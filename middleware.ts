@@ -3,24 +3,44 @@ import { Address } from "viem";
 import { paymentMiddleware } from "x402-next";
 
 const payTo = process.env.RESOURCE_WALLET_ADDRESS as Address;
-// Match the reference output schema shape
-const outputSchema = {
+// Match the image generation endpoint schema
+const imageGenerateOutputSchema = {
   input: {
     type: "http" as const,
     method: "GET" as const,
     queryParams: {
-      location: {
+      prompt: {
         type: "string",
         required: true,
-        description: "City name",
+        description: "Text prompt describing the image to generate",
       },
     },
   },
   output: {
     type: "object" as const,
     properties: {
-      weather: { type: "string" },
-      temperature: { type: "number" },
+      result: {
+        type: "object" as const,
+        description: "GenerateImageResult containing the generated images and metadata",
+        properties: {
+          images: {
+            type: "array" as const,
+            description: "Array of all generated images",
+            items: {
+              type: "object" as const,
+              description: "Generated image",
+              properties: {
+                base64: { type: "string", description: "Image as base64 encoded string" },
+                mediaType: { type: "string", description: "IANA media type of the image" },
+              },
+            },
+          },
+          usage: {
+            type: "object" as const,
+            description: "Token usage information for the image generation",
+          },
+        },
+      },
     },
   },
 };
@@ -28,25 +48,13 @@ const outputSchema = {
 export const middleware = paymentMiddleware(
   payTo,
   {
-    "/protected": {
-      price: "$0.001",
-      network: "base",
-      config: {
-        discoverable: true, // make endpoint discoverable
-        description: "Access to protected content",
-        outputSchema: {
-          type: "text/html",
-          description: "Exclusive music content",
-        },
-      },
-    },
     "GET /api/image/generate": {
-      price: "$0.001",
+      price: "$0.01111",
       network: "base",
       config: {
         discoverable: true, // make endpoint discoverable
-        description: "Access to protected content",
-        outputSchema,
+        description: "Generate an image from a text prompt using AI",
+        outputSchema: imageGenerateOutputSchema,
       },
     },
   },
