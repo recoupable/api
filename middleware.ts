@@ -61,7 +61,7 @@ export const middleware = paymentMiddleware(
       },
     },
     "GET /api/image/generate": {
-      price: "$0.001",
+      price: "$0.01111",
       network: "base",
       config: {
         discoverable: true, // make endpoint discoverable
