@@ -1,6 +1,19 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import refreshConnectedAccount from "@/lib/composio/googleSheets/refreshConnectedAccount";
 import { createApiResponse } from "@/lib/networking/createApiResponse";
+import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+
+/**
+ * OPTIONS handler for CORS preflight requests.
+ *
+ * @returns A NextResponse with CORS headers.
+ */
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: getCorsHeaders(),
+  });
+}
 
 /**
  * POST handler for refreshing a connected account.
