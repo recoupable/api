@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
         { error: "accountId is required" },
         {
           status: 400,
+          headers: getCorsHeaders(),
         },
       );
     }
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
       { message: "Connected account refreshed successfully", ...response },
       {
         status: 200,
+        headers: getCorsHeaders(),
       },
     );
   } catch (error) {
@@ -52,6 +54,7 @@ export async function POST(request: NextRequest) {
       { error: errorMessage },
       {
         status: statusCode,
+        headers: getCorsHeaders(),
       },
     );
   }
