@@ -7,7 +7,7 @@ const payTo = process.env.RESOURCE_WALLET_ADDRESS as Address;
 export const middleware = paymentMiddleware(
   payTo,
   {
-    "/api/image/generate": {
+    "/protected": {
       price: "$0.001",
       network: "base",
       config: {
