@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { wrapFetchWithPayment, decodeXPaymentResponse } from "x402-fetch";
-import { privateKeyToAccount } from "viem/accounts";
-import { base } from "viem/chains";
+import { toAccount } from "viem/accounts";
+import { getAccount } from "@/lib/coinbase/getAccount";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -61,45 +61,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Create smart wallet for x402 payments
+    const account = await getAccount("0x7AfB9872Ea382B7Eb01c67B6884dD99A744eA64f");
+
+    const fetchWithPayment = wrapFetchWithPayment(fetch, toAccount(account));
+
     // Build the internal x402 endpoint URL
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.nextUrl.origin;
     const x402Url = new URL("/api/x402/image/generate", baseUrl);
     x402Url.searchParams.set("prompt", prompt);
 
-    // Forward the X-PAYMENT header if present (for x402 payment)
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-    };
-
-    const xPaymentHeader = request.headers.get("X-PAYMENT");
-    if (xPaymentHeader) {
-      headers["X-PAYMENT"] = xPaymentHeader;
-    }
-
-    // Make request to x402-protected endpoint
-    const response = await fetch(x402Url.toString(), {
+    // Make request to x402-protected endpoint (payment handled automatically)
+    const response = await fetchWithPayment(x402Url.toString(), {
       method: "GET",
-      headers,
+      headers: {
+        "Content-Type": "application/json",
+      },
     });
-
-    // Handle x402 payment required response
-    if (response.status === 402) {
-      const paymentData = await response.json();
-      return NextResponse.json(
-        {
-          status: "error",
-          error: {
-            code: "payment_required",
-            message: "Payment required to generate image",
-          },
-          paymentRequirements: paymentData,
-        },
-        {
-          status: 402,
-          headers: getCorsHeaders(),
-        },
-      );
-    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({
@@ -122,6 +100,14 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json();
+    console.log("data", data);
+
+    // Decode payment response if present
+    const xPaymentResponse = response.headers.get("x-payment-response");
+    if (xPaymentResponse) {
+      const paymentResponse = decodeXPaymentResponse(xPaymentResponse);
+      console.log("Payment response:", paymentResponse);
+    }
 
     // Transform the response to match the Recoup API format
     return NextResponse.json(
