@@ -14,8 +14,7 @@ export function isCID(str: string | null | undefined): boolean {
     return true;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {
-    if (/^(bafy|Qm)/.test(str)) return true;
+    console.error(e);
     return false;
   }
 }
-
