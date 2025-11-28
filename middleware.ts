@@ -12,31 +12,32 @@ const inputSchema = {
 
 // Match the image generation endpoint schema
 const imageGenerateOutputSchema = {
-  output: {
-    type: "object" as const,
-    properties: {
-      result: {
+  type: "object" as const,
+  description: "GenerateImageResult containing the generated images and metadata",
+  properties: {
+    images: {
+      type: "array" as const,
+      description: "Array of all generated images",
+      items: {
         type: "object" as const,
-        description: "GenerateImageResult containing the generated images and metadata",
+        description: "Generated image",
         properties: {
-          images: {
-            type: "array" as const,
-            description: "Array of all generated images",
-            items: {
-              type: "object" as const,
-              description: "Generated image",
-              properties: {
-                base64: { type: "string", description: "Image as base64 encoded string" },
-                mediaType: { type: "string", description: "IANA media type of the image" },
-              },
-            },
-          },
-          usage: {
-            type: "object" as const,
-            description: "Token usage information for the image generation",
-          },
+          base64: { type: "string", description: "Image as base64 encoded string" },
+          mediaType: { type: "string", description: "IANA media type of the image" },
         },
       },
+    },
+    usage: {
+      type: "object" as const,
+      description: "Token usage information for the image generation",
+    },
+    imageUrl: {
+      type: "string" as const,
+      description: "Fetchable URL for the uploaded image",
+    },
+    arweaveResult: {
+      type: "object" as const,
+      description: "Arweave transaction result",
     },
   },
 };

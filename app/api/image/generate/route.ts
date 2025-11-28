@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import generateImage from "@/lib/ai/generateImage";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import uploadToArweave from "@/lib/arweave/uploadToArweave";
-import { getFetchableUrl } from "@/lib/arweave/gateway";
+import { getFetchableUrl } from "@/lib/arweave/getFetchableUrl";
 
 /**
  * OPTIONS handler for CORS preflight requests.
