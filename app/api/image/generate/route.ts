@@ -110,21 +110,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform the response to match the Recoup API format
-    return NextResponse.json(
-      {
-        status: "success",
-        data: {
-          image_url: data.imageUrl || null,
-          post_id: null, // TODO: Implement post creation if needed
-          artist_id: artistAccountId,
-          created_at: new Date().toISOString(),
-        },
-      },
-      {
-        status: 200,
-        headers: getCorsHeaders(),
-      },
-    );
+    return NextResponse.json(data, {
+      status: 200,
+      headers: getCorsHeaders(),
+    });
   } catch (error) {
     console.error("Error in image generation endpoint:", error);
 
