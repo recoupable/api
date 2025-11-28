@@ -15,6 +15,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Recoup API",
   description: "AI agents made for the music industry.",
+  openGraph: {
+    title: "Recoup API",
+    description: "AI agents made for the music industry.",
+    images: [
+      {
+        url: "/images/recoup_logo.png",
+      },
+    ],
+  },
 };
 
 export default function RootLayout({
