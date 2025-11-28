@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     description: "AI agents made for the music industry.",
     images: [
       {
-        url: "/images/recoup_logo.png",
+        url: "/images/recoup_screenshot.png",
       },
     ],
   },
