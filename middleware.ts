@@ -45,7 +45,7 @@ const imageGenerateOutputSchema = {
 export const middleware = paymentMiddleware(
   payTo,
   {
-    "GET /api/image/generate": {
+    "GET /api/x402/image/generate": {
       price: "$0.01111",
       network: "base",
       config: {
