@@ -1,19 +1,25 @@
-import type { Address } from "viem";
 import { cdp } from "./client";
 import type { EvmServerAccount } from "@coinbase/cdp-sdk";
 
 /**
- * Gets an EVM account by address.
+ * Gets an EVM account by account ID, creating it if it doesn't exist.
  *
- * @param address - The address of the account to retrieve.
+ * @param accountId - The account ID (name) of the account to retrieve.
  * @returns Promise resolving to the EVM server account.
  */
-export async function getAccount(address: Address): Promise<EvmServerAccount> {
+export async function getAccount(accountId: string): Promise<EvmServerAccount> {
   try {
-    const account = await cdp.evm.getAccount({ address });
+    const account = await cdp.evm.getAccount({ name: accountId });
     return account;
-  } catch (error) {
-    console.error("[getAccount] Error:", error);
-    throw new Error(`Failed to get account for address ${address}`);
+  } catch {
+    // If account doesn't exist, create it
+    console.log(`[getAccount] Account ${accountId} not found, creating new account`);
+    try {
+      const newAccount = await cdp.evm.createAccount({ name: accountId });
+      return newAccount;
+    } catch (createError) {
+      console.error("[getAccount] Error creating account:", createError);
+      throw new Error(`Failed to get or create account for accountId ${accountId}`);
+    }
   }
 }
