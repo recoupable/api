@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import generateImage from "@/lib/ai/generateImage";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import uploadToArweave from "@/lib/arweave/uploadToArweave";
+import uploadImageToArweave from "@/lib/arweave/uploadImageToArweave";
 import { getFetchableUrl } from "@/lib/arweave/getFetchableUrl";
+import { createImageMoment } from "@/lib/inprocess/createImageMoment";
+import { getBuyerAccount } from "@/lib/x402/getBuyerAccount";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -26,6 +28,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const prompt = searchParams.get("prompt");
+    const account = getBuyerAccount(request);
 
     if (!prompt) {
       return NextResponse.json(
@@ -48,13 +51,28 @@ export async function GET(request: NextRequest) {
         },
       );
     }
-    const arweaveResult = await uploadToArweave({
+    const arweaveResult = await uploadImageToArweave({
       base64Data: result.images[0].base64,
       mimeType: result.images[0].mediaType,
     });
 
+    const arweaveUri = `ar://${arweaveResult.id}`;
+    const imageUrl = getFetchableUrl(arweaveUri);
+
+    const momentResult = await createImageMoment({
+      prompt,
+      account,
+      arweaveUri,
+      mediaType: result.images[0].mediaType,
+    });
+
     return NextResponse.json(
-      { ...result, imageUrl: getFetchableUrl(`ar://${arweaveResult.id}`), arweaveResult },
+      {
+        ...result,
+        imageUrl,
+        arweaveResult,
+        moment: momentResult,
+      },
       {
         status: 200,
         headers: getCorsHeaders(),

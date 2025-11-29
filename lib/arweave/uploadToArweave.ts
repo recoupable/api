@@ -1,49 +1,26 @@
-import Arweave from "arweave";
 import Transaction from "arweave/node/lib/transaction";
-import type { JWKInterface } from "arweave/node/lib/wallet";
+import { arweave, ARWEAVE_KEY } from "./client";
 
-const rawArweaveKey = process.env.ARWEAVE_KEY;
-
-if (!rawArweaveKey) {
-  throw new Error(
-    "ARWEAVE_KEY environment variable is missing. Please set it to a base64-encoded JSON key.",
-  );
-}
-
-const ARWEAVE_KEY: JWKInterface = (() => {
-  try {
-    const decodedKey = Buffer.from(rawArweaveKey, "base64").toString();
-    return JSON.parse(decodedKey) as JWKInterface;
-  } catch (error) {
-    throw new Error(
-      `Failed to decode ARWEAVE_KEY. Ensure it is base64-encoded JSON. ${
-        error instanceof Error ? error.message : error
-      }`,
-    );
-  }
-})();
-
-const arweave = Arweave.init({
-  host: "arweave.net",
-  port: 443,
-  protocol: "https",
-  timeout: 20000,
-  logging: false,
-});
-
-const uploadToArweave = async (
-  imageData: { base64Data: string; mimeType: string },
+/**
+ * Uploads data to Arweave.
+ *
+ * @param data - The data buffer to upload.
+ * @param contentType - The content type (MIME type) for the data.
+ * @param getProgress - Optional callback to track upload progress.
+ * @returns Promise resolving to the Arweave transaction.
+ */
+export async function uploadToArweave(
+  data: Buffer,
+  contentType: string,
   getProgress: (progress: number) => void = () => {},
-): Promise<Transaction> => {
-  const buffer = Buffer.from(imageData.base64Data, "base64");
-
+): Promise<Transaction> {
   const transaction = await arweave.createTransaction(
     {
-      data: buffer,
+      data,
     },
     ARWEAVE_KEY,
   );
-  transaction.addTag("Content-Type", imageData.mimeType);
+  transaction.addTag("Content-Type", contentType);
   await arweave.transactions.sign(transaction, ARWEAVE_KEY);
   const uploader = await arweave.transactions.getUploader(transaction);
 
@@ -56,6 +33,4 @@ const uploadToArweave = async (
   }
 
   return transaction;
-};
-
-export default uploadToArweave;
+}

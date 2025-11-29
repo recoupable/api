@@ -12,9 +12,7 @@ export function isCID(str: string | null | undefined): boolean {
   try {
     CID.parse(str);
     return true;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (e) {
-    console.error(e);
+  } catch {
     return false;
   }
 }
