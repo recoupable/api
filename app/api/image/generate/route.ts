@@ -65,9 +65,15 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error in image generation endpoint:", error);
-    return NextResponse.json(error, {
-      status: 500,
-      headers: getCorsHeaders(),
-    });
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    return NextResponse.json(
+      {
+        error: errorMessage,
+      },
+      {
+        status: 500,
+        headers: getCorsHeaders(),
+      },
+    );
   }
 }
