@@ -26,6 +26,7 @@ export async function OPTIONS() {
  */
 export async function GET(request: NextRequest) {
   try {
+    console.log("starting image generation");
     const { searchParams } = new URL(request.url);
     const prompt = searchParams.get("prompt");
     const account = getBuyerAccount(request);
@@ -80,9 +81,17 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     console.error("Error generating image:", error);
-    return NextResponse.json(error, {
-      status: 500,
-      headers: getCorsHeaders(),
-    });
+
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+
+    return NextResponse.json(
+      {
+        error: errorMessage,
+      },
+      {
+        status: 500,
+        headers: getCorsHeaders(),
+      },
+    );
   }
 }
