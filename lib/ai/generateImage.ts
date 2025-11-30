@@ -7,9 +7,6 @@ const generateImage = async (
     const response = await generateText({
       model: "google/gemini-3-pro-image",
       prompt,
-      providerOptions: {
-        openai: { quality: "high" },
-      },
     });
 
     return { image: response.files[0], usage: response.usage };
