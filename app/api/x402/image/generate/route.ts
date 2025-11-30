@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import generateImage from "@/lib/ai/generateImage";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import uploadImageToArweave from "@/lib/arweave/uploadImageToArweave";
-import { getFetchableUrl } from "@/lib/arweave/getFetchableUrl";
-import { createImageMoment } from "@/lib/inprocess/createImageMoment";
+import { uploadImageAndCreateMoment } from "@/lib/arweave/uploadImageAndCreateMoment";
 import { getBuyerAccount } from "@/lib/x402/getBuyerAccount";
 
 /**
@@ -40,9 +38,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const result = await generateImage(prompt);
+    const { image, usage } = await generateImage(prompt);
 
-    if (!result) {
+    if (!image) {
       return NextResponse.json(
         { error: "Failed to generate image" },
         {
@@ -51,27 +49,26 @@ export async function GET(request: NextRequest) {
         },
       );
     }
-    const arweaveResult = await uploadImageToArweave({
-      base64Data: result.images[0].base64,
-      mimeType: result.images[0].mediaType,
-    });
 
-    const arweaveUri = `ar://${arweaveResult.id}`;
-    const imageUrl = getFetchableUrl(arweaveUri);
-
-    const momentResult = await createImageMoment({
+    const {
+      arweaveResult,
+      imageUrl,
+      moment: momentResult,
+      arweaveError,
+    } = await uploadImageAndCreateMoment({
+      image,
       prompt,
       account,
-      arweaveUri,
-      mediaType: result.images[0].mediaType,
     });
 
     return NextResponse.json(
       {
-        ...result,
+        image,
+        usage,
         imageUrl,
         arweaveResult,
         moment: momentResult,
+        ...(arweaveError && { arweaveError }),
       },
       {
         status: 200,

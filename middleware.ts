@@ -11,31 +11,41 @@ const inputSchema = {
 // Match the image generation endpoint schema
 const imageGenerateOutputSchema = {
   type: "object" as const,
-  description: "GenerateImageResult containing the generated images and metadata",
+  description: "GenerateImageResult containing the generated image and metadata",
   properties: {
-    images: {
-      type: "array" as const,
-      description: "Array of all generated images",
-      items: {
-        type: "object" as const,
-        description: "Generated image",
-        properties: {
-          base64: { type: "string", description: "Image as base64 encoded string" },
-          mediaType: { type: "string", description: "IANA media type of the image" },
-        },
+    image: {
+      type: "object" as const,
+      description: "Generated image file",
+      properties: {
+        base64: { type: "string", description: "Image as base64 encoded string" },
+        mediaType: { type: "string", description: "IANA media type of the image" },
       },
     },
     usage: {
       type: "object" as const,
       description: "Token usage information for the image generation",
+      properties: {
+        inputTokens: { type: "number", description: "Number of tokens used for the prompt" },
+        outputTokens: { type: "number", description: "Number of tokens used for the output" },
+        totalTokens: { type: "number", description: "Number of tokens used for the total" },
+        reasoningTokens: { type: "number", description: "Number of tokens used for the reasoning" },
+      },
     },
     imageUrl: {
       type: "string" as const,
-      description: "Fetchable URL for the uploaded image",
+      description: "Fetchable URL for the uploaded image (nullable)",
     },
     arweaveResult: {
       type: "object" as const,
-      description: "Arweave transaction result",
+      description: "Arweave transaction result (nullable)",
+    },
+    moment: {
+      type: "object" as const,
+      description: "In Process moment creation result (nullable)",
+    },
+    arweaveError: {
+      type: "string" as const,
+      description: "Error message if Arweave upload failed (optional)",
     },
   },
 };

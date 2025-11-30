@@ -1,16 +1,15 @@
-import { experimental_generateImage as generate, type Experimental_GenerateImageResult } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { GeneratedFile, generateText, LanguageModelUsage } from "ai";
 
-const generateImage = async (prompt: string): Promise<Experimental_GenerateImageResult | null> => {
+const generateImage = async (
+  prompt: string,
+): Promise<{ image: GeneratedFile; usage: LanguageModelUsage } | null> => {
   try {
-    const response = await generate({
-      model: openai.image("gpt-image-1"),
+    const response = await generateText({
+      model: "google/gemini-3-pro-image",
       prompt,
-      providerOptions: {
-        openai: { quality: "high" },
-      },
     });
-    return response;
+
+    return { image: response.files[0], usage: response.usage };
   } catch (error) {
     console.error("Error generating image:", error);
   }
