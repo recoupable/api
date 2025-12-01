@@ -5,7 +5,7 @@ import { deductCredits } from "../credits/deductCredits";
 import { loadAccount } from "./loadAccount";
 import { getCreditsForPrice } from "./getCreditsForPrice";
 import { IMAGE_GENERATE_PRICE } from "@/lib/const";
-import { parseUnits } from "@coinbase/cdp-sdk";
+import { parseUnits } from "viem";
 
 /**
  * Fetches a URL with x402 payment handling.
