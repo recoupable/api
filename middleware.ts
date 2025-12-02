@@ -6,7 +6,7 @@ const inputSchema = {
   queryParams: {
     prompt: "Text prompt describing the image to generate",
     files:
-      'Optional JSON-encoded array of file objects. Each file object should have \'data\' (string URL, base64 string, or data URL) and \'mediaType\' (IANA media type string). Example: [{"data":"https://example.com/image.png","mediaType":"image/png"}]',
+      "Optional pipe-separated list of files. Format: url1:mediaType1|url2:mediaType2. Example: https://example.com/image.png:image/png|https://example.com/file.jpg:image/jpeg",
   },
 };
 
