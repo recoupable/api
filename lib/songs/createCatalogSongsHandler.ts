@@ -4,15 +4,7 @@ import { insertCatalogSongs } from "@/lib/supabase/catalog_songs/insertCatalogSo
 import { selectCatalogSongsWithArtists } from "@/lib/supabase/catalog_songs/selectCatalogSongsWithArtists";
 import { processSongsInput } from "@/lib/songs/processSongsInput";
 import { SongInput } from "@/lib/songs/formatSongsInput";
-
-type CatalogSongInput = {
-  catalog_id: string;
-  isrc: string;
-  name?: string;
-  album?: string;
-  notes?: string;
-  artists?: string[];
-};
+import { CatalogSongInput } from "@/lib/songs/types";
 
 type CreateCatalogSongsRequest = {
   songs: CatalogSongInput[];

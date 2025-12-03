@@ -2,15 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { selectCatalogSongsWithArtists } from "@/lib/supabase/catalog_songs/selectCatalogSongsWithArtists";
 import { deleteCatalogSongs } from "@/lib/supabase/catalog_songs/deleteCatalogSongs";
-
-type CatalogSongInput = {
-  catalog_id: string;
-  isrc: string;
-  name?: string;
-  album?: string;
-  notes?: string;
-  artists?: string[];
-};
+import { CatalogSongInput } from "@/lib/songs/types";
 
 type DeleteCatalogSongsRequest = {
   songs: CatalogSongInput[];
