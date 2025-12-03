@@ -17,10 +17,11 @@ export type AccountSocialResponse = Pick<AccountSocialRow, "id" | "social_id"> &
  * @returns Array of transformed social responses
  * @throws Error if social data is missing for any account_social
  */
-export function flattenAccountSocials(accountSocials: unknown[] | null): AccountSocialResponse[] {
+export function flattenAccountSocials(
+  accountSocials: AccountSocialWithSocial[] | null,
+): AccountSocialResponse[] {
   return (accountSocials || []).map(item => {
-    const accountSocial = item as AccountSocialWithSocial;
-    // Supabase types this as an array, but runtime data is a single object
+    const accountSocial = item;
     const socialData = accountSocial.social as unknown as SocialRow;
     if (!socialData) {
       throw new Error(`No social data found for account_social id: ${accountSocial.id}`);

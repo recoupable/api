@@ -23,11 +23,7 @@ export async function getArtistSocialsHandler(request: NextRequest): Promise<Nex
       return validatedQuery;
     }
 
-    const result = await getArtistSocials({
-      artist_account_id: validatedQuery.artist_account_id,
-      page: validatedQuery.page,
-      limit: validatedQuery.limit,
-    });
+    const result = await getArtistSocials(validatedQuery);
 
     const statusCode = result.status === "success" ? 200 : 500;
 

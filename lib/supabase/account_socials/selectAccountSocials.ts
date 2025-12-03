@@ -10,7 +10,7 @@ type SocialRow = Tables<"socials">;
  * so at runtime `social` is a single object, not an array.
  */
 export type AccountSocialWithSocial = AccountSocialRow & {
-  social: SocialRow | SocialRow[] | null;
+  social: SocialRow | null;
 };
 
 /**
