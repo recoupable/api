@@ -24,8 +24,8 @@ export type AccountSocialWithSocial = AccountSocialRow & {
  */
 export async function selectAccountSocials(
   artist_account_id: string,
-  offset: number,
-  limit: number,
+  offset: number = 0,
+  limit: number = 100,
 ): Promise<AccountSocialWithSocial[] | null> {
   const { data, error } = await supabase
     .from("account_socials")
