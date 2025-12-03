@@ -20,6 +20,8 @@
     "@supabase/supabase-js": "^2.86.0",
     "ai": "6.0.0-beta.122",
     "arweave": "^1.15.7",
+    "bullmq": "^5.65.1",
+    "ioredis": "^5.8.2",
     "multiformats": "^13.4.1",
     "next": "^16.0.5",
     "react": "^19.0.0",
