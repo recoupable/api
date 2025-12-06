@@ -1,5 +1,4 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { getLocalTime } from "@/lib/time/getLocalTime";
 import { GetLocalTimeQuery, getLocalTimeQuerySchema } from "@/lib/time/validateGetLocalTimeQuery";
 
@@ -19,7 +18,7 @@ export function registerGetLocalTimeTool(server: McpServer): void {
     },
     async (args: GetLocalTimeQuery) => {
       const result = await getLocalTime(args);
-      return result as unknown as CallToolResult;
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
     },
   );
 }
