@@ -1,6 +1,4 @@
-import { registerGetRandomNumberTool } from "@/lib/mcp/registerGetRandomNumberTool";
-import { registerAddTool } from "@/lib/mcp/registerAddTool";
-import { registerHelloRemoteTool } from "@/lib/mcp/registerHelloRemoteTool";
+import { registerAllTools } from "@/lib/mcp/tools";
 import { createMcpHandler } from "mcp-handler";
 
 let handler: ReturnType<typeof createMcpHandler> | null = null;
@@ -14,9 +12,7 @@ async function getHandler(): Promise<ReturnType<typeof createMcpHandler>> {
   if (!handler) {
     handler = createMcpHandler(
       server => {
-        registerGetRandomNumberTool(server);
-        registerAddTool(server);
-        registerHelloRemoteTool(server);
+        registerAllTools(server);
       },
       {
         serverInfo: {
