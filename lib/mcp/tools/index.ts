@@ -1,4 +1,4 @@
-import { PaymentMcpServer } from "x402-mcp";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerGetRandomNumberTool } from "./registerGetRandomNumberTool";
 import { registerGetArtistSocialsTool } from "./registerGetArtistSocialsTool";
 
@@ -8,7 +8,7 @@ import { registerGetArtistSocialsTool } from "./registerGetArtistSocialsTool";
  *
  * @param server - The MCP server instance to register tools on.
  */
-export const registerAllTools = (server: PaymentMcpServer): void => {
+export const registerAllTools = (server: McpServer): void => {
   registerGetRandomNumberTool(server);
   registerGetArtistSocialsTool(server);
 };
