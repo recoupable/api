@@ -1,9 +1,7 @@
 import { createPaidMcpHandler } from "x402-mcp";
 import { facilitator } from "@coinbase/x402";
 import { SMART_ACCOUNT_ADDRESS } from "@/lib/const";
-import { registerGetRandomNumberTool } from "@/lib/mcp/tools/registerGetRandomNumberTool";
-import { registerAddTool } from "@/lib/mcp/tools/registerAddTool";
-import { registerHelloRemoteTool } from "@/lib/mcp/tools/registerHelloRemoteTool";
+import { registerAllTools } from "@/lib/mcp/tools";
 
 let handler: ReturnType<typeof createPaidMcpHandler> | null = null;
 
@@ -16,9 +14,7 @@ async function getHandler(): Promise<ReturnType<typeof createPaidMcpHandler>> {
   if (!handler) {
     handler = createPaidMcpHandler(
       server => {
-        registerGetRandomNumberTool(server);
-        registerAddTool(server);
-        registerHelloRemoteTool(server);
+        registerAllTools(server);
       },
       {
         serverInfo: {
