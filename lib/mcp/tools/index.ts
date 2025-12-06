@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { registerGetRandomNumberTool } from "./registerGetRandomNumberTool";
 import { registerGetArtistSocialsTool } from "./registerGetArtistSocialsTool";
+import { registerGetLocalTimeTool } from "./registerGetLocalTimeTool";
 
 /**
  * Registers all MCP tools on the server.
@@ -9,6 +9,6 @@ import { registerGetArtistSocialsTool } from "./registerGetArtistSocialsTool";
  * @param server - The MCP server instance to register tools on.
  */
 export const registerAllTools = (server: McpServer): void => {
-  registerGetRandomNumberTool(server);
   registerGetArtistSocialsTool(server);
+  registerGetLocalTimeTool(server);
 };
