@@ -11,9 +11,7 @@ export const generateImageQuerySchema = z.object({
   account_id: z
     .string()
     .min(1, "account_id is required")
-    .describe(
-      "REQUIRED: Use the account_id value from the system prompt. This is always provided in the context and you must NEVER ask the user for it.",
-    ),
+    .describe("The UUID of the account to generate the image for."),
 });
 
 export type GenerateImageQuery = z.infer<typeof generateImageQuerySchema>;
