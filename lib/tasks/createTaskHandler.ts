@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { insertScheduledAction } from "@/lib/supabase/scheduled_actions/insertScheduledAction";
-import { updateScheduledAction } from "@/lib/supabase/scheduled_actions/updateScheduledAction";
-import { createSchedule } from "@/lib/trigger/createSchedule";
 import { validateCreateTaskBody } from "@/lib/tasks/validateCreateTaskBody";
+import { createTask } from "@/lib/tasks/createTask";
 
 /**
  * Creates a new task (scheduled action)
@@ -29,34 +27,12 @@ export async function createTaskHandler(request: NextRequest): Promise<NextRespo
       return validatedBody;
     }
 
-    const { schedule } = validatedBody;
-
-    const tasks = await insertScheduledAction(validatedBody);
-
-    const created = tasks[0];
-    if (!created || !created.id) {
-      throw new Error("Failed to create task: missing Supabase id for scheduling");
-    }
-
-    const triggerSchedule = await createSchedule({
-      cron: schedule,
-      deduplicationKey: created.id,
-      externalId: created.id,
-    });
-
-    if (!triggerSchedule.id) {
-      throw new Error("Failed to create Trigger.dev schedule: missing schedule id");
-    }
-
-    const updated = await updateScheduledAction({
-      id: created.id,
-      trigger_schedule_id: triggerSchedule.id,
-    });
+    const createdTask = await createTask(validatedBody);
 
     return NextResponse.json(
       {
         status: "success",
-        tasks: [updated],
+        tasks: [createdTask],
       },
       {
         status: 200,

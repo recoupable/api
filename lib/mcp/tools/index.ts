@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerGetArtistSocialsTool } from "./registerGetArtistSocialsTool";
 import { registerGetLocalTimeTool } from "./registerGetLocalTimeTool";
+import { registerAllTaskTools } from "./tasks";
 
 /**
  * Registers all MCP tools on the server.
@@ -11,4 +12,5 @@ import { registerGetLocalTimeTool } from "./registerGetLocalTimeTool";
 export const registerAllTools = (server: McpServer): void => {
   registerGetArtistSocialsTool(server);
   registerGetLocalTimeTool(server);
+  registerAllTaskTools(server);
 };

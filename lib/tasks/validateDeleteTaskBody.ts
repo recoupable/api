@@ -3,7 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { z } from "zod";
 
 export const deleteTaskBodySchema = z.object({
-  id: z.string().min(1, "id body parameter is required"),
+  id: z.string().min(1, "id parameter is required").describe("UUID of the task to delete"),
 });
 
 export type DeleteTaskBody = z.infer<typeof deleteTaskBodySchema>;

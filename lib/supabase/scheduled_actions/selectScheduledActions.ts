@@ -1,10 +1,5 @@
+import { Tables } from "@/types/database.types";
 import supabase from "../serverClient";
-
-type SelectScheduledActionsParams = {
-  id?: string;
-  account_id?: string;
-  artist_account_id?: string;
-};
 
 /**
  * Selects scheduled actions (tasks) from the database
@@ -12,7 +7,9 @@ type SelectScheduledActionsParams = {
  * @param params - The parameters for the query
  * @returns The scheduled actions
  */
-export async function selectScheduledActions(params: SelectScheduledActionsParams) {
+export async function selectScheduledActions(
+  params: Partial<Tables<"scheduled_actions">>,
+): Promise<Tables<"scheduled_actions">[]> {
   let query = supabase
     .from("scheduled_actions")
     .select("*")
@@ -28,6 +25,10 @@ export async function selectScheduledActions(params: SelectScheduledActionsParam
 
   if (params.artist_account_id) {
     query = query.eq("artist_account_id", params.artist_account_id);
+  }
+
+  if (params.enabled !== undefined) {
+    query = query.eq("enabled", params.enabled);
   }
 
   const { data, error } = await query;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
+import { validateGetTasksQuery } from "@/lib/tasks/validateGetTasksQuery";
 
 /**
  * Retrieves tasks (scheduled actions) from the database.
@@ -13,17 +14,12 @@ import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectS
  */
 export async function getTasksHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
-    const account_id = searchParams.get("account_id");
-    const artist_account_id = searchParams.get("artist_account_id");
+    const validatedQuery = validateGetTasksQuery(request);
+    if (validatedQuery instanceof NextResponse) {
+      return validatedQuery;
+    }
 
-    const tasks = await selectScheduledActions({
-      id: id && typeof id === "string" ? id : undefined,
-      account_id: account_id && typeof account_id === "string" ? account_id : undefined,
-      artist_account_id:
-        artist_account_id && typeof artist_account_id === "string" ? artist_account_id : undefined,
-    });
+    const tasks = await selectScheduledActions(validatedQuery);
 
     return NextResponse.json(
       {

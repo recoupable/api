@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { updateScheduledAction } from "@/lib/supabase/scheduled_actions/updateScheduledAction";
-import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
-import { syncTriggerSchedule } from "@/lib/trigger/syncTriggerSchedule";
 import { validateUpdateTaskBody } from "@/lib/tasks/validateUpdateTaskBody";
-import type { TablesUpdate } from "@/types/database.types";
+import { updateTask } from "@/lib/tasks/updateTask";
 
 /**
  * Updates an existing task (scheduled action)
@@ -34,59 +31,12 @@ export async function updateTaskHandler(request: NextRequest): Promise<NextRespo
       return validatedBody;
     }
 
-    const { id, title, prompt, schedule, account_id, artist_account_id, enabled, model } =
-      validatedBody;
-
-    const existingTasks = await selectScheduledActions({ id });
-    const existingTask = existingTasks[0];
-
-    if (!existingTask) {
-      return NextResponse.json(
-        {
-          status: "error",
-          error: "Task not found",
-        },
-        {
-          status: 404,
-          headers: getCorsHeaders(),
-        },
-      );
-    }
-
-    const updateData: Partial<TablesUpdate<"scheduled_actions">> = {};
-    if (title !== undefined) updateData.title = title;
-    if (prompt !== undefined) updateData.prompt = prompt;
-    if (schedule !== undefined) updateData.schedule = schedule;
-    if (account_id !== undefined) updateData.account_id = account_id;
-    if (artist_account_id !== undefined) updateData.artist_account_id = artist_account_id;
-    if (enabled !== undefined) updateData.enabled = enabled;
-    if (model !== undefined) updateData.model = model;
-
-    const finalEnabled = enabled !== undefined ? enabled : (existingTask.enabled ?? true);
-    const cronExpression = schedule ?? existingTask.schedule ?? undefined;
-    const scheduleChanged = schedule !== undefined;
-
-    const newTriggerScheduleId = await syncTriggerSchedule({
-      taskId: id,
-      enabled: finalEnabled,
-      cronExpression,
-      scheduleChanged,
-      existingScheduleId: existingTask.trigger_schedule_id ?? null,
-    });
-
-    if (newTriggerScheduleId !== existingTask.trigger_schedule_id) {
-      updateData.trigger_schedule_id = newTriggerScheduleId;
-    }
-
-    const updated = await updateScheduledAction({
-      id,
-      ...updateData,
-    });
+    const updatedTask = await updateTask(validatedBody);
 
     return NextResponse.json(
       {
         status: "success",
-        tasks: [updated],
+        tasks: [updatedTask],
       },
       {
         status: 200,
@@ -95,6 +45,21 @@ export async function updateTaskHandler(request: NextRequest): Promise<NextRespo
     );
   } catch (error) {
     console.error("Error updating task:", error);
+
+    // Handle "Task not found" error with 404 status
+    if (error instanceof Error && error.message === "Task not found") {
+      return NextResponse.json(
+        {
+          status: "error",
+          error: error.message,
+        },
+        {
+          status: 404,
+          headers: getCorsHeaders(),
+        },
+      );
+    }
+
     return NextResponse.json(
       {
         status: "error",
