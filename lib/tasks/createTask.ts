@@ -1,29 +1,23 @@
 import { insertScheduledAction } from "@/lib/supabase/scheduled_actions/insertScheduledAction";
 import { updateScheduledAction } from "@/lib/supabase/scheduled_actions/updateScheduledAction";
 import { createSchedule } from "@/lib/trigger/createSchedule";
+import { createTaskBodySchema, type CreateTaskBody } from "@/lib/tasks/validateCreateTaskBody";
 import type { Tables } from "@/types/database.types";
-
-export type CreateTaskInput = {
-  title: string;
-  prompt: string;
-  schedule: string;
-  account_id: string;
-  artist_account_id: string;
-  model?: string;
-};
 
 /**
  * Creates a new task (scheduled action) in the system.
  * Also creates the corresponding Trigger.dev schedule.
  *
- * @param input - The task data to create
+ * @param input - The task data to create (validated against createTaskBodySchema)
  * @returns The created task
  */
-export async function createTask(input: CreateTaskInput): Promise<Tables<"scheduled_actions">> {
-  const { schedule } = input;
+export async function createTask(input: CreateTaskBody): Promise<Tables<"scheduled_actions">> {
+  // Validate input using schema
+  const validatedInput = createTaskBodySchema.parse(input);
+  const { schedule } = validatedInput;
 
   // Insert the task into the database
-  const tasks = await insertScheduledAction(input);
+  const tasks = await insertScheduledAction(validatedInput);
   const created = tasks[0];
 
   if (!created || !created.id) {
