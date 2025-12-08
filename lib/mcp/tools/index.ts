@@ -4,6 +4,7 @@ import { registerGetLocalTimeTool } from "./registerGetLocalTimeTool";
 import { registerAllTaskTools } from "./tasks";
 import { registerAllImageTools } from "./images";
 import { registerAllCatalogTools } from "./catalogs";
+import { registerAllSora2Tools } from "./sora2";
 
 /**
  * Registers all MCP tools on the server.
@@ -17,4 +18,5 @@ export const registerAllTools = (server: McpServer): void => {
   registerAllTaskTools(server);
   registerAllImageTools(server);
   registerAllCatalogTools(server);
+  registerAllSora2Tools(server);
 };
