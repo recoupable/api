@@ -1,9 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { retrieveVideoContentFunction } from "@/lib/video/retrieveVideoContent";
 import {
-  retrieveVideoContentQuerySchema,
-  type RetrieveVideoContentQuery,
-} from "@/lib/video/validateRetrieveVideoContentQuery";
+  retrieveVideoQuerySchema,
+  type RetrieveVideoQuery,
+} from "@/lib/video/validateRetrieveVideoQuery";
 
 /**
  * Registers the "retrieve_sora_2_video_content" tool on the MCP server.
@@ -27,9 +27,9 @@ export function registerRetrieveVideoContentTool(server: McpServer): void {
     - Only works when video status is "completed" (check with retrieve_sora_2_video first)
     - Downloads the actual video file content (this may take some time)
     - Returns video metadata including file size and content type`,
-      inputSchema: retrieveVideoContentQuerySchema,
+      inputSchema: retrieveVideoQuerySchema,
     },
-    async (args: RetrieveVideoContentQuery) => {
+    async (args: RetrieveVideoQuery) => {
       const result = await retrieveVideoContentFunction(args);
 
       return {
