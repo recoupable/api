@@ -28,6 +28,7 @@
     "mcp-handler": "^1.0.4",
     "multiformats": "^13.4.1",
     "next": "^16.0.7",
+    "node-telegram-bot-api": "^0.66.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "viem": "^2.21.26",

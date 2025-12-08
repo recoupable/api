@@ -5,6 +5,7 @@ import { registerAllTaskTools } from "./tasks";
 import { registerAllImageTools } from "./images";
 import { registerAllCatalogTools } from "./catalogs";
 import { registerAllSora2Tools } from "./sora2";
+import { registerContactTeamTool } from "./registerContactTeamTool";
 
 /**
  * Registers all MCP tools on the server.
@@ -19,4 +20,5 @@ export const registerAllTools = (server: McpServer): void => {
   registerAllImageTools(server);
   registerAllCatalogTools(server);
   registerAllSora2Tools(server);
+  registerContactTeamTool(server);
 };
