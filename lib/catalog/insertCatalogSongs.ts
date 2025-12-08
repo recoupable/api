@@ -2,6 +2,7 @@ import { insertCatalogSongs } from "@/lib/supabase/catalog_songs/insertCatalogSo
 import { selectCatalogSongsWithArtists } from "@/lib/supabase/catalog_songs/selectCatalogSongsWithArtists";
 import { processSongsInput } from "@/lib/songs/processSongsInput";
 import { SongInput } from "@/lib/songs/formatSongsInput";
+import { CatalogSongWithArtists } from "@/lib/supabase/catalog_songs/selectCatalogSongsWithArtists";
 
 export interface InsertCatalogSongsInput {
   catalog_id: string;
@@ -13,15 +14,7 @@ export interface InsertCatalogSongsInput {
 }
 
 export interface InsertCatalogSongsResult {
-  songs: Array<{
-    catalog_id: string;
-    isrc: string;
-    name: string | null;
-    album: string | null;
-    notes: string | null;
-    updated_at: string | null;
-    artists: Array<{ name: string | null }>;
-  }>;
+  songs: CatalogSongWithArtists[];
   pagination: {
     total_count: number;
     page: number;
