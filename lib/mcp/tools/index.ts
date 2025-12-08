@@ -3,6 +3,7 @@ import { registerGetArtistSocialsTool } from "./registerGetArtistSocialsTool";
 import { registerGetLocalTimeTool } from "./registerGetLocalTimeTool";
 import { registerAllTaskTools } from "./tasks";
 import { registerAllImageTools } from "./images";
+import { registerAllCatalogTools } from "./catalogs";
 
 /**
  * Registers all MCP tools on the server.
@@ -15,4 +16,5 @@ export const registerAllTools = (server: McpServer): void => {
   registerGetLocalTimeTool(server);
   registerAllTaskTools(server);
   registerAllImageTools(server);
+  registerAllCatalogTools(server);
 };

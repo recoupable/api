@@ -1,7 +1,7 @@
 import supabase from "../serverClient";
 import { Tables } from "@/types/database.types";
 
-type CatalogSongWithArtists = {
+export type CatalogSongWithArtists = {
   catalog_id: string;
 } & Tables<"songs"> & {
     artists: Tables<"accounts">[];
