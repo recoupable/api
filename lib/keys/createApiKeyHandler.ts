@@ -31,7 +31,7 @@ export async function createApiKeyHandler(request: NextRequest): Promise<NextRes
       throw new Error("PRIVY_PROJECT_SECRET environment variable is required");
     }
 
-    const rawApiKey = generateApiKey("recoup_pk");
+    const rawApiKey = generateApiKey("recoup_sk");
     const keyHash = hashApiKey(rawApiKey, PRIVY_PROJECT_SECRET);
 
     const { error } = await insertApiKey({
