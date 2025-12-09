@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createApiKeyHandler } from "@/lib/keys/createApiKeyHandler";
+import { deleteApiKeyHandler } from "@/lib/keys/deleteApiKeyHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -28,4 +29,19 @@ export async function OPTIONS() {
  */
 export async function POST(request: NextRequest) {
   return createApiKeyHandler(request);
+}
+
+/**
+ * DELETE /api/keys
+ *
+ * Deletes an API key record from account_api_keys.
+ *
+ * Body parameters:
+ * - id (required): The ID of the API key to delete
+ *
+ * @param request - The request object containing the body with id.
+ * @returns A NextResponse with the delete operation status.
+ */
+export async function DELETE(request: NextRequest) {
+  return deleteApiKeyHandler(request);
 }
