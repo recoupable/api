@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createApiKeyHandler } from "@/lib/keys/createApiKeyHandler";
 import { deleteApiKeyHandler } from "@/lib/keys/deleteApiKeyHandler";
+import { getApiKeysHandler } from "@/lib/keys/getApiKeysHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -13,6 +14,21 @@ export async function OPTIONS() {
     status: 200,
     headers: getCorsHeaders(),
   });
+}
+
+/**
+ * GET /api/keys
+ *
+ * Retrieves all API keys for an account from account_api_keys.
+ *
+ * Query parameters:
+ * - account_id (required): The account ID to retrieve API keys for
+ *
+ * @param request - The request object containing query parameters.
+ * @returns A NextResponse with the API keys.
+ */
+export async function GET(request: NextRequest) {
+  return getApiKeysHandler(request);
 }
 
 /**
