@@ -15,6 +15,7 @@ export async function getApiKeysHandler(request: NextRequest): Promise<NextRespo
   try {
     const authHeader = request.headers.get("authorization");
     const authToken = getBearerToken(authHeader);
+    console.log("authToken", authToken);
     if (!authToken) {
       return NextResponse.json(
         {
