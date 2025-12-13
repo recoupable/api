@@ -8,6 +8,7 @@ import { registerAllSpotifyTools } from "./spotify";
 import { registerContactTeamTool } from "./registerContactTeamTool";
 import { registerUpdateAccountInfoTool } from "./registerUpdateAccountInfoTool";
 import { registerAllArtistSocialsTools } from "./artistSocials";
+import { registerSearchWebTool } from "./registerSearchWebTool";
 
 /**
  * Registers all MCP tools on the server.
@@ -25,4 +26,5 @@ export const registerAllTools = (server: McpServer): void => {
   registerAllSpotifyTools(server);
   registerContactTeamTool(server);
   registerUpdateAccountInfoTool(server);
+  registerSearchWebTool(server);
 };
