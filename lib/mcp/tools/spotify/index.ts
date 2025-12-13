@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerGetSpotifySearchTool } from "./registerGetSpotifySearchTool";
 import { registerGetSpotifyArtistTopTracksTool } from "./registerGetSpotifyArtistTopTracksTool";
+import { registerGetSpotifyArtistAlbumsTool } from "./registerGetSpotifyArtistAlbumsTool";
 
 /**
  * Registers all Spotify-related MCP tools on the server.
@@ -10,4 +11,5 @@ import { registerGetSpotifyArtistTopTracksTool } from "./registerGetSpotifyArtis
 export const registerAllSpotifyTools = (server: McpServer): void => {
   registerGetSpotifySearchTool(server);
   registerGetSpotifyArtistTopTracksTool(server);
+  registerGetSpotifyArtistAlbumsTool(server);
 };
