@@ -4,7 +4,6 @@ import { z } from "zod";
 
 export const createApiKeyBodySchema = z.object({
   key_name: z.string().min(1, "key_name parameter is required"),
-  account_id: z.string().min(1, "account_id parameter is required"),
 });
 
 export type CreateApiKeyBody = z.infer<typeof createApiKeyBodySchema>;

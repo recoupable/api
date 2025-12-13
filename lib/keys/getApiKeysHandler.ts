@@ -1,27 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateGetApiKeysQuery } from "@/lib/keys/validateGetApiKeysQuery";
 import { getApiKeys } from "@/lib/supabase/account_api_keys/getApiKeys";
+import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
 
 /**
  * Handler for retrieving API keys for an account.
+ * Requires authentication via Bearer token in Authorization header.
  *
- * Query parameters:
- * - account_id (required): The account ID to retrieve API keys for
- *
- * @param request - The request object containing query parameters.
+ * @param request - The request object.
  * @returns A NextResponse with the API keys.
  */
 export async function getApiKeysHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const { searchParams } = new URL(request.url);
-
-    const validatedQuery = validateGetApiKeysQuery(searchParams);
-    if (validatedQuery instanceof NextResponse) {
-      return validatedQuery;
+    const accountIdOrError = await getAuthenticatedAccountId(request);
+    if (accountIdOrError instanceof NextResponse) {
+      return accountIdOrError;
     }
+    const accountId = accountIdOrError;
 
-    const { data, error } = await getApiKeys(validatedQuery.account_id);
+    const { data, error } = await getApiKeys(accountId);
 
     if (error) {
       console.error("Error fetching API keys:", error);
