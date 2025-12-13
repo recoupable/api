@@ -7,6 +7,7 @@ import { registerAllCatalogTools } from "./catalogs";
 import { registerAllSora2Tools } from "./sora2";
 import { registerAllSpotifyTools } from "./spotify";
 import { registerContactTeamTool } from "./registerContactTeamTool";
+import { registerUpdateAccountInfoTool } from "./registerUpdateAccountInfoTool";
 
 /**
  * Registers all MCP tools on the server.
@@ -23,4 +24,5 @@ export const registerAllTools = (server: McpServer): void => {
   registerAllSora2Tools(server);
   registerAllSpotifyTools(server);
   registerContactTeamTool(server);
+  registerUpdateAccountInfoTool(server);
 };
