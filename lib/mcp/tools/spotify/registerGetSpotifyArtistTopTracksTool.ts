@@ -2,6 +2,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import generateAccessToken from "@/lib/spotify/generateAccessToken";
 import getArtistTopTracks from "@/lib/spotify/getArtistTopTracks";
+import { getToolResultError } from "@/lib/mcp/getToolResultError";
+import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 
 // Zod schema for the MCP tool - matches the original tool interface
 const getSpotifyArtistTopTracksSchema = z.object({
@@ -32,17 +34,7 @@ export function registerGetSpotifyArtistTopTracksTool(server: McpServer): void {
         const tokenResult = await generateAccessToken();
 
         if (!tokenResult || tokenResult.error || !tokenResult.access_token) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify({
-                  success: false,
-                  message: "Failed to generate Spotify access token",
-                }),
-              },
-            ],
-          };
+          return getToolResultError("Failed to generate Spotify access token");
         }
 
         // Call Spotify API to get artist top tracks
@@ -53,42 +45,16 @@ export function registerGetSpotifyArtistTopTracksTool(server: McpServer): void {
         });
 
         if (error || !data) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify({
-                  success: false,
-                  message: error?.message || "Failed to fetch artist top tracks",
-                }),
-              },
-            ],
-          };
+          return getToolResultError(error?.message || "Failed to fetch artist top tracks");
         }
 
         // Return the data directly (Spotify API returns { tracks: [...] })
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(data),
-            },
-          ],
-        };
+        return getToolResultSuccess(data);
       } catch (error) {
         console.error("Error fetching artist top tracks:", error);
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({
-                success: false,
-                message:
-                  error instanceof Error ? error.message : "Failed to fetch artist top tracks",
-              }),
-            },
-          ],
-        };
+        return getToolResultError(
+          error instanceof Error ? error.message : "Failed to fetch artist top tracks",
+        );
       }
     },
   );

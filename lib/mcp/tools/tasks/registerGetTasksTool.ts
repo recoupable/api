@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
 import { GetTasksQuery, getTasksQuerySchema } from "@/lib/tasks/validateGetTasksQuery";
+import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 
 /**
  * Registers the "get_tasks" tool on the MCP server.
@@ -17,15 +18,7 @@ export function registerGetTasksTool(server: McpServer): void {
     },
     async (args: GetTasksQuery) => {
       const tasks = await selectScheduledActions(args);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(tasks),
-          },
-        ],
-      };
+      return getToolResultSuccess(tasks);
     },
   );
 }

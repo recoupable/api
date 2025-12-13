@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { deleteTask } from "@/lib/tasks/deleteTask";
 import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
 import { deleteTaskBodySchema, type DeleteTaskBody } from "@/lib/tasks/validateDeleteTaskBody";
+import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 
 /**
  * Registers the "delete_task" tool on the MCP server.
@@ -24,14 +25,7 @@ export function registerDeleteTaskTool(server: McpServer): void {
       // Delete the task
       await deleteTask(args);
 
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(taskToDelete),
-          },
-        ],
-      };
+      return getToolResultSuccess(taskToDelete);
     },
   );
 }

@@ -4,6 +4,7 @@ import {
   ArtistSocialsQuery,
   artistSocialsQuerySchema,
 } from "@/lib/artist/validateArtistSocialsQuery";
+import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 
 /**
  * Registers the "get_artist_socials" tool on the MCP server.
@@ -21,7 +22,7 @@ export function registerGetArtistSocialsTool(server: McpServer): void {
     },
     async (args: ArtistSocialsQuery) => {
       const result = await getArtistSocials(args);
-      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      return getToolResultSuccess(result);
     },
   );
 }

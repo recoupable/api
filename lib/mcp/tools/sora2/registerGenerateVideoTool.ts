@@ -4,6 +4,7 @@ import {
   generateVideoQuerySchema,
   type GenerateVideoQuery,
 } from "@/lib/video/validateGenerateVideoQuery";
+import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 
 /**
  * Registers the "generate_sora_2_video" tool on the MCP server.
@@ -28,15 +29,7 @@ export function registerGenerateVideoTool(server: McpServer): void {
     },
     async (args: GenerateVideoQuery) => {
       const result = await generateVideoFunction(args);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(result),
-          },
-        ],
-      };
+      return getToolResultSuccess(result);
     },
   );
 }

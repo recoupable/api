@@ -4,6 +4,7 @@ import {
   type GetCatalogsQuery,
 } from "@/lib/catalog/validateGetCatalogsQuery";
 import { selectAccountCatalogs } from "@/lib/supabase/account_catalogs/selectAccountCatalogs";
+import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 /**
  * Registers the "select_catalogs" tool on the MCP server.
  * Retrieves catalogs associated with the current account for ANY music recommendation request.
@@ -28,15 +29,7 @@ export function registerGetCatalogsTool(server: McpServer): void {
     },
     async (args: GetCatalogsQuery) => {
       const data = await selectAccountCatalogs({ accountIds: [args.account_id] });
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(data),
-          },
-        ],
-      };
+      return getToolResultSuccess(data);
     },
   );
 }
