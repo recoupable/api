@@ -65,3 +65,4 @@ export async function generateAndStoreTxtFile(contents: string): Promise<Generat
     metadataArweave,
   };
 }
+

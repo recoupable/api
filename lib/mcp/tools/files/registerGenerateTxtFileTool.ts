@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { generateAndStoreTxtFile } from "@/lib/txt/generateAndStoreTxtFile";
+import { generateAndStoreTxtFile } from "@/lib/files/generateAndStoreTxtFile";
 import { getFetchableUrl } from "@/lib/arweave/getFetchableUrl";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
