@@ -5,8 +5,7 @@ import { generateApiKey } from "@/lib/keys/generateApiKey";
 import { hashApiKey } from "@/lib/keys/hashApiKey";
 import { insertApiKey } from "@/lib/supabase/account_api_keys/insertApiKey";
 import { PRIVY_PROJECT_SECRET } from "../const";
-import { getBearerToken } from "@/lib/auth/getBearerToken";
-import { getAccountIdByAuthToken } from "@/lib/privy/getAccountIdByAuthToken";
+import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
 
 /**
  * Handler for creating a new API key.
@@ -20,22 +19,11 @@ import { getAccountIdByAuthToken } from "@/lib/privy/getAccountIdByAuthToken";
  */
 export async function createApiKeyHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const authHeader = request.headers.get("authorization");
-    const authToken = getBearerToken(authHeader);
-    if (!authToken) {
-      return NextResponse.json(
-        {
-          status: "error",
-          message: "Authorization header with Bearer token required",
-        },
-        {
-          status: 401,
-          headers: getCorsHeaders(),
-        },
-      );
+    const accountIdOrError = await getAuthenticatedAccountId(request);
+    if (accountIdOrError instanceof NextResponse) {
+      return accountIdOrError;
     }
-
-    const accountId = await getAccountIdByAuthToken(authToken);
+    const accountId = accountIdOrError;
 
     const body = await request.json();
 

@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateDeleteApiKeyBody } from "@/lib/keys/validateDeleteApiKeyBody";
 import { deleteApiKey } from "@/lib/supabase/account_api_keys/deleteApiKey";
-import { getBearerToken } from "@/lib/auth/getBearerToken";
-import { getAccountIdByAuthToken } from "@/lib/privy/getAccountIdByAuthToken";
+import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
 import { getApiKeys } from "@/lib/supabase/account_api_keys/getApiKeys";
 
 /**
@@ -19,22 +18,11 @@ import { getApiKeys } from "@/lib/supabase/account_api_keys/getApiKeys";
  */
 export async function deleteApiKeyHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const authHeader = request.headers.get("authorization");
-    const authToken = getBearerToken(authHeader);
-    if (!authToken) {
-      return NextResponse.json(
-        {
-          status: "error",
-          message: "Authorization header with Bearer token required",
-        },
-        {
-          status: 401,
-          headers: getCorsHeaders(),
-        },
-      );
+    const accountIdOrError = await getAuthenticatedAccountId(request);
+    if (accountIdOrError instanceof NextResponse) {
+      return accountIdOrError;
     }
-
-    const accountId = await getAccountIdByAuthToken(authToken);
+    const accountId = accountIdOrError;
 
     const body = await request.json();
 
