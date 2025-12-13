@@ -10,9 +10,7 @@ import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmai
  */
 export async function getAccountIdByAuthToken(authToken: string): Promise<string> {
   const verified = await privyClient.utils().auth().verifyAuthToken(authToken);
-  if (!verified) {
-    throw new Error("Invalid authentication token");
-  }
+  if (!verified) throw new Error("Invalid authentication token");
 
   // Fetch user data from Privy API to get email
   const url = `https://api.privy.io/v1/users/${verified.user_id}`;
@@ -20,7 +18,7 @@ export async function getAccountIdByAuthToken(authToken: string): Promise<string
     method: "GET",
     headers: {
       "privy-app-id": process.env.PRIVY_APP_ID!,
-      Authorization: `Basic ${btoa(process.env.PRIVY_APP_ID! + ":" + process.env.PRIVY_API_KEY!)}`,
+      Authorization: `Basic ${btoa(process.env.PRIVY_APP_ID! + ":" + process.env.PRIVY_PROJECT_SECRET!)}`,
     },
   };
 
