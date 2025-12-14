@@ -41,10 +41,7 @@ export function registerGetYouTubeRevenueTool(server: McpServer): void {
     {
       description:
         "Youtube: Get estimated revenue data for a specific date range for a YouTube account. " +
-        "This tool requires the artist_account_id parameter from the system prompt of the active artist. " +
-        "The startDate and endDate parameters are optional - if not provided, it will default to the last 30 days (1 month). " +
-        "When provided, dates should be in YYYY-MM-DD format. " +
-        "IMPORTANT: Always call the youtube_login tool first to obtain the required authentication before calling this tool.",
+        "The startDate and endDate parameters are optional - if not provided, it will default to the last 30 days (1 month). ",
       inputSchema: getYouTubeRevenueSchema,
     },
     async (args: GetYouTubeRevenueArgs) => {
