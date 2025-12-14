@@ -25,11 +25,7 @@ export function registerGetYouTubeChannelsTool(server: McpServer): void {
   server.registerTool(
     "get_youtube_channels",
     {
-      description:
-        "Get YouTube channel information for a specific account. " +
-        "This tool requires the artist_account_id parameter from the system prompt of the active artist. " +
-        "Returns an array of comprehensive channel data including statistics, thumbnails, and branding if the artist has valid YouTube authentication. " +
-        "IMPORTANT: Always call the youtube_login tool first to obtain the required authentication before calling this tool.",
+      description: "Get YouTube channel information for a specific account. ",
       inputSchema: getYouTubeChannelsSchema,
     },
     async (args: GetYouTubeChannelsArgs) => {
