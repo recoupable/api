@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerYouTubeLoginTool } from "./registerYouTubeLoginTool";
+import { registerGetYouTubeChannelsTool } from "./registerGetYouTubeChannelsTool";
 
 /**
  * Registers all YouTube-related MCP tools on the server.
@@ -8,4 +9,5 @@ import { registerYouTubeLoginTool } from "./registerYouTubeLoginTool";
  */
 export const registerAllYouTubeTools = (server: McpServer): void => {
   registerYouTubeLoginTool(server);
+  registerGetYouTubeChannelsTool(server);
 };
