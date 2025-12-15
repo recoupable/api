@@ -36,6 +36,8 @@ export async function deleteApiKeyHandler(request: NextRequest): Promise<NextRes
     // Fetch the API key by ID
     const { data: apiKeys, error: fetchError } = await getApiKeys({ id: validatedBody.id });
 
+    console.log("apiKeys", apiKeys);
+
     if (fetchError || !apiKeys || apiKeys.length === 0) {
       return NextResponse.json(
         {
@@ -50,6 +52,7 @@ export async function deleteApiKeyHandler(request: NextRequest): Promise<NextRes
     }
 
     const key = apiKeys[0];
+    console.log("key", key);
 
     // Check if the key belongs to the authenticated account
     if (key.account === accountId) {
@@ -87,7 +90,7 @@ export async function deleteApiKeyHandler(request: NextRequest): Promise<NextRes
       return NextResponse.json(
         {
           status: "error",
-          message: "API key not found or access denied",
+          message: "Access denied",
         },
         {
           status: 404,
