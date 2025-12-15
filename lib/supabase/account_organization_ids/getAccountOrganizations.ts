@@ -10,16 +10,27 @@ export type AccountOrganization = Tables<"account_organization_ids"> & {
     | null;
 };
 
+export interface GetAccountOrganizationsParams {
+  accountId: string;
+  organizationId?: string;
+}
+
 /**
  * Get all organizations an account belongs to.
  *
- * @param accountId - The account ID to get organizations for
+ * @param params - The parameters for the query
+ * @param params.accountId - The account ID to get organizations for
+ * @param params.organizationId - Optional organization ID to filter by
  * @returns Array of organizations with their account info
  */
-export async function getAccountOrganizations(accountId: string): Promise<AccountOrganization[]> {
+export async function getAccountOrganizations(
+  params: GetAccountOrganizationsParams,
+): Promise<AccountOrganization[]> {
+  const { accountId, organizationId } = params;
+
   if (!accountId) return [];
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("account_organization_ids")
     .select(
       `
@@ -32,8 +43,13 @@ export async function getAccountOrganizations(accountId: string): Promise<Accoun
     )
     .eq("account_id", accountId);
 
+  if (organizationId) {
+    query = query.eq("organization_id", organizationId);
+  }
+
+  const { data, error } = await query;
+
   if (error) return [];
 
   return (data as AccountOrganization[]) || [];
 }
-

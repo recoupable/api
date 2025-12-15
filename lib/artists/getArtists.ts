@@ -54,7 +54,7 @@ export async function getArtists(options: GetArtistsOptions): Promise<FormattedA
     const [accountArtistsRaw, accountWorkspacesRaw, accountOrgs] = await Promise.all([
       getAccountArtistIds({ accountIds: [accountId] }),
       getAccountWorkspaceIds(accountId),
-      getAccountOrganizations(accountId),
+      getAccountOrganizations({ accountId }),
     ]);
 
     // Format artists
@@ -72,9 +72,7 @@ export async function getArtists(options: GetArtistsOptions): Promise<FormattedA
       .filter((id): id is string => id !== null);
     const orgArtistsRaw = orgIds.length > 0 ? await getArtistsByOrganization(orgIds) : [];
     const orgArtistIds = new Set(
-      orgArtistsRaw
-        .map(row => getFormattedArtist(row).account_id)
-        .filter(Boolean),
+      orgArtistsRaw.map(row => getFormattedArtist(row).account_id).filter(Boolean),
     );
 
     // Return only artists + workspaces NOT in any org
@@ -86,7 +84,7 @@ export async function getArtists(options: GetArtistsOptions): Promise<FormattedA
   const [accountArtistsRaw, accountWorkspacesRaw, accountOrgs] = await Promise.all([
     getAccountArtistIds({ accountIds: [accountId] }),
     getAccountWorkspaceIds(accountId),
-    getAccountOrganizations(accountId),
+    getAccountOrganizations({ accountId }),
   ]);
 
   // Format artists
@@ -128,4 +126,3 @@ export async function getArtists(options: GetArtistsOptions): Promise<FormattedA
 
   return Array.from(uniqueByAccountId.values());
 }
-

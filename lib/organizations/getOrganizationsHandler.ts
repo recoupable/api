@@ -22,7 +22,9 @@ export async function getOrganizationsHandler(request: NextRequest): Promise<Nex
       return validatedQuery;
     }
 
-    const rawOrgs = await getAccountOrganizations(validatedQuery.accountId);
+    const rawOrgs = await getAccountOrganizations({
+      accountId: validatedQuery.accountId,
+    });
     const organizations = formatAccountOrganizations(rawOrgs);
 
     return NextResponse.json(
@@ -49,4 +51,3 @@ export async function getOrganizationsHandler(request: NextRequest): Promise<Nex
     );
   }
 }
-
