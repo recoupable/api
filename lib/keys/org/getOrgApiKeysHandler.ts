@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getApiKeys } from "@/lib/supabase/account_api_keys/getApiKeys";
-import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
+import { onlyOrgAccounts } from "./onlyOrgAccounts";
 
 /**
  * Internal helper to fetch API keys scoped to an organization.
@@ -17,22 +17,9 @@ export async function getOrgApiKeysHandler(
   organizationId: string,
 ): Promise<NextResponse> {
   // Verify membership before returning org keys
-  const orgMemberships = await getAccountOrganizations({
-    accountId,
-    organizationId,
-  });
-
-  if (!orgMemberships.length) {
-    return NextResponse.json(
-      {
-        status: "error",
-        message: "Account is not a member of this organization",
-      },
-      {
-        status: 403,
-        headers: getCorsHeaders(),
-      },
-    );
+  const membershipError = await onlyOrgAccounts(accountId, organizationId);
+  if (membershipError) {
+    return membershipError;
   }
 
   const { data, error } = await getApiKeys(organizationId);

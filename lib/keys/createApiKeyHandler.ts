@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateApiKeyBody } from "@/lib/keys/validateCreateApiKeyBody";
-import { generateApiKey } from "@/lib/keys/generateApiKey";
-import { hashApiKey } from "@/lib/keys/hashApiKey";
-import { insertApiKey } from "@/lib/supabase/account_api_keys/insertApiKey";
-import { PRIVY_PROJECT_SECRET } from "../const";
 import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
+import { createOrgApiKeysHandler } from "@/lib/keys/org/createOrgApiKeysHandler";
+import { createKey } from "@/lib/keys/createKey";
 
 /**
  * Handler for creating a new API key.
@@ -13,6 +11,8 @@ import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId"
  *
  * Body parameters:
  * - key_name (required): The name for the API key
+ * - organizationId (optional): If provided, creates a key for the organization
+ *   after validating the authenticated account is a member.
  *
  * @param request - The request object containing the body with key_name.
  * @returns A NextResponse with the generated API key.
@@ -32,40 +32,15 @@ export async function createApiKeyHandler(request: NextRequest): Promise<NextRes
       return validatedBody;
     }
 
-    const { key_name } = validatedBody;
+    const { key_name, organizationId } = validatedBody;
 
-    const rawApiKey = generateApiKey("recoup_sk");
-    const keyHash = hashApiKey(rawApiKey, PRIVY_PROJECT_SECRET);
-
-    const { error } = await insertApiKey({
-      name: key_name.trim(),
-      account: accountId,
-      key_hash: keyHash,
-    });
-
-    if (error) {
-      console.error("Error inserting API key:", error);
-      return NextResponse.json(
-        {
-          status: "error",
-          message: "Failed to store API key",
-        },
-        {
-          status: 500,
-          headers: getCorsHeaders(),
-        },
-      );
+    // If organizationId is provided, delegate to org-specific handler
+    if (organizationId) {
+      return createOrgApiKeysHandler(accountId, organizationId, key_name);
     }
 
-    return NextResponse.json(
-      {
-        key: rawApiKey,
-      },
-      {
-        status: 200,
-        headers: getCorsHeaders(),
-      },
-    );
+    // Default: create key for the authenticated account
+    return createKey(accountId, key_name);
   } catch (error) {
     console.error("[ERROR] Error creating API key:", error);
     const message = error instanceof Error ? error.message : "Failed to create an API key";

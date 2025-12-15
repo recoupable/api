@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getApiKeys } from "@/lib/supabase/account_api_keys/getApiKeys";
 import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
-import { getOrgApiKeysHandler } from "./getOrgApiKeysHandler";
+import { getOrgApiKeysHandler } from "@/lib/keys/org/getOrgApiKeysHandler";
 
 /**
  * Handler for retrieving API keys for an account or organization.
