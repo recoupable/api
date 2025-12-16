@@ -16,11 +16,10 @@ export async function respondToInboundEmail(
     const original = event.data;
     const subject = original.subject ? `Re: ${original.subject}` : "Re: Your email";
     const messageId = original.message_id;
-    const fromAddress = original.to[0];
     const toArray = [original.from];
 
     const payload = {
-      from: fromAddress,
+      from: "hi@recoupable.com",
       to: toArray,
       subject,
       html: "<p>Thanks for your email!</p>",
