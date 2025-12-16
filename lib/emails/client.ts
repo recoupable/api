@@ -8,10 +8,10 @@ if (!apiKey) {
 
 /**
  * Returns a configured Resend client instance using the RESEND_API_KEY
- * environment variable. Logs an error and returns null if the key
+ * environment variable. Throws an error if the key
  * is not configured.
  *
- * @returns Resend client instance or null if not configured
+ * @returns Resend client instance
  */
 export function getResendClient(): Resend {
   return new Resend(apiKey);
