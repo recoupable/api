@@ -1,22 +1,14 @@
 import supabase from "../serverClient";
+import type { Tables } from "@/types/database.types";
 
 /**
  * Flattened account object with related details merged in.
  * Only the first row from each related table is included.
  */
-export interface AccountWithDetails {
-  id: string;
-  created_at: string;
-  // Fields from account_info (first row only)
-  name?: string;
-  image?: string;
-  // Fields from account_emails (first row only)
-  email?: string;
-  // Fields from account_wallets (first row only)
-  address?: string;
-  // Allow additional fields from the base account or relations
-  [key: string]: unknown;
-}
+export type AccountWithDetails = Tables<"accounts"> &
+  Partial<Tables<"account_info">> &
+  Partial<Tables<"account_emails">> &
+  Partial<Tables<"account_wallets">>;
 
 /**
  * Retrieves an account with its related details (info, emails, wallets).
@@ -28,9 +20,7 @@ export interface AccountWithDetails {
  * @param accountId - The account's ID (UUID)
  * @returns Flattened account object with related data, or null if not found/error
  */
-export async function getAccountWithDetails(
-  accountId: string,
-): Promise<AccountWithDetails | null> {
+export async function getAccountWithDetails(accountId: string): Promise<AccountWithDetails | null> {
   const { data: account, error } = await supabase
     .from("accounts")
     .select("*, account_info(*), account_emails(*), account_wallets(*)")
@@ -50,4 +40,3 @@ export async function getAccountWithDetails(
     ...(account.account_wallets?.[0] || {}),
   };
 }
-
