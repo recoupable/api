@@ -21,8 +21,6 @@ export async function handleInboundEmail(request: NextRequest): Promise<NextResp
 
   const event = validatedOrError;
 
-  console.log("Received email event:", event);
-
   if (event?.type === "email.received") {
     return respondToInboundEmail(event);
   }
