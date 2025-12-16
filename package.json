@@ -33,6 +33,7 @@
     "node-telegram-bot-api": "^0.66.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
+    "resend": "^6.6.0",
     "sharp": "^0.34.5",
     "viem": "^2.21.26",
     "x402-fetch": "^0.7.3",
