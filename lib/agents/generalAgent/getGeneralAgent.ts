@@ -18,17 +18,9 @@ import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDet
  * @returns The general agent
  */
 export default async function getGeneralAgent(body: ChatRequestBody): Promise<RoutingDecision> {
-  const {
-    accountId,
-    messages,
-    artistId,
-    // knowledgeBaseText,
-    model: bodyModel,
-  } = body;
+  const { accountId, messages, artistId, model: bodyModel } = body;
 
-  // Fetch account email(s)
   const accountEmails = await selectAccountEmails({ accountIds: accountId });
-  // Use the first email from the list
   const email = accountEmails[0]?.email || undefined;
 
   // Fetch artist instruction and knowledge base if artistId is provided
@@ -37,8 +29,6 @@ export default async function getGeneralAgent(body: ChatRequestBody): Promise<Ro
   if (artistId) {
     const artistAccountInfo = await selectAccountInfo(artistId);
     artistInstruction = artistAccountInfo?.instruction || undefined;
-
-    // Process knowledge base files from account_info
     knowledgeBaseText = await getKnowledgeBaseText(artistAccountInfo?.knowledges);
   }
 
@@ -55,7 +45,6 @@ export default async function getGeneralAgent(body: ChatRequestBody): Promise<Ro
   const imageUrls = extractImageUrlsFromMessages(messages);
   const instructions = buildSystemPromptWithImages(baseSystemPrompt, imageUrls);
 
-  // Build General Agent
   const tools = await setupToolsForRequest(body);
   const model = bodyModel || DEFAULT_MODEL;
   const stopWhen = stepCountIs(111);
