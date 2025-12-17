@@ -4,6 +4,7 @@ import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { getMessages } from "@/lib/messages/getMessages";
 import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
+import { getEmailContent } from "@/lib/emails/inbound/getEmailContent";
 
 /**
  * Responds to an inbound email by sending a hard-coded reply in the same thread.
@@ -19,22 +20,26 @@ export async function respondToInboundEmail(
     const original = event.data;
     const subject = original.subject ? `Re: ${original.subject}` : "Re: Your email";
     const messageId = original.message_id;
+    const emailId = original.email_id;
     const from = original.from;
     const toArray = [from];
+
+    const emailText = await getEmailContent(emailId);
 
     const accountEmails = await selectAccountEmails({ emails: [from] });
     if (accountEmails.length === 0) throw new Error("Account not found");
     const accountId = accountEmails[0].account_id;
-    const decision = await getGeneralAgent({ accountId, messages: getMessages("hello world") });
+
+    const decision = await getGeneralAgent({ accountId, messages: getMessages(emailText) });
     const agent = decision.agent;
     const chatResponse = await agent.generate({
-      prompt: "hello world",
+      prompt: emailText,
     });
     const payload = {
       from: "hi@recoupable.com",
       to: toArray,
       subject,
-      html: `<p>Thanks for your email!</p><p>account_id: ${accountId}</p><p>${chatResponse.text}</p>`,
+      html: `<p>${chatResponse.text}</p>`,
       headers: {
         "In-Reply-To": messageId,
       },
