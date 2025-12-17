@@ -5,6 +5,7 @@ import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmai
 import { getMessages } from "@/lib/messages/getMessages";
 import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
 import { getEmailContent } from "@/lib/emails/inbound/getEmailContent";
+import { getFromWithName } from "@/lib/emails/inbound/getFromWithName";
 
 /**
  * Responds to an inbound email by sending a hard-coded reply in the same thread.
@@ -21,24 +22,13 @@ export async function respondToInboundEmail(
     const subject = original.subject ? `Re: ${original.subject}` : "Re: Your email";
     const messageId = original.message_id;
     const emailId = original.email_id;
-    const from = original.from;
-    const toArray = [from];
-
-    // Find the first email in the 'to' array that ends with "@mail.recoupable.com"
-    const customFromEmail = original.to.find(email => email.endsWith("@mail.recoupable.com"));
-
-    if (!customFromEmail) {
-      throw new Error("No email found ending with @mail.recoupable.com in the 'to' array");
-    }
-
-    // Extract the name part (everything before the @ sign) for a human-readable from name
-    const emailNameRaw = customFromEmail.split("@")[0];
-    const emailName = emailNameRaw.charAt(0).toUpperCase() + emailNameRaw.slice(1);
-    const fromWithName = `${emailName} <${customFromEmail}>`;
+    const to = original.from;
+    const toArray = [to];
+    const from = getFromWithName(original.to);
 
     const emailText = await getEmailContent(emailId);
 
-    const accountEmails = await selectAccountEmails({ emails: [from] });
+    const accountEmails = await selectAccountEmails({ emails: [to] });
     if (accountEmails.length === 0) throw new Error("Account not found");
     const accountId = accountEmails[0].account_id;
 
@@ -48,7 +38,7 @@ export async function respondToInboundEmail(
       prompt: emailText,
     });
     const payload = {
-      from: fromWithName,
+      from,
       to: toArray,
       subject,
       html: `<p>${chatResponse.text}</p>`,
