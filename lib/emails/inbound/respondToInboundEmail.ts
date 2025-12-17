@@ -30,7 +30,6 @@ export async function respondToInboundEmail(
     if (accountEmails.length === 0) throw new Error("Account not found");
     const accountId = accountEmails[0].account_id;
 
-    // Pass the email content to the agent
     const decision = await getGeneralAgent({ accountId, messages: getMessages(emailText) });
     const agent = decision.agent;
     const chatResponse = await agent.generate({
