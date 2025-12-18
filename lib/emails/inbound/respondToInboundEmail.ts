@@ -6,6 +6,7 @@ import { getMessages } from "@/lib/messages/getMessages";
 import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
 import { getEmailContent } from "@/lib/emails/inbound/getEmailContent";
 import { getFromWithName } from "@/lib/emails/inbound/getFromWithName";
+import { getEmailRoomId } from "@/lib/emails/inbound/getEmailRoomId";
 import { handleChatCompletion } from "@/lib/chat/handleChatCompletion";
 import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
 import insertMemoryEmail from "@/lib/supabase/memory_emails/insertMemoryEmail";
@@ -29,7 +30,10 @@ export async function respondToInboundEmail(
     const toArray = [to];
     const from = getFromWithName(original.to);
 
-    const emailText = await getEmailContent(emailId);
+    const emailContent = await getEmailContent(emailId);
+    const emailText = emailContent.text || emailContent.html || "";
+
+    const roomId = await getEmailRoomId(emailContent);
 
     const accountEmails = await selectAccountEmails({ emails: [to] });
     if (accountEmails.length === 0) throw new Error("Account not found");
@@ -37,6 +41,7 @@ export async function respondToInboundEmail(
     const chatRequestBody: ChatRequestBody = {
       accountId,
       messages: getMessages(emailText),
+      ...(roomId && { roomId }),
     };
     const decision = await getGeneralAgent(chatRequestBody);
     const agent = decision.agent;
