@@ -1,5 +1,6 @@
 import type { ModelMessage } from "ai";
 import selectMemories from "@/lib/supabase/memories/selectMemories";
+import { TextPart } from "ai";
 
 /**
  * Builds a messages array for agent.generate, including conversation history if roomId exists.
@@ -15,7 +16,7 @@ export async function getEmailRoomMessages(
   let messages: ModelMessage[] = [];
 
   if (roomId) {
-    const existingMemories = await selectMemories(roomId);
+    const existingMemories = await selectMemories(roomId, { ascending: true });
     if (existingMemories) {
       messages = existingMemories.map(memory => {
         const content = memory.content as { role: string; parts: unknown[] };
@@ -33,6 +34,8 @@ export async function getEmailRoomMessages(
     content: [{ type: "text", text: emailText }],
   } as ModelMessage);
 
-  console.log("[getEmailRoomMessages] Messages:", messages);
+  for (const message of messages) {
+    console.log("[getEmailRoomMessages] Message:", (message.content[0] as TextPart)?.text);
+  }
   return messages;
 }
