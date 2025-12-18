@@ -6,9 +6,10 @@ import generateUUID from "@/lib/uuid/generateUUID";
  * Can be used to generate initial messages for chat components
  *
  * @param content - The text content of the message
+ * @param role - Optional role for the message (defaults to "user")
  * @returns An array of properly formatted message objects
  */
-export function getMessages(content?: string): UIMessage[] {
+export function getMessages(content?: string, role: string = "user"): UIMessage[] {
   if (!content) {
     return [];
   }
@@ -16,7 +17,7 @@ export function getMessages(content?: string): UIMessage[] {
   return [
     {
       id: generateUUID(),
-      role: "user",
+      role: role as "user" | "assistant" | "system",
       parts: [{ type: "text", text: content }],
     },
   ];
