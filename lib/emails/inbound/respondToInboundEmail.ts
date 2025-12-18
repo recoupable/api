@@ -6,10 +6,10 @@ import { getMessages } from "@/lib/messages/getMessages";
 import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
 import { getEmailContent } from "@/lib/emails/inbound/getEmailContent";
 import { getFromWithName } from "@/lib/emails/inbound/getFromWithName";
+import { getEmailRoomId } from "@/lib/emails/inbound/getEmailRoomId";
 import { handleChatCompletion } from "@/lib/chat/handleChatCompletion";
 import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
 import insertMemoryEmail from "@/lib/supabase/memory_emails/insertMemoryEmail";
-import selectMemoryEmails from "@/lib/supabase/memory_emails/selectMemoryEmails";
 
 /**
  * Responds to an inbound email by sending a hard-coded reply in the same thread.
@@ -33,15 +33,11 @@ export async function respondToInboundEmail(
     const emailContent = await getEmailContent(emailId);
     const emailText = emailContent.text || emailContent.html || "";
 
-    // Parse headers.references to find existing roomId from referenced emails
-    const references = emailContent.headers?.references;
-    const messageIds = JSON.parse(references);
-    const existingMemoryEmails = await selectMemoryEmails({ messageIds });
+    const roomId = await getEmailRoomId(emailContent);
 
     const accountEmails = await selectAccountEmails({ emails: [to] });
     if (accountEmails.length === 0) throw new Error("Account not found");
     const accountId = accountEmails[0].account_id;
-    const roomId = existingMemoryEmails[0]?.memories?.room_id;
     const chatRequestBody: ChatRequestBody = {
       accountId,
       messages: getMessages(emailText),
