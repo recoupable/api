@@ -75,7 +75,7 @@ export async function respondToInboundEmail(
       return result;
     }
 
-    return NextResponse.json(result.data);
+    return NextResponse.json(result);
   } catch (error) {
     console.error("[respondToInboundEmail] Failed to respond to inbound email", error);
     return NextResponse.json({ error: "Internal error handling inbound email" }, { status: 500 });
