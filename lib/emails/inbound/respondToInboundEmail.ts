@@ -7,11 +7,10 @@ import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
 import { getEmailContent } from "@/lib/emails/inbound/getEmailContent";
 import { getFromWithName } from "@/lib/emails/inbound/getFromWithName";
 import { getEmailRoomId } from "@/lib/emails/inbound/getEmailRoomId";
+import { getEmailRoomMessages } from "@/lib/emails/inbound/getEmailRoomMessages";
 import { handleChatCompletion } from "@/lib/chat/handleChatCompletion";
 import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
 import insertMemoryEmail from "@/lib/supabase/memory_emails/insertMemoryEmail";
-import selectMemories from "@/lib/supabase/memories/selectMemories";
-import type { ModelMessage } from "ai";
 
 /**
  * Responds to an inbound email by sending a hard-coded reply in the same thread.
@@ -48,26 +47,7 @@ export async function respondToInboundEmail(
     const decision = await getGeneralAgent(chatRequestBody);
     const agent = decision.agent;
 
-    // Build messages array with history if roomId exists
-    let messages: ModelMessage[] = [];
-    if (roomId) {
-      const existingMemories = await selectMemories(roomId);
-      if (existingMemories) {
-        messages = existingMemories.map(memory => {
-          const content = memory.content as { role: string; parts: unknown[] };
-          return {
-            role: content.role as "user" | "assistant" | "system",
-            content: content.parts,
-          } as ModelMessage;
-        });
-      }
-    }
-
-    // Add the current email message
-    messages.push({
-      role: "user",
-      content: [{ type: "text", text: emailText }],
-    } as ModelMessage);
+    const messages = await getEmailRoomMessages(roomId, emailText);
 
     const chatResponse = await agent.generate({
       messages,
