@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getResendClient } from "@/lib/emails/client";
-import { CreateEmailOptions, CreateEmailRequestOptions } from "resend";
+import { CreateEmailOptions, CreateEmailRequestOptions, CreateEmailResponseSuccess } from "resend";
 
 /**
  * Sends an email via Resend using a shared client.
@@ -13,7 +13,7 @@ import { CreateEmailOptions, CreateEmailRequestOptions } from "resend";
 export async function sendEmailWithResend(
   payload: CreateEmailOptions,
   options?: CreateEmailRequestOptions,
-): Promise<NextResponse | { data: unknown }> {
+): Promise<NextResponse | CreateEmailResponseSuccess> {
   const resend = getResendClient();
 
   const { data, error } = await resend.emails.send(payload, options);
@@ -29,5 +29,5 @@ export async function sendEmailWithResend(
     );
   }
 
-  return { data };
+  return data;
 }

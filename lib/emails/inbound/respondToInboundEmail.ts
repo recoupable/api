@@ -8,6 +8,7 @@ import { getEmailContent } from "@/lib/emails/inbound/getEmailContent";
 import { getFromWithName } from "@/lib/emails/inbound/getFromWithName";
 import { handleChatCompletion } from "@/lib/chat/handleChatCompletion";
 import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
+import insertMemoryEmail from "@/lib/supabase/memory_emails/insertMemoryEmail";
 
 /**
  * Responds to an inbound email by sending a hard-coded reply in the same thread.
@@ -54,13 +55,27 @@ export async function respondToInboundEmail(
 
     const result = await sendEmailWithResend(payload);
 
-    await handleChatCompletion(chatRequestBody, getMessages(chatResponse.text, "assistant"));
+    const memories = await handleChatCompletion(
+      chatRequestBody,
+      getMessages(chatResponse.text, "assistant"),
+    );
+
+    // Link the inbound email with the prompt message memory only (not the assistant response)
+    const promptMessageMemory = memories[0];
+    if (promptMessageMemory) {
+      await insertMemoryEmail({
+        email_id: emailId,
+        memory: promptMessageMemory.id,
+        message_id: messageId,
+        created_at: original.created_at,
+      });
+    }
 
     if (result instanceof NextResponse) {
       return result;
     }
 
-    return NextResponse.json(result.data);
+    return NextResponse.json(result);
   } catch (error) {
     console.error("[respondToInboundEmail] Failed to respond to inbound email", error);
     return NextResponse.json({ error: "Internal error handling inbound email" }, { status: 500 });
