@@ -33,13 +33,11 @@ export async function queryAnalyticsReports({
 }): Promise<AnalyticsReportsResult> {
   // Get user's channel ID first
   const youtube = createYouTubeAPIClient(accessToken, refreshToken);
-  console.log("youtube", youtube);
 
   const channelResponse = await youtube.channels.list({
     part: ["id"],
     mine: true,
   });
-  console.log("channelResponse", channelResponse);
 
   if (!channelResponse.data.items || channelResponse.data.items.length === 0) {
     throw new Error(
@@ -48,7 +46,6 @@ export async function queryAnalyticsReports({
   }
 
   const channelId = channelResponse.data.items[0].id;
-  console.log("channelId", channelId);
   if (!channelId) {
     throw new Error(
       "Unable to retrieve channel ID. Please ensure your YouTube account is properly set up.",
@@ -58,7 +55,6 @@ export async function queryAnalyticsReports({
   // Create YouTube Analytics API client
   const ytAnalytics = createYouTubeAnalyticsClient(accessToken, refreshToken);
 
-  console.log("ytAnalytics", ytAnalytics);
   // Query analytics reports for the specified date range
   const response = await ytAnalytics.reports.query({
     ids: `channel==${channelId}`,
@@ -68,11 +64,9 @@ export async function queryAnalyticsReports({
     dimensions: "day",
     sort: "day",
   });
-  console.log("response", response);
 
   // Process the response
   const rows = response.data.rows || [];
-  console.log("rows", rows);
   if (rows.length === 0) {
     throw new Error(
       "No revenue data found. This could mean your channel is not monetized or you don't have the required Analytics scope permissions. Please ensure your channel is eligible for monetization and you've granted Analytics permissions.",

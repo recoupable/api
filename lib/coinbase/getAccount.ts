@@ -12,8 +12,6 @@ export async function getAccount(accountId: string): Promise<EvmServerAccount> {
     const account = await cdp.evm.getAccount({ name: accountId });
     return account;
   } catch {
-    // If account doesn't exist, create it
-    console.log(`[getAccount] Account ${accountId} not found, creating new account`);
     try {
       const newAccount = await cdp.evm.createAccount({ name: accountId });
       return newAccount;

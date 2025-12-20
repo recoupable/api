@@ -1921,6 +1921,38 @@ export type Database = {
           },
         ];
       };
+      memory_emails: {
+        Row: {
+          created_at: string;
+          email_id: string;
+          id: string;
+          memory: string;
+          message_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          email_id: string;
+          id?: string;
+          memory: string;
+          message_id: string;
+        };
+        Update: {
+          created_at?: string;
+          email_id?: string;
+          id?: string;
+          memory?: string;
+          message_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "memory_emails_memory_fkey";
+            columns: ["memory"];
+            isOneToOne: false;
+            referencedRelation: "memories";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       notifications: {
         Row: {
           account_id: string;

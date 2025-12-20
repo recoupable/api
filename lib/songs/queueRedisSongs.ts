@@ -23,7 +23,6 @@ export async function queueRedisSongs(songs: SongWithSpotify[]): Promise<void> {
         jobId: `isrc-${song.isrc}`, // Unique job ID to prevent duplicates
         priority: 1, // Higher priority for ISRC processing
       });
-      console.log(`[Queue] Queued ISRC job: ${song.isrc}`);
     } catch (error) {
       console.error(`[Queue] Failed to queue ISRC job for ${song.isrc}:`, error);
     }

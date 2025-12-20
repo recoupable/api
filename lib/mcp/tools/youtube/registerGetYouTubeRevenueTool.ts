@@ -53,7 +53,6 @@ export function registerGetYouTubeRevenueTool(server: McpServer): void {
         }
 
         const tokens = await selectYouTubeTokens(args.artist_account_id);
-        console.log("tokens", tokens);
 
         if (!tokens) {
           return getToolResultError(
@@ -71,8 +70,6 @@ export function registerGetYouTubeRevenueTool(server: McpServer): void {
         const defaultDates = getDefaultDateRange();
         const startDate = args.startDate || defaultDates.startDate;
         const endDate = args.endDate || defaultDates.endDate;
-        console.log("startDate", startDate);
-        console.log("endDate", endDate);
 
         const analyticsResult = await queryAnalyticsReports({
           accessToken: tokens.access_token,
@@ -81,7 +78,6 @@ export function registerGetYouTubeRevenueTool(server: McpServer): void {
           endDate,
           metrics: "estimatedRevenue",
         });
-        console.log("analyticsResult", analyticsResult);
         return getToolResultSuccess({
           success: true,
           status: "success",
