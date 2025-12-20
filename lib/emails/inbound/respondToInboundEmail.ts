@@ -7,7 +7,7 @@ import { getFromWithName } from "@/lib/emails/inbound/getFromWithName";
 import { getEmailRoomMessages } from "@/lib/emails/inbound/getEmailRoomMessages";
 import insertMemories from "@/lib/supabase/memories/insertMemories";
 import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
-import { validateNewMemory } from "@/lib/emails/inbound/validateNewMemory";
+import { validateNewEmailMemory } from "@/lib/emails/inbound/validateNewEmailMemory";
 
 /**
  * Responds to an inbound email by sending a hard-coded reply in the same thread.
@@ -28,7 +28,7 @@ export async function respondToInboundEmail(
     const from = getFromWithName(original.to);
 
     // Validate new memory and get chat request body (or early return if duplicate)
-    const validationResult = await validateNewMemory(event);
+    const validationResult = await validateNewEmailMemory(event);
     if ("response" in validationResult) {
       return validationResult.response;
     }

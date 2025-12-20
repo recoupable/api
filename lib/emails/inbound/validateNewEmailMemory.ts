@@ -18,7 +18,7 @@ import insertMemoryEmail from "@/lib/supabase/memory_emails/insertMemoryEmail";
  * @param event - The validated Resend email received event.
  * @returns Either a ChatRequestBody and emailText for processing or a NextResponse if email was already processed.
  */
-export async function validateNewMemory(
+export async function validateNewEmailMemory(
   event: ResendEmailReceivedEvent,
 ): Promise<{ chatRequestBody: ChatRequestBody; emailText: string } | { response: NextResponse }> {
   const original = event.data;
@@ -58,7 +58,7 @@ export async function validateNewMemory(
   } catch (error: unknown) {
     // If duplicate (unique constraint violation), return early to prevent duplicate response
     if (error && typeof error === "object" && "code" in error && error.code === "23505") {
-      console.log(`[validateNewMemory] Email ${emailId} already processed, skipping`);
+      console.log(`[validateNewEmailMemory] Email ${emailId} already processed, skipping`);
       return {
         response: NextResponse.json({ message: "Email already processed" }, { status: 200 }),
       };
