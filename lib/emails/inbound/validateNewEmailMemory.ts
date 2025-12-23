@@ -31,7 +31,7 @@ export async function validateNewEmailMemory(
   const accountId = accountEmails[0].account_id;
 
   const emailContent = await getEmailContent(emailId);
-  const emailText = trimRepliedContext(emailContent.text || emailContent.html || "");
+  const emailText = trimRepliedContext(emailContent.html || "");
 
   const roomId = await getEmailRoomId(emailContent);
   const finalRoomId = roomId || generateUUID();

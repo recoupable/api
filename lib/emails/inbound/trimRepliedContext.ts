@@ -1,44 +1,50 @@
 /**
- * Trims replied/forwarded context from email text.
- * Removes common email reply markers and quoted content.
+ * Trims replied/forwarded context from email HTML content.
+ * Removes quote-related HTML elements and converts to plain text.
  *
- * @param emailText - The email text that may contain replied context
- * @returns The email text with replied context removed
+ * @param html - The HTML email content that may contain replied context
+ * @returns The trimmed plain text content
  */
-export function trimRepliedContext(emailText: string): string {
-  if (!emailText) {
-    return emailText;
+export function trimRepliedContext(html: string): string {
+  if (!html) {
+    return html;
   }
 
-  const lines = emailText.split("\n");
-  const result: string[] = [];
+  // Remove quote-related HTML elements (Gmail, Outlook, Apple Mail, etc.)
+  let trimmed = html;
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    const lowerLine = line.toLowerCase();
+  // Remove Gmail quote containers
+  trimmed = trimmed.replace(/<div[^>]*class="[^"]*gmail_quote[^"]*"[^>]*>[\s\S]*?<\/div>/gi, "");
 
-    // Stop at common reply markers
-    if (
-      (lowerLine.includes("on") &&
-        (lowerLine.includes("wrote:") ||
-          lowerLine.includes("écrit :") ||
-          lowerLine.includes("escribió:") ||
-          lowerLine.includes("schrieb:"))) ||
-      lowerLine.includes("-----original message-----") ||
-      lowerLine.includes("begin forwarded message") ||
-      lowerLine.startsWith("from:") ||
-      lowerLine.startsWith("sent:")
-    ) {
-      break;
-    }
+  // Remove blockquote elements (common in email replies)
+  trimmed = trimmed.replace(/<blockquote[^>]*>[\s\S]*?<\/blockquote>/gi, "");
 
-    // Stop at quoted lines (they indicate reply content)
-    if (trimmed.startsWith(">")) {
-      break;
-    }
+  // Remove Outlook quote markers
+  trimmed = trimmed.replace(
+    /<div[^>]*class="[^"]*OutlookMessageHeader[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    "",
+  );
 
-    result.push(line);
-  }
+  // Remove Apple Mail quote markers
+  trimmed = trimmed.replace(
+    /<div[^>]*class="[^"]*AppleMailSignature[^"]*"[^>]*>[\s\S]*?<\/div>/gi,
+    "",
+  );
 
-  return result.join("\n").trim();
+  // Remove any remaining quote-related divs
+  trimmed = trimmed.replace(/<div[^>]*class="[^"]*quote[^"]*"[^>]*>[\s\S]*?<\/div>/gi, "");
+
+  // Strip HTML tags to get plain text
+  trimmed = trimmed
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+
+  return trimmed.trim();
 }
