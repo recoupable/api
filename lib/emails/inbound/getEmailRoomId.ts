@@ -15,7 +15,9 @@ export async function getEmailRoomId(
     return undefined;
   }
 
-  const messageIds = JSON.parse(references);
+  // References header is space/newline separated list of message IDs (not JSON)
+  // e.g., "<id1@domain> <id2@domain>"
+  const messageIds = references.split(/\s+/).filter(id => id.length > 0);
   const existingMemoryEmails = await selectMemoryEmails({ messageIds });
 
   return existingMemoryEmails[0]?.memories?.room_id;
