@@ -7,6 +7,8 @@ import insertMemories from "@/lib/supabase/memories/insertMemories";
 import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
 import { validateNewEmailMemory } from "@/lib/emails/inbound/validateNewEmailMemory";
 import { generateEmailResponse } from "@/lib/emails/inbound/generateEmailResponse";
+import { isRecoupOnlyInCC } from "@/lib/emails/inbound/isRecoupOnlyInCC";
+import { shouldReplyToCcEmail } from "@/lib/emails/inbound/shouldReplyToCcEmail";
 
 /**
  * Responds to an inbound email by sending a hard-coded reply in the same thread.
@@ -24,7 +26,7 @@ export async function respondToInboundEmail(
     const messageId = original.message_id;
     const to = original.from;
     const toArray = [to];
-    const from = getFromWithName(original.to);
+    const from = getFromWithName(original.to, original.cc);
 
     // Validate new memory and get chat request body (or early return if duplicate)
     const validationResult = await validateNewEmailMemory(event);
@@ -32,7 +34,30 @@ export async function respondToInboundEmail(
       return validationResult.response;
     }
 
-    const { chatRequestBody } = validationResult;
+    const { chatRequestBody, emailText } = validationResult;
+
+    // Check if Recoup is only CC'd (not in TO) - use LLM to determine if reply is expected
+    if (isRecoupOnlyInCC(original.to, original.cc)) {
+      const shouldReply = await shouldReplyToCcEmail({
+        from: original.from,
+        to: original.to,
+        cc: original.cc,
+        subject: original.subject,
+        body: emailText,
+      });
+
+      if (!shouldReply) {
+        console.log(
+          "[respondToInboundEmail] Recoup is only CC'd and no reply expected, skipping response",
+        );
+        return NextResponse.json(
+          { message: "CC'd for visibility only, no reply sent" },
+          { status: 200 },
+        );
+      }
+
+      console.log("[respondToInboundEmail] Recoup is only CC'd but reply is expected, continuing");
+    }
     const { roomId } = chatRequestBody;
 
     const { text, html } = await generateEmailResponse(chatRequestBody);

@@ -2,17 +2,23 @@
  * Gets a formatted "from" email address with a human-readable name.
  *
  * @param toEmails - Array of email addresses from the 'to' field
+ * @param ccEmails - Optional array of email addresses from the 'cc' field (fallback)
  * @returns Formatted email address with display name (e.g., "Support <support@mail.recoupable.com>")
- * @throws Error if no email ending with "@mail.recoupable.com" is found
+ * @throws Error if no email ending with "@mail.recoupable.com" is found in either array
  */
-export function getFromWithName(toEmails: string[]): string {
+export function getFromWithName(toEmails: string[], ccEmails: string[] = []): string {
   // Find the first email in the 'to' array that ends with "@mail.recoupable.com"
-  const customFromEmail = toEmails.find(email =>
+  let customFromEmail = toEmails.find(email =>
     email.toLowerCase().endsWith("@mail.recoupable.com"),
   );
 
+  // If not found in 'to', check the 'cc' array as fallback
   if (!customFromEmail) {
-    throw new Error("No email found ending with @mail.recoupable.com in the 'to' array");
+    customFromEmail = ccEmails.find(email => email.toLowerCase().endsWith("@mail.recoupable.com"));
+  }
+
+  if (!customFromEmail) {
+    throw new Error("No email found ending with @mail.recoupable.com in the 'to' or 'cc' array");
   }
 
   // Extract the name part (everything before the @ sign) for a human-readable from name
