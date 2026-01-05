@@ -1,13 +1,8 @@
 import generateText from "@/lib/ai/generateText";
 import { LIGHTWEIGHT_MODEL } from "@/lib/const";
+import type { ResendEmailData } from "@/lib/emails/validateInboundEmailEvent";
 
-interface CcEmailContext {
-  from: string;
-  to: string[];
-  cc: string[];
-  subject: string;
-  body: string;
-}
+type CcEmailContext = Pick<ResendEmailData, "from" | "to" | "cc" | "subject"> & { body: string };
 
 /**
  * Uses an LLM to determine if a reply is expected when Recoup is only CC'd on an email.
