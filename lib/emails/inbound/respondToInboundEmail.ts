@@ -7,8 +7,7 @@ import insertMemories from "@/lib/supabase/memories/insertMemories";
 import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
 import { validateNewEmailMemory } from "@/lib/emails/inbound/validateNewEmailMemory";
 import { generateEmailResponse } from "@/lib/emails/inbound/generateEmailResponse";
-import { isRecoupOnlyInCC } from "@/lib/emails/inbound/isRecoupOnlyInCC";
-import { shouldReplyToCcEmail } from "@/lib/emails/inbound/shouldReplyToCcEmail";
+import { validateCcReplyExpected } from "@/lib/emails/inbound/validateCcReplyExpected";
 
 /**
  * Responds to an inbound email by sending a hard-coded reply in the same thread.
@@ -36,28 +35,18 @@ export async function respondToInboundEmail(
 
     const { chatRequestBody, emailText } = validationResult;
 
-    // Check if Recoup is only CC'd (not in TO) - use LLM to determine if reply is expected
-    if (isRecoupOnlyInCC(original.to, original.cc)) {
-      const shouldReply = await shouldReplyToCcEmail({
-        from: original.from,
-        to: original.to,
-        cc: original.cc,
-        subject: original.subject,
-        body: emailText,
-      });
-
-      if (!shouldReply) {
-        console.log(
-          "[respondToInboundEmail] Recoup is only CC'd and no reply expected, skipping response",
-        );
-        return NextResponse.json(
-          { message: "CC'd for visibility only, no reply sent" },
-          { status: 200 },
-        );
-      }
-
-      console.log("[respondToInboundEmail] Recoup is only CC'd but reply is expected, continuing");
+    // Check if Recoup is only CC'd - use LLM to determine if reply is expected
+    const ccValidation = await validateCcReplyExpected({
+      from: original.from,
+      to: original.to,
+      cc: original.cc,
+      subject: original.subject,
+      emailText,
+    });
+    if (ccValidation) {
+      return ccValidation.response;
     }
+
     const { roomId } = chatRequestBody;
 
     const { text, html } = await generateEmailResponse(chatRequestBody);
