@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { validateCcReplyExpected } from "../validateCcReplyExpected";
 import type { ResendEmailData } from "@/lib/emails/validateInboundEmailEvent";
 
-// Mock the generateText function
-vi.mock("@/lib/ai/generateText", () => ({
-  default: vi.fn(),
+// Mock the shouldReplyToCcEmail function
+vi.mock("@/lib/emails/inbound/shouldReplyToCcEmail", () => ({
+  shouldReplyToCcEmail: vi.fn(),
 }));
 
-import generateText from "@/lib/ai/generateText";
+import { shouldReplyToCcEmail } from "@/lib/emails/inbound/shouldReplyToCcEmail";
 
-const mockGenerateText = vi.mocked(generateText);
+const mockShouldReply = vi.mocked(shouldReplyToCcEmail);
 
 describe("validateCcReplyExpected", () => {
   const baseEmailData: ResendEmailData = {
@@ -28,79 +28,68 @@ describe("validateCcReplyExpected", () => {
     vi.clearAllMocks();
   });
 
-  describe("when Recoup is in TO array", () => {
-    it("returns null (should reply) without calling LLM", async () => {
-      const emailData: ResendEmailData = {
-        ...baseEmailData,
-        to: ["hi@mail.recoupable.com"],
-        cc: [],
-      };
+  it("always calls shouldReplyToCcEmail regardless of TO/CC", async () => {
+    mockShouldReply.mockResolvedValue(true);
 
-      const result = await validateCcReplyExpected(emailData, "Hello");
+    const emailData: ResendEmailData = {
+      ...baseEmailData,
+      to: ["hi@mail.recoupable.com"],
+      cc: [],
+    };
 
-      expect(result).toBeNull();
-      expect(mockGenerateText).not.toHaveBeenCalled();
-    });
+    await validateCcReplyExpected(emailData, "Hello");
 
-    it("returns null when Recoup is in both TO and CC", async () => {
-      const emailData: ResendEmailData = {
-        ...baseEmailData,
-        to: ["hi@mail.recoupable.com"],
-        cc: ["hi@mail.recoupable.com"],
-      };
-
-      const result = await validateCcReplyExpected(emailData, "Hello");
-
-      expect(result).toBeNull();
-      expect(mockGenerateText).not.toHaveBeenCalled();
-    });
+    expect(mockShouldReply).toHaveBeenCalledTimes(1);
   });
 
-  describe("when Recoup is only in CC array", () => {
-    it("calls LLM and returns null when reply is expected", async () => {
-      mockGenerateText.mockResolvedValue({ text: "true" } as never);
+  it("returns null when shouldReplyToCcEmail returns true", async () => {
+    mockShouldReply.mockResolvedValue(true);
 
-      const emailData: ResendEmailData = {
-        ...baseEmailData,
-        to: ["someone@example.com"],
-        cc: ["hi@mail.recoupable.com"],
-      };
+    const emailData: ResendEmailData = {
+      ...baseEmailData,
+      to: ["hi@mail.recoupable.com"],
+      cc: [],
+    };
 
-      const result = await validateCcReplyExpected(emailData, "Hey Recoup, can you help?");
+    const result = await validateCcReplyExpected(emailData, "Hello");
 
-      expect(result).toBeNull();
-      expect(mockGenerateText).toHaveBeenCalledTimes(1);
-    });
-
-    it("calls LLM and returns response when no reply expected", async () => {
-      mockGenerateText.mockResolvedValue({ text: "false" } as never);
-
-      const emailData: ResendEmailData = {
-        ...baseEmailData,
-        to: ["someone@example.com"],
-        cc: ["hi@mail.recoupable.com"],
-      };
-
-      const result = await validateCcReplyExpected(emailData, "FYI - keeping you in the loop");
-
-      expect(result).not.toBeNull();
-      expect(result?.response).toBeDefined();
-      expect(mockGenerateText).toHaveBeenCalledTimes(1);
-    });
+    expect(result).toBeNull();
   });
 
-  describe("when Recoup is not in TO or CC", () => {
-    it("returns response (no reply) without calling LLM", async () => {
-      const emailData: ResendEmailData = {
-        ...baseEmailData,
-        to: ["someone@example.com"],
-        cc: ["another@example.com"],
-      };
+  it("returns response when shouldReplyToCcEmail returns false", async () => {
+    mockShouldReply.mockResolvedValue(false);
 
-      const result = await validateCcReplyExpected(emailData, "Hello");
+    const emailData: ResendEmailData = {
+      ...baseEmailData,
+      to: ["someone@example.com"],
+      cc: ["hi@mail.recoupable.com"],
+    };
 
-      expect(result).not.toBeNull();
-      expect(mockGenerateText).not.toHaveBeenCalled();
+    const result = await validateCcReplyExpected(emailData, "FYI");
+
+    expect(result).not.toBeNull();
+    expect(result?.response).toBeDefined();
+  });
+
+  it("passes correct params to shouldReplyToCcEmail", async () => {
+    mockShouldReply.mockResolvedValue(true);
+
+    const emailData: ResendEmailData = {
+      ...baseEmailData,
+      from: "test@example.com",
+      to: ["hi@mail.recoupable.com"],
+      cc: ["cc@example.com"],
+      subject: "Test",
+    };
+
+    await validateCcReplyExpected(emailData, "Email body");
+
+    expect(mockShouldReply).toHaveBeenCalledWith({
+      from: "test@example.com",
+      to: ["hi@mail.recoupable.com"],
+      cc: ["cc@example.com"],
+      subject: "Test",
+      body: "Email body",
     });
   });
 });
