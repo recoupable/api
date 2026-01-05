@@ -1,3 +1,4 @@
+import { marked } from "marked";
 import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
 import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
 import { getEmailRoomMessages } from "@/lib/emails/inbound/getEmailRoomMessages";
@@ -27,6 +28,8 @@ export async function generateEmailResponse(
   const chatResponse = await agent.generate({ messages });
   const text = chatResponse.text;
 
+  const bodyHtml = marked(text);
+
   const footerHtml = `
 <hr style="margin-top:24px;margin-bottom:16px;border:none;border-top:1px solid #e5e7eb;" />
 <p style="font-size:12px;color:#6b7280;margin:0 0 4px;">
@@ -40,7 +43,7 @@ export async function generateEmailResponse(
 </p>
 `.trim();
 
-  const html = `${text}\n\n${footerHtml}`;
+  const html = `${bodyHtml}\n\n${footerHtml}`;
 
   return { text, html };
 }

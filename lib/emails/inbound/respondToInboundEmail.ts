@@ -26,6 +26,7 @@ export async function respondToInboundEmail(
     const to = original.from;
     const toArray = [to];
     const from = getFromWithName(original.to, original.cc);
+    const cc = original.cc?.length ? original.cc : undefined;
 
     // Validate new memory and get chat request body (or early return if duplicate)
     const validationResult = await validateNewEmailMemory(event);
@@ -48,6 +49,7 @@ export async function respondToInboundEmail(
     const payload = {
       from,
       to: toArray,
+      ...(cc && { cc }),
       subject,
       html,
       headers: {
