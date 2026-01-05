@@ -4,13 +4,11 @@ import type { ResendEmailData } from "@/lib/emails/validateInboundEmailEvent";
 
 const mockGenerate = vi.fn();
 
-// Mock the ai module
-vi.mock("ai", () => ({
-  Output: { object: vi.fn() },
-  ToolLoopAgent: vi.fn().mockImplementation(() => ({
+// Mock the EmailReplyAgent
+vi.mock("@/lib/agents/EmailReplyAgent", () => ({
+  createEmailReplyAgent: vi.fn().mockImplementation(() => ({
     generate: mockGenerate,
   })),
-  stepCountIs: vi.fn(),
 }));
 
 describe("validateCcReplyExpected", () => {
