@@ -21,8 +21,10 @@ export async function processAudioTranscription(
   const audioBlob = await response.blob();
   const contentType = response.headers.get("content-type") || "audio/mpeg";
   const ext = getExtensionFromContentType(contentType);
+  const timestamp = Date.now();
   const safeTitle = (title || "audio").replace(/[^a-zA-Z0-9._-]/g, "_");
-  const fileName = `${safeTitle}.${ext}`;
+  const uniqueTitle = `${safeTitle}-${timestamp}`;
+  const fileName = `${uniqueTitle}.${ext}`;
 
   const audioFileRecord = await saveAudioToFiles({
     audioBlob,
@@ -30,7 +32,7 @@ export async function processAudioTranscription(
     fileName,
     ownerAccountId,
     artistAccountId,
-    title,
+    title: uniqueTitle,
     tags: ["audio", "original"],
   });
 
@@ -42,7 +44,7 @@ export async function processAudioTranscription(
     markdown,
     ownerAccountId,
     artistAccountId,
-    title,
+    title: uniqueTitle,
     tags: ["transcription", "generated"],
   });
 
