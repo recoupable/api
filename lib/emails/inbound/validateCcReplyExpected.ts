@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import type { ResendEmailData } from "@/lib/emails/validateInboundEmailEvent";
 import { shouldReplyToCcEmail } from "@/lib/emails/inbound/shouldReplyToCcEmail";
+import { containsRecoupEmail } from "@/lib/emails/containsRecoupEmail";
 
 /**
- * Validates whether a reply should be sent by delegating to shouldReplyToCcEmail.
+ * Validates whether a reply should be sent.
+ *
+ * Logic:
+ * - If recoup email is only in TO (not CC): Always reply (skip LLM call)
+ * - If recoup email is in CC (regardless of TO): Use LLM to determine if reply is expected
+ * - If recoup email is in both TO and CC: Treat as CC (use LLM)
  *
  * @param original - The original email data from the Resend webhook
  * @param emailText - The parsed email body text
@@ -13,6 +19,16 @@ export async function validateCcReplyExpected(
   original: ResendEmailData,
   emailText: string,
 ): Promise<{ response: NextResponse } | null> {
+  const isInTo = containsRecoupEmail(original.to);
+  const isInCc = containsRecoupEmail(original.cc);
+
+  // If recoup email is only in TO (not CC), always reply - skip LLM call
+  if (isInTo && !isInCc) {
+    console.log("[validateCcReplyExpected] Recoup email in TO only, replying");
+    return null;
+  }
+
+  // If recoup email is in CC (or both TO and CC), use LLM to determine if reply is expected
   const shouldReply = await shouldReplyToCcEmail({
     from: original.from,
     to: original.to,

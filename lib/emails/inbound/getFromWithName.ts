@@ -1,3 +1,5 @@
+import { RECOUP_EMAIL_DOMAIN } from "@/lib/const";
+
 /**
  * Gets a formatted "from" email address with a human-readable name.
  *
@@ -8,17 +10,15 @@
  */
 export function getFromWithName(toEmails: string[], ccEmails: string[] = []): string {
   // Find the first email in the 'to' array that ends with "@mail.recoupable.com"
-  let customFromEmail = toEmails.find(email =>
-    email.toLowerCase().endsWith("@mail.recoupable.com"),
-  );
+  let customFromEmail = toEmails.find(email => email.toLowerCase().endsWith(RECOUP_EMAIL_DOMAIN));
 
   // If not found in 'to', check the 'cc' array as fallback
   if (!customFromEmail) {
-    customFromEmail = ccEmails.find(email => email.toLowerCase().endsWith("@mail.recoupable.com"));
+    customFromEmail = ccEmails.find(email => email.toLowerCase().endsWith(RECOUP_EMAIL_DOMAIN));
   }
 
   if (!customFromEmail) {
-    throw new Error("No email found ending with @mail.recoupable.com in the 'to' or 'cc' array");
+    throw new Error(`No email found ending with ${RECOUP_EMAIL_DOMAIN} in the 'to' or 'cc' array`);
   }
 
   // Extract the name part (everything before the @ sign) for a human-readable from name

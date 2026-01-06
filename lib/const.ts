@@ -12,3 +12,4 @@ export const IMAGE_GENERATE_PRICE = "0.15";
 export const DEFAULT_MODEL = "openai/gpt-5-mini";
 export const LIGHTWEIGHT_MODEL = "openai/gpt-4o-mini";
 export const PRIVY_PROJECT_SECRET = process.env.PRIVY_PROJECT_SECRET;
+export const RECOUP_EMAIL_DOMAIN = "@mail.recoupable.com";
