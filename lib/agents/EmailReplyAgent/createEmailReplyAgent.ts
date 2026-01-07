@@ -1,12 +1,12 @@
 import { Output, ToolLoopAgent, stepCountIs } from "ai";
 import { z } from "zod";
-import { LIGHTWEIGHT_MODEL, RECOUP_EMAIL_DOMAIN } from "@/lib/const";
+import { LIGHTWEIGHT_MODEL, INBOUND_EMAIL_DOMAIN } from "@/lib/const";
 
 const replyDecisionSchema = z.object({
   shouldReply: z.boolean().describe("Whether the Recoup AI assistant should reply to this email"),
 });
 
-const instructions = `You analyze emails to determine if a Recoup AI assistant (${RECOUP_EMAIL_DOMAIN}) should reply.
+const instructions = `You analyze emails to determine if a Recoup AI assistant (${INBOUND_EMAIL_DOMAIN}) should reply.
 
 Rules (check in this order):
 1. FIRST check the body/subject: If the sender explicitly asks NOT to reply (e.g., "don't reply", "do not reply", "stop replying", "no response needed") → return false

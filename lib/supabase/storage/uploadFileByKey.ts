@@ -1,5 +1,5 @@
 import supabase from "@/lib/supabase/serverClient";
-import { SUPABASE_STORAGE_BUCKET } from "@/lib/consts";
+import { SUPABASE_STORAGE_BUCKET } from "@/lib/const";
 
 /**
  * Upload file to Supabase storage by key
