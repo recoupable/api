@@ -24,14 +24,14 @@ export function registerSendEmailTool(server: McpServer): void {
       const { to, cc = [], subject, text, html = "", headers = {}, room_id } = args;
 
       const footer = getEmailFooter(room_id);
-      const htmlWithFooter = html ? `${html}\n\n${footer}` : footer;
+      const bodyHtml = html || (text ? `<p>${text}</p>` : "");
+      const htmlWithFooter = `${bodyHtml}\n\n${footer}`;
 
       const result = await sendEmailWithResend({
         from: RECOUP_FROM_EMAIL,
         to,
         cc: cc.length > 0 ? cc : undefined,
         subject,
-        text,
         html: htmlWithFooter,
         headers,
       });
