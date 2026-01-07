@@ -6,6 +6,9 @@ import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { RECOUP_FROM_EMAIL } from "@/lib/const";
 import { getEmailFooter } from "@/lib/emails/getEmailFooter";
 import { NextResponse } from "next/server";
+import insertMemories from "@/lib/supabase/memories/insertMemories";
+import insertMemoryEmail from "@/lib/supabase/memory_emails/insertMemoryEmail";
+import { generateUUID } from "@/lib/uuid/generateUUID";
 
 /**
  * Registers the "send_email" tool on the MCP server.
@@ -41,6 +44,27 @@ export function registerSendEmailTool(server: McpServer): void {
         return getToolResultError(
           data?.error?.message || `Failed to send email from ${RECOUP_FROM_EMAIL} to ${to}.`,
         );
+      }
+
+      // If room_id is provided, store the sent email as a memory
+      if (room_id && result.id) {
+        const memoryId = generateUUID();
+        const emailContent = text || html || "";
+
+        await insertMemories({
+          id: memoryId,
+          room_id,
+          content: {
+            role: "assistant",
+            content: emailContent,
+          },
+        });
+
+        await insertMemoryEmail({
+          email_id: result.id,
+          memory: memoryId,
+          message_id: result.id,
+        });
       }
 
       return getToolResultSuccess({
