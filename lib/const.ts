@@ -17,3 +17,5 @@ export const RECOUP_EMAIL_DOMAIN = "@mail.recoupable.com";
 
 /** Domain for sending outbound emails (e.g., support@recoupable.com) */
 export const OUTBOUND_EMAIL_DOMAIN = "@recoupable.com";
+
+export const SUPABASE_STORAGE_BUCKET = "user-files";
