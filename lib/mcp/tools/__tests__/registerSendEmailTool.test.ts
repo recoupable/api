@@ -4,40 +4,9 @@ import { registerSendEmailTool } from "../registerSendEmailTool";
 import { NextResponse } from "next/server";
 
 const mockSendEmailWithResend = vi.fn();
-const mockInsertMemories = vi.fn();
-const mockInsertMemoryEmail = vi.fn();
 
 vi.mock("@/lib/emails/sendEmail", () => ({
   sendEmailWithResend: (...args: unknown[]) => mockSendEmailWithResend(...args),
-}));
-
-vi.mock("@/lib/supabase/memories/insertMemories", () => ({
-  default: (...args: unknown[]) => mockInsertMemories(...args),
-}));
-
-vi.mock("@/lib/supabase/memory_emails/insertMemoryEmail", () => ({
-  default: (...args: unknown[]) => mockInsertMemoryEmail(...args),
-}));
-
-vi.mock("@/lib/messages/getMessages", () => ({
-  getMessages: (content: string, role: string) => [
-    {
-      id: "mock-message-id",
-      role,
-      parts: [{ type: "text", text: content }],
-    },
-  ],
-}));
-
-vi.mock("@/lib/messages/filterMessageContentForMemories", () => ({
-  default: (message: { role: string; parts: { type: string; text: string }[] }) => ({
-    role: message.role,
-    parts: message.parts,
-    content: message.parts
-      .filter((part: { type: string }) => part.type === "text")
-      .map((part: { type: string; text?: string }) => part.text || "")
-      .join(""),
-  }),
 }));
 
 describe("registerSendEmailTool", () => {
@@ -127,47 +96,5 @@ describe("registerSendEmailTool", () => {
         },
       ],
     });
-  });
-
-  it("inserts memory and memory_email when room_id is provided", async () => {
-    mockSendEmailWithResend.mockResolvedValue({ id: "email-456" });
-    mockInsertMemories.mockResolvedValue({ id: "email-456" });
-    mockInsertMemoryEmail.mockResolvedValue({});
-
-    await registeredHandler({
-      to: ["test@example.com"],
-      subject: "Test Subject",
-      text: "Email content for memory",
-      room_id: "room-789",
-    });
-
-    expect(mockInsertMemories).toHaveBeenCalledWith({
-      id: "email-456",
-      room_id: "room-789",
-      content: {
-        role: "assistant",
-        parts: [{ type: "text", text: "Email content for memory" }],
-        content: "Email content for memory",
-      },
-    });
-
-    expect(mockInsertMemoryEmail).toHaveBeenCalledWith({
-      email_id: "email-456",
-      memory: "email-456",
-      message_id: "email-456",
-    });
-  });
-
-  it("does not insert memory when room_id is not provided", async () => {
-    mockSendEmailWithResend.mockResolvedValue({ id: "email-456" });
-
-    await registeredHandler({
-      to: ["test@example.com"],
-      subject: "Test Subject",
-      text: "Email content",
-    });
-
-    expect(mockInsertMemories).not.toHaveBeenCalled();
-    expect(mockInsertMemoryEmail).not.toHaveBeenCalled();
   });
 });
