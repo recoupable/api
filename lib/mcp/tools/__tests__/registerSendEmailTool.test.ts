@@ -19,6 +19,27 @@ vi.mock("@/lib/supabase/memory_emails/insertMemoryEmail", () => ({
   default: (...args: unknown[]) => mockInsertMemoryEmail(...args),
 }));
 
+vi.mock("@/lib/messages/getMessages", () => ({
+  getMessages: (content: string, role: string) => [
+    {
+      id: "mock-message-id",
+      role,
+      parts: [{ type: "text", text: content }],
+    },
+  ],
+}));
+
+vi.mock("@/lib/messages/filterMessageContentForMemories", () => ({
+  default: (message: { role: string; parts: { type: string; text: string }[] }) => ({
+    role: message.role,
+    parts: message.parts,
+    content: message.parts
+      .filter((part: { type: string }) => part.type === "text")
+      .map((part: { type: string; text?: string }) => part.text || "")
+      .join(""),
+  }),
+}));
+
 describe("registerSendEmailTool", () => {
   let mockServer: McpServer;
   let registeredHandler: (args: unknown) => Promise<unknown>;
@@ -125,6 +146,7 @@ describe("registerSendEmailTool", () => {
       room_id: "room-789",
       content: {
         role: "assistant",
+        parts: [{ type: "text", text: "Email content for memory" }],
         content: "Email content for memory",
       },
     });
