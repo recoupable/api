@@ -1,4 +1,4 @@
-import { INBOUND_EMAIL_DOMAIN, OUTBOUND_EMAIL_DOMAIN } from "@/lib/consts";
+import { OUTBOUND_EMAIL_DOMAIN, RECOUP_EMAIL_DOMAIN } from "@/lib/const";
 
 /**
  * Gets a formatted "from" email address with a human-readable name.
@@ -11,15 +11,15 @@ import { INBOUND_EMAIL_DOMAIN, OUTBOUND_EMAIL_DOMAIN } from "@/lib/consts";
  */
 export function getFromWithName(toEmails: string[], ccEmails: string[] = []): string {
   // Find the first email in the 'to' array that ends with the inbound domain
-  let inboundEmail = toEmails.find(email => email.toLowerCase().endsWith(INBOUND_EMAIL_DOMAIN));
+  let inboundEmail = toEmails.find(email => email.toLowerCase().endsWith(RECOUP_EMAIL_DOMAIN));
 
   // If not found in 'to', check the 'cc' array as fallback
   if (!inboundEmail) {
-    inboundEmail = ccEmails.find(email => email.toLowerCase().endsWith(INBOUND_EMAIL_DOMAIN));
+    inboundEmail = ccEmails.find(email => email.toLowerCase().endsWith(RECOUP_EMAIL_DOMAIN));
   }
 
   if (!inboundEmail) {
-    throw new Error(`No email found ending with ${INBOUND_EMAIL_DOMAIN} in the 'to' or 'cc' array`);
+    throw new Error(`No email found ending with ${RECOUP_EMAIL_DOMAIN} in the 'to' or 'cc' array`);
   }
 
   // Extract the name part (everything before the @ sign) for a human-readable from name
