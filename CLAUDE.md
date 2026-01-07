@@ -12,6 +12,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 4. Before pushing, verify the current branch is not `main` or `test`
 5. **Open PRs against the `test` branch**, not `main`
 
+### Starting a New Task
+
+When starting a new task, **first sync the `test` branch with `main`**:
+
+```bash
+git checkout test && git pull origin test && git fetch origin main && git merge origin/main && git push origin test
+```
+
+Then checkout main, pull latest, and create your feature branch from there.
+
+This is the **only** time you should push directly to `test`.
+
 ## Build Commands
 
 ```bash
