@@ -11,6 +11,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 3. **NEVER push directly to `main` or `test` branches** - always use feature branches and PRs
 4. Before pushing, verify the current branch is not `main` or `test`
 
+### Starting a New Task
+
+When starting a new task, **first sync the `test` branch with `main`**:
+
+```bash
+git checkout test && git pull origin test && git fetch origin main && git merge origin/main && git push origin test
+```
+
+Then checkout main, pull latest, and create your feature branch from there.
+
+This is the **only** time you should push directly to `test`.
+
 ## Build Commands
 
 ```bash
