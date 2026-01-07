@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 export const sendEmailSchema = z.object({
-  to: z.array(z.string()).describe("Recipient email address or array of addresses"),
+  to: z.array(z.string().email()).describe("Recipient email address or array of addresses"),
   cc: z
-    .array(z.string())
+    .array(z.string().email())
     .describe(
       "Optional array of CC email addresses. active_account_email should always be included unless already in 'to'.",
     )

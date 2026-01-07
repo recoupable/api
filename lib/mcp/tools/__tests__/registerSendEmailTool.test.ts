@@ -19,10 +19,6 @@ vi.mock("@/lib/supabase/memory_emails/insertMemoryEmail", () => ({
   default: (...args: unknown[]) => mockInsertMemoryEmail(...args),
 }));
 
-vi.mock("@/lib/uuid/generateUUID", () => ({
-  generateUUID: () => "mock-uuid-123",
-}));
-
 describe("registerSendEmailTool", () => {
   let mockServer: McpServer;
   let registeredHandler: (args: unknown) => Promise<unknown>;
@@ -114,7 +110,7 @@ describe("registerSendEmailTool", () => {
 
   it("inserts memory and memory_email when room_id is provided", async () => {
     mockSendEmailWithResend.mockResolvedValue({ id: "email-456" });
-    mockInsertMemories.mockResolvedValue({ id: "mock-uuid-123" });
+    mockInsertMemories.mockResolvedValue({ id: "email-456" });
     mockInsertMemoryEmail.mockResolvedValue({});
 
     await registeredHandler({
@@ -125,7 +121,7 @@ describe("registerSendEmailTool", () => {
     });
 
     expect(mockInsertMemories).toHaveBeenCalledWith({
-      id: "mock-uuid-123",
+      id: "email-456",
       room_id: "room-789",
       content: {
         role: "assistant",
@@ -135,7 +131,7 @@ describe("registerSendEmailTool", () => {
 
     expect(mockInsertMemoryEmail).toHaveBeenCalledWith({
       email_id: "email-456",
-      memory: "mock-uuid-123",
+      memory: "email-456",
       message_id: "email-456",
     });
   });
