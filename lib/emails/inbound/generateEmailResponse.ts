@@ -2,6 +2,7 @@ import { marked } from "marked";
 import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
 import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
 import { getEmailRoomMessages } from "@/lib/emails/inbound/getEmailRoomMessages";
+import { getEmailFooter } from "@/lib/emails/getEmailFooter";
 
 /**
  * Generates the assistant response HTML for an email, including:
@@ -29,20 +30,7 @@ export async function generateEmailResponse(
   const text = chatResponse.text;
 
   const bodyHtml = marked(text);
-
-  const footerHtml = `
-<hr style="margin-top:24px;margin-bottom:16px;border:none;border-top:1px solid #e5e7eb;" />
-<p style="font-size:12px;color:#6b7280;margin:0 0 4px;">
-  Note: you can reply directly to this email to continue the conversation.
-</p>
-<p style="font-size:12px;color:#6b7280;margin:0;">
-  Or continue the conversation on Recoup:
-  <a href="https://chat.recoupable.com/chat/${roomId}" target="_blank" rel="noopener noreferrer">
-    https://chat.recoupable.com/chat/${roomId}
-  </a>
-</p>
-`.trim();
-
+  const footerHtml = getEmailFooter(roomId);
   const html = `${bodyHtml}\n\n${footerHtml}`;
 
   return { text, html };
