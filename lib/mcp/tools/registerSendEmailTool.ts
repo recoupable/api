@@ -6,6 +6,7 @@ import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { RECOUP_FROM_EMAIL } from "@/lib/const";
 import { getEmailFooter } from "@/lib/emails/getEmailFooter";
 import { NextResponse } from "next/server";
+import { marked } from "marked";
 
 /**
  * Registers the "send_email" tool on the MCP server.
@@ -24,7 +25,7 @@ export function registerSendEmailTool(server: McpServer): void {
       const { to, cc = [], subject, text, html = "", headers = {}, room_id } = args;
 
       const footer = getEmailFooter(room_id);
-      const bodyHtml = html || (text ? `<p>${text}</p>` : "");
+      const bodyHtml = html || (text ? marked(text) : "");
       const htmlWithFooter = `${bodyHtml}\n\n${footer}`;
 
       const result = await sendEmailWithResend({
