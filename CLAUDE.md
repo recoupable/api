@@ -51,8 +51,11 @@ pnpm format:check   # Check formatting
   - `lib/trigger/` - Trigger.dev task triggers
   - `lib/x402/` - Payment middleware utilities
 
-## Key Patterns
+## Code Principles
 
+- **SRP (Single Responsibility Principle)**: One exported function per file. Each file should do one thing well.
+- **DRY (Don't Repeat Yourself)**: Extract shared logic into reusable utilities.
+- **KISS (Keep It Simple)**: Prefer simple solutions over clever ones.
 - All API routes should have JSDoc comments
 - Run `pnpm lint` before committing
 

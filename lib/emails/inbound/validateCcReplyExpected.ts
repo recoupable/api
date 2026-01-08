@@ -24,7 +24,6 @@ export async function validateCcReplyExpected(
 
   // If recoup email is only in TO (not CC), always reply - skip LLM call
   if (isInTo && !isInCc) {
-    console.log("[validateCcReplyExpected] Recoup email in TO only, replying");
     return null;
   }
 
@@ -38,7 +37,6 @@ export async function validateCcReplyExpected(
   });
 
   if (!shouldReply) {
-    console.log("[validateCcReplyExpected] No reply expected, skipping");
     return {
       response: NextResponse.json({ message: "No reply expected" }, { status: 200 }),
     };
