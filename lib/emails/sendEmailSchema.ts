@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 export const sendEmailSchema = z.object({
-  to: z.array(z.string().email()).describe("Recipient email address or array of addresses"),
+  to: z.array(z.email()).describe("Recipient email address or array of addresses"),
   cc: z
-    .array(z.string().email())
+    .array(z.email())
     .describe(
       "Optional array of CC email addresses. active_account_email should always be included unless already in 'to'.",
     )
@@ -26,7 +26,9 @@ export const sendEmailSchema = z.object({
     .optional(),
   room_id: z
     .string()
-    .describe("Optional room ID to include in the email footer link")
+    .describe(
+      "Room ID to include in the email footer link. Use the active_conversation_id from context.",
+    )
     .optional(),
 });
 

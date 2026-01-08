@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 3. **NEVER push directly to `main` or `test` branches** - always use feature branches and PRs
 4. Before pushing, verify the current branch is not `main` or `test`
 5. **Open PRs against the `test` branch**, not `main`
+6. After pushing, check if a PR exists for the branch. If not, create one with `gh pr create --base test`
 
 ### Starting a New Task
 
