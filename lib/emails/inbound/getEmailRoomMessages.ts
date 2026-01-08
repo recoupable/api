@@ -16,26 +16,12 @@ interface MemoryContent {
 }
 
 /**
- * Extracts text content from UI parts for user messages.
+ * Extracts text content from UI parts.
  *
  * @param parts - UI parts from stored memory
  * @returns Combined text string from all text parts
  */
-function extractUserText(parts: UIPart[]): string {
-  return parts
-    .filter(p => p.type === "text" && p.text)
-    .map(p => p.text!)
-    .join("\n");
-}
-
-/**
- * Extracts text content from UI parts for assistant messages.
- * Only includes actual text responses, skipping tool calls and reasoning.
- *
- * @param parts - UI parts from stored memory
- * @returns Combined text string from text parts
- */
-function extractAssistantText(parts: UIPart[]): string {
+function extractText(parts: UIPart[]): string {
   return parts
     .filter(p => p.type === "text" && p.text)
     .map(p => p.text!)
@@ -62,15 +48,10 @@ export async function getEmailRoomMessages(roomId: string): Promise<ModelMessage
     const role = content.role;
     let text = "";
 
-    if (role === "user") {
-      text = extractUserText(content.parts);
+    if (role === "user" || role === "assistant") {
+      text = extractText(content.parts);
       if (text) {
-        messages.push({ role: "user", content: text });
-      }
-    } else if (role === "assistant") {
-      text = extractAssistantText(content.parts);
-      if (text) {
-        messages.push({ role: "assistant", content: text });
+        messages.push({ role, content: text });
       }
     }
   }
