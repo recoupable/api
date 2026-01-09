@@ -59,6 +59,71 @@ pnpm format:check   # Check formatting
 - All API routes should have JSDoc comments
 - Run `pnpm lint` before committing
 
+## Input Validation
+
+All API endpoints should use a **validate function** for input parsing. Use Zod for schema validation.
+
+### Pattern
+
+Create a `validate<EndpointName>Body.ts` or `validate<EndpointName>Query.ts` file:
+
+```typescript
+import { NextResponse } from "next/server";
+import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { z } from "zod";
+
+// Define the schema
+export const createExampleBodySchema = z.object({
+  name: z.string({ message: "name is required" }).min(1, "name cannot be empty"),
+  id: z.string().uuid("id must be a valid UUID").optional(),
+});
+
+// Export the inferred type
+export type CreateExampleBody = z.infer<typeof createExampleBodySchema>;
+
+/**
+ * Validates request body for POST /api/example.
+ *
+ * @param body - The request body
+ * @returns A NextResponse with an error if validation fails, or the validated body if validation passes.
+ */
+export function validateCreateExampleBody(body: unknown): NextResponse | CreateExampleBody {
+  const result = createExampleBodySchema.safeParse(body);
+
+  if (!result.success) {
+    const firstError = result.error.issues[0];
+    return NextResponse.json(
+      {
+        status: "error",
+        missing_fields: firstError.path,
+        error: firstError.message,
+      },
+      {
+        status: 400,
+        headers: getCorsHeaders(),
+      },
+    );
+  }
+
+  return result.data;
+}
+```
+
+### Usage in Handler
+
+```typescript
+const validated = validateCreateExampleBody(body);
+if (validated instanceof NextResponse) {
+  return validated;
+}
+// validated is now typed as CreateExampleBody
+```
+
+### Naming Convention
+
+- `validate<Name>Body.ts` - For POST/PUT request bodies
+- `validate<Name>Query.ts` - For GET query parameters
+
 ## Constants (`lib/const.ts`)
 
 All shared constants live in `lib/const.ts`:
