@@ -28,8 +28,7 @@ export const sendEmailSchema = z.object({
     .string()
     .describe(
       "Room ID to include in the email footer link. Use the active_conversation_id from context.",
-    )
-    .optional(),
+    ),
 });
 
 export type SendEmailInput = z.infer<typeof sendEmailSchema>;
