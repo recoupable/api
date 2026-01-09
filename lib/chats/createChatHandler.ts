@@ -4,6 +4,7 @@ import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { insertRoom } from "@/lib/supabase/rooms/insertRoom";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import { validateCreateChatBody } from "@/lib/chats/validateCreateChatBody";
+import { safeParseJson } from "@/lib/networking/safeParseJson";
 
 /**
  * Handler for creating a new chat room.
@@ -23,7 +24,7 @@ export async function createChatHandler(request: NextRequest): Promise<NextRespo
 
     const accountId = accountIdOrError;
 
-    const body = await request.json();
+    const body = await safeParseJson(request);
 
     const validated = validateCreateChatBody(body);
     if (validated instanceof NextResponse) {
