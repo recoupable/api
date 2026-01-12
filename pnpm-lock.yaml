@@ -18,11 +18,11 @@ importers:
         specifier: ^0.7.3
         version: 0.7.3(@solana/sysvars@5.0.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3))(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.1))(@types/react@19.2.7)(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(ioredis@5.8.2)(react@19.2.1)(typescript@5.9.3)(utf-8-validate@5.0.10)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))
       '@composio/core':
-        specifier: ^0.2.6
-        version: 0.2.6(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@4.1.13)
+        specifier: ^0.3.4
+        version: 0.3.4(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@4.1.13)
       '@composio/vercel':
-        specifier: ^0.2.18
-        version: 0.2.18(@composio/core@0.2.6(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@4.1.13))(ai@6.0.0-beta.122(zod@4.1.13))
+        specifier: ^0.3.4
+        version: 0.3.4(@composio/core@0.3.4(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@4.1.13))(ai@6.0.0-beta.122(zod@4.1.13))
       '@modelcontextprotocol/sdk':
         specifier: ^1.24.3
         version: 1.24.3(zod@4.1.13)
@@ -224,24 +224,24 @@ packages:
   '@coinbase/x402@0.7.3':
     resolution: {integrity: sha512-mSxxbPnDCvSLfq6ZZAB5P1HyYQfQNSdWyY01Cn7yjzTuGUFFgZ7onDkbZnZ1Yry0UnG467aqrmjs6AgoYgpzCQ==}
 
-  '@composio/client@0.1.0-alpha.40':
-    resolution: {integrity: sha512-xkd+LseCiuFLxiXXtjFgON0bO4M/1AsBQD4omhf2nl5tXJI0sXj72wCf1EXhT2jIu5pgJqJ4H64ZzwoM0fHDvg==}
+  '@composio/client@0.1.0-alpha.52':
+    resolution: {integrity: sha512-IFPa77R/v4JUX0QeRHRTEkJCBZ+OqMQBh1rIn4Nv5PIP1eP3sZqxlTYJUKPS4qLNnwBJRD+Vn7/jUs5J7pdv5g==}
 
-  '@composio/core@0.2.6':
-    resolution: {integrity: sha512-QQgZz9o0ikl+A38PhyE0/j5V1y5wDDl8z6yfYw/WYAkk7AqjOJI9eJ/eujwgkTWxKnMaxrkthVzsjtvg/KIoYw==}
+  '@composio/core@0.3.4':
+    resolution: {integrity: sha512-6jHKJ9kbuJcCPdW8k8jFN2UlszO5e1TJIQ9WkJWOxNO7Qw8wzZ5Ay5pqL5XtU3beDxzQS/YDwBYDVHFppjx2Rg==}
     peerDependencies:
-      zod: '>=3.25.76 <5'
+      zod: ^3.25 || ^4
 
   '@composio/json-schema-to-zod@0.1.19':
     resolution: {integrity: sha512-OynnORVWjsqDv13EvFa4Bb+B1SzBqpkWGi6qXm4vpB3EG65o3T9FbhDCqWB3ZufnMmH1T/NYS526O0lnn2LoCQ==}
     peerDependencies:
       zod: '>=3.25.76 <4 || >=4.1 <5'
 
-  '@composio/vercel@0.2.18':
-    resolution: {integrity: sha512-UuswOOjD+PZcqZT0vw+gHolLKMM1UI8n1EmB2vTlBqpOTsA0eTXfUuYcSED5qsvPoB9r6yWyg271MF3MeAPSZQ==}
+  '@composio/vercel@0.3.4':
+    resolution: {integrity: sha512-uo4MsSnif6fghvaGb5h473DAf+mFLJRlfFZ/XL4Jmf2TrMz7Z4ErBngep5WfHJ8vLJhbsI06AJ0BJ6ti3V5Ijg==}
     peerDependencies:
-      '@composio/core': 0.2.6
-      ai: ^5.0.44
+      '@composio/core': 0.3.4
+      ai: 5.0.52
 
   '@crawlee/types@3.15.3':
     resolution: {integrity: sha512-RvgVPXrsQw4GQIUXrC1z1aNOedUPJnZ/U/8n+jZ0fu1Iw9moJVMuiuIxSI8q1P6BA84aWZdalyfDWBZ3FMjsiw==}
@@ -5847,11 +5847,11 @@ snapshots:
       - utf-8-validate
       - ws
 
-  '@composio/client@0.1.0-alpha.40': {}
+  '@composio/client@0.1.0-alpha.52': {}
 
-  '@composio/core@0.2.6(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@4.1.13)':
+  '@composio/core@0.3.4(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@4.1.13)':
     dependencies:
-      '@composio/client': 0.1.0-alpha.40
+      '@composio/client': 0.1.0-alpha.52
       '@composio/json-schema-to-zod': 0.1.19(zod@4.1.13)
       '@types/json-schema': 7.0.15
       chalk: 4.1.2
@@ -5868,9 +5868,9 @@ snapshots:
     dependencies:
       zod: 4.1.13
 
-  '@composio/vercel@0.2.18(@composio/core@0.2.6(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@4.1.13))(ai@6.0.0-beta.122(zod@4.1.13))':
+  '@composio/vercel@0.3.4(@composio/core@0.3.4(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@4.1.13))(ai@6.0.0-beta.122(zod@4.1.13))':
     dependencies:
-      '@composio/core': 0.2.6(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@4.1.13)
+      '@composio/core': 0.3.4(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@4.1.13)
       ai: 6.0.0-beta.122(zod@4.1.13)
 
   '@crawlee/types@3.15.3':

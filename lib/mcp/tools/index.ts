@@ -14,6 +14,7 @@ import { registerCreateSegmentsTool } from "./registerCreateSegmentsTool";
 import { registerAllYouTubeTools } from "./youtube";
 import { registerTranscribeTools } from "./transcribe";
 import { registerSendEmailTool } from "./registerSendEmailTool";
+import { registerAllComposioTools } from "./composio";
 
 /**
  * Registers all MCP tools on the server.
@@ -24,6 +25,7 @@ import { registerSendEmailTool } from "./registerSendEmailTool";
 export const registerAllTools = (server: McpServer): void => {
   registerAllArtistSocialsTools(server);
   registerAllCatalogTools(server);
+  registerAllComposioTools(server);
   registerAllFileTools(server);
   registerAllImageTools(server);
   registerAllSora2Tools(server);
