@@ -45,14 +45,54 @@ describe("getEmailRoomId", () => {
     });
   });
 
+  describe("secondary: extracting from email HTML", () => {
+    it("returns roomId from HTML when text has no chat link", async () => {
+      const emailContent = {
+        text: "No chat link in text",
+        html: '<a href="https://chat.recoupable.com/chat/abcdef12-3456-7890-abcd-ef1234567890">link</a>',
+        headers: { references: "<old-message-id@example.com>" },
+      } as GetReceivingEmailResponseSuccess;
+
+      const result = await getEmailRoomId(emailContent);
+
+      expect(result).toBe("abcdef12-3456-7890-abcd-ef1234567890");
+      expect(mockSelectMemoryEmails).not.toHaveBeenCalled();
+    });
+
+    it("handles Superhuman wbr tags in HTML link text", async () => {
+      const emailContent = {
+        text: undefined,
+        html: '<a href="#">https:/<wbr />/<wbr />chat.<wbr />recoupable.<wbr />com/<wbr />chat/<wbr />d5c473ec-04cf-4a23-a577-e0dc71542392</a>',
+        headers: {},
+      } as GetReceivingEmailResponseSuccess;
+
+      const result = await getEmailRoomId(emailContent);
+
+      expect(result).toBe("d5c473ec-04cf-4a23-a577-e0dc71542392");
+    });
+
+    it("prioritizes text over HTML", async () => {
+      const emailContent = {
+        text: "https://chat.recoupable.com/chat/11111111-1111-1111-1111-111111111111",
+        html: '<a href="https://chat.recoupable.com/chat/22222222-2222-2222-2222-222222222222">link</a>',
+        headers: {},
+      } as GetReceivingEmailResponseSuccess;
+
+      const result = await getEmailRoomId(emailContent);
+
+      expect(result).toBe("11111111-1111-1111-1111-111111111111");
+    });
+  });
+
   describe("fallback: checking references header", () => {
-    it("falls back to references header when no chat link in text", async () => {
+    it("falls back to references header when no chat link in text or html", async () => {
       mockSelectMemoryEmails.mockResolvedValue([
         { memories: { room_id: "22222222-3333-4444-5555-666666666666" } },
       ] as Awaited<ReturnType<typeof selectMemoryEmails>>);
 
       const emailContent = {
         text: "No chat link here",
+        html: "<p>No chat link in HTML either</p>",
         headers: { references: "<message-id@example.com>" },
       } as GetReceivingEmailResponseSuccess;
 
