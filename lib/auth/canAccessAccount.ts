@@ -1,5 +1,5 @@
 import { RECOUP_ORG_ID } from "@/lib/const";
-import supabase from "@/lib/supabase/serverClient";
+import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 
 export interface CanAccessAccountParams {
   orgId: string | null;
@@ -33,16 +33,10 @@ export async function canAccessAccount(
   }
 
   // Check if target account is a member of the organization
-  const { data, error } = await supabase
-    .from("account_organization_ids")
-    .select("account_id")
-    .eq("account_id", targetAccountId)
-    .eq("organization_id", orgId)
-    .maybeSingle();
+  const memberships = await getAccountOrganizations({
+    accountId: targetAccountId,
+    organizationId: orgId,
+  });
 
-  if (error) {
-    return false;
-  }
-
-  return data !== null;
+  return memberships.length > 0;
 }
