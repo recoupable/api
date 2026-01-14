@@ -14,20 +14,12 @@ vi.mock("@/lib/supabase/account_api_keys/selectAccountApiKeys", () => ({
   selectAccountApiKeys: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/serverClient", () => ({
-  default: {
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          maybeSingle: vi.fn(),
-        })),
-      })),
-    })),
-  },
+vi.mock("@/lib/supabase/account_organization_ids/isOrganization", () => ({
+  isOrganization: vi.fn(),
 }));
 
 import { selectAccountApiKeys } from "@/lib/supabase/account_api_keys/selectAccountApiKeys";
-import supabase from "@/lib/supabase/serverClient";
+import { isOrganization } from "@/lib/supabase/account_organization_ids/isOrganization";
 
 describe("getApiKeyDetails", () => {
   beforeEach(() => {
@@ -49,11 +41,8 @@ describe("getApiKeyDetails", () => {
         },
       ]);
 
-      // Mock supabase to return no organization (this is a personal key)
-      const mockMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
-      const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
-      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as any);
+      // Mock isOrganization to return false (this is a personal key)
+      vi.mocked(isOrganization).mockResolvedValue(false);
 
       const result = await getApiKeyDetails("test_api_key");
 
@@ -61,6 +50,7 @@ describe("getApiKeyDetails", () => {
         accountId: personalAccountId,
         orgId: null,
       });
+      expect(isOrganization).toHaveBeenCalledWith(personalAccountId);
     });
 
     it("returns accountId and orgId for organization API key", async () => {
@@ -77,14 +67,8 @@ describe("getApiKeyDetails", () => {
         },
       ]);
 
-      // Mock supabase to return that this account IS an organization
-      const mockMaybeSingle = vi.fn().mockResolvedValue({
-        data: { organization_id: orgId },
-        error: null,
-      });
-      const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
-      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as any);
+      // Mock isOrganization to return true (this is an org key)
+      vi.mocked(isOrganization).mockResolvedValue(true);
 
       const result = await getApiKeyDetails("org_api_key");
 
@@ -92,6 +76,7 @@ describe("getApiKeyDetails", () => {
         accountId: orgId,
         orgId: orgId,
       });
+      expect(isOrganization).toHaveBeenCalledWith(orgId);
     });
   });
 

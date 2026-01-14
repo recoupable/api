@@ -1,7 +1,7 @@
 import { hashApiKey } from "@/lib/keys/hashApiKey";
 import { PRIVY_PROJECT_SECRET } from "@/lib/const";
 import { selectAccountApiKeys } from "@/lib/supabase/account_api_keys/selectAccountApiKeys";
-import supabase from "@/lib/supabase/serverClient";
+import { isOrganization } from "@/lib/supabase/account_organization_ids/isOrganization";
 
 export interface ApiKeyDetails {
   accountId: string;
@@ -38,14 +38,9 @@ export async function getApiKeyDetails(
       return null;
     }
 
-    // Check if this account is an organization by looking it up in account_organization_ids
-    const { data: orgRecord } = await supabase
-      .from("account_organization_ids")
-      .select("organization_id")
-      .eq("organization_id", accountId)
-      .maybeSingle();
-
-    const orgId = orgRecord?.organization_id ?? null;
+    // Check if this account is an organization
+    const isOrg = await isOrganization(accountId);
+    const orgId = isOrg ? accountId : null;
 
     return {
       accountId,
