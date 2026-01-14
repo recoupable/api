@@ -3,6 +3,7 @@ import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
 import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
 import { getEmailRoomMessages } from "@/lib/emails/inbound/getEmailRoomMessages";
 import { getEmailFooter } from "@/lib/emails/getEmailFooter";
+import { selectRoomWithArtist } from "@/lib/supabase/rooms/selectRoomWithArtist";
 
 /**
  * Generates the assistant response HTML for an email, including:
@@ -29,8 +30,9 @@ export async function generateEmailResponse(
   const chatResponse = await agent.generate({ messages });
   const text = chatResponse.text;
 
+  const roomData = await selectRoomWithArtist(roomId);
   const bodyHtml = marked(text);
-  const footerHtml = getEmailFooter(roomId);
+  const footerHtml = getEmailFooter(roomId, roomData?.artist_name || undefined);
   const html = `${bodyHtml}\n\n${footerHtml}`;
 
   return { text, html };
