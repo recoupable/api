@@ -22,3 +22,9 @@ export const OUTBOUND_EMAIL_DOMAIN = "@recoupable.com";
 export const RECOUP_FROM_EMAIL = `Agent by Recoup <agent${OUTBOUND_EMAIL_DOMAIN}>`;
 
 export const SUPABASE_STORAGE_BUCKET = "user-files";
+
+/**
+ * UUID of the Recoup admin organization.
+ * API keys from this org have universal access and can specify any accountId.
+ */
+export const RECOUP_ORG_ID = "04e3aba9-c130-4fb8-8b92-34e95d43e66b";

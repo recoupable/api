@@ -51,6 +51,90 @@ pnpm format:check   # Check formatting
   - `lib/trigger/` - Trigger.dev task triggers
   - `lib/x402/` - Payment middleware utilities
 
+## Supabase Database Operations
+
+**CRITICAL: NEVER import `@/lib/supabase/serverClient` outside of `lib/supabase/` directory.**
+
+All Supabase database calls **must** be in `lib/supabase/[table_name]/[function].ts`.
+
+If you need database access in `lib/auth/`, `lib/chats/`, or any other domain folder:
+1. **First** check if a function already exists in `lib/supabase/[table_name]/`
+2. If not, **create** a new function in `lib/supabase/[table_name]/` first
+3. **Then** import and use that function in your domain code
+
+❌ **WRONG** - Direct Supabase call in domain code:
+```typescript
+// lib/auth/someFunction.ts
+import supabase from "@/lib/supabase/serverClient";  // NEVER DO THIS
+const { data } = await supabase.from("accounts").select("*");
+```
+
+✅ **CORRECT** - Import from supabase lib:
+```typescript
+// lib/auth/someFunction.ts
+import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
+const accounts = await selectAccounts();
+```
+
+### Directory Structure
+
+```
+lib/supabase/
+├── serverClient.ts              # Supabase client instance
+├── accounts/
+│   ├── selectAccounts.ts
+│   ├── insertAccount.ts
+│   └── updateAccount.ts
+├── account_api_keys/
+│   ├── selectAccountApiKeys.ts
+│   ├── insertApiKey.ts
+│   └── deleteApiKey.ts
+├── account_organization_ids/
+│   ├── getAccountOrganizations.ts
+│   └── addAccountToOrganization.ts
+└── [table_name]/
+    └── [action][TableName].ts
+```
+
+### Naming Conventions
+
+- `select[TableName].ts` - Basic SELECT queries
+- `insert[TableName].ts` - INSERT queries
+- `update[TableName].ts` - UPDATE queries
+- `delete[TableName].ts` - DELETE queries
+- `get[Descriptive].ts` - Complex queries with joins
+
+### Pattern
+
+```typescript
+import supabase from "@/lib/supabase/serverClient";
+import type { Tables } from "@/types/database.types";
+
+/**
+ * Select rows from table_name with optional filters.
+ */
+export async function selectTableName({
+  filter,
+}: {
+  filter?: string;
+} = {}): Promise<Tables<"table_name">[] | null> {
+  let query = supabase.from("table_name").select("*");
+
+  if (filter) {
+    query = query.eq("column", filter);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching table_name:", error);
+    return null;
+  }
+
+  return data || [];
+}
+```
+
 ## Code Principles
 
 - **SRP (Single Responsibility Principle)**: One exported function per file. Each file should do one thing well.
