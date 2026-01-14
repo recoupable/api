@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
-import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { insertRoom } from "@/lib/supabase/rooms/insertRoom";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import { validateCreateChatBody } from "@/lib/chats/validateCreateChatBody";
@@ -38,53 +37,14 @@ export async function createChatHandler(request: NextRequest): Promise<NextRespo
 
     // Handle accountId override for org API keys
     if (bodyAccountId) {
-      const apiKey = request.headers.get("x-api-key");
-      if (!apiKey) {
-        return NextResponse.json(
-          {
-            status: "error",
-            message: "Failed to validate API key",
-          },
-          {
-            status: 500,
-            headers: getCorsHeaders(),
-          },
-        );
-      }
-
-      const keyDetails = await getApiKeyDetails(apiKey);
-      if (!keyDetails) {
-        return NextResponse.json(
-          {
-            status: "error",
-            message: "Failed to validate API key",
-          },
-          {
-            status: 500,
-            headers: getCorsHeaders(),
-          },
-        );
-      }
-
-      const hasAccess = await canAccessAccount({
-        orgId: keyDetails.orgId,
+      const validated = await validateOverrideAccountId({
+        apiKey: request.headers.get("x-api-key"),
         targetAccountId: bodyAccountId,
       });
-
-      if (!hasAccess) {
-        return NextResponse.json(
-          {
-            status: "error",
-            message: "Access denied to specified accountId",
-          },
-          {
-            status: 403,
-            headers: getCorsHeaders(),
-          },
-        );
+      if (validated instanceof NextResponse) {
+        return validated;
       }
-
-      accountId = bodyAccountId;
+      accountId = validated.accountId;
     }
 
     const roomId = chatId || generateUUID();

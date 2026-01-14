@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getApiKeyDetails } from "../getApiKeyDetails";
 
+import { selectAccountApiKeys } from "@/lib/supabase/account_api_keys/selectAccountApiKeys";
+import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
+
 // Mock dependencies
 vi.mock("@/lib/keys/hashApiKey", () => ({
   hashApiKey: vi.fn((key: string) => `hashed_${key}`),
@@ -14,12 +17,9 @@ vi.mock("@/lib/supabase/account_api_keys/selectAccountApiKeys", () => ({
   selectAccountApiKeys: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/account_organization_ids/isOrganization", () => ({
-  isOrganization: vi.fn(),
+vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
+  getAccountOrganizations: vi.fn(),
 }));
-
-import { selectAccountApiKeys } from "@/lib/supabase/account_api_keys/selectAccountApiKeys";
-import { isOrganization } from "@/lib/supabase/account_organization_ids/isOrganization";
 
 describe("getApiKeyDetails", () => {
   beforeEach(() => {
@@ -41,8 +41,8 @@ describe("getApiKeyDetails", () => {
         },
       ]);
 
-      // Mock isOrganization to return false (this is a personal key)
-      vi.mocked(isOrganization).mockResolvedValue(false);
+      // Mock getAccountOrganizations to return empty array (not an org)
+      vi.mocked(getAccountOrganizations).mockResolvedValue([]);
 
       const result = await getApiKeyDetails("test_api_key");
 
@@ -50,7 +50,9 @@ describe("getApiKeyDetails", () => {
         accountId: personalAccountId,
         orgId: null,
       });
-      expect(isOrganization).toHaveBeenCalledWith(personalAccountId);
+      expect(getAccountOrganizations).toHaveBeenCalledWith({
+        organizationId: personalAccountId,
+      });
     });
 
     it("returns accountId and orgId for organization API key", async () => {
@@ -67,8 +69,14 @@ describe("getApiKeyDetails", () => {
         },
       ]);
 
-      // Mock isOrganization to return true (this is an org key)
-      vi.mocked(isOrganization).mockResolvedValue(true);
+      // Mock getAccountOrganizations to return members (is an org)
+      vi.mocked(getAccountOrganizations).mockResolvedValue([
+        {
+          account_id: "member-1",
+          organization_id: orgId,
+          organization: null,
+        },
+      ]);
 
       const result = await getApiKeyDetails("org_api_key");
 
@@ -76,7 +84,9 @@ describe("getApiKeyDetails", () => {
         accountId: orgId,
         orgId: orgId,
       });
-      expect(isOrganization).toHaveBeenCalledWith(orgId);
+      expect(getAccountOrganizations).toHaveBeenCalledWith({
+        organizationId: orgId,
+      });
     });
   });
 

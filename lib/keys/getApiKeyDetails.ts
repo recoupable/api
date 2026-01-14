@@ -1,7 +1,7 @@
 import { hashApiKey } from "@/lib/keys/hashApiKey";
 import { PRIVY_PROJECT_SECRET } from "@/lib/const";
 import { selectAccountApiKeys } from "@/lib/supabase/account_api_keys/selectAccountApiKeys";
-import { isOrganization } from "@/lib/supabase/account_organization_ids/isOrganization";
+import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 
 export interface ApiKeyDetails {
   accountId: string;
@@ -17,9 +17,7 @@ export interface ApiKeyDetails {
  * @param apiKey - The raw API key string
  * @returns ApiKeyDetails object with accountId and orgId, or null if key is invalid
  */
-export async function getApiKeyDetails(
-  apiKey: string,
-): Promise<ApiKeyDetails | null> {
+export async function getApiKeyDetails(apiKey: string): Promise<ApiKeyDetails | null> {
   if (!apiKey) {
     return null;
   }
@@ -38,9 +36,9 @@ export async function getApiKeyDetails(
       return null;
     }
 
-    // Check if this account is an organization
-    const isOrg = await isOrganization(accountId);
-    const orgId = isOrg ? accountId : null;
+    // Check if this account is an organization (has any members)
+    const members = await getAccountOrganizations({ organizationId: accountId });
+    const orgId = members.length > 0 ? accountId : null;
 
     return {
       accountId,

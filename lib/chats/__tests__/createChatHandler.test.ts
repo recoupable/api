@@ -1,18 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createChatHandler } from "../createChatHandler";
+
+import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
+import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
+import { insertRoom } from "@/lib/supabase/rooms/insertRoom";
+import { safeParseJson } from "@/lib/networking/safeParseJson";
 
 // Mock dependencies
 vi.mock("@/lib/auth/getApiKeyAccountId", () => ({
   getApiKeyAccountId: vi.fn(),
 }));
 
-vi.mock("@/lib/keys/getApiKeyDetails", () => ({
-  getApiKeyDetails: vi.fn(),
-}));
-
-vi.mock("@/lib/organizations/canAccessAccount", () => ({
-  canAccessAccount: vi.fn(),
+vi.mock("@/lib/accounts/validateOverrideAccountId", () => ({
+  validateOverrideAccountId: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/rooms/insertRoom", () => ({
@@ -31,12 +32,10 @@ vi.mock("@/lib/networking/safeParseJson", () => ({
   safeParseJson: vi.fn(),
 }));
 
-import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
-import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
-import { insertRoom } from "@/lib/supabase/rooms/insertRoom";
-import { safeParseJson } from "@/lib/networking/safeParseJson";
-
+/**
+ *
+ * @param apiKey
+ */
 function createMockRequest(apiKey = "test-api-key"): NextRequest {
   return {
     headers: {
@@ -70,6 +69,7 @@ describe("createChatHandler", () => {
 
       expect(response.status).toBe(200);
       expect(json.status).toBe("success");
+      expect(validateOverrideAccountId).not.toHaveBeenCalled();
       expect(insertRoom).toHaveBeenCalledWith({
         id: "generated-uuid-123",
         account_id: apiKeyAccountId,
@@ -80,7 +80,7 @@ describe("createChatHandler", () => {
   });
 
   describe("with accountId override", () => {
-    it("uses body accountId when org has access (Recoup admin)", async () => {
+    it("uses body accountId when validation succeeds", async () => {
       const apiKeyAccountId = "recoup-org-account";
       const targetAccountId = "123e4567-e89b-12d3-a456-426614174001";
       const artistId = "123e4567-e89b-12d3-a456-426614174000";
@@ -90,11 +90,9 @@ describe("createChatHandler", () => {
         artistId,
         accountId: targetAccountId,
       });
-      vi.mocked(getApiKeyDetails).mockResolvedValue({
-        accountId: apiKeyAccountId,
-        orgId: "recoup-admin-org-id",
+      vi.mocked(validateOverrideAccountId).mockResolvedValue({
+        accountId: targetAccountId,
       });
-      vi.mocked(canAccessAccount).mockResolvedValue(true);
       vi.mocked(insertRoom).mockResolvedValue({
         id: "generated-uuid-123",
         account_id: targetAccountId,
@@ -108,8 +106,8 @@ describe("createChatHandler", () => {
 
       expect(response.status).toBe(200);
       expect(json.status).toBe("success");
-      expect(canAccessAccount).toHaveBeenCalledWith({
-        orgId: "recoup-admin-org-id",
+      expect(validateOverrideAccountId).toHaveBeenCalledWith({
+        apiKey: "test-api-key",
         targetAccountId,
       });
       expect(insertRoom).toHaveBeenCalledWith({
@@ -120,55 +118,20 @@ describe("createChatHandler", () => {
       });
     });
 
-    it("uses body accountId when org has access (org member)", async () => {
+    it("returns 403 when validation returns access denied", async () => {
       const apiKeyAccountId = "org-account";
       const targetAccountId = "123e4567-e89b-12d3-a456-426614174001";
-      const orgId = "regular-org-id";
 
       vi.mocked(getApiKeyAccountId).mockResolvedValue(apiKeyAccountId);
       vi.mocked(safeParseJson).mockResolvedValue({
         accountId: targetAccountId,
       });
-      vi.mocked(getApiKeyDetails).mockResolvedValue({
-        accountId: apiKeyAccountId,
-        orgId,
-      });
-      vi.mocked(canAccessAccount).mockResolvedValue(true);
-      vi.mocked(insertRoom).mockResolvedValue({
-        id: "generated-uuid-123",
-        account_id: targetAccountId,
-        artist_id: null,
-        topic: null,
-      });
-
-      const request = createMockRequest();
-      const response = await createChatHandler(request);
-      const json = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(json.status).toBe("success");
-      expect(insertRoom).toHaveBeenCalledWith({
-        id: "generated-uuid-123",
-        account_id: targetAccountId,
-        artist_id: null,
-        topic: null,
-      });
-    });
-
-    it("returns 403 when org lacks access to target account", async () => {
-      const apiKeyAccountId = "org-account";
-      const targetAccountId = "123e4567-e89b-12d3-a456-426614174001";
-      const orgId = "regular-org-id";
-
-      vi.mocked(getApiKeyAccountId).mockResolvedValue(apiKeyAccountId);
-      vi.mocked(safeParseJson).mockResolvedValue({
-        accountId: targetAccountId,
-      });
-      vi.mocked(getApiKeyDetails).mockResolvedValue({
-        accountId: apiKeyAccountId,
-        orgId,
-      });
-      vi.mocked(canAccessAccount).mockResolvedValue(false);
+      vi.mocked(validateOverrideAccountId).mockResolvedValue(
+        NextResponse.json(
+          { status: "error", message: "Access denied to specified accountId" },
+          { status: 403 },
+        ),
+      );
 
       const request = createMockRequest();
       const response = await createChatHandler(request);
@@ -180,30 +143,7 @@ describe("createChatHandler", () => {
       expect(insertRoom).not.toHaveBeenCalled();
     });
 
-    it("returns 403 when personal key tries to use accountId override", async () => {
-      const apiKeyAccountId = "personal-account-123";
-      const targetAccountId = "123e4567-e89b-12d3-a456-426614174001";
-
-      vi.mocked(getApiKeyAccountId).mockResolvedValue(apiKeyAccountId);
-      vi.mocked(safeParseJson).mockResolvedValue({
-        accountId: targetAccountId,
-      });
-      vi.mocked(getApiKeyDetails).mockResolvedValue({
-        accountId: apiKeyAccountId,
-        orgId: null, // Personal key has no org
-      });
-
-      const request = createMockRequest();
-      const response = await createChatHandler(request);
-      const json = await response.json();
-
-      expect(response.status).toBe(403);
-      expect(json.status).toBe("error");
-      expect(json.message).toBe("Access denied to specified accountId");
-      expect(insertRoom).not.toHaveBeenCalled();
-    });
-
-    it("returns 500 when getApiKeyDetails fails", async () => {
+    it("returns 500 when validation returns API key error", async () => {
       const apiKeyAccountId = "org-account";
       const targetAccountId = "123e4567-e89b-12d3-a456-426614174001";
 
@@ -211,7 +151,12 @@ describe("createChatHandler", () => {
       vi.mocked(safeParseJson).mockResolvedValue({
         accountId: targetAccountId,
       });
-      vi.mocked(getApiKeyDetails).mockResolvedValue(null);
+      vi.mocked(validateOverrideAccountId).mockResolvedValue(
+        NextResponse.json(
+          { status: "error", message: "Failed to validate API key" },
+          { status: 500 },
+        ),
+      );
 
       const request = createMockRequest();
       const response = await createChatHandler(request);
