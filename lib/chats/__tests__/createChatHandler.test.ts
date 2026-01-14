@@ -11,7 +11,7 @@ vi.mock("@/lib/auth/getApiKeyDetails", () => ({
   getApiKeyDetails: vi.fn(),
 }));
 
-vi.mock("@/lib/auth/canAccessAccount", () => ({
+vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: vi.fn(),
 }));
 
@@ -33,7 +33,7 @@ vi.mock("@/lib/networking/safeParseJson", () => ({
 
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { getApiKeyDetails } from "@/lib/auth/getApiKeyDetails";
-import { canAccessAccount } from "@/lib/auth/canAccessAccount";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import { insertRoom } from "@/lib/supabase/rooms/insertRoom";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 
