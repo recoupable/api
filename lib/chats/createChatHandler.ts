@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
-import { getApiKeyDetails } from "@/lib/auth/getApiKeyDetails";
+import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import { insertRoom } from "@/lib/supabase/rooms/insertRoom";
 import { generateUUID } from "@/lib/uuid/generateUUID";
