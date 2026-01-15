@@ -252,5 +252,62 @@ describe("setupChatRequest", () => {
       // Should return the original options when no tool chain matches
       expect(prepareResult).toEqual(mockOptions);
     });
+
+    it("prepareStep returns next tool when tool chain is triggered", async () => {
+      const body: ChatRequestBody = {
+        accountId: "account-123",
+        messages: [{ id: "1", role: "user", content: "Hello" }],
+      };
+
+      const result = await setupChatRequest(body);
+
+      // Simulate create_new_artist tool being executed
+      const mockOptions = {
+        steps: [
+          {
+            toolResults: [
+              { toolCallId: "call-1", toolName: "create_new_artist", output: { type: "json", value: {} } },
+            ],
+          },
+        ],
+        stepNumber: 1,
+        model: "test-model",
+        messages: [],
+      };
+      const prepareResult = result.prepareStep!(mockOptions as any);
+
+      // Should return next tool in the create_new_artist chain (get_spotify_search)
+      expect(prepareResult).toHaveProperty("toolChoice");
+      expect((prepareResult as any).toolChoice.toolName).toBe("get_spotify_search");
+    });
+
+    it("prepareStep merges tool chain result with original options", async () => {
+      const body: ChatRequestBody = {
+        accountId: "account-123",
+        messages: [{ id: "1", role: "user", content: "Hello" }],
+      };
+
+      const result = await setupChatRequest(body);
+
+      // Simulate create_new_artist tool being executed
+      const mockOptions = {
+        steps: [
+          {
+            toolResults: [
+              { toolCallId: "call-1", toolName: "create_new_artist", output: { type: "json", value: {} } },
+            ],
+          },
+        ],
+        stepNumber: 1,
+        model: "original-model",
+        messages: [{ role: "user", content: "original" }],
+      };
+      const prepareResult = result.prepareStep!(mockOptions as any);
+
+      // Should merge original options with tool chain result
+      expect(prepareResult).toHaveProperty("stepNumber", 1);
+      expect(prepareResult).toHaveProperty("model", "original-model");
+      expect(prepareResult).toHaveProperty("toolChoice");
+    });
   });
 });

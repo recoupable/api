@@ -7,6 +7,7 @@ import { MAX_MESSAGES } from "./const";
 import { type ChatConfig } from "./types";
 import { ChatRequestBody } from "./validateChatRequest";
 import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
+import getPrepareStepResult from "./toolChains/getPrepareStepResult";
 
 /**
  * Sets up and prepares the chat request configuration.
@@ -38,8 +39,10 @@ export async function setupChatRequest(body: ChatRequestBody): Promise<ChatConfi
     experimental_generateMessageId: generateUUID,
     tools,
     prepareStep: (options) => {
-      // TODO: Implement getPrepareStepResult from toolChains migration
-      // For now, return options unchanged (no tool chain routing)
+      const next = getPrepareStepResult(options);
+      if (next) {
+        return { ...options, ...next };
+      }
       return options;
     },
     providerOptions: {
