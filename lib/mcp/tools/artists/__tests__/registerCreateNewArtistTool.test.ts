@@ -45,7 +45,8 @@ describe("registerCreateNewArtistTool", () => {
       id: "artist-123",
       account_id: "artist-123",
       name: "Test Artist",
-      image: null,
+      account_info: [{ image: null }],
+      account_socials: [],
     };
     mockCreateArtistInDb.mockResolvedValue(mockArtist);
 
@@ -70,7 +71,8 @@ describe("registerCreateNewArtistTool", () => {
       id: "artist-123",
       account_id: "artist-123",
       name: "Test Artist",
-      image: null,
+      account_info: [{ image: null }],
+      account_socials: [],
     };
     mockCreateArtistInDb.mockResolvedValue(mockArtist);
     mockCopyRoom.mockResolvedValue("new-room-789");
@@ -97,7 +99,8 @@ describe("registerCreateNewArtistTool", () => {
       id: "artist-123",
       account_id: "artist-123",
       name: "Test Artist",
-      image: null,
+      account_info: [{ image: null }],
+      account_socials: [],
     };
     mockCreateArtistInDb.mockResolvedValue(mockArtist);
 

@@ -1,6 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { createArtistInDb } from "@/lib/artists/createArtistInDb";
+import {
+  createArtistInDb,
+  type CreateArtistResult,
+} from "@/lib/artists/createArtistInDb";
 import { copyRoom } from "@/lib/rooms/copyRoom";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
@@ -32,17 +35,15 @@ const createNewArtistSchema = z.object({
 
 export type CreateNewArtistArgs = z.infer<typeof createNewArtistSchema>;
 
-export interface CreateNewArtistResult {
-  artist?: {
-    account_id: string;
-    name: string;
+export type CreateNewArtistResult = {
+  artist?: Pick<CreateArtistResult, "account_id" | "name"> & {
     image?: string | null;
   };
   artistAccountId?: string;
   message: string;
   error?: string;
   newRoomId?: string | null;
-}
+};
 
 /**
  * Registers the "create_new_artist" tool on the MCP server.
@@ -95,7 +96,7 @@ export function registerCreateNewArtistTool(server: McpServer): void {
           artist: {
             account_id: artist.account_id,
             name: artist.name,
-            image: artist.image,
+            image: artist.account_info[0]?.image ?? null,
           },
           artistAccountId: artist.account_id,
           message: `Successfully created artist "${name}". Now searching Spotify for this artist to connect their profile...`,
