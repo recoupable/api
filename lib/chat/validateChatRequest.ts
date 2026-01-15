@@ -46,7 +46,7 @@ export type ChatRequestBody = BaseChatRequestBody & {
  * Validates chat request body and auth headers.
  *
  * Returns:
- * - Response (400/401/403/500) when invalid (body or headers)
+ * - NextResponse (400/401/403/500) when invalid (body or headers)
  * - Parsed & augmented body when valid (including header-derived accountId)
  *
  * @param request - The NextRequest object
@@ -54,7 +54,7 @@ export type ChatRequestBody = BaseChatRequestBody & {
  */
 export async function validateChatRequest(
   request: NextRequest,
-): Promise<Response | ChatRequestBody> {
+): Promise<NextResponse | ChatRequestBody> {
   const json = await request.json();
   const validationResult = chatRequestSchema.safeParse(json);
 
