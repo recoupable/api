@@ -1,32 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateCreateArtistQuery } from "@/lib/artists/validateCreateArtistQuery";
+import { validateCreateArtistBody } from "@/lib/artists/validateCreateArtistBody";
 import { createArtistInDb } from "@/lib/artists/createArtistInDb";
 
 /**
- * Handler for creating a new artist.
+ * Handler for creating a new artist via POST request.
  *
- * Query parameters:
+ * JSON body:
  * - name (required): The name of the artist to create
  * - account_id (required): The ID of the owner account (UUID)
  *
- * @param request - The request object containing query parameters
+ * @param request - The request object containing JSON body
  * @returns A NextResponse with artist data or error
  */
-export async function createArtistHandler(
+export async function createArtistPostHandler(
   request: NextRequest,
 ): Promise<NextResponse> {
-  const { searchParams } = new URL(request.url);
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { message: "Invalid JSON body" },
+      {
+        status: 400,
+        headers: getCorsHeaders(),
+      },
+    );
+  }
 
-  const validatedQuery = validateCreateArtistQuery(searchParams);
-  if (validatedQuery instanceof NextResponse) {
-    return validatedQuery;
+  const validatedBody = validateCreateArtistBody(body);
+  if (validatedBody instanceof NextResponse) {
+    return validatedBody;
   }
 
   try {
     const artist = await createArtistInDb(
-      validatedQuery.name,
-      validatedQuery.account_id,
+      validatedBody.name,
+      validatedBody.account_id,
     );
 
     if (!artist) {
@@ -42,7 +53,7 @@ export async function createArtistHandler(
     return NextResponse.json(
       { artist },
       {
-        status: 200,
+        status: 201,
         headers: getCorsHeaders(),
       },
     );

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createArtistHandler } from "@/lib/artists/createArtistHandler";
+import { createArtistPostHandler } from "@/lib/artists/createArtistPostHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -15,19 +15,19 @@ export async function OPTIONS() {
 }
 
 /**
- * GET /api/artist/create
+ * POST /api/artist
  *
  * Creates a new artist account and associates it with an owner account.
  *
- * Query parameters:
+ * JSON body:
  * - name (required): The name of the artist to create
  * - account_id (required): The ID of the owner account (UUID)
  *
- * @param request - The request object containing query parameters
+ * @param request - The request object containing JSON body
  * @returns A NextResponse with the created artist data
  */
-export async function GET(request: NextRequest) {
-  return createArtistHandler(request);
+export async function POST(request: NextRequest) {
+  return createArtistPostHandler(request);
 }
 
 export const dynamic = "force-dynamic";

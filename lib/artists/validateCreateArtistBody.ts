@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { z } from "zod";
 
-export const createArtistQuerySchema = z.object({
+export const createArtistBodySchema = z.object({
   name: z
     .string({ message: "name is required" })
     .min(1, "name cannot be empty"),
@@ -11,19 +11,18 @@ export const createArtistQuerySchema = z.object({
     .uuid("account_id must be a valid UUID"),
 });
 
-export type CreateArtistQuery = z.infer<typeof createArtistQuerySchema>;
+export type CreateArtistBody = z.infer<typeof createArtistBodySchema>;
 
 /**
- * Validates query parameters for GET /api/artist/create.
+ * Validates JSON body for POST /api/artist.
  *
- * @param searchParams - The URL search parameters
- * @returns A NextResponse with an error if validation fails, or the validated query if validation passes.
+ * @param body - The parsed JSON body
+ * @returns A NextResponse with an error if validation fails, or the validated body if validation passes.
  */
-export function validateCreateArtistQuery(
-  searchParams: URLSearchParams,
-): NextResponse | CreateArtistQuery {
-  const params = Object.fromEntries(searchParams.entries());
-  const result = createArtistQuerySchema.safeParse(params);
+export function validateCreateArtistBody(
+  body: unknown,
+): NextResponse | CreateArtistBody {
+  const result = createArtistBodySchema.safeParse(body);
 
   if (!result.success) {
     const firstError = result.error.issues[0];
