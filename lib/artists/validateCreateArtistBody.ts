@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getApiKeyDetails, type ApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
+import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import { z } from "zod";
 
 export const createArtistBodySchema = z.object({
@@ -20,15 +21,17 @@ export const createArtistBodySchema = z.object({
 export type CreateArtistBody = z.infer<typeof createArtistBodySchema>;
 
 export type ValidatedCreateArtistRequest = {
-  body: CreateArtistBody;
-  keyDetails: ApiKeyDetails;
+  name: string;
+  accountId: string;
+  organizationId?: string;
 };
 
 /**
- * Validates POST /api/artists request including API key, body parsing, and schema validation.
+ * Validates POST /api/artists request including API key, body parsing, schema validation,
+ * and account access authorization.
  *
  * @param request - The NextRequest object
- * @returns A NextResponse with an error if validation fails, or the validated body and keyDetails if validation passes.
+ * @returns A NextResponse with an error if validation fails, or the validated request data if validation passes.
  */
 export async function validateCreateArtistBody(
   request: NextRequest,
@@ -72,8 +75,25 @@ export async function validateCreateArtistBody(
     );
   }
 
+  // Use account_id from body if provided (org API keys only), otherwise use API key's account
+  let accountId = keyDetails.accountId;
+  if (result.data.account_id) {
+    const hasAccess = await canAccessAccount({
+      orgId: keyDetails.orgId,
+      targetAccountId: result.data.account_id,
+    });
+    if (!hasAccess) {
+      return NextResponse.json(
+        { status: "error", error: "Access denied to specified account_id" },
+        { status: 403, headers: getCorsHeaders() },
+      );
+    }
+    accountId = result.data.account_id;
+  }
+
   return {
-    body: result.data,
-    keyDetails,
+    name: result.data.name,
+    accountId,
+    organizationId: result.data.organization_id,
   };
 }

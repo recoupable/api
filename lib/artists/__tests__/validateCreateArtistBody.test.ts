@@ -2,9 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
 const mockGetApiKeyDetails = vi.fn();
+const mockCanAccessAccount = vi.fn();
 
 vi.mock("@/lib/keys/getApiKeyDetails", () => ({
   getApiKeyDetails: (...args: unknown[]) => mockGetApiKeyDetails(...args),
+}));
+
+vi.mock("@/lib/organizations/canAccessAccount", () => ({
+  canAccessAccount: (...args: unknown[]) => mockCanAccessAccount(...args),
 }));
 
 import { validateCreateArtistBody } from "../validateCreateArtistBody";
@@ -30,29 +35,74 @@ describe("validateCreateArtistBody", () => {
     });
   });
 
-  it("returns validated body and keyDetails when valid", async () => {
+  it("returns validated data with accountId from API key", async () => {
     const request = createRequest({ name: "Test Artist" }, "test-api-key");
     const result = await validateCreateArtistBody(request);
 
     expect(result).not.toBeInstanceOf(NextResponse);
     if (!(result instanceof NextResponse)) {
-      expect(result.body).toEqual({ name: "Test Artist" });
-      expect(result.keyDetails).toEqual({ accountId: "api-key-account-id", orgId: null });
+      expect(result.name).toBe("Test Artist");
+      expect(result.accountId).toBe("api-key-account-id");
+      expect(result.organizationId).toBeUndefined();
     }
   });
 
-  it("returns validated body with all optional fields", async () => {
-    const body = {
-      name: "Test Artist",
-      account_id: "550e8400-e29b-41d4-a716-446655440000",
-      organization_id: "660e8400-e29b-41d4-a716-446655440001",
-    };
-    const request = createRequest(body, "test-api-key");
+  it("returns validated data with organization_id", async () => {
+    const request = createRequest(
+      { name: "Test Artist", organization_id: "660e8400-e29b-41d4-a716-446655440001" },
+      "test-api-key",
+    );
     const result = await validateCreateArtistBody(request);
 
     expect(result).not.toBeInstanceOf(NextResponse);
     if (!(result instanceof NextResponse)) {
-      expect(result.body).toEqual(body);
+      expect(result.name).toBe("Test Artist");
+      expect(result.accountId).toBe("api-key-account-id");
+      expect(result.organizationId).toBe("660e8400-e29b-41d4-a716-446655440001");
+    }
+  });
+
+  it("uses account_id override for org API keys with access", async () => {
+    mockGetApiKeyDetails.mockResolvedValue({
+      accountId: "org-account-id",
+      orgId: "org-account-id",
+    });
+    mockCanAccessAccount.mockResolvedValue(true);
+
+    const request = createRequest(
+      { name: "Test Artist", account_id: "550e8400-e29b-41d4-a716-446655440000" },
+      "test-api-key",
+    );
+    const result = await validateCreateArtistBody(request);
+
+    expect(mockCanAccessAccount).toHaveBeenCalledWith({
+      orgId: "org-account-id",
+      targetAccountId: "550e8400-e29b-41d4-a716-446655440000",
+    });
+    expect(result).not.toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) {
+      expect(result.accountId).toBe("550e8400-e29b-41d4-a716-446655440000");
+    }
+  });
+
+  it("returns 403 when org API key lacks access to account_id", async () => {
+    mockGetApiKeyDetails.mockResolvedValue({
+      accountId: "org-account-id",
+      orgId: "org-account-id",
+    });
+    mockCanAccessAccount.mockResolvedValue(false);
+
+    const request = createRequest(
+      { name: "Test Artist", account_id: "550e8400-e29b-41d4-a716-446655440000" },
+      "test-api-key",
+    );
+    const result = await validateCreateArtistBody(request);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(403);
+      const data = await result.json();
+      expect(data.error).toBe("Access denied to specified account_id");
     }
   });
 

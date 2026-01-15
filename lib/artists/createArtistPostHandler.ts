@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateArtistBody } from "@/lib/artists/validateCreateArtistBody";
 import { createArtistInDb } from "@/lib/artists/createArtistInDb";
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 /**
  * Handler for POST /api/artists.
@@ -28,29 +27,11 @@ export async function createArtistPostHandler(
     return validated;
   }
 
-  const { body, keyDetails } = validated;
-
-  // Use account_id from body if provided (org API keys only), otherwise use API key's account
-  let accountId = keyDetails.accountId;
-  if (body.account_id) {
-    const hasAccess = await canAccessAccount({
-      orgId: keyDetails.orgId,
-      targetAccountId: body.account_id,
-    });
-    if (!hasAccess) {
-      return NextResponse.json(
-        { status: "error", error: "Access denied to specified account_id" },
-        { status: 403, headers: getCorsHeaders() },
-      );
-    }
-    accountId = body.account_id;
-  }
-
   try {
     const artist = await createArtistInDb(
-      body.name,
-      accountId,
-      body.organization_id,
+      validated.name,
+      validated.accountId,
+      validated.organizationId,
     );
 
     if (!artist) {
