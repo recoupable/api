@@ -63,13 +63,11 @@ export function registerCreateNewArtistTool(server: McpServer): void {
         "The organization_id parameter is optional — use the organization_id from the system prompt context to link the artist to the user's selected organization.",
       inputSchema: createNewArtistSchema,
     },
-    async (args: CreateNewArtistArgs, extra) => {
+    async (args: CreateNewArtistArgs) => {
       try {
         const { name, account_id, active_conversation_id, organization_id } = args;
 
-        // Get account_id from args or from API key context
-        const accountId = account_id ?? extra?.accountId;
-        if (!accountId) {
+        if (!account_id) {
           return getToolResultError(
             "account_id is required. Provide it from the system prompt context.",
           );
@@ -78,7 +76,7 @@ export function registerCreateNewArtistTool(server: McpServer): void {
         // Create the artist account (with optional org linking)
         const artist = await createArtistInDb(
           name,
-          accountId,
+          account_id,
           organization_id ?? undefined,
         );
 
