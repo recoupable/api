@@ -1,5 +1,6 @@
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
-import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
+import { getAccountIdByAuthToken } from "@/lib/privy/getAccountIdByAuthToken";
+import { getAccountIdByApiKey } from "@/lib/mcp/getAccountIdByApiKey";
 
 export interface McpAuthInfoExtra extends Record<string, unknown> {
   accountId: string;
@@ -11,13 +12,15 @@ export interface McpAuthInfo extends AuthInfo {
 }
 
 /**
- * Verifies an API key and returns auth info with account details.
+ * Verifies a bearer token (Privy JWT or API key) and returns auth info.
+ *
+ * Tries Privy JWT validation first, then falls back to API key validation.
  *
  * @param _req - The request object (unused).
- * @param bearerToken - The API key from the Authorization: Bearer header.
- * @returns AuthInfo with accountId and orgId, or undefined if invalid.
+ * @param bearerToken - The token from Authorization: Bearer header (Privy JWT or API key).
+ * @returns AuthInfo with accountId, or undefined if invalid.
  */
-export async function verifyApiKey(
+export async function verifyBearerToken(
   _req: Request,
   bearerToken?: string,
 ): Promise<McpAuthInfo | undefined> {
@@ -25,21 +28,41 @@ export async function verifyApiKey(
     return undefined;
   }
 
-  const apiKey = bearerToken;
+  // Try Privy JWT first
+  try {
+    const accountId = await getAccountIdByAuthToken(bearerToken);
 
-  const keyDetails = await getApiKeyDetails(apiKey);
-
-  if (!keyDetails) {
-    return undefined;
+    return {
+      token: bearerToken,
+      scopes: ["mcp:tools"],
+      clientId: accountId,
+      extra: {
+        accountId,
+        orgId: null,
+      },
+    };
+  } catch {
+    // Privy validation failed, try API key
   }
 
-  return {
-    token: apiKey,
-    scopes: ["mcp:tools"],
-    clientId: keyDetails.accountId,
-    extra: {
-      accountId: keyDetails.accountId,
-      orgId: keyDetails.orgId,
-    },
-  };
+  // Try API key validation
+  try {
+    const accountId = await getAccountIdByApiKey(bearerToken);
+
+    if (!accountId) {
+      return undefined;
+    }
+
+    return {
+      token: bearerToken,
+      scopes: ["mcp:tools"],
+      clientId: accountId,
+      extra: {
+        accountId,
+        orgId: null,
+      },
+    };
+  } catch {
+    return undefined;
+  }
 }

@@ -1,6 +1,6 @@
 import { registerAllTools } from "@/lib/mcp/tools";
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
-import { verifyApiKey } from "@/lib/mcp/verifyApiKey";
+import { verifyBearerToken } from "@/lib/mcp/verifyApiKey";
 
 const baseHandler = createMcpHandler(
   server => {
@@ -14,8 +14,8 @@ const baseHandler = createMcpHandler(
   },
 );
 
-// Wrap with auth - API key is required for all MCP requests
-const handler = withMcpAuth(baseHandler, verifyApiKey, {
+// Wrap with auth - Privy JWT or API key required for all MCP requests
+const handler = withMcpAuth(baseHandler, verifyBearerToken, {
   required: true,
 });
 
