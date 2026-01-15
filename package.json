@@ -15,7 +15,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.13",
+    "@ai-sdk/google": "^3.0.8",
     "@ai-sdk/mcp": "^0.0.12",
+    "@ai-sdk/openai": "^3.0.10",
     "@coinbase/cdp-sdk": "^1.38.6",
     "@coinbase/x402": "^0.7.3",
     "@composio/core": "^0.2.6",
