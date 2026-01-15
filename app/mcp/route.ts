@@ -1,29 +1,23 @@
 import { registerAllTools } from "@/lib/mcp/tools";
-import { createMcpHandler } from "mcp-handler";
+import { createMcpHandler, withMcpAuth } from "mcp-handler";
+import { verifyApiKey } from "@/lib/mcp/verifyApiKey";
 
-let handler: ReturnType<typeof createMcpHandler> | null = null;
+const baseHandler = createMcpHandler(
+  server => {
+    registerAllTools(server);
+  },
+  {
+    serverInfo: {
+      name: "recoup-mcp",
+      version: "0.0.1",
+    },
+  },
+);
 
-/**
- * Gets the MCP handler for the API.
- *
- * @returns The MCP handler.
- */
-async function getHandler(): Promise<ReturnType<typeof createMcpHandler>> {
-  if (!handler) {
-    handler = createMcpHandler(
-      server => {
-        registerAllTools(server);
-      },
-      {
-        serverInfo: {
-          name: "recoup-mcp",
-          version: "0.0.1",
-        },
-      },
-    );
-  }
-  return handler;
-}
+// Wrap with auth - API key is required for all MCP requests
+const handler = withMcpAuth(baseHandler, verifyApiKey, {
+  required: true,
+});
 
 /**
  * GET handler for the MCP API.
@@ -32,7 +26,6 @@ async function getHandler(): Promise<ReturnType<typeof createMcpHandler>> {
  * @returns The response from the MCP handler.
  */
 export async function GET(req: Request) {
-  const handler = await getHandler();
   return handler(req);
 }
 
@@ -43,6 +36,5 @@ export async function GET(req: Request) {
  * @returns The response from the MCP handler.
  */
 export async function POST(req: Request) {
-  const handler = await getHandler();
   return handler(req);
 }

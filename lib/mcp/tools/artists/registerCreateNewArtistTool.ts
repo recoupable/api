@@ -1,5 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
+import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import {
   createArtistInDb,
   type CreateArtistResult,
@@ -14,7 +18,8 @@ const createNewArtistSchema = z.object({
     .string()
     .optional()
     .describe(
-      "The account ID to create the artist for. Only required for organization API keys creating artists on behalf of other accounts.",
+      "The account ID to create the artist for. Only required for organization API keys creating artists on behalf of other accounts. " +
+        "If not provided, the account ID will be resolved from the authenticated API key.",
     ),
   active_conversation_id: z
     .string()
@@ -57,26 +62,36 @@ export function registerCreateNewArtistTool(server: McpServer): void {
     {
       description:
         "Create a new artist account in the system. " +
+        "Requires authentication via API key (Authorization: Bearer header). " +
         "The account_id parameter is optional — only provide it when using an organization API key to create artists on behalf of other accounts. " +
         "The active_conversation_id parameter is optional — when omitted, use the active_conversation_id from the system prompt " +
         "to copy the conversation. Never ask the user to provide a room ID. " +
         "The organization_id parameter is optional — use the organization_id from the system prompt context to link the artist to the user's selected organization.",
       inputSchema: createNewArtistSchema,
     },
-    async (args: CreateNewArtistArgs) => {
+    async (args: CreateNewArtistArgs, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
       try {
         const { name, account_id, active_conversation_id, organization_id } = args;
 
-        if (!account_id) {
-          return getToolResultError(
-            "account_id is required. Provide it from the system prompt context.",
-          );
+        // Resolve accountId from auth or use provided account_id
+        const authInfo = extra.authInfo as McpAuthInfo | undefined;
+        const { accountId: resolvedAccountId, error } = await resolveAccountId({
+          authInfo,
+          accountIdOverride: account_id,
+        });
+
+        if (error) {
+          return getToolResultError(error);
+        }
+
+        if (!resolvedAccountId) {
+          return getToolResultError("Failed to resolve account ID");
         }
 
         // Create the artist account (with optional org linking)
         const artist = await createArtistInDb(
           name,
-          account_id,
+          resolvedAccountId,
           organization_id ?? undefined,
         );
 
