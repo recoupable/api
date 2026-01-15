@@ -10,7 +10,7 @@ const schema = z.object({
 
 const googleSheetsLoginTool = tool({
   description: "Initiate the authentication flow for the Google Sheets account.",
-  parameters: schema,
+  inputSchema: schema,
   execute: async ({ account_id }) => {
     await getConnectedAccount(account_id);
     return {
