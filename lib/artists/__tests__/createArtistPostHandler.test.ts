@@ -168,7 +168,7 @@ describe("createArtistPostHandler", () => {
     expect(response.status).toBe(400);
   });
 
-  it("returns 400 for invalid JSON body", async () => {
+  it("returns 400 for invalid JSON body (treated as empty)", async () => {
     const request = new NextRequest("http://localhost/api/artists", {
       method: "POST",
       headers: {
@@ -181,8 +181,9 @@ describe("createArtistPostHandler", () => {
     const response = await createArtistPostHandler(request);
     const data = await response.json();
 
+    // safeParseJson returns {} for invalid JSON, so schema validation catches it
     expect(response.status).toBe(400);
-    expect(data.error).toBe("Invalid JSON body");
+    expect(data.error).toBe("name is required");
   });
 
   it("returns 500 when artist creation fails", async () => {
