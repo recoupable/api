@@ -1,72 +1,150 @@
-import { describe, it, expect } from "vitest";
-import { NextResponse } from "next/server";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest, NextResponse } from "next/server";
+
+const mockGetApiKeyDetails = vi.fn();
+
+vi.mock("@/lib/keys/getApiKeyDetails", () => ({
+  getApiKeyDetails: (...args: unknown[]) => mockGetApiKeyDetails(...args),
+}));
+
 import { validateCreateArtistBody } from "../validateCreateArtistBody";
 
-describe("validateCreateArtistBody", () => {
-  it("returns validated body when name is provided", () => {
-    const body = { name: "Test Artist" };
-    const result = validateCreateArtistBody(body);
+function createRequest(body: unknown, apiKey?: string): NextRequest {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (apiKey) {
+    headers["x-api-key"] = apiKey;
+  }
+  return new NextRequest("http://localhost/api/artists", {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+}
 
-    expect(result).not.toBeInstanceOf(NextResponse);
-    expect(result).toEqual({ name: "Test Artist" });
+describe("validateCreateArtistBody", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetApiKeyDetails.mockResolvedValue({
+      accountId: "api-key-account-id",
+      orgId: null,
+    });
   });
 
-  it("returns validated body with all optional fields", () => {
+  it("returns validated body and keyDetails when valid", async () => {
+    const request = createRequest({ name: "Test Artist" }, "test-api-key");
+    const result = await validateCreateArtistBody(request);
+
+    expect(result).not.toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) {
+      expect(result.body).toEqual({ name: "Test Artist" });
+      expect(result.keyDetails).toEqual({ accountId: "api-key-account-id", orgId: null });
+    }
+  });
+
+  it("returns validated body with all optional fields", async () => {
     const body = {
       name: "Test Artist",
       account_id: "550e8400-e29b-41d4-a716-446655440000",
       organization_id: "660e8400-e29b-41d4-a716-446655440001",
     };
-    const result = validateCreateArtistBody(body);
+    const request = createRequest(body, "test-api-key");
+    const result = await validateCreateArtistBody(request);
 
     expect(result).not.toBeInstanceOf(NextResponse);
-    expect(result).toEqual(body);
+    if (!(result instanceof NextResponse)) {
+      expect(result.body).toEqual(body);
+    }
   });
 
-  it("returns error when name is missing", () => {
-    const body = {};
-    const result = validateCreateArtistBody(body);
+  it("returns 401 when API key is missing", async () => {
+    const request = createRequest({ name: "Test Artist" });
+    const result = await validateCreateArtistBody(request);
 
     expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(401);
+      const data = await result.json();
+      expect(data.error).toBe("x-api-key header required");
+    }
   });
 
-  it("returns error when name is empty", () => {
-    const body = { name: "" };
-    const result = validateCreateArtistBody(body);
+  it("returns 401 when API key is invalid", async () => {
+    mockGetApiKeyDetails.mockResolvedValue(null);
+
+    const request = createRequest({ name: "Test Artist" }, "invalid-key");
+    const result = await validateCreateArtistBody(request);
 
     expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(401);
+      const data = await result.json();
+      expect(data.error).toBe("Invalid API key");
+    }
   });
 
-  it("returns error when account_id is not a valid UUID", () => {
-    const body = { name: "Test Artist", account_id: "invalid-uuid" };
-    const result = validateCreateArtistBody(body);
+  it("returns 400 for invalid JSON body", async () => {
+    const request = new NextRequest("http://localhost/api/artists", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": "test-api-key",
+      },
+      body: "invalid json",
+    });
+
+    const result = await validateCreateArtistBody(request);
 
     expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(400);
+      const data = await result.json();
+      expect(data.error).toBe("Invalid JSON body");
+    }
   });
 
-  it("returns error when organization_id is not a valid UUID", () => {
-    const body = { name: "Test Artist", organization_id: "invalid-uuid" };
-    const result = validateCreateArtistBody(body);
+  it("returns error when name is missing", async () => {
+    const request = createRequest({}, "test-api-key");
+    const result = await validateCreateArtistBody(request);
 
     expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(400);
+    }
   });
 
-  it("allows account_id to be omitted", () => {
-    const body = { name: "Test Artist" };
-    const result = validateCreateArtistBody(body);
+  it("returns error when name is empty", async () => {
+    const request = createRequest({ name: "" }, "test-api-key");
+    const result = await validateCreateArtistBody(request);
 
-    expect(result).not.toBeInstanceOf(NextResponse);
-    expect(result).toEqual({ name: "Test Artist" });
+    expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(400);
+    }
   });
 
-  it("allows organization_id to be omitted", () => {
-    const body = {
-      name: "Test Artist",
-      account_id: "550e8400-e29b-41d4-a716-446655440000",
-    };
-    const result = validateCreateArtistBody(body);
+  it("returns error when account_id is not a valid UUID", async () => {
+    const request = createRequest(
+      { name: "Test Artist", account_id: "invalid-uuid" },
+      "test-api-key",
+    );
+    const result = await validateCreateArtistBody(request);
 
-    expect(result).not.toBeInstanceOf(NextResponse);
-    expect(result).toEqual(body);
+    expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(400);
+    }
+  });
+
+  it("returns error when organization_id is not a valid UUID", async () => {
+    const request = createRequest(
+      { name: "Test Artist", organization_id: "invalid-uuid" },
+      "test-api-key",
+    );
+    const result = await validateCreateArtistBody(request);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(400);
+    }
   });
 });

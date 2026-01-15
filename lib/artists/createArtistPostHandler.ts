@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateArtistBody } from "@/lib/artists/validateCreateArtistBody";
 import { createArtistInDb } from "@/lib/artists/createArtistInDb";
-import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 /**
@@ -24,43 +23,19 @@ import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 export async function createArtistPostHandler(
   request: NextRequest,
 ): Promise<NextResponse> {
-  const apiKey = request.headers.get("x-api-key");
-  if (!apiKey) {
-    return NextResponse.json(
-      { status: "error", error: "x-api-key header required" },
-      { status: 401, headers: getCorsHeaders() },
-    );
-  }
-
-  const keyDetails = await getApiKeyDetails(apiKey);
-  if (!keyDetails) {
-    return NextResponse.json(
-      { status: "error", error: "Invalid API key" },
-      { status: 401, headers: getCorsHeaders() },
-    );
-  }
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { status: "error", error: "Invalid JSON body" },
-      { status: 400, headers: getCorsHeaders() },
-    );
-  }
-
-  const validated = validateCreateArtistBody(body);
+  const validated = await validateCreateArtistBody(request);
   if (validated instanceof NextResponse) {
     return validated;
   }
 
+  const { body, keyDetails } = validated;
+
   // Use account_id from body if provided (org API keys only), otherwise use API key's account
   let accountId = keyDetails.accountId;
-  if (validated.account_id) {
+  if (body.account_id) {
     const hasAccess = await canAccessAccount({
       orgId: keyDetails.orgId,
-      targetAccountId: validated.account_id,
+      targetAccountId: body.account_id,
     });
     if (!hasAccess) {
       return NextResponse.json(
@@ -68,14 +43,14 @@ export async function createArtistPostHandler(
         { status: 403, headers: getCorsHeaders() },
       );
     }
-    accountId = validated.account_id;
+    accountId = body.account_id;
   }
 
   try {
     const artist = await createArtistInDb(
-      validated.name,
+      body.name,
       accountId,
-      validated.organization_id,
+      body.organization_id,
     );
 
     if (!artist) {
