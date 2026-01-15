@@ -2,6 +2,9 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getConnectors } from "@/lib/composio/connectors";
+import { disconnectConnector } from "@/lib/composio/connectors/disconnectConnector";
+import { validateDisconnectConnectorBody } from "@/lib/composio/connectors/validateDisconnectConnectorBody";
+import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -18,8 +21,7 @@ export async function OPTIONS() {
  *
  * List all available connectors and their connection status for a user.
  *
- * Query params:
- * - account_id: The user's account ID (required)
+ * Authentication: x-api-key header required.
  *
  * @returns List of connectors with connection status
  */
@@ -27,14 +29,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const headers = getCorsHeaders();
 
   try {
-    const accountId = request.nextUrl.searchParams.get("account_id");
-
-    if (!accountId) {
-      return NextResponse.json(
-        { error: "account_id query parameter is required" },
-        { status: 400, headers },
-      );
+    const accountIdOrError = await getApiKeyAccountId(request);
+    if (accountIdOrError instanceof NextResponse) {
+      return accountIdOrError;
     }
+
+    const accountId = accountIdOrError;
 
     const connectors = await getConnectors(accountId);
 
@@ -50,6 +50,49 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to fetch connectors";
+    return NextResponse.json({ error: message }, { status: 500, headers });
+  }
+}
+
+/**
+ * DELETE /api/connectors
+ *
+ * Disconnect a connected account from Composio.
+ *
+ * Authentication: x-api-key header required.
+ *
+ * Body: { connected_account_id: string }
+ */
+export async function DELETE(request: NextRequest): Promise<NextResponse> {
+  const headers = getCorsHeaders();
+
+  try {
+    const accountIdOrError = await getApiKeyAccountId(request);
+    if (accountIdOrError instanceof NextResponse) {
+      return accountIdOrError;
+    }
+
+    const body = await request.json();
+
+    const validated = validateDisconnectConnectorBody(body);
+    if (validated instanceof NextResponse) {
+      return validated;
+    }
+
+    const { connected_account_id } = validated;
+
+    const result = await disconnectConnector(connected_account_id);
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: result,
+      },
+      { status: 200, headers },
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to disconnect connector";
     return NextResponse.json({ error: message }, { status: 500, headers });
   }
 }

@@ -59,6 +59,25 @@ pnpm format:check   # Check formatting
 - All API routes should have JSDoc comments
 - Run `pnpm lint` before committing
 
+## Authentication
+
+**Never use `account_id` in request bodies.** Always derive the account ID from the `x-api-key` header using `getApiKeyAccountId()`:
+
+```typescript
+import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
+
+const accountIdOrError = await getApiKeyAccountId(request);
+if (accountIdOrError instanceof NextResponse) {
+  return accountIdOrError;
+}
+const accountId = accountIdOrError;
+```
+
+This ensures:
+- Callers cannot impersonate other accounts
+- Authentication is always enforced
+- Account ID is derived from a validated API key
+
 ## Input Validation
 
 All API endpoints should use a **validate function** for input parsing. Use Zod for schema validation.

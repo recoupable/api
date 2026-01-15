@@ -11,15 +11,24 @@ export interface ComposioTool {
 }
 
 /**
+ * Tools we want to expose from Composio Tool Router.
+ * Once we're ready to add all tools, remove this filter.
+ */
+const ALLOWED_TOOLS = [
+  "COMPOSIO_MANAGE_CONNECTIONS",
+  "COMPOSIO_SEARCH_TOOLS",
+  "COMPOSIO_GET_TOOL_SCHEMAS",
+  "COMPOSIO_MULTI_EXECUTE_TOOL",
+];
+
+/**
  * Get Composio Tool Router tools for a user.
  *
- * Returns 6 meta-tools:
+ * Returns a filtered subset of meta-tools:
  * - COMPOSIO_MANAGE_CONNECTIONS - OAuth/auth management
  * - COMPOSIO_SEARCH_TOOLS - Find available connectors
  * - COMPOSIO_GET_TOOL_SCHEMAS - Get parameter schemas
  * - COMPOSIO_MULTI_EXECUTE_TOOL - Execute actions
- * - COMPOSIO_REMOTE_BASH_TOOL - Remote bash
- * - COMPOSIO_REMOTE_WORKBENCH - Workbench
  *
  * @param userId - Unique identifier for the user (accountId)
  * @param roomId - Optional chat room ID for OAuth redirect
@@ -30,6 +39,15 @@ export async function getComposioTools(
   roomId?: string,
 ): Promise<Record<string, ComposioTool>> {
   const session = await createToolRouterSession(userId, roomId);
-  const tools = await session.tools();
-  return tools as Record<string, ComposioTool>;
+  const allTools = (await session.tools()) as Record<string, ComposioTool>;
+
+  // Filter to only allowed tools
+  const filteredTools: Record<string, ComposioTool> = {};
+  for (const toolName of ALLOWED_TOOLS) {
+    if (allTools[toolName]) {
+      filteredTools[toolName] = allTools[toolName];
+    }
+  }
+
+  return filteredTools;
 }

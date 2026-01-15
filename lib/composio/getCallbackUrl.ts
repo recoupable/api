@@ -1,3 +1,5 @@
+import { getFrontendBaseUrl } from "./getFrontendBaseUrl";
+
 /**
  * Build OAuth callback URL based on environment and destination.
  *
@@ -10,14 +12,6 @@ type CallbackDestination = "chat" | "connectors";
 interface CallbackOptions {
   destination: CallbackDestination;
   roomId?: string;
-}
-
-/**
- * Get the base URL for the frontend based on environment.
- */
-function getFrontendBaseUrl(): string {
-  const isProd = process.env.VERCEL_ENV === "production";
-  return isProd ? "https://chat.recoupable.com" : "http://localhost:3001";
 }
 
 /**

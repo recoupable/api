@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { authorizeConnector } from "@/lib/composio/connectors";
+import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -18,8 +19,10 @@ export async function OPTIONS() {
  *
  * Generate an OAuth authorization URL for a specific connector.
  *
+ * Authentication: x-api-key header required.
+ * The account ID is inferred from the API key.
+ *
  * Request body:
- * - account_id: The user's account ID (required)
  * - connector: The connector slug, e.g., "googlesheets" (required)
  * - callback_url: Optional custom callback URL after OAuth
  *
@@ -29,15 +32,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const headers = getCorsHeaders();
 
   try {
-    const body = await request.json();
-    const { account_id, connector, callback_url } = body;
-
-    if (!account_id) {
-      return NextResponse.json(
-        { error: "account_id is required" },
-        { status: 400, headers },
-      );
+    const accountIdOrError = await getApiKeyAccountId(request);
+    if (accountIdOrError instanceof NextResponse) {
+      return accountIdOrError;
     }
+
+    const accountId = accountIdOrError;
+    const body = await request.json();
+    const { connector, callback_url } = body;
 
     if (!connector) {
       return NextResponse.json(
@@ -46,7 +48,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const result = await authorizeConnector(account_id, connector, callback_url);
+    const result = await authorizeConnector(accountId, connector, callback_url);
 
     return NextResponse.json(
       {
