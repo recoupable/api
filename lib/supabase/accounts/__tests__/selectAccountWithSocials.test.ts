@@ -25,8 +25,9 @@ describe("selectAccountWithSocials", () => {
     const mockData = {
       id: "account-123",
       name: "Test Artist",
+      timestamp: 1704067200000,
       account_socials: [{ id: "social-1", platform: "spotify" }],
-      account_info: [{ id: "info-1", image: "https://example.com/image.jpg" }],
+      account_info: [{ id: "info-1", image: "https://example.com/image.jpg", updated_at: "2024-01-01T12:00:00Z" }],
     };
     mockSingle.mockResolvedValue({ data: mockData, error: null });
 
@@ -35,7 +36,11 @@ describe("selectAccountWithSocials", () => {
     expect(mockFrom).toHaveBeenCalledWith("accounts");
     expect(mockSelect).toHaveBeenCalledWith("*, account_socials(*), account_info(*)");
     expect(mockEq).toHaveBeenCalledWith("id", "account-123");
-    expect(result).toEqual(mockData);
+    expect(result).toEqual({
+      ...mockData,
+      created_at: new Date(mockData.timestamp).toISOString(),
+      updated_at: "2024-01-01T12:00:00Z",
+    });
   });
 
   it("returns null when account is not found", async () => {

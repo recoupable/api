@@ -10,18 +10,18 @@ import { addArtistToOrganization } from "@/lib/supabase/artist_organization_ids/
 export interface CreateArtistResult {
   id: string;
   account_id: string;
-  name: string;
+  name: string | null;
   created_at: string | null;
   updated_at: string | null;
   image: string | null;
   instruction: string | null;
-  knowledges: string[] | null;
+  knowledges: unknown;
   label: string | null;
   organization: string | null;
   company_name: string | null;
   job_title: string | null;
   role_type: string | null;
-  onboarding_status: string | null;
+  onboarding_status: unknown;
   onboarding_data: unknown;
   account_info: unknown[];
   account_socials: unknown[];
