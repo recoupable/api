@@ -7,8 +7,8 @@ import { z } from "zod";
 
 export const createArtistBodySchema = z.object({
   name: z.string({ message: "name is required" }).min(1, "name cannot be empty"),
-  account_id: z.string().uuid("account_id must be a valid UUID").optional(),
-  organization_id: z.string().uuid("organization_id must be a valid UUID").optional(),
+  account_id: z.uuid({ message: "account_id must be a valid UUID" }).optional(),
+  organization_id: z.uuid({ message: "organization_id must be a valid UUID" }).optional(),
 });
 
 export type CreateArtistBody = z.infer<typeof createArtistBodySchema>;
