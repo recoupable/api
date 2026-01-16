@@ -84,6 +84,7 @@ describe("getGeneralAgent", () => {
     it("returns a RoutingDecision object with required properties", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -98,6 +99,7 @@ describe("getGeneralAgent", () => {
     it("returns a ToolLoopAgent instance", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -109,6 +111,7 @@ describe("getGeneralAgent", () => {
     it("uses DEFAULT_MODEL when no model is specified", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -120,6 +123,7 @@ describe("getGeneralAgent", () => {
     it("uses custom model when specified in body", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
         model: "anthropic/claude-3-opus",
       };
@@ -132,6 +136,7 @@ describe("getGeneralAgent", () => {
     it("sets stopWhen to stepCountIs(111)", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -147,6 +152,7 @@ describe("getGeneralAgent", () => {
     it("fetches account emails using accountId", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -165,6 +171,7 @@ describe("getGeneralAgent", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -180,6 +187,7 @@ describe("getGeneralAgent", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -195,6 +203,7 @@ describe("getGeneralAgent", () => {
     it("fetches artist info when artistId is provided", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         artistId: "artist-456",
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
@@ -207,6 +216,7 @@ describe("getGeneralAgent", () => {
     it("does not fetch artist info when artistId is not provided", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -223,6 +233,7 @@ describe("getGeneralAgent", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         artistId: "artist-456",
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
@@ -248,6 +259,7 @@ describe("getGeneralAgent", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         artistId: "artist-456",
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
@@ -265,6 +277,7 @@ describe("getGeneralAgent", () => {
     it("calls getSystemPrompt with all required parameters", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         artistId: "artist-456",
         roomId: "room-789",
         messages: [{ id: "1", role: "user", content: "Hello" }],
@@ -294,6 +307,7 @@ describe("getGeneralAgent", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -333,6 +347,7 @@ describe("getGeneralAgent", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Edit these images" }],
       };
 
@@ -349,6 +364,7 @@ describe("getGeneralAgent", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -362,6 +378,7 @@ describe("getGeneralAgent", () => {
     it("calls setupToolsForRequest with body", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
         excludeTools: ["dangerous_tool"],
       };
@@ -377,6 +394,7 @@ describe("getGeneralAgent", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -390,6 +408,7 @@ describe("getGeneralAgent", () => {
     it("creates ToolLoopAgent with model matching result model", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
         model: "anthropic/claude-sonnet-4",
       };
@@ -406,6 +425,7 @@ describe("getGeneralAgent", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -422,6 +442,7 @@ describe("getGeneralAgent", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -433,6 +454,7 @@ describe("getGeneralAgent", () => {
     it("returns stopWhen in the routing decision", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 

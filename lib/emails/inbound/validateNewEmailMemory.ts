@@ -76,6 +76,7 @@ export async function validateNewEmailMemory(
 
   const chatRequestBody: ChatRequestBody = {
     accountId,
+    orgId: null,
     messages: getMessages(emailText),
     roomId: finalRoomId,
   };

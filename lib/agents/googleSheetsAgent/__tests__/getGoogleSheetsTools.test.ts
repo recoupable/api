@@ -56,6 +56,7 @@ describe("getGoogleSheetsTools", () => {
     it("calls getConnectedAccount with accountId", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -72,6 +73,7 @@ describe("getGoogleSheetsTools", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Create a spreadsheet for me" }],
       };
 
@@ -90,6 +92,7 @@ describe("getGoogleSheetsTools", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Test" }],
       };
 
@@ -114,6 +117,7 @@ describe("getGoogleSheetsTools", () => {
     it("returns Google Sheets tools from Composio", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -131,6 +135,7 @@ describe("getGoogleSheetsTools", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -152,6 +157,7 @@ describe("getGoogleSheetsTools", () => {
     it("returns google_sheets_login tool", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -168,6 +174,7 @@ describe("getGoogleSheetsTools", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -185,6 +192,7 @@ describe("getGoogleSheetsTools", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -200,6 +208,7 @@ describe("getGoogleSheetsTools", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 

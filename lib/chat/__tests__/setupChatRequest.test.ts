@@ -46,6 +46,7 @@ describe("setupChatRequest", () => {
     it("returns a ChatConfig object with all required properties", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -61,6 +62,7 @@ describe("setupChatRequest", () => {
     it("calls getGeneralAgent with the body", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -72,6 +74,7 @@ describe("setupChatRequest", () => {
     it("uses instructions from routing decision as system prompt", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -100,6 +103,7 @@ describe("setupChatRequest", () => {
     it("passes tools to convertToModelMessages", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -123,6 +127,7 @@ describe("setupChatRequest", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: manyMessages,
       };
 
@@ -137,6 +142,7 @@ describe("setupChatRequest", () => {
     it("provides a function that generates unique UUIDs", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -157,6 +163,7 @@ describe("setupChatRequest", () => {
     it("includes anthropic thinking configuration", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -169,6 +176,7 @@ describe("setupChatRequest", () => {
     it("includes google thinkingConfig", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -181,6 +189,7 @@ describe("setupChatRequest", () => {
     it("includes openai reasoning configuration", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -195,6 +204,7 @@ describe("setupChatRequest", () => {
     it("spreads routing decision properties into result", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -217,6 +227,7 @@ describe("setupChatRequest", () => {
 
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -230,6 +241,7 @@ describe("setupChatRequest", () => {
     it("includes a prepareStep function", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -241,6 +253,7 @@ describe("setupChatRequest", () => {
     it("prepareStep returns options when no tool chain matches", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -256,6 +269,7 @@ describe("setupChatRequest", () => {
     it("prepareStep returns next tool when tool chain is triggered", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -284,6 +298,7 @@ describe("setupChatRequest", () => {
     it("prepareStep merges tool chain result with original options", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
+        orgId: null,
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
