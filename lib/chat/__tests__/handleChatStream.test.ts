@@ -26,10 +26,6 @@ vi.mock("@/lib/chat/setupChatRequest", () => ({
   setupChatRequest: vi.fn(),
 }));
 
-vi.mock("@/lib/chat/handleChatCompletion", () => ({
-  handleChatCompletion: vi.fn(),
-}));
-
 vi.mock("ai", () => ({
   createUIMessageStream: vi.fn(),
   createUIMessageStreamResponse: vi.fn(),
@@ -38,14 +34,12 @@ vi.mock("ai", () => ({
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { setupChatRequest } from "@/lib/chat/setupChatRequest";
-import { handleChatCompletion } from "@/lib/chat/handleChatCompletion";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { handleChatStream } from "../handleChatStream";
 
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
 const mockSetupChatRequest = vi.mocked(setupChatRequest);
-const mockHandleChatCompletion = vi.mocked(handleChatCompletion);
 const mockCreateUIMessageStream = vi.mocked(createUIMessageStream);
 const mockCreateUIMessageStreamResponse = vi.mocked(createUIMessageStreamResponse);
 
@@ -66,7 +60,6 @@ function createMockRequest(
 describe("handleChatStream", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockHandleChatCompletion.mockResolvedValue();
   });
 
   afterEach(() => {
@@ -299,147 +292,6 @@ describe("handleChatStream", () => {
           accountId: "target-account-456",
         }),
       );
-    });
-  });
-
-  describe("chat completion handling", () => {
-    it("passes onFinish callback to createUIMessageStream", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
-
-      const mockAgent = {
-        stream: vi.fn().mockResolvedValue({
-          toUIMessageStream: vi.fn().mockReturnValue(new ReadableStream()),
-          usage: Promise.resolve({ inputTokens: 100, outputTokens: 50 }),
-        }),
-        tools: {},
-      };
-
-      mockSetupChatRequest.mockResolvedValue({
-        agent: mockAgent,
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
-        messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
-        providerOptions: {},
-      } as any);
-
-      const mockStream = new ReadableStream();
-      mockCreateUIMessageStream.mockReturnValue(mockStream);
-      mockCreateUIMessageStreamResponse.mockReturnValue(new Response(mockStream));
-
-      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
-
-      await handleChatStream(request as any);
-
-      // Verify onFinish callback was passed to createUIMessageStream
-      expect(mockCreateUIMessageStream).toHaveBeenCalledWith(
-        expect.objectContaining({
-          onFinish: expect.any(Function),
-        }),
-      );
-    });
-
-    it("calls handleChatCompletion with body and messages when onFinish is triggered", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
-
-      const mockAgent = {
-        stream: vi.fn().mockResolvedValue({
-          toUIMessageStream: vi.fn().mockReturnValue(new ReadableStream()),
-          usage: Promise.resolve({ inputTokens: 100, outputTokens: 50 }),
-        }),
-        tools: {},
-      };
-
-      mockSetupChatRequest.mockResolvedValue({
-        agent: mockAgent,
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
-        messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
-        providerOptions: {},
-      } as any);
-
-      const mockStream = new ReadableStream();
-      mockCreateUIMessageStream.mockReturnValue(mockStream);
-      mockCreateUIMessageStreamResponse.mockReturnValue(new Response(mockStream));
-
-      const messages = [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hi" }] }];
-      const request = createMockRequest(
-        { messages, roomId: "room-123", artistId: "artist-456" },
-        { "x-api-key": "valid-key" },
-      );
-
-      await handleChatStream(request as any);
-
-      // Get the onFinish callback that was passed to createUIMessageStream
-      const createUIMessageStreamCall = mockCreateUIMessageStream.mock.calls[0][0] as {
-        onFinish: (params: { messages: unknown[] }) => void;
-      };
-      const onFinishCallback = createUIMessageStreamCall.onFinish;
-
-      // Simulate onFinish being called with response messages
-      const responseMessages = [
-        { id: "resp-1", role: "assistant", parts: [{ type: "text", text: "Hello!" }] },
-      ];
-      onFinishCallback({ messages: responseMessages });
-
-      // Verify handleChatCompletion was called with correct arguments
-      expect(mockHandleChatCompletion).toHaveBeenCalledWith(
-        expect.objectContaining({
-          messages,
-          roomId: "room-123",
-          artistId: "artist-456",
-          accountId: "account-123",
-        }),
-        responseMessages,
-      );
-    });
-
-    it("does not throw when handleChatCompletion fails", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
-      mockHandleChatCompletion.mockRejectedValue(new Error("Completion failed"));
-
-      const mockAgent = {
-        stream: vi.fn().mockResolvedValue({
-          toUIMessageStream: vi.fn().mockReturnValue(new ReadableStream()),
-          usage: Promise.resolve({ inputTokens: 100, outputTokens: 50 }),
-        }),
-        tools: {},
-      };
-
-      mockSetupChatRequest.mockResolvedValue({
-        agent: mockAgent,
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
-        messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
-        providerOptions: {},
-      } as any);
-
-      const mockStream = new ReadableStream();
-      mockCreateUIMessageStream.mockReturnValue(mockStream);
-      mockCreateUIMessageStreamResponse.mockReturnValue(new Response(mockStream));
-
-      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
-
-      // Should not throw even if handleChatCompletion fails
-      const result = await handleChatStream(request as any);
-      expect(result).toBeInstanceOf(Response);
-
-      // Trigger onFinish to ensure error is caught gracefully
-      const createUIMessageStreamCall = mockCreateUIMessageStream.mock.calls[0][0] as {
-        onFinish: (params: { messages: unknown[] }) => void;
-      };
-      const onFinishCallback = createUIMessageStreamCall.onFinish;
-
-      // This should not throw
-      expect(() => onFinishCallback({ messages: [] })).not.toThrow();
     });
   });
 });

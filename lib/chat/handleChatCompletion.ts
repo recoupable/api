@@ -29,14 +29,6 @@ export async function handleChatCompletion(
   body: ChatRequestBody,
   responseMessages: UIMessage[],
 ): Promise<void> {
-  console.log("🔵 handleChatCompletion called with:", {
-    roomId: body.roomId,
-    accountId: body.accountId,
-    artistId: body.artistId,
-    messagesCount: body.messages?.length,
-    responseMessagesCount: responseMessages?.length,
-  });
-
   try {
     const { messages, roomId = "", accountId, artistId } = body;
 
@@ -48,14 +40,10 @@ export async function handleChatCompletion(
     }
 
     // Validate and get last user message
-    console.log("🔵 Validating messages, count:", messages?.length);
     const { lastMessage } = validateMessages(messages);
-    console.log("🔵 Last message id:", lastMessage?.id);
 
     // Check if room exists
-    console.log("🔵 Checking if room exists:", roomId);
     const room = await selectRoom(roomId);
-    console.log("🔵 Room exists:", !!room);
 
     // Create room and send notification if this is a new conversation
     if (!room) {
@@ -82,22 +70,17 @@ export async function handleChatCompletion(
 
     // Store messages sequentially to maintain correct order
     // First store the user message, then the assistant message
-    console.log("🔵 Saving user message with id:", lastMessage.id, "to room:", roomId);
     await upsertMemory({
       id: lastMessage.id,
       room_id: roomId,
       content: filterMessageContentForMemories(lastMessage),
     });
-    console.log("🔵 User message saved successfully");
 
-    const assistantMessage = responseMessages[responseMessages.length - 1];
-    console.log("🔵 Saving assistant message with id:", assistantMessage?.id, "to room:", roomId);
     await upsertMemory({
-      id: assistantMessage.id,
+      id: responseMessages[responseMessages.length - 1].id,
       room_id: roomId,
-      content: filterMessageContentForMemories(assistantMessage),
+      content: filterMessageContentForMemories(responseMessages[responseMessages.length - 1]),
     });
-    console.log("🔵 Assistant message saved successfully");
 
     // Process any email tool outputs
     await handleSendEmailToolOutputs(responseMessages);

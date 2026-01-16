@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { validateChatRequest } from "./validateChatRequest";
 import { setupChatRequest } from "./setupChatRequest";
-import { handleChatCompletion } from "./handleChatCompletion";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import generateUUID from "@/lib/uuid/generateUUID";
 
@@ -35,18 +34,14 @@ export async function handleChatStream(request: NextRequest): Promise<Response> 
         const { writer } = options;
         const result = await agent.stream(chatConfig);
         writer.merge(result.toUIMessageStream());
+        // Note: Credit handling and chat completion handling will be added
+        // as part of the handleChatCredits and handleChatCompletion migrations
       },
       onError: (e) => {
         console.error("/api/chat onError:", e);
         return JSON.stringify({
           status: "error",
           message: e instanceof Error ? e.message : "Unknown error",
-        });
-      },
-      onFinish: ({ messages }) => {
-        console.log("🟢 onFinish triggered, messages count:", messages?.length);
-        void handleChatCompletion(body, messages).catch((e) => {
-          console.error("Failed to handle chat completion:", e);
         });
       },
     });
