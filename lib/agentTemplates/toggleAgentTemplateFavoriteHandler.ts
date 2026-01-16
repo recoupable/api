@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
-import { addAgentTemplateFavorite } from "./addAgentTemplateFavorite";
+import insertAgentTemplateFavorite from "@/lib/supabase/agent_template_favorites/insertAgentTemplateFavorite";
 import { removeAgentTemplateFavorite } from "./removeAgentTemplateFavorite";
 
 interface ToggleFavoriteRequestBody {
@@ -66,7 +66,7 @@ export async function toggleAgentTemplateFavoriteHandler(
 
     // Toggle favorite
     if (isFavourite) {
-      await addAgentTemplateFavorite(templateId, accountId);
+      await insertAgentTemplateFavorite({ templateId, userId: accountId });
     } else {
       await removeAgentTemplateFavorite(templateId, accountId);
     }

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { toggleAgentTemplateFavoriteHandler } from "../toggleAgentTemplateFavoriteHandler";
 
 import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
-import { addAgentTemplateFavorite } from "../addAgentTemplateFavorite";
+import insertAgentTemplateFavorite from "@/lib/supabase/agent_template_favorites/insertAgentTemplateFavorite";
 import { removeAgentTemplateFavorite } from "../removeAgentTemplateFavorite";
 
 // Mock dependencies
@@ -11,8 +11,8 @@ vi.mock("@/lib/auth/getAuthenticatedAccountId", () => ({
   getAuthenticatedAccountId: vi.fn(),
 }));
 
-vi.mock("../addAgentTemplateFavorite", () => ({
-  addAgentTemplateFavorite: vi.fn(),
+vi.mock("@/lib/supabase/agent_template_favorites/insertAgentTemplateFavorite", () => ({
+  default: vi.fn(),
 }));
 
 vi.mock("../removeAgentTemplateFavorite", () => ({
@@ -123,7 +123,7 @@ describe("toggleAgentTemplateFavoriteHandler", () => {
   describe("with valid authentication", () => {
     it("adds favorite when isFavourite is true", async () => {
       vi.mocked(getAuthenticatedAccountId).mockResolvedValue("user-123");
-      vi.mocked(addAgentTemplateFavorite).mockResolvedValue({ success: true });
+      vi.mocked(insertAgentTemplateFavorite).mockResolvedValue({ success: true });
 
       const request = createMockBearerRequest({ templateId: "template-1", isFavourite: true });
       const response = await toggleAgentTemplateFavoriteHandler(request);
@@ -131,7 +131,7 @@ describe("toggleAgentTemplateFavoriteHandler", () => {
 
       expect(response.status).toBe(200);
       expect(json.success).toBe(true);
-      expect(addAgentTemplateFavorite).toHaveBeenCalledWith("template-1", "user-123");
+      expect(insertAgentTemplateFavorite).toHaveBeenCalledWith({ templateId: "template-1", userId: "user-123" });
       expect(removeAgentTemplateFavorite).not.toHaveBeenCalled();
     });
 
@@ -146,14 +146,14 @@ describe("toggleAgentTemplateFavoriteHandler", () => {
       expect(response.status).toBe(200);
       expect(json.success).toBe(true);
       expect(removeAgentTemplateFavorite).toHaveBeenCalledWith("template-1", "user-123");
-      expect(addAgentTemplateFavorite).not.toHaveBeenCalled();
+      expect(insertAgentTemplateFavorite).not.toHaveBeenCalled();
     });
   });
 
   describe("error handling", () => {
-    it("returns 500 when addAgentTemplateFavorite throws", async () => {
+    it("returns 500 when insertAgentTemplateFavorite throws", async () => {
       vi.mocked(getAuthenticatedAccountId).mockResolvedValue("user-123");
-      vi.mocked(addAgentTemplateFavorite).mockRejectedValue(new Error("Database error"));
+      vi.mocked(insertAgentTemplateFavorite).mockRejectedValue(new Error("Database error"));
 
       const request = createMockBearerRequest({ templateId: "template-1", isFavourite: true });
       const response = await toggleAgentTemplateFavoriteHandler(request);
