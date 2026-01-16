@@ -3,11 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
 import insertAgentTemplateFavorite from "@/lib/supabase/agent_template_favorites/insertAgentTemplateFavorite";
 import { removeAgentTemplateFavorite } from "./removeAgentTemplateFavorite";
-
-interface ToggleFavoriteRequestBody {
-  templateId?: string;
-  isFavourite?: boolean;
-}
+import { validateToggleAgentTemplateFavoriteBody } from "./validateToggleAgentTemplateFavoriteBody";
 
 /**
  * Handler for toggling agent template favorites.
@@ -33,36 +29,14 @@ export async function toggleAgentTemplateFavoriteHandler(
 
     const accountId = accountIdOrError;
 
-    // Parse request body
-    const body: ToggleFavoriteRequestBody = await request.json();
-    const { templateId, isFavourite } = body;
-
-    // Validate required fields
-    if (!templateId) {
-      return NextResponse.json(
-        {
-          status: "error",
-          message: "Missing templateId",
-        },
-        {
-          status: 400,
-          headers: getCorsHeaders(),
-        },
-      );
+    // Parse and validate request body
+    const body = await request.json();
+    const validatedBodyOrError = validateToggleAgentTemplateFavoriteBody(body);
+    if (validatedBodyOrError instanceof NextResponse) {
+      return validatedBodyOrError;
     }
 
-    if (typeof isFavourite !== "boolean") {
-      return NextResponse.json(
-        {
-          status: "error",
-          message: "Missing isFavourite",
-        },
-        {
-          status: 400,
-          headers: getCorsHeaders(),
-        },
-      );
-    }
+    const { templateId, isFavourite } = validatedBodyOrError;
 
     // Toggle favorite
     if (isFavourite) {

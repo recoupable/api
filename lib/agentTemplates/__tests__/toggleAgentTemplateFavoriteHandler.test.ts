@@ -104,7 +104,7 @@ describe("toggleAgentTemplateFavoriteHandler", () => {
 
       expect(response.status).toBe(400);
       expect(json.status).toBe("error");
-      expect(json.message).toBe("Missing templateId");
+      expect(json.message).toBe("templateId is required");
     });
 
     it("returns 400 when isFavourite is missing", async () => {
@@ -116,7 +116,7 @@ describe("toggleAgentTemplateFavoriteHandler", () => {
 
       expect(response.status).toBe(400);
       expect(json.status).toBe("error");
-      expect(json.message).toBe("Missing isFavourite");
+      expect(json.message).toBe("isFavourite is required");
     });
   });
 
