@@ -1,5 +1,6 @@
-import supabase from "@/lib/supabase/serverClient";
 import { getSocialPlatformByLink } from "@/lib/artists/getSocialPlatformByLink";
+import selectAgentStatusBySocialIds from "@/lib/supabase/agent_status/selectAgentStatusBySocialIds";
+import selectAgentsWithStatusAndSocials from "@/lib/supabase/agents/selectAgentsWithStatusAndSocials";
 
 export interface ArtistAgent {
   type: string;
@@ -17,32 +18,31 @@ export interface ArtistAgent {
  * @returns Array of ArtistAgent objects, aggregated by type
  */
 export async function getArtistAgents(artistSocialIds: string[]): Promise<ArtistAgent[]> {
-  const { data, error } = await supabase
-    .from("agent_status")
-    .select("*, agent:agents(*)")
-    .in("social_id", artistSocialIds);
-
-  if (error) {
-    console.error("Error fetching artist agents:", error);
+  let agentStatusData;
+  try {
+    agentStatusData = await selectAgentStatusBySocialIds({ socialIds: artistSocialIds });
+  } catch {
     return [];
   }
 
-  if (!data) return [];
+  if (!agentStatusData.length) return [];
 
-  const agentIds = [...new Set(data.map(ele => ele.agent.id))];
+  const agentIds = [...new Set(agentStatusData.map(ele => ele.agent?.id).filter(Boolean))] as string[];
 
-  const { data: agents } = await supabase
-    .from("agents")
-    .select("*, agent_status(*, social:socials(*))")
-    .in("id", agentIds);
+  let agents;
+  try {
+    agents = await selectAgentsWithStatusAndSocials({ agentIds });
+  } catch {
+    return [];
+  }
 
-  if (!agents) return [];
+  if (!agents.length) return [];
 
   const transformedAgents = agents.map(agent => ({
     type: new String(
       agent.agent_status.length > 1
         ? "wrapped"
-        : getSocialPlatformByLink(agent.agent_status[0].social.profile_url),
+        : getSocialPlatformByLink(agent.agent_status[0].social?.profile_url ?? ""),
     ).toLowerCase(),
     agentId: agent.id,
     updated_at: agent.updated_at,
