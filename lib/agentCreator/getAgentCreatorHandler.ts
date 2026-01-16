@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
-import { ADMIN_EMAILS } from "@/lib/admin";
+import { ADMIN_EMAILS } from "@/lib/const";
 
 /**
  * Handler for fetching agent creator information.

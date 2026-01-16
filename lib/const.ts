@@ -28,3 +28,9 @@ export const SUPABASE_STORAGE_BUCKET = "user-files";
  * API keys from this org have universal access and can specify any accountId.
  */
 export const RECOUP_ORG_ID = "04e3aba9-c130-4fb8-8b92-34e95d43e66b";
+
+/**
+ * List of admin email addresses.
+ * Users with these emails are identified as admins in the agent creator endpoint.
+ */
+export const ADMIN_EMAILS: string[] = ["sidney+1@recoupable.com"];

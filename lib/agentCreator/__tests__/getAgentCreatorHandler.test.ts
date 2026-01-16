@@ -3,16 +3,20 @@ import { NextRequest } from "next/server";
 import { getAgentCreatorHandler } from "../getAgentCreatorHandler";
 
 import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
-import { ADMIN_EMAILS } from "@/lib/admin";
+import { ADMIN_EMAILS } from "@/lib/const";
 
 // Mock dependencies
 vi.mock("@/lib/supabase/accounts/getAccountWithDetails", () => ({
   getAccountWithDetails: vi.fn(),
 }));
 
-vi.mock("@/lib/admin", () => ({
-  ADMIN_EMAILS: ["admin@example.com"],
-}));
+vi.mock("@/lib/const", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/const")>();
+  return {
+    ...actual,
+    ADMIN_EMAILS: ["admin@example.com"],
+  };
+});
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
