@@ -2,35 +2,35 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { getSharedTemplatesForAccount } from "../getSharedTemplatesForAccount";
 
-const mockFrom = vi.fn();
-const mockSelect = vi.fn();
-const mockEq = vi.fn();
+const mockSelectAgentTemplateShares = vi.fn();
 
-vi.mock("@/lib/supabase/serverClient", () => ({
-  default: {
-    from: (...args: unknown[]) => mockFrom(...args),
-  },
+vi.mock("@/lib/supabase/agent_template_shares/selectAgentTemplateShares", () => ({
+  default: (...args: unknown[]) => mockSelectAgentTemplateShares(...args),
 }));
 
 describe("getSharedTemplatesForAccount", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFrom.mockReturnValue({ select: mockSelect });
-    mockSelect.mockReturnValue({ eq: mockEq });
   });
 
   it("returns empty array when no shared templates exist", async () => {
-    mockEq.mockResolvedValue({ data: [], error: null });
+    mockSelectAgentTemplateShares.mockResolvedValue([]);
 
     const result = await getSharedTemplatesForAccount("account-123");
 
-    expect(mockFrom).toHaveBeenCalledWith("agent_template_shares");
+    expect(mockSelectAgentTemplateShares).toHaveBeenCalledWith({
+      userId: "account-123",
+      includeTemplates: true,
+    });
     expect(result).toEqual([]);
   });
 
   it("returns templates for account with shared templates", async () => {
     const mockSharedData = [
       {
+        template_id: "tmpl-1",
+        user_id: "account-123",
+        created_at: "2024-01-01T00:00:00Z",
         templates: {
           id: "tmpl-1",
           title: "Shared Template",
@@ -45,12 +45,14 @@ describe("getSharedTemplatesForAccount", () => {
         },
       },
     ];
-    mockEq.mockResolvedValue({ data: mockSharedData, error: null });
+    mockSelectAgentTemplateShares.mockResolvedValue(mockSharedData);
 
     const result = await getSharedTemplatesForAccount("account-123");
 
-    expect(mockFrom).toHaveBeenCalledWith("agent_template_shares");
-    expect(mockEq).toHaveBeenCalledWith("user_id", "account-123");
+    expect(mockSelectAgentTemplateShares).toHaveBeenCalledWith({
+      userId: "account-123",
+      includeTemplates: true,
+    });
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("tmpl-1");
     expect(result[0].title).toBe("Shared Template");
@@ -59,6 +61,9 @@ describe("getSharedTemplatesForAccount", () => {
   it("handles multiple templates and deduplicates by ID", async () => {
     const mockSharedData = [
       {
+        template_id: "tmpl-1",
+        user_id: "account-123",
+        created_at: "2024-01-01T00:00:00Z",
         templates: {
           id: "tmpl-1",
           title: "Template 1",
@@ -73,6 +78,9 @@ describe("getSharedTemplatesForAccount", () => {
         },
       },
       {
+        template_id: "tmpl-1",
+        user_id: "account-123",
+        created_at: "2024-01-01T00:00:00Z",
         templates: {
           id: "tmpl-1", // Duplicate
           title: "Template 1",
@@ -87,6 +95,9 @@ describe("getSharedTemplatesForAccount", () => {
         },
       },
       {
+        template_id: "tmpl-2",
+        user_id: "account-123",
+        created_at: "2024-01-02T00:00:00Z",
         templates: {
           id: "tmpl-2",
           title: "Template 2",
@@ -101,7 +112,7 @@ describe("getSharedTemplatesForAccount", () => {
         },
       },
     ];
-    mockEq.mockResolvedValue({ data: mockSharedData, error: null });
+    mockSelectAgentTemplateShares.mockResolvedValue(mockSharedData);
 
     const result = await getSharedTemplatesForAccount("account-123");
 
@@ -112,6 +123,9 @@ describe("getSharedTemplatesForAccount", () => {
   it("handles templates as array within share", async () => {
     const mockSharedData = [
       {
+        template_id: "tmpl-1",
+        user_id: "account-123",
+        created_at: "2024-01-01T00:00:00Z",
         templates: [
           {
             id: "tmpl-1",
@@ -140,16 +154,16 @@ describe("getSharedTemplatesForAccount", () => {
         ],
       },
     ];
-    mockEq.mockResolvedValue({ data: mockSharedData, error: null });
+    mockSelectAgentTemplateShares.mockResolvedValue(mockSharedData);
 
     const result = await getSharedTemplatesForAccount("account-123");
 
     expect(result).toHaveLength(2);
   });
 
-  it("throws error when database query fails", async () => {
+  it("throws error when selectAgentTemplateShares fails", async () => {
     const mockError = { message: "Database connection failed" };
-    mockEq.mockResolvedValue({ data: null, error: mockError });
+    mockSelectAgentTemplateShares.mockRejectedValue(mockError);
 
     await expect(getSharedTemplatesForAccount("account-123")).rejects.toEqual(
       mockError,
@@ -160,8 +174,11 @@ describe("getSharedTemplatesForAccount", () => {
     const mockSharedData = [
       null,
       undefined,
-      { templates: null },
+      { template_id: "x", user_id: "y", created_at: "z", templates: null },
       {
+        template_id: "tmpl-1",
+        user_id: "account-123",
+        created_at: "2024-01-01T00:00:00Z",
         templates: {
           id: "tmpl-1",
           title: "Valid Template",
@@ -176,7 +193,7 @@ describe("getSharedTemplatesForAccount", () => {
         },
       },
     ];
-    mockEq.mockResolvedValue({ data: mockSharedData, error: null });
+    mockSelectAgentTemplateShares.mockResolvedValue(mockSharedData);
 
     const result = await getSharedTemplatesForAccount("account-123");
 

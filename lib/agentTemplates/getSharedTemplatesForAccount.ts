@@ -1,40 +1,30 @@
-import supabase from "@/lib/supabase/serverClient";
+import selectAgentTemplateShares, {
+  type AgentTemplateShareWithTemplate,
+} from "@/lib/supabase/agent_template_shares/selectAgentTemplateShares";
 import type { AgentTemplateRow } from "./types";
-
-interface SharedTemplateData {
-  templates: AgentTemplateRow | AgentTemplateRow[];
-}
 
 export async function getSharedTemplatesForAccount(
   accountId: string,
 ): Promise<AgentTemplateRow[]> {
-  const { data, error } = await supabase
-    .from("agent_template_shares")
-    .select(
-      `
-      templates:agent_templates(
-        id, title, description, prompt, tags, creator, is_private, created_at, favorites_count, updated_at
-      )
-    `,
-    )
-    .eq("user_id", accountId);
-
-  if (error) throw error;
+  const shares = (await selectAgentTemplateShares({
+    userId: accountId,
+    includeTemplates: true,
+  })) as AgentTemplateShareWithTemplate[];
 
   const templates: AgentTemplateRow[] = [];
   const processedIds = new Set<string>();
 
-  data?.forEach((share: SharedTemplateData) => {
+  shares?.forEach((share) => {
     if (!share || !share.templates) return;
 
-    // Handle both single template and array of templates
+    // Handle both single template and array of templates (Supabase can return either)
     const templateList = Array.isArray(share.templates)
       ? share.templates
       : [share.templates];
 
-    templateList?.forEach((template: AgentTemplateRow) => {
+    templateList?.forEach((template) => {
       if (template && template.id && !processedIds.has(template.id)) {
-        templates.push(template);
+        templates.push(template as AgentTemplateRow);
         processedIds.add(template.id);
       }
     });
