@@ -1,5 +1,5 @@
 import supabase from "@/lib/supabase/serverClient";
-import getSocialPlatformByLink from "./getSocialPlatformByLink";
+import { getSocialPlatformByLink } from "@/lib/artists/getSocialPlatformByLink";
 
 export interface ArtistAgent {
   type: string;
@@ -16,9 +16,7 @@ export interface ArtistAgent {
  * @param artistSocialIds - Array of social IDs to look up
  * @returns Array of ArtistAgent objects, aggregated by type
  */
-export async function getArtistAgents(
-  artistSocialIds: string[],
-): Promise<ArtistAgent[]> {
+export async function getArtistAgents(artistSocialIds: string[]): Promise<ArtistAgent[]> {
   const { data, error } = await supabase
     .from("agent_status")
     .select("*, agent:agents(*)")
@@ -31,7 +29,7 @@ export async function getArtistAgents(
 
   if (!data) return [];
 
-  const agentIds = [...new Set(data.map((ele) => ele.agent.id))];
+  const agentIds = [...new Set(data.map(ele => ele.agent.id))];
 
   const { data: agents } = await supabase
     .from("agents")
@@ -40,7 +38,7 @@ export async function getArtistAgents(
 
   if (!agents) return [];
 
-  const transformedAgents = agents.map((agent) => ({
+  const transformedAgents = agents.map(agent => ({
     type: new String(
       agent.agent_status.length > 1
         ? "wrapped"
@@ -53,7 +51,7 @@ export async function getArtistAgents(
   // Aggregate agents by type (latest one for each type wins)
   const aggregatedAgents: Record<string, ArtistAgent> = {};
 
-  transformedAgents.forEach((agent) => {
+  transformedAgents.forEach(agent => {
     const type = agent.type.toLowerCase();
     aggregatedAgents[type] = agent;
   });
