@@ -66,7 +66,7 @@ export async function validateChatRequest(
       {
         status: "error",
         message: "Invalid input",
-        errors: validationResult.error.issues.map((err) => ({
+        errors: validationResult.error.issues.map(err => ({
           field: err.path.join("."),
           message: err.message,
         })),
@@ -141,11 +141,9 @@ export async function validateChatRequest(
   // Normalize chat content:
   // - If messages are provided, keep them as-is
   // - If only prompt is provided, convert it into a single user UIMessage
-  const hasMessages =
-    Array.isArray(validatedBody.messages) && validatedBody.messages.length > 0;
+  const hasMessages = Array.isArray(validatedBody.messages) && validatedBody.messages.length > 0;
   const hasPrompt =
-    typeof validatedBody.prompt === "string" &&
-    validatedBody.prompt.trim().length > 0;
+    typeof validatedBody.prompt === "string" && validatedBody.prompt.trim().length > 0;
 
   if (!hasMessages && hasPrompt) {
     validatedBody.messages = getMessages(validatedBody.prompt);

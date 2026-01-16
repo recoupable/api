@@ -18,7 +18,7 @@ import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDet
  * @returns The general agent
  */
 export default async function getGeneralAgent(body: ChatRequestBody): Promise<RoutingDecision> {
-  const { accountId, messages, artistId, model: bodyModel } = body;
+  const { accountId, orgId, messages, artistId, model: bodyModel } = body;
 
   const accountEmails = await selectAccountEmails({ accountIds: accountId });
   const email = accountEmails[0]?.email || undefined;
@@ -37,6 +37,7 @@ export default async function getGeneralAgent(body: ChatRequestBody): Promise<Ro
     roomId: body.roomId,
     artistId,
     accountId,
+    orgId,
     email,
     artistInstruction,
     knowledgeBaseText,
