@@ -1,25 +1,29 @@
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
-import { getAgentTemplateSharesByTemplateIds } from "./getAgentTemplateSharesByTemplateIds";
+import selectAgentTemplateShares from "@/lib/supabase/agent_template_shares/selectAgentTemplateShares";
 
+/**
+ *
+ * @param templateIds
+ */
 export async function getSharedEmailsForTemplates(
   templateIds: string[],
 ): Promise<Record<string, string[]>> {
   if (!templateIds || templateIds.length === 0) return {};
 
   // Get all shares for these templates using existing utility
-  const shares = await getAgentTemplateSharesByTemplateIds(templateIds);
+  const shares = await selectAgentTemplateShares({ templateIds });
 
   if (shares.length === 0) return {};
 
   // Get all user IDs who have access to these templates
-  const userIds = [...new Set(shares.map((share) => share.user_id))];
+  const userIds = [...new Set(shares.map(share => share.user_id))];
 
   // Get emails for these users using existing utility
   const emails = await selectAccountEmails({ accountIds: userIds });
 
   // Create a map of user_id to email
   const userEmailMap: Record<string, string[]> = {};
-  emails.forEach((emailRecord) => {
+  emails.forEach(emailRecord => {
     if (emailRecord.account_id && emailRecord.email) {
       if (!userEmailMap[emailRecord.account_id]) {
         userEmailMap[emailRecord.account_id] = [];
@@ -31,7 +35,7 @@ export async function getSharedEmailsForTemplates(
   // Create the final map of template_id to emails
   const emailMap: Record<string, string[]> = {};
 
-  shares.forEach((share) => {
+  shares.forEach(share => {
     if (!emailMap[share.template_id]) {
       emailMap[share.template_id] = [];
     }
@@ -42,7 +46,7 @@ export async function getSharedEmailsForTemplates(
   });
 
   // Remove duplicates for each template
-  Object.keys(emailMap).forEach((templateId) => {
+  Object.keys(emailMap).forEach(templateId => {
     emailMap[templateId] = [...new Set(emailMap[templateId])];
   });
 
