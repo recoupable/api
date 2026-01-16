@@ -22,8 +22,9 @@ export async function getAccountTemplates(accountId?: string | null) {
       }
     });
 
-    // Get user's favorite templates
-    const favouriteIds = await selectAgentTemplateFavorites({ userId: accountId });
+    // Get user's favorite templates and convert to Set of IDs
+    const favourites = await selectAgentTemplateFavorites({ userId: accountId });
+    const favouriteIds = new Set(favourites.map((f) => f.template_id));
 
     // Mark favorites
     return allTemplates.map((template: AgentTemplateRow) => ({

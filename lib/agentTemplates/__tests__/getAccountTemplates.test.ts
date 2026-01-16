@@ -56,9 +56,9 @@ describe("getAccountTemplates", () => {
 
       vi.mocked(listAgentTemplatesForUser).mockResolvedValue(ownedTemplates);
       vi.mocked(getSharedTemplatesForAccount).mockResolvedValue(sharedTemplates);
-      vi.mocked(selectAgentTemplateFavorites).mockResolvedValue(
-        new Set(["template-1"]),
-      );
+      vi.mocked(selectAgentTemplateFavorites).mockResolvedValue([
+        { template_id: "template-1", user_id: "user-123", created_at: null },
+      ]);
 
       const result = await getAccountTemplates("user-123");
 
@@ -85,7 +85,7 @@ describe("getAccountTemplates", () => {
 
       vi.mocked(listAgentTemplatesForUser).mockResolvedValue([ownedTemplate]);
       vi.mocked(getSharedTemplatesForAccount).mockResolvedValue([ownedTemplate]);
-      vi.mocked(selectAgentTemplateFavorites).mockResolvedValue(new Set());
+      vi.mocked(selectAgentTemplateFavorites).mockResolvedValue([]);
 
       const result = await getAccountTemplates("user-123");
 
@@ -122,9 +122,9 @@ describe("getAccountTemplates", () => {
 
       vi.mocked(listAgentTemplatesForUser).mockResolvedValue(templates);
       vi.mocked(getSharedTemplatesForAccount).mockResolvedValue([]);
-      vi.mocked(selectAgentTemplateFavorites).mockResolvedValue(
-        new Set(["template-1"]),
-      );
+      vi.mocked(selectAgentTemplateFavorites).mockResolvedValue([
+        { template_id: "template-1", user_id: "user-123", created_at: null },
+      ]);
 
       const result = await getAccountTemplates("user-123");
 

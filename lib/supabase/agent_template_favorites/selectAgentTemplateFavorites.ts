@@ -1,38 +1,37 @@
 import supabase from "@/lib/supabase/serverClient";
+import type { Tables } from "@/types/database.types";
 
-interface TemplateFavorite {
-  template_id: string;
-}
+// DRY: Use database types instead of custom interfaces
+export type AgentTemplateFavorite = Tables<"agent_template_favorites">;
 
 /**
  * Select agent template favorites for a user
  *
  * @param params - The parameters for the query
  * @param params.userId - The user ID to get favorites for
- * @returns Set of favorite template IDs
+ * @returns Array of favorite records
  */
 export default async function selectAgentTemplateFavorites({
   userId,
 }: {
   userId?: string;
-}): Promise<Set<string>> {
+}): Promise<AgentTemplateFavorite[]> {
   const hasUserId = typeof userId === "string" && userId.length > 0;
 
-  // If no userId is provided, return empty set
+  // If no userId is provided, return empty array
   if (!hasUserId) {
-    return new Set();
+    return [];
   }
 
+  // DRY: Use select('*') instead of explicit columns
   const { data, error } = await supabase
     .from("agent_template_favorites")
-    .select("template_id")
+    .select("*")
     .eq("user_id", userId);
 
   if (error) {
     throw error;
   }
 
-  return new Set<string>(
-    (data || []).map((f: TemplateFavorite) => f.template_id)
-  );
+  return data || [];
 }
