@@ -18,6 +18,10 @@ vi.mock("@/lib/keys/getApiKeyDetails", () => ({
   getApiKeyDetails: vi.fn(),
 }));
 
+vi.mock("@/lib/organizations/validateOrganizationAccess", () => ({
+  validateOrganizationAccess: vi.fn(),
+}));
+
 vi.mock("@/lib/chat/setupChatRequest", () => ({
   setupChatRequest: vi.fn(),
 }));

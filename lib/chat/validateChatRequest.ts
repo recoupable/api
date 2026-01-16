@@ -7,6 +7,7 @@ import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId"
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { getMessages } from "@/lib/messages/getMessages";
 import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
+import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
 
 export const chatRequestSchema = z
   .object({
@@ -17,6 +18,7 @@ export const chatRequestSchema = z
     roomId: z.string().optional(),
     accountId: z.string().optional(),
     artistId: z.string().optional(),
+    organizationId: z.string().optional(),
     model: z.string().optional(),
     excludeTools: z.array(z.string()).optional(),
   })
@@ -136,6 +138,30 @@ export async function validateChatRequest(
       return accountIdOrError;
     }
     accountId = accountIdOrError;
+  }
+
+  // Handle organizationId override from request body
+  if (validatedBody.organizationId) {
+    const hasOrgAccess = await validateOrganizationAccess({
+      accountId,
+      organizationId: validatedBody.organizationId,
+    });
+
+    if (!hasOrgAccess) {
+      return NextResponse.json(
+        {
+          status: "error",
+          message: "Access denied to specified organizationId",
+        },
+        {
+          status: 403,
+          headers: getCorsHeaders(),
+        },
+      );
+    }
+
+    // Use the provided organizationId as orgId
+    orgId = validatedBody.organizationId;
   }
 
   // Normalize chat content:
