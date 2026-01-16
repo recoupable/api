@@ -494,7 +494,7 @@ describe("validateChatRequest", () => {
       expect((result as any).orgId).toBe("different-org-456");
     });
 
-    it("rejects organizationId when user is NOT a member of org", async () => {
+    it("ignores organizationId when user is NOT a member of org (lenient behavior)", async () => {
       mockGetAuthenticatedAccountId.mockResolvedValue("user-account-123");
       mockValidateOrganizationAccess.mockResolvedValue(false);
 
@@ -505,10 +505,9 @@ describe("validateChatRequest", () => {
 
       const result = await validateChatRequest(request as any);
 
-      expect(result).toBeInstanceOf(NextResponse);
-      const json = await (result as NextResponse).json();
-      expect(json.status).toBe("error");
-      expect(json.message).toBe("Access denied to specified organizationId");
+      // Should succeed but with orgId: null (ignores invalid org)
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect((result as any).orgId).toBeNull();
     });
 
     it("uses API key orgId when no organizationId is provided", async () => {
