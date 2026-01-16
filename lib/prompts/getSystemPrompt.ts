@@ -40,7 +40,7 @@ export function getSystemPrompt({
 
   **IMPORTANT CONTEXT VALUES (use these exact values in tools):**
   - account_id: ${accountId || "Unknown"} (use this for ALL tools that require account_id parameter)
-  - organization_id: ${orgId || "None"}
+  - organization_id: ${orgId || "None. Personal Account."}
   - artist_account_id: ${artistId}
   - active_account_email: ${email || "Unknown"}
   - active_conversation_id: ${roomId || "No ID"}
