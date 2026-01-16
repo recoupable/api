@@ -26,6 +26,10 @@ vi.mock("@/lib/chat/setupChatRequest", () => ({
   setupChatRequest: vi.fn(),
 }));
 
+vi.mock("@/lib/chat/handleChatCompletion", () => ({
+  handleChatCompletion: vi.fn(),
+}));
+
 vi.mock("ai", () => ({
   generateText: vi.fn(),
 }));
@@ -33,12 +37,14 @@ vi.mock("ai", () => ({
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { setupChatRequest } from "@/lib/chat/setupChatRequest";
+import { handleChatCompletion } from "@/lib/chat/handleChatCompletion";
 import { generateText } from "ai";
 import { handleChatGenerate } from "../handleChatGenerate";
 
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
 const mockSetupChatRequest = vi.mocked(setupChatRequest);
+const mockHandleChatCompletion = vi.mocked(handleChatCompletion);
 const mockGenerateText = vi.mocked(generateText);
 
 // Helper to create mock NextRequest
@@ -58,6 +64,7 @@ function createMockRequest(
 describe("handleChatGenerate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockHandleChatCompletion.mockResolvedValue();
   });
 
   afterEach(() => {

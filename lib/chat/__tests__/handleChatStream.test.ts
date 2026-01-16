@@ -26,6 +26,10 @@ vi.mock("@/lib/chat/setupChatRequest", () => ({
   setupChatRequest: vi.fn(),
 }));
 
+vi.mock("@/lib/chat/handleChatCompletion", () => ({
+  handleChatCompletion: vi.fn(),
+}));
+
 vi.mock("ai", () => ({
   createUIMessageStream: vi.fn(),
   createUIMessageStreamResponse: vi.fn(),
@@ -34,12 +38,14 @@ vi.mock("ai", () => ({
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { setupChatRequest } from "@/lib/chat/setupChatRequest";
+import { handleChatCompletion } from "@/lib/chat/handleChatCompletion";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { handleChatStream } from "../handleChatStream";
 
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
 const mockSetupChatRequest = vi.mocked(setupChatRequest);
+const mockHandleChatCompletion = vi.mocked(handleChatCompletion);
 const mockCreateUIMessageStream = vi.mocked(createUIMessageStream);
 const mockCreateUIMessageStreamResponse = vi.mocked(createUIMessageStreamResponse);
 
@@ -60,6 +66,7 @@ function createMockRequest(
 describe("handleChatStream", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockHandleChatCompletion.mockResolvedValue();
   });
 
   afterEach(() => {

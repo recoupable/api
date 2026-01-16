@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateText } from "ai";
+import { generateText, UIMessage } from "ai";
 import { validateChatRequest } from "./validateChatRequest";
 import { setupChatRequest } from "./setupChatRequest";
+import { handleChatCompletion } from "./handleChatCompletion";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import generateUUID from "@/lib/uuid/generateUUID";
 
 /**
  * Handles a non-streaming chat generate request.
@@ -28,8 +30,20 @@ export async function handleChatGenerate(request: NextRequest): Promise<Response
 
     const result = await generateText(chatConfig);
 
-    // Note: Credit handling and chat completion handling will be added
-    // as part of the handleChatCredits and handleChatCompletion migrations
+    const responseUIMessage = {
+      id: generateUUID(),
+      role: "assistant",
+      parts: [
+        {
+          type: "text",
+          text: result?.text || "",
+        },
+      ],
+    } as UIMessage;
+
+    void handleChatCompletion(body, [responseUIMessage]).catch((e) => {
+      console.error("Failed to handle chat completion:", e);
+    });
 
     return NextResponse.json(
       {
