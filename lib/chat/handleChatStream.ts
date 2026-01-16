@@ -44,6 +44,7 @@ export async function handleChatStream(request: NextRequest): Promise<Response> 
         });
       },
       onFinish: ({ messages }) => {
+        console.log("🟢 onFinish triggered, messages count:", messages?.length);
         void handleChatCompletion(body, messages).catch((e) => {
           console.error("Failed to handle chat completion:", e);
         });

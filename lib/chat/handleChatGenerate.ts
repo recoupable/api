@@ -41,6 +41,7 @@ export async function handleChatGenerate(request: NextRequest): Promise<Response
       ],
     } as UIMessage;
 
+    console.log("🟢 Calling handleChatCompletion for generate endpoint");
     void handleChatCompletion(body, [responseUIMessage]).catch((e) => {
       console.error("Failed to handle chat completion:", e);
     });
