@@ -19,15 +19,21 @@ vi.mock("@/lib/keys/getApiKeyDetails", () => ({
   getApiKeyDetails: vi.fn(),
 }));
 
+vi.mock("@/lib/organizations/validateOrganizationAccess", () => ({
+  validateOrganizationAccess: vi.fn(),
+}));
+
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
+import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
 
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockGetAuthenticatedAccountId = vi.mocked(getAuthenticatedAccountId);
 const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
 const mockGetApiKeyDetails = vi.mocked(getApiKeyDetails);
+const mockValidateOrganizationAccess = vi.mocked(validateOrganizationAccess);
 
 // Helper to create mock NextRequest
 function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
@@ -415,6 +421,129 @@ describe("validateChatRequest", () => {
         prompt: "test",
       });
       expect(result.success).toBe(false);
+    });
+  });
+
+  describe("organizationId override", () => {
+    it("accepts organizationId in schema", () => {
+      const result = chatRequestSchema.safeParse({
+        prompt: "test",
+        organizationId: "org-123",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("uses provided organizationId when user is member of org (bearer token)", async () => {
+      mockGetAuthenticatedAccountId.mockResolvedValue("user-account-123");
+      mockValidateOrganizationAccess.mockResolvedValue(true);
+
+      const request = createMockRequest(
+        { prompt: "Hello", organizationId: "org-456" },
+        { authorization: "Bearer valid-jwt-token" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect((result as any).orgId).toBe("org-456");
+      expect(mockValidateOrganizationAccess).toHaveBeenCalledWith({
+        accountId: "user-account-123",
+        organizationId: "org-456",
+      });
+    });
+
+    it("uses provided organizationId when user is member of org (API key)", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("api-key-account-123");
+      mockGetApiKeyDetails.mockResolvedValue({
+        accountId: "api-key-account-123",
+        orgId: null,
+      });
+      mockValidateOrganizationAccess.mockResolvedValue(true);
+
+      const request = createMockRequest(
+        { prompt: "Hello", organizationId: "org-789" },
+        { "x-api-key": "personal-api-key" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect((result as any).orgId).toBe("org-789");
+      expect(mockValidateOrganizationAccess).toHaveBeenCalledWith({
+        accountId: "api-key-account-123",
+        organizationId: "org-789",
+      });
+    });
+
+    it("overwrites API key orgId with provided organizationId when user is member", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("org-account-123");
+      mockGetApiKeyDetails.mockResolvedValue({
+        accountId: "org-account-123",
+        orgId: "original-org-123",
+      });
+      mockValidateOrganizationAccess.mockResolvedValue(true);
+
+      const request = createMockRequest(
+        { prompt: "Hello", organizationId: "different-org-456" },
+        { "x-api-key": "org-api-key" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect((result as any).orgId).toBe("different-org-456");
+    });
+
+    it("rejects organizationId when user is NOT a member of org", async () => {
+      mockGetAuthenticatedAccountId.mockResolvedValue("user-account-123");
+      mockValidateOrganizationAccess.mockResolvedValue(false);
+
+      const request = createMockRequest(
+        { prompt: "Hello", organizationId: "org-not-member" },
+        { authorization: "Bearer valid-jwt-token" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).toBeInstanceOf(NextResponse);
+      const json = await (result as NextResponse).json();
+      expect(json.status).toBe("error");
+      expect(json.message).toBe("Access denied to specified organizationId");
+    });
+
+    it("uses API key orgId when no organizationId is provided", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("org-account-123");
+      mockGetApiKeyDetails.mockResolvedValue({
+        accountId: "org-account-123",
+        orgId: "api-key-org-123",
+      });
+
+      const request = createMockRequest(
+        { prompt: "Hello" },
+        { "x-api-key": "org-api-key" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect((result as any).orgId).toBe("api-key-org-123");
+      // Should not validate org access when no organizationId is provided
+      expect(mockValidateOrganizationAccess).not.toHaveBeenCalled();
+    });
+
+    it("returns null orgId when no organizationId provided and bearer token auth", async () => {
+      mockGetAuthenticatedAccountId.mockResolvedValue("user-account-123");
+
+      const request = createMockRequest(
+        { prompt: "Hello" },
+        { authorization: "Bearer valid-jwt-token" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect((result as any).orgId).toBeNull();
+      expect(mockValidateOrganizationAccess).not.toHaveBeenCalled();
     });
   });
 });

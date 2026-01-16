@@ -31,6 +31,10 @@ vi.mock("@/lib/keys/getApiKeyDetails", () => ({
   getApiKeyDetails: vi.fn(),
 }));
 
+vi.mock("@/lib/organizations/validateOrganizationAccess", () => ({
+  validateOrganizationAccess: vi.fn(),
+}));
+
 // Mock Supabase dependencies
 vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
   default: vi.fn(),
