@@ -6,7 +6,6 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { registerAllTools } from "@/lib/mcp/tools";
 import { getGoogleSheetsTools } from "@/lib/agents/googleSheetsAgent";
-import { AuthenticatedInMemoryTransport } from "@/lib/mcp/AuthenticatedInMemoryTransport";
 
 /**
  * Sets up and filters tools for a chat request.
@@ -18,7 +17,7 @@ import { AuthenticatedInMemoryTransport } from "@/lib/mcp/AuthenticatedInMemoryT
  * @returns Filtered tool set ready for use
  */
 export async function setupToolsForRequest(body: ChatRequestBody): Promise<ToolSet> {
-  const { excludeTools, accountId, orgId } = body;
+  const { excludeTools } = body;
 
   // Create in-memory MCP server and client (no HTTP call needed)
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -30,19 +29,7 @@ export async function setupToolsForRequest(body: ChatRequestBody): Promise<ToolS
   registerAllTools(server);
   await server.connect(serverTransport);
 
-  // Wrap client transport to inject auth info into every message
-  const authInfo = {
-    token: "internal",
-    scopes: ["mcp:tools"],
-    clientId: accountId,
-    extra: {
-      accountId,
-      orgId,
-    },
-  };
-  const authenticatedTransport = new AuthenticatedInMemoryTransport(clientTransport, authInfo);
-
-  const mcpClient = await createMCPClient({ transport: authenticatedTransport });
+  const mcpClient = await createMCPClient({ transport: clientTransport });
   const mcpClientTools = (await mcpClient.tools()) as ToolSet;
 
   // Fetch Google Sheets tools (authenticated tools or login tool)
