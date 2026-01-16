@@ -35,7 +35,6 @@ export async function handleChatGenerate(request: NextRequest): Promise<Response
       id: generateUUID(),
       role: "assistant",
       parts: [{ type: "text", text: result.text }],
-      createdAt: new Date(),
     };
 
     // Handle post-completion tasks (room creation, memory storage, notifications)
