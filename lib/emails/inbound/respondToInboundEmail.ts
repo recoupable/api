@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import type { ResendEmailReceivedEvent } from "@/lib/emails/validateInboundEmailEvent";
 import { sendEmailWithResend } from "@/lib/emails/sendEmail";
-import { getMessages } from "@/lib/messages/getMessages";
 import { getFromWithName } from "@/lib/emails/inbound/getFromWithName";
-import insertMemories from "@/lib/supabase/memories/insertMemories";
-import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
 import { validateNewEmailMemory } from "@/lib/emails/inbound/validateNewEmailMemory";
 import { generateEmailResponse } from "@/lib/emails/inbound/generateEmailResponse";
 import { validateCcReplyExpected } from "@/lib/emails/inbound/validateCcReplyExpected";
+import { saveChatCompletion } from "@/lib/chat/saveChatCompletion";
 
 /**
  * Responds to an inbound email by sending a hard-coded reply in the same thread.
@@ -60,12 +58,7 @@ export async function respondToInboundEmail(
     const result = await sendEmailWithResend(payload);
 
     // Save the assistant response message
-    const assistantMessage = getMessages(text, "assistant")[0];
-    await insertMemories({
-      id: assistantMessage.id,
-      room_id: roomId,
-      content: filterMessageContentForMemories(assistantMessage),
-    });
+    await saveChatCompletion({ text, roomId });
 
     if (result instanceof NextResponse) {
       return result;

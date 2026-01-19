@@ -23,17 +23,45 @@ vi.mock("@/lib/organizations/validateOrganizationAccess", () => ({
   validateOrganizationAccess: vi.fn(),
 }));
 
+vi.mock("@/lib/uuid/generateUUID", () => {
+  const mockFn = vi.fn(() => "mock-uuid-default");
+  return {
+    generateUUID: mockFn,
+    default: mockFn,
+  };
+});
+
+vi.mock("@/lib/chat/createNewRoom", () => ({
+  createNewRoom: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/memories/insertMemories", () => ({
+  default: vi.fn(),
+}));
+
+vi.mock("@/lib/messages/filterMessageContentForMemories", () => ({
+  default: vi.fn((msg: unknown) => msg),
+}));
+
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
+import { generateUUID } from "@/lib/uuid/generateUUID";
+import { createNewRoom } from "@/lib/chat/createNewRoom";
+import insertMemories from "@/lib/supabase/memories/insertMemories";
+import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
 
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockGetAuthenticatedAccountId = vi.mocked(getAuthenticatedAccountId);
 const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
 const mockGetApiKeyDetails = vi.mocked(getApiKeyDetails);
 const mockValidateOrganizationAccess = vi.mocked(validateOrganizationAccess);
+const mockGenerateUUID = vi.mocked(generateUUID);
+const mockCreateNewRoom = vi.mocked(createNewRoom);
+const mockInsertMemories = vi.mocked(insertMemories);
+const mockFilterMessageContentForMemories = vi.mocked(filterMessageContentForMemories);
 
 // Helper to create mock NextRequest
 function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
@@ -544,6 +572,167 @@ describe("validateChatRequest", () => {
       expect(result).not.toBeInstanceOf(NextResponse);
       expect((result as any).orgId).toBeNull();
       expect(mockValidateOrganizationAccess).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("auto room creation", () => {
+    it("generates a new roomId when roomId is not provided", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockGenerateUUID.mockReturnValue("generated-uuid-456");
+      mockCreateNewRoom.mockResolvedValue(undefined);
+
+      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "test-key" });
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect((result as any).roomId).toBe("generated-uuid-456");
+      expect(mockGenerateUUID).toHaveBeenCalled();
+    });
+
+    it("creates a new room when roomId is not provided", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockGenerateUUID.mockReturnValue("generated-uuid-789");
+      mockCreateNewRoom.mockResolvedValue(undefined);
+
+      const request = createMockRequest({ prompt: "Create a new room" }, { "x-api-key": "test-key" });
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect(mockCreateNewRoom).toHaveBeenCalledWith({
+        accountId: "account-123",
+        roomId: "generated-uuid-789",
+        artistId: undefined,
+        lastMessage: expect.objectContaining({
+          role: "user",
+          parts: expect.arrayContaining([expect.objectContaining({ text: "Create a new room" })]),
+        }),
+      });
+    });
+
+    it("creates a new room with artistId when provided", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockGenerateUUID.mockReturnValue("generated-uuid-abc");
+      mockCreateNewRoom.mockResolvedValue(undefined);
+
+      const request = createMockRequest(
+        { prompt: "Hello", artistId: "artist-xyz" },
+        { "x-api-key": "test-key" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect(mockCreateNewRoom).toHaveBeenCalledWith({
+        accountId: "account-123",
+        roomId: "generated-uuid-abc",
+        artistId: "artist-xyz",
+        lastMessage: expect.any(Object),
+      });
+    });
+
+    it("does NOT generate a new roomId when roomId is provided", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+
+      const request = createMockRequest(
+        { prompt: "Hello", roomId: "existing-room-123" },
+        { "x-api-key": "test-key" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect((result as any).roomId).toBe("existing-room-123");
+      // Note: generateUUID may be called by getMessages for message IDs, but not for roomId
+      expect(mockCreateNewRoom).not.toHaveBeenCalled();
+    });
+
+    it("does NOT create a room when roomId is already provided", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+
+      const request = createMockRequest(
+        { prompt: "Hello", roomId: "existing-room-456" },
+        { "x-api-key": "test-key" },
+      );
+
+      await validateChatRequest(request as any);
+
+      expect(mockCreateNewRoom).not.toHaveBeenCalled();
+    });
+
+    it("works with bearer token auth for auto room creation", async () => {
+      mockGetAuthenticatedAccountId.mockResolvedValue("jwt-account-123");
+      mockGenerateUUID.mockReturnValue("jwt-generated-uuid");
+      mockCreateNewRoom.mockResolvedValue(undefined);
+
+      const request = createMockRequest(
+        { prompt: "Hello from JWT" },
+        { authorization: "Bearer valid-jwt" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect((result as any).roomId).toBe("jwt-generated-uuid");
+      expect(mockCreateNewRoom).toHaveBeenCalledWith({
+        accountId: "jwt-account-123",
+        roomId: "jwt-generated-uuid",
+        artistId: undefined,
+        lastMessage: expect.any(Object),
+      });
+    });
+
+    it("persists user message to memories when roomId is auto-created", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockGenerateUUID.mockReturnValue("new-room-uuid");
+      mockCreateNewRoom.mockResolvedValue(undefined);
+      mockInsertMemories.mockResolvedValue(null);
+
+      const request = createMockRequest(
+        { prompt: "This is my first message" },
+        { "x-api-key": "test-key" },
+      );
+
+      await validateChatRequest(request as any);
+
+      expect(mockInsertMemories).toHaveBeenCalledWith({
+        id: "new-room-uuid",
+        room_id: "new-room-uuid",
+        content: expect.objectContaining({
+          role: "user",
+          parts: expect.arrayContaining([
+            expect.objectContaining({ text: "This is my first message" }),
+          ]),
+        }),
+      });
+    });
+
+    it("persists user message to memories for existing rooms (match /api/emails/inbound behavior)", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockGenerateUUID.mockReturnValue("memory-uuid");
+      mockInsertMemories.mockResolvedValue(null);
+
+      const request = createMockRequest(
+        { prompt: "Hello to existing room", roomId: "existing-room-id" },
+        { "x-api-key": "test-key" },
+      );
+
+      await validateChatRequest(request as any);
+
+      // User message should be persisted for ALL requests (matching email flow)
+      expect(mockInsertMemories).toHaveBeenCalledWith({
+        id: "memory-uuid",
+        room_id: "existing-room-id",
+        content: expect.objectContaining({
+          role: "user",
+          parts: expect.arrayContaining([
+            expect.objectContaining({ text: "Hello to existing room" }),
+          ]),
+        }),
+      });
+      // Room should NOT be created for existing rooms
+      expect(mockCreateNewRoom).not.toHaveBeenCalled();
     });
   });
 });
