@@ -72,20 +72,12 @@ describe("convertToUiMessages", () => {
       });
     });
 
-    it("generates UUIDs for messages without IDs", () => {
+    it("generates UUIDs for ModelMessage format (ModelMessage has no id field)", () => {
       const messages = [{ role: "user", content: "Hello" }];
 
       const result = convertToUiMessages(messages);
 
       expect(result[0].id).toBe("generated-uuid");
-    });
-
-    it("preserves ID if present in simple format", () => {
-      const messages = [{ id: "existing-id", role: "user", content: "Hello" }];
-
-      const result = convertToUiMessages(messages);
-
-      expect(result[0].id).toBe("existing-id");
     });
   });
 

@@ -1,20 +1,30 @@
-import { UIMessage } from "ai";
+import { UIMessage, ModelMessage } from "ai";
 import generateUUID from "@/lib/uuid/generateUUID";
 import isUiMessage from "@/lib/messages/isUiMessage";
 
 /**
- * Message in simple { role, content } format.
+ * Input message that can be either UIMessage or ModelMessage format.
  */
-interface SimpleMessage {
-  id?: string;
-  role: string;
-  content: string;
-}
+type InputMessage = UIMessage | ModelMessage;
 
 /**
- * Input message that can be either UIMessage or simple format.
+ * Extracts text content from ModelMessage content field.
+ *
+ * @param content - The content field which can be string or content parts array
+ * @returns The extracted text content
  */
-type InputMessage = UIMessage | SimpleMessage;
+function extractTextContent(content: ModelMessage["content"]): string {
+  if (typeof content === "string") {
+    return content;
+  }
+
+  // Handle content parts array - extract text from text parts
+  const textParts = content
+    .filter((part): part is { type: "text"; text: string } => part.type === "text")
+    .map((part) => part.text);
+
+  return textParts.join("");
+}
 
 /**
  * Converts messages to UIMessage format.
@@ -24,7 +34,7 @@ type InputMessage = UIMessage | SimpleMessage;
  *
  * Handles:
  * - UIMessage format (with parts array) - passed through unchanged
- * - Simple format ({ role, content }) - converted to UIMessage
+ * - ModelMessage format ({ role, content }) - converted to UIMessage
  * - Mixed arrays of both formats
  *
  * @param messages - Array of messages in any supported format
@@ -36,11 +46,14 @@ export default function convertToUiMessages(messages: InputMessage[]): UIMessage
       return message;
     }
 
-    // Convert simple { role, content } format to UIMessage
+    // Convert ModelMessage { role, content } format to UIMessage
+    const modelMessage = message as ModelMessage;
+    const textContent = extractTextContent(modelMessage.content);
+
     return {
-      id: message.id || generateUUID(),
-      role: message.role as "user" | "assistant" | "system",
-      parts: [{ type: "text" as const, text: message.content }],
+      id: generateUUID(),
+      role: modelMessage.role as "user" | "assistant" | "system",
+      parts: [{ type: "text" as const, text: textContent }],
     };
   });
 }
