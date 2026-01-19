@@ -1,14 +1,5 @@
 import { createToolRouterSession } from "./createSession";
-
-/**
- * Tool returned by Composio Tool Router.
- * Uses inputSchema (not parameters) which is MCP-compatible.
- */
-export interface ComposioTool {
-  description: string;
-  inputSchema: unknown;
-  execute: (args: unknown) => Promise<unknown>;
-}
+import type { Tool, ToolSet } from "ai";
 
 /**
  * Tools we want to expose from Composio Tool Router.
@@ -22,25 +13,28 @@ const ALLOWED_TOOLS = [
 ];
 
 /**
- * Runtime validation to check if an object conforms to ComposioTool interface.
+ * Runtime validation to check if an object is a valid Vercel AI SDK Tool.
  *
- * Why: The Composio SDK returns a Tools class instance from session.tools(),
- * not a plain object. We validate each tool at runtime to ensure type safety.
+ * Why: The Composio SDK's session.tools() returns a ToolSet (Record<string, Tool>)
+ * from the configured provider. With VercelProvider, this returns Vercel AI SDK tools.
+ * We validate at runtime to ensure type safety before using bracket notation access.
  *
  * @param tool - The object to validate
- * @returns true if the object has required ComposioTool properties
+ * @returns true if the object has required Tool properties
  */
-function isComposioTool(tool: unknown): tool is ComposioTool {
+function isValidTool(tool: unknown): tool is Tool {
   if (typeof tool !== "object" || tool === null) {
     return false;
   }
 
   const obj = tool as Record<string, unknown>;
-  return (
-    typeof obj.description === "string" &&
-    "inputSchema" in obj &&
-    typeof obj.execute === "function"
-  );
+
+  // Vercel AI SDK Tool requires: description (optional), parameters, execute
+  // The execute function is what makes it callable
+  const hasExecute = typeof obj.execute === "function";
+  const hasParameters = "parameters" in obj;
+
+  return hasExecute && hasParameters;
 }
 
 /**
@@ -54,17 +48,17 @@ function isComposioTool(tool: unknown): tool is ComposioTool {
  *
  * @param userId - Unique identifier for the user (accountId)
  * @param roomId - Optional chat room ID for OAuth redirect
- * @returns Record of tool name to tool definition
+ * @returns ToolSet containing filtered Vercel AI SDK tools
  */
 export async function getComposioTools(
   userId: string,
   roomId?: string
-): Promise<Record<string, ComposioTool>> {
+): Promise<ToolSet> {
   const session = await createToolRouterSession(userId, roomId);
   const allTools = await session.tools();
 
   // Filter to only allowed tools with runtime validation
-  const filteredTools: Record<string, ComposioTool> = {};
+  const filteredTools: ToolSet = {};
 
   for (const toolName of ALLOWED_TOOLS) {
     // Use Object.prototype.hasOwnProperty to safely check for property existence
@@ -72,7 +66,7 @@ export async function getComposioTools(
     if (Object.prototype.hasOwnProperty.call(allTools, toolName)) {
       const tool = (allTools as Record<string, unknown>)[toolName];
 
-      if (isComposioTool(tool)) {
+      if (isValidTool(tool)) {
         filteredTools[toolName] = tool;
       }
     }
