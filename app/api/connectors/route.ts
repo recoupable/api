@@ -4,6 +4,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getConnectors } from "@/lib/composio/connectors";
 import { disconnectConnector } from "@/lib/composio/connectors/disconnectConnector";
 import { validateDisconnectConnectorBody } from "@/lib/composio/connectors/validateDisconnectConnectorBody";
+import { verifyConnectorOwnership } from "@/lib/composio/connectors/verifyConnectorOwnership";
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 
 /**
@@ -72,6 +73,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
       return accountIdOrError;
     }
 
+    const accountId = accountIdOrError;
     const body = await request.json();
 
     const validated = validateDisconnectConnectorBody(body);
@@ -80,6 +82,15 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
     }
 
     const { connected_account_id } = validated;
+
+    // Verify the connected account belongs to the authenticated user
+    const isOwner = await verifyConnectorOwnership(accountId, connected_account_id);
+    if (!isOwner) {
+      return NextResponse.json(
+        { error: "Connected account not found or does not belong to this user" },
+        { status: 403, headers }
+      );
+    }
 
     const result = await disconnectConnector(connected_account_id);
 
