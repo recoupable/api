@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { authorizeConnector } from "@/lib/composio/connectors";
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
+import { validateAuthorizeConnectorBody } from "@/lib/composio/connectors/validateAuthorizeConnectorBody";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -39,15 +40,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const accountId = accountIdOrError;
     const body = await request.json();
-    const { connector, callback_url } = body;
 
-    if (!connector) {
-      return NextResponse.json(
-        { error: "connector is required (e.g., 'googlesheets', 'gmail')" },
-        { status: 400, headers },
-      );
+    const validated = validateAuthorizeConnectorBody(body);
+    if (validated instanceof NextResponse) {
+      return validated;
     }
 
+    const { connector, callback_url } = validated;
     const result = await authorizeConnector(accountId, connector, callback_url);
 
     return NextResponse.json(
