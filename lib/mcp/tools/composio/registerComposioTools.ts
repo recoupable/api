@@ -7,7 +7,7 @@ export function registerComposioTools(server: McpServer): void {
   server.registerTool(
     "composio",
     {
-      description: "Get Composio tools for accessing external services.",
+      description: "Get Composio tools for Google Sheets integration.",
       inputSchema: z.object({
         account_id: z.string().min(1),
         room_id: z.string().optional(),
