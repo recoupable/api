@@ -8,6 +8,8 @@ import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccoun
 import { getMessages } from "@/lib/messages/getMessages";
 import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
+import { generateUUID } from "@/lib/uuid/generateUUID";
+import { createNewRoom } from "@/lib/chat/createNewRoom";
 
 export const chatRequestSchema = z
   .object({
@@ -175,9 +177,37 @@ export async function validateChatRequest(
     validatedBody.messages = getMessages(validatedBody.prompt);
   }
 
+  // Auto-create roomId if not provided (match /api/emails/inbound behavior)
+  let finalRoomId = validatedBody.roomId;
+  if (!finalRoomId) {
+    finalRoomId = generateUUID();
+    const firstMessage = validatedBody.messages[0];
+
+    // Convert message to UIMessage format if needed (messages may come in different formats)
+    let lastMessage;
+    if (firstMessage?.parts) {
+      // Already in UIMessage format
+      lastMessage = firstMessage;
+    } else if (firstMessage?.content) {
+      // Convert simple { role, content } format to UIMessage
+      lastMessage = getMessages(firstMessage.content, firstMessage.role)[0];
+    } else {
+      // Fallback: create a default message
+      lastMessage = getMessages("New conversation")[0];
+    }
+
+    await createNewRoom({
+      accountId,
+      roomId: finalRoomId,
+      artistId: validatedBody.artistId,
+      lastMessage,
+    });
+  }
+
   return {
     ...validatedBody,
     accountId,
     orgId,
+    roomId: finalRoomId,
   } as ChatRequestBody;
 }
