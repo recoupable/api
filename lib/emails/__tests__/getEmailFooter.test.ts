@@ -38,4 +38,20 @@ describe("getEmailFooter", () => {
     expect(footer).toContain("font-size:12px");
     expect(footer).toContain("color:#6b7280");
   });
+
+  it("includes artist workspace when artistName is provided", () => {
+    const footer = getEmailFooter("room-id", "Taylor Swift");
+    expect(footer).toContain("From Taylor Swift's workspace");
+  });
+
+  it("excludes artist line when artistName is not provided", () => {
+    const footer = getEmailFooter("room-id");
+    expect(footer).not.toContain("workspace");
+  });
+
+  it("includes artist workspace without roomId", () => {
+    const footer = getEmailFooter(undefined, "Drake");
+    expect(footer).toContain("From Drake's workspace");
+    expect(footer).not.toContain("chat.recoupable.com");
+  });
 });

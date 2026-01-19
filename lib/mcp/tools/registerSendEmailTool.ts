@@ -5,6 +5,7 @@ import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { RECOUP_FROM_EMAIL } from "@/lib/const";
 import { getEmailFooter } from "@/lib/emails/getEmailFooter";
+import { selectRoomWithArtist } from "@/lib/supabase/rooms/selectRoomWithArtist";
 import { NextResponse } from "next/server";
 import { marked } from "marked";
 
@@ -24,7 +25,8 @@ export function registerSendEmailTool(server: McpServer): void {
     async (args: SendEmailInput) => {
       const { to, cc = [], subject, text, html = "", headers = {}, room_id } = args;
 
-      const footer = getEmailFooter(room_id);
+      const roomData = room_id ? await selectRoomWithArtist(room_id) : null;
+      const footer = getEmailFooter(room_id, roomData?.artist_name || undefined);
       const bodyHtml = html || (text ? marked(text) : "");
       const htmlWithFooter = `${bodyHtml}\n\n${footer}`;
 

@@ -1,10 +1,13 @@
 import type { GetReceivingEmailResponseSuccess } from "resend";
 import selectMemoryEmails from "@/lib/supabase/memory_emails/selectMemoryEmails";
 import { extractRoomIdFromText } from "./extractRoomIdFromText";
+import { extractRoomIdFromHtml } from "./extractRoomIdFromHtml";
 
 /**
- * Extracts the roomId from an email. First checks the email text for a Recoup chat link,
- * then falls back to looking up existing memory_emails via the references header.
+ * Extracts the roomId from an email. Checks multiple sources in order:
+ * 1. Email text body for a Recoup chat link
+ * 2. Email HTML body for a Recoup chat link (handles Superhuman's wbr tags)
+ * 3. References header to look up existing memory_emails
  *
  * @param emailContent - The email content from Resend's Receiving API
  * @returns The roomId if found, undefined otherwise
@@ -16,6 +19,13 @@ export async function getEmailRoomId(
   const roomIdFromText = extractRoomIdFromText(emailContent.text);
   if (roomIdFromText) {
     return roomIdFromText;
+  }
+
+  // Secondary: check email HTML for Recoup chat link
+  // This handles clients like Superhuman that insert <wbr /> tags in link text
+  const roomIdFromHtml = extractRoomIdFromHtml(emailContent.html);
+  if (roomIdFromHtml) {
+    return roomIdFromHtml;
   }
 
   // Fallback: check references header for existing memory_emails

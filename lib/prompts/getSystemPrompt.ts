@@ -19,6 +19,7 @@ export function getSystemPrompt({
   roomId,
   artistId,
   accountId,
+  orgId,
   email,
   knowledgeBaseText,
   artistInstruction,
@@ -28,16 +29,18 @@ export function getSystemPrompt({
   roomId?: string;
   artistId?: string;
   accountId: string;
+  orgId?: string | null;
   email?: string;
   knowledgeBaseText?: string;
   artistInstruction?: string;
   conversationName?: string;
   accountWithDetails?: AccountWithDetails;
 }): string {
-  let systemPrompt = `${SYSTEM_PROMPT} 
+  let systemPrompt = `${SYSTEM_PROMPT}
 
   **IMPORTANT CONTEXT VALUES (use these exact values in tools):**
   - account_id: ${accountId || "Unknown"} (use this for ALL tools that require account_id parameter)
+  - organization_id: ${orgId || "None. Personal Account."}
   - artist_account_id: ${artistId}
   - active_account_email: ${email || "Unknown"}
   - active_conversation_id: ${roomId || "No ID"}

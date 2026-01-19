@@ -4,9 +4,14 @@ import { registerSendEmailTool } from "../registerSendEmailTool";
 import { NextResponse } from "next/server";
 
 const mockSendEmailWithResend = vi.fn();
+const mockSelectRoomWithArtist = vi.fn();
 
 vi.mock("@/lib/emails/sendEmail", () => ({
   sendEmailWithResend: (...args: unknown[]) => mockSendEmailWithResend(...args),
+}));
+
+vi.mock("@/lib/supabase/rooms/selectRoomWithArtist", () => ({
+  selectRoomWithArtist: (...args: unknown[]) => mockSelectRoomWithArtist(...args),
 }));
 
 describe("registerSendEmailTool", () => {

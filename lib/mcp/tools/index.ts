@@ -9,12 +9,15 @@ import { registerContactTeamTool } from "./registerContactTeamTool";
 import { registerUpdateAccountInfoTool } from "./registerUpdateAccountInfoTool";
 import { registerAllArtistSocialsTools } from "./artistSocials";
 import { registerSearchWebTool } from "./registerSearchWebTool";
+import { registerWebDeepResearchTool } from "./registerWebDeepResearchTool";
+import { registerArtistDeepResearchTool } from "./registerArtistDeepResearchTool";
 import { registerAllFileTools } from "./files";
 import { registerCreateSegmentsTool } from "./registerCreateSegmentsTool";
 import { registerAllYouTubeTools } from "./youtube";
 import { registerTranscribeTools } from "./transcribe";
 import { registerSendEmailTool } from "./registerSendEmailTool";
 import { registerAllComposioTools } from "./composio";
+import { registerAllArtistTools } from "./artists";
 
 /**
  * Registers all MCP tools on the server.
@@ -23,6 +26,7 @@ import { registerAllComposioTools } from "./composio";
  * @param server - The MCP server instance to register tools on.
  */
 export const registerAllTools = (server: McpServer): void => {
+  registerAllArtistTools(server);
   registerAllArtistSocialsTools(server);
   registerAllCatalogTools(server);
   registerAllComposioTools(server);
@@ -35,6 +39,8 @@ export const registerAllTools = (server: McpServer): void => {
   registerContactTeamTool(server);
   registerGetLocalTimeTool(server);
   registerSearchWebTool(server);
+  registerWebDeepResearchTool(server);
+  registerArtistDeepResearchTool(server);
   registerSendEmailTool(server);
   registerUpdateAccountInfoTool(server);
   registerCreateSegmentsTool(server);
