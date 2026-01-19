@@ -5,10 +5,7 @@ import { getMessages } from "@/lib/messages/getMessages";
 import { getEmailContent } from "@/lib/emails/inbound/getEmailContent";
 import { getEmailRoomId } from "@/lib/emails/inbound/getEmailRoomId";
 import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
-import insertMemories from "@/lib/supabase/memories/insertMemories";
-import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
-import { createNewRoom } from "@/lib/chat/createNewRoom";
-import { generateUUID } from "@/lib/uuid/generateUUID";
+import { setupConversation } from "@/lib/chat/setupConversation";
 import insertMemoryEmail from "@/lib/supabase/memory_emails/insertMemoryEmail";
 import { trimRepliedContext } from "@/lib/emails/inbound/trimRepliedContext";
 
@@ -34,25 +31,19 @@ export async function validateNewEmailMemory(
   const emailText = trimRepliedContext(emailContent.html || "");
 
   const roomId = await getEmailRoomId(emailContent);
-  const finalRoomId = roomId || generateUUID();
   const promptMessage = getMessages(emailText)[0];
-  if (!roomId) {
-    await createNewRoom({
-      accountId,
-      roomId: finalRoomId,
-      artistId: undefined,
-      lastMessage: promptMessage,
-    });
-  }
 
-  // Insert the prompt message with emailId as the id to prevent duplicate processing
-  // If this email was already processed, the insert will fail with a unique constraint violation
+  // Setup conversation: auto-create room if needed and persist user message
+  // Uses emailId as memoryId for deduplication - duplicate inserts will fail with unique constraint
+  let finalRoomId: string;
   try {
-    await insertMemories({
-      id: emailId,
-      room_id: finalRoomId,
-      content: filterMessageContentForMemories(promptMessage),
+    const result = await setupConversation({
+      accountId,
+      roomId,
+      promptMessage,
+      memoryId: emailId,
     });
+    finalRoomId = result.roomId;
   } catch (error: unknown) {
     // If duplicate (unique constraint violation), return early to prevent duplicate response
     if (error && typeof error === "object" && "code" in error && error.code === "23505") {

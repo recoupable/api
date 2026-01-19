@@ -22,8 +22,27 @@ vi.mock("@/lib/organizations/validateOrganizationAccess", () => ({
   validateOrganizationAccess: vi.fn(),
 }));
 
+vi.mock("@/lib/chat/setupConversation", () => ({
+  setupConversation: vi.fn().mockResolvedValue({ roomId: "mock-room-id", memoryId: "mock-memory-id" }),
+}));
+
+vi.mock("@/lib/chat/validateMessages", () => ({
+  validateMessages: vi.fn((messages) => ({
+    lastMessage: messages[messages.length - 1] || { id: "mock-id", role: "user", parts: [] },
+    validMessages: messages,
+  })),
+}));
+
+vi.mock("@/lib/messages/convertToUiMessages", () => ({
+  default: vi.fn((messages) => messages),
+}));
+
 vi.mock("@/lib/chat/setupChatRequest", () => ({
   setupChatRequest: vi.fn(),
+}));
+
+vi.mock("@/lib/chat/handleChatCompletion", () => ({
+  handleChatCompletion: vi.fn(),
 }));
 
 vi.mock("ai", () => ({
@@ -34,11 +53,13 @@ vi.mock("ai", () => ({
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { setupChatRequest } from "@/lib/chat/setupChatRequest";
+import { setupConversation } from "@/lib/chat/setupConversation";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { handleChatStream } from "../handleChatStream";
 
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
+const mockSetupConversation = vi.mocked(setupConversation);
 const mockSetupChatRequest = vi.mocked(setupChatRequest);
 const mockCreateUIMessageStream = vi.mocked(createUIMessageStream);
 const mockCreateUIMessageStreamResponse = vi.mocked(createUIMessageStreamResponse);
@@ -60,6 +81,12 @@ function createMockRequest(
 describe("handleChatStream", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Re-setup mock return value after clearAllMocks
+    // Return the provided roomId if given, otherwise return mock-room-id
+    mockSetupConversation.mockImplementation(async ({ roomId }) => ({
+      roomId: roomId || "mock-room-id",
+      memoryId: "mock-memory-id",
+    }));
   });
 
   afterEach(() => {
