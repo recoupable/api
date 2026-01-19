@@ -8,10 +8,7 @@ import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccoun
 import { getMessages } from "@/lib/messages/getMessages";
 import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
-import { generateUUID } from "@/lib/uuid/generateUUID";
-import { createNewRoom } from "@/lib/chat/createNewRoom";
-import insertMemories from "@/lib/supabase/memories/insertMemories";
-import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
+import { setupConversation } from "@/lib/chat/setupConversation";
 
 export const chatRequestSchema = z
   .object({
@@ -193,25 +190,12 @@ export async function validateChatRequest(
     promptMessage = getMessages("New conversation")[0];
   }
 
-  // Auto-create roomId if not provided (match /api/emails/inbound behavior)
-  let finalRoomId = validatedBody.roomId;
-  if (!finalRoomId) {
-    finalRoomId = generateUUID();
-    await createNewRoom({
-      accountId,
-      roomId: finalRoomId,
-      artistId: validatedBody.artistId,
-      lastMessage: promptMessage,
-    });
-  }
-
-  // Persist the user's message to memories (match /api/emails/inbound behavior)
-  // This happens for ALL requests, not just new rooms
-  const memoryId = generateUUID();
-  await insertMemories({
-    id: memoryId,
-    room_id: finalRoomId,
-    content: filterMessageContentForMemories(promptMessage),
+  // Setup conversation: auto-create room if needed and persist user message
+  const { roomId: finalRoomId } = await setupConversation({
+    accountId,
+    roomId: validatedBody.roomId,
+    promptMessage,
+    artistId: validatedBody.artistId,
   });
 
   return {
