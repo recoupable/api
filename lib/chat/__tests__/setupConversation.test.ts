@@ -21,16 +21,22 @@ vi.mock("@/lib/messages/filterMessageContentForMemories", () => ({
   default: vi.fn((msg: unknown) => msg),
 }));
 
+vi.mock("@/lib/supabase/rooms/selectRoom", () => ({
+  default: vi.fn(),
+}));
+
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import { createNewRoom } from "@/lib/chat/createNewRoom";
 import insertMemories from "@/lib/supabase/memories/insertMemories";
 import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
+import selectRoom from "@/lib/supabase/rooms/selectRoom";
 import { setupConversation } from "../setupConversation";
 
 const mockGenerateUUID = vi.mocked(generateUUID);
 const mockCreateNewRoom = vi.mocked(createNewRoom);
 const mockInsertMemories = vi.mocked(insertMemories);
 const mockFilterMessageContentForMemories = vi.mocked(filterMessageContentForMemories);
+const mockSelectRoom = vi.mocked(selectRoom);
 
 /**
  * Helper to create a UIMessage for testing.
@@ -53,6 +59,8 @@ describe("setupConversation", () => {
     mockGenerateUUID.mockReturnValue("generated-uuid");
     mockCreateNewRoom.mockResolvedValue(undefined);
     mockInsertMemories.mockResolvedValue(null);
+    // By default, selectRoom returns an existing room when roomId is provided
+    mockSelectRoom.mockResolvedValue({ id: "existing-room-id" } as never);
   });
 
   describe("room creation", () => {
@@ -72,7 +80,8 @@ describe("setupConversation", () => {
       });
     });
 
-    it("does NOT create a room when roomId is provided", async () => {
+    it("does NOT create a room when roomId is provided and room exists", async () => {
+      mockSelectRoom.mockResolvedValue({ id: "existing-room-id" } as never);
       const promptMessage = createUIMessage("Hello");
 
       await setupConversation({
@@ -81,7 +90,27 @@ describe("setupConversation", () => {
         promptMessage,
       });
 
+      expect(mockSelectRoom).toHaveBeenCalledWith("existing-room-id");
       expect(mockCreateNewRoom).not.toHaveBeenCalled();
+    });
+
+    it("creates a room when roomId is provided but room does NOT exist", async () => {
+      mockSelectRoom.mockResolvedValue(null);
+      const promptMessage = createUIMessage("Hello");
+
+      await setupConversation({
+        accountId: "account-123",
+        roomId: "non-existent-room-id",
+        promptMessage,
+      });
+
+      expect(mockSelectRoom).toHaveBeenCalledWith("non-existent-room-id");
+      expect(mockCreateNewRoom).toHaveBeenCalledWith({
+        accountId: "account-123",
+        roomId: "non-existent-room-id",
+        artistId: undefined,
+        lastMessage: promptMessage,
+      });
     });
 
     it("passes artistId to createNewRoom when provided", async () => {

@@ -2,6 +2,7 @@ import { UIMessage } from "ai";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import { createNewRoom } from "@/lib/chat/createNewRoom";
 import insertMemories from "@/lib/supabase/memories/insertMemories";
+import selectRoom from "@/lib/supabase/rooms/selectRoom";
 import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
 
 interface SetupConversationParams {
@@ -44,8 +45,18 @@ export async function setupConversation({
   const finalRoomId = roomId || generateUUID();
   const finalMemoryId = memoryId || generateUUID();
 
-  // Create room if roomId was not provided
-  if (!roomId) {
+  // Create room if needed:
+  // - If no roomId was provided, create a new room
+  // - If roomId was provided but doesn't exist, create it (prevents FK constraint errors)
+  let shouldCreateRoom = !roomId;
+  if (roomId) {
+    const existingRoom = await selectRoom(roomId);
+    if (!existingRoom) {
+      shouldCreateRoom = true;
+    }
+  }
+
+  if (shouldCreateRoom) {
     await createNewRoom({
       accountId,
       roomId: finalRoomId,
