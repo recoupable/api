@@ -102,6 +102,23 @@ vi.mock("@/lib/chat/generateChatTitle", () => ({
   generateChatTitle: vi.fn().mockResolvedValue("Test Chat"),
 }));
 
+// Mock room creation dependencies (for auto-create roomId)
+vi.mock("@/lib/uuid/generateUUID", () => {
+  const mockFn = vi.fn(() => "mock-uuid-default");
+  return {
+    generateUUID: mockFn,
+    default: mockFn,
+  };
+});
+
+vi.mock("@/lib/chat/createNewRoom", () => ({
+  createNewRoom: vi.fn(),
+}));
+
+vi.mock("@/lib/chat/saveChatCompletion", () => ({
+  saveChatCompletion: vi.fn(),
+}));
+
 // Mock AI SDK
 vi.mock("ai", () => ({
   convertToModelMessages: vi.fn((messages: unknown[]) => messages),

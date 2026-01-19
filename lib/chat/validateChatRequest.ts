@@ -10,6 +10,7 @@ import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import { createNewRoom } from "@/lib/chat/createNewRoom";
+import { saveChatCompletion } from "@/lib/chat/saveChatCompletion";
 
 export const chatRequestSchema = z
   .object({
@@ -202,6 +203,16 @@ export async function validateChatRequest(
       artistId: validatedBody.artistId,
       lastMessage,
     });
+
+    // Persist the user's message to memories (match /api/emails/inbound behavior)
+    const userMessageText = lastMessage.parts?.find((p: { type: string }) => p.type === "text")?.text || "";
+    if (userMessageText) {
+      await saveChatCompletion({
+        text: userMessageText,
+        roomId: finalRoomId,
+        role: "user",
+      });
+    }
   }
 
   return {

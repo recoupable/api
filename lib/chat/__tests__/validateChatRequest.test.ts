@@ -35,6 +35,10 @@ vi.mock("@/lib/chat/createNewRoom", () => ({
   createNewRoom: vi.fn(),
 }));
 
+vi.mock("@/lib/chat/saveChatCompletion", () => ({
+  saveChatCompletion: vi.fn(),
+}));
+
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
@@ -42,6 +46,7 @@ import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import { createNewRoom } from "@/lib/chat/createNewRoom";
+import { saveChatCompletion } from "@/lib/chat/saveChatCompletion";
 
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockGetAuthenticatedAccountId = vi.mocked(getAuthenticatedAccountId);
@@ -50,6 +55,7 @@ const mockGetApiKeyDetails = vi.mocked(getApiKeyDetails);
 const mockValidateOrganizationAccess = vi.mocked(validateOrganizationAccess);
 const mockGenerateUUID = vi.mocked(generateUUID);
 const mockCreateNewRoom = vi.mocked(createNewRoom);
+const mockSaveChatCompletion = vi.mocked(saveChatCompletion);
 
 // Helper to create mock NextRequest
 function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
@@ -669,6 +675,41 @@ describe("validateChatRequest", () => {
         artistId: undefined,
         lastMessage: expect.any(Object),
       });
+    });
+
+    it("persists user message to memories when roomId is auto-created", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockGenerateUUID.mockReturnValue("new-room-uuid");
+      mockCreateNewRoom.mockResolvedValue(undefined);
+      mockSaveChatCompletion.mockResolvedValue(null);
+
+      const request = createMockRequest(
+        { prompt: "This is my first message" },
+        { "x-api-key": "test-key" },
+      );
+
+      await validateChatRequest(request as any);
+
+      expect(mockSaveChatCompletion).toHaveBeenCalledWith({
+        text: "This is my first message",
+        roomId: "new-room-uuid",
+        role: "user",
+      });
+    });
+
+    it("does NOT persist user message when roomId is provided (existing room)", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+
+      const request = createMockRequest(
+        { prompt: "Hello", roomId: "existing-room-id" },
+        { "x-api-key": "test-key" },
+      );
+
+      await validateChatRequest(request as any);
+
+      // User message should not be saved by validateChatRequest for existing rooms
+      // (it's expected to be handled elsewhere in the chat flow)
+      expect(mockSaveChatCompletion).not.toHaveBeenCalled();
     });
   });
 });
