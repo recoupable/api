@@ -3,33 +3,19 @@ import { z } from "zod";
 import { getComposioTools } from "@/lib/composio/toolRouter";
 import { getCallToolResult } from "@/lib/mcp/getCallToolResult";
 
-/**
- * Registers the "composio" tool on the MCP server.
- *
- * Returns raw Composio Tool Router tools for the given user.
- * Tools are filtered in getComposioTools via ALLOWED_TOOLS constant.
- *
- * @param server - The MCP server instance to register the tool on.
- */
 export function registerComposioTools(server: McpServer): void {
   server.registerTool(
     "composio",
     {
-      description:
-        "Get Composio tools for accessing 500+ external services (Gmail, Sheets, Slack, GitHub, etc). Returns meta-tools for connecting accounts, searching actions, and executing them.",
+      description: "Get Composio tools for accessing external services.",
       inputSchema: z.object({
-        account_id: z.string().min(1).describe("User's account ID"),
-        room_id: z.string().optional().describe("Chat room ID for OAuth redirect"),
+        account_id: z.string().min(1),
+        room_id: z.string().optional(),
       }),
     },
     async (args) => {
-      try {
-        const tools = await getComposioTools(args.account_id, args.room_id);
-        return getCallToolResult(JSON.stringify(tools));
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to get Composio tools";
-        return getCallToolResult(JSON.stringify({ error: message }));
-      }
+      const tools = await getComposioTools(args.account_id, args.room_id);
+      return getCallToolResult(JSON.stringify(tools));
     }
   );
 }
