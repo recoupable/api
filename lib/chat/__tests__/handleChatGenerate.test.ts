@@ -34,11 +34,25 @@ vi.mock("@/lib/chat/saveChatCompletion", () => ({
   saveChatCompletion: vi.fn(),
 }));
 
+vi.mock("@/lib/uuid/generateUUID", () => {
+  const mockFn = vi.fn(() => "auto-generated-room-id");
+  return {
+    generateUUID: mockFn,
+    default: mockFn,
+  };
+});
+
+vi.mock("@/lib/chat/createNewRoom", () => ({
+  createNewRoom: vi.fn(),
+}));
+
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { setupChatRequest } from "@/lib/chat/setupChatRequest";
 import { generateText } from "ai";
 import { saveChatCompletion } from "@/lib/chat/saveChatCompletion";
+import { generateUUID } from "@/lib/uuid/generateUUID";
+import { createNewRoom } from "@/lib/chat/createNewRoom";
 import { handleChatGenerate } from "../handleChatGenerate";
 
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
@@ -46,6 +60,8 @@ const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
 const mockSetupChatRequest = vi.mocked(setupChatRequest);
 const mockGenerateText = vi.mocked(generateText);
 const mockSaveChatCompletion = vi.mocked(saveChatCompletion);
+const mockGenerateUUID = vi.mocked(generateUUID);
+const mockCreateNewRoom = vi.mocked(createNewRoom);
 
 // Helper to create mock NextRequest
 function createMockRequest(
@@ -379,8 +395,10 @@ describe("handleChatGenerate", () => {
       });
     });
 
-    it("does not save message when roomId is not provided", async () => {
+    it("saves message with auto-generated roomId when roomId is not provided", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockGenerateUUID.mockReturnValue("auto-generated-room-id");
+      mockCreateNewRoom.mockResolvedValue(undefined);
 
       mockSetupChatRequest.mockResolvedValue({
         model: "gpt-4",
@@ -399,6 +417,8 @@ describe("handleChatGenerate", () => {
         response: { messages: [], headers: {}, body: null },
       } as any);
 
+      mockSaveChatCompletion.mockResolvedValue(null);
+
       const request = createMockRequest(
         { prompt: "Hello" },
         { "x-api-key": "valid-key" },
@@ -406,7 +426,11 @@ describe("handleChatGenerate", () => {
 
       await handleChatGenerate(request as any);
 
-      expect(mockSaveChatCompletion).not.toHaveBeenCalled();
+      // Since roomId is auto-created, saveChatCompletion should be called
+      expect(mockSaveChatCompletion).toHaveBeenCalledWith({
+        text: "Response",
+        roomId: "auto-generated-room-id",
+      });
     });
 
     it("passes correct text to saveChatCompletion", async () => {
