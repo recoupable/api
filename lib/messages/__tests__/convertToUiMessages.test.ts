@@ -132,5 +132,21 @@ describe("convertToUiMessages", () => {
 
       expect(result[0].parts[0].text).toBe("");
     });
+
+    it("handles ModelMessage with content parts array", () => {
+      const messages = [
+        {
+          role: "user",
+          content: [
+            { type: "text" as const, text: "Hello " },
+            { type: "text" as const, text: "world!" },
+          ],
+        },
+      ];
+
+      const result = convertToUiMessages(messages as any);
+
+      expect(result[0].parts[0].text).toBe("Hello world!");
+    });
   });
 });
