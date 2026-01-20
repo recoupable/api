@@ -25,7 +25,6 @@ export async function verifyBearerToken(
   bearerToken?: string,
 ): Promise<McpAuthInfo | undefined> {
   if (!bearerToken) {
-    console.error("[MCP Auth] No bearer token provided");
     return undefined;
   }
 
@@ -33,7 +32,6 @@ export async function verifyBearerToken(
   try {
     const accountId = await getAccountIdByAuthToken(bearerToken);
 
-    console.log("[MCP Auth] Privy JWT validated, accountId:", accountId);
     return {
       token: bearerToken,
       scopes: ["mcp:tools"],
@@ -43,8 +41,8 @@ export async function verifyBearerToken(
         orgId: null,
       },
     };
-  } catch (privyError) {
-    console.log("[MCP Auth] Privy JWT validation failed:", privyError instanceof Error ? privyError.message : privyError);
+  } catch {
+    // Privy validation failed, try API key
   }
 
   // Try API key validation
@@ -52,11 +50,9 @@ export async function verifyBearerToken(
     const accountId = await getAccountIdByApiKey(bearerToken);
 
     if (!accountId) {
-      console.error("[MCP Auth] API key validation returned no accountId");
       return undefined;
     }
 
-    console.log("[MCP Auth] API key validated, accountId:", accountId);
     return {
       token: bearerToken,
       scopes: ["mcp:tools"],
@@ -66,8 +62,7 @@ export async function verifyBearerToken(
         orgId: null,
       },
     };
-  } catch (apiKeyError) {
-    console.error("[MCP Auth] API key validation failed:", apiKeyError instanceof Error ? apiKeyError.message : apiKeyError);
+  } catch {
     return undefined;
   }
 }
