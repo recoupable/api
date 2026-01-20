@@ -11,7 +11,7 @@ import { getBaseUrl } from "@/lib/networking/getBaseUrl";
 export async function getMcpTools(authToken: string): Promise<ToolSet> {
   const mcpClient = await createMCPClient({
     transport: {
-      type: "sse",
+      type: "http",
       url: `${getBaseUrl()}/mcp`,
       headers: {
         Authorization: `Bearer ${authToken}`,

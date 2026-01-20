@@ -27,12 +27,12 @@ describe("getMcpTools", () => {
     } as any);
   });
 
-  it("creates MCP client with SSE transport config", async () => {
+  it("creates MCP client with HTTP transport config", async () => {
     await getMcpTools("test-token");
 
     expect(mockCreateMCPClient).toHaveBeenCalledWith({
       transport: {
-        type: "sse",
+        type: "http",
         url: "https://test.vercel.app/mcp",
         headers: {
           Authorization: "Bearer test-token",
@@ -52,7 +52,7 @@ describe("getMcpTools", () => {
 
     expect(mockCreateMCPClient).toHaveBeenCalledWith({
       transport: {
-        type: "sse",
+        type: "http",
         url: "https://test.vercel.app/mcp",
         headers: {
           Authorization: "Bearer different-token",
