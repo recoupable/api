@@ -2,34 +2,45 @@ import { ToolSet } from "ai";
 import { filterExcludedTools } from "./filterExcludedTools";
 import { ChatRequestBody } from "./validateChatRequest";
 import { experimental_createMCPClient as createMCPClient } from "@ai-sdk/mcp";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { registerAllTools } from "@/lib/mcp/tools";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { getGoogleSheetsTools } from "@/lib/agents/googleSheetsAgent";
+
+/**
+ * Gets the base URL for the current environment.
+ * Uses VERCEL_URL in Vercel deployments, falls back to localhost.
+ *
+ * @returns The base URL string
+ */
+function getBaseUrl(): string {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return "http://localhost:3000";
+}
 
 /**
  * Sets up and filters tools for a chat request.
  * Aggregates tools from:
- * - MCP server (in-process via in-memory transport, no HTTP overhead)
+ * - MCP server (via HTTP transport to /api/mcp for proper auth)
  * - Google Sheets (via Composio integration)
  *
  * @param body - The chat request body
  * @returns Filtered tool set ready for use
  */
 export async function setupToolsForRequest(body: ChatRequestBody): Promise<ToolSet> {
-  const { excludeTools } = body;
+  const { excludeTools, authToken } = body;
 
-  // Create in-memory MCP server and client (no HTTP call needed)
-  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-
-  const server = new McpServer({
-    name: "recoup-mcp",
-    version: "0.0.1",
+  // Create HTTP transport to MCP endpoint with forwarded auth token
+  const mcpUrl = new URL("/api/mcp", getBaseUrl());
+  const transport = new StreamableHTTPClientTransport(mcpUrl, {
+    requestInit: {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+    },
   });
-  registerAllTools(server);
-  await server.connect(serverTransport);
 
-  const mcpClient = await createMCPClient({ transport: clientTransport });
+  const mcpClient = await createMCPClient({ transport });
   const mcpClientTools = (await mcpClient.tools()) as ToolSet;
 
   // Fetch Google Sheets tools (authenticated tools or login tool)

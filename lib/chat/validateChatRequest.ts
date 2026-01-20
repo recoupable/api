@@ -48,6 +48,7 @@ type BaseChatRequestBody = z.infer<typeof chatRequestSchema>;
 export type ChatRequestBody = BaseChatRequestBody & {
   accountId: string;
   orgId: string | null;
+  authToken: string;
 };
 
 /**
@@ -192,10 +193,14 @@ export async function validateChatRequest(
     memoryId: lastMessage.id,
   });
 
+  // Extract the auth token to forward to MCP server
+  const authToken = hasApiKey ? apiKey! : authHeader!.replace(/^Bearer\s+/i, "");
+
   return {
     ...validatedBody,
     accountId,
     orgId,
     roomId: finalRoomId,
+    authToken,
   } as ChatRequestBody;
 }

@@ -10,22 +10,6 @@ vi.mock("@modelcontextprotocol/sdk/client/streamableHttp.js", () => ({
   StreamableHTTPClientTransport: vi.fn().mockImplementation(() => ({})),
 }));
 
-vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
-  McpServer: vi.fn().mockImplementation(() => ({
-    connect: vi.fn(),
-  })),
-}));
-
-vi.mock("@modelcontextprotocol/sdk/inMemory.js", () => ({
-  InMemoryTransport: {
-    createLinkedPair: vi.fn().mockReturnValue([{}, {}]),
-  },
-}));
-
-vi.mock("@/lib/mcp/tools", () => ({
-  registerAllTools: vi.fn(),
-}));
-
 vi.mock("@/lib/agents/googleSheetsAgent", () => ({
   getGoogleSheetsTools: vi.fn(),
 }));
@@ -34,9 +18,11 @@ vi.mock("@/lib/agents/googleSheetsAgent", () => ({
 import { setupToolsForRequest } from "../setupToolsForRequest";
 import { experimental_createMCPClient } from "@ai-sdk/mcp";
 import { getGoogleSheetsTools } from "@/lib/agents/googleSheetsAgent";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
 const mockCreateMCPClient = vi.mocked(experimental_createMCPClient);
 const mockGetGoogleSheetsTools = vi.mocked(getGoogleSheetsTools);
+const mockStreamableHTTPClientTransport = vi.mocked(StreamableHTTPClientTransport);
 
 describe("setupToolsForRequest", () => {
   const mockMcpTools = {
@@ -66,15 +52,17 @@ describe("setupToolsForRequest", () => {
   });
 
   describe("MCP tools integration", () => {
-    it("creates MCP client with correct URL", async () => {
+    it("creates MCP client with HTTP transport", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
+        authToken: "test-token-123",
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
       await setupToolsForRequest(body);
 
+      expect(mockStreamableHTTPClientTransport).toHaveBeenCalled();
       expect(mockCreateMCPClient).toHaveBeenCalled();
     });
 
@@ -82,6 +70,7 @@ describe("setupToolsForRequest", () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
+        authToken: "test-token-123",
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -91,34 +80,27 @@ describe("setupToolsForRequest", () => {
       expect(result).toHaveProperty("tool2");
     });
 
-    it("passes accountId to MCP client via authenticated transport", async () => {
+    it("passes authToken to MCP client via HTTP transport", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
+        authToken: "test-token-123",
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
       await setupToolsForRequest(body);
 
-      // Verify MCP client was created with a transport that includes auth info
-      expect(mockCreateMCPClient).toHaveBeenCalledWith(
+      // Verify HTTP transport was created with auth header
+      expect(mockStreamableHTTPClientTransport).toHaveBeenCalledWith(
+        expect.any(URL),
         expect.objectContaining({
-          transport: expect.any(Object),
+          requestInit: {
+            headers: {
+              Authorization: "Bearer test-token-123",
+            },
+          },
         }),
       );
-    });
-
-    it("passes orgId to MCP client via authenticated transport", async () => {
-      const body: ChatRequestBody = {
-        accountId: "account-123",
-        orgId: "org-456",
-        messages: [{ id: "1", role: "user", content: "Hello" }],
-      };
-
-      await setupToolsForRequest(body);
-
-      // Verify MCP client was created
-      expect(mockCreateMCPClient).toHaveBeenCalled();
     });
   });
 
@@ -127,6 +109,7 @@ describe("setupToolsForRequest", () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
+        authToken: "test-token-123",
         messages: [{ id: "1", role: "user", content: "Create a spreadsheet" }],
       };
 
@@ -141,6 +124,7 @@ describe("setupToolsForRequest", () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
+        authToken: "test-token-123",
         messages: [{ id: "1", role: "user", content: "Create a spreadsheet" }],
       };
 
@@ -156,6 +140,7 @@ describe("setupToolsForRequest", () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
+        authToken: "test-token-123",
         messages: [{ id: "1", role: "user", content: "Create a spreadsheet" }],
       };
 
@@ -172,6 +157,7 @@ describe("setupToolsForRequest", () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
+        authToken: "test-token-123",
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -198,6 +184,7 @@ describe("setupToolsForRequest", () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
+        authToken: "test-token-123",
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -215,6 +202,7 @@ describe("setupToolsForRequest", () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
+        authToken: "test-token-123",
         messages: [{ id: "1", role: "user", content: "Hello" }],
         excludeTools: ["tool1"],
       };
@@ -231,6 +219,7 @@ describe("setupToolsForRequest", () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
+        authToken: "test-token-123",
         messages: [{ id: "1", role: "user", content: "Hello" }],
         excludeTools: ["tool1", "googlesheets_create"],
       };
@@ -247,6 +236,7 @@ describe("setupToolsForRequest", () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
+        authToken: "test-token-123",
         messages: [{ id: "1", role: "user", content: "Hello" }],
       };
 
@@ -260,6 +250,7 @@ describe("setupToolsForRequest", () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
+        authToken: "test-token-123",
         messages: [{ id: "1", role: "user", content: "Hello" }],
         excludeTools: [],
       };
