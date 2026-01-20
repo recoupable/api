@@ -54,6 +54,10 @@ vi.mock("@/lib/messages/filterMessageContentForMemories", () => ({
   default: vi.fn((msg: unknown) => msg),
 }));
 
+vi.mock("@/lib/chat/setupConversation", () => ({
+  setupConversation: vi.fn(),
+}));
+
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { setupChatRequest } from "@/lib/chat/setupChatRequest";
@@ -61,6 +65,7 @@ import { generateText } from "ai";
 import { saveChatCompletion } from "@/lib/chat/saveChatCompletion";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import { createNewRoom } from "@/lib/chat/createNewRoom";
+import { setupConversation } from "@/lib/chat/setupConversation";
 import { handleChatGenerate } from "../handleChatGenerate";
 
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
@@ -70,6 +75,7 @@ const mockGenerateText = vi.mocked(generateText);
 const mockSaveChatCompletion = vi.mocked(saveChatCompletion);
 const mockGenerateUUID = vi.mocked(generateUUID);
 const mockCreateNewRoom = vi.mocked(createNewRoom);
+const mockSetupConversation = vi.mocked(setupConversation);
 
 // Helper to create mock NextRequest
 function createMockRequest(
@@ -88,6 +94,11 @@ function createMockRequest(
 describe("handleChatGenerate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default mock for setupConversation
+    mockSetupConversation.mockResolvedValue({
+      roomId: "auto-generated-room-id",
+      memoryId: "auto-generated-memory-id",
+    });
   });
 
   afterEach(() => {
@@ -204,6 +215,10 @@ describe("handleChatGenerate", () => {
 
     it("passes through optional parameters", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockSetupConversation.mockResolvedValue({
+        roomId: "room-xyz",
+        memoryId: "memory-id",
+      });
 
       mockSetupChatRequest.mockResolvedValue({
         model: "claude-3-opus",
@@ -370,6 +385,10 @@ describe("handleChatGenerate", () => {
   describe("message persistence", () => {
     it("saves assistant message to database when roomId is provided", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockSetupConversation.mockResolvedValue({
+        roomId: "room-abc-123",
+        memoryId: "memory-id",
+      });
 
       mockSetupChatRequest.mockResolvedValue({
         model: "gpt-4",
@@ -405,8 +424,10 @@ describe("handleChatGenerate", () => {
 
     it("saves message with auto-generated roomId when roomId is not provided", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
-      mockGenerateUUID.mockReturnValue("auto-generated-room-id");
-      mockCreateNewRoom.mockResolvedValue(undefined);
+      mockSetupConversation.mockResolvedValue({
+        roomId: "auto-generated-room-id",
+        memoryId: "memory-id",
+      });
 
       mockSetupChatRequest.mockResolvedValue({
         model: "gpt-4",
@@ -443,6 +464,10 @@ describe("handleChatGenerate", () => {
 
     it("includes roomId in HTTP response when provided by client", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockSetupConversation.mockResolvedValue({
+        roomId: "client-provided-room-id",
+        memoryId: "memory-id",
+      });
 
       mockSetupChatRequest.mockResolvedValue({
         model: "gpt-4",
@@ -477,8 +502,10 @@ describe("handleChatGenerate", () => {
 
     it("includes auto-generated roomId in HTTP response when not provided", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
-      mockGenerateUUID.mockReturnValue("auto-generated-room-456");
-      mockCreateNewRoom.mockResolvedValue(undefined);
+      mockSetupConversation.mockResolvedValue({
+        roomId: "auto-generated-room-456",
+        memoryId: "memory-id",
+      });
 
       mockSetupChatRequest.mockResolvedValue({
         model: "gpt-4",
@@ -513,6 +540,10 @@ describe("handleChatGenerate", () => {
 
     it("passes correct text to saveChatCompletion", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockSetupConversation.mockResolvedValue({
+        roomId: "room-xyz",
+        memoryId: "memory-id",
+      });
 
       mockSetupChatRequest.mockResolvedValue({
         model: "gpt-4",
@@ -548,6 +579,10 @@ describe("handleChatGenerate", () => {
 
     it("still returns success response even if saveChatCompletion fails", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockSetupConversation.mockResolvedValue({
+        roomId: "room-abc",
+        memoryId: "memory-id",
+      });
 
       mockSetupChatRequest.mockResolvedValue({
         model: "gpt-4",
