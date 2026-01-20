@@ -1,10 +1,8 @@
 import { ToolSet } from "ai";
 import { filterExcludedTools } from "./filterExcludedTools";
 import { ChatRequestBody } from "./validateChatRequest";
-import { experimental_createMCPClient as createMCPClient } from "@ai-sdk/mcp";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { getGoogleSheetsTools } from "@/lib/agents/googleSheetsAgent";
-import { getBaseUrl } from "@/lib/networking/getBaseUrl";
+import { getMcpTools } from "@/lib/mcp/getMcpTools";
 
 /**
  * Sets up and filters tools for a chat request.
@@ -18,22 +16,8 @@ import { getBaseUrl } from "@/lib/networking/getBaseUrl";
 export async function setupToolsForRequest(body: ChatRequestBody): Promise<ToolSet> {
   const { excludeTools, authToken } = body;
 
-  let mcpClientTools: ToolSet = {};
-
   // Only fetch MCP tools if we have an auth token
-  if (authToken) {
-    const mcpUrl = new URL("/api/mcp", getBaseUrl());
-    const transport = new StreamableHTTPClientTransport(mcpUrl, {
-      requestInit: {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      },
-    });
-
-    const mcpClient = await createMCPClient({ transport });
-    mcpClientTools = (await mcpClient.tools()) as ToolSet;
-  }
+  const mcpClientTools = authToken ? await getMcpTools(authToken) : {};
 
   // Fetch Google Sheets tools (authenticated tools or login tool)
   const googleSheetsTools = await getGoogleSheetsTools(body);
