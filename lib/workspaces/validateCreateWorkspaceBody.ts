@@ -4,23 +4,26 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { z } from "zod";
 
-export const createArtistBodySchema = z.object({
-  name: z.string({ message: "name is required" }).min(1, "name cannot be empty"),
+export const createWorkspaceBodySchema = z.object({
+  name: z.string().optional(),
   account_id: z.uuid({ message: "account_id must be a valid UUID" }).optional(),
-  organization_id: z.uuid({ message: "organization_id must be a valid UUID" }).optional(),
+  organization_id: z
+    .uuid({ message: "organization_id must be a valid UUID" })
+    .optional()
+    .nullable(),
 });
 
-export type CreateArtistBody = z.infer<typeof createArtistBodySchema>;
+export type CreateWorkspaceBody = z.infer<typeof createWorkspaceBodySchema>;
 
-export type ValidatedCreateArtistRequest = {
+export type ValidatedCreateWorkspaceRequest = {
   name: string;
   accountId: string;
   organizationId?: string;
 };
 
 /**
- * Validates POST /api/artists request including auth headers, body parsing, schema validation,
- * account access authorization, and organization access authorization.
+ * Validates POST /api/workspaces request including auth headers, body parsing, schema validation,
+ * organization access authorization, and account access authorization.
  *
  * Supports both:
  * - x-api-key header
@@ -29,12 +32,12 @@ export type ValidatedCreateArtistRequest = {
  * @param request - The NextRequest object
  * @returns A NextResponse with an error if validation fails, or the validated request data if validation passes.
  */
-export async function validateCreateArtistBody(
+export async function validateCreateWorkspaceBody(
   request: NextRequest,
-): Promise<NextResponse | ValidatedCreateArtistRequest> {
+): Promise<NextResponse | ValidatedCreateWorkspaceRequest> {
   // Parse and validate the request body first
   const body = await safeParseJson(request);
-  const result = createArtistBodySchema.safeParse(body);
+  const result = createWorkspaceBodySchema.safeParse(body);
   if (!result.success) {
     const firstError = result.error.issues[0];
     return NextResponse.json(
@@ -57,9 +60,12 @@ export async function validateCreateArtistBody(
     return authContext;
   }
 
+  // Default name to "Untitled" if not provided
+  const workspaceName = result.data.name?.trim() || "Untitled";
+
   return {
-    name: result.data.name,
+    name: workspaceName,
     accountId: authContext.accountId,
-    organizationId: result.data.organization_id,
+    organizationId: result.data.organization_id ?? undefined,
   };
 }
