@@ -33,7 +33,7 @@ describe("getMcpTools", () => {
     expect(mockCreateMCPClient).toHaveBeenCalledWith({
       transport: {
         type: "sse",
-        url: "https://test.vercel.app/api/mcp",
+        url: "https://test.vercel.app/mcp",
         headers: {
           Authorization: "Bearer test-token",
         },
@@ -53,7 +53,7 @@ describe("getMcpTools", () => {
     expect(mockCreateMCPClient).toHaveBeenCalledWith({
       transport: {
         type: "sse",
-        url: "https://test.vercel.app/api/mcp",
+        url: "https://test.vercel.app/mcp",
         headers: {
           Authorization: "Bearer different-token",
         },

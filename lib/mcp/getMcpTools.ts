@@ -12,7 +12,7 @@ export async function getMcpTools(authToken: string): Promise<ToolSet> {
   const mcpClient = await createMCPClient({
     transport: {
       type: "sse",
-      url: `${getBaseUrl()}/api/mcp`,
+      url: `${getBaseUrl()}/mcp`,
       headers: {
         Authorization: `Bearer ${authToken}`,
       },
