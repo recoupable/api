@@ -58,7 +58,7 @@ export async function handleChatStream(request: NextRequest): Promise<Response> 
       },
     });
 
-    return createUIMessageStreamResponse({ stream });
+    return createUIMessageStreamResponse({ stream, headers: getCorsHeaders() });
   } catch (e) {
     console.error("/api/chat Global error:", e);
     return NextResponse.json(

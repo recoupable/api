@@ -162,6 +162,11 @@ describe("handleChatStream", () => {
       expect(mockCreateUIMessageStream).toHaveBeenCalled();
       expect(mockCreateUIMessageStreamResponse).toHaveBeenCalledWith({
         stream: mockStream,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, x-api-key",
+        },
       });
       expect(result).toBe(mockResponse);
     });
