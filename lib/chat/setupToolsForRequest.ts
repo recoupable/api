@@ -30,18 +30,22 @@ function getBaseUrl(): string {
 export async function setupToolsForRequest(body: ChatRequestBody): Promise<ToolSet> {
   const { excludeTools, authToken } = body;
 
-  // Create HTTP transport to MCP endpoint with forwarded auth token
-  const mcpUrl = new URL("/api/mcp", getBaseUrl());
-  const transport = new StreamableHTTPClientTransport(mcpUrl, {
-    requestInit: {
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-      },
-    },
-  });
+  let mcpClientTools: ToolSet = {};
 
-  const mcpClient = await createMCPClient({ transport });
-  const mcpClientTools = (await mcpClient.tools()) as ToolSet;
+  // Only fetch MCP tools if we have an auth token
+  if (authToken) {
+    const mcpUrl = new URL("/api/mcp", getBaseUrl());
+    const transport = new StreamableHTTPClientTransport(mcpUrl, {
+      requestInit: {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      },
+    });
+
+    const mcpClient = await createMCPClient({ transport });
+    mcpClientTools = (await mcpClient.tools()) as ToolSet;
+  }
 
   // Fetch Google Sheets tools (authenticated tools or login tool)
   const googleSheetsTools = await getGoogleSheetsTools(body);

@@ -48,7 +48,7 @@ type BaseChatRequestBody = z.infer<typeof chatRequestSchema>;
 export type ChatRequestBody = BaseChatRequestBody & {
   accountId: string;
   orgId: string | null;
-  authToken: string;
+  authToken?: string;
 };
 
 /**
