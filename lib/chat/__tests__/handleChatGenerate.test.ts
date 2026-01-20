@@ -30,16 +30,46 @@ vi.mock("ai", () => ({
   generateText: vi.fn(),
 }));
 
+vi.mock("@/lib/chat/saveChatCompletion", () => ({
+  saveChatCompletion: vi.fn(),
+}));
+
+vi.mock("@/lib/uuid/generateUUID", () => {
+  const mockFn = vi.fn(() => "auto-generated-room-id");
+  return {
+    generateUUID: mockFn,
+    default: mockFn,
+  };
+});
+
+vi.mock("@/lib/chat/createNewRoom", () => ({
+  createNewRoom: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/memories/insertMemories", () => ({
+  default: vi.fn(),
+}));
+
+vi.mock("@/lib/messages/filterMessageContentForMemories", () => ({
+  default: vi.fn((msg: unknown) => msg),
+}));
+
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { setupChatRequest } from "@/lib/chat/setupChatRequest";
 import { generateText } from "ai";
+import { saveChatCompletion } from "@/lib/chat/saveChatCompletion";
+import { generateUUID } from "@/lib/uuid/generateUUID";
+import { createNewRoom } from "@/lib/chat/createNewRoom";
 import { handleChatGenerate } from "../handleChatGenerate";
 
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
 const mockSetupChatRequest = vi.mocked(setupChatRequest);
 const mockGenerateText = vi.mocked(generateText);
+const mockSaveChatCompletion = vi.mocked(saveChatCompletion);
+const mockGenerateUUID = vi.mocked(generateUUID);
+const mockCreateNewRoom = vi.mocked(createNewRoom);
 
 // Helper to create mock NextRequest
 function createMockRequest(
@@ -334,6 +364,220 @@ describe("handleChatGenerate", () => {
           accountId: "target-account-456",
         }),
       );
+    });
+  });
+
+  describe("message persistence", () => {
+    it("saves assistant message to database when roomId is provided", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+
+      mockSetupChatRequest.mockResolvedValue({
+        model: "gpt-4",
+        instructions: "test",
+        system: "test",
+        messages: [],
+        experimental_generateMessageId: vi.fn(),
+        tools: {},
+        providerOptions: {},
+      } as any);
+
+      mockGenerateText.mockResolvedValue({
+        text: "Hello! How can I help you?",
+        finishReason: "stop",
+        usage: { promptTokens: 10, completionTokens: 20 },
+        response: { messages: [], headers: {}, body: null },
+      } as any);
+
+      mockSaveChatCompletion.mockResolvedValue(null);
+
+      const request = createMockRequest(
+        { prompt: "Hello", roomId: "room-abc-123" },
+        { "x-api-key": "valid-key" },
+      );
+
+      await handleChatGenerate(request as any);
+
+      expect(mockSaveChatCompletion).toHaveBeenCalledWith({
+        text: "Hello! How can I help you?",
+        roomId: "room-abc-123",
+      });
+    });
+
+    it("saves message with auto-generated roomId when roomId is not provided", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockGenerateUUID.mockReturnValue("auto-generated-room-id");
+      mockCreateNewRoom.mockResolvedValue(undefined);
+
+      mockSetupChatRequest.mockResolvedValue({
+        model: "gpt-4",
+        instructions: "test",
+        system: "test",
+        messages: [],
+        experimental_generateMessageId: vi.fn(),
+        tools: {},
+        providerOptions: {},
+      } as any);
+
+      mockGenerateText.mockResolvedValue({
+        text: "Response",
+        finishReason: "stop",
+        usage: { promptTokens: 10, completionTokens: 20 },
+        response: { messages: [], headers: {}, body: null },
+      } as any);
+
+      mockSaveChatCompletion.mockResolvedValue(null);
+
+      const request = createMockRequest(
+        { prompt: "Hello" },
+        { "x-api-key": "valid-key" },
+      );
+
+      await handleChatGenerate(request as any);
+
+      // Since roomId is auto-created, saveChatCompletion should be called
+      expect(mockSaveChatCompletion).toHaveBeenCalledWith({
+        text: "Response",
+        roomId: "auto-generated-room-id",
+      });
+    });
+
+    it("includes roomId in HTTP response when provided by client", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+
+      mockSetupChatRequest.mockResolvedValue({
+        model: "gpt-4",
+        instructions: "test",
+        system: "test",
+        messages: [],
+        experimental_generateMessageId: vi.fn(),
+        tools: {},
+        providerOptions: {},
+      } as any);
+
+      mockGenerateText.mockResolvedValue({
+        text: "Response",
+        finishReason: "stop",
+        usage: { promptTokens: 10, completionTokens: 20 },
+        response: { messages: [], headers: {}, body: null },
+      } as any);
+
+      mockSaveChatCompletion.mockResolvedValue(null);
+
+      const request = createMockRequest(
+        { prompt: "Hello", roomId: "client-provided-room-id" },
+        { "x-api-key": "valid-key" },
+      );
+
+      const result = await handleChatGenerate(request as any);
+
+      expect(result.status).toBe(200);
+      const json = await result.json();
+      expect(json.roomId).toBe("client-provided-room-id");
+    });
+
+    it("includes auto-generated roomId in HTTP response when not provided", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockGenerateUUID.mockReturnValue("auto-generated-room-456");
+      mockCreateNewRoom.mockResolvedValue(undefined);
+
+      mockSetupChatRequest.mockResolvedValue({
+        model: "gpt-4",
+        instructions: "test",
+        system: "test",
+        messages: [],
+        experimental_generateMessageId: vi.fn(),
+        tools: {},
+        providerOptions: {},
+      } as any);
+
+      mockGenerateText.mockResolvedValue({
+        text: "Response",
+        finishReason: "stop",
+        usage: { promptTokens: 10, completionTokens: 20 },
+        response: { messages: [], headers: {}, body: null },
+      } as any);
+
+      mockSaveChatCompletion.mockResolvedValue(null);
+
+      const request = createMockRequest(
+        { prompt: "Hello" },
+        { "x-api-key": "valid-key" },
+      );
+
+      const result = await handleChatGenerate(request as any);
+
+      expect(result.status).toBe(200);
+      const json = await result.json();
+      expect(json.roomId).toBe("auto-generated-room-456");
+    });
+
+    it("passes correct text to saveChatCompletion", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+
+      mockSetupChatRequest.mockResolvedValue({
+        model: "gpt-4",
+        instructions: "test",
+        system: "test",
+        messages: [],
+        experimental_generateMessageId: vi.fn(),
+        tools: {},
+        providerOptions: {},
+      } as any);
+
+      mockGenerateText.mockResolvedValue({
+        text: "This is the assistant response text",
+        finishReason: "stop",
+        usage: { promptTokens: 10, completionTokens: 20 },
+        response: { messages: [], headers: {}, body: null },
+      } as any);
+
+      mockSaveChatCompletion.mockResolvedValue(null);
+
+      const request = createMockRequest(
+        { prompt: "Hello", roomId: "room-xyz" },
+        { "x-api-key": "valid-key" },
+      );
+
+      await handleChatGenerate(request as any);
+
+      expect(mockSaveChatCompletion).toHaveBeenCalledWith({
+        text: "This is the assistant response text",
+        roomId: "room-xyz",
+      });
+    });
+
+    it("still returns success response even if saveChatCompletion fails", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+
+      mockSetupChatRequest.mockResolvedValue({
+        model: "gpt-4",
+        instructions: "test",
+        system: "test",
+        messages: [],
+        experimental_generateMessageId: vi.fn(),
+        tools: {},
+        providerOptions: {},
+      } as any);
+
+      mockGenerateText.mockResolvedValue({
+        text: "Response",
+        finishReason: "stop",
+        usage: { promptTokens: 10, completionTokens: 20 },
+        response: { messages: [], headers: {}, body: null },
+      } as any);
+
+      mockSaveChatCompletion.mockRejectedValue(new Error("Database error"));
+
+      const request = createMockRequest(
+        { prompt: "Hello", roomId: "room-abc" },
+        { "x-api-key": "valid-key" },
+      );
+
+      const result = await handleChatGenerate(request as any);
+
+      expect(result.status).toBe(200);
+      const json = await result.json();
+      expect(json.text).toBe("Response");
     });
   });
 });

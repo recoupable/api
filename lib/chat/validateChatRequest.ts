@@ -6,8 +6,11 @@ import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { getMessages } from "@/lib/messages/getMessages";
+import convertToUiMessages from "@/lib/messages/convertToUiMessages";
 import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
+import { setupConversation } from "@/lib/chat/setupConversation";
+import { validateMessages } from "@/lib/chat/validateMessages";
 
 export const chatRequestSchema = z
   .object({
@@ -165,8 +168,8 @@ export async function validateChatRequest(
   }
 
   // Normalize chat content:
-  // - If messages are provided, keep them as-is
   // - If only prompt is provided, convert it into a single user UIMessage
+  // - Convert all messages to UIMessage format (handles mixed formats)
   const hasMessages = Array.isArray(validatedBody.messages) && validatedBody.messages.length > 0;
   const hasPrompt =
     typeof validatedBody.prompt === "string" && validatedBody.prompt.trim().length > 0;
@@ -175,9 +178,24 @@ export async function validateChatRequest(
     validatedBody.messages = getMessages(validatedBody.prompt);
   }
 
+  // Convert messages to UIMessage format and get the last (newest) message
+  const uiMessages = convertToUiMessages(validatedBody.messages);
+  const { lastMessage } = validateMessages(uiMessages);
+
+  // Setup conversation: auto-create room if needed and persist user message
+  // Use the message's original ID to prevent duplicates with handleChatCompletion's upsert
+  const { roomId: finalRoomId } = await setupConversation({
+    accountId,
+    roomId: validatedBody.roomId,
+    promptMessage: lastMessage,
+    artistId: validatedBody.artistId,
+    memoryId: lastMessage.id,
+  });
+
   return {
     ...validatedBody,
     accountId,
     orgId,
+    roomId: finalRoomId,
   } as ChatRequestBody;
 }
