@@ -26,14 +26,16 @@ export const createNewArtistToolChain: ToolChainItem[] = [
     messages: [getKnowledgeBaseReportReferenceMessage()],
   },
   {
-    toolName: "create_knowledge_base",
+    toolName: "generate_txt_file",
+    system:
+      "Using all the research gathered (from artist_deep_research, spotify_deep_research, search_web results, etc.), generate a comprehensive knowledge base report following the reference template. Include artist biography, discography, social media presence, notable achievements, and any other relevant information. Pass the complete report text to generate_txt_file.",
     messages: [getKnowledgeBaseReportReferenceMessage()],
   },
   {
-    toolName: "generate_txt_file",
-    messages: [getKnowledgeBaseReportReferenceMessage()],
+    toolName: "update_account_info",
+    system:
+      "Using the arweaveUrl returned from generate_txt_file, update the artist's knowledges array to include the new knowledge base entry. Set the knowledge object with: url (the arweaveUrl), name (e.g., 'Artist Knowledge Base Report'), and type ('text/plain').",
   },
-  { toolName: "update_account_info" },
   { toolName: "create_segments" },
   { toolName: "youtube_login" },
 ];
