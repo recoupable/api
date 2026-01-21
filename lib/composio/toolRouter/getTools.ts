@@ -44,6 +44,10 @@ function isValidTool(tool: unknown): tool is Tool {
  * - COMPOSIO_GET_TOOL_SCHEMAS - Get parameter schemas
  * - COMPOSIO_MULTI_EXECUTE_TOOL - Execute actions
  *
+ * Gracefully returns empty ToolSet when:
+ * - COMPOSIO_API_KEY is not set
+ * - @composio packages fail to load (bundler incompatibility)
+ *
  * @param userId - Unique identifier for the user (accountId)
  * @param roomId - Optional chat room ID for OAuth redirect
  * @returns ToolSet containing filtered Vercel AI SDK tools
@@ -52,21 +56,33 @@ export async function getComposioTools(
   userId: string,
   roomId?: string
 ): Promise<ToolSet> {
-  const session = await createToolRouterSession(userId, roomId);
-  const allTools = await session.tools();
-
-  // Filter to only allowed tools with runtime validation
-  const filteredTools: ToolSet = {};
-
-  for (const toolName of ALLOWED_TOOLS) {
-    if (toolName in allTools) {
-      const tool = (allTools as Record<string, unknown>)[toolName];
-
-      if (isValidTool(tool)) {
-        filteredTools[toolName] = tool;
-      }
-    }
+  // Skip Composio if API key is not configured
+  if (!process.env.COMPOSIO_API_KEY) {
+    return {};
   }
 
-  return filteredTools;
+  try {
+    const session = await createToolRouterSession(userId, roomId);
+    const allTools = await session.tools();
+
+    // Filter to only allowed tools with runtime validation
+    const filteredTools: ToolSet = {};
+
+    for (const toolName of ALLOWED_TOOLS) {
+      if (toolName in allTools) {
+        const tool = (allTools as Record<string, unknown>)[toolName];
+
+        if (isValidTool(tool)) {
+          filteredTools[toolName] = tool;
+        }
+      }
+    }
+
+    return filteredTools;
+  } catch (error) {
+    // Gracefully handle Composio loading failures
+    // (e.g., bundler incompatibility with createRequire(import.meta.url))
+    console.warn("Composio tools unavailable:", (error as Error).message);
+    return {};
+  }
 }

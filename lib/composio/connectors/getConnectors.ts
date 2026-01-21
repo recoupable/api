@@ -17,7 +17,7 @@ export interface ConnectorInfo {
  * @returns List of connectors with connection status
  */
 export async function getConnectors(userId: string): Promise<ConnectorInfo[]> {
-  const composio = getComposioClient();
+  const composio = await getComposioClient();
   const session = await composio.create(userId);
   const toolkits = await session.toolkits();
 
