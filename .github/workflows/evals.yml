@@ -34,3 +34,5 @@ jobs:
         with:
           api_key: ${{ secrets.BRAINTRUST_API_KEY }}
           runtime: node
+        env:
+          PRIVY_PROJECT_SECRET: ${{ secrets.PRIVY_PROJECT_SECRET }}
