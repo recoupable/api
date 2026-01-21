@@ -10,6 +10,8 @@ import type { AccountSocialWithSocial } from "@/lib/supabase/account_socials/sel
 
 /**
  * Updates artist socials by replacing existing socials for each platform type.
+ * Only replaces socials for platforms where a valid URL is provided.
+ * Existing socials for platforms not in profileUrls are preserved.
  *
  * @param artistId - The artist account ID
  * @param profileUrls - Record mapping platform types to profile URLs
@@ -26,9 +28,12 @@ export async function updateArtistSocials(
   const profilePromises = Object.entries(profileUrls).map(async ([type, value]) => {
     const normalizedUrl = normalizeProfileUrl(value);
 
-    const socials = normalizedUrl
-      ? await selectSocials({ profile_url: normalizedUrl })
-      : null;
+    // Skip if no URL provided - don't delete existing socials without replacement
+    if (!normalizedUrl) {
+      return;
+    }
+
+    const socials = await selectSocials({ profile_url: normalizedUrl });
     const social = socials && socials.length > 0 ? socials[0] : null;
 
     const existingSocial = (accountSocials || []).find(
@@ -41,28 +46,26 @@ export async function updateArtistSocials(
       await deleteAccountSocial(artistId, existingSocial.social.id);
     }
 
-    // Insert new social if URL provided
-    if (normalizedUrl) {
-      if (social) {
-        // Social already exists, check if account_social relationship exists
-        const existing = (accountSocials || []).find(
-          (as: AccountSocialWithSocial) => as.social_id === social.id,
-        );
-        if (!existing) {
-          await insertAccountSocial(artistId, social.id);
-        }
-      } else {
-        // Create new social record
-        const username = getUsernameFromProfileUrl(value);
-        const newSocials = await insertSocials([
-          {
-            username,
-            profile_url: normalizedUrl,
-          },
-        ]);
-        if (newSocials.length > 0) {
-          await insertAccountSocial(artistId, newSocials[0].id);
-        }
+    // Insert new social
+    if (social) {
+      // Social already exists, check if account_social relationship exists
+      const existing = (accountSocials || []).find(
+        (as: AccountSocialWithSocial) => as.social_id === social.id,
+      );
+      if (!existing) {
+        await insertAccountSocial(artistId, social.id);
+      }
+    } else {
+      // Create new social record
+      const username = getUsernameFromProfileUrl(value);
+      const newSocials = await insertSocials([
+        {
+          username,
+          profile_url: normalizedUrl,
+        },
+      ]);
+      if (newSocials.length > 0) {
+        await insertAccountSocial(artistId, newSocials[0].id);
       }
     }
   });
