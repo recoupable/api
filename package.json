@@ -12,10 +12,13 @@
     "lint": "eslint . --ext .ts --fix",
     "lint:check": "eslint . --ext .ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "eval": "braintrust eval --external-packages playwright playwright-core chromium-bidi @browserbasehq/stagehand"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.13",
+    "autoevals": "^0.0.129",
+    "braintrust": "^0.4.9",
     "@ai-sdk/gateway": "^3.0.14",
     "@ai-sdk/google": "^3.0.8",
     "@ai-sdk/mcp": "^0.0.12",
