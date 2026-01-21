@@ -11,6 +11,9 @@ permissions:
 jobs:
   evals:
     runs-on: ubuntu-latest
+    timeout-minutes: 11
+    env:
+      PRIVY_PROJECT_SECRET: ${{ secrets.PRIVY_PROJECT_SECRET }}
 
     steps:
       - name: Checkout code
@@ -34,5 +37,3 @@ jobs:
         with:
           api_key: ${{ secrets.BRAINTRUST_API_KEY }}
           runtime: node
-        env:
-          PRIVY_PROJECT_SECRET: ${{ secrets.PRIVY_PROJECT_SECRET }}
