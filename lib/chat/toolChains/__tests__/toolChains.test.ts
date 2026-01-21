@@ -102,6 +102,36 @@ describe("toolChains", () => {
         const chain = TOOL_CHAINS.create_new_artist;
         expect(chain[chain.length - 1].toolName).toBe("youtube_login");
       });
+
+      it("does not include create_knowledge_base tool", () => {
+        const chain = TOOL_CHAINS.create_new_artist;
+        const hasCreateKnowledgeBase = chain.some(
+          (item) => item.toolName === "create_knowledge_base"
+        );
+        expect(hasCreateKnowledgeBase).toBe(false);
+      });
+
+      it("includes generate_txt_file with system prompt for knowledge base report", () => {
+        const chain = TOOL_CHAINS.create_new_artist;
+        const generateStep = chain.find(
+          (item) => item.toolName === "generate_txt_file"
+        );
+        expect(generateStep).toBeDefined();
+        expect(generateStep?.system).toBeDefined();
+        expect(generateStep?.system).toContain("knowledge base report");
+      });
+
+      it("includes update_account_info step with system prompt to link knowledge base", () => {
+        const chain = TOOL_CHAINS.create_new_artist;
+        const updateSteps = chain.filter(
+          (item) => item.toolName === "update_account_info"
+        );
+        const knowledgeLinkStep = updateSteps.find(
+          (item) => item.system?.includes("knowledges")
+        );
+        expect(knowledgeLinkStep).toBeDefined();
+        expect(knowledgeLinkStep?.system).toContain("arweaveUrl");
+      });
     });
 
     describe("create_release_report chain", () => {
