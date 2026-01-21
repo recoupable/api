@@ -36,6 +36,7 @@ jobs:
         run: pnpm install
 
       - name: Run Evals
-        env:
-          BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
-        run: pnpm eval
+        uses: braintrustdata/eval-action@v1
+        with:
+          api_key: ${{ secrets.BRAINTRUST_API_KEY }}
+          runtime: node

@@ -11,7 +11,7 @@ const ENABLED_TOOLKITS = ["googlesheets"];
  * Create a Composio Tool Router session for a user.
  */
 export async function createToolRouterSession(userId: string, roomId?: string) {
-  const composio = getComposioClient();
+  const composio = await getComposioClient();
 
   const callbackUrl = getCallbackUrl({
     destination: "chat",

@@ -25,7 +25,7 @@ export async function authorizeConnector(
   connector: string,
   customCallbackUrl?: string,
 ): Promise<AuthorizeResult> {
-  const composio = getComposioClient();
+  const composio = await getComposioClient();
 
   const callbackUrl =
     customCallbackUrl || getCallbackUrl({ destination: "connectors" });
