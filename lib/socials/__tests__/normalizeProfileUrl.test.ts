@@ -13,9 +13,7 @@ describe("normalizeProfileUrl", () => {
   });
 
   it("returns URL unchanged if no protocol", () => {
-    expect(normalizeProfileUrl("open.spotify.com/artist/123")).toBe(
-      "open.spotify.com/artist/123",
-    );
+    expect(normalizeProfileUrl("open.spotify.com/artist/123")).toBe("open.spotify.com/artist/123");
   });
 
   it("handles empty string", () => {
@@ -28,8 +26,20 @@ describe("normalizeProfileUrl", () => {
   });
 
   it("removes trailing slash", () => {
-    expect(normalizeProfileUrl("https://instagram.com/user/")).toBe(
-      "instagram.com/user",
+    expect(normalizeProfileUrl("https://instagram.com/user/")).toBe("instagram.com/user");
+  });
+
+  it("removes www. prefix from URL", () => {
+    expect(normalizeProfileUrl("https://www.instagram.com/user")).toBe("instagram.com/user");
+  });
+
+  it("removes www. prefix along with protocol and trailing slash", () => {
+    expect(normalizeProfileUrl("https://www.instagram.com/goosebytheway/")).toBe(
+      "instagram.com/goosebytheway",
     );
+  });
+
+  it("handles URL with www. but without protocol", () => {
+    expect(normalizeProfileUrl("www.twitter.com/user")).toBe("twitter.com/user");
   });
 });
