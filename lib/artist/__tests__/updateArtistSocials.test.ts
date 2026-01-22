@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { updateArtistSocials } from "../updateArtistSocials";
+
 const mockSelectAccountSocials = vi.fn();
 const mockDeleteAccountSocial = vi.fn();
 const mockInsertAccountSocial = vi.fn();
@@ -25,8 +27,6 @@ vi.mock("@/lib/supabase/socials/selectSocials", () => ({
 vi.mock("@/lib/supabase/socials/insertSocials", () => ({
   insertSocials: (...args: unknown[]) => mockInsertSocials(...args),
 }));
-
-import { updateArtistSocials } from "../updateArtistSocials";
 
 describe("updateArtistSocials", () => {
   const artistId = "artist-123";
@@ -155,7 +155,11 @@ describe("updateArtistSocials", () => {
       return Promise.resolve([]);
     });
     mockInsertSocials.mockResolvedValue([
-      { id: "new-youtube-social", username: "artistchannel", profile_url: "youtube.com/@artistchannel" },
+      {
+        id: "new-youtube-social",
+        username: "artistchannel",
+        profile_url: "youtube.com/@artistchannel",
+      },
     ]);
 
     // Update both YouTube AND Spotify (same Spotify URL as existing)
@@ -170,5 +174,80 @@ describe("updateArtistSocials", () => {
     expect(mockInsertAccountSocial).toHaveBeenCalledWith(artistId, "social-spotify-1");
     // Should also insert YouTube
     expect(mockInsertAccountSocial).toHaveBeenCalledWith(artistId, "new-youtube-social");
+  });
+
+  it("adds both Instagram and Spotify when neither exists", async () => {
+    // BUG: When passing both Instagram and Spotify URLs for a new artist,
+    // only one social is being added
+    mockSelectAccountSocials.mockResolvedValue([]);
+    mockSelectSocials.mockResolvedValue([]);
+
+    // Mock insertSocials to return different IDs for each call
+    let insertCallCount = 0;
+    mockInsertSocials.mockImplementation(socials => {
+      insertCallCount++;
+      const social = socials[0];
+      if (social.profile_url.includes("instagram")) {
+        return Promise.resolve([
+          {
+            id: "new-instagram-social",
+            username: "goosebytheway",
+            profile_url: social.profile_url,
+          },
+        ]);
+      } else if (social.profile_url.includes("spotify")) {
+        return Promise.resolve([
+          { id: "new-spotify-social", username: "artist", profile_url: social.profile_url },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+
+    // Add both Instagram AND Spotify for a new artist
+    await updateArtistSocials(artistId, {
+      INSTAGRAM: "https://www.instagram.com/goosebytheway/",
+      SPOTIFY: "https://open.spotify.com/artist/7Lbpx0EuKekUdtfDuNStfh",
+    });
+
+    // Should NOT delete anything since no existing socials
+    expect(mockDeleteAccountSocial).not.toHaveBeenCalled();
+
+    // Should create social records for BOTH platforms
+    expect(mockInsertSocials).toHaveBeenCalledTimes(2);
+
+    // Should create account_social relationships for BOTH platforms
+    expect(mockInsertAccountSocial).toHaveBeenCalledTimes(2);
+    expect(mockInsertAccountSocial).toHaveBeenCalledWith(artistId, "new-instagram-social");
+    expect(mockInsertAccountSocial).toHaveBeenCalledWith(artistId, "new-spotify-social");
+  });
+
+  it("finds existing Instagram social when www prefix is used in URL", async () => {
+    // BUG: When URL has www. prefix but database has URL without www.,
+    // the lookup fails and creates a duplicate or fails to link
+    const existingInstagramInDb = {
+      id: "existing-instagram-social",
+      username: "goosebytheway",
+      profile_url: "instagram.com/goosebytheway", // Note: no www.
+    };
+
+    mockSelectAccountSocials.mockResolvedValue([]);
+    // Simulate database having the URL without www.
+    mockSelectSocials.mockImplementation(({ profile_url }) => {
+      // The normalized URL should match even with www. stripped
+      if (profile_url === "instagram.com/goosebytheway") {
+        return Promise.resolve([existingInstagramInDb]);
+      }
+      return Promise.resolve([]);
+    });
+
+    // Input URL has www. prefix
+    await updateArtistSocials(artistId, {
+      INSTAGRAM: "https://www.instagram.com/goosebytheway/",
+    });
+
+    // Should find existing social and NOT create new one
+    expect(mockInsertSocials).not.toHaveBeenCalled();
+    // Should link to existing social
+    expect(mockInsertAccountSocial).toHaveBeenCalledWith(artistId, "existing-instagram-social");
   });
 });
