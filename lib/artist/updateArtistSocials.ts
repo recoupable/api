@@ -48,13 +48,10 @@ export async function updateArtistSocials(
 
     // Insert new social
     if (social) {
-      // Social already exists, check if account_social relationship exists
-      const existing = (accountSocials || []).find(
-        (as: AccountSocialWithSocial) => as.social_id === social.id,
-      );
-      if (!existing) {
-        await insertAccountSocial(artistId, social.id);
-      }
+      // Always insert the account_social relationship since we deleted the old one
+      // for this platform type (if it existed). The stale accountSocials array
+      // would incorrectly skip this insert if we checked it.
+      await insertAccountSocial(artistId, social.id);
     } else {
       // Create new social record
       const username = getUsernameFromProfileUrl(value);

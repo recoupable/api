@@ -126,4 +126,49 @@ describe("updateArtistSocials", () => {
     expect(mockInsertSocials).not.toHaveBeenCalled();
     expect(mockInsertAccountSocial).toHaveBeenCalledWith(artistId, "existing-db-social");
   });
+
+  it("re-inserts Spotify relationship when updating both YouTube and Spotify URLs", async () => {
+    // BUG: When AI passes both YouTube AND existing Spotify URL, the Spotify
+    // social gets deleted but NOT re-inserted due to stale accountSocials check
+    const existingSpotifySocial = {
+      id: "account-social-spotify",
+      account_id: artistId,
+      social_id: "social-spotify-1",
+      social: {
+        id: "social-spotify-1",
+        username: "artistname",
+        profile_url: "open.spotify.com/artist/0TnOYISbd1XYRBk9myaseg",
+      },
+    };
+
+    const existingSpotifySocialRecord = {
+      id: "social-spotify-1",
+      username: "artistname",
+      profile_url: "open.spotify.com/artist/0TnOYISbd1XYRBk9myaseg",
+    };
+
+    mockSelectAccountSocials.mockResolvedValue([existingSpotifySocial]);
+    mockSelectSocials.mockImplementation(({ profile_url }) => {
+      if (profile_url === "open.spotify.com/artist/0TnOYISbd1XYRBk9myaseg") {
+        return Promise.resolve([existingSpotifySocialRecord]);
+      }
+      return Promise.resolve([]);
+    });
+    mockInsertSocials.mockResolvedValue([
+      { id: "new-youtube-social", username: "artistchannel", profile_url: "youtube.com/@artistchannel" },
+    ]);
+
+    // Update both YouTube AND Spotify (same Spotify URL as existing)
+    await updateArtistSocials(artistId, {
+      YOUTUBE: "https://youtube.com/@artistchannel",
+      SPOTIFY: "https://open.spotify.com/artist/0TnOYISbd1XYRBk9myaseg",
+    });
+
+    // Should delete existing Spotify (to replace it)
+    expect(mockDeleteAccountSocial).toHaveBeenCalledWith(artistId, "social-spotify-1");
+    // CRITICAL: Should re-insert the Spotify relationship after deleting it
+    expect(mockInsertAccountSocial).toHaveBeenCalledWith(artistId, "social-spotify-1");
+    // Should also insert YouTube
+    expect(mockInsertAccountSocial).toHaveBeenCalledWith(artistId, "new-youtube-social");
+  });
 });
