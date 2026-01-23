@@ -5,7 +5,7 @@ import { Sandbox } from "@vercel/sandbox";
  */
 export interface SandboxCreatedResponse {
   sandboxId: string;
-  status: "pending" | "running" | "stopping" | "stopped" | "failed";
+  status: "pending" | "running" | "stopping" | "stopped" | "failed" | "snapshotting";
   timeout: number;
   createdAt: string;
 }
