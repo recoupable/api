@@ -8,7 +8,7 @@ import { getComposioTools } from "@/lib/composio/toolRouter";
  * Sets up and filters tools for a chat request.
  * Aggregates tools from:
  * - MCP server (via HTTP transport to /api/mcp for proper auth)
- * - Composio Tool Router (Google Sheets and other connectors)
+ * - Composio Tool Router (Google Sheets, Google Drive, Google Docs)
  *
  * @param body - The chat request body
  * @returns Filtered tool set ready for use
