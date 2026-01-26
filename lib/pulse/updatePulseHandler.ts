@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
+import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateUpdatePulseBody, type UpdatePulseBody } from "./validateUpdatePulseBody";
 import { selectPulseAccount } from "@/lib/supabase/pulse_accounts/selectPulseAccount";
@@ -14,6 +15,9 @@ import { updatePulseAccount } from "@/lib/supabase/pulse_accounts/updatePulseAcc
  * Creates a new pulse_accounts record if one doesn't exist,
  * otherwise updates the existing record.
  *
+ * Optional body parameter:
+ * - account_id: For org API keys, target a specific account within the organization
+ *
  * @param request - The request object.
  * @returns A NextResponse with the updated pulse account status.
  */
@@ -22,14 +26,26 @@ export async function updatePulseHandler(request: NextRequest): Promise<NextResp
   if (accountIdOrError instanceof NextResponse) {
     return accountIdOrError;
   }
-  const accountId = accountIdOrError;
+  let accountId = accountIdOrError;
 
   const body = await safeParseJson(request);
   const validated = validateUpdatePulseBody(body);
   if (validated instanceof NextResponse) {
     return validated;
   }
-  const { active } = validated as UpdatePulseBody;
+  const { active, account_id: targetAccountId } = validated as UpdatePulseBody;
+
+  if (targetAccountId) {
+    const apiKey = request.headers.get("x-api-key");
+    const overrideResult = await validateOverrideAccountId({
+      apiKey,
+      targetAccountId,
+    });
+    if (overrideResult instanceof NextResponse) {
+      return overrideResult;
+    }
+    accountId = overrideResult.accountId;
+  }
 
   const existingPulseAccount = await selectPulseAccount(accountId);
 
@@ -44,7 +60,7 @@ export async function updatePulseHandler(request: NextRequest): Promise<NextResp
     return NextResponse.json(
       {
         status: "error",
-        message: "Failed to update pulse status",
+        error: "Failed to update pulse status",
       },
       {
         status: 500,
@@ -55,7 +71,12 @@ export async function updatePulseHandler(request: NextRequest): Promise<NextResp
 
   return NextResponse.json(
     {
-      active: pulseAccount.active,
+      status: "success",
+      pulse: {
+        id: pulseAccount.id,
+        account_id: pulseAccount.account_id,
+        active: pulseAccount.active,
+      },
     },
     {
       status: 200,

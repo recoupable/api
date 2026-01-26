@@ -4,6 +4,7 @@ import { z } from "zod";
 
 export const updatePulseBodySchema = z.object({
   active: z.boolean({ message: "active must be a boolean" }),
+  account_id: z.string().uuid("account_id must be a valid UUID").optional(),
 });
 
 export type UpdatePulseBody = z.infer<typeof updatePulseBodySchema>;
