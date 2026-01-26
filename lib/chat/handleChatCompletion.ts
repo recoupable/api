@@ -51,21 +51,30 @@ export async function handleChatCompletion(
         lastMessage.parts.find((part) => part.type === "text")?.text || "";
       const conversationName = await generateChatTitle(latestMessageText);
 
-      await Promise.all([
-        insertRoom({
+      try {
+        await insertRoom({
           id: roomId,
           account_id: accountId,
           topic: conversationName,
           artist_id: artistId || null,
-        }),
-        sendNewConversationNotification({
+        });
+        // Only send notification if we successfully created the room
+        await sendNewConversationNotification({
           accountId,
           email,
           conversationId: roomId,
           topic: conversationName,
           firstMessage: latestMessageText,
-        }),
-      ]);
+        });
+      } catch (insertError: unknown) {
+        // Room already exists (frontend created it via race condition) - continue
+        const isUniqueViolation =
+          insertError &&
+          typeof insertError === "object" &&
+          "code" in insertError &&
+          insertError.code === "23505";
+        if (!isUniqueViolation) throw insertError;
+      }
     }
 
     // Store messages sequentially to maintain correct order
