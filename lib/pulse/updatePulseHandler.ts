@@ -4,16 +4,14 @@ import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateUpdatePulseBody, type UpdatePulseBody } from "./validateUpdatePulseBody";
-import { selectPulseAccount } from "@/lib/supabase/pulse_accounts/selectPulseAccount";
-import { insertPulseAccount } from "@/lib/supabase/pulse_accounts/insertPulseAccount";
-import { updatePulseAccount } from "@/lib/supabase/pulse_accounts/updatePulseAccount";
+import { upsertPulseAccount } from "@/lib/supabase/pulse_accounts/upsertPulseAccount";
 
 /**
  * Handler for updating pulse status for an account.
  * Requires authentication via x-api-key header.
  *
  * Creates a new pulse_accounts record if one doesn't exist,
- * otherwise updates the existing record.
+ * otherwise updates the existing record (upsert).
  *
  * Optional body parameter:
  * - account_id: For org API keys, target a specific account within the organization
@@ -47,14 +45,7 @@ export async function updatePulseHandler(request: NextRequest): Promise<NextResp
     accountId = overrideResult.accountId;
   }
 
-  const existingPulseAccount = await selectPulseAccount(accountId);
-
-  let pulseAccount;
-  if (existingPulseAccount) {
-    pulseAccount = await updatePulseAccount(accountId, { active });
-  } else {
-    pulseAccount = await insertPulseAccount({ account_id: accountId, active });
-  }
+  const pulseAccount = await upsertPulseAccount({ account_id: accountId, active });
 
   if (!pulseAccount) {
     return NextResponse.json(
