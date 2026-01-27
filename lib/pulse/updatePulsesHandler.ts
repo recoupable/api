@@ -1,31 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateUpdatePulseRequest } from "./validateUpdatePulseRequest";
+import { validateUpdatePulsesRequest } from "./validateUpdatePulsesRequest";
 import { upsertPulseAccount } from "@/lib/supabase/pulse_accounts/upsertPulseAccount";
 
 /**
  * Handler for updating pulse status for an account.
- * Requires authentication via x-api-key header.
+ * Requires authentication via x-api-key header or Authorization bearer token.
  *
  * Creates a new pulse_accounts record if one doesn't exist,
  * otherwise updates the existing record (upsert).
  *
- * Optional body parameter:
- * - account_id: For org API keys, target a specific account within the organization
+ * Returns an array containing the upserted pulse record.
  *
  * @param request - The request object.
- * @returns A NextResponse with the updated pulse account status.
+ * @returns A NextResponse with array of pulse account statuses.
  */
-export async function updatePulseHandler(request: NextRequest): Promise<NextResponse> {
-  const validated = await validateUpdatePulseRequest(request);
+export async function updatePulsesHandler(request: NextRequest): Promise<NextResponse> {
+  const validated = await validateUpdatePulsesRequest(request);
   if (validated instanceof NextResponse) {
     return validated;
   }
   const { accountId, active } = validated;
 
-  const pulseAccount = await upsertPulseAccount({ account_id: accountId, active });
+  // Update the pulse account - returns array
+  const pulses = await upsertPulseAccount({ account_id: accountId, active });
 
-  if (!pulseAccount) {
+  if (!pulses || pulses.length === 0) {
     return NextResponse.json(
       {
         status: "error",
@@ -41,7 +41,7 @@ export async function updatePulseHandler(request: NextRequest): Promise<NextResp
   return NextResponse.json(
     {
       status: "success",
-      pulse: pulseAccount,
+      pulses,
     },
     {
       status: 200,

@@ -4,7 +4,7 @@ import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sd
 import { z } from "zod";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
-import { selectPulseAccount } from "@/lib/supabase/pulse_accounts/selectPulseAccount";
+import { selectPulseAccounts } from "@/lib/supabase/pulse_accounts/selectPulseAccounts";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 
@@ -44,7 +44,8 @@ export function registerGetPulseTool(server: McpServer): void {
         return getToolResultError("Failed to resolve account ID");
       }
 
-      const pulseAccount = await selectPulseAccount(accountId);
+      const pulseAccounts = await selectPulseAccounts({ accountIds: [accountId] });
+      const pulseAccount = pulseAccounts[0] ?? null;
 
       return getToolResultSuccess({
         pulse: pulseAccount ?? { id: null, account_id: accountId, active: false },

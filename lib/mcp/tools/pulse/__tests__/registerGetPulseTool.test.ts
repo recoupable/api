@@ -5,11 +5,11 @@ import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sd
 
 import { registerGetPulseTool } from "../registerGetPulseTool";
 
-const mockSelectPulseAccount = vi.fn();
+const mockSelectPulseAccounts = vi.fn();
 const mockCanAccessAccount = vi.fn();
 
-vi.mock("@/lib/supabase/pulse_accounts/selectPulseAccount", () => ({
-  selectPulseAccount: (...args: unknown[]) => mockSelectPulseAccount(...args),
+vi.mock("@/lib/supabase/pulse_accounts/selectPulseAccounts", () => ({
+  selectPulseAccounts: (...args: unknown[]) => mockSelectPulseAccounts(...args),
 }));
 
 vi.mock("@/lib/organizations/canAccessAccount", () => ({
@@ -71,11 +71,11 @@ describe("registerGetPulseTool", () => {
   });
 
   it("returns pulse with active: false when no record exists", async () => {
-    mockSelectPulseAccount.mockResolvedValue(null);
+    mockSelectPulseAccounts.mockResolvedValue([]);
 
     const result = await registeredHandler({}, createMockExtra({ accountId: "account-123" }));
 
-    expect(mockSelectPulseAccount).toHaveBeenCalledWith("account-123");
+    expect(mockSelectPulseAccounts).toHaveBeenCalledWith({ accountIds: ["account-123"] });
     expect(result).toEqual({
       content: [
         {
@@ -87,11 +87,13 @@ describe("registerGetPulseTool", () => {
   });
 
   it("returns pulse with active: true when record exists", async () => {
-    mockSelectPulseAccount.mockResolvedValue({
-      id: "pulse-456",
-      account_id: "account-123",
-      active: true,
-    });
+    mockSelectPulseAccounts.mockResolvedValue([
+      {
+        id: "pulse-456",
+        account_id: "account-123",
+        active: true,
+      },
+    ]);
 
     const result = await registeredHandler({}, createMockExtra({ accountId: "account-123" }));
 
@@ -107,11 +109,13 @@ describe("registerGetPulseTool", () => {
 
   it("allows account_id override for org auth with access", async () => {
     mockCanAccessAccount.mockResolvedValue(true);
-    mockSelectPulseAccount.mockResolvedValue({
-      id: "pulse-456",
-      account_id: "target-account-789",
-      active: true,
-    });
+    mockSelectPulseAccounts.mockResolvedValue([
+      {
+        id: "pulse-456",
+        account_id: "target-account-789",
+        active: true,
+      },
+    ]);
 
     await registeredHandler(
       { account_id: "target-account-789" },
@@ -122,7 +126,7 @@ describe("registerGetPulseTool", () => {
       orgId: "org-account-id",
       targetAccountId: "target-account-789",
     });
-    expect(mockSelectPulseAccount).toHaveBeenCalledWith("target-account-789");
+    expect(mockSelectPulseAccounts).toHaveBeenCalledWith({ accountIds: ["target-account-789"] });
   });
 
   it("returns error when org auth lacks access to account_id", async () => {
