@@ -147,22 +147,34 @@ export async function selectTableName({
 
 **Never use `account_id` in request bodies or tool schemas.** Always derive the account ID from authentication:
 
-- **API routes**: Use `x-api-key` header via `getApiKeyAccountId()`
+- **API routes**: Use `validateAuthContext()` (supports both `x-api-key` and `Authorization: Bearer` tokens)
 - **MCP tools**: Use `extra.authInfo` via `resolveAccountId()`
 
 Both API keys and Privy access tokens resolve to an `accountId`. Never accept `account_id` as user input.
 
 ### API Routes
 
-```typescript
-import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
+**CRITICAL: Always use `validateAuthContext()` for authentication.** This function supports both `x-api-key` header AND `Authorization: Bearer` token authentication. Never use `getApiKeyAccountId()` directly in route handlers - it only supports API keys and will reject Bearer tokens from the frontend.
 
-const accountIdOrError = await getApiKeyAccountId(request);
-if (accountIdOrError instanceof NextResponse) {
-  return accountIdOrError;
+```typescript
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+
+const authResult = await validateAuthContext(request, {
+  accountId: body.account_id,        // Optional: for account_id override
+  organizationId: body.organization_id, // Optional: for org context
+});
+
+if (authResult instanceof NextResponse) {
+  return authResult;
 }
-const accountId = accountIdOrError;
+
+const { accountId, orgId, authToken } = authResult;
 ```
+
+`validateAuthContext` handles:
+- Both `x-api-key` and `Authorization: Bearer` authentication
+- Account ID override validation (org keys can access member accounts)
+- Organization access validation
 
 ### MCP Tools
 
@@ -181,6 +193,7 @@ This ensures:
 - Callers cannot impersonate other accounts
 - Authentication is always enforced
 - Account ID is derived from validated credentials
+- Frontend apps using Bearer tokens work correctly
 
 ## Input Validation
 
