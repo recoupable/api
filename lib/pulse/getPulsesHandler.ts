@@ -36,28 +36,13 @@ export async function getPulsesHandler(request: NextRequest): Promise<NextRespon
 
   if (accountIds === undefined || active !== undefined) {
     // Admin (undefined accountIds) or filtering by active: return only existing records
-    pulses = existingPulses.map(p => ({
-      id: p.id,
-      account_id: p.account_id,
-      active: p.active,
-    }));
+    pulses = existingPulses;
   } else {
     // Regular users without active filter: include defaults for accounts without records
     const pulseMap = new Map(existingPulses.map(p => [p.account_id, p]));
     pulses = accountIds.map(accountId => {
       const existing = pulseMap.get(accountId);
-      if (existing) {
-        return {
-          id: existing.id,
-          account_id: existing.account_id,
-          active: existing.active,
-        };
-      }
-      return {
-        id: null,
-        account_id: accountId,
-        active: false,
-      };
+      return existing ?? { id: null, account_id: accountId, active: false };
     });
   }
 
