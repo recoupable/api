@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetPulsesRequest } from "./validateGetPulsesRequest";
 import { selectPulseAccounts } from "@/lib/supabase/pulse_accounts/selectPulseAccounts";
-import { selectAllPulseAccounts } from "@/lib/supabase/pulse_accounts/selectAllPulseAccounts";
 import type { Tables } from "@/types/database.types";
 
 type PulseRecord = Omit<Tables<"pulse_accounts">, "id"> & { id: string | null };
@@ -31,7 +30,7 @@ export async function getPulsesHandler(request: NextRequest): Promise<NextRespon
 
   // If accountIds is null, it means Recoup admin wants ALL records
   if (accountIds === null) {
-    const allPulses = await selectAllPulseAccounts({ active });
+    const allPulses = await selectPulseAccounts({ active });
     const pulses: PulseRecord[] = allPulses.map(p => ({
       id: p.id,
       account_id: p.account_id,

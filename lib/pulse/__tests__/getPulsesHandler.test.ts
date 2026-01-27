@@ -11,17 +11,12 @@ vi.mock("@/lib/supabase/pulse_accounts/selectPulseAccounts", () => ({
   selectPulseAccounts: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/pulse_accounts/selectAllPulseAccounts", () => ({
-  selectAllPulseAccounts: vi.fn(),
-}));
-
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => new Headers()),
 }));
 
 import { validateGetPulsesRequest } from "../validateGetPulsesRequest";
 import { selectPulseAccounts } from "@/lib/supabase/pulse_accounts/selectPulseAccounts";
-import { selectAllPulseAccounts } from "@/lib/supabase/pulse_accounts/selectAllPulseAccounts";
 
 describe("getPulsesHandler", () => {
   beforeEach(() => {
@@ -86,7 +81,7 @@ describe("getPulsesHandler", () => {
       active: undefined,
     });
 
-    vi.mocked(selectAllPulseAccounts).mockResolvedValue([
+    vi.mocked(selectPulseAccounts).mockResolvedValue([
       { id: "pulse-1", account_id: "account-1", active: true },
       { id: "pulse-2", account_id: "account-2", active: false },
       { id: "pulse-3", account_id: "account-3", active: true },
@@ -99,7 +94,7 @@ describe("getPulsesHandler", () => {
     expect(data.status).toBe("success");
     expect(data.pulses).toBeInstanceOf(Array);
     expect(data.pulses).toHaveLength(3);
-    expect(selectAllPulseAccounts).toHaveBeenCalledWith({ active: undefined });
+    expect(selectPulseAccounts).toHaveBeenCalledWith({ active: undefined });
   });
 
   it("should filter by active status when provided", async () => {
