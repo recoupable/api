@@ -139,4 +139,20 @@ describe("getPulsesHandler", () => {
       active: false,
     });
   });
+
+  it("should only call selectPulseAccounts once", async () => {
+    vi.mocked(validateGetPulsesRequest).mockResolvedValue({
+      accountIds: ["account-1", "account-2"],
+      active: undefined,
+    });
+
+    vi.mocked(selectPulseAccounts).mockResolvedValue([
+      { id: "pulse-1", account_id: "account-1", active: true },
+    ]);
+
+    const request = new NextRequest("http://localhost/api/pulses");
+    await getPulsesHandler(request);
+
+    expect(selectPulseAccounts).toHaveBeenCalledTimes(1);
+  });
 });

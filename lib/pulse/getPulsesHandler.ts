@@ -28,45 +28,25 @@ export async function getPulsesHandler(request: NextRequest): Promise<NextRespon
   }
   const { accountIds, active } = validated;
 
-  // If accountIds is null, it means Recoup admin wants ALL records
-  if (accountIds === null) {
-    const allPulses = await selectPulseAccounts({ active });
-    const pulses: PulseRecord[] = allPulses.map(p => ({
-      id: p.id,
-      account_id: p.account_id,
-      active: p.active,
-    }));
-
-    return NextResponse.json(
-      {
-        status: "success",
-        pulses,
-      },
-      {
-        status: 200,
-        headers: getCorsHeaders(),
-      },
-    );
-  }
-
-  // Query existing pulse records for specific accounts
-  const existingPulses = await selectPulseAccounts({ accountIds, active });
-
-  // Create a map of existing pulses by account_id
-  const pulseMap = new Map(existingPulses.map(p => [p.account_id, p]));
+  // Single call to selectPulseAccounts - pass accountIds only if not null
+  const existingPulses = await selectPulseAccounts({
+    ...(accountIds !== null && { accountIds }),
+    active,
+  });
 
   // Build the result array
   let pulses: PulseRecord[];
 
-  if (active !== undefined) {
-    // When filtering by active status, only return accounts that have matching pulse records
+  if (accountIds === null || active !== undefined) {
+    // Admin (null) or filtering by active: return only existing records
     pulses = existingPulses.map(p => ({
       id: p.id,
       account_id: p.account_id,
       active: p.active,
     }));
   } else {
-    // When not filtering, include all accounts with defaults for those without pulse records
+    // Regular users without active filter: include defaults for accounts without records
+    const pulseMap = new Map(existingPulses.map(p => [p.account_id, p]));
     pulses = accountIds.map(accountId => {
       const existing = pulseMap.get(accountId);
       if (existing) {
@@ -76,7 +56,6 @@ export async function getPulsesHandler(request: NextRequest): Promise<NextRespon
           active: existing.active,
         };
       }
-      // Default pulse for accounts without a record
       return {
         id: null,
         account_id: accountId,
