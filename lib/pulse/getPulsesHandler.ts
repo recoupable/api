@@ -3,12 +3,9 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetPulsesRequest } from "./validateGetPulsesRequest";
 import { selectPulseAccounts } from "@/lib/supabase/pulse_accounts/selectPulseAccounts";
 import { selectAllPulseAccounts } from "@/lib/supabase/pulse_accounts/selectAllPulseAccounts";
+import type { Tables } from "@/types/database.types";
 
-interface PulseRecord {
-  id: string | null;
-  account_id: string;
-  active: boolean;
-}
+type PulseRecord = Omit<Tables<"pulse_accounts">, "id"> & { id: string | null };
 
 /**
  * Handler for retrieving pulse statuses for accounts.
