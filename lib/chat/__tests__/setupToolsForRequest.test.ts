@@ -215,4 +215,67 @@ describe("setupToolsForRequest", () => {
       expect(result).toHaveProperty("tool2");
     });
   });
+
+  describe("parallel execution", () => {
+    it("fetches MCP tools and Composio tools in parallel", async () => {
+      const executionOrder: string[] = [];
+
+      // Track when each operation starts and completes
+      mockGetMcpTools.mockImplementation(async () => {
+        executionOrder.push("getMcpTools:start");
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        executionOrder.push("getMcpTools:end");
+        return { mcpTool: { description: "MCP Tool", parameters: {} } };
+      });
+
+      mockGetComposioTools.mockImplementation(async () => {
+        executionOrder.push("getComposioTools:start");
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        executionOrder.push("getComposioTools:end");
+        return { composioTool: { description: "Composio Tool", parameters: {} } };
+      });
+
+      const body: ChatRequestBody = {
+        accountId: "account-123",
+        orgId: null,
+        authToken: "test-token-123",
+        messages: [{ id: "1", role: "user", content: "Hello" }],
+      };
+
+      await setupToolsForRequest(body);
+
+      // Both should start before either ends (parallel execution)
+      const mcpStartIndex = executionOrder.indexOf("getMcpTools:start");
+      const composioStartIndex = executionOrder.indexOf("getComposioTools:start");
+      const mcpEndIndex = executionOrder.indexOf("getMcpTools:end");
+      const composioEndIndex = executionOrder.indexOf("getComposioTools:end");
+
+      // Both operations should have started
+      expect(mcpStartIndex).toBeGreaterThanOrEqual(0);
+      expect(composioStartIndex).toBeGreaterThanOrEqual(0);
+
+      // Both starts should come before both ends
+      expect(mcpStartIndex).toBeLessThan(mcpEndIndex);
+      expect(composioStartIndex).toBeLessThan(composioEndIndex);
+
+      // At least one start should come before the other's end (proves parallelism)
+      const bothStartedBeforeAnyEnds =
+        Math.max(mcpStartIndex, composioStartIndex) < Math.min(mcpEndIndex, composioEndIndex);
+      expect(bothStartedBeforeAnyEnds).toBe(true);
+    });
+
+    it("both operations are called when authToken is provided", async () => {
+      const body: ChatRequestBody = {
+        accountId: "account-123",
+        orgId: null,
+        authToken: "test-token-123",
+        messages: [{ id: "1", role: "user", content: "Hello" }],
+      };
+
+      await setupToolsForRequest(body);
+
+      expect(mockGetMcpTools).toHaveBeenCalledTimes(1);
+      expect(mockGetComposioTools).toHaveBeenCalledTimes(1);
+    });
+  });
 });

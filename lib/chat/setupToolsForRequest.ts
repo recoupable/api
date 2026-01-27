@@ -16,11 +16,11 @@ import { getComposioTools } from "@/lib/composio/toolRouter";
 export async function setupToolsForRequest(body: ChatRequestBody): Promise<ToolSet> {
   const { accountId, roomId, excludeTools, authToken } = body;
 
-  // Only fetch MCP tools if we have an auth token
-  const mcpTools = authToken ? await getMcpTools(authToken) : {};
-
-  // Get Composio Tool Router tools (COMPOSIO_MANAGE_CONNECTIONS, etc.)
-  const composioTools = await getComposioTools(accountId, roomId);
+  // Fetch MCP tools and Composio tools in parallel - they're independent
+  const [mcpTools, composioTools] = await Promise.all([
+    authToken ? getMcpTools(authToken) : Promise.resolve({}),
+    getComposioTools(accountId, roomId),
+  ]);
 
   // Merge all tools
   const allTools: ToolSet = {

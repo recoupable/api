@@ -20,11 +20,11 @@ export async function deleteTask(input: { id: string }): Promise<void> {
     throw new Error("Task not found");
   }
 
-  // Delete from Trigger.dev if schedule exists
-  if (scheduledAction.trigger_schedule_id) {
-    await deleteSchedule(scheduledAction.trigger_schedule_id);
-  }
-
-  // Delete from database
-  await deleteScheduledAction(id);
+  // Delete from Trigger.dev and database in parallel - they're independent
+  await Promise.all([
+    scheduledAction.trigger_schedule_id
+      ? deleteSchedule(scheduledAction.trigger_schedule_id)
+      : Promise.resolve(),
+    deleteScheduledAction(id),
+  ]);
 }
