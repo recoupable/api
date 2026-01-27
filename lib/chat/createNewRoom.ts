@@ -36,29 +36,19 @@ export async function createNewRoom({
     email = accountEmails[0].email;
   }
 
-  try {
-    await Promise.all([
-      insertRoom({
-        account_id: accountId,
-        topic: conversationName,
-        artist_id: artistId || undefined,
-        id: roomId,
-      }),
-      sendNewConversationNotification({
-        accountId,
-        email,
-        conversationId: roomId,
-        topic: conversationName,
-        firstMessage: latestMessageText,
-      }),
-    ]);
-  } catch (error: unknown) {
-    // Room already exists (frontend created it via race condition) - continue
-    const isUniqueViolation =
-      error &&
-      typeof error === "object" &&
-      "code" in error &&
-      error.code === "23505";
-    if (!isUniqueViolation) throw error;
-  }
+  await Promise.all([
+    insertRoom({
+      account_id: accountId,
+      topic: conversationName,
+      artist_id: artistId || undefined,
+      id: roomId,
+    }),
+    sendNewConversationNotification({
+      accountId,
+      email,
+      conversationId: roomId,
+      topic: conversationName,
+      firstMessage: latestMessageText,
+    }),
+  ]);
 }
