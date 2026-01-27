@@ -34,6 +34,10 @@ export async function buildGetPulsesParams(
 ): Promise<BuildGetPulsesParamsResult> {
   const { accountId, orgId, targetAccountId, active } = input;
 
+  console.log("[DEBUG] buildGetPulsesParams input:", { accountId, orgId, targetAccountId, active });
+  console.log("[DEBUG] RECOUP_ORG_ID:", RECOUP_ORG_ID);
+  console.log("[DEBUG] orgId === RECOUP_ORG_ID:", orgId === RECOUP_ORG_ID);
+
   // Handle account_id filter if provided
   if (targetAccountId) {
     const hasAccess = await canAccessAccount({ orgId, targetAccountId });
