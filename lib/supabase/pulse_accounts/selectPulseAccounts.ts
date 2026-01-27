@@ -60,5 +60,16 @@ export async function selectPulseAccounts(
     return [];
   }
 
-  return data || [];
+  if (!data) {
+    return [];
+  }
+
+  // Strip joined data if present (from org join)
+  if (orgId) {
+    return (data as unknown as (Tables<"pulse_accounts"> & { account_organization_ids?: unknown })[]).map(
+      ({ account_organization_ids: _, ...pulseAccount }) => pulseAccount,
+    );
+  }
+
+  return data as unknown as Tables<"pulse_accounts">[];
 }
