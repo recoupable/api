@@ -38,8 +38,6 @@ export function registerGetPulsesTool(server: McpServer): void {
       const accountId = authInfo?.extra?.accountId;
       const orgId = authInfo?.extra?.orgId ?? null;
 
-      console.log("[DEBUG] get_pulses authInfo:", { accountId, orgId, extra: authInfo?.extra });
-
       if (!accountId) {
         return getToolResultError(
           "Authentication required. Provide an API key via Authorization: Bearer header, or provide account_id from the system prompt context.",
