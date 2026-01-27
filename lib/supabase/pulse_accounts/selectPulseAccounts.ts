@@ -33,15 +33,17 @@ export async function selectPulseAccounts(
   }
 
   // Use different select based on whether we need org join
+  // Join path: pulse_accounts -> accounts -> account_organization_ids
+  // Must specify FK name because accounts has two relationships to account_organization_ids
   const selectColumns = orgId
-    ? "*, account_organization_ids!inner(organization_id)"
+    ? "*, accounts!inner(account_organization_ids!account_organization_ids_account_id_fkey!inner(organization_id))"
     : "*";
 
   let query = supabase.from("pulse_accounts").select(selectColumns);
 
   // Filter by org membership if orgId provided
   if (orgId) {
-    query = query.eq("account_organization_ids.organization_id", orgId);
+    query = query.eq("accounts.account_organization_ids.organization_id", orgId);
   }
 
   // Filter by account IDs if provided
@@ -64,10 +66,10 @@ export async function selectPulseAccounts(
     return [];
   }
 
-  // Strip joined data if present (from org join)
+  // Strip joined data if present (from org join through accounts)
   if (orgId) {
-    return (data as unknown as (Tables<"pulse_accounts"> & { account_organization_ids?: unknown })[]).map(
-      ({ account_organization_ids: _, ...pulseAccount }) => pulseAccount,
+    return (data as unknown as (Tables<"pulse_accounts"> & { accounts?: unknown })[]).map(
+      ({ accounts: _, ...pulseAccount }) => pulseAccount,
     );
   }
 
