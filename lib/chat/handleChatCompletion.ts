@@ -52,20 +52,21 @@ export async function handleChatCompletion(
       const conversationName = await generateChatTitle(latestMessageText);
 
       try {
-        await insertRoom({
-          id: roomId,
-          account_id: accountId,
-          topic: conversationName,
-          artist_id: artistId || null,
-        });
-        // Only send notification if we successfully created the room
-        await sendNewConversationNotification({
-          accountId,
-          email,
-          conversationId: roomId,
-          topic: conversationName,
-          firstMessage: latestMessageText,
-        });
+        await Promise.all([
+          insertRoom({
+            id: roomId,
+            account_id: accountId,
+            topic: conversationName,
+            artist_id: artistId || null,
+          }),
+          sendNewConversationNotification({
+            accountId,
+            email,
+            conversationId: roomId,
+            topic: conversationName,
+            firstMessage: latestMessageText,
+          }),
+        ]);
       } catch (insertError: unknown) {
         // Room already exists (frontend created it via race condition) - continue
         const isUniqueViolation =
