@@ -8,26 +8,26 @@ import { selectPulseAccounts } from "@/lib/supabase/pulse_accounts/selectPulseAc
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 
-const getPulseSchema = z.object({
+const getPulsesSchema = z.object({
   account_id: z.string().optional().describe("The account ID to get pulse status for."),
 });
 
-export type GetPulseArgs = z.infer<typeof getPulseSchema>;
+export type GetPulsesArgs = z.infer<typeof getPulsesSchema>;
 
 /**
- * Registers the "get_pulse" tool on the MCP server.
- * Retrieves the pulse status for an account.
+ * Registers the "get_pulses" tool on the MCP server.
+ * Retrieves pulse statuses for accounts.
  *
  * @param server - The MCP server instance to register the tool on.
  */
-export function registerGetPulseTool(server: McpServer): void {
+export function registerGetPulsesTool(server: McpServer): void {
   server.registerTool(
-    "get_pulse",
+    "get_pulses",
     {
-      description: "Get the pulse status for an account.",
-      inputSchema: getPulseSchema,
+      description: "Get pulse statuses for accounts.",
+      inputSchema: getPulsesSchema,
     },
-    async (args: GetPulseArgs, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
+    async (args: GetPulsesArgs, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
       const { account_id } = args;
 
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
@@ -44,12 +44,9 @@ export function registerGetPulseTool(server: McpServer): void {
         return getToolResultError("Failed to resolve account ID");
       }
 
-      const pulseAccounts = await selectPulseAccounts({ accountIds: [accountId] });
-      const pulseAccount = pulseAccounts[0] ?? null;
+      const pulses = await selectPulseAccounts({ accountIds: [accountId] });
 
-      return getToolResultSuccess({
-        pulse: pulseAccount ?? { id: null, account_id: accountId, active: false },
-      });
+      return getToolResultSuccess({ pulses });
     },
   );
 }

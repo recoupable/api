@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 
-import { registerGetPulseTool } from "../registerGetPulseTool";
+import { registerGetPulsesTool } from "../registerGetPulsesTool";
 
 const mockSelectPulseAccounts = vi.fn();
 const mockCanAccessAccount = vi.fn();
@@ -44,7 +44,7 @@ function createMockExtra(authInfo?: {
   } as unknown as ServerRequestHandlerExtra;
 }
 
-describe("registerGetPulseTool", () => {
+describe("registerGetPulsesTool", () => {
   let mockServer: McpServer;
   let registeredHandler: (args: unknown, extra: ServerRequestHandlerExtra) => Promise<unknown>;
 
@@ -57,20 +57,20 @@ describe("registerGetPulseTool", () => {
       }),
     } as unknown as McpServer;
 
-    registerGetPulseTool(mockServer);
+    registerGetPulsesTool(mockServer);
   });
 
-  it("registers the get_pulse tool", () => {
+  it("registers the get_pulses tool", () => {
     expect(mockServer.registerTool).toHaveBeenCalledWith(
-      "get_pulse",
+      "get_pulses",
       expect.objectContaining({
-        description: "Get the pulse status for an account.",
+        description: "Get pulse statuses for accounts.",
       }),
       expect.any(Function),
     );
   });
 
-  it("returns pulse with active: false when no record exists", async () => {
+  it("returns empty pulses array when no records exist", async () => {
     mockSelectPulseAccounts.mockResolvedValue([]);
 
     const result = await registeredHandler({}, createMockExtra({ accountId: "account-123" }));
@@ -80,13 +80,13 @@ describe("registerGetPulseTool", () => {
       content: [
         {
           type: "text",
-          text: expect.stringContaining('"active":false'),
+          text: expect.stringContaining('"pulses":[]'),
         },
       ],
     });
   });
 
-  it("returns pulse with active: true when record exists", async () => {
+  it("returns pulses array with records when they exist", async () => {
     mockSelectPulseAccounts.mockResolvedValue([
       {
         id: "pulse-456",
@@ -97,6 +97,14 @@ describe("registerGetPulseTool", () => {
 
     const result = await registeredHandler({}, createMockExtra({ accountId: "account-123" }));
 
+    expect(result).toEqual({
+      content: [
+        {
+          type: "text",
+          text: expect.stringContaining('"pulses":['),
+        },
+      ],
+    });
     expect(result).toEqual({
       content: [
         {
