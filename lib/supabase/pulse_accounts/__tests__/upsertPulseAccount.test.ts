@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockFrom = vi.fn();
 const mockUpsert = vi.fn();
 const mockSelect = vi.fn();
-const mockSingle = vi.fn();
 
 vi.mock("@/lib/supabase/serverClient", () => ({
   default: {
@@ -18,7 +17,6 @@ describe("upsertPulseAccount", () => {
     vi.clearAllMocks();
     mockFrom.mockReturnValue({ upsert: mockUpsert });
     mockUpsert.mockReturnValue({ select: mockSelect });
-    mockSelect.mockReturnValue({ single: mockSingle });
   });
 
   it("creates new pulse account when none exists", async () => {
@@ -29,11 +27,11 @@ describe("upsertPulseAccount", () => {
       active: true,
     };
 
-    mockSingle.mockResolvedValue({ data: pulseAccount, error: null });
+    mockSelect.mockResolvedValue({ data: [pulseAccount], error: null });
 
     const result = await upsertPulseAccount({ account_id: accountId, active: true });
 
-    expect(result).toEqual(pulseAccount);
+    expect(result).toEqual([pulseAccount]);
     expect(mockFrom).toHaveBeenCalledWith("pulse_accounts");
     expect(mockUpsert).toHaveBeenCalledWith(
       { account_id: accountId, active: true },
@@ -49,11 +47,11 @@ describe("upsertPulseAccount", () => {
       active: false,
     };
 
-    mockSingle.mockResolvedValue({ data: pulseAccount, error: null });
+    mockSelect.mockResolvedValue({ data: [pulseAccount], error: null });
 
     const result = await upsertPulseAccount({ account_id: accountId, active: false });
 
-    expect(result).toEqual(pulseAccount);
+    expect(result).toEqual([pulseAccount]);
     expect(mockUpsert).toHaveBeenCalledWith(
       { account_id: accountId, active: false },
       { onConflict: "account_id" },
@@ -61,7 +59,7 @@ describe("upsertPulseAccount", () => {
   });
 
   it("returns null on database error", async () => {
-    mockSingle.mockResolvedValue({
+    mockSelect.mockResolvedValue({
       data: null,
       error: { code: "PGRST500", message: "Database error" },
     });
