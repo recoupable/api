@@ -1,5 +1,5 @@
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
-import { insertRoom } from "@/lib/supabase/rooms/insertRoom";
+import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
 import generateUUID from "@/lib/uuid/generateUUID";
 
 /**
@@ -26,7 +26,7 @@ export async function copyRoom(
     const newRoomId = generateUUID();
 
     // Create new room with same account but new artist
-    await insertRoom({
+    await upsertRoom({
       id: newRoomId,
       account_id: sourceRoom.account_id,
       artist_id: artistId,

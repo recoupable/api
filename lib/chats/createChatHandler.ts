@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
-import { insertRoom } from "@/lib/supabase/rooms/insertRoom";
+import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import { validateCreateChatBody } from "@/lib/chats/validateCreateChatBody";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
@@ -60,7 +60,7 @@ export async function createChatHandler(request: NextRequest): Promise<NextRespo
       }
     }
 
-    const chat = await insertRoom({
+    const chat = await upsertRoom({
       id: roomId,
       account_id: accountId,
       artist_id: artistId || null,

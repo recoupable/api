@@ -10,8 +10,8 @@ vi.mock("@/lib/supabase/rooms/selectRoom", () => ({
   default: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/rooms/insertRoom", () => ({
-  insertRoom: vi.fn(),
+vi.mock("@/lib/supabase/rooms/upsertRoom", () => ({
+  upsertRoom: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/memories/upsertMemory", () => ({
@@ -36,7 +36,7 @@ vi.mock("@/lib/telegram/sendErrorNotification", () => ({
 
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
-import { insertRoom } from "@/lib/supabase/rooms/insertRoom";
+import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
 import upsertMemory from "@/lib/supabase/memories/upsertMemory";
 import { sendNewConversationNotification } from "@/lib/telegram/sendNewConversationNotification";
 import { generateChatTitle } from "@/lib/chat/generateChatTitle";
@@ -47,7 +47,7 @@ import type { ChatRequestBody } from "../validateChatRequest";
 
 const mockSelectAccountEmails = vi.mocked(selectAccountEmails);
 const mockSelectRoom = vi.mocked(selectRoom);
-const mockInsertRoom = vi.mocked(insertRoom);
+const mockUpsertRoom = vi.mocked(upsertRoom);
 const mockUpsertMemory = vi.mocked(upsertMemory);
 const mockSendNewConversationNotification = vi.mocked(sendNewConversationNotification);
 const mockGenerateChatTitle = vi.mocked(generateChatTitle);
@@ -143,7 +143,7 @@ describe("handleChatCompletion", () => {
 
       await handleChatCompletion(body, responseMessages);
 
-      expect(mockInsertRoom).toHaveBeenCalledWith(
+      expect(mockUpsertRoom).toHaveBeenCalledWith(
         expect.objectContaining({
           id: "new-room-123",
           account_id: "account-123",
@@ -180,7 +180,7 @@ describe("handleChatCompletion", () => {
 
       await handleChatCompletion(body, responseMessages);
 
-      expect(mockInsertRoom).not.toHaveBeenCalled();
+      expect(mockUpsertRoom).not.toHaveBeenCalled();
       expect(mockSendNewConversationNotification).not.toHaveBeenCalled();
     });
   });
@@ -272,7 +272,7 @@ describe("handleChatCompletion", () => {
       await handleChatCompletion(body, responseMessages);
 
       // Should still create room with empty string ID (or undefined)
-      expect(mockInsertRoom).toHaveBeenCalled();
+      expect(mockUpsertRoom).toHaveBeenCalled();
     });
 
     it("handles artistId when creating room", async () => {
@@ -284,7 +284,7 @@ describe("handleChatCompletion", () => {
 
       await handleChatCompletion(body, responseMessages);
 
-      expect(mockInsertRoom).toHaveBeenCalledWith(
+      expect(mockUpsertRoom).toHaveBeenCalledWith(
         expect.objectContaining({
           artist_id: "artist-789",
         }),

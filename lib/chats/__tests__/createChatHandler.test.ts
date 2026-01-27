@@ -4,7 +4,7 @@ import { createChatHandler } from "../createChatHandler";
 
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
-import { insertRoom } from "@/lib/supabase/rooms/insertRoom";
+import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { generateChatTitle } from "../generateChatTitle";
 
@@ -17,8 +17,8 @@ vi.mock("@/lib/accounts/validateOverrideAccountId", () => ({
   validateOverrideAccountId: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/rooms/insertRoom", () => ({
-  insertRoom: vi.fn(),
+vi.mock("@/lib/supabase/rooms/upsertRoom", () => ({
+  upsertRoom: vi.fn(),
 }));
 
 vi.mock("@/lib/uuid/generateUUID", () => ({
@@ -61,7 +61,7 @@ describe("createChatHandler", () => {
 
       vi.mocked(getApiKeyAccountId).mockResolvedValue(apiKeyAccountId);
       vi.mocked(safeParseJson).mockResolvedValue({ artistId });
-      vi.mocked(insertRoom).mockResolvedValue({
+      vi.mocked(upsertRoom).mockResolvedValue({
         id: "generated-uuid-123",
         account_id: apiKeyAccountId,
         artist_id: artistId,
@@ -75,7 +75,7 @@ describe("createChatHandler", () => {
       expect(response.status).toBe(200);
       expect(json.status).toBe("success");
       expect(validateOverrideAccountId).not.toHaveBeenCalled();
-      expect(insertRoom).toHaveBeenCalledWith({
+      expect(upsertRoom).toHaveBeenCalledWith({
         id: "generated-uuid-123",
         account_id: apiKeyAccountId,
         artist_id: artistId,
@@ -98,7 +98,7 @@ describe("createChatHandler", () => {
       vi.mocked(validateOverrideAccountId).mockResolvedValue({
         accountId: targetAccountId,
       });
-      vi.mocked(insertRoom).mockResolvedValue({
+      vi.mocked(upsertRoom).mockResolvedValue({
         id: "generated-uuid-123",
         account_id: targetAccountId,
         artist_id: artistId,
@@ -115,7 +115,7 @@ describe("createChatHandler", () => {
         apiKey: "test-api-key",
         targetAccountId,
       });
-      expect(insertRoom).toHaveBeenCalledWith({
+      expect(upsertRoom).toHaveBeenCalledWith({
         id: "generated-uuid-123",
         account_id: targetAccountId,
         artist_id: artistId,
@@ -145,7 +145,7 @@ describe("createChatHandler", () => {
       expect(response.status).toBe(403);
       expect(json.status).toBe("error");
       expect(json.message).toBe("Access denied to specified accountId");
-      expect(insertRoom).not.toHaveBeenCalled();
+      expect(upsertRoom).not.toHaveBeenCalled();
     });
 
     it("returns 500 when validation returns API key error", async () => {
@@ -170,7 +170,7 @@ describe("createChatHandler", () => {
       expect(response.status).toBe(500);
       expect(json.status).toBe("error");
       expect(json.message).toBe("Failed to validate API key");
-      expect(insertRoom).not.toHaveBeenCalled();
+      expect(upsertRoom).not.toHaveBeenCalled();
     });
   });
 
@@ -187,7 +187,7 @@ describe("createChatHandler", () => {
         firstMessage,
       });
       vi.mocked(generateChatTitle).mockResolvedValue(generatedTitle);
-      vi.mocked(insertRoom).mockResolvedValue({
+      vi.mocked(upsertRoom).mockResolvedValue({
         id: "generated-uuid-123",
         account_id: apiKeyAccountId,
         artist_id: artistId,
@@ -201,7 +201,7 @@ describe("createChatHandler", () => {
       expect(response.status).toBe(200);
       expect(json.status).toBe("success");
       expect(generateChatTitle).toHaveBeenCalledWith(firstMessage);
-      expect(insertRoom).toHaveBeenCalledWith({
+      expect(upsertRoom).toHaveBeenCalledWith({
         id: "generated-uuid-123",
         account_id: apiKeyAccountId,
         artist_id: artistId,
@@ -217,7 +217,7 @@ describe("createChatHandler", () => {
       vi.mocked(safeParseJson).mockResolvedValue({
         artistId,
       });
-      vi.mocked(insertRoom).mockResolvedValue({
+      vi.mocked(upsertRoom).mockResolvedValue({
         id: "generated-uuid-123",
         account_id: apiKeyAccountId,
         artist_id: artistId,
@@ -229,7 +229,7 @@ describe("createChatHandler", () => {
 
       expect(response.status).toBe(200);
       expect(generateChatTitle).not.toHaveBeenCalled();
-      expect(insertRoom).toHaveBeenCalledWith({
+      expect(upsertRoom).toHaveBeenCalledWith({
         id: "generated-uuid-123",
         account_id: apiKeyAccountId,
         artist_id: artistId,
@@ -248,7 +248,7 @@ describe("createChatHandler", () => {
         firstMessage,
       });
       vi.mocked(generateChatTitle).mockRejectedValue(new Error("AI generation failed"));
-      vi.mocked(insertRoom).mockResolvedValue({
+      vi.mocked(upsertRoom).mockResolvedValue({
         id: "generated-uuid-123",
         account_id: apiKeyAccountId,
         artist_id: artistId,
@@ -262,7 +262,7 @@ describe("createChatHandler", () => {
       expect(response.status).toBe(200);
       expect(json.status).toBe("success");
       expect(generateChatTitle).toHaveBeenCalledWith(firstMessage);
-      expect(insertRoom).toHaveBeenCalledWith({
+      expect(upsertRoom).toHaveBeenCalledWith({
         id: "generated-uuid-123",
         account_id: apiKeyAccountId,
         artist_id: artistId,

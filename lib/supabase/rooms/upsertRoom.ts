@@ -5,8 +5,8 @@ type Room = Tables<"rooms">;
 
 type CreateRoomParams = Pick<Room, "account_id" | "topic" | "artist_id" | "id">;
 
-export const insertRoom = async (params: CreateRoomParams): Promise<Room> => {
-  const { data, error } = await supabase.from("rooms").insert(params).select("*").single();
+export const upsertRoom = async (params: CreateRoomParams): Promise<Room> => {
+  const { data, error } = await supabase.from("rooms").upsert(params).select("*").single();
 
   if (error) throw error;
 

@@ -1,4 +1,4 @@
-import { insertRoom } from "@/lib/supabase/rooms/insertRoom";
+import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
 import { generateChatTitle } from "@/lib/chat/generateChatTitle";
 import { sendNewConversationNotification } from "@/lib/telegram/sendNewConversationNotification";
 import { UIMessage } from "ai";
@@ -37,7 +37,7 @@ export async function createNewRoom({
   }
 
   await Promise.all([
-    insertRoom({
+    upsertRoom({
       account_id: accountId,
       topic: conversationName,
       artist_id: artistId || undefined,

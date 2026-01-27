@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockSelectRoom = vi.fn();
-const mockInsertRoom = vi.fn();
+const mockUpsertRoom = vi.fn();
 
 vi.mock("@/lib/supabase/rooms/selectRoom", () => ({
   default: (...args: unknown[]) => mockSelectRoom(...args),
 }));
 
-vi.mock("@/lib/supabase/rooms/insertRoom", () => ({
-  insertRoom: (...args: unknown[]) => mockInsertRoom(...args),
+vi.mock("@/lib/supabase/rooms/upsertRoom", () => ({
+  upsertRoom: (...args: unknown[]) => mockUpsertRoom(...args),
 }));
 
 vi.mock("@/lib/uuid/generateUUID", () => ({
@@ -38,12 +38,12 @@ describe("copyRoom", () => {
 
   it("copies a room to a new artist", async () => {
     mockSelectRoom.mockResolvedValue(mockSourceRoom);
-    mockInsertRoom.mockResolvedValue(mockNewRoom);
+    mockUpsertRoom.mockResolvedValue(mockNewRoom);
 
     const result = await copyRoom("source-room-123", "new-artist-999");
 
     expect(mockSelectRoom).toHaveBeenCalledWith("source-room-123");
-    expect(mockInsertRoom).toHaveBeenCalledWith({
+    expect(mockUpsertRoom).toHaveBeenCalledWith({
       id: "generated-uuid-123",
       account_id: "account-456",
       artist_id: "new-artist-999",
@@ -54,11 +54,11 @@ describe("copyRoom", () => {
 
   it("uses default topic when source room has no topic", async () => {
     mockSelectRoom.mockResolvedValue({ ...mockSourceRoom, topic: null });
-    mockInsertRoom.mockResolvedValue(mockNewRoom);
+    mockUpsertRoom.mockResolvedValue(mockNewRoom);
 
     await copyRoom("source-room-123", "new-artist-999");
 
-    expect(mockInsertRoom).toHaveBeenCalledWith(
+    expect(mockUpsertRoom).toHaveBeenCalledWith(
       expect.objectContaining({
         topic: "New conversation",
       }),
@@ -71,12 +71,12 @@ describe("copyRoom", () => {
     const result = await copyRoom("nonexistent-room", "new-artist-999");
 
     expect(result).toBeNull();
-    expect(mockInsertRoom).not.toHaveBeenCalled();
+    expect(mockUpsertRoom).not.toHaveBeenCalled();
   });
 
   it("returns null when room insertion fails", async () => {
     mockSelectRoom.mockResolvedValue(mockSourceRoom);
-    mockInsertRoom.mockRejectedValue(new Error("Insert failed"));
+    mockUpsertRoom.mockRejectedValue(new Error("Insert failed"));
 
     const result = await copyRoom("source-room-123", "new-artist-999");
 

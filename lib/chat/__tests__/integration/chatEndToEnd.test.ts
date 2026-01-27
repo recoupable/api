@@ -56,8 +56,8 @@ vi.mock("@/lib/supabase/rooms/selectRoom", () => ({
   default: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/rooms/insertRoom", () => ({
-  insertRoom: vi.fn(),
+vi.mock("@/lib/supabase/rooms/upsertRoom", () => ({
+  upsertRoom: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/memories/upsertMemory", () => ({
@@ -143,7 +143,7 @@ import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo
 import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
 import { getKnowledgeBaseText } from "@/lib/files/getKnowledgeBaseText";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
-import { insertRoom } from "@/lib/supabase/rooms/insertRoom";
+import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
 import upsertMemory from "@/lib/supabase/memories/upsertMemory";
 import { sendNewConversationNotification } from "@/lib/telegram/sendNewConversationNotification";
 import { handleSendEmailToolOutputs } from "@/lib/emails/handleSendEmailToolOutputs";
@@ -161,7 +161,7 @@ const mockSelectAccountInfo = vi.mocked(selectAccountInfo);
 const mockGetAccountWithDetails = vi.mocked(getAccountWithDetails);
 const mockGetKnowledgeBaseText = vi.mocked(getKnowledgeBaseText);
 const mockSelectRoom = vi.mocked(selectRoom);
-const mockInsertRoom = vi.mocked(insertRoom);
+const mockUpsertRoom = vi.mocked(upsertRoom);
 const mockUpsertMemory = vi.mocked(upsertMemory);
 const mockSendNewConversationNotification = vi.mocked(sendNewConversationNotification);
 const mockHandleSendEmailToolOutputs = vi.mocked(handleSendEmailToolOutputs);
@@ -193,7 +193,7 @@ describe("Chat Integration Tests", () => {
     mockGetAccountWithDetails.mockResolvedValue(null);
     mockGetKnowledgeBaseText.mockResolvedValue("");
     mockSelectRoom.mockResolvedValue(null);
-    mockInsertRoom.mockResolvedValue(undefined);
+    mockUpsertRoom.mockResolvedValue(undefined);
     mockUpsertMemory.mockResolvedValue(undefined);
     mockSendNewConversationNotification.mockResolvedValue(undefined);
     mockHandleSendEmailToolOutputs.mockResolvedValue(undefined);
@@ -433,7 +433,7 @@ describe("Chat Integration Tests", () => {
 
       await handleChatCompletion(body as any, responseMessages as any);
 
-      expect(mockInsertRoom).toHaveBeenCalledWith(
+      expect(mockUpsertRoom).toHaveBeenCalledWith(
         expect.objectContaining({
           id: "new-room-123",
           account_id: "account-123",
@@ -460,7 +460,7 @@ describe("Chat Integration Tests", () => {
 
       await handleChatCompletion(body as any, responseMessages as any);
 
-      expect(mockInsertRoom).not.toHaveBeenCalled();
+      expect(mockUpsertRoom).not.toHaveBeenCalled();
       expect(mockSendNewConversationNotification).not.toHaveBeenCalled();
     });
 
@@ -710,7 +710,7 @@ describe("Chat Integration Tests", () => {
 
       await handleChatCompletion(body as any, responseMessages as any);
 
-      expect(mockInsertRoom).toHaveBeenCalled();
+      expect(mockUpsertRoom).toHaveBeenCalled();
       expect(mockUpsertMemory).toHaveBeenCalledTimes(2);
 
       // 4. Handle credits

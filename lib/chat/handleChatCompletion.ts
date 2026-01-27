@@ -1,7 +1,7 @@
 import type { UIMessage } from "ai";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
-import { insertRoom } from "@/lib/supabase/rooms/insertRoom";
+import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
 import upsertMemory from "@/lib/supabase/memories/upsertMemory";
 import { validateMessages } from "@/lib/messages/validateMessages";
 import { generateChatTitle } from "@/lib/chat/generateChatTitle";
@@ -52,7 +52,7 @@ export async function handleChatCompletion(
       const conversationName = await generateChatTitle(latestMessageText);
 
       await Promise.all([
-        insertRoom({
+        upsertRoom({
           id: roomId,
           account_id: accountId,
           topic: conversationName,

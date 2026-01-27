@@ -7,16 +7,15 @@ import type { Tables, TablesInsert } from "@/types/database.types";
  * or updates the existing record if one does exist.
  *
  * @param pulseAccount - The pulse account data to upsert
- * @returns The upserted pulse account record, or null if failed
+ * @returns Array containing the upserted pulse account record, or null if failed
  */
 export async function upsertPulseAccount(
   pulseAccount: TablesInsert<"pulse_accounts">,
-): Promise<Tables<"pulse_accounts"> | null> {
+): Promise<Tables<"pulse_accounts">[] | null> {
   const { data, error } = await supabase
     .from("pulse_accounts")
     .upsert(pulseAccount, { onConflict: "account_id" })
-    .select()
-    .single();
+    .select();
 
   if (error) {
     console.error("[ERROR] upsertPulseAccount:", error);
