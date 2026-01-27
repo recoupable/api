@@ -221,4 +221,28 @@ describe("registerGetPulsesTool", () => {
       ],
     });
   });
+
+  it("filters by active status when provided", async () => {
+    const activePulses = [{ id: "pulse-1", account_id: "account-123", active: true }];
+    mockSelectPulseAccounts.mockResolvedValue(activePulses);
+
+    await registeredHandler({ active: true }, createMockExtra({ accountId: "account-123" }));
+
+    expect(mockSelectPulseAccounts).toHaveBeenCalledWith({
+      accountIds: ["account-123"],
+      active: true,
+    });
+  });
+
+  it("filters by active: false when provided", async () => {
+    const inactivePulses = [{ id: "pulse-2", account_id: "account-123", active: false }];
+    mockSelectPulseAccounts.mockResolvedValue(inactivePulses);
+
+    await registeredHandler({ active: false }, createMockExtra({ accountId: "account-123" }));
+
+    expect(mockSelectPulseAccounts).toHaveBeenCalledWith({
+      accountIds: ["account-123"],
+      active: false,
+    });
+  });
 });

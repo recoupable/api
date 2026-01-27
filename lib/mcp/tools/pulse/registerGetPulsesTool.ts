@@ -10,6 +10,7 @@ import { buildGetPulsesParams } from "@/lib/pulse/buildGetPulsesParams";
 
 const getPulsesSchema = z.object({
   account_id: z.string().optional().describe("The account ID to get pulse status for."),
+  active: z.boolean().optional().describe("Filter by active status (true/false)."),
 });
 
 export type GetPulsesArgs = z.infer<typeof getPulsesSchema>;
@@ -32,7 +33,7 @@ export function registerGetPulsesTool(server: McpServer): void {
       inputSchema: getPulsesSchema,
     },
     async (args: GetPulsesArgs, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
-      const { account_id } = args;
+      const { account_id, active } = args;
 
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
       const accountId = authInfo?.extra?.accountId;
@@ -48,6 +49,7 @@ export function registerGetPulsesTool(server: McpServer): void {
         accountId,
         orgId,
         targetAccountId: account_id,
+        active,
       });
 
       if (error) {
