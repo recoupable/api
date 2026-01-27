@@ -17,6 +17,7 @@ import { registerAllYouTubeTools } from "./youtube";
 import { registerTranscribeTools } from "./transcribe";
 import { registerSendEmailTool } from "./registerSendEmailTool";
 import { registerAllArtistTools } from "./artists";
+import { registerAllPulseTools } from "./pulse";
 
 /**
  * Registers all MCP tools on the server.
@@ -33,6 +34,7 @@ export const registerAllTools = (server: McpServer): void => {
   registerAllCatalogTools(server);
   registerAllFileTools(server);
   registerAllImageTools(server);
+  registerAllPulseTools(server);
   registerAllSora2Tools(server);
   registerAllSpotifyTools(server);
   registerAllTaskTools(server);
