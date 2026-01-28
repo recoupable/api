@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 
-import { registerGetPulseTool } from "../registerGetPulseTool";
+import { registerGetPulsesTool } from "../registerGetPulsesTool";
 
 const mockSelectPulseAccounts = vi.fn();
 const mockCanAccessAccount = vi.fn();
@@ -14,6 +14,10 @@ vi.mock("@/lib/supabase/pulse_accounts/selectPulseAccounts", () => ({
 
 vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: (...args: unknown[]) => mockCanAccessAccount(...args),
+}));
+
+vi.mock("@/lib/const", () => ({
+  RECOUP_ORG_ID: "recoup-org-id",
 }));
 
 type ServerRequestHandlerExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
@@ -44,7 +48,7 @@ function createMockExtra(authInfo?: {
   } as unknown as ServerRequestHandlerExtra;
 }
 
-describe("registerGetPulseTool", () => {
+describe("registerGetPulsesTool", () => {
   let mockServer: McpServer;
   let registeredHandler: (args: unknown, extra: ServerRequestHandlerExtra) => Promise<unknown>;
 
@@ -57,20 +61,20 @@ describe("registerGetPulseTool", () => {
       }),
     } as unknown as McpServer;
 
-    registerGetPulseTool(mockServer);
+    registerGetPulsesTool(mockServer);
   });
 
-  it("registers the get_pulse tool", () => {
+  it("registers the get_pulses tool", () => {
     expect(mockServer.registerTool).toHaveBeenCalledWith(
-      "get_pulse",
+      "get_pulses",
       expect.objectContaining({
-        description: "Get the pulse status for an account.",
+        description: "Get pulse statuses for accounts.",
       }),
       expect.any(Function),
     );
   });
 
-  it("returns pulse with active: false when no record exists", async () => {
+  it("returns empty pulses array when no records exist", async () => {
     mockSelectPulseAccounts.mockResolvedValue([]);
 
     const result = await registeredHandler({}, createMockExtra({ accountId: "account-123" }));
@@ -80,13 +84,13 @@ describe("registerGetPulseTool", () => {
       content: [
         {
           type: "text",
-          text: expect.stringContaining('"active":false'),
+          text: expect.stringContaining('"pulses":[]'),
         },
       ],
     });
   });
 
-  it("returns pulse with active: true when record exists", async () => {
+  it("returns pulses array with records when they exist", async () => {
     mockSelectPulseAccounts.mockResolvedValue([
       {
         id: "pulse-456",
@@ -97,6 +101,14 @@ describe("registerGetPulseTool", () => {
 
     const result = await registeredHandler({}, createMockExtra({ accountId: "account-123" }));
 
+    expect(result).toEqual({
+      content: [
+        {
+          type: "text",
+          text: expect.stringContaining('"pulses":['),
+        },
+      ],
+    });
     expect(result).toEqual({
       content: [
         {
@@ -127,6 +139,7 @@ describe("registerGetPulseTool", () => {
       targetAccountId: "target-account-789",
     });
     expect(mockSelectPulseAccounts).toHaveBeenCalledWith({ accountIds: ["target-account-789"] });
+    expect(mockSelectPulseAccounts).toHaveBeenCalledTimes(1);
   });
 
   it("returns error when org auth lacks access to account_id", async () => {
@@ -141,7 +154,7 @@ describe("registerGetPulseTool", () => {
       content: [
         {
           type: "text",
-          text: expect.stringContaining("Access denied"),
+          text: expect.stringContaining("account_id is not a member of this organization"),
         },
       ],
     });
@@ -157,6 +170,79 @@ describe("registerGetPulseTool", () => {
           text: expect.stringContaining("Authentication required"),
         },
       ],
+    });
+  });
+
+  it("returns ALL pulses for Recoup Admin key (no filter)", async () => {
+    const allPulses = [
+      { id: "pulse-1", account_id: "account-1", active: true },
+      { id: "pulse-2", account_id: "account-2", active: false },
+      { id: "pulse-3", account_id: "account-3", active: true },
+    ];
+    mockSelectPulseAccounts.mockResolvedValue(allPulses);
+
+    const result = await registeredHandler(
+      {},
+      createMockExtra({ accountId: "recoup-org-id", orgId: "recoup-org-id" }),
+    );
+
+    // Should call selectPulseAccounts with empty object (no filter)
+    expect(mockSelectPulseAccounts).toHaveBeenCalledWith({});
+    expect(result).toEqual({
+      content: [
+        {
+          type: "text",
+          text: expect.stringContaining('"pulses":['),
+        },
+      ],
+    });
+  });
+
+  it("returns pulses filtered by orgId for org key", async () => {
+    const orgPulses = [
+      { id: "pulse-1", account_id: "member-1", active: true },
+      { id: "pulse-2", account_id: "member-2", active: false },
+    ];
+    mockSelectPulseAccounts.mockResolvedValue(orgPulses);
+
+    const result = await registeredHandler(
+      {},
+      createMockExtra({ accountId: "org-123", orgId: "org-123" }),
+    );
+
+    // Should call selectPulseAccounts with orgId filter
+    expect(mockSelectPulseAccounts).toHaveBeenCalledWith({ orgId: "org-123" });
+    expect(result).toEqual({
+      content: [
+        {
+          type: "text",
+          text: expect.stringContaining('"pulses":['),
+        },
+      ],
+    });
+  });
+
+  it("filters by active status when provided", async () => {
+    const activePulses = [{ id: "pulse-1", account_id: "account-123", active: true }];
+    mockSelectPulseAccounts.mockResolvedValue(activePulses);
+
+    await registeredHandler({ active: true }, createMockExtra({ accountId: "account-123" }));
+
+    expect(mockSelectPulseAccounts).toHaveBeenCalledWith({
+      accountIds: ["account-123"],
+      active: true,
+    });
+  });
+
+  it("filters by active: false when provided", async () => {
+    const inactivePulses = [{ id: "pulse-2", account_id: "account-123", active: false }];
+    mockSelectPulseAccounts.mockResolvedValue(inactivePulses);
+
+    await registeredHandler({ active: false }, createMockExtra({ accountId: "account-123" }));
+
+    expect(mockSelectPulseAccounts).toHaveBeenCalledWith({
+      accountIds: ["account-123"],
+      active: false,
     });
   });
 });

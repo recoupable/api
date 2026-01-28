@@ -1,6 +1,6 @@
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { getAccountIdByAuthToken } from "@/lib/privy/getAccountIdByAuthToken";
-import { getAccountIdByApiKey } from "@/lib/mcp/getAccountIdByApiKey";
+import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 
 export interface McpAuthInfoExtra extends Record<string, unknown> {
   accountId: string;
@@ -18,7 +18,7 @@ export interface McpAuthInfo extends AuthInfo {
  *
  * @param _req - The request object (unused).
  * @param bearerToken - The token from Authorization: Bearer header (Privy JWT or API key).
- * @returns AuthInfo with accountId, or undefined if invalid.
+ * @returns AuthInfo with accountId and orgId, or undefined if invalid.
  */
 export async function verifyBearerToken(
   _req: Request,
@@ -45,21 +45,21 @@ export async function verifyBearerToken(
     // Privy validation failed, try API key
   }
 
-  // Try API key validation
+  // Try API key validation - includes org context
   try {
-    const accountId = await getAccountIdByApiKey(bearerToken);
+    const keyDetails = await getApiKeyDetails(bearerToken);
 
-    if (!accountId) {
+    if (!keyDetails) {
       return undefined;
     }
 
     return {
       token: bearerToken,
       scopes: ["mcp:tools"],
-      clientId: accountId,
+      clientId: keyDetails.accountId,
       extra: {
-        accountId,
-        orgId: null,
+        accountId: keyDetails.accountId,
+        orgId: keyDetails.orgId,
       },
     };
   } catch {

@@ -1,5 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { registerGetPulseTool } from "./registerGetPulseTool";
+import { registerGetPulsesTool } from "./registerGetPulsesTool";
 import { registerUpdatePulseTool } from "./registerUpdatePulseTool";
 
 /**
@@ -8,6 +8,6 @@ import { registerUpdatePulseTool } from "./registerUpdatePulseTool";
  * @param server - The MCP server instance to register tools on.
  */
 export const registerAllPulseTools = (server: McpServer): void => {
-  registerGetPulseTool(server);
+  registerGetPulsesTool(server);
   registerUpdatePulseTool(server);
 };

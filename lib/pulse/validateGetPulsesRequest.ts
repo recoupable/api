@@ -2,9 +2,8 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import type { SelectPulseAccountsParams } from "@/lib/supabase/pulse_accounts/selectPulseAccounts";
-import { RECOUP_ORG_ID } from "@/lib/const";
+import { buildGetPulsesParams } from "./buildGetPulsesParams";
 import { z } from "zod";
 
 const getPulsesQuerySchema = z.object({
@@ -62,35 +61,23 @@ export async function validateGetPulsesRequest(
 
   const { accountId, orgId } = authResult;
 
-  // Handle account_id filter if provided
-  if (targetAccountId) {
-    // Use canAccessAccount to validate access (handles RECOUP_ORG_ID and org membership)
-    const hasAccess = await canAccessAccount({ orgId, targetAccountId });
-    if (!hasAccess) {
-      return NextResponse.json(
-        {
-          status: "error",
-          error: orgId
-            ? "account_id is not a member of this organization"
-            : "Personal API keys cannot filter by account_id",
-        },
-        { status: 403, headers: getCorsHeaders() },
-      );
-    }
-    return { accountIds: [targetAccountId], active };
+  // Use shared function to build params
+  const { params, error } = await buildGetPulsesParams({
+    accountId,
+    orgId,
+    targetAccountId,
+    active,
+  });
+
+  if (error) {
+    return NextResponse.json(
+      {
+        status: "error",
+        error,
+      },
+      { status: 403, headers: getCorsHeaders() },
+    );
   }
 
-  // No account_id filter - determine what to return based on key type
-  if (orgId === RECOUP_ORG_ID) {
-    // Recoup admin: return undefined to indicate ALL records
-    return { active };
-  }
-
-  if (orgId) {
-    // Org key: return orgId for filtering by org membership in database
-    return { orgId, active };
-  }
-
-  // Personal key: Only return the key owner's account
-  return { accountIds: [accountId], active };
+  return params;
 }
