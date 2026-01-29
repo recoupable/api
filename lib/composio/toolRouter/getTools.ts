@@ -1,6 +1,7 @@
 import { createToolRouterSession } from "./createSession";
+import { getComposioClient } from "../client";
+import { ALLOWED_ARTIST_CONNECTORS } from "../artistConnectors/ALLOWED_ARTIST_CONNECTORS";
 import type { Tool, ToolSet } from "ai";
-import { selectArtistComposioConnections } from "@/lib/supabase/artist_composio_connections/selectArtistComposioConnections";
 
 /**
  * Tools we want to expose from Composio Tool Router.
@@ -37,6 +38,39 @@ function isValidTool(tool: unknown): tool is Tool {
 }
 
 /**
+ * Query Composio for an artist's connected accounts.
+ *
+ * Uses artistId as the Composio entity to get their connections.
+ * Only returns connections for ALLOWED_ARTIST_CONNECTORS (e.g., tiktok).
+ *
+ * @param artistId - The artist ID (Composio entity)
+ * @returns Map of toolkit slug to connected account ID
+ */
+async function getArtistConnectionsFromComposio(
+  artistId: string
+): Promise<Record<string, string>> {
+  const composio = await getComposioClient();
+
+  // Create session with artistId as entity
+  const session = await composio.create(artistId, {
+    toolkits: ALLOWED_ARTIST_CONNECTORS,
+  });
+
+  // Get toolkits and extract connected account IDs
+  const toolkits = await session.toolkits();
+  const connections: Record<string, string> = {};
+
+  for (const toolkit of toolkits.items) {
+    const connectedAccountId = toolkit.connection?.connectedAccount?.id;
+    if (connectedAccountId && ALLOWED_ARTIST_CONNECTORS.includes(toolkit.slug)) {
+      connections[toolkit.slug] = connectedAccountId;
+    }
+  }
+
+  return connections;
+}
+
+/**
  * Get Composio Tool Router tools for a user.
  *
  * Returns a filtered subset of meta-tools:
@@ -44,6 +78,9 @@ function isValidTool(tool: unknown): tool is Tool {
  * - COMPOSIO_SEARCH_TOOLS - Find available connectors
  * - COMPOSIO_GET_TOOL_SCHEMAS - Get parameter schemas
  * - COMPOSIO_MULTI_EXECUTE_TOOL - Execute actions
+ *
+ * If artistId is provided, queries Composio for the artist's connections
+ * and passes them to the session via connectedAccounts override.
  *
  * Gracefully returns empty ToolSet when:
  * - COMPOSIO_API_KEY is not set
@@ -57,7 +94,7 @@ function isValidTool(tool: unknown): tool is Tool {
 export async function getComposioTools(
   userId: string,
   artistId?: string,
-  roomId?: string,
+  roomId?: string
 ): Promise<ToolSet> {
   // Skip Composio if API key is not configured
   if (!process.env.COMPOSIO_API_KEY) {
@@ -65,19 +102,13 @@ export async function getComposioTools(
   }
 
   try {
-    // Fetch artist-specific Composio connections if artistId is provided
+    // Fetch artist-specific connections from Composio if artistId is provided
     let artistConnections: Record<string, string> | undefined;
     if (artistId) {
-      const connections = await selectArtistComposioConnections(artistId);
-      if (connections.length > 0) {
-        // Transform to { toolkit_slug: connected_account_id } format
-        artistConnections = connections.reduce(
-          (acc, conn) => {
-            acc[conn.toolkit_slug] = conn.connected_account_id;
-            return acc;
-          },
-          {} as Record<string, string>,
-        );
+      artistConnections = await getArtistConnectionsFromComposio(artistId);
+      // Only pass if there are actual connections
+      if (Object.keys(artistConnections).length === 0) {
+        artistConnections = undefined;
       }
     }
 

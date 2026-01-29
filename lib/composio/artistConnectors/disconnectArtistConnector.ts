@@ -1,28 +1,33 @@
 import { getComposioApiKey } from "../getComposioApiKey";
-import { deleteArtistComposioConnection } from "@/lib/supabase/artist_composio_connections/deleteArtistComposioConnection";
-import { selectArtistComposioConnections } from "@/lib/supabase/artist_composio_connections/selectArtistComposioConnections";
+import { getComposioClient } from "../client";
 
 /**
- * Disconnect an artist connector from Composio and remove the DB record.
+ * Disconnect an artist connector from Composio.
  *
- * Why: When an artist disconnects a service (like TikTok), we need to:
- * 1. Delete the connected account from Composio's side
- * 2. Remove the mapping from our artist_composio_connections table
+ * Uses artistId as the Composio entity to verify the connection exists
+ * and belongs to this artist before deleting.
  *
- * @param artistId - The artist ID
+ * @param artistId - The artist ID (Composio entity)
  * @param connectedAccountId - The ID of the connected account to disconnect
  * @returns Success status
  */
 export async function disconnectArtistConnector(
   artistId: string,
-  connectedAccountId: string,
+  connectedAccountId: string
 ): Promise<{ success: boolean }> {
-  // First, find the connection record in our DB to get the ID
-  const connections = await selectArtistComposioConnections(artistId);
-  const connection = connections.find(c => c.connected_account_id === connectedAccountId);
+  const composio = await getComposioClient();
 
-  if (!connection) {
-    throw new Error("Connection not found");
+  // Create session with artistId to verify the connection belongs to this artist
+  const session = await composio.create(artistId);
+  const toolkits = await session.toolkits();
+
+  // Find the connection to verify ownership
+  const hasConnection = toolkits.items.some(
+    (toolkit) => toolkit.connection?.connectedAccount?.id === connectedAccountId
+  );
+
+  if (!hasConnection) {
+    throw new Error("Connection not found for this artist");
   }
 
   // Delete from Composio using their v3 API
@@ -39,14 +44,9 @@ export async function disconnectArtistConnector(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Failed to disconnect from Composio (${response.status}): ${errorText}`);
-  }
-
-  // Remove from our DB
-  const { error } = await deleteArtistComposioConnection(connection.id);
-
-  if (error) {
-    throw new Error(`Failed to remove connection record: ${error.message}`);
+    throw new Error(
+      `Failed to disconnect from Composio (${response.status}): ${errorText}`
+    );
   }
 
   return { success: true };

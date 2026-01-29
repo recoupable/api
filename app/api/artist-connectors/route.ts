@@ -5,7 +5,6 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { checkAccountArtistAccess } from "@/lib/supabase/account_artist_ids/checkAccountArtistAccess";
 import { getArtistConnectors } from "@/lib/composio/artistConnectors/getArtistConnectors";
 import { validateDisconnectArtistConnectorBody } from "@/lib/composio/artistConnectors/validateDisconnectArtistConnectorBody";
-import { verifyArtistConnectorOwnership } from "@/lib/composio/artistConnectors/verifyArtistConnectorOwnership";
 import { disconnectArtistConnector } from "@/lib/composio/artistConnectors/disconnectArtistConnector";
 
 /**
@@ -124,16 +123,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Verify the connected account belongs to this artist
-    const isOwner = await verifyArtistConnectorOwnership(artist_id, connected_account_id);
-    if (!isOwner) {
-      return NextResponse.json(
-        { error: "Connected account not found or does not belong to this artist" },
-        { status: 403, headers },
-      );
-    }
-
-    // Disconnect from Composio and remove from DB
+    // Disconnect from Composio (ownership verified inside via artistId entity)
     await disconnectArtistConnector(artist_id, connected_account_id);
 
     return NextResponse.json({ success: true }, { status: 200, headers });

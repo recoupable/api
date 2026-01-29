@@ -71,8 +71,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Generate OAuth URL
-    const result = await authorizeArtistConnector(accountId, artist_id, connector);
+    // Generate OAuth URL - uses artistId as Composio entity
+    const result = await authorizeArtistConnector(artist_id, connector);
 
     return NextResponse.json(
       {

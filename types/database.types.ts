@@ -797,41 +797,6 @@ export type Database = {
           },
         ];
       };
-      artist_composio_connections: {
-        Row: {
-          id: string;
-          artist_id: string;
-          toolkit_slug: string;
-          connected_account_id: string;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          artist_id: string;
-          toolkit_slug: string;
-          connected_account_id: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          artist_id?: string;
-          toolkit_slug?: string;
-          connected_account_id?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "artist_composio_connections_artist_id_fkey";
-            columns: ["artist_id"];
-            isOneToOne: false;
-            referencedRelation: "account_info";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       artist_fan_segment: {
         Row: {
           artist_social_id: string | null;

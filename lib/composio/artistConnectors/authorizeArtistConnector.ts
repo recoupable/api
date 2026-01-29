@@ -12,16 +12,14 @@ export interface AuthorizeArtistConnectorResult {
 /**
  * Generate an OAuth authorization URL for an artist connector.
  *
- * Why: Used by the /api/artist-connectors/authorize endpoint to let users
- * connect external services (like TikTok) for a specific artist.
+ * Uses artistId as the Composio entity so that connections are stored
+ * under the artist, not the user. This keeps Composio as the source of truth.
  *
- * @param accountId - The user's account ID (used as Composio entity)
- * @param artistId - The artist ID to associate the connection with
+ * @param artistId - The artist ID (used as Composio entity)
  * @param connector - The connector slug (e.g., "tiktok")
  * @returns The redirect URL for OAuth
  */
 export async function authorizeArtistConnector(
-  accountId: string,
   artistId: string,
   connector: string,
 ): Promise<AuthorizeArtistConnectorResult> {
@@ -33,7 +31,8 @@ export async function authorizeArtistConnector(
     toolkit: connector,
   });
 
-  const session = await composio.create(accountId, {
+  // Use artistId as the Composio entity - connection will be stored under the artist
+  const session = await composio.create(artistId, {
     manageConnections: {
       callbackUrl,
     },
