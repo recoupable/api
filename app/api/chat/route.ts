@@ -64,12 +64,20 @@ export async function POST(request: NextRequest): Promise<Response> {
     // Route through x402 endpoint (handles credit deduction and payment)
     const response = await x402Chat(chatBody, baseUrl);
 
-    // Return the streaming response with CORS headers
+    // Filter out CORS headers from internal response to avoid duplicates
+    const responseHeaders = Object.fromEntries(response.headers.entries());
+    const filteredHeaders = Object.fromEntries(
+      Object.entries(responseHeaders).filter(
+        ([key]) => !key.toLowerCase().startsWith("access-control-"),
+      ),
+    );
+
+    // Return the streaming response with our CORS headers
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
       headers: {
-        ...Object.fromEntries(response.headers.entries()),
+        ...filteredHeaders,
         ...getCorsHeaders(),
       },
     });
