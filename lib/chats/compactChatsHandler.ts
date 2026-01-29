@@ -35,36 +35,43 @@ export async function compactChatsHandler(request: NextRequest): Promise<NextRes
 
     const { accountId, orgId } = authResult;
 
-    // Process each chat
+    // Process all chats in parallel using Promise.all for performance
+    const processResults = await Promise.all(
+      chatIds.map(async chatId => {
+        // Verify the chat exists
+        const room = await selectRoom(chatId);
+        if (!room) {
+          return { type: "notFound" as const, chatId };
+        }
+
+        // Verify user has access to the chat
+        const roomAccountId = room.account_id;
+        if (roomAccountId && roomAccountId !== accountId) {
+          // Check if org key has access to this account
+          const hasAccess = await canAccessAccount({
+            orgId,
+            targetAccountId: roomAccountId,
+          });
+          if (!hasAccess) {
+            return { type: "notFound" as const, chatId };
+          }
+        }
+
+        // Compact the chat
+        const compactResult = await compactChat(chatId, prompt);
+        return { type: "success" as const, result: compactResult };
+      }),
+    );
+
+    // Separate results and not-found IDs
     const results: CompactChatResult[] = [];
     const notFoundIds: string[] = [];
 
-    for (const chatId of chatIds) {
-      // Verify the chat exists
-      const room = await selectRoom(chatId);
-      if (!room) {
-        notFoundIds.push(chatId);
-        continue;
-      }
-
-      // Verify user has access to the chat
-      const roomAccountId = room.account_id;
-      if (roomAccountId && roomAccountId !== accountId) {
-        // Check if org key has access to this account
-        const hasAccess = await canAccessAccount({
-          orgId,
-          targetAccountId: roomAccountId,
-        });
-        if (!hasAccess) {
-          notFoundIds.push(chatId);
-          continue;
-        }
-      }
-
-      // Compact the chat
-      const compactResult = await compactChat(chatId, prompt);
-      if (compactResult) {
-        results.push(compactResult);
+    for (const processResult of processResults) {
+      if (processResult.type === "notFound") {
+        notFoundIds.push(processResult.chatId);
+      } else if (processResult.result) {
+        results.push(processResult.result);
       }
     }
 

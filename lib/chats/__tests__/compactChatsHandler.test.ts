@@ -188,6 +188,61 @@ describe("compactChatsHandler", () => {
     });
   });
 
+  describe("parallel processing", () => {
+    it("processes multiple chats in parallel", async () => {
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "test-token",
+      });
+
+      // Track the order of operations to verify parallelism
+      const callOrder: string[] = [];
+
+      mockSelectRoom.mockImplementation(async (chatId: string) => {
+        callOrder.push(`selectRoom:${chatId}:start`);
+        // Simulate async operation
+        await new Promise(resolve => setTimeout(resolve, 10));
+        callOrder.push(`selectRoom:${chatId}:end`);
+        return {
+          id: chatId,
+          account_id: "account-123",
+          topic: `Chat ${chatId}`,
+        };
+      });
+
+      mockCompactChat.mockImplementation(async (chatId: string) => {
+        callOrder.push(`compactChat:${chatId}:start`);
+        // Simulate async operation
+        await new Promise(resolve => setTimeout(resolve, 10));
+        callOrder.push(`compactChat:${chatId}:end`);
+        return { chatId, compacted: `Summary for ${chatId}` };
+      });
+
+      const chatIds = [
+        "123e4567-e89b-12d3-a456-426614174001",
+        "123e4567-e89b-12d3-a456-426614174002",
+        "123e4567-e89b-12d3-a456-426614174003",
+      ];
+      const request = createMockRequest({ chatId: chatIds });
+      const response = await compactChatsHandler(request);
+
+      expect(response.status).toBe(200);
+
+      // Verify parallel execution: all selectRoom:start calls should happen
+      // before any selectRoom:end calls complete (indicating parallel execution)
+      const selectRoomStartIndices = chatIds.map(id => callOrder.indexOf(`selectRoom:${id}:start`));
+      const firstSelectRoomEndIndex = Math.min(
+        ...chatIds.map(id => callOrder.indexOf(`selectRoom:${id}:end`)),
+      );
+
+      // All starts should happen before any end in parallel execution
+      selectRoomStartIndices.forEach(startIndex => {
+        expect(startIndex).toBeLessThan(firstSelectRoomEndIndex);
+      });
+    });
+  });
+
   describe("successful responses", () => {
     it("compacts multiple chats successfully", async () => {
       mockValidateAuthContext.mockResolvedValue({
