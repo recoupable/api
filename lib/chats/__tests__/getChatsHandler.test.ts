@@ -4,6 +4,7 @@ import { getChatsHandler } from "../getChatsHandler";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 import { selectRooms } from "@/lib/supabase/rooms/selectRooms";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
@@ -12,6 +13,10 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 
 vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
+  getAccountOrganizations: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/rooms/selectRooms", () => ({
@@ -129,6 +134,13 @@ describe("getChatsHandler", () => {
           topic: "Chat 1",
           updated_at: "2024-01-01T00:00:00Z",
         },
+        {
+          id: "chat-2",
+          account_id: "member-2",
+          artist_id: null,
+          topic: "Chat 2",
+          updated_at: "2024-01-02T00:00:00Z",
+        },
       ];
 
       vi.mocked(validateAuthContext).mockResolvedValue({
@@ -136,6 +148,10 @@ describe("getChatsHandler", () => {
         orgId,
         authToken: "test-token",
       });
+      vi.mocked(getAccountOrganizations).mockResolvedValue([
+        { account_id: "member-1", organization_id: orgId, organization: null },
+        { account_id: "member-2", organization_id: orgId, organization: null },
+      ]);
       vi.mocked(selectRooms).mockResolvedValue(mockChats);
 
       const request = createMockRequest("http://localhost/api/chats");
@@ -144,8 +160,9 @@ describe("getChatsHandler", () => {
 
       expect(response.status).toBe(200);
       expect(json.status).toBe("success");
+      expect(json.chats).toEqual(mockChats);
       expect(selectRooms).toHaveBeenCalledWith({
-        org_id: orgId,
+        account_ids: ["member-1", "member-2"],
         artist_id: undefined,
       });
     });

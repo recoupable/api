@@ -2,9 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { buildGetChatsParams } from "../buildGetChatsParams";
 
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 
 vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
+  getAccountOrganizations: vi.fn(),
 }));
 
 vi.mock("@/lib/const", () => ({
@@ -59,15 +64,21 @@ describe("buildGetChatsParams", () => {
   });
 
   describe("organization API key", () => {
-    it("returns org_id when no target_account_id", async () => {
-      const org_id = "org-123";
+    it("fetches org member account_ids when no target_account_id", async () => {
+      vi.mocked(getAccountOrganizations).mockResolvedValue([
+        { account_id: "member-1", organization_id: "org-123", organization: null },
+        { account_id: "member-2", organization_id: "org-123", organization: null },
+        { account_id: "member-3", organization_id: "org-123", organization: null },
+      ]);
+
       const result = await buildGetChatsParams({
-        account_id: "account-123",
-        org_id,
+        account_id: "org-123",
+        org_id: "org-123",
       });
 
+      expect(getAccountOrganizations).toHaveBeenCalledWith({ organizationId: "org-123" });
       expect(result).toEqual({
-        params: { org_id, artist_id: undefined },
+        params: { account_ids: ["member-1", "member-2", "member-3"], artist_id: undefined },
         error: null,
       });
     });
@@ -107,6 +118,10 @@ describe("buildGetChatsParams", () => {
     });
 
     it("includes artist_id filter for org key", async () => {
+      vi.mocked(getAccountOrganizations).mockResolvedValue([
+        { account_id: "member-1", organization_id: "org-123", organization: null },
+      ]);
+
       const result = await buildGetChatsParams({
         account_id: "account-123",
         org_id: "org-123",
@@ -114,7 +129,21 @@ describe("buildGetChatsParams", () => {
       });
 
       expect(result).toEqual({
-        params: { org_id: "org-123", artist_id: "artist-456" },
+        params: { account_ids: ["member-1"], artist_id: "artist-456" },
+        error: null,
+      });
+    });
+
+    it("returns empty account_ids when org has no members", async () => {
+      vi.mocked(getAccountOrganizations).mockResolvedValue([]);
+
+      const result = await buildGetChatsParams({
+        account_id: "org-123",
+        org_id: "org-123",
+      });
+
+      expect(result).toEqual({
+        params: { account_ids: [], artist_id: undefined },
         error: null,
       });
     });
@@ -133,6 +162,8 @@ describe("buildGetChatsParams", () => {
         params: { artist_id: undefined },
         error: null,
       });
+      // Should NOT call getAccountOrganizations for admin
+      expect(getAccountOrganizations).not.toHaveBeenCalled();
     });
 
     it("allows filtering by any account_id", async () => {

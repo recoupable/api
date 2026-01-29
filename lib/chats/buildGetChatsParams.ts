@@ -1,5 +1,6 @@
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import type { SelectRoomsParams } from "@/lib/supabase/rooms/selectRooms";
+import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 import { RECOUP_ORG_ID } from "@/lib/const";
 
 export interface BuildGetChatsParamsInput {
@@ -21,7 +22,7 @@ export type BuildGetChatsParamsResult =
  * Builds the parameters for selectRooms based on auth context.
  *
  * For personal keys: Returns account_ids with the key owner's account
- * For org keys: Returns org_id for filtering by org membership
+ * For org keys: Fetches all org member account_ids and returns them
  * For Recoup admin key: Returns empty params to indicate ALL records
  *
  * If target_account_id is provided, validates access and returns that account.
@@ -55,8 +56,10 @@ export async function buildGetChatsParams(
   }
 
   if (org_id) {
-    // Org key: return org_id for filtering by org membership in database
-    return { params: { org_id, artist_id }, error: null };
+    // Org key: fetch all member account IDs for this organization
+    const orgMembers = await getAccountOrganizations({ organizationId: org_id });
+    const memberAccountIds = orgMembers.map((member) => member.account_id);
+    return { params: { account_ids: memberAccountIds, artist_id }, error: null };
   }
 
   // Personal key: Only return the key owner's account

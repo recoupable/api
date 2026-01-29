@@ -4,6 +4,7 @@ import { validateGetChatsRequest } from "../validateGetChatsRequest";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 
 // Mock dependencies
 vi.mock("@/lib/auth/validateAuthContext", () => ({
@@ -12,6 +13,10 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 
 vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
+  getAccountOrganizations: vi.fn(),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -60,13 +65,17 @@ describe("validateGetChatsRequest", () => {
     });
   });
 
-  it("should return org_id for org key", async () => {
+  it("should return org member account_ids for org key", async () => {
     const mockOrgId = "org-123";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockOrgId,
       orgId: mockOrgId,
       authToken: "test-token",
     });
+    vi.mocked(getAccountOrganizations).mockResolvedValue([
+      { account_id: "member-1", organization_id: mockOrgId, organization: null },
+      { account_id: "member-2", organization_id: mockOrgId, organization: null },
+    ]);
 
     const request = new NextRequest("http://localhost/api/chats", {
       headers: { "x-api-key": "test-api-key" },
@@ -75,7 +84,7 @@ describe("validateGetChatsRequest", () => {
 
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
-      org_id: mockOrgId,
+      account_ids: ["member-1", "member-2"],
       artist_id: undefined,
     });
   });

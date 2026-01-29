@@ -115,6 +115,21 @@ describe("selectRooms", () => {
       expect(result).toEqual([]);
       expect(supabase.from).not.toHaveBeenCalled();
     });
+
+    it("filters by multiple account_ids", async () => {
+      const account_ids = ["account-1", "account-2", "account-3"];
+      const mockRooms = [
+        { id: "room-1", account_id: "account-1" },
+        { id: "room-2", account_id: "account-2" },
+      ];
+
+      const { chainableMock } = createMockQueryBuilder(mockRooms);
+
+      const result = await selectRooms({ account_ids });
+
+      expect(result).toEqual(mockRooms);
+      expect(chainableMock.in).toHaveBeenCalledWith("account_id", account_ids);
+    });
   });
 
   describe("with artist_id filter", () => {
