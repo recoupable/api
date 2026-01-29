@@ -17,6 +17,7 @@ import { registerAllYouTubeTools } from "./youtube";
 import { registerTranscribeTools } from "./transcribe";
 import { registerSendEmailTool } from "./registerSendEmailTool";
 import { registerAllArtistTools } from "./artists";
+import { registerAllChatsTools } from "./chats";
 import { registerAllPulseTools } from "./pulse";
 
 /**
@@ -32,6 +33,7 @@ export const registerAllTools = (server: McpServer): void => {
   registerAllArtistTools(server);
   registerAllArtistSocialsTools(server);
   registerAllCatalogTools(server);
+  registerAllChatsTools(server);
   registerAllFileTools(server);
   registerAllImageTools(server);
   registerAllPulseTools(server);
