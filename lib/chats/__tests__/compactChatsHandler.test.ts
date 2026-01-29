@@ -97,7 +97,10 @@ describe("compactChatsHandler", () => {
         accountId: "account-123",
       });
       mockProcessCompactChatRequest
-        .mockResolvedValueOnce({ type: "success", result: { chatId: "chat-1", compacted: "Summary" } })
+        .mockResolvedValueOnce({
+          type: "success",
+          result: { chatId: "chat-1", compacted: "Summary" },
+        })
         .mockResolvedValueOnce({ type: "notFound", chatId: "chat-2" });
 
       const request = createMockRequest();
@@ -115,7 +118,10 @@ describe("compactChatsHandler", () => {
       });
       mockProcessCompactChatRequest
         .mockResolvedValueOnce({ type: "notFound", chatId: "chat-1" })
-        .mockResolvedValueOnce({ type: "success", result: { chatId: "chat-2", compacted: "Summary" } })
+        .mockResolvedValueOnce({
+          type: "success",
+          result: { chatId: "chat-2", compacted: "Summary" },
+        })
         .mockResolvedValueOnce({ type: "notFound", chatId: "chat-3" });
 
       const request = createMockRequest();
@@ -135,8 +141,14 @@ describe("compactChatsHandler", () => {
         accountId: "account-123",
       });
       mockProcessCompactChatRequest
-        .mockResolvedValueOnce({ type: "success", result: { chatId: "chat-1", compacted: "Summary 1" } })
-        .mockResolvedValueOnce({ type: "success", result: { chatId: "chat-2", compacted: "Summary 2" } });
+        .mockResolvedValueOnce({
+          type: "success",
+          result: { chatId: "chat-1", compacted: "Summary 1" },
+        })
+        .mockResolvedValueOnce({
+          type: "success",
+          result: { chatId: "chat-2", compacted: "Summary 2" },
+        });
 
       const request = createMockRequest();
       const response = await compactChatsHandler(request);
@@ -182,7 +194,9 @@ describe("compactChatsHandler", () => {
       await compactChatsHandler(request);
 
       // Verify parallel execution: all starts should happen before any end
-      const startIndices = ["chat-1", "chat-2", "chat-3"].map(id => callOrder.indexOf(`${id}:start`));
+      const startIndices = ["chat-1", "chat-2", "chat-3"].map(id =>
+        callOrder.indexOf(`${id}:start`),
+      );
       const firstEndIndex = Math.min(
         ...["chat-1", "chat-2", "chat-3"].map(id => callOrder.indexOf(`${id}:end`)),
       );

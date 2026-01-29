@@ -25,9 +25,7 @@ export async function compactChatsHandler(request: NextRequest): Promise<NextRes
 
     // Process all chats in parallel using Promise.all for performance
     const processResults = await Promise.all(
-      chatIds.map(chatId =>
-        processCompactChatRequest({ chatId, prompt, accountId, orgId }),
-      ),
+      chatIds.map(chatId => processCompactChatRequest({ chatId, prompt, accountId, orgId })),
     );
 
     // Separate results and not-found IDs

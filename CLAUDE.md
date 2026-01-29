@@ -260,6 +260,110 @@ if (validated instanceof NextResponse) {
 - `validate<Name>Body.ts` - For POST/PUT request bodies
 - `validate<Name>Query.ts` - For GET query parameters
 
+## MCP Tools Architecture (DRY with API Endpoints)
+
+MCP tools and REST API endpoints share business logic through domain-specific functions. This ensures DRY compliance and consistent behavior across all interfaces.
+
+### Directory Structure
+
+```
+lib/mcp/tools/
+├── index.ts                        # registerAllTools() - central registration
+├── [domain]/
+│   ├── index.ts                    # registerAll[Domain]Tools()
+│   └── register[ToolName]Tool.ts   # Individual tool registration
+```
+
+### DRY Pattern: Shared Logic Between MCP Tools and API Routes
+
+Both MCP tools and API routes should use the **same domain functions**:
+
+```
+┌─────────────────────────────────────┐     ┌─────────────────────────────────────┐
+│  API Route Handler                   │     │  MCP Tool Handler                    │
+│  (app/api/endpoint/route.ts)        │     │  (lib/mcp/tools/*/register*.ts)     │
+│                                      │     │                                      │
+│  validateRequest() ──┐               │     │  Extract args from schema ──┐       │
+│                      ↓               │     │                             ↓       │
+│              ┌───────────────────────┴─────┴───────────────────────┐             │
+│              │        Shared Domain Logic (lib/[domain]/)          │             │
+│              │  - buildParams functions (auth/access control)      │             │
+│              │  - process functions (business logic)               │             │
+│              │  - Supabase queries (lib/supabase/[table]/)        │             │
+│              └───────────────────────┬─────┬───────────────────────┘             │
+│                      ↓               │     │                             ↓       │
+│  Return NextResponse                 │     │  Return getToolResultSuccess()     │
+└─────────────────────────────────────┘     └─────────────────────────────────────┘
+```
+
+### Examples of DRY Implementation
+
+| Feature | API Route | MCP Tool | Shared Logic |
+|---------|-----------|----------|--------------|
+| Get Chats | `GET /api/chats` | `get_chats` | `buildGetChatsParams`, `selectRooms` |
+| Get Pulses | `GET /api/pulses` | `get_pulses` | `buildGetPulsesParams`, `selectPulseAccounts` |
+| Create Artist | `POST /api/artists` | `create_new_artist` | `createArtistInDb`, `copyRoom` |
+| Compact Chats | `POST /api/chats/compact` | `compact_chats` | `processCompactChatRequest` |
+
+### Creating a New MCP Tool (Following DRY)
+
+1. **Identify shared logic** - Check if an API endpoint exists with reusable functions
+2. **Create the tool file** - `lib/mcp/tools/[domain]/register[ToolName]Tool.ts`
+3. **Import shared functions** - Use the same domain logic as the API route
+4. **Register in index** - Add to `lib/mcp/tools/[domain]/index.ts`
+
+### Tool Registration Pattern
+
+```typescript
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
+import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
+import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
+import { getToolResultError } from "@/lib/mcp/getToolResultError";
+// Import shared domain logic
+import { sharedDomainFunction } from "@/lib/[domain]/sharedDomainFunction";
+
+const toolSchema = z.object({
+  param: z.string().describe("Description for the AI."),
+});
+
+export function registerToolNameTool(server: McpServer): void {
+  server.registerTool(
+    "tool_name",
+    {
+      description: "Tool description for the AI.",
+      inputSchema: toolSchema,
+    },
+    async (args, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
+      const authInfo = extra.authInfo as McpAuthInfo | undefined;
+      const accountId = authInfo?.extra?.accountId;
+      const orgId = authInfo?.extra?.orgId ?? null;
+
+      if (!accountId) {
+        return getToolResultError("Authentication required.");
+      }
+
+      // Use shared domain logic (same as API route)
+      const result = await sharedDomainFunction({ accountId, orgId, ...args });
+
+      if (!result) {
+        return getToolResultError("Operation failed");
+      }
+
+      return getToolResultSuccess(result);
+    },
+  );
+}
+```
+
+### Key Utilities
+
+- `getToolResultSuccess(data)` - Wrap successful responses
+- `getToolResultError(message)` - Wrap error responses
+- `resolveAccountId({ authInfo, accountIdOverride })` - Resolve account from auth
+
 ## Constants (`lib/const.ts`)
 
 All shared constants live in `lib/const.ts`:
