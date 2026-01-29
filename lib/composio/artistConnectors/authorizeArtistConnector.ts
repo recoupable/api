@@ -1,5 +1,5 @@
 import { getComposioClient } from "../client";
-import { getFrontendBaseUrl } from "../getFrontendBaseUrl";
+import { getCallbackUrl } from "../getCallbackUrl";
 
 /**
  * Result of authorizing an artist connector.
@@ -7,20 +7,6 @@ import { getFrontendBaseUrl } from "../getFrontendBaseUrl";
 export interface AuthorizeArtistConnectorResult {
   connector: string;
   redirectUrl: string;
-}
-
-/**
- * Build callback URL for artist connector OAuth.
- *
- * Redirects to /chat with artist_connected and toolkit query params
- * so the frontend can complete the connection flow.
- */
-function buildArtistConnectorCallbackUrl(
-  artistId: string,
-  toolkit: string,
-): string {
-  const baseUrl = getFrontendBaseUrl();
-  return `${baseUrl}/chat?artist_connected=${artistId}&toolkit=${toolkit}`;
 }
 
 /**
@@ -41,7 +27,11 @@ export async function authorizeArtistConnector(
 ): Promise<AuthorizeArtistConnectorResult> {
   const composio = await getComposioClient();
 
-  const callbackUrl = buildArtistConnectorCallbackUrl(artistId, connector);
+  const callbackUrl = getCallbackUrl({
+    destination: "artist-connectors",
+    artistId,
+    toolkit: connector,
+  });
 
   const session = await composio.create(accountId, {
     manageConnections: {
