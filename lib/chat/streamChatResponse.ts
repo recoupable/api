@@ -51,7 +51,15 @@ export async function streamChatResponse(
       },
     });
 
-    return createUIMessageStreamResponse({ stream, headers: getCorsHeaders() });
+    // Add Content-Encoding: none to prevent proxy middleware from buffering the stream
+    // See: https://ai-sdk.dev/docs/troubleshooting/streaming-not-working-when-proxied
+    return createUIMessageStreamResponse({
+      stream,
+      headers: {
+        ...getCorsHeaders(),
+        "Content-Encoding": "none",
+      },
+    });
   } catch (e) {
     console.error(`${logPrefix} Global error:`, e);
     return NextResponse.json(

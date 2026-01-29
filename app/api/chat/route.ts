@@ -73,12 +73,14 @@ export async function POST(request: NextRequest): Promise<Response> {
     );
 
     // Return the streaming response with our CORS headers
+    // Add Content-Encoding: none to prevent proxy middleware from buffering the stream
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
       headers: {
         ...filteredHeaders,
         ...getCorsHeaders(),
+        "Content-Encoding": "none",
       },
     });
   } catch (error) {
