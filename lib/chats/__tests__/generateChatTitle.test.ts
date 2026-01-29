@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { generateChatTitle } from "../generateChatTitle";
+import generateText from "@/lib/ai/generateText";
+
 vi.mock("@/lib/ai/generateText", () => ({
   default: vi.fn(),
 }));
-
-import { generateChatTitle } from "../generateChatTitle";
-import generateText from "@/lib/ai/generateText";
 
 const mockGenerateText = vi.mocked(generateText);
 

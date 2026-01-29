@@ -1,39 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { validateGetChatsQuery } from "@/lib/chats/validateGetChatsQuery";
+import { validateGetChatsRequest } from "@/lib/chats/validateGetChatsRequest";
 import { selectRooms } from "@/lib/supabase/rooms/selectRooms";
 
 /**
  * Handler for retrieving chats.
+ * Requires authentication via x-api-key header or Authorization bearer token.
  *
- * Query parameters:
- * - account_id (required): The account's ID (UUID)
- * - artist_account_id (optional): Filter to chats for a specific artist (UUID)
+ * For personal keys: Returns array of chats for the account (if exists).
+ * For org keys: Returns array of chats for accounts in the organization.
+ * For Recoup admin key: Returns array of ALL chat records.
+ *
+ * Optional query parameters:
+ * - account_id: Filter to a specific account (validated against org membership)
+ * - artist_account_id: Filter to chats for a specific artist (UUID)
  *
  * @param request - The request object containing query parameters
  * @returns A NextResponse with chats data
  */
 export async function getChatsHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const authResult = await validateAuthContext(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
+    const validated = await validateGetChatsRequest(request);
+    if (validated instanceof NextResponse) {
+      return validated;
     }
 
-    const { searchParams } = new URL(request.url);
-
-    const validatedQuery = validateGetChatsQuery(searchParams);
-    if (validatedQuery instanceof NextResponse) {
-      return validatedQuery;
-    }
-
-    const { account_id, artist_account_id } = validatedQuery;
-
-    const chats = await selectRooms({
-      accountId: account_id,
-      artistId: artist_account_id,
-    });
+    // Pass validated params directly to selectRooms
+    const chats = await selectRooms(validated);
 
     if (chats === null) {
       return NextResponse.json(
