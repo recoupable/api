@@ -111,7 +111,8 @@ export const middleware = paymentMiddleware(
 );
 
 // Configure which paths the middleware should run on
+// Only run x402 middleware on x402-protected routes to avoid interfering with CORS preflight
 export const config = {
-  matcher: ["/protected/:path*", "/api/:path*"],
+  matcher: ["/protected/:path*", "/api/x402/:path*"],
   runtime: "nodejs",
 };
