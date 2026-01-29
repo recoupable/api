@@ -1,7 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { handleChatStream } from "@/lib/chat/handleChatStream";
+import { validateChatAuth } from "@/lib/chat/validateChatAuth";
+import { x402Chat } from "@/lib/x402/recoup/x402Chat";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -19,9 +20,13 @@ export async function OPTIONS() {
  * POST /api/chat
  *
  * Streaming chat endpoint that processes messages and returns a streaming response.
+ * All requests are routed through the x402 payment system, which:
+ * 1. Deducts credits from the account
+ * 2. Makes an on-chain USDC payment
+ * 3. Forwards to the x402-protected chat endpoint
  *
- * Authentication: x-api-key header required.
- * The account ID is inferred from the API key.
+ * Authentication: x-api-key or Authorization header required.
+ * The account ID is inferred from the authentication.
  *
  * Request body:
  * - messages: Array of chat messages (mutually exclusive with prompt)
@@ -36,5 +41,50 @@ export async function OPTIONS() {
  * @returns A streaming response or error
  */
 export async function POST(request: NextRequest): Promise<Response> {
-  return handleChatStream(request);
+  // Validate authentication and get accountId
+  const authResult = await validateChatAuth(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
+  const { body, accountId, orgId } = authResult;
+
+  try {
+    // Build the chat body with resolved accountId
+    const chatBody = {
+      ...body,
+      accountId,
+      orgId,
+      messages: body.messages || [],
+    };
+
+    // Get the base URL for the x402 endpoint
+    const baseUrl = request.nextUrl.origin;
+
+    // Route through x402 endpoint (handles credit deduction and payment)
+    const response = await x402Chat(chatBody, baseUrl);
+
+    // Return the streaming response with CORS headers
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: {
+        ...Object.fromEntries(response.headers.entries()),
+        ...getCorsHeaders(),
+      },
+    });
+  } catch (error) {
+    console.error("Error in /api/chat:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    return NextResponse.json(
+      {
+        status: "error",
+        message: errorMessage,
+      },
+      {
+        status: 500,
+        headers: getCorsHeaders(),
+      },
+    );
+  }
 }

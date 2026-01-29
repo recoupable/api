@@ -9,6 +9,7 @@ export const SMART_ACCOUNT_ADDRESS = "0xbAf31935ED514e8F7da81D0A730AB5362DEEEEb7
 export const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as Address;
 export const PAYMASTER_URL = `https://api.developer.coinbase.com/rpc/v1/base/${process.env.PAYMASTER_KEY}`;
 export const IMAGE_GENERATE_PRICE = "0.15";
+export const CHAT_PRICE = "0.01";
 export const DEFAULT_MODEL = "openai/gpt-5-mini";
 export const LIGHTWEIGHT_MODEL = "openai/gpt-4o-mini";
 export const PRIVY_PROJECT_SECRET = process.env.PRIVY_PROJECT_SECRET;
@@ -32,10 +33,4 @@ export const RECOUP_ORG_ID = "04e3aba9-c130-4fb8-8b92-34e95d43e66b";
 // EVALS
 export const EVAL_ACCOUNT_ID = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
 export const EVAL_ACCESS_TOKEN = process.env.EVAL_ACCESS_TOKEN || "";
-export const EVAL_ARTISTS = [
-  "Gliiico",
-  "Mac Miller",
-  "Wiz Khalifa",
-  "Mod Sun",
-  "Julius Black",
-];
+export const EVAL_ARTISTS = ["Gliiico", "Mac Miller", "Wiz Khalifa", "Mod Sun", "Julius Black"];
