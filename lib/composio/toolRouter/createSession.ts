@@ -9,8 +9,16 @@ const ENABLED_TOOLKITS = ["googlesheets", "googledrive", "googledocs", "tiktok"]
 
 /**
  * Create a Composio Tool Router session for a user.
+ *
+ * @param userId - Unique identifier for the user (accountId)
+ * @param roomId - Optional chat room ID for OAuth redirect
+ * @param artistConnections - Optional mapping of toolkit slug to connected account ID for artist-specific connections
  */
-export async function createToolRouterSession(userId: string, roomId?: string) {
+export async function createToolRouterSession(
+  userId: string,
+  roomId?: string,
+  artistConnections?: Record<string, string>
+) {
   const composio = await getComposioClient();
 
   const callbackUrl = getCallbackUrl({
@@ -23,6 +31,7 @@ export async function createToolRouterSession(userId: string, roomId?: string) {
     manageConnections: {
       callbackUrl,
     },
+    connectedAccounts: artistConnections,
   });
 
   return session;

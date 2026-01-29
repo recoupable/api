@@ -50,11 +50,13 @@ function isValidTool(tool: unknown): tool is Tool {
  *
  * @param userId - Unique identifier for the user (accountId)
  * @param roomId - Optional chat room ID for OAuth redirect
+ * @param artistConnections - Optional mapping of toolkit slug to connected account ID for artist-specific connections
  * @returns ToolSet containing filtered Vercel AI SDK tools
  */
 export async function getComposioTools(
   userId: string,
-  roomId?: string
+  roomId?: string,
+  artistConnections?: Record<string, string>
 ): Promise<ToolSet> {
   // Skip Composio if API key is not configured
   if (!process.env.COMPOSIO_API_KEY) {
@@ -62,7 +64,7 @@ export async function getComposioTools(
   }
 
   try {
-    const session = await createToolRouterSession(userId, roomId);
+    const session = await createToolRouterSession(userId, roomId, artistConnections);
     const allTools = await session.tools();
 
     // Filter to only allowed tools with runtime validation
