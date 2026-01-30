@@ -80,6 +80,9 @@ importers:
       mcp-handler:
         specifier: ^1.0.4
         version: 1.0.4(@modelcontextprotocol/sdk@1.24.3(zod@4.1.13))(next@16.0.7(@opentelemetry/api@1.9.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1))
+      ms:
+        specifier: ^2.1.3
+        version: 2.1.3
       multiformats:
         specifier: ^13.4.1
         version: 13.4.1
@@ -117,6 +120,9 @@ importers:
       '@eslint/js':
         specifier: ^9.24.0
         version: 9.39.1
+      '@types/ms':
+        specifier: ^2.1.0
+        version: 2.1.0
       '@types/node':
         specifier: ^20
         version: 20.19.25
