@@ -71,8 +71,8 @@ export async function createSandbox(script: string): Promise<SandboxResult> {
     console.log(`Verifying SDK connection...`);
     const verifyScript = `
 import Anthropic from '@anthropic-ai/sdk';
+const client = new Anthropic();
 console.log('SDK imported successfully');
-console.log('Anthropic SDK version:', Anthropic.VERSION);
 console.log('SDK is ready to use');
 `;
     await sandbox.writeFiles([
