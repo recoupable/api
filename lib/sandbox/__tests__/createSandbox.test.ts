@@ -90,12 +90,11 @@ describe("createSandbox", () => {
     );
   });
 
-  it("returns sandbox result with output and exitCode", async () => {
+  it("returns sandbox result with sandboxId and exitCode", async () => {
     const result = await createSandbox("console.log('test')");
 
     expect(result).toEqual({
       sandboxId: "sbx_test123",
-      output: expect.any(String),
       exitCode: 0,
     });
   });

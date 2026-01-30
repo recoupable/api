@@ -83,7 +83,6 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(createSandbox).mockResolvedValue({
       sandboxId: "sbx_123",
-      output: "Hello World\n",
       exitCode: 0,
     });
 
@@ -94,7 +93,6 @@ describe("createSandboxPostHandler", () => {
     const json = await response.json();
     expect(json.status).toBe("success");
     expect(json.data.sandboxId).toBe("sbx_123");
-    expect(json.data.output).toBe("Hello World\n");
     expect(json.data.exitCode).toBe(0);
   });
 
@@ -106,7 +104,6 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(createSandbox).mockResolvedValue({
       sandboxId: "sbx_123",
-      output: "Error: something went wrong",
       exitCode: 1,
     });
 

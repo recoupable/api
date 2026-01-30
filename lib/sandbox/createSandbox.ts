@@ -1,26 +1,9 @@
-import { Writable } from "stream";
 import ms from "ms";
 import { Sandbox } from "@vercel/sandbox";
 
 export interface SandboxResult {
   sandboxId: string;
-  output: string;
   exitCode: number;
-}
-
-/**
- * Creates a writable stream that collects data into an array.
- *
- * @param chunks - Array to collect output chunks
- * @returns A Writable stream
- */
-function createCollectorStream(chunks: string[]): Writable {
-  return new Writable({
-    write(chunk, _encoding, callback) {
-      chunks.push(chunk.toString());
-      callback();
-    },
-  });
 }
 
 /**
@@ -103,12 +86,11 @@ console.log('SDK is ready to use');
       },
     ]);
 
-    const scriptOutput: string[] = [];
     const runScript = await sandbox.runCommand({
       cmd: "node",
       args: ["script.mjs"],
-      stdout: createCollectorStream(scriptOutput),
-      stderr: createCollectorStream(scriptOutput),
+      stdout: process.stdout,
+      stderr: process.stderr,
       env: {
         ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
       },
@@ -117,7 +99,6 @@ console.log('SDK is ready to use');
     console.log(`✓ Script executed`);
     return {
       sandboxId: sandbox.sandboxId,
-      output: scriptOutput.join(""),
       exitCode: runScript.exitCode,
     };
   } finally {
