@@ -40,6 +40,7 @@
     "ioredis": "^5.8.2",
     "marked": "^15.0.12",
     "mcp-handler": "^1.0.4",
+    "ms": "^2.1.3",
     "multiformats": "^13.4.1",
     "next": "^16.0.7",
     "node-telegram-bot-api": "^0.66.0",
@@ -54,6 +55,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.24.0",
+    "@types/ms": "^2.1.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

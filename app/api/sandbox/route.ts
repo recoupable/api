@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createSandboxPostHandler } from "@/lib/sandbox/createSandboxPostHandler";
 
@@ -17,22 +18,29 @@ export async function OPTIONS() {
 /**
  * POST /api/sandbox
  *
- * Creates a new ephemeral sandbox environment.
+ * Executes a script in a Vercel Sandbox with Claude's Agent SDK pre-installed.
  * Sandboxes are isolated Linux microVMs that can be used to evaluate
- * account-generated code, run AI agent output safely, or execute reproducible tasks.
+ * AI agent output safely or execute reproducible tasks with the Anthropic SDK.
  *
- * Request:
- * - No request body required
- * - Authentication via x-api-key header
+ * Authentication: x-api-key header or Authorization Bearer token required.
  *
- * Response:
- * - 200: { sandboxId: string, status: string, timeout: number, createdAt: string }
- * - 400: { error: "Failed to create sandbox" }
- * - 401: { status: "error", error: "x-api-key header required" or "Invalid API key" }
+ * Request body:
+ * - script: The JavaScript/TypeScript script to execute (required)
+ * - timeout: Timeout in milliseconds. Default: 300000 (5 minutes). Max: 5 hours for Pro/Enterprise
+ * - runtime: Node.js runtime version ('node22', 'node20', 'node18'). Default: 'node22'
+ * - vcpus: Number of vCPUs to allocate (1-8). Default: 4
+ *
+ * Response body:
+ * - status: 'success' or 'error'
+ * - data: {
+ *     sandboxId: string,
+ *     output: string,
+ *     exitCode: number
+ *   }
  *
  * @param request - The request object
- * @returns A NextResponse with the created sandbox data or error
+ * @returns A NextResponse with the sandbox execution result or error
  */
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<Response> {
   return createSandboxPostHandler(request);
 }

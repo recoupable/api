@@ -1,29 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { createSandbox } from "@/lib/sandbox/createSandbox";
+import { validateSandboxBody } from "@/lib/sandbox/validateSandboxBody";
 
 /**
  * Handler for POST /api/sandbox.
  *
- * Creates a new ephemeral sandbox environment. Requires authentication via x-api-key header.
- * No request body is required.
+ * Creates a Vercel Sandbox with Claude's Agent SDK pre-installed and executes a script.
+ * Requires authentication via x-api-key header or Authorization Bearer token.
  *
  * @param request - The request object
- * @returns A NextResponse with sandbox data or error
+ * @returns A NextResponse with sandbox execution result or error
  */
 export async function createSandboxPostHandler(request: NextRequest): Promise<NextResponse> {
-  const accountIdOrError = await getApiKeyAccountId(request);
-  if (accountIdOrError instanceof NextResponse) {
-    return accountIdOrError;
+  const authResult = await validateAuthContext(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
   }
 
+  let body: unknown;
   try {
-    const sandbox = await createSandbox();
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { status: "error", error: "Invalid JSON body" },
+      { status: 400, headers: getCorsHeaders() },
+    );
+  }
 
-    return NextResponse.json(sandbox, { status: 200, headers: getCorsHeaders() });
+  const validated = validateSandboxBody(body);
+  if (validated instanceof NextResponse) {
+    return validated;
+  }
+
+  const { script, timeout, runtime, vcpus } = validated;
+
+  try {
+    const result = await createSandbox(script, { timeout, runtime, vcpus });
+
+    return NextResponse.json(
+      {
+        status: result.exitCode === 0 ? "success" : "error",
+        data: result,
+      },
+      {
+        status: result.exitCode === 0 ? 200 : 500,
+        headers: getCorsHeaders(),
+      },
+    );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to create sandbox";
-    return NextResponse.json({ error: message }, { status: 400, headers: getCorsHeaders() });
+    const message = error instanceof Error ? error.message : "Failed to execute sandbox script";
+    return NextResponse.json(
+      { status: "error", error: message },
+      { status: 500, headers: getCorsHeaders() },
+    );
   }
 }
