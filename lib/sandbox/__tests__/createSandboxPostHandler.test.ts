@@ -62,7 +62,7 @@ describe("createSandboxPostHandler", () => {
     expect(json.error).toBe("Invalid JSON body");
   });
 
-  it("returns 400 when script is missing", async () => {
+  it("returns 400 when prompt is missing", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
@@ -88,7 +88,7 @@ describe("createSandboxPostHandler", () => {
       createdAt: "2024-01-01T00:00:00.000Z",
     });
 
-    const request = createMockRequest({ script: "echo hello" });
+    const request = createMockRequest({ prompt: "tell me hello" });
     const response = await createSandboxPostHandler(request);
 
     expect(response.status).toBe(200);
@@ -106,7 +106,7 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(createSandbox).mockRejectedValue(new Error("Sandbox creation failed"));
 
-    const request = createMockRequest({ script: "echo hello" });
+    const request = createMockRequest({ prompt: "tell me hello" });
     const response = await createSandboxPostHandler(request);
 
     expect(response.status).toBe(400);

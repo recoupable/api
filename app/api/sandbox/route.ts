@@ -25,7 +25,7 @@ export async function OPTIONS() {
  * Authentication: x-api-key header or Authorization Bearer token required.
  *
  * Request body:
- * - script: The shell script to execute (required)
+ * - prompt: The prompt to send to Claude (required)
  *
  * Response body:
  * - sandboxId: string

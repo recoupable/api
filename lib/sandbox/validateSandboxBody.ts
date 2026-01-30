@@ -3,7 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { z } from "zod";
 
 export const sandboxBodySchema = z.object({
-  script: z.string({ message: "script is required" }).min(1, "script cannot be empty"),
+  prompt: z.string({ message: "prompt is required" }).min(1, "prompt cannot be empty"),
 });
 
 export type SandboxBody = z.infer<typeof sandboxBodySchema>;

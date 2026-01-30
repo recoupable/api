@@ -35,7 +35,7 @@ export async function createSandboxPostHandler(request: NextRequest): Promise<Ne
   }
 
   try {
-    const result = await createSandbox(validated.script);
+    const result = await createSandbox(validated.prompt);
 
     return NextResponse.json(result, { status: 200, headers: getCorsHeaders() });
   } catch (error) {

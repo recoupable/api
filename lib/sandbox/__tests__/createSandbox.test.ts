@@ -68,14 +68,14 @@ describe("createSandbox", () => {
     );
   });
 
-  it("writes script to sandbox filesystem", async () => {
-    const script = "echo hello";
-    await createSandbox(script);
+  it("writes script to sandbox filesystem with claude command", async () => {
+    const prompt = "tell me hello";
+    await createSandbox(prompt);
 
     expect(mockSandbox.writeFiles).toHaveBeenCalledWith([
       {
         path: "/vercel/sandbox/ralph-once.sh",
-        content: Buffer.from(script),
+        content: Buffer.from(`claude --permission-mode acceptEdits --model opus '${prompt}'`),
       },
     ]);
   });

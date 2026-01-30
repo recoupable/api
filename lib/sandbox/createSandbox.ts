@@ -9,13 +9,13 @@ export interface SandboxCreatedResponse {
 }
 
 /**
- * Creates a Vercel Sandbox, installs Claude Code CLI and Anthropic SDK, then executes a shell script.
+ * Creates a Vercel Sandbox, installs Claude Code CLI and Anthropic SDK, then executes a prompt.
  *
- * @param script - The shell script to execute
+ * @param prompt - The prompt to send to Claude
  * @returns The sandbox creation response
  * @throws Error if sandbox creation or dependency installation fails
  */
-export async function createSandbox(script: string): Promise<SandboxCreatedResponse> {
+export async function createSandbox(prompt: string): Promise<SandboxCreatedResponse> {
   const sandbox = await Sandbox.create({
     resources: { vcpus: 4 },
     timeout: ms("10m"),
@@ -80,7 +80,8 @@ console.log('SDK is ready to use');
     }
     console.log(`✓ Anthropic SDK is properly connected`);
 
-    console.log(`Executing script...`);
+    console.log(`Executing prompt...`);
+    const script = `claude --permission-mode acceptEdits --model opus '${prompt}'`;
     await sandbox.writeFiles([
       {
         path: "/vercel/sandbox/ralph-once.sh",
