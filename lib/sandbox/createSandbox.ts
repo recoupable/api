@@ -8,9 +8,9 @@ export interface SandboxResult {
 }
 
 /**
- * Creates a Vercel Sandbox, installs Claude Code CLI and Anthropic SDK, then executes a script.
+ * Creates a Vercel Sandbox, installs Claude Code CLI and Anthropic SDK, then executes a shell script.
  *
- * @param script - The JavaScript/TypeScript script to execute
+ * @param script - The shell script to execute
  * @returns The sandbox execution result
  * @throws Error if sandbox creation or dependency installation fails
  */
@@ -82,14 +82,14 @@ console.log('SDK is ready to use');
     console.log(`Executing script...`);
     await sandbox.writeFiles([
       {
-        path: "/vercel/sandbox/script.mjs",
+        path: "/vercel/sandbox/ralph-once.sh",
         content: Buffer.from(script),
       },
     ]);
 
     const runScript = await sandbox.runCommand({
-      cmd: "node",
-      args: ["script.mjs"],
+      cmd: "sh",
+      args: ["ralph-once.sh"],
       stdout: process.stdout,
       stderr: process.stderr,
       env: {

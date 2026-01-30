@@ -25,7 +25,7 @@ export async function OPTIONS() {
  * Authentication: x-api-key header or Authorization Bearer token required.
  *
  * Request body:
- * - script: The JavaScript/TypeScript script to execute (required)
+ * - script: The shell script to execute (required)
  *
  * Response body:
  * - status: 'success' or 'error'

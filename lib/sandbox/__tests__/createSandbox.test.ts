@@ -66,12 +66,12 @@ describe("createSandbox", () => {
   });
 
   it("writes script to sandbox filesystem", async () => {
-    const script = "console.log('hello')";
+    const script = "echo hello";
     await createSandbox(script);
 
     expect(mockSandbox.writeFiles).toHaveBeenCalledWith([
       {
-        path: "/vercel/sandbox/script.mjs",
+        path: "/vercel/sandbox/ralph-once.sh",
         content: Buffer.from(script),
       },
     ]);
@@ -79,12 +79,12 @@ describe("createSandbox", () => {
 
   it("executes script with ANTHROPIC_API_KEY env var", async () => {
     process.env.ANTHROPIC_API_KEY = "test-key";
-    await createSandbox("console.log('test')");
+    await createSandbox("echo hello");
 
     expect(mockSandbox.runCommand).toHaveBeenCalledWith(
       expect.objectContaining({
-        cmd: "node",
-        args: ["script.mjs"],
+        cmd: "sh",
+        args: ["ralph-once.sh"],
         env: { ANTHROPIC_API_KEY: "test-key" },
       }),
     );
