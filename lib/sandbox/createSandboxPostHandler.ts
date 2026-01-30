@@ -34,10 +34,8 @@ export async function createSandboxPostHandler(request: NextRequest): Promise<Ne
     return validated;
   }
 
-  const { script, timeout, runtime, vcpus } = validated;
-
   try {
-    const result = await createSandbox(script, { timeout, runtime, vcpus });
+    const result = await createSandbox(validated.script);
 
     return NextResponse.json(
       {

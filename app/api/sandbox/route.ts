@@ -26,9 +26,6 @@ export async function OPTIONS() {
  *
  * Request body:
  * - script: The JavaScript/TypeScript script to execute (required)
- * - timeout: Timeout in milliseconds. Default: 300000 (5 minutes). Max: 5 hours for Pro/Enterprise
- * - runtime: Node.js runtime version ('node22', 'node20', 'node18'). Default: 'node22'
- * - vcpus: Number of vCPUs to allocate (1-8). Default: 4
  *
  * Response body:
  * - status: 'success' or 'error'

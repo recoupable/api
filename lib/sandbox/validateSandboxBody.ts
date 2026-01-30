@@ -4,27 +4,6 @@ import { z } from "zod";
 
 export const sandboxBodySchema = z.object({
   script: z.string({ message: "script is required" }).min(1, "script cannot be empty"),
-  timeout: z
-    .number()
-    .int()
-    .min(1000)
-    .max(5 * 60 * 60 * 1000)
-    .optional()
-    .default(5 * 60 * 1000)
-    .describe("Timeout in milliseconds. Default: 5 minutes. Max: 5 hours for Pro/Enterprise."),
-  runtime: z
-    .enum(["node22", "node20", "node18"])
-    .optional()
-    .default("node22")
-    .describe("Node.js runtime version"),
-  vcpus: z
-    .number()
-    .int()
-    .min(1)
-    .max(8)
-    .optional()
-    .default(4)
-    .describe("Number of vCPUs to allocate (1-8)"),
 });
 
 export type SandboxBody = z.infer<typeof sandboxBodySchema>;

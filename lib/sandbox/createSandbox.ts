@@ -1,12 +1,6 @@
 import { Writable } from "stream";
 import { Sandbox } from "@vercel/sandbox";
 
-export interface SandboxConfig {
-  timeout?: number;
-  runtime?: "node22" | "node20" | "node18";
-  vcpus?: number;
-}
-
 export interface SandboxResult {
   sandboxId: string;
   output: string;
@@ -32,20 +26,14 @@ function createCollectorStream(chunks: string[]): Writable {
  * Creates a Vercel Sandbox, installs Claude's Agent SDK, and executes a script.
  *
  * @param script - The JavaScript/TypeScript script to execute
- * @param config - Optional sandbox configuration
  * @returns The sandbox execution result
  * @throws Error if sandbox creation or script execution fails
  */
-export async function createSandbox(
-  script: string,
-  config: SandboxConfig = {},
-): Promise<SandboxResult> {
-  const { timeout = 5 * 60 * 1000, runtime = "node22", vcpus = 4 } = config;
-
+export async function createSandbox(script: string): Promise<SandboxResult> {
   const sandbox = await Sandbox.create({
-    resources: { vcpus },
-    timeout,
-    runtime,
+    resources: { vcpus: 4 },
+    timeout: 5 * 60 * 1000,
+    runtime: "node22",
   });
 
   try {
