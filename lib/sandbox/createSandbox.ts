@@ -36,8 +36,10 @@ export async function createSandbox(script: string): Promise<SandboxResult> {
     timeout: ms("10m"),
     runtime: "node22",
   });
+  console.log(`Sandbox created: ${sandbox.sandboxId}`);
 
   try {
+    console.log(`Installing Claude Code CLI...`);
     const cliOutput: string[] = [];
     const installCLI = await sandbox.runCommand({
       cmd: "npm",
@@ -48,9 +50,12 @@ export async function createSandbox(script: string): Promise<SandboxResult> {
     });
 
     if (installCLI.exitCode !== 0) {
+      console.log("Installing Claude Code CLI failed");
       throw new Error(`Failed to install Claude Code CLI: ${cliOutput.join("")}`);
     }
+    console.log(`✓ Claude Code CLI installed`);
 
+    console.log(`Installing Anthropic SDK...`);
     const sdkOutput: string[] = [];
     const installSDK = await sandbox.runCommand({
       cmd: "npm",
@@ -60,9 +65,12 @@ export async function createSandbox(script: string): Promise<SandboxResult> {
     });
 
     if (installSDK.exitCode !== 0) {
+      console.log("Installing Anthropic SDK failed");
       throw new Error(`Failed to install Anthropic SDK: ${sdkOutput.join("")}`);
     }
+    console.log(`✓ Anthropic SDK installed`);
 
+    console.log(`Executing script...`);
     await sandbox.writeFiles([
       {
         path: "/vercel/sandbox/script.mjs",
@@ -81,6 +89,7 @@ export async function createSandbox(script: string): Promise<SandboxResult> {
       },
     });
 
+    console.log(`✓ Script executed`);
     return {
       sandboxId: sandbox.sandboxId,
       output: scriptOutput.join(""),
@@ -88,5 +97,6 @@ export async function createSandbox(script: string): Promise<SandboxResult> {
     };
   } finally {
     await sandbox.stop();
+    console.log(`Sandbox stopped`);
   }
 }

@@ -25,6 +25,7 @@ vi.mock("ms", () => ({
 
 describe("createSandbox", () => {
   beforeEach(() => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
     vi.clearAllMocks();
     mockSandbox.runCommand.mockResolvedValue({ exitCode: 0 });
     mockSandbox.writeFiles.mockResolvedValue(undefined);
