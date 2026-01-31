@@ -1,12 +1,26 @@
 import { facilitator } from "@coinbase/x402";
 import { paymentMiddleware } from "x402-next";
-import { IMAGE_GENERATE_PRICE, SMART_ACCOUNT_ADDRESS } from "./lib/const";
+import { CHAT_PRICE, IMAGE_GENERATE_PRICE, SMART_ACCOUNT_ADDRESS } from "./lib/const";
 
-const inputSchema = {
+const imageInputSchema = {
   queryParams: {
     prompt: "Text prompt describing the image to generate",
     files:
       "Optional pipe-separated list of files. Format: url1:mediaType1|url2:mediaType2. Example: https://example.com/image.png:image/png|https://example.com/file.jpg:image/jpeg",
+  },
+};
+
+const chatInputSchema = {
+  bodyType: "json" as const,
+  bodyFields: {
+    messages:
+      "Array of chat messages in the format { role: 'user' | 'assistant', content: string }",
+    prompt: "Alternative to messages - a simple string prompt (mutually exclusive with messages)",
+    roomId: "Optional UUID of the chat room for conversation continuity",
+    artistId: "Optional UUID of the artist account for context",
+    accountId: "The account ID of the user making the request",
+    model: "Optional model ID override",
+    excludeTools: "Optional array of tool names to exclude",
   },
 };
 
@@ -52,6 +66,18 @@ const imageGenerateOutputSchema = {
   },
 };
 
+// Chat endpoint output schema (streaming response)
+const chatOutputSchema = {
+  type: "object" as const,
+  description: "Streaming chat response with AI-generated messages",
+  properties: {
+    stream: {
+      type: "string" as const,
+      description: "Server-sent events stream containing chat messages and tool results",
+    },
+  },
+};
+
 export const middleware = paymentMiddleware(
   SMART_ACCOUNT_ADDRESS,
   {
@@ -59,10 +85,20 @@ export const middleware = paymentMiddleware(
       price: `$${IMAGE_GENERATE_PRICE}`,
       network: "base",
       config: {
-        discoverable: true, // make endpoint discoverable
+        discoverable: true,
         description: "Generate an image from a text prompt using AI",
         outputSchema: imageGenerateOutputSchema,
-        inputSchema,
+        inputSchema: imageInputSchema,
+      },
+    },
+    "POST /api/x402/chat": {
+      price: `$${CHAT_PRICE}`,
+      network: "base",
+      config: {
+        discoverable: true,
+        description: "Chat with an AI agent that can use tools to help with tasks",
+        outputSchema: chatOutputSchema,
+        inputSchema: chatInputSchema,
       },
     },
   },
@@ -75,7 +111,8 @@ export const middleware = paymentMiddleware(
 );
 
 // Configure which paths the middleware should run on
+// Only run x402 middleware on x402-protected routes to avoid interfering with CORS preflight
 export const config = {
-  matcher: ["/protected/:path*", "/api/:path*"],
+  matcher: ["/protected/:path*", "/api/x402/:path*"],
   runtime: "nodejs",
 };

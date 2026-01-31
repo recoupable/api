@@ -18,7 +18,7 @@ export async function fetchWithPayment(url: string, accountId: string): Promise<
   const account = await getAccount(accountId);
   const creditsToDeduct = getCreditsForPrice(IMAGE_GENERATE_PRICE);
   await deductCredits({ accountId, creditsToDeduct });
-  await loadAccount(account.address);
+  await loadAccount(account.address, IMAGE_GENERATE_PRICE);
   const fetchWithPaymentWrapper = wrapFetchWithPayment(
     fetch,
     toAccount(account),
