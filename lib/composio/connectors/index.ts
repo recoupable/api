@@ -16,5 +16,5 @@ export {
   ALLOWED_ARTIST_CONNECTORS,
   isAllowedArtistConnector,
   type AllowedArtistConnector,
-} from "./allowedArtistConnectors";
+} from "./isAllowedArtistConnector";
 export { verifyConnectorOwnership } from "./verifyConnectorOwnership";

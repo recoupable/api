@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { z } from "zod";
+import { ALLOWED_ARTIST_CONNECTORS } from "./isAllowedArtistConnector";
 
 export const authorizeConnectorBodySchema = z
   .object({
@@ -23,6 +24,19 @@ export const authorizeConnectorBodySchema = z
       message: "entity_id is required when entity_type is 'artist'",
       path: ["entity_id"],
     },
+  )
+  .refine(
+    (data) => {
+      // connector must be in ALLOWED_ARTIST_CONNECTORS when entity_type is "artist"
+      if (data.entity_type === "artist") {
+        return (ALLOWED_ARTIST_CONNECTORS as readonly string[]).includes(data.connector);
+      }
+      return true;
+    },
+    {
+      message: `Connector is not allowed for artist connections. Allowed: ${ALLOWED_ARTIST_CONNECTORS.join(", ")}`,
+      path: ["connector"],
+    },
   );
 
 export type AuthorizeConnectorBody = z.infer<typeof authorizeConnectorBodySchema>;
@@ -33,6 +47,11 @@ export type AuthorizeConnectorBody = z.infer<typeof authorizeConnectorBodySchema
  * Supports both user and artist connectors:
  * - User: { connector: "googlesheets" }
  * - Artist: { connector: "tiktok", entity_type: "artist", entity_id: "artist-uuid" }
+ *
+ * Validation includes:
+ * - connector is required and non-empty
+ * - entity_id is required when entity_type is "artist"
+ * - connector must be allowed for artists when entity_type is "artist"
  *
  * @param body - The request body
  * @returns A NextResponse with an error if validation fails, or the validated body if validation passes.
