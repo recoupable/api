@@ -1,9 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { NextResponse } from "next/server";
-import {
-  validateCreateChatBody,
-  createChatBodySchema,
-} from "../validateCreateChatBody";
+import { validateCreateChatBody, createChatBodySchema } from "../validateCreateChatBody";
 
 describe("validateCreateChatBody", () => {
   describe("artistId validation", () => {
@@ -13,9 +10,7 @@ describe("validateCreateChatBody", () => {
       });
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).artistId).toBe(
-        "123e4567-e89b-12d3-a456-426614174000",
-      );
+      expect((result as any).artistId).toBe("123e4567-e89b-12d3-a456-426614174000");
     });
 
     it("rejects invalid UUID for artistId", () => {
@@ -40,9 +35,7 @@ describe("validateCreateChatBody", () => {
       });
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).chatId).toBe(
-        "123e4567-e89b-12d3-a456-426614174000",
-      );
+      expect((result as any).chatId).toBe("123e4567-e89b-12d3-a456-426614174000");
     });
 
     it("rejects invalid UUID for chatId", () => {
@@ -61,9 +54,7 @@ describe("validateCreateChatBody", () => {
       });
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe(
-        "123e4567-e89b-12d3-a456-426614174000",
-      );
+      expect((result as any).accountId).toBe("123e4567-e89b-12d3-a456-426614174000");
     });
 
     it("rejects invalid UUID for accountId", () => {
@@ -95,9 +86,7 @@ describe("validateCreateChatBody", () => {
       const result = createChatBodySchema.safeParse(validBody);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.accountId).toBe(
-          "123e4567-e89b-12d3-a456-426614174002",
-        );
+        expect(result.data.accountId).toBe("123e4567-e89b-12d3-a456-426614174002");
       }
     });
   });
@@ -110,9 +99,7 @@ describe("validateCreateChatBody", () => {
       });
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).firstMessage).toBe(
-        "What marketing strategies should I use?",
-      );
+      expect((result as any).firstMessage).toBe("What marketing strategies should I use?");
     });
 
     it("accepts missing firstMessage (optional)", () => {

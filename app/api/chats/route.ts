@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createChatHandler } from "@/lib/chats/createChatHandler";
+import { getChatsHandler } from "@/lib/chats/getChatsHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -13,6 +14,24 @@ export async function OPTIONS() {
     status: 200,
     headers: getCorsHeaders(),
   });
+}
+
+/**
+ * GET /api/chats
+ *
+ * Retrieves chat rooms for an account.
+ *
+ * Authentication: x-api-key header or Authorization Bearer token required.
+ *
+ * Query parameters:
+ * - account_id (required): UUID of the account whose chats to retrieve
+ * - artist_account_id (optional): Filter to chats for a specific artist (UUID)
+ *
+ * @param request - The request object containing query parameters
+ * @returns A NextResponse with chats data or an error
+ */
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  return getChatsHandler(request);
 }
 
 /**

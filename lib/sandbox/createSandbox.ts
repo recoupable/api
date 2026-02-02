@@ -1,29 +1,40 @@
+import ms from "ms";
 import { Sandbox } from "@vercel/sandbox";
+import { installClaudeCode } from "./installClaudeCode";
+import { runClaudeCode } from "./runClaudeCode";
 
-/**
- * Response from creating a sandbox.
- * Uses Sandbox class types from @vercel/sandbox SDK.
- */
 export interface SandboxCreatedResponse {
   sandboxId: Sandbox["sandboxId"];
-  status: Sandbox["status"];
+  sandboxStatus: Sandbox["status"];
   timeout: Sandbox["timeout"];
   createdAt: string;
 }
 
 /**
- * Creates a new ephemeral sandbox environment using Vercel Sandbox SDK.
+ * Creates a Vercel Sandbox, installs Claude Code CLI and Anthropic SDK, then executes a prompt.
  *
- * @returns The created sandbox details
- * @throws Error if sandbox creation fails
+ * @param prompt - The prompt to send to Claude
+ * @returns The sandbox creation response
+ * @throws Error if sandbox creation or dependency installation fails
  */
-export async function createSandbox(): Promise<SandboxCreatedResponse> {
-  const sandbox = await Sandbox.create();
+export async function createSandbox(prompt: string): Promise<SandboxCreatedResponse> {
+  const sandbox = await Sandbox.create({
+    resources: { vcpus: 4 },
+    timeout: ms("10m"),
+    runtime: "node22",
+  });
 
-  return {
-    sandboxId: sandbox.sandboxId,
-    status: sandbox.status,
-    timeout: sandbox.timeout,
-    createdAt: sandbox.createdAt.toISOString(),
-  };
+  try {
+    await installClaudeCode(sandbox);
+    await runClaudeCode(sandbox, prompt);
+
+    return {
+      sandboxId: sandbox.sandboxId,
+      sandboxStatus: sandbox.status,
+      timeout: sandbox.timeout,
+      createdAt: sandbox.createdAt.toISOString(),
+    };
+  } finally {
+    await sandbox.stop();
+  }
 }

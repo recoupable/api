@@ -12,6 +12,18 @@ const nextConfig: NextConfig = {
       '@ai-sdk/google',
     ],
   },
+  async headers() {
+    return [
+      {
+        source: "/api/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET, POST, PUT, DELETE, OPTIONS, PATCH" },
+          { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization, X-Requested-With, x-api-key" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
