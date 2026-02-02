@@ -8,7 +8,7 @@ import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAcc
 /**
  * Handler for POST /api/sandboxes.
  *
- * Creates a Vercel Sandbox with Claude's Agent SDK pre-installed and executes a prompt.
+ * Creates a Vercel Sandbox and returns its info.
  * Requires authentication via x-api-key header or Authorization Bearer token.
  * Saves sandbox info to the account_sandboxes table.
  *
@@ -22,7 +22,7 @@ export async function createSandboxPostHandler(request: NextRequest): Promise<Ne
   }
 
   try {
-    const result = await createSandbox(validated.prompt);
+    const result = await createSandbox();
 
     await insertAccountSandbox({
       account_id: validated.accountId,

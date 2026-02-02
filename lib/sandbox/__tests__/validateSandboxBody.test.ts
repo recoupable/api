@@ -3,14 +3,9 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { validateSandboxBody } from "../validateSandboxBody";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { safeParseJson } from "@/lib/networking/safeParseJson";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
-}));
-
-vi.mock("@/lib/networking/safeParseJson", () => ({
-  safeParseJson: vi.fn(),
 }));
 
 /**
@@ -41,13 +36,12 @@ describe("validateSandboxBody", () => {
     expect((result as NextResponse).status).toBe(401);
   });
 
-  it("returns validated body with auth context when prompt is provided", async () => {
+  it("returns auth context when authentication succeeds", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "acc_123",
       orgId: "org_456",
       authToken: "token",
     });
-    vi.mocked(safeParseJson).mockResolvedValue({ prompt: "tell me hello" });
 
     const request = createMockRequest();
     const result = await validateSandboxBody(request);
@@ -56,37 +50,23 @@ describe("validateSandboxBody", () => {
       accountId: "acc_123",
       orgId: "org_456",
       authToken: "token",
-      prompt: "tell me hello",
     });
   });
 
-  it("returns error response when prompt is missing", async () => {
+  it("returns auth context with null orgId", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
       authToken: "token",
     });
-    vi.mocked(safeParseJson).mockResolvedValue({});
 
     const request = createMockRequest();
     const result = await validateSandboxBody(request);
 
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(400);
-  });
-
-  it("returns error response when prompt is empty string", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
+    expect(result).toEqual({
       accountId: "acc_123",
       orgId: null,
       authToken: "token",
     });
-    vi.mocked(safeParseJson).mockResolvedValue({ prompt: "" });
-
-    const request = createMockRequest();
-    const result = await validateSandboxBody(request);
-
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(400);
   });
 });
