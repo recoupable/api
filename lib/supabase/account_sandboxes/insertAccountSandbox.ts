@@ -1,5 +1,10 @@
+import type { PostgrestError } from "@supabase/supabase-js";
 import supabase from "../serverClient";
-import type { Database } from "@/types/database.types";
+import type { Tables, TablesInsert } from "@/types/database.types";
+
+type InsertAccountSandboxResult =
+  | { data: Tables<"account_sandboxes">; error: null }
+  | { data: null; error: PostgrestError };
 
 /**
  * Inserts an account sandbox record into the database.
@@ -12,7 +17,7 @@ import type { Database } from "@/types/database.types";
 export async function insertAccountSandbox({
   account_id,
   sandbox_id,
-}: Database["public"]["Tables"]["account_sandboxes"]["Insert"]) {
+}: TablesInsert<"account_sandboxes">): Promise<InsertAccountSandboxResult> {
   const { data, error } = await supabase
     .from("account_sandboxes")
     .insert({
