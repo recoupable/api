@@ -3,12 +3,14 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createSandbox } from "@/lib/sandbox/createSandbox";
 import { validateSandboxBody } from "@/lib/sandbox/validateSandboxBody";
+import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 
 /**
  * Handler for POST /api/sandboxes.
  *
  * Creates a Vercel Sandbox with Claude's Agent SDK pre-installed and executes a prompt.
  * Requires authentication via x-api-key header or Authorization Bearer token.
+ * Saves sandbox info to the account_sandboxes table.
  *
  * @param request - The request object
  * @returns A NextResponse with sandbox creation result or error
@@ -21,6 +23,11 @@ export async function createSandboxPostHandler(request: NextRequest): Promise<Ne
 
   try {
     const result = await createSandbox(validated.prompt);
+
+    await insertAccountSandbox({
+      account_id: validated.accountId,
+      sandbox_id: result.sandboxId,
+    });
 
     return NextResponse.json(
       { status: "success", sandboxes: [result] },

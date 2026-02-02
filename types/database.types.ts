@@ -277,6 +277,35 @@ export type Database = {
           },
         ]
       }
+      account_sandboxes: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          sandbox_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          sandbox_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          sandbox_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_sandboxes_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       account_socials: {
         Row: {
           account_id: string | null
