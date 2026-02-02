@@ -27,15 +27,15 @@ export async function getSandboxesHandler(request: NextRequest): Promise<NextRes
   // Get sandbox records from database
   const accountSandboxes = await selectAccountSandboxes(validated);
 
-  // Fetch live status for each sandbox from Vercel API
-  const sandboxes: SandboxCreatedResponse[] = [];
+  // Fetch live status for each sandbox from Vercel API in parallel
+  const statusResults = await Promise.all(
+    accountSandboxes.map(record => getSandboxStatus(record.sandbox_id)),
+  );
 
-  for (const record of accountSandboxes) {
-    const status = await getSandboxStatus(record.sandbox_id);
-    if (status) {
-      sandboxes.push(status);
-    }
-  }
+  // Filter out null results (sandboxes that no longer exist)
+  const sandboxes = statusResults.filter(
+    (status): status is SandboxCreatedResponse => status !== null,
+  );
 
   return NextResponse.json(
     {

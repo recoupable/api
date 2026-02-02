@@ -178,4 +178,64 @@ describe("getSandboxesHandler", () => {
     expect(getSandboxStatus).toHaveBeenCalledWith("sbx_1");
     expect(getSandboxStatus).toHaveBeenCalledWith("sbx_2");
   });
+
+  it("fetches sandbox statuses in parallel, not sequentially", async () => {
+    const callOrder: string[] = [];
+
+    vi.mocked(validateGetSandboxesRequest).mockResolvedValue({
+      accountIds: ["acc_123"],
+    });
+    vi.mocked(selectAccountSandboxes).mockResolvedValue([
+      {
+        id: "record_1",
+        account_id: "acc_123",
+        sandbox_id: "sbx_1",
+        created_at: "2024-01-01T00:00:00.000Z",
+      },
+      {
+        id: "record_2",
+        account_id: "acc_123",
+        sandbox_id: "sbx_2",
+        created_at: "2024-01-01T00:00:00.000Z",
+      },
+      {
+        id: "record_3",
+        account_id: "acc_123",
+        sandbox_id: "sbx_3",
+        created_at: "2024-01-01T00:00:00.000Z",
+      },
+    ]);
+
+    // Mock that tracks when calls start and complete
+    vi.mocked(getSandboxStatus).mockImplementation(async (sandboxId: string) => {
+      callOrder.push(`start:${sandboxId}`);
+      // Simulate async delay
+      await new Promise(resolve => setTimeout(resolve, 10));
+      callOrder.push(`end:${sandboxId}`);
+      return {
+        sandboxId,
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      };
+    });
+
+    const request = createMockRequest();
+    await getSandboxesHandler(request);
+
+    // In parallel execution, all starts should happen before any ends
+    // Pattern should be: start:1, start:2, start:3, end:1, end:2, end:3
+    // In sequential execution: start:1, end:1, start:2, end:2, start:3, end:3
+    const startIndices = callOrder
+      .map((item, index) => (item.startsWith("start:") ? index : -1))
+      .filter(i => i !== -1);
+    const endIndices = callOrder
+      .map((item, index) => (item.startsWith("end:") ? index : -1))
+      .filter(i => i !== -1);
+
+    // All starts should come before all ends (parallel execution)
+    const maxStartIndex = Math.max(...startIndices);
+    const minEndIndex = Math.min(...endIndices);
+    expect(maxStartIndex).toBeLessThan(minEndIndex);
+  });
 });
