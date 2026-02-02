@@ -4,11 +4,12 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createSandbox } from "@/lib/sandbox/createSandbox";
 import { validateSandboxBody } from "@/lib/sandbox/validateSandboxBody";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
+import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
 
 /**
  * Handler for POST /api/sandboxes.
  *
- * Creates a Vercel Sandbox and returns its info.
+ * Creates a Vercel Sandbox and triggers the run-sandbox-command task to execute the prompt.
  * Requires authentication via x-api-key header or Authorization Bearer token.
  * Saves sandbox info to the account_sandboxes table.
  *
@@ -27,6 +28,11 @@ export async function createSandboxPostHandler(request: NextRequest): Promise<Ne
     await insertAccountSandbox({
       account_id: validated.accountId,
       sandbox_id: result.sandboxId,
+    });
+
+    await triggerRunSandboxCommand({
+      prompt: validated.prompt,
+      sandboxId: result.sandboxId,
     });
 
     return NextResponse.json(
