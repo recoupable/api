@@ -34,7 +34,13 @@ export async function createChatHandler(request: NextRequest): Promise<NextRespo
       return validated;
     }
 
-    const { artistId, chatId, accountId: bodyAccountId, firstMessage } = validated;
+    const {
+      artistId,
+      chatId,
+      accountId: bodyAccountId,
+      firstMessage,
+      topic: providedTopic,
+    } = validated;
 
     // Handle accountId override for org API keys
     if (bodyAccountId) {
@@ -50,9 +56,9 @@ export async function createChatHandler(request: NextRequest): Promise<NextRespo
 
     const roomId = chatId || generateUUID();
 
-    // Generate title from firstMessage if provided
-    let topic: string | null = null;
-    if (firstMessage) {
+    // Use provided topic, or generate from firstMessage if provided
+    let topic: string | null = providedTopic || null;
+    if (!topic && firstMessage) {
       try {
         topic = await generateChatTitle(firstMessage);
       } catch {
