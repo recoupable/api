@@ -8,24 +8,22 @@ interface AccountSnapshot {
 }
 
 /**
- * Selects the most recent snapshot for an account.
+ * Selects snapshots for an account, ordered by creation date (newest first).
  *
- * @param accountId - The account ID to get the snapshot for
- * @returns The snapshot record or null if not found
+ * @param accountId - The account ID to get snapshots for
+ * @returns Array of snapshot records, or empty array if none found
  */
-export async function selectAccountSnapshot(accountId: string): Promise<AccountSnapshot | null> {
+export async function selectAccountSnapshots(accountId: string): Promise<AccountSnapshot[]> {
   const { data, error } = await supabase
     .from("account_snapshots")
     .select("*")
     .eq("account_id", accountId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
+    .order("created_at", { ascending: false });
 
   if (error) {
-    // Table might not exist or no snapshot found - both are ok
-    return null;
+    // Table might not exist or query failed - return empty array
+    return [];
   }
 
-  return data;
+  return data ?? [];
 }

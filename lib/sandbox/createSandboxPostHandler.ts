@@ -5,7 +5,7 @@ import { createSandbox } from "@/lib/sandbox/createSandbox";
 import { validateSandboxBody } from "@/lib/sandbox/validateSandboxBody";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
-import { selectAccountSnapshot } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
+import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 
 /**
  * Handler for POST /api/sandboxes.
@@ -25,9 +25,9 @@ export async function createSandboxPostHandler(request: NextRequest): Promise<Ne
   }
 
   try {
-    // Get account's snapshot if available
-    const accountSnapshot = await selectAccountSnapshot(validated.accountId);
-    const snapshotId = accountSnapshot?.snapshot_id;
+    // Get account's most recent snapshot if available
+    const accountSnapshots = await selectAccountSnapshots(validated.accountId);
+    const snapshotId = accountSnapshots[0]?.snapshot_id;
 
     // Create sandbox (from snapshot if valid, otherwise fresh)
     const result = await createSandbox(

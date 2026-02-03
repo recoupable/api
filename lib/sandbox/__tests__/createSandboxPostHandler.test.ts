@@ -7,7 +7,7 @@ import { validateSandboxBody } from "@/lib/sandbox/validateSandboxBody";
 import { createSandbox } from "@/lib/sandbox/createSandbox";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
-import { selectAccountSnapshot } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
+import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 
 vi.mock("@/lib/sandbox/validateSandboxBody", () => ({
   validateSandboxBody: vi.fn(),
@@ -26,7 +26,7 @@ vi.mock("@/lib/trigger/triggerRunSandboxCommand", () => ({
 }));
 
 vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
-  selectAccountSnapshot: vi.fn(),
+  selectAccountSnapshots: vi.fn(),
 }));
 
 /**
@@ -63,7 +63,7 @@ describe("createSandboxPostHandler", () => {
       authToken: "token",
       command: "ls",
     });
-    vi.mocked(selectAccountSnapshot).mockResolvedValue(null);
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
       sandboxId: "sbx_123",
       sandboxStatus: "running",
@@ -109,12 +109,14 @@ describe("createSandboxPostHandler", () => {
       authToken: "token",
       command: "ls",
     });
-    vi.mocked(selectAccountSnapshot).mockResolvedValue({
-      id: "snap_record_123",
-      account_id: "acc_123",
-      snapshot_id: "snap_xyz",
-      created_at: "2024-01-01T00:00:00.000Z",
-    });
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([
+      {
+        id: "snap_record_123",
+        account_id: "acc_123",
+        snapshot_id: "snap_xyz",
+        created_at: "2024-01-01T00:00:00.000Z",
+      },
+    ]);
     vi.mocked(createSandbox).mockResolvedValue({
       sandboxId: "sbx_456",
       sandboxStatus: "running",
@@ -147,7 +149,7 @@ describe("createSandboxPostHandler", () => {
       authToken: "token",
       command: "ls",
     });
-    vi.mocked(selectAccountSnapshot).mockResolvedValue(null);
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
       sandboxId: "sbx_456",
       sandboxStatus: "running",
@@ -180,7 +182,7 @@ describe("createSandboxPostHandler", () => {
       authToken: "token",
       command: "ls",
     });
-    vi.mocked(selectAccountSnapshot).mockResolvedValue(null);
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
       sandboxId: "sbx_456",
       sandboxStatus: "running",
@@ -218,7 +220,7 @@ describe("createSandboxPostHandler", () => {
       args: ["-la"],
       cwd: "/home",
     });
-    vi.mocked(selectAccountSnapshot).mockResolvedValue(null);
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
       sandboxId: "sbx_789",
       sandboxStatus: "running",
@@ -257,7 +259,7 @@ describe("createSandboxPostHandler", () => {
       authToken: "token",
       command: "ls",
     });
-    vi.mocked(selectAccountSnapshot).mockResolvedValue(null);
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockRejectedValue(new Error("Sandbox creation failed"));
 
     const request = createMockRequest();
@@ -278,7 +280,7 @@ describe("createSandboxPostHandler", () => {
       authToken: "token",
       command: "ls",
     });
-    vi.mocked(selectAccountSnapshot).mockResolvedValue(null);
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
       sandboxId: "sbx_123",
       sandboxStatus: "running",
@@ -305,7 +307,7 @@ describe("createSandboxPostHandler", () => {
       authToken: "token",
       command: "ls",
     });
-    vi.mocked(selectAccountSnapshot).mockResolvedValue(null);
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
       sandboxId: "sbx_123",
       sandboxStatus: "running",
