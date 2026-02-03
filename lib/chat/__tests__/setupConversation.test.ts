@@ -128,6 +128,36 @@ describe("setupConversation", () => {
         }),
       );
     });
+
+    it("passes topic to createNewRoom when provided", async () => {
+      const promptMessage = createUIMessage("Hello");
+
+      await setupConversation({
+        accountId: "account-123",
+        promptMessage,
+        topic: "Pulse Feb 2",
+      });
+
+      expect(mockCreateNewRoom).toHaveBeenCalledWith(
+        expect.objectContaining({
+          topic: "Pulse Feb 2",
+        }),
+      );
+    });
+
+    it("does NOT pass topic to createNewRoom when room already exists", async () => {
+      mockSelectRoom.mockResolvedValue({ id: "existing-room-id" } as never);
+      const promptMessage = createUIMessage("Hello");
+
+      await setupConversation({
+        accountId: "account-123",
+        roomId: "existing-room-id",
+        topic: "Should be ignored",
+        promptMessage,
+      });
+
+      expect(mockCreateNewRoom).not.toHaveBeenCalled();
+    });
   });
 
   describe("message persistence", () => {

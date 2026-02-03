@@ -442,6 +442,20 @@ describe("validateChatRequest", () => {
       expect(result).not.toBeInstanceOf(NextResponse);
       expect((result as any).excludeTools).toEqual(["tool1", "tool2"]);
     });
+
+    it("passes through topic", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+
+      const request = createMockRequest(
+        { prompt: "Hello", topic: "Pulse Feb 2" },
+        { "x-api-key": "test-key" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect((result as any).topic).toBe("Pulse Feb 2");
+    });
   });
 
   describe("chatRequestSchema", () => {
@@ -464,6 +478,14 @@ describe("validateChatRequest", () => {
         prompt: "test",
       });
       expect(result.success).toBe(false);
+    });
+
+    it("schema accepts optional topic string", () => {
+      const result = chatRequestSchema.safeParse({
+        prompt: "test",
+        topic: "Pulse Feb 2",
+      });
+      expect(result.success).toBe(true);
     });
   });
 
@@ -646,6 +668,27 @@ describe("validateChatRequest", () => {
       expect(mockSetupConversation).toHaveBeenCalledWith(
         expect.objectContaining({
           artistId: "artist-xyz",
+        }),
+      );
+    });
+
+    it("passes topic to setupConversation when provided", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockSetupConversation.mockResolvedValue({
+        roomId: "generated-uuid-topic",
+        memoryId: "memory-id",
+      });
+
+      const request = createMockRequest(
+        { prompt: "Hello", topic: "Pulse Feb 2" },
+        { "x-api-key": "test-key" },
+      );
+
+      await validateChatRequest(request as any);
+
+      expect(mockSetupConversation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          topic: "Pulse Feb 2",
         }),
       );
     });

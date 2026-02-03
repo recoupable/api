@@ -19,6 +19,7 @@ export const chatRequestSchema = z
     messages: z.array(z.any()).default([]),
     // Core routing / context fields
     roomId: z.string().optional(),
+    topic: z.string().optional(),
     accountId: z.string().optional(),
     artistId: z.string().optional(),
     organizationId: z.string().optional(),
@@ -188,6 +189,7 @@ export async function validateChatRequest(
   const { roomId: finalRoomId } = await setupConversation({
     accountId,
     roomId: validatedBody.roomId,
+    topic: validatedBody.topic,
     promptMessage: lastMessage,
     artistId: validatedBody.artistId,
     memoryId: lastMessage.id,

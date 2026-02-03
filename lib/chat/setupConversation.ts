@@ -8,6 +8,7 @@ import filterMessageContentForMemories from "@/lib/messages/filterMessageContent
 interface SetupConversationParams {
   accountId: string;
   roomId?: string;
+  topic?: string;
   promptMessage: UIMessage;
   artistId?: string;
   memoryId?: string;
@@ -28,6 +29,7 @@ interface SetupConversationResult {
  * @param root0 - The setup conversation parameters
  * @param root0.accountId - The account ID for the conversation
  * @param root0.roomId - Optional existing room ID. If not provided, a new room is created.
+ * @param root0.topic - Optional topic for the new room. Ignored if room already exists.
  * @param root0.promptMessage - The user's message in UIMessage format
  * @param root0.artistId - Optional artist ID for the room
  * @param root0.memoryId - Optional memory ID. If not provided, a UUID is generated.
@@ -38,6 +40,7 @@ interface SetupConversationResult {
 export async function setupConversation({
   accountId,
   roomId,
+  topic,
   promptMessage,
   artistId,
   memoryId,
@@ -60,6 +63,7 @@ export async function setupConversation({
     await createNewRoom({
       accountId,
       roomId: finalRoomId,
+      topic,
       artistId,
       lastMessage: promptMessage,
     });

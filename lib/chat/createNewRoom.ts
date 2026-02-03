@@ -7,6 +7,7 @@ import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmai
 interface CreateNewRoomParams {
   accountId: string;
   roomId: string;
+  topic?: string;
   artistId?: string;
   lastMessage: UIMessage;
 }
@@ -17,6 +18,7 @@ interface CreateNewRoomParams {
  * @param params - The parameters for creating a new room
  * @param params.accountId - The account ID
  * @param params.roomId - The room ID
+ * @param params.topic - Optional topic for the room. If not provided, one is generated from the message.
  * @param params.artistId - Optional artist ID
  * @param params.lastMessage - The last message from the conversation
  * @returns void
@@ -24,11 +26,12 @@ interface CreateNewRoomParams {
 export async function createNewRoom({
   accountId,
   roomId,
+  topic,
   artistId,
   lastMessage,
 }: CreateNewRoomParams): Promise<void> {
   const latestMessageText = lastMessage.parts.find(part => part.type === "text")?.text || "";
-  const conversationName = await generateChatTitle(latestMessageText);
+  const conversationName = topic || (await generateChatTitle(latestMessageText));
 
   let email = "";
   const accountEmails = await selectAccountEmails({ accountIds: accountId });
