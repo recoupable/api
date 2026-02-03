@@ -2,7 +2,6 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateUpdateChatBody } from "./validateUpdateChatBody";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
 import { updateRoom } from "@/lib/supabase/rooms/updateRoom";
@@ -15,9 +14,7 @@ import { buildGetChatsParams } from "./buildGetChatsParams";
  * @returns NextResponse with updated chat data or error
  */
 export async function updateChatHandler(request: NextRequest): Promise<NextResponse> {
-  const body = await safeParseJson(request);
-
-  const validated = validateUpdateChatBody(body);
+  const validated = await validateUpdateChatBody(request);
   if (validated instanceof NextResponse) {
     return validated;
   }

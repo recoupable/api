@@ -6,8 +6,8 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-vi.mock("@/lib/networking/safeParseJson", () => ({
-  safeParseJson: vi.fn(),
+vi.mock("@/lib/chats/validateUpdateChatBody", () => ({
+  validateUpdateChatBody: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
@@ -26,17 +26,18 @@ vi.mock("@/lib/chats/buildGetChatsParams", () => ({
   buildGetChatsParams: vi.fn(),
 }));
 
-import { safeParseJson } from "@/lib/networking/safeParseJson";
+import { validateUpdateChatBody } from "@/lib/chats/validateUpdateChatBody";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
 import { updateRoom } from "@/lib/supabase/rooms/updateRoom";
 import { buildGetChatsParams } from "@/lib/chats/buildGetChatsParams";
 
 describe("updateChatHandler", () => {
-  const mockRequest = (body: object) => {
+  const mockRequest = () => {
     return new NextRequest("http://localhost/api/chats", {
       method: "PATCH",
-      headers: { "x-api-key": "test-key" },
+      headers: { "x-api-key": "test-key", "Content-Type": "application/json" },
+      body: JSON.stringify({}),
     });
   };
 
@@ -50,7 +51,7 @@ describe("updateChatHandler", () => {
       const chatId = "123e4567-e89b-12d3-a456-426614174001";
       const newTopic = "My Updated Chat";
 
-      vi.mocked(safeParseJson).mockResolvedValue({
+      vi.mocked(validateUpdateChatBody).mockResolvedValue({
         chatId,
         topic: newTopic,
       });
@@ -82,7 +83,7 @@ describe("updateChatHandler", () => {
         updated_at: "2024-01-02T00:00:00Z",
       });
 
-      const request = mockRequest({ chatId, topic: newTopic });
+      const request = mockRequest();
       const response = await updateChatHandler(request);
 
       expect(response.status).toBe(200);
@@ -111,7 +112,7 @@ describe("updateChatHandler", () => {
       const chatId = "123e4567-e89b-12d3-a456-426614174004";
       const newTopic = "Org Chat Updated";
 
-      vi.mocked(safeParseJson).mockResolvedValue({
+      vi.mocked(validateUpdateChatBody).mockResolvedValue({
         chatId,
         topic: newTopic,
       });
@@ -143,7 +144,7 @@ describe("updateChatHandler", () => {
         updated_at: "2024-01-02T00:00:00Z",
       });
 
-      const request = mockRequest({ chatId, topic: newTopic });
+      const request = mockRequest();
       const response = await updateChatHandler(request);
 
       expect(response.status).toBe(200);
@@ -151,53 +152,26 @@ describe("updateChatHandler", () => {
   });
 
   describe("validation errors", () => {
-    it("returns 400 when chatId is not a valid UUID", async () => {
-      vi.mocked(safeParseJson).mockResolvedValue({
-        chatId: "not-a-uuid",
-        topic: "Valid Topic",
-      });
+    it("returns 400 when validation fails", async () => {
+      vi.mocked(validateUpdateChatBody).mockResolvedValue(
+        NextResponse.json(
+          { status: "error", error: "chatId must be a valid UUID" },
+          { status: 400 },
+        ),
+      );
 
-      const request = mockRequest({});
+      const request = mockRequest();
       const response = await updateChatHandler(request);
 
       expect(response.status).toBe(400);
       const body = await response.json();
       expect(body.status).toBe("error");
-      expect(body.error).toContain("UUID");
-    });
-
-    it("returns 400 when topic is too short", async () => {
-      vi.mocked(safeParseJson).mockResolvedValue({
-        chatId: "123e4567-e89b-12d3-a456-426614174000",
-        topic: "ab",
-      });
-
-      const request = mockRequest({});
-      const response = await updateChatHandler(request);
-
-      expect(response.status).toBe(400);
-      const body = await response.json();
-      expect(body.error).toContain("3 and 50");
-    });
-
-    it("returns 400 when topic is too long", async () => {
-      vi.mocked(safeParseJson).mockResolvedValue({
-        chatId: "123e4567-e89b-12d3-a456-426614174000",
-        topic: "a".repeat(51),
-      });
-
-      const request = mockRequest({});
-      const response = await updateChatHandler(request);
-
-      expect(response.status).toBe(400);
-      const body = await response.json();
-      expect(body.error).toContain("3 and 50");
     });
   });
 
   describe("authentication errors", () => {
     it("returns 401 when no auth provided", async () => {
-      vi.mocked(safeParseJson).mockResolvedValue({
+      vi.mocked(validateUpdateChatBody).mockResolvedValue({
         chatId: "123e4567-e89b-12d3-a456-426614174000",
         topic: "Valid Topic",
       });
@@ -209,7 +183,7 @@ describe("updateChatHandler", () => {
         ),
       );
 
-      const request = mockRequest({});
+      const request = mockRequest();
       const response = await updateChatHandler(request);
 
       expect(response.status).toBe(401);
@@ -218,7 +192,7 @@ describe("updateChatHandler", () => {
 
   describe("not found errors", () => {
     it("returns 404 when chat does not exist", async () => {
-      vi.mocked(safeParseJson).mockResolvedValue({
+      vi.mocked(validateUpdateChatBody).mockResolvedValue({
         chatId: "123e4567-e89b-12d3-a456-426614174000",
         topic: "Valid Topic",
       });
@@ -231,7 +205,7 @@ describe("updateChatHandler", () => {
 
       vi.mocked(selectRoom).mockResolvedValue(null);
 
-      const request = mockRequest({});
+      const request = mockRequest();
       const response = await updateChatHandler(request);
 
       expect(response.status).toBe(404);
@@ -246,7 +220,7 @@ describe("updateChatHandler", () => {
       const otherAccountId = "123e4567-e89b-12d3-a456-426614174006";
       const chatId = "123e4567-e89b-12d3-a456-426614174007";
 
-      vi.mocked(safeParseJson).mockResolvedValue({
+      vi.mocked(validateUpdateChatBody).mockResolvedValue({
         chatId,
         topic: "Valid Topic",
       });
@@ -270,7 +244,7 @@ describe("updateChatHandler", () => {
         error: null,
       });
 
-      const request = mockRequest({});
+      const request = mockRequest();
       const response = await updateChatHandler(request);
 
       expect(response.status).toBe(403);

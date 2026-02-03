@@ -1,3 +1,4 @@
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { z } from "zod";
@@ -17,11 +18,22 @@ export type UpdateChatBody = z.infer<typeof updateChatBodySchema>;
 
 /**
  * Validates request body for PATCH /api/chats.
+ * Parses JSON from the request and validates against the schema.
  *
- * @param body - The request body
+ * @param request - The NextRequest object
  * @returns A NextResponse with an error if validation fails, or the validated body if validation passes.
  */
-export function validateUpdateChatBody(body: unknown): NextResponse | UpdateChatBody {
+export async function validateUpdateChatBody(
+  request: NextRequest,
+): Promise<NextResponse | UpdateChatBody> {
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    body = {};
+  }
+
   const result = updateChatBodySchema.safeParse(body);
 
   if (!result.success) {
