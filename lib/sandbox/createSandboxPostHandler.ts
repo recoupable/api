@@ -5,7 +5,7 @@ import { createSandbox } from "@/lib/sandbox/createSandbox";
 import { validateSandboxBody } from "@/lib/sandbox/validateSandboxBody";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
-import { selectAccountSnapshot } from "@/lib/supabase/account_snapshots/selectAccountSnapshot";
+import { selectAccountSnapshot } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 
 /**
  * Handler for POST /api/sandboxes.

@@ -7,7 +7,7 @@ import { validateSandboxBody } from "@/lib/sandbox/validateSandboxBody";
 import { createSandbox } from "@/lib/sandbox/createSandbox";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
-import { selectAccountSnapshot } from "@/lib/supabase/account_snapshots/selectAccountSnapshot";
+import { selectAccountSnapshot } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 
 vi.mock("@/lib/sandbox/validateSandboxBody", () => ({
   validateSandboxBody: vi.fn(),
@@ -25,7 +25,7 @@ vi.mock("@/lib/trigger/triggerRunSandboxCommand", () => ({
   triggerRunSandboxCommand: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshot", () => ({
+vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
   selectAccountSnapshot: vi.fn(),
 }));
 
