@@ -144,6 +144,74 @@ export async function selectTableName({
 - All API routes should have JSDoc comments
 - Run `pnpm lint` before committing
 
+## Test-Driven Development (TDD)
+
+**CRITICAL: Always write tests BEFORE implementing new features or fixing bugs.**
+
+### TDD Workflow
+
+1. **Write failing tests first** - Create tests in `lib/[domain]/__tests__/[filename].test.ts` that describe the expected behavior
+2. **Run tests to verify they fail** - `pnpm test path/to/test.ts`
+3. **Implement the code** - Write the minimum code needed to make tests pass
+4. **Run tests to verify they pass** - All tests should be green
+5. **Refactor if needed** - Clean up while keeping tests green
+
+### Test File Location
+
+Tests live alongside the code they test:
+```
+lib/
+├── chats/
+│   ├── __tests__/
+│   │   └── updateChatHandler.test.ts
+│   ├── updateChatHandler.ts
+│   └── validateUpdateChatBody.ts
+```
+
+### Test Pattern
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest, NextResponse } from "next/server";
+
+// Mock dependencies
+vi.mock("@/lib/networking/getCorsHeaders", () => ({
+  getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
+}));
+
+describe("functionName", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe("successful cases", () => {
+    it("does something when condition is met", async () => {
+      // Arrange
+      vi.mocked(dependency).mockResolvedValue(mockData);
+
+      // Act
+      const result = await functionName(input);
+
+      // Assert
+      expect(result.status).toBe(200);
+    });
+  });
+
+  describe("error cases", () => {
+    it("returns 400 when validation fails", async () => {
+      // Test error handling
+    });
+  });
+});
+```
+
+### When to Write Tests
+
+- **New API endpoints**: Write tests for all success and error paths
+- **New handlers**: Test business logic with mocked dependencies
+- **Bug fixes**: Write a failing test that reproduces the bug, then fix it
+- **Validation functions**: Test all valid and invalid input combinations
+
 ## Authentication
 
 **Never use `account_id` in request bodies or tool schemas.** Always derive the account ID from authentication:

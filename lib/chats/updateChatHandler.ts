@@ -41,21 +41,14 @@ export async function updateChatHandler(request: NextRequest): Promise<NextRespo
       );
     }
 
-    // Verify access to this chat using the same logic as GET /api/chats
-    const { params, error } = await buildGetChatsParams({
+    // Get the list of account_ids this user has access to
+    const { params } = await buildGetChatsParams({
       account_id: accountId,
       org_id: orgId,
-      target_account_id: room.account_id ?? undefined,
     });
 
-    if (error) {
-      return NextResponse.json(
-        { status: "error", error: "Access denied to this chat" },
-        { status: 403, headers: getCorsHeaders() },
-      );
-    }
-
     // Check if the room's account_id is in the allowed account_ids
+    // If params.account_ids is undefined, it means admin access (all records)
     if (params.account_ids && room.account_id) {
       if (!params.account_ids.includes(room.account_id)) {
         return NextResponse.json(
