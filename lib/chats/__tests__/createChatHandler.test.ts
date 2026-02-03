@@ -174,6 +174,74 @@ describe("createChatHandler", () => {
     });
   });
 
+  describe("with topic parameter", () => {
+    it("uses provided topic directly without generating", async () => {
+      const apiKeyAccountId = "api-key-account-123";
+      const artistId = "123e4567-e89b-12d3-a456-426614174000";
+      const topic = "My Custom Topic";
+
+      vi.mocked(getApiKeyAccountId).mockResolvedValue(apiKeyAccountId);
+      vi.mocked(safeParseJson).mockResolvedValue({
+        artistId,
+        topic,
+      });
+      vi.mocked(upsertRoom).mockResolvedValue({
+        id: "generated-uuid-123",
+        account_id: apiKeyAccountId,
+        artist_id: artistId,
+        topic,
+      });
+
+      const request = createMockRequest();
+      const response = await createChatHandler(request);
+      const json = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(json.status).toBe("success");
+      expect(generateChatTitle).not.toHaveBeenCalled();
+      expect(upsertRoom).toHaveBeenCalledWith({
+        id: "generated-uuid-123",
+        account_id: apiKeyAccountId,
+        artist_id: artistId,
+        topic,
+      });
+    });
+
+    it("uses provided topic even when firstMessage is also provided", async () => {
+      const apiKeyAccountId = "api-key-account-123";
+      const artistId = "123e4567-e89b-12d3-a456-426614174000";
+      const topic = "My Custom Topic";
+      const firstMessage = "What marketing strategies should I use?";
+
+      vi.mocked(getApiKeyAccountId).mockResolvedValue(apiKeyAccountId);
+      vi.mocked(safeParseJson).mockResolvedValue({
+        artistId,
+        topic,
+        firstMessage,
+      });
+      vi.mocked(upsertRoom).mockResolvedValue({
+        id: "generated-uuid-123",
+        account_id: apiKeyAccountId,
+        artist_id: artistId,
+        topic,
+      });
+
+      const request = createMockRequest();
+      const response = await createChatHandler(request);
+      const json = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(json.status).toBe("success");
+      expect(generateChatTitle).not.toHaveBeenCalled();
+      expect(upsertRoom).toHaveBeenCalledWith({
+        id: "generated-uuid-123",
+        account_id: apiKeyAccountId,
+        artist_id: artistId,
+        topic,
+      });
+    });
+  });
+
   describe("with firstMessage (title generation)", () => {
     it("generates a title from firstMessage when provided", async () => {
       const apiKeyAccountId = "api-key-account-123";
