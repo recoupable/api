@@ -166,8 +166,6 @@ export type Database = {
           job_title: string | null
           knowledges: Json | null
           label: string | null
-          onboarding_data: Json | null
-          onboarding_status: Json | null
           organization: string | null
           role_type: string | null
           updated_at: string
@@ -181,8 +179,6 @@ export type Database = {
           job_title?: string | null
           knowledges?: Json | null
           label?: string | null
-          onboarding_data?: Json | null
-          onboarding_status?: Json | null
           organization?: string | null
           role_type?: string | null
           updated_at?: string
@@ -196,8 +192,6 @@ export type Database = {
           job_title?: string | null
           knowledges?: Json | null
           label?: string | null
-          onboarding_data?: Json | null
-          onboarding_status?: Json | null
           organization?: string | null
           role_type?: string | null
           updated_at?: string
@@ -301,6 +295,35 @@ export type Database = {
             foreignKeyName: "account_sandboxes_account_id_fkey"
             columns: ["account_id"]
             isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      account_snapshots: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          expires_at: string
+          snapshot_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          expires_at: string
+          snapshot_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          expires_at?: string
+          snapshot_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_snapshots_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
             referencedRelation: "accounts"
             referencedColumns: ["id"]
           },

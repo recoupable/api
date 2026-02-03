@@ -1,11 +1,5 @@
 import supabase from "../serverClient";
-
-interface AccountSnapshot {
-  id: string;
-  account_id: string;
-  snapshot_id: string;
-  created_at: string;
-}
+import type { Tables } from "@/types/database.types";
 
 /**
  * Selects snapshots for an account, ordered by creation date (newest first).
@@ -13,7 +7,9 @@ interface AccountSnapshot {
  * @param accountId - The account ID to get snapshots for
  * @returns Array of snapshot records, or empty array if none found
  */
-export async function selectAccountSnapshots(accountId: string): Promise<AccountSnapshot[]> {
+export async function selectAccountSnapshots(
+  accountId: string,
+): Promise<Tables<"account_snapshots">[]> {
   const { data, error } = await supabase
     .from("account_snapshots")
     .select("*")
