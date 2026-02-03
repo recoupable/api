@@ -34,10 +34,12 @@ export async function createSandbox(params: CreateSandboxParams = {}): Promise<S
         timeout: params.timeout ?? DEFAULT_TIMEOUT,
       })
     : await Sandbox.create({
-        ...params,
-        resources: params.resources ?? { vcpus: DEFAULT_VCPUS },
+        resources: "resources" in params && params.resources ? params.resources : { vcpus: DEFAULT_VCPUS },
         timeout: params.timeout ?? DEFAULT_TIMEOUT,
-        runtime: params.runtime ?? DEFAULT_RUNTIME,
+        runtime: "runtime" in params && params.runtime ? params.runtime : DEFAULT_RUNTIME,
+        ports: params.ports,
+        source: params.source,
+        signal: params.signal,
       });
 
   return {
