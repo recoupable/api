@@ -14,12 +14,15 @@ describe("triggerRunSandboxCommand", () => {
   });
 
   it("triggers run-sandbox-command task with correct payload", async () => {
-    const mockHandle = { id: "task_123" };
+    const mockHandle = { id: "run_123" };
     vi.mocked(tasks.trigger).mockResolvedValue(mockHandle);
 
     const payload = {
-      prompt: "tell me hello",
+      command: "ls",
+      args: ["-la"],
+      cwd: "/home",
       sandboxId: "sbx_456",
+      accountId: "acc_123",
     };
 
     const result = await triggerRunSandboxCommand(payload);
@@ -29,12 +32,13 @@ describe("triggerRunSandboxCommand", () => {
   });
 
   it("passes through the task handle from trigger", async () => {
-    const mockHandle = { id: "task_789", publicAccessToken: "token_abc" };
+    const mockHandle = { id: "run_789", publicAccessToken: "token_abc" };
     vi.mocked(tasks.trigger).mockResolvedValue(mockHandle);
 
     const result = await triggerRunSandboxCommand({
-      prompt: "another prompt",
+      command: "echo",
       sandboxId: "sbx_999",
+      accountId: "acc_456",
     });
 
     expect(result).toBe(mockHandle);
