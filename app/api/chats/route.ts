@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createChatHandler } from "@/lib/chats/createChatHandler";
 import { getChatsHandler } from "@/lib/chats/getChatsHandler";
+import { updateChatHandler } from "@/lib/chats/updateChatHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -51,4 +52,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   return createChatHandler(request);
+}
+
+/**
+ * PATCH /api/chats
+ *
+ * Update a chat room's topic (display name).
+ *
+ * Authentication: x-api-key header or Authorization Bearer token required.
+ *
+ * Body parameters:
+ * - chatId (required): UUID of the chat room to update
+ * - topic (required): New display name for the chat (3-50 characters)
+ *
+ * @param request - The request object
+ * @returns A NextResponse with the updated chat or an error
+ */
+export async function PATCH(request: NextRequest): Promise<NextResponse> {
+  return updateChatHandler(request);
 }
