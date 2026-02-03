@@ -34,7 +34,7 @@ export async function retrieveTaskRun(runId: string): Promise<TaskRunResult | nu
   }
 
   if (run.status === "COMPLETED") {
-    return { status: "complete", data: run.output };
+    return { status: "complete", data: run.output ?? null };
   }
 
   if (FAILED_STATUSES.includes(run.status)) {

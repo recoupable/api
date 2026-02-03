@@ -72,6 +72,18 @@ describe("retrieveTaskRun", () => {
     expect(result).toEqual({ status: "complete", data: outputData });
   });
 
+  it("returns complete status with null data when output is undefined", async () => {
+    vi.mocked(runs.retrieve).mockResolvedValue({
+      id: "run_123",
+      status: "COMPLETED",
+      output: undefined,
+    });
+
+    const result = await retrieveTaskRun("run_123");
+
+    expect(result).toEqual({ status: "complete", data: null });
+  });
+
   it("returns failed status with error when run status is FAILED", async () => {
     vi.mocked(runs.retrieve).mockResolvedValue({
       id: "run_123",
