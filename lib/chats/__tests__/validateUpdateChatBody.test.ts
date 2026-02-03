@@ -14,8 +14,13 @@ vi.mock("@/lib/supabase/rooms/selectRoom", () => ({
   default: vi.fn(),
 }));
 
+vi.mock("@/lib/chats/buildGetChatsParams", () => ({
+  buildGetChatsParams: vi.fn(),
+}));
+
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
+import { buildGetChatsParams } from "@/lib/chats/buildGetChatsParams";
 
 describe("validateUpdateChatBody", () => {
   beforeEach(() => {
@@ -31,7 +36,7 @@ describe("validateUpdateChatBody", () => {
   };
 
   describe("successful validation", () => {
-    it("returns validated data with room and auth context", async () => {
+    it("returns validated data when user owns the chat", async () => {
       const chatId = "123e4567-e89b-12d3-a456-426614174000";
       const accountId = "123e4567-e89b-12d3-a456-426614174001";
       const topic = "Valid Topic";
@@ -51,17 +56,16 @@ describe("validateUpdateChatBody", () => {
 
       vi.mocked(selectRoom).mockResolvedValue(room);
 
+      vi.mocked(buildGetChatsParams).mockResolvedValue({
+        params: { account_ids: [accountId] },
+        error: null,
+      });
+
       const request = createRequest({ chatId, topic });
       const result = await validateUpdateChatBody(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({
-        chatId,
-        topic,
-        room,
-        accountId,
-        orgId: null,
-      });
+      expect(result).toEqual({ chatId, topic });
     });
 
     it("accepts topic at minimum length (3 chars)", async () => {
@@ -84,11 +88,16 @@ describe("validateUpdateChatBody", () => {
 
       vi.mocked(selectRoom).mockResolvedValue(room);
 
+      vi.mocked(buildGetChatsParams).mockResolvedValue({
+        params: { account_ids: [accountId] },
+        error: null,
+      });
+
       const request = createRequest({ chatId, topic });
       const result = await validateUpdateChatBody(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toMatchObject({ chatId, topic });
+      expect(result).toEqual({ chatId, topic });
     });
 
     it("accepts topic at maximum length (50 chars)", async () => {
@@ -111,21 +120,58 @@ describe("validateUpdateChatBody", () => {
 
       vi.mocked(selectRoom).mockResolvedValue(room);
 
+      vi.mocked(buildGetChatsParams).mockResolvedValue({
+        params: { account_ids: [accountId] },
+        error: null,
+      });
+
       const request = createRequest({ chatId, topic });
       const result = await validateUpdateChatBody(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toMatchObject({ chatId, topic });
+      expect(result).toEqual({ chatId, topic });
     });
 
-    it("includes orgId when using org key", async () => {
+    it("allows org key to access member's chat", async () => {
       const chatId = "123e4567-e89b-12d3-a456-426614174000";
-      const accountId = "123e4567-e89b-12d3-a456-426614174001";
+      const memberAccountId = "123e4567-e89b-12d3-a456-426614174001";
       const orgId = "123e4567-e89b-12d3-a456-426614174002";
       const topic = "Valid Topic";
       const room = {
         id: chatId,
-        account_id: accountId,
+        account_id: memberAccountId,
+        artist_id: null,
+        topic: "Old",
+        updated_at: "2024-01-01T00:00:00Z",
+      };
+
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId: orgId,
+        orgId,
+        authToken: "org-key",
+      });
+
+      vi.mocked(selectRoom).mockResolvedValue(room);
+
+      vi.mocked(buildGetChatsParams).mockResolvedValue({
+        params: { account_ids: [memberAccountId, "other-member"] },
+        error: null,
+      });
+
+      const request = createRequest({ chatId, topic });
+      const result = await validateUpdateChatBody(request);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect(result).toEqual({ chatId, topic });
+    });
+
+    it("allows admin access when account_ids is undefined", async () => {
+      const chatId = "123e4567-e89b-12d3-a456-426614174000";
+      const accountId = "123e4567-e89b-12d3-a456-426614174001";
+      const topic = "Valid Topic";
+      const room = {
+        id: chatId,
+        account_id: "any-account",
         artist_id: null,
         topic: "Old",
         updated_at: "2024-01-01T00:00:00Z",
@@ -133,17 +179,22 @@ describe("validateUpdateChatBody", () => {
 
       vi.mocked(validateAuthContext).mockResolvedValue({
         accountId,
-        orgId,
-        authToken: "org-key",
+        orgId: "admin-org",
+        authToken: "admin-key",
       });
 
       vi.mocked(selectRoom).mockResolvedValue(room);
+
+      vi.mocked(buildGetChatsParams).mockResolvedValue({
+        params: {}, // No account_ids = admin access
+        error: null,
+      });
 
       const request = createRequest({ chatId, topic });
       const result = await validateUpdateChatBody(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toMatchObject({ accountId, orgId });
+      expect(result).toEqual({ chatId, topic });
     });
   });
 
@@ -284,6 +335,84 @@ describe("validateUpdateChatBody", () => {
       expect(response.status).toBe(404);
       const body = await response.json();
       expect(body.error).toContain("not found");
+    });
+  });
+
+  describe("access denied errors", () => {
+    it("returns 403 when user tries to update another user's chat", async () => {
+      const userAccountId = "123e4567-e89b-12d3-a456-426614174001";
+      const otherAccountId = "123e4567-e89b-12d3-a456-426614174002";
+      const chatId = "123e4567-e89b-12d3-a456-426614174000";
+      const room = {
+        id: chatId,
+        account_id: otherAccountId,
+        artist_id: null,
+        topic: "Old Topic",
+        updated_at: "2024-01-01T00:00:00Z",
+      };
+
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId: userAccountId,
+        orgId: null,
+        authToken: "test-key",
+      });
+
+      vi.mocked(selectRoom).mockResolvedValue(room);
+
+      vi.mocked(buildGetChatsParams).mockResolvedValue({
+        params: { account_ids: [userAccountId] },
+        error: null,
+      });
+
+      const request = createRequest({
+        chatId,
+        topic: "Valid Topic",
+      });
+      const result = await validateUpdateChatBody(request);
+
+      expect(result).toBeInstanceOf(NextResponse);
+      const response = result as NextResponse;
+      expect(response.status).toBe(403);
+      const body = await response.json();
+      expect(body.error).toContain("Access denied");
+    });
+
+    it("returns 403 when org key cannot access non-member's chat", async () => {
+      const orgId = "123e4567-e89b-12d3-a456-426614174001";
+      const nonMemberAccountId = "123e4567-e89b-12d3-a456-426614174002";
+      const chatId = "123e4567-e89b-12d3-a456-426614174000";
+      const room = {
+        id: chatId,
+        account_id: nonMemberAccountId,
+        artist_id: null,
+        topic: "Old Topic",
+        updated_at: "2024-01-01T00:00:00Z",
+      };
+
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId: orgId,
+        orgId,
+        authToken: "org-key",
+      });
+
+      vi.mocked(selectRoom).mockResolvedValue(room);
+
+      vi.mocked(buildGetChatsParams).mockResolvedValue({
+        params: { account_ids: ["member-1", "member-2"] }, // non-member not in list
+        error: null,
+      });
+
+      const request = createRequest({
+        chatId,
+        topic: "Valid Topic",
+      });
+      const result = await validateUpdateChatBody(request);
+
+      expect(result).toBeInstanceOf(NextResponse);
+      const response = result as NextResponse;
+      expect(response.status).toBe(403);
+      const body = await response.json();
+      expect(body.error).toContain("Access denied");
     });
   });
 });

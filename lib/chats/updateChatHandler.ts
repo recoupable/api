@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateUpdateChatBody } from "./validateUpdateChatBody";
 import { updateRoom } from "@/lib/supabase/rooms/updateRoom";
-import { buildGetChatsParams } from "./buildGetChatsParams";
 
 /**
  * Handles PATCH /api/chats - Update a chat room's topic.
@@ -17,27 +16,9 @@ export async function updateChatHandler(request: NextRequest): Promise<NextRespo
     return validated;
   }
 
-  const { chatId, topic, room, accountId, orgId } = validated;
+  const { chatId, topic } = validated;
 
   try {
-    // Get the list of account_ids this user has access to
-    const { params } = await buildGetChatsParams({
-      account_id: accountId,
-      org_id: orgId,
-    });
-
-    // Check if the room's account_id is in the allowed account_ids
-    // If params.account_ids is undefined, it means admin access (all records)
-    if (params.account_ids && room.account_id) {
-      if (!params.account_ids.includes(room.account_id)) {
-        return NextResponse.json(
-          { status: "error", error: "Access denied to this chat" },
-          { status: 403, headers: getCorsHeaders() },
-        );
-      }
-    }
-
-    // Update the room
     const updated = await updateRoom(chatId, { topic });
     if (!updated) {
       return NextResponse.json(
