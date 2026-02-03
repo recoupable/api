@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateGetTaskRunQuery } from "./validateGetTaskRunQuery";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
 
@@ -13,14 +12,8 @@ import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
  * @returns A NextResponse with the task run status
  */
 export async function getTaskRunHandler(request: NextRequest): Promise<NextResponse> {
-  // Validate auth context
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) {
-    return authResult;
-  }
-
-  // Validate query parameters
-  const validatedQuery = validateGetTaskRunQuery(request);
+  // Validate auth context and query parameters
+  const validatedQuery = await validateGetTaskRunQuery(request);
   if (validatedQuery instanceof NextResponse) {
     return validatedQuery;
   }

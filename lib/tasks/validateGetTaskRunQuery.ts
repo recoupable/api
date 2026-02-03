@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { z } from "zod";
 
 const getTaskRunQuerySchema = z.object({
@@ -13,12 +14,20 @@ const getTaskRunQuerySchema = z.object({
 export type GetTaskRunQuery = z.infer<typeof getTaskRunQuerySchema>;
 
 /**
- * Validates query parameters for GET /api/tasks/runs.
+ * Validates auth context and query parameters for GET /api/tasks/runs.
  *
  * @param request - The NextRequest object
  * @returns A NextResponse with an error if validation fails, or the validated query if validation passes.
  */
-export function validateGetTaskRunQuery(request: NextRequest): NextResponse | GetTaskRunQuery {
+export async function validateGetTaskRunQuery(
+  request: NextRequest,
+): Promise<NextResponse | GetTaskRunQuery> {
+  // Validate auth context
+  const authResult = await validateAuthContext(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   const runId = request.nextUrl.searchParams.get("runId") ?? "";
 
   const result = getTaskRunQuerySchema.safeParse({ runId });

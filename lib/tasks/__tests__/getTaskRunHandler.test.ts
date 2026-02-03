@@ -3,13 +3,8 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { getTaskRunHandler } from "../getTaskRunHandler";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateGetTaskRunQuery } from "../validateGetTaskRunQuery";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
-
-vi.mock("@/lib/auth/validateAuthContext", () => ({
-  validateAuthContext: vi.fn(),
-}));
 
 vi.mock("../validateGetTaskRunQuery", () => ({
   validateGetTaskRunQuery: vi.fn(),
@@ -39,8 +34,8 @@ describe("getTaskRunHandler", () => {
     vi.clearAllMocks();
   });
 
-  it("returns error response when auth validation fails", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue(
+  it("returns error response when validation fails (auth or query)", async () => {
+    vi.mocked(validateGetTaskRunQuery).mockResolvedValue(
       NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
     );
 
@@ -51,12 +46,7 @@ describe("getTaskRunHandler", () => {
   });
 
   it("returns error response when query validation fails", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "acc_123",
-      orgId: null,
-      authToken: "test-key",
-    });
-    vi.mocked(validateGetTaskRunQuery).mockReturnValue(
+    vi.mocked(validateGetTaskRunQuery).mockResolvedValue(
       NextResponse.json({ status: "error", error: "runId is required" }, { status: 400 }),
     );
 
@@ -67,12 +57,7 @@ describe("getTaskRunHandler", () => {
   });
 
   it("returns pending status when task is still running", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "acc_123",
-      orgId: null,
-      authToken: "test-key",
-    });
-    vi.mocked(validateGetTaskRunQuery).mockReturnValue({ runId: "run_123" });
+    vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ runId: "run_123" });
     vi.mocked(retrieveTaskRun).mockResolvedValue({ status: "pending" });
 
     const request = createMockRequest();
@@ -85,12 +70,7 @@ describe("getTaskRunHandler", () => {
 
   it("returns complete status with data when task is completed", async () => {
     const taskData = { result: "success", details: { foo: "bar" } };
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "acc_123",
-      orgId: null,
-      authToken: "test-key",
-    });
-    vi.mocked(validateGetTaskRunQuery).mockReturnValue({ runId: "run_123" });
+    vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ runId: "run_123" });
     vi.mocked(retrieveTaskRun).mockResolvedValue({ status: "complete", data: taskData });
 
     const request = createMockRequest();
@@ -102,12 +82,7 @@ describe("getTaskRunHandler", () => {
   });
 
   it("returns failed status with error when task failed", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "acc_123",
-      orgId: null,
-      authToken: "test-key",
-    });
-    vi.mocked(validateGetTaskRunQuery).mockReturnValue({ runId: "run_123" });
+    vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ runId: "run_123" });
     vi.mocked(retrieveTaskRun).mockResolvedValue({
       status: "failed",
       error: "Task execution failed",
@@ -122,12 +97,7 @@ describe("getTaskRunHandler", () => {
   });
 
   it("calls retrieveTaskRun with the validated runId", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "acc_123",
-      orgId: null,
-      authToken: "test-key",
-    });
-    vi.mocked(validateGetTaskRunQuery).mockReturnValue({ runId: "run_specific_id" });
+    vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ runId: "run_specific_id" });
     vi.mocked(retrieveTaskRun).mockResolvedValue({ status: "pending" });
 
     const request = createMockRequest();
@@ -137,12 +107,7 @@ describe("getTaskRunHandler", () => {
   });
 
   it("returns 500 error when retrieveTaskRun throws", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "acc_123",
-      orgId: null,
-      authToken: "test-key",
-    });
-    vi.mocked(validateGetTaskRunQuery).mockReturnValue({ runId: "run_123" });
+    vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ runId: "run_123" });
     vi.mocked(retrieveTaskRun).mockRejectedValue(new Error("Trigger.dev API error"));
 
     const request = createMockRequest();
@@ -155,12 +120,7 @@ describe("getTaskRunHandler", () => {
   });
 
   it("returns 404 when run is not found", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "acc_123",
-      orgId: null,
-      authToken: "test-key",
-    });
-    vi.mocked(validateGetTaskRunQuery).mockReturnValue({ runId: "run_nonexistent" });
+    vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ runId: "run_nonexistent" });
     vi.mocked(retrieveTaskRun).mockResolvedValue(null);
 
     const request = createMockRequest();
