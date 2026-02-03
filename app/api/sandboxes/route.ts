@@ -43,7 +43,18 @@ export async function OPTIONS() {
  * @returns A NextResponse with the sandbox creation result or error
  */
 export async function POST(request: NextRequest): Promise<Response> {
-  return createSandboxPostHandler(request);
+  console.log("[POST /api/sandboxes] Request received");
+  try {
+    const response = await createSandboxPostHandler(request);
+    console.log("[POST /api/sandboxes] Handler returned response with status:", response.status);
+    return response;
+  } catch (error) {
+    console.error("[POST /api/sandboxes] Unhandled error:", error);
+    return NextResponse.json(
+      { status: "error", error: "Internal server error" },
+      { status: 500, headers: getCorsHeaders() },
+    );
+  }
 }
 
 /**
