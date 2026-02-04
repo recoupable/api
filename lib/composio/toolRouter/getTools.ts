@@ -1,4 +1,4 @@
-import { createToolRouterSession } from "./createSession";
+import { createToolRouterSession } from "./createToolRouterSession";
 import { getArtistConnectionsFromComposio } from "./getArtistConnectionsFromComposio";
 import type { Tool, ToolSet } from "ai";
 

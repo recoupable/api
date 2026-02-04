@@ -1,2 +1,2 @@
-export { createToolRouterSession } from "./createSession";
+export { createToolRouterSession } from "./createToolRouterSession";
 export { getComposioTools } from "./getTools";
