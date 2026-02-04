@@ -25,8 +25,15 @@ export async function getSandboxesHandler(request: NextRequest): Promise<NextRes
     return validated;
   }
 
-  // Get sandbox records from database
-  const accountSandboxes = await selectAccountSandboxes(validated);
+  // Determine account ID for snapshot lookup
+  const snapshotAccountId =
+    validated.accountIds?.length === 1 ? validated.accountIds[0] : validated.orgId;
+
+  // Fetch sandbox records and snapshot info in parallel
+  const [accountSandboxes, snapshots] = await Promise.all([
+    selectAccountSandboxes(validated),
+    snapshotAccountId ? selectAccountSnapshots(snapshotAccountId) : Promise.resolve([]),
+  ]);
 
   // Fetch live status for each sandbox from Vercel API in parallel
   const statusResults = await Promise.all(
@@ -38,20 +45,9 @@ export async function getSandboxesHandler(request: NextRequest): Promise<NextRes
     (status): status is SandboxCreatedResponse => status !== null,
   );
 
-  // Get snapshot info - use accountId for personal keys, orgId for org keys
-  let snapshot_id: string | null = null;
-  let github_repo: string | null = null;
-
-  const snapshotAccountId =
-    validated.accountIds?.length === 1 ? validated.accountIds[0] : validated.orgId;
-
-  if (snapshotAccountId) {
-    const snapshots = await selectAccountSnapshots(snapshotAccountId);
-    if (snapshots.length > 0) {
-      snapshot_id = snapshots[0].snapshot_id;
-      github_repo = snapshots[0].github_repo ?? null;
-    }
-  }
+  // Extract snapshot info
+  const snapshot_id = snapshots[0]?.snapshot_id ?? null;
+  const github_repo = snapshots[0]?.github_repo ?? null;
 
   return NextResponse.json(
     {
