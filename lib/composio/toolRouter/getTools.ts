@@ -1,5 +1,5 @@
 import { createToolRouterSession } from "./createSession";
-import { getConnectors, ALLOWED_ARTIST_CONNECTORS } from "../connectors";
+import { getArtistConnectionsFromComposio } from "./getArtistConnectionsFromComposio";
 import type { Tool, ToolSet } from "ai";
 
 /**
@@ -34,34 +34,6 @@ function isValidTool(tool: unknown): tool is Tool {
   const hasSchema = "parameters" in obj || "inputSchema" in obj;
 
   return hasExecute && hasSchema;
-}
-
-/**
- * Query Composio for an artist's connected accounts.
- *
- * Uses artistId as the Composio entity to get their connections.
- * Only returns connections for ALLOWED_ARTIST_CONNECTORS (e.g., tiktok).
- *
- * @param artistId - The artist ID (Composio entity)
- * @returns Map of toolkit slug to connected account ID
- */
-async function getArtistConnectionsFromComposio(
-  artistId: string
-): Promise<Record<string, string>> {
-  // Use unified getConnectors with artist filter
-  const connectors = await getConnectors(artistId, {
-    allowedToolkits: ALLOWED_ARTIST_CONNECTORS,
-  });
-
-  // Build connections map from connected connectors
-  const connections: Record<string, string> = {};
-  for (const connector of connectors) {
-    if (connector.connectedAccountId) {
-      connections[connector.slug] = connector.connectedAccountId;
-    }
-  }
-
-  return connections;
 }
 
 /**
