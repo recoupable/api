@@ -30,6 +30,7 @@ describe("validateSnapshotPatchBody", () => {
   });
 
   it("returns 401 when auth fails", async () => {
+    vi.mocked(safeParseJson).mockResolvedValue({ snapshotId: "snap_abc123" });
     vi.mocked(validateAuthContext).mockResolvedValue(
       NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
     );
@@ -41,31 +42,24 @@ describe("validateSnapshotPatchBody", () => {
     expect((result as NextResponse).status).toBe(401);
   });
 
-  it("returns validated body with auth context when snapshotId is provided", async () => {
+  it("returns validated body when snapshotId is provided", async () => {
+    vi.mocked(safeParseJson).mockResolvedValue({ snapshotId: "snap_abc123" });
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "acc_123",
       orgId: "org_456",
       authToken: "token",
     });
-    vi.mocked(safeParseJson).mockResolvedValue({ snapshotId: "snap_abc123" });
 
     const request = createMockRequest();
     const result = await validateSnapshotPatchBody(request);
 
     expect(result).toEqual({
       accountId: "acc_123",
-      orgId: "org_456",
-      authToken: "token",
       snapshotId: "snap_abc123",
     });
   });
 
   it("returns error response when snapshotId is missing", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "acc_123",
-      orgId: null,
-      authToken: "token",
-    });
     vi.mocked(safeParseJson).mockResolvedValue({});
 
     const request = createMockRequest();
@@ -78,11 +72,6 @@ describe("validateSnapshotPatchBody", () => {
   });
 
   it("returns error response when snapshotId is empty string", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "acc_123",
-      orgId: null,
-      authToken: "token",
-    });
     vi.mocked(safeParseJson).mockResolvedValue({ snapshotId: "" });
 
     const request = createMockRequest();
@@ -90,5 +79,61 @@ describe("validateSnapshotPatchBody", () => {
 
     expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(400);
+  });
+
+  it("passes account_id to validateAuthContext when provided", async () => {
+    const targetAccountId = "550e8400-e29b-41d4-a716-446655440000";
+    vi.mocked(safeParseJson).mockResolvedValue({
+      snapshotId: "snap_abc123",
+      account_id: targetAccountId,
+    });
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: targetAccountId,
+      orgId: "org_789",
+      authToken: "token",
+    });
+
+    const request = createMockRequest();
+    const result = await validateSnapshotPatchBody(request);
+
+    expect(validateAuthContext).toHaveBeenCalledWith(request, {
+      accountId: targetAccountId,
+    });
+    expect(result).toEqual({
+      accountId: targetAccountId,
+      snapshotId: "snap_abc123",
+    });
+  });
+
+  it("returns 403 when account_id override is denied", async () => {
+    const unauthorizedAccountId = "660e8400-e29b-41d4-a716-446655440001";
+    vi.mocked(safeParseJson).mockResolvedValue({
+      snapshotId: "snap_abc123",
+      account_id: unauthorizedAccountId,
+    });
+    vi.mocked(validateAuthContext).mockResolvedValue(
+      NextResponse.json({ error: "Access denied to specified account_id" }, { status: 403 }),
+    );
+
+    const request = createMockRequest();
+    const result = await validateSnapshotPatchBody(request);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(403);
+  });
+
+  it("returns error when account_id is not a valid UUID", async () => {
+    vi.mocked(safeParseJson).mockResolvedValue({
+      snapshotId: "snap_abc123",
+      account_id: "not-a-uuid",
+    });
+
+    const request = createMockRequest();
+    const result = await validateSnapshotPatchBody(request);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(400);
+    const json = await (result as NextResponse).json();
+    expect(json.error).toContain("account_id");
   });
 });
