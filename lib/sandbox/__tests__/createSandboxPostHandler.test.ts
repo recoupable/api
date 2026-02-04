@@ -139,7 +139,9 @@ describe("createSandboxPostHandler", () => {
     const request = createMockRequest();
     await createSandboxPostHandler(request);
 
-    expect(createSandbox).toHaveBeenCalledWith({ source: { type: "snapshot", snapshotId: "snap_xyz" } });
+    expect(createSandbox).toHaveBeenCalledWith({
+      source: { type: "snapshot", snapshotId: "snap_xyz" },
+    });
   });
 
   it("calls createSandbox with empty params when account has no snapshot", async () => {
@@ -298,6 +300,51 @@ describe("createSandboxPostHandler", () => {
       status: "error",
       error: "Database insert failed",
     });
+  });
+
+  it("returns 200 without runId and skips trigger when command is not provided", async () => {
+    vi.mocked(validateSandboxBody).mockResolvedValue({
+      accountId: "acc_123",
+      orgId: null,
+      authToken: "token",
+      // command is not provided (optional)
+    });
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
+    vi.mocked(createSandbox).mockResolvedValue({
+      sandboxId: "sbx_123",
+      sandboxStatus: "running",
+      timeout: 600000,
+      createdAt: "2024-01-01T00:00:00.000Z",
+    });
+    vi.mocked(insertAccountSandbox).mockResolvedValue({
+      data: {
+        id: "record_123",
+        account_id: "acc_123",
+        sandbox_id: "sbx_123",
+        created_at: "2024-01-01T00:00:00.000Z",
+      },
+      error: null,
+    });
+
+    const request = createMockRequest();
+    const response = await createSandboxPostHandler(request);
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json).toEqual({
+      status: "success",
+      sandboxes: [
+        {
+          sandboxId: "sbx_123",
+          sandboxStatus: "running",
+          timeout: 600000,
+          createdAt: "2024-01-01T00:00:00.000Z",
+          // Note: runId is not included when command is not provided
+        },
+      ],
+    });
+    // Verify triggerRunSandboxCommand was NOT called
+    expect(triggerRunSandboxCommand).not.toHaveBeenCalled();
   });
 
   it("returns 200 without runId when triggerRunSandboxCommand throws", async () => {

@@ -85,7 +85,7 @@ describe("validateSandboxBody", () => {
     });
   });
 
-  it("returns error response when command is missing", async () => {
+  it("returns validated body when command is omitted (optional)", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
@@ -96,8 +96,11 @@ describe("validateSandboxBody", () => {
     const request = createMockRequest();
     const result = await validateSandboxBody(request);
 
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(400);
+    expect(result).toEqual({
+      accountId: "acc_123",
+      orgId: null,
+      authToken: "token",
+    });
   });
 
   it("returns error response when command is empty string", async () => {

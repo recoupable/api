@@ -6,7 +6,7 @@ import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { z } from "zod";
 
 export const sandboxBodySchema = z.object({
-  command: z.string({ message: "command is required" }).min(1, "command cannot be empty"),
+  command: z.string().min(1, "command cannot be empty").optional(),
   args: z.array(z.string()).optional(),
   cwd: z.string().optional(),
 });
