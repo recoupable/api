@@ -8,7 +8,7 @@ import { authorizeConnector } from "./authorizeConnector";
  * Handler for POST /api/connectors/authorize.
  *
  * Generates an OAuth authorization URL for a specific connector.
- * Supports connecting for the authenticated account or another entity (via entity_id).
+ * Supports connecting for the authenticated account or another entity (via account_id).
  *
  * @param request - The incoming request
  * @returns The redirect URL for OAuth authorization

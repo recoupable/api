@@ -35,7 +35,7 @@ describe("validateGetConnectorsRequest", () => {
     expect(response.status).toBe(401);
   });
 
-  it("should return accountId as composioEntityId when no entity_id provided", async () => {
+  it("should return accountId as composioEntityId when no account_id provided", async () => {
     const mockAccountId = "account-123";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
@@ -52,7 +52,7 @@ describe("validateGetConnectorsRequest", () => {
     });
   });
 
-  it("should return entity_id as composioEntityId with allowedToolkits when entity_id provided", async () => {
+  it("should return account_id as composioEntityId with allowedToolkits when account_id provided", async () => {
     const mockAccountId = "account-123";
     const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
@@ -62,7 +62,7 @@ describe("validateGetConnectorsRequest", () => {
     });
     vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
 
-    const request = new NextRequest(`http://localhost/api/connectors?entity_id=${mockEntityId}`);
+    const request = new NextRequest(`http://localhost/api/connectors?account_id=${mockEntityId}`);
     const result = await validateGetConnectorsRequest(request);
 
     expect(checkAccountArtistAccess).toHaveBeenCalledWith(mockAccountId, mockEntityId);
@@ -73,7 +73,7 @@ describe("validateGetConnectorsRequest", () => {
     });
   });
 
-  it("should return 403 when entity_id provided but no access", async () => {
+  it("should return 403 when account_id provided but no access", async () => {
     const mockAccountId = "account-123";
     const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
@@ -83,7 +83,7 @@ describe("validateGetConnectorsRequest", () => {
     });
     vi.mocked(checkAccountArtistAccess).mockResolvedValue(false);
 
-    const request = new NextRequest(`http://localhost/api/connectors?entity_id=${mockEntityId}`);
+    const request = new NextRequest(`http://localhost/api/connectors?account_id=${mockEntityId}`);
     const result = await validateGetConnectorsRequest(request);
 
     expect(result).toBeInstanceOf(NextResponse);
@@ -91,14 +91,14 @@ describe("validateGetConnectorsRequest", () => {
     expect(response.status).toBe(403);
   });
 
-  it("should return 400 for invalid entity_id format", async () => {
+  it("should return 400 for invalid account_id format", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "account-123",
       orgId: null,
       authToken: "test-token",
     });
 
-    const request = new NextRequest("http://localhost/api/connectors?entity_id=not-a-uuid");
+    const request = new NextRequest("http://localhost/api/connectors?account_id=not-a-uuid");
     const result = await validateGetConnectorsRequest(request);
 
     expect(result).toBeInstanceOf(NextResponse);

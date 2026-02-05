@@ -43,7 +43,7 @@ describe("validateDisconnectConnectorRequest", () => {
     expect(response.status).toBe(401);
   });
 
-  it("should verify ownership when no entity_id provided", async () => {
+  it("should verify ownership when no account_id provided", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "account-123",
       orgId: null,
@@ -84,7 +84,7 @@ describe("validateDisconnectConnectorRequest", () => {
     expect(response.status).toBe(403);
   });
 
-  it("should check entity access when entity_id provided", async () => {
+  it("should check entity access when account_id provided", async () => {
     const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "account-123",
@@ -95,7 +95,7 @@ describe("validateDisconnectConnectorRequest", () => {
 
     const request = new NextRequest("http://localhost/api/connectors", {
       method: "DELETE",
-      body: JSON.stringify({ connected_account_id: "ca_123", entity_id: mockEntityId }),
+      body: JSON.stringify({ connected_account_id: "ca_123", account_id: mockEntityId }),
     });
     const result = await validateDisconnectConnectorRequest(request);
 
@@ -119,7 +119,7 @@ describe("validateDisconnectConnectorRequest", () => {
 
     const request = new NextRequest("http://localhost/api/connectors", {
       method: "DELETE",
-      body: JSON.stringify({ connected_account_id: "ca_123", entity_id: mockEntityId }),
+      body: JSON.stringify({ connected_account_id: "ca_123", account_id: mockEntityId }),
     });
     const result = await validateDisconnectConnectorRequest(request);
 

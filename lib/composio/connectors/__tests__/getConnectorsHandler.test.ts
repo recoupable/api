@@ -53,7 +53,7 @@ describe("getConnectorsHandler", () => {
     expect(body.data.connectors[0].slug).toBe("googlesheets");
   });
 
-  it("should pass allowedToolkits when entity_id is provided", async () => {
+  it("should pass allowedToolkits when account_id is provided", async () => {
     vi.mocked(validateGetConnectorsRequest).mockResolvedValue({
       composioEntityId: "entity-456",
       allowedToolkits: ["tiktok"],
@@ -64,7 +64,7 @@ describe("getConnectorsHandler", () => {
     ]);
 
     const request = new NextRequest(
-      "http://localhost/api/connectors?entity_id=entity-456",
+      "http://localhost/api/connectors?account_id=entity-456",
     );
     await getConnectorsHandler(request);
 

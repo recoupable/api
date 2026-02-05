@@ -20,8 +20,8 @@ export interface AuthorizeConnectorParams {
  *
  * Handles:
  * 1. Authentication (x-api-key or Bearer token)
- * 2. Body validation (connector, entity_id, allowed connector check)
- * 3. Access verification (when entity_id is provided)
+ * 2. Body validation (connector, account_id, allowed connector check)
+ * 3. Access verification (when account_id is provided)
  *
  * @param request - The incoming request
  * @returns NextResponse error or validated params
@@ -38,17 +38,17 @@ export async function validateAuthorizeConnectorRequest(
   }
   const { accountId } = authResult;
 
-  // 2. Validate body (includes allowed connector check when entity_id is provided)
+  // 2. Validate body (includes allowed connector check when account_id is provided)
   const body = await request.json();
   const validated = validateAuthorizeConnectorBody(body);
   if (validated instanceof NextResponse) {
     return validated;
   }
-  const { connector, callback_url, entity_id } = validated;
+  const { connector, callback_url, account_id } = validated;
 
-  // 3. If entity_id is provided, verify access and use that entity
-  if (entity_id) {
-    const hasAccess = await checkAccountArtistAccess(accountId, entity_id);
+  // 3. If account_id is provided, verify access and use that entity
+  if (account_id) {
+    const hasAccess = await checkAccountArtistAccess(accountId, account_id);
     if (!hasAccess) {
       return NextResponse.json({ error: "Access denied to this entity" }, { status: 403, headers });
     }
@@ -60,14 +60,14 @@ export async function validateAuthorizeConnectorRequest(
     }
 
     return {
-      composioEntityId: entity_id,
+      composioEntityId: account_id,
       connector,
       callbackUrl: callback_url,
       authConfigs: Object.keys(authConfigs).length > 0 ? authConfigs : undefined,
     };
   }
 
-  // No entity_id: use the authenticated account
+  // No account_id: use the authenticated account
   return {
     composioEntityId: accountId,
     connector,

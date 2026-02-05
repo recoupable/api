@@ -9,12 +9,12 @@ export const authorizeConnectorBodySchema = z
       .string({ message: "connector is required" })
       .min(1, "connector cannot be empty (e.g., 'googlesheets', 'tiktok')"),
     callback_url: z.string().url("callback_url must be a valid URL").optional(),
-    entity_id: z.string().uuid("entity_id must be a valid UUID").optional(),
+    account_id: z.string().uuid("account_id must be a valid UUID").optional(),
   })
   .refine(
     data => {
-      // connector must be in ALLOWED_ARTIST_CONNECTORS when entity_id is provided
-      if (data.entity_id) {
+      // connector must be in ALLOWED_ARTIST_CONNECTORS when account_id is provided
+      if (data.account_id) {
         return (ALLOWED_ARTIST_CONNECTORS as readonly string[]).includes(data.connector);
       }
       return true;
@@ -31,13 +31,13 @@ export type AuthorizeConnectorBody = z.infer<typeof authorizeConnectorBodySchema
  * Validates request body for POST /api/connectors/authorize.
  *
  * - User connection: { connector: "googlesheets" }
- * - Entity connection: { connector: "tiktok", entity_id: "account-uuid" }
+ * - Entity connection: { connector: "tiktok", account_id: "account-uuid" }
  *
- * When entity_id is provided:
+ * When account_id is provided:
  * - Uses that account ID as the Composio entity
  * - Validates connector is allowed for that entity type
  *
- * When entity_id is not provided:
+ * When account_id is not provided:
  * - Uses the authenticated account ID
  *
  * @param body - The request body

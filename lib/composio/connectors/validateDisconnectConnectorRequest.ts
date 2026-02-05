@@ -19,7 +19,7 @@ export interface DisconnectConnectorParams {
  *
  * Handles:
  * 1. Authentication (x-api-key or Bearer token)
- * 2. Body validation (connected_account_id, entity_id)
+ * 2. Body validation (connected_account_id, account_id)
  * 3. Access verification (entity access or connector ownership)
  *
  * @param request - The incoming request
@@ -43,12 +43,12 @@ export async function validateDisconnectConnectorRequest(
   if (validated instanceof NextResponse) {
     return validated;
   }
-  const { connected_account_id, entity_id } = validated;
+  const { connected_account_id, account_id } = validated;
 
   // 3. Verify access
-  if (entity_id) {
+  if (account_id) {
     // Disconnecting for another entity - verify access to that entity
-    const hasAccess = await checkAccountArtistAccess(accountId, entity_id);
+    const hasAccess = await checkAccountArtistAccess(accountId, account_id);
     if (!hasAccess) {
       return NextResponse.json({ error: "Access denied to this entity" }, { status: 403, headers });
     }
@@ -65,6 +65,6 @@ export async function validateDisconnectConnectorRequest(
 
   return {
     connectedAccountId: connected_account_id,
-    entityId: entity_id,
+    entityId: account_id,
   };
 }

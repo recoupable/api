@@ -19,8 +19,8 @@ export interface GetConnectorsParams {
  *
  * Handles:
  * 1. Authentication (x-api-key or Bearer token)
- * 2. Query param validation (entity_id)
- * 3. Access verification (when entity_id is provided)
+ * 2. Query param validation (account_id)
+ * 3. Access verification (when account_id is provided)
  *
  * @param request - The incoming request
  * @returns NextResponse error or validated params
@@ -43,22 +43,22 @@ export async function validateGetConnectorsRequest(
   if (validated instanceof NextResponse) {
     return validated;
   }
-  const { entity_id } = validated;
+  const { account_id } = validated;
 
-  // 3. If entity_id is provided, verify access and use that entity
-  if (entity_id) {
-    const hasAccess = await checkAccountArtistAccess(accountId, entity_id);
+  // 3. If account_id is provided, verify access and use that entity
+  if (account_id) {
+    const hasAccess = await checkAccountArtistAccess(accountId, account_id);
     if (!hasAccess) {
       return NextResponse.json({ error: "Access denied to this entity" }, { status: 403, headers });
     }
 
     return {
-      composioEntityId: entity_id,
+      composioEntityId: account_id,
       allowedToolkits: ALLOWED_ARTIST_CONNECTORS,
     };
   }
 
-  // No entity_id: use the authenticated account
+  // No account_id: use the authenticated account
   return {
     composioEntityId: accountId,
   };

@@ -15,21 +15,21 @@ describe("validateGetConnectorsQuery", () => {
     expect(result).toEqual({});
   });
 
-  it("should accept valid entity_id UUID", () => {
+  it("should accept valid account_id UUID", () => {
     const searchParams = new URLSearchParams({
-      entity_id: "550e8400-e29b-41d4-a716-446655440000",
+      account_id: "550e8400-e29b-41d4-a716-446655440000",
     });
     const result = validateGetConnectorsQuery(searchParams);
 
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
-      entity_id: "550e8400-e29b-41d4-a716-446655440000",
+      account_id: "550e8400-e29b-41d4-a716-446655440000",
     });
   });
 
-  it("should return 400 for invalid entity_id UUID format", () => {
+  it("should return 400 for invalid account_id UUID format", () => {
     const searchParams = new URLSearchParams({
-      entity_id: "not-a-uuid",
+      account_id: "not-a-uuid",
     });
     const result = validateGetConnectorsQuery(searchParams);
 

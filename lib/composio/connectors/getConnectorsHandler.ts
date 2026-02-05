@@ -18,7 +18,7 @@ const CONNECTOR_DISPLAY_NAMES: Record<string, string> = {
  * Handler for GET /api/connectors.
  *
  * Lists all available connectors and their connection status.
- * Use entity_id query param to get connectors for a specific entity.
+ * Use account_id query param to get connectors for a specific entity.
  *
  * @param request - The incoming request
  * @returns List of connectors with connection status

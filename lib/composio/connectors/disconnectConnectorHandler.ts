@@ -8,7 +8,7 @@ import { disconnectConnector } from "./disconnectConnector";
  * Handler for DELETE /api/connectors.
  *
  * Disconnects a connected account from Composio.
- * Supports disconnecting for the authenticated account or another entity (via entity_id).
+ * Supports disconnecting for the authenticated account or another entity (via account_id).
  *
  * @param request - The incoming request
  * @returns Success status

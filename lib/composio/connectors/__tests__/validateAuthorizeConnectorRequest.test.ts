@@ -38,7 +38,7 @@ describe("validateAuthorizeConnectorRequest", () => {
     expect(response.status).toBe(401);
   });
 
-  it("should return accountId as composioEntityId when no entity_id", async () => {
+  it("should return accountId as composioEntityId when no account_id", async () => {
     const mockAccountId = "account-123";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
@@ -60,7 +60,7 @@ describe("validateAuthorizeConnectorRequest", () => {
     });
   });
 
-  it("should return entity_id as composioEntityId when entity_id provided", async () => {
+  it("should return account_id as composioEntityId when account_id provided", async () => {
     const mockAccountId = "account-123";
     const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
@@ -72,7 +72,7 @@ describe("validateAuthorizeConnectorRequest", () => {
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
-      body: JSON.stringify({ connector: "tiktok", entity_id: mockEntityId }),
+      body: JSON.stringify({ connector: "tiktok", account_id: mockEntityId }),
     });
     const result = await validateAuthorizeConnectorRequest(request);
 
@@ -86,7 +86,7 @@ describe("validateAuthorizeConnectorRequest", () => {
     });
   });
 
-  it("should return 403 when entity_id provided but no access", async () => {
+  it("should return 403 when account_id provided but no access", async () => {
     const mockAccountId = "account-123";
     const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
@@ -98,7 +98,7 @@ describe("validateAuthorizeConnectorRequest", () => {
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
-      body: JSON.stringify({ connector: "tiktok", entity_id: mockEntityId }),
+      body: JSON.stringify({ connector: "tiktok", account_id: mockEntityId }),
     });
     const result = await validateAuthorizeConnectorRequest(request);
 
@@ -122,7 +122,7 @@ describe("validateAuthorizeConnectorRequest", () => {
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
-      body: JSON.stringify({ connector: "tiktok", entity_id: mockEntityId }),
+      body: JSON.stringify({ connector: "tiktok", account_id: mockEntityId }),
     });
     const result = await validateAuthorizeConnectorRequest(request);
 

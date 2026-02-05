@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export const disconnectConnectorBodySchema = z.object({
   connected_account_id: z.string().min(1, "connected_account_id is required"),
-  entity_id: z.string().uuid("entity_id must be a valid UUID").optional(),
+  account_id: z.string().uuid("account_id must be a valid UUID").optional(),
 });
 
 export type DisconnectConnectorBody = z.infer<typeof disconnectConnectorBodySchema>;
@@ -13,9 +13,9 @@ export type DisconnectConnectorBody = z.infer<typeof disconnectConnectorBodySche
  * Validates request body for DELETE /api/connectors.
  *
  * - User disconnect: { connected_account_id: "ca_xxx" }
- * - Entity disconnect: { connected_account_id: "ca_xxx", entity_id: "account-uuid" }
+ * - Entity disconnect: { connected_account_id: "ca_xxx", account_id: "account-uuid" }
  *
- * When entity_id is provided, verifies the connection belongs to that entity.
+ * When account_id is provided, verifies the connection belongs to that entity.
  * When not provided, verifies the connection belongs to the authenticated account.
  *
  * @param body - The request body

@@ -7,7 +7,7 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 }));
 
 describe("validateAuthorizeConnectorBody", () => {
-  it("should accept valid connector request without entity_id", () => {
+  it("should accept valid connector request without account_id", () => {
     const result = validateAuthorizeConnectorBody({
       connector: "googlesheets",
     });
@@ -18,16 +18,16 @@ describe("validateAuthorizeConnectorBody", () => {
     });
   });
 
-  it("should accept valid connector request with entity_id for allowed connector", () => {
+  it("should accept valid connector request with account_id for allowed connector", () => {
     const result = validateAuthorizeConnectorBody({
       connector: "tiktok",
-      entity_id: "550e8400-e29b-41d4-a716-446655440000",
+      account_id: "550e8400-e29b-41d4-a716-446655440000",
     });
 
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
       connector: "tiktok",
-      entity_id: "550e8400-e29b-41d4-a716-446655440000",
+      account_id: "550e8400-e29b-41d4-a716-446655440000",
     });
   });
 
@@ -60,10 +60,10 @@ describe("validateAuthorizeConnectorBody", () => {
     expect(response.status).toBe(400);
   });
 
-  it("should return 400 when entity_id is provided but connector is not allowed", () => {
+  it("should return 400 when account_id is provided but connector is not allowed", () => {
     const result = validateAuthorizeConnectorBody({
       connector: "googlesheets",
-      entity_id: "550e8400-e29b-41d4-a716-446655440000",
+      account_id: "550e8400-e29b-41d4-a716-446655440000",
     });
 
     expect(result).toBeInstanceOf(NextResponse);
@@ -82,10 +82,10 @@ describe("validateAuthorizeConnectorBody", () => {
     expect(response.status).toBe(400);
   });
 
-  it("should return 400 for invalid entity_id UUID format", () => {
+  it("should return 400 for invalid account_id UUID format", () => {
     const result = validateAuthorizeConnectorBody({
       connector: "tiktok",
-      entity_id: "not-a-uuid",
+      account_id: "not-a-uuid",
     });
 
     expect(result).toBeInstanceOf(NextResponse);
