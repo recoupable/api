@@ -31,8 +31,8 @@ describe("upsertAccountSnapshot", () => {
     mockSingle.mockResolvedValue({ data: mockData, error: null });
 
     const result = await upsertAccountSnapshot({
-      accountId: "account-456",
-      snapshotId: "snap_abc123",
+      account_id: "account-456",
+      snapshot_id: "snap_abc123",
     });
 
     expect(mockFrom).toHaveBeenCalledWith("account_snapshots");
@@ -56,8 +56,8 @@ describe("upsertAccountSnapshot", () => {
     mockSingle.mockResolvedValue({ data: mockData, error: null });
 
     const result = await upsertAccountSnapshot({
-      accountId: "account-456",
-      snapshotId: "snap_new789",
+      account_id: "account-456",
+      snapshot_id: "snap_new789",
     });
 
     expect(mockFrom).toHaveBeenCalledWith("account_snapshots");
@@ -69,8 +69,8 @@ describe("upsertAccountSnapshot", () => {
     mockSingle.mockResolvedValue({ data: null, error: mockError });
 
     const result = await upsertAccountSnapshot({
-      accountId: "account-456",
-      snapshotId: "snap_abc123",
+      account_id: "account-456",
+      snapshot_id: "snap_abc123",
     });
 
     expect(mockFrom).toHaveBeenCalledWith("account_snapshots");
@@ -79,14 +79,15 @@ describe("upsertAccountSnapshot", () => {
 
   it("returns error when account_id foreign key constraint fails", async () => {
     const mockError = {
-      message: 'insert or update on table "account_snapshots" violates foreign key constraint',
+      message:
+        'insert or update on table "account_snapshots" violates foreign key constraint',
       code: "23503",
     };
     mockSingle.mockResolvedValue({ data: null, error: mockError });
 
     const result = await upsertAccountSnapshot({
-      accountId: "non-existent-account",
-      snapshotId: "snap_abc123",
+      account_id: "non-existent-account",
+      snapshot_id: "snap_abc123",
     });
 
     expect(result).toEqual({ data: null, error: mockError });
