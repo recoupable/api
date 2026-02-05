@@ -3,6 +3,7 @@ import { getComposioTools } from "../getTools";
 
 import { createToolRouterSession } from "../createToolRouterSession";
 import { getArtistConnectionsFromComposio } from "../getArtistConnectionsFromComposio";
+import { checkAccountArtistAccess } from "@/lib/supabase/account_artist_ids/checkAccountArtistAccess";
 
 // Mock dependencies
 vi.mock("../createToolRouterSession", () => ({
@@ -11,6 +12,10 @@ vi.mock("../createToolRouterSession", () => ({
 
 vi.mock("../getArtistConnectionsFromComposio", () => ({
   getArtistConnectionsFromComposio: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/account_artist_ids/checkAccountArtistAccess", () => ({
+  checkAccountArtistAccess: vi.fn(),
 }));
 
 // Mock valid tool structure
@@ -55,8 +60,9 @@ describe("getComposioTools", () => {
     expect(createToolRouterSession).toHaveBeenCalledWith("account-123", undefined, undefined);
   });
 
-  it("should fetch and pass artist connections when artistId is provided", async () => {
+  it("should fetch and pass artist connections when artistId is provided and access is granted", async () => {
     const mockConnections = { tiktok: "tiktok-account-456" };
+    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
     vi.mocked(getArtistConnectionsFromComposio).mockResolvedValue(mockConnections);
 
     const mockSession = {
@@ -68,11 +74,30 @@ describe("getComposioTools", () => {
 
     await getComposioTools("account-123", "artist-456", "room-789");
 
+    expect(checkAccountArtistAccess).toHaveBeenCalledWith("account-123", "artist-456");
     expect(getArtistConnectionsFromComposio).toHaveBeenCalledWith("artist-456");
     expect(createToolRouterSession).toHaveBeenCalledWith("account-123", "room-789", mockConnections);
   });
 
+  it("should skip artist connections when access is denied", async () => {
+    vi.mocked(checkAccountArtistAccess).mockResolvedValue(false);
+
+    const mockSession = {
+      tools: vi.fn().mockResolvedValue({
+        COMPOSIO_MANAGE_CONNECTIONS: createMockTool(),
+      }),
+    };
+    vi.mocked(createToolRouterSession).mockResolvedValue(mockSession);
+
+    await getComposioTools("account-123", "artist-456", "room-789");
+
+    expect(checkAccountArtistAccess).toHaveBeenCalledWith("account-123", "artist-456");
+    expect(getArtistConnectionsFromComposio).not.toHaveBeenCalled();
+    expect(createToolRouterSession).toHaveBeenCalledWith("account-123", "room-789", undefined);
+  });
+
   it("should pass undefined when artist has no connections", async () => {
+    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
     vi.mocked(getArtistConnectionsFromComposio).mockResolvedValue({});
 
     const mockSession = {

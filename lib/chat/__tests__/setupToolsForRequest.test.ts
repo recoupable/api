@@ -81,7 +81,22 @@ describe("setupToolsForRequest", () => {
   });
 
   describe("Composio tools integration", () => {
-    it("calls getComposioTools with accountId and roomId", async () => {
+    it("calls getComposioTools with accountId, artistId, and roomId", async () => {
+      const body: ChatRequestBody = {
+        accountId: "account-123",
+        orgId: null,
+        authToken: "test-token-123",
+        artistId: "artist-789",
+        roomId: "room-456",
+        messages: [{ id: "1", role: "user", content: "Create a spreadsheet" }],
+      };
+
+      await setupToolsForRequest(body);
+
+      expect(mockGetComposioTools).toHaveBeenCalledWith("account-123", "artist-789", "room-456");
+    });
+
+    it("passes undefined artistId when not provided", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
@@ -92,7 +107,7 @@ describe("setupToolsForRequest", () => {
 
       await setupToolsForRequest(body);
 
-      expect(mockGetComposioTools).toHaveBeenCalledWith("account-123", "room-456");
+      expect(mockGetComposioTools).toHaveBeenCalledWith("account-123", undefined, "room-456");
     });
 
     it("includes Composio tools in result", async () => {

@@ -1,5 +1,6 @@
 import { createToolRouterSession } from "./createToolRouterSession";
 import { getArtistConnectionsFromComposio } from "./getArtistConnectionsFromComposio";
+import { checkAccountArtistAccess } from "@/lib/supabase/account_artist_ids/checkAccountArtistAccess";
 import type { Tool, ToolSet } from "ai";
 
 /**
@@ -69,13 +70,18 @@ export async function getComposioTools(
 
   try {
     // Fetch artist-specific connections from Composio if artistId is provided
+    // Only fetch if the account has access to this artist
     let artistConnections: Record<string, string> | undefined;
     if (artistId) {
-      artistConnections = await getArtistConnectionsFromComposio(artistId);
-      // Only pass if there are actual connections
-      if (Object.keys(artistConnections).length === 0) {
-        artistConnections = undefined;
+      const hasAccess = await checkAccountArtistAccess(accountId, artistId);
+      if (hasAccess) {
+        artistConnections = await getArtistConnectionsFromComposio(artistId);
+        // Only pass if there are actual connections
+        if (Object.keys(artistConnections).length === 0) {
+          artistConnections = undefined;
+        }
       }
+      // If no access, silently skip artist connections (don't throw)
     }
 
     const session = await createToolRouterSession(accountId, roomId, artistConnections);
