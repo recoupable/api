@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAccountIdHeaders } from "@/lib/accounts/validateAccountIdHeaders";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateGetConnectorsQuery } from "./validateGetConnectorsQuery";
 import { checkAccountArtistAccess } from "@/lib/supabase/account_artist_ids/checkAccountArtistAccess";
 import { ALLOWED_ARTIST_CONNECTORS } from "./isAllowedArtistConnector";
@@ -30,8 +30,8 @@ export async function validateGetConnectorsRequest(
 ): Promise<NextResponse | GetConnectorsParams> {
   const headers = getCorsHeaders();
 
-  // 1. Validate authentication
-  const authResult = await validateAccountIdHeaders(request);
+  // 1. Validate authentication (supports x-api-key and Bearer token)
+  const authResult = await validateAuthContext(request);
   if (authResult instanceof NextResponse) {
     return authResult;
   }

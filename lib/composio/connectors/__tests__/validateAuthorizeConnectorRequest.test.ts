@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateAuthorizeConnectorRequest } from "../validateAuthorizeConnectorRequest";
 
-import { validateAccountIdHeaders } from "@/lib/accounts/validateAccountIdHeaders";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { checkAccountArtistAccess } from "@/lib/supabase/account_artist_ids/checkAccountArtistAccess";
 
-vi.mock("@/lib/accounts/validateAccountIdHeaders", () => ({
-  validateAccountIdHeaders: vi.fn(),
+vi.mock("@/lib/auth/validateAuthContext", () => ({
+  validateAuthContext: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/account_artist_ids/checkAccountArtistAccess", () => ({
@@ -23,7 +23,7 @@ describe("validateAuthorizeConnectorRequest", () => {
   });
 
   it("should return error if auth fails", async () => {
-    vi.mocked(validateAccountIdHeaders).mockResolvedValue(
+    vi.mocked(validateAuthContext).mockResolvedValue(
       NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
     );
 
@@ -40,8 +40,10 @@ describe("validateAuthorizeConnectorRequest", () => {
 
   it("should return accountId as composioEntityId with isEntityConnection=false when no entity_id", async () => {
     const mockAccountId = "account-123";
-    vi.mocked(validateAccountIdHeaders).mockResolvedValue({
+    vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
+      orgId: null,
+      authToken: "test-token",
     });
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
@@ -62,8 +64,10 @@ describe("validateAuthorizeConnectorRequest", () => {
   it("should return entity_id as composioEntityId with isEntityConnection=true when entity_id provided", async () => {
     const mockAccountId = "account-123";
     const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
-    vi.mocked(validateAccountIdHeaders).mockResolvedValue({
+    vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
+      orgId: null,
+      authToken: "test-token",
     });
     vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
 
@@ -87,8 +91,10 @@ describe("validateAuthorizeConnectorRequest", () => {
   it("should return 403 when entity_id provided but no access", async () => {
     const mockAccountId = "account-123";
     const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
-    vi.mocked(validateAccountIdHeaders).mockResolvedValue({
+    vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
+      orgId: null,
+      authToken: "test-token",
     });
     vi.mocked(checkAccountArtistAccess).mockResolvedValue(false);
 
@@ -109,8 +115,10 @@ describe("validateAuthorizeConnectorRequest", () => {
     const originalEnv = process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID;
     process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID = "ac_test123";
 
-    vi.mocked(validateAccountIdHeaders).mockResolvedValue({
+    vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
+      orgId: null,
+      authToken: "test-token",
     });
     vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
 

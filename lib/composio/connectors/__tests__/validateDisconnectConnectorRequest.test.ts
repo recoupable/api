@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateDisconnectConnectorRequest } from "../validateDisconnectConnectorRequest";
 
-import { validateAccountIdHeaders } from "@/lib/accounts/validateAccountIdHeaders";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { checkAccountArtistAccess } from "@/lib/supabase/account_artist_ids/checkAccountArtistAccess";
 import { verifyConnectorOwnership } from "../verifyConnectorOwnership";
 
-vi.mock("@/lib/accounts/validateAccountIdHeaders", () => ({
-  validateAccountIdHeaders: vi.fn(),
+vi.mock("@/lib/auth/validateAuthContext", () => ({
+  validateAuthContext: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/account_artist_ids/checkAccountArtistAccess", () => ({
@@ -28,7 +28,7 @@ describe("validateDisconnectConnectorRequest", () => {
   });
 
   it("should return error if auth fails", async () => {
-    vi.mocked(validateAccountIdHeaders).mockResolvedValue(
+    vi.mocked(validateAuthContext).mockResolvedValue(
       NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
     );
 
@@ -44,8 +44,10 @@ describe("validateDisconnectConnectorRequest", () => {
   });
 
   it("should verify ownership when no entity_id provided", async () => {
-    vi.mocked(validateAccountIdHeaders).mockResolvedValue({
+    vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "account-123",
+      orgId: null,
+      authToken: "test-token",
     });
     vi.mocked(verifyConnectorOwnership).mockResolvedValue(true);
 
@@ -64,8 +66,10 @@ describe("validateDisconnectConnectorRequest", () => {
   });
 
   it("should return 403 when ownership verification fails", async () => {
-    vi.mocked(validateAccountIdHeaders).mockResolvedValue({
+    vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "account-123",
+      orgId: null,
+      authToken: "test-token",
     });
     vi.mocked(verifyConnectorOwnership).mockResolvedValue(false);
 
@@ -82,8 +86,10 @@ describe("validateDisconnectConnectorRequest", () => {
 
   it("should check entity access when entity_id provided", async () => {
     const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
-    vi.mocked(validateAccountIdHeaders).mockResolvedValue({
+    vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "account-123",
+      orgId: null,
+      authToken: "test-token",
     });
     vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
 
@@ -104,8 +110,10 @@ describe("validateDisconnectConnectorRequest", () => {
 
   it("should return 403 when entity access denied", async () => {
     const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
-    vi.mocked(validateAccountIdHeaders).mockResolvedValue({
+    vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "account-123",
+      orgId: null,
+      authToken: "test-token",
     });
     vi.mocked(checkAccountArtistAccess).mockResolvedValue(false);
 
