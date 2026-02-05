@@ -23,8 +23,10 @@ export async function updateSnapshotPatchHandler(request: NextRequest): Promise<
   try {
     const result = await upsertAccountSnapshot({
       account_id: validated.accountId,
-      expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-      ...(validated.snapshotId && { snapshot_id: validated.snapshotId }),
+      ...(validated.snapshotId && {
+        snapshot_id: validated.snapshotId,
+        expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      }),
       ...(validated.githubRepo && { github_repo: validated.githubRepo }),
     });
 

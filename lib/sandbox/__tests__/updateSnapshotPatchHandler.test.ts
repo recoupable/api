@@ -93,6 +93,7 @@ describe("updateSnapshotPatchHandler", () => {
       expect.objectContaining({
         account_id: "acc_456",
         snapshot_id: "snap_xyz",
+        expires_at: expect.any(String),
       }),
     );
   });
@@ -149,6 +150,7 @@ describe("updateSnapshotPatchHandler", () => {
 
     const call = vi.mocked(upsertAccountSnapshot).mock.calls[0][0];
     expect(call).not.toHaveProperty("snapshot_id");
+    expect(call).not.toHaveProperty("expires_at");
     expect(call).toEqual(
       expect.objectContaining({
         account_id: "acc_123",
