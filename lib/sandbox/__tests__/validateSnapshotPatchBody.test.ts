@@ -78,6 +78,22 @@ describe("validateSnapshotPatchBody", () => {
     });
   });
 
+  it("returns validated body when neither snapshotId nor github_repo is provided", async () => {
+    vi.mocked(safeParseJson).mockResolvedValue({});
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc_123",
+      orgId: "org_456",
+      authToken: "token",
+    });
+
+    const request = createMockRequest();
+    const result = await validateSnapshotPatchBody(request);
+
+    expect(result).toEqual({
+      accountId: "acc_123",
+    });
+  });
+
   it("returns error response when snapshotId is empty string", async () => {
     vi.mocked(safeParseJson).mockResolvedValue({ snapshotId: "" });
 
