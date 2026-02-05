@@ -5,7 +5,6 @@ import { NextResponse } from "next/server";
 import { updateSnapshotPatchHandler } from "../updateSnapshotPatchHandler";
 import { validateSnapshotPatchBody } from "@/lib/sandbox/validateSnapshotPatchBody";
 import { upsertAccountSnapshot } from "@/lib/supabase/account_snapshots/upsertAccountSnapshot";
-import { updateAccountSnapshot } from "@/lib/supabase/account_snapshots/updateAccountSnapshot";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 
 vi.mock("@/lib/sandbox/validateSnapshotPatchBody", () => ({
@@ -14,10 +13,6 @@ vi.mock("@/lib/sandbox/validateSnapshotPatchBody", () => ({
 
 vi.mock("@/lib/supabase/account_snapshots/upsertAccountSnapshot", () => ({
   upsertAccountSnapshot: vi.fn(),
-}));
-
-vi.mock("@/lib/supabase/account_snapshots/updateAccountSnapshot", () => ({
-  updateAccountSnapshot: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
@@ -142,17 +137,17 @@ describe("updateSnapshotPatchHandler", () => {
     );
   });
 
-  it("uses updateAccountSnapshot when only github_repo is provided", async () => {
+  it("upserts with github_repo when only github_repo is provided", async () => {
     vi.mocked(validateSnapshotPatchBody).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
       authToken: "token",
       githubRepo: "https://github.com/org/repo",
     });
-    vi.mocked(updateAccountSnapshot).mockResolvedValue({
+    vi.mocked(upsertAccountSnapshot).mockResolvedValue({
       data: {
         account_id: "acc_123",
-        snapshot_id: "snap_existing",
+        snapshot_id: null,
         expires_at: "2025-01-01T00:00:00.000Z",
         created_at: "2024-01-01T00:00:00.000Z",
         github_repo: "https://github.com/org/repo",
@@ -163,10 +158,12 @@ describe("updateSnapshotPatchHandler", () => {
     const request = createMockRequest();
     const response = await updateSnapshotPatchHandler(request);
 
-    expect(upsertAccountSnapshot).not.toHaveBeenCalled();
-    expect(updateAccountSnapshot).toHaveBeenCalledWith("acc_123", {
-      github_repo: "https://github.com/org/repo",
-    });
+    expect(upsertAccountSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account_id: "acc_123",
+        github_repo: "https://github.com/org/repo",
+      }),
+    );
     expect(response.status).toBe(200);
   });
 
