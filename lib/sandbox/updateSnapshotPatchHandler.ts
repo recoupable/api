@@ -48,13 +48,7 @@ export async function updateSnapshotPatchHandler(request: NextRequest): Promise<
       );
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        snapshotId: result.data.snapshot_id,
-      },
-      { status: 200, headers: getCorsHeaders() },
-    );
+    return NextResponse.json(result.data, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update snapshot";
     return NextResponse.json(

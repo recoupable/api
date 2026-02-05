@@ -46,7 +46,7 @@ describe("updateSnapshotPatchHandler", () => {
     expect(response.status).toBe(401);
   });
 
-  it("returns 200 with success and snapshotId on successful upsert", async () => {
+  it("returns 200 with full row on successful upsert", async () => {
     vi.mocked(validateSnapshotPatchBody).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
@@ -59,6 +59,7 @@ describe("updateSnapshotPatchHandler", () => {
         snapshot_id: "snap_abc123",
         expires_at: "2025-01-01T00:00:00.000Z",
         created_at: "2024-01-01T00:00:00.000Z",
+        github_repo: null,
       },
       error: null,
     });
@@ -69,8 +70,11 @@ describe("updateSnapshotPatchHandler", () => {
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json).toEqual({
-      success: true,
-      snapshotId: "snap_abc123",
+      account_id: "acc_123",
+      snapshot_id: "snap_abc123",
+      expires_at: "2025-01-01T00:00:00.000Z",
+      created_at: "2024-01-01T00:00:00.000Z",
+      github_repo: null,
     });
   });
 
