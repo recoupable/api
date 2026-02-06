@@ -7,6 +7,7 @@ import { validateGetSandboxesRequest } from "../validateGetSandboxesRequest";
 import { selectAccountSandboxes } from "@/lib/supabase/account_sandboxes/selectAccountSandboxes";
 import { getSandboxStatus } from "../getSandboxStatus";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
+import { getRepoFileTree } from "@/lib/github/getRepoFileTree";
 
 vi.mock("../validateGetSandboxesRequest", () => ({
   validateGetSandboxesRequest: vi.fn(),
@@ -22,6 +23,10 @@ vi.mock("../getSandboxStatus", () => ({
 
 vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
   selectAccountSnapshots: vi.fn(),
+}));
+
+vi.mock("@/lib/github/getRepoFileTree", () => ({
+  getRepoFileTree: vi.fn(),
 }));
 
 /**
@@ -41,6 +46,8 @@ describe("getSandboxesHandler", () => {
     vi.clearAllMocks();
     // Default mock for selectAccountSnapshots - no snapshot exists
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
+    // Default mock for getRepoFileTree - no filetree
+    vi.mocked(getRepoFileTree).mockResolvedValue(null);
   });
 
   it("returns error response when validation fails", async () => {
@@ -70,6 +77,7 @@ describe("getSandboxesHandler", () => {
       sandboxes: [],
       snapshot_id: null,
       github_repo: null,
+      filetree: null,
     });
   });
 
@@ -109,6 +117,7 @@ describe("getSandboxesHandler", () => {
       ],
       snapshot_id: null,
       github_repo: null,
+      filetree: null,
     });
   });
 
@@ -351,6 +360,142 @@ describe("getSandboxesHandler", () => {
       await getSandboxesHandler(request);
 
       expect(selectAccountSnapshots).toHaveBeenCalledWith("acc_123");
+    });
+  });
+
+  describe("filetree field", () => {
+    it("returns filetree when github_repo exists", async () => {
+      const mockFiletree = [
+        { path: "README.md", type: "blob" as const, sha: "abc123", size: 100 },
+        { path: "src", type: "tree" as const, sha: "def456" },
+        { path: "src/index.ts", type: "blob" as const, sha: "ghi789", size: 250 },
+      ];
+      vi.mocked(validateGetSandboxesRequest).mockResolvedValue({
+        accountIds: ["acc_123"],
+      });
+      vi.mocked(selectAccountSandboxes).mockResolvedValue([]);
+      vi.mocked(selectAccountSnapshots).mockResolvedValue([
+        {
+          account_id: "acc_123",
+          snapshot_id: "snap_abc123",
+          github_repo: "https://github.com/user/repo",
+          created_at: "2024-01-01T00:00:00.000Z",
+          expires_at: "2024-01-08T00:00:00.000Z",
+        },
+      ]);
+      vi.mocked(getRepoFileTree).mockResolvedValue(mockFiletree);
+
+      const request = createMockRequest();
+      const response = await getSandboxesHandler(request);
+
+      const json = await response.json();
+      expect(json.filetree).toEqual(mockFiletree);
+      expect(getRepoFileTree).toHaveBeenCalledWith("https://github.com/user/repo");
+    });
+
+    it("returns null filetree when no github_repo exists", async () => {
+      vi.mocked(validateGetSandboxesRequest).mockResolvedValue({
+        accountIds: ["acc_123"],
+      });
+      vi.mocked(selectAccountSandboxes).mockResolvedValue([]);
+      vi.mocked(selectAccountSnapshots).mockResolvedValue([
+        {
+          account_id: "acc_123",
+          snapshot_id: "snap_abc123",
+          github_repo: null,
+          created_at: "2024-01-01T00:00:00.000Z",
+          expires_at: "2024-01-08T00:00:00.000Z",
+        },
+      ]);
+
+      const request = createMockRequest();
+      const response = await getSandboxesHandler(request);
+
+      const json = await response.json();
+      expect(json.filetree).toBeNull();
+      expect(getRepoFileTree).not.toHaveBeenCalled();
+    });
+
+    it("returns null filetree when getRepoFileTree fails", async () => {
+      vi.mocked(validateGetSandboxesRequest).mockResolvedValue({
+        accountIds: ["acc_123"],
+      });
+      vi.mocked(selectAccountSandboxes).mockResolvedValue([]);
+      vi.mocked(selectAccountSnapshots).mockResolvedValue([
+        {
+          account_id: "acc_123",
+          snapshot_id: "snap_abc123",
+          github_repo: "https://github.com/user/repo",
+          created_at: "2024-01-01T00:00:00.000Z",
+          expires_at: "2024-01-08T00:00:00.000Z",
+        },
+      ]);
+      vi.mocked(getRepoFileTree).mockResolvedValue(null);
+
+      const request = createMockRequest();
+      const response = await getSandboxesHandler(request);
+
+      const json = await response.json();
+      expect(json.filetree).toBeNull();
+    });
+
+    it("fetches filetree in parallel with sandbox statuses", async () => {
+      const callOrder: string[] = [];
+
+      vi.mocked(validateGetSandboxesRequest).mockResolvedValue({
+        accountIds: ["acc_123"],
+      });
+      vi.mocked(selectAccountSandboxes).mockResolvedValue([
+        {
+          id: "record_1",
+          account_id: "acc_123",
+          sandbox_id: "sbx_1",
+          created_at: "2024-01-01T00:00:00.000Z",
+        },
+      ]);
+      vi.mocked(selectAccountSnapshots).mockResolvedValue([
+        {
+          account_id: "acc_123",
+          snapshot_id: "snap_abc123",
+          github_repo: "https://github.com/user/repo",
+          created_at: "2024-01-01T00:00:00.000Z",
+          expires_at: "2024-01-08T00:00:00.000Z",
+        },
+      ]);
+
+      vi.mocked(getSandboxStatus).mockImplementation(async () => {
+        callOrder.push("start:sandbox");
+        await new Promise(resolve => setTimeout(resolve, 10));
+        callOrder.push("end:sandbox");
+        return {
+          sandboxId: "sbx_1",
+          sandboxStatus: "running",
+          timeout: 600000,
+          createdAt: "2024-01-01T00:00:00.000Z",
+        };
+      });
+
+      vi.mocked(getRepoFileTree).mockImplementation(async () => {
+        callOrder.push("start:filetree");
+        await new Promise(resolve => setTimeout(resolve, 10));
+        callOrder.push("end:filetree");
+        return [{ path: "README.md", type: "blob" as const, sha: "abc", size: 10 }];
+      });
+
+      const request = createMockRequest();
+      await getSandboxesHandler(request);
+
+      // Both should start before either ends (parallel execution)
+      const startIndices = callOrder
+        .map((item, index) => (item.startsWith("start:") ? index : -1))
+        .filter(i => i !== -1);
+      const endIndices = callOrder
+        .map((item, index) => (item.startsWith("end:") ? index : -1))
+        .filter(i => i !== -1);
+
+      const maxStartIndex = Math.max(...startIndices);
+      const minEndIndex = Math.min(...endIndices);
+      expect(maxStartIndex).toBeLessThan(minEndIndex);
     });
   });
 });

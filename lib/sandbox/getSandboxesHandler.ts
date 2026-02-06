@@ -4,6 +4,7 @@ import { validateGetSandboxesRequest } from "./validateGetSandboxesRequest";
 import { selectAccountSandboxes } from "@/lib/supabase/account_sandboxes/selectAccountSandboxes";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { getSandboxStatus } from "./getSandboxStatus";
+import { getRepoFileTree } from "@/lib/github/getRepoFileTree";
 import type { SandboxCreatedResponse } from "./createSandbox";
 
 /**
@@ -35,19 +36,20 @@ export async function getSandboxesHandler(request: NextRequest): Promise<NextRes
     snapshotAccountId ? selectAccountSnapshots(snapshotAccountId) : Promise.resolve([]),
   ]);
 
-  // Fetch live status for each sandbox from Vercel API in parallel
-  const statusResults = await Promise.all(
-    accountSandboxes.map(record => getSandboxStatus(record.sandbox_id)),
-  );
+  // Extract snapshot info
+  const snapshot_id = snapshots[0]?.snapshot_id ?? null;
+  const github_repo = snapshots[0]?.github_repo ?? null;
+
+  // Fetch live sandbox statuses and filetree in parallel
+  const [statusResults, filetree] = await Promise.all([
+    Promise.all(accountSandboxes.map(record => getSandboxStatus(record.sandbox_id))),
+    github_repo ? getRepoFileTree(github_repo) : Promise.resolve(null),
+  ]);
 
   // Filter out null results (sandboxes that no longer exist)
   const sandboxes = statusResults.filter(
     (status): status is SandboxCreatedResponse => status !== null,
   );
-
-  // Extract snapshot info
-  const snapshot_id = snapshots[0]?.snapshot_id ?? null;
-  const github_repo = snapshots[0]?.github_repo ?? null;
 
   return NextResponse.json(
     {
@@ -55,6 +57,7 @@ export async function getSandboxesHandler(request: NextRequest): Promise<NextRes
       sandboxes,
       snapshot_id,
       github_repo,
+      filetree,
     },
     {
       status: 200,
