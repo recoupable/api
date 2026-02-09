@@ -37,7 +37,10 @@ export async function deleteGithubRepo(githubRepoUrl: string): Promise<boolean> 
     }
 
     if (!response.ok) {
-      console.error(`GitHub API error deleting repo: ${response.status}`);
+      const body = await response.text();
+      console.error(
+        `GitHub API error deleting repo ${repoInfo.owner}/${repoInfo.repo}: ${response.status} ${body}`,
+      );
       return false;
     }
 
