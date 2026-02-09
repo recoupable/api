@@ -8,6 +8,7 @@ import { createSandbox } from "@/lib/sandbox/createSandbox";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
+import { ensureGithubRepo } from "@/lib/github/ensureGithubRepo";
 
 vi.mock("@/lib/sandbox/validateSandboxBody", () => ({
   validateSandboxBody: vi.fn(),
@@ -27,6 +28,10 @@ vi.mock("@/lib/trigger/triggerRunSandboxCommand", () => ({
 
 vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
   selectAccountSnapshots: vi.fn(),
+}));
+
+vi.mock("@/lib/github/ensureGithubRepo", () => ({
+  ensureGithubRepo: vi.fn(),
 }));
 
 /**
@@ -65,10 +70,13 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
-      sandboxId: "sbx_123",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      sandbox: {} as any,
+      response: {
+        sandboxId: "sbx_123",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     vi.mocked(insertAccountSandbox).mockResolvedValue({
       data: {
@@ -99,6 +107,7 @@ describe("createSandboxPostHandler", () => {
           runId: "run_abc123",
         },
       ],
+      github_repo: null,
     });
   });
 
@@ -118,10 +127,13 @@ describe("createSandboxPostHandler", () => {
       },
     ]);
     vi.mocked(createSandbox).mockResolvedValue({
-      sandboxId: "sbx_456",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      sandbox: {} as any,
+      response: {
+        sandboxId: "sbx_456",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     vi.mocked(insertAccountSandbox).mockResolvedValue({
       data: {
@@ -153,10 +165,13 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
-      sandboxId: "sbx_456",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      sandbox: {} as any,
+      response: {
+        sandboxId: "sbx_456",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     vi.mocked(insertAccountSandbox).mockResolvedValue({
       data: {
@@ -186,10 +201,13 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
-      sandboxId: "sbx_456",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      sandbox: {} as any,
+      response: {
+        sandboxId: "sbx_456",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     vi.mocked(insertAccountSandbox).mockResolvedValue({
       data: {
@@ -224,10 +242,13 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
-      sandboxId: "sbx_789",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      sandbox: {} as any,
+      response: {
+        sandboxId: "sbx_789",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     vi.mocked(insertAccountSandbox).mockResolvedValue({
       data: {
@@ -284,10 +305,13 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
-      sandboxId: "sbx_123",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      sandbox: {} as any,
+      response: {
+        sandboxId: "sbx_123",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     vi.mocked(insertAccountSandbox).mockRejectedValue(new Error("Database insert failed"));
 
@@ -311,10 +335,13 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
-      sandboxId: "sbx_123",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      sandbox: {} as any,
+      response: {
+        sandboxId: "sbx_123",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     vi.mocked(insertAccountSandbox).mockResolvedValue({
       data: {
@@ -342,6 +369,7 @@ describe("createSandboxPostHandler", () => {
           // Note: runId is not included when command is not provided
         },
       ],
+      github_repo: null,
     });
     // Verify triggerRunSandboxCommand was NOT called
     expect(triggerRunSandboxCommand).not.toHaveBeenCalled();
@@ -356,10 +384,13 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
-      sandboxId: "sbx_123",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      sandbox: {} as any,
+      response: {
+        sandboxId: "sbx_123",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     vi.mocked(insertAccountSandbox).mockResolvedValue({
       data: {
@@ -389,6 +420,7 @@ describe("createSandboxPostHandler", () => {
           // Note: runId is not included when trigger fails
         },
       ],
+      github_repo: null,
     });
   });
 });
