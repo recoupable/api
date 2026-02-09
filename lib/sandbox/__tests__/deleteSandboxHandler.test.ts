@@ -6,6 +6,7 @@ import { validateDeleteSandboxBody } from "../validateDeleteSandboxBody";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { deleteAccountSnapshot } from "@/lib/supabase/account_snapshots/deleteAccountSnapshot";
 import { deleteGithubRepo } from "@/lib/github/deleteGithubRepo";
+import { findOrgReposByAccountId } from "@/lib/github/findOrgReposByAccountId";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -25,6 +26,10 @@ vi.mock("@/lib/supabase/account_snapshots/deleteAccountSnapshot", () => ({
 
 vi.mock("@/lib/github/deleteGithubRepo", () => ({
   deleteGithubRepo: vi.fn(),
+}));
+
+vi.mock("@/lib/github/findOrgReposByAccountId", () => ({
+  findOrgReposByAccountId: vi.fn().mockResolvedValue([]),
 }));
 
 /**
@@ -62,11 +67,12 @@ describe("deleteSandboxHandler", () => {
     expect(selectAccountSnapshots).not.toHaveBeenCalled();
   });
 
-  it("returns success with null deleted_snapshot when no snapshot exists", async () => {
+  it("returns success with null deleted_snapshot when no snapshot and no org repos exist", async () => {
     vi.mocked(validateDeleteSandboxBody).mockResolvedValue({
       accountId: mockAccountId,
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
+    vi.mocked(findOrgReposByAccountId).mockResolvedValue([]);
 
     const request = createMockRequest();
     const response = await deleteSandboxHandler(request as never);
@@ -75,7 +81,28 @@ describe("deleteSandboxHandler", () => {
     expect(response.status).toBe(200);
     expect(body.status).toBe("success");
     expect(body.deleted_snapshot).toBeNull();
+    expect(findOrgReposByAccountId).toHaveBeenCalledWith(mockAccountId);
     expect(deleteGithubRepo).not.toHaveBeenCalled();
+    expect(deleteAccountSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("deletes org repos found by account ID when no snapshot exists", async () => {
+    const repoUrl = "https://github.com/recoupable/artist-550e8400-e29b-41d4-a716-446655440000";
+    vi.mocked(validateDeleteSandboxBody).mockResolvedValue({
+      accountId: mockAccountId,
+    });
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
+    vi.mocked(findOrgReposByAccountId).mockResolvedValue([repoUrl]);
+    vi.mocked(deleteGithubRepo).mockResolvedValue(true);
+
+    const request = createMockRequest();
+    const response = await deleteSandboxHandler(request as never);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.status).toBe("success");
+    expect(body.deleted_snapshot).toBeNull();
+    expect(deleteGithubRepo).toHaveBeenCalledWith(repoUrl);
     expect(deleteAccountSnapshot).not.toHaveBeenCalled();
   });
 
@@ -98,12 +125,13 @@ describe("deleteSandboxHandler", () => {
     expect(deleteAccountSnapshot).toHaveBeenCalledWith(mockAccountId);
   });
 
-  it("skips github repo deletion when snapshot has no github_repo", async () => {
+  it("searches org repos when snapshot has no github_repo", async () => {
     const snapshotWithoutRepo = { ...mockSnapshot, github_repo: null };
     vi.mocked(validateDeleteSandboxBody).mockResolvedValue({
       accountId: mockAccountId,
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([snapshotWithoutRepo]);
+    vi.mocked(findOrgReposByAccountId).mockResolvedValue([]);
     vi.mocked(deleteAccountSnapshot).mockResolvedValue(snapshotWithoutRepo);
 
     const request = createMockRequest();
@@ -112,7 +140,7 @@ describe("deleteSandboxHandler", () => {
 
     expect(response.status).toBe(200);
     expect(body.status).toBe("success");
-    expect(deleteGithubRepo).not.toHaveBeenCalled();
+    expect(findOrgReposByAccountId).toHaveBeenCalledWith(mockAccountId);
     expect(deleteAccountSnapshot).toHaveBeenCalledWith(mockAccountId);
   });
 
