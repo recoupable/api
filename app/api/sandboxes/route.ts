@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createSandboxPostHandler } from "@/lib/sandbox/createSandboxPostHandler";
+import { deleteSandboxHandler } from "@/lib/sandbox/deleteSandboxHandler";
 import { getSandboxesHandler } from "@/lib/sandbox/getSandboxesHandler";
 import { updateSnapshotPatchHandler } from "@/lib/sandbox/updateSnapshotPatchHandler";
 
@@ -99,4 +100,32 @@ export async function GET(request: NextRequest): Promise<Response> {
  */
 export async function PATCH(request: NextRequest): Promise<Response> {
   return updateSnapshotPatchHandler(request);
+}
+
+/**
+ * DELETE /api/sandboxes
+ *
+ * Deletes the GitHub repository and snapshot record for an account.
+ * For personal API keys, deletes the sandbox for the key owner's account.
+ * Organization API keys may specify account_id to target any account
+ * within their organization.
+ *
+ * Authentication: x-api-key header or Authorization Bearer token required.
+ *
+ * Request body:
+ * - account_id: string (optional) - UUID of the account to delete for (org keys only)
+ *
+ * Response (200):
+ * - status: "success"
+ * - deleted_snapshot: { account_id, snapshot_id, expires_at, github_repo, created_at } | null
+ *
+ * Error (400/401/403/500):
+ * - status: "error"
+ * - error: string
+ *
+ * @param request - The request object
+ * @returns A NextResponse with the deletion result or error
+ */
+export async function DELETE(request: NextRequest): Promise<Response> {
+  return deleteSandboxHandler(request);
 }
