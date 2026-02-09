@@ -116,22 +116,21 @@ describe("deleteSandboxHandler", () => {
     expect(deleteAccountSnapshot).toHaveBeenCalledWith(mockAccountId);
   });
 
-  it("still deletes snapshot when github repo deletion fails (best-effort)", async () => {
+  it("returns 500 and does not delete snapshot when github repo deletion fails", async () => {
     vi.mocked(validateDeleteSandboxBody).mockResolvedValue({
       accountId: mockAccountId,
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([mockSnapshot]);
     vi.mocked(deleteGithubRepo).mockResolvedValue(false);
-    vi.mocked(deleteAccountSnapshot).mockResolvedValue(mockSnapshot);
 
     const request = createMockRequest();
     const response = await deleteSandboxHandler(request as never);
     const body = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(body.status).toBe("success");
-    expect(body.deleted_snapshot).toEqual(mockSnapshot);
-    expect(deleteAccountSnapshot).toHaveBeenCalledWith(mockAccountId);
+    expect(response.status).toBe(500);
+    expect(body.status).toBe("error");
+    expect(body.error).toBe("Failed to delete GitHub repository");
+    expect(deleteAccountSnapshot).not.toHaveBeenCalled();
   });
 
   it("returns 500 when deleteAccountSnapshot throws", async () => {

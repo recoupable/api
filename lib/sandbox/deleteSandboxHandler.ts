@@ -33,7 +33,13 @@ export async function deleteSandboxHandler(request: NextRequest): Promise<NextRe
 
   try {
     if (snapshot.github_repo) {
-      await deleteGithubRepo(snapshot.github_repo);
+      const repoDeleted = await deleteGithubRepo(snapshot.github_repo);
+      if (!repoDeleted) {
+        return NextResponse.json(
+          { status: "error", error: "Failed to delete GitHub repository" },
+          { status: 500, headers: getCorsHeaders() },
+        );
+      }
     }
 
     const deletedSnapshot = await deleteAccountSnapshot(validated.accountId);
