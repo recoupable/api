@@ -58,7 +58,7 @@ describe("deleteGithubRepo", () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it("returns false when GitHub API returns an error", async () => {
+  it("returns true when repo does not exist (404)", async () => {
     vi.mocked(parseGitHubRepoUrl).mockReturnValue({
       owner: "recoupable",
       repo: "test-repo",
@@ -66,6 +66,21 @@ describe("deleteGithubRepo", () => {
     vi.mocked(global.fetch).mockResolvedValue({
       ok: false,
       status: 404,
+    } as Response);
+
+    const result = await deleteGithubRepo(mockRepoUrl);
+
+    expect(result).toBe(true);
+  });
+
+  it("returns false when GitHub API returns a non-404 error", async () => {
+    vi.mocked(parseGitHubRepoUrl).mockReturnValue({
+      owner: "recoupable",
+      repo: "test-repo",
+    });
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: false,
+      status: 403,
     } as Response);
 
     const result = await deleteGithubRepo(mockRepoUrl);
