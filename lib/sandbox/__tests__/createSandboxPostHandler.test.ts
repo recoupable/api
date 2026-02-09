@@ -7,8 +7,8 @@ import { validateSandboxBody } from "@/lib/sandbox/validateSandboxBody";
 import { createSandbox } from "@/lib/sandbox/createSandbox";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
+import { triggerSetupSandbox } from "@/lib/trigger/triggerSetupSandbox";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
-import { ensureGithubRepo } from "@/lib/github/ensureGithubRepo";
 
 vi.mock("@/lib/sandbox/validateSandboxBody", () => ({
   validateSandboxBody: vi.fn(),
@@ -26,12 +26,12 @@ vi.mock("@/lib/trigger/triggerRunSandboxCommand", () => ({
   triggerRunSandboxCommand: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
-  selectAccountSnapshots: vi.fn(),
+vi.mock("@/lib/trigger/triggerSetupSandbox", () => ({
+  triggerSetupSandbox: vi.fn(),
 }));
 
-vi.mock("@/lib/github/ensureGithubRepo", () => ({
-  ensureGithubRepo: vi.fn(),
+vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
+  selectAccountSnapshots: vi.fn(),
 }));
 
 /**
@@ -107,7 +107,6 @@ describe("createSandboxPostHandler", () => {
           runId: "run_abc123",
         },
       ],
-      github_repo: null,
     });
   });
 
@@ -275,6 +274,95 @@ describe("createSandboxPostHandler", () => {
     });
   });
 
+  it("calls triggerSetupSandbox with sandboxId and accountId", async () => {
+    vi.mocked(validateSandboxBody).mockResolvedValue({
+      accountId: "acc_123",
+      orgId: null,
+      authToken: "token",
+      command: "ls",
+    });
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
+    vi.mocked(createSandbox).mockResolvedValue({
+      sandbox: {} as any,
+      response: {
+        sandboxId: "sbx_123",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
+    });
+    vi.mocked(insertAccountSandbox).mockResolvedValue({
+      data: {
+        id: "record_123",
+        account_id: "acc_123",
+        sandbox_id: "sbx_123",
+        created_at: "2024-01-01T00:00:00.000Z",
+      },
+      error: null,
+    });
+    vi.mocked(triggerRunSandboxCommand).mockResolvedValue({
+      id: "run_abc123",
+    });
+
+    const request = createMockRequest();
+    await createSandboxPostHandler(request);
+
+    expect(triggerSetupSandbox).toHaveBeenCalledWith({
+      sandboxId: "sbx_123",
+      accountId: "acc_123",
+    });
+  });
+
+  it("returns 200 even when triggerSetupSandbox throws", async () => {
+    vi.mocked(validateSandboxBody).mockResolvedValue({
+      accountId: "acc_123",
+      orgId: null,
+      authToken: "token",
+      command: "ls",
+    });
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
+    vi.mocked(createSandbox).mockResolvedValue({
+      sandbox: {} as any,
+      response: {
+        sandboxId: "sbx_123",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
+    });
+    vi.mocked(insertAccountSandbox).mockResolvedValue({
+      data: {
+        id: "record_123",
+        account_id: "acc_123",
+        sandbox_id: "sbx_123",
+        created_at: "2024-01-01T00:00:00.000Z",
+      },
+      error: null,
+    });
+    vi.mocked(triggerSetupSandbox).mockRejectedValue(new Error("Trigger.dev unavailable"));
+    vi.mocked(triggerRunSandboxCommand).mockResolvedValue({
+      id: "run_abc123",
+    });
+
+    const request = createMockRequest();
+    const response = await createSandboxPostHandler(request);
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json).toEqual({
+      status: "success",
+      sandboxes: [
+        {
+          sandboxId: "sbx_123",
+          sandboxStatus: "running",
+          timeout: 600000,
+          createdAt: "2024-01-01T00:00:00.000Z",
+          runId: "run_abc123",
+        },
+      ],
+    });
+  });
+
   it("returns 400 with error status when createSandbox throws", async () => {
     vi.mocked(validateSandboxBody).mockResolvedValue({
       accountId: "acc_123",
@@ -369,7 +457,6 @@ describe("createSandboxPostHandler", () => {
           // Note: runId is not included when command is not provided
         },
       ],
-      github_repo: null,
     });
     // Verify triggerRunSandboxCommand was NOT called
     expect(triggerRunSandboxCommand).not.toHaveBeenCalled();
@@ -420,7 +507,6 @@ describe("createSandboxPostHandler", () => {
           // Note: runId is not included when trigger fails
         },
       ],
-      github_repo: null,
     });
   });
 });

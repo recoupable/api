@@ -5,8 +5,8 @@ import { createSandbox } from "@/lib/sandbox/createSandbox";
 import { validateSandboxBody } from "@/lib/sandbox/validateSandboxBody";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
+import { triggerSetupSandbox } from "@/lib/trigger/triggerSetupSandbox";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
-import { ensureGithubRepo } from "@/lib/github/ensureGithubRepo";
 
 /**
  * Handler for POST /api/sandboxes.
@@ -32,7 +32,7 @@ export async function createSandboxPostHandler(request: NextRequest): Promise<Ne
     const snapshotId = accountSnapshots[0]?.snapshot_id;
 
     // Create sandbox (from snapshot if valid, otherwise fresh)
-    const { sandbox, response: result } = await createSandbox(
+    const { response: result } = await createSandbox(
       snapshotId ? { source: { type: "snapshot", snapshotId } } : {},
     );
 
@@ -41,12 +41,14 @@ export async function createSandboxPostHandler(request: NextRequest): Promise<Ne
       sandbox_id: result.sandboxId,
     });
 
-    // Ensure GitHub repo exists and is cloned (non-blocking failure)
-    let githubRepo: string | undefined;
+    // Fire-and-forget: set up GitHub repo in the background
     try {
-      githubRepo = await ensureGithubRepo(validated.accountId, sandbox);
+      await triggerSetupSandbox({
+        sandboxId: result.sandboxId,
+        accountId: validated.accountId,
+      });
     } catch (err) {
-      console.error("Failed to ensure GitHub repo:", err);
+      console.error("Failed to trigger setup-sandbox task:", err);
     }
 
     // Trigger the command execution task only if a command was provided
@@ -75,7 +77,6 @@ export async function createSandboxPostHandler(request: NextRequest): Promise<Ne
             ...(runId && { runId }),
           },
         ],
-        github_repo: githubRepo ?? null,
       },
       { status: 200, headers: getCorsHeaders() },
     );
