@@ -32,7 +32,7 @@ export async function createSandboxPostHandler(request: NextRequest): Promise<Ne
     const snapshotId = accountSnapshots[0]?.snapshot_id;
 
     // Create sandbox (from snapshot if valid, otherwise fresh)
-    const { response: result } = await createSandbox(
+    const result = await createSandbox(
       snapshotId ? { source: { type: "snapshot", snapshotId } } : {},
     );
 

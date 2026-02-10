@@ -8,11 +8,6 @@ export interface SandboxCreatedResponse {
   createdAt: string;
 }
 
-export interface SandboxCreateResult {
-  sandbox: Sandbox;
-  response: SandboxCreatedResponse;
-}
-
 /** Extract CreateSandboxParams from Sandbox.create method signature */
 export type CreateSandboxParams = NonNullable<Parameters<typeof Sandbox.create>[0]>;
 
@@ -30,11 +25,8 @@ const DEFAULT_RUNTIME = "node22";
  * @returns The sandbox creation response
  * @throws Error if sandbox creation fails
  */
-export async function createSandbox(
-  params: CreateSandboxParams = {},
-): Promise<SandboxCreateResult> {
-  const hasSnapshotSource =
-    params.source && "type" in params.source && params.source.type === "snapshot";
+export async function createSandbox(params: CreateSandboxParams = {}): Promise<SandboxCreatedResponse> {
+  const hasSnapshotSource = params.source && "type" in params.source && params.source.type === "snapshot";
 
   // Pass params directly to SDK - it handles all the type variants
   const sandbox = await Sandbox.create(
@@ -52,12 +44,9 @@ export async function createSandbox(
   );
 
   return {
-    sandbox,
-    response: {
-      sandboxId: sandbox.sandboxId,
-      sandboxStatus: sandbox.status,
-      timeout: sandbox.timeout,
-      createdAt: sandbox.createdAt.toISOString(),
-    },
+    sandboxId: sandbox.sandboxId,
+    sandboxStatus: sandbox.status,
+    timeout: sandbox.timeout,
+    createdAt: sandbox.createdAt.toISOString(),
   };
 }
