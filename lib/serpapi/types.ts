@@ -23,6 +23,9 @@ export interface SerpApiResponse {
   };
 }
 
+/** Default number of image results to return */
+export const DEFAULT_IMAGE_LIMIT = 8;
+
 export interface SearchImagesOptions {
   query: string;
   limit?: number;

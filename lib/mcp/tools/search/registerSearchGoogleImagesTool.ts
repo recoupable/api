@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { searchGoogleImages } from "@/lib/serpapi/searchGoogleImages";
+import { DEFAULT_IMAGE_LIMIT } from "@/lib/serpapi/types";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 
@@ -16,25 +17,19 @@ const searchGoogleImagesSchema = z.object({
     .min(1)
     .max(100)
     .optional()
-    .describe("Number of images to return (1-100, default: 8)."),
+    .describe(`Number of images to return (1-100, default: ${DEFAULT_IMAGE_LIMIT}).`),
   imageSize: z
     .enum(["l", "m", "i"])
     .optional()
-    .describe(
-      "Image size: 'l' (large, recommended), 'm' (medium), 'i' (icon/small). Leave unset if unsure.",
-    ),
+    .describe("Image size: 'l' (large, recommended), 'm' (medium), 'i' (icon/small). Leave unset if unsure."),
   imageType: z
     .enum(["photo", "clipart", "lineart", "animated"])
     .optional()
-    .describe(
-      "Type of image: 'photo' (default, recommended), 'clipart', 'lineart', 'animated'. Leave unset if unsure.",
-    ),
+    .describe("Type of image: 'photo' (default, recommended), 'clipart', 'lineart', 'animated'. Leave unset if unsure."),
   aspectRatio: z
     .enum(["square", "wide", "tall", "panoramic"])
     .optional()
-    .describe(
-      "Aspect ratio filter. Only use if specifically requested. Leave unset for general searches.",
-    ),
+    .describe("Aspect ratio filter. Only use if specifically requested. Leave unset for general searches."),
 });
 
 type SearchGoogleImagesArgs = z.infer<typeof searchGoogleImagesSchema>;
@@ -66,18 +61,12 @@ export function registerSearchGoogleImagesTool(server: McpServer): void {
       inputSchema: searchGoogleImagesSchema,
     },
     async (args: SearchGoogleImagesArgs) => {
-      const { query, limit = 8, imageSize, imageType, aspectRatio } = args;
+      const { query, limit = DEFAULT_IMAGE_LIMIT, imageSize, imageType, aspectRatio } = args;
 
       try {
-        const response = await searchGoogleImages({
-          query,
-          limit,
-          imageSize,
-          imageType,
-          aspectRatio,
-        });
+        const response = await searchGoogleImages({ query, limit, imageSize, imageType, aspectRatio });
 
-        const images = (response.images_results || []).map(img => ({
+        const images = (response.images_results ?? []).map((img) => ({
           position: img.position,
           thumbnail: img.thumbnail,
           original: img.original,

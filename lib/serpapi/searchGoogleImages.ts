@@ -1,37 +1,18 @@
-import { getSerpApiKey, SERPAPI_BASE_URL } from "./config";
+import { getSerpApiKey } from "./config";
+import { buildSearchUrl } from "./buildSearchParams";
 import type { SerpApiResponse, SearchImagesOptions } from "./types";
+import { DEFAULT_IMAGE_LIMIT } from "./types";
 
 /**
  * Searches Google Images via SerpAPI.
  *
- * Builds the query with optional filters (size, type, aspect ratio)
- * and returns image results limited to the requested count.
- *
  * @param options - Search parameters including query, limit, and optional filters
- * @returns SerpAPI response containing image results
+ * @returns SerpAPI response with image results limited to the requested count
  */
 export async function searchGoogleImages(options: SearchImagesOptions): Promise<SerpApiResponse> {
-  const { query, limit = 10, page = 0, imageSize, imageType, aspectRatio } = options;
-
+  const { limit = DEFAULT_IMAGE_LIMIT } = options;
   const apiKey = getSerpApiKey();
-
-  // SerpAPI uses "tbs" for advanced image filtering (type, size)
-  const tbsParams: string[] = [];
-  if (imageType) tbsParams.push(`itp:${imageType}`);
-  if (imageSize) tbsParams.push(`isz:${imageSize}`);
-  const tbs = tbsParams.length > 0 ? tbsParams.join(",") : undefined;
-
-  const params = new URLSearchParams({
-    engine: "google_images",
-    q: query,
-    api_key: apiKey,
-    ijn: page.toString(),
-  });
-
-  if (tbs) params.append("tbs", tbs);
-  if (aspectRatio) params.append("imgar", aspectRatio);
-
-  const url = `${SERPAPI_BASE_URL}/search.json?${params.toString()}`;
+  const url = buildSearchUrl(options, apiKey);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -39,7 +20,6 @@ export async function searchGoogleImages(options: SearchImagesOptions): Promise<
   try {
     const response = await fetch(url, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
       signal: controller.signal,
     });
 
@@ -52,11 +32,10 @@ export async function searchGoogleImages(options: SearchImagesOptions): Promise<
 
     const data: SerpApiResponse = await response.json();
 
-    if (limit && data.images_results) {
-      data.images_results = data.images_results.slice(0, limit);
-    }
-
-    return data;
+    return {
+      ...data,
+      images_results: data.images_results?.slice(0, limit),
+    };
   } catch (error) {
     clearTimeout(timeoutId);
 
