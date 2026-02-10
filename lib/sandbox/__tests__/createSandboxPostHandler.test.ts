@@ -9,6 +9,7 @@ import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAcc
 import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
 import { triggerSetupSandbox } from "@/lib/trigger/triggerSetupSandbox";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
+import { deleteAccountSnapshot } from "@/lib/supabase/account_snapshots/deleteAccountSnapshot";
 
 vi.mock("@/lib/sandbox/validateSandboxBody", () => ({
   validateSandboxBody: vi.fn(),
@@ -34,6 +35,10 @@ vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
   selectAccountSnapshots: vi.fn(),
 }));
 
+vi.mock("@/lib/supabase/account_snapshots/deleteAccountSnapshot", () => ({
+  deleteAccountSnapshot: vi.fn(),
+}));
+
 /**
  * Creates a mock NextRequest for testing.
  *
@@ -47,7 +52,7 @@ function createMockRequest(): NextRequest {
 
 describe("createSandboxPostHandler", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it("returns error response when validation fails", async () => {
@@ -440,6 +445,59 @@ describe("createSandboxPostHandler", () => {
       sandboxId: "sbx_789",
       accountId: "acc_123",
     });
+  });
+
+  it("falls back to fresh sandbox when snapshot creation fails", async () => {
+    vi.mocked(validateSandboxBody).mockResolvedValue({
+      accountId: "acc_123",
+      orgId: null,
+      authToken: "token",
+    });
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([
+      {
+        id: "snap_record_123",
+        account_id: "acc_123",
+        snapshot_id: "expired_snap",
+        created_at: "2024-01-01T00:00:00.000Z",
+      },
+    ]);
+    let callCount = 0;
+    vi.mocked(createSandbox).mockImplementation(async () => {
+      callCount++;
+      if (callCount === 1) throw new Error("Snapshot expired");
+      return {
+        sandboxId: "sbx_fresh",
+        sandboxStatus: "running" as const,
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      };
+    });
+    vi.mocked(deleteAccountSnapshot).mockResolvedValue(null);
+    vi.mocked(insertAccountSandbox).mockResolvedValue({
+      data: {
+        id: "record_123",
+        account_id: "acc_123",
+        sandbox_id: "sbx_fresh",
+        created_at: "2024-01-01T00:00:00.000Z",
+      },
+      error: null,
+    });
+    vi.mocked(triggerSetupSandbox).mockResolvedValue({
+      id: "setup_abc123",
+    });
+
+    const request = createMockRequest();
+    const response = await createSandboxPostHandler(request);
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json.sandboxes[0].sandboxId).toBe("sbx_fresh");
+    expect(createSandbox).toHaveBeenCalledTimes(2);
+    expect(createSandbox).toHaveBeenNthCalledWith(1, {
+      source: { type: "snapshot", snapshotId: "expired_snap" },
+    });
+    expect(createSandbox).toHaveBeenNthCalledWith(2, {});
+    expect(deleteAccountSnapshot).toHaveBeenCalledWith("acc_123");
   });
 
   it("returns 200 without runId when triggerSetupSandbox throws and no command", async () => {
