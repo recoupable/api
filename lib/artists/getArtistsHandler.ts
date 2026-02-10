@@ -1,35 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateArtistsQuery } from "@/lib/artists/validateArtistsQuery";
+import { validateGetArtistsRequest } from "@/lib/artists/validateGetArtistsRequest";
 import { getArtists } from "@/lib/artists/getArtists";
 
 /**
- * Handler for retrieving artists with organization filtering.
+ * Handler for retrieving artists with authentication and organization filtering.
+ *
+ * Requires authentication via x-api-key or Authorization bearer token.
  *
  * Query parameters:
- * - accountId (required): The account's ID
- * - orgId (optional): Filter to artists in a specific organization
- * - personal (optional): Set to "true" to show only personal (non-org) artists
+ * - account_id (optional): Filter to a specific account (org/admin keys only)
+ * - organization_id (optional): Filter to artists in a specific organization
  *
- * @param request - The request object containing query parameters
+ * @param request - The request object
  * @returns A NextResponse with artists data
  */
 export async function getArtistsHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const { searchParams } = new URL(request.url);
-
-    const validatedQuery = validateArtistsQuery(searchParams);
-    if (validatedQuery instanceof NextResponse) {
-      return validatedQuery;
+    const validated = await validateGetArtistsRequest(request);
+    if (validated instanceof NextResponse) {
+      return validated;
     }
 
-    // Determine orgId filter: personal=true means null, orgId means specific org
-    const orgIdFilter = validatedQuery.personal === "true" ? null : validatedQuery.orgId;
-
-    const artists = await getArtists({
-      accountId: validatedQuery.accountId,
-      orgId: orgIdFilter,
-    });
+    const artists = await getArtists(validated);
 
     return NextResponse.json(
       {
@@ -55,4 +48,3 @@ export async function getArtistsHandler(request: NextRequest): Promise<NextRespo
     );
   }
 }
-
