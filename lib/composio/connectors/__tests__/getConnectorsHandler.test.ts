@@ -49,8 +49,8 @@ describe("getConnectorsHandler", () => {
 
     expect(result.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(body.data.connectors).toHaveLength(2);
-    expect(body.data.connectors[0].slug).toBe("googlesheets");
+    expect(body.connectors).toHaveLength(2);
+    expect(body.connectors[0].slug).toBe("googlesheets");
   });
 
   it("should pass allowedToolkits when account_id is provided", async () => {

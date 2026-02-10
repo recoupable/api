@@ -44,7 +44,7 @@ export async function getConnectorsHandler(request: NextRequest): Promise<NextRe
     return NextResponse.json(
       {
         success: true,
-        data: { connectors },
+        connectors,
       },
       { status: 200, headers },
     );
