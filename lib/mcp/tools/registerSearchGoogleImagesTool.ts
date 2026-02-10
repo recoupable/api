@@ -96,7 +96,6 @@ export function registerSearchGoogleImagesTool(server: McpServer): void {
           message: `Found ${images.length} images for "${query}"`,
         });
       } catch (error) {
-        console.error("Error searching Google Images:", error);
         return getToolResultError(
           error instanceof Error
             ? `Google Images search failed: ${error.message}`

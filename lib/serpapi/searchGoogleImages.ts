@@ -15,13 +15,12 @@ export async function searchGoogleImages(options: SearchImagesOptions): Promise<
 
   const apiKey = getSerpApiKey();
 
-  // Build tbs parameter for advanced filtering
+  // SerpAPI uses "tbs" for advanced image filtering (type, size)
   const tbsParams: string[] = [];
   if (imageType) tbsParams.push(`itp:${imageType}`);
   if (imageSize) tbsParams.push(`isz:${imageSize}`);
   const tbs = tbsParams.length > 0 ? tbsParams.join(",") : undefined;
 
-  // Build query parameters
   const params = new URLSearchParams({
     engine: "google_images",
     q: query,
@@ -34,7 +33,6 @@ export async function searchGoogleImages(options: SearchImagesOptions): Promise<
 
   const url = `${SERPAPI_BASE_URL}/search.json?${params.toString()}`;
 
-  // 10 second timeout via AbortController
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -54,7 +52,6 @@ export async function searchGoogleImages(options: SearchImagesOptions): Promise<
 
     const data: SerpApiResponse = await response.json();
 
-    // Limit results if specified
     if (limit && data.images_results) {
       data.images_results = data.images_results.slice(0, limit);
     }
