@@ -1,30 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateOrganizationsQuery } from "@/lib/organizations/validateOrganizationsQuery";
+import { validateGetOrganizationsRequest } from "@/lib/organizations/validateGetOrganizationsRequest";
 import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 import { formatAccountOrganizations } from "@/lib/organizations/formatAccountOrganizations";
 
 /**
  * Handler for retrieving organizations for an account.
  *
- * Query parameters:
- * - accountId (required): The account ID to get organizations for
+ * Authenticates via x-api-key or Authorization bearer token.
+ * For personal keys: returns the key owner's organizations.
+ * For org keys: returns organizations for all accounts in the org.
+ * For Recoup admin: returns all organizations.
  *
- * @param request - The request object containing query parameters
+ * Optional query parameter:
+ * - account_id: Filter to a specific account (org keys only)
+ *
+ * @param request - The request object
  * @returns A NextResponse with organizations data
  */
 export async function getOrganizationsHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const { searchParams } = new URL(request.url);
-
-    const validatedQuery = validateOrganizationsQuery(searchParams);
-    if (validatedQuery instanceof NextResponse) {
-      return validatedQuery;
+    const validated = await validateGetOrganizationsRequest(request);
+    if (validated instanceof NextResponse) {
+      return validated;
     }
 
-    const rawOrgs = await getAccountOrganizations({
-      accountId: validatedQuery.accountId,
-    });
+    const rawOrgs = await getAccountOrganizations(validated);
     const organizations = formatAccountOrganizations(rawOrgs);
 
     return NextResponse.json(
