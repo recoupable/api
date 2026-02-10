@@ -61,7 +61,7 @@ describe("createSandboxPostHandler", () => {
     expect(response.status).toBe(401);
   });
 
-  it("returns 200 with sandboxes array including setupRunId and runId on success", async () => {
+  it("returns runId from command task when command is provided", async () => {
     vi.mocked(validateSandboxBody).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
@@ -104,7 +104,6 @@ describe("createSandboxPostHandler", () => {
           sandboxStatus: "running",
           timeout: 600000,
           createdAt: "2024-01-01T00:00:00.000Z",
-          setupRunId: "setup_abc123",
           runId: "run_abc123",
         },
       ],
@@ -311,12 +310,11 @@ describe("createSandboxPostHandler", () => {
     });
   });
 
-  it("returns 200 with setupRunId but without runId when command is not provided", async () => {
+  it("returns runId from setup task when no command is provided", async () => {
     vi.mocked(validateSandboxBody).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
       authToken: "token",
-      // command is not provided (optional)
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
@@ -351,20 +349,18 @@ describe("createSandboxPostHandler", () => {
           sandboxStatus: "running",
           timeout: 600000,
           createdAt: "2024-01-01T00:00:00.000Z",
-          setupRunId: "setup_abc123",
+          runId: "setup_abc123",
         },
       ],
     });
-    // Verify triggerRunSandboxCommand was NOT called
     expect(triggerRunSandboxCommand).not.toHaveBeenCalled();
-    // Verify triggerSetupSandbox was still called
     expect(triggerSetupSandbox).toHaveBeenCalledWith({
       sandboxId: "sbx_123",
       accountId: "acc_123",
     });
   });
 
-  it("returns 200 with setupRunId but without runId when triggerRunSandboxCommand throws", async () => {
+  it("returns 200 without runId when triggerRunSandboxCommand throws", async () => {
     vi.mocked(validateSandboxBody).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
@@ -406,7 +402,6 @@ describe("createSandboxPostHandler", () => {
           sandboxStatus: "running",
           timeout: 600000,
           createdAt: "2024-01-01T00:00:00.000Z",
-          setupRunId: "setup_abc123",
         },
       ],
     });
@@ -447,7 +442,7 @@ describe("createSandboxPostHandler", () => {
     });
   });
 
-  it("returns 200 without setupRunId when triggerSetupSandbox throws", async () => {
+  it("returns 200 without runId when triggerSetupSandbox throws and no command", async () => {
     vi.mocked(validateSandboxBody).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
@@ -474,7 +469,6 @@ describe("createSandboxPostHandler", () => {
     const request = createMockRequest();
     const response = await createSandboxPostHandler(request);
 
-    // Sandbox was created successfully, so return 200 even if setup trigger fails
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json).toEqual({
