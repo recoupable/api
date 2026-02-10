@@ -4,8 +4,6 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateAuthorizeConnectorBody } from "./validateAuthorizeConnectorBody";
 import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
-import { isAllowedArtistConnector } from "./isAllowedArtistConnector";
-import { ALLOWED_ARTIST_CONNECTORS } from "./isAllowedArtistConnector";
 
 /**
  * Validated params for authorizing a connector.
@@ -20,9 +18,13 @@ export interface AuthorizeConnectorParams {
 /**
  * Validates the full POST /api/connectors/authorize request.
  *
+ * Unopinionated: allows any connector for any account type.
+ * Connector usage decisions (e.g., which tools the AI agent uses) are handled
+ * at the tool router level, not the API level.
+ *
  * Handles:
  * 1. Authentication (x-api-key or Bearer token)
- * 2. Body validation (connector, account_id, allowed connector check)
+ * 2. Body validation (connector, callback_url, account_id)
  * 3. Access verification (when account_id is provided)
  *
  * @param request - The incoming request
@@ -53,14 +55,6 @@ export async function validateAuthorizeConnectorRequest(
     const accessResult = await checkAccountAccess(accountId, account_id);
     if (!accessResult.hasAccess) {
       return NextResponse.json({ error: "Access denied to this account" }, { status: 403, headers });
-    }
-
-    // Artists can only authorize specific connectors (prevents tool collision)
-    if (accessResult.entityType === "artist" && !isAllowedArtistConnector(connector)) {
-      return NextResponse.json(
-        { error: `Connector "${connector}" is not allowed for artists. Allowed: ${ALLOWED_ARTIST_CONNECTORS.join(", ")}` },
-        { status: 400, headers },
-      );
     }
 
     // Build auth configs for custom OAuth

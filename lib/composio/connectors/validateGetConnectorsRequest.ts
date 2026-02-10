@@ -4,18 +4,20 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateGetConnectorsQuery } from "./validateGetConnectorsQuery";
 import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
-import { ALLOWED_ARTIST_CONNECTORS } from "./isAllowedArtistConnector";
 
 /**
  * Validated params for getting connectors.
  */
 export interface GetConnectorsParams {
   composioEntityId: string;
-  allowedToolkits?: readonly string[];
 }
 
 /**
  * Validates the full GET /api/connectors request.
+ *
+ * Unopinionated: returns all available connectors for any account type.
+ * Connector restrictions (e.g., which tools the AI agent uses) are handled
+ * at the tool router level, not the API level.
  *
  * Handles:
  * 1. Authentication (x-api-key or Bearer token)
@@ -52,15 +54,9 @@ export async function validateGetConnectorsRequest(
       return NextResponse.json({ error: "Access denied to this account" }, { status: 403, headers });
     }
 
-    return {
-      composioEntityId: account_id,
-      // Only restrict to artist-specific connectors when the target is an artist
-      allowedToolkits: accessResult.entityType === "artist" ? ALLOWED_ARTIST_CONNECTORS : undefined,
-    };
+    return { composioEntityId: account_id };
   }
 
   // No account_id: use the authenticated account
-  return {
-    composioEntityId: accountId,
-  };
+  return { composioEntityId: accountId };
 }

@@ -53,10 +53,9 @@ describe("getConnectorsHandler", () => {
     expect(body.connectors[0].slug).toBe("googlesheets");
   });
 
-  it("should pass allowedToolkits when account_id is provided", async () => {
+  it("should fetch all connectors for any account (no filtering)", async () => {
     vi.mocked(validateGetConnectorsRequest).mockResolvedValue({
       composioEntityId: "entity-456",
-      allowedToolkits: ["tiktok"],
     });
 
     vi.mocked(getConnectors).mockResolvedValue([
@@ -68,8 +67,8 @@ describe("getConnectorsHandler", () => {
     );
     await getConnectorsHandler(request);
 
+    // API is unopinionated — no allowedToolkits filtering
     expect(getConnectors).toHaveBeenCalledWith("entity-456", {
-      allowedToolkits: ["tiktok"],
       displayNames: {
         tiktok: "TikTok",
         googlesheets: "Google Sheets",

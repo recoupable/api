@@ -52,7 +52,7 @@ describe("validateGetConnectorsRequest", () => {
     });
   });
 
-  it("should restrict to artist connectors when account_id is an artist", async () => {
+  it("should return all connectors for any account type (unopinionated)", async () => {
     const mockAccountId = "account-123";
     const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
@@ -69,66 +69,6 @@ describe("validateGetConnectorsRequest", () => {
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
       composioEntityId: mockEntityId,
-      allowedToolkits: ["tiktok"],
-    });
-  });
-
-  it("should NOT restrict connectors when account_id is a workspace", async () => {
-    const mockAccountId = "account-123";
-    const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: mockAccountId,
-      orgId: null,
-      authToken: "test-token",
-    });
-    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "workspace" });
-
-    const request = new NextRequest(`http://localhost/api/connectors?account_id=${mockEntityId}`);
-    const result = await validateGetConnectorsRequest(request);
-
-    expect(result).not.toBeInstanceOf(NextResponse);
-    expect(result).toEqual({
-      composioEntityId: mockEntityId,
-      allowedToolkits: undefined,
-    });
-  });
-
-  it("should NOT restrict connectors when account_id is an organization", async () => {
-    const mockAccountId = "account-123";
-    const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: mockAccountId,
-      orgId: null,
-      authToken: "test-token",
-    });
-    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "organization" });
-
-    const request = new NextRequest(`http://localhost/api/connectors?account_id=${mockEntityId}`);
-    const result = await validateGetConnectorsRequest(request);
-
-    expect(result).not.toBeInstanceOf(NextResponse);
-    expect(result).toEqual({
-      composioEntityId: mockEntityId,
-      allowedToolkits: undefined,
-    });
-  });
-
-  it("should NOT restrict connectors when account_id is self", async () => {
-    const mockAccountId = "550e8400-e29b-41d4-a716-446655440000";
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: mockAccountId,
-      orgId: null,
-      authToken: "test-token",
-    });
-    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "self" });
-
-    const request = new NextRequest(`http://localhost/api/connectors?account_id=${mockAccountId}`);
-    const result = await validateGetConnectorsRequest(request);
-
-    expect(result).not.toBeInstanceOf(NextResponse);
-    expect(result).toEqual({
-      composioEntityId: mockAccountId,
-      allowedToolkits: undefined,
     });
   });
 

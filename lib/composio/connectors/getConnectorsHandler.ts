@@ -33,11 +33,10 @@ export async function getConnectorsHandler(request: NextRequest): Promise<NextRe
       return validated;
     }
 
-    const { composioEntityId, allowedToolkits } = validated;
+    const { composioEntityId } = validated;
 
-    // Fetch connectors
+    // Fetch all connectors — no filtering at the API level
     const connectors = await getConnectors(composioEntityId, {
-      allowedToolkits,
       displayNames: CONNECTOR_DISPLAY_NAMES,
     });
 

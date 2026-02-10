@@ -86,7 +86,7 @@ describe("validateAuthorizeConnectorRequest", () => {
     });
   });
 
-  it("should return 400 when artist tries to authorize a non-allowed connector", async () => {
+  it("should allow any connector for any account type (unopinionated)", async () => {
     const mockAccountId = "account-123";
     const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
@@ -102,9 +102,14 @@ describe("validateAuthorizeConnectorRequest", () => {
     });
     const result = await validateAuthorizeConnectorRequest(request);
 
-    expect(result).toBeInstanceOf(NextResponse);
-    const response = result as NextResponse;
-    expect(response.status).toBe(400);
+    // API is unopinionated — artists can connect any service
+    expect(result).not.toBeInstanceOf(NextResponse);
+    expect(result).toEqual({
+      composioEntityId: mockEntityId,
+      connector: "googlesheets",
+      callbackUrl: undefined,
+      authConfigs: undefined,
+    });
   });
 
   it("should allow any connector for workspace account_id", async () => {
