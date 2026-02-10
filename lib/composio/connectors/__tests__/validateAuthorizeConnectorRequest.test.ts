@@ -3,14 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateAuthorizeConnectorRequest } from "../validateAuthorizeConnectorRequest";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { checkAccountArtistAccess } from "@/lib/supabase/account_artist_ids/checkAccountArtistAccess";
+import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/account_artist_ids/checkAccountArtistAccess", () => ({
-  checkAccountArtistAccess: vi.fn(),
+vi.mock("@/lib/auth/checkAccountAccess", () => ({
+  checkAccountAccess: vi.fn(),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -60,7 +60,7 @@ describe("validateAuthorizeConnectorRequest", () => {
     });
   });
 
-  it("should return account_id as composioEntityId when account_id provided", async () => {
+  it("should allow tiktok for artist account_id", async () => {
     const mockAccountId = "account-123";
     const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
@@ -68,7 +68,7 @@ describe("validateAuthorizeConnectorRequest", () => {
       orgId: null,
       authToken: "test-token",
     });
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "artist" });
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
@@ -76,11 +76,82 @@ describe("validateAuthorizeConnectorRequest", () => {
     });
     const result = await validateAuthorizeConnectorRequest(request);
 
-    expect(checkAccountArtistAccess).toHaveBeenCalledWith(mockAccountId, mockEntityId);
+    expect(checkAccountAccess).toHaveBeenCalledWith(mockAccountId, mockEntityId);
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
       composioEntityId: mockEntityId,
       connector: "tiktok",
+      callbackUrl: undefined,
+      authConfigs: undefined,
+    });
+  });
+
+  it("should return 400 when artist tries to authorize a non-allowed connector", async () => {
+    const mockAccountId = "account-123";
+    const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: mockAccountId,
+      orgId: null,
+      authToken: "test-token",
+    });
+    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "artist" });
+
+    const request = new NextRequest("http://localhost/api/connectors/authorize", {
+      method: "POST",
+      body: JSON.stringify({ connector: "googlesheets", account_id: mockEntityId }),
+    });
+    const result = await validateAuthorizeConnectorRequest(request);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    const response = result as NextResponse;
+    expect(response.status).toBe(400);
+  });
+
+  it("should allow any connector for workspace account_id", async () => {
+    const mockAccountId = "account-123";
+    const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: mockAccountId,
+      orgId: null,
+      authToken: "test-token",
+    });
+    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "workspace" });
+
+    const request = new NextRequest("http://localhost/api/connectors/authorize", {
+      method: "POST",
+      body: JSON.stringify({ connector: "googlesheets", account_id: mockEntityId }),
+    });
+    const result = await validateAuthorizeConnectorRequest(request);
+
+    expect(result).not.toBeInstanceOf(NextResponse);
+    expect(result).toEqual({
+      composioEntityId: mockEntityId,
+      connector: "googlesheets",
+      callbackUrl: undefined,
+      authConfigs: undefined,
+    });
+  });
+
+  it("should allow any connector for organization account_id", async () => {
+    const mockAccountId = "account-123";
+    const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: mockAccountId,
+      orgId: null,
+      authToken: "test-token",
+    });
+    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "organization" });
+
+    const request = new NextRequest("http://localhost/api/connectors/authorize", {
+      method: "POST",
+      body: JSON.stringify({ connector: "googlesheets", account_id: mockEntityId }),
+    });
+    const result = await validateAuthorizeConnectorRequest(request);
+
+    expect(result).not.toBeInstanceOf(NextResponse);
+    expect(result).toEqual({
+      composioEntityId: mockEntityId,
+      connector: "googlesheets",
       callbackUrl: undefined,
       authConfigs: undefined,
     });
@@ -94,7 +165,7 @@ describe("validateAuthorizeConnectorRequest", () => {
       orgId: null,
       authToken: "test-token",
     });
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(false);
+    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: false });
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
@@ -118,7 +189,7 @@ describe("validateAuthorizeConnectorRequest", () => {
       orgId: null,
       authToken: "test-token",
     });
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "artist" });
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",

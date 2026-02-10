@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateDisconnectConnectorBody } from "./validateDisconnectConnectorBody";
-import { checkAccountArtistAccess } from "@/lib/supabase/account_artist_ids/checkAccountArtistAccess";
+import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
 import { verifyConnectorOwnership } from "./verifyConnectorOwnership";
 
 /**
@@ -47,10 +47,10 @@ export async function validateDisconnectConnectorRequest(
 
   // 3. Verify access
   if (account_id) {
-    // Disconnecting for another entity - verify access to that entity
-    const hasAccess = await checkAccountArtistAccess(accountId, account_id);
-    if (!hasAccess) {
-      return NextResponse.json({ error: "Access denied to this entity" }, { status: 403, headers });
+    // Disconnecting for another account - verify access to that account
+    const accessResult = await checkAccountAccess(accountId, account_id);
+    if (!accessResult.hasAccess) {
+      return NextResponse.json({ error: "Access denied to this account" }, { status: 403, headers });
     }
   } else {
     // Disconnecting account's own connection - verify ownership

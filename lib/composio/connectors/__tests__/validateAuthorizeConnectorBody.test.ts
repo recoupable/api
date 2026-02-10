@@ -60,15 +60,19 @@ describe("validateAuthorizeConnectorBody", () => {
     expect(response.status).toBe(400);
   });
 
-  it("should return 400 when account_id is provided but connector is not allowed", () => {
+  it("should accept any connector with account_id (restriction enforced at request level)", () => {
+    // Connector restriction for artists is now checked in validateAuthorizeConnectorRequest
+    // after the entity type is determined, not at the body validation level.
     const result = validateAuthorizeConnectorBody({
       connector: "googlesheets",
       account_id: "550e8400-e29b-41d4-a716-446655440000",
     });
 
-    expect(result).toBeInstanceOf(NextResponse);
-    const response = result as NextResponse;
-    expect(response.status).toBe(400);
+    expect(result).not.toBeInstanceOf(NextResponse);
+    expect(result).toEqual({
+      connector: "googlesheets",
+      account_id: "550e8400-e29b-41d4-a716-446655440000",
+    });
   });
 
   it("should return 400 for invalid callback_url format", () => {

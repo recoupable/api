@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateGetConnectorsQuery } from "./validateGetConnectorsQuery";
-import { checkAccountArtistAccess } from "@/lib/supabase/account_artist_ids/checkAccountArtistAccess";
+import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
 import { ALLOWED_ARTIST_CONNECTORS } from "./isAllowedArtistConnector";
 
 /**
@@ -47,14 +47,15 @@ export async function validateGetConnectorsRequest(
 
   // 3. If account_id is provided, verify access and use that entity
   if (account_id) {
-    const hasAccess = await checkAccountArtistAccess(accountId, account_id);
-    if (!hasAccess) {
-      return NextResponse.json({ error: "Access denied to this entity" }, { status: 403, headers });
+    const accessResult = await checkAccountAccess(accountId, account_id);
+    if (!accessResult.hasAccess) {
+      return NextResponse.json({ error: "Access denied to this account" }, { status: 403, headers });
     }
 
     return {
       composioEntityId: account_id,
-      allowedToolkits: ALLOWED_ARTIST_CONNECTORS,
+      // Only restrict to artist-specific connectors when the target is an artist
+      allowedToolkits: accessResult.entityType === "artist" ? ALLOWED_ARTIST_CONNECTORS : undefined,
     };
   }
 

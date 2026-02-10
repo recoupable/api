@@ -36,7 +36,7 @@ export async function disconnectConnectorHandler(request: NextRequest): Promise<
       await disconnectConnector(connectedAccountId);
     }
 
-    return NextResponse.json({ success: true }, { status: 200, headers });
+    return NextResponse.json({ success: true, message: "Connector disconnected" }, { status: 200, headers });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to disconnect connector";
     return NextResponse.json({ error: message }, { status: 500, headers });

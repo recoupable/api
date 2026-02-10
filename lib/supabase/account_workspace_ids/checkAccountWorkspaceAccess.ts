@@ -1,0 +1,31 @@
+import supabase from "../serverClient";
+
+/**
+ * Check if an account has access to a specific workspace.
+ *
+ * Access is granted if:
+ * 1. Account has direct ownership via account_workspace_ids
+ *
+ * Fails closed: returns false on any database error to deny access safely.
+ *
+ * @param accountId - The account ID to check
+ * @param workspaceId - The workspace ID to check access for
+ * @returns true if the account has access to the workspace, false otherwise
+ */
+export async function checkAccountWorkspaceAccess(
+  accountId: string,
+  workspaceId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("account_workspace_ids")
+    .select("workspace_id")
+    .eq("account_id", accountId)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (error) {
+    return false; // Fail closed
+  }
+
+  return !!data;
+}
