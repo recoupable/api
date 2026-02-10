@@ -27,8 +27,17 @@ export function buildSearchUrl(options: SearchImagesOptions, apiKey: string): st
     ijn: page.toString(),
   });
 
+  // SerpAPI expects abbreviated aspect ratio codes, not full names
+  const aspectRatioMap: Record<string, string> = {
+    square: "s",
+    wide: "w",
+    tall: "t",
+    panoramic: "xw",
+  };
+
   if (tbs) params.append("tbs", tbs);
-  if (aspectRatio) params.append("imgar", aspectRatio);
+  const mappedAspectRatio = aspectRatio ? aspectRatioMap[aspectRatio] : undefined;
+  if (mappedAspectRatio) params.append("imgar", mappedAspectRatio);
 
   return `${SERPAPI_BASE_URL}/search.json?${params.toString()}`;
 }
