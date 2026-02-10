@@ -15,7 +15,7 @@ export interface SerpApiImageResult {
 }
 
 export interface SerpApiResponse {
-  images_results: SerpApiImageResult[];
+  images_results?: SerpApiImageResult[];
   search_metadata?: {
     id: string;
     status: string;
