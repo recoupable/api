@@ -9,6 +9,7 @@ import { registerContactTeamTool } from "./registerContactTeamTool";
 import { registerUpdateAccountInfoTool } from "./registerUpdateAccountInfoTool";
 import { registerAllArtistSocialsTools } from "./artistSocials";
 import { registerSearchWebTool } from "./registerSearchWebTool";
+import { registerSearchGoogleImagesTool } from "./registerSearchGoogleImagesTool";
 import { registerWebDeepResearchTool } from "./registerWebDeepResearchTool";
 import { registerArtistDeepResearchTool } from "./registerArtistDeepResearchTool";
 import { registerAllFileTools } from "./files";
@@ -44,6 +45,7 @@ export const registerAllTools = (server: McpServer): void => {
   registerContactTeamTool(server);
   registerGetLocalTimeTool(server);
   registerSearchWebTool(server);
+  registerSearchGoogleImagesTool(server);
   registerWebDeepResearchTool(server);
   registerArtistDeepResearchTool(server);
   registerSendEmailTool(server);
