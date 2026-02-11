@@ -7,6 +7,7 @@ import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAcc
 import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
 import { triggerSetupSandbox } from "@/lib/trigger/triggerSetupSandbox";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
+import { deleteAccountSnapshot } from "@/lib/supabase/account_snapshots/deleteAccountSnapshot";
 
 /**
  * Handler for POST /api/sandboxes.
@@ -32,9 +33,19 @@ export async function createSandboxPostHandler(request: NextRequest): Promise<Ne
     const snapshotId = accountSnapshots[0]?.snapshot_id;
 
     // Create sandbox (from snapshot if valid, otherwise fresh)
-    const result = await createSandbox(
-      snapshotId ? { source: { type: "snapshot", snapshotId } } : {},
-    );
+    // If snapshot creation fails (e.g. expired snapshot), fall back to a fresh sandbox
+    let result;
+    if (snapshotId) {
+      try {
+        result = await createSandbox({ source: { type: "snapshot", snapshotId } });
+      } catch {
+        console.error("Snapshot creation failed, falling back to fresh sandbox", { snapshotId });
+        await deleteAccountSnapshot(validated.accountId);
+        result = await createSandbox({});
+      }
+    } else {
+      result = await createSandbox({});
+    }
 
     await insertAccountSandbox({
       account_id: validated.accountId,
