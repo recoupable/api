@@ -5,7 +5,7 @@ import { createSandbox } from "@/lib/sandbox/createSandbox";
 import { validateSandboxBody } from "@/lib/sandbox/validateSandboxBody";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
-import { triggerSetupSandbox } from "@/lib/trigger/triggerSetupSandbox";
+
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 
 /**
@@ -41,19 +41,8 @@ export async function createSandboxPostHandler(request: NextRequest): Promise<Ne
       sandbox_id: result.sandboxId,
     });
 
-    // Trigger the setup-sandbox task (fire-and-forget)
+    // Trigger the command execution task if a command was provided
     let runId: string | undefined;
-    try {
-      const setupHandle = await triggerSetupSandbox({
-        sandboxId: result.sandboxId,
-        accountId: validated.accountId,
-      });
-      runId = setupHandle.id;
-    } catch (triggerError) {
-      console.error("Failed to trigger setup-sandbox task:", triggerError);
-    }
-
-    // Trigger the command execution task if a command was provided (overrides runId)
     if (validated.command) {
       try {
         const handle = await triggerRunSandboxCommand({
