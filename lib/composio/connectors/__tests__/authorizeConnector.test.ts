@@ -62,9 +62,9 @@ describe("authorizeConnector", () => {
 
   it("should include auth configs when provided", async () => {
     const authConfigs = { tiktok: "ac_12345" };
-    await authorizeConnector("entity-123", "tiktok", { authConfigs });
+    await authorizeConnector("account-456", "tiktok", { authConfigs });
 
-    expect(mockCreate).toHaveBeenCalledWith("entity-123", {
+    expect(mockCreate).toHaveBeenCalledWith("account-456", {
       authConfigs,
       manageConnections: {
         callbackUrl: "https://app.example.com/settings/connectors?connected=true",

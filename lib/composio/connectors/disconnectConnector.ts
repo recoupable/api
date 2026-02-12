@@ -6,8 +6,8 @@ import { getConnectors } from "./getConnectors";
  */
 export interface DisconnectConnectorOptions {
   /**
-   * Entity ID to verify ownership before disconnecting.
-   * If provided, checks that the connected account belongs to this entity.
+   * Account ID to verify ownership before disconnecting.
+   * If provided, checks that the connected account belongs to this account.
    */
   verifyOwnershipFor?: string;
 }
@@ -33,7 +33,7 @@ export async function disconnectConnector(
     const connectors = await getConnectors(verifyOwnershipFor);
     const hasConnection = connectors.some(c => c.connectedAccountId === connectedAccountId);
     if (!hasConnection) {
-      throw new Error("Connection not found for this entity");
+      throw new Error("Connection not found for this account");
     }
   }
 

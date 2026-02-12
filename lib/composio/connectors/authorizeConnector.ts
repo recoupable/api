@@ -27,16 +27,13 @@ export interface AuthorizeConnectorOptions {
 /**
  * Generate an OAuth authorization URL for a connector.
  *
- * The entityId is an account ID - either the caller's own account or
- * another entity (like an artist) they have access to.
- *
- * @param entityId - The account ID to store the connection under
+ * @param accountId - The account ID to store the connection under
  * @param connector - The connector slug (e.g., "googlesheets", "tiktok")
  * @param options - Authorization options
  * @returns The redirect URL for OAuth
  */
 export async function authorizeConnector(
-  entityId: string,
+  accountId: string,
   connector: string,
   options: AuthorizeConnectorOptions = {},
 ): Promise<AuthorizeResult> {
@@ -47,7 +44,7 @@ export async function authorizeConnector(
   const callbackUrl = customCallbackUrl ?? getCallbackUrl({ destination: "connectors" });
 
   // Create session with optional auth configs
-  const session = await composio.create(entityId, {
+  const session = await composio.create(accountId, {
     ...(authConfigs && Object.keys(authConfigs).length > 0 && { authConfigs }),
     manageConnections: {
       callbackUrl,

@@ -9,7 +9,7 @@ import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
  * Validated params for authorizing a connector.
  */
 export interface AuthorizeConnectorParams {
-  composioEntityId: string;
+  accountId: string;
   connector: string;
   callbackUrl?: string;
   authConfigs?: Record<string, string>;
@@ -64,7 +64,7 @@ export async function validateAuthorizeConnectorRequest(
     }
 
     return {
-      composioEntityId: account_id,
+      accountId: account_id,
       connector,
       callbackUrl: callback_url,
       authConfigs: Object.keys(authConfigs).length > 0 ? authConfigs : undefined,
@@ -73,7 +73,7 @@ export async function validateAuthorizeConnectorRequest(
 
   // No account_id: use the authenticated account
   return {
-    composioEntityId: accountId,
+    accountId,
     connector,
     callbackUrl: callback_url,
   };

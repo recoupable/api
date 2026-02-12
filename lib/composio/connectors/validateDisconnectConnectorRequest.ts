@@ -11,7 +11,7 @@ import { verifyConnectorOwnership } from "./verifyConnectorOwnership";
  */
 export interface DisconnectConnectorParams {
   connectedAccountId: string;
-  entityId?: string;
+  targetAccountId?: string;
 }
 
 /**
@@ -20,7 +20,7 @@ export interface DisconnectConnectorParams {
  * Handles:
  * 1. Authentication (x-api-key or Bearer token)
  * 2. Body validation (connected_account_id, account_id)
- * 3. Access verification (entity access or connector ownership)
+ * 3. Access verification (account access or connector ownership)
  *
  * @param request - The incoming request
  * @returns NextResponse error or validated params
@@ -65,6 +65,6 @@ export async function validateDisconnectConnectorRequest(
 
   return {
     connectedAccountId: connected_account_id,
-    entityId: account_id,
+    targetAccountId: account_id,
   };
 }

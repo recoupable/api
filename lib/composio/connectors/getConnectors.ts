@@ -27,16 +27,16 @@ export interface GetConnectorsOptions {
 }
 
 /**
- * Get connectors and their connection status for an entity.
+ * Get connectors and their connection status for an account.
  *
- * Works for any account ID. Composio uses the entityId to scope connections.
+ * Works for any account ID. Composio uses the accountId to scope connections.
  *
- * @param entityId - The account ID to get connectors for
+ * @param accountId - The account ID to get connectors for
  * @param options - Options for filtering and display
  * @returns List of connectors with connection status
  */
 export async function getConnectors(
-  entityId: string,
+  accountId: string,
   options: GetConnectorsOptions = {},
 ): Promise<ConnectorInfo[]> {
   const { allowedToolkits, displayNames = {} } = options;
@@ -47,7 +47,7 @@ export async function getConnectors(
     ? { toolkits: [...allowedToolkits] as string[] }
     : undefined;
 
-  const session = await composio.create(entityId, sessionOptions);
+  const session = await composio.create(accountId, sessionOptions);
   const toolkits = await session.toolkits();
 
   // Build connector list

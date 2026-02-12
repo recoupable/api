@@ -38,7 +38,7 @@ describe("validateAuthorizeConnectorRequest", () => {
     expect(response.status).toBe(401);
   });
 
-  it("should return accountId as composioEntityId when no account_id", async () => {
+  it("should return accountId as accountId when no account_id", async () => {
     const mockAccountId = "account-123";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
@@ -54,7 +54,7 @@ describe("validateAuthorizeConnectorRequest", () => {
 
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
-      composioEntityId: mockAccountId,
+      accountId: mockAccountId,
       connector: "googlesheets",
       callbackUrl: undefined,
     });
@@ -62,7 +62,7 @@ describe("validateAuthorizeConnectorRequest", () => {
 
   it("should allow tiktok for artist account_id", async () => {
     const mockAccountId = "account-123";
-    const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
+    const mockTargetAccountId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
       orgId: null,
@@ -72,14 +72,14 @@ describe("validateAuthorizeConnectorRequest", () => {
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
-      body: JSON.stringify({ connector: "tiktok", account_id: mockEntityId }),
+      body: JSON.stringify({ connector: "tiktok", account_id: mockTargetAccountId }),
     });
     const result = await validateAuthorizeConnectorRequest(request);
 
-    expect(checkAccountAccess).toHaveBeenCalledWith(mockAccountId, mockEntityId);
+    expect(checkAccountAccess).toHaveBeenCalledWith(mockAccountId, mockTargetAccountId);
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
-      composioEntityId: mockEntityId,
+      accountId: mockTargetAccountId,
       connector: "tiktok",
       callbackUrl: undefined,
       authConfigs: undefined,
@@ -88,7 +88,7 @@ describe("validateAuthorizeConnectorRequest", () => {
 
   it("should allow any connector for any account type (unopinionated)", async () => {
     const mockAccountId = "account-123";
-    const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
+    const mockTargetAccountId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
       orgId: null,
@@ -98,14 +98,14 @@ describe("validateAuthorizeConnectorRequest", () => {
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
-      body: JSON.stringify({ connector: "googlesheets", account_id: mockEntityId }),
+      body: JSON.stringify({ connector: "googlesheets", account_id: mockTargetAccountId }),
     });
     const result = await validateAuthorizeConnectorRequest(request);
 
     // API is unopinionated — artists can connect any service
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
-      composioEntityId: mockEntityId,
+      accountId: mockTargetAccountId,
       connector: "googlesheets",
       callbackUrl: undefined,
       authConfigs: undefined,
@@ -114,7 +114,7 @@ describe("validateAuthorizeConnectorRequest", () => {
 
   it("should allow any connector for workspace account_id", async () => {
     const mockAccountId = "account-123";
-    const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
+    const mockTargetAccountId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
       orgId: null,
@@ -124,13 +124,13 @@ describe("validateAuthorizeConnectorRequest", () => {
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
-      body: JSON.stringify({ connector: "googlesheets", account_id: mockEntityId }),
+      body: JSON.stringify({ connector: "googlesheets", account_id: mockTargetAccountId }),
     });
     const result = await validateAuthorizeConnectorRequest(request);
 
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
-      composioEntityId: mockEntityId,
+      accountId: mockTargetAccountId,
       connector: "googlesheets",
       callbackUrl: undefined,
       authConfigs: undefined,
@@ -139,7 +139,7 @@ describe("validateAuthorizeConnectorRequest", () => {
 
   it("should allow any connector for organization account_id", async () => {
     const mockAccountId = "account-123";
-    const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
+    const mockTargetAccountId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
       orgId: null,
@@ -149,13 +149,13 @@ describe("validateAuthorizeConnectorRequest", () => {
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
-      body: JSON.stringify({ connector: "googlesheets", account_id: mockEntityId }),
+      body: JSON.stringify({ connector: "googlesheets", account_id: mockTargetAccountId }),
     });
     const result = await validateAuthorizeConnectorRequest(request);
 
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
-      composioEntityId: mockEntityId,
+      accountId: mockTargetAccountId,
       connector: "googlesheets",
       callbackUrl: undefined,
       authConfigs: undefined,
@@ -164,7 +164,7 @@ describe("validateAuthorizeConnectorRequest", () => {
 
   it("should return 403 when account_id provided but no access", async () => {
     const mockAccountId = "account-123";
-    const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
+    const mockTargetAccountId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
       orgId: null,
@@ -174,7 +174,7 @@ describe("validateAuthorizeConnectorRequest", () => {
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
-      body: JSON.stringify({ connector: "tiktok", account_id: mockEntityId }),
+      body: JSON.stringify({ connector: "tiktok", account_id: mockTargetAccountId }),
     });
     const result = await validateAuthorizeConnectorRequest(request);
 
@@ -185,7 +185,7 @@ describe("validateAuthorizeConnectorRequest", () => {
 
   it("should include TikTok auth config when connector is tiktok and env var is set", async () => {
     const mockAccountId = "account-123";
-    const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
+    const mockTargetAccountId = "550e8400-e29b-41d4-a716-446655440000";
     const originalEnv = process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID;
     process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID = "ac_test123";
 
@@ -198,7 +198,7 @@ describe("validateAuthorizeConnectorRequest", () => {
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
-      body: JSON.stringify({ connector: "tiktok", account_id: mockEntityId }),
+      body: JSON.stringify({ connector: "tiktok", account_id: mockTargetAccountId }),
     });
     const result = await validateAuthorizeConnectorRequest(request);
 

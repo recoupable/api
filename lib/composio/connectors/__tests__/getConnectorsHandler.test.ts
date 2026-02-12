@@ -35,7 +35,7 @@ describe("getConnectorsHandler", () => {
 
   it("should return connectors list for account", async () => {
     vi.mocked(validateGetConnectorsRequest).mockResolvedValue({
-      composioEntityId: "account-123",
+      accountId: "account-123",
     });
 
     vi.mocked(getConnectors).mockResolvedValue([
@@ -55,7 +55,7 @@ describe("getConnectorsHandler", () => {
 
   it("should fetch all connectors for any account (no filtering)", async () => {
     vi.mocked(validateGetConnectorsRequest).mockResolvedValue({
-      composioEntityId: "entity-456",
+      accountId: "account-456",
     });
 
     vi.mocked(getConnectors).mockResolvedValue([
@@ -63,12 +63,12 @@ describe("getConnectorsHandler", () => {
     ]);
 
     const request = new NextRequest(
-      "http://localhost/api/connectors?account_id=entity-456",
+      "http://localhost/api/connectors?account_id=account-456",
     );
     await getConnectorsHandler(request);
 
     // API is unopinionated — no allowedToolkits filtering
-    expect(getConnectors).toHaveBeenCalledWith("entity-456", {
+    expect(getConnectors).toHaveBeenCalledWith("account-456", {
       displayNames: {
         tiktok: "TikTok",
         googlesheets: "Google Sheets",
@@ -80,7 +80,7 @@ describe("getConnectorsHandler", () => {
 
   it("should return 500 when getConnectors throws", async () => {
     vi.mocked(validateGetConnectorsRequest).mockResolvedValue({
-      composioEntityId: "account-123",
+      accountId: "account-123",
     });
 
     vi.mocked(getConnectors).mockRejectedValue(new Error("Composio API error"));

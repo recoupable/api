@@ -9,7 +9,7 @@ import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
  * Validated params for getting connectors.
  */
 export interface GetConnectorsParams {
-  composioEntityId: string;
+  accountId: string;
 }
 
 /**
@@ -54,9 +54,9 @@ export async function validateGetConnectorsRequest(
       return NextResponse.json({ error: "Access denied to this account" }, { status: 403, headers });
     }
 
-    return { composioEntityId: account_id };
+    return { accountId: account_id };
   }
 
   // No account_id: use the authenticated account
-  return { composioEntityId: accountId };
+  return { accountId };
 }

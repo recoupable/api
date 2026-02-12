@@ -33,10 +33,10 @@ export async function getConnectorsHandler(request: NextRequest): Promise<NextRe
       return validated;
     }
 
-    const { composioEntityId } = validated;
+    const { accountId } = validated;
 
     // Fetch all connectors — no filtering at the API level
-    const connectors = await getConnectors(composioEntityId, {
+    const connectors = await getConnectors(accountId, {
       displayNames: CONNECTOR_DISPLAY_NAMES,
     });
 

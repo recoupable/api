@@ -37,7 +37,7 @@ describe("authorizeConnectorHandler", () => {
 
   it("should call authorizeConnector with validated params for account connection", async () => {
     vi.mocked(validateAuthorizeConnectorRequest).mockResolvedValue({
-      composioEntityId: "account-123",
+      accountId: "account-123",
       connector: "googlesheets",
     });
     vi.mocked(authorizeConnector).mockResolvedValue({
@@ -60,9 +60,9 @@ describe("authorizeConnectorHandler", () => {
     expect(body.data.redirectUrl).toBe("https://oauth.example.com/auth");
   });
 
-  it("should call authorizeConnector with authConfigs for entity connection", async () => {
+  it("should call authorizeConnector with authConfigs for account with authConfigs", async () => {
     vi.mocked(validateAuthorizeConnectorRequest).mockResolvedValue({
-      composioEntityId: "entity-456",
+      accountId: "account-456",
       connector: "tiktok",
       authConfigs: { tiktok: "ac_123" },
     });
@@ -76,7 +76,7 @@ describe("authorizeConnectorHandler", () => {
     });
     await authorizeConnectorHandler(request);
 
-    expect(authorizeConnector).toHaveBeenCalledWith("entity-456", "tiktok", {
+    expect(authorizeConnector).toHaveBeenCalledWith("account-456", "tiktok", {
       customCallbackUrl: undefined,
       authConfigs: { tiktok: "ac_123" },
     });
@@ -84,7 +84,7 @@ describe("authorizeConnectorHandler", () => {
 
   it("should pass through custom callbackUrl", async () => {
     vi.mocked(validateAuthorizeConnectorRequest).mockResolvedValue({
-      composioEntityId: "account-123",
+      accountId: "account-123",
       connector: "googlesheets",
       callbackUrl: "https://custom.example.com/callback",
     });
@@ -106,7 +106,7 @@ describe("authorizeConnectorHandler", () => {
 
   it("should return 500 on error", async () => {
     vi.mocked(validateAuthorizeConnectorRequest).mockResolvedValue({
-      composioEntityId: "account-123",
+      accountId: "account-123",
       connector: "googlesheets",
     });
     vi.mocked(authorizeConnector).mockRejectedValue(new Error("OAuth failed"));

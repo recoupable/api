@@ -8,7 +8,7 @@ import { disconnectConnector } from "./disconnectConnector";
  * Handler for DELETE /api/connectors.
  *
  * Disconnects a connected account from Composio.
- * Supports disconnecting for the authenticated account or another entity (via account_id).
+ * Supports disconnecting for the authenticated account or another account (via account_id).
  *
  * @param request - The incoming request
  * @returns Success status
@@ -23,13 +23,13 @@ export async function disconnectConnectorHandler(request: NextRequest): Promise<
       return validated;
     }
 
-    const { connectedAccountId, entityId } = validated;
+    const { connectedAccountId, targetAccountId } = validated;
 
     // Disconnect from Composio
-    if (entityId) {
-      // Disconnecting for another entity - verify ownership
+    if (targetAccountId) {
+      // Disconnecting for another account - verify ownership
       await disconnectConnector(connectedAccountId, {
-        verifyOwnershipFor: entityId,
+        verifyOwnershipFor: targetAccountId,
       });
     } else {
       // User's own connection - already verified in validation

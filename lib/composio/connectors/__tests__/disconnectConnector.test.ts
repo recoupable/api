@@ -74,18 +74,18 @@ describe("disconnectConnector", () => {
       disconnectConnector("ca_12345", {
         verifyOwnershipFor: "artist-456",
       }),
-    ).rejects.toThrow("Connection not found for this entity");
+    ).rejects.toThrow("Connection not found for this account");
 
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it("should throw when entity has no connections", async () => {
+  it("should throw when account has no connections", async () => {
     vi.mocked(getConnectors).mockResolvedValue([]);
 
     await expect(
       disconnectConnector("ca_12345", {
         verifyOwnershipFor: "artist-456",
       }),
-    ).rejects.toThrow("Connection not found for this entity");
+    ).rejects.toThrow("Connection not found for this account");
   });
 });

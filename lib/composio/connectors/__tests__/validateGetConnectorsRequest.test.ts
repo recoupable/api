@@ -35,7 +35,7 @@ describe("validateGetConnectorsRequest", () => {
     expect(response.status).toBe(401);
   });
 
-  it("should return accountId as composioEntityId when no account_id provided", async () => {
+  it("should return accountId as accountId when no account_id provided", async () => {
     const mockAccountId = "account-123";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
@@ -48,13 +48,13 @@ describe("validateGetConnectorsRequest", () => {
 
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
-      composioEntityId: mockAccountId,
+      accountId: mockAccountId,
     });
   });
 
   it("should return all connectors for any account type (unopinionated)", async () => {
     const mockAccountId = "account-123";
-    const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
+    const mockTargetAccountId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
       orgId: null,
@@ -62,19 +62,19 @@ describe("validateGetConnectorsRequest", () => {
     });
     vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "artist" });
 
-    const request = new NextRequest(`http://localhost/api/connectors?account_id=${mockEntityId}`);
+    const request = new NextRequest(`http://localhost/api/connectors?account_id=${mockTargetAccountId}`);
     const result = await validateGetConnectorsRequest(request);
 
-    expect(checkAccountAccess).toHaveBeenCalledWith(mockAccountId, mockEntityId);
+    expect(checkAccountAccess).toHaveBeenCalledWith(mockAccountId, mockTargetAccountId);
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
-      composioEntityId: mockEntityId,
+      accountId: mockTargetAccountId,
     });
   });
 
   it("should return 403 when account_id provided but no access", async () => {
     const mockAccountId = "account-123";
-    const mockEntityId = "550e8400-e29b-41d4-a716-446655440000";
+    const mockTargetAccountId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
       orgId: null,
@@ -82,7 +82,7 @@ describe("validateGetConnectorsRequest", () => {
     });
     vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: false });
 
-    const request = new NextRequest(`http://localhost/api/connectors?account_id=${mockEntityId}`);
+    const request = new NextRequest(`http://localhost/api/connectors?account_id=${mockTargetAccountId}`);
     const result = await validateGetConnectorsRequest(request);
 
     expect(result).toBeInstanceOf(NextResponse);

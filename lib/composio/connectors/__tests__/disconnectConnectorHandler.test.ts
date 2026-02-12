@@ -35,7 +35,7 @@ describe("disconnectConnectorHandler", () => {
     expect(result.status).toBe(400);
   });
 
-  it("should call disconnectConnector without options when no entityId", async () => {
+  it("should call disconnectConnector without options when no targetAccountId", async () => {
     vi.mocked(validateDisconnectConnectorRequest).mockResolvedValue({
       connectedAccountId: "ca_123",
     });
@@ -52,10 +52,10 @@ describe("disconnectConnectorHandler", () => {
     expect(body.success).toBe(true);
   });
 
-  it("should call disconnectConnector with verifyOwnershipFor when entityId provided", async () => {
+  it("should call disconnectConnector with verifyOwnershipFor when targetAccountId provided", async () => {
     vi.mocked(validateDisconnectConnectorRequest).mockResolvedValue({
       connectedAccountId: "ca_123",
-      entityId: "entity-456",
+      targetAccountId: "account-456",
     });
     vi.mocked(disconnectConnector).mockResolvedValue(undefined);
 
@@ -65,7 +65,7 @@ describe("disconnectConnectorHandler", () => {
     const result = await disconnectConnectorHandler(request);
 
     expect(disconnectConnector).toHaveBeenCalledWith("ca_123", {
-      verifyOwnershipFor: "entity-456",
+      verifyOwnershipFor: "account-456",
     });
     expect(result.status).toBe(200);
   });
