@@ -1,4 +1,6 @@
-import { createToolRouterSession } from "./createSession";
+import { createToolRouterSession } from "./createToolRouterSession";
+import { getArtistConnectionsFromComposio } from "./getArtistConnectionsFromComposio";
+import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import type { Tool, ToolSet } from "ai";
 
 /**
@@ -36,7 +38,7 @@ function isValidTool(tool: unknown): tool is Tool {
 }
 
 /**
- * Get Composio Tool Router tools for a user.
+ * Get Composio Tool Router tools for an account.
  *
  * Returns a filtered subset of meta-tools:
  * - COMPOSIO_MANAGE_CONNECTIONS - OAuth/auth management
@@ -44,17 +46,22 @@ function isValidTool(tool: unknown): tool is Tool {
  * - COMPOSIO_GET_TOOL_SCHEMAS - Get parameter schemas
  * - COMPOSIO_MULTI_EXECUTE_TOOL - Execute actions
  *
+ * If artistId is provided, queries Composio for the artist's connections
+ * and passes them to the session via connectedAccounts override.
+ *
  * Gracefully returns empty ToolSet when:
  * - COMPOSIO_API_KEY is not set
  * - @composio packages fail to load (bundler incompatibility)
  *
- * @param userId - Unique identifier for the user (accountId)
+ * @param accountId - Unique identifier for the account
+ * @param artistId - Optional artist ID to use artist-specific Composio connections
  * @param roomId - Optional chat room ID for OAuth redirect
  * @returns ToolSet containing filtered Vercel AI SDK tools
  */
 export async function getComposioTools(
-  userId: string,
-  roomId?: string
+  accountId: string,
+  artistId?: string,
+  roomId?: string,
 ): Promise<ToolSet> {
   // Skip Composio if API key is not configured
   if (!process.env.COMPOSIO_API_KEY) {
@@ -62,7 +69,22 @@ export async function getComposioTools(
   }
 
   try {
-    const session = await createToolRouterSession(userId, roomId);
+    // Fetch artist-specific connections from Composio if artistId is provided
+    // Only fetch if the account has access to this artist
+    let artistConnections: Record<string, string> | undefined;
+    if (artistId) {
+      const hasAccess = await checkAccountArtistAccess(accountId, artistId);
+      if (hasAccess) {
+        artistConnections = await getArtistConnectionsFromComposio(artistId);
+        // Only pass if there are actual connections
+        if (Object.keys(artistConnections).length === 0) {
+          artistConnections = undefined;
+        }
+      }
+      // If no access, silently skip artist connections (don't throw)
+    }
+
+    const session = await createToolRouterSession(accountId, roomId, artistConnections);
     const allTools = await session.tools();
 
     // Filter to only allowed tools with runtime validation
