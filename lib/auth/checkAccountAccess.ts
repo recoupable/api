@@ -1,5 +1,5 @@
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
-import { checkAccountWorkspaceAccess } from "@/lib/supabase/account_workspace_ids/checkAccountWorkspaceAccess";
+import { selectAccountWorkspaceId } from "@/lib/supabase/account_workspace_ids/selectAccountWorkspaceId";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
 
 /**
@@ -53,7 +53,7 @@ export async function checkAccountAccess(
   }
 
   // 3. Workspace access — target is a workspace the caller owns
-  const isWorkspace = await checkAccountWorkspaceAccess(authenticatedAccountId, targetAccountId);
+  const isWorkspace = await selectAccountWorkspaceId(authenticatedAccountId, targetAccountId);
   if (isWorkspace) {
     return { hasAccess: true, entityType: "workspace" };
   }
