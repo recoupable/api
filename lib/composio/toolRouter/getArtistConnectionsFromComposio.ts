@@ -12,15 +12,13 @@ import { getConnectors, ALLOWED_ARTIST_CONNECTORS } from "../connectors";
 export async function getArtistConnectionsFromComposio(
   artistId: string,
 ): Promise<Record<string, string>> {
-  // Use unified getConnectors with artist filter
-  const connectors = await getConnectors(artistId, {
-    allowedToolkits: ALLOWED_ARTIST_CONNECTORS,
-  });
+  const connectors = await getConnectors(artistId);
 
-  // Build connections map from connected connectors
+  // Build connections map, filtered to allowed artist connectors
+  const allowed = new Set<string>(ALLOWED_ARTIST_CONNECTORS);
   const connections: Record<string, string> = {};
   for (const connector of connectors) {
-    if (connector.connectedAccountId) {
+    if (allowed.has(connector.slug) && connector.connectedAccountId) {
       connections[connector.slug] = connector.connectedAccountId;
     }
   }

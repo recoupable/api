@@ -19,9 +19,7 @@ describe("getArtistConnectionsFromComposio", () => {
 
     const result = await getArtistConnectionsFromComposio("artist-123");
 
-    expect(getConnectors).toHaveBeenCalledWith("artist-123", {
-      allowedToolkits: ["tiktok"],
-    });
+    expect(getConnectors).toHaveBeenCalledWith("artist-123");
     expect(result).toEqual({});
   });
 
@@ -51,7 +49,7 @@ describe("getArtistConnectionsFromComposio", () => {
     });
   });
 
-  it("should handle multiple connected accounts", async () => {
+  it("should only include allowed artist connectors", async () => {
     vi.mocked(getConnectors).mockResolvedValue([
       { slug: "tiktok", connectedAccountId: "tiktok-account-1" },
       { slug: "instagram", connectedAccountId: "instagram-account-2" },
@@ -61,8 +59,8 @@ describe("getArtistConnectionsFromComposio", () => {
 
     expect(result).toEqual({
       tiktok: "tiktok-account-1",
-      instagram: "instagram-account-2",
     });
+    expect(result).not.toHaveProperty("instagram");
   });
 
   it("should return empty object when getConnectors returns empty array", async () => {
