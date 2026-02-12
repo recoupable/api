@@ -9,10 +9,6 @@ import { z } from "zod";
 const getArtistsQuerySchema = z.object({
   account_id: z.string().uuid("account_id must be a valid UUID").optional(),
   org_id: z.string().uuid("org_id must be a valid UUID").optional(),
-  personal: z
-    .enum(["true", "false"], { message: "personal must be 'true' or 'false'" })
-    .transform(val => val === "true")
-    .optional(),
 });
 
 /**
@@ -25,8 +21,7 @@ const getArtistsQuerySchema = z.object({
  *
  * Query parameters:
  * - account_id: Filter to a specific account (org keys only)
- * - org_id: Filter to artists in a specific organization
- * - personal: Set to "true" to show only personal (non-org) artists
+ * - org_id: Filter to artists in a specific organization (omit for personal artists)
  *
  * @param request - The NextRequest object
  * @returns A NextResponse with an error if validation fails, or GetArtistsOptions
@@ -39,7 +34,6 @@ export async function validateGetArtistsRequest(
   const queryParams = {
     account_id: searchParams.get("account_id") ?? undefined,
     org_id: searchParams.get("org_id") ?? undefined,
-    personal: searchParams.get("personal") ?? undefined,
   };
 
   const queryResult = getArtistsQuerySchema.safeParse(queryParams);
@@ -54,7 +48,7 @@ export async function validateGetArtistsRequest(
     );
   }
 
-  const { account_id: targetAccountId, org_id: orgIdFilter, personal } = queryResult.data;
+  const { account_id: targetAccountId, org_id: orgIdFilter } = queryResult.data;
 
   // Use validateAuthContext for authentication
   const authResult = await validateAuthContext(request);
@@ -70,7 +64,6 @@ export async function validateGetArtistsRequest(
     orgId,
     targetAccountId,
     orgIdFilter,
-    personal,
   });
 
   if (error) {

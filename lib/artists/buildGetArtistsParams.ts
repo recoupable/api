@@ -11,8 +11,6 @@ export interface BuildGetArtistsParamsInput {
   targetAccountId?: string;
   /** Optional organization filter for which artists to show */
   orgIdFilter?: string;
-  /** Whether to show only personal (non-org) artists */
-  personal?: boolean;
 }
 
 export type BuildGetArtistsParamsResult =
@@ -34,7 +32,7 @@ export type BuildGetArtistsParamsResult =
 export async function buildGetArtistsParams(
   input: BuildGetArtistsParamsInput,
 ): Promise<BuildGetArtistsParamsResult> {
-  const { accountId, orgId, targetAccountId, orgIdFilter, personal } = input;
+  const { accountId, orgId, targetAccountId, orgIdFilter } = input;
 
   let effectiveAccountId = accountId;
 
@@ -52,8 +50,9 @@ export async function buildGetArtistsParams(
     effectiveAccountId = targetAccountId;
   }
 
-  // Determine orgId filter: personal=true means null, org_id means specific org
-  const effectiveOrgId = personal ? null : orgIdFilter;
+  // When org_id is omitted, default to personal artists (null = personal only)
+  // When org_id is provided, filter to that organization's artists
+  const effectiveOrgId = orgIdFilter ?? null;
 
   return {
     params: { accountId: effectiveAccountId, orgId: effectiveOrgId },
