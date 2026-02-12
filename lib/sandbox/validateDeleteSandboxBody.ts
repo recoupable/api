@@ -5,34 +5,27 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { z } from "zod";
 
-export const snapshotPatchBodySchema = z.object({
-  snapshotId: z.string().min(1, "snapshotId cannot be empty").optional(),
+export const deleteSandboxBodySchema = z.object({
   account_id: z.string().uuid("account_id must be a valid UUID").optional(),
-  github_repo: z.string().url("github_repo must be a valid URL").optional(),
 });
 
-export type SnapshotPatchBody = {
-  /** The account ID to update */
+export type DeleteSandboxBody = {
   accountId: string;
-  /** The snapshot ID to set */
-  snapshotId?: string;
-  /** The GitHub repository URL to associate with the sandbox */
-  githubRepo?: string;
 };
 
 /**
- * Validates auth and request body for PATCH /api/sandboxes/snapshot.
+ * Validates auth and request body for DELETE /api/sandboxes.
  * Handles authentication via x-api-key or Authorization bearer token,
  * body validation, and optional account_id override for organization API keys.
  *
  * @param request - The NextRequest object
  * @returns A NextResponse with an error if validation fails, or the validated body with auth context.
  */
-export async function validateSnapshotPatchBody(
+export async function validateDeleteSandboxBody(
   request: NextRequest,
-): Promise<NextResponse | SnapshotPatchBody> {
+): Promise<NextResponse | DeleteSandboxBody> {
   const body = await safeParseJson(request);
-  const result = snapshotPatchBodySchema.safeParse(body);
+  const result = deleteSandboxBodySchema.safeParse(body);
 
   if (!result.success) {
     const firstError = result.error.issues[0];
@@ -49,7 +42,7 @@ export async function validateSnapshotPatchBody(
     );
   }
 
-  const { snapshotId, account_id: targetAccountId, github_repo: githubRepo } = result.data;
+  const { account_id: targetAccountId } = result.data;
 
   const authResult = await validateAuthContext(request, {
     accountId: targetAccountId,
@@ -61,7 +54,5 @@ export async function validateSnapshotPatchBody(
 
   return {
     accountId: authResult.accountId,
-    ...(snapshotId && { snapshotId }),
-    ...(githubRepo && { githubRepo }),
   };
 }

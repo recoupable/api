@@ -7,6 +7,7 @@ import { validateSandboxBody } from "@/lib/sandbox/validateSandboxBody";
 import { createSandbox } from "@/lib/sandbox/createSandbox";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
+
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 
 vi.mock("@/lib/sandbox/validateSandboxBody", () => ({
@@ -24,6 +25,7 @@ vi.mock("@/lib/supabase/account_sandboxes/insertAccountSandbox", () => ({
 vi.mock("@/lib/trigger/triggerRunSandboxCommand", () => ({
   triggerRunSandboxCommand: vi.fn(),
 }));
+
 
 vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
   selectAccountSnapshots: vi.fn(),
@@ -56,7 +58,7 @@ describe("createSandboxPostHandler", () => {
     expect(response.status).toBe(401);
   });
 
-  it("returns 200 with sandboxes array including runId on success", async () => {
+  it("returns runId from command task when command is provided", async () => {
     vi.mocked(validateSandboxBody).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
@@ -302,12 +304,11 @@ describe("createSandboxPostHandler", () => {
     });
   });
 
-  it("returns 200 without runId and skips trigger when command is not provided", async () => {
+  it("returns 200 without runId when no command is provided", async () => {
     vi.mocked(validateSandboxBody).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
       authToken: "token",
-      // command is not provided (optional)
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
@@ -339,11 +340,9 @@ describe("createSandboxPostHandler", () => {
           sandboxStatus: "running",
           timeout: 600000,
           createdAt: "2024-01-01T00:00:00.000Z",
-          // Note: runId is not included when command is not provided
         },
       ],
     });
-    // Verify triggerRunSandboxCommand was NOT called
     expect(triggerRunSandboxCommand).not.toHaveBeenCalled();
   });
 
@@ -375,7 +374,7 @@ describe("createSandboxPostHandler", () => {
     const request = createMockRequest();
     const response = await createSandboxPostHandler(request);
 
-    // Sandbox was created successfully, so return 200 even if trigger fails
+    // Sandbox was created successfully, so return 200 even if command trigger fails
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json).toEqual({
@@ -386,9 +385,9 @@ describe("createSandboxPostHandler", () => {
           sandboxStatus: "running",
           timeout: 600000,
           createdAt: "2024-01-01T00:00:00.000Z",
-          // Note: runId is not included when trigger fails
         },
       ],
     });
   });
+
 });

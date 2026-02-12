@@ -19,11 +19,16 @@ export async function OPTIONS() {
  * GET /api/organizations
  *
  * Retrieves all organizations an account belongs to.
+ * Requires authentication via x-api-key or Authorization bearer token.
+ *
+ * For personal keys: returns the key owner's organizations.
+ * For org keys: returns organizations for all accounts in the org.
+ * For Recoup admin: returns all organizations.
  *
  * Query parameters:
- * - accountId (required): The account's ID (UUID)
+ * - account_id (optional): Filter to a specific account (org keys only)
  *
- * @param request - The request object containing query parameters
+ * @param request - The request object
  * @returns A NextResponse with organizations data
  */
 export async function GET(request: NextRequest) {
@@ -45,4 +50,3 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   return createOrganizationHandler(request);
 }
-
