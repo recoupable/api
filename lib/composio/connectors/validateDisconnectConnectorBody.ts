@@ -10,13 +10,11 @@ export const disconnectConnectorBodySchema = z.object({
 export type DisconnectConnectorBody = z.infer<typeof disconnectConnectorBodySchema>;
 
 /**
- * Validates request body for DELETE /api/connectors.
+ * Validates request body shape for DELETE /api/connectors.
  *
- * - User disconnect: { connected_account_id: "ca_xxx" }
- * - Entity disconnect: { connected_account_id: "ca_xxx", account_id: "account-uuid" }
- *
- * When account_id is provided, verifies the connection belongs to that entity.
- * When not provided, verifies the connection belongs to the authenticated account.
+ * Only checks presence and format of fields (connected_account_id required,
+ * account_id optional UUID). Ownership and authorization checks are performed
+ * by validateDisconnectConnectorRequest.
  *
  * @param body - The request body
  * @returns A NextResponse with an error if validation fails, or the validated body if validation passes.
