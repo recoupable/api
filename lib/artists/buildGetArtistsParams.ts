@@ -1,6 +1,5 @@
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import type { GetArtistsOptions } from "@/lib/artists/getArtists";
-import { RECOUP_ORG_ID } from "@/lib/const";
 
 export interface BuildGetArtistsParamsInput {
   /** The authenticated account ID */

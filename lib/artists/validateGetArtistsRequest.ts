@@ -11,6 +11,8 @@ const getArtistsQuerySchema = z.object({
   org_id: z.string().uuid("org_id must be a valid UUID").optional(),
 });
 
+export type GetArtistsQuery = z.infer<typeof getArtistsQuerySchema>;
+
 /**
  * Validates GET /api/artists request.
  * Handles authentication via x-api-key or Authorization bearer token.
