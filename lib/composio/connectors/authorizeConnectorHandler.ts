@@ -5,7 +5,7 @@ import { validateAuthorizeConnectorRequest } from "./validateAuthorizeConnectorR
 import { authorizeConnector } from "./authorizeConnector";
 
 /**
- * Handler for POST /api/connectors/authorize.
+ * Handler for POST /api/connectors.
  *
  * Generates an OAuth authorization URL for a specific connector.
  * Supports connecting for the authenticated account or another entity (via account_id).

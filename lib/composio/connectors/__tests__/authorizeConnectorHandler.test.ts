@@ -27,7 +27,7 @@ describe("authorizeConnectorHandler", () => {
       NextResponse.json({ error: "Invalid request" }, { status: 400 }),
     );
 
-    const request = new NextRequest("http://localhost/api/connectors/authorize", {
+    const request = new NextRequest("http://localhost/api/connectors", {
       method: "POST",
     });
     const result = await authorizeConnectorHandler(request);
@@ -45,7 +45,7 @@ describe("authorizeConnectorHandler", () => {
       redirectUrl: "https://oauth.example.com/auth",
     });
 
-    const request = new NextRequest("http://localhost/api/connectors/authorize", {
+    const request = new NextRequest("http://localhost/api/connectors", {
       method: "POST",
     });
     const result = await authorizeConnectorHandler(request);
@@ -71,7 +71,7 @@ describe("authorizeConnectorHandler", () => {
       redirectUrl: "https://oauth.example.com/auth",
     });
 
-    const request = new NextRequest("http://localhost/api/connectors/authorize", {
+    const request = new NextRequest("http://localhost/api/connectors", {
       method: "POST",
     });
     await authorizeConnectorHandler(request);
@@ -93,7 +93,7 @@ describe("authorizeConnectorHandler", () => {
       redirectUrl: "https://oauth.example.com/auth",
     });
 
-    const request = new NextRequest("http://localhost/api/connectors/authorize", {
+    const request = new NextRequest("http://localhost/api/connectors", {
       method: "POST",
     });
     await authorizeConnectorHandler(request);
@@ -111,7 +111,7 @@ describe("authorizeConnectorHandler", () => {
     });
     vi.mocked(authorizeConnector).mockRejectedValue(new Error("OAuth failed"));
 
-    const request = new NextRequest("http://localhost/api/connectors/authorize", {
+    const request = new NextRequest("http://localhost/api/connectors", {
       method: "POST",
     });
     const result = await authorizeConnectorHandler(request);
