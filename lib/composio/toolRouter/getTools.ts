@@ -1,6 +1,6 @@
 import { createToolRouterSession } from "./createToolRouterSession";
 import { getArtistConnectionsFromComposio } from "./getArtistConnectionsFromComposio";
-import { checkAccountArtistAccess } from "@/lib/supabase/account_artist_ids/checkAccountArtistAccess";
+import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import type { Tool, ToolSet } from "ai";
 
 /**

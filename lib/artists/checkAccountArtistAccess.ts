@@ -1,6 +1,6 @@
-import { selectAccountArtistId } from "./selectAccountArtistId";
-import { selectArtistOrganizationIds } from "../artist_organization_ids/selectArtistOrganizationIds";
-import { selectAccountOrganizationIds } from "../account_organization_ids/selectAccountOrganizationIds";
+import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
+import { selectArtistOrganizationIds } from "@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds";
+import { selectAccountOrganizationIds } from "@/lib/supabase/account_organization_ids/selectAccountOrganizationIds";
 
 /**
  * Check if an account has access to a specific artist.

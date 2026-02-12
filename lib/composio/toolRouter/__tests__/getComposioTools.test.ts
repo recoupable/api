@@ -3,7 +3,7 @@ import { getComposioTools } from "../getTools";
 
 import { createToolRouterSession } from "../createToolRouterSession";
 import { getArtistConnectionsFromComposio } from "../getArtistConnectionsFromComposio";
-import { checkAccountArtistAccess } from "@/lib/supabase/account_artist_ids/checkAccountArtistAccess";
+import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 
 // Mock dependencies
 vi.mock("../createToolRouterSession", () => ({
@@ -14,7 +14,7 @@ vi.mock("../getArtistConnectionsFromComposio", () => ({
   getArtistConnectionsFromComposio: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/account_artist_ids/checkAccountArtistAccess", () => ({
+vi.mock("@/lib/artists/checkAccountArtistAccess", () => ({
   checkAccountArtistAccess: vi.fn(),
 }));
 

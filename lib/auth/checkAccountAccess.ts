@@ -1,4 +1,4 @@
-import { checkAccountArtistAccess } from "@/lib/supabase/account_artist_ids/checkAccountArtistAccess";
+import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import { checkAccountWorkspaceAccess } from "@/lib/supabase/account_workspace_ids/checkAccountWorkspaceAccess";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
 
