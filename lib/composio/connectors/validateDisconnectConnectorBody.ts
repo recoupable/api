@@ -3,7 +3,9 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { z } from "zod";
 
 export const disconnectConnectorBodySchema = z.object({
-  connected_account_id: z.string().min(1, "connected_account_id is required"),
+  connected_account_id: z
+    .string({ message: "connected_account_id is required" })
+    .min(1, "connected_account_id cannot be empty"),
   account_id: z.string().uuid("account_id must be a valid UUID").optional(),
 });
 
@@ -28,6 +30,8 @@ export function validateDisconnectConnectorBody(
     const firstError = result.error.issues[0];
     return NextResponse.json(
       {
+        status: "error",
+        missing_fields: firstError.path,
         error: firstError.message,
       },
       {

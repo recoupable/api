@@ -31,12 +31,15 @@ describe("validateDisconnectConnectorBody", () => {
     });
   });
 
-  it("should return 400 when connected_account_id is missing", () => {
+  it("should return 400 with field name when connected_account_id is missing", async () => {
     const result = validateDisconnectConnectorBody({});
 
     expect(result).toBeInstanceOf(NextResponse);
     const response = result as NextResponse;
     expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.missing_fields).toEqual(["connected_account_id"]);
+    expect(body.error).toBe("connected_account_id is required");
   });
 
   it("should return 400 when connected_account_id is empty", () => {

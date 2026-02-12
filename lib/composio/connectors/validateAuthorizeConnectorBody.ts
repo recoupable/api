@@ -31,6 +31,8 @@ export function validateAuthorizeConnectorBody(
     const firstError = result.error.issues[0];
     return NextResponse.json(
       {
+        status: "error",
+        missing_fields: firstError.path,
         error: firstError.message,
       },
       {

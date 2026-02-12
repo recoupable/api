@@ -44,12 +44,15 @@ describe("validateAuthorizeConnectorBody", () => {
     });
   });
 
-  it("should return 400 when connector is missing", () => {
+  it("should return 400 with field name when connector is missing", async () => {
     const result = validateAuthorizeConnectorBody({});
 
     expect(result).toBeInstanceOf(NextResponse);
     const response = result as NextResponse;
     expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.missing_fields).toEqual(["connector"]);
+    expect(body.error).toBe("connector is required");
   });
 
   it("should return 400 when connector is empty", () => {
