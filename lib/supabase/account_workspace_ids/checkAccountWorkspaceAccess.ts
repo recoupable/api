@@ -1,4 +1,4 @@
-import supabase from "../serverClient";
+import { selectAccountWorkspaceId } from "./selectAccountWorkspaceId";
 
 /**
  * Check if an account has access to a specific workspace.
@@ -16,16 +16,6 @@ export async function checkAccountWorkspaceAccess(
   accountId: string,
   workspaceId: string,
 ): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("account_workspace_ids")
-    .select("workspace_id")
-    .eq("account_id", accountId)
-    .eq("workspace_id", workspaceId)
-    .maybeSingle();
-
-  if (error) {
-    return false; // Fail closed
-  }
-
+  const data = await selectAccountWorkspaceId(accountId, workspaceId);
   return !!data;
 }
