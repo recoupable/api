@@ -144,6 +144,25 @@ export async function selectTableName({
 - All API routes should have JSDoc comments
 - Run `pnpm lint` before committing
 
+### Terminology
+
+Use **"account"** terminology, never "entity" or "user". All entities in the system (individuals, artists, workspaces, organizations) are "accounts". When referring to specific types, use the specific name:
+
+- ✅ `account_id`, "artist", "workspace", "organization"
+- ❌ `entity_id`, "entity", "user"
+
+### API Response Shapes
+
+Keep response bodies **flat** — put fields at the root level, not nested inside a `data` wrapper:
+
+```typescript
+// ✅ Correct — flat response
+{ success: true, connectors: [...] }
+
+// ❌ Wrong — unnecessary nesting
+{ success: true, data: { connectors: [...] } }
+```
+
 ## Test-Driven Development (TDD)
 
 **CRITICAL: Always write tests BEFORE implementing new features or fixing bugs.**

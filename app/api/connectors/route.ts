@@ -1,11 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getConnectors } from "@/lib/composio/connectors";
-import { disconnectConnector } from "@/lib/composio/connectors/disconnectConnector";
-import { validateDisconnectConnectorBody } from "@/lib/composio/connectors/validateDisconnectConnectorBody";
-import { verifyConnectorOwnership } from "@/lib/composio/connectors/verifyConnectorOwnership";
-import { validateAccountIdHeaders } from "@/lib/accounts/validateAccountIdHeaders";
+import { getConnectorsHandler } from "@/lib/composio/connectors/getConnectorsHandler";
+import { authorizeConnectorHandler } from "@/lib/composio/connectors/authorizeConnectorHandler";
+import { disconnectConnectorHandler } from "@/lib/composio/connectors/disconnectConnectorHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -20,39 +18,37 @@ export async function OPTIONS() {
 /**
  * GET /api/connectors
  *
- * List all available connectors and their connection status for a user.
+ * List all available connectors and their connection status.
+ *
+ * Query params:
+ *   - account_id (optional): Entity ID for entity-specific connections (e.g., artist ID)
  *
  * Authentication: x-api-key OR Authorization Bearer token required.
  *
+ * @param request
  * @returns List of connectors with connection status
  */
-export async function GET(request: NextRequest): Promise<NextResponse> {
-  const headers = getCorsHeaders();
+export async function GET(request: NextRequest) {
+  return getConnectorsHandler(request);
+}
 
-  try {
-    const authResult = await validateAccountIdHeaders(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
-
-    const { accountId } = authResult;
-
-    const connectors = await getConnectors(accountId);
-
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          connectors,
-        },
-      },
-      { status: 200, headers },
-    );
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to fetch connectors";
-    return NextResponse.json({ error: message }, { status: 500, headers });
-  }
+/**
+ * POST /api/connectors
+ *
+ * Generate an OAuth authorization URL for a specific connector.
+ *
+ * Authentication: x-api-key OR Authorization Bearer token required.
+ *
+ * Request body:
+ * - connector: The connector slug, e.g., "googlesheets" or "tiktok" (required)
+ * - callback_url: Optional custom callback URL after OAuth
+ * - account_id: Optional account ID for account-specific connections
+ *
+ * @param request
+ * @returns The redirect URL for OAuth authorization
+ */
+export async function POST(request: NextRequest) {
+  return authorizeConnectorHandler(request);
 }
 
 /**
@@ -60,50 +56,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
  *
  * Disconnect a connected account from Composio.
  *
+ * Body:
+ * - connected_account_id (required): The connected account ID to disconnect
+ * - account_id (optional): Entity ID for ownership verification (e.g., artist ID)
+ *
  * Authentication: x-api-key OR Authorization Bearer token required.
  *
- * Body: { connected_account_id: string }
+ * @param request
  */
-export async function DELETE(request: NextRequest): Promise<NextResponse> {
-  const headers = getCorsHeaders();
-
-  try {
-    const authResult = await validateAccountIdHeaders(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
-
-    const { accountId } = authResult;
-    const body = await request.json();
-
-    const validated = validateDisconnectConnectorBody(body);
-    if (validated instanceof NextResponse) {
-      return validated;
-    }
-
-    const { connected_account_id } = validated;
-
-    // Verify the connected account belongs to the authenticated user
-    const isOwner = await verifyConnectorOwnership(accountId, connected_account_id);
-    if (!isOwner) {
-      return NextResponse.json(
-        { error: "Connected account not found or does not belong to this user" },
-        { status: 403, headers }
-      );
-    }
-
-    const result = await disconnectConnector(connected_account_id);
-
-    return NextResponse.json(
-      {
-        success: true,
-        data: result,
-      },
-      { status: 200, headers },
-    );
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to disconnect connector";
-    return NextResponse.json({ error: message }, { status: 500, headers });
-  }
+export async function DELETE(request: NextRequest) {
+  return disconnectConnectorHandler(request);
 }
