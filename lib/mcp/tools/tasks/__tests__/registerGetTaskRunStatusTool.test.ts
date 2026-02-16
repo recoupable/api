@@ -6,9 +6,14 @@ import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sd
 import { registerGetTaskRunStatusTool } from "../registerGetTaskRunStatusTool";
 
 const mockRetrieveTaskRun = vi.fn();
+const mockResolveAccountId = vi.fn();
 
 vi.mock("@/lib/trigger/retrieveTaskRun", () => ({
   retrieveTaskRun: (...args: unknown[]) => mockRetrieveTaskRun(...args),
+}));
+
+vi.mock("@/lib/mcp/resolveAccountId", () => ({
+  resolveAccountId: (...args: unknown[]) => mockResolveAccountId(...args),
 }));
 
 type ServerRequestHandlerExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
@@ -65,7 +70,12 @@ describe("registerGetTaskRunStatusTool", () => {
     );
   });
 
-  it("returns error when no auth is provided", async () => {
+  it("returns error when resolveAccountId returns an error", async () => {
+    mockResolveAccountId.mockResolvedValue({
+      accountId: null,
+      error: "Authentication required. Provide an API key via Authorization: Bearer header, or provide account_id from the system prompt context.",
+    });
+
     const result = await registeredHandler(
       { runId: "run_123" },
       createMockExtra(),
@@ -81,7 +91,57 @@ describe("registerGetTaskRunStatusTool", () => {
     });
   });
 
+  it("returns error when resolveAccountId returns null accountId without error", async () => {
+    mockResolveAccountId.mockResolvedValue({
+      accountId: null,
+      error: null,
+    });
+
+    const result = await registeredHandler(
+      { runId: "run_123" },
+      createMockExtra(),
+    );
+
+    expect(result).toEqual({
+      content: [
+        {
+          type: "text",
+          text: expect.stringContaining("Failed to resolve account ID"),
+        },
+      ],
+    });
+  });
+
+  it("passes authInfo to resolveAccountId", async () => {
+    mockResolveAccountId.mockResolvedValue({
+      accountId: "acc_123",
+      error: null,
+    });
+    mockRetrieveTaskRun.mockResolvedValue({
+      status: "complete",
+      data: null,
+      metadata: null,
+      taskIdentifier: "test-task",
+      createdAt: "2024-01-01T00:00:00.000Z",
+      startedAt: null,
+      finishedAt: null,
+      durationMs: null,
+    });
+
+    const extra = createMockExtra({ accountId: "acc_123" });
+    await registeredHandler({ runId: "run_123" }, extra);
+
+    expect(mockResolveAccountId).toHaveBeenCalledWith({
+      authInfo: extra.authInfo,
+      accountIdOverride: undefined,
+    });
+  });
+
   it("returns task run status on success", async () => {
+    mockResolveAccountId.mockResolvedValue({
+      accountId: "acc_123",
+      error: null,
+    });
     mockRetrieveTaskRun.mockResolvedValue({
       status: "complete",
       data: { output: "done" },
@@ -110,6 +170,10 @@ describe("registerGetTaskRunStatusTool", () => {
   });
 
   it("returns error when task run is not found", async () => {
+    mockResolveAccountId.mockResolvedValue({
+      accountId: "acc_123",
+      error: null,
+    });
     mockRetrieveTaskRun.mockResolvedValue(null);
 
     const result = await registeredHandler(
@@ -128,6 +192,10 @@ describe("registerGetTaskRunStatusTool", () => {
   });
 
   it("returns error when retrieveTaskRun throws", async () => {
+    mockResolveAccountId.mockResolvedValue({
+      accountId: "acc_123",
+      error: null,
+    });
     mockRetrieveTaskRun.mockRejectedValue(new Error("Trigger API error"));
 
     const result = await registeredHandler(

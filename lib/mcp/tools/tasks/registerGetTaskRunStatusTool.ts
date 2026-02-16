@@ -3,6 +3,7 @@ import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/proto
 import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
+import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
@@ -27,12 +28,17 @@ export function registerGetTaskRunStatusTool(server: McpServer): void {
     },
     async (args, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
-      const accountId = authInfo?.extra?.accountId;
+      const { accountId, error } = await resolveAccountId({
+        authInfo,
+        accountIdOverride: undefined,
+      });
+
+      if (error) {
+        return getToolResultError(error);
+      }
 
       if (!accountId) {
-        return getToolResultError(
-          "Authentication required. Provide an API key via Authorization: Bearer header.",
-        );
+        return getToolResultError("Failed to resolve account ID");
       }
 
       try {
