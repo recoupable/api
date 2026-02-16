@@ -23,12 +23,7 @@ export async function createSandboxPostHandler(request: NextRequest): Promise<Ne
   }
 
   try {
-    const result = await processCreateSandbox({
-      accountId: validated.accountId,
-      command: validated.command,
-      args: validated.args,
-      cwd: validated.cwd,
-    });
+    const result = await processCreateSandbox(validated);
 
     return NextResponse.json(
       {
