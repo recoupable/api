@@ -266,6 +266,8 @@ const { accountId, orgId, authToken } = authResult;
 
 ### MCP Tools
 
+**CRITICAL: Never manually extract `accountId` from `extra.authInfo` (e.g. `authInfo?.extra?.accountId`).** Always use `resolveAccountId()` — it handles validation, org-key overrides, and access control in one place.
+
 ```typescript
 import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
@@ -275,6 +277,14 @@ const { accountId, error } = await resolveAccountId({
   authInfo,
   accountIdOverride: undefined,
 });
+
+if (error) {
+  return getToolResultError(error);
+}
+
+if (!accountId) {
+  return getToolResultError("Failed to resolve account ID");
+}
 ```
 
 This ensures:
