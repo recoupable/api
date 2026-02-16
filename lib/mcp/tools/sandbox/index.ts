@@ -1,6 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerRunSandboxCommandTool } from "./registerRunSandboxCommandTool";
-import { registerGetTaskRunStatusTool } from "./registerGetTaskRunStatusTool";
 
 /**
  * Registers all sandbox-related MCP tools on the server.
@@ -9,5 +8,4 @@ import { registerGetTaskRunStatusTool } from "./registerGetTaskRunStatusTool";
  */
 export const registerAllSandboxTools = (server: McpServer): void => {
   registerRunSandboxCommandTool(server);
-  registerGetTaskRunStatusTool(server);
 };

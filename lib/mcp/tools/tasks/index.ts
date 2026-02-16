@@ -3,6 +3,7 @@ import { registerCreateTaskTool } from "./registerCreateTaskTool";
 import { registerGetTasksTool } from "./registerGetTasksTool";
 import { registerUpdateTaskTool } from "./registerUpdateTaskTool";
 import { registerDeleteTaskTool } from "./registerDeleteTaskTool";
+import { registerGetTaskRunStatusTool } from "./registerGetTaskRunStatusTool";
 
 /**
  * Registers all task-related MCP tools on the server.
@@ -14,4 +15,5 @@ export const registerAllTaskTools = (server: McpServer): void => {
   registerGetTasksTool(server);
   registerUpdateTaskTool(server);
   registerDeleteTaskTool(server);
+  registerGetTaskRunStatusTool(server);
 };
