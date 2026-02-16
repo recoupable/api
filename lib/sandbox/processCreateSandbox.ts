@@ -4,6 +4,7 @@ import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectA
 import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
 import type { SandboxBody } from "@/lib/sandbox/validateSandboxBody";
 
+type ProcessCreateSandboxInput = Pick<SandboxBody, "accountId" | "command" | "args" | "cwd">;
 type ProcessCreateSandboxResult = SandboxCreatedResponse & { runId?: string };
 
 /**
@@ -14,7 +15,7 @@ type ProcessCreateSandboxResult = SandboxCreatedResponse & { runId?: string };
  * @returns The sandbox creation result with optional runId
  */
 export async function processCreateSandbox(
-  input: SandboxBody,
+  input: ProcessCreateSandboxInput,
 ): Promise<ProcessCreateSandboxResult> {
   const { accountId, command, args, cwd } = input;
 
