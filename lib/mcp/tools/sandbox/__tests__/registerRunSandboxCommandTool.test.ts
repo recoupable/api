@@ -6,9 +6,14 @@ import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sd
 import { registerRunSandboxCommandTool } from "../registerRunSandboxCommandTool";
 
 const mockProcessCreateSandbox = vi.fn();
+const mockResolveAccountId = vi.fn();
 
 vi.mock("@/lib/sandbox/processCreateSandbox", () => ({
   processCreateSandbox: (...args: unknown[]) => mockProcessCreateSandbox(...args),
+}));
+
+vi.mock("@/lib/mcp/resolveAccountId", () => ({
+  resolveAccountId: (...args: unknown[]) => mockResolveAccountId(...args),
 }));
 
 type ServerRequestHandlerExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
@@ -65,7 +70,12 @@ describe("registerRunSandboxCommandTool", () => {
     );
   });
 
-  it("returns error when no auth is provided", async () => {
+  it("returns error when resolveAccountId returns an error", async () => {
+    mockResolveAccountId.mockResolvedValue({
+      accountId: null,
+      error: "Authentication required. Provide an API key via Authorization: Bearer header, or provide account_id from the system prompt context.",
+    });
+
     const result = await registeredHandler(
       { command: "ls" },
       createMockExtra(),
@@ -81,7 +91,32 @@ describe("registerRunSandboxCommandTool", () => {
     });
   });
 
+  it("returns error when resolveAccountId returns null accountId without error", async () => {
+    mockResolveAccountId.mockResolvedValue({
+      accountId: null,
+      error: null,
+    });
+
+    const result = await registeredHandler(
+      { command: "ls" },
+      createMockExtra(),
+    );
+
+    expect(result).toEqual({
+      content: [
+        {
+          type: "text",
+          text: expect.stringContaining("Failed to resolve account ID"),
+        },
+      ],
+    });
+  });
+
   it("calls processCreateSandbox with command and returns success", async () => {
+    mockResolveAccountId.mockResolvedValue({
+      accountId: "acc_123",
+      error: null,
+    });
     mockProcessCreateSandbox.mockResolvedValue({
       sandboxId: "sbx_123",
       sandboxStatus: "running",
@@ -119,7 +154,32 @@ describe("registerRunSandboxCommandTool", () => {
     });
   });
 
+  it("passes authInfo to resolveAccountId", async () => {
+    mockResolveAccountId.mockResolvedValue({
+      accountId: "acc_123",
+      error: null,
+    });
+    mockProcessCreateSandbox.mockResolvedValue({
+      sandboxId: "sbx_123",
+      sandboxStatus: "running",
+      timeout: 600000,
+      createdAt: "2024-01-01T00:00:00.000Z",
+    });
+
+    const extra = createMockExtra({ accountId: "acc_123" });
+    await registeredHandler({ command: "ls" }, extra);
+
+    expect(mockResolveAccountId).toHaveBeenCalledWith({
+      authInfo: extra.authInfo,
+      accountIdOverride: undefined,
+    });
+  });
+
   it("returns error when processCreateSandbox throws", async () => {
+    mockResolveAccountId.mockResolvedValue({
+      accountId: "acc_123",
+      error: null,
+    });
     mockProcessCreateSandbox.mockRejectedValue(new Error("Sandbox creation failed"));
 
     const result = await registeredHandler(
