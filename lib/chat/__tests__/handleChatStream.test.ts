@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextResponse } from "next/server";
 
+import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
+import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
+import { setupChatRequest } from "@/lib/chat/setupChatRequest";
+import { setupConversation } from "@/lib/chat/setupConversation";
+import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
+import { handleChatStream } from "../handleChatStream";
+
 // Mock all dependencies before importing the module under test
 vi.mock("@/lib/auth/getApiKeyAccountId", () => ({
   getApiKeyAccountId: vi.fn(),
@@ -23,18 +30,20 @@ vi.mock("@/lib/organizations/validateOrganizationAccess", () => ({
 }));
 
 vi.mock("@/lib/chat/setupConversation", () => ({
-  setupConversation: vi.fn().mockResolvedValue({ roomId: "mock-room-id", memoryId: "mock-memory-id" }),
+  setupConversation: vi
+    .fn()
+    .mockResolvedValue({ roomId: "mock-room-id", memoryId: "mock-memory-id" }),
 }));
 
 vi.mock("@/lib/chat/validateMessages", () => ({
-  validateMessages: vi.fn((messages) => ({
+  validateMessages: vi.fn(messages => ({
     lastMessage: messages[messages.length - 1] || { id: "mock-id", role: "user", parts: [] },
     validMessages: messages,
   })),
 }));
 
 vi.mock("@/lib/messages/convertToUiMessages", () => ({
-  default: vi.fn((messages) => messages),
+  default: vi.fn(messages => messages),
 }));
 
 vi.mock("@/lib/chat/setupChatRequest", () => ({
@@ -50,13 +59,6 @@ vi.mock("ai", () => ({
   createUIMessageStreamResponse: vi.fn(),
 }));
 
-import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
-import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
-import { setupChatRequest } from "@/lib/chat/setupChatRequest";
-import { setupConversation } from "@/lib/chat/setupConversation";
-import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
-import { handleChatStream } from "../handleChatStream";
-
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
 const mockSetupConversation = vi.mocked(setupConversation);
@@ -65,10 +67,12 @@ const mockCreateUIMessageStream = vi.mocked(createUIMessageStream);
 const mockCreateUIMessageStreamResponse = vi.mocked(createUIMessageStreamResponse);
 
 // Helper to create mock NextRequest
-function createMockRequest(
-  body: unknown,
-  headers: Record<string, string> = {},
-): Request {
+/**
+ *
+ * @param body
+ * @param headers
+ */
+function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
   return {
     json: () => Promise.resolve(body),
     headers: {
@@ -97,10 +101,7 @@ describe("handleChatStream", () => {
     it("returns 400 error when neither messages nor prompt is provided", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
 
-      const request = createMockRequest(
-        { roomId: "room-123" },
-        { "x-api-key": "test-key" },
-      );
+      const request = createMockRequest({ roomId: "room-123" }, { "x-api-key": "test-key" });
 
       const result = await handleChatStream(request as any);
 
@@ -142,7 +143,6 @@ describe("handleChatStream", () => {
         messages: [],
         experimental_generateMessageId: vi.fn(),
         tools: {},
-        providerOptions: {},
       } as any);
 
       const mockStream = new ReadableStream();
@@ -151,10 +151,7 @@ describe("handleChatStream", () => {
       const mockResponse = new Response(mockStream);
       mockCreateUIMessageStreamResponse.mockReturnValue(mockResponse);
 
-      const request = createMockRequest(
-        { prompt: "Hello, world!" },
-        { "x-api-key": "valid-key" },
-      );
+      const request = createMockRequest({ prompt: "Hello, world!" }, { "x-api-key": "valid-key" });
 
       const result = await handleChatStream(request as any);
 
@@ -165,7 +162,8 @@ describe("handleChatStream", () => {
         headers: {
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, x-api-key",
+          "Access-Control-Allow-Headers":
+            "Content-Type, Authorization, X-Requested-With, x-api-key",
         },
       });
       expect(result).toBe(mockResponse);
@@ -190,7 +188,6 @@ describe("handleChatStream", () => {
         messages: [],
         experimental_generateMessageId: vi.fn(),
         tools: {},
-        providerOptions: {},
       } as any);
 
       const mockStream = new ReadableStream();
@@ -198,10 +195,7 @@ describe("handleChatStream", () => {
       mockCreateUIMessageStreamResponse.mockReturnValue(new Response(mockStream));
 
       const messages = [{ role: "user", content: "Hello" }];
-      const request = createMockRequest(
-        { messages },
-        { "x-api-key": "valid-key" },
-      );
+      const request = createMockRequest({ messages }, { "x-api-key": "valid-key" });
 
       await handleChatStream(request as any);
 
@@ -232,7 +226,6 @@ describe("handleChatStream", () => {
         messages: [],
         experimental_generateMessageId: vi.fn(),
         tools: {},
-        providerOptions: {},
       } as any);
 
       const mockStream = new ReadableStream();
@@ -268,10 +261,7 @@ describe("handleChatStream", () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
       mockSetupChatRequest.mockRejectedValue(new Error("Setup failed"));
 
-      const request = createMockRequest(
-        { prompt: "Hello" },
-        { "x-api-key": "valid-key" },
-      );
+      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
       const result = await handleChatStream(request as any);
 
@@ -305,7 +295,6 @@ describe("handleChatStream", () => {
         messages: [],
         experimental_generateMessageId: vi.fn(),
         tools: {},
-        providerOptions: {},
       } as any);
 
       const mockStream = new ReadableStream();

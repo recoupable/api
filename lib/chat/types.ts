@@ -1,14 +1,5 @@
-import { AnthropicProviderOptions } from "@ai-sdk/anthropic";
-import { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
-import { OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import { VercelToolCollection } from "@composio/vercel";
-import {
-  type ModelMessage,
-  type ToolSet,
-  type StopCondition,
-  type PrepareStepFunction,
-  type ToolLoopAgent,
-} from "ai";
+import { type ModelMessage, type ToolSet, type StopCondition, type ToolLoopAgent } from "ai";
 
 export interface RoutingDecision {
   model: string;
@@ -22,13 +13,7 @@ export interface ChatConfig extends RoutingDecision {
   messages: ModelMessage[];
   experimental_generateMessageId: () => string;
   experimental_download?: (
-    files: Array<{ url: URL; isUrlSupportedByModel: boolean }>
+    files: Array<{ url: URL; isUrlSupportedByModel: boolean }>,
   ) => Promise<Array<{ data: Uint8Array; mediaType: string | undefined } | null>>;
   tools: ToolSet;
-  prepareStep?: PrepareStepFunction;
-  providerOptions?: {
-    anthropic?: AnthropicProviderOptions;
-    google?: GoogleGenerativeAIProviderOptions;
-    openai?: OpenAIResponsesProviderOptions;
-  };
 }

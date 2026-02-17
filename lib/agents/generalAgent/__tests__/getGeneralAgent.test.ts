@@ -2,6 +2,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
 import { ToolLoopAgent, stepCountIs } from "ai";
 
+// Import after mocks
+import getGeneralAgent from "../getGeneralAgent";
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
+import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
+import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
+import { getKnowledgeBaseText } from "@/lib/files/getKnowledgeBaseText";
+import { setupToolsForRequest } from "@/lib/chat/setupToolsForRequest";
+import { getSystemPrompt } from "@/lib/prompts/getSystemPrompt";
+import { extractImageUrlsFromMessages } from "@/lib/messages/extractImageUrlsFromMessages";
+import { buildSystemPromptWithImages } from "@/lib/chat/buildSystemPromptWithImages";
+
 // Mock all external dependencies
 vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
   default: vi.fn(),
@@ -34,17 +45,6 @@ vi.mock("@/lib/messages/extractImageUrlsFromMessages", () => ({
 vi.mock("@/lib/chat/buildSystemPromptWithImages", () => ({
   buildSystemPromptWithImages: vi.fn(),
 }));
-
-// Import after mocks
-import getGeneralAgent from "../getGeneralAgent";
-import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
-import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
-import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
-import { getKnowledgeBaseText } from "@/lib/files/getKnowledgeBaseText";
-import { setupToolsForRequest } from "@/lib/chat/setupToolsForRequest";
-import { getSystemPrompt } from "@/lib/prompts/getSystemPrompt";
-import { extractImageUrlsFromMessages } from "@/lib/messages/extractImageUrlsFromMessages";
-import { buildSystemPromptWithImages } from "@/lib/chat/buildSystemPromptWithImages";
 
 const mockSelectAccountEmails = vi.mocked(selectAccountEmails);
 const mockSelectAccountInfo = vi.mocked(selectAccountInfo);
@@ -464,6 +464,53 @@ describe("getGeneralAgent", () => {
       // stopWhen is returned in the routing decision (stepCountIs returns a function)
       expect(result.stopWhen).toBeDefined();
       expect(typeof result.stopWhen).toBe("function");
+    });
+
+    it("creates ToolLoopAgent with providerOptions for thinking/reasoning", async () => {
+      const body: ChatRequestBody = {
+        accountId: "account-123",
+        orgId: null,
+        messages: [{ id: "1", role: "user", content: "Hello" }],
+      };
+
+      const result = await getGeneralAgent(body);
+
+      // providerOptions should be baked into the agent constructor (stored in settings)
+      const settings = (result.agent as any).settings;
+      expect(settings.providerOptions).toBeDefined();
+      expect(settings.providerOptions.anthropic).toEqual(
+        expect.objectContaining({
+          thinking: { type: "enabled", budgetTokens: 12000 },
+        }),
+      );
+      expect(settings.providerOptions.google).toEqual(
+        expect.objectContaining({
+          thinkingConfig: expect.objectContaining({
+            thinkingBudget: 8192,
+            includeThoughts: true,
+          }),
+        }),
+      );
+      expect(settings.providerOptions.openai).toEqual(
+        expect.objectContaining({
+          reasoningEffort: "medium",
+          reasoningSummary: "detailed",
+        }),
+      );
+    });
+
+    it("creates ToolLoopAgent with prepareStep function", async () => {
+      const body: ChatRequestBody = {
+        accountId: "account-123",
+        orgId: null,
+        messages: [{ id: "1", role: "user", content: "Hello" }],
+      };
+
+      const result = await getGeneralAgent(body);
+
+      // prepareStep should be baked into the agent constructor (stored in settings)
+      const settings = (result.agent as any).settings;
+      expect(settings.prepareStep).toBeInstanceOf(Function);
     });
   });
 });

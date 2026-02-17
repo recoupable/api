@@ -1,24 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ChatRequestBody } from "../validateChatRequest";
 
+import { setupChatRequest } from "../setupChatRequest";
+import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
+import { convertToModelMessages } from "ai";
+
 // Mock dependencies
 vi.mock("@/lib/agents/generalAgent/getGeneralAgent", () => ({
   default: vi.fn(),
 }));
 
-vi.mock("ai", async (importOriginal) => {
+vi.mock("ai", async importOriginal => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
-    convertToModelMessages: vi.fn((messages) => messages),
+    convertToModelMessages: vi.fn(messages => messages),
     stepCountIs: actual.stepCountIs,
     ToolLoopAgent: actual.ToolLoopAgent,
   };
 });
-
-import { setupChatRequest } from "../setupChatRequest";
-import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
-import { convertToModelMessages } from "ai";
 
 const mockGetGeneralAgent = vi.mocked(getGeneralAgent);
 const mockConvertToModelMessages = vi.mocked(convertToModelMessages);
@@ -39,7 +39,7 @@ describe("setupChatRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetGeneralAgent.mockResolvedValue(mockRoutingDecision as any);
-    mockConvertToModelMessages.mockImplementation((messages) => messages as any);
+    mockConvertToModelMessages.mockImplementation(messages => messages as any);
   });
 
   describe("basic functionality", () => {
@@ -56,7 +56,19 @@ describe("setupChatRequest", () => {
       expect(result).toHaveProperty("messages");
       expect(result).toHaveProperty("experimental_generateMessageId");
       expect(result).toHaveProperty("tools");
-      expect(result).toHaveProperty("providerOptions");
+    });
+
+    it("does not include providerOptions or prepareStep (moved to agent constructor)", async () => {
+      const body: ChatRequestBody = {
+        accountId: "account-123",
+        orgId: null,
+        messages: [{ id: "1", role: "user", content: "Hello" }],
+      };
+
+      const result = await setupChatRequest(body);
+
+      expect(result).not.toHaveProperty("providerOptions");
+      expect(result).not.toHaveProperty("prepareStep");
     });
 
     it("calls getGeneralAgent with the body", async () => {
@@ -159,46 +171,7 @@ describe("setupChatRequest", () => {
     });
   });
 
-  describe("provider options", () => {
-    it("includes anthropic thinking configuration", async () => {
-      const body: ChatRequestBody = {
-        accountId: "account-123",
-        orgId: null,
-        messages: [{ id: "1", role: "user", content: "Hello" }],
-      };
-
-      const result = await setupChatRequest(body);
-
-      expect(result.providerOptions).toHaveProperty("anthropic");
-      expect(result.providerOptions?.anthropic).toHaveProperty("thinking");
-    });
-
-    it("includes google thinkingConfig", async () => {
-      const body: ChatRequestBody = {
-        accountId: "account-123",
-        orgId: null,
-        messages: [{ id: "1", role: "user", content: "Hello" }],
-      };
-
-      const result = await setupChatRequest(body);
-
-      expect(result.providerOptions).toHaveProperty("google");
-      expect(result.providerOptions?.google).toHaveProperty("thinkingConfig");
-    });
-
-    it("includes openai reasoning configuration", async () => {
-      const body: ChatRequestBody = {
-        accountId: "account-123",
-        orgId: null,
-        messages: [{ id: "1", role: "user", content: "Hello" }],
-      };
-
-      const result = await setupChatRequest(body);
-
-      expect(result.providerOptions).toHaveProperty("openai");
-      expect(result.providerOptions?.openai).toHaveProperty("reasoningEffort");
-    });
-  });
+  // providerOptions tests removed — they're now in the agent constructor (getGeneralAgent.test.ts)
 
   describe("routing decision properties", () => {
     it("spreads routing decision properties into result", async () => {
@@ -237,92 +210,5 @@ describe("setupChatRequest", () => {
     });
   });
 
-  describe("prepareStep function", () => {
-    it("includes a prepareStep function", async () => {
-      const body: ChatRequestBody = {
-        accountId: "account-123",
-        orgId: null,
-        messages: [{ id: "1", role: "user", content: "Hello" }],
-      };
-
-      const result = await setupChatRequest(body);
-
-      expect(result.prepareStep).toBeInstanceOf(Function);
-    });
-
-    it("prepareStep returns options when no tool chain matches", async () => {
-      const body: ChatRequestBody = {
-        accountId: "account-123",
-        orgId: null,
-        messages: [{ id: "1", role: "user", content: "Hello" }],
-      };
-
-      const result = await setupChatRequest(body);
-
-      const mockOptions = { steps: [], stepNumber: 0, model: "test-model", messages: [] };
-      const prepareResult = result.prepareStep!(mockOptions as any);
-
-      // Should return the original options when no tool chain matches
-      expect(prepareResult).toEqual(mockOptions);
-    });
-
-    it("prepareStep returns next tool when tool chain is triggered", async () => {
-      const body: ChatRequestBody = {
-        accountId: "account-123",
-        orgId: null,
-        messages: [{ id: "1", role: "user", content: "Hello" }],
-      };
-
-      const result = await setupChatRequest(body);
-
-      // Simulate create_new_artist tool being executed
-      const mockOptions = {
-        steps: [
-          {
-            toolResults: [
-              { toolCallId: "call-1", toolName: "create_new_artist", output: { type: "json", value: {} } },
-            ],
-          },
-        ],
-        stepNumber: 1,
-        model: "test-model",
-        messages: [],
-      };
-      const prepareResult = result.prepareStep!(mockOptions as any);
-
-      // Should return next tool in the create_new_artist chain (get_spotify_search)
-      expect(prepareResult).toHaveProperty("toolChoice");
-      expect((prepareResult as any).toolChoice.toolName).toBe("get_spotify_search");
-    });
-
-    it("prepareStep merges tool chain result with original options", async () => {
-      const body: ChatRequestBody = {
-        accountId: "account-123",
-        orgId: null,
-        messages: [{ id: "1", role: "user", content: "Hello" }],
-      };
-
-      const result = await setupChatRequest(body);
-
-      // Simulate create_new_artist tool being executed
-      const mockOptions = {
-        steps: [
-          {
-            toolResults: [
-              { toolCallId: "call-1", toolName: "create_new_artist", output: { type: "json", value: {} } },
-            ],
-          },
-        ],
-        stepNumber: 1,
-        model: "original-model",
-        messages: [{ role: "user", content: "original" }],
-      };
-      const prepareResult = result.prepareStep!(mockOptions as any);
-
-      // Should merge original options with tool chain result
-      expect(prepareResult).toHaveProperty("stepNumber", 1);
-      expect(prepareResult).toHaveProperty("model", "original-model");
-      expect(prepareResult).toHaveProperty("toolChoice");
-    });
-  });
+  // prepareStep tests removed — they're now in the agent constructor (getGeneralAgent.test.ts)
 });
