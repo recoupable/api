@@ -5,11 +5,17 @@ import { validateAuthContext, type AuthContext } from "@/lib/auth/validateAuthCo
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { z } from "zod";
 
-export const sandboxBodySchema = z.object({
-  command: z.string().min(1, "command cannot be empty").optional(),
-  args: z.array(z.string()).optional(),
-  cwd: z.string().optional(),
-});
+export const sandboxBodySchema = z
+  .object({
+    command: z.string().min(1, "command cannot be empty").optional(),
+    args: z.array(z.string()).optional(),
+    cwd: z.string().optional(),
+    prompt: z.string().min(1, "prompt cannot be empty").optional(),
+  })
+  .refine(data => !(data.command && data.prompt), {
+    message: "Cannot specify both command and prompt",
+    path: ["prompt"],
+  });
 
 export type SandboxBody = z.infer<typeof sandboxBodySchema> & AuthContext;
 

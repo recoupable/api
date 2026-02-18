@@ -4,7 +4,10 @@ import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectA
 import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
 import type { SandboxBody } from "@/lib/sandbox/validateSandboxBody";
 
-type ProcessCreateSandboxInput = Pick<SandboxBody, "accountId" | "command" | "args" | "cwd">;
+type ProcessCreateSandboxInput = Pick<
+  SandboxBody,
+  "accountId" | "command" | "args" | "cwd" | "prompt"
+>;
 type ProcessCreateSandboxResult = SandboxCreatedResponse & { runId?: string };
 
 /**
@@ -17,7 +20,11 @@ type ProcessCreateSandboxResult = SandboxCreatedResponse & { runId?: string };
 export async function processCreateSandbox(
   input: ProcessCreateSandboxInput,
 ): Promise<ProcessCreateSandboxResult> {
-  const { accountId, command, args, cwd } = input;
+  const { accountId, prompt, cwd } = input;
+
+  // Convert prompt shortcut to opencode command
+  const command = prompt ? "opencode" : input.command;
+  const args = prompt ? ["run", prompt] : input.args;
 
   // Get account's most recent snapshot if available
   const accountSnapshots = await selectAccountSnapshots(accountId);

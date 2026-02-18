@@ -181,6 +181,48 @@ describe("processCreateSandbox", () => {
     });
   });
 
+  it("converts prompt to opencode run command", async () => {
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
+    vi.mocked(createSandbox).mockResolvedValue({
+      sandboxId: "sbx_123",
+      sandboxStatus: "running",
+      timeout: 600000,
+      createdAt: "2024-01-01T00:00:00.000Z",
+    });
+    vi.mocked(insertAccountSandbox).mockResolvedValue({
+      data: {
+        id: "record_123",
+        account_id: "acc_123",
+        sandbox_id: "sbx_123",
+        created_at: "2024-01-01T00:00:00.000Z",
+      },
+      error: null,
+    });
+    vi.mocked(triggerRunSandboxCommand).mockResolvedValue({
+      id: "run_prompt123",
+    });
+
+    const result = await processCreateSandbox({
+      accountId: "acc_123",
+      prompt: "create a hello world index.html",
+    });
+
+    expect(result).toEqual({
+      sandboxId: "sbx_123",
+      sandboxStatus: "running",
+      timeout: 600000,
+      createdAt: "2024-01-01T00:00:00.000Z",
+      runId: "run_prompt123",
+    });
+    expect(triggerRunSandboxCommand).toHaveBeenCalledWith({
+      command: "opencode",
+      args: ["run", "create a hello world index.html"],
+      cwd: undefined,
+      sandboxId: "sbx_123",
+      accountId: "acc_123",
+    });
+  });
+
   it("throws when createSandbox fails", async () => {
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockRejectedValue(new Error("Sandbox creation failed"));
