@@ -24,15 +24,17 @@ const mockGetGeneralAgent = vi.mocked(getGeneralAgent);
 const mockConvertToModelMessages = vi.mocked(convertToModelMessages);
 
 describe("setupChatRequest", () => {
+  const mockAgent = {
+    model: "claude-sonnet-4-20250514",
+    tools: {},
+    instructions: "You are a helpful assistant",
+    stopWhen: undefined,
+  };
+
   const mockRoutingDecision = {
     model: "claude-sonnet-4-20250514",
     instructions: "You are a helpful assistant",
-    agent: {
-      model: "claude-sonnet-4-20250514",
-      tools: {},
-      instructions: "You are a helpful assistant",
-      stopWhen: undefined,
-    },
+    agent: mockAgent,
     stopWhen: undefined,
   };
 
@@ -43,7 +45,7 @@ describe("setupChatRequest", () => {
   });
 
   describe("basic functionality", () => {
-    it("returns a ChatConfig object with all required properties", async () => {
+    it("returns a ChatConfig with only agent and messages", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
@@ -52,13 +54,12 @@ describe("setupChatRequest", () => {
 
       const result = await setupChatRequest(body);
 
-      expect(result).toHaveProperty("system");
+      expect(result).toHaveProperty("agent");
       expect(result).toHaveProperty("messages");
-      expect(result).toHaveProperty("experimental_generateMessageId");
-      expect(result).toHaveProperty("tools");
+      expect(Object.keys(result)).toEqual(["agent", "messages"]);
     });
 
-    it("does not include providerOptions or prepareStep (moved to agent constructor)", async () => {
+    it("does not include system, tools, model, instructions, or experimental fields", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
@@ -67,6 +68,11 @@ describe("setupChatRequest", () => {
 
       const result = await setupChatRequest(body);
 
+      expect(result).not.toHaveProperty("system");
+      expect(result).not.toHaveProperty("tools");
+      expect(result).not.toHaveProperty("model");
+      expect(result).not.toHaveProperty("instructions");
+      expect(result).not.toHaveProperty("experimental_generateMessageId");
       expect(result).not.toHaveProperty("providerOptions");
       expect(result).not.toHaveProperty("prepareStep");
     });
@@ -83,7 +89,7 @@ describe("setupChatRequest", () => {
       expect(mockGetGeneralAgent).toHaveBeenCalledWith(body);
     });
 
-    it("uses instructions from routing decision as system prompt", async () => {
+    it("returns the agent from the routing decision", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
@@ -92,7 +98,7 @@ describe("setupChatRequest", () => {
 
       const result = await setupChatRequest(body);
 
-      expect(result.system).toBe(mockRoutingDecision.instructions);
+      expect(result.agent).toBe(mockAgent);
     });
   });
 
@@ -112,7 +118,16 @@ describe("setupChatRequest", () => {
       expect(mockConvertToModelMessages).toHaveBeenCalledWith(messages, expect.any(Object));
     });
 
-    it("passes tools to convertToModelMessages", async () => {
+    it("passes agent tools to convertToModelMessages", async () => {
+      const mockTools = { tool1: {}, tool2: {} };
+      mockGetGeneralAgent.mockResolvedValue({
+        ...mockRoutingDecision,
+        agent: {
+          ...mockAgent,
+          tools: mockTools,
+        },
+      } as any);
+
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
@@ -124,7 +139,7 @@ describe("setupChatRequest", () => {
       expect(mockConvertToModelMessages).toHaveBeenCalledWith(
         expect.any(Array),
         expect.objectContaining({
-          tools: expect.any(Object),
+          tools: mockTools,
           ignoreIncompleteToolCalls: true,
         }),
       );
@@ -149,66 +164,4 @@ describe("setupChatRequest", () => {
       expect(result.messages.length).toBeLessThanOrEqual(55);
     });
   });
-
-  describe("experimental_generateMessageId", () => {
-    it("provides a function that generates unique UUIDs", async () => {
-      const body: ChatRequestBody = {
-        accountId: "account-123",
-        orgId: null,
-        messages: [{ id: "1", role: "user", content: "Hello" }],
-      };
-
-      const result = await setupChatRequest(body);
-
-      const id1 = result.experimental_generateMessageId();
-      const id2 = result.experimental_generateMessageId();
-
-      expect(typeof id1).toBe("string");
-      expect(typeof id2).toBe("string");
-      expect(id1).not.toBe(id2);
-      // UUID format validation
-      expect(id1).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
-    });
-  });
-
-  // providerOptions tests removed — they're now in the agent constructor (getGeneralAgent.test.ts)
-
-  describe("routing decision properties", () => {
-    it("spreads routing decision properties into result", async () => {
-      const body: ChatRequestBody = {
-        accountId: "account-123",
-        orgId: null,
-        messages: [{ id: "1", role: "user", content: "Hello" }],
-      };
-
-      const result = await setupChatRequest(body);
-
-      expect(result.model).toBe(mockRoutingDecision.model);
-      expect(result.instructions).toBe(mockRoutingDecision.instructions);
-      expect(result.agent).toBeDefined();
-    });
-
-    it("includes tools from routing decision agent", async () => {
-      const mockTools = { tool1: {}, tool2: {} };
-      mockGetGeneralAgent.mockResolvedValue({
-        ...mockRoutingDecision,
-        agent: {
-          ...mockRoutingDecision.agent,
-          tools: mockTools,
-        },
-      } as any);
-
-      const body: ChatRequestBody = {
-        accountId: "account-123",
-        orgId: null,
-        messages: [{ id: "1", role: "user", content: "Hello" }],
-      };
-
-      const result = await setupChatRequest(body);
-
-      expect(result.tools).toEqual(mockTools);
-    });
-  });
-
-  // prepareStep tests removed — they're now in the agent constructor (getGeneralAgent.test.ts)
 });

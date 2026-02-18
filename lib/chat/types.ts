@@ -8,12 +8,7 @@ export interface RoutingDecision {
   stopWhen?: StopCondition<NoInfer<ToolSet>> | StopCondition<NoInfer<ToolSet>>[] | undefined;
 }
 
-export interface ChatConfig extends RoutingDecision {
-  system: string;
+export interface ChatConfig {
+  agent: ToolLoopAgent<never, VercelToolCollection, never>;
   messages: ModelMessage[];
-  experimental_generateMessageId: () => string;
-  experimental_download?: (
-    files: Array<{ url: URL; isUrlSupportedByModel: boolean }>,
-  ) => Promise<Array<{ data: Uint8Array; mediaType: string | undefined } | null>>;
-  tools: ToolSet;
 }

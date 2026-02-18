@@ -137,12 +137,7 @@ describe("handleChatStream", () => {
 
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
-        model: "gpt-4",
-        instructions: "You are a helpful assistant",
-        system: "You are a helpful assistant",
         messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
       } as any);
 
       const mockStream = new ReadableStream();
@@ -182,12 +177,7 @@ describe("handleChatStream", () => {
 
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
-        model: "gpt-4",
-        instructions: "You are a helpful assistant",
-        system: "You are a helpful assistant",
         messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
       } as any);
 
       const mockStream = new ReadableStream();
@@ -220,12 +210,7 @@ describe("handleChatStream", () => {
 
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
-        model: "claude-3-opus",
-        instructions: "You are a helpful assistant",
-        system: "You are a helpful assistant",
         messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
       } as any);
 
       const mockStream = new ReadableStream();
@@ -289,12 +274,7 @@ describe("handleChatStream", () => {
 
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
         messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
       } as any);
 
       const mockStream = new ReadableStream();

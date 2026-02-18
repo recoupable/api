@@ -1,5 +1,4 @@
 import { convertToModelMessages } from "ai";
-import generateUUID from "@/lib/uuid/generateUUID";
 import { MAX_MESSAGES } from "./const";
 import { type ChatConfig } from "./types";
 import { ChatRequestBody } from "./validateChatRequest";
@@ -19,21 +18,13 @@ import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
 export async function setupChatRequest(body: ChatRequestBody): Promise<ChatConfig> {
   const decision = await getGeneralAgent(body);
 
-  const system = decision.instructions;
-  const tools = decision.agent.tools;
-
   const convertedMessages = convertToModelMessages(body.messages, {
-    tools,
+    tools: decision.agent.tools,
     ignoreIncompleteToolCalls: true,
   }).slice(-MAX_MESSAGES);
 
-  const config: ChatConfig = {
-    ...decision,
-    system,
+  return {
+    agent: decision.agent,
     messages: convertedMessages,
-    experimental_generateMessageId: generateUUID,
-    tools,
   };
-
-  return config;
 }

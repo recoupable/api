@@ -155,12 +155,7 @@ describe("handleChatGenerate", () => {
 
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
-        model: "gpt-4",
-        instructions: "You are a helpful assistant",
-        system: "You are a helpful assistant",
         messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
       } as any);
 
       const request = createMockRequest({ prompt: "Hello, world!" }, { "x-api-key": "valid-key" });
@@ -187,12 +182,7 @@ describe("handleChatGenerate", () => {
 
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
         messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
       } as any);
 
       const messages = [{ role: "user", content: "Hello" }];
@@ -224,12 +214,7 @@ describe("handleChatGenerate", () => {
 
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
-        model: "claude-3-opus",
-        instructions: "test",
-        system: "test",
         messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
       } as any);
 
       const request = createMockRequest(
@@ -269,12 +254,7 @@ describe("handleChatGenerate", () => {
 
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
         messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
       } as any);
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
@@ -314,12 +294,7 @@ describe("handleChatGenerate", () => {
 
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
         messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
       } as any);
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
@@ -349,12 +324,7 @@ describe("handleChatGenerate", () => {
 
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
         messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
       } as any);
 
       const request = createMockRequest(
@@ -389,12 +359,7 @@ describe("handleChatGenerate", () => {
 
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
         messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
       } as any);
 
       mockSaveChatCompletion.mockResolvedValue(null);
@@ -428,12 +393,7 @@ describe("handleChatGenerate", () => {
 
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
         messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
       } as any);
 
       mockSaveChatCompletion.mockResolvedValue(null);
@@ -465,12 +425,7 @@ describe("handleChatGenerate", () => {
 
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
         messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
       } as any);
 
       mockSaveChatCompletion.mockResolvedValue(null);
@@ -503,12 +458,7 @@ describe("handleChatGenerate", () => {
 
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
         messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
       } as any);
 
       mockSaveChatCompletion.mockResolvedValue(null);
@@ -538,12 +488,7 @@ describe("handleChatGenerate", () => {
 
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
         messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
       } as any);
 
       mockSaveChatCompletion.mockResolvedValue(null);
@@ -577,12 +522,7 @@ describe("handleChatGenerate", () => {
 
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
         messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
       } as any);
 
       mockSaveChatCompletion.mockRejectedValue(new Error("Database error"));

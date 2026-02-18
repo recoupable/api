@@ -1,7 +1,6 @@
 import { UIMessage } from "ai";
 import { DEFAULT_MODEL, EVAL_ACCOUNT_ID, EVAL_ACCESS_TOKEN } from "@/lib/consts";
 import { setupChatRequest } from "@/lib/chat/setupChatRequest";
-import { generateText } from "ai";
 import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
 
 /**
@@ -35,8 +34,8 @@ export async function callChatFunctionsWithResult(input: string) {
     excludeTools: [], // Don't exclude any tools - we want to test tool usage
   };
 
-  const chatConfig = await setupChatRequest(body);
-  const result = await generateText(chatConfig);
+  const { agent, messages: convertedMessages } = await setupChatRequest(body);
+  const result = await agent.generate({ messages: convertedMessages });
 
   // Collect tool calls from ALL steps, not just the last one
   const allToolCalls =
