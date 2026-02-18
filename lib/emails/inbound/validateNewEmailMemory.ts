@@ -5,6 +5,7 @@ import { getMessages } from "@/lib/messages/getMessages";
 import { getEmailContent } from "@/lib/emails/inbound/getEmailContent";
 import { getEmailRoomId } from "@/lib/emails/inbound/getEmailRoomId";
 import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
+import { RECOUP_API_KEY } from "@/lib/const";
 import { setupConversation } from "@/lib/chat/setupConversation";
 import insertMemoryEmail from "@/lib/supabase/memory_emails/insertMemoryEmail";
 import { trimRepliedContext } from "@/lib/emails/inbound/trimRepliedContext";
@@ -70,6 +71,7 @@ export async function validateNewEmailMemory(
     orgId: null,
     messages: getMessages(emailText),
     roomId: finalRoomId,
+    authToken: RECOUP_API_KEY,
   };
 
   return { chatRequestBody, emailText };
