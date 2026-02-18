@@ -1,4 +1,7 @@
 import { stepCountIs, ToolLoopAgent } from "ai";
+import { AnthropicProviderOptions } from "@ai-sdk/anthropic";
+import { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
+import { OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import { DEFAULT_MODEL } from "@/lib/const";
 import { RoutingDecision } from "@/lib/chat/types";
 import { extractImageUrlsFromMessages } from "@/lib/messages/extractImageUrlsFromMessages";
@@ -10,6 +13,7 @@ import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmai
 import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
 import { getKnowledgeBaseText } from "@/lib/files/getKnowledgeBaseText";
 import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
+import getPrepareStepResult from "@/lib/chat/toolChains/getPrepareStepResult";
 
 /**
  * Gets the general agent for the chat
@@ -55,6 +59,26 @@ export default async function getGeneralAgent(body: ChatRequestBody): Promise<Ro
     instructions,
     tools,
     stopWhen,
+    prepareStep: options => {
+      const next = getPrepareStepResult(options);
+      if (next) return { ...options, ...next };
+      return options;
+    },
+    providerOptions: {
+      anthropic: {
+        thinking: { type: "enabled", budgetTokens: 12000 },
+      } satisfies AnthropicProviderOptions,
+      google: {
+        thinkingConfig: {
+          thinkingBudget: 8192,
+          includeThoughts: true,
+        },
+      } satisfies GoogleGenerativeAIProviderOptions,
+      openai: {
+        reasoningEffort: "medium",
+        reasoningSummary: "detailed",
+      } satisfies OpenAIResponsesProviderOptions,
+    },
   });
 
   return {
