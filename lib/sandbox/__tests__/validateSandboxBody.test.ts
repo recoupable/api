@@ -103,6 +103,60 @@ describe("validateSandboxBody", () => {
     });
   });
 
+  it("returns validated body when prompt is provided", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc_123",
+      orgId: "org_456",
+      authToken: "token",
+    });
+    vi.mocked(safeParseJson).mockResolvedValue({
+      prompt: "create a hello world index.html",
+    });
+
+    const request = createMockRequest();
+    const result = await validateSandboxBody(request);
+
+    expect(result).toEqual({
+      accountId: "acc_123",
+      orgId: "org_456",
+      authToken: "token",
+      prompt: "create a hello world index.html",
+    });
+  });
+
+  it("returns error response when both command and prompt are provided", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc_123",
+      orgId: null,
+      authToken: "token",
+    });
+    vi.mocked(safeParseJson).mockResolvedValue({
+      command: "ls",
+      prompt: "do something",
+    });
+
+    const request = createMockRequest();
+    const result = await validateSandboxBody(request);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(400);
+  });
+
+  it("returns error response when prompt is empty string", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc_123",
+      orgId: null,
+      authToken: "token",
+    });
+    vi.mocked(safeParseJson).mockResolvedValue({ prompt: "" });
+
+    const request = createMockRequest();
+    const result = await validateSandboxBody(request);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(400);
+  });
+
   it("returns error response when command is empty string", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "acc_123",

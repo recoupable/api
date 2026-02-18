@@ -135,6 +135,7 @@ describe("registerRunSandboxCommandTool", () => {
       command: "npm install",
       args: ["express"],
       cwd: "/app",
+      prompt: undefined,
     });
     expect(result).toEqual({
       content: [
@@ -149,6 +150,41 @@ describe("registerRunSandboxCommandTool", () => {
         {
           type: "text",
           text: expect.stringContaining('"runId":"run_abc123"'),
+        },
+      ],
+    });
+  });
+
+  it("calls processCreateSandbox with prompt and returns success", async () => {
+    mockResolveAccountId.mockResolvedValue({
+      accountId: "acc_123",
+      error: null,
+    });
+    mockProcessCreateSandbox.mockResolvedValue({
+      sandboxId: "sbx_456",
+      sandboxStatus: "running",
+      timeout: 600000,
+      createdAt: "2024-01-01T00:00:00.000Z",
+      runId: "run_prompt456",
+    });
+
+    const result = await registeredHandler(
+      { prompt: "create a hello world index.html" },
+      createMockExtra({ accountId: "acc_123" }),
+    );
+
+    expect(mockProcessCreateSandbox).toHaveBeenCalledWith({
+      accountId: "acc_123",
+      command: undefined,
+      args: undefined,
+      cwd: undefined,
+      prompt: "create a hello world index.html",
+    });
+    expect(result).toEqual({
+      content: [
+        {
+          type: "text",
+          text: expect.stringContaining('"sandboxId":"sbx_456"'),
         },
       ],
     });
