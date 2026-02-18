@@ -9,9 +9,18 @@ import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { processCreateSandbox } from "@/lib/sandbox/processCreateSandbox";
 
 const runSandboxCommandSchema = z.object({
-  command: z.string().describe("The command to run in the sandbox."),
+  command: z
+    .string()
+    .optional()
+    .describe("The command to run in the sandbox. Cannot be used with prompt."),
   args: z.array(z.string()).optional().describe("Arguments for the command."),
   cwd: z.string().optional().describe("Working directory for the command."),
+  prompt: z
+    .string()
+    .optional()
+    .describe(
+      'A prompt to pass to OpenCode. Runs `opencode run "<prompt>"` in the sandbox. Cannot be used with command.',
+    ),
   account_id: z
     .string()
     .optional()
@@ -31,7 +40,7 @@ export function registerRunSandboxCommandTool(server: McpServer): void {
     "run_sandbox_command",
     {
       description:
-        "Create a sandbox and run a command in it. Returns the sandbox ID and a run ID to track progress.",
+        'Create a sandbox and run a command or OpenCode prompt in it. Use prompt to run `opencode run "<prompt>"`. Returns the sandbox ID and a run ID to track progress.',
       inputSchema: runSandboxCommandSchema,
     },
     async (args, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
@@ -55,6 +64,7 @@ export function registerRunSandboxCommandTool(server: McpServer): void {
           command: args.command,
           args: args.args,
           cwd: args.cwd,
+          prompt: args.prompt,
         });
 
         return getToolResultSuccess(result);
