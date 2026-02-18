@@ -25,7 +25,7 @@ const runSandboxCommandSchema = z.object({
     .string()
     .optional()
     .describe(
-      "The account ID to run the sandbox command for. Use the account_id from the system prompt context.",
+      "The account ID to run the sandbox command for. Only applicable for organization API keys — org keys can target any account within their organization. Do not use with personal API keys.",
     ),
 });
 
