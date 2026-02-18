@@ -154,7 +154,28 @@ describe("registerRunSandboxCommandTool", () => {
     });
   });
 
-  it("passes authInfo to resolveAccountId", async () => {
+  it("passes account_id as accountIdOverride to resolveAccountId", async () => {
+    mockResolveAccountId.mockResolvedValue({
+      accountId: "user_456",
+      error: null,
+    });
+    mockProcessCreateSandbox.mockResolvedValue({
+      sandboxId: "sbx_123",
+      sandboxStatus: "running",
+      timeout: 600000,
+      createdAt: "2024-01-01T00:00:00.000Z",
+    });
+
+    const extra = createMockExtra({ accountId: "org_123", orgId: "org_123" });
+    await registeredHandler({ command: "ls", account_id: "user_456" }, extra);
+
+    expect(mockResolveAccountId).toHaveBeenCalledWith({
+      authInfo: extra.authInfo,
+      accountIdOverride: "user_456",
+    });
+  });
+
+  it("passes undefined accountIdOverride when no account_id arg provided", async () => {
     mockResolveAccountId.mockResolvedValue({
       accountId: "acc_123",
       error: null,

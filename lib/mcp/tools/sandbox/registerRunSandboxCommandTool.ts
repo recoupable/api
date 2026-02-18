@@ -12,6 +12,12 @@ const runSandboxCommandSchema = z.object({
   command: z.string().describe("The command to run in the sandbox."),
   args: z.array(z.string()).optional().describe("Arguments for the command."),
   cwd: z.string().optional().describe("Working directory for the command."),
+  account_id: z
+    .string()
+    .optional()
+    .describe(
+      "The account ID to run the sandbox command for. Use the account_id from the system prompt context.",
+    ),
 });
 
 /**
@@ -32,7 +38,7 @@ export function registerRunSandboxCommandTool(server: McpServer): void {
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
       const { accountId, error } = await resolveAccountId({
         authInfo,
-        accountIdOverride: undefined,
+        accountIdOverride: args.account_id,
       });
 
       if (error) {
