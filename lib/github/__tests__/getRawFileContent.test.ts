@@ -6,11 +6,18 @@ const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
 describe("getRawFileContent", () => {
+  const originalEnv = process.env;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env = { ...originalEnv, GITHUB_TOKEN: "test-token" };
   });
 
-  it("returns content on success", async () => {
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it("returns content on success with auth header", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       text: () => Promise.resolve("console.log('hello');"),
@@ -24,6 +31,7 @@ describe("getRawFileContent", () => {
     expect(result).toEqual({ content: "console.log('hello');" });
     expect(mockFetch).toHaveBeenCalledWith(
       "https://raw.githubusercontent.com/user/repo/main/src/index.ts",
+      { headers: { Authorization: "Bearer test-token" } },
     );
   });
 
@@ -81,6 +89,7 @@ describe("getRawFileContent", () => {
     expect(result).toEqual({ content: "# README" });
     expect(mockFetch).toHaveBeenCalledWith(
       "https://raw.githubusercontent.com/user/repo/main/README.md",
+      { headers: { Authorization: "Bearer test-token" } },
     );
   });
 });

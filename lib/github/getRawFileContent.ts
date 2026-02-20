@@ -21,9 +21,14 @@ export async function getRawFileContent({
   }
 
   const { owner, repo } = repoInfo;
+  const token = process.env.GITHUB_TOKEN;
   const url = `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}`;
 
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    ...(token && {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  });
   if (!response.ok) {
     if (response.status === 404) {
       return { error: "File not found in repository" };
