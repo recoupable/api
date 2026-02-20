@@ -1,9 +1,18 @@
 import { runs } from "@trigger.dev/sdk/v3";
 
+interface TaskRunCommonFields {
+  metadata: Record<string, unknown> | null;
+  taskIdentifier: string;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  durationMs: number | null;
+}
+
 export type TaskRunResult =
-  | { status: "pending" }
-  | { status: "complete"; data: unknown }
-  | { status: "failed"; error: string };
+  | (TaskRunCommonFields & { status: "pending" })
+  | (TaskRunCommonFields & { status: "complete"; data: unknown })
+  | (TaskRunCommonFields & { status: "failed"; error: string });
 
 const PENDING_STATUSES = ["EXECUTING", "QUEUED", "REATTEMPTING", "PENDING", "WAITING_FOR_DEPLOY"];
 const FAILED_STATUSES = [
@@ -29,12 +38,29 @@ export async function retrieveTaskRun(runId: string): Promise<TaskRunResult | nu
     return null;
   }
 
+  const common: TaskRunCommonFields = {
+    metadata: (run.metadata as Record<string, unknown>) ?? null,
+    taskIdentifier: run.taskIdentifier,
+    createdAt: run.createdAt instanceof Date ? run.createdAt.toISOString() : String(run.createdAt),
+    startedAt: run.startedAt
+      ? run.startedAt instanceof Date
+        ? run.startedAt.toISOString()
+        : String(run.startedAt)
+      : null,
+    finishedAt: run.finishedAt
+      ? run.finishedAt instanceof Date
+        ? run.finishedAt.toISOString()
+        : String(run.finishedAt)
+      : null,
+    durationMs: run.durationMs ?? null,
+  };
+
   if (PENDING_STATUSES.includes(run.status)) {
-    return { status: "pending" };
+    return { ...common, status: "pending" };
   }
 
   if (run.status === "COMPLETED") {
-    return { status: "complete", data: run.output ?? null };
+    return { ...common, status: "complete", data: run.output ?? null };
   }
 
   if (FAILED_STATUSES.includes(run.status)) {
@@ -46,9 +72,9 @@ export async function retrieveTaskRun(runId: string): Promise<TaskRunResult | nu
       errorMessage = (run.error as { message: string }).message;
     }
 
-    return { status: "failed", error: errorMessage };
+    return { ...common, status: "failed", error: errorMessage };
   }
 
   // Unknown status, treat as pending
-  return { status: "pending" };
+  return { ...common, status: "pending" };
 }

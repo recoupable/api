@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextResponse } from "next/server";
 
+import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
+import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
+import { setupChatRequest } from "@/lib/chat/setupChatRequest";
+import { saveChatCompletion } from "@/lib/chat/saveChatCompletion";
+import { setupConversation } from "@/lib/chat/setupConversation";
+import { handleChatGenerate } from "../handleChatGenerate";
+
 // Mock all dependencies before importing the module under test
 vi.mock("@/lib/auth/getApiKeyAccountId", () => ({
   getApiKeyAccountId: vi.fn(),
@@ -24,10 +31,6 @@ vi.mock("@/lib/organizations/validateOrganizationAccess", () => ({
 
 vi.mock("@/lib/chat/setupChatRequest", () => ({
   setupChatRequest: vi.fn(),
-}));
-
-vi.mock("ai", () => ({
-  generateText: vi.fn(),
 }));
 
 vi.mock("@/lib/chat/saveChatCompletion", () => ({
@@ -58,30 +61,32 @@ vi.mock("@/lib/chat/setupConversation", () => ({
   setupConversation: vi.fn(),
 }));
 
-import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
-import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
-import { setupChatRequest } from "@/lib/chat/setupChatRequest";
-import { generateText } from "ai";
-import { saveChatCompletion } from "@/lib/chat/saveChatCompletion";
-import { generateUUID } from "@/lib/uuid/generateUUID";
-import { createNewRoom } from "@/lib/chat/createNewRoom";
-import { setupConversation } from "@/lib/chat/setupConversation";
-import { handleChatGenerate } from "../handleChatGenerate";
-
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
 const mockSetupChatRequest = vi.mocked(setupChatRequest);
-const mockGenerateText = vi.mocked(generateText);
 const mockSaveChatCompletion = vi.mocked(saveChatCompletion);
-const mockGenerateUUID = vi.mocked(generateUUID);
-const mockCreateNewRoom = vi.mocked(createNewRoom);
 const mockSetupConversation = vi.mocked(setupConversation);
 
+// Helper to create a mock agent with .generate()
+/**
+ *
+ * @param generateResult
+ */
+function createMockAgent(generateResult: Record<string, unknown>) {
+  return {
+    generate: vi.fn().mockResolvedValue(generateResult),
+    stream: vi.fn(),
+    tools: {},
+  };
+}
+
 // Helper to create mock NextRequest
-function createMockRequest(
-  body: unknown,
-  headers: Record<string, string> = {},
-): Request {
+/**
+ *
+ * @param body
+ * @param headers
+ */
+function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
   return {
     json: () => Promise.resolve(body),
     headers: {
@@ -109,10 +114,7 @@ describe("handleChatGenerate", () => {
     it("returns 400 error when neither messages nor prompt is provided", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
 
-      const request = createMockRequest(
-        { roomId: "room-123" },
-        { "x-api-key": "test-key" },
-      );
+      const request = createMockRequest({ roomId: "room-123" }, { "x-api-key": "test-key" });
 
       const result = await handleChatGenerate(request as any);
 
@@ -135,22 +137,10 @@ describe("handleChatGenerate", () => {
   });
 
   describe("text generation", () => {
-    it("returns generated text for valid requests", async () => {
+    it("returns generated text using agent.generate() for valid requests", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
 
-      const mockChatConfig = {
-        model: "gpt-4",
-        instructions: "You are a helpful assistant",
-        system: "You are a helpful assistant",
-        messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
-        providerOptions: {},
-      };
-
-      mockSetupChatRequest.mockResolvedValue(mockChatConfig as any);
-
-      mockGenerateText.mockResolvedValue({
+      const mockAgent = createMockAgent({
         text: "Hello! How can I help you?",
         reasoningText: undefined,
         sources: [],
@@ -161,15 +151,18 @@ describe("handleChatGenerate", () => {
           headers: {},
           body: null,
         },
+      });
+
+      mockSetupChatRequest.mockResolvedValue({
+        agent: mockAgent,
+        messages: [],
       } as any);
 
-      const request = createMockRequest(
-        { prompt: "Hello, world!" },
-        { "x-api-key": "valid-key" },
-      );
+      const request = createMockRequest({ prompt: "Hello, world!" }, { "x-api-key": "valid-key" });
 
       const result = await handleChatGenerate(request as any);
 
+      expect(mockAgent.generate).toHaveBeenCalled();
       expect(result.status).toBe(200);
       const json = await result.json();
       expect(json.text).toBe("Hello! How can I help you?");
@@ -180,28 +173,20 @@ describe("handleChatGenerate", () => {
     it("uses messages array when provided", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
 
-      mockSetupChatRequest.mockResolvedValue({
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
-        messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
-        providerOptions: {},
-      } as any);
-
-      mockGenerateText.mockResolvedValue({
+      const mockAgent = createMockAgent({
         text: "Response",
         finishReason: "stop",
         usage: { promptTokens: 10, completionTokens: 20 },
         response: { messages: [], headers: {}, body: null },
+      });
+
+      mockSetupChatRequest.mockResolvedValue({
+        agent: mockAgent,
+        messages: [],
       } as any);
 
       const messages = [{ role: "user", content: "Hello" }];
-      const request = createMockRequest(
-        { messages },
-        { "x-api-key": "valid-key" },
-      );
+      const request = createMockRequest({ messages }, { "x-api-key": "valid-key" });
 
       await handleChatGenerate(request as any);
 
@@ -220,21 +205,16 @@ describe("handleChatGenerate", () => {
         memoryId: "memory-id",
       });
 
-      mockSetupChatRequest.mockResolvedValue({
-        model: "claude-3-opus",
-        instructions: "test",
-        system: "test",
-        messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
-        providerOptions: {},
-      } as any);
-
-      mockGenerateText.mockResolvedValue({
+      const mockAgent = createMockAgent({
         text: "Response",
         finishReason: "stop",
         usage: { promptTokens: 10, completionTokens: 20 },
         response: { messages: [], headers: {}, body: null },
+      });
+
+      mockSetupChatRequest.mockResolvedValue({
+        agent: mockAgent,
+        messages: [],
       } as any);
 
       const request = createMockRequest(
@@ -263,29 +243,21 @@ describe("handleChatGenerate", () => {
     it("includes reasoningText when present", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
 
-      mockSetupChatRequest.mockResolvedValue({
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
-        messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
-        providerOptions: {},
-      } as any);
-
-      mockGenerateText.mockResolvedValue({
+      const mockAgent = createMockAgent({
         text: "Response",
         reasoningText: "Let me think about this...",
         sources: [{ url: "https://example.com" }],
         finishReason: "stop",
         usage: { promptTokens: 10, completionTokens: 20 },
         response: { messages: [], headers: {}, body: null },
+      });
+
+      mockSetupChatRequest.mockResolvedValue({
+        agent: mockAgent,
+        messages: [],
       } as any);
 
-      const request = createMockRequest(
-        { prompt: "Hello" },
-        { "x-api-key": "valid-key" },
-      );
+      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
       const result = await handleChatGenerate(request as any);
 
@@ -301,10 +273,7 @@ describe("handleChatGenerate", () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
       mockSetupChatRequest.mockRejectedValue(new Error("Setup failed"));
 
-      const request = createMockRequest(
-        { prompt: "Hello" },
-        { "x-api-key": "valid-key" },
-      );
+      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
       const result = await handleChatGenerate(request as any);
 
@@ -314,25 +283,21 @@ describe("handleChatGenerate", () => {
       expect(json.status).toBe("error");
     });
 
-    it("returns 500 error when generateText fails", async () => {
+    it("returns 500 error when agent.generate() fails", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
 
-      mockSetupChatRequest.mockResolvedValue({
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
-        messages: [],
-        experimental_generateMessageId: vi.fn(),
+      const mockAgent = {
+        generate: vi.fn().mockRejectedValue(new Error("Generation failed")),
+        stream: vi.fn(),
         tools: {},
-        providerOptions: {},
+      };
+
+      mockSetupChatRequest.mockResolvedValue({
+        agent: mockAgent,
+        messages: [],
       } as any);
 
-      mockGenerateText.mockRejectedValue(new Error("Generation failed"));
-
-      const request = createMockRequest(
-        { prompt: "Hello" },
-        { "x-api-key": "valid-key" },
-      );
+      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
       const result = await handleChatGenerate(request as any);
 
@@ -350,21 +315,16 @@ describe("handleChatGenerate", () => {
         accountId: "target-account-456",
       });
 
-      mockSetupChatRequest.mockResolvedValue({
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
-        messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
-        providerOptions: {},
-      } as any);
-
-      mockGenerateText.mockResolvedValue({
+      const mockAgent = createMockAgent({
         text: "Response",
         finishReason: "stop",
         usage: { promptTokens: 10, completionTokens: 20 },
         response: { messages: [], headers: {}, body: null },
+      });
+
+      mockSetupChatRequest.mockResolvedValue({
+        agent: mockAgent,
+        messages: [],
       } as any);
 
       const request = createMockRequest(
@@ -390,21 +350,16 @@ describe("handleChatGenerate", () => {
         memoryId: "memory-id",
       });
 
-      mockSetupChatRequest.mockResolvedValue({
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
-        messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
-        providerOptions: {},
-      } as any);
-
-      mockGenerateText.mockResolvedValue({
+      const mockAgent = createMockAgent({
         text: "Hello! How can I help you?",
         finishReason: "stop",
         usage: { promptTokens: 10, completionTokens: 20 },
         response: { messages: [], headers: {}, body: null },
+      });
+
+      mockSetupChatRequest.mockResolvedValue({
+        agent: mockAgent,
+        messages: [],
       } as any);
 
       mockSaveChatCompletion.mockResolvedValue(null);
@@ -429,29 +384,21 @@ describe("handleChatGenerate", () => {
         memoryId: "memory-id",
       });
 
-      mockSetupChatRequest.mockResolvedValue({
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
-        messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
-        providerOptions: {},
-      } as any);
-
-      mockGenerateText.mockResolvedValue({
+      const mockAgent = createMockAgent({
         text: "Response",
         finishReason: "stop",
         usage: { promptTokens: 10, completionTokens: 20 },
         response: { messages: [], headers: {}, body: null },
+      });
+
+      mockSetupChatRequest.mockResolvedValue({
+        agent: mockAgent,
+        messages: [],
       } as any);
 
       mockSaveChatCompletion.mockResolvedValue(null);
 
-      const request = createMockRequest(
-        { prompt: "Hello" },
-        { "x-api-key": "valid-key" },
-      );
+      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
       await handleChatGenerate(request as any);
 
@@ -469,21 +416,16 @@ describe("handleChatGenerate", () => {
         memoryId: "memory-id",
       });
 
-      mockSetupChatRequest.mockResolvedValue({
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
-        messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
-        providerOptions: {},
-      } as any);
-
-      mockGenerateText.mockResolvedValue({
+      const mockAgent = createMockAgent({
         text: "Response",
         finishReason: "stop",
         usage: { promptTokens: 10, completionTokens: 20 },
         response: { messages: [], headers: {}, body: null },
+      });
+
+      mockSetupChatRequest.mockResolvedValue({
+        agent: mockAgent,
+        messages: [],
       } as any);
 
       mockSaveChatCompletion.mockResolvedValue(null);
@@ -507,29 +449,21 @@ describe("handleChatGenerate", () => {
         memoryId: "memory-id",
       });
 
-      mockSetupChatRequest.mockResolvedValue({
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
-        messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
-        providerOptions: {},
-      } as any);
-
-      mockGenerateText.mockResolvedValue({
+      const mockAgent = createMockAgent({
         text: "Response",
         finishReason: "stop",
         usage: { promptTokens: 10, completionTokens: 20 },
         response: { messages: [], headers: {}, body: null },
+      });
+
+      mockSetupChatRequest.mockResolvedValue({
+        agent: mockAgent,
+        messages: [],
       } as any);
 
       mockSaveChatCompletion.mockResolvedValue(null);
 
-      const request = createMockRequest(
-        { prompt: "Hello" },
-        { "x-api-key": "valid-key" },
-      );
+      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
       const result = await handleChatGenerate(request as any);
 
@@ -545,21 +479,16 @@ describe("handleChatGenerate", () => {
         memoryId: "memory-id",
       });
 
-      mockSetupChatRequest.mockResolvedValue({
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
-        messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
-        providerOptions: {},
-      } as any);
-
-      mockGenerateText.mockResolvedValue({
+      const mockAgent = createMockAgent({
         text: "This is the assistant response text",
         finishReason: "stop",
         usage: { promptTokens: 10, completionTokens: 20 },
         response: { messages: [], headers: {}, body: null },
+      });
+
+      mockSetupChatRequest.mockResolvedValue({
+        agent: mockAgent,
+        messages: [],
       } as any);
 
       mockSaveChatCompletion.mockResolvedValue(null);
@@ -584,21 +513,16 @@ describe("handleChatGenerate", () => {
         memoryId: "memory-id",
       });
 
-      mockSetupChatRequest.mockResolvedValue({
-        model: "gpt-4",
-        instructions: "test",
-        system: "test",
-        messages: [],
-        experimental_generateMessageId: vi.fn(),
-        tools: {},
-        providerOptions: {},
-      } as any);
-
-      mockGenerateText.mockResolvedValue({
+      const mockAgent = createMockAgent({
         text: "Response",
         finishReason: "stop",
         usage: { promptTokens: 10, completionTokens: 20 },
         response: { messages: [], headers: {}, body: null },
+      });
+
+      mockSetupChatRequest.mockResolvedValue({
+        agent: mockAgent,
+        messages: [],
       } as any);
 
       mockSaveChatCompletion.mockRejectedValue(new Error("Database error"));

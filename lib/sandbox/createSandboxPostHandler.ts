@@ -1,12 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createSandbox } from "@/lib/sandbox/createSandbox";
 import { validateSandboxBody } from "@/lib/sandbox/validateSandboxBody";
-import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
-import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
-
-import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
+import { processCreateSandbox } from "@/lib/sandbox/processCreateSandbox";
 
 /**
  * Handler for POST /api/sandboxes.
@@ -27,47 +23,12 @@ export async function createSandboxPostHandler(request: NextRequest): Promise<Ne
   }
 
   try {
-    // Get account's most recent snapshot if available
-    const accountSnapshots = await selectAccountSnapshots(validated.accountId);
-    const snapshotId = accountSnapshots[0]?.snapshot_id;
-
-    // Create sandbox (from snapshot if valid, otherwise fresh)
-    const result = await createSandbox(
-      snapshotId ? { source: { type: "snapshot", snapshotId } } : {},
-    );
-
-    await insertAccountSandbox({
-      account_id: validated.accountId,
-      sandbox_id: result.sandboxId,
-    });
-
-    // Trigger the command execution task if a command was provided
-    let runId: string | undefined;
-    if (validated.command) {
-      try {
-        const handle = await triggerRunSandboxCommand({
-          command: validated.command,
-          args: validated.args,
-          cwd: validated.cwd,
-          sandboxId: result.sandboxId,
-          accountId: validated.accountId,
-        });
-        runId = handle.id;
-      } catch (triggerError) {
-        console.error("Failed to trigger run-sandbox-command task:", triggerError);
-        runId = undefined;
-      }
-    }
+    const result = await processCreateSandbox(validated);
 
     return NextResponse.json(
       {
         status: "success",
-        sandboxes: [
-          {
-            ...result,
-            ...(runId && { runId }),
-          },
-        ],
+        sandboxes: [result],
       },
       { status: 200, headers: getCorsHeaders() },
     );

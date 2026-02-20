@@ -370,7 +370,7 @@ describe("Chat Integration Tests", () => {
       expect(mockGetKnowledgeBaseText).not.toHaveBeenCalled();
     });
 
-    it("returns ChatConfig with agent and tools", async () => {
+    it("returns ChatConfig with agent and messages", async () => {
       const body = {
         accountId: "account-123",
         messages: [{ id: "msg-1", role: "user", content: "Hello" }],
@@ -379,22 +379,8 @@ describe("Chat Integration Tests", () => {
       const result = await setupChatRequest(body as any);
 
       expect(result).toHaveProperty("agent");
-      expect(result).toHaveProperty("model");
-      expect(result).toHaveProperty("instructions");
-      expect(result).toHaveProperty("tools");
-      expect(result).toHaveProperty("system");
-    });
-
-    it("uses provided model override", async () => {
-      const body = {
-        accountId: "account-123",
-        messages: [{ id: "msg-1", role: "user", content: "Hello" }],
-        model: "claude-3-opus",
-      };
-
-      const result = await setupChatRequest(body as any);
-
-      expect(result.model).toBe("claude-3-opus");
+      expect(result).toHaveProperty("messages");
+      expect(Object.keys(result)).toEqual(["agent", "messages"]);
     });
 
     it("fetches account details for system prompt context", async () => {
@@ -653,7 +639,7 @@ describe("Chat Integration Tests", () => {
 
       const chatConfig = await setupChatRequest(validationResult as any);
       expect(chatConfig.agent).toBeDefined();
-      expect(chatConfig.model).toBeDefined();
+      expect(chatConfig.messages).toBeDefined();
     });
 
     it("validates messages-based requests through full pipeline", async () => {
@@ -716,7 +702,7 @@ describe("Chat Integration Tests", () => {
       // 4. Handle credits
       await handleChatCredits({
         usage: { promptTokens: 100, completionTokens: 50 },
-        model: chatConfig.model,
+        model: (body as any).model || "openai/gpt-5-mini",
         accountId: (body as any).accountId,
       });
 

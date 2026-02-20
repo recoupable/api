@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateText } from "ai";
 import { validateChatRequest } from "./validateChatRequest";
 import { setupChatRequest } from "./setupChatRequest";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
@@ -27,8 +26,9 @@ export async function handleChatGenerate(request: NextRequest): Promise<Response
 
   try {
     const chatConfig = await setupChatRequest(body);
+    const { agent } = chatConfig;
 
-    const result = await generateText(chatConfig);
+    const result = await agent.generate(chatConfig);
 
     // Save assistant message to database
     // Note: roomId is always defined after validateChatRequest (auto-created if not provided)

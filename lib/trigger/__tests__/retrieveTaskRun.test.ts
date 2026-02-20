@@ -8,18 +8,36 @@ vi.mock("@trigger.dev/sdk/v3", () => ({
   },
 }));
 
+const baseMockRun = {
+  id: "run_123",
+  taskIdentifier: "setup-sandbox",
+  metadata: { currentStep: "Complete", logs: ["step 1"] },
+  createdAt: new Date("2025-01-01T00:00:00Z"),
+  startedAt: new Date("2025-01-01T00:00:01Z"),
+  finishedAt: new Date("2025-01-01T00:00:10Z"),
+  durationMs: 9000,
+};
+
+const expectedCommon = {
+  metadata: baseMockRun.metadata,
+  taskIdentifier: "setup-sandbox",
+  createdAt: "2025-01-01T00:00:00.000Z",
+  startedAt: "2025-01-01T00:00:01.000Z",
+  finishedAt: "2025-01-01T00:00:10.000Z",
+  durationMs: 9000,
+};
+
 describe("retrieveTaskRun", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("calls runs.retrieve with the provided runId", async () => {
-    const mockRun = {
-      id: "run_123",
+    vi.mocked(runs.retrieve).mockResolvedValue({
+      ...baseMockRun,
       status: "COMPLETED",
       output: { result: "success" },
-    };
-    vi.mocked(runs.retrieve).mockResolvedValue(mockRun);
+    });
 
     await retrieveTaskRun("run_123");
 
@@ -28,65 +46,88 @@ describe("retrieveTaskRun", () => {
 
   it("returns pending status when run status is EXECUTING", async () => {
     vi.mocked(runs.retrieve).mockResolvedValue({
-      id: "run_123",
+      ...baseMockRun,
       status: "EXECUTING",
+      finishedAt: null,
+      durationMs: null,
     });
 
     const result = await retrieveTaskRun("run_123");
 
-    expect(result).toEqual({ status: "pending" });
+    expect(result).toEqual({
+      ...expectedCommon,
+      status: "pending",
+      finishedAt: null,
+      durationMs: null,
+    });
   });
 
   it("returns pending status when run status is QUEUED", async () => {
     vi.mocked(runs.retrieve).mockResolvedValue({
-      id: "run_123",
+      ...baseMockRun,
       status: "QUEUED",
+      startedAt: null,
+      finishedAt: null,
+      durationMs: null,
     });
 
     const result = await retrieveTaskRun("run_123");
 
-    expect(result).toEqual({ status: "pending" });
+    expect(result).toEqual({
+      ...expectedCommon,
+      status: "pending",
+      startedAt: null,
+      finishedAt: null,
+      durationMs: null,
+    });
   });
 
   it("returns pending status when run status is REATTEMPTING", async () => {
     vi.mocked(runs.retrieve).mockResolvedValue({
-      id: "run_123",
+      ...baseMockRun,
       status: "REATTEMPTING",
+      finishedAt: null,
+      durationMs: null,
     });
 
     const result = await retrieveTaskRun("run_123");
 
-    expect(result).toEqual({ status: "pending" });
+    expect(result).toEqual({
+      ...expectedCommon,
+      status: "pending",
+      finishedAt: null,
+      durationMs: null,
+    });
   });
 
   it("returns complete status with data when run status is COMPLETED", async () => {
     const outputData = { message: "Task completed successfully" };
     vi.mocked(runs.retrieve).mockResolvedValue({
-      id: "run_123",
+      ...baseMockRun,
       status: "COMPLETED",
       output: outputData,
     });
 
     const result = await retrieveTaskRun("run_123");
 
-    expect(result).toEqual({ status: "complete", data: outputData });
+    expect(result).toEqual({ ...expectedCommon, status: "complete", data: outputData });
   });
 
   it("returns complete status with null data when output is undefined", async () => {
     vi.mocked(runs.retrieve).mockResolvedValue({
-      id: "run_123",
+      ...baseMockRun,
       status: "COMPLETED",
       output: undefined,
     });
 
     const result = await retrieveTaskRun("run_123");
 
-    expect(result).toEqual({ status: "complete", data: null });
+    expect(result).toEqual({ ...expectedCommon, status: "complete", data: null });
   });
 
   it("returns failed status with error when run status is FAILED", async () => {
     vi.mocked(runs.retrieve).mockResolvedValue({
-      id: "run_123",
+      ...baseMockRun,
       status: "FAILED",
       error: { message: "Task execution failed" },
     });
@@ -94,6 +135,7 @@ describe("retrieveTaskRun", () => {
     const result = await retrieveTaskRun("run_123");
 
     expect(result).toEqual({
+      ...expectedCommon,
       status: "failed",
       error: "Task execution failed",
     });
@@ -101,7 +143,7 @@ describe("retrieveTaskRun", () => {
 
   it("returns failed status with error when run status is CRASHED", async () => {
     vi.mocked(runs.retrieve).mockResolvedValue({
-      id: "run_123",
+      ...baseMockRun,
       status: "CRASHED",
       error: { message: "Task crashed unexpectedly" },
     });
@@ -109,6 +151,7 @@ describe("retrieveTaskRun", () => {
     const result = await retrieveTaskRun("run_123");
 
     expect(result).toEqual({
+      ...expectedCommon,
       status: "failed",
       error: "Task crashed unexpectedly",
     });
@@ -116,13 +159,14 @@ describe("retrieveTaskRun", () => {
 
   it("returns failed status with error when run status is CANCELED", async () => {
     vi.mocked(runs.retrieve).mockResolvedValue({
-      id: "run_123",
+      ...baseMockRun,
       status: "CANCELED",
     });
 
     const result = await retrieveTaskRun("run_123");
 
     expect(result).toEqual({
+      ...expectedCommon,
       status: "failed",
       error: "Task was canceled",
     });
@@ -130,16 +174,30 @@ describe("retrieveTaskRun", () => {
 
   it("returns failed status with generic error when error message is not available", async () => {
     vi.mocked(runs.retrieve).mockResolvedValue({
-      id: "run_123",
+      ...baseMockRun,
       status: "FAILED",
     });
 
     const result = await retrieveTaskRun("run_123");
 
     expect(result).toEqual({
+      ...expectedCommon,
       status: "failed",
       error: "Task execution failed",
     });
+  });
+
+  it("returns null metadata when metadata is not set", async () => {
+    vi.mocked(runs.retrieve).mockResolvedValue({
+      ...baseMockRun,
+      status: "COMPLETED",
+      output: null,
+      metadata: undefined,
+    });
+
+    const result = await retrieveTaskRun("run_123");
+
+    expect(result?.metadata).toBeNull();
   });
 
   it("throws error when runs.retrieve fails", async () => {

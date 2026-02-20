@@ -29,6 +29,8 @@ export const SUPABASE_STORAGE_BUCKET = "user-files";
  */
 export const RECOUP_ORG_ID = "04e3aba9-c130-4fb8-8b92-34e95d43e66b";
 
+export const RECOUP_API_KEY = process.env.RECOUP_API_KEY || "";
+
 // EVALS
 export const EVAL_ACCOUNT_ID = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
 export const EVAL_ACCESS_TOKEN = process.env.EVAL_ACCESS_TOKEN || "";
