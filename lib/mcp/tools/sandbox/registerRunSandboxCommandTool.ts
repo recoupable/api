@@ -19,7 +19,7 @@ const runSandboxCommandSchema = z.object({
     .string()
     .optional()
     .describe(
-      'A prompt to pass to OpenCode. Runs `opencode run "<prompt>"` in the sandbox. Cannot be used with command.',
+      'A prompt to pass to OpenClaw. Runs `openclaw agent --agent main --message "<prompt>"` in the sandbox. Cannot be used with command.',
     ),
   account_id: z
     .string()
@@ -40,7 +40,7 @@ export function registerRunSandboxCommandTool(server: McpServer): void {
     "run_sandbox_command",
     {
       description:
-        'Create a sandbox and run a command or OpenCode prompt in it. Use prompt to run `opencode run "<prompt>"`. Returns the sandbox ID and a run ID to track progress.',
+        'Create a sandbox and run a command or OpenClaw prompt in it. Use prompt to run `openclaw agent --agent main --message "<prompt>"`. Returns the sandbox ID and a run ID to track progress.',
       inputSchema: runSandboxCommandSchema,
     },
     async (args, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {

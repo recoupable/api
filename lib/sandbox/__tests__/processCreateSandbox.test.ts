@@ -181,7 +181,7 @@ describe("processCreateSandbox", () => {
     });
   });
 
-  it("converts prompt to opencode run command", async () => {
+  it("converts prompt to openclaw agent command", async () => {
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
       sandboxId: "sbx_123",
@@ -215,8 +215,8 @@ describe("processCreateSandbox", () => {
       runId: "run_prompt123",
     });
     expect(triggerRunSandboxCommand).toHaveBeenCalledWith({
-      command: "opencode",
-      args: ["run", "create a hello world index.html"],
+      command: "openclaw",
+      args: ["agent", "--agent", "main", "--message", "create a hello world index.html"],
       cwd: undefined,
       sandboxId: "sbx_123",
       accountId: "acc_123",
