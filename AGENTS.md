@@ -418,6 +418,7 @@ import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/proto
 import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
+import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 // Import shared domain logic
@@ -435,16 +436,23 @@ export function registerToolNameTool(server: McpServer): void {
       inputSchema: toolSchema,
     },
     async (args, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
+      // Always use resolveAccountId — never extract accountId manually
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
-      const accountId = authInfo?.extra?.accountId;
-      const orgId = authInfo?.extra?.orgId ?? null;
+      const { accountId, error } = await resolveAccountId({
+        authInfo,
+        accountIdOverride: undefined, // pass account_id from args if the tool accepts one
+      });
+
+      if (error) {
+        return getToolResultError(error);
+      }
 
       if (!accountId) {
-        return getToolResultError("Authentication required.");
+        return getToolResultError("Failed to resolve account ID");
       }
 
       // Use shared domain logic (same as API route)
-      const result = await sharedDomainFunction({ accountId, orgId, ...args });
+      const result = await sharedDomainFunction({ accountId, ...args });
 
       if (!result) {
         return getToolResultError("Operation failed");

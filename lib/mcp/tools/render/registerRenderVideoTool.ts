@@ -3,6 +3,7 @@ import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/proto
 import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
+import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { triggerRenderVideo } from "@/lib/trigger/triggerRenderVideo";
@@ -68,11 +69,19 @@ IMPORTANT:
       inputSchema: renderVideoSchema,
     },
     async (args, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
+      // Use resolveAccountId for consistent auth handling (supports org key overrides)
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
-      const accountId = authInfo?.extra?.accountId;
+      const { accountId, error } = await resolveAccountId({
+        authInfo,
+        accountIdOverride: undefined,
+      });
+
+      if (error) {
+        return getToolResultError(error);
+      }
 
       if (!accountId) {
-        return getToolResultError("Authentication required.");
+        return getToolResultError("Failed to resolve account ID");
       }
 
       try {
