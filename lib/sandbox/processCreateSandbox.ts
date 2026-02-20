@@ -22,9 +22,9 @@ export async function processCreateSandbox(
 ): Promise<ProcessCreateSandboxResult> {
   const { accountId, prompt, cwd } = input;
 
-  // Convert prompt shortcut to opencode command
-  const command = prompt ? "opencode" : input.command;
-  const args = prompt ? ["run", prompt] : input.args;
+  // Convert prompt shortcut to openclaw agent command
+  const command = prompt ? "openclaw" : input.command;
+  const args = prompt ? ["agent", "--agent", "main", "--message", prompt] : input.args;
 
   // Get account's most recent snapshot if available
   const accountSnapshots = await selectAccountSnapshots(accountId);
