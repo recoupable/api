@@ -1,5 +1,5 @@
 import { parseGitHubRepoUrl } from "./parseGitHubRepoUrl";
-import { parseGitModules } from "./parseGitModules";
+import { getRepoGitModules } from "./getRepoGitModules";
 
 export interface FileTreeEntry {
   path: string;
@@ -78,20 +78,19 @@ export async function getRepoFileTree(githubRepoUrl: string): Promise<FileTreeEn
       return regularEntries;
     }
 
-    const gitmodulesResponse = await fetch(
-      `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/${defaultBranch}/.gitmodules`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
+    const submodules = await getRepoGitModules({
+      owner: repoInfo.owner,
+      repo: repoInfo.repo,
+      branch: defaultBranch,
+    });
 
-    if (!gitmodulesResponse.ok) {
+    if (!submodules) {
       for (const sub of submoduleEntries) {
         regularEntries.push({ path: sub.path, type: "tree", sha: sub.sha });
       }
       return regularEntries;
     }
 
-    const gitmodulesContent = await gitmodulesResponse.text();
-    const submodules = parseGitModules(gitmodulesContent);
     const submoduleUrlMap = new Map(submodules.map(s => [s.path, s.url]));
 
     const submoduleResults = await Promise.all(
