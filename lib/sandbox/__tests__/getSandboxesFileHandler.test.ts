@@ -6,6 +6,7 @@ import { getSandboxesFileHandler } from "../getSandboxesFileHandler";
 import { validateGetSandboxesFileRequest } from "../validateGetSandboxesFileRequest";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { getRawFileContent } from "@/lib/github/getRawFileContent";
+import { resolveSubmodulePath } from "@/lib/github/resolveSubmodulePath";
 
 vi.mock("../validateGetSandboxesFileRequest", () => ({
   validateGetSandboxesFileRequest: vi.fn(),
@@ -17,6 +18,10 @@ vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
 
 vi.mock("@/lib/github/getRawFileContent", () => ({
   getRawFileContent: vi.fn(),
+}));
+
+vi.mock("@/lib/github/resolveSubmodulePath", () => ({
+  resolveSubmodulePath: vi.fn(),
 }));
 
 /**
@@ -35,6 +40,8 @@ function createMockRequest(path = "src/index.ts"): NextRequest {
 describe("getSandboxesFileHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: resolveSubmodulePath passes through unchanged
+    vi.mocked(resolveSubmodulePath).mockImplementation(async (params) => params);
   });
 
   it("returns error response when validation fails", async () => {
@@ -167,7 +174,7 @@ describe("getSandboxesFileHandler", () => {
     expect(selectAccountSnapshots).toHaveBeenCalledWith("org_123");
   });
 
-  it("calls getRawFileContent with correct params", async () => {
+  it("calls resolveSubmodulePath then getRawFileContent with resolved params", async () => {
     vi.mocked(validateGetSandboxesFileRequest).mockResolvedValue({
       accountIds: ["acc_123"],
       path: "src/utils/helper.ts",
@@ -188,9 +195,47 @@ describe("getSandboxesFileHandler", () => {
     const request = createMockRequest("src/utils/helper.ts");
     await getSandboxesFileHandler(request);
 
+    expect(resolveSubmodulePath).toHaveBeenCalledWith({
+      githubRepo: "https://github.com/user/repo",
+      path: "src/utils/helper.ts",
+    });
     expect(getRawFileContent).toHaveBeenCalledWith({
       githubRepo: "https://github.com/user/repo",
       path: "src/utils/helper.ts",
+    });
+  });
+
+  it("fetches from submodule repo when path is inside a submodule", async () => {
+    vi.mocked(validateGetSandboxesFileRequest).mockResolvedValue({
+      accountIds: ["acc_123"],
+      path: ".openclaw/workspace/orgs/my-org/artist.md",
+    });
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([
+      {
+        account_id: "acc_123",
+        snapshot_id: "snap_abc",
+        github_repo: "https://github.com/user/repo",
+        created_at: "2024-01-01T00:00:00.000Z",
+        expires_at: "2024-01-08T00:00:00.000Z",
+      },
+    ]);
+    vi.mocked(resolveSubmodulePath).mockResolvedValue({
+      githubRepo: "https://github.com/recoupable/org-my-org-abc123",
+      path: "artist.md",
+    });
+    vi.mocked(getRawFileContent).mockResolvedValue({
+      content: "# Artist Info",
+    });
+
+    const request = createMockRequest(".openclaw/workspace/orgs/my-org/artist.md");
+    const response = await getSandboxesFileHandler(request);
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json.content).toBe("# Artist Info");
+    expect(getRawFileContent).toHaveBeenCalledWith({
+      githubRepo: "https://github.com/recoupable/org-my-org-abc123",
+      path: "artist.md",
     });
   });
 });

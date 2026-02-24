@@ -3,6 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetSandboxesFileRequest } from "./validateGetSandboxesFileRequest";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { getRawFileContent } from "@/lib/github/getRawFileContent";
+import { resolveSubmodulePath } from "@/lib/github/resolveSubmodulePath";
 
 /**
  * Handler for retrieving file contents from a sandbox's GitHub repository.
@@ -45,7 +46,8 @@ export async function getSandboxesFileHandler(request: NextRequest): Promise<Nex
     );
   }
 
-  const result = await getRawFileContent({ githubRepo, path });
+  const resolved = await resolveSubmodulePath({ githubRepo, path });
+  const result = await getRawFileContent(resolved);
 
   if ("error" in result) {
     return NextResponse.json(
