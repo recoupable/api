@@ -1,5 +1,5 @@
 import { parseGitHubRepoUrl } from "./parseGitHubRepoUrl";
-import { getRepoGitModules } from "./getRepoGitModules";
+import { expandSubmoduleEntries } from "./expandSubmoduleEntries";
 
 export interface FileTreeEntry {
   path: string;
@@ -78,41 +78,11 @@ export async function getRepoFileTree(githubRepoUrl: string): Promise<FileTreeEn
       return regularEntries;
     }
 
-    const submodules = await getRepoGitModules({
-      owner: repoInfo.owner,
-      repo: repoInfo.repo,
-      branch: defaultBranch,
+    return expandSubmoduleEntries({
+      regularEntries,
+      submoduleEntries,
+      repo: { owner: repoInfo.owner, repo: repoInfo.repo, branch: defaultBranch },
     });
-
-    if (!submodules) {
-      for (const sub of submoduleEntries) {
-        regularEntries.push({ path: sub.path, type: "tree", sha: sub.sha });
-      }
-      return regularEntries;
-    }
-
-    const submoduleUrlMap = new Map(submodules.map(s => [s.path, s.url]));
-
-    const submoduleResults = await Promise.all(
-      submoduleEntries.map(async sub => {
-        const url = submoduleUrlMap.get(sub.path);
-        if (!url) return { path: sub.path, sha: sub.sha, entries: null };
-
-        const entries = await getRepoFileTree(url);
-        return { path: sub.path, sha: sub.sha, entries };
-      }),
-    );
-
-    for (const { path, sha, entries } of submoduleResults) {
-      regularEntries.push({ path, type: "tree", sha });
-      if (entries) {
-        for (const entry of entries) {
-          regularEntries.push({ ...entry, path: `${path}/${entry.path}` });
-        }
-      }
-    }
-
-    return regularEntries;
   } catch (error) {
     console.error("Error fetching GitHub file tree:", error);
     return null;
