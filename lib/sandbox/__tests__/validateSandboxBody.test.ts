@@ -16,11 +16,20 @@ vi.mock("@/lib/networking/safeParseJson", () => ({
 /**
  * Creates a mock NextRequest for testing.
  *
+ * @param queryParams - Optional query parameters to include in the URL
  * @returns A mock NextRequest object
  */
-function createMockRequest(): NextRequest {
+function createMockRequest(queryParams?: Record<string, string>): NextRequest {
+  const url = new URL("https://example.com/api/sandboxes");
+  if (queryParams) {
+    for (const [key, value] of Object.entries(queryParams)) {
+      url.searchParams.set(key, value);
+    }
+  }
   return {
     headers: new Headers({ "x-api-key": "test-key" }),
+    url: url.toString(),
+    nextUrl: url,
   } as unknown as NextRequest;
 }
 
@@ -166,6 +175,66 @@ describe("validateSandboxBody", () => {
     vi.mocked(safeParseJson).mockResolvedValue({ command: "" });
 
     const request = createMockRequest();
+    const result = await validateSandboxBody(request);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(400);
+  });
+
+  it("passes account_id query param to validateAuthContext for override", async () => {
+    const targetAccountId = "10000000-1000-4000-8000-100000000001";
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: targetAccountId,
+      orgId: "org_456",
+      authToken: "token",
+    });
+    vi.mocked(safeParseJson).mockResolvedValue({ prompt: "hello" });
+
+    const request = createMockRequest({ account_id: targetAccountId });
+    const result = await validateSandboxBody(request);
+
+    expect(validateAuthContext).toHaveBeenCalledWith(request, {
+      accountId: targetAccountId,
+    });
+    expect(result).not.toBeInstanceOf(NextResponse);
+    expect((result as Record<string, unknown>).accountId).toBe(targetAccountId);
+  });
+
+  it("calls validateAuthContext without accountId when no account_id query param", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc_123",
+      orgId: null,
+      authToken: "token",
+    });
+    vi.mocked(safeParseJson).mockResolvedValue({});
+
+    const request = createMockRequest();
+    const result = await validateSandboxBody(request);
+
+    expect(validateAuthContext).toHaveBeenCalledWith(request, {
+      accountId: undefined,
+    });
+    expect(result).not.toBeInstanceOf(NextResponse);
+  });
+
+  it("returns 403 when validateAuthContext rejects account_id override", async () => {
+    const targetAccountId = "20000000-2000-4000-8000-200000000002";
+    vi.mocked(validateAuthContext).mockResolvedValue(
+      NextResponse.json({ status: "error", error: "Access denied" }, { status: 403 }),
+    );
+    vi.mocked(safeParseJson).mockResolvedValue({ prompt: "hello" });
+
+    const request = createMockRequest({ account_id: targetAccountId });
+    const result = await validateSandboxBody(request);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(403);
+  });
+
+  it("returns 400 when account_id query param is not a valid UUID", async () => {
+    vi.mocked(safeParseJson).mockResolvedValue({});
+
+    const request = createMockRequest({ account_id: "not-a-uuid" });
     const result = await validateSandboxBody(request);
 
     expect(result).toBeInstanceOf(NextResponse);
