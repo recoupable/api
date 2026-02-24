@@ -11,7 +11,7 @@ export interface SandboxCreatedResponse {
 /** Extract CreateSandboxParams from Sandbox.create method signature */
 export type CreateSandboxParams = NonNullable<Parameters<typeof Sandbox.create>[0]>;
 
-const DEFAULT_TIMEOUT = ms("10m");
+const DEFAULT_TIMEOUT = ms("30m");
 const DEFAULT_VCPUS = 4;
 const DEFAULT_RUNTIME = "node22";
 
@@ -25,8 +25,11 @@ const DEFAULT_RUNTIME = "node22";
  * @returns The sandbox creation response
  * @throws Error if sandbox creation fails
  */
-export async function createSandbox(params: CreateSandboxParams = {}): Promise<SandboxCreatedResponse> {
-  const hasSnapshotSource = params.source && "type" in params.source && params.source.type === "snapshot";
+export async function createSandbox(
+  params: CreateSandboxParams = {},
+): Promise<SandboxCreatedResponse> {
+  const hasSnapshotSource =
+    params.source && "type" in params.source && params.source.type === "snapshot";
 
   // Pass params directly to SDK - it handles all the type variants
   const sandbox = await Sandbox.create(

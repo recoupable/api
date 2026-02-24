@@ -6,7 +6,7 @@ import { Sandbox } from "@vercel/sandbox";
 const mockSandbox = {
   sandboxId: "sbx_test123",
   status: "running",
-  timeout: 600000,
+  timeout: 1800000,
   createdAt: new Date("2024-01-01T00:00:00Z"),
 };
 
@@ -18,7 +18,7 @@ vi.mock("@vercel/sandbox", () => ({
 
 vi.mock("ms", () => ({
   default: vi.fn((str: string) => {
-    if (str === "10m") return 600000;
+    if (str === "30m") return 1800000;
     return 300000;
   }),
 }));
@@ -33,7 +33,7 @@ describe("createSandbox", () => {
 
     expect(Sandbox.create).toHaveBeenCalledWith({
       resources: { vcpus: 4 },
-      timeout: 600000,
+      timeout: 1800000,
       runtime: "node22",
     });
   });
@@ -43,7 +43,7 @@ describe("createSandbox", () => {
 
     expect(Sandbox.create).toHaveBeenCalledWith({
       source: { type: "snapshot", snapshotId: "snap_abc123" },
-      timeout: 600000,
+      timeout: 1800000,
     });
   });
 
@@ -62,7 +62,7 @@ describe("createSandbox", () => {
 
     expect(Sandbox.create).toHaveBeenCalledWith({
       resources: { vcpus: 2 },
-      timeout: 600000,
+      timeout: 1800000,
       runtime: "node22",
     });
   });
@@ -73,7 +73,7 @@ describe("createSandbox", () => {
     expect(result).toEqual({
       sandboxId: "sbx_test123",
       sandboxStatus: "running",
-      timeout: 600000,
+      timeout: 1800000,
       createdAt: "2024-01-01T00:00:00.000Z",
     });
   });
