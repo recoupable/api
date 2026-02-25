@@ -125,6 +125,7 @@ describe("registerPromptSandboxTool", () => {
 
     expect(mockPromptSandbox).toHaveBeenCalledWith({
       accountId: "acc_123",
+      apiKey: "test-token",
       prompt: "say hello",
     });
     expect(result).toEqual({

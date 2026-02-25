@@ -46,6 +46,7 @@ export function registerPromptSandboxTool(server: McpServer): void {
       try {
         const result = await promptSandbox({
           accountId,
+          apiKey: authInfo!.token,
           prompt: args.prompt,
         });
 

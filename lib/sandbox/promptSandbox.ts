@@ -2,6 +2,7 @@ import { getOrCreateSandbox } from "./getOrCreateSandbox";
 
 interface PromptSandboxInput {
   accountId: string;
+  apiKey: string;
   prompt: string;
 }
 
@@ -24,7 +25,7 @@ interface PromptSandboxResult {
 export async function promptSandbox(
   input: PromptSandboxInput,
 ): Promise<PromptSandboxResult> {
-  const { accountId, prompt } = input;
+  const { accountId, apiKey, prompt } = input;
 
   const { sandbox, sandboxId, created } =
     await getOrCreateSandbox(accountId);
@@ -33,7 +34,7 @@ export async function promptSandbox(
     cmd: "openclaw",
     args: ["agent", "--agent", "main", "--message", prompt],
     env: {
-      RECOUP_API_KEY: process.env.RECOUP_API_KEY!,
+      RECOUP_API_KEY: apiKey,
       RECOUP_ACCOUNT_ID: accountId,
     },
   });

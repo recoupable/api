@@ -37,6 +37,7 @@ describe("promptSandbox", () => {
 
     const result = await promptSandbox({
       accountId: "acc_1",
+      apiKey: "key_abc",
       prompt: "say hello",
     });
 
@@ -49,9 +50,7 @@ describe("promptSandbox", () => {
     });
   });
 
-  it("passes env vars to runCommand", async () => {
-    process.env.RECOUP_API_KEY = "test-api-key";
-
+  it("passes caller's API key as RECOUP_API_KEY env var", async () => {
     mockGetOrCreateSandbox.mockResolvedValue({
       sandbox: mockSandbox,
       sandboxId: "sbx_123",
@@ -67,6 +66,7 @@ describe("promptSandbox", () => {
 
     await promptSandbox({
       accountId: "acc_1",
+      apiKey: "caller-api-key",
       prompt: "do something",
     });
 
@@ -74,7 +74,7 @@ describe("promptSandbox", () => {
       cmd: "openclaw",
       args: ["agent", "--agent", "main", "--message", "do something"],
       env: {
-        RECOUP_API_KEY: "test-api-key",
+        RECOUP_API_KEY: "caller-api-key",
         RECOUP_ACCOUNT_ID: "acc_1",
       },
     });
@@ -96,6 +96,7 @@ describe("promptSandbox", () => {
 
     const result = await promptSandbox({
       accountId: "acc_1",
+      apiKey: "key_abc",
       prompt: "setup",
     });
 
@@ -119,6 +120,7 @@ describe("promptSandbox", () => {
 
     const result = await promptSandbox({
       accountId: "acc_1",
+      apiKey: "key_abc",
       prompt: "bad command",
     });
 
