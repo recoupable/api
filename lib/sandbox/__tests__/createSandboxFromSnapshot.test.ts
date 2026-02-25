@@ -32,10 +32,12 @@ describe("createSandboxFromSnapshot", () => {
     vi.clearAllMocks();
     mockCreateSandbox.mockResolvedValue({
       sandbox: mockSandbox,
-      sandboxId: "sbx_new",
-      sandboxStatus: "running",
-      timeout: 1800000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      response: {
+        sandboxId: "sbx_new",
+        sandboxStatus: "running",
+        timeout: 1800000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     mockInsertAccountSandbox.mockResolvedValue({
       data: { account_id: "acc_1", sandbox_id: "sbx_new" },

@@ -2,11 +2,15 @@ import ms from "ms";
 import { Sandbox } from "@vercel/sandbox";
 
 export interface SandboxCreatedResponse {
-  sandbox: Sandbox;
   sandboxId: Sandbox["sandboxId"];
   sandboxStatus: Sandbox["status"];
   timeout: Sandbox["timeout"];
   createdAt: string;
+}
+
+export interface SandboxCreateResult {
+  sandbox: Sandbox;
+  response: SandboxCreatedResponse;
 }
 
 /** Extract CreateSandboxParams from Sandbox.create method signature */
@@ -28,7 +32,7 @@ const DEFAULT_RUNTIME = "node22";
  */
 export async function createSandbox(
   params: CreateSandboxParams = {},
-): Promise<SandboxCreatedResponse> {
+): Promise<SandboxCreateResult> {
   const hasSnapshotSource =
     params.source && "type" in params.source && params.source.type === "snapshot";
 
@@ -49,9 +53,11 @@ export async function createSandbox(
 
   return {
     sandbox,
-    sandboxId: sandbox.sandboxId,
-    sandboxStatus: sandbox.status,
-    timeout: sandbox.timeout,
-    createdAt: sandbox.createdAt.toISOString(),
+    response: {
+      sandboxId: sandbox.sandboxId,
+      sandboxStatus: sandbox.status,
+      timeout: sandbox.timeout,
+      createdAt: sandbox.createdAt.toISOString(),
+    },
   };
 }

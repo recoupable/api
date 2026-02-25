@@ -16,13 +16,13 @@ export async function createSandboxFromSnapshot(
   const snapshots = await selectAccountSnapshots(accountId);
   const snapshotId = snapshots[0]?.snapshot_id;
 
-  const { sandbox, sandboxId } = await createSandbox(
+  const { sandbox, response } = await createSandbox(
     snapshotId ? { source: { type: "snapshot", snapshotId } } : {},
   );
 
   await insertAccountSandbox({
     account_id: accountId,
-    sandbox_id: sandboxId,
+    sandbox_id: response.sandboxId,
   });
 
   return sandbox;
