@@ -152,4 +152,42 @@ describe("createNotificationHandler", () => {
     expect(data.status).toBe("error");
     expect(data.error).toContain("Rate limited");
   });
+
+  it("resolves email from account_id override", async () => {
+    const overrideAccountId = "550e8400-e29b-41d4-a716-446655440000";
+
+    mockValidateAuthContext.mockResolvedValue({
+      accountId: overrideAccountId,
+      orgId: "org-id",
+      authToken: "test-key",
+    });
+    mockSelectAccountEmails.mockResolvedValue([
+      { id: "email-2", account_id: overrideAccountId, email: "member@example.com", updated_at: "" },
+    ]);
+    mockProcessAndSendEmail.mockResolvedValue({
+      success: true,
+      message: "Email sent successfully to member@example.com.",
+      id: "email-override",
+    });
+
+    const request = createRequest({
+      subject: "Override Test",
+      text: "Hello member",
+      account_id: overrideAccountId,
+    });
+    const response = await createNotificationHandler(request);
+
+    expect(response.status).toBe(200);
+    expect(mockValidateAuthContext).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ accountId: overrideAccountId }),
+    );
+    expect(mockSelectAccountEmails).toHaveBeenCalledWith({ accountIds: overrideAccountId });
+    expect(mockProcessAndSendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: ["member@example.com"],
+        subject: "Override Test",
+      }),
+    );
+  });
 });

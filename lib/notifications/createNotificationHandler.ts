@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { safeParseJson } from "@/lib/networking/safeParseJson";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateCreateNotificationBody } from "./validateCreateNotificationBody";
 import { processAndSendEmail } from "@/lib/emails/processAndSendEmail";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
@@ -10,27 +8,22 @@ import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmai
  * Handler for POST /api/notifications.
  * Sends a notification email to the authenticated account's email address.
  * The recipient is automatically resolved from the API key or Bearer token.
+ * Supports optional account_id override for org API keys.
  * Requires authentication via x-api-key header or Authorization bearer token.
  *
  * @param request - The request object.
  * @returns A NextResponse with the send result.
  */
 export async function createNotificationHandler(request: NextRequest): Promise<NextResponse> {
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) {
-    return authResult;
-  }
-
-  const body = await safeParseJson(request);
-  const validated = validateCreateNotificationBody(body);
+  const validated = await validateCreateNotificationBody(request);
   if (validated instanceof NextResponse) {
     return validated;
   }
 
-  const { cc = [], subject, text, html = "", headers = {}, room_id } = validated;
+  const { cc = [], subject, text, html = "", headers = {}, room_id, accountId } = validated;
 
   // Resolve recipient email from authenticated account
-  const accountEmails = await selectAccountEmails({ accountIds: authResult.accountId });
+  const accountEmails = await selectAccountEmails({ accountIds: accountId });
   const recipientEmail = accountEmails?.[0]?.email;
 
   if (!recipientEmail) {
