@@ -6,12 +6,14 @@ import { validateCreateNotificationBody } from "./validateCreateNotificationBody
 import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 import { getEmailFooter } from "@/lib/emails/getEmailFooter";
 import { selectRoomWithArtist } from "@/lib/supabase/rooms/selectRoomWithArtist";
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { RECOUP_FROM_EMAIL } from "@/lib/const";
 import { marked } from "marked";
 
 /**
  * Handler for POST /api/notifications.
- * Sends a notification email via Resend.
+ * Sends a notification email to the authenticated account's email address.
+ * The recipient is automatically resolved from the API key or Bearer token.
  * Requires authentication via x-api-key header or Authorization bearer token.
  *
  * @param request - The request object.
@@ -29,7 +31,26 @@ export async function createNotificationHandler(request: NextRequest): Promise<N
     return validated;
   }
 
-  const { to, cc = [], subject, text, html = "", headers = {}, room_id } = validated;
+  const { cc = [], subject, text, html = "", headers = {}, room_id } = validated;
+
+  // Resolve recipient email from authenticated account
+  const accountEmails = await selectAccountEmails({ accountIds: authResult.accountId });
+  const recipientEmail = accountEmails?.[0]?.email;
+
+  if (!recipientEmail) {
+    return NextResponse.json(
+      {
+        status: "error",
+        error: "No email address found for the authenticated account.",
+      },
+      {
+        status: 400,
+        headers: getCorsHeaders(),
+      },
+    );
+  }
+
+  const to = [recipientEmail];
 
   const roomData = room_id ? await selectRoomWithArtist(room_id) : null;
   const footer = getEmailFooter(room_id, roomData?.artist_name || undefined);
@@ -50,7 +71,7 @@ export async function createNotificationHandler(request: NextRequest): Promise<N
     return NextResponse.json(
       {
         status: "error",
-        error: data?.error?.message || `Failed to send email from ${RECOUP_FROM_EMAIL} to ${to.join(", ")}.`,
+        error: data?.error?.message || `Failed to send email from ${RECOUP_FROM_EMAIL} to ${recipientEmail}.`,
       },
       {
         status: 502,
@@ -62,7 +83,7 @@ export async function createNotificationHandler(request: NextRequest): Promise<N
   return NextResponse.json(
     {
       success: true,
-      message: `Email sent successfully from ${RECOUP_FROM_EMAIL} to ${to.join(", ")}. CC: ${cc.length > 0 ? cc.join(", ") : "none"}.`,
+      message: `Email sent successfully from ${RECOUP_FROM_EMAIL} to ${recipientEmail}. CC: ${cc.length > 0 ? cc.join(", ") : "none"}.`,
       id: result.id,
     },
     {

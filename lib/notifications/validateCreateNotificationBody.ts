@@ -3,7 +3,6 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { z } from "zod";
 
 export const createNotificationBodySchema = z.object({
-  to: z.array(z.string().email("each 'to' entry must be a valid email")).min(1, "'to' must contain at least one email"),
   cc: z.array(z.string().email("each 'cc' entry must be a valid email")).default([]).optional(),
   subject: z.string({ message: "subject is required" }).min(1, "subject cannot be empty"),
   text: z.string().optional(),

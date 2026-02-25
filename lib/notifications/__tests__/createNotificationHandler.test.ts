@@ -5,6 +5,7 @@ import { createNotificationHandler } from "../createNotificationHandler";
 const mockValidateAuthContext = vi.fn();
 const mockSendEmailWithResend = vi.fn();
 const mockSelectRoomWithArtist = vi.fn();
+const mockSelectAccountEmails = vi.fn();
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: (...args: unknown[]) => mockValidateAuthContext(...args),
@@ -16,6 +17,10 @@ vi.mock("@/lib/emails/sendEmail", () => ({
 
 vi.mock("@/lib/supabase/rooms/selectRoomWithArtist", () => ({
   selectRoomWithArtist: (...args: unknown[]) => mockSelectRoomWithArtist(...args),
+}));
+
+vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
+  default: (...args: unknown[]) => mockSelectAccountEmails(...args),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -45,6 +50,9 @@ describe("createNotificationHandler", () => {
       orgId: null,
       authToken: "test-key",
     });
+    mockSelectAccountEmails.mockResolvedValue([
+      { id: "email-1", account_id: "account-123", email: "owner@example.com", updated_at: "" },
+    ]);
   });
 
   it("returns 401 when authentication fails", async () => {
@@ -52,14 +60,14 @@ describe("createNotificationHandler", () => {
       NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
     );
 
-    const request = createRequest({ to: ["user@example.com"], subject: "Test" });
+    const request = createRequest({ subject: "Test" });
     const response = await createNotificationHandler(request);
 
     expect(response.status).toBe(401);
   });
 
   it("returns 400 when body validation fails", async () => {
-    const request = createRequest({ subject: "Missing to field" });
+    const request = createRequest({});
     const response = await createNotificationHandler(request);
 
     expect(response.status).toBe(400);
@@ -67,11 +75,21 @@ describe("createNotificationHandler", () => {
     expect(data.status).toBe("error");
   });
 
-  it("sends email successfully with text body", async () => {
+  it("returns 400 when account has no email", async () => {
+    mockSelectAccountEmails.mockResolvedValue([]);
+
+    const request = createRequest({ subject: "Test", text: "Hello" });
+    const response = await createNotificationHandler(request);
+
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.error).toContain("No email address found");
+  });
+
+  it("sends email to account owner with text body", async () => {
     mockSendEmailWithResend.mockResolvedValue({ id: "email-123" });
 
     const request = createRequest({
-      to: ["user@example.com"],
       subject: "Test Subject",
       text: "Hello world",
     });
@@ -81,11 +99,12 @@ describe("createNotificationHandler", () => {
     const data = await response.json();
     expect(data.success).toBe(true);
     expect(data.id).toBe("email-123");
-    expect(data.message).toContain("Email sent successfully");
+    expect(data.message).toContain("owner@example.com");
+    expect(mockSelectAccountEmails).toHaveBeenCalledWith({ accountIds: "account-123" });
     expect(mockSendEmailWithResend).toHaveBeenCalledWith(
       expect.objectContaining({
         from: "Agent by Recoup <agent@recoupable.com>",
-        to: ["user@example.com"],
+        to: ["owner@example.com"],
         subject: "Test Subject",
         html: expect.stringContaining("Hello world"),
       }),
@@ -96,7 +115,6 @@ describe("createNotificationHandler", () => {
     mockSendEmailWithResend.mockResolvedValue({ id: "email-456" });
 
     const request = createRequest({
-      to: ["user@example.com"],
       subject: "Test",
       text: "plain text",
       html: "<h1>HTML body</h1>",
@@ -115,7 +133,6 @@ describe("createNotificationHandler", () => {
     mockSendEmailWithResend.mockResolvedValue({ id: "email-789" });
 
     const request = createRequest({
-      to: ["user@example.com"],
       cc: ["cc@example.com"],
       subject: "Test",
       text: "Hello",
@@ -135,7 +152,6 @@ describe("createNotificationHandler", () => {
     mockSelectRoomWithArtist.mockResolvedValue({ artist_name: "Test Artist" });
 
     const request = createRequest({
-      to: ["user@example.com"],
       subject: "Test",
       text: "Hello",
       room_id: "room-abc",
@@ -159,7 +175,6 @@ describe("createNotificationHandler", () => {
     mockSendEmailWithResend.mockResolvedValue(errorResponse);
 
     const request = createRequest({
-      to: ["user@example.com"],
       subject: "Test",
       text: "Hello",
     });

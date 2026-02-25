@@ -7,9 +7,8 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 }));
 
 describe("validateCreateNotificationBody", () => {
-  it("returns validated body for valid input", () => {
+  it("returns validated body for valid input with subject and text", () => {
     const result = validateCreateNotificationBody({
-      to: ["user@example.com"],
       subject: "Test Subject",
       text: "Hello world",
     });
@@ -17,7 +16,6 @@ describe("validateCreateNotificationBody", () => {
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual(
       expect.objectContaining({
-        to: ["user@example.com"],
         subject: "Test Subject",
         text: "Hello world",
       }),
@@ -26,7 +24,6 @@ describe("validateCreateNotificationBody", () => {
 
   it("returns validated body with all optional fields", () => {
     const result = validateCreateNotificationBody({
-      to: ["user@example.com"],
       cc: ["cc@example.com"],
       subject: "Test Subject",
       text: "Hello",
@@ -38,7 +35,6 @@ describe("validateCreateNotificationBody", () => {
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual(
       expect.objectContaining({
-        to: ["user@example.com"],
         cc: ["cc@example.com"],
         subject: "Test Subject",
         text: "Hello",
@@ -49,38 +45,9 @@ describe("validateCreateNotificationBody", () => {
     );
   });
 
-  it("returns 400 when 'to' is missing", () => {
-    const result = validateCreateNotificationBody({
-      subject: "Test",
-    });
-
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(400);
-  });
-
-  it("returns 400 when 'to' is empty array", () => {
-    const result = validateCreateNotificationBody({
-      to: [],
-      subject: "Test",
-    });
-
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(400);
-  });
-
-  it("returns 400 when 'to' contains invalid email", () => {
-    const result = validateCreateNotificationBody({
-      to: ["not-an-email"],
-      subject: "Test",
-    });
-
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(400);
-  });
-
   it("returns 400 when 'subject' is missing", () => {
     const result = validateCreateNotificationBody({
-      to: ["user@example.com"],
+      text: "Hello",
     });
 
     expect(result).toBeInstanceOf(NextResponse);
@@ -89,7 +56,6 @@ describe("validateCreateNotificationBody", () => {
 
   it("returns 400 when 'subject' is empty", () => {
     const result = validateCreateNotificationBody({
-      to: ["user@example.com"],
       subject: "",
     });
 
@@ -99,12 +65,24 @@ describe("validateCreateNotificationBody", () => {
 
   it("returns 400 when 'cc' contains invalid email", () => {
     const result = validateCreateNotificationBody({
-      to: ["user@example.com"],
       subject: "Test",
       cc: ["not-valid"],
     });
 
     expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(400);
+  });
+
+  it("accepts subject-only body (no text or html)", () => {
+    const result = validateCreateNotificationBody({
+      subject: "Test Subject",
+    });
+
+    expect(result).not.toBeInstanceOf(NextResponse);
+    expect(result).toEqual(
+      expect.objectContaining({
+        subject: "Test Subject",
+      }),
+    );
   });
 });

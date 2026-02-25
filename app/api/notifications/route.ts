@@ -17,11 +17,11 @@ export async function OPTIONS() {
 /**
  * POST /api/notifications
  *
- * Sends a notification email via Resend.
+ * Sends a notification email to the authenticated account's email address via Resend.
+ * The recipient is automatically resolved from the API key or Bearer token.
  * Requires authentication via x-api-key header or Authorization bearer token.
  *
  * Body parameters:
- * - to (required): array of email addresses
  * - subject (required): email subject line
  * - text (optional): plain text / Markdown body
  * - html (optional): raw HTML body (takes precedence over text)
