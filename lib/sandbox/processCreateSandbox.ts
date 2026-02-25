@@ -31,7 +31,7 @@ export async function processCreateSandbox(
   const snapshotId = accountSnapshots[0]?.snapshot_id;
 
   // Create sandbox (from snapshot if valid, otherwise fresh)
-  const result = await createSandbox(
+  const { sandbox: _sandbox, ...result } = await createSandbox(
     snapshotId ? { source: { type: "snapshot", snapshotId } } : {},
   );
 

@@ -2,6 +2,7 @@ import ms from "ms";
 import { Sandbox } from "@vercel/sandbox";
 
 export interface SandboxCreatedResponse {
+  sandbox: Sandbox;
   sandboxId: Sandbox["sandboxId"];
   sandboxStatus: Sandbox["status"];
   timeout: Sandbox["timeout"];
@@ -47,6 +48,7 @@ export async function createSandbox(
   );
 
   return {
+    sandbox,
     sandboxId: sandbox.sandboxId,
     sandboxStatus: sandbox.status,
     timeout: sandbox.timeout,

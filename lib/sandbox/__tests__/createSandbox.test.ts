@@ -71,6 +71,7 @@ describe("createSandbox", () => {
     const result = await createSandbox();
 
     expect(result).toEqual({
+      sandbox: mockSandbox,
       sandboxId: "sbx_test123",
       sandboxStatus: "running",
       timeout: 1800000,
