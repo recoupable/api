@@ -145,9 +145,9 @@ describe("registerPromptSandboxTool", () => {
     });
   });
 
-  it("passes account_id override to resolveAccountId", async () => {
+  it("resolves accountId from auth only without override", async () => {
     mockResolveAccountId.mockResolvedValue({
-      accountId: "user_456",
+      accountId: "acc_123",
       error: null,
     });
     mockPromptSandbox.mockResolvedValue({
@@ -155,18 +155,14 @@ describe("registerPromptSandboxTool", () => {
       stdout: "",
       stderr: "",
       exitCode: 0,
-      created: true,
+      created: false,
     });
 
-    const extra = createMockExtra({ accountId: "org_123", orgId: "org_123" });
-    await registeredHandler(
-      { prompt: "test", account_id: "user_456" },
-      extra,
-    );
+    const extra = createMockExtra({ accountId: "acc_123" });
+    await registeredHandler({ prompt: "test" }, extra);
 
     expect(mockResolveAccountId).toHaveBeenCalledWith({
       authInfo: extra.authInfo,
-      accountIdOverride: "user_456",
     });
   });
 

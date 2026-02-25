@@ -13,12 +13,6 @@ const promptSandboxSchema = z.object({
     .string()
     .min(1)
     .describe("The prompt to send to OpenClaw running in the sandbox."),
-  account_id: z
-    .string()
-    .optional()
-    .describe(
-      "The account ID to run the prompt for. Only applicable for organization API keys — org keys can target any account within their organization. Do not use with personal API keys.",
-    ),
 });
 
 /**
@@ -39,7 +33,6 @@ export function registerPromptSandboxTool(server: McpServer): void {
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
       const { accountId, error } = await resolveAccountId({
         authInfo,
-        accountIdOverride: args.account_id,
       });
 
       if (error) {
