@@ -75,7 +75,6 @@ describe("promptSandbox", () => {
       args: ["agent", "--agent", "main", "--message", "do something"],
       env: {
         RECOUP_API_KEY: "caller-api-key",
-        RECOUP_ACCOUNT_ID: "acc_1",
       },
     });
   });

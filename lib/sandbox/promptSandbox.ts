@@ -35,7 +35,6 @@ export async function promptSandbox(
     args: ["agent", "--agent", "main", "--message", prompt],
     env: {
       RECOUP_API_KEY: apiKey,
-      RECOUP_ACCOUNT_ID: accountId,
     },
   });
 
