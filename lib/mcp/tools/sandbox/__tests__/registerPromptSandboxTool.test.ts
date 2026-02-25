@@ -164,6 +164,7 @@ describe("registerPromptSandboxTool", () => {
 
     expect(mockResolveAccountId).toHaveBeenCalledWith({
       authInfo: extra.authInfo,
+      accountIdOverride: undefined,
     });
   });
 

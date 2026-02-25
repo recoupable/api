@@ -33,6 +33,7 @@ export function registerPromptSandboxTool(server: McpServer): void {
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
       const { accountId, error } = await resolveAccountId({
         authInfo,
+        accountIdOverride: undefined,
       });
 
       if (error) {
