@@ -67,10 +67,13 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
-      sandboxId: "sbx_123",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      sandbox: {} as never,
+      response: {
+        sandboxId: "sbx_123",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     vi.mocked(insertAccountSandbox).mockResolvedValue({
       data: {
@@ -120,10 +123,13 @@ describe("createSandboxPostHandler", () => {
       },
     ]);
     vi.mocked(createSandbox).mockResolvedValue({
-      sandboxId: "sbx_456",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      sandbox: {} as never,
+      response: {
+        sandboxId: "sbx_456",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     vi.mocked(insertAccountSandbox).mockResolvedValue({
       data: {
@@ -155,10 +161,13 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
-      sandboxId: "sbx_456",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      sandbox: {} as never,
+      response: {
+        sandboxId: "sbx_456",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     vi.mocked(insertAccountSandbox).mockResolvedValue({
       data: {
@@ -188,10 +197,13 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
-      sandboxId: "sbx_456",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      sandbox: {} as never,
+      response: {
+        sandboxId: "sbx_456",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     vi.mocked(insertAccountSandbox).mockResolvedValue({
       data: {
@@ -226,10 +238,13 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
-      sandboxId: "sbx_789",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      sandbox: {} as never,
+      response: {
+        sandboxId: "sbx_789",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     vi.mocked(insertAccountSandbox).mockResolvedValue({
       data: {
@@ -286,10 +301,13 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
-      sandboxId: "sbx_123",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      sandbox: {} as never,
+      response: {
+        sandboxId: "sbx_123",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     vi.mocked(insertAccountSandbox).mockRejectedValue(new Error("Database insert failed"));
 
@@ -312,10 +330,13 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
-      sandboxId: "sbx_123",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      sandbox: {} as never,
+      response: {
+        sandboxId: "sbx_123",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     vi.mocked(insertAccountSandbox).mockResolvedValue({
       data: {
@@ -355,10 +376,13 @@ describe("createSandboxPostHandler", () => {
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
-      sandboxId: "sbx_123",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
+      sandbox: {} as never,
+      response: {
+        sandboxId: "sbx_123",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
     });
     vi.mocked(insertAccountSandbox).mockResolvedValue({
       data: {

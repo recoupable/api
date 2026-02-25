@@ -67,10 +67,11 @@ describe("createSandbox", () => {
     });
   });
 
-  it("returns sandbox created response with sandboxStatus", async () => {
+  it("returns sandbox instance and response separately", async () => {
     const result = await createSandbox();
 
-    expect(result).toEqual({
+    expect(result.sandbox).toBe(mockSandbox);
+    expect(result.response).toEqual({
       sandboxId: "sbx_test123",
       sandboxStatus: "running",
       timeout: 1800000,
