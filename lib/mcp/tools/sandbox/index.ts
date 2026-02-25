@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerPromptSandboxTool } from "./registerPromptSandboxTool";
 import { registerRunSandboxCommandTool } from "./registerRunSandboxCommandTool";
 
 /**
@@ -7,5 +8,6 @@ import { registerRunSandboxCommandTool } from "./registerRunSandboxCommandTool";
  * @param server - The MCP server instance to register tools on.
  */
 export const registerAllSandboxTools = (server: McpServer): void => {
+  registerPromptSandboxTool(server);
   registerRunSandboxCommandTool(server);
 };
