@@ -21,7 +21,7 @@ export function registerSendEmailTool(server: McpServer): void {
     async (args: SendEmailInput) => {
       const result = await processAndSendEmail(args);
 
-      if (!result.success) {
+      if (result.success === false) {
         return getToolResultError(result.error);
       }
 

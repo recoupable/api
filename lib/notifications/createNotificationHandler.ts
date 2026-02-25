@@ -56,7 +56,7 @@ export async function createNotificationHandler(request: NextRequest): Promise<N
     room_id,
   });
 
-  if (!result.success) {
+  if (result.success === false) {
     return NextResponse.json(
       {
         status: "error",
