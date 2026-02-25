@@ -3,12 +3,8 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateCreateNotificationBody } from "./validateCreateNotificationBody";
-import { sendEmailWithResend } from "@/lib/emails/sendEmail";
-import { getEmailFooter } from "@/lib/emails/getEmailFooter";
-import { selectRoomWithArtist } from "@/lib/supabase/rooms/selectRoomWithArtist";
+import { processAndSendEmail } from "@/lib/emails/processAndSendEmail";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
-import { RECOUP_FROM_EMAIL } from "@/lib/const";
-import { marked } from "marked";
 
 /**
  * Handler for POST /api/notifications.
@@ -50,28 +46,21 @@ export async function createNotificationHandler(request: NextRequest): Promise<N
     );
   }
 
-  const to = [recipientEmail];
-
-  const roomData = room_id ? await selectRoomWithArtist(room_id) : null;
-  const footer = getEmailFooter(room_id, roomData?.artist_name || undefined);
-  const bodyHtml = html || (text ? await marked(text) : "");
-  const htmlWithFooter = `${bodyHtml}\n\n${footer}`;
-
-  const result = await sendEmailWithResend({
-    from: RECOUP_FROM_EMAIL,
-    to,
-    cc: cc.length > 0 ? cc : undefined,
+  const result = await processAndSendEmail({
+    to: [recipientEmail],
+    cc,
     subject,
-    html: htmlWithFooter,
+    text,
+    html,
     headers,
+    room_id,
   });
 
-  if (result instanceof NextResponse) {
-    const data = await result.json();
+  if (!result.success) {
     return NextResponse.json(
       {
         status: "error",
-        error: data?.error?.message || `Failed to send email from ${RECOUP_FROM_EMAIL} to ${recipientEmail}.`,
+        error: result.error,
       },
       {
         status: 502,
@@ -83,7 +72,7 @@ export async function createNotificationHandler(request: NextRequest): Promise<N
   return NextResponse.json(
     {
       success: true,
-      message: `Email sent successfully from ${RECOUP_FROM_EMAIL} to ${recipientEmail}. CC: ${cc.length > 0 ? cc.join(", ") : "none"}.`,
+      message: result.message,
       id: result.id,
     },
     {

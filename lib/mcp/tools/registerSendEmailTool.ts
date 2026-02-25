@@ -1,13 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { sendEmailSchema, type SendEmailInput } from "@/lib/emails/sendEmailSchema";
-import { sendEmailWithResend } from "@/lib/emails/sendEmail";
+import { processAndSendEmail } from "@/lib/emails/processAndSendEmail";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { RECOUP_FROM_EMAIL } from "@/lib/const";
-import { getEmailFooter } from "@/lib/emails/getEmailFooter";
-import { selectRoomWithArtist } from "@/lib/supabase/rooms/selectRoomWithArtist";
-import { NextResponse } from "next/server";
-import { marked } from "marked";
 
 /**
  * Registers the "send_email" tool on the MCP server.
@@ -23,33 +19,16 @@ export function registerSendEmailTool(server: McpServer): void {
       inputSchema: sendEmailSchema,
     },
     async (args: SendEmailInput) => {
-      const { to, cc = [], subject, text, html = "", headers = {}, room_id } = args;
+      const result = await processAndSendEmail(args);
 
-      const roomData = room_id ? await selectRoomWithArtist(room_id) : null;
-      const footer = getEmailFooter(room_id, roomData?.artist_name || undefined);
-      const bodyHtml = html || (text ? marked(text) : "");
-      const htmlWithFooter = `${bodyHtml}\n\n${footer}`;
-
-      const result = await sendEmailWithResend({
-        from: RECOUP_FROM_EMAIL,
-        to,
-        cc: cc.length > 0 ? cc : undefined,
-        subject,
-        html: htmlWithFooter,
-        headers,
-      });
-
-      if (result instanceof NextResponse) {
-        const data = await result.json();
-        return getToolResultError(
-          data?.error?.message || `Failed to send email from ${RECOUP_FROM_EMAIL} to ${to}.`,
-        );
+      if (!result.success) {
+        return getToolResultError(result.error);
       }
 
       return getToolResultSuccess({
         success: true,
-        message: `Email sent successfully from ${RECOUP_FROM_EMAIL} to ${to}. CC: ${cc.length > 0 ? JSON.stringify(cc) : "none"}.`,
-        data: result,
+        message: result.message,
+        data: { id: result.id },
       });
     },
   );

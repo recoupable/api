@@ -3,24 +3,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { createNotificationHandler } from "../createNotificationHandler";
 
 const mockValidateAuthContext = vi.fn();
-const mockSendEmailWithResend = vi.fn();
-const mockSelectRoomWithArtist = vi.fn();
 const mockSelectAccountEmails = vi.fn();
+const mockProcessAndSendEmail = vi.fn();
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: (...args: unknown[]) => mockValidateAuthContext(...args),
 }));
 
-vi.mock("@/lib/emails/sendEmail", () => ({
-  sendEmailWithResend: (...args: unknown[]) => mockSendEmailWithResend(...args),
-}));
-
-vi.mock("@/lib/supabase/rooms/selectRoomWithArtist", () => ({
-  selectRoomWithArtist: (...args: unknown[]) => mockSelectRoomWithArtist(...args),
-}));
-
 vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
   default: (...args: unknown[]) => mockSelectAccountEmails(...args),
+}));
+
+vi.mock("@/lib/emails/processAndSendEmail", () => ({
+  processAndSendEmail: (...args: unknown[]) => mockProcessAndSendEmail(...args),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -87,7 +82,11 @@ describe("createNotificationHandler", () => {
   });
 
   it("sends email to account owner with text body", async () => {
-    mockSendEmailWithResend.mockResolvedValue({ id: "email-123" });
+    mockProcessAndSendEmail.mockResolvedValue({
+      success: true,
+      message: "Email sent successfully from Agent by Recoup <agent@recoupable.com> to owner@example.com. CC: none.",
+      id: "email-123",
+    });
 
     const request = createRequest({
       subject: "Test Subject",
@@ -101,57 +100,26 @@ describe("createNotificationHandler", () => {
     expect(data.id).toBe("email-123");
     expect(data.message).toContain("owner@example.com");
     expect(mockSelectAccountEmails).toHaveBeenCalledWith({ accountIds: "account-123" });
-    expect(mockSendEmailWithResend).toHaveBeenCalledWith(
-      expect.objectContaining({
-        from: "Agent by Recoup <agent@recoupable.com>",
-        to: ["owner@example.com"],
-        subject: "Test Subject",
-        html: expect.stringContaining("Hello world"),
-      }),
-    );
-  });
-
-  it("sends email with html body taking precedence over text", async () => {
-    mockSendEmailWithResend.mockResolvedValue({ id: "email-456" });
-
-    const request = createRequest({
-      subject: "Test",
-      text: "plain text",
-      html: "<h1>HTML body</h1>",
+    expect(mockProcessAndSendEmail).toHaveBeenCalledWith({
+      to: ["owner@example.com"],
+      cc: [],
+      subject: "Test Subject",
+      text: "Hello world",
+      html: "",
+      headers: {},
+      room_id: undefined,
     });
-    const response = await createNotificationHandler(request);
-
-    expect(response.status).toBe(200);
-    expect(mockSendEmailWithResend).toHaveBeenCalledWith(
-      expect.objectContaining({
-        html: expect.stringContaining("<h1>HTML body</h1>"),
-      }),
-    );
   });
 
-  it("includes CC addresses when provided", async () => {
-    mockSendEmailWithResend.mockResolvedValue({ id: "email-789" });
+  it("passes CC and room_id through to processAndSendEmail", async () => {
+    mockProcessAndSendEmail.mockResolvedValue({
+      success: true,
+      message: "Email sent successfully.",
+      id: "email-789",
+    });
 
     const request = createRequest({
       cc: ["cc@example.com"],
-      subject: "Test",
-      text: "Hello",
-    });
-    const response = await createNotificationHandler(request);
-
-    expect(response.status).toBe(200);
-    expect(mockSendEmailWithResend).toHaveBeenCalledWith(
-      expect.objectContaining({
-        cc: ["cc@example.com"],
-      }),
-    );
-  });
-
-  it("includes room footer when room_id is provided", async () => {
-    mockSendEmailWithResend.mockResolvedValue({ id: "email-room" });
-    mockSelectRoomWithArtist.mockResolvedValue({ artist_name: "Test Artist" });
-
-    const request = createRequest({
       subject: "Test",
       text: "Hello",
       room_id: "room-abc",
@@ -159,20 +127,19 @@ describe("createNotificationHandler", () => {
     const response = await createNotificationHandler(request);
 
     expect(response.status).toBe(200);
-    expect(mockSelectRoomWithArtist).toHaveBeenCalledWith("room-abc");
-    expect(mockSendEmailWithResend).toHaveBeenCalledWith(
+    expect(mockProcessAndSendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
-        html: expect.stringContaining("Test Artist"),
+        cc: ["cc@example.com"],
+        room_id: "room-abc",
       }),
     );
   });
 
   it("returns 502 when email delivery fails", async () => {
-    const errorResponse = NextResponse.json(
-      { error: { message: "Rate limited" } },
-      { status: 429 },
-    );
-    mockSendEmailWithResend.mockResolvedValue(errorResponse);
+    mockProcessAndSendEmail.mockResolvedValue({
+      success: false,
+      error: "Rate limited",
+    });
 
     const request = createRequest({
       subject: "Test",
