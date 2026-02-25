@@ -3,13 +3,14 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetTaskRunQuery } from "./validateGetTaskRunQuery";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
+import { listTaskRuns } from "@/lib/trigger/listTaskRuns";
 
 /**
  * Handles GET /api/tasks/runs requests.
- * Retrieves the status of a Trigger.dev task run.
+ * Retrieves a single task run by ID, or lists recent runs for the authenticated account.
  *
  * @param request - The NextRequest object
- * @returns A NextResponse with the task run status
+ * @returns A NextResponse with the task run status or list
  */
 export async function getTaskRunHandler(request: NextRequest): Promise<NextResponse> {
   // Validate auth context and query parameters
@@ -19,6 +20,14 @@ export async function getTaskRunHandler(request: NextRequest): Promise<NextRespo
   }
 
   try {
+    if (validatedQuery.mode === "list") {
+      const runs = await listTaskRuns(validatedQuery.accountId, validatedQuery.limit);
+      return NextResponse.json(
+        { status: "success", runs },
+        { status: 200, headers: getCorsHeaders() },
+      );
+    }
+
     const result = await retrieveTaskRun(validatedQuery.runId);
 
     if (result === null) {
