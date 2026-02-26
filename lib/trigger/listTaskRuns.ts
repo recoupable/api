@@ -1,31 +1,20 @@
 import { runs } from "@trigger.dev/sdk/v3";
-import type { TaskRunResult } from "./retrieveTaskRun";
+import type { TaskRun } from "./retrieveTaskRun";
 import { toISOStringOrNull } from "./toISOStringOrNull";
-
-const PENDING_STATUSES = ["EXECUTING", "QUEUED", "REATTEMPTING", "PENDING", "WAITING_FOR_DEPLOY"];
-const FAILED_STATUSES = [
-  "FAILED",
-  "CRASHED",
-  "CANCELED",
-  "SYSTEM_FAILURE",
-  "INTERRUPTED",
-  "EXPIRED",
-  "TIMED_OUT",
-];
 
 /**
  * Lists recent task runs for an account by querying the Trigger.dev API
- * using the `account:<accountId>` tag. Returns the same TaskRunResult shape
- * as retrieveTaskRun.
+ * using the `account:<accountId>` tag. Returns the same TaskRun shape
+ * as retrieveTaskRun (without output/error which are only on retrieve).
  *
  * @param accountId - The account ID to filter runs by
  * @param limit - Maximum number of runs to return (default 20)
- * @returns Array of TaskRunResult objects
+ * @returns Array of TaskRun objects
  */
 export async function listTaskRuns(
   accountId: string,
   limit: number = 20,
-): Promise<TaskRunResult[]> {
+): Promise<TaskRun[]> {
   const tag = `account:${accountId}`;
   console.log("[listTaskRuns] querying runs", { tag, limit });
 
@@ -40,34 +29,15 @@ export async function listTaskRuns(
     statuses: result.data.map(r => r.status),
   });
 
-  return result.data.map(run => {
-    const common = {
-      id: run.id,
-      metadata: (run.metadata as Record<string, unknown>) ?? null,
-      taskIdentifier: run.taskIdentifier,
-      createdAt: run.createdAt instanceof Date ? run.createdAt.toISOString() : String(run.createdAt),
-      startedAt: toISOStringOrNull(run.startedAt),
-      finishedAt: toISOStringOrNull(run.finishedAt),
-      durationMs: run.durationMs ?? null,
-    };
-
-    if (run.status === "COMPLETED") {
-      return { ...common, status: "complete" as const, data: null };
-    }
-
-    if (FAILED_STATUSES.includes(run.status)) {
-      let errorMessage = "Task execution failed";
-      if (run.status === "CANCELED") {
-        errorMessage = "Task was canceled";
-      }
-      return { ...common, status: "failed" as const, error: errorMessage };
-    }
-
-    if (PENDING_STATUSES.includes(run.status)) {
-      return { ...common, status: "pending" as const };
-    }
-
-    // Unknown status, treat as pending
-    return { ...common, status: "pending" as const };
-  });
+  return result.data.map(run => ({
+    id: run.id,
+    status: run.status,
+    taskIdentifier: run.taskIdentifier,
+    createdAt: run.createdAt instanceof Date ? run.createdAt.toISOString() : String(run.createdAt),
+    startedAt: toISOStringOrNull(run.startedAt),
+    finishedAt: toISOStringOrNull(run.finishedAt),
+    durationMs: run.durationMs,
+    tags: run.tags,
+    metadata: (run.metadata as Record<string, unknown>) ?? null,
+  }));
 }

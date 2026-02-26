@@ -1,75 +1,44 @@
 import { runs } from "@trigger.dev/sdk/v3";
 import { toISOStringOrNull } from "./toISOStringOrNull";
 
-interface TaskRunCommonFields {
+export interface TaskRun {
   id: string;
-  metadata: Record<string, unknown> | null;
+  status: string;
   taskIdentifier: string;
   createdAt: string;
   startedAt: string | null;
   finishedAt: string | null;
-  durationMs: number | null;
+  durationMs: number;
+  tags: string[];
+  metadata: Record<string, unknown> | null;
+  output?: unknown;
+  error?: { message: string; name?: string; stackTrace?: string } | null;
 }
 
-export type TaskRunResult =
-  | (TaskRunCommonFields & { status: "pending" })
-  | (TaskRunCommonFields & { status: "complete"; data: unknown })
-  | (TaskRunCommonFields & { status: "failed"; error: string });
-
-const PENDING_STATUSES = ["EXECUTING", "QUEUED", "REATTEMPTING", "PENDING", "WAITING_FOR_DEPLOY"];
-const FAILED_STATUSES = [
-  "FAILED",
-  "CRASHED",
-  "CANCELED",
-  "SYSTEM_FAILURE",
-  "INTERRUPTED",
-  "EXPIRED",
-  "TIMED_OUT",
-];
-
 /**
- * Retrieves the status of a Trigger.dev task run.
+ * Retrieves a Trigger.dev task run by ID.
  *
  * @param runId - The unique identifier of the task run
- * @returns The task run result with status and data/error, or null if not found
+ * @returns The raw task run data, or null if not found
  */
-export async function retrieveTaskRun(runId: string): Promise<TaskRunResult | null> {
+export async function retrieveTaskRun(runId: string): Promise<TaskRun | null> {
   const run = await runs.retrieve(runId);
 
   if (!run) {
     return null;
   }
 
-  const common: TaskRunCommonFields = {
+  return {
     id: run.id,
-    metadata: (run.metadata as Record<string, unknown>) ?? null,
+    status: run.status,
     taskIdentifier: run.taskIdentifier,
     createdAt: run.createdAt instanceof Date ? run.createdAt.toISOString() : String(run.createdAt),
     startedAt: toISOStringOrNull(run.startedAt),
     finishedAt: toISOStringOrNull(run.finishedAt),
-    durationMs: run.durationMs ?? null,
+    durationMs: run.durationMs,
+    tags: run.tags,
+    metadata: (run.metadata as Record<string, unknown>) ?? null,
+    output: run.output ?? null,
+    error: run.error ? (run.error as TaskRun["error"]) : null,
   };
-
-  if (PENDING_STATUSES.includes(run.status)) {
-    return { ...common, status: "pending" };
-  }
-
-  if (run.status === "COMPLETED") {
-    return { ...common, status: "complete", data: run.output ?? null };
-  }
-
-  if (FAILED_STATUSES.includes(run.status)) {
-    let errorMessage = "Task execution failed";
-
-    if (run.status === "CANCELED") {
-      errorMessage = "Task was canceled";
-    } else if (run.error && typeof run.error === "object" && "message" in run.error) {
-      errorMessage = (run.error as { message: string }).message;
-    }
-
-    return { ...common, status: "failed", error: errorMessage };
-  }
-
-  // Unknown status, treat as pending
-  return { ...common, status: "pending" };
 }
