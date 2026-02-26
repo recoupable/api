@@ -66,35 +66,31 @@ describe("validateGetTaskRunQuery", () => {
       });
     });
 
-    it("returns error when runId is missing", async () => {
+    it("returns list mode when runId is missing", async () => {
       const request = createMockRequest("http://localhost:3000/api/tasks/runs");
 
       const result = await validateGetTaskRunQuery(request);
 
-      expect(result).toBeInstanceOf(NextResponse);
-      if (result instanceof NextResponse) {
-        expect(result.status).toBe(400);
-      }
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect(result).toEqual({ mode: "list", accountId: "acc_123", limit: 20 });
     });
 
-    it("returns error when runId is empty string", async () => {
+    it("returns list mode when runId is empty string", async () => {
       const request = createMockRequest("http://localhost:3000/api/tasks/runs?runId=");
 
       const result = await validateGetTaskRunQuery(request);
 
-      expect(result).toBeInstanceOf(NextResponse);
-      if (result instanceof NextResponse) {
-        expect(result.status).toBe(400);
-      }
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect(result).toEqual({ mode: "list", accountId: "acc_123", limit: 20 });
     });
 
-    it("returns validated runId when provided", async () => {
+    it("returns retrieve mode with validated runId when provided", async () => {
       const request = createMockRequest("http://localhost:3000/api/tasks/runs?runId=run_abc123");
 
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ runId: "run_abc123" });
+      expect(result).toEqual({ mode: "retrieve", runId: "run_abc123" });
     });
 
     it("trims whitespace from runId", async () => {
@@ -105,20 +101,16 @@ describe("validateGetTaskRunQuery", () => {
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ runId: "run_abc123" });
+      expect(result).toEqual({ mode: "retrieve", runId: "run_abc123" });
     });
 
-    it("returns error response with proper error message", async () => {
-      const request = createMockRequest("http://localhost:3000/api/tasks/runs");
+    it("returns list mode with custom limit", async () => {
+      const request = createMockRequest("http://localhost:3000/api/tasks/runs?limit=50");
 
       const result = await validateGetTaskRunQuery(request);
 
-      expect(result).toBeInstanceOf(NextResponse);
-      if (result instanceof NextResponse) {
-        const json = await result.json();
-        expect(json.status).toBe("error");
-        expect(json.error).toContain("runId");
-      }
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect(result).toEqual({ mode: "list", accountId: "acc_123", limit: 50 });
     });
   });
 });
