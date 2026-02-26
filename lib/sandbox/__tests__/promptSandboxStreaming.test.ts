@@ -49,12 +49,14 @@ describe("promptSandboxStreaming", () => {
     });
 
     while (true) {
-      const { value, done } = await gen.next();
-      if (done) {
-        finalResult = value;
+      const result = await gen.next();
+      if (result.done) {
+        finalResult = result.value;
         break;
       }
-      chunks.push(value);
+      chunks.push(
+        result.value as { data: string; stream: "stdout" | "stderr" },
+      );
     }
 
     expect(chunks).toEqual([
@@ -89,7 +91,6 @@ describe("promptSandboxStreaming", () => {
     };
     mockRunCommand.mockResolvedValue(mockCmd);
 
-    const chunks: Array<{ data: string; stream: "stdout" | "stderr" }> = [];
     let finalResult;
 
     const gen = promptSandboxStreaming({
@@ -99,12 +100,11 @@ describe("promptSandboxStreaming", () => {
     });
 
     while (true) {
-      const { value, done } = await gen.next();
-      if (done) {
-        finalResult = value;
+      const result = await gen.next();
+      if (result.done) {
+        finalResult = result.value;
         break;
       }
-      chunks.push(value);
     }
 
     expect(finalResult).toEqual({
@@ -140,9 +140,8 @@ describe("promptSandboxStreaming", () => {
     });
 
     // Drain the generator
-    while (true) {
-      const { done } = await gen.next();
-      if (done) break;
+    for await (const _ of gen) {
+      // consume
     }
 
     expect(mockRunCommand).toHaveBeenCalledWith({
@@ -178,9 +177,9 @@ describe("promptSandboxStreaming", () => {
 
     let finalResult;
     while (true) {
-      const { value, done } = await gen.next();
-      if (done) {
-        finalResult = value;
+      const result = await gen.next();
+      if (result.done) {
+        finalResult = result.value;
         break;
       }
     }
@@ -214,9 +213,9 @@ describe("promptSandboxStreaming", () => {
 
     let finalResult;
     while (true) {
-      const { value, done } = await gen.next();
-      if (done) {
-        finalResult = value;
+      const result = await gen.next();
+      if (result.done) {
+        finalResult = result.value;
         break;
       }
     }

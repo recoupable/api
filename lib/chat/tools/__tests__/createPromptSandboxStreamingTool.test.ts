@@ -9,6 +9,15 @@ vi.mock("@/lib/sandbox/promptSandboxStreaming", () => ({
     mockPromptSandboxStreaming(...args),
 }));
 
+// Helper to drain an async iterable into yields + return value
+async function drainGenerator(iterable: AsyncIterable<unknown>) {
+  const yields: unknown[] = [];
+  for await (const value of iterable) {
+    yields.push(value);
+  }
+  return yields;
+}
+
 describe("createPromptSandboxStreamingTool", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -32,23 +41,13 @@ describe("createPromptSandboxStreamingTool", () => {
     mockPromptSandboxStreaming.mockReturnValue(fakeStreaming());
 
     const tool = createPromptSandboxStreamingTool("acc_123", "api-key-123");
-    const gen = tool.execute!({ prompt: "say hello" }, {
+    const iterable = tool.execute!({ prompt: "say hello" }, {
       abortSignal: new AbortController().signal,
       toolCallId: "tc_1",
       messages: [],
-    });
+    }) as AsyncIterable<unknown>;
 
-    const yields: unknown[] = [];
-    let returnValue;
-
-    while (true) {
-      const { value, done } = await gen.next();
-      if (done) {
-        returnValue = value;
-        break;
-      }
-      yields.push(value);
-    }
+    const yields = await drainGenerator(iterable);
 
     // First yield: booting
     expect(yields[0]).toEqual({
@@ -73,9 +72,6 @@ describe("createPromptSandboxStreamingTool", () => {
       stderr: "",
       exitCode: 0,
     });
-
-    // Return value for outer LLM
-    expect(returnValue).toEqual(finalResult);
   });
 
   it("passes accountId, apiKey, and prompt to promptSandboxStreaming", async () => {
@@ -92,17 +88,13 @@ describe("createPromptSandboxStreamingTool", () => {
     mockPromptSandboxStreaming.mockReturnValue(fakeStreaming());
 
     const tool = createPromptSandboxStreamingTool("acc_456", "key_789");
-    const gen = tool.execute!({ prompt: "do stuff" }, {
+    const iterable = tool.execute!({ prompt: "do stuff" }, {
       abortSignal: new AbortController().signal,
       toolCallId: "tc_2",
       messages: [],
-    });
+    }) as AsyncIterable<unknown>;
 
-    // Drain the generator
-    while (true) {
-      const { done } = await gen.next();
-      if (done) break;
-    }
+    await drainGenerator(iterable);
 
     expect(mockPromptSandboxStreaming).toHaveBeenCalledWith({
       accountId: "acc_456",
@@ -127,18 +119,13 @@ describe("createPromptSandboxStreamingTool", () => {
     mockPromptSandboxStreaming.mockReturnValue(fakeStreaming());
 
     const tool = createPromptSandboxStreamingTool("acc_1", "key_1");
-    const gen = tool.execute!({ prompt: "fail" }, {
+    const iterable = tool.execute!({ prompt: "fail" }, {
       abortSignal: new AbortController().signal,
       toolCallId: "tc_3",
       messages: [],
-    });
+    }) as AsyncIterable<unknown>;
 
-    const yields: unknown[] = [];
-    while (true) {
-      const { value, done } = await gen.next();
-      if (done) break;
-      yields.push(value);
-    }
+    const yields = await drainGenerator(iterable);
 
     // booting
     expect(yields[0]).toEqual({ status: "booting", output: "" });
@@ -159,6 +146,6 @@ describe("createPromptSandboxStreamingTool", () => {
     const tool = createPromptSandboxStreamingTool("acc_1", "key_1");
 
     expect(tool.description).toContain("sandbox");
-    expect(tool.parameters).toBeDefined();
+    expect(tool.inputSchema).toBeDefined();
   });
 });

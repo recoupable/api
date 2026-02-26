@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { tool } from "ai";
+import type { Tool } from "ai";
 import { promptSandboxStreaming } from "@/lib/sandbox/promptSandboxStreaming";
 
 const promptSandboxSchema = z.object({
@@ -8,6 +8,21 @@ const promptSandboxSchema = z.object({
     .min(1)
     .describe("The prompt to send to OpenClaw running in the sandbox."),
 });
+
+interface SandboxStreamProgress {
+  status: "booting" | "streaming" | "complete";
+  output: string;
+  stderr?: string;
+  exitCode?: number;
+}
+
+interface PromptSandboxFinalResult {
+  sandboxId: string;
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+  created: boolean;
+}
 
 /**
  * Creates a local AI SDK generator tool that streams sandbox output to the UI.
@@ -20,13 +35,13 @@ const promptSandboxSchema = z.object({
 export function createPromptSandboxStreamingTool(
   accountId: string,
   apiKey: string,
-) {
-  return tool({
+): Tool<z.infer<typeof promptSandboxSchema>, SandboxStreamProgress> {
+  return {
     description:
       "Send a prompt to OpenClaw running in a persistent sandbox. " +
       "Reuses the account's existing running sandbox or creates one from the latest snapshot. " +
       "Streams output in real-time. The sandbox stays alive for follow-up prompts.",
-    parameters: promptSandboxSchema,
+    inputSchema: promptSandboxSchema,
     execute: async function* ({ prompt }, { abortSignal }) {
       yield { status: "booting" as const, output: "" };
 
@@ -38,25 +53,23 @@ export function createPromptSandboxStreamingTool(
       });
 
       let stdout = "";
-      let stderr = "";
-      let exitCode = 0;
-      let sandboxId = "";
-      let created = false;
+      let finalResult: PromptSandboxFinalResult | undefined;
 
       while (true) {
-        const { value, done } = await gen.next();
+        const iterResult = await gen.next();
 
-        if (done) {
-          sandboxId = value.sandboxId;
-          stdout = value.stdout;
-          stderr = value.stderr;
-          exitCode = value.exitCode;
-          created = value.created;
+        if (iterResult.done) {
+          finalResult = iterResult.value as PromptSandboxFinalResult;
           break;
         }
 
-        if (value.stream === "stdout") {
-          stdout += value.data;
+        const chunk = iterResult.value as {
+          data: string;
+          stream: "stdout" | "stderr";
+        };
+
+        if (chunk.stream === "stdout") {
+          stdout += chunk.data;
         }
 
         yield { status: "streaming" as const, output: stdout };
@@ -64,12 +77,12 @@ export function createPromptSandboxStreamingTool(
 
       yield {
         status: "complete" as const,
-        output: stdout,
-        stderr,
-        exitCode,
+        output: finalResult!.stdout,
+        stderr: finalResult!.stderr,
+        exitCode: finalResult!.exitCode,
       };
 
-      return { sandboxId, stdout, stderr, exitCode, created };
+      return finalResult as never;
     },
-  });
+  };
 }
