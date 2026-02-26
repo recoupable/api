@@ -1,4 +1,5 @@
 import { runs } from "@trigger.dev/sdk/v3";
+import { toISOStringOrNull } from "./toISOStringOrNull";
 
 interface TaskRunCommonFields {
   id: string;
@@ -44,16 +45,8 @@ export async function retrieveTaskRun(runId: string): Promise<TaskRunResult | nu
     metadata: (run.metadata as Record<string, unknown>) ?? null,
     taskIdentifier: run.taskIdentifier,
     createdAt: run.createdAt instanceof Date ? run.createdAt.toISOString() : String(run.createdAt),
-    startedAt: run.startedAt
-      ? run.startedAt instanceof Date
-        ? run.startedAt.toISOString()
-        : String(run.startedAt)
-      : null,
-    finishedAt: run.finishedAt
-      ? run.finishedAt instanceof Date
-        ? run.finishedAt.toISOString()
-        : String(run.finishedAt)
-      : null,
+    startedAt: toISOStringOrNull(run.startedAt),
+    finishedAt: toISOStringOrNull(run.finishedAt),
     durationMs: run.durationMs ?? null,
   };
 

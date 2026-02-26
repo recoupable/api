@@ -1,5 +1,6 @@
 import { runs } from "@trigger.dev/sdk/v3";
 import type { TaskRunResult } from "./retrieveTaskRun";
+import { toISOStringOrNull } from "./toISOStringOrNull";
 
 const PENDING_STATUSES = ["EXECUTING", "QUEUED", "REATTEMPTING", "PENDING", "WAITING_FOR_DEPLOY"];
 const FAILED_STATUSES = [
@@ -11,11 +12,6 @@ const FAILED_STATUSES = [
   "EXPIRED",
   "TIMED_OUT",
 ];
-
-function toISOStringOrNull(value: Date | string | null | undefined): string | null {
-  if (!value) return null;
-  return value instanceof Date ? value.toISOString() : String(value);
-}
 
 /**
  * Lists recent task runs for an account by querying the Trigger.dev API
