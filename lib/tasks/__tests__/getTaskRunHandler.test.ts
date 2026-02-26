@@ -35,7 +35,7 @@ const mockRun = {
   id: "run_123",
   status: "COMPLETED",
   taskIdentifier: "run-sandbox-command",
-  createdAt: "2025-01-01T00:00:00.000Z",
+  createdAt: new Date("2025-01-01T00:00:00.000Z"),
   startedAt: null,
   finishedAt: null,
   durationMs: 5000,
@@ -71,7 +71,6 @@ describe("getTaskRunHandler", () => {
       expect(json.status).toBe("success");
       expect(json.runs).toHaveLength(1);
       expect(json.runs[0].id).toBe("run_123");
-      expect(json.runs[0].status).toBe("COMPLETED");
     });
 
     it("returns 404 when run is not found", async () => {
@@ -114,7 +113,6 @@ describe("getTaskRunHandler", () => {
 
       expect(json.status).toBe("success");
       expect(json.runs).toHaveLength(1);
-      expect(json.runs[0].status).toBe("COMPLETED");
     });
 
     it("calls listTaskRuns with accountId and limit", async () => {

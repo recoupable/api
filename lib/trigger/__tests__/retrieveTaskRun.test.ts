@@ -8,7 +8,7 @@ vi.mock("@trigger.dev/sdk/v3", () => ({
   },
 }));
 
-const baseMockRun = {
+const mockRun = {
   id: "run_123",
   status: "COMPLETED",
   taskIdentifier: "setup-sandbox",
@@ -28,7 +28,7 @@ describe("retrieveTaskRun", () => {
   });
 
   it("calls runs.retrieve with the provided runId", async () => {
-    vi.mocked(runs.retrieve).mockResolvedValue(baseMockRun);
+    vi.mocked(runs.retrieve).mockResolvedValue(mockRun);
 
     await retrieveTaskRun("run_123");
 
@@ -43,77 +43,12 @@ describe("retrieveTaskRun", () => {
     expect(result).toBeNull();
   });
 
-  it("passes through the raw status without mapping", async () => {
-    vi.mocked(runs.retrieve).mockResolvedValue({ ...baseMockRun, status: "EXECUTING" });
+  it("returns the raw SDK object without mapping", async () => {
+    vi.mocked(runs.retrieve).mockResolvedValue(mockRun);
 
     const result = await retrieveTaskRun("run_123");
 
-    expect(result?.status).toBe("EXECUTING");
-  });
-
-  it("converts dates to ISO strings", async () => {
-    vi.mocked(runs.retrieve).mockResolvedValue(baseMockRun);
-
-    const result = await retrieveTaskRun("run_123");
-
-    expect(result?.createdAt).toBe("2025-01-01T00:00:00.000Z");
-    expect(result?.startedAt).toBe("2025-01-01T00:00:01.000Z");
-    expect(result?.finishedAt).toBe("2025-01-01T00:00:10.000Z");
-  });
-
-  it("returns null for missing optional date fields", async () => {
-    vi.mocked(runs.retrieve).mockResolvedValue({
-      ...baseMockRun,
-      startedAt: undefined,
-      finishedAt: undefined,
-    });
-
-    const result = await retrieveTaskRun("run_123");
-
-    expect(result?.startedAt).toBeNull();
-    expect(result?.finishedAt).toBeNull();
-  });
-
-  it("includes output from the run", async () => {
-    vi.mocked(runs.retrieve).mockResolvedValue(baseMockRun);
-
-    const result = await retrieveTaskRun("run_123");
-
-    expect(result?.output).toEqual({ result: "ok" });
-  });
-
-  it("returns null output when not present", async () => {
-    vi.mocked(runs.retrieve).mockResolvedValue({ ...baseMockRun, output: undefined });
-
-    const result = await retrieveTaskRun("run_123");
-
-    expect(result?.output).toBeNull();
-  });
-
-  it("includes error from the run", async () => {
-    const error = { message: "Task failed", name: "Error" };
-    vi.mocked(runs.retrieve).mockResolvedValue({ ...baseMockRun, error });
-
-    const result = await retrieveTaskRun("run_123");
-
-    expect(result?.error).toEqual(error);
-  });
-
-  it("includes tags and metadata", async () => {
-    vi.mocked(runs.retrieve).mockResolvedValue(baseMockRun);
-
-    const result = await retrieveTaskRun("run_123");
-
-    expect(result?.tags).toEqual(["account:acc_123"]);
-    expect(result?.metadata).toEqual({ currentStep: "Complete", logs: ["step 1"] });
-  });
-
-  it("returns null metadata when not set", async () => {
-    vi.mocked(runs.retrieve).mockResolvedValue({ ...baseMockRun, metadata: undefined });
-
-    const result = await retrieveTaskRun("run_123");
-
-    expect(result?.metadata).toBeNull();
+    expect(result).toBe(mockRun);
   });
 
   it("throws error when runs.retrieve fails", async () => {
