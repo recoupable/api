@@ -7,13 +7,14 @@ import { listTaskRuns } from "@/lib/trigger/listTaskRuns";
 
 /**
  * Handles GET /api/tasks/runs requests.
- * Retrieves a single task run by ID, or lists recent runs for the authenticated account.
+ * Always returns { status: "success", runs: [...] }.
+ * When runId is provided, runs contains a single element.
+ * When omitted, runs contains recent runs for the authenticated account.
  *
  * @param request - The NextRequest object
- * @returns A NextResponse with the task run status or list
+ * @returns A NextResponse with the runs array
  */
 export async function getTaskRunHandler(request: NextRequest): Promise<NextResponse> {
-  // Validate auth context and query parameters
   const validatedQuery = await validateGetTaskRunQuery(request);
   if (validatedQuery instanceof NextResponse) {
     return validatedQuery;
@@ -32,21 +33,15 @@ export async function getTaskRunHandler(request: NextRequest): Promise<NextRespo
 
     if (result === null) {
       return NextResponse.json(
-        {
-          status: "error",
-          error: "Task run not found",
-        },
-        {
-          status: 404,
-          headers: getCorsHeaders(),
-        },
+        { status: "error", error: "Task run not found" },
+        { status: 404, headers: getCorsHeaders() },
       );
     }
 
-    return NextResponse.json(result, {
-      status: 200,
-      headers: getCorsHeaders(),
-    });
+    return NextResponse.json(
+      { status: "success", runs: [result] },
+      { status: 200, headers: getCorsHeaders() },
+    );
   } catch (error) {
     console.error("Error retrieving task run:", error);
     return NextResponse.json(
@@ -54,10 +49,7 @@ export async function getTaskRunHandler(request: NextRequest): Promise<NextRespo
         status: "error",
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      {
-        status: 500,
-        headers: getCorsHeaders(),
-      },
+      { status: 500, headers: getCorsHeaders() },
     );
   }
 }

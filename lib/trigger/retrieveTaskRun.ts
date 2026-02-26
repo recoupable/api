@@ -1,6 +1,7 @@
 import { runs } from "@trigger.dev/sdk/v3";
 
 interface TaskRunCommonFields {
+  id: string;
   metadata: Record<string, unknown> | null;
   taskIdentifier: string;
   createdAt: string;
@@ -39,6 +40,7 @@ export async function retrieveTaskRun(runId: string): Promise<TaskRunResult | nu
   }
 
   const common: TaskRunCommonFields = {
+    id: run.id,
     metadata: (run.metadata as Record<string, unknown>) ?? null,
     taskIdentifier: run.taskIdentifier,
     createdAt: run.createdAt instanceof Date ? run.createdAt.toISOString() : String(run.createdAt),

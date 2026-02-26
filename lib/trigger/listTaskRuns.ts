@@ -1,8 +1,6 @@
 import { runs } from "@trigger.dev/sdk/v3";
 import type { TaskRunResult } from "./retrieveTaskRun";
 
-export type TaskRunListEntry = TaskRunResult & { id: string };
-
 const PENDING_STATUSES = ["EXECUTING", "QUEUED", "REATTEMPTING", "PENDING", "WAITING_FOR_DEPLOY"];
 const FAILED_STATUSES = [
   "FAILED",
@@ -21,17 +19,17 @@ function toISOStringOrNull(value: Date | string | null | undefined): string | nu
 
 /**
  * Lists recent task runs for an account by querying the Trigger.dev API
- * using the `account:<accountId>` tag. Returns the same shape as retrieveTaskRun
- * with an added `id` field.
+ * using the `account:<accountId>` tag. Returns the same TaskRunResult shape
+ * as retrieveTaskRun.
  *
  * @param accountId - The account ID to filter runs by
  * @param limit - Maximum number of runs to return (default 20)
- * @returns Array of task run entries matching the TaskRunResult shape
+ * @returns Array of TaskRunResult objects
  */
 export async function listTaskRuns(
   accountId: string,
   limit: number = 20,
-): Promise<TaskRunListEntry[]> {
+): Promise<TaskRunResult[]> {
   const result = await runs.list({
     tag: [`account:${accountId}`],
     limit,
