@@ -35,7 +35,7 @@ describe("listTaskRuns", () => {
     });
   });
 
-  it("maps COMPLETED runs to complete status with data", async () => {
+  it("maps COMPLETED runs to complete status with null data", async () => {
     const mockRun = {
       id: "run_abc",
       status: "COMPLETED",
@@ -45,7 +45,6 @@ describe("listTaskRuns", () => {
       finishedAt: new Date("2025-06-01T10:00:05Z"),
       durationMs: 4000,
       metadata: null,
-      output: { result: "ok" },
     };
     vi.mocked(runs.list).mockResolvedValue({ data: [mockRun] } as never);
 
@@ -55,7 +54,7 @@ describe("listTaskRuns", () => {
     expect(result[0]).toEqual({
       id: "run_abc",
       status: "complete",
-      data: { result: "ok" },
+      data: null,
       taskIdentifier: "run-sandbox-command",
       createdAt: "2025-06-01T10:00:00.000Z",
       startedAt: "2025-06-01T10:00:01.000Z",

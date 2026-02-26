@@ -47,7 +47,7 @@ export async function listTaskRuns(
     };
 
     if (run.status === "COMPLETED") {
-      return { ...common, status: "complete" as const, data: run.output ?? null };
+      return { ...common, status: "complete" as const, data: null };
     }
 
     if (FAILED_STATUSES.includes(run.status)) {
