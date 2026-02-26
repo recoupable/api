@@ -26,9 +26,18 @@ export async function listTaskRuns(
   accountId: string,
   limit: number = 20,
 ): Promise<TaskRunResult[]> {
+  const tag = `account:${accountId}`;
+  console.log("[listTaskRuns] querying runs", { tag, limit });
+
   const result = await runs.list({
-    tag: [`account:${accountId}`],
+    tag: [tag],
     limit,
+  });
+
+  console.log("[listTaskRuns] result", {
+    count: result.data.length,
+    runIds: result.data.map(r => r.id),
+    statuses: result.data.map(r => r.status),
   });
 
   return result.data.map(run => {
