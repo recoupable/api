@@ -19,6 +19,7 @@ const baseMockRun = {
 };
 
 const expectedCommon = {
+  id: "run_123",
   metadata: baseMockRun.metadata,
   taskIdentifier: "setup-sandbox",
   createdAt: "2025-01-01T00:00:00.000Z",

@@ -41,7 +41,7 @@ export async function validateGetTaskRunQuery(
     return authResult;
   }
 
-  const runId = request.nextUrl.searchParams.get("runId") ?? undefined;
+  const runId = request.nextUrl.searchParams.get("runId") || undefined;
   const limit = request.nextUrl.searchParams.get("limit") ?? undefined;
 
   const result = getTaskRunQuerySchema.safeParse({ runId, limit });
