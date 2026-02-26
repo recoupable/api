@@ -20,8 +20,6 @@ export async function getTaskRunHandler(request: NextRequest): Promise<NextRespo
     return validatedQuery;
   }
 
-  console.log("[getTaskRunHandler] validated query", validatedQuery);
-
   try {
     if (validatedQuery.mode === "list") {
       const runs = await listTaskRuns(validatedQuery.accountId, validatedQuery.limit);
