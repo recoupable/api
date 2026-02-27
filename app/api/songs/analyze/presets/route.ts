@@ -15,7 +15,7 @@ export async function OPTIONS() {
 }
 
 /**
- * GET /api/music/presets
+ * GET /api/songs/analyze/presets
  *
  * Lists all available music analysis presets. Each preset is a curated
  * prompt with optimized generation parameters for a specific use case

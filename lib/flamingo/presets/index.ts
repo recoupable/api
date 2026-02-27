@@ -64,7 +64,7 @@ export function getAllPresets(): PresetConfig[] {
 }
 
 /**
- * Returns a summary of all available presets for the /api/music/presets endpoint.
+ * Returns a summary of all available presets for the /api/songs/analyze/presets endpoint.
  *
  * @returns Array of preset summaries (name, label, description, requiresAudio, responseFormat)
  */

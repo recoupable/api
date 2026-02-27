@@ -9,7 +9,7 @@ import { FULL_REPORT_PRESET_NAME } from "@/lib/flamingo/presets/fullReport";
 import { executeFullReport } from "@/lib/flamingo/executeFullReport";
 
 /**
- * Handler for POST /api/music/analyze.
+ * Handler for POST /api/songs/analyze.
  *
  * Authenticates the request, validates the body, resolves any preset
  * to its curated prompt and params, then calls the Music Flamingo model.

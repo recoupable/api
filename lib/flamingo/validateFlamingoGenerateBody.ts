@@ -4,7 +4,7 @@ import { z } from "zod";
 import { PRESET_NAMES } from "@/lib/flamingo/presets";
 
 /**
- * Zod schema for the POST /api/music/analyze request body.
+ * Zod schema for the POST /api/songs/analyze request body.
  *
  * Callers must provide either a "preset" name OR a custom "prompt" — not both.
  * When using a preset, the prompt and generation params are resolved automatically.
@@ -36,7 +36,7 @@ export const flamingoGenerateBodySchema = z
 export type FlamingoGenerateBody = z.infer<typeof flamingoGenerateBodySchema>;
 
 /**
- * Validates the request body for POST /api/music/analyze.
+ * Validates the request body for POST /api/songs/analyze.
  *
  * @param body - The raw request body (parsed JSON).
  * @returns A NextResponse with an error if validation fails, or the validated body if it passes.

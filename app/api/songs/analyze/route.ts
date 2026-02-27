@@ -16,7 +16,7 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/music/analyze
+ * POST /api/songs/analyze
  *
  * Analyze music or answer music questions using the Music Flamingo model.
  * Accepts a text prompt and an optional audio URL. The model can describe
