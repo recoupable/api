@@ -10,6 +10,13 @@ vi.mock("@/lib/composio/toolRouter", () => ({
   getComposioTools: vi.fn(),
 }));
 
+vi.mock("@/lib/chat/tools/createPromptSandboxStreamingTool", () => ({
+  createPromptSandboxStreamingTool: vi.fn(() => ({
+    description: "Mock streaming sandbox tool",
+    parameters: {},
+  })),
+}));
+
 // Import after mocks
 import { setupToolsForRequest } from "../setupToolsForRequest";
 import { getMcpTools } from "@/lib/mcp/getMcpTools";
@@ -291,6 +298,52 @@ describe("setupToolsForRequest", () => {
 
       expect(mockGetMcpTools).toHaveBeenCalledTimes(1);
       expect(mockGetComposioTools).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("local streaming tool override", () => {
+    it("includes prompt_sandbox when authToken is provided", async () => {
+      const body: ChatRequestBody = {
+        accountId: "account-123",
+        orgId: null,
+        authToken: "test-token-123",
+        messages: [{ id: "1", role: "user", content: "Hello" }],
+      };
+
+      const result = await setupToolsForRequest(body);
+
+      expect(result).toHaveProperty("prompt_sandbox");
+    });
+
+    it("overrides MCP prompt_sandbox with local streaming version", async () => {
+      mockGetMcpTools.mockResolvedValue({
+        prompt_sandbox: { description: "MCP version", parameters: {} },
+      });
+
+      const body: ChatRequestBody = {
+        accountId: "account-123",
+        orgId: null,
+        authToken: "test-token-123",
+        messages: [{ id: "1", role: "user", content: "Hello" }],
+      };
+
+      const result = await setupToolsForRequest(body);
+
+      expect(result.prompt_sandbox).toEqual(
+        expect.objectContaining({ description: "Mock streaming sandbox tool" }),
+      );
+    });
+
+    it("does not include prompt_sandbox when authToken is not provided", async () => {
+      const body: ChatRequestBody = {
+        accountId: "account-123",
+        orgId: null,
+        messages: [{ id: "1", role: "user", content: "Hello" }],
+      };
+
+      const result = await setupToolsForRequest(body);
+
+      expect(result).not.toHaveProperty("prompt_sandbox");
     });
   });
 });

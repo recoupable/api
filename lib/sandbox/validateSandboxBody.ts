@@ -7,6 +7,7 @@ import { z } from "zod";
 
 export const sandboxBodySchema = z
   .object({
+    account_id: z.string().uuid("account_id must be a valid UUID").optional(),
     command: z.string().min(1, "command cannot be empty").optional(),
     args: z.array(z.string()).optional(),
     cwd: z.string().optional(),
@@ -21,6 +22,7 @@ export type SandboxBody = z.infer<typeof sandboxBodySchema> & AuthContext;
 
 /**
  * Validates auth and request body for POST /api/sandboxes.
+ * Supports optional account_id in the body for org API keys to target a specific account.
  *
  * @param request - The NextRequest object
  * @returns A NextResponse with an error if validation fails, or the validated body with auth context.
@@ -28,11 +30,6 @@ export type SandboxBody = z.infer<typeof sandboxBodySchema> & AuthContext;
 export async function validateSandboxBody(
   request: NextRequest,
 ): Promise<NextResponse | SandboxBody> {
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) {
-    return authResult;
-  }
-
   const body = await safeParseJson(request);
   const result = sandboxBodySchema.safeParse(body);
 
@@ -51,8 +48,17 @@ export async function validateSandboxBody(
     );
   }
 
+  const { account_id: targetAccountId, ...bodyFields } = result.data;
+
+  const authResult = await validateAuthContext(request, {
+    accountId: targetAccountId,
+  });
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   return {
     ...authResult,
-    ...result.data,
+    ...bodyFields,
   };
 }

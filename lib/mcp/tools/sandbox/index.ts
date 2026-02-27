@@ -3,6 +3,7 @@ import { registerRunSandboxCommandTool } from "./registerRunSandboxCommandTool";
 
 /**
  * Registers all sandbox-related MCP tools on the server.
+ * Note: prompt_sandbox is now a local streaming tool in setupToolsForRequest.
  *
  * @param server - The MCP server instance to register tools on.
  */

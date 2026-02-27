@@ -1,17 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerSendEmailTool } from "../registerSendEmailTool";
-import { NextResponse } from "next/server";
 
-const mockSendEmailWithResend = vi.fn();
-const mockSelectRoomWithArtist = vi.fn();
+const mockProcessAndSendEmail = vi.fn();
 
-vi.mock("@/lib/emails/sendEmail", () => ({
-  sendEmailWithResend: (...args: unknown[]) => mockSendEmailWithResend(...args),
-}));
-
-vi.mock("@/lib/supabase/rooms/selectRoomWithArtist", () => ({
-  selectRoomWithArtist: (...args: unknown[]) => mockSelectRoomWithArtist(...args),
+vi.mock("@/lib/emails/processAndSendEmail", () => ({
+  processAndSendEmail: (...args: unknown[]) => mockProcessAndSendEmail(...args),
 }));
 
 describe("registerSendEmailTool", () => {
@@ -41,7 +35,11 @@ describe("registerSendEmailTool", () => {
   });
 
   it("returns success when email is sent successfully", async () => {
-    mockSendEmailWithResend.mockResolvedValue({ id: "email-123" });
+    mockProcessAndSendEmail.mockResolvedValue({
+      success: true,
+      message: "Email sent successfully from Agent by Recoup <agent@recoupable.com> to test@example.com. CC: none.",
+      id: "email-123",
+    });
 
     const result = await registeredHandler({
       to: ["test@example.com"],
@@ -49,13 +47,10 @@ describe("registerSendEmailTool", () => {
       text: "Test body",
     });
 
-    expect(mockSendEmailWithResend).toHaveBeenCalledWith({
-      from: "Agent by Recoup <agent@recoupable.com>",
+    expect(mockProcessAndSendEmail).toHaveBeenCalledWith({
       to: ["test@example.com"],
-      cc: undefined,
       subject: "Test Subject",
-      html: expect.stringMatching(/Test body.*you can reply directly to this email/s),
-      headers: {},
+      text: "Test body",
     });
 
     expect(result).toEqual({
@@ -68,8 +63,12 @@ describe("registerSendEmailTool", () => {
     });
   });
 
-  it("includes CC addresses when provided", async () => {
-    mockSendEmailWithResend.mockResolvedValue({ id: "email-123" });
+  it("passes CC addresses through to processAndSendEmail", async () => {
+    mockProcessAndSendEmail.mockResolvedValue({
+      success: true,
+      message: "Email sent successfully.",
+      id: "email-123",
+    });
 
     await registeredHandler({
       to: ["test@example.com"],
@@ -77,16 +76,18 @@ describe("registerSendEmailTool", () => {
       subject: "Test Subject",
     });
 
-    expect(mockSendEmailWithResend).toHaveBeenCalledWith(
+    expect(mockProcessAndSendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         cc: ["cc@example.com"],
       }),
     );
   });
 
-  it("returns error when sendEmailWithResend returns NextResponse", async () => {
-    const errorResponse = NextResponse.json({ error: { message: "Rate limited" } }, { status: 429 });
-    mockSendEmailWithResend.mockResolvedValue(errorResponse);
+  it("returns error when processAndSendEmail fails", async () => {
+    mockProcessAndSendEmail.mockResolvedValue({
+      success: false,
+      error: "Rate limited",
+    });
 
     const result = await registeredHandler({
       to: ["test@example.com"],
