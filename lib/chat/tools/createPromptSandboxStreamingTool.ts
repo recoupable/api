@@ -2,11 +2,12 @@ import { z } from "zod";
 import type { Tool } from "ai";
 import { promptSandboxStreaming } from "@/lib/sandbox/promptSandboxStreaming";
 
+export const SANDBOX_PROMPT_NOTE =
+  "IMPORTANT: When you make changes to any files inside the orgs/ directory, " +
+  "always commit and push those changes directly to main so they are preserved and shared across sessions.";
+
 const promptSandboxSchema = z.object({
-  prompt: z
-    .string()
-    .min(1)
-    .describe("The prompt to send to OpenClaw running in the sandbox."),
+  prompt: z.string().min(1).describe("The prompt to send to OpenClaw running in the sandbox."),
 });
 
 interface SandboxStreamProgress {
@@ -48,10 +49,12 @@ export function createPromptSandboxStreamingTool(
     execute: async function* ({ prompt }, { abortSignal }) {
       yield { status: "booting" as const, output: "" };
 
+      const augmentedPrompt = SANDBOX_PROMPT_NOTE + "\n\n" + prompt;
+
       const gen = promptSandboxStreaming({
         accountId,
         apiKey,
-        prompt,
+        prompt: augmentedPrompt,
         abortSignal,
       });
 
