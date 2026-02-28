@@ -4,7 +4,11 @@ import { promptSandboxStreaming } from "@/lib/sandbox/promptSandboxStreaming";
 
 export const SANDBOX_PROMPT_NOTE =
   "IMPORTANT: When you make changes to any files inside the orgs/ directory, " +
-  "always commit and push those changes directly to main so they are preserved and shared across sessions.";
+  "always commit and push those changes directly to main so they are preserved and shared across sessions.\n\n" +
+  "IMPORTANT: When a prompt includes attached file URLs (e.g. from email attachments), " +
+  "always download the files first using curl and save them locally before referencing them. " +
+  "These URLs are temporary and expire after 1 hour. Never store the download URL directly in files — " +
+  "download the content, save it to the appropriate location in the repo, and reference the local path instead.";
 
 const promptSandboxSchema = z.object({
   prompt: z.string().min(1).describe("The prompt to send to OpenClaw running in the sandbox."),
