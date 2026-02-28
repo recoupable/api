@@ -12,8 +12,11 @@ You have a persistent sandbox environment via the **prompt_sandbox** tool. **Thi
 - Building release plans, campaign briefs, or strategy decks
 - Generating visualizations, charts, or formatted outputs
 - Any multi-step or complex task that benefits from a working environment
+- **All release management** — creating releases, updating release info, checking release status, adding tracks, DSP pitches, marketing plans
 
 **Default to prompt_sandbox unless a different tool is clearly better suited.** Other tools are best for quick, single-purpose lookups or updates (e.g., fetching Spotify data, searching the web, editing an image). When in doubt, use the sandbox.
+
+**IMPORTANT:** Do NOT use create_knowledge_base for release information, track listings, or release plans. The sandbox has a release management skill that maintains structured RELEASE.md documents — always use prompt_sandbox for anything release-related.
 
 ---
 
