@@ -140,33 +140,7 @@ describe("validateNewEmailMemory", () => {
     expect(response.status).toBe(200);
   });
 
-  it("fetches attachments and includes them in chatRequestBody", async () => {
-    const mockAttachments = [
-      {
-        id: "att-1",
-        filename: "logo.svg",
-        contentType: "image/svg+xml",
-        downloadUrl: "https://resend.com/dl/att-1",
-      },
-    ];
-    vi.mocked(getEmailAttachments).mockResolvedValue(mockAttachments);
-    vi.mocked(formatAttachmentsText).mockReturnValue(
-      "\n\nAttached files:\n- logo.svg (image/svg+xml): https://resend.com/dl/att-1",
-    );
-
-    const event = createMockEvent();
-    const result = await validateNewEmailMemory(event);
-
-    expect(result).not.toHaveProperty("response");
-    const { chatRequestBody } = result as {
-      chatRequestBody: Record<string, unknown>;
-      emailText: string;
-    };
-    expect(chatRequestBody.attachments).toEqual(mockAttachments);
-    expect(getEmailAttachments).toHaveBeenCalledWith(MOCK_EMAIL_ID);
-  });
-
-  it("appends attachment URLs to emailText", async () => {
+  it("fetches attachments and appends download URLs to emailText", async () => {
     const attachmentText =
       "\n\nAttached files:\n- logo.svg (image/svg+xml): https://resend.com/dl/att-1";
     vi.mocked(getEmailAttachments).mockResolvedValue([
@@ -182,22 +156,22 @@ describe("validateNewEmailMemory", () => {
     const event = createMockEvent();
     const result = await validateNewEmailMemory(event);
 
+    expect(result).not.toHaveProperty("response");
+    expect(getEmailAttachments).toHaveBeenCalledWith(MOCK_EMAIL_ID);
+
     const { emailText } = result as { chatRequestBody: Record<string, unknown>; emailText: string };
     expect(emailText).toContain("Attached files:");
     expect(emailText).toContain("https://resend.com/dl/att-1");
   });
 
-  it("includes empty attachments array when no attachments exist", async () => {
+  it("does not append text when no attachments exist", async () => {
     vi.mocked(getEmailAttachments).mockResolvedValue([]);
     vi.mocked(formatAttachmentsText).mockReturnValue("");
 
     const event = createMockEvent();
     const result = await validateNewEmailMemory(event);
 
-    const { chatRequestBody } = result as {
-      chatRequestBody: Record<string, unknown>;
-      emailText: string;
-    };
-    expect(chatRequestBody.attachments).toEqual([]);
+    const { emailText } = result as { chatRequestBody: Record<string, unknown>; emailText: string };
+    expect(emailText).toBe("<p>Hello from email</p>");
   });
 });

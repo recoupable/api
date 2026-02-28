@@ -76,7 +76,6 @@ export async function validateNewEmailMemory(
     messages: getMessages(emailText),
     roomId: finalRoomId,
     authToken: RECOUP_API_KEY,
-    attachments,
   };
 
   return { chatRequestBody, emailText };

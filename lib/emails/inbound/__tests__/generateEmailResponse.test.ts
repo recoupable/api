@@ -42,7 +42,7 @@ describe("generateEmailResponse", () => {
     );
   });
 
-  it("generates response without attachments", async () => {
+  it("generates response with text and footer", async () => {
     vi.mocked(getEmailRoomMessages).mockResolvedValue([{ role: "user", content: "Hi there" }]);
 
     const body: ChatRequestBody = {
@@ -60,106 +60,5 @@ describe("generateEmailResponse", () => {
     expect(result.text).toBe("Hello from assistant");
     expect(result.html).toContain("Hello from assistant");
     expect(result.html).toContain("<footer>footer</footer>");
-  });
-
-  it("appends image parts to last user message when image attachments exist", async () => {
-    vi.mocked(getEmailRoomMessages).mockResolvedValue([
-      { role: "user", content: "Check this image" },
-    ]);
-
-    const body: ChatRequestBody = {
-      accountId: "acc-1",
-      orgId: null,
-      messages: [],
-      roomId: "room-1",
-      attachments: [
-        {
-          id: "att-1",
-          filename: "logo.png",
-          contentType: "image/png",
-          downloadUrl: "https://resend.com/dl/att-1",
-        },
-      ],
-    };
-
-    await generateEmailResponse(body);
-
-    const callArgs = mockGenerate.mock.calls[0][0];
-    const lastUserMsg = callArgs.messages[0];
-
-    // Should have been converted to parts array with text + image
-    expect(Array.isArray(lastUserMsg.content)).toBe(true);
-    expect(lastUserMsg.content[0]).toEqual({ type: "text", text: "Check this image" });
-    expect(lastUserMsg.content[1]).toMatchObject({
-      type: "image",
-      mimeType: "image/png",
-    });
-    expect(lastUserMsg.content[1].image).toBeInstanceOf(URL);
-    expect(lastUserMsg.content[1].image.href).toBe("https://resend.com/dl/att-1");
-  });
-
-  it("does not modify messages when only non-image attachments exist", async () => {
-    vi.mocked(getEmailRoomMessages).mockResolvedValue([
-      { role: "user", content: "Check this file" },
-    ]);
-
-    const body: ChatRequestBody = {
-      accountId: "acc-1",
-      orgId: null,
-      messages: [],
-      roomId: "room-1",
-      attachments: [
-        {
-          id: "att-1",
-          filename: "report.pdf",
-          contentType: "application/pdf",
-          downloadUrl: "https://resend.com/dl/att-1",
-        },
-      ],
-    };
-
-    await generateEmailResponse(body);
-
-    const callArgs = mockGenerate.mock.calls[0][0];
-    const lastUserMsg = callArgs.messages[0];
-
-    // Should remain as plain string (no image parts to add)
-    expect(lastUserMsg.content).toBe("Check this file");
-  });
-
-  it("appends image parts to the last user message in multi-message conversations", async () => {
-    vi.mocked(getEmailRoomMessages).mockResolvedValue([
-      { role: "user", content: "First message" },
-      { role: "assistant", content: "Reply" },
-      { role: "user", content: "Here is the image" },
-    ]);
-
-    const body: ChatRequestBody = {
-      accountId: "acc-1",
-      orgId: null,
-      messages: [],
-      roomId: "room-1",
-      attachments: [
-        {
-          id: "att-1",
-          filename: "photo.jpg",
-          contentType: "image/jpeg",
-          downloadUrl: "https://resend.com/dl/att-1",
-        },
-      ],
-    };
-
-    await generateEmailResponse(body);
-
-    const callArgs = mockGenerate.mock.calls[0][0];
-    // First user message should be unchanged
-    expect(callArgs.messages[0].content).toBe("First message");
-    // Last user message should have image parts
-    expect(Array.isArray(callArgs.messages[2].content)).toBe(true);
-    expect(callArgs.messages[2].content[0]).toEqual({
-      type: "text",
-      text: "Here is the image",
-    });
-    expect(callArgs.messages[2].content[1].type).toBe("image");
   });
 });
