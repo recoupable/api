@@ -38,9 +38,12 @@ export function createPromptSandboxStreamingTool(
 ): Tool<z.infer<typeof promptSandboxSchema>, SandboxStreamProgress> {
   return {
     description:
-      "Send a prompt to OpenClaw running in a persistent sandbox. " +
+      "Send a prompt to the agent running in the artist's persistent sandbox environment. " +
+      "This is your primary tool — use it for release management (creating, updating, or reviewing releases), " +
+      "file operations, data analysis, content generation, and any multi-step task. " +
+      "The sandbox has skills for managing RELEASE.md documents, generating deliverables, and more. " +
       "Reuses the account's existing running sandbox or creates one from the latest snapshot. " +
-      "Streams output in real-time. The sandbox stays alive for follow-up prompts.",
+      "Streams output in real-time.",
     inputSchema: promptSandboxSchema,
     execute: async function* ({ prompt }, { abortSignal }) {
       yield { status: "booting" as const, output: "" };

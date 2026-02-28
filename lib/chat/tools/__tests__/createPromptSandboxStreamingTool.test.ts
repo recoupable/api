@@ -148,4 +148,24 @@ describe("createPromptSandboxStreamingTool", () => {
     expect(tool.description).toContain("sandbox");
     expect(tool.inputSchema).toBeDefined();
   });
+
+  describe("description mentions release management", () => {
+    it("includes release management as a primary use case", () => {
+      const tool = createPromptSandboxStreamingTool("acc_1", "key_1");
+
+      expect(tool.description).toContain("release management");
+    });
+
+    it("describes itself as the primary tool", () => {
+      const tool = createPromptSandboxStreamingTool("acc_1", "key_1");
+
+      expect(tool.description).toContain("primary tool");
+    });
+
+    it("mentions RELEASE.md documents", () => {
+      const tool = createPromptSandboxStreamingTool("acc_1", "key_1");
+
+      expect(tool.description).toContain("RELEASE.md");
+    });
+  });
 });
