@@ -1,4 +1,4 @@
-import type { ModelMessage } from "ai";
+import type { ModelMessage, UserModelMessage } from "ai";
 import { marked } from "marked";
 import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
 import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
@@ -38,17 +38,15 @@ export async function generateEmailResponse(
       if (lastUserIdx >= 0) {
         const msg = messages[lastUserIdx];
         const textContent = typeof msg.content === "string" ? msg.content : "";
-        const parts: Array<{ type: string; text?: string; image?: URL; mimeType?: string }> = [
+        const parts: UserModelMessage["content"] = [
           { type: "text", text: textContent },
-        ];
-        for (const att of imageAttachments) {
-          parts.push({
-            type: "image",
+          ...imageAttachments.map(att => ({
+            type: "image" as const,
             image: new URL(att.downloadUrl),
             mimeType: att.contentType,
-          });
-        }
-        messages[lastUserIdx] = { ...msg, content: parts as ModelMessage["content"] };
+          })),
+        ];
+        messages[lastUserIdx] = { role: "user" as const, content: parts };
       }
     }
   }
