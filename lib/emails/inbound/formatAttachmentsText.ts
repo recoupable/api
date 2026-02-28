@@ -12,7 +12,7 @@ export function formatAttachmentsText(attachments: EmailAttachment[]): string {
   if (!attachments.length) return "";
 
   const lines = attachments.map(
-    att => `- ${att.filename} (${att.contentType}): ${att.downloadUrl}`,
+    att => `- ${att.filename || "attachment"} (${att.content_type}): ${att.download_url}`,
   );
   return `\n\nAttached files:\n${lines.join("\n")}`;
 }

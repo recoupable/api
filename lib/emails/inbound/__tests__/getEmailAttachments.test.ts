@@ -23,7 +23,7 @@ describe("getEmailAttachments", () => {
     } as ReturnType<typeof getResendClient>);
   });
 
-  it("returns mapped attachments when Resend returns data", async () => {
+  it("returns attachments directly from Resend SDK", async () => {
     mockList.mockResolvedValue({
       data: {
         data: [
@@ -52,20 +52,10 @@ describe("getEmailAttachments", () => {
     const result = await getEmailAttachments("email-123");
 
     expect(mockList).toHaveBeenCalledWith({ emailId: "email-123" });
-    expect(result).toEqual([
-      {
-        id: "att-1",
-        filename: "logo.svg",
-        contentType: "image/svg+xml",
-        downloadUrl: "https://resend.com/dl/att-1",
-      },
-      {
-        id: "att-2",
-        filename: "report.pdf",
-        contentType: "application/pdf",
-        downloadUrl: "https://resend.com/dl/att-2",
-      },
-    ]);
+    expect(result).toHaveLength(2);
+    expect(result[0].id).toBe("att-1");
+    expect(result[0].download_url).toBe("https://resend.com/dl/att-1");
+    expect(result[1].content_type).toBe("application/pdf");
   });
 
   it("returns empty array when no attachments exist", async () => {
@@ -82,27 +72,5 @@ describe("getEmailAttachments", () => {
     const result = await getEmailAttachments("email-123");
 
     expect(result).toEqual([]);
-  });
-
-  it("defaults filename to 'attachment' when not provided", async () => {
-    mockList.mockResolvedValue({
-      data: {
-        data: [
-          {
-            id: "att-3",
-            filename: undefined,
-            content_type: "application/octet-stream",
-            download_url: "https://resend.com/dl/att-3",
-            size: 512,
-            content_disposition: "attachment",
-            expires_at: "2025-01-01T01:00:00Z",
-          },
-        ],
-      },
-    });
-
-    const result = await getEmailAttachments("email-123");
-
-    expect(result[0].filename).toBe("attachment");
   });
 });

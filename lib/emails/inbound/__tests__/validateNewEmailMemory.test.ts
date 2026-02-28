@@ -147,10 +147,13 @@ describe("validateNewEmailMemory", () => {
       {
         id: "att-1",
         filename: "logo.svg",
-        contentType: "image/svg+xml",
-        downloadUrl: "https://resend.com/dl/att-1",
+        size: 1024,
+        content_type: "image/svg+xml",
+        content_disposition: "attachment",
+        download_url: "https://resend.com/dl/att-1",
+        expires_at: "2025-01-01T01:00:00Z",
       },
-    ]);
+    ] as Awaited<ReturnType<typeof getEmailAttachments>>);
     vi.mocked(formatAttachmentsText).mockReturnValue(attachmentText);
 
     const event = createMockEvent();
