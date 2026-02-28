@@ -11,6 +11,7 @@ import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
 import { setupConversation } from "@/lib/chat/setupConversation";
 import { validateMessages } from "@/lib/chat/validateMessages";
+import type { EmailAttachment } from "@/lib/emails/inbound/getEmailAttachments";
 
 export const chatRequestSchema = z
   .object({
@@ -50,6 +51,7 @@ export type ChatRequestBody = BaseChatRequestBody & {
   accountId: string;
   orgId: string | null;
   authToken?: string;
+  attachments?: EmailAttachment[];
 };
 
 /**
