@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { createSandbox } from "../createSandbox";
-import { Sandbox } from "@vercel/sandbox";
+import { Sandbox, APIError } from "@vercel/sandbox";
 
 const mockSandbox = {
   sandboxId: "sbx_test123",
@@ -10,11 +10,15 @@ const mockSandbox = {
   createdAt: new Date("2024-01-01T00:00:00Z"),
 };
 
-vi.mock("@vercel/sandbox", () => ({
-  Sandbox: {
-    create: vi.fn(() => Promise.resolve(mockSandbox)),
-  },
-}));
+vi.mock("@vercel/sandbox", async () => {
+  const actual = await vi.importActual("@vercel/sandbox");
+  return {
+    ...actual,
+    Sandbox: {
+      create: vi.fn(() => Promise.resolve(mockSandbox)),
+    },
+  };
+});
 
 vi.mock("ms", () => ({
   default: vi.fn((str: string) => {
@@ -77,6 +81,44 @@ describe("createSandbox", () => {
       timeout: 1800000,
       createdAt: "2024-01-01T00:00:00.000Z",
     });
+  });
+
+  it("re-throws APIError with detailed message including API response json", async () => {
+    const fakeResponse = new Response("Bad Request", { status: 400, statusText: "Bad Request" });
+    const apiError = new APIError(fakeResponse, {
+      message: "Status code 400 is not ok",
+      json: { error: { code: "bad_request", message: "vcpus must be between 0.5 and 2" } },
+      text: '{"error":{"code":"bad_request","message":"vcpus must be between 0.5 and 2"}}',
+    });
+    vi.mocked(Sandbox.create).mockRejectedValue(apiError);
+
+    await expect(createSandbox()).rejects.toThrow("vcpus must be between 0.5 and 2");
+  });
+
+  it("logs API error details to console.error", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const fakeResponse = new Response("Bad Request", { status: 400, statusText: "Bad Request" });
+    const apiError = new APIError(fakeResponse, {
+      message: "Status code 400 is not ok",
+      json: { error: { code: "bad_request", message: "quota exceeded" } },
+      text: '{"error":{"code":"bad_request","message":"quota exceeded"}}',
+    });
+    vi.mocked(Sandbox.create).mockRejectedValue(apiError);
+
+    await expect(createSandbox()).rejects.toThrow();
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Sandbox.create failed"),
+      expect.objectContaining({ json: apiError.json }),
+    );
+    consoleSpy.mockRestore();
+  });
+
+  it("re-throws non-APIError errors unchanged", async () => {
+    const genericError = new Error("Network timeout");
+    vi.mocked(Sandbox.create).mockRejectedValue(genericError);
+
+    await expect(createSandbox()).rejects.toThrow("Network timeout");
   });
 
   it("does not stop sandbox after creation", async () => {
