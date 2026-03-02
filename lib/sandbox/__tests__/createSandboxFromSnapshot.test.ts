@@ -12,13 +12,11 @@ vi.mock("@/lib/sandbox/createSandbox", () => ({
 }));
 
 vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
-  selectAccountSnapshots: (...args: unknown[]) =>
-    mockSelectAccountSnapshots(...args),
+  selectAccountSnapshots: (...args: unknown[]) => mockSelectAccountSnapshots(...args),
 }));
 
 vi.mock("@/lib/supabase/account_sandboxes/insertAccountSandbox", () => ({
-  insertAccountSandbox: (...args: unknown[]) =>
-    mockInsertAccountSandbox(...args),
+  insertAccountSandbox: (...args: unknown[]) => mockInsertAccountSandbox(...args),
 }));
 
 describe("createSandboxFromSnapshot", () => {
@@ -76,11 +74,27 @@ describe("createSandboxFromSnapshot", () => {
     });
   });
 
-  it("returns Sandbox instance", async () => {
+  it("returns { sandbox, fromSnapshot: false } when no snapshot exists", async () => {
     mockSelectAccountSnapshots.mockResolvedValue([]);
 
     const result = await createSandboxFromSnapshot("acc_1");
 
-    expect(result).toBe(mockSandbox);
+    expect(result).toEqual({
+      sandbox: mockSandbox,
+      fromSnapshot: false,
+    });
+  });
+
+  it("returns { sandbox, fromSnapshot: true } when snapshot exists", async () => {
+    mockSelectAccountSnapshots.mockResolvedValue([
+      { snapshot_id: "snap_abc", account_id: "acc_1" },
+    ]);
+
+    const result = await createSandboxFromSnapshot("acc_1");
+
+    expect(result).toEqual({
+      sandbox: mockSandbox,
+      fromSnapshot: true,
+    });
   });
 });
