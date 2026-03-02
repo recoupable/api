@@ -52,7 +52,7 @@ export async function* promptSandboxStreaming(
         githubRepo = next.value;
         break;
       }
-      yield next.value;
+      yield next.value as { data: string; stream: "stderr" };
     }
   }
 
@@ -93,6 +93,9 @@ export async function* promptSandboxStreaming(
     await upsertAccountSnapshot({
       account_id: accountId,
       snapshot_id: snapshotResult.snapshotId,
+      expires_at: (
+        snapshotResult.expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      ).toISOString(),
       github_repo: githubRepo,
     });
   }

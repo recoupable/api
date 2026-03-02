@@ -41,7 +41,7 @@ describe("promptSandboxStreaming", () => {
     vi.clearAllMocks();
     mockSnapshot.mockResolvedValue({
       snapshotId: "snap_new",
-      expiresAt: "2025-01-01T00:00:00.000Z",
+      expiresAt: new Date("2025-01-01T00:00:00.000Z"),
     });
     mockUpsertAccountSnapshot.mockResolvedValue({ data: {}, error: null });
     mockPushSandboxToGithub.mockResolvedValue(true);
@@ -309,6 +309,7 @@ describe("promptSandboxStreaming", () => {
         expect.objectContaining({
           account_id: "acc_1",
           snapshot_id: "snap_new",
+          expires_at: "2025-01-01T00:00:00.000Z",
           github_repo: "https://github.com/recoupable/repo",
         }),
       );

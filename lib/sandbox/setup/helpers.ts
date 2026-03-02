@@ -61,16 +61,13 @@ export async function runOpenClawAgent(
 
   deps.log(label);
 
-  const commandOpts: Record<string, unknown> = {
+  const commandOpts: Parameters<Sandbox["runCommand"]>[0] = {
     cmd: "openclaw",
     args: ["agent", "--agent", "main", "--message", message],
+    ...(env ? { env } : {}),
   };
 
-  if (env) {
-    commandOpts.env = env;
-  }
-
-  const result = await sandbox.runCommand(commandOpts as Parameters<Sandbox["runCommand"]>[0]);
+  const result = await sandbox.runCommand(commandOpts);
 
   const stdout = (await result.stdout()) || "";
   const stderr = (await result.stderr()) || "";

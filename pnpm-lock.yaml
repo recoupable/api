@@ -48,8 +48,8 @@ importers:
         specifier: ^4.2.0
         version: 4.2.0(ai@6.0.0-beta.122(zod@4.1.13))(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.13)
       '@vercel/sandbox':
-        specifier: ^1.3.1
-        version: 1.3.1
+        specifier: ^1.8.0
+        version: 1.8.0
       ai:
         specifier: 6.0.0-beta.122
         version: 6.0.0-beta.122(zod@4.1.13)
@@ -2355,8 +2355,12 @@ packages:
     resolution: {integrity: sha512-Fw28YZpRnA3cAHHDlkt7xQHiJ0fcL+NRcIqsocZQUSmbzeIKRpwttJjik5ZGanXP+vlA4SbTg+AbA3bP363l+w==}
     engines: {node: '>= 20'}
 
-  '@vercel/sandbox@1.3.1':
-    resolution: {integrity: sha512-FFeeJgb4mcm89LSS2ta5kUlAbJ4FsjBbi6otK6Au50GJh9ubzdZuaxiVhWas9NlQ9EnE3FZsIslLLLvjN7Onlw==}
+  '@vercel/oidc@3.2.0':
+    resolution: {integrity: sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug==}
+    engines: {node: '>= 20'}
+
+  '@vercel/sandbox@1.8.0':
+    resolution: {integrity: sha512-SbXkg8Fmp8i+I9IdyD4PAAVtxM/KS4ULV4eiEfY/9tab1AF1MPvmEA8/ebvCn7QTWQQ7twwtpJNSPlUVmOBp3w==}
 
   '@vitest/expect@3.2.4':
     resolution: {integrity: sha512-Io0yyORnB6sikFlt8QW5K7slY4OjqNX9jmJQ02QDda8lyM6B5oNgVWoSoKPac8/kgnCUzuHQKrSLtu/uOqqrig==}
@@ -8961,9 +8965,11 @@ snapshots:
 
   '@vercel/oidc@3.1.0': {}
 
-  '@vercel/sandbox@1.3.1':
+  '@vercel/oidc@3.2.0': {}
+
+  '@vercel/sandbox@1.8.0':
     dependencies:
-      '@vercel/oidc': 3.1.0
+      '@vercel/oidc': 3.2.0
       async-retry: 1.3.3
       jsonlines: 0.1.1
       ms: 2.1.3

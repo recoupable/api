@@ -29,8 +29,11 @@ export async function ensureGithubRepo(
 
   // Fetch github_repo from snapshot
   const snapshots = await selectAccountSnapshots(accountId);
-  let githubRepo = snapshots[0]?.github_repo ?? null;
-  const snapshotId = snapshots[0]?.snapshot_id ?? undefined;
+  const snapshot = snapshots[0] ?? null;
+  let githubRepo = snapshot?.github_repo ?? null;
+  const snapshotId = snapshot?.snapshot_id ?? "pending";
+  const expiresAt =
+    snapshot?.expires_at ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
   // If no repo exists, create one
   if (!githubRepo) {
@@ -56,6 +59,7 @@ export async function ensureGithubRepo(
     await upsertAccountSnapshot({
       account_id: accountId,
       snapshot_id: snapshotId,
+      expires_at: expiresAt,
       github_repo: repoUrl,
     });
 
