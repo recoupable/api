@@ -17,7 +17,7 @@ describe("setupOpenClaw", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("VERCEL_AI_GATEWAY_API_KEY", "test-gateway-key");
+    vi.stubEnv("AI_GATEWAY_API_KEY", "test-gateway-key");
     vi.stubEnv("RECOUP_API_KEY", "test-api-key");
     vi.stubEnv("GITHUB_TOKEN", "test-github-token");
   });
@@ -93,6 +93,17 @@ describe("setupOpenClaw", () => {
 
     const gatewayCall = mockRunCommand.mock.calls[2];
     expect(gatewayCall[0].args[1]).toContain("openclaw gateway run");
+  });
+
+  it("throws when AI_GATEWAY_API_KEY is missing", async () => {
+    vi.stubEnv("AI_GATEWAY_API_KEY", "");
+    delete process.env.AI_GATEWAY_API_KEY;
+
+    mockRunCommand.mockResolvedValueOnce({ exitCode: 1 }); // config check - missing
+
+    await expect(setupOpenClaw(mockSandbox, "acc_1", "api-key-123", deps)).rejects.toThrow(
+      "Missing AI_GATEWAY_API_KEY environment variable",
+    );
   });
 
   it("throws when env injection fails", async () => {

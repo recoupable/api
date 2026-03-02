@@ -23,6 +23,12 @@ export async function setupOpenClaw(
   });
 
   if (configCheck.exitCode !== 0) {
+    const gatewayApiKey = process.env.AI_GATEWAY_API_KEY;
+
+    if (!gatewayApiKey) {
+      throw new Error("Missing AI_GATEWAY_API_KEY environment variable");
+    }
+
     // Run onboard
     const onboardArgs = [
       "onboard",
@@ -32,7 +38,7 @@ export async function setupOpenClaw(
       "--auth-choice",
       "ai-gateway-api-key",
       "--ai-gateway-api-key",
-      process.env.VERCEL_AI_GATEWAY_API_KEY!,
+      gatewayApiKey,
       "--gateway-port",
       "18789",
       "--gateway-bind",
