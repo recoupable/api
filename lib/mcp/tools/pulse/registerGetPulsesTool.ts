@@ -7,9 +7,9 @@ import { selectPulseAccounts } from "@/lib/supabase/pulse_accounts/selectPulseAc
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { buildGetPulsesParams } from "@/lib/pulse/buildGetPulsesParams";
+import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 
 const getPulsesSchema = z.object({
-  account_id: z.string().optional().describe("The account ID to get pulse status for."),
   active: z.boolean().optional().describe("Filter by active status (true/false)."),
 });
 
@@ -33,22 +33,28 @@ export function registerGetPulsesTool(server: McpServer): void {
       inputSchema: getPulsesSchema,
     },
     async (args: GetPulsesArgs, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
-      const { account_id, active } = args;
+      const { active } = args;
 
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
-      const accountId = authInfo?.extra?.accountId;
-      const orgId = authInfo?.extra?.orgId ?? null;
+      const { accountId, error: authError } = await resolveAccountId({
+        authInfo,
+        accountIdOverride: undefined,
+      });
+
+      if (authError) {
+        return getToolResultError(authError);
+      }
 
       if (!accountId) {
-        return getToolResultError(
-          "Authentication required. Provide an API key via Authorization: Bearer header, or provide account_id from the system prompt context.",
-        );
+        return getToolResultError("Failed to resolve account ID");
       }
+
+      const orgId = authInfo?.extra?.orgId ?? null;
 
       const { params, error } = await buildGetPulsesParams({
         accountId,
         orgId,
-        targetAccountId: account_id,
+        targetAccountId: undefined,
         active,
       });
 
