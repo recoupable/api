@@ -11,6 +11,18 @@ export interface ConnectorInfo {
 }
 
 /**
+ * All toolkit slugs the platform supports.
+ * Passed explicitly to composio.create() because session.toolkits()
+ * only returns the first 20 by default.
+ */
+const SUPPORTED_TOOLKITS = [
+  "googlesheets",
+  "googledrive",
+  "googledocs",
+  "tiktok",
+];
+
+/**
  * Options for getting connectors.
  */
 export interface GetConnectorsOptions {
@@ -37,13 +49,18 @@ export async function getConnectors(
   const { displayNames = {} } = options;
   const composio = await getComposioClient();
 
-  const session = await composio.create(accountId);
+  const session = await composio.create(accountId, {
+    toolkits: SUPPORTED_TOOLKITS,
+  });
   const toolkits = await session.toolkits();
 
-  return toolkits.items.map(toolkit => ({
-    slug: toolkit.slug,
-    name: displayNames[toolkit.slug] || toolkit.name,
-    isConnected: toolkit.connection?.isActive ?? false,
-    connectedAccountId: toolkit.connection?.connectedAccount?.id,
-  }));
+  return toolkits.items.map(toolkit => {
+    const slug = toolkit.slug.toLowerCase();
+    return {
+      slug,
+      name: displayNames[slug] || toolkit.name,
+      isConnected: toolkit.connection?.isActive ?? false,
+      connectedAccountId: toolkit.connection?.connectedAccount?.id,
+    };
+  });
 }
