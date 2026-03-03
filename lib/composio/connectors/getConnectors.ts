@@ -40,10 +40,13 @@ export async function getConnectors(
   const session = await composio.create(accountId);
   const toolkits = await session.toolkits();
 
-  return toolkits.items.map(toolkit => ({
-    slug: toolkit.slug,
-    name: displayNames[toolkit.slug] || toolkit.name,
-    isConnected: toolkit.connection?.isActive ?? false,
-    connectedAccountId: toolkit.connection?.connectedAccount?.id,
-  }));
+  return toolkits.items.map(toolkit => {
+    const slug = toolkit.slug.toLowerCase();
+    return {
+      slug,
+      name: displayNames[slug] || toolkit.name,
+      isConnected: toolkit.connection?.isActive ?? false,
+      connectedAccountId: toolkit.connection?.connectedAccount?.id,
+    };
+  });
 }
