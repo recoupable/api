@@ -51,7 +51,7 @@ export function validateFlamingoGenerateBody(
     return NextResponse.json(
       {
         status: "error",
-        invalid_fields: firstError.path,
+        missing_fields: firstError.path,
         error: firstError.message,
       },
       {

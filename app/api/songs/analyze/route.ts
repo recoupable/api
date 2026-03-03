@@ -26,12 +26,14 @@ export async function OPTIONS() {
  * Authentication: x-api-key header or Authorization Bearer token required.
  *
  * Request body:
- * - prompt (required): Text prompt or question about the music
+ * - preset (optional): Curated preset name for structured analysis
+ * - prompt (optional): Text prompt or question about the music
  * - audio_url (optional): Public URL to an audio file (MP3, WAV, FLAC)
  * - max_new_tokens (optional): Max tokens to generate (1–2048, default 512)
  * - temperature (optional): Controls creativity (0–2, default 1.0)
  * - top_p (optional): Nucleus sampling cutoff (0–1, default 1.0)
  * - do_sample (optional): Enable sampling (default false)
+ * Exactly one of `preset` or `prompt` is required.
  *
  * Response (200):
  * - status: "success"

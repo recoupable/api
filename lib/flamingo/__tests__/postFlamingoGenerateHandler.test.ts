@@ -112,8 +112,15 @@ describe("postFlamingoGenerateHandler", () => {
 
       const request = createMockRequest({});
       const result = await postFlamingoGenerateHandler(request);
+      const body = await result.json();
 
       expect(result.status).toBe(400);
+      expect(body).toEqual(
+        expect.objectContaining({
+          status: "error",
+          missing_fields: ["preset"],
+        }),
+      );
     });
 
     it("returns 500 when Modal call fails", async () => {
