@@ -7,7 +7,7 @@ const resendAttachmentSchema = z.object({
   filename: z.string(),
   content_type: z.string(),
   content_disposition: z.string(),
-  content_id: z.string(),
+  content_id: z.string().nullable(),
 });
 
 const resendEmailDataSchema = z.object({
