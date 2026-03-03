@@ -1,16 +1,25 @@
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getPresetSummaries } from "@/lib/flamingo/presets";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 /**
  * Handler for GET /api/songs/analyze/presets.
  *
  * Returns a list of all available analysis presets.
- * No authentication required — this is a discovery endpoint.
+ * Requires authentication via x-api-key header or Authorization bearer token.
  *
  * @returns A NextResponse with the list of available presets.
  */
-export function getFlamingoPresetsHandler(): NextResponse {
+export async function getFlamingoPresetsHandler(
+  request: NextRequest,
+): Promise<NextResponse> {
+  const authResult = await validateAuthContext(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   const presets = getPresetSummaries();
 
   return NextResponse.json(

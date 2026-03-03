@@ -1,3 +1,4 @@
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getFlamingoPresetsHandler } from "@/lib/flamingo/getFlamingoPresetsHandler";
@@ -21,7 +22,7 @@ export async function OPTIONS() {
  * prompt with optimized generation parameters for a specific use case
  * (e.g. catalog metadata, sync licensing, audience profiling).
  *
- * No authentication required — this is a discovery endpoint.
+ * Authentication: x-api-key header or Authorization Bearer token required.
  *
  * Response (200):
  * - status: "success"
@@ -29,6 +30,6 @@ export async function OPTIONS() {
  *
  * @returns A NextResponse with the list of available presets
  */
-export async function GET(): Promise<NextResponse> {
-  return getFlamingoPresetsHandler();
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  return getFlamingoPresetsHandler(request);
 }
