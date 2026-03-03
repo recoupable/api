@@ -4,7 +4,7 @@
  * and an optional response parser.
  */
 export interface PresetConfig {
-  /** Unique preset identifier (kebab-case) */
+  /** Unique preset identifier (snake_case, e.g. "mix_feedback") */
   name: string;
   /** Human-readable label */
   label: string;

@@ -76,6 +76,7 @@ describe("postFlamingoGenerateHandler", () => {
         prompt: "What genre?",
         audio_url: "https://example.com/song.mp3",
         max_new_tokens: 256,
+        top_p: 0.85,
       });
       await postFlamingoGenerateHandler(request);
 
@@ -84,6 +85,7 @@ describe("postFlamingoGenerateHandler", () => {
           prompt: "What genre?",
           audio_url: "https://example.com/song.mp3",
           max_new_tokens: 256,
+          top_p: 0.85,
         }),
       );
     });
@@ -134,6 +136,24 @@ describe("postFlamingoGenerateHandler", () => {
       expect(body).toEqual({
         status: "error",
         error: "Flamingo model returned 503: Service Unavailable",
+      });
+    });
+
+    it("returns 400 when request body is malformed JSON", async () => {
+      const request = {
+        headers: new Headers({ "x-api-key": "test-key" }),
+        json: async () => {
+          throw new SyntaxError("Unexpected token");
+        },
+      } as unknown as NextRequest;
+
+      const result = await postFlamingoGenerateHandler(request);
+      const body = await result.json();
+
+      expect(result.status).toBe(400);
+      expect(body).toEqual({
+        status: "error",
+        error: "Request body must be valid JSON",
       });
     });
   });

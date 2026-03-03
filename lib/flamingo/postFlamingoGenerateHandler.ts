@@ -25,6 +25,16 @@ import { executeFullReport } from "@/lib/flamingo/executeFullReport";
 export async function postFlamingoGenerateHandler(
   request: NextRequest,
 ): Promise<NextResponse> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { status: "error", error: "Request body must be valid JSON" },
+      { status: 400, headers: getCorsHeaders() },
+    );
+  }
+
   try {
     // 1. Authenticate — supports both x-api-key and Authorization Bearer
     const authResult = await validateAuthContext(request);
@@ -33,7 +43,6 @@ export async function postFlamingoGenerateHandler(
     }
 
     // 2. Parse and validate body
-    const body = await request.json();
     const validated = validateFlamingoGenerateBody(body);
     if (validated instanceof NextResponse) {
       return validated;
@@ -62,6 +71,7 @@ export async function postFlamingoGenerateHandler(
     let prompt = validated.prompt ?? "";
     let maxNewTokens = validated.max_new_tokens;
     let temperature = validated.temperature;
+    let topP = validated.top_p;
     let doSample = validated.do_sample;
     let presetName: string | undefined;
     let parseResponse: ((raw: string) => unknown) | undefined;
@@ -89,6 +99,7 @@ export async function postFlamingoGenerateHandler(
       prompt = preset.prompt;
       maxNewTokens = preset.params.max_new_tokens;
       temperature = preset.params.temperature;
+      topP = undefined;
       doSample = preset.params.do_sample;
       presetName = preset.name;
       parseResponse = preset.parseResponse;
@@ -100,6 +111,7 @@ export async function postFlamingoGenerateHandler(
       audio_url: validated.audio_url,
       max_new_tokens: maxNewTokens,
       temperature,
+      top_p: topP,
       do_sample: doSample,
     });
 

@@ -105,4 +105,15 @@ describe("callFlamingoGenerate", () => {
       callFlamingoGenerate({ prompt: "Describe this." }),
     ).rejects.toThrow("Flamingo model returned 500: Unknown error");
   });
+
+  it("throws when response shape is invalid", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ response: 42 }),
+    });
+
+    await expect(
+      callFlamingoGenerate({ prompt: "Describe this." }),
+    ).rejects.toThrow("Flamingo model returned an unexpected response shape");
+  });
 });

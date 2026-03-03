@@ -10,7 +10,7 @@ import { getPresetSummaries } from "@/lib/flamingo/presets";
  *
  * @returns A NextResponse with the list of available presets.
  */
-export async function getFlamingoPresetsHandler(): Promise<NextResponse> {
+export function getFlamingoPresetsHandler(): NextResponse {
   const presets = getPresetSummaries();
 
   return NextResponse.json(

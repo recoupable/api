@@ -24,6 +24,7 @@ const analyzeMusicSchema = z.object({
     ),
   prompt: z
     .string()
+    .max(24000)
     .optional()
     .describe(
       "Custom text prompt or question about the music. Use when no preset fits your needs.",
@@ -40,6 +41,22 @@ const analyzeMusicSchema = z.object({
     .max(2048)
     .optional()
     .describe("Maximum tokens to generate (default 512). Ignored when using a preset."),
+  temperature: z
+    .number()
+    .min(0)
+    .max(2)
+    .optional()
+    .describe("Controls creativity (default 1.0). Ignored when using a preset."),
+  top_p: z
+    .number()
+    .min(0)
+    .max(1)
+    .optional()
+    .describe("Nucleus sampling cutoff (default 1.0). Ignored when using a preset."),
+  do_sample: z
+    .boolean()
+    .optional()
+    .describe("Enable sampling (default false). Ignored when using a preset."),
 });
 
 /**
@@ -87,6 +104,12 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
       }
 
       try {
+        console.info("[MCP] analyze_music request", {
+          accountId,
+          preset: args.preset ?? null,
+          hasAudioUrl: Boolean(args.audio_url),
+        });
+
         // Handle full_report preset
         if (args.preset === FULL_REPORT_PRESET_NAME) {
           if (!args.audio_url) {
@@ -104,6 +127,7 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
         let prompt = args.prompt ?? "";
         let maxNewTokens = args.max_new_tokens;
         let temperature: number | undefined;
+        let topP = args.top_p;
         let doSample: boolean | undefined;
         let parseResponse: ((raw: string) => unknown) | undefined;
 
@@ -120,6 +144,7 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
           prompt = preset.prompt;
           maxNewTokens = preset.params.max_new_tokens;
           temperature = preset.params.temperature;
+          topP = undefined;
           doSample = preset.params.do_sample;
           parseResponse = preset.parseResponse;
         }
@@ -130,6 +155,7 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
           audio_url: args.audio_url,
           max_new_tokens: maxNewTokens,
           temperature,
+          top_p: topP,
           do_sample: doSample,
         });
 

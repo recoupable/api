@@ -11,6 +11,15 @@ export interface FlamingoGenerateResult {
   elapsed_seconds: number;
 }
 
+function isFlamingoGenerateResult(value: unknown): value is FlamingoGenerateResult {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.response === "string" &&
+    typeof candidate.elapsed_seconds === "number"
+  );
+}
+
 /**
  * Calls the Music Flamingo /generate endpoint on Modal.
  * This is the shared business logic used by both the API route handler
@@ -43,6 +52,9 @@ export async function callFlamingoGenerate(
     );
   }
 
-  const data = (await response.json()) as FlamingoGenerateResult;
+  const data = await response.json();
+  if (!isFlamingoGenerateResult(data)) {
+    throw new Error("Flamingo model returned an unexpected response shape");
+  }
   return data;
 }

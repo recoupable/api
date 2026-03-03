@@ -18,10 +18,10 @@ export const flamingoGenerateBodySchema = z
       .max(24000, "prompt exceeds 24,000 character limit")
       .optional(),
     audio_url: z.string().url("audio_url must be a valid URL").optional(),
-    max_new_tokens: z.number().int().min(1).max(2048).default(512).optional(),
-    temperature: z.number().min(0).max(2).default(1.0).optional(),
-    top_p: z.number().min(0).max(1).default(1.0).optional(),
-    do_sample: z.boolean().default(false).optional(),
+    max_new_tokens: z.number().int().min(1).max(2048).optional().default(512),
+    temperature: z.number().min(0).max(2).optional().default(1.0),
+    top_p: z.number().min(0).max(1).optional().default(1.0),
+    do_sample: z.boolean().optional().default(false),
   })
   .refine((data) => data.preset || data.prompt, {
     message: "Either 'preset' or 'prompt' is required",
@@ -51,7 +51,7 @@ export function validateFlamingoGenerateBody(
     return NextResponse.json(
       {
         status: "error",
-        missing_fields: firstError.path,
+        invalid_fields: firstError.path,
         error: firstError.message,
       },
       {
