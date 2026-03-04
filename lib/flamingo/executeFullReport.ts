@@ -43,6 +43,7 @@ export async function executeFullReport(audioUrl: string): Promise<{
           audio_url: audioUrl,
           max_new_tokens: preset.params.max_new_tokens,
           temperature: preset.params.temperature,
+          top_p: 1.0,
           do_sample: preset.params.do_sample,
         });
 
