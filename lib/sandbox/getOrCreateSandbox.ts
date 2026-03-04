@@ -1,12 +1,12 @@
-import type { Sandbox } from "@vercel/sandbox";
 import { getActiveSandbox } from "./getActiveSandbox";
-import { createSandboxFromSnapshot } from "./createSandboxFromSnapshot";
+import {
+  createSandboxFromSnapshot,
+  type CreateSandboxFromSnapshotResult,
+} from "./createSandboxFromSnapshot";
 
-export interface GetOrCreateSandboxResult {
-  sandbox: Sandbox;
+export interface GetOrCreateSandboxResult extends CreateSandboxFromSnapshotResult {
   sandboxId: string;
   created: boolean;
-  fromSnapshot: boolean;
 }
 
 /**
