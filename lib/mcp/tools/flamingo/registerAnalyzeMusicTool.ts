@@ -5,14 +5,11 @@ import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
-import { callFlamingoGenerate } from "@/lib/flamingo/callFlamingoGenerate";
-import { getPreset, PRESET_NAMES } from "@/lib/flamingo/presets";
-import { FULL_REPORT_PRESET_NAME } from "@/lib/flamingo/presets/fullReport";
-import { executeFullReport } from "@/lib/flamingo/executeFullReport";
 import {
   flamingoGenerateBodySchema,
   type FlamingoGenerateBody,
 } from "@/lib/flamingo/validateFlamingoGenerateBody";
+import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRequest";
 
 /**
  * Registers the analyze_music MCP tool on the server.
@@ -35,7 +32,6 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
       args: FlamingoGenerateBody,
       extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
     ) => {
-      // Authenticate via authInfo
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
       const { accountId, error } = await resolveAccountId({
         authInfo,
@@ -50,82 +46,21 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
         return getToolResultError("Failed to resolve account ID");
       }
 
+      let result;
       try {
-        console.info("[MCP] analyze_music request", {
-          accountId,
-          preset: args.preset ?? null,
-          hasAudioUrl: Boolean(args.audio_url),
-        });
-
-        // Handle full_report preset
-        if (args.preset === FULL_REPORT_PRESET_NAME) {
-          if (!args.audio_url) {
-            return getToolResultError(
-              "audio_url is required for the full_report preset",
-            );
-          }
-          const { report, elapsed_seconds } = await executeFullReport(
-            args.audio_url,
-          );
-          return getToolResultSuccess({ preset: "full_report", report, elapsed_seconds });
-        }
-
-        // Resolve individual preset
-        let prompt = args.prompt ?? "";
-        let maxNewTokens = args.max_new_tokens;
-        let temperature: number | undefined;
-        let topP = args.top_p;
-        let doSample: boolean | undefined;
-        let parseResponse: ((raw: string) => unknown) | undefined;
-
-        if (args.preset) {
-          const preset = getPreset(args.preset);
-          if (!preset) {
-            return getToolResultError(`Unknown preset: ${args.preset}`);
-          }
-          if (preset.requiresAudio && !args.audio_url) {
-            return getToolResultError(
-              `The "${preset.name}" preset requires an audio_url`,
-            );
-          }
-          prompt = preset.prompt;
-          maxNewTokens = preset.params.max_new_tokens;
-          temperature = preset.params.temperature;
-          topP = undefined;
-          doSample = preset.params.do_sample;
-          parseResponse = preset.parseResponse;
-        }
-
-        // Call Flamingo
-        const result = await callFlamingoGenerate({
-          prompt,
-          audio_url: args.audio_url,
-          max_new_tokens: maxNewTokens,
-          temperature,
-          top_p: topP,
-          do_sample: doSample,
-        });
-
-        // Apply post-processing
-        let response: unknown = result.response;
-        if (parseResponse) {
-          try {
-            response = parseResponse(result.response);
-          } catch {
-            response = result.response;
-          }
-        }
-
-        return getToolResultSuccess({
-          ...(args.preset ? { preset: args.preset } : {}),
-          response,
-          elapsed_seconds: result.elapsed_seconds,
-        });
+        result = await processAnalyzeMusicRequest(args);
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Flamingo inference failed";
         return getToolResultError(`Music analysis failed: ${message}`);
       }
+
+      if (result.type === "error") {
+        return getToolResultError(result.error);
+      }
+
+      const { type: _, ...data } = result;
+      return getToolResultSuccess(data);
     },
   );
 }
