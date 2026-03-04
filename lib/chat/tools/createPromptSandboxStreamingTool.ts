@@ -56,7 +56,8 @@ export function createPromptSandboxStreamingTool(
       "IMPORTANT: When the result contains a `runId`, it means the sandbox is being set up for the first time " +
       "and the command was dispatched to a background task. The output will be empty because the task is still running. " +
       "The UI automatically shows a live progress view for background tasks — do NOT summarize or interpret the empty output. " +
-      "Simply tell the user their request is being processed in the sandbox and the results will appear in the task progress view above.",
+      "Simply tell the user their request is being processed in the sandbox and the results will appear in the task progress view above. " +
+      "Do NOT automatically poll or check the task status — instead, let the user know they can ask you to check on it whenever they want.",
     inputSchema: promptSandboxSchema,
     execute: async function* ({ prompt }, { abortSignal }) {
       yield { status: "booting" as const, output: "" };
