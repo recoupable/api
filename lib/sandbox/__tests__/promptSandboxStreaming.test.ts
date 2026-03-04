@@ -5,7 +5,6 @@ import { promptSandboxStreaming } from "../promptSandboxStreaming";
 
 const mockGetOrCreateSandbox = vi.fn();
 const mockTriggerRunSandboxCommand = vi.fn();
-const mockPollTaskRun = vi.fn();
 
 vi.mock("../getOrCreateSandbox", () => ({
   getOrCreateSandbox: (...args: unknown[]) => mockGetOrCreateSandbox(...args),
@@ -14,10 +13,6 @@ vi.mock("../getOrCreateSandbox", () => ({
 vi.mock("@/lib/trigger/triggerRunSandboxCommand", () => ({
   triggerRunSandboxCommand: (...args: unknown[]) =>
     mockTriggerRunSandboxCommand(...args),
-}));
-
-vi.mock("@/lib/trigger/pollTaskRun", () => ({
-  pollTaskRun: (...args: unknown[]) => mockPollTaskRun(...args),
 }));
 
 describe("promptSandboxStreaming", () => {
@@ -211,7 +206,7 @@ describe("promptSandboxStreaming", () => {
   });
 
   describe("when sandbox is fresh (no snapshot)", () => {
-    it("triggers runSandboxCommand and polls for result", async () => {
+    it("triggers runSandboxCommand and returns runId immediately", async () => {
       mockGetOrCreateSandbox.mockResolvedValue({
         sandbox: mockSandbox,
         sandboxId: "sbx_fresh",
@@ -220,14 +215,6 @@ describe("promptSandboxStreaming", () => {
       });
 
       mockTriggerRunSandboxCommand.mockResolvedValue({ id: "run_abc" });
-      mockPollTaskRun.mockResolvedValue({
-        status: "COMPLETED",
-        output: {
-          stdout: "setup + prompt output",
-          stderr: "",
-          exitCode: 0,
-        },
-      });
 
       const chunks: Array<{ data: string; stream: "stdout" | "stderr" }> = [];
       let finalResult;
@@ -255,17 +242,17 @@ describe("promptSandboxStreaming", () => {
         sandboxId: "sbx_fresh",
         accountId: "acc_1",
       });
-      expect(mockPollTaskRun).toHaveBeenCalledWith("run_abc");
 
       // Should yield a setup status message
       expect(chunks.some((c) => c.stream === "stderr")).toBe(true);
 
       expect(finalResult).toEqual({
         sandboxId: "sbx_fresh",
-        stdout: "setup + prompt output",
+        stdout: "",
         stderr: "",
         exitCode: 0,
         created: true,
+        runId: "run_abc",
       });
     });
 
@@ -278,14 +265,6 @@ describe("promptSandboxStreaming", () => {
       });
 
       mockTriggerRunSandboxCommand.mockResolvedValue({ id: "run_abc" });
-      mockPollTaskRun.mockResolvedValue({
-        status: "COMPLETED",
-        output: {
-          stdout: "done",
-          stderr: "",
-          exitCode: 0,
-        },
-      });
 
       const gen = promptSandboxStreaming({
         accountId: "acc_1",
@@ -300,7 +279,7 @@ describe("promptSandboxStreaming", () => {
       expect(mockRunCommand).not.toHaveBeenCalled();
     });
 
-    it("handles failed task run", async () => {
+    it("does not poll for task completion", async () => {
       mockGetOrCreateSandbox.mockResolvedValue({
         sandbox: mockSandbox,
         sandboxId: "sbx_fresh",
@@ -308,15 +287,7 @@ describe("promptSandboxStreaming", () => {
         fromSnapshot: false,
       });
 
-      mockTriggerRunSandboxCommand.mockResolvedValue({ id: "run_fail" });
-      mockPollTaskRun.mockResolvedValue({
-        status: "COMPLETED",
-        output: {
-          stdout: "",
-          stderr: "setup failed",
-          exitCode: 1,
-        },
-      });
+      mockTriggerRunSandboxCommand.mockResolvedValue({ id: "run_abc" });
 
       const gen = promptSandboxStreaming({
         accountId: "acc_1",
@@ -324,22 +295,12 @@ describe("promptSandboxStreaming", () => {
         prompt: "test",
       });
 
-      let finalResult;
-      while (true) {
-        const result = await gen.next();
-        if (result.done) {
-          finalResult = result.value;
-          break;
-        }
+      for await (const _ of gen) {
+        // consume
       }
 
-      expect(finalResult).toEqual({
-        sandboxId: "sbx_fresh",
-        stdout: "",
-        stderr: "setup failed",
-        exitCode: 1,
-        created: true,
-      });
+      // Should return immediately without waiting for task completion
+      expect(mockTriggerRunSandboxCommand).toHaveBeenCalledTimes(1);
     });
   });
 });

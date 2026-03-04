@@ -1,6 +1,5 @@
 import { getOrCreateSandbox } from "./getOrCreateSandbox";
 import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
-import { pollTaskRun } from "@/lib/trigger/pollTaskRun";
 
 interface PromptSandboxStreamingInput {
   accountId: string;
@@ -15,18 +14,20 @@ interface PromptSandboxStreamingResult {
   stderr: string;
   exitCode: number;
   created: boolean;
+  runId?: string;
 }
 
 /**
  * Streams output from OpenClaw running inside a persistent per-account sandbox.
  *
  * For sandboxes with an existing snapshot, runs the prompt directly and streams output.
- * For fresh sandboxes (no snapshot), delegates to the runSandboxCommand background task
- * which handles full setup (OpenClaw install, GitHub repo, etc.) before running the prompt.
+ * For fresh sandboxes (no snapshot), triggers the runSandboxCommand background task
+ * which handles full setup (OpenClaw install, GitHub repo, etc.) and runs the prompt.
+ * Returns immediately with a runId so the caller can track progress without blocking.
  *
  * @param input - The account ID, API key, prompt, and optional abort signal
  * @yields Log chunks with data and stream type (stdout/stderr)
- * @returns The sandbox ID, accumulated output, exit code, and whether the sandbox was newly created
+ * @returns The sandbox ID, accumulated output, exit code, whether the sandbox was newly created, and optional runId
  */
 export async function* promptSandboxStreaming(
   input: PromptSandboxStreamingInput,
@@ -39,7 +40,7 @@ export async function* promptSandboxStreaming(
 
   const { sandbox, sandboxId, created, fromSnapshot } = await getOrCreateSandbox(accountId);
 
-  // Fresh sandbox: delegate to background task for full setup + prompt execution
+  // Fresh sandbox: trigger background task for full setup + prompt execution
   if (created && !fromSnapshot) {
     yield {
       data: "Setting up your sandbox for the first time...\n",
@@ -53,19 +54,13 @@ export async function* promptSandboxStreaming(
       accountId,
     });
 
-    const run = await pollTaskRun(handle.id);
-    const output = run.output as {
-      stdout: string;
-      stderr: string;
-      exitCode: number;
-    };
-
     return {
       sandboxId,
-      stdout: output.stdout,
-      stderr: output.stderr,
-      exitCode: output.exitCode,
+      stdout: "",
+      stderr: "",
+      exitCode: 0,
       created,
+      runId: handle.id,
     };
   }
 
