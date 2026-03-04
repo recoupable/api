@@ -19,6 +19,8 @@ interface SandboxStreamProgress {
   output: string;
   stderr?: string;
   exitCode?: number;
+  fromSnapshot?: boolean;
+  runId?: string;
 }
 
 interface PromptSandboxFinalResult {
@@ -27,6 +29,8 @@ interface PromptSandboxFinalResult {
   stderr: string;
   exitCode: number;
   created: boolean;
+  fromSnapshot: boolean;
+  runId?: string;
 }
 
 /**
@@ -48,7 +52,12 @@ export function createPromptSandboxStreamingTool(
       "file operations, data analysis, content generation, and any multi-step task. " +
       "The sandbox has skills for managing RELEASE.md documents, generating deliverables, and more. " +
       "Reuses the account's existing running sandbox or creates one from the latest snapshot. " +
-      "Streams output in real-time.",
+      "Streams output in real-time. " +
+      "IMPORTANT: When the result contains a `runId`, it means the sandbox is being set up for the first time " +
+      "and the command was dispatched to a background task. The output will be empty because the task is still running. " +
+      "The UI automatically shows a live progress view for background tasks — do NOT summarize or interpret the empty output. " +
+      "Simply tell the user their request is being processed in the sandbox and the results will appear in the task progress view above. " +
+      "Do NOT automatically poll or check the task status — instead, let the user know they can ask you to check on it whenever they want.",
     inputSchema: promptSandboxSchema,
     execute: async function* ({ prompt }, { abortSignal }) {
       yield { status: "booting" as const, output: "" };
@@ -90,6 +99,8 @@ export function createPromptSandboxStreamingTool(
         output: finalResult!.stdout,
         stderr: finalResult!.stderr,
         exitCode: finalResult!.exitCode,
+        ...(finalResult!.fromSnapshot === false && { fromSnapshot: false }),
+        ...(finalResult!.runId && { runId: finalResult!.runId }),
       };
 
       return finalResult as never;
