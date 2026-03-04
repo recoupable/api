@@ -1,7 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
@@ -10,54 +9,10 @@ import { callFlamingoGenerate } from "@/lib/flamingo/callFlamingoGenerate";
 import { getPreset, PRESET_NAMES } from "@/lib/flamingo/presets";
 import { FULL_REPORT_PRESET_NAME } from "@/lib/flamingo/presets/fullReport";
 import { executeFullReport } from "@/lib/flamingo/executeFullReport";
-
-/**
- * Zod schema for the analyze_music MCP tool input.
- * Supports both custom prompts and curated presets.
- */
-const analyzeMusicSchema = z.object({
-  preset: z
-    .enum(PRESET_NAMES as unknown as [string, ...string[]])
-    .optional()
-    .describe(
-      "Name of a curated analysis preset (e.g. 'catalog_metadata', 'mood_tags', 'full_report'). Use instead of prompt for structured output.",
-    ),
-  prompt: z
-    .string()
-    .max(24000)
-    .optional()
-    .describe(
-      "Custom text prompt or question about the music. Use when no preset fits your needs.",
-    ),
-  audio_url: z
-    .string()
-    .url()
-    .optional()
-    .describe("Public URL to an audio file (MP3, WAV, FLAC — up to 20 min)"),
-  max_new_tokens: z
-    .number()
-    .int()
-    .min(1)
-    .max(2048)
-    .optional()
-    .describe("Maximum tokens to generate (default 512). Ignored when using a preset."),
-  temperature: z
-    .number()
-    .min(0)
-    .max(2)
-    .optional()
-    .describe("Controls creativity (default 1.0). Ignored when using a preset."),
-  top_p: z
-    .number()
-    .min(0)
-    .max(1)
-    .optional()
-    .describe("Nucleus sampling cutoff (default 1.0). Ignored when using a preset."),
-  do_sample: z
-    .boolean()
-    .optional()
-    .describe("Enable sampling (default false). Ignored when using a preset."),
-});
+import {
+  flamingoGenerateBodySchema,
+  type FlamingoGenerateBody,
+} from "@/lib/flamingo/validateFlamingoGenerateBody";
 
 /**
  * Registers the analyze_music MCP tool on the server.
@@ -74,10 +29,10 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
         "Accepts either a 'preset' name for structured analysis (e.g. 'catalog_metadata', 'mood_tags', 'sync_brief_match', 'full_report') " +
         "or a custom 'prompt' for free-form questions. " +
         "Most presets require an audio_url. Audio files can be up to 20 minutes (MP3, WAV, FLAC).",
-      inputSchema: analyzeMusicSchema,
+      inputSchema: flamingoGenerateBodySchema,
     },
     async (
-      args: z.infer<typeof analyzeMusicSchema>,
+      args: FlamingoGenerateBody,
       extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
     ) => {
       // Authenticate via authInfo
@@ -93,14 +48,6 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
 
       if (!accountId) {
         return getToolResultError("Failed to resolve account ID");
-      }
-
-      // Validate: need either preset or prompt
-      if (!args.preset && !args.prompt) {
-        return getToolResultError(
-          "Either 'preset' or 'prompt' is required. Available presets: " +
-            PRESET_NAMES.join(", "),
-        );
       }
 
       try {

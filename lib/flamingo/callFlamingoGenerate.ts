@@ -1,24 +1,10 @@
 import { FLAMINGO_GENERATE_URL } from "@/lib/const";
 import type { FlamingoGenerateBody } from "@/lib/flamingo/validateFlamingoGenerateBody";
-
-/**
- * Response shape from the Music Flamingo /generate endpoint on Modal.
- */
-export interface FlamingoGenerateResult {
-  /** The model's text response about the music */
-  response: string;
-  /** Inference time in seconds */
-  elapsed_seconds: number;
-}
-
-function isFlamingoGenerateResult(value: unknown): value is FlamingoGenerateResult {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Record<string, unknown>;
-  return (
-    typeof candidate.response === "string" &&
-    typeof candidate.elapsed_seconds === "number"
-  );
-}
+import {
+  isFlamingoGenerateResult,
+  type FlamingoGenerateResult,
+} from "@/lib/flamingo/isFlamingoGenerateResult";
+export type { FlamingoGenerateResult };
 
 /**
  * Calls the Music Flamingo /generate endpoint on Modal.
