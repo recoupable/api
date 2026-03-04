@@ -206,7 +206,7 @@ describe("promptSandboxStreaming", () => {
   });
 
   describe("when sandbox is fresh (no snapshot)", () => {
-    it("triggers runSandboxCommand and returns runId immediately", async () => {
+    it("triggers runSandboxCommand and returns runId without yielding", async () => {
       mockGetOrCreateSandbox.mockResolvedValue({
         sandbox: mockSandbox,
         sandboxId: "sbx_fresh",
@@ -243,8 +243,7 @@ describe("promptSandboxStreaming", () => {
         accountId: "acc_1",
       });
 
-      // Should yield a setup status message
-      expect(chunks.some((c) => c.stream === "stderr")).toBe(true);
+      expect(chunks).toEqual([]);
 
       expect(finalResult).toEqual({
         sandboxId: "sbx_fresh",

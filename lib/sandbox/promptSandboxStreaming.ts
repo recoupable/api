@@ -42,11 +42,6 @@ export async function* promptSandboxStreaming(
 
   // Fresh sandbox: trigger background task for full setup + prompt execution
   if (created && !fromSnapshot) {
-    yield {
-      data: "Setting up your sandbox for the first time...\n",
-      stream: "stderr" as const,
-    };
-
     const handle = await triggerRunSandboxCommand({
       command: "openclaw",
       args: ["agent", "--agent", "main", "--message", prompt],
