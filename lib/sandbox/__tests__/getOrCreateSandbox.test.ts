@@ -20,7 +20,7 @@ describe("getOrCreateSandbox", () => {
     vi.clearAllMocks();
   });
 
-  it("returns existing sandbox with created=false", async () => {
+  it("returns existing sandbox with created=false and fromSnapshot=true", async () => {
     const mockSandbox = {
       sandboxId: "sbx_existing",
       status: "running",
@@ -34,18 +34,22 @@ describe("getOrCreateSandbox", () => {
       sandbox: mockSandbox,
       sandboxId: "sbx_existing",
       created: false,
+      fromSnapshot: true,
     });
     expect(mockCreateSandboxFromSnapshot).not.toHaveBeenCalled();
   });
 
-  it("creates new sandbox when none active with created=true", async () => {
+  it("creates new sandbox from snapshot with created=true, fromSnapshot=true", async () => {
     const mockSandbox = {
       sandboxId: "sbx_new",
       status: "running",
     } as unknown as Sandbox;
 
     mockGetActiveSandbox.mockResolvedValue(null);
-    mockCreateSandboxFromSnapshot.mockResolvedValue(mockSandbox);
+    mockCreateSandboxFromSnapshot.mockResolvedValue({
+      sandbox: mockSandbox,
+      fromSnapshot: true,
+    });
 
     const result = await getOrCreateSandbox("acc_1");
 
@@ -53,7 +57,30 @@ describe("getOrCreateSandbox", () => {
       sandbox: mockSandbox,
       sandboxId: "sbx_new",
       created: true,
+      fromSnapshot: true,
     });
     expect(mockCreateSandboxFromSnapshot).toHaveBeenCalledWith("acc_1");
+  });
+
+  it("creates fresh sandbox with created=true, fromSnapshot=false", async () => {
+    const mockSandbox = {
+      sandboxId: "sbx_fresh",
+      status: "running",
+    } as unknown as Sandbox;
+
+    mockGetActiveSandbox.mockResolvedValue(null);
+    mockCreateSandboxFromSnapshot.mockResolvedValue({
+      sandbox: mockSandbox,
+      fromSnapshot: false,
+    });
+
+    const result = await getOrCreateSandbox("acc_1");
+
+    expect(result).toEqual({
+      sandbox: mockSandbox,
+      sandboxId: "sbx_fresh",
+      created: true,
+      fromSnapshot: false,
+    });
   });
 });

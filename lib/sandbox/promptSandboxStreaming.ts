@@ -1,4 +1,6 @@
 import { getOrCreateSandbox } from "./getOrCreateSandbox";
+import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
+import { pollTaskRun } from "@/lib/trigger/pollTaskRun";
 
 interface PromptSandboxStreamingInput {
   accountId: string;
@@ -17,7 +19,10 @@ interface PromptSandboxStreamingResult {
 
 /**
  * Streams output from OpenClaw running inside a persistent per-account sandbox.
- * Yields log chunks as they arrive, then returns the full result.
+ *
+ * For sandboxes with an existing snapshot, runs the prompt directly and streams output.
+ * For fresh sandboxes (no snapshot), delegates to the runSandboxCommand background task
+ * which handles full setup (OpenClaw install, GitHub repo, etc.) before running the prompt.
  *
  * @param input - The account ID, API key, prompt, and optional abort signal
  * @yields Log chunks with data and stream type (stdout/stderr)
@@ -32,9 +37,39 @@ export async function* promptSandboxStreaming(
 > {
   const { accountId, apiKey, prompt, abortSignal } = input;
 
-  const { sandbox, sandboxId, created } =
-    await getOrCreateSandbox(accountId);
+  const { sandbox, sandboxId, created, fromSnapshot } = await getOrCreateSandbox(accountId);
 
+  // Fresh sandbox: delegate to background task for full setup + prompt execution
+  if (created && !fromSnapshot) {
+    yield {
+      data: "Setting up your sandbox for the first time...\n",
+      stream: "stderr" as const,
+    };
+
+    const handle = await triggerRunSandboxCommand({
+      command: "openclaw",
+      args: ["agent", "--agent", "main", "--message", prompt],
+      sandboxId,
+      accountId,
+    });
+
+    const run = await pollTaskRun(handle.id);
+    const output = run.output as {
+      stdout: string;
+      stderr: string;
+      exitCode: number;
+    };
+
+    return {
+      sandboxId,
+      stdout: output.stdout,
+      stderr: output.stderr,
+      exitCode: output.exitCode,
+      created,
+    };
+  }
+
+  // Existing setup: run prompt directly and stream output
   const cmd = await sandbox.runCommand({
     cmd: "openclaw",
     args: ["agent", "--agent", "main", "--message", prompt],
