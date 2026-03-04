@@ -78,6 +78,7 @@ describe("promptSandboxStreaming", () => {
         stderr: "",
         exitCode: 0,
         created: false,
+        fromSnapshot: true,
       });
     });
 
@@ -122,6 +123,7 @@ describe("promptSandboxStreaming", () => {
         stderr: "warn: something",
         exitCode: 0,
         created: false,
+        fromSnapshot: true,
       });
     });
 
@@ -201,6 +203,7 @@ describe("promptSandboxStreaming", () => {
         stderr: "error output",
         exitCode: 1,
         created: false,
+        fromSnapshot: true,
       });
     });
   });
@@ -251,6 +254,7 @@ describe("promptSandboxStreaming", () => {
         stderr: "",
         exitCode: 0,
         created: true,
+        fromSnapshot: false,
         runId: "run_abc",
       });
     });

@@ -14,6 +14,7 @@ interface PromptSandboxStreamingResult {
   stderr: string;
   exitCode: number;
   created: boolean;
+  fromSnapshot: boolean;
   runId?: string;
 }
 
@@ -55,6 +56,7 @@ export async function* promptSandboxStreaming(
       stderr: "",
       exitCode: 0,
       created,
+      fromSnapshot,
       runId: handle.id,
     };
   }
@@ -89,5 +91,6 @@ export async function* promptSandboxStreaming(
     stderr,
     exitCode,
     created,
+    fromSnapshot,
   };
 }
