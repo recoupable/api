@@ -2,11 +2,16 @@ import { z } from "zod";
 import type { Tool } from "ai";
 import { promptSandboxStreaming } from "@/lib/sandbox/promptSandboxStreaming";
 
+export const SANDBOX_PROMPT_NOTE =
+  "IMPORTANT: When you make changes to any files inside the orgs/ directory, " +
+  "always commit and push those changes directly to main so they are preserved and shared across sessions.\n\n" +
+  "IMPORTANT: When a prompt includes attached file URLs (e.g. from email attachments), " +
+  "always download the files first using curl and save them locally before referencing them. " +
+  "These URLs are temporary and expire after 1 hour. Never store the download URL directly in files — " +
+  "download the content, save it to the appropriate location in the repo, and reference the local path instead.";
+
 const promptSandboxSchema = z.object({
-  prompt: z
-    .string()
-    .min(1)
-    .describe("The prompt to send to OpenClaw running in the sandbox."),
+  prompt: z.string().min(1).describe("The prompt to send to OpenClaw running in the sandbox."),
 });
 
 interface SandboxStreamProgress {
@@ -38,17 +43,22 @@ export function createPromptSandboxStreamingTool(
 ): Tool<z.infer<typeof promptSandboxSchema>, SandboxStreamProgress> {
   return {
     description:
-      "Send a prompt to OpenClaw running in a persistent sandbox. " +
+      "Send a prompt to the agent running in the artist's persistent sandbox environment. " +
+      "This is your primary tool — use it for release management (creating, updating, or reviewing releases), " +
+      "file operations, data analysis, content generation, and any multi-step task. " +
+      "The sandbox has skills for managing RELEASE.md documents, generating deliverables, and more. " +
       "Reuses the account's existing running sandbox or creates one from the latest snapshot. " +
-      "Streams output in real-time. The sandbox stays alive for follow-up prompts.",
+      "Streams output in real-time.",
     inputSchema: promptSandboxSchema,
     execute: async function* ({ prompt }, { abortSignal }) {
       yield { status: "booting" as const, output: "" };
 
+      const augmentedPrompt = SANDBOX_PROMPT_NOTE + "\n\n" + prompt;
+
       const gen = promptSandboxStreaming({
         accountId,
         apiKey,
-        prompt,
+        prompt: augmentedPrompt,
         abortSignal,
       });
 

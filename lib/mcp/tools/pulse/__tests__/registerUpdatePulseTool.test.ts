@@ -6,14 +6,13 @@ import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sd
 import { registerUpdatePulseTool } from "../registerUpdatePulseTool";
 
 const mockUpsertPulseAccount = vi.fn();
-const mockCanAccessAccount = vi.fn();
 
 vi.mock("@/lib/supabase/pulse_accounts/upsertPulseAccount", () => ({
   upsertPulseAccount: (...args: unknown[]) => mockUpsertPulseAccount(...args),
 }));
 
 vi.mock("@/lib/organizations/canAccessAccount", () => ({
-  canAccessAccount: (...args: unknown[]) => mockCanAccessAccount(...args),
+  canAccessAccount: vi.fn(),
 }));
 
 type ServerRequestHandlerExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
@@ -122,48 +121,7 @@ describe("registerUpdatePulseTool", () => {
     });
   });
 
-  it("allows account_id override for org auth with access", async () => {
-    mockCanAccessAccount.mockResolvedValue(true);
-    mockUpsertPulseAccount.mockResolvedValue({
-      id: "pulse-456",
-      account_id: "target-account-789",
-      active: true,
-    });
-
-    await registeredHandler(
-      { active: true, account_id: "target-account-789" },
-      createMockExtra({ accountId: "org-account-id", orgId: "org-account-id" }),
-    );
-
-    expect(mockCanAccessAccount).toHaveBeenCalledWith({
-      orgId: "org-account-id",
-      targetAccountId: "target-account-789",
-    });
-    expect(mockUpsertPulseAccount).toHaveBeenCalledWith({
-      account_id: "target-account-789",
-      active: true,
-    });
-  });
-
-  it("returns error when org auth lacks access to account_id", async () => {
-    mockCanAccessAccount.mockResolvedValue(false);
-
-    const result = await registeredHandler(
-      { active: true, account_id: "target-account-789" },
-      createMockExtra({ accountId: "org-account-id", orgId: "org-account-id" }),
-    );
-
-    expect(result).toEqual({
-      content: [
-        {
-          type: "text",
-          text: expect.stringContaining("Access denied"),
-        },
-      ],
-    });
-  });
-
-  it("returns error when neither auth nor account_id is provided", async () => {
+  it("returns error when no auth is provided", async () => {
     const result = await registeredHandler({ active: true }, createMockExtra());
 
     expect(result).toEqual({

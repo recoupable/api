@@ -9,6 +9,8 @@ import { RECOUP_API_KEY } from "@/lib/const";
 import { setupConversation } from "@/lib/chat/setupConversation";
 import insertMemoryEmail from "@/lib/supabase/memory_emails/insertMemoryEmail";
 import { trimRepliedContext } from "@/lib/emails/inbound/trimRepliedContext";
+import { getEmailAttachments } from "./getEmailAttachments";
+import { formatAttachmentsText } from "./formatAttachmentsText";
 
 /**
  * Validates and processes a new memory from an inbound email.
@@ -29,7 +31,9 @@ export async function validateNewEmailMemory(
   const accountId = accountEmails[0].account_id;
 
   const emailContent = await getEmailContent(emailId);
-  const emailText = trimRepliedContext(emailContent.html || "");
+  const attachments = await getEmailAttachments(emailId);
+  const emailText =
+    trimRepliedContext(emailContent.html || "") + formatAttachmentsText(attachments);
 
   const roomId = await getEmailRoomId(emailContent);
   const promptMessage = getMessages(emailText)[0];
