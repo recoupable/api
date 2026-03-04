@@ -144,6 +144,28 @@ export async function selectTableName({
 - All API routes should have JSDoc comments
 - Run `pnpm lint` before committing
 
+### Reviewer Non-Negotiables (PR-blocking)
+
+These rules reflect current code review expectations and should be treated as blocking quality gates:
+
+1. **Barrel files are re-export only**
+   - `index.ts` files should export symbols; they should not contain domain/business logic.
+
+2. **One exported responsibility per file**
+   - If a file grows multiple exported helpers (parsers, mappers, type guards), split them.
+   - Name files by purpose (e.g., `parseJsonLike.ts`, `isFlamingoGenerateResult.ts`).
+
+3. **Shared schemas for shared contracts**
+   - Do not duplicate Zod schema shape across API route + MCP tool for the same feature.
+   - Reuse a shared schema/validator from `lib/[domain]/validate*.ts`.
+
+4. **Contract parity across interfaces**
+   - API route and MCP tool for the same capability must enforce equivalent validation rules
+     (required fields, exclusivity constraints, defaults, limits).
+
+5. **Extract repeated transforms**
+   - If parsing/normalization logic appears more than once in a domain, move it to a shared helper.
+
 ### Terminology
 
 Use **"account"** terminology, never "entity" or "user". All entities in the system (individuals, artists, workspaces, organizations) are "accounts". When referring to specific types, use the specific name:
@@ -418,6 +440,7 @@ import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/proto
 import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
+import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 // Import shared domain logic
@@ -436,15 +459,17 @@ export function registerToolNameTool(server: McpServer): void {
     },
     async (args, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
-      const accountId = authInfo?.extra?.accountId;
-      const orgId = authInfo?.extra?.orgId ?? null;
+      const { accountId, error } = await resolveAccountId({
+        authInfo,
+        accountIdOverride: undefined,
+      });
 
-      if (!accountId) {
-        return getToolResultError("Authentication required.");
+      if (error) {
+        return getToolResultError(error);
       }
 
       // Use shared domain logic (same as API route)
-      const result = await sharedDomainFunction({ accountId, orgId, ...args });
+      const result = await sharedDomainFunction({ accountId, ...args });
 
       if (!result) {
         return getToolResultError("Operation failed");
@@ -461,6 +486,16 @@ export function registerToolNameTool(server: McpServer): void {
 - `getToolResultSuccess(data)` - Wrap successful responses
 - `getToolResultError(message)` - Wrap error responses
 - `resolveAccountId({ authInfo, accountIdOverride })` - Resolve account from auth
+
+### Pre-Push SRP/DRY Checklist
+
+Before commit/push, verify all items:
+
+- [ ] I did not place business logic in a barrel `index.ts`.
+- [ ] New helper/parser/type guard functions are in dedicated files.
+- [ ] I reused existing validation schema/validator when API + MCP share the same contract.
+- [ ] I did not duplicate domain transforms that already exist.
+- [ ] Matching API + MCP feature paths enforce the same validation behavior.
 
 ## Constants (`lib/const.ts`)
 
