@@ -19,6 +19,8 @@ interface SandboxStreamProgress {
   output: string;
   stderr?: string;
   exitCode?: number;
+  fromSnapshot?: boolean;
+  runId?: string;
 }
 
 interface PromptSandboxFinalResult {
@@ -27,6 +29,8 @@ interface PromptSandboxFinalResult {
   stderr: string;
   exitCode: number;
   created: boolean;
+  fromSnapshot: boolean;
+  runId?: string;
 }
 
 /**
@@ -90,6 +94,8 @@ export function createPromptSandboxStreamingTool(
         output: finalResult!.stdout,
         stderr: finalResult!.stderr,
         exitCode: finalResult!.exitCode,
+        ...(finalResult!.fromSnapshot === false && { fromSnapshot: false }),
+        ...(finalResult!.runId && { runId: finalResult!.runId }),
       };
 
       return finalResult as never;

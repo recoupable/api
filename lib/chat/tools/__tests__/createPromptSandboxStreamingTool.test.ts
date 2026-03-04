@@ -199,6 +199,46 @@ describe("createPromptSandboxStreamingTool", () => {
     });
   });
 
+  describe("fresh sandbox (no snapshot)", () => {
+    it("includes runId and fromSnapshot in complete status", async () => {
+      async function* fakeStreaming() {
+        return {
+          sandboxId: "sbx_fresh",
+          stdout: "",
+          stderr: "",
+          exitCode: 0,
+          created: true,
+          fromSnapshot: false,
+          runId: "run_abc",
+        };
+      }
+
+      mockPromptSandboxStreaming.mockReturnValue(fakeStreaming());
+
+      const tool = createPromptSandboxStreamingTool("acc_1", "key_1");
+      const iterable = tool.execute!(
+        { prompt: "hello" },
+        {
+          abortSignal: new AbortController().signal,
+          toolCallId: "tc_fresh",
+          messages: [],
+        },
+      ) as AsyncIterable<unknown>;
+
+      const yields = await drainGenerator(iterable);
+      const complete = yields[yields.length - 1];
+
+      expect(complete).toEqual({
+        status: "complete",
+        output: "",
+        stderr: "",
+        exitCode: 0,
+        fromSnapshot: false,
+        runId: "run_abc",
+      });
+    });
+  });
+
   describe("description mentions release management", () => {
     it("includes release management as a primary use case", () => {
       const tool = createPromptSandboxStreamingTool("acc_1", "key_1");
