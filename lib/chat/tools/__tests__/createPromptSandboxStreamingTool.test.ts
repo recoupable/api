@@ -239,6 +239,28 @@ describe("createPromptSandboxStreamingTool", () => {
     });
   });
 
+  describe("description explains runId background task behavior", () => {
+    it("tells LLM not to interpret empty output when runId is present", () => {
+      const tool = createPromptSandboxStreamingTool("acc_1", "key_1");
+
+      expect(tool.description).toContain("runId");
+      expect(tool.description).toContain("background task");
+      expect(tool.description).toContain("do NOT");
+    });
+
+    it("tells LLM not to poll task status", () => {
+      const tool = createPromptSandboxStreamingTool("acc_1", "key_1");
+
+      expect(tool.description).toContain("Do NOT automatically poll");
+    });
+
+    it("tells LLM to let user know they can ask for status", () => {
+      const tool = createPromptSandboxStreamingTool("acc_1", "key_1");
+
+      expect(tool.description).toContain("ask you to check");
+    });
+  });
+
   describe("description mentions release management", () => {
     it("includes release management as a primary use case", () => {
       const tool = createPromptSandboxStreamingTool("acc_1", "key_1");
