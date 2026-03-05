@@ -3,15 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-
-/**
- * Parses a string query param as a boolean. Only "true" → true; everything else → false.
- * z.coerce.boolean() would treat any non-empty string (including "false") as true.
- */
-const booleanFromString = z
-  .enum(["true", "false"])
-  .default("false")
-  .transform(v => v === "true");
+import { booleanFromString } from "@/lib/content/booleanFromString";
 
 export const getContentEstimateQuerySchema = z.object({
   lipsync: booleanFromString,
@@ -47,4 +39,3 @@ export async function validateGetContentEstimateQuery(
 
   return result.data;
 }
-

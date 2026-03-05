@@ -3,13 +3,7 @@ import { uploadFileByKey } from "@/lib/supabase/storage/uploadFileByKey";
 import { createFileRecord } from "@/lib/supabase/files/createFileRecord";
 import { selectFileByStorageKey } from "@/lib/supabase/files/selectFileByStorageKey";
 import { createSignedFileUrlByKey } from "@/lib/supabase/storage/createSignedFileUrlByKey";
-
-type TriggerRunLike = {
-  id: string;
-  status?: string | null;
-  taskIdentifier?: string | null;
-  output?: unknown;
-};
+import { isCompletedRun, type TriggerRunLike } from "@/lib/content/isCompletedRun";
 
 type CreateContentOutput = {
   status?: string;
@@ -28,10 +22,6 @@ type CreateContentOutput = {
   } | null;
 };
 
-function isCompleted(run: TriggerRunLike): boolean {
-  return run.status === "COMPLETED";
-}
-
 /**
  * Persists create-content task video output to Supabase storage + files table
  * and returns the run with normalized output.
@@ -39,7 +29,7 @@ function isCompleted(run: TriggerRunLike): boolean {
  * This keeps Supabase writes in API only.
  */
 export async function persistCreateContentRunVideo<T extends TriggerRunLike>(run: T): Promise<T> {
-  if (run.taskIdentifier !== CREATE_CONTENT_TASK_ID || !isCompleted(run)) {
+  if (run.taskIdentifier !== CREATE_CONTENT_TASK_ID || !isCompletedRun(run)) {
     return run;
   }
 
@@ -133,4 +123,3 @@ export async function persistCreateContentRunVideo<T extends TriggerRunLike>(run
     },
   };
 }
-

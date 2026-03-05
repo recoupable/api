@@ -1,6 +1,6 @@
-import { getRepoFileTree, type FileTreeEntry } from "@/lib/github/getRepoFileTree";
-import { getOrgRepoUrls } from "@/lib/github/getOrgRepoUrls";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
+import { getArtistFileTree } from "@/lib/content/getArtistFileTree";
+import { getArtistRootPrefix } from "@/lib/content/getArtistRootPrefix";
 
 type MissingSeverity = "required" | "recommended";
 
@@ -17,52 +17,6 @@ export interface ArtistContentReadiness {
   warnings: ContentReadinessIssue[];
   /** The GitHub repo URL for this account's sandbox. */
   githubRepo: string;
-}
-
-function getArtistRootPrefix(paths: string[], artistSlug: string): string {
-  const preferredPrefix = `artists/${artistSlug}/`;
-  if (paths.some(path => path.startsWith(preferredPrefix))) {
-    return preferredPrefix;
-  }
-
-  const directPrefix = `${artistSlug}/`;
-  if (paths.some(path => path.startsWith(directPrefix))) {
-    return directPrefix;
-  }
-
-  return preferredPrefix;
-}
-
-/**
- * Gets the file tree that contains the artist, checking the main repo
- * first, then falling back to org submodule repos.
- */
-async function getArtistFileTree(
-  githubRepo: string,
-  artistSlug: string,
-): Promise<FileTreeEntry[] | null> {
-  const mainTree = await getRepoFileTree(githubRepo);
-  if (mainTree) {
-    const blobPaths = mainTree.filter(e => e.type === "blob").map(e => e.path);
-    const hasArtist = blobPaths.some(
-      p => p.startsWith(`artists/${artistSlug}/`) || p.startsWith(`${artistSlug}/`),
-    );
-    if (hasArtist) return mainTree;
-  }
-
-  const orgUrls = await getOrgRepoUrls(githubRepo);
-  for (const orgUrl of orgUrls) {
-    const orgTree = await getRepoFileTree(orgUrl);
-    if (orgTree) {
-      const blobPaths = orgTree.filter(e => e.type === "blob").map(e => e.path);
-      const hasArtist = blobPaths.some(
-        p => p.startsWith(`artists/${artistSlug}/`) || p.startsWith(`${artistSlug}/`),
-      );
-      if (hasArtist) return orgTree;
-    }
-  }
-
-  return mainTree;
 }
 
 /**
