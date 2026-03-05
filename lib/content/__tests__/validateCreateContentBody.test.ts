@@ -52,6 +52,7 @@ describe("validateCreateContentBody", () => {
         lipsync: true,
         captionLength: "short",
         upscale: false,
+      batch: 1,
       });
     }
   });

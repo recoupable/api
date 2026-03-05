@@ -35,7 +35,7 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
       );
     }
 
-    const handle = await triggerCreateContent({
+    const payload = {
       accountId: validated.accountId,
       artistSlug: validated.artistSlug,
       template: validated.template,
@@ -43,7 +43,28 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
       captionLength: validated.captionLength,
       upscale: validated.upscale,
       githubRepo: readiness.githubRepo,
-    });
+    };
+
+    if (validated.batch > 1) {
+      // Batch mode: trigger N tasks in parallel
+      const handles = await Promise.all(
+        Array.from({ length: validated.batch }, () => triggerCreateContent(payload)),
+      );
+      return NextResponse.json(
+        {
+          runIds: handles.map(h => h.id),
+          status: "triggered",
+          batch: validated.batch,
+          artist: validated.artistSlug,
+          template: validated.template,
+          lipsync: validated.lipsync,
+        },
+        { status: 202, headers: getCorsHeaders() },
+      );
+    }
+
+    // Single mode
+    const handle = await triggerCreateContent(payload);
 
     return NextResponse.json(
       {
@@ -53,10 +74,7 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
         template: validated.template,
         lipsync: validated.lipsync,
       },
-      {
-        status: 202,
-        headers: getCorsHeaders(),
-      },
+      { status: 202, headers: getCorsHeaders() },
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to trigger content creation";

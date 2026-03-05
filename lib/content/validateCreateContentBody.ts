@@ -21,6 +21,7 @@ export const createContentBodySchema = z.object({
   lipsync: z.boolean().default(false).optional(),
   caption_length: z.enum(CAPTION_LENGTHS).default("short").optional(),
   upscale: z.boolean().default(false).optional(),
+  batch: z.number().int().min(1).max(30).default(1).optional(),
 });
 
 export type ValidatedCreateContentBody = {
@@ -30,6 +31,7 @@ export type ValidatedCreateContentBody = {
   lipsync: boolean;
   captionLength: "short" | "medium" | "long";
   upscale: boolean;
+  batch: number;
 };
 
 /**
@@ -77,6 +79,7 @@ export async function validateCreateContentBody(
     lipsync: result.data.lipsync ?? false,
     captionLength: result.data.caption_length ?? "short",
     upscale: result.data.upscale ?? false,
+    batch: result.data.batch ?? 1,
   };
 }
 
