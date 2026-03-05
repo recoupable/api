@@ -1,4 +1,5 @@
 import { getRepoFileTree, type FileTreeEntry } from "@/lib/github/getRepoFileTree";
+import { getOrgRepoUrls } from "@/lib/github/getOrgRepoUrls";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 
 type MissingSeverity = "required" | "recommended";
@@ -40,7 +41,6 @@ async function getArtistFileTree(
   githubRepo: string,
   artistSlug: string,
 ): Promise<FileTreeEntry[] | null> {
-  // Try main repo first
   const mainTree = await getRepoFileTree(githubRepo);
   if (mainTree) {
     const blobPaths = mainTree.filter(e => e.type === "blob").map(e => e.path);
@@ -50,9 +50,8 @@ async function getArtistFileTree(
     if (hasArtist) return mainTree;
   }
 
-  // Not in main repo — check org submodule repos
-  const orgRepoUrls = await getOrgRepoUrls(githubRepo);
-  for (const orgUrl of orgRepoUrls) {
+  const orgUrls = await getOrgRepoUrls(githubRepo);
+  for (const orgUrl of orgUrls) {
     const orgTree = await getRepoFileTree(orgUrl);
     if (orgTree) {
       const blobPaths = orgTree.filter(e => e.type === "blob").map(e => e.path);
@@ -64,42 +63,6 @@ async function getArtistFileTree(
   }
 
   return mainTree;
-}
-
-/**
- * Reads .gitmodules from the repo and extracts org submodule URLs.
- */
-async function getOrgRepoUrls(githubRepo: string): Promise<string[]> {
-  const token = process.env.GITHUB_TOKEN;
-  if (!token) return [];
-
-  const match = githubRepo.match(/github\.com\/([^/]+)\/([^/]+)/);
-  if (!match) return [];
-  const [, owner, repo] = match;
-
-  try {
-    const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/.gitmodules`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.github.v3.raw",
-          "User-Agent": "Recoup-API",
-        },
-      },
-    );
-    if (!response.ok) return [];
-
-    const content = await response.text();
-    const urls: string[] = [];
-    const urlMatches = content.matchAll(/url\s*=\s*(https:\/\/github\.com\/[^\s]+)/g);
-    for (const m of urlMatches) {
-      urls.push(m[1]);
-    }
-    return urls;
-  } catch {
-    return [];
-  }
 }
 
 /**
