@@ -6,14 +6,15 @@ export interface TriggerCreateContentPayload {
   artistSlug: string;
   template: string;
   lipsync: boolean;
+  /** GitHub repo URL so the task can fetch artist files. */
+  githubRepo: string;
 }
 
 /**
  * Triggers the create-content task in Trigger.dev.
- *
- * @param payload
  */
 export async function triggerCreateContent(payload: TriggerCreateContentPayload) {
   const handle = await tasks.trigger(CREATE_CONTENT_TASK_ID, payload);
   return handle;
 }
+

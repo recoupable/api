@@ -14,6 +14,8 @@ export interface ArtistContentReadiness {
   ready: boolean;
   missing: ContentReadinessIssue[];
   warnings: ContentReadinessIssue[];
+  /** The GitHub repo URL for this account's sandbox. */
+  githubRepo: string;
 }
 
 function getArtistRootPrefix(paths: string[], artistSlug: string): string {
@@ -122,6 +124,7 @@ export async function getArtistContentReadiness({
     ready: requiredMissing.length === 0,
     missing: requiredMissing,
     warnings,
+    githubRepo,
   };
 }
 

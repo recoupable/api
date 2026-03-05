@@ -40,6 +40,7 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
       artistSlug: validated.artistSlug,
       template: validated.template,
       lipsync: validated.lipsync,
+      githubRepo: readiness.githubRepo,
     });
 
     return NextResponse.json(
