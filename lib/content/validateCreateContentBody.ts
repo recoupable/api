@@ -48,7 +48,7 @@ export async function validateCreateContentBody(
     return NextResponse.json(
       {
         status: "error",
-        missing_fields: firstError.path,
+        field: firstError.path,
         error: firstError.message,
       },
       { status: 400, headers: getCorsHeaders() },

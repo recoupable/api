@@ -87,7 +87,7 @@ describe("createContentHandler", () => {
     expect(result.status).toBe(500);
     expect(body).toEqual({
       status: "error",
-      error: "Trigger unavailable",
+      error: "Failed to trigger content creation",
     });
   });
 

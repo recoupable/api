@@ -77,11 +77,11 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
       { status: 202, headers: getCorsHeaders() },
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to trigger content creation";
+    console.error("Failed to trigger content creation:", error);
     return NextResponse.json(
       {
         status: "error",
-        error: message,
+        error: "Failed to trigger content creation",
       },
       { status: 500, headers: getCorsHeaders() },
     );
