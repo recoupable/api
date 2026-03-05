@@ -28,10 +28,6 @@ type CreateContentOutput = {
   } | null;
 };
 
-/**
- *
- * @param run
- */
 function isCompleted(run: TriggerRunLike): boolean {
   return run.status === "COMPLETED";
 }
@@ -41,8 +37,6 @@ function isCompleted(run: TriggerRunLike): boolean {
  * and returns the run with normalized output.
  *
  * This keeps Supabase writes in API only.
- *
- * @param run
  */
 export async function persistCreateContentRunVideo<T extends TriggerRunLike>(run: T): Promise<T> {
   if (run.taskIdentifier !== CREATE_CONTENT_TASK_ID || !isCompleted(run)) {
@@ -100,17 +94,25 @@ export async function persistCreateContentRunVideo<T extends TriggerRunLike>(run
     upsert: true,
   });
 
-  const createdFile = await createFileRecord({
-    ownerAccountId: output.accountId,
-    // Phase 1: artist account mapping is not wired yet, so we scope to owner account.
-    artistAccountId: output.accountId,
-    storageKey,
-    fileName,
-    mimeType,
-    sizeBytes: videoBlob.size,
-    description: `Content pipeline output for ${output.artistSlug}`,
-    tags: ["content", "video", output.template ?? "unknown-template"],
-  });
+  let createdFile;
+  try {
+    createdFile = await createFileRecord({
+      ownerAccountId: output.accountId,
+      // Phase 1: artist account mapping is not wired yet, so we scope to owner account.
+      artistAccountId: output.accountId,
+      storageKey,
+      fileName,
+      mimeType,
+      sizeBytes: videoBlob.size,
+      description: `Content pipeline output for ${output.artistSlug}`,
+      tags: ["content", "video", output.template ?? "unknown-template"],
+    });
+  } catch {
+    // Race condition: another request may have created the record. Re-select.
+    const raceFile = await selectFileByStorageKey({ ownerAccountId: output.accountId, storageKey });
+    if (!raceFile) throw new Error("Failed to create or find file record");
+    createdFile = raceFile;
+  }
 
   const signedUrl = await createSignedFileUrlByKey({
     key: createdFile.storage_key,
@@ -131,3 +133,4 @@ export async function persistCreateContentRunVideo<T extends TriggerRunLike>(run
     },
   };
 }
+

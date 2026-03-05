@@ -77,9 +77,12 @@ export async function getArtistContentReadiness({
   artistSlug: string;
 }): Promise<ArtistContentReadiness> {
   const snapshots = await selectAccountSnapshots(accountId);
+  if (!snapshots) {
+    throw new Error("Failed to query account snapshots");
+  }
   const githubRepo = snapshots[0]?.github_repo ?? null;
   if (!githubRepo) {
-    throw new Error("No GitHub repository found for this account");
+    throw new Error("No GitHub repository configured for this account");
   }
 
   const tree = await getArtistFileTree(githubRepo, artistSlug);

@@ -80,7 +80,7 @@ describe("getArtistContentReadiness", () => {
         accountId: "acc_123",
         artistSlug: "gatsby-grace",
       }),
-    ).rejects.toThrow("No GitHub repository found for this account");
+    ).rejects.toThrow("No GitHub repository configured for this account");
   });
 });
 

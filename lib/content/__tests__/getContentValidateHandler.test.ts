@@ -80,6 +80,6 @@ describe("getContentValidateHandler", () => {
     const body = await result.json();
 
     expect(result.status).toBe(500);
-    expect(body.error).toBe("Failed to retrieve repository file tree");
+    expect(body.error).toBe("Failed to validate content readiness");
   });
 });

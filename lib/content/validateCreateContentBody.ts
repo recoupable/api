@@ -16,12 +16,12 @@ export const createContentBodySchema = z.object({
   template: z
     .string()
     .min(1, "template cannot be empty")
-    .default(DEFAULT_CONTENT_TEMPLATE)
-    .optional(),
-  lipsync: z.boolean().default(false).optional(),
-  caption_length: z.enum(CAPTION_LENGTHS).default("short").optional(),
-  upscale: z.boolean().default(false).optional(),
-  batch: z.number().int().min(1).max(30).default(1).optional(),
+    .optional()
+    .default(DEFAULT_CONTENT_TEMPLATE),
+  lipsync: z.boolean().optional().default(false),
+  caption_length: z.enum(CAPTION_LENGTHS).optional().default("short"),
+  upscale: z.boolean().optional().default(false),
+  batch: z.number().int().min(1).max(30).optional().default(1),
 });
 
 export type ValidatedCreateContentBody = {

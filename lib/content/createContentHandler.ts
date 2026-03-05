@@ -46,15 +46,23 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
     };
 
     if (validated.batch > 1) {
-      // Batch mode: trigger N tasks in parallel
-      const handles = await Promise.all(
+      // Batch mode: trigger N tasks in parallel.
+      // Use allSettled so partial failures don't lose successful runIds.
+      const results = await Promise.allSettled(
         Array.from({ length: validated.batch }, () => triggerCreateContent(payload)),
       );
+      const runIds = results
+        .filter((r): r is PromiseFulfilledResult<{ id: string }> => r.status === "fulfilled")
+        .map(r => r.value.id);
+      const failedCount = results.filter(r => r.status === "rejected").length;
+
       return NextResponse.json(
         {
-          runIds: handles.map(h => h.id),
+          runIds,
           status: "triggered",
           batch: validated.batch,
+          triggered: runIds.length,
+          ...(failedCount > 0 && { failed: failedCount }),
           artist: validated.artistSlug,
           template: validated.template,
           lipsync: validated.lipsync,
