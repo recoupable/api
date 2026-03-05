@@ -29,6 +29,7 @@ describe("createContentHandler", () => {
       ready: true,
       missing: [],
       warnings: [],
+      githubRepo: "https://github.com/test/repo",
     });
   });
 
@@ -51,6 +52,7 @@ describe("createContentHandler", () => {
       artistSlug: "gatsby-grace",
       template: "artist-caption-bedroom",
       lipsync: false,
+      captionLength: "short",
     });
     vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run_abc123" } as never);
     const request = new NextRequest("http://localhost/api/content/create", { method: "POST" });
@@ -74,6 +76,7 @@ describe("createContentHandler", () => {
       artistSlug: "gatsby-grace",
       template: "artist-caption-bedroom",
       lipsync: false,
+      captionLength: "short",
     });
     vi.mocked(triggerCreateContent).mockRejectedValue(new Error("Trigger unavailable"));
     const request = new NextRequest("http://localhost/api/content/create", { method: "POST" });
@@ -94,6 +97,7 @@ describe("createContentHandler", () => {
       artistSlug: "gatsby-grace",
       template: "artist-caption-bedroom",
       lipsync: false,
+      captionLength: "short",
     });
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
       artist_slug: "gatsby-grace",
@@ -118,3 +122,4 @@ describe("createContentHandler", () => {
     expect(Array.isArray(body.missing)).toBe(true);
   });
 });
+

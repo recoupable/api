@@ -40,6 +40,7 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
       artistSlug: validated.artistSlug,
       template: validated.template,
       lipsync: validated.lipsync,
+      captionLength: validated.captionLength,
       githubRepo: readiness.githubRepo,
     });
 
@@ -67,4 +68,3 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
     );
   }
 }
-

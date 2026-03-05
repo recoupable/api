@@ -9,6 +9,8 @@ import {
   isSupportedContentTemplate,
 } from "@/lib/content/contentTemplates";
 
+export const CAPTION_LENGTHS = ["short", "medium", "long"] as const;
+
 export const createContentBodySchema = z.object({
   artist_slug: z.string({ message: "artist_slug is required" }).min(1, "artist_slug cannot be empty"),
   template: z
@@ -17,6 +19,7 @@ export const createContentBodySchema = z.object({
     .default(DEFAULT_CONTENT_TEMPLATE)
     .optional(),
   lipsync: z.boolean().default(false).optional(),
+  caption_length: z.enum(CAPTION_LENGTHS).default("short").optional(),
 });
 
 export type ValidatedCreateContentBody = {
@@ -24,6 +27,7 @@ export type ValidatedCreateContentBody = {
   artistSlug: string;
   template: string;
   lipsync: boolean;
+  captionLength: "short" | "medium" | "long";
 };
 
 /**
@@ -69,6 +73,7 @@ export async function validateCreateContentBody(
     artistSlug: result.data.artist_slug,
     template,
     lipsync: result.data.lipsync ?? false,
+    captionLength: result.data.caption_length ?? "short",
   };
 }
 

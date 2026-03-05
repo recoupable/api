@@ -6,6 +6,8 @@ export interface TriggerCreateContentPayload {
   artistSlug: string;
   template: string;
   lipsync: boolean;
+  /** Controls caption length: "short", "medium", or "long". */
+  captionLength: "short" | "medium" | "long";
   /** GitHub repo URL so the task can fetch artist files. */
   githubRepo: string;
 }

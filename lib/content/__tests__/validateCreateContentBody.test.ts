@@ -16,10 +16,6 @@ vi.mock("@/lib/networking/safeParseJson", () => ({
   safeParseJson: vi.fn(async (req: Request) => req.json()),
 }));
 
-/**
- *
- * @param body
- */
 function createRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/content/create", {
     method: "POST",
@@ -54,6 +50,7 @@ describe("validateCreateContentBody", () => {
         artistSlug: "gatsby-grace",
         template: "artist-caption-bedroom",
         lipsync: true,
+        captionLength: "short",
       });
     }
   });
@@ -115,3 +112,4 @@ describe("validateCreateContentBody", () => {
     }
   });
 });
+
