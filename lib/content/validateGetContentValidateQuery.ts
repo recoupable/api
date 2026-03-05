@@ -4,10 +4,8 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
-const getContentValidateQuerySchema = z.object({
-  artist_slug: z
-    .string({ message: "artist_slug is required" })
-    .min(1, "artist_slug cannot be empty"),
+export const getContentValidateQuerySchema = z.object({
+  artist_slug: z.string({ message: "artist_slug is required" }).min(1, "artist_slug cannot be empty"),
 });
 
 export type ValidatedGetContentValidateQuery = {
@@ -17,8 +15,6 @@ export type ValidatedGetContentValidateQuery = {
 
 /**
  * Validates auth and query params for GET /api/content/validate.
- *
- * @param request
  */
 export async function validateGetContentValidateQuery(
   request: NextRequest,
@@ -47,3 +43,4 @@ export async function validateGetContentValidateQuery(
     artistSlug: result.data.artist_slug,
   };
 }
+

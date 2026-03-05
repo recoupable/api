@@ -10,16 +10,13 @@ import {
 } from "@/lib/content/contentTemplates";
 
 export const createContentBodySchema = z.object({
-  artist_slug: z
-    .string({ message: "artist_slug is required" })
-    .min(1, "artist_slug cannot be empty"),
+  artist_slug: z.string({ message: "artist_slug is required" }).min(1, "artist_slug cannot be empty"),
   template: z
     .string()
     .min(1, "template cannot be empty")
     .default(DEFAULT_CONTENT_TEMPLATE)
     .optional(),
   lipsync: z.boolean().default(false).optional(),
-  account_id: z.string().uuid("account_id must be a valid UUID").optional(),
 });
 
 export type ValidatedCreateContentBody = {
@@ -31,8 +28,6 @@ export type ValidatedCreateContentBody = {
 
 /**
  * Validates auth and request body for POST /api/content/create.
- *
- * @param request
  */
 export async function validateCreateContentBody(
   request: NextRequest,
@@ -52,9 +47,7 @@ export async function validateCreateContentBody(
     );
   }
 
-  const authResult = await validateAuthContext(request, {
-    accountId: result.data.account_id,
-  });
+  const authResult = await validateAuthContext(request);
 
   if (authResult instanceof NextResponse) {
     return authResult;
@@ -78,3 +71,4 @@ export async function validateCreateContentBody(
     lipsync: result.data.lipsync ?? false,
   };
 }
+

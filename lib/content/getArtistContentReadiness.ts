@@ -16,11 +16,6 @@ export interface ArtistContentReadiness {
   warnings: ContentReadinessIssue[];
 }
 
-/**
- *
- * @param paths
- * @param artistSlug
- */
 function getArtistRootPrefix(paths: string[], artistSlug: string): string {
   const preferredPrefix = `artists/${artistSlug}/`;
   if (paths.some(path => path.startsWith(preferredPrefix))) {
@@ -37,10 +32,6 @@ function getArtistRootPrefix(paths: string[], artistSlug: string): string {
 
 /**
  * Checks whether an artist has the expected files for content creation.
- *
- * @param root0
- * @param root0.accountId
- * @param root0.artistSlug
  */
 export async function getArtistContentReadiness({
   accountId,
@@ -66,7 +57,9 @@ export async function getArtistContentReadiness({
   const hasFile = (relativePath: string): boolean =>
     blobPaths.some(path => path === `${artistRootPrefix}${relativePath}`);
   const hasAnyMp3 = blobPaths.some(
-    path => path.startsWith(artistRootPrefix) && path.toLowerCase().endsWith(".mp3"),
+    path =>
+      path.startsWith(artistRootPrefix) &&
+      path.toLowerCase().endsWith(".mp3"),
   );
 
   const issues: ContentReadinessIssue[] = [];
@@ -125,7 +118,8 @@ export async function getArtistContentReadiness({
   return {
     artist_slug: artistSlug,
     ready: requiredMissing.length === 0,
-    missing: issues,
+    missing: requiredMissing,
     warnings,
   };
 }
+

@@ -4,18 +4,25 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
-const getContentEstimateQuerySchema = z.object({
-  lipsync: z.coerce.boolean().default(false),
+/**
+ * Parses a string query param as a boolean. Only "true" → true; everything else → false.
+ * z.coerce.boolean() would treat any non-empty string (including "false") as true.
+ */
+const booleanFromString = z
+  .enum(["true", "false"])
+  .default("false")
+  .transform(v => v === "true");
+
+export const getContentEstimateQuerySchema = z.object({
+  lipsync: booleanFromString,
   batch: z.coerce.number().int().min(1).max(100).default(1),
-  compare: z.coerce.boolean().default(false),
+  compare: booleanFromString,
 });
 
 export type ValidatedGetContentEstimateQuery = z.infer<typeof getContentEstimateQuerySchema>;
 
 /**
  * Validates auth and query params for GET /api/content/estimate.
- *
- * @param request
  */
 export async function validateGetContentEstimateQuery(
   request: NextRequest,
@@ -40,3 +47,4 @@ export async function validateGetContentEstimateQuery(
 
   return result.data;
 }
+
