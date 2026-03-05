@@ -52,8 +52,8 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
         Array.from({ length: validated.batch }, () => triggerCreateContent(payload)),
       );
       const runIds = results
-        .filter((r): r is PromiseFulfilledResult<{ id: string }> => r.status === "fulfilled")
-        .map(r => r.value.id);
+        .filter(r => r.status === "fulfilled")
+        .map(r => (r as PromiseFulfilledResult<{ id: string }>).value.id);
       const failedCount = results.filter(r => r.status === "rejected").length;
 
       return NextResponse.json(
