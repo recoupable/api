@@ -7,7 +7,7 @@ import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadine
 
 /**
  * Handler for POST /api/content/create.
- * Triggers a background content-creation run and returns a runId for polling.
+ * Always returns runIds array (KISS — one response shape for single and batch).
  */
 export async function createContentHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateCreateContentBody(request);
@@ -45,42 +45,24 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
       githubRepo: readiness.githubRepo,
     };
 
-    if (validated.batch > 1) {
-      // Batch mode: trigger N tasks in parallel.
-      // Use allSettled so partial failures don't lose successful runIds.
-      const results = await Promise.allSettled(
-        Array.from({ length: validated.batch }, () => triggerCreateContent(payload)),
-      );
-      const runIds = results
-        .filter(r => r.status === "fulfilled")
-        .map(r => (r as PromiseFulfilledResult<{ id: string }>).value.id);
-      const failedCount = results.filter(r => r.status === "rejected").length;
-
-      return NextResponse.json(
-        {
-          runIds,
-          status: "triggered",
-          batch: validated.batch,
-          triggered: runIds.length,
-          ...(failedCount > 0 && { failed: failedCount }),
-          artist: validated.artistSlug,
-          template: validated.template,
-          lipsync: validated.lipsync,
-        },
-        { status: 202, headers: getCorsHeaders() },
-      );
-    }
-
-    // Single mode
-    const handle = await triggerCreateContent(payload);
+    // Always use allSettled — works for single and batch.
+    const count = validated.batch;
+    const results = await Promise.allSettled(
+      Array.from({ length: count }, () => triggerCreateContent(payload)),
+    );
+    const runIds = results
+      .filter(r => r.status === "fulfilled")
+      .map(r => (r as PromiseFulfilledResult<{ id: string }>).value.id);
+    const failedCount = results.filter(r => r.status === "rejected").length;
 
     return NextResponse.json(
       {
-        runId: handle.id,
+        runIds,
         status: "triggered",
         artist: validated.artistSlug,
         template: validated.template,
         lipsync: validated.lipsync,
+        ...(failedCount > 0 && { failed: failedCount }),
       },
       { status: 202, headers: getCorsHeaders() },
     );
