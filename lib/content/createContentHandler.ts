@@ -41,6 +41,7 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
       template: validated.template,
       lipsync: validated.lipsync,
       captionLength: validated.captionLength,
+      upscale: validated.upscale,
       githubRepo: readiness.githubRepo,
     });
 

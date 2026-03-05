@@ -51,6 +51,7 @@ describe("validateCreateContentBody", () => {
         template: "artist-caption-bedroom",
         lipsync: true,
         captionLength: "short",
+        upscale: false,
       });
     }
   });

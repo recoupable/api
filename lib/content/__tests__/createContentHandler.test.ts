@@ -53,6 +53,7 @@ describe("createContentHandler", () => {
       template: "artist-caption-bedroom",
       lipsync: false,
       captionLength: "short",
+      upscale: false,
     });
     vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run_abc123" } as never);
     const request = new NextRequest("http://localhost/api/content/create", { method: "POST" });
@@ -77,6 +78,7 @@ describe("createContentHandler", () => {
       template: "artist-caption-bedroom",
       lipsync: false,
       captionLength: "short",
+      upscale: false,
     });
     vi.mocked(triggerCreateContent).mockRejectedValue(new Error("Trigger unavailable"));
     const request = new NextRequest("http://localhost/api/content/create", { method: "POST" });
@@ -98,6 +100,7 @@ describe("createContentHandler", () => {
       template: "artist-caption-bedroom",
       lipsync: false,
       captionLength: "short",
+      upscale: false,
     });
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
       artist_slug: "gatsby-grace",
