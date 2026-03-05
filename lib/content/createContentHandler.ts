@@ -8,8 +8,6 @@ import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadine
 /**
  * Handler for POST /api/content/create.
  * Triggers a background content-creation run and returns a runId for polling.
- *
- * @param request
  */
 export async function createContentHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateCreateContentBody(request);
@@ -68,3 +66,4 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
     );
   }
 }
+

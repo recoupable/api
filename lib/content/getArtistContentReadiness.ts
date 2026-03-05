@@ -72,11 +72,13 @@ export async function getArtistContentReadiness({
     });
   }
 
+  // config/content-creation/config.json is optional — the pipeline uses sensible
+  // defaults and only reads the artist config file to override specific fields.
   if (!hasFile("config/content-creation/config.json")) {
     issues.push({
       file: "config/content-creation/config.json",
-      severity: "required",
-      fix: "Add the content creation config.json file.",
+      severity: "recommended",
+      fix: "Add a pipeline config to override default model/resolution settings.",
     });
   }
 

@@ -52,10 +52,24 @@ describe("getArtistContentReadiness", () => {
 
     expect(result.ready).toBe(false);
     expect(result.missing.some(item => item.file === "context/images/face-guide.png")).toBe(true);
-    expect(result.missing.some(item => item.file === "config/content-creation/config.json")).toBe(
-      true,
-    );
     expect(result.missing.some(item => item.file === "songs/*.mp3")).toBe(true);
+  });
+
+  it("returns ready=true when only face-guide and mp3 exist (config.json is optional)", async () => {
+    vi.mocked(getRepoFileTree).mockResolvedValue([
+      { path: "artists/gatsby-grace/context/images/face-guide.png", type: "blob", sha: "1" },
+      { path: "artists/gatsby-grace/songs/track.mp3", type: "blob", sha: "2" },
+    ]);
+
+    const result = await getArtistContentReadiness({
+      accountId: "acc_123",
+      artistSlug: "gatsby-grace",
+    });
+
+    expect(result.ready).toBe(true);
+    expect(result.missing).toEqual([]);
+    // config.json appears as a warning, not a blocker
+    expect(result.warnings.some(item => item.file === "config/content-creation/config.json")).toBe(true);
   });
 
   it("throws when account has no github repo", async () => {
@@ -69,3 +83,4 @@ describe("getArtistContentReadiness", () => {
     ).rejects.toThrow("No GitHub repository found for this account");
   });
 });
+
