@@ -11,6 +11,12 @@ const logger = new ConsoleLogger();
  * Creates a new Chat bot instance configured with Slack and GitHub adapters.
  */
 export function createCodingAgentBot() {
+  // ioredis is configured with lazyConnect: true, so we must
+  // explicitly connect before the state adapter listens for "ready".
+  if (redis.status === "wait") {
+    redis.connect().catch(err => console.error("[coding-agent] Redis connect error:", err));
+  }
+
   const state = createIoRedisState({
     client: redis,
     keyPrefix: "coding-agent",
