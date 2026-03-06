@@ -11,6 +11,13 @@ vi.mock("@/lib/trigger/triggerUpdatePR", () => ({
   triggerUpdatePR: mockTriggerUpdatePR,
 }));
 
+vi.mock("chat", () => ({
+  Card: vi.fn((opts) => ({ type: "card", ...opts })),
+  Text: vi.fn((text) => ({ type: "text", text })),
+  Actions: vi.fn((children) => ({ type: "actions", children })),
+  LinkButton: vi.fn((opts) => ({ type: "link-button", ...opts })),
+}));
+
 const { registerOnNewMention } = await import("../handlers/onNewMention");
 
 beforeEach(() => {
@@ -53,8 +60,8 @@ describe("registerOnNewMention", () => {
     await handler(mockThread, mockMessage);
 
     expect(mockThread.subscribe).toHaveBeenCalledOnce();
-    expect(mockThread.post).toHaveBeenCalledWith(expect.stringContaining("Starting work"));
     expect(mockTriggerCodingAgent).toHaveBeenCalled();
+    expect(mockThread.post).toHaveBeenCalledWith(expect.objectContaining({ card: expect.anything() }));
     expect(mockThread.setState).toHaveBeenCalledWith(
       expect.objectContaining({
         status: "running",

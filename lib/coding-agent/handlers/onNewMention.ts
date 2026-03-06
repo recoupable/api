@@ -1,3 +1,4 @@
+import { Card, Text, Actions, LinkButton } from "chat";
 import type { CodingAgentBot } from "../bot";
 import { triggerCodingAgent } from "@/lib/trigger/triggerCodingAgent";
 import { triggerUpdatePR } from "@/lib/trigger/triggerUpdatePR";
@@ -34,12 +35,23 @@ export function registerOnNewMention(bot: CodingAgentBot) {
 
       const prompt = message.text;
       await thread.subscribe();
-      await thread.post(`Starting work on: "${prompt}"\n\nI'll reply here when done.`);
 
       const handle = await triggerCodingAgent({
         prompt,
         callbackThreadId: thread.id,
       });
+
+      const card = Card({
+        title: "Task Started",
+        children: [
+          Text(`Starting work on: "${prompt}"\n\nI'll reply here when done.`),
+          Actions([
+            LinkButton({ url: `https://chat.recoupable.com/tasks/${handle.id}`, label: "View Task" }),
+          ]),
+        ],
+      });
+
+      await thread.post({ card });
 
       await thread.setState({
         status: "running",
