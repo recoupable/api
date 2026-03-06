@@ -12,35 +12,6 @@ describe("config", () => {
     process.env = originalEnv;
   });
 
-  describe("SUBMODULE_CONFIG", () => {
-    it("maps api to test base branch", async () => {
-      const { SUBMODULE_CONFIG } = await import("../config");
-      expect(SUBMODULE_CONFIG.api.baseBranch).toBe("test");
-    });
-
-    it("maps chat to test base branch", async () => {
-      const { SUBMODULE_CONFIG } = await import("../config");
-      expect(SUBMODULE_CONFIG.chat.baseBranch).toBe("test");
-    });
-
-    it("maps tasks to main base branch", async () => {
-      const { SUBMODULE_CONFIG } = await import("../config");
-      expect(SUBMODULE_CONFIG.tasks.baseBranch).toBe("main");
-    });
-
-    it("maps docs to main base branch", async () => {
-      const { SUBMODULE_CONFIG } = await import("../config");
-      expect(SUBMODULE_CONFIG.docs.baseBranch).toBe("main");
-    });
-
-    it("includes repo URL for each submodule", async () => {
-      const { SUBMODULE_CONFIG } = await import("../config");
-      expect(SUBMODULE_CONFIG.api.repo).toBe("recoupable/recoup-api");
-      expect(SUBMODULE_CONFIG.chat.repo).toBe("recoupable/chat");
-      expect(SUBMODULE_CONFIG.tasks.repo).toBe("recoupable/tasks");
-    });
-  });
-
   describe("getAllowedChannelIds", () => {
     it("parses comma-separated channel IDs from env", async () => {
       process.env.CODING_AGENT_CHANNELS = "C123,C456,C789";

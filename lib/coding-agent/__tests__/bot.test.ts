@@ -6,12 +6,6 @@ vi.mock("@chat-adapter/slack", () => ({
   })),
 }));
 
-vi.mock("@chat-adapter/github", () => ({
-  GitHubAdapter: vi.fn().mockImplementation(() => ({
-    name: "github",
-  })),
-}));
-
 vi.mock("@chat-adapter/state-ioredis", () => ({
   createIoRedisState: vi.fn().mockReturnValue({
     connect: vi.fn(),
@@ -36,6 +30,7 @@ vi.mock("chat", () => ({
     instance.registerSingleton = vi.fn().mockReturnValue(instance);
     return instance;
   }),
+  ConsoleLogger: vi.fn(),
 }));
 
 describe("createCodingAgentBot", () => {
@@ -43,12 +38,11 @@ describe("createCodingAgentBot", () => {
     vi.clearAllMocks();
     process.env.SLACK_BOT_TOKEN = "xoxb-test";
     process.env.SLACK_SIGNING_SECRET = "test-signing-secret";
-    process.env.GITHUB_TOKEN = "ghp_test";
-    process.env.GITHUB_WEBHOOK_SECRET = "test-webhook-secret";
-    process.env.GITHUB_BOT_USERNAME = "recoup-bot";
+    process.env.REDIS_URL = "redis://localhost:6379";
+    process.env.CODING_AGENT_CALLBACK_SECRET = "test-callback-secret";
   });
 
-  it("creates a Chat instance with slack and github adapters", async () => {
+  it("creates a Chat instance with slack adapter", async () => {
     const { Chat } = await import("chat");
     const { createCodingAgentBot } = await import("../bot");
 
@@ -58,7 +52,6 @@ describe("createCodingAgentBot", () => {
     const lastCall = vi.mocked(Chat).mock.calls.at(-1)!;
     const config = lastCall[0];
     expect(config.adapters).toHaveProperty("slack");
-    expect(config.adapters).toHaveProperty("github");
   });
 
   it("creates a SlackAdapter with correct config", async () => {
@@ -71,21 +64,6 @@ describe("createCodingAgentBot", () => {
       expect.objectContaining({
         botToken: "xoxb-test",
         signingSecret: "test-signing-secret",
-      }),
-    );
-  });
-
-  it("creates a GitHubAdapter with correct config", async () => {
-    const { GitHubAdapter } = await import("@chat-adapter/github");
-    const { createCodingAgentBot } = await import("../bot");
-
-    createCodingAgentBot();
-
-    expect(GitHubAdapter).toHaveBeenCalledWith(
-      expect.objectContaining({
-        token: "ghp_test",
-        webhookSecret: "test-webhook-secret",
-        userName: "recoup-bot",
       }),
     );
   });

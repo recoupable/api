@@ -1,7 +1,6 @@
 import type { CodingAgentBot } from "../bot";
 import { getAllowedChannelIds, getAllowedUserIds } from "../config";
 import { triggerCodingAgent } from "@/lib/trigger/triggerCodingAgent";
-import type { CodingAgentThreadState } from "../types";
 
 /**
  * Registers the onNewMention handler on the bot.
@@ -57,7 +56,7 @@ export function registerOnNewMention(bot: CodingAgentBot) {
         prompt,
         runId: handle.id,
         slackThreadId: thread.id,
-      } as Partial<CodingAgentThreadState>);
+      });
     } catch (error) {
       console.error("[coding-agent] onNewMention error:", error);
     }
