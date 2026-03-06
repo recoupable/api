@@ -11,7 +11,7 @@ import type { CodingAgentThreadState } from "../types";
  * @param state - The current thread state
  */
 export async function handleFeedback(
-  thread: { id: string; post: (msg: unknown) => Promise<void>; setState: (s: Partial<CodingAgentThreadState>) => Promise<void> },
+  thread: { id: string; post: (msg: unknown) => Promise<unknown>; setState: (s: Partial<CodingAgentThreadState>) => Promise<unknown> },
   messageText: string,
   state: CodingAgentThreadState | null,
 ): Promise<boolean> {
