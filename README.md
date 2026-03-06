@@ -127,4 +127,8 @@ export const config = {
 
 ## Accessing Mainnet
 
-To access the mainnet facilitator in Next.js, simply install and use the `@coinbase/x402` package. 
+To access the mainnet facilitator in Next.js, simply install and use the `@coinbase/x402` package.
+
+```js
+console.log("Hello from the Recoup API 🎵");
+``` 
