@@ -25,8 +25,10 @@ describe("getRepoGitModules", () => {
 
     expect(result).toEqual([{ path: "orgs/my-org", url: "https://github.com/recoupable/org-abc" }]);
     expect(fetch).toHaveBeenCalledWith(
-      "https://raw.githubusercontent.com/owner/repo/main/.gitmodules",
-      expect.objectContaining({ headers: { Authorization: "Bearer test-token" } }),
+      "https://api.github.com/repos/owner/repo/contents/.gitmodules?ref=main",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer test-token" }),
+      }),
     );
   });
 
@@ -51,8 +53,10 @@ describe("getRepoGitModules", () => {
 
     expect(result).toEqual([{ path: "sub", url: "https://github.com/owner/sub" }]);
     expect(fetch).toHaveBeenCalledWith(
-      "https://raw.githubusercontent.com/owner/repo/develop/.gitmodules",
-      {},
+      "https://api.github.com/repos/owner/repo/contents/.gitmodules?ref=develop",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Accept: "application/vnd.github.v3.raw" }),
+      }),
     );
   });
 });

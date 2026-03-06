@@ -75,7 +75,7 @@ describe("validateCreateContentBody", () => {
     }
   });
 
-  it("returns 400 when artist_slug is missing", async () => {
+  it("returns 400 when artist_account_id is missing", async () => {
     const request = createRequest({
       template: "artist-caption-bedroom",
     });
