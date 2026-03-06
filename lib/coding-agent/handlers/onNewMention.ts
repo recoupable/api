@@ -1,7 +1,7 @@
 import type { CodingAgentBot } from "../bot";
 import { buildTaskCard } from "../buildTaskCard";
 import { triggerCodingAgent } from "@/lib/trigger/triggerCodingAgent";
-import { triggerUpdatePR } from "@/lib/trigger/triggerUpdatePR";
+import { handleFeedback } from "./handleFeedback";
 
 /**
  * Registers the onNewMention handler on the bot.
@@ -15,25 +15,7 @@ export function registerOnNewMention(bot: CodingAgentBot) {
     try {
       const state = await thread.state;
 
-      if (state?.status === "running" || state?.status === "updating") {
-        await thread.post("I'm still working on this. I'll let you know when I'm done.");
-        return;
-      }
-
-      if (state?.status === "pr_created" && state.snapshotId && state.branch && state.prs?.length) {
-        await thread.setState({ status: "updating" });
-        const handle = await triggerUpdatePR({
-          feedback: message.text,
-          snapshotId: state.snapshotId,
-          branch: state.branch,
-          repo: state.prs[0].repo,
-          callbackThreadId: thread.id,
-        });
-
-        const card = buildTaskCard("Updating PRs", "Got your feedback. Updating the PRs...", handle.id);
-        await thread.post({ card });
-        return;
-      }
+      if (await handleFeedback(thread, message.text, state)) return;
 
       const prompt = message.text;
       await thread.subscribe();
