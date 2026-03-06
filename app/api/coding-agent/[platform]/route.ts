@@ -1,5 +1,7 @@
 import type { NextRequest } from "next/server";
 import { after } from "next/server";
+import { codingAgentBot } from "@/lib/coding-agent/bot";
+import "@/lib/coding-agent/handlers/registerHandlers";
 
 /**
  * POST /api/coding-agent/[platform]
@@ -26,20 +28,11 @@ export async function POST(
     }
   }
 
-  try {
-    // Lazy-import bot to isolate initialization errors
-    const { codingAgentBot } = await import("@/lib/coding-agent/bot");
-    await import("@/lib/coding-agent/handlers/registerHandlers");
+  const handler = codingAgentBot.webhooks[platform as keyof typeof codingAgentBot.webhooks];
 
-    const handler = codingAgentBot.webhooks[platform as keyof typeof codingAgentBot.webhooks];
-
-    if (!handler) {
-      return new Response("Unknown platform", { status: 404 });
-    }
-
-    return handler(request, { waitUntil: p => after(() => p) });
-  } catch (error) {
-    console.error("[coding-agent] Failed to initialize bot:", error);
-    return new Response("Internal server error", { status: 500 });
+  if (!handler) {
+    return new Response("Unknown platform", { status: 404 });
   }
+
+  return handler(request, { waitUntil: p => after(() => p) });
 }
