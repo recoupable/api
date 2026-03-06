@@ -3,8 +3,18 @@
  * Stored in Redis via Chat SDK's state adapter.
  */
 export interface CodingAgentThreadState {
-  status: "running" | "failed";
+  status: "running" | "pr_created" | "failed";
   prompt: string;
   runId?: string;
   slackThreadId?: string;
+  branch?: string;
+  snapshotId?: string;
+  prs?: CodingAgentPR[];
+}
+
+export interface CodingAgentPR {
+  repo: string;
+  number: number;
+  url: string;
+  baseBranch: string;
 }
