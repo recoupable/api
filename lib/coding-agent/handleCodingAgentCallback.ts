@@ -52,6 +52,11 @@ export async function handleCodingAgentCallback(request: Request): Promise<NextR
     case "failed":
       await thread.post(`Agent failed: ${validated.message ?? "Unknown error"}`);
       break;
+
+    case "updated":
+      await thread.setState({ snapshotId: validated.snapshotId });
+      await thread.post("PRs updated with your feedback. Review the latest commits.");
+      break;
   }
 
   return NextResponse.json({ status: "ok" }, { headers: getCorsHeaders() });
