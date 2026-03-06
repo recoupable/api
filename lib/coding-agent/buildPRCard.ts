@@ -8,14 +8,10 @@ import type { CodingAgentPR } from "./types";
  * @param prs - Array of PRs to build review links for
  */
 export function buildPRCard(title: string, prs: CodingAgentPR[]) {
-  const prLinks = prs
-    .map(pr => `- [${pr.repo}#${pr.number}](${pr.url}) → \`${pr.baseBranch}\``)
-    .join("\n");
-
   return Card({
     title,
     children: [
-      CardText(`${prLinks}\n\nReply in this thread to give feedback.`),
+      CardText("Reply in this thread to give feedback."),
       Actions([
         ...prs.map(pr =>
           LinkButton({ url: pr.url, label: `Review ${pr.repo}#${pr.number}` }),
