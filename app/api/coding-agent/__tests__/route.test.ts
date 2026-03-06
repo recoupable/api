@@ -27,7 +27,7 @@ describe("POST /api/coding-agent/[platform]", () => {
     vi.clearAllMocks();
   });
 
-  it("responds to Slack url_verification challenge", async () => {
+  it("responds to Slack url_verification challenge without loading bot", async () => {
     const body = JSON.stringify({
       type: "url_verification",
       challenge: "test_challenge_value",

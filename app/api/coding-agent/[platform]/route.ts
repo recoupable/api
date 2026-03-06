@@ -1,13 +1,11 @@
 import type { NextRequest } from "next/server";
 import { after } from "next/server";
-import { codingAgentBot } from "@/lib/coding-agent/bot";
-import "@/lib/coding-agent/handlers/registerHandlers";
 
 /**
  * POST /api/coding-agent/[platform]
  *
  * Webhook endpoint for the coding agent bot.
- * Handles Slack webhooks via dynamic [platform] segment.
+ * Handles both Slack and GitHub webhooks via dynamic [platform] segment.
  *
  * @param request - The incoming webhook request
  * @param params.params
@@ -18,21 +16,34 @@ export async function POST(
   { params }: { params: Promise<{ platform: string }> },
 ) {
   const { platform } = await params;
+  console.log(`[coding-agent] POST /api/coding-agent/${platform}`);
 
   // Handle Slack url_verification challenge before loading the bot.
   // This avoids blocking on Redis/adapter initialization during setup.
   if (platform === "slack") {
     const body = await request.clone().json().catch(() => null);
     if (body?.type === "url_verification" && body?.challenge) {
+      console.log("[coding-agent] Responding to Slack url_verification challenge");
       return Response.json({ challenge: body.challenge });
     }
   }
 
-  const handler = codingAgentBot.webhooks[platform as keyof typeof codingAgentBot.webhooks];
+  try {
+    // Lazy-import bot to isolate initialization errors
+    const { codingAgentBot } = await import("@/lib/coding-agent/bot");
+    await import("@/lib/coding-agent/handlers/registerHandlers");
 
-  if (!handler) {
-    return new Response("Unknown platform", { status: 404 });
+    const handler = codingAgentBot.webhooks[platform as keyof typeof codingAgentBot.webhooks];
+
+    if (!handler) {
+      console.log(`[coding-agent] Unknown platform: ${platform}`);
+      return new Response("Unknown platform", { status: 404 });
+    }
+
+    console.log(`[coding-agent] Delegating to ${platform} webhook handler`);
+    return handler(request, { waitUntil: p => after(() => p) });
+  } catch (error) {
+    console.error("[coding-agent] Failed to initialize bot:", error);
+    return new Response("Internal server error", { status: 500 });
   }
-
-  return handler(request, { waitUntil: p => after(() => p) });
 }

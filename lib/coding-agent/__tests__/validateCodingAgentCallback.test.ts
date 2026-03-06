@@ -44,7 +44,16 @@ describe("validateCodingAgentCallback", () => {
       expect(result).not.toBeInstanceOf(NextResponse);
     });
 
-});
+    it("accepts updated status with new snapshotId", () => {
+      const body = {
+        threadId: "slack:C123:1234567890.123456",
+        status: "updated",
+        snapshotId: "snap_new456",
+      };
+      const result = validateCodingAgentCallback(body);
+      expect(result).not.toBeInstanceOf(NextResponse);
+    });
+  });
 
   describe("invalid payloads", () => {
     it("rejects missing threadId", () => {

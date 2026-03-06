@@ -121,4 +121,17 @@ describe("handleCodingAgentCallback", () => {
     expect(mockPost).toHaveBeenCalledWith(expect.stringContaining("Sandbox timed out"));
   });
 
+  it("posts updated confirmation for updated status", async () => {
+    const body = {
+      threadId: "slack:C123:1234567890.123456",
+      status: "updated",
+      snapshotId: "snap_new",
+    };
+    const request = makeRequest(body);
+
+    const response = await handleCodingAgentCallback(request);
+
+    expect(response.status).toBe(200);
+    expect(mockPost).toHaveBeenCalledWith(expect.stringContaining("updated"));
+  });
 });

@@ -1,5 +1,6 @@
 import { Chat, ConsoleLogger } from "chat";
 import { SlackAdapter } from "@chat-adapter/slack";
+import { GitHubAdapter } from "@chat-adapter/github";
 import { createIoRedisState } from "@chat-adapter/state-ioredis";
 import redis from "@/lib/redis/connection";
 import type { CodingAgentThreadState } from "./types";
@@ -8,16 +9,14 @@ import { validateCodingAgentEnv } from "./validateEnv";
 const logger = new ConsoleLogger();
 
 /**
- * Creates a new Chat bot instance configured with the Slack adapter.
+ * Creates a new Chat bot instance configured with Slack and GitHub adapters.
  */
 export function createCodingAgentBot() {
   validateCodingAgentEnv();
   // ioredis is configured with lazyConnect: true, so we must
   // explicitly connect before the state adapter listens for "ready".
   if (redis.status === "wait") {
-    redis.connect().catch(() => {
-      throw new Error("[coding-agent] Redis failed to connect");
-    });
+    redis.connect().catch(err => console.error("[coding-agent] Redis connect error:", err));
   }
 
   const state = createIoRedisState({
@@ -32,9 +31,16 @@ export function createCodingAgentBot() {
     logger,
   });
 
-  return new Chat<{ slack: SlackAdapter }, CodingAgentThreadState>({
+  const github = new GitHubAdapter({
+    token: process.env.GITHUB_TOKEN!,
+    webhookSecret: process.env.GITHUB_WEBHOOK_SECRET!,
+    userName: process.env.GITHUB_BOT_USERNAME!,
+    logger,
+  });
+
+  return new Chat<{ slack: SlackAdapter; github: GitHubAdapter }, CodingAgentThreadState>({
     userName: "Recoup Agent",
-    adapters: { slack },
+    adapters: { slack, github },
     state,
   });
 }
