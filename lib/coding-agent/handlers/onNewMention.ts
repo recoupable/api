@@ -1,19 +1,39 @@
 import type { CodingAgentBot } from "../bot";
 import { triggerCodingAgent } from "@/lib/trigger/triggerCodingAgent";
+import { triggerUpdatePR } from "@/lib/trigger/triggerUpdatePR";
 
 /**
  * Registers the onNewMention handler on the bot.
- * Subscribes to the thread and triggers the coding agent Trigger.dev task.
+ * If the thread already has PRs, treats the mention as feedback and
+ * triggers the update-pr task. Otherwise, starts a new coding agent task.
  *
  * @param bot
  */
 export function registerOnNewMention(bot: CodingAgentBot) {
   bot.onNewMention(async (thread, message) => {
-    const prompt = message.text;
-
     try {
-      await thread.subscribe();
+      const state = await thread.state;
 
+      if (state?.status === "running" || state?.status === "updating") {
+        await thread.post("I'm still working on this. I'll let you know when I'm done.");
+        return;
+      }
+
+      if (state?.status === "pr_created" && state.snapshotId && state.branch && state.prs?.length) {
+        await thread.post("Got your feedback. Updating the PRs...");
+        await thread.setState({ status: "updating" });
+        await triggerUpdatePR({
+          feedback: message.text,
+          snapshotId: state.snapshotId,
+          branch: state.branch,
+          repo: state.prs[0].repo,
+          callbackThreadId: thread.id,
+        });
+        return;
+      }
+
+      const prompt = message.text;
+      await thread.subscribe();
       await thread.post(`Starting work on: "${prompt}"\n\nI'll reply here when done.`);
 
       const handle = await triggerCodingAgent({
