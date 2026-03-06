@@ -1,3 +1,4 @@
+import type { Thread } from "chat";
 import { buildTaskCard } from "../buildTaskCard";
 import { triggerUpdatePR } from "@/lib/trigger/triggerUpdatePR";
 import type { CodingAgentThreadState } from "../types";
@@ -11,7 +12,7 @@ import type { CodingAgentThreadState } from "../types";
  * @param state - The current thread state
  */
 export async function handleFeedback(
-  thread: { id: string; post: (msg: unknown) => Promise<unknown>; setState: (s: Partial<CodingAgentThreadState>) => Promise<unknown> },
+  thread: Thread<CodingAgentThreadState>,
   messageText: string,
   state: CodingAgentThreadState | null,
 ): Promise<boolean> {
