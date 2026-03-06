@@ -1,4 +1,4 @@
-import { Card, Text, Actions, Button, LinkButton } from "chat";
+import { Card, CardText, Actions, Button, LinkButton } from "chat";
 import { getThread } from "./getThread";
 import type { CodingAgentCallbackBody } from "./validateCodingAgentCallback";
 
@@ -17,7 +17,7 @@ export async function handlePRCreated(threadId: string, body: CodingAgentCallbac
   const card = Card({
     title: "PRs Created",
     children: [
-      Text(`${prLinks}\n\nReply in this thread to give feedback.`),
+      CardText(`${prLinks}\n\nReply in this thread to give feedback.`),
       Actions([
         ...((body.prs ?? []).map(pr =>
           LinkButton({ url: pr.url, label: `Review ${pr.repo}#${pr.number}` }),

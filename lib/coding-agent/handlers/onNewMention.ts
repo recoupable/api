@@ -1,4 +1,4 @@
-import { Card, Text, Actions, LinkButton } from "chat";
+import { Card, CardText, Actions, LinkButton } from "chat";
 import type { CodingAgentBot } from "../bot";
 import { triggerCodingAgent } from "@/lib/trigger/triggerCodingAgent";
 import { triggerUpdatePR } from "@/lib/trigger/triggerUpdatePR";
@@ -44,7 +44,7 @@ export function registerOnNewMention(bot: CodingAgentBot) {
       const card = Card({
         title: "Task Started",
         children: [
-          Text(`Starting work on: "${prompt}"\n\nI'll reply here when done.`),
+          CardText(`Starting work on: "${prompt}"\n\nI'll reply here when done.`),
           Actions([
             LinkButton({ url: `https://chat.recoupable.com/tasks/${handle.id}`, label: "View Task" }),
           ]),

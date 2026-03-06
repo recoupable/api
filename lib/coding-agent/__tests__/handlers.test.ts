@@ -13,7 +13,7 @@ vi.mock("@/lib/trigger/triggerUpdatePR", () => ({
 
 vi.mock("chat", () => ({
   Card: vi.fn((opts) => ({ type: "card", ...opts })),
-  Text: vi.fn((text) => ({ type: "text", text })),
+  CardText: vi.fn((text) => ({ type: "text", text })),
   Actions: vi.fn((children) => ({ type: "actions", children })),
   LinkButton: vi.fn((opts) => ({ type: "link-button", ...opts })),
 }));

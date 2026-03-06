@@ -11,7 +11,7 @@ vi.mock("../getThread", () => ({
 
 vi.mock("chat", () => ({
   Card: vi.fn((opts) => ({ type: "card", ...opts })),
-  Text: vi.fn((text) => ({ type: "text", text })),
+  CardText: vi.fn((text) => ({ type: "text", text })),
   Actions: vi.fn((children) => ({ type: "actions", children })),
   Button: vi.fn((opts) => ({ type: "button", ...opts })),
   LinkButton: vi.fn((opts) => ({ type: "link-button", ...opts })),
