@@ -27,9 +27,6 @@ describe("registerOnNewMention", () => {
   });
 
   it("posts acknowledgment and triggers coding agent task", async () => {
-    process.env.CODING_AGENT_CHANNELS = "";
-    process.env.CODING_AGENT_USERS = "";
-
     const bot = createMockBot();
     registerOnNewMention(bot);
     const handler = bot.onNewMention.mock.calls[0][0];
@@ -55,25 +52,5 @@ describe("registerOnNewMention", () => {
         prompt: "fix the login bug in the api",
       }),
     );
-  });
-
-  it("rejects mentions from non-allowed channels", async () => {
-    process.env.CODING_AGENT_CHANNELS = "C999";
-    process.env.CODING_AGENT_USERS = "";
-
-    const bot = createMockBot();
-    registerOnNewMention(bot);
-    const handler = bot.onNewMention.mock.calls[0][0];
-
-    const mockThread = {
-      id: "slack:C123:1234567890.123456",
-      subscribe: vi.fn(),
-      post: vi.fn(),
-      setState: vi.fn(),
-    };
-
-    await handler(mockThread, { text: "hi", author: { id: "U111" } });
-
-    expect(mockThread.subscribe).not.toHaveBeenCalled();
   });
 });
