@@ -6,11 +6,15 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 
 const mockPost = vi.fn();
 const mockSetState = vi.fn();
+let mockState: unknown = null;
 
 vi.mock("chat", () => {
   const ThreadImpl = vi.fn().mockImplementation(() => ({
     post: mockPost,
     setState: mockSetState,
+    get state() {
+      return Promise.resolve(mockState);
+    },
   }));
   return {
     ThreadImpl,
@@ -34,6 +38,7 @@ const { handleCodingAgentCallback } = await import("../handleCodingAgentCallback
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockState = null;
   process.env.CODING_AGENT_CALLBACK_SECRET = "test-secret";
 });
 
@@ -128,7 +133,12 @@ describe("handleCodingAgentCallback", () => {
     expect(mockPost).toHaveBeenCalledWith(expect.stringContaining("Sandbox timed out"));
   });
 
-  it("posts updated confirmation for updated status", async () => {
+  it("posts updated card with PR buttons for updated status", async () => {
+    mockState = {
+      status: "updating",
+      prs: [{ repo: "recoupable/api", number: 42, url: "https://github.com/recoupable/api/pull/42", baseBranch: "test" }],
+    };
+
     const body = {
       threadId: "slack:C123:1234567890.123456",
       status: "updated",
@@ -139,7 +149,7 @@ describe("handleCodingAgentCallback", () => {
     const response = await handleCodingAgentCallback(request);
 
     expect(response.status).toBe(200);
-    expect(mockSetState).toHaveBeenCalledWith(expect.objectContaining({ snapshotId: "snap_new" }));
-    expect(mockPost).toHaveBeenCalledWith(expect.stringContaining("updated"));
+    expect(mockSetState).toHaveBeenCalledWith(expect.objectContaining({ status: "pr_created", snapshotId: "snap_new" }));
+    expect(mockPost).toHaveBeenCalledWith(expect.objectContaining({ card: expect.anything() }));
   });
 });
