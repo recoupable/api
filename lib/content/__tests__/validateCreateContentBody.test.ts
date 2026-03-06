@@ -16,6 +16,10 @@ vi.mock("@/lib/networking/safeParseJson", () => ({
   safeParseJson: vi.fn(async (req: Request) => req.json()),
 }));
 
+vi.mock("@/lib/content/resolveArtistSlug", () => ({
+  resolveArtistSlug: vi.fn().mockResolvedValue("gatsby-grace"),
+}));
+
 function createRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/content/create", {
     method: "POST",
