@@ -1,4 +1,5 @@
 import type { CodingAgentBot } from "../bot";
+import type { CodingAgentThreadState } from "../types";
 
 /**
  * Registers the "Merge All PRs" button action handler on the bot.
@@ -9,7 +10,7 @@ import type { CodingAgentBot } from "../bot";
 export function registerOnMergeAction(bot: CodingAgentBot) {
   bot.onAction("merge_all_prs", async event => {
     const thread = event.thread;
-    const state = await thread.state;
+    const state = (await thread.state) as CodingAgentThreadState | null;
 
     if (!state?.prs?.length) {
       await thread.post("No PRs to merge.");

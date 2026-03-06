@@ -1,11 +1,10 @@
 import { tasks } from "@trigger.dev/sdk";
-import type { CodingAgentPR } from "@/lib/coding-agent/types";
 
 type UpdatePRPayload = {
   feedback: string;
   snapshotId: string;
   branch: string;
-  prs: CodingAgentPR[];
+  repo: string;
   callbackThreadId: string;
 };
 

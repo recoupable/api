@@ -1,9 +1,10 @@
-import type { Sandbox } from "@vercel/sandbox";
 import { getActiveSandbox } from "./getActiveSandbox";
-import { createSandboxFromSnapshot } from "./createSandboxFromSnapshot";
+import {
+  createSandboxFromSnapshot,
+  type CreateSandboxFromSnapshotResult,
+} from "./createSandboxFromSnapshot";
 
-export interface GetOrCreateSandboxResult {
-  sandbox: Sandbox;
+export interface GetOrCreateSandboxResult extends CreateSandboxFromSnapshotResult {
   sandboxId: string;
   created: boolean;
 }
@@ -12,11 +13,9 @@ export interface GetOrCreateSandboxResult {
  * Returns an active sandbox for the account, creating one if none exists.
  *
  * @param accountId - The account ID to get or create a sandbox for
- * @returns The sandbox instance, its ID, and whether it was newly created
+ * @returns The sandbox instance, its ID, whether it was newly created, and whether it was from a snapshot
  */
-export async function getOrCreateSandbox(
-  accountId: string,
-): Promise<GetOrCreateSandboxResult> {
+export async function getOrCreateSandbox(accountId: string): Promise<GetOrCreateSandboxResult> {
   const existing = await getActiveSandbox(accountId);
 
   if (existing) {
@@ -24,14 +23,16 @@ export async function getOrCreateSandbox(
       sandbox: existing,
       sandboxId: existing.sandboxId,
       created: false,
+      fromSnapshot: true,
     };
   }
 
-  const sandbox = await createSandboxFromSnapshot(accountId);
+  const { sandbox, fromSnapshot } = await createSandboxFromSnapshot(accountId);
 
   return {
     sandbox,
     sandboxId: sandbox.sandboxId,
     created: true,
+    fromSnapshot,
   };
 }

@@ -36,7 +36,9 @@ describe("getConnectors", () => {
     const result = await getConnectors("account-123");
 
     expect(getComposioClient).toHaveBeenCalled();
-    expect(mockComposio.create).toHaveBeenCalledWith("account-123");
+    expect(mockComposio.create).toHaveBeenCalledWith("account-123", {
+      toolkits: ["googlesheets", "googledrive", "googledocs", "tiktok"],
+    });
     expect(result).toEqual([
       {
         slug: "googlesheets",

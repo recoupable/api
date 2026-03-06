@@ -107,7 +107,7 @@ describe("registerOnSubscribedMessage", () => {
         prompt: "fix bug",
         snapshotId: "snap_abc",
         branch: "agent/fix-bug",
-        prs: [{ repo: "recoupable/recoup-api", number: 1, url: "url", baseBranch: "test" }],
+        prs: [{ repo: "recoupable/api", number: 1, url: "url", baseBranch: "test" }],
       }),
       post: vi.fn(),
       setState: vi.fn(),
@@ -119,6 +119,7 @@ describe("registerOnSubscribedMessage", () => {
       expect.objectContaining({
         feedback: "make the button blue",
         snapshotId: "snap_abc",
+        repo: "recoupable/api",
       }),
     );
     expect(mockThread.setState).toHaveBeenCalledWith(

@@ -1,9 +1,11 @@
-import { Chat } from "chat";
+import { Chat, ConsoleLogger } from "chat";
 import { SlackAdapter } from "@chat-adapter/slack";
 import { GitHubAdapter } from "@chat-adapter/github";
 import { createIoRedisState } from "@chat-adapter/state-ioredis";
 import redis from "@/lib/redis/connection";
 import type { CodingAgentThreadState } from "./types";
+
+const logger = new ConsoleLogger();
 
 /**
  * Creates a new Chat bot instance configured with Slack and GitHub adapters.
@@ -12,20 +14,20 @@ export function createCodingAgentBot() {
   const state = createIoRedisState({
     client: redis,
     keyPrefix: "coding-agent",
-    logger: console,
+    logger,
   });
 
   const slack = new SlackAdapter({
     botToken: process.env.SLACK_BOT_TOKEN!,
     signingSecret: process.env.SLACK_SIGNING_SECRET!,
-    logger: console,
+    logger,
   });
 
   const github = new GitHubAdapter({
     token: process.env.GITHUB_TOKEN!,
     webhookSecret: process.env.GITHUB_WEBHOOK_SECRET!,
     userName: process.env.GITHUB_BOT_USERNAME!,
-    logger: console,
+    logger,
   });
 
   return new Chat<{ slack: SlackAdapter; github: GitHubAdapter }, CodingAgentThreadState>({

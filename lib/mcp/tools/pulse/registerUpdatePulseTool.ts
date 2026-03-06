@@ -10,7 +10,6 @@ import { getToolResultError } from "@/lib/mcp/getToolResultError";
 
 const updatePulseSchema = z.object({
   active: z.boolean().describe("Whether pulse is active for this account"),
-  account_id: z.string().optional().describe("The account ID to update pulse status for."),
 });
 
 export type UpdatePulseArgs = z.infer<typeof updatePulseSchema>;
@@ -32,12 +31,12 @@ export function registerUpdatePulseTool(server: McpServer): void {
       args: UpdatePulseArgs,
       extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
     ) => {
-      const { active, account_id } = args;
+      const { active } = args;
 
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
       const { accountId, error } = await resolveAccountId({
         authInfo,
-        accountIdOverride: account_id,
+        accountIdOverride: undefined,
       });
 
       if (error) {

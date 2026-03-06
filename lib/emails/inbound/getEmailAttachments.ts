@@ -1,11 +1,7 @@
 import { getResendClient } from "@/lib/emails/client";
+import type { ListAttachmentsResponseSuccess } from "resend";
 
-export interface EmailAttachment {
-  id: string;
-  filename: string;
-  contentType: string;
-  downloadUrl: string;
-}
+export type EmailAttachment = ListAttachmentsResponseSuccess["data"][number];
 
 /**
  * Fetches attachment download URLs for a received email from Resend.
@@ -21,10 +17,5 @@ export async function getEmailAttachments(emailId: string): Promise<EmailAttachm
 
   if (!data?.data?.length) return [];
 
-  return data.data.map(att => ({
-    id: att.id,
-    filename: att.filename || "attachment",
-    contentType: att.content_type,
-    downloadUrl: att.download_url,
-  }));
+  return data.data;
 }

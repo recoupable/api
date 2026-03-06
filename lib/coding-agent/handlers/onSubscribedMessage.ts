@@ -20,7 +20,7 @@ export function registerOnSubscribedMessage(bot: CodingAgentBot) {
       return;
     }
 
-    if (state.status === "pr_created" && state.snapshotId && state.branch && state.prs) {
+    if (state.status === "pr_created" && state.snapshotId && state.branch && state.prs?.length) {
       await thread.post("Got your feedback. Updating the PRs...");
 
       await thread.setState({ status: "updating" });
@@ -29,7 +29,7 @@ export function registerOnSubscribedMessage(bot: CodingAgentBot) {
         feedback: message.text,
         snapshotId: state.snapshotId,
         branch: state.branch,
-        prs: state.prs,
+        repo: state.prs[0].repo,
         callbackThreadId: thread.id,
       });
     }

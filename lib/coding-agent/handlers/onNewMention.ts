@@ -23,7 +23,7 @@ export function registerOnNewMention(bot: CodingAgentBot) {
     }
 
     if (allowedUsers.length > 0) {
-      const userId = message.author.id;
+      const userId = message.author.userId;
       if (!allowedUsers.includes(userId)) {
         return;
       }
