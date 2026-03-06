@@ -10,9 +10,13 @@ export const getUsernameFromProfileUrl = (profileUrl: string | null | undefined)
   }
 
   try {
-    const normalizedUrl = profileUrl.toLowerCase().trim();
-    const match = normalizedUrl.match(/(?:\.com|\.net)\/([^/?]+)/);
-    return match ? match[1] : "";
+    const trimmedUrl = profileUrl.trim();
+    const match = trimmedUrl.match(/(?:\.com|\.net)\/([^/?]+)/i);
+    if (!match) {
+      return "";
+    }
+    // Strip leading @ (e.g. instagram.com/@handle → handle)
+    return match[1].replace(/^@/, "");
   } catch (error) {
     console.error("[ERROR] Error extracting username from profile URL:", error);
     return "";
