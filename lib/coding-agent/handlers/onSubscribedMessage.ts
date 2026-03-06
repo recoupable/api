@@ -1,4 +1,5 @@
 import type { CodingAgentBot } from "../bot";
+import { buildTaskCard } from "../buildTaskCard";
 import { triggerUpdatePR } from "@/lib/trigger/triggerUpdatePR";
 
 /**
@@ -21,17 +22,18 @@ export function registerOnSubscribedMessage(bot: CodingAgentBot) {
     }
 
     if (state.status === "pr_created" && state.snapshotId && state.branch && state.prs?.length) {
-      await thread.post("Got your feedback. Updating the PRs...");
-
       await thread.setState({ status: "updating" });
 
-      await triggerUpdatePR({
+      const handle = await triggerUpdatePR({
         feedback: message.text,
         snapshotId: state.snapshotId,
         branch: state.branch,
         repo: state.prs[0].repo,
         callbackThreadId: thread.id,
       });
+
+      const card = buildTaskCard("Updating PRs", "Got your feedback. Updating the PRs...", handle.id);
+      await thread.post({ card });
     }
   });
 }
