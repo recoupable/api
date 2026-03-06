@@ -21,15 +21,26 @@ export function registerOnNewMention(bot: CodingAgentBot) {
       }
 
       if (state?.status === "pr_created" && state.snapshotId && state.branch && state.prs?.length) {
-        await thread.post("Got your feedback. Updating the PRs...");
         await thread.setState({ status: "updating" });
-        await triggerUpdatePR({
+        const handle = await triggerUpdatePR({
           feedback: message.text,
           snapshotId: state.snapshotId,
           branch: state.branch,
           repo: state.prs[0].repo,
           callbackThreadId: thread.id,
         });
+
+        const card = Card({
+          title: "Updating PRs",
+          children: [
+            CardText(`Got your feedback. Updating the PRs...`),
+            Actions([
+              LinkButton({ url: `https://chat.recoupable.com/tasks/${handle.id}`, label: "View Task" }),
+            ]),
+          ],
+        });
+
+        await thread.post({ card });
         return;
       }
 

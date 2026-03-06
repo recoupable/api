@@ -104,7 +104,7 @@ describe("registerOnNewMention", () => {
         repo: "recoupable/tasks",
       }),
     );
-    expect(mockThread.post).toHaveBeenCalledWith(expect.stringContaining("feedback"));
+    expect(mockThread.post).toHaveBeenCalledWith(expect.objectContaining({ card: expect.anything() }));
     expect(mockThread.setState).toHaveBeenCalledWith(expect.objectContaining({ status: "updating" }));
   });
 
