@@ -1,5 +1,5 @@
-import { Card, CardText, Actions, LinkButton } from "chat";
 import type { CodingAgentBot } from "../bot";
+import { buildTaskCard } from "../buildTaskCard";
 import { triggerCodingAgent } from "@/lib/trigger/triggerCodingAgent";
 import { triggerUpdatePR } from "@/lib/trigger/triggerUpdatePR";
 
@@ -30,16 +30,7 @@ export function registerOnNewMention(bot: CodingAgentBot) {
           callbackThreadId: thread.id,
         });
 
-        const card = Card({
-          title: "Updating PRs",
-          children: [
-            CardText(`Got your feedback. Updating the PRs...`),
-            Actions([
-              LinkButton({ url: `https://chat.recoupable.com/tasks/${handle.id}`, label: "View Task" }),
-            ]),
-          ],
-        });
-
+        const card = buildTaskCard("Updating PRs", "Got your feedback. Updating the PRs...", handle.id);
         await thread.post({ card });
         return;
       }
@@ -52,16 +43,7 @@ export function registerOnNewMention(bot: CodingAgentBot) {
         callbackThreadId: thread.id,
       });
 
-      const card = Card({
-        title: "Task Started",
-        children: [
-          CardText(`Starting work on: "${prompt}"\n\nI'll reply here when done.`),
-          Actions([
-            LinkButton({ url: `https://chat.recoupable.com/tasks/${handle.id}`, label: "View Task" }),
-          ]),
-        ],
-      });
-
+      const card = buildTaskCard("Task Started", `Starting work on: "${prompt}"\n\nI'll reply here when done.`, handle.id);
       await thread.post({ card });
 
       await thread.setState({
