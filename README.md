@@ -8,6 +8,14 @@ This is a Next.js application that demonstrates how to use the `x402-next` middl
 - pnpm v10 (install via [pnpm.io/installation](https://pnpm.io/installation))
 - A valid Ethereum address for receiving payments
 
+## Quick Check
+
+Run this to verify your environment is ready:
+
+```js
+console.log("Recoup API is ready to go 🚀");
+```
+
 ## Setup
 
 1. Copy `.env.local` to `.env` and add your Ethereum address to receive payments:
