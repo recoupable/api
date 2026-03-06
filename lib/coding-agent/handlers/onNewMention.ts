@@ -30,7 +30,9 @@ export function registerOnNewMention(bot: CodingAgentBot) {
           callbackThreadId: thread.id,
         });
 
+        console.log("[coding-agent] triggerUpdatePR handle:", JSON.stringify(handle));
         const card = buildTaskCard("Updating PRs", "Got your feedback. Updating the PRs...", handle.id);
+        console.log("[coding-agent] posting card:", JSON.stringify({ card }));
         await thread.post({ card });
         return;
       }
