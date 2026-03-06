@@ -12,8 +12,10 @@ import { handleCodingAgentCallback } from "@/lib/coding-agent/handleCodingAgentC
  * @param request - The incoming callback request
  */
 export async function POST(request: NextRequest) {
-  if (redis.status !== "ready") {
+  if (redis.status === "wait") {
     await redis.connect();
+  } else if (redis.status === "connecting") {
+    await new Promise<void>((resolve) => redis.once("ready", resolve));
   }
   return handleCodingAgentCallback(request);
 }
