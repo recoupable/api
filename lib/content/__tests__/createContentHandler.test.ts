@@ -89,7 +89,7 @@ describe("createContentHandler", () => {
     expect(body.failed).toBe(1);
   });
 
-  it("returns 400 when artist is not ready", async () => {
+  it("still triggers when readiness check finds missing files (best-effort)", async () => {
     vi.mocked(validateCreateContentBody).mockResolvedValue({
       accountId: "acc_123",
       artistSlug: "gatsby-grace",
@@ -116,10 +116,9 @@ describe("createContentHandler", () => {
     const result = await createContentHandler(request);
     const body = await result.json();
 
-    expect(result.status).toBe(400);
-    expect(triggerCreateContent).not.toHaveBeenCalled();
-    expect(body.ready).toBe(false);
-    expect(Array.isArray(body.missing)).toBe(true);
+    // Best-effort: validation doesn't block, task handles its own file discovery
+    expect(result.status).toBe(202);
+    expect(body.runIds).toBeDefined();
   });
 });
 

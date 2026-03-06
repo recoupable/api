@@ -16,23 +16,28 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
   }
 
   try {
-    const readiness = await getArtistContentReadiness({
-      accountId: validated.accountId,
-      artistSlug: validated.artistSlug,
-    });
-
-    if (!readiness.ready) {
-      return NextResponse.json(
-        {
-          error: `Artist '${validated.artistSlug}' is not ready for content creation`,
-          ready: false,
-          missing: readiness.missing,
-        },
-        {
-          status: 400,
-          headers: getCorsHeaders(),
-        },
-      );
+    // Best-effort readiness check. The task has its own submodule-aware file
+    // discovery that works even when the API-level check can't find files
+    // (e.g., artists in org submodule repos).
+    let githubRepo: string;
+    try {
+      const readiness = await getArtistContentReadiness({
+        accountId: validated.accountId,
+        artistSlug: validated.artistSlug,
+      });
+      githubRepo = readiness.githubRepo;
+    } catch {
+      // If readiness check fails, still try to resolve the repo
+      const { selectAccountSnapshots } = await import("@/lib/supabase/account_snapshots/selectAccountSnapshots");
+      const snapshots = await selectAccountSnapshots(validated.accountId);
+      const repo = snapshots?.[0]?.github_repo;
+      if (!repo) {
+        return NextResponse.json(
+          { status: "error", error: "No GitHub repository found for this account" },
+          { status: 400, headers: getCorsHeaders() },
+        );
+      }
+      githubRepo = repo;
     }
 
     const payload = {
@@ -42,7 +47,7 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
       lipsync: validated.lipsync,
       captionLength: validated.captionLength,
       upscale: validated.upscale,
-      githubRepo: readiness.githubRepo,
+      githubRepo,
     };
 
     // Always use allSettled — works for single and batch.
