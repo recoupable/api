@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import "@/lib/coding-agent/bot";
 import { handleCodingAgentCallback } from "@/lib/coding-agent/handleCodingAgentCallback";
 
 /**
