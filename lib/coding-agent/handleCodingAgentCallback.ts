@@ -46,10 +46,12 @@ export async function handleCodingAgentCallback(request: Request): Promise<NextR
       break;
 
     case "no_changes":
+      await thread.setState({ status: "no_changes" });
       await thread.post("No changes were detected. The agent didn't modify any files.");
       break;
 
     case "failed":
+      await thread.setState({ status: "failed" });
       await thread.post(`Agent failed: ${validated.message ?? "Unknown error"}`);
       break;
 

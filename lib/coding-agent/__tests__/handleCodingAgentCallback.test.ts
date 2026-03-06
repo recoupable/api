@@ -93,7 +93,7 @@ describe("handleCodingAgentCallback", () => {
     expect(mockSetState).toHaveBeenCalledWith(expect.objectContaining({ status: "pr_created" }));
   });
 
-  it("posts no-changes message for no_changes status", async () => {
+  it("posts no-changes message and resets state for no_changes status", async () => {
     const body = {
       threadId: "slack:C123:1234567890.123456",
       status: "no_changes",
@@ -104,10 +104,11 @@ describe("handleCodingAgentCallback", () => {
     const response = await handleCodingAgentCallback(request);
 
     expect(response.status).toBe(200);
+    expect(mockSetState).toHaveBeenCalledWith(expect.objectContaining({ status: "no_changes" }));
     expect(mockPost).toHaveBeenCalledWith(expect.stringContaining("No changes"));
   });
 
-  it("posts error message for failed status", async () => {
+  it("posts error message and resets state for failed status", async () => {
     const body = {
       threadId: "slack:C123:1234567890.123456",
       status: "failed",
@@ -118,6 +119,7 @@ describe("handleCodingAgentCallback", () => {
     const response = await handleCodingAgentCallback(request);
 
     expect(response.status).toBe(200);
+    expect(mockSetState).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
     expect(mockPost).toHaveBeenCalledWith(expect.stringContaining("Sandbox timed out"));
   });
 
