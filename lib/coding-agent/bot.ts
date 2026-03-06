@@ -4,6 +4,7 @@ import { GitHubAdapter } from "@chat-adapter/github";
 import { createIoRedisState } from "@chat-adapter/state-ioredis";
 import redis from "@/lib/redis/connection";
 import type { CodingAgentThreadState } from "./types";
+import { validateCodingAgentEnv } from "./validateEnv";
 
 const logger = new ConsoleLogger();
 
@@ -11,6 +12,7 @@ const logger = new ConsoleLogger();
  * Creates a new Chat bot instance configured with Slack and GitHub adapters.
  */
 export function createCodingAgentBot() {
+  validateCodingAgentEnv();
   // ioredis is configured with lazyConnect: true, so we must
   // explicitly connect before the state adapter listens for "ready".
   if (redis.status === "wait") {
