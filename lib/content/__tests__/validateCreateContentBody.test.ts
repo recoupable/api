@@ -40,7 +40,7 @@ describe("validateCreateContentBody", () => {
 
   it("returns validated payload for a valid request", async () => {
     const request = createRequest({
-      artist_slug: "gatsby-grace",
+      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
       template: "artist-caption-bedroom",
       lipsync: true,
     });
@@ -63,7 +63,7 @@ describe("validateCreateContentBody", () => {
 
   it("applies defaults when optional fields are omitted", async () => {
     const request = createRequest({
-      artist_slug: "gatsby-grace",
+      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
     });
 
     const result = await validateCreateContentBody(request);
@@ -90,7 +90,7 @@ describe("validateCreateContentBody", () => {
 
   it("returns 400 when template is unsupported", async () => {
     const request = createRequest({
-      artist_slug: "gatsby-grace",
+      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
       template: "not-a-real-template",
     });
 
@@ -108,7 +108,7 @@ describe("validateCreateContentBody", () => {
     mockValidateAuthContext.mockResolvedValue(
       NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
     );
-    const request = createRequest({ artist_slug: "gatsby-grace" });
+    const request = createRequest({ artist_account_id: "550e8400-e29b-41d4-a716-446655440000" });
 
     const result = await validateCreateContentBody(request);
 

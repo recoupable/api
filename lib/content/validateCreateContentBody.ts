@@ -13,8 +13,7 @@ import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
 export const CAPTION_LENGTHS = ["short", "medium", "long"] as const;
 
 export const createContentBodySchema = z.object({
-  artist_slug: z.string().min(1, "artist_slug cannot be empty").optional(),
-  artist_account_id: z.string().uuid("artist_account_id must be a valid UUID").optional(),
+  artist_account_id: z.string({ message: "artist_account_id is required" }).uuid("artist_account_id must be a valid UUID"),
   template: z
     .string()
     .min(1, "template cannot be empty")
@@ -74,21 +73,12 @@ export async function validateCreateContentBody(
     );
   }
 
-  // Resolve artist slug from either artist_slug or artist_account_id
-  let artistSlug = result.data.artist_slug;
-  if (!artistSlug && result.data.artist_account_id) {
-    artistSlug = await resolveArtistSlug(result.data.artist_account_id) ?? undefined;
-    if (!artistSlug) {
-      return NextResponse.json(
-        { status: "error", error: "Artist not found for the provided artist_account_id" },
-        { status: 404, headers: getCorsHeaders() },
-      );
-    }
-  }
+  // Resolve artist_account_id → slug (directory name)
+  const artistSlug = await resolveArtistSlug(result.data.artist_account_id);
   if (!artistSlug) {
     return NextResponse.json(
-      { status: "error", error: "Either artist_slug or artist_account_id is required" },
-      { status: 400, headers: getCorsHeaders() },
+      { status: "error", error: "Artist not found for the provided artist_account_id" },
+      { status: 404, headers: getCorsHeaders() },
     );
   }
 
@@ -102,4 +92,3 @@ export async function validateCreateContentBody(
     batch: result.data.batch ?? 1,
   };
 }
-

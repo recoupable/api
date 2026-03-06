@@ -25,7 +25,7 @@ describe("createContentHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      artist_slug: "gatsby-grace",
+      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
       ready: true,
       missing: [],
       warnings: [],
@@ -100,7 +100,7 @@ describe("createContentHandler", () => {
       batch: 1,
     });
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      artist_slug: "gatsby-grace",
+      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
       ready: false,
       missing: [
         {
