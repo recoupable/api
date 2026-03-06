@@ -22,7 +22,16 @@ export async function handleCodingAgentCallback(request: Request): Promise<NextR
     );
   }
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { status: "error", error: "Invalid JSON body" },
+      { status: 400, headers: getCorsHeaders() },
+    );
+  }
+
   const validated = validateCodingAgentCallback(body);
 
   if (validated instanceof NextResponse) {

@@ -15,7 +15,9 @@ export function createCodingAgentBot() {
   // ioredis is configured with lazyConnect: true, so we must
   // explicitly connect before the state adapter listens for "ready".
   if (redis.status === "wait") {
-    redis.connect().catch(err => console.error("[coding-agent] Redis connect error:", err));
+    redis.connect().catch(() => {
+      throw new Error("[coding-agent] Redis failed to connect");
+    });
   }
 
   const state = createIoRedisState({
