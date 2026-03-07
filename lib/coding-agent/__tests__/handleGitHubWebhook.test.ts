@@ -16,6 +16,10 @@ vi.mock("@/lib/trigger/triggerUpdatePR", () => ({
   triggerUpdatePR: (...args: unknown[]) => mockTriggerUpdatePR(...args),
 }));
 
+vi.mock("../postGitHubComment", () => ({
+  postGitHubComment: vi.fn(),
+}));
+
 global.fetch = vi.fn();
 
 const { handleGitHubWebhook } = await import("../handleGitHubWebhook");

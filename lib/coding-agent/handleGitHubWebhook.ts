@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { verifyGitHubWebhook } from "./verifyGitHubWebhook";
+import { encodeGitHubThreadId } from "./encodeGitHubThreadId";
 import { extractPRComment } from "./extractPRComment";
 import { getCodingAgentPRState, setCodingAgentPRState } from "./prState";
 import { triggerUpdatePR } from "@/lib/trigger/triggerUpdatePR";
@@ -35,16 +36,20 @@ export async function handleGitHubWebhook(request: Request): Promise<NextRespons
     return NextResponse.json({ status: "ignored" }, { headers: getCorsHeaders() });
   }
 
-  let { repo, prNumber, branch, commentBody } = extracted;
+  let { thread, branch, commentBody } = extracted;
+  const fullRepo = `${thread.owner}/${thread.repo}`;
   const token = process.env.GITHUB_TOKEN;
 
   if (!branch) {
-    const prResponse = await fetch(`https://api.github.com/repos/${repo}/pulls/${prNumber}`, {
-      headers: {
-        Authorization: `token ${token}`,
-        Accept: "application/vnd.github+json",
+    const prResponse = await fetch(
+      `https://api.github.com/repos/${fullRepo}/pulls/${thread.prNumber}`,
+      {
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: "application/vnd.github+json",
+        },
       },
-    });
+    );
 
     if (!prResponse.ok) {
       return NextResponse.json(
@@ -57,7 +62,7 @@ export async function handleGitHubWebhook(request: Request): Promise<NextRespons
     branch = prData.head.ref;
   }
 
-  const prState = await getCodingAgentPRState(repo, branch);
+  const prState = await getCodingAgentPRState(fullRepo, branch);
 
   if (!prState) {
     return NextResponse.json({ status: "no_state" }, { headers: getCorsHeaders() });
@@ -73,22 +78,24 @@ export async function handleGitHubWebhook(request: Request): Promise<NextRespons
 
   const feedback = commentBody.replace(BOT_MENTION, "").trim();
 
-  await setCodingAgentPRState(repo, branch, {
+  await setCodingAgentPRState(fullRepo, branch, {
     ...prState,
     status: "updating",
   });
+
+  const threadId = encodeGitHubThreadId(thread);
 
   const handle = await triggerUpdatePR({
     feedback,
     snapshotId: prState.snapshotId,
     branch: prState.branch,
     repo: prState.repo,
-    callbackThreadId: `github:${repo}:${prNumber}`,
+    callbackThreadId: threadId,
   });
 
   await postGitHubComment(
-    repo,
-    prNumber,
+    fullRepo,
+    thread.prNumber,
     `Got your feedback. Updating the PRs...\n\n[View Task](https://chat.recoupable.com/tasks/${handle.id})`,
   );
 

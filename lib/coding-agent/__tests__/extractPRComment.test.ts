@@ -8,6 +8,7 @@ const BASE_PAYLOAD = {
     pull_request: { url: "https://api.github.com/repos/recoupable/tasks/pulls/66" },
   },
   comment: {
+    id: 123,
     body: "@recoup-coding-agent make the button blue",
     user: { login: "sweetmantech" },
   },
@@ -41,17 +42,16 @@ describe("extractPRComment", () => {
     expect(extractPRComment("issue_comment", payload)).toBeNull();
   });
 
-  it("extracts from issue_comment with empty branch", () => {
+  it("extracts from issue_comment with GitHubThreadId", () => {
     const result = extractPRComment("issue_comment", BASE_PAYLOAD);
     expect(result).toEqual({
-      repo: "recoupable/tasks",
-      prNumber: 66,
+      thread: { owner: "recoupable", repo: "tasks", prNumber: 66 },
       branch: "",
       commentBody: "@recoup-coding-agent make the button blue",
     });
   });
 
-  it("extracts from pull_request_review_comment with branch", () => {
+  it("extracts from pull_request_review_comment with branch and reviewCommentId", () => {
     const payload = {
       action: "created",
       pull_request: {
@@ -59,6 +59,7 @@ describe("extractPRComment", () => {
         head: { ref: "feature/my-branch" },
       },
       comment: {
+        id: 2898626443,
         body: "@recoup-coding-agent fix the typo",
       },
       repository: {
@@ -67,8 +68,7 @@ describe("extractPRComment", () => {
     };
     const result = extractPRComment("pull_request_review_comment", payload);
     expect(result).toEqual({
-      repo: "recoupable/api",
-      prNumber: 266,
+      thread: { owner: "recoupable", repo: "api", prNumber: 266, reviewCommentId: 2898626443 },
       branch: "feature/my-branch",
       commentBody: "@recoup-coding-agent fix the typo",
     });
