@@ -1,4 +1,5 @@
 import type { CodingAgentBot } from "../bot";
+import { deleteCodingAgentPRState } from "../prState";
 import type { CodingAgentThreadState } from "../types";
 
 /**
@@ -49,6 +50,9 @@ export function registerOnMergeAction(bot: CodingAgentBot) {
     }
 
     await thread.setState({ status: "merged" });
+    if (state.branch && state.prs?.[0]?.repo) {
+      await deleteCodingAgentPRState(state.prs[0].repo, state.branch);
+    }
     await thread.post(`Merge results:\n${results.map(r => `- ${r}`).join("\n")}`);
   });
 }

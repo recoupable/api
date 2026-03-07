@@ -10,11 +10,16 @@ vi.mock("../getThread", () => ({
 }));
 
 vi.mock("chat", () => ({
-  Card: vi.fn((opts) => ({ type: "card", ...opts })),
-  CardText: vi.fn((text) => ({ type: "text", text })),
-  Actions: vi.fn((children) => ({ type: "actions", children })),
-  Button: vi.fn((opts) => ({ type: "button", ...opts })),
-  LinkButton: vi.fn((opts) => ({ type: "link-button", ...opts })),
+  Card: vi.fn(opts => ({ type: "card", ...opts })),
+  CardText: vi.fn(text => ({ type: "text", text })),
+  Actions: vi.fn(children => ({ type: "actions", children })),
+  Button: vi.fn(opts => ({ type: "button", ...opts })),
+  LinkButton: vi.fn(opts => ({ type: "link-button", ...opts })),
+}));
+
+const mockSetPRState = vi.fn();
+vi.mock("../prState", () => ({
+  setCodingAgentPRState: (...args: unknown[]) => mockSetPRState(...args),
 }));
 
 describe("handlePRCreated", () => {
@@ -26,10 +31,19 @@ describe("handlePRCreated", () => {
       status: "pr_created",
       branch: "agent/fix-bug",
       snapshotId: "snap_abc",
-      prs: [{ repo: "recoupable/api", number: 42, url: "https://github.com/recoupable/api/pull/42", baseBranch: "test" }],
+      prs: [
+        {
+          repo: "recoupable/api",
+          number: 42,
+          url: "https://github.com/recoupable/api/pull/42",
+          baseBranch: "test",
+        },
+      ],
     });
 
-    expect(mockThread.post).toHaveBeenCalledWith(expect.objectContaining({ card: expect.anything() }));
+    expect(mockThread.post).toHaveBeenCalledWith(
+      expect.objectContaining({ card: expect.anything() }),
+    );
 
     const { Button } = await import("chat");
     expect(Button).toHaveBeenCalledWith(
@@ -41,6 +55,17 @@ describe("handlePRCreated", () => {
         status: "pr_created",
         branch: "agent/fix-bug",
         snapshotId: "snap_abc",
+      }),
+    );
+
+    expect(mockSetPRState).toHaveBeenCalledWith(
+      "recoupable/api",
+      "agent/fix-bug",
+      expect.objectContaining({
+        status: "pr_created",
+        snapshotId: "snap_abc",
+        branch: "agent/fix-bug",
+        repo: "recoupable/api",
       }),
     );
   });

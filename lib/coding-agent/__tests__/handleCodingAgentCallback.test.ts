@@ -22,16 +22,21 @@ vi.mock("chat", () => {
       const parts = threadId.split(":");
       return `${parts[0]}:${parts[1]}`;
     }),
-    Card: vi.fn((opts) => ({ type: "card", ...opts })),
-    CardText: vi.fn((text) => ({ type: "text", text })),
-    Actions: vi.fn((children) => ({ type: "actions", children })),
-    Button: vi.fn((opts) => ({ type: "button", ...opts })),
-    LinkButton: vi.fn((opts) => ({ type: "link-button", ...opts })),
+    Card: vi.fn(opts => ({ type: "card", ...opts })),
+    CardText: vi.fn(text => ({ type: "text", text })),
+    Actions: vi.fn(children => ({ type: "actions", children })),
+    Button: vi.fn(opts => ({ type: "button", ...opts })),
+    LinkButton: vi.fn(opts => ({ type: "link-button", ...opts })),
   };
 });
 
 vi.mock("../bot", () => ({
   codingAgentBot: {},
+}));
+
+const mockSetPRState = vi.fn();
+vi.mock("../prState", () => ({
+  setCodingAgentPRState: (...args: unknown[]) => mockSetPRState(...args),
 }));
 
 const { handleCodingAgentCallback } = await import("../handleCodingAgentCallback");
@@ -136,7 +141,14 @@ describe("handleCodingAgentCallback", () => {
   it("posts updated card with PR buttons for updated status", async () => {
     mockState = {
       status: "updating",
-      prs: [{ repo: "recoupable/api", number: 42, url: "https://github.com/recoupable/api/pull/42", baseBranch: "test" }],
+      prs: [
+        {
+          repo: "recoupable/api",
+          number: 42,
+          url: "https://github.com/recoupable/api/pull/42",
+          baseBranch: "test",
+        },
+      ],
     };
 
     const body = {
@@ -149,7 +161,9 @@ describe("handleCodingAgentCallback", () => {
     const response = await handleCodingAgentCallback(request);
 
     expect(response.status).toBe(200);
-    expect(mockSetState).toHaveBeenCalledWith(expect.objectContaining({ status: "pr_created", snapshotId: "snap_new" }));
+    expect(mockSetState).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "pr_created", snapshotId: "snap_new" }),
+    );
     expect(mockPost).toHaveBeenCalledWith(expect.objectContaining({ card: expect.anything() }));
   });
 });

@@ -4,12 +4,19 @@ vi.mock("@/lib/trigger/triggerUpdatePR", () => ({
   triggerUpdatePR: vi.fn().mockResolvedValue({ id: "run_456" }),
 }));
 
+vi.mock("../prState", () => ({
+  setCodingAgentPRState: vi.fn(),
+}));
+
 const { registerOnSubscribedMessage } = await import("../handlers/onSubscribedMessage");
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
+/**
+ *
+ */
 function createMockBot() {
   return {
     onSubscribedMessage: vi.fn(),
@@ -45,8 +52,12 @@ describe("registerOnSubscribedMessage", () => {
 
     await handler(mockThread, { text: "make the button blue", author: { userId: "U111" } });
 
-    expect(mockThread.post).toHaveBeenCalledWith(expect.objectContaining({ card: expect.anything() }));
-    expect(mockThread.setState).toHaveBeenCalledWith(expect.objectContaining({ status: "updating" }));
+    expect(mockThread.post).toHaveBeenCalledWith(
+      expect.objectContaining({ card: expect.anything() }),
+    );
+    expect(mockThread.setState).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "updating" }),
+    );
     expect(triggerUpdatePR).toHaveBeenCalledWith(
       expect.objectContaining({
         feedback: "make the button blue",

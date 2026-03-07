@@ -1,6 +1,7 @@
 import type { Thread } from "chat";
 import { buildTaskCard } from "../buildTaskCard";
 import { triggerUpdatePR } from "@/lib/trigger/triggerUpdatePR";
+import { setCodingAgentPRState } from "../prState";
 import type { CodingAgentThreadState } from "../types";
 
 /**
@@ -23,6 +24,14 @@ export async function handleFeedback(
 
   if (state?.status === "pr_created" && state.snapshotId && state.branch && state.prs?.length) {
     await thread.setState({ status: "updating" });
+    await setCodingAgentPRState(state.prs[0].repo, state.branch, {
+      status: "updating",
+      snapshotId: state.snapshotId,
+      branch: state.branch,
+      repo: state.prs[0].repo,
+      prs: state.prs,
+    });
+
     const handle = await triggerUpdatePR({
       feedback: messageText,
       snapshotId: state.snapshotId,
