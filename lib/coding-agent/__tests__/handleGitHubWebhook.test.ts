@@ -169,4 +169,51 @@ describe("handleGitHubWebhook", () => {
       expect.objectContaining({ status: "updating" }),
     );
   });
+
+  it("handles pull_request_review_comment events without fetching PR details", async () => {
+    const reviewPayload = {
+      action: "created",
+      pull_request: {
+        number: 266,
+        head: { ref: "feature/my-branch" },
+      },
+      comment: {
+        body: "@recoup-coding-agent fix the typo",
+        user: { login: "sweetmantech" },
+      },
+      repository: {
+        full_name: "recoupable/api",
+      },
+    };
+    mockGetPRState.mockResolvedValue({
+      status: "pr_created",
+      snapshotId: "snap_xyz",
+      branch: "feature/my-branch",
+      repo: "recoupable/api",
+      prs: [{ repo: "recoupable/api", number: 266, url: "url", baseBranch: "test" }],
+    });
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true } as Response);
+
+    const request = makeRequest(reviewPayload, "pull_request_review_comment");
+    const response = await handleGitHubWebhook(request);
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json.status).toBe("update_triggered");
+
+    expect(mockTriggerUpdatePR).toHaveBeenCalledWith(
+      expect.objectContaining({
+        feedback: "fix the typo",
+        snapshotId: "snap_xyz",
+        branch: "feature/my-branch",
+        repo: "recoupable/api",
+      }),
+    );
+
+    // Should NOT have fetched PR details — branch came from payload
+    expect(fetch).not.toHaveBeenCalledWith(
+      expect.stringContaining("/pulls/266"),
+      expect.anything(),
+    );
+  });
 });
