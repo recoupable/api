@@ -1,4 +1,5 @@
 import type { CodingAgentBot } from "../bot";
+import { deleteCodingAgentPRState } from "../prState";
 import type { CodingAgentThreadState } from "../types";
 
 /**
@@ -43,12 +44,17 @@ export function registerOnMergeAction(bot: CodingAgentBot) {
       if (response.ok) {
         results.push(`${pr.repo}#${pr.number} merged`);
       } else {
-        const error = await response.json();
+        const errorBody = await response.text();
+        console.error(`[coding-agent] merge failed for ${pr.repo}#${pr.number}: ${response.status} ${errorBody}`);
+        const error = JSON.parse(errorBody);
         results.push(`${pr.repo}#${pr.number} failed: ${error.message}`);
       }
     }
 
     await thread.setState({ status: "merged" });
+    if (state.branch && state.prs?.[0]?.repo) {
+      await deleteCodingAgentPRState(state.prs[0].repo, state.branch);
+    }
     await thread.post(`Merge results:\n${results.map(r => `- ${r}`).join("\n")}`);
   });
 }

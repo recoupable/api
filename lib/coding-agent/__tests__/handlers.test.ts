@@ -12,10 +12,15 @@ vi.mock("@/lib/trigger/triggerUpdatePR", () => ({
 }));
 
 vi.mock("chat", () => ({
-  Card: vi.fn((opts) => ({ type: "card", ...opts })),
-  CardText: vi.fn((text) => ({ type: "text", text })),
-  Actions: vi.fn((children) => ({ type: "actions", children })),
-  LinkButton: vi.fn((opts) => ({ type: "link-button", ...opts })),
+  Card: vi.fn(opts => ({ type: "card", ...opts })),
+  CardText: vi.fn(text => ({ type: "text", text })),
+  Actions: vi.fn(children => ({ type: "actions", children })),
+  LinkButton: vi.fn(opts => ({ type: "link-button", ...opts })),
+}));
+
+vi.mock("../prState", () => ({
+  getCodingAgentPRState: vi.fn().mockResolvedValue(null),
+  setCodingAgentPRState: vi.fn(),
 }));
 
 const { registerOnNewMention } = await import("../handlers/onNewMention");
@@ -61,7 +66,9 @@ describe("registerOnNewMention", () => {
 
     expect(mockThread.subscribe).toHaveBeenCalledOnce();
     expect(mockTriggerCodingAgent).toHaveBeenCalled();
-    expect(mockThread.post).toHaveBeenCalledWith(expect.objectContaining({ card: expect.anything() }));
+    expect(mockThread.post).toHaveBeenCalledWith(
+      expect.objectContaining({ card: expect.anything() }),
+    );
     expect(mockThread.setState).toHaveBeenCalledWith(
       expect.objectContaining({
         status: "running",
@@ -82,7 +89,14 @@ describe("registerOnNewMention", () => {
         prompt: "original prompt",
         snapshotId: "snap_abc",
         branch: "agent/fix-bug",
-        prs: [{ repo: "recoupable/tasks", number: 56, url: "https://github.com/recoupable/tasks/pull/56", baseBranch: "main" }],
+        prs: [
+          {
+            repo: "recoupable/tasks",
+            number: 56,
+            url: "https://github.com/recoupable/tasks/pull/56",
+            baseBranch: "main",
+          },
+        ],
       }),
       subscribe: vi.fn(),
       post: vi.fn(),
@@ -104,8 +118,53 @@ describe("registerOnNewMention", () => {
         repo: "recoupable/tasks",
       }),
     );
-    expect(mockThread.post).toHaveBeenCalledWith(expect.objectContaining({ card: expect.anything() }));
-    expect(mockThread.setState).toHaveBeenCalledWith(expect.objectContaining({ status: "updating" }));
+    expect(mockThread.post).toHaveBeenCalledWith(
+      expect.objectContaining({ card: expect.anything() }),
+    );
+    expect(mockThread.setState).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "updating" }),
+    );
+  });
+
+  it("resolves PR state from shared key when thread state is null and raw has repo/branch", async () => {
+    const { getCodingAgentPRState } = await import("../prState");
+    vi.mocked(getCodingAgentPRState).mockResolvedValue({
+      status: "pr_created",
+      snapshotId: "snap_abc",
+      branch: "agent/fix-bug",
+      repo: "recoupable/api",
+      prs: [{ repo: "recoupable/api", number: 42, url: "url", baseBranch: "test" }],
+    });
+
+    const bot = createMockBot();
+    registerOnNewMention(bot);
+    const handler = bot.onNewMention.mock.calls[0][0];
+
+    const mockThread = {
+      id: "github:recoupable/api:42",
+      state: Promise.resolve(null),
+      subscribe: vi.fn(),
+      post: vi.fn(),
+      setState: vi.fn(),
+    };
+    const mockMessage = {
+      text: "make the button blue",
+      author: { id: "sweetmantech" },
+      raw: { repo: "recoupable/api", branch: "agent/fix-bug" },
+    };
+
+    await handler(mockThread, mockMessage);
+
+    expect(getCodingAgentPRState).toHaveBeenCalledWith("recoupable/api", "agent/fix-bug");
+    expect(mockTriggerUpdatePR).toHaveBeenCalledWith(
+      expect.objectContaining({
+        feedback: "make the button blue",
+        snapshotId: "snap_abc",
+        branch: "agent/fix-bug",
+        repo: "recoupable/api",
+      }),
+    );
+    expect(mockTriggerCodingAgent).not.toHaveBeenCalled();
   });
 
   it("tells user to wait when thread is already running", async () => {
