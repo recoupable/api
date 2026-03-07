@@ -1,5 +1,8 @@
+import { timingSafeEqual } from "crypto";
+
 /**
  * Verifies a GitHub webhook signature using HMAC SHA-256.
+ * Uses constant-time comparison to prevent timing attacks.
  *
  * @param body - Raw request body string
  * @param signature - The x-hub-signature-256 header value
@@ -26,5 +29,7 @@ export async function verifyGitHubWebhook(
     .join("");
   const expected = `sha256=${hex}`;
 
-  return signature === expected;
+  if (signature.length !== expected.length) return false;
+
+  return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
 }

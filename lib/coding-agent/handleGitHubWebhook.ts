@@ -85,19 +85,28 @@ export async function handleGitHubWebhook(request: Request): Promise<NextRespons
 
   const threadId = encodeGitHubThreadId(thread);
 
-  const handle = await triggerUpdatePR({
-    feedback,
-    snapshotId: prState.snapshotId,
-    branch: prState.branch,
-    repo: prState.repo,
-    callbackThreadId: threadId,
-  });
+  try {
+    const handle = await triggerUpdatePR({
+      feedback,
+      snapshotId: prState.snapshotId,
+      branch: prState.branch,
+      repo: prState.repo,
+      callbackThreadId: threadId,
+    });
 
-  await postGitHubComment(
-    fullRepo,
-    thread.prNumber,
-    `Got your feedback. Updating the PRs...\n\n[View Task](https://chat.recoupable.com/tasks/${handle.id})`,
-  );
+    await postGitHubComment(
+      fullRepo,
+      thread.prNumber,
+      `Got your feedback. Updating the PRs...\n\n[View Task](https://chat.recoupable.com/tasks/${handle.id})`,
+    );
 
-  return NextResponse.json({ status: "update_triggered" }, { headers: getCorsHeaders() });
+    return NextResponse.json({ status: "update_triggered" }, { headers: getCorsHeaders() });
+  } catch (error) {
+    await setCodingAgentPRState(fullRepo, branch, prState);
+    console.error("Failed to trigger update-pr:", error);
+    return NextResponse.json(
+      { status: "error", error: "Failed to trigger update" },
+      { status: 500, headers: getCorsHeaders() },
+    );
+  }
 }

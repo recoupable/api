@@ -220,4 +220,41 @@ describe("handleGitHubWebhook", () => {
       expect.anything(),
     );
   });
+
+  it("restores PR state when triggerUpdatePR fails", async () => {
+    const reviewPayload = {
+      action: "created",
+      pull_request: { number: 99, head: { ref: "agent/fix-bug" } },
+      comment: {
+        body: "@recoup-coding-agent fix it",
+        user: { login: "sweetmantech" },
+      },
+      repository: { full_name: "recoupable/tasks" },
+    };
+    const originalState = {
+      status: "pr_created" as const,
+      snapshotId: "snap_abc",
+      branch: "agent/fix-bug",
+      repo: "recoupable/tasks",
+      prs: [{ repo: "recoupable/tasks", number: 99, url: "url", baseBranch: "main" }],
+    };
+    mockGetPRState.mockResolvedValueOnce({ ...originalState });
+    mockTriggerUpdatePR.mockRejectedValueOnce(new Error("Trigger failed"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const request = makeRequest(reviewPayload, "pull_request_review_comment");
+    const response = await handleGitHubWebhook(request);
+
+    expect(response.status).toBe(500);
+    const json = await response.json();
+    expect(json.status).toBe("error");
+
+    // Should have set updating, then restored original state
+    expect(mockSetPRState).toHaveBeenCalledTimes(2);
+    expect(mockSetPRState).toHaveBeenLastCalledWith(
+      "recoupable/tasks",
+      "agent/fix-bug",
+      originalState,
+    );
+  });
 });
