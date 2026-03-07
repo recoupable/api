@@ -45,7 +45,7 @@ describe("registerOnSubscribedMessage", () => {
 
     await handler(mockThread, { text: "make the button blue", author: { userId: "U111" } });
 
-    expect(mockThread.post).toHaveBeenCalledWith(expect.stringContaining("feedback"));
+    expect(mockThread.post).toHaveBeenCalledWith(expect.objectContaining({ card: expect.anything() }));
     expect(mockThread.setState).toHaveBeenCalledWith(expect.objectContaining({ status: "updating" }));
     expect(triggerUpdatePR).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -13,7 +13,6 @@ vi.mock("@/lib/coding-agent/bot", () => ({
   codingAgentBot: {
     webhooks: {
       slack: vi.fn().mockResolvedValue(new Response("ok", { status: 200 })),
-      github: vi.fn().mockResolvedValue(new Response("ok", { status: 200 })),
     },
   },
 }));

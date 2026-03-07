@@ -38,6 +38,7 @@ describe("createCodingAgentBot", () => {
     vi.clearAllMocks();
     process.env.SLACK_BOT_TOKEN = "xoxb-test";
     process.env.SLACK_SIGNING_SECRET = "test-signing-secret";
+    process.env.GITHUB_TOKEN = "ghp_test";
     process.env.REDIS_URL = "redis://localhost:6379";
     process.env.CODING_AGENT_CALLBACK_SECRET = "test-callback-secret";
   });

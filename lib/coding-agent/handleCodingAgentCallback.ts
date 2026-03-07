@@ -3,6 +3,8 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCodingAgentCallback } from "./validateCodingAgentCallback";
 import { getThread } from "./getThread";
 import { handlePRCreated } from "./handlePRCreated";
+import { buildPRCard } from "./buildPRCard";
+import type { CodingAgentThreadState } from "./types";
 
 /**
  * Handles coding agent task callback from Trigger.dev.
@@ -46,12 +48,23 @@ export async function handleCodingAgentCallback(request: Request): Promise<NextR
       break;
 
     case "no_changes":
+      await thread.setState({ status: "no_changes" });
       await thread.post("No changes were detected. The agent didn't modify any files.");
       break;
 
     case "failed":
+      await thread.setState({ status: "failed" });
       await thread.post(`Agent failed: ${validated.message ?? "Unknown error"}`);
       break;
+
+    case "updated": {
+      const state = (await thread.state) as CodingAgentThreadState | null;
+      await thread.setState({ status: "pr_created", snapshotId: validated.snapshotId });
+      const prs = state?.prs ?? [];
+      const card = buildPRCard("PRs Updated", prs);
+      await thread.post({ card });
+      break;
+    }
   }
 
   return NextResponse.json({ status: "ok" }, { headers: getCorsHeaders() });

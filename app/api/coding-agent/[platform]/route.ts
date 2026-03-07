@@ -7,11 +7,11 @@ import "@/lib/coding-agent/handlers/registerHandlers";
  * POST /api/coding-agent/[platform]
  *
  * Webhook endpoint for the coding agent bot.
- * Handles Slack webhooks via dynamic [platform] segment.
+ * Currently handles Slack webhooks via dynamic [platform] segment.
  *
  * @param request - The incoming webhook request
  * @param params.params
- * @param params - Route params containing the platform name (slack or github)
+ * @param params - Route params containing the platform name
  */
 export async function POST(
   request: NextRequest,

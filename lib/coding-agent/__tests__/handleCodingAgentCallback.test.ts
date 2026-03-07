@@ -6,11 +6,15 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 
 const mockPost = vi.fn();
 const mockSetState = vi.fn();
+let mockState: unknown = null;
 
 vi.mock("chat", () => {
   const ThreadImpl = vi.fn().mockImplementation(() => ({
     post: mockPost,
     setState: mockSetState,
+    get state() {
+      return Promise.resolve(mockState);
+    },
   }));
   return {
     ThreadImpl,
@@ -18,6 +22,11 @@ vi.mock("chat", () => {
       const parts = threadId.split(":");
       return `${parts[0]}:${parts[1]}`;
     }),
+    Card: vi.fn((opts) => ({ type: "card", ...opts })),
+    CardText: vi.fn((text) => ({ type: "text", text })),
+    Actions: vi.fn((children) => ({ type: "actions", children })),
+    Button: vi.fn((opts) => ({ type: "button", ...opts })),
+    LinkButton: vi.fn((opts) => ({ type: "link-button", ...opts })),
   };
 });
 
@@ -29,6 +38,7 @@ const { handleCodingAgentCallback } = await import("../handleCodingAgentCallback
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockState = null;
   process.env.CODING_AGENT_CALLBACK_SECRET = "test-secret";
 });
 
@@ -89,11 +99,11 @@ describe("handleCodingAgentCallback", () => {
     const response = await handleCodingAgentCallback(request);
 
     expect(response.status).toBe(200);
-    expect(mockPost).toHaveBeenCalled();
+    expect(mockPost).toHaveBeenCalledWith(expect.objectContaining({ card: expect.anything() }));
     expect(mockSetState).toHaveBeenCalledWith(expect.objectContaining({ status: "pr_created" }));
   });
 
-  it("posts no-changes message for no_changes status", async () => {
+  it("posts no-changes message and resets state for no_changes status", async () => {
     const body = {
       threadId: "slack:C123:1234567890.123456",
       status: "no_changes",
@@ -104,10 +114,11 @@ describe("handleCodingAgentCallback", () => {
     const response = await handleCodingAgentCallback(request);
 
     expect(response.status).toBe(200);
+    expect(mockSetState).toHaveBeenCalledWith(expect.objectContaining({ status: "no_changes" }));
     expect(mockPost).toHaveBeenCalledWith(expect.stringContaining("No changes"));
   });
 
-  it("posts error message for failed status", async () => {
+  it("posts error message and resets state for failed status", async () => {
     const body = {
       threadId: "slack:C123:1234567890.123456",
       status: "failed",
@@ -118,7 +129,27 @@ describe("handleCodingAgentCallback", () => {
     const response = await handleCodingAgentCallback(request);
 
     expect(response.status).toBe(200);
+    expect(mockSetState).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
     expect(mockPost).toHaveBeenCalledWith(expect.stringContaining("Sandbox timed out"));
   });
 
+  it("posts updated card with PR buttons for updated status", async () => {
+    mockState = {
+      status: "updating",
+      prs: [{ repo: "recoupable/api", number: 42, url: "https://github.com/recoupable/api/pull/42", baseBranch: "test" }],
+    };
+
+    const body = {
+      threadId: "slack:C123:1234567890.123456",
+      status: "updated",
+      snapshotId: "snap_new",
+    };
+    const request = makeRequest(body);
+
+    const response = await handleCodingAgentCallback(request);
+
+    expect(response.status).toBe(200);
+    expect(mockSetState).toHaveBeenCalledWith(expect.objectContaining({ status: "pr_created", snapshotId: "snap_new" }));
+    expect(mockPost).toHaveBeenCalledWith(expect.objectContaining({ card: expect.anything() }));
+  });
 });
