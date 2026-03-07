@@ -5,6 +5,8 @@ import { getThread } from "./getThread";
 import { handlePRCreated } from "./handlePRCreated";
 import { buildPRCard } from "./buildPRCard";
 import { setCodingAgentPRState } from "./prState";
+import { parseGitHubThreadId } from "./parseGitHubThreadId";
+import { postGitHubComment } from "./postGitHubComment";
 import type { CodingAgentThreadState } from "./types";
 
 /**
@@ -42,21 +44,28 @@ export async function handleCodingAgentCallback(request: Request): Promise<NextR
   }
 
   const thread = getThread(validated.threadId);
+  const github = parseGitHubThreadId(validated.threadId);
 
   switch (validated.status) {
     case "pr_created":
       await handlePRCreated(validated.threadId, validated);
       break;
 
-    case "no_changes":
+    case "no_changes": {
       await thread.setState({ status: "no_changes" });
-      await thread.post("No changes were detected. The agent didn't modify any files.");
+      const msg = "No changes were detected. The agent didn't modify any files.";
+      await thread.post(msg);
+      if (github) await postGitHubComment(github.repo, github.prNumber, msg);
       break;
+    }
 
-    case "failed":
+    case "failed": {
       await thread.setState({ status: "failed" });
-      await thread.post(`Agent failed: ${validated.message ?? "Unknown error"}`);
+      const msg = `Agent failed: ${validated.message ?? "Unknown error"}`;
+      await thread.post(msg);
+      if (github) await postGitHubComment(github.repo, github.prNumber, msg);
       break;
+    }
 
     case "updated": {
       const state = (await thread.state) as CodingAgentThreadState | null;
@@ -64,6 +73,15 @@ export async function handleCodingAgentCallback(request: Request): Promise<NextR
       const prs = state?.prs ?? [];
       const card = buildPRCard("PRs Updated", prs);
       await thread.post({ card });
+
+      if (github) {
+        const prLinks = prs.map((pr) => `- [${pr.repo}#${pr.number}](${pr.url})`).join("\n");
+        await postGitHubComment(
+          github.repo,
+          github.prNumber,
+          `PRs Updated:\n${prLinks}`,
+        );
+      }
 
       if (state?.branch && state?.prs?.length) {
         await setCodingAgentPRState(state.prs[0].repo, state.branch, {

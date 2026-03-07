@@ -3,6 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { verifyGitHubWebhook } from "./verifyGitHubWebhook";
 import { getCodingAgentPRState, setCodingAgentPRState } from "./prState";
 import { triggerUpdatePR } from "@/lib/trigger/triggerUpdatePR";
+import { postGitHubComment } from "./postGitHubComment";
 
 const BOT_MENTION = "@recoup-coding-agent";
 const SUPPORTED_EVENTS = ["issue_comment", "pull_request_review_comment"];
@@ -119,17 +120,11 @@ export async function handleGitHubWebhook(request: Request): Promise<NextRespons
     callbackThreadId: `github:${repo}:${prNumber}`,
   });
 
-  const [owner, repoName] = repo.split("/");
-  await fetch(`https://api.github.com/repos/${owner}/${repoName}/issues/${prNumber}/comments`, {
-    method: "POST",
-    headers: {
-      Authorization: `token ${token}`,
-      Accept: "application/vnd.github+json",
-    },
-    body: JSON.stringify({
-      body: `Got your feedback. Updating the PRs...\n\n[View Task](https://chat.recoupable.com/tasks/${handle.id})`,
-    }),
-  });
+  await postGitHubComment(
+    repo,
+    prNumber,
+    `Got your feedback. Updating the PRs...\n\n[View Task](https://chat.recoupable.com/tasks/${handle.id})`,
+  );
 
   return NextResponse.json({ status: "update_triggered" }, { headers: getCorsHeaders() });
 }

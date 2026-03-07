@@ -1,6 +1,8 @@
 import { getThread } from "./getThread";
 import { buildPRCard } from "./buildPRCard";
 import { setCodingAgentPRState } from "./prState";
+import { parseGitHubThreadId } from "./parseGitHubThreadId";
+import { postGitHubComment } from "./postGitHubComment";
 import type { CodingAgentCallbackBody } from "./validateCodingAgentCallback";
 
 /**
@@ -16,6 +18,16 @@ export async function handlePRCreated(threadId: string, body: CodingAgentCallbac
   const card = buildPRCard("PRs Created", prs);
 
   await thread.post({ card });
+
+  const github = parseGitHubThreadId(threadId);
+  if (github) {
+    const prLinks = prs.map((pr) => `- [${pr.repo}#${pr.number}](${pr.url})`).join("\n");
+    await postGitHubComment(
+      github.repo,
+      github.prNumber,
+      `PRs Created:\n${prLinks}`,
+    );
+  }
 
   await thread.setState({
     status: "pr_created",
