@@ -44,7 +44,9 @@ export function registerOnMergeAction(bot: CodingAgentBot) {
       if (response.ok) {
         results.push(`${pr.repo}#${pr.number} merged`);
       } else {
-        const error = await response.json();
+        const errorBody = await response.text();
+        console.error(`[coding-agent] merge failed for ${pr.repo}#${pr.number}: ${response.status} ${errorBody}`);
+        const error = JSON.parse(errorBody);
         results.push(`${pr.repo}#${pr.number} failed: ${error.message}`);
       }
     }
