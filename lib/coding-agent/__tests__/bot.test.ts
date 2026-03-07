@@ -6,6 +6,12 @@ vi.mock("@chat-adapter/slack", () => ({
   })),
 }));
 
+vi.mock("@chat-adapter/github", () => ({
+  createGitHubAdapter: vi.fn().mockReturnValue({
+    name: "github",
+  }),
+}));
+
 vi.mock("@chat-adapter/state-ioredis", () => ({
   createIoRedisState: vi.fn().mockReturnValue({
     connect: vi.fn(),
@@ -81,6 +87,32 @@ describe("createCodingAgentBot", () => {
       expect.objectContaining({
         client: redis,
         keyPrefix: "coding-agent",
+      }),
+    );
+  });
+
+  it("creates a Chat instance with github adapter", async () => {
+    const { Chat } = await import("chat");
+    const { createCodingAgentBot } = await import("../bot");
+
+    createCodingAgentBot();
+
+    const lastCall = vi.mocked(Chat).mock.calls.at(-1)!;
+    const config = lastCall[0];
+    expect(config.adapters).toHaveProperty("github");
+  });
+
+  it("creates GitHub adapter with correct config", async () => {
+    const { createGitHubAdapter } = await import("@chat-adapter/github");
+    const { createCodingAgentBot } = await import("../bot");
+
+    createCodingAgentBot();
+
+    expect(createGitHubAdapter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        token: "ghp_test",
+        webhookSecret: "test-webhook-secret",
+        userName: "recoup-coding-agent",
       }),
     );
   });

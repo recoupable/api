@@ -5,8 +5,6 @@ import { getThread } from "./getThread";
 import { handlePRCreated } from "./handlePRCreated";
 import { buildPRCard } from "./buildPRCard";
 import { setCodingAgentPRState } from "./prState";
-import { parseGitHubThreadId } from "./parseGitHubThreadId";
-import { postGitHubComment } from "./postGitHubComment";
 import type { CodingAgentThreadState } from "./types";
 
 /**
@@ -43,72 +41,38 @@ export async function handleCodingAgentCallback(request: Request): Promise<NextR
     return validated;
   }
 
-  const github = parseGitHubThreadId(validated.threadId);
-  const thread = github ? null : getThread(validated.threadId);
+  const thread = getThread(validated.threadId);
 
   switch (validated.status) {
     case "pr_created":
       await handlePRCreated(validated.threadId, validated);
       break;
 
-    case "no_changes": {
-      const msg = "No changes were detected. The agent didn't modify any files.";
-      if (github) {
-        await postGitHubComment(github.repo, github.prNumber, msg);
-      } else {
-        await thread!.setState({ status: "no_changes" });
-        await thread!.post(msg);
-      }
+    case "no_changes":
+      await thread.setState({ status: "no_changes" });
+      await thread.post("No changes were detected. The agent didn't modify any files.");
       break;
-    }
 
-    case "failed": {
-      const msg = `Agent failed: ${validated.message ?? "Unknown error"}`;
-      if (github) {
-        await postGitHubComment(github.repo, github.prNumber, msg);
-      } else {
-        await thread!.setState({ status: "failed" });
-        await thread!.post(msg);
-      }
+    case "failed":
+      await thread.setState({ status: "failed" });
+      await thread.post(`Agent failed: ${validated.message ?? "Unknown error"}`);
       break;
-    }
 
     case "updated": {
-      if (github) {
-        const prState = await getCodingAgentPRState(github.repo, validated.branch ?? "");
-        const prs = prState?.prs ?? [];
-        const prLinks = prs.map((pr) => `- [${pr.repo}#${pr.number}](${pr.url})`).join("\n");
-        await postGitHubComment(
-          github.repo,
-          github.prNumber,
-          `PRs Updated:\n${prLinks}`,
-        );
+      const state = (await thread.state) as CodingAgentThreadState | null;
+      await thread.setState({ status: "pr_created", snapshotId: validated.snapshotId });
+      const prs = state?.prs ?? [];
+      const card = buildPRCard("PRs Updated", prs);
+      await thread.post({ card });
 
-        if (prState?.branch && prs.length) {
-          await setCodingAgentPRState(prs[0].repo, prState.branch, {
-            status: "pr_created",
-            snapshotId: validated.snapshotId,
-            branch: prState.branch,
-            repo: prs[0].repo,
-            prs,
-          });
-        }
-      } else {
-        const state = (await thread!.state) as CodingAgentThreadState | null;
-        await thread!.setState({ status: "pr_created", snapshotId: validated.snapshotId });
-        const prs = state?.prs ?? [];
-        const card = buildPRCard("PRs Updated", prs);
-        await thread!.post({ card });
-
-        if (state?.branch && state?.prs?.length) {
-          await setCodingAgentPRState(state.prs[0].repo, state.branch, {
-            status: "pr_created",
-            snapshotId: validated.snapshotId,
-            branch: state.branch,
-            repo: state.prs[0].repo,
-            prs: state.prs,
-          });
-        }
+      if (state?.branch && state?.prs?.length) {
+        await setCodingAgentPRState(state.prs[0].repo, state.branch, {
+          status: "pr_created",
+          snapshotId: validated.snapshotId,
+          branch: state.branch,
+          repo: state.prs[0].repo,
+          prs: state.prs,
+        });
       }
       break;
     }
