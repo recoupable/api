@@ -1,10 +1,15 @@
 import type { CodingAgentBot } from "../bot";
 import { deleteCodingAgentPRState } from "../prState";
 import type { CodingAgentThreadState } from "../types";
+import { upsertAccountSnapshot } from "@/lib/supabase/account_snapshots/upsertAccountSnapshot";
+
+const CODING_AGENT_ACCOUNT_ID = "coding-agent";
 
 /**
  * Registers the "Merge All PRs" button action handler on the bot.
- * Squash-merges each PR via the GitHub API.
+ * Squash-merges each PR via the GitHub API, then persists the latest
+ * snapshot via PATCH /api/sandboxes so the coding-agent account stays
+ * up-to-date.
  *
  * @param bot
  */
@@ -55,6 +60,24 @@ export function registerOnMergeAction(bot: CodingAgentBot) {
     if (state.branch && state.prs?.[0]?.repo) {
       await deleteCodingAgentPRState(state.prs[0].repo, state.branch);
     }
+
+    // Persist the latest snapshot for the coding-agent account so new
+    // sandboxes start from the post-merge state.
+    if (state.snapshotId) {
+      const snapshotResult = await upsertAccountSnapshot({
+        account_id: CODING_AGENT_ACCOUNT_ID,
+        snapshot_id: state.snapshotId,
+        expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      });
+
+      if (snapshotResult.error) {
+        console.error(
+          `[coding-agent] failed to persist snapshot for ${CODING_AGENT_ACCOUNT_ID}:`,
+          snapshotResult.error,
+        );
+      }
+    }
+
     await thread.post(`Merge results:\n${results.map(r => `- ${r}`).join("\n")}`);
   });
 }
