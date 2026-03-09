@@ -127,7 +127,7 @@ export const config = {
 
 ## Chat SDK Integrations
 
-The API uses the [Chat SDK](../chat) to integrate with external platforms via a unified adapter pattern.
+The API uses the [Chat SDK](https://github.com/vercel/chat) to integrate with external platforms via a unified adapter pattern.
 
 ### Architecture
 
