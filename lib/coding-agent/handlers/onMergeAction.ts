@@ -1,10 +1,11 @@
 import type { CodingAgentBot } from "../bot";
-import { deleteCodingAgentPRState } from "../prState";
 import type { CodingAgentThreadState } from "../types";
+import { handleMergeSuccess } from "../handleMergeSuccess";
 
 /**
  * Registers the "Merge All PRs" button action handler on the bot.
- * Squash-merges each PR via the GitHub API.
+ * Squash-merges each PR via the GitHub API, then delegates to
+ * handleMergeSuccess to clean up PR state and persist the latest snapshot.
  *
  * @param bot
  */
@@ -51,10 +52,14 @@ export function registerOnMergeAction(bot: CodingAgentBot) {
       }
     }
 
-    await thread.setState({ status: "merged" });
-    if (state.branch && state.prs?.[0]?.repo) {
-      await deleteCodingAgentPRState(state.prs[0].repo, state.branch);
+    const allMerged = results.every(r => r.endsWith("merged"));
+
+    // On failure, revert to pr_created so handleFeedback still accepts replies
+    await thread.setState({ status: allMerged ? "merged" : "pr_created" });
+    if (allMerged) {
+      await handleMergeSuccess(state);
     }
+
     await thread.post(`Merge results:\n${results.map(r => `- ${r}`).join("\n")}`);
   });
 }
