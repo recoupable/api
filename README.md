@@ -16,7 +16,7 @@ pnpm dev
 
 ## Chat SDK Integrations (Slack & GitHub)
 
-The **coding agent** uses the [Chat SDK](https://github.com/nichochar/chat) (`chat` + `@chat-adapter/slack`) to bridge Slack conversations with GitHub workflows.
+The **coding agent** uses the [Chat SDK](https://github.com/vercel/chat) (`chat` + `@chat-adapter/slack`) to bridge Slack conversations with GitHub workflows.
 
 ### Architecture
 
