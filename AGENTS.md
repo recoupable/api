@@ -51,6 +51,38 @@ pnpm format:check   # Check formatting
   - `lib/supabase/` - Database operations
   - `lib/trigger/` - Trigger.dev task triggers
   - `lib/x402/` - Payment middleware utilities
+  - `lib/coding-agent/` - Chat SDK bot for coding agent workflows (Slack ↔ GitHub)
+
+### Chat SDK Integrations (Slack & GitHub)
+
+The coding agent uses the **Chat SDK** (`chat` + `@chat-adapter/slack`) to bridge
+Slack conversations with GitHub workflows. Key architecture:
+
+```
+Slack (mentions/threads)
+  ↕  SlackAdapter (Chat SDK)
+  ↕  codingAgentBot singleton (lib/coding-agent/bot.ts)
+  │
+  ├─ onNewMention → triggers Trigger.dev coding agent task
+  ├─ onSubscribedMessage → handles follow-up messages in active threads
+  └─ onMergeAction → processes PR merge requests
+  │
+  ↕  Callbacks from Trigger.dev (handleCodingAgentCallback)
+  │
+  ├─ pr_created → posts PR card to Slack thread, stores state
+  ├─ updated → posts updated PR card
+  ├─ no_changes / failed → notifies thread
+  │
+  ↕  GitHub PR context
+      - onNewMention reads message.meta { repo, branch } for GitHub PR comments
+      - resolvePRState() checks thread state + shared Redis PR state key
+      - handleFeedback() routes follow-ups to update-pr task when PRs exist
+```
+
+**State management:** Thread state (`CodingAgentThreadState`) is persisted in
+Redis via `@chat-adapter/state-ioredis`, keyed by thread ID. A separate shared
+PR state key (`coding-agent:pr:<repo>:<branch>`) enables cross-thread PR lookups
+(e.g., when GitHub PR comments arrive without existing thread state).
 
 ## Supabase Database Operations
 
