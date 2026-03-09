@@ -4,9 +4,8 @@ import { handleMergeSuccess } from "../handleMergeSuccess";
 
 /**
  * Registers the "Merge All PRs" button action handler on the bot.
- * Squash-merges each PR via the GitHub API, then persists the latest
- * snapshot via PATCH /api/sandboxes so the coding-agent account stays
- * up-to-date.
+ * Squash-merges each PR via the GitHub API, then delegates to
+ * handleMergeSuccess to clean up PR state and persist the latest snapshot.
  *
  * @param bot
  */
