@@ -8,13 +8,13 @@ import { processCreateSandbox } from "@/lib/sandbox/processCreateSandbox";
  * Handler for POST /api/sandboxes.
  *
  * Creates a Vercel Sandbox (from account's snapshot if available, otherwise fresh).
- * If a command is provided, triggers the run-sandbox-command task to execute it.
- * If no command is provided, simply creates the sandbox without running any command.
+ * If a prompt is provided, triggers a task to run the prompt via OpenClaw.
+ * If no prompt is provided, simply creates the sandbox without running anything.
  * Requires authentication via x-api-key header or Authorization Bearer token.
  * Saves sandbox info to the account_sandboxes table.
  *
  * @param request - The request object
- * @returns A NextResponse with sandbox creation result (includes runId only if command was provided)
+ * @returns A NextResponse with sandbox creation result (includes runId only if prompt was provided)
  */
 export async function createSandboxPostHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateSandboxBody(request);

@@ -5,18 +5,10 @@ import { validateAuthContext, type AuthContext } from "@/lib/auth/validateAuthCo
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { z } from "zod";
 
-export const sandboxBodySchema = z
-  .object({
-    account_id: z.string().uuid("account_id must be a valid UUID").optional(),
-    command: z.string().min(1, "command cannot be empty").optional(),
-    args: z.array(z.string()).optional(),
-    cwd: z.string().optional(),
-    prompt: z.string().min(1, "prompt cannot be empty").optional(),
-  })
-  .refine(data => !(data.command && data.prompt), {
-    message: "Cannot specify both command and prompt",
-    path: ["prompt"],
-  });
+export const sandboxBodySchema = z.object({
+  account_id: z.string().uuid("account_id must be a valid UUID").optional(),
+  prompt: z.string().min(1, "prompt cannot be empty").optional(),
+});
 
 export type SandboxBody = z.infer<typeof sandboxBodySchema> & AuthContext;
 

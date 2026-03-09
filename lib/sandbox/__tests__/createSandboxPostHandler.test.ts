@@ -6,8 +6,7 @@ import { createSandboxPostHandler } from "../createSandboxPostHandler";
 import { validateSandboxBody } from "@/lib/sandbox/validateSandboxBody";
 import { createSandbox } from "@/lib/sandbox/createSandbox";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
-import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
-
+import { triggerPromptSandbox } from "@/lib/trigger/triggerPromptSandbox";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 
 vi.mock("@/lib/sandbox/validateSandboxBody", () => ({
@@ -22,10 +21,9 @@ vi.mock("@/lib/supabase/account_sandboxes/insertAccountSandbox", () => ({
   insertAccountSandbox: vi.fn(),
 }));
 
-vi.mock("@/lib/trigger/triggerRunSandboxCommand", () => ({
-  triggerRunSandboxCommand: vi.fn(),
+vi.mock("@/lib/trigger/triggerPromptSandbox", () => ({
+  triggerPromptSandbox: vi.fn(),
 }));
-
 
 vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
   selectAccountSnapshots: vi.fn(),
@@ -58,12 +56,12 @@ describe("createSandboxPostHandler", () => {
     expect(response.status).toBe(401);
   });
 
-  it("returns runId from command task when command is provided", async () => {
+  it("returns runId when prompt is provided", async () => {
     vi.mocked(validateSandboxBody).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
       authToken: "token",
-      command: "ls",
+      prompt: "create a hello world page",
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
@@ -84,7 +82,7 @@ describe("createSandboxPostHandler", () => {
       },
       error: null,
     });
-    vi.mocked(triggerRunSandboxCommand).mockResolvedValue({
+    vi.mocked(triggerPromptSandbox).mockResolvedValue({
       id: "run_abc123",
     });
 
@@ -112,7 +110,7 @@ describe("createSandboxPostHandler", () => {
       accountId: "acc_123",
       orgId: null,
       authToken: "token",
-      command: "ls",
+      prompt: "say hello",
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([
       {
@@ -140,7 +138,7 @@ describe("createSandboxPostHandler", () => {
       },
       error: null,
     });
-    vi.mocked(triggerRunSandboxCommand).mockResolvedValue({
+    vi.mocked(triggerPromptSandbox).mockResolvedValue({
       id: "run_def456",
     });
 
@@ -157,7 +155,7 @@ describe("createSandboxPostHandler", () => {
       accountId: "acc_123",
       orgId: null,
       authToken: "token",
-      command: "ls",
+      prompt: "say hello",
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
@@ -178,7 +176,7 @@ describe("createSandboxPostHandler", () => {
       },
       error: null,
     });
-    vi.mocked(triggerRunSandboxCommand).mockResolvedValue({
+    vi.mocked(triggerPromptSandbox).mockResolvedValue({
       id: "run_def456",
     });
 
@@ -193,7 +191,7 @@ describe("createSandboxPostHandler", () => {
       accountId: "acc_123",
       orgId: null,
       authToken: "token",
-      command: "ls",
+      prompt: "say hello",
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
@@ -214,7 +212,7 @@ describe("createSandboxPostHandler", () => {
       },
       error: null,
     });
-    vi.mocked(triggerRunSandboxCommand).mockResolvedValue({
+    vi.mocked(triggerPromptSandbox).mockResolvedValue({
       id: "run_def456",
     });
 
@@ -227,14 +225,12 @@ describe("createSandboxPostHandler", () => {
     });
   });
 
-  it("calls triggerRunSandboxCommand with command, args, cwd, sandboxId, and accountId", async () => {
+  it("calls triggerPromptSandbox with prompt, sandboxId, and accountId", async () => {
     vi.mocked(validateSandboxBody).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
       authToken: "token",
-      command: "ls",
-      args: ["-la"],
-      cwd: "/home",
+      prompt: "create a hello world page",
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
@@ -255,17 +251,15 @@ describe("createSandboxPostHandler", () => {
       },
       error: null,
     });
-    vi.mocked(triggerRunSandboxCommand).mockResolvedValue({
+    vi.mocked(triggerPromptSandbox).mockResolvedValue({
       id: "run_ghi789",
     });
 
     const request = createMockRequest();
     await createSandboxPostHandler(request);
 
-    expect(triggerRunSandboxCommand).toHaveBeenCalledWith({
-      command: "ls",
-      args: ["-la"],
-      cwd: "/home",
+    expect(triggerPromptSandbox).toHaveBeenCalledWith({
+      prompt: "create a hello world page",
       sandboxId: "sbx_789",
       accountId: "acc_123",
     });
@@ -276,7 +270,7 @@ describe("createSandboxPostHandler", () => {
       accountId: "acc_123",
       orgId: null,
       authToken: "token",
-      command: "ls",
+      prompt: "say hello",
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockRejectedValue(new Error("Sandbox creation failed"));
@@ -297,7 +291,7 @@ describe("createSandboxPostHandler", () => {
       accountId: "acc_123",
       orgId: null,
       authToken: "token",
-      command: "ls",
+      prompt: "say hello",
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
@@ -322,7 +316,7 @@ describe("createSandboxPostHandler", () => {
     });
   });
 
-  it("returns 200 without runId when no command is provided", async () => {
+  it("returns 200 without runId when no prompt is provided", async () => {
     vi.mocked(validateSandboxBody).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
@@ -364,15 +358,15 @@ describe("createSandboxPostHandler", () => {
         },
       ],
     });
-    expect(triggerRunSandboxCommand).not.toHaveBeenCalled();
+    expect(triggerPromptSandbox).not.toHaveBeenCalled();
   });
 
-  it("returns 200 without runId when triggerRunSandboxCommand throws", async () => {
+  it("returns 200 without runId when triggerPromptSandbox throws", async () => {
     vi.mocked(validateSandboxBody).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
       authToken: "token",
-      command: "ls",
+      prompt: "say hello",
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
@@ -393,12 +387,12 @@ describe("createSandboxPostHandler", () => {
       },
       error: null,
     });
-    vi.mocked(triggerRunSandboxCommand).mockRejectedValue(new Error("Task trigger failed"));
+    vi.mocked(triggerPromptSandbox).mockRejectedValue(new Error("Task trigger failed"));
 
     const request = createMockRequest();
     const response = await createSandboxPostHandler(request);
 
-    // Sandbox was created successfully, so return 200 even if command trigger fails
+    // Sandbox was created successfully, so return 200 even if prompt trigger fails
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json).toEqual({
@@ -413,5 +407,4 @@ describe("createSandboxPostHandler", () => {
       ],
     });
   });
-
 });
