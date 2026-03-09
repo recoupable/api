@@ -1,5 +1,6 @@
 import { Chat, ConsoleLogger } from "chat";
 import { SlackAdapter } from "@chat-adapter/slack";
+import { createGitHubAdapter } from "@chat-adapter/github";
 import { createIoRedisState } from "@chat-adapter/state-ioredis";
 import redis from "@/lib/redis/connection";
 import type { CodingAgentThreadState } from "./types";
@@ -32,9 +33,16 @@ export function createCodingAgentBot() {
     logger,
   });
 
-  return new Chat<{ slack: SlackAdapter }, CodingAgentThreadState>({
+  const github = createGitHubAdapter({
+    token: process.env.GITHUB_TOKEN!,
+    webhookSecret: process.env.GITHUB_WEBHOOK_SECRET!,
+    userName: process.env.GITHUB_BOT_USERNAME ?? "recoup-coding-agent",
+    logger,
+  });
+
+  return new Chat<{ slack: SlackAdapter; github: ReturnType<typeof createGitHubAdapter> }, CodingAgentThreadState>({
     userName: "Recoup Agent",
-    adapters: { slack },
+    adapters: { slack, github },
     state,
   });
 }
