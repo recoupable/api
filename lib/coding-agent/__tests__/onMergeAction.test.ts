@@ -157,7 +157,8 @@ describe("registerOnMergeAction", () => {
     await handler({ thread: mockThread });
 
     expect(mockUpsertAccountSnapshot).not.toHaveBeenCalled();
-    expect(mockThread.setState).toHaveBeenCalledWith({ status: "merge_failed" });
+    expect(mockDeletePRState).not.toHaveBeenCalled();
+    expect(mockThread.setState).toHaveBeenCalledWith({ status: "pr_created" });
     expect(mockThread.post).toHaveBeenCalledWith(expect.stringContaining("failed"));
     consoleSpy.mockRestore();
   });

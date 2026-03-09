@@ -57,8 +57,9 @@ export function registerOnMergeAction(bot: CodingAgentBot) {
 
     const allMerged = results.every(r => r.endsWith("merged"));
 
-    await thread.setState({ status: allMerged ? "merged" : "merge_failed" });
-    if (state.branch && state.prs?.[0]?.repo) {
+    // On failure, revert to pr_created so handleFeedback still accepts replies
+    await thread.setState({ status: allMerged ? "merged" : "pr_created" });
+    if (allMerged && state.branch && state.prs?.[0]?.repo) {
       await deleteCodingAgentPRState(state.prs[0].repo, state.branch);
     }
 
