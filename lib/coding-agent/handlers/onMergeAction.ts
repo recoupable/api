@@ -2,8 +2,7 @@ import type { CodingAgentBot } from "../bot";
 import { deleteCodingAgentPRState } from "../prState";
 import type { CodingAgentThreadState } from "../types";
 import { upsertAccountSnapshot } from "@/lib/supabase/account_snapshots/upsertAccountSnapshot";
-
-const CODING_AGENT_ACCOUNT_ID = "coding-agent";
+import { RECOUP_ORG_ID } from "@/lib/const";
 
 /**
  * Registers the "Merge All PRs" button action handler on the bot.
@@ -65,14 +64,14 @@ export function registerOnMergeAction(bot: CodingAgentBot) {
     // sandboxes start from the post-merge state.
     if (state.snapshotId) {
       const snapshotResult = await upsertAccountSnapshot({
-        account_id: CODING_AGENT_ACCOUNT_ID,
+        account_id: RECOUP_ORG_ID,
         snapshot_id: state.snapshotId,
         expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
       });
 
       if (snapshotResult.error) {
         console.error(
-          `[coding-agent] failed to persist snapshot for ${CODING_AGENT_ACCOUNT_ID}:`,
+          `[coding-agent] failed to persist snapshot for ${RECOUP_ORG_ID}:`,
           snapshotResult.error,
         );
       }

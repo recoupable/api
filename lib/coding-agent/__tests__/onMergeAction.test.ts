@@ -64,7 +64,7 @@ describe("registerOnMergeAction", () => {
     expect(mockThread.setState).toHaveBeenCalledWith({ status: "merged" });
     expect(mockDeletePRState).toHaveBeenCalledWith("recoupable/api", "agent/fix-bug");
     expect(mockUpsertAccountSnapshot).toHaveBeenCalledWith({
-      account_id: "coding-agent",
+      account_id: "04e3aba9-c130-4fb8-8b92-34e95d43e66b",
       snapshot_id: "snap_abc123",
       expires_at: expect.any(String),
     });
