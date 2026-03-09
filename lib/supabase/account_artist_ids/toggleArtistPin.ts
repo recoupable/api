@@ -1,0 +1,30 @@
+import supabase from "@/lib/supabase/serverClient";
+
+interface ToggleArtistPinParams {
+  accountId: string;
+  artistId: string;
+  pinned: boolean;
+}
+
+/**
+ * Toggle the pinned status of an artist for an account.
+ * Uses upsert to create the row if it doesn't exist (for org artists).
+ */
+export async function toggleArtistPin({
+  accountId,
+  artistId,
+  pinned,
+}: ToggleArtistPinParams): Promise<{ success: boolean; pinned: boolean }> {
+  const { error } = await supabase
+    .from("account_artist_ids")
+    .upsert(
+      { account_id: accountId, artist_id: artistId, pinned },
+      { onConflict: "account_id,artist_id" },
+    );
+
+  if (error) {
+    throw new Error("Failed to update pinned status");
+  }
+
+  return { success: true, pinned };
+}
