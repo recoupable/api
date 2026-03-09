@@ -1,9 +1,7 @@
 import { deleteCodingAgentPRState } from "./prState";
 import { upsertAccountSnapshot } from "@/lib/supabase/account_snapshots/upsertAccountSnapshot";
-import { RECOUP_ORG_ID } from "@/lib/const";
+import { RECOUP_ORG_ID, SNAPSHOT_EXPIRY_MS } from "@/lib/const";
 import type { CodingAgentThreadState } from "./types";
-
-const SNAPSHOT_EXPIRY_MS = 365 * 24 * 60 * 60 * 1000; // 1 year
 
 /**
  * Handles post-merge cleanup after all PRs merged successfully.
