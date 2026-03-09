@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateSnapshotPatchBody } from "@/lib/sandbox/validateSnapshotPatchBody";
 import { upsertAccountSnapshot } from "@/lib/supabase/account_snapshots/upsertAccountSnapshot";
+import { SNAPSHOT_EXPIRY_MS } from "@/lib/const";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 
 /**
@@ -30,7 +31,7 @@ export async function updateSnapshotPatchHandler(request: NextRequest): Promise<
       account_id: validated.accountId,
       ...(validated.snapshotId && {
         snapshot_id: validated.snapshotId,
-        expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        expires_at: new Date(Date.now() + SNAPSHOT_EXPIRY_MS).toISOString(),
       }),
       ...(validated.githubRepo && { github_repo: validated.githubRepo }),
     });
