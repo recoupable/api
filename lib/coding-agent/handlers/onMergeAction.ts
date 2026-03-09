@@ -1,8 +1,6 @@
 import type { CodingAgentBot } from "../bot";
-import { deleteCodingAgentPRState } from "../prState";
 import type { CodingAgentThreadState } from "../types";
-import { upsertAccountSnapshot } from "@/lib/supabase/account_snapshots/upsertAccountSnapshot";
-import { RECOUP_ORG_ID } from "@/lib/const";
+import { handleMergeSuccess } from "../handleMergeSuccess";
 
 /**
  * Registers the "Merge All PRs" button action handler on the bot.
@@ -59,25 +57,8 @@ export function registerOnMergeAction(bot: CodingAgentBot) {
 
     // On failure, revert to pr_created so handleFeedback still accepts replies
     await thread.setState({ status: allMerged ? "merged" : "pr_created" });
-    if (allMerged && state.branch && state.prs?.[0]?.repo) {
-      await deleteCodingAgentPRState(state.prs[0].repo, state.branch);
-    }
-
-    // Persist the latest snapshot only when every PR merged successfully
-    // so new sandboxes start from the post-merge state.
-    if (allMerged && state.snapshotId) {
-      const snapshotResult = await upsertAccountSnapshot({
-        account_id: RECOUP_ORG_ID,
-        snapshot_id: state.snapshotId,
-        expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-      });
-
-      if (snapshotResult.error) {
-        console.error(
-          `[coding-agent] failed to persist snapshot for ${RECOUP_ORG_ID}:`,
-          snapshotResult.error,
-        );
-      }
+    if (allMerged) {
+      await handleMergeSuccess(state);
     }
 
     await thread.post(`Merge results:\n${results.map(r => `- ${r}`).join("\n")}`);

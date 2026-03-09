@@ -2,14 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 global.fetch = vi.fn();
 
-const mockDeletePRState = vi.fn();
-vi.mock("../prState", () => ({
-  deleteCodingAgentPRState: (...args: unknown[]) => mockDeletePRState(...args),
-}));
-
-const mockUpsertAccountSnapshot = vi.fn();
-vi.mock("@/lib/supabase/account_snapshots/upsertAccountSnapshot", () => ({
-  upsertAccountSnapshot: (...args: unknown[]) => mockUpsertAccountSnapshot(...args),
+const mockHandleMergeSuccess = vi.fn();
+vi.mock("../handleMergeSuccess", () => ({
+  handleMergeSuccess: (...args: unknown[]) => mockHandleMergeSuccess(...args),
 }));
 
 const { registerOnMergeAction } = await import("../handlers/onMergeAction");
@@ -17,7 +12,7 @@ const { registerOnMergeAction } = await import("../handlers/onMergeAction");
 beforeEach(() => {
   vi.clearAllMocks();
   process.env.GITHUB_TOKEN = "ghp_test";
-  mockUpsertAccountSnapshot.mockResolvedValue({ data: {}, error: null });
+  mockHandleMergeSuccess.mockResolvedValue(undefined);
 });
 
 /**
@@ -36,7 +31,7 @@ describe("registerOnMergeAction", () => {
     expect(bot.onAction).toHaveBeenCalledWith("merge_all_prs", expect.any(Function));
   });
 
-  it("squash-merges PRs, cleans up shared state, persists snapshot, and posts results", async () => {
+  it("squash-merges PRs, calls handleMergeSuccess, and posts results", async () => {
     vi.mocked(fetch).mockResolvedValue({ ok: true } as Response);
 
     const bot = createMockBot();
@@ -62,75 +57,13 @@ describe("registerOnMergeAction", () => {
       expect.objectContaining({ method: "PUT" }),
     );
     expect(mockThread.setState).toHaveBeenCalledWith({ status: "merged" });
-    expect(mockDeletePRState).toHaveBeenCalledWith("recoupable/api", "agent/fix-bug");
-    expect(mockUpsertAccountSnapshot).toHaveBeenCalledWith({
-      account_id: "04e3aba9-c130-4fb8-8b92-34e95d43e66b",
-      snapshot_id: "snap_abc123",
-      expires_at: expect.any(String),
-    });
-    expect(mockThread.post).toHaveBeenCalledWith(expect.stringContaining("merged"));
-  });
-
-  it("skips snapshot persistence when snapshotId is not in state", async () => {
-    vi.mocked(fetch).mockResolvedValue({ ok: true } as Response);
-
-    const bot = createMockBot();
-    registerOnMergeAction(bot);
-    const handler = bot.onAction.mock.calls[0][1];
-
-    const mockThread = {
-      state: Promise.resolve({
-        status: "pr_created",
-        prompt: "fix bug",
-        branch: "agent/fix-bug",
-        prs: [{ repo: "recoupable/api", number: 42, url: "url", baseBranch: "test" }],
-      }),
-      post: vi.fn(),
-      setState: vi.fn(),
-    };
-
-    await handler({ thread: mockThread });
-
-    expect(mockUpsertAccountSnapshot).not.toHaveBeenCalled();
-    expect(mockThread.post).toHaveBeenCalledWith(expect.stringContaining("merged"));
-  });
-
-  it("logs error but does not throw when snapshot persistence fails", async () => {
-    vi.mocked(fetch).mockResolvedValue({ ok: true } as Response);
-    mockUpsertAccountSnapshot.mockResolvedValue({
-      data: null,
-      error: { message: "db error", code: "500" },
-    });
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-    const bot = createMockBot();
-    registerOnMergeAction(bot);
-    const handler = bot.onAction.mock.calls[0][1];
-
-    const mockThread = {
-      state: Promise.resolve({
-        status: "pr_created",
-        prompt: "fix bug",
-        branch: "agent/fix-bug",
-        snapshotId: "snap_abc123",
-        prs: [{ repo: "recoupable/api", number: 42, url: "url", baseBranch: "test" }],
-      }),
-      post: vi.fn(),
-      setState: vi.fn(),
-    };
-
-    await handler({ thread: mockThread });
-
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("failed to persist snapshot"),
-      expect.anything(),
+    expect(mockHandleMergeSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ branch: "agent/fix-bug", snapshotId: "snap_abc123" }),
     );
-    // Should still post merge results even if snapshot fails
     expect(mockThread.post).toHaveBeenCalledWith(expect.stringContaining("merged"));
-    consoleSpy.mockRestore();
   });
 
-  it("does not persist snapshot when a merge fails", async () => {
+  it("does not call handleMergeSuccess when a merge fails", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
       status: 409,
@@ -156,8 +89,7 @@ describe("registerOnMergeAction", () => {
 
     await handler({ thread: mockThread });
 
-    expect(mockUpsertAccountSnapshot).not.toHaveBeenCalled();
-    expect(mockDeletePRState).not.toHaveBeenCalled();
+    expect(mockHandleMergeSuccess).not.toHaveBeenCalled();
     expect(mockThread.setState).toHaveBeenCalledWith({ status: "pr_created" });
     expect(mockThread.post).toHaveBeenCalledWith(expect.stringContaining("failed"));
     consoleSpy.mockRestore();
@@ -178,6 +110,6 @@ describe("registerOnMergeAction", () => {
 
     expect(mockThread.post).toHaveBeenCalledWith("No PRs to merge.");
     expect(fetch).not.toHaveBeenCalled();
-    expect(mockUpsertAccountSnapshot).not.toHaveBeenCalled();
+    expect(mockHandleMergeSuccess).not.toHaveBeenCalled();
   });
 });
