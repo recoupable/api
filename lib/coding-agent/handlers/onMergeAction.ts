@@ -55,14 +55,16 @@ export function registerOnMergeAction(bot: CodingAgentBot) {
       }
     }
 
-    await thread.setState({ status: "merged" });
+    const allMerged = results.every(r => r.endsWith("merged"));
+
+    await thread.setState({ status: allMerged ? "merged" : "merge_failed" });
     if (state.branch && state.prs?.[0]?.repo) {
       await deleteCodingAgentPRState(state.prs[0].repo, state.branch);
     }
 
-    // Persist the latest snapshot for the coding-agent account so new
-    // sandboxes start from the post-merge state.
-    if (state.snapshotId) {
+    // Persist the latest snapshot only when every PR merged successfully
+    // so new sandboxes start from the post-merge state.
+    if (allMerged && state.snapshotId) {
       const snapshotResult = await upsertAccountSnapshot({
         account_id: RECOUP_ORG_ID,
         snapshot_id: state.snapshotId,
