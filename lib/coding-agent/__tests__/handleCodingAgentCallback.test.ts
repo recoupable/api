@@ -108,6 +108,49 @@ describe("handleCodingAgentCallback", () => {
     expect(mockSetState).toHaveBeenCalledWith(expect.objectContaining({ status: "pr_created" }));
   });
 
+  it("posts agent stdout to the thread before status-specific messages", async () => {
+    const body = {
+      threadId: "slack:C123:1234567890.123456",
+      status: "pr_created",
+      branch: "agent/fix-bug-1234",
+      snapshotId: "snap_abc",
+      stdout: "Created branch agent/fix-bug-1234\nModified 3 files in api/\n",
+      prs: [
+        {
+          repo: "recoupable/recoup-api",
+          number: 42,
+          url: "https://github.com/recoupable/recoup-api/pull/42",
+          baseBranch: "test",
+        },
+      ],
+    };
+    const request = makeRequest(body);
+
+    const response = await handleCodingAgentCallback(request);
+
+    expect(response.status).toBe(200);
+    // stdout should be posted first, then the card
+    expect(mockPost).toHaveBeenCalledTimes(2);
+    expect(mockPost.mock.calls[0][0]).toBe("Created branch agent/fix-bug-1234\nModified 3 files in api/");
+    expect(mockPost.mock.calls[1][0]).toEqual(expect.objectContaining({ card: expect.anything() }));
+  });
+
+  it("does not post stdout when it is empty or whitespace", async () => {
+    const body = {
+      threadId: "slack:C123:1234567890.123456",
+      status: "no_changes",
+      stdout: "   \n  ",
+    };
+    const request = makeRequest(body);
+
+    const response = await handleCodingAgentCallback(request);
+
+    expect(response.status).toBe(200);
+    // Only the no_changes message, no stdout post
+    expect(mockPost).toHaveBeenCalledTimes(1);
+    expect(mockPost).toHaveBeenCalledWith(expect.stringContaining("No changes"));
+  });
+
   it("posts no-changes message and resets state for no_changes status", async () => {
     const body = {
       threadId: "slack:C123:1234567890.123456",
