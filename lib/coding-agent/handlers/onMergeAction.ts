@@ -58,7 +58,7 @@ export function registerOnMergeAction(bot: CodingAgentBot) {
       }
 
       await thread.post(`✅ ${pr.repo}#${pr.number} merged.`);
-    } else {
+    } else if (!result.ok) {
       await thread.post(`❌ ${pr.repo}#${pr.number} failed to merge: ${result.message}`);
     }
   });
