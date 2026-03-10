@@ -3,11 +3,15 @@ import type { CodingAgentThreadState } from "../types";
 import { handleMergeSuccess } from "../handleMergeSuccess";
 import { parseMergeActionId } from "../parseMergeActionId";
 import { mergeGithubPR } from "../mergeGithubPR";
+import { buildMergeTestToMainCard } from "../buildMergeTestToMainCard";
 
 /**
  * Registers individual per-PR merge button action handlers on the bot.
  * Each button has an ID like "merge_pr:<repo>#<number>" and squash-merges
  * that single PR via the GitHub API.
+ *
+ * When a PR targeting the "test" branch is merged, a follow-up
+ * "Merge test to main" button is presented.
  *
  * Uses a prefix pattern so a single handler covers all merge_pr:* actions.
  *
@@ -65,5 +69,11 @@ export function registerOnMergeAction(bot: CodingAgentBot) {
     }
 
     await thread.post(`✅ ${pr.repo}#${pr.number} merged.`);
+
+    // Offer "Merge test to main" when the PR targeted the test branch
+    if (pr.baseBranch === "test") {
+      const card = buildMergeTestToMainCard(pr.repo);
+      await thread.post({ card });
+    }
   });
 }
