@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-global.fetch = vi.fn();
+const mockMergeGithubPR = vi.fn();
+vi.mock("../mergeGithubPR", () => ({
+  mergeGithubPR: (...args: unknown[]) => mockMergeGithubPR(...args),
+}));
 
 const mockHandleMergeSuccess = vi.fn();
 vi.mock("../handleMergeSuccess", () => ({
@@ -32,7 +35,7 @@ describe("registerOnMergeAction", () => {
   });
 
   it("squash-merges a single PR, calls handleMergeSuccess, and posts result", async () => {
-    vi.mocked(fetch).mockResolvedValue({ ok: true } as Response);
+    mockMergeGithubPR.mockResolvedValue({ ok: true });
 
     const bot = createMockBot();
     registerOnMergeAction(bot);
@@ -52,10 +55,7 @@ describe("registerOnMergeAction", () => {
 
     await handler({ thread: mockThread, actionId: "merge_pr:recoupable/api#42" });
 
-    expect(fetch).toHaveBeenCalledWith(
-      "https://api.github.com/repos/recoupable/api/pulls/42/merge",
-      expect.objectContaining({ method: "PUT" }),
-    );
+    expect(mockMergeGithubPR).toHaveBeenCalledWith("recoupable/api", 42, "ghp_test");
     expect(mockThread.setState).toHaveBeenCalledWith({ status: "merged", prs: [] });
     expect(mockHandleMergeSuccess).toHaveBeenCalledWith(
       expect.objectContaining({ branch: "agent/fix-bug", snapshotId: "snap_abc123" }),
@@ -64,7 +64,7 @@ describe("registerOnMergeAction", () => {
   });
 
   it("merges one PR and keeps remaining PRs in state without calling handleMergeSuccess", async () => {
-    vi.mocked(fetch).mockResolvedValue({ ok: true } as Response);
+    mockMergeGithubPR.mockResolvedValue({ ok: true });
 
     const bot = createMockBot();
     registerOnMergeAction(bot);
@@ -108,17 +108,12 @@ describe("registerOnMergeAction", () => {
     await handler({ thread: mockThread, actionId: "merge_pr:recoupable/api#99" });
 
     expect(mockThread.post).toHaveBeenCalledWith("PR recoupable/api#99 not found in this thread.");
-    expect(fetch).not.toHaveBeenCalled();
+    expect(mockMergeGithubPR).not.toHaveBeenCalled();
     expect(mockHandleMergeSuccess).not.toHaveBeenCalled();
   });
 
   it("posts error message when merge fails", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.mocked(fetch).mockResolvedValue({
-      ok: false,
-      status: 405,
-      text: () => Promise.resolve(JSON.stringify({ message: "Not allowed" })),
-    } as any);
+    mockMergeGithubPR.mockResolvedValue({ ok: false, message: "Not allowed" });
 
     const bot = createMockBot();
     registerOnMergeAction(bot);
@@ -139,6 +134,5 @@ describe("registerOnMergeAction", () => {
 
     expect(mockHandleMergeSuccess).not.toHaveBeenCalled();
     expect(mockThread.post).toHaveBeenCalledWith("❌ recoupable/api#42 failed to merge: Not allowed");
-    consoleSpy.mockRestore();
   });
 });
