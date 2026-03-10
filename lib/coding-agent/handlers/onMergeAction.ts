@@ -41,25 +41,26 @@ export function registerOnMergeAction(bot: CodingAgentBot) {
 
     const result = await mergeGithubPR(pr.repo, pr.number, token);
 
-    if (result.ok) {
-      // Remove merged PR from state
-      const remainingPrs = state!.prs!.filter(
-        p => !(p.repo === pr.repo && p.number === pr.number),
-      );
-      const allMerged = remainingPrs.length === 0;
-
-      await thread.setState({
-        status: allMerged ? "merged" : state!.status,
-        prs: remainingPrs,
-      });
-
-      if (allMerged) {
-        await handleMergeSuccess(state!);
-      }
-
-      await thread.post(`✅ ${pr.repo}#${pr.number} merged.`);
-    } else if (!result.ok) {
+    if (!result.ok) {
       await thread.post(`❌ ${pr.repo}#${pr.number} failed to merge: ${result.message}`);
+      return;
     }
+
+    // Remove merged PR from state
+    const remainingPrs = state!.prs!.filter(
+      p => !(p.repo === pr.repo && p.number === pr.number),
+    );
+    const allMerged = remainingPrs.length === 0;
+
+    await thread.setState({
+      status: allMerged ? "merged" : state!.status,
+      prs: remainingPrs,
+    });
+
+    if (allMerged) {
+      await handleMergeSuccess(state!);
+    }
+
+    await thread.post(`✅ ${pr.repo}#${pr.number} merged.`);
   });
 }
