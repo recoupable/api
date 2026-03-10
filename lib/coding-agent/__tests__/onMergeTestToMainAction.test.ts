@@ -5,7 +5,7 @@ vi.mock("../mergeGithubBranch", () => ({
   mergeGithubBranch: (...args: unknown[]) => mockMergeGithubBranch(...args),
 }));
 
-const { registerOnMergeTestToMainAction, parseMergeTestToMainActionId } = await import(
+const { registerOnMergeTestToMainAction } = await import(
   "../handlers/onMergeTestToMainAction"
 );
 
@@ -17,18 +17,6 @@ beforeEach(() => {
 function createMockBot() {
   return { onAction: vi.fn() } as any;
 }
-
-describe("parseMergeTestToMainActionId", () => {
-  it("parses a valid action ID", () => {
-    expect(parseMergeTestToMainActionId("merge_test_to_main:recoupable/api")).toBe("recoupable/api");
-  });
-
-  it("returns null for invalid format", () => {
-    expect(parseMergeTestToMainActionId("merge_test_to_main:")).toBeNull();
-    expect(parseMergeTestToMainActionId("merge_test_to_main:noslash")).toBeNull();
-    expect(parseMergeTestToMainActionId("other_action:repo/name")).toBeNull();
-  });
-});
 
 describe("registerOnMergeTestToMainAction", () => {
   it("registers merge_test_to_main: action handler", () => {
