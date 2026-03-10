@@ -9,7 +9,9 @@ import { parseMergeTestToMainActionId } from "../parseMergeTestToMainActionId";
  * @param bot
  */
 export function registerOnMergeTestToMainAction(bot: CodingAgentBot) {
-  bot.onAction("merge_test_to_main:", async event => {
+  bot.onAction(async event => {
+    if (!event.actionId.startsWith("merge_test_to_main:")) return;
+
     const thread = event.thread;
 
     const repo = parseMergeTestToMainActionId(event.actionId);

@@ -19,10 +19,10 @@ function createMockBot() {
 }
 
 describe("registerOnMergeTestToMainAction", () => {
-  it("registers merge_test_to_main: action handler", () => {
+  it("registers catch-all action handler", () => {
     const bot = createMockBot();
     registerOnMergeTestToMainAction(bot);
-    expect(bot.onAction).toHaveBeenCalledWith("merge_test_to_main:", expect.any(Function));
+    expect(bot.onAction).toHaveBeenCalledWith(expect.any(Function));
   });
 
   it("merges test to main and posts success", async () => {
@@ -30,7 +30,7 @@ describe("registerOnMergeTestToMainAction", () => {
 
     const bot = createMockBot();
     registerOnMergeTestToMainAction(bot);
-    const handler = bot.onAction.mock.calls[0][1];
+    const handler = bot.onAction.mock.calls[0][0];
 
     const mockThread = { post: vi.fn() };
 
@@ -45,7 +45,7 @@ describe("registerOnMergeTestToMainAction", () => {
 
     const bot = createMockBot();
     registerOnMergeTestToMainAction(bot);
-    const handler = bot.onAction.mock.calls[0][1];
+    const handler = bot.onAction.mock.calls[0][0];
 
     const mockThread = { post: vi.fn() };
 
@@ -61,7 +61,7 @@ describe("registerOnMergeTestToMainAction", () => {
 
     const bot = createMockBot();
     registerOnMergeTestToMainAction(bot);
-    const handler = bot.onAction.mock.calls[0][1];
+    const handler = bot.onAction.mock.calls[0][0];
 
     const mockThread = { post: vi.fn() };
 
