@@ -10,12 +10,23 @@ vi.mock("../handleMergeSuccess", () => ({
   handleMergeSuccess: (...args: unknown[]) => mockHandleMergeSuccess(...args),
 }));
 
+const mockDeletePRState = vi.fn();
+vi.mock("../prState", () => ({
+  deleteCodingAgentPRState: (...args: unknown[]) => mockDeletePRState(...args),
+}));
+
+const mockUpsertAccountSnapshot = vi.fn();
+vi.mock("@/lib/supabase/account_snapshots/upsertAccountSnapshot", () => ({
+  upsertAccountSnapshot: (...args: unknown[]) => mockUpsertAccountSnapshot(...args),
+}));
+
 const { registerOnMergeAction } = await import("../handlers/onMergeAction");
 
 beforeEach(() => {
   vi.clearAllMocks();
   process.env.GITHUB_TOKEN = "ghp_test";
   mockHandleMergeSuccess.mockResolvedValue(undefined);
+  mockUpsertAccountSnapshot.mockResolvedValue({ data: {}, error: null });
 });
 
 /**
@@ -134,5 +145,44 @@ describe("registerOnMergeAction", () => {
 
     expect(mockHandleMergeSuccess).not.toHaveBeenCalled();
     expect(mockThread.post).toHaveBeenCalledWith("❌ recoupable/api#42 failed to merge: Not allowed");
+  });
+
+  it("merge button click triggers snapshot upsert in Supabase via handleMergeSuccess", async () => {
+    // Use the real handleMergeSuccess instead of the mock to verify the full chain
+    const { handleMergeSuccess: realHandleMergeSuccess } = await vi.importActual<
+      typeof import("../handleMergeSuccess")
+    >("../handleMergeSuccess");
+    mockHandleMergeSuccess.mockImplementation(realHandleMergeSuccess);
+    mockMergeGithubPR.mockResolvedValue({ ok: true });
+
+    const bot = createMockBot();
+    registerOnMergeAction(bot);
+    const handler = bot.onAction.mock.calls[0][1];
+
+    const state = {
+      status: "pr_created" as const,
+      prompt: "fix bug",
+      branch: "agent/fix-bug",
+      snapshotId: "snap_abc123",
+      prs: [{ repo: "recoupable/api", number: 42, url: "url", baseBranch: "test" }],
+    };
+
+    const mockThread = {
+      state: Promise.resolve(state),
+      post: vi.fn(),
+      setState: vi.fn(),
+    };
+
+    await handler({ thread: mockThread, actionId: "merge_pr:recoupable/api#42" });
+
+    // Verify the full chain: merge → handleMergeSuccess → upsertAccountSnapshot
+    expect(mockMergeGithubPR).toHaveBeenCalledWith("recoupable/api", 42, "ghp_test");
+    expect(mockDeletePRState).toHaveBeenCalledWith("recoupable/api", "agent/fix-bug");
+    expect(mockUpsertAccountSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        snapshot_id: "snap_abc123",
+        expires_at: expect.any(String),
+      }),
+    );
   });
 });
