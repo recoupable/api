@@ -35,6 +35,10 @@ describe("registerOnMergeTestToMainAction", () => {
     const mockThread = { post: vi.fn() };
 
     await handler({ thread: mockThread, actionId: "merge_test_to_main:recoupable/chat" });
+    // Flush fire-and-forget .then() chain
+    await vi.waitFor(() => {
+      expect(mockThread.post).toHaveBeenCalled();
+    });
 
     expect(mockMergeGithubBranch).toHaveBeenCalledWith("recoupable/chat", "test", "main", "ghp_test");
     expect(mockThread.post).toHaveBeenCalledWith("✅ Merged test → main for recoupable/chat.");
@@ -50,6 +54,9 @@ describe("registerOnMergeTestToMainAction", () => {
     const mockThread = { post: vi.fn() };
 
     await handler({ thread: mockThread, actionId: "merge_test_to_main:recoupable/api" });
+    await vi.waitFor(() => {
+      expect(mockThread.post).toHaveBeenCalled();
+    });
 
     expect(mockThread.post).toHaveBeenCalledWith(
       "❌ Failed to merge test → main for recoupable/api: Merge conflict",

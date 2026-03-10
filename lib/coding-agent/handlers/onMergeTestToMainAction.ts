@@ -26,14 +26,13 @@ export function registerOnMergeTestToMainAction(bot: CodingAgentBot) {
       return;
     }
 
-    const result = await mergeGithubBranch(repo, "test", "main", token);
-
-    if (result.ok === false) {
-      const { message } = result;
-      await thread.post(`❌ Failed to merge test → main for ${repo}: ${message}`);
-      return;
-    }
-
-    await thread.post(`✅ Merged test → main for ${repo}.`);
+    // Fire-and-forget so the Slack interaction responds within 3 seconds
+    mergeGithubBranch(repo, "test", "main", token).then(async result => {
+      if (result.ok === false) {
+        await thread.post(`❌ Failed to merge test → main for ${repo}: ${result.message}`);
+        return;
+      }
+      await thread.post(`✅ Merged test → main for ${repo}.`);
+    });
   });
 }
