@@ -14,7 +14,9 @@ import { mergeGithubPR } from "../mergeGithubPR";
  * @param bot
  */
 export function registerOnMergeAction(bot: CodingAgentBot) {
-  bot.onAction("merge_pr:", async event => {
+  bot.onAction(async event => {
+    if (!event.actionId.startsWith("merge_pr:")) return;
+
     const thread = event.thread;
     const state = (await thread.state) as CodingAgentThreadState | null;
 

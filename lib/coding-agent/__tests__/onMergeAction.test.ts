@@ -39,10 +39,26 @@ function createMockBot() {
 }
 
 describe("registerOnMergeAction", () => {
-  it("registers merge_pr: action handler with prefix pattern", () => {
+  it("registers catch-all action handler", () => {
     const bot = createMockBot();
     registerOnMergeAction(bot);
-    expect(bot.onAction).toHaveBeenCalledWith("merge_pr:", expect.any(Function));
+    expect(bot.onAction).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it("ignores non-merge actions", async () => {
+    const bot = createMockBot();
+    registerOnMergeAction(bot);
+    const handler = bot.onAction.mock.calls[0][0];
+
+    const mockThread = {
+      state: Promise.resolve({ status: "pr_created", prompt: "fix bug", prs: [] }),
+      post: vi.fn(),
+      setState: vi.fn(),
+    };
+
+    await handler({ thread: mockThread, actionId: "some_other_action" });
+
+    expect(mockThread.post).not.toHaveBeenCalled();
   });
 
   it("squash-merges a single PR, calls handleMergeSuccess, and posts result", async () => {
@@ -50,7 +66,7 @@ describe("registerOnMergeAction", () => {
 
     const bot = createMockBot();
     registerOnMergeAction(bot);
-    const handler = bot.onAction.mock.calls[0][1];
+    const handler = bot.onAction.mock.calls[0][0];
 
     const mockThread = {
       state: Promise.resolve({
@@ -79,7 +95,7 @@ describe("registerOnMergeAction", () => {
 
     const bot = createMockBot();
     registerOnMergeAction(bot);
-    const handler = bot.onAction.mock.calls[0][1];
+    const handler = bot.onAction.mock.calls[0][0];
 
     const mockThread = {
       state: Promise.resolve({
@@ -108,7 +124,7 @@ describe("registerOnMergeAction", () => {
   it("posts not found message when PR is not in thread state", async () => {
     const bot = createMockBot();
     registerOnMergeAction(bot);
-    const handler = bot.onAction.mock.calls[0][1];
+    const handler = bot.onAction.mock.calls[0][0];
 
     const mockThread = {
       state: Promise.resolve({ status: "pr_created", prompt: "fix bug", prs: [] }),
@@ -128,7 +144,7 @@ describe("registerOnMergeAction", () => {
 
     const bot = createMockBot();
     registerOnMergeAction(bot);
-    const handler = bot.onAction.mock.calls[0][1];
+    const handler = bot.onAction.mock.calls[0][0];
 
     const mockThread = {
       state: Promise.resolve({
@@ -157,7 +173,7 @@ describe("registerOnMergeAction", () => {
 
     const bot = createMockBot();
     registerOnMergeAction(bot);
-    const handler = bot.onAction.mock.calls[0][1];
+    const handler = bot.onAction.mock.calls[0][0];
 
     const state = {
       status: "pr_created" as const,
