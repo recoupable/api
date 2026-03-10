@@ -1,6 +1,13 @@
-export type MergeGithubPRResult =
-  | { ok: true }
-  | { ok: false; message: string };
+export interface MergeGithubPRSuccess {
+  ok: true;
+}
+
+export interface MergeGithubPRFailure {
+  ok: false;
+  message: string;
+}
+
+export type MergeGithubPRResult = MergeGithubPRSuccess | MergeGithubPRFailure;
 
 /**
  * Squash-merges a GitHub pull request via the API.

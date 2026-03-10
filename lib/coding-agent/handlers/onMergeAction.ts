@@ -41,8 +41,9 @@ export function registerOnMergeAction(bot: CodingAgentBot) {
 
     const result = await mergeGithubPR(pr.repo, pr.number, token);
 
-    if (!result.ok) {
-      await thread.post(`❌ ${pr.repo}#${pr.number} failed to merge: ${result.message}`);
+    if (result.ok === false) {
+      const { message } = result;
+      await thread.post(`❌ ${pr.repo}#${pr.number} failed to merge: ${message}`);
       return;
     }
 
