@@ -7,7 +7,7 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 }));
 
 const mockCheckIsAdmin = vi.fn();
-vi.mock("../checkIsAdmin", () => ({
+vi.mock("@/lib/admins/checkIsAdmin", () => ({
   checkIsAdmin: (...args: unknown[]) => mockCheckIsAdmin(...args),
 }));
 
