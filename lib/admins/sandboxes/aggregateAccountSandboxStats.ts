@@ -1,4 +1,4 @@
-import { selectAllAccountSandboxStats } from "@/lib/supabase/account_sandboxes/selectAllAccountSandboxStats";
+import { selectAccountSandboxes } from "@/lib/supabase/account_sandboxes/selectAccountSandboxes";
 
 export interface AccountSandboxStats {
   account_id: string;
@@ -14,7 +14,7 @@ export interface AccountSandboxStats {
  * @returns Array of per-account sandbox stats
  */
 export async function aggregateAccountSandboxStats(): Promise<AccountSandboxStats[]> {
-  const rows = await selectAllAccountSandboxStats();
+  const rows = await selectAccountSandboxes({});
 
   if (rows.length === 0) {
     return [];

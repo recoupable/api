@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockSelectAllAccountSandboxStats = vi.fn();
-vi.mock("@/lib/supabase/account_sandboxes/selectAllAccountSandboxStats", () => ({
-  selectAllAccountSandboxStats: (...args: unknown[]) => mockSelectAllAccountSandboxStats(...args),
+const mockSelectAccountSandboxes = vi.fn();
+vi.mock("@/lib/supabase/account_sandboxes/selectAccountSandboxes", () => ({
+  selectAccountSandboxes: (...args: unknown[]) => mockSelectAccountSandboxes(...args),
 }));
 
 const { aggregateAccountSandboxStats } = await import("../aggregateAccountSandboxStats");
@@ -12,8 +12,16 @@ beforeEach(() => {
 });
 
 describe("aggregateAccountSandboxStats", () => {
+  it("calls selectAccountSandboxes with no filters", async () => {
+    mockSelectAccountSandboxes.mockResolvedValue([]);
+
+    await aggregateAccountSandboxStats();
+
+    expect(mockSelectAccountSandboxes).toHaveBeenCalledWith({});
+  });
+
   it("returns empty array when no rows", async () => {
-    mockSelectAllAccountSandboxStats.mockResolvedValue([]);
+    mockSelectAccountSandboxes.mockResolvedValue([]);
 
     const result = await aggregateAccountSandboxStats();
 
@@ -21,7 +29,7 @@ describe("aggregateAccountSandboxStats", () => {
   });
 
   it("aggregates rows by account_id with correct counts", async () => {
-    mockSelectAllAccountSandboxStats.mockResolvedValue([
+    mockSelectAccountSandboxes.mockResolvedValue([
       { account_id: "acc-1", created_at: "2026-03-10T12:00:00Z", id: "1", sandbox_id: "sbx-1" },
       { account_id: "acc-1", created_at: "2026-03-09T10:00:00Z", id: "2", sandbox_id: "sbx-2" },
       { account_id: "acc-2", created_at: "2026-03-08T08:00:00Z", id: "3", sandbox_id: "sbx-3" },
@@ -39,7 +47,7 @@ describe("aggregateAccountSandboxStats", () => {
   });
 
   it("sorts results by last_created_at descending", async () => {
-    mockSelectAllAccountSandboxStats.mockResolvedValue([
+    mockSelectAccountSandboxes.mockResolvedValue([
       { account_id: "acc-a", created_at: "2026-03-10T12:00:00Z", id: "1", sandbox_id: "sbx-1" },
       { account_id: "acc-b", created_at: "2026-03-11T08:00:00Z", id: "2", sandbox_id: "sbx-2" },
     ]);
