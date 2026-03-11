@@ -177,4 +177,65 @@ Set this in your `.env` (local) or in your hosting provider's environment variab
 
 ## Accessing Mainnet
 
-To access the mainnet facilitator in Next.js, simply install and use the `@coinbase/x402` package. 
+To access the mainnet facilitator in Next.js, simply install and use the `@coinbase/x402` package.
+
+## Testing Resend Email Integration
+
+The coding agent supports email conversations via Resend. To test this integration:
+
+### 1. Configure Environment Variables
+
+Ensure these environment variables are set in your `.env`:
+
+```bash
+RESEND_API_KEY=re_your_api_key_here
+# Optional: for webhook signature verification
+RESEND_WEBHOOK_SECRET=whsec_your_webhook_secret_here
+```
+
+### 2. Set Up Resend Webhook
+
+In your [Resend dashboard](https://resend.com/dashboard/webhooks):
+
+1. Create a new webhook
+2. Set the endpoint URL to: `https://<your-host>/api/coding-agent/resend`
+3. Select events: `email.sent`, `email.delivered`, `email.opened`, `email.clicked`, `email.bounced`
+4. Copy the webhook signing secret and set it as `RESEND_WEBHOOK_SECRET`
+
+### 3. Send a Test Email
+
+Send an email to `agent@recoupable.com` with:
+- **Subject**: Your request (e.g., "Fix the login bug")
+- **Body**: Detailed description of what you want the coding agent to do
+
+The coding agent will:
+1. Receive the email via Resend webhook
+2. Create a new thread (same as a Slack mention)
+3. Process your request
+4. Reply via email with the results
+
+### 4. Test Reply Threading
+
+Reply to the agent's email to continue the conversation. The email threading uses standard `Message-ID` and `In-Reply-To` headers, so replies are automatically grouped into the same Chat SDK thread.
+
+### 5. Local Development with ngrok
+
+For local testing, use [ngrok](https://ngrok.com/) to expose your local server:
+
+```bash
+# Terminal 1: Start the dev server
+pnpm dev
+
+# Terminal 2: Expose via ngrok
+npx ngrok http 3000
+
+# Update Resend webhook URL to: https://<ngrok-id>.ngrok.io/api/coding-agent/resend
+```
+
+### 6. Verify in Logs
+
+Check the server logs for:
+- `POST /api/coding-agent/resend` — Webhook received
+- `Syncing monorepo submodules` — Submodule sync before changes
+- `Agent completed` — Coding agent finished
+- Email sent confirmation via Resend

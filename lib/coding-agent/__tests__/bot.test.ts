@@ -12,6 +12,12 @@ vi.mock("@chat-adapter/github", () => ({
   }),
 }));
 
+vi.mock("@resend/chat-sdk-adapter", () => ({
+  createResendAdapter: vi.fn().mockReturnValue({
+    name: "resend",
+  }),
+}));
+
 vi.mock("@chat-adapter/state-ioredis", () => ({
   createIoRedisState: vi.fn().mockReturnValue({
     connect: vi.fn(),
@@ -125,5 +131,30 @@ describe("createCodingAgentBot", () => {
 
     const lastCall = vi.mocked(Chat).mock.calls.at(-1)!;
     expect(lastCall[0].userName).toBe("Recoup Agent");
+  });
+
+  it("creates a Chat instance with resend adapter", async () => {
+    const { Chat } = await import("chat");
+    const { createCodingAgentBot } = await import("../bot");
+
+    createCodingAgentBot();
+
+    const lastCall = vi.mocked(Chat).mock.calls.at(-1)!;
+    const config = lastCall[0];
+    expect(config.adapters).toHaveProperty("resend");
+  });
+
+  it("creates Resend adapter with correct from address", async () => {
+    const { createResendAdapter } = await import("@resend/chat-sdk-adapter");
+    const { createCodingAgentBot } = await import("../bot");
+
+    createCodingAgentBot();
+
+    expect(createResendAdapter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fromAddress: "agent@recoupable.com",
+        fromName: "Recoup Agent",
+      }),
+    );
   });
 });

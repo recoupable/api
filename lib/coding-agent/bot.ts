@@ -1,10 +1,12 @@
 import { Chat, ConsoleLogger } from "chat";
 import { SlackAdapter } from "@chat-adapter/slack";
 import { createGitHubAdapter } from "@chat-adapter/github";
+import { createResendAdapter } from "@resend/chat-sdk-adapter";
 import { createIoRedisState } from "@chat-adapter/state-ioredis";
 import redis from "@/lib/redis/connection";
 import type { CodingAgentThreadState } from "./types";
 import { validateCodingAgentEnv } from "./validateEnv";
+import { CODING_AGENT_FROM_EMAIL } from "./const";
 
 const logger = new ConsoleLogger();
 
@@ -40,9 +42,18 @@ export function createCodingAgentBot() {
     logger,
   });
 
-  return new Chat<{ slack: SlackAdapter; github: ReturnType<typeof createGitHubAdapter> }, CodingAgentThreadState>({
+  const resend = createResendAdapter({
+    fromAddress: CODING_AGENT_FROM_EMAIL,
+    fromName: "Recoup Agent",
+  });
+
+  return new Chat<{
+    slack: SlackAdapter;
+    github: ReturnType<typeof createGitHubAdapter>;
+    resend: ReturnType<typeof createResendAdapter>;
+  }, CodingAgentThreadState>({
     userName: "Recoup Agent",
-    adapters: { slack, github },
+    adapters: { slack, github, resend },
     state,
   });
 }
