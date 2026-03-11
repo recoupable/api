@@ -24,10 +24,9 @@ export async function selectAccounts(
     .select("*")
     .in("id", ids);
 
-  if (error || !data) {
-    console.error("Error fetching accounts:", error);
-    return [];
+  if (error) {
+    throw error;
   }
 
-  return data;
+  return data ?? [];
 }

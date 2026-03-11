@@ -47,13 +47,10 @@ describe("selectAccounts", () => {
     expect(result).toEqual([{ id: "acc-1", name: "Alice", timestamp: null }]);
   });
 
-  it("returns empty array on error", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    mockIn.mockResolvedValue({ data: null, error: { message: "DB error" } });
+  it("throws on database error", async () => {
+    const dbError = { message: "DB error", code: "500" };
+    mockIn.mockResolvedValue({ data: null, error: dbError });
 
-    const result = await selectAccounts("acc-1");
-
-    expect(result).toEqual([]);
-    consoleSpy.mockRestore();
+    await expect(selectAccounts("acc-1")).rejects.toEqual(dbError);
   });
 });
