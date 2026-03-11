@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { checkIsAdmin } from "./checkIsAdmin";
-import { aggregateAccountSandboxStats } from "./aggregateAccountSandboxStats";
-import { selectAccountsByIds } from "@/lib/supabase/accounts/selectAccounts";
+import { aggregateAccountSandboxStats } from "./sandboxes/aggregateAccountSandboxStats";
+import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 
 /**
  * Handler for GET /api/admins/sandboxes.
@@ -45,7 +45,7 @@ export async function getAdminSandboxesHandler(request: NextRequest): Promise<Ne
 
     // Fetch account names for all account IDs in a single query
     const accountIds = stats.map(s => s.account_id);
-    const accountRows = await selectAccountsByIds(accountIds);
+    const accountRows = await selectAccounts(accountIds);
 
     const nameMap = new Map<string, string | null>(
       accountRows.map(a => [a.id, a.name]),

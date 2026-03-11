@@ -12,13 +12,13 @@ vi.mock("../checkIsAdmin", () => ({
 }));
 
 const mockAggregateAccountSandboxStats = vi.fn();
-vi.mock("../aggregateAccountSandboxStats", () => ({
+vi.mock("../sandboxes/aggregateAccountSandboxStats", () => ({
   aggregateAccountSandboxStats: (...args: unknown[]) => mockAggregateAccountSandboxStats(...args),
 }));
 
-const mockSelectAccountsByIds = vi.fn();
+const mockSelectAccounts = vi.fn();
 vi.mock("@/lib/supabase/accounts/selectAccounts", () => ({
-  selectAccountsByIds: (...args: unknown[]) => mockSelectAccountsByIds(...args),
+  selectAccounts: (...args: unknown[]) => mockSelectAccounts(...args),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -33,7 +33,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockValidateAuthContext.mockResolvedValue(mockAuth);
   mockCheckIsAdmin.mockResolvedValue(true);
-  mockSelectAccountsByIds.mockResolvedValue([]);
+  mockSelectAccounts.mockResolvedValue([]);
 });
 
 describe("getAdminSandboxesHandler", () => {
@@ -76,7 +76,7 @@ describe("getAdminSandboxesHandler", () => {
       { account_id: "acc-2", total_sandboxes: 2, last_created_at: "2026-03-09T08:00:00Z" },
     ]);
 
-    mockSelectAccountsByIds.mockResolvedValue([
+    mockSelectAccounts.mockResolvedValue([
       { id: "acc-1", name: "Alice" },
       { id: "acc-2", name: "Bob" },
     ]);
@@ -107,7 +107,7 @@ describe("getAdminSandboxesHandler", () => {
       { account_id: "acc-unknown", total_sandboxes: 1, last_created_at: "2026-03-10T00:00:00Z" },
     ]);
 
-    mockSelectAccountsByIds.mockResolvedValue([]);
+    mockSelectAccounts.mockResolvedValue([]);
 
     const request = new NextRequest("http://localhost/api/admins/sandboxes");
     const response = await getAdminSandboxesHandler(request);
