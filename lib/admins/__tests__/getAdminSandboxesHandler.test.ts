@@ -11,9 +11,9 @@ vi.mock("../checkIsAdmin", () => ({
   checkIsAdmin: (...args: unknown[]) => mockCheckIsAdmin(...args),
 }));
 
-const mockSelectAllAccountSandboxStats = vi.fn();
-vi.mock("@/lib/supabase/account_sandboxes/selectAllAccountSandboxStats", () => ({
-  selectAllAccountSandboxStats: (...args: unknown[]) => mockSelectAllAccountSandboxStats(...args),
+const mockAggregateAccountSandboxStats = vi.fn();
+vi.mock("../aggregateAccountSandboxStats", () => ({
+  aggregateAccountSandboxStats: (...args: unknown[]) => mockAggregateAccountSandboxStats(...args),
 }));
 
 const mockSelectAccountsByIds = vi.fn();
@@ -60,7 +60,7 @@ describe("getAdminSandboxesHandler", () => {
   });
 
   it("returns empty accounts array when no sandboxes exist", async () => {
-    mockSelectAllAccountSandboxStats.mockResolvedValue([]);
+    mockAggregateAccountSandboxStats.mockResolvedValue([]);
 
     const request = new NextRequest("http://localhost/api/admins/sandboxes");
     const response = await getAdminSandboxesHandler(request);
@@ -71,7 +71,7 @@ describe("getAdminSandboxesHandler", () => {
   });
 
   it("returns account sandbox stats with account names", async () => {
-    mockSelectAllAccountSandboxStats.mockResolvedValue([
+    mockAggregateAccountSandboxStats.mockResolvedValue([
       { account_id: "acc-1", total_sandboxes: 5, last_created_at: "2026-03-10T12:00:00Z" },
       { account_id: "acc-2", total_sandboxes: 2, last_created_at: "2026-03-09T08:00:00Z" },
     ]);
@@ -103,7 +103,7 @@ describe("getAdminSandboxesHandler", () => {
   });
 
   it("falls back to null account_name when account not found in accounts table", async () => {
-    mockSelectAllAccountSandboxStats.mockResolvedValue([
+    mockAggregateAccountSandboxStats.mockResolvedValue([
       { account_id: "acc-unknown", total_sandboxes: 1, last_created_at: "2026-03-10T00:00:00Z" },
     ]);
 

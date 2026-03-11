@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { checkIsAdmin } from "./checkIsAdmin";
-import { selectAllAccountSandboxStats } from "@/lib/supabase/account_sandboxes/selectAllAccountSandboxStats";
+import { aggregateAccountSandboxStats } from "./aggregateAccountSandboxStats";
 import { selectAccountsByIds } from "@/lib/supabase/accounts/selectAccounts";
 
 /**
@@ -34,7 +34,7 @@ export async function getAdminSandboxesHandler(request: NextRequest): Promise<Ne
       );
     }
 
-    const stats = await selectAllAccountSandboxStats();
+    const stats = await aggregateAccountSandboxStats();
 
     if (stats.length === 0) {
       return NextResponse.json(
