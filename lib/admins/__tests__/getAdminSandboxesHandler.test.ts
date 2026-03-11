@@ -16,11 +16,9 @@ vi.mock("@/lib/supabase/account_sandboxes/selectAllAccountSandboxStats", () => (
   selectAllAccountSandboxStats: (...args: unknown[]) => mockSelectAllAccountSandboxStats(...args),
 }));
 
-const mockSupabaseFrom = vi.fn();
-vi.mock("@/lib/supabase/serverClient", () => ({
-  default: {
-    from: (...args: unknown[]) => mockSupabaseFrom(...args),
-  },
+const mockSelectAccountsByIds = vi.fn();
+vi.mock("@/lib/supabase/accounts/selectAccounts", () => ({
+  selectAccountsByIds: (...args: unknown[]) => mockSelectAccountsByIds(...args),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -35,10 +33,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockValidateAuthContext.mockResolvedValue(mockAuth);
   mockCheckIsAdmin.mockResolvedValue(true);
-  mockSupabaseFrom.mockReturnValue({
-    select: vi.fn().mockReturnThis(),
-    in: vi.fn().mockResolvedValue({ data: [], error: null }),
-  });
+  mockSelectAccountsByIds.mockResolvedValue([]);
 });
 
 describe("getAdminSandboxesHandler", () => {
@@ -81,16 +76,10 @@ describe("getAdminSandboxesHandler", () => {
       { account_id: "acc-2", total_sandboxes: 2, last_created_at: "2026-03-09T08:00:00Z" },
     ]);
 
-    mockSupabaseFrom.mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      in: vi.fn().mockResolvedValue({
-        data: [
-          { id: "acc-1", name: "Alice" },
-          { id: "acc-2", name: "Bob" },
-        ],
-        error: null,
-      }),
-    });
+    mockSelectAccountsByIds.mockResolvedValue([
+      { id: "acc-1", name: "Alice" },
+      { id: "acc-2", name: "Bob" },
+    ]);
 
     const request = new NextRequest("http://localhost/api/admins/sandboxes");
     const response = await getAdminSandboxesHandler(request);
@@ -118,10 +107,7 @@ describe("getAdminSandboxesHandler", () => {
       { account_id: "acc-unknown", total_sandboxes: 1, last_created_at: "2026-03-10T00:00:00Z" },
     ]);
 
-    mockSupabaseFrom.mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      in: vi.fn().mockResolvedValue({ data: [], error: null }),
-    });
+    mockSelectAccountsByIds.mockResolvedValue([]);
 
     const request = new NextRequest("http://localhost/api/admins/sandboxes");
     const response = await getAdminSandboxesHandler(request);
