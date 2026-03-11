@@ -3,14 +3,14 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { checkIsAdmin } from "../checkIsAdmin";
 import { aggregateAccountSandboxStats } from "./aggregateAccountSandboxStats";
-import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
+import { selectAccountEmails } from "@/lib/supabase/account_emails/selectAccountEmails";
 
 /**
  * Handler for GET /api/admins/sandboxes.
  *
  * Returns a list of accounts with their sandbox statistics:
  * - account_id
- * - account_name
+ * - account_email
  * - total_sandboxes
  * - last_created_at
  *
@@ -43,17 +43,17 @@ export async function getAdminSandboxesHandler(request: NextRequest): Promise<Ne
       );
     }
 
-    // Fetch account names for all account IDs in a single query
+    // Fetch emails for all account IDs in a single query
     const accountIds = stats.map(s => s.account_id);
-    const accountRows = await selectAccounts(accountIds);
+    const emailRows = await selectAccountEmails(accountIds);
 
-    const nameMap = new Map<string, string | null>(
-      accountRows.map(a => [a.id, a.name]),
+    const emailMap = new Map<string, string | null>(
+      emailRows.map(r => [r.account_id, r.email]),
     );
 
     const accounts = stats.map(s => ({
       account_id: s.account_id,
-      account_name: nameMap.get(s.account_id) ?? null,
+      account_email: emailMap.get(s.account_id) ?? null,
       total_sandboxes: s.total_sandboxes,
       last_created_at: s.last_created_at,
     }));

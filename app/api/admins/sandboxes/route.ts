@@ -21,7 +21,7 @@ export async function OPTIONS() {
  * Returns a table of all accounts with sandbox statistics.
  * Each row includes:
  * - account_id: string
- * - account_name: string | null
+ * - account_email: string | null
  * - total_sandboxes: number — total sandboxes created for this account
  * - last_created_at: string — ISO timestamp of the most recently created sandbox
  *
@@ -30,7 +30,7 @@ export async function OPTIONS() {
  *
  * Response (200):
  * - status: "success"
- * - accounts: Array<{ account_id, account_name, total_sandboxes, last_created_at }>
+ * - accounts: Array<{ account_id, account_email, total_sandboxes, last_created_at }>
  *
  * Error (401): Unauthorized
  * Error (403): Forbidden (not an admin)

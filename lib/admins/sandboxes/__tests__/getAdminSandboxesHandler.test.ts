@@ -16,9 +16,9 @@ vi.mock("../aggregateAccountSandboxStats", () => ({
   aggregateAccountSandboxStats: (...args: unknown[]) => mockAggregateAccountSandboxStats(...args),
 }));
 
-const mockSelectAccounts = vi.fn();
-vi.mock("@/lib/supabase/accounts/selectAccounts", () => ({
-  selectAccounts: (...args: unknown[]) => mockSelectAccounts(...args),
+const mockSelectAccountEmails = vi.fn();
+vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
+  selectAccountEmails: (...args: unknown[]) => mockSelectAccountEmails(...args),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -33,7 +33,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockValidateAuthContext.mockResolvedValue(mockAuth);
   mockCheckIsAdmin.mockResolvedValue(true);
-  mockSelectAccounts.mockResolvedValue([]);
+  mockSelectAccountEmails.mockResolvedValue([]);
 });
 
 describe("getAdminSandboxesHandler", () => {
@@ -76,9 +76,9 @@ describe("getAdminSandboxesHandler", () => {
       { account_id: "acc-2", total_sandboxes: 2, last_created_at: "2026-03-09T08:00:00Z" },
     ]);
 
-    mockSelectAccounts.mockResolvedValue([
-      { id: "acc-1", name: "Alice" },
-      { id: "acc-2", name: "Bob" },
+    mockSelectAccountEmails.mockResolvedValue([
+      { account_id: "acc-1", email: "alice@example.com" },
+      { account_id: "acc-2", email: "bob@example.com" },
     ]);
 
     const request = new NextRequest("http://localhost/api/admins/sandboxes");
@@ -90,30 +90,30 @@ describe("getAdminSandboxesHandler", () => {
     expect(body.accounts).toHaveLength(2);
     expect(body.accounts[0]).toEqual({
       account_id: "acc-1",
-      account_name: "Alice",
+      account_email: "alice@example.com",
       total_sandboxes: 5,
       last_created_at: "2026-03-10T12:00:00Z",
     });
     expect(body.accounts[1]).toEqual({
       account_id: "acc-2",
-      account_name: "Bob",
+      account_email: "bob@example.com",
       total_sandboxes: 2,
       last_created_at: "2026-03-09T08:00:00Z",
     });
   });
 
-  it("falls back to null account_name when account not found in accounts table", async () => {
+  it("falls back to null account_email when account not found in accounts table", async () => {
     mockAggregateAccountSandboxStats.mockResolvedValue([
       { account_id: "acc-unknown", total_sandboxes: 1, last_created_at: "2026-03-10T00:00:00Z" },
     ]);
 
-    mockSelectAccounts.mockResolvedValue([]);
+    mockSelectAccountEmails.mockResolvedValue([]);
 
     const request = new NextRequest("http://localhost/api/admins/sandboxes");
     const response = await getAdminSandboxesHandler(request);
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.accounts[0].account_name).toBeNull();
+    expect(body.accounts[0].account_email).toBeNull();
   });
 });

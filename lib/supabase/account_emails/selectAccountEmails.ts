@@ -1,48 +1,34 @@
-import supabase from "@/lib/supabase/serverClient";
-import type { Tables } from "@/types/database.types";
+import supabase from "../serverClient";
+
+export interface AccountEmailRow {
+  account_id: string;
+  email: string | null;
+}
 
 /**
- * Select account_emails by email addresses and/or account IDs
+ * Retrieves email addresses for the given account IDs from the account_emails table.
  *
- * @param params - The parameters for the query
- * @param params.emails - Optional array of email addresses to query
- * @param params.accountIds - Optional array of account IDs to query
- * @returns Array of account_emails rows
+ * @param accountIds - Array of account IDs to fetch emails for
+ * @returns Array of { account_id, email } rows (empty array on error or empty input)
  */
-export default async function selectAccountEmails({
-  emails,
-  accountIds,
-}: {
-  emails?: string[];
-  accountIds?: string | string[];
-}): Promise<Tables<"account_emails">[]> {
-  let query = supabase.from("account_emails").select("*");
-
-  // Build query based on provided parameters
-  const ids = accountIds ? (Array.isArray(accountIds) ? accountIds : [accountIds]) : [];
-  const hasEmails = Array.isArray(emails) && emails.length > 0;
-  const hasAccountIds = ids.length > 0;
-
-  // If neither parameter is provided, return empty array
-  if (!hasEmails && !hasAccountIds) {
+export async function selectAccountEmails(
+  accountIds: string[],
+): Promise<AccountEmailRow[]> {
+  if (accountIds.length === 0) {
     return [];
   }
 
-  // Apply filters
-  if (hasEmails) {
-    query = query.in("email", emails);
-  }
-
-  if (hasAccountIds) {
-    query = query.in("account_id", ids);
-  }
-
-  const { data, error } = await query;
+  const { data, error } = await supabase
+    .from("account_emails")
+    .select("account_id, email")
+    .in("account_id", accountIds);
 
   if (error) {
-    console.error("Error fetching account_emails:", error);
-    return [];
+    throw error;
   }
 
-  return data || [];
+  return (data ?? []).map(row => ({
+    account_id: row.account_id ?? "",
+    email: row.email,
+  }));
 }

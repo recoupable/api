@@ -32,7 +32,7 @@ describe("GET /api/admins/sandboxes", () => {
     const accounts = [
       {
         account_id: "acc-1",
-        account_name: "Alice",
+        account_email: "alice@example.com",
         total_sandboxes: 3,
         last_created_at: "2026-03-10T12:00:00Z",
       },
