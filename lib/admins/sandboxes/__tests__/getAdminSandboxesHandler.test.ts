@@ -18,7 +18,7 @@ vi.mock("../aggregateAccountSandboxStats", () => ({
 
 const mockSelectAccountEmails = vi.fn();
 vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
-  selectAccountEmails: (...args: unknown[]) => mockSelectAccountEmails(...args),
+  default: (...args: unknown[]) => mockSelectAccountEmails(...args),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -77,8 +77,8 @@ describe("getAdminSandboxesHandler", () => {
     ]);
 
     mockSelectAccountEmails.mockResolvedValue([
-      { account_id: "acc-1", email: "alice@example.com" },
-      { account_id: "acc-2", email: "bob@example.com" },
+      { account_id: "acc-1", email: "alice@example.com", id: "1", updated_at: "" },
+      { account_id: "acc-2", email: "bob@example.com", id: "2", updated_at: "" },
     ]);
 
     const request = new NextRequest("http://localhost/api/admins/sandboxes");

@@ -3,7 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { checkIsAdmin } from "../checkIsAdmin";
 import { aggregateAccountSandboxStats } from "./aggregateAccountSandboxStats";
-import { selectAccountEmails } from "@/lib/supabase/account_emails/selectAccountEmails";
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
 /**
  * Handler for GET /api/admins/sandboxes.
@@ -45,10 +45,12 @@ export async function getAdminSandboxesHandler(request: NextRequest): Promise<Ne
 
     // Fetch emails for all account IDs in a single query
     const accountIds = stats.map(s => s.account_id);
-    const emailRows = await selectAccountEmails(accountIds);
+    const emailRows = await selectAccountEmails({ accountIds });
 
     const emailMap = new Map<string, string | null>(
-      emailRows.map(r => [r.account_id, r.email]),
+      emailRows
+        .filter(r => r.account_id !== null)
+        .map(r => [r.account_id as string, r.email]),
     );
 
     const accounts = stats.map(s => ({
