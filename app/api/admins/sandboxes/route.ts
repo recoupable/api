@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getAdminSandboxesHandler } from "@/lib/admins/getAdminSandboxesHandler";
+import { getAdminSandboxesHandler } from "@/lib/admins/sandboxes/getAdminSandboxesHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.

@@ -12,7 +12,7 @@ vi.mock("../checkIsAdmin", () => ({
 }));
 
 const mockAggregateAccountSandboxStats = vi.fn();
-vi.mock("../sandboxes/aggregateAccountSandboxStats", () => ({
+vi.mock("../aggregateAccountSandboxStats", () => ({
   aggregateAccountSandboxStats: (...args: unknown[]) => mockAggregateAccountSandboxStats(...args),
 }));
 
