@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { checkIsAdmin } from "./checkIsAdmin";
+import { checkIsAdmin } from "../checkIsAdmin";
 import { aggregateAccountSandboxStats } from "./aggregateAccountSandboxStats";
 import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 
