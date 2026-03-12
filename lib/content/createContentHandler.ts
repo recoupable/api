@@ -4,6 +4,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateContentBody } from "@/lib/content/validateCreateContentBody";
 import { triggerCreateContent } from "@/lib/trigger/triggerCreateContent";
 import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadiness";
+import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 
 /**
  * Handler for POST /api/content/create.
@@ -29,7 +30,6 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
       githubRepo = readiness.githubRepo;
     } catch {
       // If readiness check fails, still try to resolve the repo
-      const { selectAccountSnapshots } = await import("@/lib/supabase/account_snapshots/selectAccountSnapshots");
       const snapshots = await selectAccountSnapshots(validated.accountId);
       const repo = snapshots?.[0]?.github_repo;
       if (!repo) {

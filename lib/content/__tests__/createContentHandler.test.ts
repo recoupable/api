@@ -21,6 +21,10 @@ vi.mock("@/lib/content/getArtistContentReadiness", () => ({
   getArtistContentReadiness: vi.fn(),
 }));
 
+vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
+  selectAccountSnapshots: vi.fn(),
+}));
+
 describe("createContentHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
