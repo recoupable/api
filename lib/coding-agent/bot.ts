@@ -4,7 +4,8 @@ import { createWhatsAppAdapter, WhatsAppAdapter } from "@chat-adapter/whatsapp";
 import { createIoRedisState } from "@chat-adapter/state-ioredis";
 import redis from "@/lib/redis/connection";
 import type { CodingAgentThreadState } from "./types";
-import { validateCodingAgentEnv, isWhatsAppConfigured } from "./validateEnv";
+import { validateCodingAgentEnv } from "./validateEnv";
+import { isWhatsAppConfigured } from "./isWhatsAppConfigured";
 
 const logger = new ConsoleLogger();
 

@@ -22,10 +22,6 @@ export async function resolvePRState(
 ): Promise<CodingAgentThreadState | null> {
   const threadState = await thread.state;
   if (threadState) {
-    // Backfill threadId from legacy slackThreadId for older Redis entries
-    if (!threadState.threadId && threadState.slackThreadId) {
-      threadState.threadId = threadState.slackThreadId;
-    }
     return threadState;
   }
 

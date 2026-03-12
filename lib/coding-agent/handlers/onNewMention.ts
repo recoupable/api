@@ -45,7 +45,6 @@ export function registerOnNewMention(bot: CodingAgentBot) {
         prompt,
         runId: handle.id,
         threadId: thread.id,
-        slackThreadId: thread.id,
       });
     } catch (error) {
       console.error("[coding-agent] onNewMention error:", error);
