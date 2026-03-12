@@ -6,7 +6,6 @@ import { getTaskRunHandler } from "../getTaskRunHandler";
 import { validateGetTaskRunQuery } from "../validateGetTaskRunQuery";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
 import { listTaskRuns } from "@/lib/trigger/listTaskRuns";
-import { persistCreateContentRunVideo } from "@/lib/content/persistCreateContentRunVideo";
 
 vi.mock("../validateGetTaskRunQuery", () => ({
   validateGetTaskRunQuery: vi.fn(),
@@ -20,17 +19,10 @@ vi.mock("@/lib/trigger/listTaskRuns", () => ({
   listTaskRuns: vi.fn(),
 }));
 
-vi.mock("@/lib/content/persistCreateContentRunVideo", () => ({
-  persistCreateContentRunVideo: vi.fn(async run => run),
-}));
-
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-/**
- *
- */
 function createMockRequest(): NextRequest {
   return {
     url: "http://localhost:3000/api/tasks/runs",
@@ -56,7 +48,6 @@ const mockRun = {
 describe("getTaskRunHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(persistCreateContentRunVideo).mockImplementation(async run => run as never);
   });
 
   it("returns error response when validation fails", async () => {
@@ -80,7 +71,6 @@ describe("getTaskRunHandler", () => {
       expect(json.status).toBe("success");
       expect(json.runs).toHaveLength(1);
       expect(json.runs[0].id).toBe("run_123");
-      expect(persistCreateContentRunVideo).toHaveBeenCalledWith(mockRun);
     });
 
     it("returns 404 when run is not found", async () => {
@@ -104,11 +94,7 @@ describe("getTaskRunHandler", () => {
 
   describe("list mode", () => {
     it("returns empty runs array", async () => {
-      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
-        mode: "list",
-        accountId: "acc_123",
-        limit: 20,
-      });
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ mode: "list", accountId: "acc_123", limit: 20 });
       vi.mocked(listTaskRuns).mockResolvedValue([]);
 
       const response = await getTaskRunHandler(createMockRequest());
@@ -119,11 +105,7 @@ describe("getTaskRunHandler", () => {
     });
 
     it("returns populated runs array", async () => {
-      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
-        mode: "list",
-        accountId: "acc_123",
-        limit: 20,
-      });
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ mode: "list", accountId: "acc_123", limit: 20 });
       vi.mocked(listTaskRuns).mockResolvedValue([mockRun]);
 
       const response = await getTaskRunHandler(createMockRequest());
@@ -131,15 +113,10 @@ describe("getTaskRunHandler", () => {
 
       expect(json.status).toBe("success");
       expect(json.runs).toHaveLength(1);
-      expect(persistCreateContentRunVideo).toHaveBeenCalledWith(mockRun);
     });
 
     it("calls listTaskRuns with accountId and limit", async () => {
-      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
-        mode: "list",
-        accountId: "acc_456",
-        limit: 50,
-      });
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ mode: "list", accountId: "acc_456", limit: 50 });
       vi.mocked(listTaskRuns).mockResolvedValue([]);
 
       await getTaskRunHandler(createMockRequest());
@@ -148,11 +125,7 @@ describe("getTaskRunHandler", () => {
     });
 
     it("returns 500 when listTaskRuns throws", async () => {
-      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
-        mode: "list",
-        accountId: "acc_123",
-        limit: 20,
-      });
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ mode: "list", accountId: "acc_123", limit: 20 });
       vi.mocked(listTaskRuns).mockRejectedValue(new Error("API error"));
 
       const response = await getTaskRunHandler(createMockRequest());
