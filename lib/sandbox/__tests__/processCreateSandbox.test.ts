@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { processCreateSandbox } from "../processCreateSandbox";
 import { createSandbox } from "@/lib/sandbox/createSandbox";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
-import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
+import { triggerPromptSandbox } from "@/lib/trigger/triggerPromptSandbox";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 
 vi.mock("@/lib/sandbox/createSandbox", () => ({
@@ -14,8 +14,8 @@ vi.mock("@/lib/supabase/account_sandboxes/insertAccountSandbox", () => ({
   insertAccountSandbox: vi.fn(),
 }));
 
-vi.mock("@/lib/trigger/triggerRunSandboxCommand", () => ({
-  triggerRunSandboxCommand: vi.fn(),
+vi.mock("@/lib/trigger/triggerPromptSandbox", () => ({
+  triggerPromptSandbox: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
@@ -27,7 +27,7 @@ describe("processCreateSandbox", () => {
     vi.clearAllMocks();
   });
 
-  it("creates sandbox without command and returns result without runId", async () => {
+  it("creates sandbox without prompt and returns result without runId", async () => {
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
       sandbox: {} as never,
@@ -56,10 +56,10 @@ describe("processCreateSandbox", () => {
       timeout: 600000,
       createdAt: "2024-01-01T00:00:00.000Z",
     });
-    expect(triggerRunSandboxCommand).not.toHaveBeenCalled();
+    expect(triggerPromptSandbox).not.toHaveBeenCalled();
   });
 
-  it("creates sandbox with command and returns result with runId", async () => {
+  it("creates sandbox with prompt and returns result with runId", async () => {
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
       sandbox: {} as never,
@@ -79,15 +79,13 @@ describe("processCreateSandbox", () => {
       },
       error: null,
     });
-    vi.mocked(triggerRunSandboxCommand).mockResolvedValue({
-      id: "run_abc123",
+    vi.mocked(triggerPromptSandbox).mockResolvedValue({
+      id: "run_prompt123",
     });
 
     const result = await processCreateSandbox({
       accountId: "acc_123",
-      command: "ls",
-      args: ["-la"],
-      cwd: "/home",
+      prompt: "create a hello world index.html",
     });
 
     expect(result).toEqual({
@@ -95,12 +93,10 @@ describe("processCreateSandbox", () => {
       sandboxStatus: "running",
       timeout: 600000,
       createdAt: "2024-01-01T00:00:00.000Z",
-      runId: "run_abc123",
+      runId: "run_prompt123",
     });
-    expect(triggerRunSandboxCommand).toHaveBeenCalledWith({
-      command: "ls",
-      args: ["-la"],
-      cwd: "/home",
+    expect(triggerPromptSandbox).toHaveBeenCalledWith({
+      prompt: "create a hello world index.html",
       sandboxId: "sbx_123",
       accountId: "acc_123",
     });
@@ -196,51 +192,6 @@ describe("processCreateSandbox", () => {
     });
   });
 
-  it("converts prompt to openclaw agent command", async () => {
-    vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
-    vi.mocked(createSandbox).mockResolvedValue({
-      sandbox: {} as never,
-      response: {
-        sandboxId: "sbx_123",
-        sandboxStatus: "running",
-        timeout: 600000,
-        createdAt: "2024-01-01T00:00:00.000Z",
-      },
-    });
-    vi.mocked(insertAccountSandbox).mockResolvedValue({
-      data: {
-        id: "record_123",
-        account_id: "acc_123",
-        sandbox_id: "sbx_123",
-        created_at: "2024-01-01T00:00:00.000Z",
-      },
-      error: null,
-    });
-    vi.mocked(triggerRunSandboxCommand).mockResolvedValue({
-      id: "run_prompt123",
-    });
-
-    const result = await processCreateSandbox({
-      accountId: "acc_123",
-      prompt: "create a hello world index.html",
-    });
-
-    expect(result).toEqual({
-      sandboxId: "sbx_123",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
-      runId: "run_prompt123",
-    });
-    expect(triggerRunSandboxCommand).toHaveBeenCalledWith({
-      command: "openclaw",
-      args: ["agent", "--agent", "main", "--message", "create a hello world index.html"],
-      cwd: undefined,
-      sandboxId: "sbx_123",
-      accountId: "acc_123",
-    });
-  });
-
   it("throws when createSandbox fails", async () => {
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockRejectedValue(new Error("Sandbox creation failed"));
@@ -250,7 +201,7 @@ describe("processCreateSandbox", () => {
     );
   });
 
-  it("returns result without runId when triggerRunSandboxCommand fails", async () => {
+  it("returns result without runId when triggerPromptSandbox fails", async () => {
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
     vi.mocked(createSandbox).mockResolvedValue({
       sandbox: {} as never,
@@ -270,11 +221,11 @@ describe("processCreateSandbox", () => {
       },
       error: null,
     });
-    vi.mocked(triggerRunSandboxCommand).mockRejectedValue(new Error("Task trigger failed"));
+    vi.mocked(triggerPromptSandbox).mockRejectedValue(new Error("Task trigger failed"));
 
     const result = await processCreateSandbox({
       accountId: "acc_123",
-      command: "ls",
+      prompt: "say hello",
     });
 
     expect(result).toEqual({

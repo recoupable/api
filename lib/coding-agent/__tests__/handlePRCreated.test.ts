@@ -23,7 +23,7 @@ vi.mock("../prState", () => ({
 }));
 
 describe("handlePRCreated", () => {
-  it("posts a card with PR links and merge button", async () => {
+  it("posts a card with PR links and individual merge buttons", async () => {
     const { handlePRCreated } = await import("../handlePRCreated");
 
     await handlePRCreated("slack:C123:ts", {
@@ -47,7 +47,10 @@ describe("handlePRCreated", () => {
 
     const { Button } = await import("chat");
     expect(Button).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "merge_all_prs", label: "Merge All PRs" }),
+      expect.objectContaining({
+        id: "merge_pr:recoupable/api#42",
+        label: "Merge recoupable/api#42",
+      }),
     );
 
     expect(mockThread.setState).toHaveBeenCalledWith(
