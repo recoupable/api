@@ -1,5 +1,6 @@
 import { Chat, ConsoleLogger } from "chat";
 import { SlackAdapter } from "@chat-adapter/slack";
+import { createWhatsAppAdapter, WhatsAppAdapter } from "@chat-adapter/whatsapp";
 import { createIoRedisState } from "@chat-adapter/state-ioredis";
 import redis from "@/lib/redis/connection";
 import type { CodingAgentThreadState } from "./types";
@@ -7,8 +8,13 @@ import { validateCodingAgentEnv } from "./validateEnv";
 
 const logger = new ConsoleLogger();
 
+type CodingAgentAdapters = {
+  slack: SlackAdapter;
+  whatsapp: WhatsAppAdapter;
+};
+
 /**
- * Creates a new Chat bot instance configured with the Slack adapter.
+ * Creates a new Chat bot instance configured with Slack and WhatsApp adapters.
  */
 export function createCodingAgentBot() {
   validateCodingAgentEnv();
@@ -32,9 +38,11 @@ export function createCodingAgentBot() {
     logger,
   });
 
-  return new Chat<{ slack: SlackAdapter }, CodingAgentThreadState>({
+  const whatsapp = createWhatsAppAdapter({ logger });
+
+  return new Chat<CodingAgentAdapters, CodingAgentThreadState>({
     userName: "Recoup Agent",
-    adapters: { slack },
+    adapters: { slack, whatsapp },
     state,
   });
 }
