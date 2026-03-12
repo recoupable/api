@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
 import { GetTasksQuery, getTasksQuerySchema } from "@/lib/tasks/validateGetTasksQuery";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
+import { getToolResultError } from "@/lib/mcp/getToolResultError";
 
 /**
  * Registers the "get_tasks" tool on the MCP server.
@@ -17,8 +18,14 @@ export function registerGetTasksTool(server: McpServer): void {
       inputSchema: getTasksQuerySchema,
     },
     async (args: GetTasksQuery) => {
-      const tasks = await selectScheduledActions(args);
-      return getToolResultSuccess(tasks);
+      try {
+        const tasks = await selectScheduledActions(args);
+        return getToolResultSuccess(tasks);
+      } catch (error) {
+        return getToolResultError(
+          error instanceof Error ? error.message : "Failed to fetch tasks",
+        );
+      }
     },
   );
 }
