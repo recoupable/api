@@ -2,6 +2,7 @@ import { parseGitModules, type SubmoduleEntry } from "./parseGitModules";
 
 /**
  * Fetches and parses .gitmodules from a GitHub repository.
+ * Uses the GitHub Contents API (works for both public and private repos).
  *
  * @param owner - The GitHub repository owner
  * @param repo - The GitHub repository name
@@ -20,8 +21,14 @@ export async function getRepoGitModules({
   const token = process.env.GITHUB_TOKEN;
 
   const response = await fetch(
-    `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/.gitmodules`,
-    { ...(token && { headers: { Authorization: `Bearer ${token}` } }) },
+    `https://api.github.com/repos/${owner}/${repo}/contents/.gitmodules?ref=${branch}`,
+    {
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+        Accept: "application/vnd.github.v3.raw",
+        "User-Agent": "Recoup-API",
+      },
+    },
   );
 
   if (!response.ok) {
