@@ -1,5 +1,6 @@
 import { insertScheduledAction } from "@/lib/supabase/scheduled_actions/insertScheduledAction";
 import { updateScheduledAction } from "@/lib/supabase/scheduled_actions/updateScheduledAction";
+import { deleteScheduledAction } from "@/lib/supabase/scheduled_actions/deleteScheduledAction";
 import { createSchedule } from "@/lib/trigger/createSchedule";
 import { createTaskBodySchema, type CreateTaskBody } from "@/lib/tasks/validateCreateTaskBody";
 import type { Tables } from "@/types/database.types";
@@ -7,6 +8,7 @@ import type { Tables } from "@/types/database.types";
 /**
  * Creates a new task (scheduled action) in the system.
  * Also creates the corresponding Trigger.dev schedule.
+ * If Trigger.dev schedule creation fails, the DB record is rolled back.
  *
  * @param input - The task data to create (validated against createTaskBodySchema)
  * @returns The created task
@@ -24,14 +26,29 @@ export async function createTask(input: CreateTaskBody): Promise<Tables<"schedul
     throw new Error("Failed to create task: missing Supabase id for scheduling");
   }
 
-  // Create the Trigger.dev schedule
-  const triggerSchedule = await createSchedule({
-    cron: schedule,
-    deduplicationKey: created.id,
-    externalId: created.id,
-  });
+  // Create the Trigger.dev schedule — rollback DB insert on failure
+  let triggerSchedule;
+  try {
+    triggerSchedule = await createSchedule({
+      cron: schedule,
+      deduplicationKey: created.id,
+      externalId: created.id,
+    });
+  } catch (error) {
+    // Clean up the orphaned DB record
+    await deleteScheduledAction(created.id).catch(deleteError => {
+      console.error("Failed to rollback scheduled action after Trigger.dev error:", deleteError);
+    });
+    throw new Error(
+      `Failed to create Trigger.dev schedule: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 
   if (!triggerSchedule.id) {
+    // Clean up the orphaned DB record
+    await deleteScheduledAction(created.id).catch(deleteError => {
+      console.error("Failed to rollback scheduled action after missing schedule id:", deleteError);
+    });
     throw new Error("Failed to create Trigger.dev schedule: missing schedule id");
   }
 
