@@ -23,6 +23,7 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
     try {
       const readiness = await getArtistContentReadiness({
         accountId: validated.accountId,
+        artistAccountId: validated.artistAccountId,
         artistSlug: validated.artistSlug,
       });
       githubRepo = readiness.githubRepo;
@@ -64,7 +65,7 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
       {
         runIds,
         status: "triggered",
-        artist: validated.artistSlug,
+        artist_account_id: validated.artistAccountId,
         template: validated.template,
         lipsync: validated.lipsync,
         ...(failedCount > 0 && { failed: failedCount }),

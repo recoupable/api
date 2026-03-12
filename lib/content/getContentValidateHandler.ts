@@ -18,6 +18,7 @@ export async function getContentValidateHandler(request: NextRequest): Promise<N
   try {
     const readiness = await getArtistContentReadiness({
       accountId: validated.accountId,
+      artistAccountId: validated.artistAccountId,
       artistSlug: validated.artistSlug,
     });
 

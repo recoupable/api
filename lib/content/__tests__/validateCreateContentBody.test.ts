@@ -51,12 +51,13 @@ describe("validateCreateContentBody", () => {
     if (!(result instanceof NextResponse)) {
       expect(result).toEqual({
         accountId: "acc_123",
+        artistAccountId: "550e8400-e29b-41d4-a716-446655440000",
         artistSlug: "gatsby-grace",
         template: "artist-caption-bedroom",
         lipsync: true,
         captionLength: "short",
         upscale: false,
-      batch: 1,
+        batch: 1,
       });
     }
   });

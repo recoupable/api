@@ -11,7 +11,7 @@ export interface ContentReadinessIssue {
 }
 
 export interface ArtistContentReadiness {
-  artist_slug: string;
+  artist_account_id: string;
   ready: boolean;
   missing: ContentReadinessIssue[];
   warnings: ContentReadinessIssue[];
@@ -25,9 +25,11 @@ export interface ArtistContentReadiness {
  */
 export async function getArtistContentReadiness({
   accountId,
+  artistAccountId,
   artistSlug,
 }: {
   accountId: string;
+  artistAccountId: string;
   artistSlug: string;
 }): Promise<ArtistContentReadiness> {
   const snapshots = await selectAccountSnapshots(accountId);
@@ -111,7 +113,7 @@ export async function getArtistContentReadiness({
   const warnings = issues.filter(item => item.severity === "recommended");
 
   return {
-    artist_slug: artistSlug,
+    artist_account_id: artistAccountId,
     ready: requiredMissing.length === 0,
     missing: requiredMissing,
     warnings,

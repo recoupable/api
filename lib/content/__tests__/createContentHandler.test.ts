@@ -25,7 +25,7 @@ describe("createContentHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
+      artist_account_id: "art_456",
       ready: true,
       missing: [],
       warnings: [],
@@ -49,6 +49,7 @@ describe("createContentHandler", () => {
   it("returns 202 with runIds when trigger succeeds", async () => {
     vi.mocked(validateCreateContentBody).mockResolvedValue({
       accountId: "acc_123",
+      artistAccountId: "art_456",
       artistSlug: "gatsby-grace",
       template: "artist-caption-bedroom",
       lipsync: false,
@@ -65,12 +66,13 @@ describe("createContentHandler", () => {
     expect(result.status).toBe(202);
     expect(body.runIds).toEqual(["run_abc123"]);
     expect(body.status).toBe("triggered");
-    expect(body.artist).toBe("gatsby-grace");
+    expect(body.artist_account_id).toBe("art_456");
   });
 
   it("returns 202 with empty runIds and failed count when trigger fails", async () => {
     vi.mocked(validateCreateContentBody).mockResolvedValue({
       accountId: "acc_123",
+      artistAccountId: "art_456",
       artistSlug: "gatsby-grace",
       template: "artist-caption-bedroom",
       lipsync: false,
@@ -92,6 +94,7 @@ describe("createContentHandler", () => {
   it("still triggers when readiness check finds missing files (best-effort)", async () => {
     vi.mocked(validateCreateContentBody).mockResolvedValue({
       accountId: "acc_123",
+      artistAccountId: "art_456",
       artistSlug: "gatsby-grace",
       template: "artist-caption-bedroom",
       lipsync: false,
@@ -100,7 +103,7 @@ describe("createContentHandler", () => {
       batch: 1,
     });
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
+      artist_account_id: "art_456",
       ready: false,
       missing: [
         {

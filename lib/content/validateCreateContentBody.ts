@@ -27,6 +27,7 @@ export const createContentBodySchema = z.object({
 
 export type ValidatedCreateContentBody = {
   accountId: string;
+  artistAccountId: string;
   artistSlug: string;
   template: string;
   lipsync: boolean;
@@ -84,6 +85,7 @@ export async function validateCreateContentBody(
 
   return {
     accountId: authResult.accountId,
+    artistAccountId: result.data.artist_account_id,
     artistSlug,
     template,
     lipsync: result.data.lipsync ?? false,

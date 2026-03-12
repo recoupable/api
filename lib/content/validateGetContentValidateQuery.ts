@@ -6,6 +6,7 @@ import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
 
 export type ValidatedGetContentValidateQuery = {
   accountId: string;
+  artistAccountId: string;
   artistSlug: string;
 };
 
@@ -39,6 +40,7 @@ export async function validateGetContentValidateQuery(
 
   return {
     accountId: authResult.accountId,
+    artistAccountId: artistAccountId,
     artistSlug,
   };
 }

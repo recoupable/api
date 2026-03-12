@@ -20,16 +20,17 @@ describe("getContentValidateHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      artist_slug: "gatsby-grace",
+      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
       ready: true,
       missing: [],
       warnings: [],
+      githubRepo: "https://github.com/test/repo",
     });
   });
 
   it("returns validation error when query validation fails", async () => {
     const errorResponse = NextResponse.json(
-      { status: "error", error: "artist_slug is required" },
+      { status: "error", error: "artist_account_id query parameter is required" },
       { status: 400 },
     );
     vi.mocked(validateGetContentValidateQuery).mockResolvedValue(errorResponse);
@@ -42,10 +43,11 @@ describe("getContentValidateHandler", () => {
   it("returns readiness payload when validation succeeds", async () => {
     vi.mocked(validateGetContentValidateQuery).mockResolvedValue({
       accountId: "acc_123",
+      artistAccountId: "550e8400-e29b-41d4-a716-446655440000",
       artistSlug: "gatsby-grace",
     });
     const request = new NextRequest(
-      "http://localhost/api/content/validate?artist_slug=gatsby-grace",
+      "http://localhost/api/content/validate?artist_account_id=550e8400-e29b-41d4-a716-446655440000",
       {
         method: "GET",
       },
@@ -57,20 +59,21 @@ describe("getContentValidateHandler", () => {
     expect(result.status).toBe(200);
     expect(body.status).toBe("success");
     expect(body.ready).toBe(true);
-    expect(body.artist_slug).toBe("gatsby-grace");
+    expect(body.artist_account_id).toBe("550e8400-e29b-41d4-a716-446655440000");
     expect(Array.isArray(body.missing)).toBe(true);
   });
 
   it("returns 500 when readiness check throws", async () => {
     vi.mocked(validateGetContentValidateQuery).mockResolvedValue({
       accountId: "acc_123",
+      artistAccountId: "550e8400-e29b-41d4-a716-446655440000",
       artistSlug: "gatsby-grace",
     });
     vi.mocked(getArtistContentReadiness).mockRejectedValue(
       new Error("Failed to retrieve repository file tree"),
     );
     const request = new NextRequest(
-      "http://localhost/api/content/validate?artist_slug=gatsby-grace",
+      "http://localhost/api/content/validate?artist_account_id=550e8400-e29b-41d4-a716-446655440000",
       {
         method: "GET",
       },

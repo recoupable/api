@@ -33,6 +33,7 @@ describe("getArtistContentReadiness", () => {
 
     const result = await getArtistContentReadiness({
       accountId: "acc_123",
+      artistAccountId: "art_456",
       artistSlug: "gatsby-grace",
     });
 
@@ -47,6 +48,7 @@ describe("getArtistContentReadiness", () => {
 
     const result = await getArtistContentReadiness({
       accountId: "acc_123",
+      artistAccountId: "art_456",
       artistSlug: "gatsby-grace",
     });
 
@@ -63,6 +65,7 @@ describe("getArtistContentReadiness", () => {
 
     const result = await getArtistContentReadiness({
       accountId: "acc_123",
+      artistAccountId: "art_456",
       artistSlug: "gatsby-grace",
     });
 
