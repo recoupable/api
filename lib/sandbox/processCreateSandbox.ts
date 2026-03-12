@@ -1,18 +1,17 @@
 import { createSandbox, type SandboxCreatedResponse } from "@/lib/sandbox/createSandbox";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
-import { triggerRunSandboxCommand } from "@/lib/trigger/triggerRunSandboxCommand";
-import type { SandboxBody } from "@/lib/sandbox/validateSandboxBody";
+import { triggerPromptSandbox } from "@/lib/trigger/triggerPromptSandbox";
 
-type ProcessCreateSandboxInput = Pick<
-  SandboxBody,
-  "accountId" | "command" | "args" | "cwd" | "prompt"
->;
+type ProcessCreateSandboxInput = {
+  accountId: string;
+  prompt?: string;
+};
 type ProcessCreateSandboxResult = SandboxCreatedResponse & { runId?: string };
 
 /**
- * Shared domain logic for creating a sandbox and optionally running a command.
- * Used by both POST /api/sandboxes handler and the run_sandbox_command MCP tool.
+ * Shared domain logic for creating a sandbox and optionally running a prompt.
+ * Used by both POST /api/sandboxes handler and the prompt_sandbox MCP tool.
  *
  * @param input - The sandbox creation parameters
  * @returns The sandbox creation result with optional runId
@@ -20,11 +19,7 @@ type ProcessCreateSandboxResult = SandboxCreatedResponse & { runId?: string };
 export async function processCreateSandbox(
   input: ProcessCreateSandboxInput,
 ): Promise<ProcessCreateSandboxResult> {
-  const { accountId, prompt, cwd } = input;
-
-  // Convert prompt shortcut to openclaw agent command
-  const command = prompt ? "openclaw" : input.command;
-  const args = prompt ? ["agent", "--agent", "main", "--message", prompt] : input.args;
+  const { accountId, prompt } = input;
 
   // Get account's most recent snapshot if available
   const accountSnapshots = await selectAccountSnapshots(accountId);
@@ -40,20 +35,18 @@ export async function processCreateSandbox(
     sandbox_id: result.sandboxId,
   });
 
-  // Trigger the command execution task if a command was provided
+  // Trigger the prompt execution task if a prompt was provided
   let runId: string | undefined;
-  if (command) {
+  if (prompt) {
     try {
-      const handle = await triggerRunSandboxCommand({
-        command,
-        args,
-        cwd,
+      const handle = await triggerPromptSandbox({
+        prompt,
         sandboxId: result.sandboxId,
         accountId,
       });
       runId = handle.id;
     } catch (triggerError) {
-      console.error("Failed to trigger run-sandbox-command task:", triggerError);
+      console.error("Failed to trigger prompt sandbox task:", triggerError);
       runId = undefined;
     }
   }

@@ -43,6 +43,11 @@ export async function handleCodingAgentCallback(request: Request): Promise<NextR
 
   const thread = getThread(validated.threadId);
 
+  // Post agent stdout to the thread so users see the full agent response
+  if (validated.stdout?.trim()) {
+    await thread.post(validated.stdout.trim());
+  }
+
   switch (validated.status) {
     case "pr_created":
       await handlePRCreated(validated.threadId, validated);

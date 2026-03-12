@@ -42,13 +42,13 @@ describe("validateSandboxBody", () => {
     expect((result as NextResponse).status).toBe(401);
   });
 
-  it("returns validated body with auth context when command is provided", async () => {
+  it("returns validated body with auth context when prompt is provided", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "acc_123",
       orgId: "org_456",
       authToken: "token",
     });
-    vi.mocked(safeParseJson).mockResolvedValue({ command: "ls" });
+    vi.mocked(safeParseJson).mockResolvedValue({ prompt: "say hello" });
 
     const request = createMockRequest();
     const result = await validateSandboxBody(request);
@@ -57,19 +57,20 @@ describe("validateSandboxBody", () => {
       accountId: "acc_123",
       orgId: "org_456",
       authToken: "token",
-      command: "ls",
+      prompt: "say hello",
     });
   });
 
-  it("returns validated body with optional args and cwd", async () => {
+  it("strips unknown fields from body", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "acc_123",
       orgId: "org_456",
       authToken: "token",
     });
     vi.mocked(safeParseJson).mockResolvedValue({
+      prompt: "say hello",
       command: "ls",
-      args: ["-la", "/home"],
+      args: ["-la"],
       cwd: "/tmp",
     });
 
@@ -80,9 +81,7 @@ describe("validateSandboxBody", () => {
       accountId: "acc_123",
       orgId: "org_456",
       authToken: "token",
-      command: "ls",
-      args: ["-la", "/home"],
-      cwd: "/tmp",
+      prompt: "say hello",
     });
   });
 
@@ -125,31 +124,8 @@ describe("validateSandboxBody", () => {
     });
   });
 
-  it("returns error response when both command and prompt are provided", async () => {
-    vi.mocked(safeParseJson).mockResolvedValue({
-      command: "ls",
-      prompt: "do something",
-    });
-
-    const request = createMockRequest();
-    const result = await validateSandboxBody(request);
-
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(400);
-  });
-
   it("returns error response when prompt is empty string", async () => {
     vi.mocked(safeParseJson).mockResolvedValue({ prompt: "" });
-
-    const request = createMockRequest();
-    const result = await validateSandboxBody(request);
-
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(400);
-  });
-
-  it("returns error response when command is empty string", async () => {
-    vi.mocked(safeParseJson).mockResolvedValue({ command: "" });
 
     const request = createMockRequest();
     const result = await validateSandboxBody(request);

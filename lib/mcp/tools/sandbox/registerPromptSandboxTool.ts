@@ -8,18 +8,11 @@ import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { processCreateSandbox } from "@/lib/sandbox/processCreateSandbox";
 
-const runSandboxCommandSchema = z.object({
-  command: z
-    .string()
-    .optional()
-    .describe("The command to run in the sandbox. Cannot be used with prompt."),
-  args: z.array(z.string()).optional().describe("Arguments for the command."),
-  cwd: z.string().optional().describe("Working directory for the command."),
+const promptSandboxSchema = z.object({
   prompt: z
     .string()
-    .optional()
     .describe(
-      'A prompt to pass to OpenClaw. Runs `openclaw agent --agent main --message "<prompt>"` in the sandbox. Cannot be used with command.',
+      'A prompt to pass to OpenClaw. Runs `openclaw agent --agent main --message "<prompt>"` in the sandbox.',
     ),
   account_id: z
     .string()
@@ -30,18 +23,18 @@ const runSandboxCommandSchema = z.object({
 });
 
 /**
- * Registers the "run_sandbox_command" tool on the MCP server.
- * Creates a sandbox and runs a command in it.
+ * Registers the "prompt_sandbox" tool on the MCP server.
+ * Creates a sandbox and runs an OpenClaw prompt in it.
  *
  * @param server - The MCP server instance to register the tool on.
  */
-export function registerRunSandboxCommandTool(server: McpServer): void {
+export function registerPromptSandboxTool(server: McpServer): void {
   server.registerTool(
-    "run_sandbox_command",
+    "prompt_sandbox",
     {
       description:
-        'Create a sandbox and run a command or OpenClaw prompt in it. Use prompt to run `openclaw agent --agent main --message "<prompt>"`. Returns the sandbox ID and a run ID to track progress.',
-      inputSchema: runSandboxCommandSchema,
+        'Create a sandbox and run an OpenClaw prompt in it. Runs `openclaw agent --agent main --message "<prompt>"`. Returns the sandbox ID and a run ID to track progress.',
+      inputSchema: promptSandboxSchema,
     },
     async (args, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
@@ -61,9 +54,6 @@ export function registerRunSandboxCommandTool(server: McpServer): void {
       try {
         const result = await processCreateSandbox({
           accountId,
-          command: args.command,
-          args: args.args,
-          cwd: args.cwd,
           prompt: args.prompt,
         });
 

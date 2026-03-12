@@ -9,10 +9,14 @@ vi.mock("next/server", async () => {
   };
 });
 
+const mockInitialize = vi.fn();
+const mockSlackWebhook = vi.fn().mockResolvedValue(new Response("ok", { status: 200 }));
+
 vi.mock("@/lib/coding-agent/bot", () => ({
   codingAgentBot: {
+    initialize: mockInitialize,
     webhooks: {
-      slack: vi.fn().mockResolvedValue(new Response("ok", { status: 200 })),
+      slack: mockSlackWebhook,
     },
   },
 }));
@@ -62,8 +66,6 @@ describe("POST /api/coding-agent/[platform]", () => {
   });
 
   it("delegates non-challenge Slack requests to bot webhook handler", async () => {
-    const { codingAgentBot } = await import("@/lib/coding-agent/bot");
-
     const body = JSON.stringify({
       type: "event_callback",
       event: { type: "app_mention", text: "hello" },
@@ -80,6 +82,53 @@ describe("POST /api/coding-agent/[platform]", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(codingAgentBot.webhooks.slack).toHaveBeenCalled();
+    expect(mockSlackWebhook).toHaveBeenCalled();
+  });
+
+  it("calls initialize before delegating to webhook handler", async () => {
+    const callOrder: string[] = [];
+    mockInitialize.mockImplementation(async () => {
+      callOrder.push("initialize");
+    });
+    mockSlackWebhook.mockImplementation(async () => {
+      callOrder.push("webhook");
+      return new Response("ok", { status: 200 });
+    });
+
+    const body = JSON.stringify({
+      type: "event_callback",
+      event: { type: "app_mention", text: "hello" },
+    });
+
+    const request = new NextRequest("https://example.com/api/coding-agent/slack", {
+      method: "POST",
+      body,
+      headers: { "content-type": "application/json" },
+    });
+
+    await POST(request, {
+      params: Promise.resolve({ platform: "slack" }),
+    });
+
+    expect(callOrder).toEqual(["initialize", "webhook"]);
+  });
+
+  it("does not call initialize for url_verification challenges", async () => {
+    const body = JSON.stringify({
+      type: "url_verification",
+      challenge: "test_challenge",
+    });
+
+    const request = new NextRequest("https://example.com/api/coding-agent/slack", {
+      method: "POST",
+      body,
+      headers: { "content-type": "application/json" },
+    });
+
+    await POST(request, {
+      params: Promise.resolve({ platform: "slack" }),
+    });
+
+    expect(mockInitialize).not.toHaveBeenCalled();
   });
 });

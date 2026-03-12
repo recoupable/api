@@ -50,6 +50,8 @@ export async function POST(
     }
   }
 
+  await codingAgentBot.initialize();
+
   const handler = codingAgentBot.webhooks[platform as keyof typeof codingAgentBot.webhooks];
 
   if (!handler) {

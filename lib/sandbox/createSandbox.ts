@@ -23,7 +23,7 @@ const DEFAULT_RUNTIME = "node22";
 /**
  * Creates a Vercel Sandbox and returns its info.
  *
- * The sandbox is left running so that commands can be executed via the runSandboxCommand task.
+ * The sandbox is left running so that prompts can be executed via the prompt_sandbox tool.
  * Accepts the same parameters as Sandbox.create from @vercel/sandbox.
  *
  * @param params - Sandbox creation parameters (source, timeout, resources, runtime, ports)
