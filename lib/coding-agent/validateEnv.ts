@@ -14,6 +14,13 @@ const WHATSAPP_ENV_VARS = [
 ] as const;
 
 /**
+ * Returns true when all WhatsApp environment variables are configured.
+ */
+export function isWhatsAppConfigured(): boolean {
+  return WHATSAPP_ENV_VARS.every(name => !!process.env[name]);
+}
+
+/**
  * Validates that all required environment variables for the coding agent are set.
  * WhatsApp variables are validated as a group — if any are set, all must be present.
  * Throws an error listing all missing variables.

@@ -4,13 +4,13 @@ import { createWhatsAppAdapter, WhatsAppAdapter } from "@chat-adapter/whatsapp";
 import { createIoRedisState } from "@chat-adapter/state-ioredis";
 import redis from "@/lib/redis/connection";
 import type { CodingAgentThreadState } from "./types";
-import { validateCodingAgentEnv } from "./validateEnv";
+import { validateCodingAgentEnv, isWhatsAppConfigured } from "./validateEnv";
 
 const logger = new ConsoleLogger();
 
 type CodingAgentAdapters = {
   slack: SlackAdapter;
-  whatsapp: WhatsAppAdapter;
+  whatsapp?: WhatsAppAdapter;
 };
 
 /**
@@ -38,11 +38,15 @@ export function createCodingAgentBot() {
     logger,
   });
 
-  const whatsapp = createWhatsAppAdapter({ logger });
+  const adapters: CodingAgentAdapters = { slack };
+
+  if (isWhatsAppConfigured()) {
+    adapters.whatsapp = createWhatsAppAdapter({ logger });
+  }
 
   return new Chat<CodingAgentAdapters, CodingAgentThreadState>({
     userName: "Recoup Agent",
-    adapters: { slack, whatsapp },
+    adapters,
     state,
   });
 }
