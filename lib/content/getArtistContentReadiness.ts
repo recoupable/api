@@ -43,7 +43,20 @@ export async function getArtistContentReadiness({
 
   const tree = await getArtistFileTree(githubRepo, artistSlug);
   if (!tree) {
-    throw new Error("Failed to retrieve repository file tree");
+    // Empty repo or artist not found in any repo — return not-ready instead of crashing
+    return {
+      artist_account_id: artistAccountId,
+      ready: false,
+      missing: [
+        {
+          file: "artists/",
+          severity: "required" as const,
+          fix: "No repository file tree found. The sandbox repo may be empty or the artist directory does not exist yet.",
+        },
+      ],
+      warnings: [],
+      githubRepo,
+    };
   }
 
   const blobPaths = tree.filter(entry => entry.type === "blob").map(entry => entry.path);
