@@ -6,7 +6,8 @@ export interface CodingAgentThreadState {
   status: "running" | "pr_created" | "updating" | "merged" | "failed" | "no_changes";
   prompt: string;
   runId?: string;
-  slackThreadId?: string;
+  /** Platform-agnostic thread identifier (Slack or WhatsApp thread ID). */
+  threadId?: string;
   branch?: string;
   snapshotId?: string;
   prs?: CodingAgentPR[];
