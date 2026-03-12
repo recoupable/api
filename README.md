@@ -139,18 +139,27 @@ Slack (events/messages)
                     └─▶ POST /api/coding-agent/callback  ← Trigger.dev callback URL
                           └─▶ Posts result back to Slack thread
 
+WhatsApp (messages)
+  └─▶ GET  /api/coding-agent/whatsapp ← Meta hub.challenge verification handshake
+  └─▶ POST /api/coding-agent/whatsapp ← Incoming messages (X-Hub-Signature-256 verified)
+        └─▶ Chat SDK (WhatsAppAdapter)
+              └─▶ Handler dispatches Trigger.dev task
+                    └─▶ POST /api/coding-agent/callback  ← Trigger.dev callback URL
+                          └─▶ Posts result back to WhatsApp thread
+
 GitHub (webhooks)
   └─▶ PR events, repo operations
         └─▶ lib/github/* helpers (file trees, submodules, repo management)
 ```
 
 - **Slack adapter** — Receives messages via Slack's Events API, processes them through Chat SDK handlers, and triggers coding agent tasks via Trigger.dev. Results are posted back to the originating Slack thread.
+- **WhatsApp adapter** — Receives messages via the WhatsApp Business Cloud API. Uses the same coding agent handlers as Slack. Verification handshake is handled automatically on GET.
 - **GitHub integration** — Manages repo operations (file trees, submodules, PRs) used by the coding agent to create and update pull requests.
 - **State** — Thread state (status, run IDs, PRs) is stored in Redis via the Chat SDK's ioredis state adapter.
 
 ### Updating Testing/Dev URLs
 
-When deploying to a new environment (e.g. preview branches, local dev via ngrok), you need to update callback URLs in two places:
+When deploying to a new environment (e.g. preview branches, local dev via ngrok), you need to update callback URLs in the relevant places:
 
 #### Slack — Subscription Events & Interactivity
 
@@ -164,6 +173,24 @@ When deploying to a new environment (e.g. preview branches, local dev via ngrok)
    https://<your-host>/api/coding-agent/slack
    ```
 4. Slack will send a `url_verification` challenge — the route handles this automatically.
+
+#### WhatsApp — Meta App Webhook
+
+1. Go to [developers.facebook.com/apps](https://developers.facebook.com/apps) → select your app
+2. **WhatsApp > Configuration** → Update the Callback URL to:
+   ```
+   https://<your-host>/api/coding-agent/whatsapp
+   ```
+3. Set the **Verify Token** to match your `WHATSAPP_VERIFY_TOKEN` env var
+4. Subscribe to the `messages` webhook field
+
+Required environment variables:
+```
+WHATSAPP_ACCESS_TOKEN=...      # Meta access token (permanent or system user token)
+WHATSAPP_APP_SECRET=...        # App secret for X-Hub-Signature-256 verification
+WHATSAPP_PHONE_NUMBER_ID=...   # Bot's phone number ID from Meta dashboard
+WHATSAPP_VERIFY_TOKEN=...      # User-defined secret for webhook verification
+```
 
 #### Trigger.dev — Callback URL
 

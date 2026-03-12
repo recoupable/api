@@ -11,19 +11,21 @@ vi.mock("next/server", async () => {
 
 const mockInitialize = vi.fn();
 const mockSlackWebhook = vi.fn().mockResolvedValue(new Response("ok", { status: 200 }));
+const mockWhatsAppWebhook = vi.fn().mockResolvedValue(new Response("ok", { status: 200 }));
 
 vi.mock("@/lib/coding-agent/bot", () => ({
   codingAgentBot: {
     initialize: mockInitialize,
     webhooks: {
       slack: mockSlackWebhook,
+      whatsapp: mockWhatsAppWebhook,
     },
   },
 }));
 
 vi.mock("@/lib/coding-agent/handlers/registerHandlers", () => ({}));
 
-const { POST } = await import("../[platform]/route");
+const { GET, POST } = await import("../[platform]/route");
 
 describe("POST /api/coding-agent/[platform]", () => {
   beforeEach(() => {
@@ -113,6 +115,26 @@ describe("POST /api/coding-agent/[platform]", () => {
     expect(callOrder).toEqual(["initialize", "webhook"]);
   });
 
+  it("delegates WhatsApp POST events to bot webhook handler", async () => {
+    const body = JSON.stringify({
+      object: "whatsapp_business_account",
+      entry: [{ changes: [{ value: { messages: [] }, field: "messages" }] }],
+    });
+
+    const request = new NextRequest("https://example.com/api/coding-agent/whatsapp", {
+      method: "POST",
+      body,
+      headers: { "content-type": "application/json", "x-hub-signature-256": "sha256=test" },
+    });
+
+    const response = await POST(request, {
+      params: Promise.resolve({ platform: "whatsapp" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(mockWhatsAppWebhook).toHaveBeenCalled();
+  });
+
   it("does not call initialize for url_verification challenges", async () => {
     const body = JSON.stringify({
       type: "url_verification",
@@ -130,5 +152,34 @@ describe("POST /api/coding-agent/[platform]", () => {
     });
 
     expect(mockInitialize).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/coding-agent/[platform]", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("delegates WhatsApp GET verification to bot webhook handler", async () => {
+    const request = new NextRequest(
+      "https://example.com/api/coding-agent/whatsapp?hub.mode=subscribe&hub.verify_token=test&hub.challenge=abc123",
+    );
+
+    const response = await GET(request, {
+      params: Promise.resolve({ platform: "whatsapp" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(mockWhatsAppWebhook).toHaveBeenCalled();
+  });
+
+  it("returns 404 for unknown platforms on GET", async () => {
+    const request = new NextRequest("https://example.com/api/coding-agent/unknown");
+
+    const response = await GET(request, {
+      params: Promise.resolve({ platform: "unknown" }),
+    });
+
+    expect(response.status).toBe(404);
   });
 });
