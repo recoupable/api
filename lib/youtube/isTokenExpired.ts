@@ -10,4 +10,3 @@ export function isTokenExpired(expiresAt: string): boolean {
   const oneMinuteInMs = 60 * 1000;
   return expirationTime <= now + oneMinuteInMs;
 }
-

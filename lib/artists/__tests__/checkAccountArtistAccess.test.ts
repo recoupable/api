@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { checkAccountArtistAccess } from "../checkAccountArtistAccess";
 
+import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
+import { selectArtistOrganizationIds } from "@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds";
+import { selectAccountOrganizationIds } from "@/lib/supabase/account_organization_ids/selectAccountOrganizationIds";
+
 vi.mock("@/lib/supabase/account_artist_ids/selectAccountArtistId", () => ({
   selectAccountArtistId: vi.fn(),
 }));
@@ -12,10 +16,6 @@ vi.mock("@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds", ()
 vi.mock("@/lib/supabase/account_organization_ids/selectAccountOrganizationIds", () => ({
   selectAccountOrganizationIds: vi.fn(),
 }));
-
-import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
-import { selectArtistOrganizationIds } from "@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds";
-import { selectAccountOrganizationIds } from "@/lib/supabase/account_organization_ids/selectAccountOrganizationIds";
 
 describe("checkAccountArtistAccess", () => {
   beforeEach(() => {
@@ -34,12 +34,8 @@ describe("checkAccountArtistAccess", () => {
 
   it("should return true when account and artist share an organization", async () => {
     vi.mocked(selectAccountArtistId).mockResolvedValue(null);
-    vi.mocked(selectArtistOrganizationIds).mockResolvedValue([
-      { organization_id: "org-1" },
-    ]);
-    vi.mocked(selectAccountOrganizationIds).mockResolvedValue([
-      { organization_id: "org-1" },
-    ]);
+    vi.mocked(selectArtistOrganizationIds).mockResolvedValue([{ organization_id: "org-1" }]);
+    vi.mocked(selectAccountOrganizationIds).mockResolvedValue([{ organization_id: "org-1" }]);
 
     const result = await checkAccountArtistAccess("account-123", "artist-456");
 
@@ -69,9 +65,7 @@ describe("checkAccountArtistAccess", () => {
 
   it("should return false when account org lookup errors (fail closed)", async () => {
     vi.mocked(selectAccountArtistId).mockResolvedValue(null);
-    vi.mocked(selectArtistOrganizationIds).mockResolvedValue([
-      { organization_id: "org-1" },
-    ]);
+    vi.mocked(selectArtistOrganizationIds).mockResolvedValue([{ organization_id: "org-1" }]);
     vi.mocked(selectAccountOrganizationIds).mockResolvedValue(null);
 
     const result = await checkAccountArtistAccess("account-123", "artist-456");

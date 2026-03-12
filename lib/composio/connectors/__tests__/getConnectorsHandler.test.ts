@@ -62,9 +62,7 @@ describe("getConnectorsHandler", () => {
       { slug: "tiktok", name: "TikTok", isConnected: true },
     ]);
 
-    const request = new NextRequest(
-      "http://localhost/api/connectors?account_id=account-456",
-    );
+    const request = new NextRequest("http://localhost/api/connectors?account_id=account-456");
     await getConnectorsHandler(request);
 
     // API is unopinionated — no allowedToolkits filtering

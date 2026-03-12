@@ -41,10 +41,4 @@ export const SNAPSHOT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 // EVALS
 export const EVAL_ACCOUNT_ID = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
 export const EVAL_ACCESS_TOKEN = process.env.EVAL_ACCESS_TOKEN || "";
-export const EVAL_ARTISTS = [
-  "Gliiico",
-  "Mac Miller",
-  "Wiz Khalifa",
-  "Mod Sun",
-  "Julius Black",
-];
+export const EVAL_ARTISTS = ["Gliiico", "Mac Miller", "Wiz Khalifa", "Mod Sun", "Julius Black"];

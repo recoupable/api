@@ -6,8 +6,7 @@ const mockGetPreset = vi.fn();
 const mockExecuteFullReport = vi.fn();
 
 vi.mock("@/lib/flamingo/callFlamingoGenerate", () => ({
-  callFlamingoGenerate: (...args: unknown[]) =>
-    mockCallFlamingoGenerate(...args),
+  callFlamingoGenerate: (...args: unknown[]) => mockCallFlamingoGenerate(...args),
 }));
 
 vi.mock("@/lib/flamingo/presets", () => ({
@@ -77,9 +76,7 @@ describe("processAnalyzeMusicRequest", () => {
         report: { metadata: { title: "Song" } },
         elapsed_seconds: 30.5,
       });
-      expect(mockExecuteFullReport).toHaveBeenCalledWith(
-        "https://example.com/song.mp3",
-      );
+      expect(mockExecuteFullReport).toHaveBeenCalledWith("https://example.com/song.mp3");
     });
 
     it("returns error when full_report preset has no audio_url", async () => {
@@ -155,7 +152,7 @@ describe("processAnalyzeMusicRequest", () => {
 
       expect(result).toEqual({
         type: "error",
-        error: 'Unknown preset: nonexistent_preset',
+        error: "Unknown preset: nonexistent_preset",
       });
     });
 
@@ -215,9 +212,7 @@ describe("processAnalyzeMusicRequest", () => {
 
   describe("inference failure", () => {
     it("throws when callFlamingoGenerate fails", async () => {
-      mockCallFlamingoGenerate.mockRejectedValue(
-        new Error("Modal returned 503"),
-      );
+      mockCallFlamingoGenerate.mockRejectedValue(new Error("Modal returned 503"));
 
       await expect(
         processAnalyzeMusicRequest({

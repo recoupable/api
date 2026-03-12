@@ -11,8 +11,7 @@ vi.mock("../getActiveSandbox", () => ({
 }));
 
 vi.mock("../createSandboxFromSnapshot", () => ({
-  createSandboxFromSnapshot: (...args: unknown[]) =>
-    mockCreateSandboxFromSnapshot(...args),
+  createSandboxFromSnapshot: (...args: unknown[]) => mockCreateSandboxFromSnapshot(...args),
 }));
 
 describe("getOrCreateSandbox", () => {

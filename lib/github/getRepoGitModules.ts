@@ -3,9 +3,12 @@ import { parseGitModules, type SubmoduleEntry } from "./parseGitModules";
 /**
  * Fetches and parses .gitmodules from a GitHub repository.
  *
+ * @param owner.owner
  * @param owner - The GitHub repository owner
  * @param repo - The GitHub repository name
  * @param branch - The branch to fetch from
+ * @param owner.repo
+ * @param owner.branch
  * @returns Array of submodule entries, or null if .gitmodules doesn't exist or fetch fails
  */
 export async function getRepoGitModules({

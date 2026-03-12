@@ -79,8 +79,7 @@ describe("upsertAccountSnapshot", () => {
 
   it("returns error when account_id foreign key constraint fails", async () => {
     const mockError = {
-      message:
-        'insert or update on table "account_snapshots" violates foreign key constraint',
+      message: 'insert or update on table "account_snapshots" violates foreign key constraint',
       code: "23503",
     };
     mockSingle.mockResolvedValue({ data: null, error: mockError });

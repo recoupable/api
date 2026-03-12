@@ -35,8 +35,4 @@ export const PRESETS: Record<string, PresetConfig> = {
  * All valid preset names (including full_report).
  * Used for Zod enum validation in the request schema.
  */
-export const PRESET_NAMES = [
-  ...Object.keys(PRESETS),
-  FULL_REPORT_PRESET_NAME,
-] as const;
-
+export const PRESET_NAMES = [...Object.keys(PRESETS), FULL_REPORT_PRESET_NAME] as const;

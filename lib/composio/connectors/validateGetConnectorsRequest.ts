@@ -51,7 +51,10 @@ export async function validateGetConnectorsRequest(
   if (account_id) {
     const accessResult = await checkAccountAccess(accountId, account_id);
     if (!accessResult.hasAccess) {
-      return NextResponse.json({ error: "Access denied to this account" }, { status: 403, headers });
+      return NextResponse.json(
+        { error: "Access denied to this account" },
+        { status: 403, headers },
+      );
     }
 
     return { accountId: account_id };

@@ -56,7 +56,7 @@ export async function transcribeAudio(
   const data: WhisperVerboseResponse = await response.json();
 
   // Map OpenAI segments to our chunk format
-  const chunks = data.segments?.map((seg) => ({
+  const chunks = data.segments?.map(seg => ({
     timestamp: [seg.start, seg.end] as [number, number],
     text: seg.text,
   }));
@@ -67,4 +67,3 @@ export async function transcribeAudio(
     language: data.language,
   };
 }
-
