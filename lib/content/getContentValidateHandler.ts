@@ -22,10 +22,12 @@ export async function getContentValidateHandler(request: NextRequest): Promise<N
       artistSlug: validated.artistSlug,
     });
 
+    const { githubRepo: _, ...publicReadiness } = readiness;
+
     return NextResponse.json(
       {
         status: "success",
-        ...readiness,
+        ...publicReadiness,
       },
       { status: 200, headers: getCorsHeaders() },
     );
