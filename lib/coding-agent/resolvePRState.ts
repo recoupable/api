@@ -21,9 +21,7 @@ export async function resolvePRState(
   prContext?: PRContext,
 ): Promise<CodingAgentThreadState | null> {
   const threadState = await thread.state;
-  if (threadState) {
-    return threadState;
-  }
+  if (threadState) return threadState;
 
   if (prContext?.repo && prContext?.branch) {
     const prState = await getCodingAgentPRState(prContext.repo, prContext.branch);

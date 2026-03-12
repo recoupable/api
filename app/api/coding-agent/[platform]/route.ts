@@ -45,7 +45,7 @@ export async function POST(
   // This avoids blocking on Redis/adapter initialization during setup.
   if (platform === "slack") {
     const body = await request.clone().json().catch(() => null);
-    if (body?.type === "url_verification" && body?.challenge) {
+    if (body?.type === "url_verification" && typeof body?.challenge === "string") {
       return Response.json({ challenge: body.challenge });
     }
   }
