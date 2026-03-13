@@ -36,9 +36,7 @@ export function registerOnMergeAction(bot: CodingAgentBot) {
       return;
     }
 
-    const pr = state?.prs?.find(
-      p => p.repo === parsed.repo && p.number === parsed.number,
-    );
+    const pr = state?.prs?.find(p => p.repo === parsed.repo && p.number === parsed.number);
 
     if (!pr) {
       await thread.post(`PR ${parsed.repo}#${parsed.number} not found in this thread.`);
@@ -54,9 +52,7 @@ export function registerOnMergeAction(bot: CodingAgentBot) {
     }
 
     // Remove merged PR from state
-    const remainingPrs = state!.prs!.filter(
-      p => !(p.repo === pr.repo && p.number === pr.number),
-    );
+    const remainingPrs = state!.prs!.filter(p => !(p.repo === pr.repo && p.number === pr.number));
     const allMerged = remainingPrs.length === 0;
 
     await thread.setState({

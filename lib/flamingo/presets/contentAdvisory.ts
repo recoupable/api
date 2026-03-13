@@ -11,5 +11,5 @@ export const contentAdvisoryPreset: PresetConfig = {
   params: { max_new_tokens: 256, temperature: 0.2, do_sample: true },
   requiresAudio: true,
   responseFormat: "json",
-  parseResponse: (raw) => parseJsonLike(raw),
+  parseResponse: raw => parseJsonLike(raw),
 };

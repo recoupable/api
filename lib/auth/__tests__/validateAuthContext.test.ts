@@ -39,6 +39,10 @@ const mockGetApiKeyDetails = vi.mocked(getApiKeyDetails);
 const mockValidateOrganizationAccess = vi.mocked(validateOrganizationAccess);
 const mockCanAccessAccount = vi.mocked(canAccessAccount);
 
+/**
+ *
+ * @param headers
+ */
 function createMockRequest(headers: Record<string, string> = {}): Request {
   return {
     headers: {

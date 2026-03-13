@@ -13,16 +13,13 @@ export async function findOrgReposByAccountId(accountId: string): Promise<string
   }
 
   try {
-    const response = await fetch(
-      `https://api.github.com/orgs/recoupable/repos?per_page=100`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.github.v3+json",
-          "User-Agent": "Recoup-API",
-        },
+    const response = await fetch(`https://api.github.com/orgs/recoupable/repos?per_page=100`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "Recoup-API",
       },
-    );
+    });
 
     if (!response.ok) {
       console.error(`GitHub API error listing org repos: ${response.status}`);
@@ -31,9 +28,7 @@ export async function findOrgReposByAccountId(accountId: string): Promise<string
 
     const repos = (await response.json()) as Array<{ name: string; html_url: string }>;
 
-    return repos
-      .filter((repo) => repo.name.includes(accountId))
-      .map((repo) => repo.html_url);
+    return repos.filter(repo => repo.name.includes(accountId)).map(repo => repo.html_url);
   } catch (error) {
     console.error("Error searching org repos:", error);
     return [];

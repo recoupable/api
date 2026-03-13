@@ -1,5 +1,3 @@
-import { WHATSAPP_ENV_VARS } from "./whatsApp/isWhatsAppConfigured";
-
 const REQUIRED_ENV_VARS = [
   "SLACK_BOT_TOKEN",
   "SLACK_SIGNING_SECRET",
@@ -11,17 +9,10 @@ const REQUIRED_ENV_VARS = [
 
 /**
  * Validates that all required environment variables for the coding agent are set.
- * WhatsApp variables are validated as a group — if any are set, all must be present.
  * Throws an error listing all missing variables.
  */
 export function validateCodingAgentEnv(): void {
-  const missing: string[] = REQUIRED_ENV_VARS.filter(name => !process.env[name]);
-
-  const whatsappSet = WHATSAPP_ENV_VARS.filter(name => process.env[name]);
-  if (whatsappSet.length > 0 && whatsappSet.length < WHATSAPP_ENV_VARS.length) {
-    const whatsappMissing = WHATSAPP_ENV_VARS.filter(name => !process.env[name]);
-    missing.push(...whatsappMissing);
-  }
+  const missing = REQUIRED_ENV_VARS.filter(name => !process.env[name]);
 
   if (missing.length > 0) {
     throw new Error(

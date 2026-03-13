@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateGetPulsesRequest } from "../validateGetPulsesRequest";
 
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+
 // Mock dependencies
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
@@ -18,9 +21,6 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 vi.mock("@/lib/const", () => ({
   RECOUP_ORG_ID: "recoup-org-id",
 }));
-
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 describe("validateGetPulsesRequest", () => {
   beforeEach(() => {
@@ -144,12 +144,9 @@ describe("validateGetPulsesRequest", () => {
       authToken: "test-token",
     });
 
-    const request = new NextRequest(
-      `http://localhost/api/pulses?account_id=${otherAccountId}`,
-      {
-        headers: { "x-api-key": "test-api-key" },
-      },
-    );
+    const request = new NextRequest(`http://localhost/api/pulses?account_id=${otherAccountId}`, {
+      headers: { "x-api-key": "test-api-key" },
+    });
     const result = await validateGetPulsesRequest(request);
 
     expect(result).toBeInstanceOf(NextResponse);
@@ -167,12 +164,9 @@ describe("validateGetPulsesRequest", () => {
     });
     vi.mocked(canAccessAccount).mockResolvedValue(true);
 
-    const request = new NextRequest(
-      `http://localhost/api/pulses?account_id=${targetAccountId}`,
-      {
-        headers: { "x-api-key": "test-api-key" },
-      },
-    );
+    const request = new NextRequest(`http://localhost/api/pulses?account_id=${targetAccountId}`, {
+      headers: { "x-api-key": "test-api-key" },
+    });
     const result = await validateGetPulsesRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({
@@ -194,12 +188,9 @@ describe("validateGetPulsesRequest", () => {
     });
     vi.mocked(canAccessAccount).mockResolvedValue(false);
 
-    const request = new NextRequest(
-      `http://localhost/api/pulses?account_id=${notInOrgId}`,
-      {
-        headers: { "x-api-key": "test-api-key" },
-      },
-    );
+    const request = new NextRequest(`http://localhost/api/pulses?account_id=${notInOrgId}`, {
+      headers: { "x-api-key": "test-api-key" },
+    });
     const result = await validateGetPulsesRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({
@@ -221,12 +212,9 @@ describe("validateGetPulsesRequest", () => {
     });
     vi.mocked(canAccessAccount).mockResolvedValue(true); // Admin always has access
 
-    const request = new NextRequest(
-      `http://localhost/api/pulses?account_id=${anyAccountId}`,
-      {
-        headers: { "x-api-key": "recoup-admin-key" },
-      },
-    );
+    const request = new NextRequest(`http://localhost/api/pulses?account_id=${anyAccountId}`, {
+      headers: { "x-api-key": "recoup-admin-key" },
+    });
     const result = await validateGetPulsesRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({

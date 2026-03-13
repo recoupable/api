@@ -56,6 +56,8 @@ export interface ProcessTranscriptionResult {
 /**
  * Formats transcription errors into user-friendly messages.
  * Centralizes error message logic to avoid duplication.
+ *
+ * @param error
  */
 export function formatTranscriptionError(error: unknown): { message: string; status: number } {
   const rawMessage = error instanceof Error ? error.message : "Transcription failed";
@@ -64,7 +66,10 @@ export function formatTranscriptionError(error: unknown): { message: string; sta
     return { message: "OpenAI API key is not configured", status: 500 };
   }
   if (rawMessage.includes("fetch audio") || rawMessage.includes("Failed to fetch")) {
-    return { message: "Could not fetch the audio file. Please check the URL is accessible.", status: 400 };
+    return {
+      message: "Could not fetch the audio file. Please check the URL is accessible.",
+      status: 400,
+    };
   }
   if (rawMessage.includes("25 MB") || rawMessage.includes("file size")) {
     return { message: "Audio file exceeds the 25MB limit", status: 413 };
@@ -75,4 +80,3 @@ export function formatTranscriptionError(error: unknown): { message: string; sta
 
   return { message: rawMessage, status: 500 };
 }
-

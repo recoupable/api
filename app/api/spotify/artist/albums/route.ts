@@ -32,4 +32,3 @@ export async function OPTIONS() {
 export async function GET(request: NextRequest) {
   return getSpotifyArtistAlbumsHandler(request);
 }
-

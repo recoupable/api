@@ -4,10 +4,7 @@ import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sd
 import { z } from "zod";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
-import {
-  createArtistInDb,
-  type CreateArtistResult,
-} from "@/lib/artists/createArtistInDb";
+import { createArtistInDb, type CreateArtistResult } from "@/lib/artists/createArtistInDb";
 import { copyRoom } from "@/lib/rooms/copyRoom";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
@@ -69,7 +66,10 @@ export function registerCreateNewArtistTool(server: McpServer): void {
         "The organization_id parameter is optional — use the organization_id from the system prompt context to link the artist to the user's selected organization.",
       inputSchema: createNewArtistSchema,
     },
-    async (args: CreateNewArtistArgs, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
+    async (
+      args: CreateNewArtistArgs,
+      extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
+    ) => {
       try {
         const { name, account_id, active_conversation_id, organization_id } = args;
 

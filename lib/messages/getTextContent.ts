@@ -13,6 +13,6 @@ export default function getTextContent(content: ModelMessage["content"]): string
   // Content is an array of parts - extract and join text parts
   return content
     .filter((part): part is { type: "text"; text: string } => part.type === "text")
-    .map((part) => part.text)
+    .map(part => part.text)
     .join("");
 }

@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { selectAccountWithSocials } from "../selectAccountWithSocials";
+
 const mockFrom = vi.fn();
 const mockSelect = vi.fn();
 const mockEq = vi.fn();
@@ -10,8 +12,6 @@ vi.mock("@/lib/supabase/serverClient", () => ({
     from: (...args: unknown[]) => mockFrom(...args),
   },
 }));
-
-import { selectAccountWithSocials } from "../selectAccountWithSocials";
 
 describe("selectAccountWithSocials", () => {
   beforeEach(() => {
@@ -27,7 +27,13 @@ describe("selectAccountWithSocials", () => {
       name: "Test Artist",
       timestamp: 1704067200000,
       account_socials: [{ id: "social-1", platform: "spotify" }],
-      account_info: [{ id: "info-1", image: "https://example.com/image.jpg", updated_at: "2024-01-01T12:00:00Z" }],
+      account_info: [
+        {
+          id: "info-1",
+          image: "https://example.com/image.jpg",
+          updated_at: "2024-01-01T12:00:00Z",
+        },
+      ],
     };
     mockSingle.mockResolvedValue({ data: mockData, error: null });
 

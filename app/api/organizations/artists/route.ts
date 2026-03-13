@@ -29,4 +29,3 @@ export async function OPTIONS() {
 export async function POST(request: NextRequest) {
   return addArtistToOrgHandler(request);
 }
-

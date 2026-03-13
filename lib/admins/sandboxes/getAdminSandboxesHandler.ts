@@ -48,9 +48,7 @@ export async function getAdminSandboxesHandler(request: NextRequest): Promise<Ne
     const emailRows = await selectAccountEmails({ accountIds });
 
     const emailMap = new Map<string, string | null>(
-      emailRows
-        .filter(r => r.account_id !== null)
-        .map(r => [r.account_id as string, r.email]),
+      emailRows.filter(r => r.account_id !== null).map(r => [r.account_id as string, r.email]),
     );
 
     const accounts = stats.map(s => ({
