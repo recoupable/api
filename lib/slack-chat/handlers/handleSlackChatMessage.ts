@@ -6,8 +6,7 @@ import { validateMessages } from "@/lib/chat/validateMessages";
 import { setupConversation } from "@/lib/chat/setupConversation";
 import { setupChatRequest } from "@/lib/chat/setupChatRequest";
 import { saveChatCompletion } from "@/lib/chat/saveChatCompletion";
-
-const ACCOUNT_ID = "cebcc866-34c3-451c-8cd7-f63309acff0a";
+import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 
 /**
  * Shared handler for both onNewMention and onSubscribedMessage.
@@ -35,6 +34,18 @@ export async function handleSlackChatMessage(
     return;
   }
 
+  const authToken = process.env.SLACK_CHAT_API_KEY!;
+
+  // Derive account from the API key — no hardcoded account ID
+  const keyDetails = await getApiKeyDetails(authToken);
+  if (!keyDetails) {
+    console.error("[slack-chat] Invalid SLACK_CHAT_API_KEY — could not resolve account");
+    await thread.post("Sorry, I'm not configured correctly. Please contact support.");
+    return;
+  }
+
+  const { accountId, orgId } = keyDetails;
+
   await thread.setState({
     status: "generating",
     prompt: text,
@@ -49,20 +60,20 @@ export async function handleSlackChatMessage(
   const { lastMessage } = validateMessages(uiMessages);
 
   const { roomId } = await setupConversation({
-    accountId: ACCOUNT_ID,
+    accountId,
     roomId: currentState?.roomId,
     topic: text.slice(0, 100),
     promptMessage: lastMessage,
     memoryId: lastMessage.id,
   });
 
-  // Build ChatRequestBody (bypasses HTTP validation)
+  // Build ChatRequestBody — accountId inferred from API key
   const body: ChatRequestBody = {
     messages: uiMessages,
-    accountId: ACCOUNT_ID,
-    orgId: null,
+    accountId,
+    orgId,
     roomId,
-    authToken: process.env.SLACK_CHAT_API_KEY!,
+    authToken,
   };
 
   const chatConfig = await setupChatRequest(body);
