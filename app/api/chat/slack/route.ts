@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { after } from "next/server";
 import { slackChatBot } from "@/lib/slack-chat/bot";
+import { handleUrlVerification } from "@/lib/slack/handleUrlVerification";
 import "@/lib/slack-chat/handlers/registerHandlers";
 
 /**
@@ -25,15 +26,8 @@ export async function GET(request: NextRequest) {
  * @returns The webhook handler response or url_verification challenge
  */
 export async function POST(request: NextRequest) {
-  // Handle Slack url_verification challenge before loading the bot.
-  // This avoids blocking on Redis/adapter initialization during setup.
-  const body = await request
-    .clone()
-    .json()
-    .catch(() => null);
-  if (body?.type === "url_verification" && typeof body?.challenge === "string") {
-    return Response.json({ challenge: body.challenge });
-  }
+  const verification = await handleUrlVerification(request);
+  if (verification) return verification;
 
   await slackChatBot.initialize();
 
