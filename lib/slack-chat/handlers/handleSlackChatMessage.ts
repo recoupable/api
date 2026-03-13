@@ -7,6 +7,7 @@ import { setupConversation } from "@/lib/chat/setupConversation";
 import { setupChatRequest } from "@/lib/chat/setupChatRequest";
 import { saveChatCompletion } from "@/lib/chat/saveChatCompletion";
 import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
+import selectMemories from "@/lib/supabase/memories/selectMemories";
 
 /**
  * Shared handler for both onNewMention and onSubscribedMessage.
@@ -54,11 +55,12 @@ export async function handleSlackChatMessage(
 
   await thread.post("Thinking...");
 
-  // Get or create roomId from thread state
-  const messages = getMessages(text, "user");
-  const uiMessages = convertToUiMessages(messages);
-  const { lastMessage } = validateMessages(uiMessages);
+  // Build current message as UIMessage
+  const newMessages = getMessages(text, "user");
+  const newUiMessages = convertToUiMessages(newMessages);
+  const { lastMessage } = validateMessages(newUiMessages);
 
+  // Setup conversation: create room if needed, persist user message
   const { roomId } = await setupConversation({
     accountId,
     roomId: currentState?.roomId,
@@ -67,9 +69,32 @@ export async function handleSlackChatMessage(
     memoryId: lastMessage.id,
   });
 
+  // Load full conversation history from the room (includes the message we just saved)
+  const memories = await selectMemories(roomId, { ascending: true });
+  const historyMessages = (memories ?? [])
+    .filter(m => {
+      const content = m.content as unknown as { role?: string; parts?: unknown[] };
+      return content?.role && content?.parts;
+    })
+    .map(m => {
+      const content = m.content as unknown as {
+        role: string;
+        parts: { type: string; text?: string }[];
+      };
+      return {
+        id: m.id,
+        role: content.role as "user" | "assistant" | "system",
+        parts: content.parts,
+      };
+    });
+
+  const allUiMessages = convertToUiMessages(
+    historyMessages.length > 0 ? historyMessages : newUiMessages,
+  );
+
   // Build ChatRequestBody — accountId inferred from API key
   const body: ChatRequestBody = {
-    messages: uiMessages,
+    messages: allUiMessages,
     accountId,
     orgId,
     roomId,
