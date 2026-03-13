@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
 import { after } from "next/server";
-import { slackChatBot } from "@/lib/slack-chat/bot";
+import { slackChatBot } from "@/lib/slack/chat/bot";
 import { handleUrlVerification } from "@/lib/slack/handleUrlVerification";
-import "@/lib/slack-chat/handlers/registerHandlers";
+import "@/lib/slack/chat/handlers/registerHandlers";
 
 /**
  * GET /api/chat/slack
