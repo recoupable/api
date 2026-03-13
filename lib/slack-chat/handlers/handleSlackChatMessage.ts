@@ -1,3 +1,4 @@
+import type { UIMessage } from "ai";
 import type { SlackChatThreadState } from "../types";
 import type { ChatRequestBody } from "@/lib/chat/validateChatRequest";
 import { getMessages } from "@/lib/messages/getMessages";
@@ -71,19 +72,16 @@ export async function handleSlackChatMessage(
 
   // Load full conversation history from the room (includes the message we just saved)
   const memories = await selectMemories(roomId, { ascending: true });
-  const historyMessages = (memories ?? [])
+  const historyMessages: UIMessage[] = (memories ?? [])
     .filter(m => {
       const content = m.content as unknown as { role?: string; parts?: unknown[] };
       return content?.role && content?.parts;
     })
     .map(m => {
-      const content = m.content as unknown as {
-        role: string;
-        parts: { type: string; text?: string }[];
-      };
+      const content = m.content as unknown as UIMessage;
       return {
         id: m.id,
-        role: content.role as "user" | "assistant" | "system",
+        role: content.role,
         parts: content.parts,
       };
     });
