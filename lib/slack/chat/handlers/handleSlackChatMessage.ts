@@ -56,66 +56,74 @@ export async function handleSlackChatMessage(
 
   await thread.post("Thinking...");
 
-  // Build current message as UIMessage
-  const newMessages = getMessages(text, "user");
-  const newUiMessages = convertToUiMessages(newMessages);
-  const { lastMessage } = validateMessages(newUiMessages);
+  let finalRoomId = currentState?.roomId;
 
-  // Setup conversation: create room if needed, persist user message
-  const { roomId } = await setupConversation({
-    accountId,
-    roomId: currentState?.roomId,
-    topic: text.slice(0, 100),
-    promptMessage: lastMessage,
-    memoryId: lastMessage.id,
-  });
+  try {
+    // Build current message as UIMessage
+    const newMessages = getMessages(text, "user");
+    const newUiMessages = convertToUiMessages(newMessages);
+    const { lastMessage } = validateMessages(newUiMessages);
 
-  // Load full conversation history from the room (includes the message we just saved)
-  const memories = await selectMemories(roomId, { ascending: true });
-  const historyMessages: UIMessage[] = (memories ?? [])
-    .filter(m => {
-      const content = m.content as unknown as { role?: string; parts?: unknown[] };
-      return content?.role && content?.parts;
-    })
-    .map(m => {
-      const content = m.content as unknown as UIMessage;
-      return {
-        id: m.id,
-        role: content.role,
-        parts: content.parts,
-      };
+    // Setup conversation: create room if needed, persist user message
+    const { roomId } = await setupConversation({
+      accountId,
+      roomId: currentState?.roomId,
+      topic: text.slice(0, 100),
+      promptMessage: lastMessage,
+      memoryId: lastMessage.id,
     });
 
-  const allUiMessages = convertToUiMessages(
-    historyMessages.length > 0 ? historyMessages : newUiMessages,
-  );
+    finalRoomId = roomId;
 
-  // Build ChatRequestBody — accountId inferred from API key
-  const body: ChatRequestBody = {
-    messages: allUiMessages,
-    accountId,
-    orgId,
-    roomId,
-    authToken,
-  };
+    // Load full conversation history from the room (includes the message we just saved)
+    const memories = await selectMemories(roomId, { ascending: true });
+    const historyMessages: UIMessage[] = (memories ?? [])
+      .filter(m => {
+        const content = m.content as unknown as { role?: string; parts?: unknown[] };
+        return content?.role && content?.parts;
+      })
+      .map(m => {
+        const content = m.content as unknown as UIMessage;
+        return {
+          id: m.id,
+          role: content.role,
+          parts: content.parts,
+        };
+      });
 
-  const chatConfig = await setupChatRequest(body);
-  const result = await chatConfig.agent.generate(chatConfig);
+    const allUiMessages = convertToUiMessages(
+      historyMessages.length > 0 ? historyMessages : newUiMessages,
+    );
 
-  // Persist assistant response
-  try {
-    await saveChatCompletion({ text: result.text, roomId });
+    // Build ChatRequestBody — accountId inferred from API key
+    const body: ChatRequestBody = {
+      messages: allUiMessages,
+      accountId,
+      orgId,
+      roomId,
+      authToken,
+    };
+
+    const chatConfig = await setupChatRequest(body);
+    const result = await chatConfig.agent.generate(chatConfig);
+
+    // Persist assistant response
+    try {
+      await saveChatCompletion({ text: result.text, roomId });
+    } catch (error) {
+      console.error("[slack-chat] Failed to persist assistant message:", error);
+    }
+
+    // Post response to Slack thread
+    await thread.post(result.text);
   } catch (error) {
-    console.error("[slack-chat] Failed to persist assistant message:", error);
+    console.error("[slack-chat] Generation failed:", error);
+    await thread.post("Sorry, something went wrong. Please try again.");
+  } finally {
+    await thread.setState({
+      status: "idle",
+      prompt: text,
+      roomId: finalRoomId,
+    });
   }
-
-  // Post response to Slack thread
-  await thread.post(result.text);
-
-  // Update thread state with roomId for conversational memory
-  await thread.setState({
-    status: "idle",
-    prompt: text,
-    roomId,
-  });
 }
