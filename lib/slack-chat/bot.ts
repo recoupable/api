@@ -21,8 +21,8 @@ export function createSlackChatBot() {
   validateSlackChatEnv();
 
   if (redis.status === "wait") {
-    redis.connect().catch(() => {
-      throw new Error("[slack-chat] Redis failed to connect");
+    redis.connect().catch(err => {
+      console.error("[slack-chat] Redis failed to connect:", err);
     });
   }
 
