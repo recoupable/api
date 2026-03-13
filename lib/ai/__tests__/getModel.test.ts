@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+import { getAvailableModels } from "@/lib/ai/getAvailableModels";
+import { getModel } from "../getModel";
+
 vi.mock("@/lib/ai/getAvailableModels", () => ({
   getAvailableModels: vi.fn(),
 }));
-
-import { getAvailableModels } from "@/lib/ai/getAvailableModels";
-import { getModel } from "../getModel";
 
 const mockGetAvailableModels = vi.mocked(getAvailableModels);
 
@@ -35,9 +35,7 @@ describe("getModel", () => {
     });
 
     it("returns undefined when model is not found", async () => {
-      const models = [
-        { id: "gpt-4", pricing: { input: "0.00003", output: "0.00006" } },
-      ];
+      const models = [{ id: "gpt-4", pricing: { input: "0.00003", output: "0.00006" } }];
       mockGetAvailableModels.mockResolvedValue(models as any);
 
       const model = await getModel("unknown-model");

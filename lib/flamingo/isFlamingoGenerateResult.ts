@@ -14,14 +14,8 @@ export interface FlamingoGenerateResult {
  * @param value - Unknown parsed JSON payload
  * @returns True when payload has the expected response and elapsed_seconds fields
  */
-export function isFlamingoGenerateResult(
-  value: unknown,
-): value is FlamingoGenerateResult {
+export function isFlamingoGenerateResult(value: unknown): value is FlamingoGenerateResult {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;
-  return (
-    typeof candidate.response === "string" &&
-    typeof candidate.elapsed_seconds === "number"
-  );
+  return typeof candidate.response === "string" && typeof candidate.elapsed_seconds === "number";
 }
-

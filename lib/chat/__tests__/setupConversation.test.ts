@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { generateUUID } from "@/lib/uuid/generateUUID";
+import { createNewRoom } from "@/lib/chat/createNewRoom";
+import insertMemories from "@/lib/supabase/memories/insertMemories";
+import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
+import selectRoom from "@/lib/supabase/rooms/selectRoom";
+import { setupConversation } from "../setupConversation";
+
 // Mock dependencies
 vi.mock("@/lib/uuid/generateUUID", () => {
   const mockFn = vi.fn(() => "mock-uuid");
@@ -24,13 +31,6 @@ vi.mock("@/lib/messages/filterMessageContentForMemories", () => ({
 vi.mock("@/lib/supabase/rooms/selectRoom", () => ({
   default: vi.fn(),
 }));
-
-import { generateUUID } from "@/lib/uuid/generateUUID";
-import { createNewRoom } from "@/lib/chat/createNewRoom";
-import insertMemories from "@/lib/supabase/memories/insertMemories";
-import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
-import selectRoom from "@/lib/supabase/rooms/selectRoom";
-import { setupConversation } from "../setupConversation";
 
 const mockGenerateUUID = vi.mocked(generateUUID);
 const mockCreateNewRoom = vi.mocked(createNewRoom);

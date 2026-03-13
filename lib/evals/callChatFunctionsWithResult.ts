@@ -8,6 +8,8 @@ import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
  *
  * Note: result.toolCalls only contains calls from the LAST step. When using multi-step
  * tool chains, we need to collect toolCalls from result.steps to capture all tool usage.
+ *
+ * @param input
  */
 export async function callChatFunctionsWithResult(input: string) {
   const messages: UIMessage[] = [
@@ -38,8 +40,7 @@ export async function callChatFunctionsWithResult(input: string) {
   const result = await agent.generate({ messages: convertedMessages });
 
   // Collect tool calls from ALL steps, not just the last one
-  const allToolCalls =
-    result.steps?.flatMap((step) => step.toolCalls || []) || result.toolCalls;
+  const allToolCalls = result.steps?.flatMap(step => step.toolCalls || []) || result.toolCalls;
 
   // Return result with all tool calls from all steps
   return {

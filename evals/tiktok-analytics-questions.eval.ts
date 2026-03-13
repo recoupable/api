@@ -23,8 +23,7 @@ Eval("TikTok Analytics Questions Evaluation", {
   data: () => [
     {
       input: "how many total views does @iamjuliusblack have on TikTok",
-      expected:
-        "A specific number of total views (e.g., '150,000 total views')",
+      expected: "A specific number of total views (e.g., '150,000 total views')",
       metadata: {
         artist: "Julius Black",
         platform: "tiktok",
@@ -34,8 +33,7 @@ Eval("TikTok Analytics Questions Evaluation", {
     },
     {
       input: "show me @iamjuliusblack's 10 highest performing TikTok posts",
-      expected:
-        "A ranked list of 10 TikTok posts with URLs, view counts, likes, and captions",
+      expected: "A ranked list of 10 TikTok posts with URLs, view counts, likes, and captions",
       metadata: {
         artist: "Julius Black",
         platform: "tiktok",

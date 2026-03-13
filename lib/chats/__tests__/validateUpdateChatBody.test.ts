@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateUpdateChatBody } from "../validateUpdateChatBody";
 
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import selectRoom from "@/lib/supabase/rooms/selectRoom";
+import { buildGetChatsParams } from "@/lib/chats/buildGetChatsParams";
+
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
@@ -17,10 +21,6 @@ vi.mock("@/lib/supabase/rooms/selectRoom", () => ({
 vi.mock("@/lib/chats/buildGetChatsParams", () => ({
   buildGetChatsParams: vi.fn(),
 }));
-
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import selectRoom from "@/lib/supabase/rooms/selectRoom";
-import { buildGetChatsParams } from "@/lib/chats/buildGetChatsParams";
 
 describe("validateUpdateChatBody", () => {
   beforeEach(() => {
@@ -296,10 +296,7 @@ describe("validateUpdateChatBody", () => {
   describe("authentication errors", () => {
     it("returns 401 when auth fails", async () => {
       vi.mocked(validateAuthContext).mockResolvedValue(
-        NextResponse.json(
-          { status: "error", error: "Unauthorized" },
-          { status: 401 },
-        ),
+        NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
       );
 
       const request = createRequest({

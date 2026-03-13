@@ -24,7 +24,6 @@
     "@chat-adapter/github": "^4.15.0",
     "@chat-adapter/slack": "^4.15.0",
     "@chat-adapter/state-ioredis": "^4.15.0",
-    "@chat-adapter/whatsapp": "^4.20.0",
     "@coinbase/cdp-sdk": "^1.38.6",
     "@coinbase/x402": "^0.7.3",
     "@composio/core": "^0.3.4",

@@ -10,16 +10,16 @@ type ToolCallContent = {
 const getExecutedToolTimeline = (steps: StepResult<ToolSet>[]): string[] => {
   const toolCallsContent = steps.flatMap(
     (step): ToolCallContent[] =>
-      step.toolResults?.map((result) => ({
+      step.toolResults?.map(result => ({
         type: "tool-result" as const,
         toolCallId: result.toolCallId || "",
         toolName: result.toolName,
         output: { type: "json" as const, value: result.output },
-      })) || []
+      })) || [],
   );
 
   // Build timeline of executed tools from toolCallsContent
-  return toolCallsContent.map((call) => call.toolName);
+  return toolCallsContent.map(call => call.toolName);
 };
 
 export default getExecutedToolTimeline;

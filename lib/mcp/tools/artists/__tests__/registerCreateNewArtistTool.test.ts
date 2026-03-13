@@ -3,6 +3,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 
+import { registerCreateNewArtistTool } from "../registerCreateNewArtistTool";
+
 const mockCreateArtistInDb = vi.fn();
 const mockCopyRoom = vi.fn();
 const mockCanAccessAccount = vi.fn();
@@ -19,12 +21,14 @@ vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: (...args: unknown[]) => mockCanAccessAccount(...args),
 }));
 
-import { registerCreateNewArtistTool } from "../registerCreateNewArtistTool";
-
 type ServerRequestHandlerExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
 
 /**
  * Creates a mock extra object with optional authInfo.
+ *
+ * @param authInfo
+ * @param authInfo.accountId
+ * @param authInfo.orgId
  */
 function createMockExtra(authInfo?: {
   accountId?: string;

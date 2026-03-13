@@ -27,4 +27,3 @@ export const errorResponse = (message: string) => ({
   data: [],
   count: 0,
 });
-

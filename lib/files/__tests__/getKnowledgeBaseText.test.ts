@@ -47,7 +47,9 @@ describe("getKnowledgeBaseText", () => {
         text: () => Promise.resolve("Plain text content"),
       } as Response);
 
-      const knowledges = [{ name: "notes.txt", url: "https://example.com/notes.txt", type: "text/plain" }];
+      const knowledges = [
+        { name: "notes.txt", url: "https://example.com/notes.txt", type: "text/plain" },
+      ];
       const result = await getKnowledgeBaseText(knowledges);
 
       expect(result).toContain("Plain text content");

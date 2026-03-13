@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { deleteAccountGithubRepos } from "../deleteAccountGithubRepos";
+import { deleteGithubRepo } from "../deleteGithubRepo";
+import { findOrgReposByAccountId } from "../findOrgReposByAccountId";
+
 vi.mock("@/lib/github/deleteGithubRepo", () => ({
   deleteGithubRepo: vi.fn(),
 }));
@@ -7,10 +11,6 @@ vi.mock("@/lib/github/deleteGithubRepo", () => ({
 vi.mock("@/lib/github/findOrgReposByAccountId", () => ({
   findOrgReposByAccountId: vi.fn(),
 }));
-
-import { deleteAccountGithubRepos } from "../deleteAccountGithubRepos";
-import { deleteGithubRepo } from "../deleteGithubRepo";
-import { findOrgReposByAccountId } from "../findOrgReposByAccountId";
 
 describe("deleteAccountGithubRepos", () => {
   const mockAccountId = "550e8400-e29b-41d4-a716-446655440000";

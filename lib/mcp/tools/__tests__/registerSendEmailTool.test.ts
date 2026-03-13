@@ -37,7 +37,8 @@ describe("registerSendEmailTool", () => {
   it("returns success when email is sent successfully", async () => {
     mockProcessAndSendEmail.mockResolvedValue({
       success: true,
-      message: "Email sent successfully from Agent by Recoup <agent@recoupable.com> to test@example.com. CC: none.",
+      message:
+        "Email sent successfully from Agent by Recoup <agent@recoupable.com> to test@example.com. CC: none.",
       id: "email-123",
     });
 

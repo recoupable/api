@@ -145,7 +145,10 @@ describe("validateAuthorizeConnectorRequest", () => {
       orgId: null,
       authToken: "test-token",
     });
-    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "organization" });
+    vi.mocked(checkAccountAccess).mockResolvedValue({
+      hasAccess: true,
+      entityType: "organization",
+    });
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",

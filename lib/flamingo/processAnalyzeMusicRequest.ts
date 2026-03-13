@@ -26,10 +26,7 @@ interface AnalysisError {
   error: string;
 }
 
-export type AnalyzeMusicResult =
-  | FullReportSuccess
-  | AnalysisSuccess
-  | AnalysisError;
+export type AnalyzeMusicResult = FullReportSuccess | AnalysisSuccess | AnalysisError;
 
 /**
  * Shared business logic for music analysis.
@@ -49,9 +46,7 @@ export async function processAnalyzeMusicRequest(
         error: "audio_url is required for the full_report preset",
       };
     }
-    const { report, elapsed_seconds } = await executeFullReport(
-      params.audio_url,
-    );
+    const { report, elapsed_seconds } = await executeFullReport(params.audio_url);
     return { type: "success", preset: "full_report", report, elapsed_seconds };
   }
 

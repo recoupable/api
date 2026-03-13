@@ -18,9 +18,7 @@ export interface CanAccessAccountParams {
  * @param params.targetAccountId - The account ID to access
  * @returns true if access is allowed, false otherwise
  */
-export async function canAccessAccount(
-  params: CanAccessAccountParams,
-): Promise<boolean> {
+export async function canAccessAccount(params: CanAccessAccountParams): Promise<boolean> {
   const { orgId, targetAccountId } = params;
 
   if (!orgId || !targetAccountId) {

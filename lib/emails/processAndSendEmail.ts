@@ -34,6 +34,8 @@ export type ProcessAndSendEmailResult = ProcessAndSendEmailSuccess | ProcessAndS
  *
  * Handles room lookup, footer generation, markdown-to-HTML conversion,
  * and the Resend API call.
+ *
+ * @param input
  */
 export async function processAndSendEmail(
   input: ProcessAndSendEmailInput,
@@ -58,7 +60,9 @@ export async function processAndSendEmail(
     const data = await result.json();
     return {
       success: false,
-      error: data?.error?.message || `Failed to send email from ${RECOUP_FROM_EMAIL} to ${to.join(", ")}.`,
+      error:
+        data?.error?.message ||
+        `Failed to send email from ${RECOUP_FROM_EMAIL} to ${to.join(", ")}.`,
     };
   }
 

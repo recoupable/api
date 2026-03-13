@@ -3,6 +3,12 @@ import { SUPABASE_STORAGE_BUCKET } from "@/lib/const";
 
 /**
  * Upload file to Supabase storage by key
+ *
+ * @param key
+ * @param file
+ * @param options
+ * @param options.contentType
+ * @param options.upsert
  */
 export async function uploadFileByKey(
   key: string,
@@ -10,17 +16,14 @@ export async function uploadFileByKey(
   options: {
     contentType?: string;
     upsert?: boolean;
-  } = {}
+  } = {},
 ): Promise<void> {
-  const { error } = await supabase.storage
-    .from(SUPABASE_STORAGE_BUCKET)
-    .upload(key, file, {
-      contentType: options.contentType || "application/octet-stream",
-      upsert: options.upsert ?? false,
-    });
+  const { error } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).upload(key, file, {
+    contentType: options.contentType || "application/octet-stream",
+    upsert: options.upsert ?? false,
+  });
 
   if (error) {
     throw new Error(`Failed to upload file: ${error.message}`);
   }
 }
-

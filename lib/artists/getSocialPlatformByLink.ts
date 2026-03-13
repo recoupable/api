@@ -17,4 +17,3 @@ export function getSocialPlatformByLink(link: string): string {
 
   return "NONE";
 }
-
