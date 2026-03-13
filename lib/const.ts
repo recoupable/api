@@ -22,6 +22,7 @@ export const OUTBOUND_EMAIL_DOMAIN = "@recoupable.com";
 export const RECOUP_FROM_EMAIL = `Agent by Recoup <agent${OUTBOUND_EMAIL_DOMAIN}>`;
 
 export const SUPABASE_STORAGE_BUCKET = "user-files";
+export const CREATE_CONTENT_TASK_ID = "create-content";
 
 /**
  * UUID of the Recoup admin organization.
@@ -41,10 +42,4 @@ export const SNAPSHOT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 // EVALS
 export const EVAL_ACCOUNT_ID = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
 export const EVAL_ACCESS_TOKEN = process.env.EVAL_ACCESS_TOKEN || "";
-export const EVAL_ARTISTS = [
-  "Gliiico",
-  "Mac Miller",
-  "Wiz Khalifa",
-  "Mod Sun",
-  "Julius Black",
-];
+export const EVAL_ARTISTS = ["Gliiico", "Mac Miller", "Wiz Khalifa", "Mod Sun", "Julius Black"];
