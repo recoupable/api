@@ -37,8 +37,7 @@ Eval("Spotify Tools Evaluation", {
     {
       input:
         'craft a spotify for artists pitch, in line with their requirements, about the 2 late to be toxic album and focus track "what happened 2 us". ask any questions you need to get necessary info you don\'t have',
-      expected:
-        "A Spotify for Artists pitch using data from Spotify tools and web research",
+      expected: "A Spotify for Artists pitch using data from Spotify tools and web research",
       metadata: {
         artist: "Unknown",
         platform: "Spotify",
@@ -67,7 +66,7 @@ Eval("Spotify Tools Evaluation", {
       const result = await callChatFunctionsWithResult(input);
       const output = extractTextFromResult(result);
       const toolCalls =
-        result.toolCalls?.map((tc) => ({
+        result.toolCalls?.map(tc => ({
           toolName: tc.toolName,
           args: {},
         })) || [];

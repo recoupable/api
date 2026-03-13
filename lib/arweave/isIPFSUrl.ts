@@ -10,4 +10,3 @@ import { isGatewayIPFSUrl } from "./isGatewayIPFSUrl";
 export function isIPFSUrl(url: string | null | undefined): boolean {
   return url ? isNormalizedIPFSURL(url) || isGatewayIPFSUrl(url) : false;
 }
-

@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { createArtistInDb } from "../createArtistInDb";
+
 const mockInsertAccount = vi.fn();
 const mockInsertAccountInfo = vi.fn();
 const mockSelectAccountWithSocials = vi.fn();
@@ -25,8 +27,6 @@ vi.mock("@/lib/supabase/account_artist_ids/insertAccountArtistId", () => ({
 vi.mock("@/lib/supabase/artist_organization_ids/addArtistToOrganization", () => ({
   addArtistToOrganization: (...args: unknown[]) => mockAddArtistToOrganization(...args),
 }));
-
-import { createArtistInDb } from "../createArtistInDb";
 
 describe("createArtistInDb", () => {
   const mockAccount = {

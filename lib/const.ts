@@ -22,7 +22,6 @@ export const OUTBOUND_EMAIL_DOMAIN = "@recoupable.com";
 export const RECOUP_FROM_EMAIL = `Agent by Recoup <agent${OUTBOUND_EMAIL_DOMAIN}>`;
 
 export const SUPABASE_STORAGE_BUCKET = "user-files";
-export const CREATE_CONTENT_TASK_ID = "create-content";
 
 /**
  * UUID of the Recoup admin organization.

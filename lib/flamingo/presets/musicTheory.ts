@@ -11,13 +11,11 @@ export const musicTheoryPreset: PresetConfig = {
   params: { max_new_tokens: 512, temperature: 0.3, do_sample: true },
   requiresAudio: true,
   responseFormat: "json",
-  parseResponse: (raw) => {
+  parseResponse: raw => {
     const parsed = parseJsonLike(raw) as Record<string, unknown>;
     // Extract one cycle from potentially repeated chord progression
     if (Array.isArray(parsed.chord_progression)) {
-      parsed.chord_progression = extractOneCycle(
-        parsed.chord_progression as string[],
-      );
+      parsed.chord_progression = extractOneCycle(parsed.chord_progression as string[]);
     }
     return parsed;
   },

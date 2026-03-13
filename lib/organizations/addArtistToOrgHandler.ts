@@ -62,4 +62,3 @@ export async function addArtistToOrgHandler(request: NextRequest): Promise<NextR
     );
   }
 }
-

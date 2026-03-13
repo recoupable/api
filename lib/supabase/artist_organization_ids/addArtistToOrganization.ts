@@ -31,4 +31,3 @@ export async function addArtistToOrganization(
 
   return data?.id || null;
 }
-
