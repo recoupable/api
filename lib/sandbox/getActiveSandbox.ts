@@ -7,9 +7,7 @@ import { selectAccountSandboxes } from "@/lib/supabase/account_sandboxes/selectA
  * @param accountId - The account ID to find an active sandbox for
  * @returns The running Sandbox instance, or null if none found
  */
-export async function getActiveSandbox(
-  accountId: string,
-): Promise<Sandbox | null> {
+export async function getActiveSandbox(accountId: string): Promise<Sandbox | null> {
   const sandboxes = await selectAccountSandboxes({
     accountIds: [accountId],
   });

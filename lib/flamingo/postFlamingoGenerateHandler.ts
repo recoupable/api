@@ -14,9 +14,7 @@ import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRe
  * @param request - The incoming request with a JSON body.
  * @returns A NextResponse with the model output or an error.
  */
-export async function postFlamingoGenerateHandler(
-  request: NextRequest,
-): Promise<NextResponse> {
+export async function postFlamingoGenerateHandler(request: NextRequest): Promise<NextResponse> {
   let body: unknown;
   try {
     body = await request.json();
@@ -44,8 +42,7 @@ export async function postFlamingoGenerateHandler(
   try {
     result = await processAnalyzeMusicRequest(validated);
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Flamingo inference failed";
+    const message = err instanceof Error ? err.message : "Flamingo inference failed";
     return NextResponse.json(
       { status: "error", error: message },
       { status: 500, headers: getCorsHeaders() },

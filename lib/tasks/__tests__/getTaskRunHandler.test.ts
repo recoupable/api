@@ -23,6 +23,9 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
+/**
+ *
+ */
 function createMockRequest(): NextRequest {
   return {
     url: "http://localhost:3000/api/tasks/runs",
@@ -94,7 +97,11 @@ describe("getTaskRunHandler", () => {
 
   describe("list mode", () => {
     it("returns empty runs array", async () => {
-      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ mode: "list", accountId: "acc_123", limit: 20 });
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
+        mode: "list",
+        accountId: "acc_123",
+        limit: 20,
+      });
       vi.mocked(listTaskRuns).mockResolvedValue([]);
 
       const response = await getTaskRunHandler(createMockRequest());
@@ -105,7 +112,11 @@ describe("getTaskRunHandler", () => {
     });
 
     it("returns populated runs array", async () => {
-      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ mode: "list", accountId: "acc_123", limit: 20 });
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
+        mode: "list",
+        accountId: "acc_123",
+        limit: 20,
+      });
       vi.mocked(listTaskRuns).mockResolvedValue([mockRun]);
 
       const response = await getTaskRunHandler(createMockRequest());
@@ -116,7 +127,11 @@ describe("getTaskRunHandler", () => {
     });
 
     it("calls listTaskRuns with accountId and limit", async () => {
-      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ mode: "list", accountId: "acc_456", limit: 50 });
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
+        mode: "list",
+        accountId: "acc_456",
+        limit: 50,
+      });
       vi.mocked(listTaskRuns).mockResolvedValue([]);
 
       await getTaskRunHandler(createMockRequest());
@@ -125,7 +140,11 @@ describe("getTaskRunHandler", () => {
     });
 
     it("returns 500 when listTaskRuns throws", async () => {
-      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ mode: "list", accountId: "acc_123", limit: 20 });
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
+        mode: "list",
+        accountId: "acc_123",
+        limit: 20,
+      });
       vi.mocked(listTaskRuns).mockRejectedValue(new Error("API error"));
 
       const response = await getTaskRunHandler(createMockRequest());

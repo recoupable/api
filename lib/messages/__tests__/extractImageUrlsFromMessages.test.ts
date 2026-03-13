@@ -10,9 +10,7 @@ describe("extractImageUrlsFromMessages", () => {
     });
 
     it("returns empty array for messages without parts", () => {
-      const messages: UIMessage[] = [
-        { id: "1", role: "user", content: "Hello" } as UIMessage,
-      ];
+      const messages: UIMessage[] = [{ id: "1", role: "user", content: "Hello" } as UIMessage];
       const result = extractImageUrlsFromMessages(messages);
       expect(result).toEqual([]);
     });
@@ -23,9 +21,7 @@ describe("extractImageUrlsFromMessages", () => {
           id: "1",
           role: "user",
           content: "Check this image",
-          parts: [
-            { type: "file", mediaType: "image/png", url: "https://example.com/image.png" },
-          ],
+          parts: [{ type: "file", mediaType: "image/png", url: "https://example.com/image.png" }],
         } as UIMessage,
       ];
       const result = extractImageUrlsFromMessages(messages);
@@ -38,17 +34,13 @@ describe("extractImageUrlsFromMessages", () => {
           id: "1",
           role: "user",
           content: "Image 1",
-          parts: [
-            { type: "file", mediaType: "image/png", url: "https://example.com/1.png" },
-          ],
+          parts: [{ type: "file", mediaType: "image/png", url: "https://example.com/1.png" }],
         } as UIMessage,
         {
           id: "2",
           role: "user",
           content: "Image 2",
-          parts: [
-            { type: "file", mediaType: "image/jpeg", url: "https://example.com/2.jpg" },
-          ],
+          parts: [{ type: "file", mediaType: "image/jpeg", url: "https://example.com/2.jpg" }],
         } as UIMessage,
       ];
       const result = extractImageUrlsFromMessages(messages);
@@ -240,10 +232,7 @@ describe("extractImageUrlsFromMessages", () => {
         } as UIMessage,
       ];
       const result = extractImageUrlsFromMessages(messages);
-      expect(result).toEqual([
-        "https://example.com/valid.png",
-        "https://example.com/valid.gif",
-      ]);
+      expect(result).toEqual(["https://example.com/valid.png", "https://example.com/valid.gif"]);
     });
   });
 });

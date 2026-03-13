@@ -10,19 +10,14 @@ import type { Tables } from "@/types/database.types";
  * @param accountId - A single account ID string, or an array of account IDs
  * @returns Array of account records (empty array if not found or on error)
  */
-export async function selectAccounts(
-  accountId: string | string[],
-): Promise<Tables<"accounts">[]> {
+export async function selectAccounts(accountId: string | string[]): Promise<Tables<"accounts">[]> {
   const ids = Array.isArray(accountId) ? accountId : [accountId];
 
   if (ids.length === 0) {
     return [];
   }
 
-  const { data, error } = await supabase
-    .from("accounts")
-    .select("*")
-    .in("id", ids);
+  const { data, error } = await supabase.from("accounts").select("*").in("id", ids);
 
   if (error) {
     throw error;

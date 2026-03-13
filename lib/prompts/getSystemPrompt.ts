@@ -13,6 +13,7 @@ import { AccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetail
  * @param params.artistInstruction - The artist instruction
  * @param params.conversationName - The name of the conversation
  * @param params.accountWithDetails - The account with details
+ * @param params.orgId
  * @returns The system prompt
  */
 export function getSystemPrompt({

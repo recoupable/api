@@ -25,10 +25,8 @@ describe("getRepoGitModules", () => {
 
     expect(result).toEqual([{ path: "orgs/my-org", url: "https://github.com/recoupable/org-abc" }]);
     expect(fetch).toHaveBeenCalledWith(
-      "https://api.github.com/repos/owner/repo/contents/.gitmodules?ref=main",
-      expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: "Bearer test-token" }),
-      }),
+      "https://raw.githubusercontent.com/owner/repo/main/.gitmodules",
+      expect.objectContaining({ headers: { Authorization: "Bearer test-token" } }),
     );
   });
 
@@ -43,20 +41,17 @@ describe("getRepoGitModules", () => {
   it("works without GITHUB_TOKEN", async () => {
     delete process.env.GITHUB_TOKEN;
     vi.spyOn(global, "fetch").mockResolvedValueOnce(
-      new Response(
-        `[submodule "sub"]\n\tpath = sub\n\turl = https://github.com/owner/sub`,
-        { status: 200 },
-      ),
+      new Response(`[submodule "sub"]\n\tpath = sub\n\turl = https://github.com/owner/sub`, {
+        status: 200,
+      }),
     );
 
     const result = await getRepoGitModules({ owner: "owner", repo: "repo", branch: "develop" });
 
     expect(result).toEqual([{ path: "sub", url: "https://github.com/owner/sub" }]);
     expect(fetch).toHaveBeenCalledWith(
-      "https://api.github.com/repos/owner/repo/contents/.gitmodules?ref=develop",
-      expect.objectContaining({
-        headers: expect.objectContaining({ Accept: "application/vnd.github.v3.raw" }),
-      }),
+      "https://raw.githubusercontent.com/owner/repo/develop/.gitmodules",
+      {},
     );
   });
 });

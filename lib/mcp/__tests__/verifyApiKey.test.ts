@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { verifyBearerToken } from "../verifyApiKey";
 
+import { getAccountIdByAuthToken } from "@/lib/privy/getAccountIdByAuthToken";
+import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
+
 vi.mock("@/lib/privy/getAccountIdByAuthToken", () => ({
   getAccountIdByAuthToken: vi.fn(),
 }));
@@ -8,9 +11,6 @@ vi.mock("@/lib/privy/getAccountIdByAuthToken", () => ({
 vi.mock("@/lib/keys/getApiKeyDetails", () => ({
   getApiKeyDetails: vi.fn(),
 }));
-
-import { getAccountIdByAuthToken } from "@/lib/privy/getAccountIdByAuthToken";
-import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 
 describe("verifyBearerToken", () => {
   beforeEach(() => {

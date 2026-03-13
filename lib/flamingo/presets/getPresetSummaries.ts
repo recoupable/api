@@ -15,7 +15,7 @@ interface PresetSummary {
  * @returns Array of preset summaries (name, label, description, requiresAudio, responseFormat)
  */
 export function getPresetSummaries(): PresetSummary[] {
-  const individual = Object.values(PRESETS).map((p) => ({
+  const individual = Object.values(PRESETS).map(p => ({
     name: p.name,
     label: p.label,
     description: p.description,
@@ -35,4 +35,3 @@ export function getPresetSummaries(): PresetSummary[] {
     },
   ];
 }
-

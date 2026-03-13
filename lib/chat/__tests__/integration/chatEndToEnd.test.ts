@@ -1,6 +1,24 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextResponse } from "next/server";
 
+import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
+import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
+import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
+import { getKnowledgeBaseText } from "@/lib/files/getKnowledgeBaseText";
+import selectRoom from "@/lib/supabase/rooms/selectRoom";
+import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
+import upsertMemory from "@/lib/supabase/memories/upsertMemory";
+import { sendNewConversationNotification } from "@/lib/telegram/sendNewConversationNotification";
+import { handleSendEmailToolOutputs } from "@/lib/emails/handleSendEmailToolOutputs";
+import { getCreditUsage } from "@/lib/credits/getCreditUsage";
+import { deductCredits } from "@/lib/credits/deductCredits";
+import { generateChatTitle } from "../../generateChatTitle";
+import { handleChatCompletion } from "../../handleChatCompletion";
+import { handleChatCredits } from "@/lib/credits/handleChatCredits";
+import { validateChatRequest } from "../../validateChatRequest";
+import { setupChatRequest } from "../../setupChatRequest";
+
 /**
  * Integration tests for chat endpoints.
  *
@@ -137,24 +155,6 @@ vi.mock("ai", () => ({
   })),
 }));
 
-import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
-import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
-import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
-import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
-import { getKnowledgeBaseText } from "@/lib/files/getKnowledgeBaseText";
-import selectRoom from "@/lib/supabase/rooms/selectRoom";
-import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
-import upsertMemory from "@/lib/supabase/memories/upsertMemory";
-import { sendNewConversationNotification } from "@/lib/telegram/sendNewConversationNotification";
-import { handleSendEmailToolOutputs } from "@/lib/emails/handleSendEmailToolOutputs";
-import { getCreditUsage } from "@/lib/credits/getCreditUsage";
-import { deductCredits } from "@/lib/credits/deductCredits";
-import { generateChatTitle } from "../../generateChatTitle";
-import { handleChatCompletion } from "../../handleChatCompletion";
-import { handleChatCredits } from "@/lib/credits/handleChatCredits";
-import { validateChatRequest } from "../../validateChatRequest";
-import { setupChatRequest } from "../../setupChatRequest";
-
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockSelectAccountEmails = vi.mocked(selectAccountEmails);
 const mockSelectAccountInfo = vi.mocked(selectAccountInfo);
@@ -170,10 +170,12 @@ const mockDeductCredits = vi.mocked(deductCredits);
 const mockGenerateChatTitle = vi.mocked(generateChatTitle);
 
 // Helper to create mock NextRequest
-function createMockRequest(
-  body: unknown,
-  headers: Record<string, string> = {},
-): Request {
+/**
+ *
+ * @param body
+ * @param headers
+ */
+function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
   return {
     json: () => Promise.resolve(body),
     headers: {
@@ -210,10 +212,7 @@ describe("Chat Integration Tests", () => {
     it("validates and returns body for valid request with prompt", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
 
-      const request = createMockRequest(
-        { prompt: "Hello" },
-        { "x-api-key": "valid-key" },
-      );
+      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
       const result = await validateChatRequest(request as any);
 
@@ -251,16 +250,10 @@ describe("Chat Integration Tests", () => {
     it("returns 401 when API key lookup fails", async () => {
       // getApiKeyAccountId returns a NextResponse when authentication fails
       mockGetApiKeyAccountId.mockResolvedValue(
-        NextResponse.json(
-          { status: "error", message: "Unauthorized" },
-          { status: 401 },
-        ),
+        NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 }),
       );
 
-      const request = createMockRequest(
-        { prompt: "Hello" },
-        { "x-api-key": "invalid-key" },
-      );
+      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "invalid-key" });
 
       const result = await validateChatRequest(request as any);
 
@@ -271,10 +264,7 @@ describe("Chat Integration Tests", () => {
     it("returns 400 when neither messages nor prompt is provided", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
 
-      const request = createMockRequest(
-        { roomId: "room-123" },
-        { "x-api-key": "valid-key" },
-      );
+      const request = createMockRequest({ roomId: "room-123" }, { "x-api-key": "valid-key" });
 
       const result = await validateChatRequest(request as any);
 
@@ -406,9 +396,7 @@ describe("Chat Integration Tests", () => {
       mockGenerateChatTitle.mockResolvedValue("New Chat Title");
 
       const body = {
-        messages: [
-          { id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] },
-        ],
+        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
         roomId: "new-room-123",
         accountId: "account-123",
       };
@@ -433,9 +421,7 @@ describe("Chat Integration Tests", () => {
       mockSelectRoom.mockResolvedValue({ id: "existing-room" } as any);
 
       const body = {
-        messages: [
-          { id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] },
-        ],
+        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
         roomId: "existing-room",
         accountId: "account-123",
       };
@@ -454,9 +440,7 @@ describe("Chat Integration Tests", () => {
       mockSelectRoom.mockResolvedValue({ id: "room-123" } as any);
 
       const body = {
-        messages: [
-          { id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] },
-        ],
+        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
         roomId: "room-123",
         accountId: "account-123",
       };
@@ -486,9 +470,7 @@ describe("Chat Integration Tests", () => {
       mockSelectRoom.mockResolvedValue({ id: "room-123" } as any);
 
       const body = {
-        messages: [
-          { id: "msg-1", role: "user", parts: [{ type: "text", text: "Send an email" }] },
-        ],
+        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Send an email" }] }],
         roomId: "room-123",
         accountId: "account-123",
       };
@@ -516,9 +498,7 @@ describe("Chat Integration Tests", () => {
       mockSelectRoom.mockRejectedValue(new Error("Database error"));
 
       const body = {
-        messages: [
-          { id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] },
-        ],
+        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
         roomId: "room-123",
         accountId: "account-123",
       };
@@ -535,9 +515,7 @@ describe("Chat Integration Tests", () => {
 
     it("handles empty roomId by defaulting to empty string", async () => {
       const body = {
-        messages: [
-          { id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] },
-        ],
+        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
         accountId: "account-123",
         // roomId not provided
       };
@@ -629,10 +607,7 @@ describe("Chat Integration Tests", () => {
     it("validates prompt-based requests through full pipeline", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
 
-      const request = createMockRequest(
-        { prompt: "What is 2+2?" },
-        { "x-api-key": "valid-key" },
-      );
+      const request = createMockRequest({ prompt: "What is 2+2?" }, { "x-api-key": "valid-key" });
 
       const validationResult = await validateChatRequest(request as any);
       expect(validationResult).not.toBeInstanceOf(NextResponse);

@@ -31,25 +31,23 @@ export async function handleChatStream(request: NextRequest): Promise<Response> 
     const stream = createUIMessageStream({
       originalMessages: body.messages,
       generateId: generateUUID,
-      execute: async (options) => {
+      execute: async options => {
         const { writer } = options;
         const result = await agent.stream(chatConfig);
         writer.merge(result.toUIMessageStream());
         // Note: Credit handling and chat completion handling will be added
         // as part of the handleChatCredits and handleChatCompletion migrations
       },
-      onFinish: async (event) => {
+      onFinish: async event => {
         if (event.isAborted) {
           return;
         }
-        const assistantMessages = event.messages.filter(
-          (message) => message.role === "assistant",
-        );
+        const assistantMessages = event.messages.filter(message => message.role === "assistant");
         const responseMessages =
           assistantMessages.length > 0 ? assistantMessages : [event.responseMessage];
         await handleChatCompletion(body, responseMessages);
       },
-      onError: (e) => {
+      onError: e => {
         console.error("/api/chat onError:", e);
         return JSON.stringify({
           status: "error",

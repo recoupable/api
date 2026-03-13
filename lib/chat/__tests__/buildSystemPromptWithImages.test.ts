@@ -57,7 +57,7 @@ describe("buildSystemPromptWithImages", () => {
       const result = buildSystemPromptWithImages(basePrompt, imageUrls);
 
       const lines = result.split("\n");
-      const imageLines = lines.filter((line) => line.startsWith("- Image"));
+      const imageLines = lines.filter(line => line.startsWith("- Image"));
       expect(imageLines).toHaveLength(2);
     });
   });

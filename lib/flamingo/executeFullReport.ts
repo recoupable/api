@@ -32,46 +32,39 @@ export async function executeFullReport(audioUrl: string): Promise<{
   const startTime = Date.now();
 
   // Build all preset calls in parallel
-  const promises: Promise<SectionResult | null>[] = FULL_REPORT_SECTIONS.map(
-    async (section) => {
-      const preset = getPreset(section.preset);
-      if (!preset) return null;
+  const promises: Promise<SectionResult | null>[] = FULL_REPORT_SECTIONS.map(async section => {
+    const preset = getPreset(section.preset);
+    if (!preset) return null;
 
-      try {
-        const result = await callFlamingoGenerate({
-          prompt: preset.prompt,
-          audio_url: audioUrl,
-          max_new_tokens: preset.params.max_new_tokens,
-          temperature: preset.params.temperature,
-          top_p: 1.0,
-          do_sample: preset.params.do_sample,
-        });
+    try {
+      const result = await callFlamingoGenerate({
+        prompt: preset.prompt,
+        audio_url: audioUrl,
+        max_new_tokens: preset.params.max_new_tokens,
+        temperature: preset.params.temperature,
+        top_p: 1.0,
+        do_sample: preset.params.do_sample,
+      });
 
-        // Apply post-processing if the preset defines one
-        const data = preset.parseResponse
-          ? preset.parseResponse(result.response)
-          : result.response;
+      // Apply post-processing if the preset defines one
+      const data = preset.parseResponse ? preset.parseResponse(result.response) : result.response;
 
-        return {
-          reportKey: section.reportKey,
-          data,
-          elapsed_seconds: result.elapsed_seconds,
-        };
-      } catch (error) {
-        console.error(
-          `[WARN] Full report section "${section.preset}" failed:`,
-          error,
-        );
-        return {
-          reportKey: section.reportKey,
-          data: {
-            error: `Section failed: ${error instanceof Error ? error.message : "unknown error"}`,
-          },
-          elapsed_seconds: 0,
-        };
-      }
-    },
-  );
+      return {
+        reportKey: section.reportKey,
+        data,
+        elapsed_seconds: result.elapsed_seconds,
+      };
+    } catch (error) {
+      console.error(`[WARN] Full report section "${section.preset}" failed:`, error);
+      return {
+        reportKey: section.reportKey,
+        data: {
+          error: `Section failed: ${error instanceof Error ? error.message : "unknown error"}`,
+        },
+        elapsed_seconds: 0,
+      };
+    }
+  });
 
   // Execute all presets in parallel
   const results = await Promise.all(promises);
@@ -84,7 +77,7 @@ export async function executeFullReport(audioUrl: string): Promise<{
     }
   }
 
-  const totalElapsed = Math.round((Date.now() - startTime) / 1000 * 100) / 100;
+  const totalElapsed = Math.round(((Date.now() - startTime) / 1000) * 100) / 100;
 
   return { report, elapsed_seconds: totalElapsed };
 }

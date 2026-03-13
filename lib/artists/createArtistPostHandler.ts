@@ -19,9 +19,7 @@ import { createArtistInDb } from "@/lib/artists/createArtistInDb";
  * @param request - The request object containing JSON body
  * @returns A NextResponse with artist data or error
  */
-export async function createArtistPostHandler(
-  request: NextRequest,
-): Promise<NextResponse> {
+export async function createArtistPostHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateCreateArtistBody(request);
   if (validated instanceof NextResponse) {
     return validated;
@@ -41,10 +39,7 @@ export async function createArtistPostHandler(
       );
     }
 
-    return NextResponse.json(
-      { artist },
-      { status: 201, headers: getCorsHeaders() },
-    );
+    return NextResponse.json({ artist }, { status: 201, headers: getCorsHeaders() });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create artist";
     return NextResponse.json(

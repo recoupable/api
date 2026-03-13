@@ -1,6 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { UIMessage } from "ai";
 
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
+import selectRoom from "@/lib/supabase/rooms/selectRoom";
+import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
+import upsertMemory from "@/lib/supabase/memories/upsertMemory";
+import { sendNewConversationNotification } from "@/lib/telegram/sendNewConversationNotification";
+import { generateChatTitle } from "@/lib/chat/generateChatTitle";
+import { handleSendEmailToolOutputs } from "@/lib/emails/handleSendEmailToolOutputs";
+import { sendErrorNotification } from "@/lib/telegram/sendErrorNotification";
+import { handleChatCompletion } from "../handleChatCompletion";
+import type { ChatRequestBody } from "../validateChatRequest";
+
 // Mock all dependencies before importing the module under test
 vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
   default: vi.fn(),
@@ -34,17 +45,6 @@ vi.mock("@/lib/telegram/sendErrorNotification", () => ({
   sendErrorNotification: vi.fn(),
 }));
 
-import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
-import selectRoom from "@/lib/supabase/rooms/selectRoom";
-import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
-import upsertMemory from "@/lib/supabase/memories/upsertMemory";
-import { sendNewConversationNotification } from "@/lib/telegram/sendNewConversationNotification";
-import { generateChatTitle } from "@/lib/chat/generateChatTitle";
-import { handleSendEmailToolOutputs } from "@/lib/emails/handleSendEmailToolOutputs";
-import { sendErrorNotification } from "@/lib/telegram/sendErrorNotification";
-import { handleChatCompletion } from "../handleChatCompletion";
-import type { ChatRequestBody } from "../validateChatRequest";
-
 const mockSelectAccountEmails = vi.mocked(selectAccountEmails);
 const mockSelectRoom = vi.mocked(selectRoom);
 const mockUpsertRoom = vi.mocked(upsertRoom);
@@ -55,6 +55,12 @@ const mockHandleSendEmailToolOutputs = vi.mocked(handleSendEmailToolOutputs);
 const mockSendErrorNotification = vi.mocked(sendErrorNotification);
 
 // Helper to create mock UIMessage
+/**
+ *
+ * @param id
+ * @param role
+ * @param text
+ */
 function createMockUIMessage(id: string, role: "user" | "assistant", text: string): UIMessage {
   return {
     id,
@@ -65,6 +71,10 @@ function createMockUIMessage(id: string, role: "user" | "assistant", text: strin
 }
 
 // Helper to create mock ChatRequestBody
+/**
+ *
+ * @param overrides
+ */
 function createMockBody(overrides: Partial<ChatRequestBody> = {}): ChatRequestBody {
   return {
     accountId: "account-123",
@@ -122,7 +132,7 @@ describe("handleChatCompletion", () => {
       const responseMessages = [createMockUIMessage("resp-1", "assistant", "Hi there!")];
 
       const callOrder: string[] = [];
-      mockUpsertMemory.mockImplementation(async (params) => {
+      mockUpsertMemory.mockImplementation(async params => {
         callOrder.push(params.id);
         return null;
       });

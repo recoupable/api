@@ -16,6 +16,8 @@ export interface ResolveAccountIdResult {
  * Validates access when an org API key attempts to use an account_id override.
  *
  * @param params - The auth info and optional account_id override.
+ * @param params.authInfo
+ * @param params.accountIdOverride
  * @returns The resolved accountId or an error message.
  */
 export async function resolveAccountId({
