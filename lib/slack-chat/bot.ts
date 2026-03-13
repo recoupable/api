@@ -20,9 +20,11 @@ type SlackChatAdapters = {
 export function createSlackChatBot() {
   validateSlackChatEnv();
 
+  // ioredis is configured with lazyConnect: true, so we must
+  // explicitly connect before the state adapter listens for "ready".
   if (redis.status === "wait") {
-    redis.connect().catch(err => {
-      console.error("[slack-chat] Redis failed to connect:", err);
+    redis.connect().catch(() => {
+      throw new Error("[slack-chat] Redis failed to connect");
     });
   }
 
