@@ -9,9 +9,7 @@ import type { FilePart } from "ai";
  * @returns Array of FilePart objects
  * @throws Error if the format is invalid
  */
-export function parseFilesFromQuery(
-  filesParam: string | null,
-): FilePart[] {
+export function parseFilesFromQuery(filesParam: string | null): FilePart[] {
   if (!filesParam) {
     return [];
   }
@@ -37,4 +35,3 @@ export function parseFilesFromQuery(
     })
     .filter(file => file.data && file.mediaType);
 }
-

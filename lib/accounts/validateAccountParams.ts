@@ -34,4 +34,3 @@ export function validateAccountParams(id: string): NextResponse | AccountParams 
 
   return result.data;
 }
-

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { z } from "zod";
+import { isValidCronExpression } from "@/lib/tasks/validateCronExpression";
 
 export const updateTaskBodySchema = z.object({
   id: z.string().min(1, "id parameter is required").describe("UUID of the task to update"),
@@ -9,8 +10,12 @@ export const updateTaskBodySchema = z.object({
   schedule: z
     .string()
     .min(1)
+    .refine(isValidCronExpression, {
+      message:
+        "Invalid cron expression. Must be 5 space-separated fields: minute hour day-of-month month day-of-week (e.g. '0 21 * * 0')",
+    })
     .optional()
-    .describe("New cron expression defining when the task runs"),
+    .describe("New cron expression defining when the task runs (5 fields: min hour dom month dow)"),
   account_id: z.string().min(1).optional().describe("UUID of the account to assign the task to."),
   artist_account_id: z
     .string()

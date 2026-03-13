@@ -11,7 +11,9 @@ export function buildPRCard(title: string, prs: CodingAgentPR[]) {
   return Card({
     title,
     children: [
-      CardText(`${prs.map(pr => `- ${pr.repo}#${pr.number} → \`${pr.baseBranch}\``).join("\n")}\n\nReply in this thread to give feedback.`),
+      CardText(
+        `${prs.map(pr => `- ${pr.repo}#${pr.number} → \`${pr.baseBranch}\``).join("\n")}\n\nReply in this thread to give feedback.`,
+      ),
       Actions([
         ...prs.flatMap(pr => [
           LinkButton({ url: pr.url, label: `Review ${pr.repo}#${pr.number}` }),

@@ -7,10 +7,7 @@ import supabase from "../serverClient";
  * @param orgIds - Organization IDs to check membership against
  * @returns Array of matching rows, or null on error
  */
-export async function selectAccountOrganizationIds(
-  accountId: string,
-  orgIds: string[],
-) {
+export async function selectAccountOrganizationIds(accountId: string, orgIds: string[]) {
   if (!orgIds.length) return [];
 
   const { data, error } = await supabase

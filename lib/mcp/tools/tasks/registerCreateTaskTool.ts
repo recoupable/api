@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createTask } from "@/lib/tasks/createTask";
 import { createTaskBodySchema, type CreateTaskBody } from "@/lib/tasks/validateCreateTaskBody";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
+import { getToolResultError } from "@/lib/mcp/getToolResultError";
 
 /**
  * Registers the "create_task" tool on the MCP server.
@@ -17,8 +18,14 @@ export function registerCreateTaskTool(server: McpServer): void {
       inputSchema: createTaskBodySchema,
     },
     async (args: CreateTaskBody) => {
-      const result = await createTask(args);
-      return getToolResultSuccess(result);
+      try {
+        const result = await createTask(args);
+        return getToolResultSuccess(result);
+      } catch (error) {
+        return getToolResultError(
+          `Failed to create task: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
     },
   );
 }

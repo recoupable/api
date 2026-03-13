@@ -27,4 +27,3 @@ export function extractOneCycle<T>(items: T[]): T[] {
 
   return items;
 }
-

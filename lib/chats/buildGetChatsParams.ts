@@ -58,7 +58,7 @@ export async function buildGetChatsParams(
   if (org_id) {
     // Org key: fetch all member account IDs for this organization
     const orgMembers = await getAccountOrganizations({ organizationId: org_id });
-    const memberAccountIds = orgMembers.map((member) => member.account_id);
+    const memberAccountIds = orgMembers.map(member => member.account_id);
     return { params: { account_ids: memberAccountIds, artist_id }, error: null };
   }
 

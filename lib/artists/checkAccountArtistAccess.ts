@@ -31,9 +31,7 @@ export async function checkAccountArtistAccess(
 
   if (!artistOrgs.length) return false;
 
-  const orgIds = artistOrgs
-    .map((o) => o.organization_id)
-    .filter((id): id is string => Boolean(id));
+  const orgIds = artistOrgs.map(o => o.organization_id).filter((id): id is string => Boolean(id));
   if (!orgIds.length) return false;
 
   const userOrgAccess = await selectAccountOrganizationIds(accountId, orgIds);

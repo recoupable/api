@@ -160,14 +160,15 @@ describe("registerOnMergeAction", () => {
     await handler({ thread: mockThread, actionId: "merge_pr:recoupable/api#42" });
 
     expect(mockHandleMergeSuccess).not.toHaveBeenCalled();
-    expect(mockThread.post).toHaveBeenCalledWith("❌ recoupable/api#42 failed to merge: Not allowed");
+    expect(mockThread.post).toHaveBeenCalledWith(
+      "❌ recoupable/api#42 failed to merge: Not allowed",
+    );
   });
 
   it("merge button click triggers snapshot upsert in Supabase via handleMergeSuccess", async () => {
     // Use the real handleMergeSuccess instead of the mock to verify the full chain
-    const { handleMergeSuccess: realHandleMergeSuccess } = await vi.importActual<
-      typeof import("../handleMergeSuccess")
-    >("../handleMergeSuccess");
+    const { handleMergeSuccess: realHandleMergeSuccess } =
+      await vi.importActual<typeof import("../handleMergeSuccess")>("../handleMergeSuccess");
     mockHandleMergeSuccess.mockImplementation(realHandleMergeSuccess);
     mockMergeGithubPR.mockResolvedValue({ ok: true });
 

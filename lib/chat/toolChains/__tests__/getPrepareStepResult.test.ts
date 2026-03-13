@@ -1,13 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import getPrepareStepResult from "../getPrepareStepResult";
+
 // Mock the toolChains module
 vi.mock("../toolChains", () => ({
   TOOL_CHAINS: {
-    test_trigger: [
-      { toolName: "step_one" },
-      { toolName: "step_two" },
-      { toolName: "step_three" },
-    ],
+    test_trigger: [{ toolName: "step_one" }, { toolName: "step_two" }, { toolName: "step_three" }],
     custom_chain: [
       {
         toolName: "custom_step_one",
@@ -24,8 +22,6 @@ vi.mock("../toolChains", () => ({
     custom_step_one: "gpt-4-turbo",
   },
 }));
-
-import getPrepareStepResult from "../getPrepareStepResult";
 
 describe("getPrepareStepResult", () => {
   beforeEach(() => {
@@ -50,7 +46,11 @@ describe("getPrepareStepResult", () => {
         steps: [
           {
             toolResults: [
-              { toolCallId: "call-1", toolName: "unrelated_tool", output: { type: "json", value: {} } },
+              {
+                toolCallId: "call-1",
+                toolName: "unrelated_tool",
+                output: { type: "json", value: {} },
+              },
             ],
           },
         ],
@@ -70,7 +70,11 @@ describe("getPrepareStepResult", () => {
         steps: [
           {
             toolResults: [
-              { toolCallId: "call-1", toolName: "test_trigger", output: { type: "json", value: {} } },
+              {
+                toolCallId: "call-1",
+                toolName: "test_trigger",
+                output: { type: "json", value: {} },
+              },
             ],
           },
         ],
@@ -90,7 +94,11 @@ describe("getPrepareStepResult", () => {
         steps: [
           {
             toolResults: [
-              { toolCallId: "call-1", toolName: "test_trigger", output: { type: "json", value: {} } },
+              {
+                toolCallId: "call-1",
+                toolName: "test_trigger",
+                output: { type: "json", value: {} },
+              },
             ],
           },
           {
@@ -116,7 +124,11 @@ describe("getPrepareStepResult", () => {
         steps: [
           {
             toolResults: [
-              { toolCallId: "call-1", toolName: "test_trigger", output: { type: "json", value: {} } },
+              {
+                toolCallId: "call-1",
+                toolName: "test_trigger",
+                output: { type: "json", value: {} },
+              },
             ],
           },
           {
@@ -149,12 +161,20 @@ describe("getPrepareStepResult", () => {
         steps: [
           {
             toolResults: [
-              { toolCallId: "call-1", toolName: "test_trigger", output: { type: "json", value: {} } },
+              {
+                toolCallId: "call-1",
+                toolName: "test_trigger",
+                output: { type: "json", value: {} },
+              },
             ],
           },
           {
             toolResults: [
-              { toolCallId: "call-2", toolName: "some_other_tool", output: { type: "json", value: {} } },
+              {
+                toolCallId: "call-2",
+                toolName: "some_other_tool",
+                output: { type: "json", value: {} },
+              },
             ],
           },
           {
@@ -183,7 +203,11 @@ describe("getPrepareStepResult", () => {
         steps: [
           {
             toolResults: [
-              { toolCallId: "call-1", toolName: "custom_chain", output: { type: "json", value: {} } },
+              {
+                toolCallId: "call-1",
+                toolName: "custom_chain",
+                output: { type: "json", value: {} },
+              },
             ],
           },
         ],
@@ -206,12 +230,20 @@ describe("getPrepareStepResult", () => {
         steps: [
           {
             toolResults: [
-              { toolCallId: "call-1", toolName: "custom_chain", output: { type: "json", value: {} } },
+              {
+                toolCallId: "call-1",
+                toolName: "custom_chain",
+                output: { type: "json", value: {} },
+              },
             ],
           },
           {
             toolResults: [
-              { toolCallId: "call-2", toolName: "custom_step_one", output: { type: "json", value: {} } },
+              {
+                toolCallId: "call-2",
+                toolName: "custom_step_one",
+                output: { type: "json", value: {} },
+              },
             ],
           },
         ],
@@ -237,7 +269,11 @@ describe("getPrepareStepResult", () => {
         steps: [
           {
             toolResults: [
-              { toolCallId: "call-1", toolName: "test_trigger", output: { type: "json", value: {} } },
+              {
+                toolCallId: "call-1",
+                toolName: "test_trigger",
+                output: { type: "json", value: {} },
+              },
             ],
           },
           {
@@ -260,7 +296,11 @@ describe("getPrepareStepResult", () => {
         steps: [
           {
             toolResults: [
-              { toolCallId: "call-1", toolName: "test_trigger", output: { type: "json", value: {} } },
+              {
+                toolCallId: "call-1",
+                toolName: "test_trigger",
+                output: { type: "json", value: {} },
+              },
             ],
           },
         ],

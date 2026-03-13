@@ -61,4 +61,3 @@ export async function createOrganizationHandler(request: NextRequest): Promise<N
     );
   }
 }
-
