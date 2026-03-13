@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  getPreset,
-  getAllPresets,
-  getPresetSummaries,
-  PRESET_NAMES,
-} from "../presets";
+import { getPreset, getAllPresets, getPresetSummaries, PRESET_NAMES } from "../presets";
 import { FULL_REPORT_SECTIONS, FULL_REPORT_PRESET_NAME } from "../presets/fullReport";
 
 describe("getPreset", () => {
@@ -62,7 +57,7 @@ describe("getPresetSummaries", () => {
 
   it("includes full_report in summaries", () => {
     const summaries = getPresetSummaries();
-    const fullReport = summaries.find((s) => s.name === "full_report");
+    const fullReport = summaries.find(s => s.name === "full_report");
     expect(fullReport).toBeDefined();
     expect(fullReport?.label).toBe("Full Report");
   });

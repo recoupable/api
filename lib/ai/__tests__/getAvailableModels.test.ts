@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+import { gateway } from "@ai-sdk/gateway";
+import { getAvailableModels } from "../getAvailableModels";
+
 vi.mock("@ai-sdk/gateway", () => ({
   gateway: {
     getAvailableModels: vi.fn(),
   },
 }));
-
-import { gateway } from "@ai-sdk/gateway";
-import { getAvailableModels } from "../getAvailableModels";
 
 const mockGatewayGetAvailableModels = vi.mocked(gateway.getAvailableModels);
 
@@ -35,7 +35,7 @@ describe("getAvailableModels", () => {
 
       // Should filter out embed models (output price = 0)
       expect(models).toHaveLength(2);
-      expect(models.map((m) => m.id)).toEqual(["gpt-4", "claude-3-opus"]);
+      expect(models.map(m => m.id)).toEqual(["gpt-4", "claude-3-opus"]);
     });
 
     it("returns empty array when gateway returns no models", async () => {

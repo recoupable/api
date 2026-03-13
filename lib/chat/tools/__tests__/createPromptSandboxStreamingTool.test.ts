@@ -12,6 +12,10 @@ vi.mock("@/lib/sandbox/promptSandboxStreaming", () => ({
 }));
 
 // Helper to drain an async iterable into yields + return value
+/**
+ *
+ * @param iterable
+ */
 async function drainGenerator(iterable: AsyncIterable<unknown>) {
   const yields: unknown[] = [];
   for await (const value of iterable) {
@@ -34,6 +38,9 @@ describe("createPromptSandboxStreamingTool", () => {
       created: false,
     };
 
+    /**
+     *
+     */
     async function* fakeStreaming() {
       yield { data: "Hello ", stream: "stdout" as const };
       yield { data: "world", stream: "stdout" as const };
@@ -80,6 +87,9 @@ describe("createPromptSandboxStreamingTool", () => {
   });
 
   it("passes accountId, apiKey, and prompt to promptSandboxStreaming", async () => {
+    /**
+     *
+     */
     async function* fakeStreaming() {
       return {
         sandboxId: "sbx_123",
@@ -113,6 +123,9 @@ describe("createPromptSandboxStreamingTool", () => {
   });
 
   it("yields only stderr chunks in streaming status", async () => {
+    /**
+     *
+     */
     async function* fakeStreaming() {
       yield { data: "warning!", stream: "stderr" as const };
       return {
@@ -162,6 +175,9 @@ describe("createPromptSandboxStreamingTool", () => {
 
   describe("sandbox prompt note", () => {
     it("prepends SANDBOX_PROMPT_NOTE to the user prompt", async () => {
+      /**
+       *
+       */
       async function* fakeStreaming() {
         return {
           sandboxId: "sbx_123",
@@ -201,6 +217,9 @@ describe("createPromptSandboxStreamingTool", () => {
 
   describe("fresh sandbox (no snapshot)", () => {
     it("includes runId and fromSnapshot in complete status", async () => {
+      /**
+       *
+       */
       async function* fakeStreaming() {
         return {
           sandboxId: "sbx_fresh",

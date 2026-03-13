@@ -11,8 +11,7 @@ vi.mock("../getOrCreateSandbox", () => ({
 }));
 
 vi.mock("@/lib/trigger/triggerRunSandboxCommand", () => ({
-  triggerRunSandboxCommand: (...args: unknown[]) =>
-    mockTriggerRunSandboxCommand(...args),
+  triggerRunSandboxCommand: (...args: unknown[]) => mockTriggerRunSandboxCommand(...args),
 }));
 
 describe("promptSandboxStreaming", () => {
@@ -36,6 +35,9 @@ describe("promptSandboxStreaming", () => {
         fromSnapshot: true,
       });
 
+      /**
+       *
+       */
       async function* fakeLogs() {
         yield { data: "Hello ", stream: "stdout" as const };
         yield { data: "world", stream: "stdout" as const };
@@ -62,9 +64,7 @@ describe("promptSandboxStreaming", () => {
           finalResult = result.value;
           break;
         }
-        chunks.push(
-          result.value as { data: string; stream: "stdout" | "stderr" },
-        );
+        chunks.push(result.value as { data: string; stream: "stdout" | "stderr" });
       }
 
       expect(chunks).toEqual([
@@ -90,6 +90,9 @@ describe("promptSandboxStreaming", () => {
         fromSnapshot: true,
       });
 
+      /**
+       *
+       */
       async function* fakeLogs() {
         yield { data: "output", stream: "stdout" as const };
         yield { data: "warn: something", stream: "stderr" as const };
@@ -135,6 +138,9 @@ describe("promptSandboxStreaming", () => {
         fromSnapshot: true,
       });
 
+      /**
+       *
+       */
       async function* fakeLogs() {
         yield { data: "done", stream: "stdout" as const };
       }
@@ -172,6 +178,9 @@ describe("promptSandboxStreaming", () => {
         fromSnapshot: true,
       });
 
+      /**
+       *
+       */
       async function* fakeLogs() {
         yield { data: "error output", stream: "stderr" as const };
       }
@@ -234,9 +243,7 @@ describe("promptSandboxStreaming", () => {
           finalResult = result.value;
           break;
         }
-        chunks.push(
-          result.value as { data: string; stream: "stdout" | "stderr" },
-        );
+        chunks.push(result.value as { data: string; stream: "stdout" | "stderr" });
       }
 
       expect(mockTriggerRunSandboxCommand).toHaveBeenCalledWith({

@@ -3,6 +3,7 @@ import { LanguageModelUsage } from "ai";
 
 /**
  * Calculates the total spend in USD for a given language model usage.
+ *
  * @param usage - The language model usage data
  * @param modelId - The ID of the model used
  * @returns The total spend in USD or 0 if calculation fails
@@ -20,10 +21,8 @@ export const getCreditUsage = async (
 
     // LanguageModelUsage uses inputTokens/outputTokens (SDK v3)
     // or promptTokens/completionTokens (SDK v2 compatibility)
-    const inputTokens =
-      (usage as any).inputTokens ?? (usage as any).promptTokens;
-    const outputTokens =
-      (usage as any).outputTokens ?? (usage as any).completionTokens;
+    const inputTokens = (usage as any).inputTokens ?? (usage as any).promptTokens;
+    const outputTokens = (usage as any).outputTokens ?? (usage as any).completionTokens;
 
     if (!inputTokens || !outputTokens) {
       console.error("No tokens found in usage");

@@ -112,9 +112,7 @@ describe("getLatestUserMessageText", () => {
           id: "1",
           role: "user",
           content: "Hello",
-          parts: [
-            { type: "file", mediaType: "image/png", url: "https://example.com/image.png" },
-          ],
+          parts: [{ type: "file", mediaType: "image/png", url: "https://example.com/image.png" }],
         },
       ];
 

@@ -26,7 +26,6 @@ vi.mock("@/lib/trigger/triggerRunSandboxCommand", () => ({
   triggerRunSandboxCommand: vi.fn(),
 }));
 
-
 vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
   selectAccountSnapshots: vi.fn(),
 }));
@@ -413,5 +412,4 @@ describe("createSandboxPostHandler", () => {
       ],
     });
   });
-
 });

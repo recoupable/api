@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ChatRequestBody } from "../validateChatRequest";
 
+// Import after mocks
+import { setupToolsForRequest } from "../setupToolsForRequest";
+import { getMcpTools } from "@/lib/mcp/getMcpTools";
+import { getComposioTools } from "@/lib/composio/toolRouter";
+
 // Mock external dependencies
 vi.mock("@/lib/mcp/getMcpTools", () => ({
   getMcpTools: vi.fn(),
@@ -16,11 +21,6 @@ vi.mock("@/lib/chat/tools/createPromptSandboxStreamingTool", () => ({
     parameters: {},
   })),
 }));
-
-// Import after mocks
-import { setupToolsForRequest } from "../setupToolsForRequest";
-import { getMcpTools } from "@/lib/mcp/getMcpTools";
-import { getComposioTools } from "@/lib/composio/toolRouter";
 
 const mockGetMcpTools = vi.mocked(getMcpTools);
 const mockGetComposioTools = vi.mocked(getComposioTools);
@@ -245,14 +245,14 @@ describe("setupToolsForRequest", () => {
       // Track when each operation starts and completes
       mockGetMcpTools.mockImplementation(async () => {
         executionOrder.push("getMcpTools:start");
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 10));
         executionOrder.push("getMcpTools:end");
         return { mcpTool: { description: "MCP Tool", parameters: {} } };
       });
 
       mockGetComposioTools.mockImplementation(async () => {
         executionOrder.push("getComposioTools:start");
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 10));
         executionOrder.push("getComposioTools:end");
         return { composioTool: { description: "Composio Tool", parameters: {} } };
       });

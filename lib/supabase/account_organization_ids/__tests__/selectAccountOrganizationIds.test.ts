@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { selectAccountOrganizationIds } from "../selectAccountOrganizationIds";
 
+import supabase from "../../serverClient";
+
 vi.mock("../../serverClient", () => {
   const mockFrom = vi.fn();
   return {
     default: { from: mockFrom },
   };
 });
-
-import supabase from "../../serverClient";
 
 describe("selectAccountOrganizationIds", () => {
   beforeEach(() => {

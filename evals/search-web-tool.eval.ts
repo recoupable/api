@@ -80,8 +80,7 @@ This year's Grammys were notable for historic wins, genre-crossing breakthroughs
       },
     },
     {
-      input:
-        "What are the current Spotify streaming numbers for Bad Bunny's latest album?",
+      input: "What are the current Spotify streaming numbers for Bad Bunny's latest album?",
       expected: `Bad Bunny's latest album titled "DeBÍ TiRAR MáS FOToS," released in 2025, currently has around 1.07 billion streams on Spotify. His previous album "Un Verano Sin Ti" has over 20.6 billion streams on Spotify, making it one of the most streamed albums on the platform as of late 2025.`,
       metadata: {
         category: "streaming_data",
@@ -181,8 +180,7 @@ These collaborations highlight a range of featured artists who dropped new track
       },
     },
     {
-      input:
-        "What are the current music industry revenue statistics for Q2 2025?",
+      input: "What are the current music industry revenue statistics for Q2 2025?",
       expected: `The current music industry revenue statistics for Q2 2025 show continued growth driven primarily by streaming and subscription services.
 
 Key highlights from major companies:
@@ -227,8 +225,7 @@ Overall, 2025 sees music copyright law adapting to address the growing influence
       },
     },
     {
-      input:
-        "What are the latest features on TikTok for music creators in Q2 2025?",
+      input: "What are the latest features on TikTok for music creators in Q2 2025?",
       expected: `The latest features on TikTok for music creators in Q2 2025 center around the beta launch of TikTok Songwriter Features. These include:
 
 - Songwriter Account Label: Music creators can create official Songwriter accounts that add a clear "Songwriter" label to their profile for identification.

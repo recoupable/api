@@ -50,7 +50,7 @@ Eval("Memory & Storage Tools Evaluation", {
       const result = await callChatFunctionsWithResult(input);
       const output = extractTextFromResult(result);
       const toolCalls =
-        result.toolCalls?.map((tc) => ({
+        result.toolCalls?.map(tc => ({
           toolName: tc.toolName,
           args: {},
         })) || [];

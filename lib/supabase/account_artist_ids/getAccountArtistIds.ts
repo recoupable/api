@@ -8,7 +8,9 @@ export type AccountArtistRow = ArtistQueryRow & { artist_id: string; pinned: boo
  * Get all artists for an array of artist IDs or account IDs, with full info.
  * Returns raw data - formatting should be done by caller.
  *
- * @param params Object with artistIds or accountIds array
+ * @param params - Object with artistIds or accountIds array
+ * @param params.artistIds
+ * @param params.accountIds
  * @returns Array of raw artist rows from database
  */
 export async function getAccountArtistIds(params: {
@@ -46,4 +48,3 @@ export async function getAccountArtistIds(params: {
 
   return (data || []) as unknown as AccountArtistRow[];
 }
-

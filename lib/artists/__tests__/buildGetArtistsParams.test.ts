@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { buildGetArtistsParams } from "../buildGetArtistsParams";
 
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+
 vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: vi.fn(),
 }));
-
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 describe("buildGetArtistsParams", () => {
   beforeEach(() => {

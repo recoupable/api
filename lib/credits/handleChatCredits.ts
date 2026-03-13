@@ -11,9 +11,13 @@ interface HandleChatCreditsParams {
 /**
  * Handles credit deduction after chat completion.
  * Calculates usage cost and deducts appropriate credits from the user's account.
+ *
+ * @param usage.usage
  * @param usage - The language model usage data
  * @param model - The model ID used for the chat
  * @param accountId - The account ID to deduct credits from (optional)
+ * @param usage.model
+ * @param usage.accountId
  */
 export const handleChatCredits = async ({
   usage,

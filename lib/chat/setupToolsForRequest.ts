@@ -27,8 +27,7 @@ export async function setupToolsForRequest(body: ChatRequestBody): Promise<ToolS
   // Local streaming tools override MCP versions for real-time output
   const localStreamingTools: ToolSet = {};
   if (authToken) {
-    localStreamingTools.prompt_sandbox =
-      createPromptSandboxStreamingTool(accountId, authToken);
+    localStreamingTools.prompt_sandbox = createPromptSandboxStreamingTool(accountId, authToken);
   }
 
   // Merge all tools — local streaming tools spread last to override MCP

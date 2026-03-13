@@ -73,13 +73,11 @@ describe("registerRunSandboxCommandTool", () => {
   it("returns error when resolveAccountId returns an error", async () => {
     mockResolveAccountId.mockResolvedValue({
       accountId: null,
-      error: "Authentication required. Provide an API key via Authorization: Bearer header, or provide account_id from the system prompt context.",
+      error:
+        "Authentication required. Provide an API key via Authorization: Bearer header, or provide account_id from the system prompt context.",
     });
 
-    const result = await registeredHandler(
-      { command: "ls" },
-      createMockExtra(),
-    );
+    const result = await registeredHandler({ command: "ls" }, createMockExtra());
 
     expect(result).toEqual({
       content: [
@@ -97,10 +95,7 @@ describe("registerRunSandboxCommandTool", () => {
       error: null,
     });
 
-    const result = await registeredHandler(
-      { command: "ls" },
-      createMockExtra(),
-    );
+    const result = await registeredHandler({ command: "ls" }, createMockExtra());
 
     expect(result).toEqual({
       content: [

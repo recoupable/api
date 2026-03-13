@@ -22,7 +22,10 @@ export async function POST(
   // Handle Slack url_verification challenge before loading the bot.
   // This avoids blocking on Redis/adapter initialization during setup.
   if (platform === "slack") {
-    const body = await request.clone().json().catch(() => null);
+    const body = await request
+      .clone()
+      .json()
+      .catch(() => null);
     if (body?.type === "url_verification" && body?.challenge) {
       return Response.json({ challenge: body.challenge });
     }
