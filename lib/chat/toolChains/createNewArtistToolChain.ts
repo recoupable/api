@@ -1,0 +1,41 @@
+import { ToolChainItem } from "./toolChains";
+import getKnowledgeBaseReportReferenceMessage from "./getKnowledgeBaseReportReferenceMessage";
+
+export const createNewArtistToolChain: ToolChainItem[] = [
+  { toolName: "get_spotify_search" },
+  {
+    toolName: "update_account_info",
+    system:
+      "From the get_spotify_search results, select the artist whose name best matches the user-provided artist name (prefer exact, case-insensitive match; otherwise choose the closest by name and popularity). Update the account using the update_account_info tool with the artist's basic information: name, image, label, etc.",
+  },
+  {
+    toolName: "update_artist_socials",
+    system:
+      "Using the matched Spotify artist from the get_spotify_search results, update the artist's socials with the Spotify profile URL (found in external_urls.spotify). Pass the URL in the urls array to update_artist_socials.",
+  },
+  { toolName: "artist_deep_research" },
+  { toolName: "spotify_deep_research" },
+  { toolName: "get_artist_socials" },
+  { toolName: "get_spotify_artist_top_tracks" },
+  { toolName: "get_spotify_artist_albums" },
+  { toolName: "get_spotify_album" },
+  { toolName: "search_web" },
+  { toolName: "update_artist_socials" },
+  {
+    toolName: "search_web",
+    messages: [getKnowledgeBaseReportReferenceMessage()],
+  },
+  {
+    toolName: "generate_txt_file",
+    system:
+      "Using all the research gathered (from artist_deep_research, spotify_deep_research, search_web results, etc.), generate a comprehensive knowledge base report following the reference template. Include artist biography, discography, social media presence, notable achievements, and any other relevant information. Pass the complete report text to generate_txt_file.",
+    messages: [getKnowledgeBaseReportReferenceMessage()],
+  },
+  {
+    toolName: "update_account_info",
+    system:
+      "Using the arweaveUrl returned from generate_txt_file, update the artist's knowledges array to include the new knowledge base entry. Set the knowledge object with: url (the arweaveUrl), name (e.g., 'Artist Knowledge Base Report'), and type ('text/plain').",
+  },
+  { toolName: "create_segments" },
+  { toolName: "youtube_login" },
+];
