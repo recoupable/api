@@ -1,7 +1,8 @@
 import type { NextRequest } from "next/server";
 import { after } from "next/server";
-import { codingAgentBot } from "@/lib/coding-agent/bot";
-import "@/lib/coding-agent/handlers/registerHandlers";
+
+/** Platforms served by the coding-agent bot. */
+const ALLOWED_PLATFORMS = new Set(["slack", "github", "whatsapp"]);
 
 /**
  * Verifies a Slack request signature using HMAC-SHA256.
@@ -20,9 +21,14 @@ async function verifySlackSignature(request: NextRequest, rawBody: string): Prom
     return false;
   }
 
-  // Reject requests older than 5 minutes to prevent replay attacks
+  // Reject requests older than 5 minutes to prevent replay attacks.
+  // Use Number() + isInteger() to reject partial/NaN timestamps that parseInt would silently accept.
+  const requestTimestamp = Number(timestamp);
+  if (!Number.isInteger(requestTimestamp)) {
+    return false;
+  }
   const now = Math.floor(Date.now() / 1000);
-  if (Math.abs(now - parseInt(timestamp, 10)) > 300) {
+  if (Math.abs(now - requestTimestamp) > 300) {
     return false;
   }
 
@@ -70,6 +76,14 @@ export async function GET(
 ) {
   const { platform } = await params;
 
+  if (!ALLOWED_PLATFORMS.has(platform)) {
+    return new Response("Unknown platform", { status: 404 });
+  }
+
+  // Lazy-load the bot and handler registration to avoid env/Redis startup for invalid platforms.
+  const { codingAgentBot } = await import("@/lib/coding-agent/bot");
+  await import("@/lib/coding-agent/handlers/registerHandlers");
+
   const handler = codingAgentBot.webhooks[platform as keyof typeof codingAgentBot.webhooks];
 
   if (!handler) {
@@ -96,14 +110,12 @@ export async function POST(
 ) {
   const { platform } = await params;
 
-  // Resolve handler early to avoid initializing the bot for unknown platforms.
-  const handler = codingAgentBot.webhooks[platform as keyof typeof codingAgentBot.webhooks];
-
-  if (!handler) {
+  // Validate platform before loading the bot to avoid unnecessary env/Redis startup.
+  if (!ALLOWED_PLATFORMS.has(platform)) {
     return new Response("Unknown platform", { status: 404 });
   }
 
-  // Handle Slack url_verification challenge before loading the bot.
+  // Handle Slack signature verification and url_verification challenge before loading the bot.
   // This avoids blocking on Redis/adapter initialization during setup.
   if (platform === "slack") {
     const rawBody = await request.clone().text();
@@ -124,6 +136,16 @@ export async function POST(
     if (parsedBody?.type === "url_verification" && typeof parsedBody?.challenge === "string") {
       return Response.json({ challenge: parsedBody.challenge });
     }
+  }
+
+  // Lazy-load the bot and handler registration after all short-circuit checks.
+  const { codingAgentBot } = await import("@/lib/coding-agent/bot");
+  await import("@/lib/coding-agent/handlers/registerHandlers");
+
+  const handler = codingAgentBot.webhooks[platform as keyof typeof codingAgentBot.webhooks];
+
+  if (!handler) {
+    return new Response("Unknown platform", { status: 404 });
   }
 
   await codingAgentBot.initialize();

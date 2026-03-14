@@ -178,6 +178,22 @@ describe("POST /api/coding-agent/[platform]", () => {
     expect(response.status).toBe(401);
   });
 
+  it("returns 401 for url_verification with malformed (non-integer) timestamp", async () => {
+    const body = JSON.stringify({
+      type: "url_verification",
+      challenge: "test_challenge_value",
+    });
+
+    // "123abc" would be silently truncated to 123 by parseInt but is rejected by Number()+isInteger()
+    const request = makeSlackRequest(body, { timestamp: "123abc" });
+
+    const response = await POST(request, {
+      params: Promise.resolve({ platform: "slack" }),
+    });
+
+    expect(response.status).toBe(401);
+  });
+
   it("returns 404 for unknown platforms without initializing", async () => {
     const request = new NextRequest("https://example.com/api/coding-agent/unknown", {
       method: "POST",

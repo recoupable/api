@@ -22,9 +22,8 @@ export function registerGetTasksTool(server: McpServer): void {
         const tasks = await selectScheduledActions(args);
         return getToolResultSuccess(tasks);
       } catch (error) {
-        return getToolResultError(
-          error instanceof Error ? error.message : "Failed to fetch tasks",
-        );
+        console.error("[get_tasks] Failed to fetch tasks:", error);
+        return getToolResultError("Failed to fetch tasks");
       }
     },
   );
