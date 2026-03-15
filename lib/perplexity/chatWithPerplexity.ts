@@ -44,7 +44,9 @@ export async function chatWithPerplexity(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Perplexity API error: ${response.status} ${response.statusText}\n${errorText}`);
+    throw new Error(
+      `Perplexity API error: ${response.status} ${response.statusText}\n${errorText}`,
+    );
   }
 
   const data = await response.json();

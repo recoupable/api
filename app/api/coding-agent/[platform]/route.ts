@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server";
 import { after } from "next/server";
 import { codingAgentBot } from "@/lib/coding-agent/bot";
-import { handleUrlVerification } from "@/lib/slack/handleUrlVerification";
 import "@/lib/coding-agent/handlers/registerHandlers";
 
 /**
@@ -10,6 +9,7 @@ import "@/lib/coding-agent/handlers/registerHandlers";
  * Handles webhook verification handshakes (e.g. WhatsApp hub.challenge).
  *
  * @param request - The incoming verification request
+ * @param params.params
  * @param params - Route params containing the platform name
  */
 export async function GET(
@@ -34,6 +34,7 @@ export async function GET(
  * Handles Slack and WhatsApp webhooks via dynamic [platform] segment.
  *
  * @param request - The incoming webhook request
+ * @param params.params
  * @param params - Route params containing the platform name
  */
 export async function POST(
@@ -42,9 +43,16 @@ export async function POST(
 ) {
   const { platform } = await params;
 
+  // Handle Slack url_verification challenge before loading the bot.
+  // This avoids blocking on Redis/adapter initialization during setup.
   if (platform === "slack") {
-    const verification = await handleUrlVerification(request);
-    if (verification) return verification;
+    const body = await request
+      .clone()
+      .json()
+      .catch(() => null);
+    if (body?.type === "url_verification" && typeof body?.challenge === "string") {
+      return Response.json({ challenge: body.challenge });
+    }
   }
 
   await codingAgentBot.initialize();

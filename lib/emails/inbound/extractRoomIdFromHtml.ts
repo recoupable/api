@@ -10,10 +10,7 @@ const CHAT_LINK_PATTERNS = [
 
 // Pattern to find UUID after /chat/ or %2Fchat%2F in link text that may contain <wbr /> tags
 // The link text version: "https://<wbr />/<wbr />chat.<wbr />recoupable.<wbr />com/<wbr />chat/<wbr />uuid"
-const WBR_STRIPPED_PATTERN = new RegExp(
-  `chat\\.recoupable\\.com/chat/(${UUID_PATTERN})`,
-  "i",
-);
+const WBR_STRIPPED_PATTERN = new RegExp(`chat\\.recoupable\\.com/chat/(${UUID_PATTERN})`, "i");
 
 /**
  * Extracts the roomId from email HTML by looking for a Recoup chat link.

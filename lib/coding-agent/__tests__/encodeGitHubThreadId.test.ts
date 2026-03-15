@@ -3,9 +3,9 @@ import { encodeGitHubThreadId } from "../encodeGitHubThreadId";
 
 describe("encodeGitHubThreadId", () => {
   it("encodes PR-level thread ID", () => {
-    expect(
-      encodeGitHubThreadId({ owner: "recoupable", repo: "tasks", prNumber: 68 }),
-    ).toBe("github:recoupable/tasks:68");
+    expect(encodeGitHubThreadId({ owner: "recoupable", repo: "tasks", prNumber: 68 })).toBe(
+      "github:recoupable/tasks:68",
+    );
   });
 
   it("encodes review comment thread ID", () => {

@@ -40,9 +40,7 @@ describe("getTextContent", () => {
     });
 
     it("returns empty string when no text parts exist", () => {
-      const content = [
-        { type: "image" as const, image: "data:image/png;base64,..." },
-      ] as any;
+      const content = [{ type: "image" as const, image: "data:image/png;base64,..." }] as any;
       expect(getTextContent(content)).toBe("");
     });
   });

@@ -33,9 +33,7 @@ export async function callFlamingoGenerate(
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => "Unknown error");
-    throw new Error(
-      `Flamingo model returned ${response.status}: ${errorText}`,
-    );
+    throw new Error(`Flamingo model returned ${response.status}: ${errorText}`);
   }
 
   const data = await response.json();

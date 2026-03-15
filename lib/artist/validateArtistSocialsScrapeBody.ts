@@ -36,4 +36,3 @@ export function validateArtistSocialsScrapeBody(
 
   return validationResult.data;
 }
-

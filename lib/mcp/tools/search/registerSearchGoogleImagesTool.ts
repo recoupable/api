@@ -21,15 +21,21 @@ const searchGoogleImagesSchema = z.object({
   imageSize: z
     .enum(["l", "m", "i"])
     .optional()
-    .describe("Image size: 'l' (large, recommended), 'm' (medium), 'i' (icon/small). Leave unset if unsure."),
+    .describe(
+      "Image size: 'l' (large, recommended), 'm' (medium), 'i' (icon/small). Leave unset if unsure.",
+    ),
   imageType: z
     .enum(["photo", "clipart", "lineart", "animated"])
     .optional()
-    .describe("Type of image: 'photo' (default, recommended), 'clipart', 'lineart', 'animated'. Leave unset if unsure."),
+    .describe(
+      "Type of image: 'photo' (default, recommended), 'clipart', 'lineart', 'animated'. Leave unset if unsure.",
+    ),
   aspectRatio: z
     .enum(["square", "wide", "tall", "panoramic"])
     .optional()
-    .describe("Aspect ratio filter. Only use if specifically requested. Leave unset for general searches."),
+    .describe(
+      "Aspect ratio filter. Only use if specifically requested. Leave unset for general searches.",
+    ),
 });
 
 type SearchGoogleImagesArgs = z.infer<typeof searchGoogleImagesSchema>;
@@ -64,9 +70,15 @@ export function registerSearchGoogleImagesTool(server: McpServer): void {
       const { query, limit = DEFAULT_IMAGE_LIMIT, imageSize, imageType, aspectRatio } = args;
 
       try {
-        const response = await searchGoogleImages({ query, limit, imageSize, imageType, aspectRatio });
+        const response = await searchGoogleImages({
+          query,
+          limit,
+          imageSize,
+          imageType,
+          aspectRatio,
+        });
 
-        const images = (response.images_results ?? []).map((img) => ({
+        const images = (response.images_results ?? []).map(img => ({
           position: img.position,
           thumbnail: img.thumbnail,
           original: img.original,

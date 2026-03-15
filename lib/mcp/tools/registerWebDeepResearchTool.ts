@@ -58,7 +58,9 @@ export function registerWebDeepResearchTool(server: McpServer): void {
         return getToolResultSuccess(finalContent);
       } catch (error) {
         return getToolResultError(
-          error instanceof Error ? `Deep research failed: ${error.message}` : "Deep research failed",
+          error instanceof Error
+            ? `Deep research failed: ${error.message}`
+            : "Deep research failed",
         );
       }
     },

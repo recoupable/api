@@ -10,10 +10,7 @@ import generateUUID from "@/lib/uuid/generateUUID";
  * @param artistId - The ID of the artist for the new room
  * @returns The ID of the new room or null if operation failed
  */
-export async function copyRoom(
-  sourceRoomId: string,
-  artistId: string,
-): Promise<string | null> {
+export async function copyRoom(sourceRoomId: string, artistId: string): Promise<string | null> {
   try {
     // Get the source room data
     const sourceRoom = await selectRoom(sourceRoomId);

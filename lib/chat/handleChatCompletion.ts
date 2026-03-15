@@ -47,8 +47,7 @@ export async function handleChatCompletion(
 
     // Create room and send notification if this is a new conversation
     if (!room) {
-      const latestMessageText =
-        lastMessage.parts.find((part) => part.type === "text")?.text || "";
+      const latestMessageText = lastMessage.parts.find(part => part.type === "text")?.text || "";
       const conversationName = await generateChatTitle(latestMessageText);
 
       await Promise.all([
