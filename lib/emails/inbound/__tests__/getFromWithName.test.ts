@@ -34,10 +34,7 @@ describe("getFromWithName", () => {
     });
 
     it("falls back to cc array when not in to array", () => {
-      const result = getFromWithName(
-        ["other@example.com"],
-        ["support@mail.recoupable.com"],
-      );
+      const result = getFromWithName(["other@example.com"], ["support@mail.recoupable.com"]);
 
       expect(result).toBe("Support by Recoup <support@recoupable.com>");
     });
@@ -66,9 +63,7 @@ describe("getFromWithName", () => {
     });
 
     it("throws error when arrays are empty", () => {
-      expect(() => getFromWithName([])).toThrow(
-        "No email found ending with @mail.recoupable.com",
-      );
+      expect(() => getFromWithName([])).toThrow("No email found ending with @mail.recoupable.com");
     });
   });
 

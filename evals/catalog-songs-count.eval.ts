@@ -1,9 +1,6 @@
 import { Eval } from "braintrust";
 import { Factuality, AnswerCorrectness } from "autoevals";
-import {
-  callChatFunctionsWithResult,
-  extractTextFromResult,
-} from "@/lib/evals";
+import { callChatFunctionsWithResult, extractTextFromResult } from "@/lib/evals";
 import getCatalogSongsCountData from "@/lib/evals/getCatalogSongsCountData";
 
 /**

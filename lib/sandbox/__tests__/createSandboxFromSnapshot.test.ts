@@ -12,13 +12,11 @@ vi.mock("@/lib/sandbox/createSandbox", () => ({
 }));
 
 vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
-  selectAccountSnapshots: (...args: unknown[]) =>
-    mockSelectAccountSnapshots(...args),
+  selectAccountSnapshots: (...args: unknown[]) => mockSelectAccountSnapshots(...args),
 }));
 
 vi.mock("@/lib/supabase/account_sandboxes/insertAccountSandbox", () => ({
-  insertAccountSandbox: (...args: unknown[]) =>
-    mockInsertAccountSandbox(...args),
+  insertAccountSandbox: (...args: unknown[]) => mockInsertAccountSandbox(...args),
 }));
 
 describe("createSandboxFromSnapshot", () => {

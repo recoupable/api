@@ -23,9 +23,7 @@ describe("parseJsonLike", () => {
   });
 
   it("handles nested objects with single quotes", () => {
-    const result = parseJsonLike(
-      "{'tags': ['dreamy', 'sad'], 'mood': 'melancholic'}",
-    );
+    const result = parseJsonLike("{'tags': ['dreamy', 'sad'], 'mood': 'melancholic'}");
     expect(result).toEqual({ tags: ["dreamy", "sad"], mood: "melancholic" });
   });
 
@@ -46,9 +44,7 @@ describe("condenseRepetitions", () => {
   });
 
   it("condenses within larger text", () => {
-    const result = condenseRepetitions(
-      "Ah, oh, oh, oh, oh, oh, yeah",
-    );
+    const result = condenseRepetitions("Ah, oh, oh, oh, oh, oh, yeah");
     expect(result).toBe("Ah, (oh x5), yeah");
   });
 

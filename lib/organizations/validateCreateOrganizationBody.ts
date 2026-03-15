@@ -37,4 +37,3 @@ export function validateCreateOrganizationBody(
 
   return result.data;
 }
-

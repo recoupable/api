@@ -23,11 +23,11 @@ export const flamingoGenerateBodySchema = z
     top_p: z.number().min(0).max(1).optional().default(1.0),
     do_sample: z.boolean().optional().default(false),
   })
-  .refine((data) => data.preset || data.prompt, {
+  .refine(data => data.preset || data.prompt, {
     message: "Either 'preset' or 'prompt' is required",
     path: ["preset"],
   })
-  .refine((data) => !(data.preset && data.prompt), {
+  .refine(data => !(data.preset && data.prompt), {
     message: "Provide either 'preset' or 'prompt', not both",
     path: ["prompt"],
   });
@@ -41,9 +41,7 @@ export type FlamingoGenerateBody = z.infer<typeof flamingoGenerateBodySchema>;
  * @param body - The raw request body (parsed JSON).
  * @returns A NextResponse with an error if validation fails, or the validated body if it passes.
  */
-export function validateFlamingoGenerateBody(
-  body: unknown,
-): NextResponse | FlamingoGenerateBody {
+export function validateFlamingoGenerateBody(body: unknown): NextResponse | FlamingoGenerateBody {
   const result = flamingoGenerateBodySchema.safeParse(body);
 
   if (!result.success) {

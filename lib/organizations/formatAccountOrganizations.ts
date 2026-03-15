@@ -21,7 +21,9 @@ export interface FormattedOrganization {
  * @param rawOrgs - Raw organization data from the database
  * @returns Formatted and deduplicated organizations
  */
-export function formatAccountOrganizations(rawOrgs: AccountOrganization[]): FormattedOrganization[] {
+export function formatAccountOrganizations(
+  rawOrgs: AccountOrganization[],
+): FormattedOrganization[] {
   const seen = new Set<string>();
 
   return rawOrgs
@@ -37,4 +39,3 @@ export function formatAccountOrganizations(rawOrgs: AccountOrganization[]): Form
       organization_image: org.organization?.account_info?.[0]?.image || null,
     }));
 }
-

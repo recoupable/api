@@ -5,15 +5,16 @@ vi.mock("../mergeGithubBranch", () => ({
   mergeGithubBranch: (...args: unknown[]) => mockMergeGithubBranch(...args),
 }));
 
-const { registerOnMergeTestToMainAction } = await import(
-  "../handlers/onMergeTestToMainAction"
-);
+const { registerOnMergeTestToMainAction } = await import("../handlers/onMergeTestToMainAction");
 
 beforeEach(() => {
   vi.clearAllMocks();
   process.env.GITHUB_TOKEN = "ghp_test";
 });
 
+/**
+ *
+ */
 function createMockBot() {
   return { onAction: vi.fn() } as any;
 }
@@ -36,7 +37,12 @@ describe("registerOnMergeTestToMainAction", () => {
 
     await handler({ thread: mockThread, actionId: "merge_test_to_main:recoupable/chat" });
 
-    expect(mockMergeGithubBranch).toHaveBeenCalledWith("recoupable/chat", "test", "main", "ghp_test");
+    expect(mockMergeGithubBranch).toHaveBeenCalledWith(
+      "recoupable/chat",
+      "test",
+      "main",
+      "ghp_test",
+    );
     expect(mockThread.post).toHaveBeenCalledWith("✅ Merged test → main for recoupable/chat.");
   });
 

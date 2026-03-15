@@ -104,8 +104,7 @@ describe("extractRoomIdFromHtml", () => {
     });
 
     it("returns undefined for invalid UUID format in link", () => {
-      const html =
-        '<a href="https://chat.recoupable.com/chat/not-a-valid-uuid">link</a>';
+      const html = '<a href="https://chat.recoupable.com/chat/not-a-valid-uuid">link</a>';
 
       const result = extractRoomIdFromHtml(html);
 

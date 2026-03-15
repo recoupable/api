@@ -5,13 +5,12 @@ export type SongArtistInsert = TablesInsert<"song_artists">;
 
 /**
  * Inserts song-artist relationships, skipping duplicates.
+ *
+ * @param songArtists
  */
-export async function insertSongArtists(
-  songArtists: SongArtistInsert[]
-): Promise<void> {
+export async function insertSongArtists(songArtists: SongArtistInsert[]): Promise<void> {
   const records = songArtists.filter(
-    (record): record is SongArtistInsert =>
-      Boolean(record.song) && Boolean(record.artist)
+    (record): record is SongArtistInsert => Boolean(record.song) && Boolean(record.artist),
   );
 
   if (records.length === 0) {
@@ -19,16 +18,12 @@ export async function insertSongArtists(
   }
 
   const deduped = [
-    ...new Map(
-      records.map((record) => [`${record.song}-${record.artist}`, record])
-    ).values(),
+    ...new Map(records.map(record => [`${record.song}-${record.artist}`, record])).values(),
   ];
 
-  const { error } = await supabase
-    .from("song_artists")
-    .upsert(deduped, {
-      onConflict: "song,artist",
-    });
+  const { error } = await supabase.from("song_artists").upsert(deduped, {
+    onConflict: "song,artist",
+  });
 
   if (error) {
     throw new Error(`Failed to insert song artists: ${error.message}`);

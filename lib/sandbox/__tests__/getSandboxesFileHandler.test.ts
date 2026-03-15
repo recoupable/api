@@ -41,7 +41,7 @@ describe("getSandboxesFileHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Default: resolveSubmodulePath passes through unchanged
-    vi.mocked(resolveSubmodulePath).mockImplementation(async (params) => params);
+    vi.mocked(resolveSubmodulePath).mockImplementation(async params => params);
   });
 
   it("returns error response when validation fails", async () => {

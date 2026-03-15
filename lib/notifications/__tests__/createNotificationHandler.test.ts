@@ -26,6 +26,10 @@ vi.mock("@/lib/networking/safeParseJson", () => ({
   safeParseJson: vi.fn(async (req: Request) => req.json()),
 }));
 
+/**
+ *
+ * @param body
+ */
 function createRequest(body: unknown): NextRequest {
   return new NextRequest("https://recoup-api.vercel.app/api/notifications", {
     method: "POST",
@@ -84,7 +88,8 @@ describe("createNotificationHandler", () => {
   it("sends email to account owner with text body", async () => {
     mockProcessAndSendEmail.mockResolvedValue({
       success: true,
-      message: "Email sent successfully from Agent by Recoup <agent@recoupable.com> to owner@example.com. CC: none.",
+      message:
+        "Email sent successfully from Agent by Recoup <agent@recoupable.com> to owner@example.com. CC: none.",
       id: "email-123",
     });
 

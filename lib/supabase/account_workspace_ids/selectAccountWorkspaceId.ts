@@ -7,10 +7,7 @@ import supabase from "../serverClient";
  * @param workspaceId - The workspace ID
  * @returns The row if found, null if not found or on error
  */
-export async function selectAccountWorkspaceId(
-  accountId: string,
-  workspaceId: string,
-) {
+export async function selectAccountWorkspaceId(accountId: string, workspaceId: string) {
   const { data, error } = await supabase
     .from("account_workspace_ids")
     .select("workspace_id")

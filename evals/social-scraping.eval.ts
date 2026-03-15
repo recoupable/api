@@ -56,8 +56,7 @@ Eval("Social Scraping Evaluation", {
     },
     {
       input: "How many Instagram followers do I have?",
-      expected:
-        "Specific follower count from fresh scraping (e.g., '112,545 followers')",
+      expected: "Specific follower count from fresh scraping (e.g., '112,545 followers')",
       metadata: {
         artist: "Fat Beats",
         platform: "instagram",
@@ -94,8 +93,7 @@ Eval("Social Scraping Evaluation", {
     {
       input:
         "Fetch streaming trend and playlist-add history for the last 90 days (shows what's actually growing).",
-      expected:
-        "Streaming trend data and playlist-add history from Spotify tools and web search",
+      expected: "Streaming trend data and playlist-add history from Spotify tools and web search",
       metadata: {
         artist: "Unknown",
         platform: "spotify",
@@ -124,7 +122,7 @@ Eval("Social Scraping Evaluation", {
       const result = await callChatFunctionsWithResult(input);
       const output = extractTextFromResult(result);
       const toolCalls =
-        result.toolCalls?.map((tc) => ({
+        result.toolCalls?.map(tc => ({
           toolName: tc.toolName,
           args: {},
         })) || [];

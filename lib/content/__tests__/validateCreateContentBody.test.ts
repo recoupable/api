@@ -20,6 +20,10 @@ vi.mock("@/lib/content/resolveArtistSlug", () => ({
   resolveArtistSlug: vi.fn().mockResolvedValue("gatsby-grace"),
 }));
 
+/**
+ *
+ * @param body
+ */
 function createRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/content/create", {
     method: "POST",
@@ -119,4 +123,3 @@ describe("validateCreateContentBody", () => {
     }
   });
 });
-

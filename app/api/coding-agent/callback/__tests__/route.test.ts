@@ -2,9 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 const mockInitialize = vi.fn();
-const mockHandleCallback = vi.fn().mockResolvedValue(
-  new Response("ok", { status: 200 }),
-);
+const mockHandleCallback = vi.fn().mockResolvedValue(new Response("ok", { status: 200 }));
 
 vi.mock("@/lib/coding-agent/bot", () => ({
   codingAgentBot: {
