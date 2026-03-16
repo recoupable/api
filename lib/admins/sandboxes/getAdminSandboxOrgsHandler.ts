@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAdminAuth } from "@/lib/admins/validateAdminAuth";
 import { getOrgRepoStats } from "./getOrgRepoStats";
-import { selectAllAccountSnapshotGithubRepos } from "@/lib/supabase/account_snapshots/selectAllAccountSnapshotGithubRepos";
+import { selectAllAccountSnapshotsWithOwners } from "@/lib/supabase/account_snapshots/selectAllAccountSnapshotsWithOwners";
 
 /**
  * Handler for GET /api/admins/sandboxes/orgs.
@@ -14,7 +14,7 @@ import { selectAllAccountSnapshotGithubRepos } from "@/lib/supabase/account_snap
  * - latest_commit_messages (latest 5)
  * - earliest_committed_at
  * - latest_committed_at
- * - account_repos (list of account repo URLs that include this org repo as a submodule)
+ * - account_repos (list of { account_id, email, repo_url } for accounts using this org repo as submodule)
  *
  * Requires the caller to be a Recoup admin.
  *
@@ -28,8 +28,8 @@ export async function getAdminSandboxOrgsHandler(request: NextRequest): Promise<
       return auth;
     }
 
-    const accountGithubRepos = await selectAllAccountSnapshotGithubRepos();
-    const repos = await getOrgRepoStats(accountGithubRepos);
+    const accountSnapshots = await selectAllAccountSnapshotsWithOwners();
+    const repos = await getOrgRepoStats(accountSnapshots);
 
     return NextResponse.json(
       { status: "success", repos },
