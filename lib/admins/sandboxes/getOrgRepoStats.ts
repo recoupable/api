@@ -1,6 +1,13 @@
+import type { AccountSnapshotOwner } from "@/lib/supabase/account_snapshots/selectAllAccountSnapshotsWithOwners";
 import { listOrgRepos } from "@/lib/github/listOrgRepos";
 import { fetchRepoCommitStats } from "@/lib/github/fetchRepoCommitStats";
 import { buildSubmoduleRepoMap } from "@/lib/github/buildSubmoduleRepoMap";
+
+export interface AccountRepo {
+  account_id: string;
+  email: string | null;
+  repo_url: string;
+}
 
 export interface OrgRepoRow {
   repo_name: string;
@@ -9,17 +16,19 @@ export interface OrgRepoRow {
   latest_commit_messages: string[];
   earliest_committed_at: string;
   latest_committed_at: string;
-  account_repos: string[];
+  account_repos: AccountRepo[];
 }
 
 /**
  * Fetches commit statistics for all repositories in the recoupable GitHub org.
  *
- * @param accountGithubRepos - Array of account github_repo URLs to check for submodule usage
+ * @param accountSnapshots - Array of { account_id, github_repo } objects for submodule analysis
+ * @param emailMap - Map of account_id to email for enriching account_repos
  * @returns Array of OrgRepoRow sorted by total_commits descending
  */
 export async function getOrgRepoStats(
-  accountGithubRepos: string[],
+  accountSnapshots: AccountSnapshotOwner[],
+  emailMap: Map<string, string | null>,
 ): Promise<OrgRepoRow[]> {
   const token = process.env.GITHUB_TOKEN;
   if (!token) {
@@ -29,7 +38,7 @@ export async function getOrgRepoStats(
 
   const [repos, submoduleRepoMap] = await Promise.all([
     listOrgRepos(token),
-    buildSubmoduleRepoMap(accountGithubRepos),
+    buildSubmoduleRepoMap(accountSnapshots),
   ]);
 
   const statsResults = await Promise.allSettled(
@@ -38,6 +47,13 @@ export async function getOrgRepoStats(
       if (!stats) return null;
 
       const normalizedUrl = repo.html_url.replace(/\.git$/, "");
+      const repoEntries = submoduleRepoMap.get(normalizedUrl) ?? [];
+
+      const accountRepos: AccountRepo[] = repoEntries.map(({ account_id, repo_url }) => ({
+        account_id,
+        email: emailMap.get(account_id) ?? null,
+        repo_url,
+      }));
 
       return {
         repo_name: repo.name,
@@ -46,7 +62,7 @@ export async function getOrgRepoStats(
         latest_commit_messages: stats.latest_commit_messages,
         earliest_committed_at: stats.earliest_committed_at,
         latest_committed_at: stats.latest_committed_at,
-        account_repos: submoduleRepoMap.get(normalizedUrl) ?? [],
+        account_repos: accountRepos,
       };
     }),
   );

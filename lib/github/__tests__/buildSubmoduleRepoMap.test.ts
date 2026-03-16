@@ -17,15 +17,23 @@ describe("buildSubmoduleRepoMap", () => {
     expect(result.size).toBe(0);
   });
 
-  it("lists parent repos for each submodule", async () => {
+  it("lists parent repo entries for each submodule", async () => {
     mockGetOrgRepoUrls
       .mockResolvedValueOnce(["https://github.com/recoupable/chat.git", "https://github.com/recoupable/api.git"])
       .mockResolvedValueOnce(["https://github.com/recoupable/chat.git"]);
 
-    const result = await buildSubmoduleRepoMap(["repo-url-1", "repo-url-2"]);
+    const result = await buildSubmoduleRepoMap([
+      { account_id: "acc_1", github_repo: "repo-url-1" },
+      { account_id: "acc_2", github_repo: "repo-url-2" },
+    ]);
 
-    expect(result.get("https://github.com/recoupable/chat")).toEqual(["repo-url-1", "repo-url-2"]);
-    expect(result.get("https://github.com/recoupable/api")).toEqual(["repo-url-1"]);
+    expect(result.get("https://github.com/recoupable/chat")).toEqual([
+      { account_id: "acc_1", repo_url: "repo-url-1" },
+      { account_id: "acc_2", repo_url: "repo-url-2" },
+    ]);
+    expect(result.get("https://github.com/recoupable/api")).toEqual([
+      { account_id: "acc_1", repo_url: "repo-url-1" },
+    ]);
   });
 
   it("skips repos that throw errors", async () => {
@@ -33,9 +41,14 @@ describe("buildSubmoduleRepoMap", () => {
       .mockRejectedValueOnce(new Error("not found"))
       .mockResolvedValueOnce(["https://github.com/recoupable/chat.git"]);
 
-    const result = await buildSubmoduleRepoMap(["bad-url", "good-url"]);
+    const result = await buildSubmoduleRepoMap([
+      { account_id: "acc_bad", github_repo: "bad-url" },
+      { account_id: "acc_good", github_repo: "good-url" },
+    ]);
 
     expect(result.size).toBe(1);
-    expect(result.get("https://github.com/recoupable/chat")).toEqual(["good-url"]);
+    expect(result.get("https://github.com/recoupable/chat")).toEqual([
+      { account_id: "acc_good", repo_url: "good-url" },
+    ]);
   });
 });
