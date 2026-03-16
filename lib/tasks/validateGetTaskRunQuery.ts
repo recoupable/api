@@ -2,8 +2,8 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { validateAccountIdOverride } from "@/lib/auth/validateAccountIdOverride";
 import { checkIsAdmin } from "@/lib/admins/checkIsAdmin";
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import { z } from "zod";
 
 const getTaskRunQuerySchema = z.object({
@@ -80,31 +80,24 @@ export async function validateGetTaskRunQuery(
   // Resolve the target account ID
   let targetAccountId = authResult.accountId;
 
-  if (result.data.account_id && result.data.account_id !== authResult.accountId) {
-    // Check admin access first (admin can query any account)
+  if (result.data.account_id) {
+    // Admin bypass: admins can query any account
     const isAdmin = await checkIsAdmin(authResult.accountId);
     if (isAdmin) {
       targetAccountId = result.data.account_id;
-    } else if (authResult.orgId) {
-      // Org API keys can query accounts within their org
-      const hasAccess = await canAccessAccount({
-        orgId: authResult.orgId,
+    } else {
+      // Self-access and org access handled by validateAccountIdOverride
+      const overrideResult = await validateAccountIdOverride({
+        currentAccountId: authResult.accountId,
         targetAccountId: result.data.account_id,
+        orgId: authResult.orgId,
       });
 
-      if (!hasAccess) {
-        return NextResponse.json(
-          { status: "error", error: "Access denied to specified account_id" },
-          { status: 403, headers: getCorsHeaders() },
-        );
+      if (overrideResult instanceof NextResponse) {
+        return overrideResult;
       }
 
-      targetAccountId = result.data.account_id;
-    } else {
-      return NextResponse.json(
-        { status: "error", error: "account_id override requires an org API key or admin access" },
-        { status: 403, headers: getCorsHeaders() },
-      );
+      targetAccountId = overrideResult.accountId;
     }
   }
 
