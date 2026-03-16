@@ -3,7 +3,6 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAdminAuth } from "@/lib/admins/validateAdminAuth";
 import { getOrgRepoStats } from "./getOrgRepoStats";
 import { selectAllAccountSnapshotsWithOwners } from "@/lib/supabase/account_snapshots/selectAllAccountSnapshotsWithOwners";
-import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
 /**
  * Handler for GET /api/admins/sandboxes/orgs.
@@ -30,20 +29,7 @@ export async function getAdminSandboxOrgsHandler(request: NextRequest): Promise<
     }
 
     const accountSnapshots = await selectAllAccountSnapshotsWithOwners();
-
-    // Build email map for all account IDs
-    const accountIds = [...new Set(accountSnapshots.map(s => s.account_id))];
-    const emailRows = accountIds.length > 0
-      ? await selectAccountEmails({ accountIds })
-      : [];
-
-    const emailMap = new Map<string, string | null>(
-      emailRows
-        .filter(r => r.account_id !== null)
-        .map(r => [r.account_id as string, r.email]),
-    );
-
-    const repos = await getOrgRepoStats(accountSnapshots, emailMap);
+    const repos = await getOrgRepoStats(accountSnapshots);
 
     return NextResponse.json(
       { status: "success", repos },

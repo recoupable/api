@@ -1,4 +1,5 @@
 import type { AccountSnapshotOwner } from "@/lib/supabase/account_snapshots/selectAllAccountSnapshotsWithOwners";
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { listOrgRepos } from "@/lib/github/listOrgRepos";
 import { fetchRepoCommitStats } from "@/lib/github/fetchRepoCommitStats";
 import { buildSubmoduleRepoMap } from "@/lib/github/buildSubmoduleRepoMap";
@@ -20,21 +21,31 @@ export interface OrgRepoRow {
 }
 
 /**
- * Fetches commit statistics for all repositories in the recoupable GitHub org.
+ * Fetches commit statistics for all repositories in the recoupable GitHub org,
+ * enriched with account email addresses.
  *
  * @param accountSnapshots - Array of { account_id, github_repo } objects for submodule analysis
- * @param emailMap - Map of account_id to email for enriching account_repos
  * @returns Array of OrgRepoRow sorted by total_commits descending
  */
 export async function getOrgRepoStats(
   accountSnapshots: AccountSnapshotOwner[],
-  emailMap: Map<string, string | null>,
 ): Promise<OrgRepoRow[]> {
   const token = process.env.GITHUB_TOKEN;
   if (!token) {
     console.error("GITHUB_TOKEN environment variable is not set");
     return [];
   }
+
+  // Build email map for all account IDs
+  const accountIds = [...new Set(accountSnapshots.map(s => s.account_id))];
+  const emailRows = accountIds.length > 0
+    ? await selectAccountEmails({ accountIds })
+    : [];
+  const emailMap = new Map<string, string | null>(
+    emailRows
+      .filter(r => r.account_id !== null)
+      .map(r => [r.account_id as string, r.email]),
+  );
 
   const [repos, submoduleRepoMap] = await Promise.all([
     listOrgRepos(token),
