@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { checkIsAdmin } from "../checkIsAdmin";
+import { validateAdminAuth } from "@/lib/admins/validateAdminAuth";
 import { getOrgRepoStats } from "./getOrgRepoStats";
 import { selectAllAccountSnapshotGithubRepos } from "@/lib/supabase/account_snapshots/selectAllAccountSnapshotGithubRepos";
 
@@ -24,17 +23,9 @@ import { selectAllAccountSnapshotGithubRepos } from "@/lib/supabase/account_snap
  */
 export async function getAdminSandboxOrgsHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const auth = await validateAuthContext(request);
+    const auth = await validateAdminAuth(request);
     if (auth instanceof NextResponse) {
       return auth;
-    }
-
-    const isAdmin = await checkIsAdmin(auth.accountId);
-    if (!isAdmin) {
-      return NextResponse.json(
-        { status: "error", message: "Forbidden" },
-        { status: 403, headers: getCorsHeaders() },
-      );
     }
 
     const accountGithubRepos = await selectAllAccountSnapshotGithubRepos();
