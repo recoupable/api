@@ -14,7 +14,7 @@ import { selectAllAccountSnapshotGithubRepos } from "@/lib/supabase/account_snap
  * - latest_commit_messages (latest 5)
  * - earliest_committed_at
  * - latest_committed_at
- * - account_repo_count (number of account repos with this org repo as a submodule)
+ * - account_repos (list of account repo URLs that include this org repo as a submodule)
  *
  * Requires the caller to be a Recoup admin.
  *

@@ -26,7 +26,7 @@ export async function OPTIONS() {
  * - latest_commit_messages: string[] — messages of the latest 5 commits
  * - earliest_committed_at: string — ISO timestamp of the first commit
  * - latest_committed_at: string — ISO timestamp of the most recent commit
- * - account_repo_count: number — count of account repos with this org repo as a submodule
+ * - account_repos: string[] — list of account repo URLs that include this org repo as a submodule
  *
  * Authentication: x-api-key or Authorization Bearer token required.
  * The authenticated account must be a Recoup admin.

@@ -1,6 +1,6 @@
 import { listOrgRepos } from "@/lib/github/listOrgRepos";
 import { fetchRepoCommitStats } from "@/lib/github/fetchRepoCommitStats";
-import { buildSubmoduleCountMap } from "@/lib/github/buildSubmoduleCountMap";
+import { buildSubmoduleRepoMap } from "@/lib/github/buildSubmoduleRepoMap";
 
 export interface OrgRepoRow {
   repo_name: string;
@@ -9,7 +9,7 @@ export interface OrgRepoRow {
   latest_commit_messages: string[];
   earliest_committed_at: string;
   latest_committed_at: string;
-  account_repo_count: number;
+  account_repos: string[];
 }
 
 /**
@@ -27,9 +27,9 @@ export async function getOrgRepoStats(
     return [];
   }
 
-  const [repos, submoduleCountMap] = await Promise.all([
+  const [repos, submoduleRepoMap] = await Promise.all([
     listOrgRepos(token),
-    buildSubmoduleCountMap(accountGithubRepos),
+    buildSubmoduleRepoMap(accountGithubRepos),
   ]);
 
   const statsResults = await Promise.allSettled(
@@ -46,7 +46,7 @@ export async function getOrgRepoStats(
         latest_commit_messages: stats.latest_commit_messages,
         earliest_committed_at: stats.earliest_committed_at,
         latest_committed_at: stats.latest_committed_at,
-        account_repo_count: submoduleCountMap.get(normalizedUrl) ?? 0,
+        account_repos: submoduleRepoMap.get(normalizedUrl) ?? [],
       };
     }),
   );

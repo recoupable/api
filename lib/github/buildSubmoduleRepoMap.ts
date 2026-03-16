@@ -1,15 +1,15 @@
 import { getOrgRepoUrls } from "./getOrgRepoUrls";
 
 /**
- * Builds a map of org repo URL -> count of account repos that have it as a submodule.
+ * Builds a map of org repo URL -> list of account repo URLs that include it as a submodule.
  *
  * @param accountGithubRepos - Array of account github_repo URLs
- * @returns Map of normalized repo URL to submodule count
+ * @returns Map of normalized repo URL to array of parent repo URLs
  */
-export async function buildSubmoduleCountMap(
+export async function buildSubmoduleRepoMap(
   accountGithubRepos: string[],
-): Promise<Map<string, number>> {
-  const countMap = new Map<string, number>();
+): Promise<Map<string, string[]>> {
+  const repoMap = new Map<string, string[]>();
 
   await Promise.all(
     accountGithubRepos.map(async (repoUrl) => {
@@ -17,7 +17,9 @@ export async function buildSubmoduleCountMap(
         const submoduleUrls = await getOrgRepoUrls(repoUrl);
         for (const url of submoduleUrls) {
           const normalized = url.replace(/\.git$/, "");
-          countMap.set(normalized, (countMap.get(normalized) ?? 0) + 1);
+          const existing = repoMap.get(normalized) ?? [];
+          existing.push(repoUrl);
+          repoMap.set(normalized, existing);
         }
       } catch {
         // skip repos that fail
@@ -25,5 +27,5 @@ export async function buildSubmoduleCountMap(
     }),
   );
 
-  return countMap;
+  return repoMap;
 }

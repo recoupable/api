@@ -37,7 +37,7 @@ describe("GET /api/admins/sandboxes/orgs", () => {
         latest_commit_messages: ["fix: auth bug", "feat: dashboard"],
         earliest_committed_at: "2024-01-15T10:00:00Z",
         latest_committed_at: "2026-03-16T09:00:00Z",
-        account_repo_count: 2,
+        account_repos: ["https://github.com/user1/repo", "https://github.com/user2/repo"],
       },
     ];
     mockGetAdminSandboxOrgsHandler.mockResolvedValue(
