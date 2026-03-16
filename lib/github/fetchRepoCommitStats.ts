@@ -1,16 +1,6 @@
-import { parseLinkHeaderLastPage } from "./parseLinkHeaderLastPage";
-
-interface GitHubCommit {
-  commit: {
-    message: string;
-    author: {
-      date: string;
-    } | null;
-    committer: {
-      date: string;
-    } | null;
-  };
-}
+import { fetchLatestCommits } from "./fetchLatestCommits";
+import { fetchRepoCommitCount } from "./fetchRepoCommitCount";
+import { fetchEarliestCommit } from "./fetchEarliestCommit";
 
 export interface RepoCommitStats {
   total_commits: number;
@@ -36,57 +26,18 @@ export async function fetchRepoCommitStats(
   repo: string,
   token: string,
 ): Promise<RepoCommitStats | null> {
-  const latestResponse = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/commits?per_page=5`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github.v3+json",
-        "User-Agent": "Recoup-API",
-      },
-    },
-  );
+  const latestCommits = await fetchLatestCommits(owner, repo, token, 5);
+  if (!latestCommits || latestCommits.length === 0) return null;
 
-  if (!latestResponse.ok) return null;
-
-  const latestCommits = (await latestResponse.json()) as GitHubCommit[];
-  if (latestCommits.length === 0) return null;
-
-  const countResponse = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/commits?per_page=1`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github.v3+json",
-        "User-Agent": "Recoup-API",
-      },
-    },
-  );
-
-  if (!countResponse.ok) return null;
-
-  const linkHeader = countResponse.headers.get("Link");
-  const totalCommits = parseLinkHeaderLastPage(linkHeader);
+  const totalCommits = await fetchRepoCommitCount(owner, repo, token);
+  if (totalCommits === null) return null;
 
   let earliestCommittedAt = latestCommits[latestCommits.length - 1].commit.author?.date ?? "";
 
   if (totalCommits > 5) {
-    const earliestResponse = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/commits?per_page=1&page=${totalCommits}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.github.v3+json",
-          "User-Agent": "Recoup-API",
-        },
-      },
-    );
-
-    if (earliestResponse.ok) {
-      const earliestCommits = (await earliestResponse.json()) as GitHubCommit[];
-      if (earliestCommits.length > 0) {
-        earliestCommittedAt = earliestCommits[0].commit.author?.date ?? earliestCommittedAt;
-      }
+    const earliest = await fetchEarliestCommit(owner, repo, token, totalCommits);
+    if (earliest) {
+      earliestCommittedAt = earliest.commit.author?.date ?? earliestCommittedAt;
     }
   }
 
