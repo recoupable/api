@@ -115,10 +115,7 @@ describe("registerWebDeepResearchTool", () => {
       messages: [{ role: "user", content: "Research this topic" }],
     });
 
-    expect(mockChatWithPerplexity).toHaveBeenCalledWith(
-      expect.any(Array),
-      "sonar-deep-research",
-    );
+    expect(mockChatWithPerplexity).toHaveBeenCalledWith(expect.any(Array), "sonar-deep-research");
   });
 
   it("handles no citations gracefully", async () => {

@@ -12,8 +12,7 @@ vi.mock("@vercel/sandbox", () => ({
 }));
 
 vi.mock("@/lib/supabase/account_sandboxes/selectAccountSandboxes", () => ({
-  selectAccountSandboxes: (...args: unknown[]) =>
-    mockSelectAccountSandboxes(...args),
+  selectAccountSandboxes: (...args: unknown[]) => mockSelectAccountSandboxes(...args),
 }));
 
 describe("getActiveSandbox", () => {
@@ -22,18 +21,14 @@ describe("getActiveSandbox", () => {
   });
 
   it("returns sandbox when most recent is running", async () => {
-    mockSelectAccountSandboxes.mockResolvedValue([
-      { sandbox_id: "sbx_123", account_id: "acc_1" },
-    ]);
+    mockSelectAccountSandboxes.mockResolvedValue([{ sandbox_id: "sbx_123", account_id: "acc_1" }]);
 
     const mockSandbox = {
       sandboxId: "sbx_123",
       status: "running",
       runCommand: vi.fn(),
     };
-    vi.mocked(Sandbox.get).mockResolvedValue(
-      mockSandbox as unknown as Sandbox,
-    );
+    vi.mocked(Sandbox.get).mockResolvedValue(mockSandbox as unknown as Sandbox);
 
     const result = await getActiveSandbox("acc_1");
 
@@ -62,9 +57,7 @@ describe("getActiveSandbox", () => {
       sandboxId: "sbx_stopped",
       status: "stopped",
     };
-    vi.mocked(Sandbox.get).mockResolvedValue(
-      mockSandbox as unknown as Sandbox,
-    );
+    vi.mocked(Sandbox.get).mockResolvedValue(mockSandbox as unknown as Sandbox);
 
     const result = await getActiveSandbox("acc_1");
 

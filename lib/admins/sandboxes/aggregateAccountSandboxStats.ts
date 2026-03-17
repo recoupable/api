@@ -37,7 +37,6 @@ export async function aggregateAccountSandboxStats(): Promise<AccountSandboxStat
   }
 
   return Array.from(statsMap.values()).sort(
-    (a, b) =>
-      new Date(b.last_created_at).getTime() - new Date(a.last_created_at).getTime(),
+    (a, b) => new Date(b.last_created_at).getTime() - new Date(a.last_created_at).getTime(),
   );
 }

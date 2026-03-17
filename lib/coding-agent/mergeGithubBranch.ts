@@ -24,22 +24,19 @@ export async function mergeGithubBranch(
   token: string,
 ): Promise<MergeGithubBranchResult> {
   const [owner, repoName] = repo.split("/");
-  const response = await fetch(
-    `https://api.github.com/repos/${owner}/${repoName}/merges`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-      body: JSON.stringify({
-        base,
-        head,
-        commit_message: `Merge ${head} into ${base}`,
-      }),
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repoName}/merges`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
     },
-  );
+    body: JSON.stringify({
+      base,
+      head,
+      commit_message: `Merge ${head} into ${base}`,
+    }),
+  });
 
   // 201 = merged, 204 = already up to date (both are success)
   if (response.ok) {

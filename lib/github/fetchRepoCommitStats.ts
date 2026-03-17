@@ -42,7 +42,7 @@ export async function fetchRepoCommitStats(
   }
 
   const latestCommittedAt = latestCommits[0].commit.author?.date ?? "";
-  const latestCommitMessages = latestCommits.map((c) => c.commit.message.split("\n")[0]);
+  const latestCommitMessages = latestCommits.map(c => c.commit.message.split("\n")[0]);
 
   return {
     total_commits: totalCommits,

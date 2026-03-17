@@ -9,4 +9,3 @@ import { registerTranscribeAudioTool } from "./registerTranscribeAudioTool";
 export function registerTranscribeTools(server: McpServer): void {
   registerTranscribeAudioTool(server);
 }
-

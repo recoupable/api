@@ -10,6 +10,7 @@ import "@/lib/coding-agent/handlers/registerHandlers";
  * Handles webhook verification handshakes (e.g. WhatsApp hub.challenge).
  *
  * @param request - The incoming verification request
+ * @param params.params
  * @param params - Route params containing the platform name
  */
 export async function GET(
@@ -34,6 +35,7 @@ export async function GET(
  * Handles Slack and WhatsApp webhooks via dynamic [platform] segment.
  *
  * @param request - The incoming webhook request
+ * @param params.params
  * @param params - Route params containing the platform name
  */
 export async function POST(

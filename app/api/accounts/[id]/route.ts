@@ -23,13 +23,10 @@ export async function OPTIONS() {
  * - id (required): The unique identifier of the account (UUID)
  *
  * @param request - The request object
+ * @param params.params
  * @param params - Route params containing the account ID
  * @returns A NextResponse with account data
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return getAccountHandler(request, params);
 }
-

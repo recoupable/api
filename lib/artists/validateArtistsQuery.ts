@@ -37,4 +37,3 @@ export function validateArtistsQuery(searchParams: URLSearchParams): NextRespons
 
   return result.data;
 }
-

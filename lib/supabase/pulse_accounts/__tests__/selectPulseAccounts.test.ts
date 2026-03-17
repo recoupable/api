@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { selectPulseAccounts } from "../selectPulseAccounts";
+
 const mockFrom = vi.fn();
 const mockSelect = vi.fn();
 const mockIn = vi.fn();
@@ -10,8 +12,6 @@ vi.mock("@/lib/supabase/serverClient", () => ({
     from: (...args: unknown[]) => mockFrom(...args),
   },
 }));
-
-import { selectPulseAccounts } from "../selectPulseAccounts";
 
 describe("selectPulseAccounts", () => {
   beforeEach(() => {
@@ -107,16 +107,31 @@ describe("selectPulseAccounts", () => {
     mockEq.mockReturnValue({ eq: mockChainedEq });
 
     const pulses = [
-      { id: "pulse-1", account_id: "member-1", active: true, accounts: { account_organization_ids: { organization_id: "org-123" } } },
-      { id: "pulse-2", account_id: "member-2", active: false, accounts: { account_organization_ids: { organization_id: "org-123" } } },
+      {
+        id: "pulse-1",
+        account_id: "member-1",
+        active: true,
+        accounts: { account_organization_ids: { organization_id: "org-123" } },
+      },
+      {
+        id: "pulse-2",
+        account_id: "member-2",
+        active: false,
+        accounts: { account_organization_ids: { organization_id: "org-123" } },
+      },
     ];
     mockEq.mockResolvedValue({ data: pulses, error: null });
 
     const result = await selectPulseAccounts({ orgId: "org-123" });
 
     expect(mockFrom).toHaveBeenCalledWith("pulse_accounts");
-    expect(mockSelect).toHaveBeenCalledWith("*, accounts!inner(account_organization_ids!account_organization_ids_account_id_fkey!inner(organization_id))");
-    expect(mockEq).toHaveBeenCalledWith("accounts.account_organization_ids.organization_id", "org-123");
+    expect(mockSelect).toHaveBeenCalledWith(
+      "*, accounts!inner(account_organization_ids!account_organization_ids_account_id_fkey!inner(organization_id))",
+    );
+    expect(mockEq).toHaveBeenCalledWith(
+      "accounts.account_organization_ids.organization_id",
+      "org-123",
+    );
     // Result should strip the joined data
     expect(result).toEqual([
       { id: "pulse-1", account_id: "member-1", active: true },
@@ -128,13 +143,25 @@ describe("selectPulseAccounts", () => {
     const mockChainedEq = vi.fn();
     mockEq.mockReturnValue({ eq: mockChainedEq });
 
-    const pulses = [{ id: "pulse-1", account_id: "member-1", active: true, accounts: { account_organization_ids: { organization_id: "org-123" } } }];
+    const pulses = [
+      {
+        id: "pulse-1",
+        account_id: "member-1",
+        active: true,
+        accounts: { account_organization_ids: { organization_id: "org-123" } },
+      },
+    ];
     mockChainedEq.mockResolvedValue({ data: pulses, error: null });
 
     const result = await selectPulseAccounts({ orgId: "org-123", active: true });
 
-    expect(mockSelect).toHaveBeenCalledWith("*, accounts!inner(account_organization_ids!account_organization_ids_account_id_fkey!inner(organization_id))");
-    expect(mockEq).toHaveBeenCalledWith("accounts.account_organization_ids.organization_id", "org-123");
+    expect(mockSelect).toHaveBeenCalledWith(
+      "*, accounts!inner(account_organization_ids!account_organization_ids_account_id_fkey!inner(organization_id))",
+    );
+    expect(mockEq).toHaveBeenCalledWith(
+      "accounts.account_organization_ids.organization_id",
+      "org-123",
+    );
     expect(mockChainedEq).toHaveBeenCalledWith("active", true);
     // Result should strip the joined data
     expect(result).toEqual([{ id: "pulse-1", account_id: "member-1", active: true }]);

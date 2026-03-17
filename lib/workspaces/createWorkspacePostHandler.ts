@@ -20,9 +20,7 @@ import { createWorkspaceInDb } from "@/lib/workspaces/createWorkspaceInDb";
  * @param request - The request object containing JSON body
  * @returns A NextResponse with workspace data or error
  */
-export async function createWorkspacePostHandler(
-  request: NextRequest,
-): Promise<NextResponse> {
+export async function createWorkspacePostHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateCreateWorkspaceBody(request);
   if (validated instanceof NextResponse) {
     return validated;
@@ -42,10 +40,7 @@ export async function createWorkspacePostHandler(
       );
     }
 
-    return NextResponse.json(
-      { workspace },
-      { status: 201, headers: getCorsHeaders() },
-    );
+    return NextResponse.json({ workspace }, { status: 201, headers: getCorsHeaders() });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create workspace";
     return NextResponse.json(

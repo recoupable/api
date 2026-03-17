@@ -76,7 +76,11 @@ describe("getComposioTools", () => {
 
     expect(checkAccountArtistAccess).toHaveBeenCalledWith("account-123", "artist-456");
     expect(getArtistConnectionsFromComposio).toHaveBeenCalledWith("artist-456");
-    expect(createToolRouterSession).toHaveBeenCalledWith("account-123", "room-789", mockConnections);
+    expect(createToolRouterSession).toHaveBeenCalledWith(
+      "account-123",
+      "room-789",
+      mockConnections,
+    );
   });
 
   it("should skip artist connections when access is denied", async () => {

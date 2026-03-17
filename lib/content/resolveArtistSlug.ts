@@ -9,9 +9,7 @@ import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
  * @param artistAccountId - The artist's account UUID
  * @returns The artist slug, or null if not found
  */
-export async function resolveArtistSlug(
-  artistAccountId: string,
-): Promise<string | null> {
+export async function resolveArtistSlug(artistAccountId: string): Promise<string | null> {
   const accounts = await selectAccounts(artistAccountId);
   const name = accounts[0]?.name;
   if (!name) return null;

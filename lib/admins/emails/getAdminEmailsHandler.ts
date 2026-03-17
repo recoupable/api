@@ -42,13 +42,9 @@ export async function getAdminEmailsHandler(request: NextRequest): Promise<NextR
       );
     }
 
-    const emails = await Promise.all(
-      emailIds.map((id) => fetchResendEmail(id)),
-    );
+    const emails = await Promise.all(emailIds.map(id => fetchResendEmail(id)));
 
-    const validEmails = emails.filter(
-      (e): e is GetEmailResponseSuccess => e !== null,
-    );
+    const validEmails = emails.filter((e): e is GetEmailResponseSuccess => e !== null);
 
     return NextResponse.json(
       { status: "success", emails: validEmails },

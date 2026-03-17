@@ -16,7 +16,7 @@ Eval("Monthly Listeners Tracking Evaluation", {
   data: () => {
     const { startDateFormatted, endDateFormatted } = getDynamicDates();
 
-    const testCases = EVAL_ARTISTS.map((artist) => ({
+    const testCases = EVAL_ARTISTS.map(artist => ({
       input: `what is the increase for ${artist} monthlies from ${startDateFormatted} to ${endDateFormatted}`,
       expected: `I've set up a monthlies tracking for ${artist}. would you like to receive the updated list in your email?`,
       metadata: {

@@ -10,4 +10,3 @@ import { PRESETS } from "./presetRegistry";
 export function getAllPresets(): PresetConfig[] {
   return Object.values(PRESETS);
 }
-

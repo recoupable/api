@@ -7,10 +7,7 @@ import supabase from "../serverClient";
  * @param artistId - The artist ID
  * @returns The row if found, null if not found or on error
  */
-export async function selectAccountArtistId(
-  accountId: string,
-  artistId: string,
-) {
+export async function selectAccountArtistId(accountId: string, artistId: string) {
   const { data, error } = await supabase
     .from("account_artist_ids")
     .select("artist_id")

@@ -22,6 +22,11 @@ export interface ArtistContentReadiness {
 /**
  * Checks whether an artist has the expected files for content creation.
  * Searches the main repo and org submodule repos.
+ *
+ * @param root0
+ * @param root0.accountId
+ * @param root0.artistAccountId
+ * @param root0.artistSlug
  */
 export async function getArtistContentReadiness({
   accountId,
@@ -65,9 +70,7 @@ export async function getArtistContentReadiness({
   const hasFile = (relativePath: string): boolean =>
     blobPaths.some(path => path === `${artistRootPrefix}${relativePath}`);
   const hasAnyMp3 = blobPaths.some(
-    path =>
-      path.startsWith(artistRootPrefix) &&
-      path.toLowerCase().endsWith(".mp3"),
+    path => path.startsWith(artistRootPrefix) && path.toLowerCase().endsWith(".mp3"),
   );
 
   const issues: ContentReadinessIssue[] = [];

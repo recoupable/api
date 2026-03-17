@@ -40,7 +40,9 @@ export async function getRepoFileTree(githubRepoUrl: string): Promise<FileTreeEn
       { headers },
     );
     if (!repoResponse.ok) {
-      console.error(`GitHub API error fetching repo ${repoInfo.owner}/${repoInfo.repo}: ${repoResponse.status}`);
+      console.error(
+        `GitHub API error fetching repo ${repoInfo.owner}/${repoInfo.repo}: ${repoResponse.status}`,
+      );
       return null;
     }
     const repoData = (await repoResponse.json()) as { default_branch: string };
@@ -51,7 +53,9 @@ export async function getRepoFileTree(githubRepoUrl: string): Promise<FileTreeEn
       { headers },
     );
     if (!treeResponse.ok) {
-      console.error(`GitHub API error fetching tree for ${repoInfo.owner}/${repoInfo.repo}@${defaultBranch}: ${treeResponse.status}`);
+      console.error(
+        `GitHub API error fetching tree for ${repoInfo.owner}/${repoInfo.repo}@${defaultBranch}: ${treeResponse.status}`,
+      );
       return null;
     }
     const treeData = (await treeResponse.json()) as {

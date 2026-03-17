@@ -38,13 +38,9 @@ export async function getOrgRepoStats(
 
   // Build email map for all account IDs
   const accountIds = [...new Set(accountSnapshots.map(s => s.account_id))];
-  const emailRows = accountIds.length > 0
-    ? await selectAccountEmails({ accountIds })
-    : [];
+  const emailRows = accountIds.length > 0 ? await selectAccountEmails({ accountIds }) : [];
   const emailMap = new Map<string, string | null>(
-    emailRows
-      .filter(r => r.account_id !== null)
-      .map(r => [r.account_id as string, r.email]),
+    emailRows.filter(r => r.account_id !== null).map(r => [r.account_id as string, r.email]),
   );
 
   const [repos, submoduleRepoMap] = await Promise.all([
@@ -80,10 +76,9 @@ export async function getOrgRepoStats(
 
   const rows = statsResults
     .filter(
-      (r): r is PromiseFulfilledResult<OrgRepoRow> =>
-        r.status === "fulfilled" && r.value !== null,
+      (r): r is PromiseFulfilledResult<OrgRepoRow> => r.status === "fulfilled" && r.value !== null,
     )
-    .map((r) => r.value);
+    .map(r => r.value);
 
   return rows.sort((a, b) => b.total_commits - a.total_commits);
 }

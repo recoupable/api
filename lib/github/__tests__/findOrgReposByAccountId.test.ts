@@ -15,7 +15,11 @@ describe("findOrgReposByAccountId", () => {
     vi.mocked(global.fetch).mockResolvedValue({
       ok: true,
       json: async () => [
-        { name: "artist-name-550e8400-e29b-41d4-a716-446655440000", html_url: "https://github.com/recoupable/artist-name-550e8400-e29b-41d4-a716-446655440000" },
+        {
+          name: "artist-name-550e8400-e29b-41d4-a716-446655440000",
+          html_url:
+            "https://github.com/recoupable/artist-name-550e8400-e29b-41d4-a716-446655440000",
+        },
         { name: "other-repo", html_url: "https://github.com/recoupable/other-repo" },
       ],
     } as Response);

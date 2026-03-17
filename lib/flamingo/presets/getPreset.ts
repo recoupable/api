@@ -10,4 +10,3 @@ import { PRESETS } from "./presetRegistry";
 export function getPreset(name: string): PresetConfig | undefined {
   return PRESETS[name];
 }
-

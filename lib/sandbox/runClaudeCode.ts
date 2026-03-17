@@ -9,7 +9,7 @@ import type { Sandbox } from "@vercel/sandbox";
  */
 export async function runClaudeCode(sandbox: Sandbox, prompt: string): Promise<void> {
   const script = `claude --permission-mode acceptEdits --model opus '${prompt}'`;
-  
+
   await sandbox.writeFiles([
     {
       path: "/vercel/sandbox/ralph-once.sh",

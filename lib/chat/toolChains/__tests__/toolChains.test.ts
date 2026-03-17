@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  TOOL_CHAINS,
-  TOOL_MODEL_MAP,
-  ToolChainItem,
-  PrepareStepResult,
-} from "../toolChains";
+import { TOOL_CHAINS, TOOL_MODEL_MAP, ToolChainItem, PrepareStepResult } from "../toolChains";
 
 describe("toolChains", () => {
   describe("ToolChainItem type", () => {
@@ -86,7 +81,7 @@ describe("toolChains", () => {
       it("includes update_account_info with custom system prompt", () => {
         const chain = TOOL_CHAINS.create_new_artist;
         const updateAccountStep = chain.find(
-          (item) => item.toolName === "update_account_info" && item.system
+          item => item.toolName === "update_account_info" && item.system,
         );
         expect(updateAccountStep).toBeDefined();
         expect(updateAccountStep?.system).toContain("get_spotify_search");
@@ -106,16 +101,14 @@ describe("toolChains", () => {
       it("does not include create_knowledge_base tool", () => {
         const chain = TOOL_CHAINS.create_new_artist;
         const hasCreateKnowledgeBase = chain.some(
-          (item) => item.toolName === "create_knowledge_base"
+          item => item.toolName === "create_knowledge_base",
         );
         expect(hasCreateKnowledgeBase).toBe(false);
       });
 
       it("includes generate_txt_file with system prompt for knowledge base report", () => {
         const chain = TOOL_CHAINS.create_new_artist;
-        const generateStep = chain.find(
-          (item) => item.toolName === "generate_txt_file"
-        );
+        const generateStep = chain.find(item => item.toolName === "generate_txt_file");
         expect(generateStep).toBeDefined();
         expect(generateStep?.system).toBeDefined();
         expect(generateStep?.system).toContain("knowledge base report");
@@ -123,12 +116,8 @@ describe("toolChains", () => {
 
       it("includes update_account_info step with system prompt to link knowledge base", () => {
         const chain = TOOL_CHAINS.create_new_artist;
-        const updateSteps = chain.filter(
-          (item) => item.toolName === "update_account_info"
-        );
-        const knowledgeLinkStep = updateSteps.find(
-          (item) => item.system?.includes("knowledges")
-        );
+        const updateSteps = chain.filter(item => item.toolName === "update_account_info");
+        const knowledgeLinkStep = updateSteps.find(item => item.system?.includes("knowledges"));
         expect(knowledgeLinkStep).toBeDefined();
         expect(knowledgeLinkStep?.system).toContain("arweaveUrl");
       });
@@ -142,9 +131,7 @@ describe("toolChains", () => {
 
       it("includes generate_txt_file with custom system prompt", () => {
         const chain = TOOL_CHAINS.create_release_report;
-        const generateStep = chain.find(
-          (item) => item.toolName === "generate_txt_file"
-        );
+        const generateStep = chain.find(item => item.toolName === "generate_txt_file");
         expect(generateStep).toBeDefined();
         expect(generateStep?.system).toBeDefined();
       });
