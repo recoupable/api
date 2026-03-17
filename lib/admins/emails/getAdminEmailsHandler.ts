@@ -3,24 +3,20 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAdminAuth } from "@/lib/admins/validateAdminAuth";
 import { selectAccountEmailIds } from "@/lib/supabase/memory_emails/selectAccountEmailIds";
 import { getResendClient } from "@/lib/emails/client";
-
-export interface PulseEmailRow {
-  id: string;
-  subject: string | null;
-  to: string[];
-  from: string | null;
-  html: string | null;
-  created_at: string;
-}
+import type { GetEmailResponseSuccess } from "resend";
 
 /**
- * Handler for GET /api/admins/emails?account_id=<id>
+ * Handler for GET /api/admins/emails
  *
- * Returns all Resend emails sent for a given account, including HTML content.
+ * Supports two query modes:
+ * - ?account_id=<id> — returns all Resend emails sent for the account
+ * - ?email_id=<id> — returns a single email by Resend ID
+ *
+ * Returns the full Resend GetEmailResponseSuccess object.
  * Requires admin authentication.
  *
  * @param request - The request object
- * @returns A NextResponse with { status: "success", emails: PulseEmailRow[] }
+ * @returns A NextResponse with { status: "success", emails: GetEmailResponseSuccess[] }
  */
 export async function getAdminEmailsHandler(request: NextRequest): Promise<NextResponse> {
   try {
@@ -31,15 +27,28 @@ export async function getAdminEmailsHandler(request: NextRequest): Promise<NextR
 
     const { searchParams } = new URL(request.url);
     const accountId = searchParams.get("account_id");
+    const emailId = searchParams.get("email_id");
 
-    if (!accountId) {
+    if (!accountId && !emailId) {
       return NextResponse.json(
-        { status: "error", error: "account_id query param is required" },
+        { status: "error", error: "must provide either account_id or email_id" },
         { status: 400, headers: getCorsHeaders() },
       );
     }
 
-    const emailIdRows = await selectAccountEmailIds(accountId);
+    const resend = getResendClient();
+
+    // Single email by Resend ID
+    if (emailId) {
+      const email = await fetchResendEmail(resend, emailId);
+      return NextResponse.json(
+        { status: "success", emails: email ? [email] : [] },
+        { status: 200, headers: getCorsHeaders() },
+      );
+    }
+
+    // All emails for an account
+    const emailIdRows = await selectAccountEmailIds(accountId!);
 
     if (emailIdRows.length === 0) {
       return NextResponse.json(
@@ -48,28 +57,13 @@ export async function getAdminEmailsHandler(request: NextRequest): Promise<NextR
       );
     }
 
-    const resend = getResendClient();
-
     const emails = await Promise.all(
-      emailIdRows.map(async ({ email_id, created_at }) => {
-        try {
-          const { data } = await resend.emails.get(email_id);
-          if (!data) return null;
-          return {
-            id: email_id,
-            subject: data.subject ?? null,
-            to: Array.isArray(data.to) ? data.to : [data.to].filter(Boolean),
-            from: data.from ?? null,
-            html: data.html ?? null,
-            created_at,
-          } satisfies PulseEmailRow;
-        } catch {
-          return null;
-        }
-      }),
+      emailIdRows.map(({ email_id }) => fetchResendEmail(resend, email_id)),
     );
 
-    const validEmails = emails.filter((e): e is PulseEmailRow => e !== null);
+    const validEmails = emails.filter(
+      (e): e is GetEmailResponseSuccess => e !== null,
+    );
 
     return NextResponse.json(
       { status: "success", emails: validEmails },
@@ -81,5 +75,17 @@ export async function getAdminEmailsHandler(request: NextRequest): Promise<NextR
       { status: "error", message: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
     );
+  }
+}
+
+async function fetchResendEmail(
+  resend: ReturnType<typeof getResendClient>,
+  emailId: string,
+): Promise<GetEmailResponseSuccess | null> {
+  try {
+    const { data } = await resend.emails.get(emailId);
+    return data ?? null;
+  } catch {
+    return null;
   }
 }
