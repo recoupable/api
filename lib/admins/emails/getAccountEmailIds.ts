@@ -1,25 +1,27 @@
-import { selectRooms } from "@/lib/supabase/rooms/selectRooms";
-import { selectMemoryIdsByRoomIds } from "@/lib/supabase/memories/selectMemoryIdsByRoomIds";
-import selectMemoryEmails from "@/lib/supabase/memory_emails/selectMemoryEmails";
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
+import { getResendClient } from "@/lib/emails/client";
 
 /**
- * Returns Resend email IDs for all emails sent for a given account
- * by querying rooms → memories → memory_emails.
+ * Returns Resend email IDs for all emails sent to a given account's email address
+ * by listing recent emails from Resend and filtering by recipient.
  *
  * @param accountId - The account ID to look up emails for
- * @returns Array of email_id strings sorted by created_at desc
+ * @returns Array of Resend email ID strings
  */
 export async function getAccountEmailIds(
   accountId: string,
 ): Promise<string[]> {
-  const rooms = await selectRooms({ account_ids: [accountId] });
-  if (!rooms || rooms.length === 0) return [];
+  const emailRows = await selectAccountEmails({ accountIds: accountId });
+  const accountEmail = emailRows.find((r) => r.email)?.email;
 
-  const roomIds = rooms.map((r) => r.id);
-  const memoryIds = await selectMemoryIdsByRoomIds(roomIds);
-  if (memoryIds.length === 0) return [];
+  if (!accountEmail) return [];
 
-  const emailRows = await selectMemoryEmails({ memoryIds });
+  const resend = getResendClient();
+  const { data } = await resend.emails.list({ limit: 100 });
 
-  return emailRows.map((row) => row.email_id);
+  if (!data?.data) return [];
+
+  return data.data
+    .filter((email) => email.to.includes(accountEmail))
+    .map((email) => email.id);
 }
