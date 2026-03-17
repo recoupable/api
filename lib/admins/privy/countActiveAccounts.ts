@@ -1,6 +1,6 @@
 import { getLatestVerifiedAt } from "./getLatestVerifiedAt";
 import type { PrivyLoginsPeriod } from "./fetchPrivyLogins";
-import type { User } from "@privy-io/node/resources/users";
+import type { User } from "@privy-io/node";
 import { PERIOD_DAYS } from "./periodDays";
 
 /**

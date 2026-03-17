@@ -2,7 +2,7 @@ import { toMs } from "./toMs";
 import { fetchPrivyUsersPage } from "./fetchPrivyUsersPage";
 import { getLatestVerifiedAt } from "./getLatestVerifiedAt";
 import { PERIOD_DAYS } from "./periodDays";
-import type { User } from "@privy-io/node/resources/users";
+import type { User } from "@privy-io/node";
 
 export type PrivyLoginsPeriod = "daily" | "weekly" | "monthly";
 

@@ -1,6 +1,4 @@
-import type { User, LinkedAccount } from "@privy-io/node/resources/users";
-
-export type { User, LinkedAccount };
+import type { User } from "@privy-io/node";
 
 export type PrivyUsersPage = {
   data: User[];

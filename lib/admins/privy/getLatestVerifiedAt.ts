@@ -1,5 +1,5 @@
 import { toMs } from "./toMs";
-import type { User } from "@privy-io/node/resources/users";
+import type { User } from "@privy-io/node";
 
 /**
  * Returns the most recent latest_verified_at (in ms) across all linked_accounts for a Privy user.
