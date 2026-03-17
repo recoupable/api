@@ -25,8 +25,9 @@ const mockLogins = [
   {
     id: "did:privy:abc123",
     created_at: ONE_HOUR_AGO,
-    latest_verified_at: ONE_HOUR_AGO,
-    linked_accounts: [{ type: "email", address: "user@example.com" }],
+    linked_accounts: [
+      { type: "email", address: "user@example.com", latest_verified_at: ONE_HOUR_AGO },
+    ],
     has_accepted_terms: true,
     is_guest: false,
     mfa_methods: [],

@@ -1,5 +1,6 @@
 import { toMs } from "./toMs";
 import { fetchPrivyUsersPage } from "./fetchPrivyUsersPage";
+import { getLatestVerifiedAt } from "./getLatestVerifiedAt";
 
 export type PrivyLoginsPeriod = "daily" | "weekly" | "monthly";
 
@@ -35,9 +36,8 @@ export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<Recor
 
     for (const user of page.data) {
       const isNew = toMs(user.created_at as number) >= cutoffMs;
-      const isActive =
-        typeof user.latest_verified_at === "number" &&
-        toMs(user.latest_verified_at) >= cutoffMs;
+      const latestVerified = getLatestVerifiedAt(user);
+      const isActive = latestVerified !== null && latestVerified >= cutoffMs;
 
       if (isNew || isActive) {
         users.push(user);
