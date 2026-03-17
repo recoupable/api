@@ -170,10 +170,7 @@ const mockDeductCredits = vi.mocked(deductCredits);
 const mockGenerateChatTitle = vi.mocked(generateChatTitle);
 
 // Helper to create mock NextRequest
-function createMockRequest(
-  body: unknown,
-  headers: Record<string, string> = {},
-): Request {
+function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
   return {
     json: () => Promise.resolve(body),
     headers: {
@@ -210,10 +207,7 @@ describe("Chat Integration Tests", () => {
     it("validates and returns body for valid request with prompt", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
 
-      const request = createMockRequest(
-        { prompt: "Hello" },
-        { "x-api-key": "valid-key" },
-      );
+      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
       const result = await validateChatRequest(request as any);
 
@@ -251,16 +245,10 @@ describe("Chat Integration Tests", () => {
     it("returns 401 when API key lookup fails", async () => {
       // getApiKeyAccountId returns a NextResponse when authentication fails
       mockGetApiKeyAccountId.mockResolvedValue(
-        NextResponse.json(
-          { status: "error", message: "Unauthorized" },
-          { status: 401 },
-        ),
+        NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 }),
       );
 
-      const request = createMockRequest(
-        { prompt: "Hello" },
-        { "x-api-key": "invalid-key" },
-      );
+      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "invalid-key" });
 
       const result = await validateChatRequest(request as any);
 
@@ -271,10 +259,7 @@ describe("Chat Integration Tests", () => {
     it("returns 400 when neither messages nor prompt is provided", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
 
-      const request = createMockRequest(
-        { roomId: "room-123" },
-        { "x-api-key": "valid-key" },
-      );
+      const request = createMockRequest({ roomId: "room-123" }, { "x-api-key": "valid-key" });
 
       const result = await validateChatRequest(request as any);
 
@@ -406,9 +391,7 @@ describe("Chat Integration Tests", () => {
       mockGenerateChatTitle.mockResolvedValue("New Chat Title");
 
       const body = {
-        messages: [
-          { id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] },
-        ],
+        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
         roomId: "new-room-123",
         accountId: "account-123",
       };
@@ -433,9 +416,7 @@ describe("Chat Integration Tests", () => {
       mockSelectRoom.mockResolvedValue({ id: "existing-room" } as any);
 
       const body = {
-        messages: [
-          { id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] },
-        ],
+        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
         roomId: "existing-room",
         accountId: "account-123",
       };
@@ -454,9 +435,7 @@ describe("Chat Integration Tests", () => {
       mockSelectRoom.mockResolvedValue({ id: "room-123" } as any);
 
       const body = {
-        messages: [
-          { id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] },
-        ],
+        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
         roomId: "room-123",
         accountId: "account-123",
       };
@@ -486,9 +465,7 @@ describe("Chat Integration Tests", () => {
       mockSelectRoom.mockResolvedValue({ id: "room-123" } as any);
 
       const body = {
-        messages: [
-          { id: "msg-1", role: "user", parts: [{ type: "text", text: "Send an email" }] },
-        ],
+        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Send an email" }] }],
         roomId: "room-123",
         accountId: "account-123",
       };
@@ -516,9 +493,7 @@ describe("Chat Integration Tests", () => {
       mockSelectRoom.mockRejectedValue(new Error("Database error"));
 
       const body = {
-        messages: [
-          { id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] },
-        ],
+        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
         roomId: "room-123",
         accountId: "account-123",
       };
@@ -535,9 +510,7 @@ describe("Chat Integration Tests", () => {
 
     it("handles empty roomId by defaulting to empty string", async () => {
       const body = {
-        messages: [
-          { id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] },
-        ],
+        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
         accountId: "account-123",
         // roomId not provided
       };
@@ -629,10 +602,7 @@ describe("Chat Integration Tests", () => {
     it("validates prompt-based requests through full pipeline", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
 
-      const request = createMockRequest(
-        { prompt: "What is 2+2?" },
-        { "x-api-key": "valid-key" },
-      );
+      const request = createMockRequest({ prompt: "What is 2+2?" }, { "x-api-key": "valid-key" });
 
       const validationResult = await validateChatRequest(request as any);
       expect(validationResult).not.toBeInstanceOf(NextResponse);

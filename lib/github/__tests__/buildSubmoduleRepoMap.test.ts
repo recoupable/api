@@ -19,7 +19,10 @@ describe("buildSubmoduleRepoMap", () => {
 
   it("lists parent repo entries for each submodule", async () => {
     mockGetOrgRepoUrls
-      .mockResolvedValueOnce(["https://github.com/recoupable/chat.git", "https://github.com/recoupable/api.git"])
+      .mockResolvedValueOnce([
+        "https://github.com/recoupable/chat.git",
+        "https://github.com/recoupable/api.git",
+      ])
       .mockResolvedValueOnce(["https://github.com/recoupable/chat.git"]);
 
     const result = await buildSubmoduleRepoMap([

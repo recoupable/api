@@ -42,4 +42,3 @@ export async function getContentValidateHandler(request: NextRequest): Promise<N
     );
   }
 }
-

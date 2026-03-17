@@ -10,17 +10,14 @@ export async function uploadFileByKey(
   options: {
     contentType?: string;
     upsert?: boolean;
-  } = {}
+  } = {},
 ): Promise<void> {
-  const { error } = await supabase.storage
-    .from(SUPABASE_STORAGE_BUCKET)
-    .upload(key, file, {
-      contentType: options.contentType || "application/octet-stream",
-      upsert: options.upsert ?? false,
-    });
+  const { error } = await supabase.storage.from(SUPABASE_STORAGE_BUCKET).upload(key, file, {
+    contentType: options.contentType || "application/octet-stream",
+    upsert: options.upsert ?? false,
+  });
 
   if (error) {
     throw new Error(`Failed to upload file: ${error.message}`);
   }
 }
-

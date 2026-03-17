@@ -35,7 +35,7 @@ describe("getAvailableModels", () => {
 
       // Should filter out embed models (output price = 0)
       expect(models).toHaveLength(2);
-      expect(models.map((m) => m.id)).toEqual(["gpt-4", "claude-3-opus"]);
+      expect(models.map(m => m.id)).toEqual(["gpt-4", "claude-3-opus"]);
     });
 
     it("returns empty array when gateway returns no models", async () => {

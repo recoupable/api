@@ -26,9 +26,7 @@ export interface CreateFileRecordParams {
 /**
  * Create a file record in the database
  */
-export async function createFileRecord(
-  params: CreateFileRecordParams
-): Promise<FileRecord> {
+export async function createFileRecord(params: CreateFileRecordParams): Promise<FileRecord> {
   const {
     ownerAccountId,
     artistAccountId,
@@ -61,4 +59,3 @@ export async function createFileRecord(
 
   return data;
 }
-

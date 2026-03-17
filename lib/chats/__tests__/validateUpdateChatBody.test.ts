@@ -296,10 +296,7 @@ describe("validateUpdateChatBody", () => {
   describe("authentication errors", () => {
     it("returns 401 when auth fails", async () => {
       vi.mocked(validateAuthContext).mockResolvedValue(
-        NextResponse.json(
-          { status: "error", error: "Unauthorized" },
-          { status: 401 },
-        ),
+        NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
       );
 
       const request = createRequest({

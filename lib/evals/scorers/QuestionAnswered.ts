@@ -44,37 +44,29 @@ Return your evaluation as JSON.`,
       schema: z.object({
         answered: z
           .boolean()
-          .describe(
-            "Did the AI provide the specific information requested in the question?"
-          ),
+          .describe("Did the AI provide the specific information requested in the question?"),
         hasSpecificAnswer: z
           .boolean()
           .describe(
-            "Does the response contain specific data/numbers/facts that directly address the question?"
+            "Does the response contain specific data/numbers/facts that directly address the question?",
           ),
         deflected: z
           .boolean()
           .describe(
-            "Did the AI deflect by explaining why it can't answer or offering alternatives instead of answering?"
+            "Did the AI deflect by explaining why it can't answer or offering alternatives instead of answering?",
           ),
         score: z
           .number()
           .min(0)
           .max(1)
           .describe(
-            "Score from 0-1 where 1=fully answered, 0.5-0.9=partially answered, 0-0.4=not answered"
+            "Score from 0-1 where 1=fully answered, 0.5-0.9=partially answered, 0-0.4=not answered",
           ),
         reasoning: z
           .string()
-          .describe(
-            "Detailed explanation of why the response did or did not answer the question"
-          ),
-        whatWasAsked: z
-          .string()
-          .describe("What specific information did the customer ask for?"),
-        whatWasProvided: z
-          .string()
-          .describe("What information did the AI actually provide?"),
+          .describe("Detailed explanation of why the response did or did not answer the question"),
+        whatWasAsked: z.string().describe("What specific information did the customer ask for?"),
+        whatWasProvided: z.string().describe("What information did the AI actually provide?"),
       }),
     });
 
@@ -83,9 +75,7 @@ Return your evaluation as JSON.`,
     }
 
     const score =
-      typeof result.object.score === "number"
-        ? Math.max(0, Math.min(1, result.object.score))
-        : 0;
+      typeof result.object.score === "number" ? Math.max(0, Math.min(1, result.object.score)) : 0;
 
     return {
       name: "question_answered",

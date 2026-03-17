@@ -11,7 +11,13 @@ beforeEach(() => {
 describe("fetchLatestCommits", () => {
   it("returns commits on success", async () => {
     const commits = [
-      { commit: { message: "feat: add thing", author: { date: "2025-02-01T00:00:00Z" }, committer: null } },
+      {
+        commit: {
+          message: "feat: add thing",
+          author: { date: "2025-02-01T00:00:00Z" },
+          committer: null,
+        },
+      },
     ];
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => commits });
 

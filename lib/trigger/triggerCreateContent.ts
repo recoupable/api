@@ -21,4 +21,3 @@ export async function triggerCreateContent(payload: TriggerCreateContentPayload)
   const handle = await tasks.trigger(CREATE_CONTENT_TASK_ID, payload);
   return handle;
 }
-

@@ -14,10 +14,9 @@ export async function fetchRepoCommitCount(
   repo: string,
   token: string,
 ): Promise<number | null> {
-  const response = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/commits?per_page=1`,
-    { headers: GITHUB_API_HEADERS(token) },
-  );
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=1`, {
+    headers: GITHUB_API_HEADERS(token),
+  });
 
   if (!response.ok) return null;
 

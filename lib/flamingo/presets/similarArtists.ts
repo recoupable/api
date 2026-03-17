@@ -11,5 +11,5 @@ export const similarArtistsPreset: PresetConfig = {
   params: { max_new_tokens: 512, temperature: 0.5, do_sample: true },
   requiresAudio: true,
   responseFormat: "json",
-  parseResponse: (raw) => parseJsonLike(raw),
+  parseResponse: raw => parseJsonLike(raw),
 };

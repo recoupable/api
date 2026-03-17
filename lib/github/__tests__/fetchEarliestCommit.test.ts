@@ -10,7 +10,9 @@ beforeEach(() => {
 
 describe("fetchEarliestCommit", () => {
   it("returns earliest commit on success", async () => {
-    const commit = { commit: { message: "initial", author: { date: "2024-01-01T00:00:00Z" }, committer: null } };
+    const commit = {
+      commit: { message: "initial", author: { date: "2024-01-01T00:00:00Z" }, committer: null },
+    };
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [commit] });
 
     const result = await fetchEarliestCommit("recoupable", "repo", "token", 42);

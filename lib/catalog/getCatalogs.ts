@@ -8,9 +8,7 @@ export interface CatalogsResponse {
   error?: string;
 }
 
-export async function getCatalogs(
-  accountId: string
-): Promise<CatalogsResponse> {
+export async function getCatalogs(accountId: string): Promise<CatalogsResponse> {
   try {
     const response = await fetch(
       `https://api.recoupable.com/api/catalogs?account_id=${accountId}`,
@@ -19,7 +17,7 @@ export async function getCatalogs(
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     if (!response.ok) {

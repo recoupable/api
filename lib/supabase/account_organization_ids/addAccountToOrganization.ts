@@ -27,4 +27,3 @@ export async function addAccountToOrganization(
 
   return data?.id || null;
 }
-

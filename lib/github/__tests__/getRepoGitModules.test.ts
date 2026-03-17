@@ -43,10 +43,9 @@ describe("getRepoGitModules", () => {
   it("works without GITHUB_TOKEN", async () => {
     delete process.env.GITHUB_TOKEN;
     vi.spyOn(global, "fetch").mockResolvedValueOnce(
-      new Response(
-        `[submodule "sub"]\n\tpath = sub\n\turl = https://github.com/owner/sub`,
-        { status: 200 },
-      ),
+      new Response(`[submodule "sub"]\n\tpath = sub\n\turl = https://github.com/owner/sub`, {
+        status: 200,
+      }),
     );
 
     const result = await getRepoGitModules({ owner: "owner", repo: "repo", branch: "develop" });
