@@ -12,5 +12,5 @@ export function getCutoffMs(period: PrivyLoginsPeriod): number {
   const days = PERIOD_DAYS[period];
   const now = new Date();
   const todayMidnightUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  return todayMidnightUtc - (days - 1) * 24 * 60 * 60 * 1000;
+  return todayMidnightUtc - days * 24 * 60 * 60 * 1000;
 }

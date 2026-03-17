@@ -30,13 +30,8 @@ export async function getPrivyLoginsHandler(request: NextRequest): Promise<NextR
     const total_new = countNewAccounts(users, query.period);
     const total_active = countActiveAccounts(users, query.period);
 
-    const logins = users.map((user) => ({
-      ...user,
-      linked_accounts: user.linked_accounts.filter((a) => a.type === "email"),
-    }));
-
     return NextResponse.json(
-      { status: "success", total: logins.length, total_new, total_active, total_privy_users: totalPrivyUsers, logins },
+      { status: "success", total: users.length, total_new, total_active, total_privy_users: totalPrivyUsers, logins: users },
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {
