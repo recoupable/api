@@ -10,13 +10,9 @@ vi.mock("../validateGetPrivyLoginsQuery", () => ({
   validateGetPrivyLoginsQuery: vi.fn(),
 }));
 
-vi.mock("../fetchPrivyLogins", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../fetchPrivyLogins")>();
-  return {
-    ...actual,
-    fetchPrivyLogins: vi.fn(),
-  };
-});
+vi.mock("../fetchPrivyLogins", () => ({
+  fetchPrivyLogins: vi.fn(),
+}));
 
 import { validateGetPrivyLoginsQuery } from "../validateGetPrivyLoginsQuery";
 import { fetchPrivyLogins } from "../fetchPrivyLogins";

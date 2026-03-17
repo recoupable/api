@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetPrivyLoginsQuery } from "./validateGetPrivyLoginsQuery";
-import { fetchPrivyLogins, countNewAccounts, countActiveAccounts } from "./fetchPrivyLogins";
+import { fetchPrivyLogins } from "./fetchPrivyLogins";
+import { countNewAccounts } from "./countNewAccounts";
+import { countActiveAccounts } from "./countActiveAccounts";
 
 /**
  * Handler for GET /api/admins/privy
