@@ -12,9 +12,8 @@ export function getLatestVerifiedAt(user: User): number | null {
   let latest: number | null = null;
 
   for (const account of linkedAccounts) {
-    const verifiedAt = (account as Record<string, unknown>).latest_verified_at;
-    if (typeof verifiedAt === "number") {
-      const ms = toMs(verifiedAt);
+    if ("latest_verified_at" in account && typeof account.latest_verified_at === "number") {
+      const ms = toMs(account.latest_verified_at);
       if (latest === null || ms > latest) {
         latest = ms;
       }
