@@ -62,7 +62,9 @@ describe("validateGetConnectorsRequest", () => {
     });
     vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "artist" });
 
-    const request = new NextRequest(`http://localhost/api/connectors?account_id=${mockTargetAccountId}`);
+    const request = new NextRequest(
+      `http://localhost/api/connectors?account_id=${mockTargetAccountId}`,
+    );
     const result = await validateGetConnectorsRequest(request);
 
     expect(checkAccountAccess).toHaveBeenCalledWith(mockAccountId, mockTargetAccountId);
@@ -82,7 +84,9 @@ describe("validateGetConnectorsRequest", () => {
     });
     vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: false });
 
-    const request = new NextRequest(`http://localhost/api/connectors?account_id=${mockTargetAccountId}`);
+    const request = new NextRequest(
+      `http://localhost/api/connectors?account_id=${mockTargetAccountId}`,
+    );
     const result = await validateGetConnectorsRequest(request);
 
     expect(result).toBeInstanceOf(NextResponse);

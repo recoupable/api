@@ -24,7 +24,6 @@ export async function selectAllAccountSnapshotsWithOwners(): Promise<AccountSnap
   }
 
   return (data ?? []).filter(
-    (row): row is AccountSnapshotOwner =>
-      row.account_id !== null && row.github_repo !== null,
+    (row): row is AccountSnapshotOwner => row.account_id !== null && row.github_repo !== null,
   );
 }

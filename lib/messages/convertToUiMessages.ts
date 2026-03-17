@@ -23,7 +23,7 @@ type InputMessage = UIMessage | ModelMessage;
  * @returns Array of messages in UIMessage format
  */
 export default function convertToUiMessages(messages: InputMessage[]): UIMessage[] {
-  return messages.map((message) => {
+  return messages.map(message => {
     if (isUiMessage(message)) {
       return message;
     }

@@ -3,7 +3,9 @@ import { parseMergeTestToMainActionId } from "../parseMergeTestToMainActionId";
 
 describe("parseMergeTestToMainActionId", () => {
   it("parses a valid action ID", () => {
-    expect(parseMergeTestToMainActionId("merge_test_to_main:recoupable/api")).toBe("recoupable/api");
+    expect(parseMergeTestToMainActionId("merge_test_to_main:recoupable/api")).toBe(
+      "recoupable/api",
+    );
   });
 
   it("parses action ID with hyphenated repo name", () => {

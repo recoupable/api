@@ -70,4 +70,3 @@ function getExtensionFromContentType(contentType: string): string {
   if (contentType.includes("webm")) return "webm";
   return "mp3";
 }
-

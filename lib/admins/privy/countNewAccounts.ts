@@ -8,5 +8,5 @@ import { getCutoffMs } from "./getCutoffMs";
  */
 export function countNewAccounts(users: User[], period: PrivyLoginsPeriod): number {
   const cutoffMs = getCutoffMs(period);
-  return users.filter((u) => toMs(u.created_at) >= cutoffMs).length;
+  return users.filter(u => toMs(u.created_at) >= cutoffMs).length;
 }

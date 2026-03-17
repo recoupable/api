@@ -122,7 +122,7 @@ describe("handleChatCompletion", () => {
       const responseMessages = [createMockUIMessage("resp-1", "assistant", "Hi there!")];
 
       const callOrder: string[] = [];
-      mockUpsertMemory.mockImplementation(async (params) => {
+      mockUpsertMemory.mockImplementation(async params => {
         callOrder.push(params.id);
         return null;
       });

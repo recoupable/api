@@ -175,10 +175,7 @@ describe("validateCreateNotificationBody", () => {
   describe("auth errors", () => {
     it("returns 401 when auth is missing", async () => {
       mockValidateAuthContext.mockResolvedValue(
-        NextResponse.json(
-          { status: "error", error: "Unauthorized" },
-          { status: 401 },
-        ),
+        NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
       );
 
       const request = createRequest({ subject: "Test" });

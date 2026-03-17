@@ -18,12 +18,7 @@ export interface ErrorContext {
  */
 function formatErrorMessage(context: ErrorContext): string {
   const { path, error, roomId, email } = context;
-  const lines = [
-    `*Error in ${path}*`,
-    "",
-    `*Error:* ${error.name}`,
-    `*Message:* ${error.message}`,
-  ];
+  const lines = [`*Error in ${path}*`, "", `*Error:* ${error.name}`, `*Message:* ${error.message}`];
 
   if (roomId) {
     lines.push(`*Room ID:* ${roomId}`);

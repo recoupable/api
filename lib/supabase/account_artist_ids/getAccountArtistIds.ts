@@ -46,4 +46,3 @@ export async function getAccountArtistIds(params: {
 
   return (data || []) as unknown as AccountArtistRow[];
 }
-

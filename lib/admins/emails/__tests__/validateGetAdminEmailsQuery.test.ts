@@ -42,7 +42,9 @@ describe("validateGetAdminEmailsQuery", () => {
   });
 
   it("prefers email_id when both provided", async () => {
-    const request = createMockRequest("http://localhost:3000/api/admins/emails?account_id=acc-123&email_id=email-abc");
+    const request = createMockRequest(
+      "http://localhost:3000/api/admins/emails?account_id=acc-123&email_id=email-abc",
+    );
     const result = await validateGetAdminEmailsQuery(request);
 
     expect(result).not.toBeInstanceOf(NextResponse);
@@ -74,7 +76,9 @@ describe("validateGetAdminEmailsQuery", () => {
   });
 
   it("trims whitespace from params", async () => {
-    const request = createMockRequest("http://localhost:3000/api/admins/emails?email_id=%20email-abc%20");
+    const request = createMockRequest(
+      "http://localhost:3000/api/admins/emails?email_id=%20email-abc%20",
+    );
     const result = await validateGetAdminEmailsQuery(request);
 
     expect(result).toEqual({ mode: "email", emailId: "email-abc" });

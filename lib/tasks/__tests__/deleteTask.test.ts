@@ -129,13 +129,13 @@ describe("deleteTask", () => {
       // Track when each operation starts and completes
       mockDeleteSchedule.mockImplementation(async () => {
         executionOrder.push("deleteSchedule:start");
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 10));
         executionOrder.push("deleteSchedule:end");
       });
 
       mockDeleteScheduledAction.mockImplementation(async () => {
         executionOrder.push("deleteScheduledAction:start");
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 10));
         executionOrder.push("deleteScheduledAction:end");
       });
 

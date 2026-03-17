@@ -131,7 +131,9 @@ describe("handleCodingAgentCallback", () => {
     expect(response.status).toBe(200);
     // stdout should be posted first, then the card
     expect(mockPost).toHaveBeenCalledTimes(2);
-    expect(mockPost.mock.calls[0][0]).toBe("Created branch agent/fix-bug-1234\nModified 3 files in api/");
+    expect(mockPost.mock.calls[0][0]).toBe(
+      "Created branch agent/fix-bug-1234\nModified 3 files in api/",
+    );
     expect(mockPost.mock.calls[1][0]).toEqual(expect.objectContaining({ card: expect.anything() }));
   });
 

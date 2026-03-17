@@ -181,7 +181,8 @@ describe("persistCreateContentRunVideo", () => {
       },
     };
 
-    await expect(persistCreateContentRunVideo(run)).rejects.toThrow("Failed to create or find file record");
+    await expect(persistCreateContentRunVideo(run)).rejects.toThrow(
+      "Failed to create or find file record",
+    );
   });
 });
-

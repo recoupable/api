@@ -9,7 +9,7 @@ import { getCutoffMs } from "./getCutoffMs";
  */
 export function countActiveAccounts(users: User[], period: PrivyLoginsPeriod): number {
   const cutoffMs = getCutoffMs(period);
-  return users.filter((u) => {
+  return users.filter(u => {
     const latestVerified = getLatestVerifiedAt(u);
     return latestVerified !== null && latestVerified >= cutoffMs;
   }).length;

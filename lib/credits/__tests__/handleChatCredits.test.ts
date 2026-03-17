@@ -143,10 +143,7 @@ describe("handleChatCredits", () => {
         accountId: "account-123",
       });
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Failed to handle chat credits:",
-        expect.any(Error),
-      );
+      expect(consoleSpy).toHaveBeenCalledWith("Failed to handle chat credits:", expect.any(Error));
     });
   });
 });

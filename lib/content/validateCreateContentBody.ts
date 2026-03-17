@@ -13,7 +13,9 @@ import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
 export const CAPTION_LENGTHS = ["short", "medium", "long"] as const;
 
 export const createContentBodySchema = z.object({
-  artist_account_id: z.string({ message: "artist_account_id is required" }).uuid("artist_account_id must be a valid UUID"),
+  artist_account_id: z
+    .string({ message: "artist_account_id is required" })
+    .uuid("artist_account_id must be a valid UUID"),
   template: z
     .string()
     .min(1, "template cannot be empty")

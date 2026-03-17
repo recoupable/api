@@ -31,7 +31,14 @@ export async function getPrivyLoginsHandler(request: NextRequest): Promise<NextR
     const total_active = countActiveAccounts(users, query.period);
 
     return NextResponse.json(
-      { status: "success", total: users.length, total_new, total_active, total_privy_users: totalPrivyUsers, logins: users },
+      {
+        status: "success",
+        total: users.length,
+        total_new,
+        total_active,
+        total_privy_users: totalPrivyUsers,
+        logins: users,
+      },
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {

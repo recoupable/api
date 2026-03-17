@@ -87,10 +87,7 @@ describe("updateChatHandler", () => {
 
     it("returns 401 from validation when auth fails", async () => {
       vi.mocked(validateUpdateChatBody).mockResolvedValue(
-        NextResponse.json(
-          { status: "error", error: "Unauthorized" },
-          { status: 401 },
-        ),
+        NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
       );
 
       const request = mockRequest();
@@ -102,10 +99,7 @@ describe("updateChatHandler", () => {
 
     it("returns 404 from validation when chat not found", async () => {
       vi.mocked(validateUpdateChatBody).mockResolvedValue(
-        NextResponse.json(
-          { status: "error", error: "Chat room not found" },
-          { status: 404 },
-        ),
+        NextResponse.json({ status: "error", error: "Chat room not found" }, { status: 404 }),
       );
 
       const request = mockRequest();
