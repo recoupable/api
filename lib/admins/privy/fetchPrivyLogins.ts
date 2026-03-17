@@ -4,7 +4,7 @@ import { getLatestVerifiedAt } from "./getLatestVerifiedAt";
 import { PERIOD_DAYS } from "./periodDays";
 import type { User } from "@privy-io/node";
 
-export type PrivyLoginsPeriod = "daily" | "weekly" | "monthly";
+export type PrivyLoginsPeriod = "all" | "daily" | "weekly" | "monthly";
 
 /**
  * Fetches Privy users active or created within the given period via the Privy Management API.
@@ -22,8 +22,8 @@ export type FetchPrivyLoginsResult = {
 };
 
 export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<FetchPrivyLoginsResult> {
-  const days = PERIOD_DAYS[period];
-  const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000;
+  const isAll = period === "all";
+  const cutoffMs = isAll ? 0 : Date.now() - PERIOD_DAYS[period] * 24 * 60 * 60 * 1000;
 
   const users: User[] = [];
   let totalPrivyUsers = 0;
@@ -41,6 +41,11 @@ export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<Fetch
     for (const user of page.data) {
       const createdAt = user.created_at;
       if (typeof createdAt !== "number" || !Number.isFinite(createdAt)) continue;
+
+      if (isAll) {
+        users.push(user);
+        continue;
+      }
 
       const isNew = toMs(createdAt) >= cutoffMs;
       const latestVerified = getLatestVerifiedAt(user);

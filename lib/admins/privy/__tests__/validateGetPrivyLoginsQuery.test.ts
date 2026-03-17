@@ -27,12 +27,12 @@ describe("validateGetPrivyLoginsQuery", () => {
   });
 
   describe("successful cases", () => {
-    it("returns daily period by default", async () => {
+    it("returns all period by default", async () => {
       vi.mocked(validateAdminAuth).mockResolvedValue(mockAuth);
 
       const result = await validateGetPrivyLoginsQuery(makeRequest());
 
-      expect(result).toEqual({ period: "daily" });
+      expect(result).toEqual({ period: "all" });
     });
 
     it("returns daily when period=daily", async () => {

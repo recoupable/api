@@ -8,7 +8,7 @@ import { PERIOD_DAYS } from "./periodDays";
  * within the cutoff period.
  */
 export function countActiveAccounts(users: User[], period: PrivyLoginsPeriod): number {
-  const cutoffMs = Date.now() - PERIOD_DAYS[period] * 24 * 60 * 60 * 1000;
+  const cutoffMs = period === "all" ? 0 : Date.now() - PERIOD_DAYS[period] * 24 * 60 * 60 * 1000;
   return users.filter((u) => {
     const latestVerified = getLatestVerifiedAt(u);
     return latestVerified !== null && latestVerified >= cutoffMs;

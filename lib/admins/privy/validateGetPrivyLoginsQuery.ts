@@ -6,7 +6,7 @@ import { z } from "zod";
 import type { PrivyLoginsPeriod } from "./fetchPrivyLogins";
 
 const getPrivyLoginsQuerySchema = z.object({
-  period: z.enum(["daily", "weekly", "monthly"]).default("daily"),
+  period: z.enum(["all", "daily", "weekly", "monthly"]).default("all"),
 });
 
 export type GetPrivyLoginsQuery = {
