@@ -1,5 +1,9 @@
-type PrivyUsersPage = {
-  data: Record<string, unknown>[];
+import type { User, LinkedAccount } from "@privy-io/node/resources/users";
+
+export type { User, LinkedAccount };
+
+export type PrivyUsersPage = {
+  data: User[];
   next_cursor?: string;
 };
 
@@ -11,8 +15,11 @@ type PrivyUsersPage = {
  * @returns A page of Privy user objects with an optional next_cursor
  */
 export async function fetchPrivyUsersPage(cursor?: string): Promise<PrivyUsersPage> {
-  const appId = process.env.PRIVY_APP_ID!;
-  const appSecret = process.env.PRIVY_PROJECT_SECRET!;
+  const appId = process.env.PRIVY_APP_ID;
+  const appSecret = process.env.PRIVY_PROJECT_SECRET;
+  if (!appId || !appSecret) {
+    throw new Error("Missing Privy credentials: PRIVY_APP_ID/PRIVY_PROJECT_SECRET");
+  }
   const authHeader = `Basic ${Buffer.from(`${appId}:${appSecret}`).toString("base64")}`;
 
   const url = new URL("https://api.privy.io/v1/users");
@@ -22,13 +29,22 @@ export async function fetchPrivyUsersPage(cursor?: string): Promise<PrivyUsersPa
     url.searchParams.set("cursor", cursor);
   }
 
-  const response = await fetch(url.toString(), {
-    headers: {
-      "privy-app-id": appId,
-      Authorization: authHeader,
-      "Content-Type": "application/json",
-    },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
+  let response: Response;
+  try {
+    response = await fetch(url.toString(), {
+      signal: controller.signal,
+      headers: {
+        "privy-app-id": appId,
+        Authorization: authHeader,
+        "Content-Type": "application/json",
+      },
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     throw new Error(`Privy API error: ${response.status} ${response.statusText}`);

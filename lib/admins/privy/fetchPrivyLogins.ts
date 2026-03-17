@@ -1,14 +1,10 @@
 import { toMs } from "./toMs";
 import { fetchPrivyUsersPage } from "./fetchPrivyUsersPage";
 import { getLatestVerifiedAt } from "./getLatestVerifiedAt";
+import { PERIOD_DAYS } from "./periodDays";
+import type { User } from "@privy-io/node/resources/users";
 
 export type PrivyLoginsPeriod = "daily" | "weekly" | "monthly";
-
-const PERIOD_DAYS: Record<PrivyLoginsPeriod, number> = {
-  daily: 1,
-  weekly: 7,
-  monthly: 30,
-};
 
 /**
  * Fetches Privy users active or created within the given period via the Privy Management API.
@@ -20,11 +16,11 @@ const PERIOD_DAYS: Record<PrivyLoginsPeriod, number> = {
  * @param period - "daily", "weekly", or "monthly"
  * @returns Array of full Privy user objects within the time window, sorted by created_at descending
  */
-export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<Record<string, unknown>[]> {
+export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<User[]> {
   const days = PERIOD_DAYS[period];
   const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000;
 
-  const users: Record<string, unknown>[] = [];
+  const users: User[] = [];
   let cursor: string | undefined = undefined;
 
   while (true) {
@@ -35,7 +31,10 @@ export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<Recor
     }
 
     for (const user of page.data) {
-      const isNew = toMs(user.created_at as number) >= cutoffMs;
+      const createdAt = user.created_at;
+      if (typeof createdAt !== "number" || !Number.isFinite(createdAt)) continue;
+
+      const isNew = toMs(createdAt) >= cutoffMs;
       const latestVerified = getLatestVerifiedAt(user);
       const isActive = latestVerified !== null && latestVerified >= cutoffMs;
 
@@ -51,7 +50,7 @@ export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<Recor
     cursor = page.next_cursor;
   }
 
-  users.sort((a, b) => (b.created_at as number) - (a.created_at as number));
+  users.sort((a, b) => b.created_at - a.created_at);
 
   return users;
 }
