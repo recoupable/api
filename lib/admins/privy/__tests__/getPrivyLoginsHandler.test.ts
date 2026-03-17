@@ -61,10 +61,10 @@ describe("getPrivyLoginsHandler", () => {
 
       expect(response.status).toBe(200);
       expect(body.status).toBe("success");
-      expect(body.total).toBe(2);
+      expect(body.total).toBe(10);
       expect(body.total_new).toBe(2);
-      expect(body.total_active).toBe(1);
-      expect(body.total_privy_users).toBe(10);
+      expect(body.total_active).toBe(2);
+      expect(body.total_privy_users).toBeUndefined();
       expect(body.logins).toEqual(mockLogins);
     });
 
@@ -80,7 +80,7 @@ describe("getPrivyLoginsHandler", () => {
       expect(body.total).toBe(0);
       expect(body.total_new).toBe(0);
       expect(body.total_active).toBe(0);
-      expect(body.total_privy_users).toBe(0);
+      expect(body.total_privy_users).toBeUndefined();
       expect(body.logins).toEqual([]);
     });
 
