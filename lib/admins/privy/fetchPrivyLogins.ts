@@ -23,7 +23,6 @@ type PrivyUsersPage = {
 export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<Record<string, unknown>[]> {
   const days = PERIOD_DAYS[period];
   const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000;
-  const cutoffSec = Math.floor(cutoffMs / 1000);
 
   const appId = process.env.PRIVY_APP_ID!;
   const appSecret = process.env.PRIVY_PROJECT_SECRET!;
@@ -59,7 +58,11 @@ export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<Recor
     }
 
     for (const user of page.data) {
-      if ((user.created_at as number) >= cutoffSec) {
+      const createdAt = user.created_at as number;
+      // Privy docs say milliseconds but examples show seconds (10 digits).
+      // Normalize to ms for comparison.
+      const createdAtMs = createdAt > 1e12 ? createdAt : createdAt * 1000;
+      if (createdAtMs >= cutoffMs) {
         users.push(user);
       }
     }
