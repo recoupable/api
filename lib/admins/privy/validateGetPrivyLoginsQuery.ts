@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAdminAuth } from "@/lib/admins/validateAdminAuth";
 import { z } from "zod";
-import type { PrivyLoginsPeriod } from "./fetchPrivyLogins";
+import { privyLoginsPeriodSchema, type PrivyLoginsPeriod } from "./privyLoginsPeriod";
 
 const getPrivyLoginsQuerySchema = z.object({
-  period: z.enum(["all", "daily", "weekly", "monthly"]).default("all"),
+  period: privyLoginsPeriodSchema.default("all"),
 });
 
 export type GetPrivyLoginsQuery = {

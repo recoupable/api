@@ -4,7 +4,7 @@ import { getLatestVerifiedAt } from "./getLatestVerifiedAt";
 import { getCutoffMs } from "./getCutoffMs";
 import type { User } from "@privy-io/node";
 
-export type PrivyLoginsPeriod = "all" | "daily" | "weekly" | "monthly";
+export type { PrivyLoginsPeriod } from "./privyLoginsPeriod";
 
 /**
  * Fetches Privy users active or created within the given period via the Privy Management API.
