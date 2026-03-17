@@ -76,9 +76,7 @@ describe("validateGetArtistsRequest", () => {
       authToken: "test-token",
     });
 
-    const request = new NextRequest(
-      `http://localhost/api/artists?org_id=${orgFilterId}`,
-    );
+    const request = new NextRequest(`http://localhost/api/artists?org_id=${orgFilterId}`);
     const result = await validateGetArtistsRequest(request);
 
     expect(result).not.toBeInstanceOf(NextResponse);
@@ -95,9 +93,7 @@ describe("validateGetArtistsRequest", () => {
       authToken: "test-token",
     });
 
-    const request = new NextRequest(
-      "http://localhost/api/artists?account_id=not-a-uuid",
-    );
+    const request = new NextRequest("http://localhost/api/artists?account_id=not-a-uuid");
     const result = await validateGetArtistsRequest(request);
 
     expect(result).toBeInstanceOf(NextResponse);
@@ -111,9 +107,7 @@ describe("validateGetArtistsRequest", () => {
       authToken: "test-token",
     });
 
-    const request = new NextRequest(
-      "http://localhost/api/artists?org_id=not-a-uuid",
-    );
+    const request = new NextRequest("http://localhost/api/artists?org_id=not-a-uuid");
     const result = await validateGetArtistsRequest(request);
 
     expect(result).toBeInstanceOf(NextResponse);
@@ -130,9 +124,7 @@ describe("validateGetArtistsRequest", () => {
     });
     vi.mocked(canAccessAccount).mockResolvedValue(true);
 
-    const request = new NextRequest(
-      `http://localhost/api/artists?account_id=${targetAccountId}`,
-    );
+    const request = new NextRequest(`http://localhost/api/artists?account_id=${targetAccountId}`);
     const result = await validateGetArtistsRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({
@@ -155,9 +147,7 @@ describe("validateGetArtistsRequest", () => {
     });
     vi.mocked(canAccessAccount).mockResolvedValue(false);
 
-    const request = new NextRequest(
-      `http://localhost/api/artists?account_id=${otherAccountId}`,
-    );
+    const request = new NextRequest(`http://localhost/api/artists?account_id=${otherAccountId}`);
     const result = await validateGetArtistsRequest(request);
 
     expect(result).toBeInstanceOf(NextResponse);
@@ -174,9 +164,7 @@ describe("validateGetArtistsRequest", () => {
     });
     vi.mocked(canAccessAccount).mockResolvedValue(false);
 
-    const request = new NextRequest(
-      `http://localhost/api/artists?account_id=${notInOrgId}`,
-    );
+    const request = new NextRequest(`http://localhost/api/artists?account_id=${notInOrgId}`);
     const result = await validateGetArtistsRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({

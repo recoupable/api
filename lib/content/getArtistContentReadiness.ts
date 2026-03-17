@@ -65,9 +65,7 @@ export async function getArtistContentReadiness({
   const hasFile = (relativePath: string): boolean =>
     blobPaths.some(path => path === `${artistRootPrefix}${relativePath}`);
   const hasAnyMp3 = blobPaths.some(
-    path =>
-      path.startsWith(artistRootPrefix) &&
-      path.toLowerCase().endsWith(".mp3"),
+    path => path.startsWith(artistRootPrefix) && path.toLowerCase().endsWith(".mp3"),
   );
 
   const issues: ContentReadinessIssue[] = [];

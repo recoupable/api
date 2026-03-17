@@ -3,8 +3,14 @@ import { createFileRecord } from "@/lib/supabase/files/createFileRecord";
 import { SaveAudioParams, FileRecord } from "./types";
 
 export async function saveAudioToFiles(params: SaveAudioParams): Promise<FileRecord> {
-  const { audioBlob, contentType, fileName, ownerAccountId, artistAccountId, title = "Audio" } =
-    params;
+  const {
+    audioBlob,
+    contentType,
+    fileName,
+    ownerAccountId,
+    artistAccountId,
+    title = "Audio",
+  } = params;
 
   const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const storageKey = `files/${ownerAccountId}/${artistAccountId}/${safeFileName}`;

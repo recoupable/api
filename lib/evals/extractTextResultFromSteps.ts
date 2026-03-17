@@ -6,13 +6,9 @@ import type { TextPart } from "ai";
  * Handles responses where maxSteps > 1
  */
 export function extractTextResultFromSteps(
-  result: Awaited<ReturnType<typeof generateText>>
+  result: Awaited<ReturnType<typeof generateText>>,
 ): string | null {
-  if (
-    !result.steps ||
-    !Array.isArray(result.steps) ||
-    result.steps.length === 0
-  ) {
+  if (!result.steps || !Array.isArray(result.steps) || result.steps.length === 0) {
     return null;
   }
 
@@ -25,10 +21,7 @@ export function extractTextResultFromSteps(
   const textParts = lastStep.content
     .filter(
       (part: unknown): part is TextPart =>
-        typeof part === "object" &&
-        part !== null &&
-        "type" in part &&
-        part.type === "text"
+        typeof part === "object" && part !== null && "type" in part && part.type === "text",
     )
     .map((part: TextPart) => part.text)
     .join("");

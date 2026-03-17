@@ -51,7 +51,13 @@ describe("fetchRepoCommitStats", () => {
 
   it("returns stats without fetching earliest when totalCommits <= 5", async () => {
     mockFetchLatestCommits.mockResolvedValue([
-      { commit: { message: "second\ndetails", author: { date: "2025-02-01T00:00:00Z" }, committer: null } },
+      {
+        commit: {
+          message: "second\ndetails",
+          author: { date: "2025-02-01T00:00:00Z" },
+          committer: null,
+        },
+      },
       { commit: { message: "first", author: { date: "2025-01-01T00:00:00Z" }, committer: null } },
     ]);
     mockFetchRepoCommitCount.mockResolvedValue(2);
@@ -73,9 +79,9 @@ describe("fetchRepoCommitStats", () => {
       { commit: { message: "older", author: { date: "2025-05-01T00:00:00Z" }, committer: null } },
     ]);
     mockFetchRepoCommitCount.mockResolvedValue(42);
-    mockFetchEarliestCommit.mockResolvedValue(
-      { commit: { message: "initial", author: { date: "2024-01-01T00:00:00Z" }, committer: null } },
-    );
+    mockFetchEarliestCommit.mockResolvedValue({
+      commit: { message: "initial", author: { date: "2024-01-01T00:00:00Z" }, committer: null },
+    });
 
     const result = await fetchRepoCommitStats("recoupable", "repo", "token");
 

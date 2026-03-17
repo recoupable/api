@@ -238,14 +238,14 @@ describe("setupToolsForRequest", () => {
       // Track when each operation starts and completes
       mockGetMcpTools.mockImplementation(async () => {
         executionOrder.push("getMcpTools:start");
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 10));
         executionOrder.push("getMcpTools:end");
         return { mcpTool: { description: "MCP Tool", parameters: {} } };
       });
 
       mockGetComposioTools.mockImplementation(async () => {
         executionOrder.push("getComposioTools:start");
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 10));
         executionOrder.push("getComposioTools:end");
         return { composioTool: { description: "Composio Tool", parameters: {} } };
       });
@@ -293,6 +293,4 @@ describe("setupToolsForRequest", () => {
       expect(mockGetComposioTools).toHaveBeenCalledTimes(1);
     });
   });
-
-
 });

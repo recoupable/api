@@ -12,8 +12,7 @@ const baseEvent = {
     to: ["agent@mail.recoupable.com"],
     bcc: [],
     cc: [],
-    message_id:
-      "<mmb11dqz.21ac8e88-777e-445c-b1c1-71829c2b82a5@we.are.superhuman.com>",
+    message_id: "<mmb11dqz.21ac8e88-777e-445c-b1c1-71829c2b82a5@we.are.superhuman.com>",
     subject: "Add mp3s to Gatsby Grace files in sandbox",
     attachments: [],
   },

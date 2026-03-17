@@ -11,10 +11,7 @@ import { parseGitHubRepoUrl } from "./parseGitHubRepoUrl";
  * @param branch - Branch to read .gitmodules from (defaults to "main")
  * @returns Array of org repo URLs, or empty array if none found
  */
-export async function getOrgRepoUrls(
-  githubRepoUrl: string,
-  branch = "main",
-): Promise<string[]> {
+export async function getOrgRepoUrls(githubRepoUrl: string, branch = "main"): Promise<string[]> {
   const repoInfo = parseGitHubRepoUrl(githubRepoUrl);
   if (!repoInfo) return [];
 

@@ -14,20 +14,16 @@ export const ToolsCalled = async ({
   penalizedTools?: string[];
 }) => {
   try {
-    const calledTools = toolCalls?.map((tc) => tc.toolName) || [];
+    const calledTools = toolCalls?.map(tc => tc.toolName) || [];
 
     // Check if required tools were called
-    const calledRequiredTools = requiredTools.filter((requiredTool) =>
-      calledTools.some((tool) =>
-        tool.toLowerCase().includes(requiredTool.toLowerCase())
-      )
+    const calledRequiredTools = requiredTools.filter(requiredTool =>
+      calledTools.some(tool => tool.toLowerCase().includes(requiredTool.toLowerCase())),
     );
 
     // Check if penalized tools were called
-    const calledPenalizedTools = penalizedTools.filter((penalizedTool) =>
-      calledTools.some((tool) =>
-        tool.toLowerCase().includes(penalizedTool.toLowerCase())
-      )
+    const calledPenalizedTools = penalizedTools.filter(penalizedTool =>
+      calledTools.some(tool => tool.toLowerCase().includes(penalizedTool.toLowerCase())),
     );
 
     // Calculate score based on required tools
@@ -64,9 +60,7 @@ export const ToolsCalled = async ({
         calledRequiredTools,
         penalizedTools,
         calledPenalizedTools,
-        missingRequiredTools: requiredTools.filter(
-          (tool) => !calledRequiredTools.includes(tool)
-        ),
+        missingRequiredTools: requiredTools.filter(tool => !calledRequiredTools.includes(tool)),
       },
     };
   } catch (error) {

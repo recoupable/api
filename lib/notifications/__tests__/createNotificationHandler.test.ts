@@ -84,7 +84,8 @@ describe("createNotificationHandler", () => {
   it("sends email to account owner with text body", async () => {
     mockProcessAndSendEmail.mockResolvedValue({
       success: true,
-      message: "Email sent successfully from Agent by Recoup <agent@recoupable.com> to owner@example.com. CC: none.",
+      message:
+        "Email sent successfully from Agent by Recoup <agent@recoupable.com> to owner@example.com. CC: none.",
       id: "email-123",
     });
 

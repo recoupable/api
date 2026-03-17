@@ -204,9 +204,7 @@ describe("validateGetTaskRunQuery", () => {
       vi.mocked(checkIsAdmin).mockResolvedValue(false);
       vi.mocked(validateAccountIdOverride).mockResolvedValue({ accountId: "acc_123" });
 
-      const request = createMockRequest(
-        "http://localhost:3000/api/tasks/runs?account_id=acc_123",
-      );
+      const request = createMockRequest("http://localhost:3000/api/tasks/runs?account_id=acc_123");
 
       const result = await validateGetTaskRunQuery(request);
 

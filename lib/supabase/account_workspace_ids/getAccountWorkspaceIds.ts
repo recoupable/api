@@ -39,4 +39,3 @@ export async function getAccountWorkspaceIds(accountId: string): Promise<Account
 
   return (data || []) as AccountWorkspaceRow[];
 }
-

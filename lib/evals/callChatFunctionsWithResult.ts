@@ -38,8 +38,7 @@ export async function callChatFunctionsWithResult(input: string) {
   const result = await agent.generate({ messages: convertedMessages });
 
   // Collect tool calls from ALL steps, not just the last one
-  const allToolCalls =
-    result.steps?.flatMap((step) => step.toolCalls || []) || result.toolCalls;
+  const allToolCalls = result.steps?.flatMap(step => step.toolCalls || []) || result.toolCalls;
 
   // Return result with all tool calls from all steps
   return {
