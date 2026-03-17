@@ -3,7 +3,6 @@ import { fetchPrivyUsersPage } from "./fetchPrivyUsersPage";
 import { getLatestVerifiedAt } from "./getLatestVerifiedAt";
 import { getCutoffMs } from "./getCutoffMs";
 import type { User } from "@privy-io/node";
-
 import type { PrivyLoginsPeriod } from "./privyLoginsPeriod";
 
 /**
