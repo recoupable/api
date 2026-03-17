@@ -1,9 +1,5 @@
 import { getSpotifyFollowers } from "@/lib/spotify/getSpotifyFollowers";
 
-/**
- *
- * @param artist
- */
 async function getSpotifyFollowersExpected(artist: string) {
   try {
     const followerCount = await getSpotifyFollowers(artist);
