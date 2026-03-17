@@ -12,9 +12,18 @@ type PrivyUsersPage = {
 };
 
 /**
- * Fetches Privy users created within the given period via the Privy Management API.
+ * Normalizes a Privy timestamp to milliseconds.
+ * Privy docs say milliseconds but examples show seconds (10 digits).
+ */
+function toMs(timestamp: number): number {
+  return timestamp > 1e12 ? timestamp : timestamp * 1000;
+}
+
+/**
+ * Fetches Privy users active or created within the given period via the Privy Management API.
  * Returns the full, unmodified user objects from Privy.
- * Paginates until all users within the time window are retrieved.
+ * Paginates through all users, collecting those whose created_at or latest_verified_at
+ * falls within the time window.
  *
  * @see https://docs.privy.io/api-reference/users/get-all
  * @param period - "daily", "weekly", or "monthly"
@@ -58,11 +67,12 @@ export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<Recor
     }
 
     for (const user of page.data) {
-      const createdAt = user.created_at as number;
-      // Privy docs say milliseconds but examples show seconds (10 digits).
-      // Normalize to ms for comparison.
-      const createdAtMs = createdAt > 1e12 ? createdAt : createdAt * 1000;
-      if (createdAtMs >= cutoffMs) {
+      const isNew = toMs(user.created_at as number) >= cutoffMs;
+      const isActive =
+        typeof user.latest_verified_at === "number" &&
+        toMs(user.latest_verified_at) >= cutoffMs;
+
+      if (isNew || isActive) {
         users.push(user);
       }
     }
@@ -77,4 +87,22 @@ export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<Recor
   users.sort((a, b) => (b.created_at as number) - (a.created_at as number));
 
   return users;
+}
+
+/**
+ * Counts how many users in the list were created within the cutoff period.
+ */
+export function countNewAccounts(users: Record<string, unknown>[], period: PrivyLoginsPeriod): number {
+  const cutoffMs = Date.now() - PERIOD_DAYS[period] * 24 * 60 * 60 * 1000;
+  return users.filter((u) => toMs(u.created_at as number) >= cutoffMs).length;
+}
+
+/**
+ * Counts how many users in the list were active (latest_verified_at) within the cutoff period.
+ */
+export function countActiveAccounts(users: Record<string, unknown>[], period: PrivyLoginsPeriod): number {
+  const cutoffMs = Date.now() - PERIOD_DAYS[period] * 24 * 60 * 60 * 1000;
+  return users.filter(
+    (u) => typeof u.latest_verified_at === "number" && toMs(u.latest_verified_at) >= cutoffMs,
+  ).length;
 }

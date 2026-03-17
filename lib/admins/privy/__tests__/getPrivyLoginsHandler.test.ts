@@ -10,17 +10,26 @@ vi.mock("../validateGetPrivyLoginsQuery", () => ({
   validateGetPrivyLoginsQuery: vi.fn(),
 }));
 
-vi.mock("../fetchPrivyLogins", () => ({
-  fetchPrivyLogins: vi.fn(),
-}));
+vi.mock("../fetchPrivyLogins", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../fetchPrivyLogins")>();
+  return {
+    ...actual,
+    fetchPrivyLogins: vi.fn(),
+  };
+});
 
 import { validateGetPrivyLoginsQuery } from "../validateGetPrivyLoginsQuery";
 import { fetchPrivyLogins } from "../fetchPrivyLogins";
 
+const now = Date.now();
+const ONE_HOUR_AGO = Math.floor((now - 60 * 60 * 1000) / 1000);
+const TWO_HOURS_AGO = Math.floor((now - 2 * 60 * 60 * 1000) / 1000);
+
 const mockLogins = [
   {
     id: "did:privy:abc123",
-    created_at: 1773928800,
+    created_at: ONE_HOUR_AGO,
+    latest_verified_at: ONE_HOUR_AGO,
     linked_accounts: [{ type: "email", address: "user@example.com" }],
     has_accepted_terms: true,
     is_guest: false,
@@ -28,7 +37,7 @@ const mockLogins = [
   },
   {
     id: "did:privy:def456",
-    created_at: 1773925200,
+    created_at: TWO_HOURS_AGO,
     linked_accounts: [],
     has_accepted_terms: false,
     is_guest: true,
@@ -46,7 +55,7 @@ describe("getPrivyLoginsHandler", () => {
   });
 
   describe("successful cases", () => {
-    it("returns 200 with logins and total for daily period", async () => {
+    it("returns 200 with logins, total_new, and total_active", async () => {
       vi.mocked(validateGetPrivyLoginsQuery).mockResolvedValue({ period: "daily" });
       vi.mocked(fetchPrivyLogins).mockResolvedValue(mockLogins);
 
@@ -56,10 +65,12 @@ describe("getPrivyLoginsHandler", () => {
       expect(response.status).toBe(200);
       expect(body.status).toBe("success");
       expect(body.total).toBe(2);
+      expect(body.total_new).toBe(2);
+      expect(body.total_active).toBe(1);
       expect(body.logins).toEqual(mockLogins);
     });
 
-    it("returns 200 with empty logins when none exist", async () => {
+    it("returns 200 with zero counts when no logins exist", async () => {
       vi.mocked(validateGetPrivyLoginsQuery).mockResolvedValue({ period: "weekly" });
       vi.mocked(fetchPrivyLogins).mockResolvedValue([]);
 
@@ -69,6 +80,8 @@ describe("getPrivyLoginsHandler", () => {
       expect(response.status).toBe(200);
       expect(body.status).toBe("success");
       expect(body.total).toBe(0);
+      expect(body.total_new).toBe(0);
+      expect(body.total_active).toBe(0);
       expect(body.logins).toEqual([]);
     });
 
