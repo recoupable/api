@@ -2,15 +2,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { canAccessAccount } from "../canAccessAccount";
 
 import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
+import { selectAccountOrganizationIds } from "@/lib/supabase/account_organization_ids/selectAccountOrganizationIds";
 
 // Mock RECOUP_ORG_ID constant
 vi.mock("@/lib/const", () => ({
   RECOUP_ORG_ID: "recoup-admin-org-id",
 }));
 
-// Mock getAccountOrganizations supabase lib
+// Mock supabase libs
 vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
   getAccountOrganizations: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/account_organization_ids/selectAccountOrganizationIds", () => ({
+  selectAccountOrganizationIds: vi.fn(),
 }));
 
 describe("canAccessAccount", () => {
@@ -78,8 +83,87 @@ describe("canAccessAccount", () => {
     });
   });
 
+  describe("shared org membership (orgId is null, currentAccountId provided)", () => {
+    it("returns true when currentAccountId shares an org with targetAccountId", async () => {
+      vi.mocked(getAccountOrganizations).mockResolvedValue([
+        {
+          account_id: "account-123",
+          organization_id: "shared-org",
+          created_at: new Date().toISOString(),
+          organization: null,
+        },
+      ]);
+      vi.mocked(selectAccountOrganizationIds).mockResolvedValue([
+        { organization_id: "shared-org" },
+      ]);
+
+      const result = await canAccessAccount({
+        orgId: null,
+        targetAccountId: "target-456",
+        currentAccountId: "account-123",
+      });
+
+      expect(result).toBe(true);
+      expect(getAccountOrganizations).toHaveBeenCalledWith({ accountId: "account-123" });
+      expect(selectAccountOrganizationIds).toHaveBeenCalledWith("target-456", ["shared-org"]);
+    });
+
+    it("returns false when currentAccountId has no shared org with targetAccountId", async () => {
+      vi.mocked(getAccountOrganizations).mockResolvedValue([
+        {
+          account_id: "account-123",
+          organization_id: "org-A",
+          created_at: new Date().toISOString(),
+          organization: null,
+        },
+      ]);
+      vi.mocked(selectAccountOrganizationIds).mockResolvedValue([]);
+
+      const result = await canAccessAccount({
+        orgId: null,
+        targetAccountId: "target-456",
+        currentAccountId: "account-123",
+      });
+
+      expect(result).toBe(false);
+    });
+
+    it("returns false when currentAccountId belongs to no orgs", async () => {
+      vi.mocked(getAccountOrganizations).mockResolvedValue([]);
+
+      const result = await canAccessAccount({
+        orgId: null,
+        targetAccountId: "target-456",
+        currentAccountId: "account-123",
+      });
+
+      expect(result).toBe(false);
+      expect(selectAccountOrganizationIds).not.toHaveBeenCalled();
+    });
+
+    it("returns true when currentAccountId is in RECOUP_ORG (admin via shared org)", async () => {
+      vi.mocked(getAccountOrganizations).mockResolvedValue([
+        {
+          account_id: "admin-account",
+          organization_id: "recoup-admin-org-id",
+          created_at: new Date().toISOString(),
+          organization: null,
+        },
+      ]);
+
+      const result = await canAccessAccount({
+        orgId: null,
+        targetAccountId: "any-account",
+        currentAccountId: "admin-account",
+      });
+
+      expect(result).toBe(true);
+      expect(selectAccountOrganizationIds).not.toHaveBeenCalled();
+    });
+  });
+
   describe("invalid inputs", () => {
-    it("returns false when orgId is null", async () => {
+    it("returns false when orgId is null and no currentAccountId", async () => {
       const result = await canAccessAccount({
         orgId: null,
         targetAccountId: "account-123",

@@ -7,7 +7,6 @@ import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId"
 import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
-import { canAccessAccountViaAnyOrg } from "@/lib/organizations/canAccessAccountViaAnyOrg";
 
 // Mock dependencies
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -34,16 +33,11 @@ vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: vi.fn(),
 }));
 
-vi.mock("@/lib/organizations/canAccessAccountViaAnyOrg", () => ({
-  canAccessAccountViaAnyOrg: vi.fn(),
-}));
-
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockGetAuthenticatedAccountId = vi.mocked(getAuthenticatedAccountId);
 const mockGetApiKeyDetails = vi.mocked(getApiKeyDetails);
 const mockValidateOrganizationAccess = vi.mocked(validateOrganizationAccess);
 const mockCanAccessAccount = vi.mocked(canAccessAccount);
-const mockCanAccessAccountViaAnyOrg = vi.mocked(canAccessAccountViaAnyOrg);
 
 /**
  *
@@ -200,7 +194,7 @@ describe("validateAuthContext", () => {
         orgId: null,
         name: "personal-key",
       });
-      mockCanAccessAccountViaAnyOrg.mockResolvedValue(false);
+      mockCanAccessAccount.mockResolvedValue(false);
 
       const result = await validateAuthContext(request as never, {
         accountId: "different-account-456", // Different from API key's account
@@ -221,7 +215,7 @@ describe("validateAuthContext", () => {
         orgId: null,
         name: "personal-key",
       });
-      mockCanAccessAccountViaAnyOrg.mockResolvedValue(true);
+      mockCanAccessAccount.mockResolvedValue(true);
 
       const result = await validateAuthContext(request as never, {
         accountId: "member-account-456",
@@ -233,9 +227,10 @@ describe("validateAuthContext", () => {
         orgId: null,
         authToken: "personal-key",
       });
-      expect(mockCanAccessAccountViaAnyOrg).toHaveBeenCalledWith({
-        currentAccountId: "account-123",
+      expect(mockCanAccessAccount).toHaveBeenCalledWith({
+        orgId: null,
         targetAccountId: "member-account-456",
+        currentAccountId: "account-123",
       });
     });
 
@@ -262,6 +257,7 @@ describe("validateAuthContext", () => {
       expect(mockCanAccessAccount).toHaveBeenCalledWith({
         orgId: "org-456",
         targetAccountId: "member-account-789",
+        currentAccountId: "org-account-123",
       });
     });
 

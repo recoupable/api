@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
-import { canAccessAccountViaAnyOrg } from "@/lib/organizations/canAccessAccountViaAnyOrg";
 
 /**
  * Parameters for account ID override validation.
@@ -27,8 +26,7 @@ export interface ValidateAccountIdOverrideResult {
  *
  * Access rules:
  * 1. If targetAccountId equals currentAccountId, always allowed (self-access)
- * 2. If orgId is present, checks if targetAccountId is a member of the org
- * 3. If orgId is null, checks if currentAccountId shares any org with targetAccountId
+ * 2. Delegates to canAccessAccount which handles org key, shared org, and admin access
  *
  * @param params - The validation parameters
  * @returns NextResponse with error or the validated result
@@ -43,29 +41,16 @@ export async function validateAccountIdOverride(
     return { accountId: targetAccountId };
   }
 
-  // For org API keys, check if target account is a member of the org
-  if (orgId) {
-    const hasAccess = await canAccessAccount({
-      orgId,
-      targetAccountId,
-    });
+  const hasAccess = await canAccessAccount({
+    orgId,
+    targetAccountId,
+    currentAccountId,
+  });
 
-    if (hasAccess) {
-      return { accountId: targetAccountId };
-    }
-  } else {
-    // For personal keys, check if the key owner shares any org with the target account
-    const hasAccess = await canAccessAccountViaAnyOrg({
-      currentAccountId,
-      targetAccountId,
-    });
-
-    if (hasAccess) {
-      return { accountId: targetAccountId };
-    }
+  if (hasAccess) {
+    return { accountId: targetAccountId };
   }
 
-  // No access
   return NextResponse.json(
     { status: "error", error: "Access denied to specified account_id" },
     { status: 403, headers: getCorsHeaders() },
