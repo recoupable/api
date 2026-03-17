@@ -172,6 +172,7 @@ describe("validateGetPulsesRequest", () => {
     expect(canAccessAccount).toHaveBeenCalledWith({
       orgId: mockOrgId,
       targetAccountId,
+      currentAccountId: mockOrgId,
     });
     expect(result).not.toBeInstanceOf(NextResponse);
     const validResult = result as { accountIds: string[]; active?: boolean };
@@ -196,6 +197,7 @@ describe("validateGetPulsesRequest", () => {
     expect(canAccessAccount).toHaveBeenCalledWith({
       orgId: mockOrgId,
       targetAccountId: notInOrgId,
+      currentAccountId: mockOrgId,
     });
     expect(result).toBeInstanceOf(NextResponse);
     const response = result as NextResponse;
@@ -220,6 +222,7 @@ describe("validateGetPulsesRequest", () => {
     expect(canAccessAccount).toHaveBeenCalledWith({
       orgId: recoupOrgId,
       targetAccountId: anyAccountId,
+      currentAccountId: recoupOrgId,
     });
     expect(result).not.toBeInstanceOf(NextResponse);
     const validResult = result as { accountIds: string[]; active?: boolean };

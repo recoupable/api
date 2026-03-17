@@ -70,6 +70,7 @@ describe("buildGetArtistsParams", () => {
     expect(canAccessAccount).toHaveBeenCalledWith({
       orgId: "org-123",
       targetAccountId: "target-456",
+      currentAccountId: "org-owner-123",
     });
     expect(result).toEqual({
       params: { accountId: "target-456", orgId: null },
@@ -93,7 +94,27 @@ describe("buildGetArtistsParams", () => {
     });
   });
 
-  it("returns error when personal key tries to filter by targetAccountId", async () => {
+  it("allows personal key to access targetAccountId via shared org", async () => {
+    vi.mocked(canAccessAccount).mockResolvedValue(true);
+
+    const result = await buildGetArtistsParams({
+      accountId: "personal-123",
+      orgId: null,
+      targetAccountId: "shared-org-member",
+    });
+
+    expect(canAccessAccount).toHaveBeenCalledWith({
+      orgId: null,
+      targetAccountId: "shared-org-member",
+      currentAccountId: "personal-123",
+    });
+    expect(result).toEqual({
+      params: { accountId: "shared-org-member", orgId: null },
+      error: null,
+    });
+  });
+
+  it("returns error when personal key has no shared org with targetAccountId", async () => {
     vi.mocked(canAccessAccount).mockResolvedValue(false);
 
     const result = await buildGetArtistsParams({
@@ -104,7 +125,7 @@ describe("buildGetArtistsParams", () => {
 
     expect(result).toEqual({
       params: null,
-      error: "Personal API keys cannot filter by account_id",
+      error: "Access denied to specified account_id",
     });
   });
 
@@ -119,7 +140,7 @@ describe("buildGetArtistsParams", () => {
 
     expect(result).toEqual({
       params: null,
-      error: "account_id is not a member of this organization",
+      error: "Access denied to specified account_id",
     });
   });
 });

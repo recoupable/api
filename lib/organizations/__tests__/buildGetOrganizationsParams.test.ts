@@ -64,9 +64,30 @@ describe("buildGetOrganizationsParams", () => {
     expect(canAccessAccount).toHaveBeenCalledWith({
       orgId: "org-123",
       targetAccountId: "target-456",
+      currentAccountId: "org-123",
     });
     expect(result).toEqual({
       params: { accountId: "target-456" },
+      error: null,
+    });
+  });
+
+  it("allows personal key to access targetAccountId via shared org", async () => {
+    vi.mocked(canAccessAccount).mockResolvedValue(true);
+
+    const result = await buildGetOrganizationsParams({
+      accountId: "personal-123",
+      orgId: null,
+      targetAccountId: "shared-org-member",
+    });
+
+    expect(canAccessAccount).toHaveBeenCalledWith({
+      orgId: null,
+      targetAccountId: "shared-org-member",
+      currentAccountId: "personal-123",
+    });
+    expect(result).toEqual({
+      params: { accountId: "shared-org-member" },
       error: null,
     });
   });
@@ -82,7 +103,7 @@ describe("buildGetOrganizationsParams", () => {
 
     expect(result).toEqual({
       params: null,
-      error: "Personal API keys cannot filter by account_id",
+      error: "Access denied to specified account_id",
     });
   });
 
@@ -97,7 +118,7 @@ describe("buildGetOrganizationsParams", () => {
 
     expect(result).toEqual({
       params: null,
-      error: "account_id is not a member of this organization",
+      error: "Access denied to specified account_id",
     });
   });
 
@@ -113,6 +134,7 @@ describe("buildGetOrganizationsParams", () => {
     expect(canAccessAccount).toHaveBeenCalledWith({
       orgId: "recoup-org-id",
       targetAccountId: "any-account",
+      currentAccountId: "recoup-org-id",
     });
     expect(result).toEqual({
       params: { accountId: "any-account" },

@@ -130,6 +130,7 @@ describe("validateGetArtistsRequest", () => {
     expect(canAccessAccount).toHaveBeenCalledWith({
       orgId: mockOrgId,
       targetAccountId,
+      currentAccountId: "org-owner",
     });
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
@@ -170,6 +171,7 @@ describe("validateGetArtistsRequest", () => {
     expect(canAccessAccount).toHaveBeenCalledWith({
       orgId: mockOrgId,
       targetAccountId: notInOrgId,
+      currentAccountId: "org-owner",
     });
     expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(403);

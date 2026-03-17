@@ -36,13 +36,15 @@ export async function buildGetPulsesParams(
 
   // Handle account_id filter if provided
   if (targetAccountId) {
-    const hasAccess = await canAccessAccount({ orgId, targetAccountId });
+    const hasAccess = await canAccessAccount({
+      orgId,
+      targetAccountId,
+      currentAccountId: accountId,
+    });
     if (!hasAccess) {
       return {
         params: null,
-        error: orgId
-          ? "account_id is not a member of this organization"
-          : "Personal API keys cannot filter by account_id",
+        error: "Access denied to specified account_id",
       };
     }
     return { params: { accountIds: [targetAccountId], active }, error: null };

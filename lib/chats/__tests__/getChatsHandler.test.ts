@@ -118,7 +118,7 @@ describe("getChatsHandler", () => {
 
       expect(response.status).toBe(403);
       expect(json.status).toBe("error");
-      expect(json.error).toBe("Personal API keys cannot filter by account_id");
+      expect(json.error).toBe("Access denied to specified account_id");
       expect(selectRooms).not.toHaveBeenCalled();
     });
   });
@@ -217,7 +217,7 @@ describe("getChatsHandler", () => {
 
       expect(response.status).toBe(403);
       expect(json.status).toBe("error");
-      expect(json.error).toBe("account_id is not a member of this organization");
+      expect(json.error).toBe("Access denied to specified account_id");
       expect(selectRooms).not.toHaveBeenCalled();
     });
   });

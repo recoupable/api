@@ -77,9 +77,30 @@ describe("buildGetPulsesParams", () => {
     expect(canAccessAccount).toHaveBeenCalledWith({
       orgId: "org-123",
       targetAccountId: "target-456",
+      currentAccountId: "org-123",
     });
     expect(result).toEqual({
       params: { accountIds: ["target-456"], active: undefined },
+      error: null,
+    });
+  });
+
+  it("allows personal key to access targetAccountId via shared org", async () => {
+    vi.mocked(canAccessAccount).mockResolvedValue(true);
+
+    const result = await buildGetPulsesParams({
+      accountId: "personal-123",
+      orgId: null,
+      targetAccountId: "shared-org-member",
+    });
+
+    expect(canAccessAccount).toHaveBeenCalledWith({
+      orgId: null,
+      targetAccountId: "shared-org-member",
+      currentAccountId: "personal-123",
+    });
+    expect(result).toEqual({
+      params: { accountIds: ["shared-org-member"], active: undefined },
       error: null,
     });
   });
@@ -95,7 +116,7 @@ describe("buildGetPulsesParams", () => {
 
     expect(result).toEqual({
       params: null,
-      error: "Personal API keys cannot filter by account_id",
+      error: "Access denied to specified account_id",
     });
   });
 
@@ -110,7 +131,7 @@ describe("buildGetPulsesParams", () => {
 
     expect(result).toEqual({
       params: null,
-      error: "account_id is not a member of this organization",
+      error: "Access denied to specified account_id",
     });
   });
 });
