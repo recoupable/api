@@ -11,5 +11,5 @@ export const syncBriefMatchPreset: PresetConfig = {
   params: { max_new_tokens: 1024, temperature: 0.4, do_sample: true },
   requiresAudio: true,
   responseFormat: "json",
-  parseResponse: (raw) => parseJsonLike(raw),
+  parseResponse: raw => parseJsonLike(raw),
 };

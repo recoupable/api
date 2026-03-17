@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { canAccessAccount } from "../canAccessAccount";
 
+import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
+
 // Mock RECOUP_ORG_ID constant
 vi.mock("@/lib/const", () => ({
   RECOUP_ORG_ID: "recoup-admin-org-id",
@@ -10,8 +12,6 @@ vi.mock("@/lib/const", () => ({
 vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
   getAccountOrganizations: vi.fn(),
 }));
-
-import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 
 describe("canAccessAccount", () => {
   beforeEach(() => {

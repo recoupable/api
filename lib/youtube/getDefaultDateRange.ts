@@ -14,4 +14,3 @@ export function getDefaultDateRange(): { startDate: string; endDate: string } {
     endDate: endDate.toISOString().split("T")[0],
   };
 }
-

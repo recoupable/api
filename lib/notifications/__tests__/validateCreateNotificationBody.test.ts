@@ -16,6 +16,11 @@ vi.mock("@/lib/networking/safeParseJson", () => ({
   safeParseJson: vi.fn(async (req: Request) => req.json()),
 }));
 
+/**
+ *
+ * @param body
+ * @param headers
+ */
 function createRequest(body: unknown, headers: Record<string, string> = {}): NextRequest {
   const defaultHeaders: Record<string, string> = { "Content-Type": "application/json" };
   return new NextRequest("http://localhost/api/notifications", {
@@ -175,10 +180,7 @@ describe("validateCreateNotificationBody", () => {
   describe("auth errors", () => {
     it("returns 401 when auth is missing", async () => {
       mockValidateAuthContext.mockResolvedValue(
-        NextResponse.json(
-          { status: "error", error: "Unauthorized" },
-          { status: 401 },
-        ),
+        NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
       );
 
       const request = createRequest({ subject: "Test" });

@@ -3,8 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const mockGetAdminSandboxOrgsHandler = vi.fn();
 vi.mock("@/lib/admins/sandboxes/getAdminSandboxOrgsHandler", () => ({
-  getAdminSandboxOrgsHandler: (...args: unknown[]) =>
-    mockGetAdminSandboxOrgsHandler(...args),
+  getAdminSandboxOrgsHandler: (...args: unknown[]) => mockGetAdminSandboxOrgsHandler(...args),
 }));
 
 const { GET, OPTIONS } = await import("../route");
@@ -15,10 +14,7 @@ beforeEach(() => {
 
 describe("GET /api/admins/sandboxes/orgs", () => {
   it("delegates to getAdminSandboxOrgsHandler and returns its response", async () => {
-    const expected = NextResponse.json(
-      { status: "success", repos: [] },
-      { status: 200 },
-    );
+    const expected = NextResponse.json({ status: "success", repos: [] }, { status: 200 });
     mockGetAdminSandboxOrgsHandler.mockResolvedValue(expected);
 
     const request = new NextRequest("https://example.com/api/admins/sandboxes/orgs");
@@ -89,10 +85,7 @@ describe("GET /api/admins/sandboxes/orgs", () => {
 
   it("returns 500 when handler returns internal error", async () => {
     mockGetAdminSandboxOrgsHandler.mockResolvedValue(
-      NextResponse.json(
-        { status: "error", message: "Internal server error" },
-        { status: 500 },
-      ),
+      NextResponse.json({ status: "error", message: "Internal server error" }, { status: 500 }),
     );
 
     const request = new NextRequest("https://example.com/api/admins/sandboxes/orgs");

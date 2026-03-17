@@ -9,10 +9,7 @@
  * @param minRepeats - Minimum repetitions to trigger condensing (default 3)
  * @returns Text with repetitions condensed
  */
-export function condenseRepetitions(
-  text: string,
-  minRepeats: number = 3,
-): string {
+export function condenseRepetitions(text: string, minRepeats: number = 3): string {
   // Split on comma+space boundaries
   const tokens = text.split(/,\s*/);
   const result: string[] = [];
@@ -39,4 +36,3 @@ export function condenseRepetitions(
 
   return result.join(", ");
 }
-

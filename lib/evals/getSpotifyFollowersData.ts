@@ -3,7 +3,7 @@ import { EVAL_ARTISTS } from "@/lib/consts";
 
 const getSpotifyFollowersData = async () => {
   const testCases = await Promise.all(
-    EVAL_ARTISTS.map(async (artist) => {
+    EVAL_ARTISTS.map(async artist => {
       const { expected } = await getSpotifyFollowersExpected(artist);
       return {
         input: `how many total followers does ${artist} have on Spotify`,
@@ -15,7 +15,7 @@ const getSpotifyFollowersData = async () => {
           data_type: "spotify_followers",
         },
       };
-    })
+    }),
   );
 
   return testCases;

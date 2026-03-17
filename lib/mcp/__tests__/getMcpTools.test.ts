@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { getMcpTools } from "../getMcpTools";
+import { experimental_createMCPClient } from "@ai-sdk/mcp";
+
 vi.mock("@ai-sdk/mcp", () => ({
   experimental_createMCPClient: vi.fn(),
 }));
@@ -7,9 +10,6 @@ vi.mock("@ai-sdk/mcp", () => ({
 vi.mock("@/lib/networking/getBaseUrl", () => ({
   getBaseUrl: vi.fn().mockReturnValue("https://test.vercel.app"),
 }));
-
-import { getMcpTools } from "../getMcpTools";
-import { experimental_createMCPClient } from "@ai-sdk/mcp";
 
 const mockCreateMCPClient = vi.mocked(experimental_createMCPClient);
 

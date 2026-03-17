@@ -54,7 +54,12 @@ describe("createToolRouterSession", () => {
   it("should pass artist connections when account has no overlap", async () => {
     // Account has Google Sheets connected but NOT TikTok
     vi.mocked(getConnectors).mockResolvedValue([
-      { slug: "googlesheets", name: "Google Sheets", isConnected: true, connectedAccountId: "gs-123" },
+      {
+        slug: "googlesheets",
+        name: "Google Sheets",
+        isConnected: true,
+        connectedAccountId: "gs-123",
+      },
       { slug: "tiktok", name: "TikTok", isConnected: false },
     ]);
 

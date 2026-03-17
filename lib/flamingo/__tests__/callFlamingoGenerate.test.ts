@@ -87,9 +87,9 @@ describe("callFlamingoGenerate", () => {
       text: async () => "Service Unavailable",
     });
 
-    await expect(
-      callFlamingoGenerate({ prompt: "Describe this." }),
-    ).rejects.toThrow("Flamingo model returned 503: Service Unavailable");
+    await expect(callFlamingoGenerate({ prompt: "Describe this." })).rejects.toThrow(
+      "Flamingo model returned 503: Service Unavailable",
+    );
   });
 
   it("throws error with fallback message when error text cannot be read", async () => {
@@ -101,9 +101,9 @@ describe("callFlamingoGenerate", () => {
       },
     });
 
-    await expect(
-      callFlamingoGenerate({ prompt: "Describe this." }),
-    ).rejects.toThrow("Flamingo model returned 500: Unknown error");
+    await expect(callFlamingoGenerate({ prompt: "Describe this." })).rejects.toThrow(
+      "Flamingo model returned 500: Unknown error",
+    );
   });
 
   it("throws when response shape is invalid", async () => {
@@ -112,8 +112,8 @@ describe("callFlamingoGenerate", () => {
       json: async () => ({ response: 42 }),
     });
 
-    await expect(
-      callFlamingoGenerate({ prompt: "Describe this." }),
-    ).rejects.toThrow("Flamingo model returned an unexpected response shape");
+    await expect(callFlamingoGenerate({ prompt: "Describe this." })).rejects.toThrow(
+      "Flamingo model returned an unexpected response shape",
+    );
   });
 });

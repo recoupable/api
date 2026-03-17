@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// Import after mocks
+import { deleteTask } from "../deleteTask";
+import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
+import { deleteScheduledAction } from "@/lib/supabase/scheduled_actions/deleteScheduledAction";
+import { deleteSchedule } from "@/lib/trigger/deleteSchedule";
+
 // Mock external dependencies
 vi.mock("@/lib/supabase/scheduled_actions/selectScheduledActions", () => ({
   selectScheduledActions: vi.fn(),
@@ -12,12 +18,6 @@ vi.mock("@/lib/supabase/scheduled_actions/deleteScheduledAction", () => ({
 vi.mock("@/lib/trigger/deleteSchedule", () => ({
   deleteSchedule: vi.fn(),
 }));
-
-// Import after mocks
-import { deleteTask } from "../deleteTask";
-import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
-import { deleteScheduledAction } from "@/lib/supabase/scheduled_actions/deleteScheduledAction";
-import { deleteSchedule } from "@/lib/trigger/deleteSchedule";
 
 const mockSelectScheduledActions = vi.mocked(selectScheduledActions);
 const mockDeleteScheduledAction = vi.mocked(deleteScheduledAction);
@@ -129,13 +129,13 @@ describe("deleteTask", () => {
       // Track when each operation starts and completes
       mockDeleteSchedule.mockImplementation(async () => {
         executionOrder.push("deleteSchedule:start");
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 10));
         executionOrder.push("deleteSchedule:end");
       });
 
       mockDeleteScheduledAction.mockImplementation(async () => {
         executionOrder.push("deleteScheduledAction:start");
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 10));
         executionOrder.push("deleteScheduledAction:end");
       });
 

@@ -5,6 +5,11 @@ import { z } from "zod";
 
 /**
  * Custom scorer that uses AI to check if recommended songs are actually in the catalog
+ *
+ * @param root0
+ * @param root0.output
+ * @param root0.expected
+ * @param root0.input
  */
 export const CatalogAvailability = async ({
   output,
@@ -40,29 +45,19 @@ ${catalog}
 
 IMPORTANT: Return ONLY valid JSON. Use double quotes for all strings. Escape any quotes within strings with backslashes. Example: "reasoning": "This is a test with \\"quotes\\" inside"`,
       schema: z.object({
-        analysis: z
-          .string()
-          .describe("Detailed analysis of the song recommendations"),
+        analysis: z.string().describe("Detailed analysis of the song recommendations"),
         totalSongs: z.number().describe("Total number of songs recommended"),
-        songsInCatalog: z
-          .number()
-          .describe("Number of songs that are in the catalog"),
+        songsInCatalog: z.number().describe("Number of songs that are in the catalog"),
         matchedSongs: z
           .array(
             z.object({
               recommended: z.string().describe("The song as recommended"),
               catalogMatch: z.string().describe("The matching song in catalog"),
-              confidence: z
-                .number()
-                .min(0)
-                .max(1)
-                .describe("Confidence in the match (0-1)"),
-            })
+              confidence: z.number().min(0).max(1).describe("Confidence in the match (0-1)"),
+            }),
           )
           .describe("Songs that were matched to the catalog"),
-        unmatchedSongs: z
-          .array(z.string())
-          .describe("Songs that were not found in the catalog"),
+        unmatchedSongs: z.array(z.string()).describe("Songs that were not found in the catalog"),
         score: z
           .number()
           .min(0)
@@ -77,9 +72,7 @@ IMPORTANT: Return ONLY valid JSON. Use double quotes for all strings. Escape any
     }
 
     const score =
-      typeof result.object.score === "number"
-        ? Math.max(0, Math.min(1, result.object.score))
-        : 0;
+      typeof result.object.score === "number" ? Math.max(0, Math.min(1, result.object.score)) : 0;
 
     return {
       name: "catalog_availability",

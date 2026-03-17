@@ -72,7 +72,9 @@ describe("getArtistContentReadiness", () => {
     expect(result.ready).toBe(true);
     expect(result.missing).toEqual([]);
     // config.json appears as a warning, not a blocker
-    expect(result.warnings.some(item => item.file === "config/content-creation/config.json")).toBe(true);
+    expect(result.warnings.some(item => item.file === "config/content-creation/config.json")).toBe(
+      true,
+    );
   });
 
   it("throws when account has no github repo", async () => {
@@ -86,4 +88,3 @@ describe("getArtistContentReadiness", () => {
     ).rejects.toThrow("No GitHub repository configured for this account");
   });
 });
-

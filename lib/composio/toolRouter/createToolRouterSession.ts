@@ -49,9 +49,7 @@ export async function createToolRouterSession(
 
     // Only keep artist connections for toolkits the account doesn't have
     filteredConnections = Object.fromEntries(
-      Object.entries(artistConnections).filter(
-        ([slug]) => !accountConnectedSlugs.has(slug),
-      ),
+      Object.entries(artistConnections).filter(([slug]) => !accountConnectedSlugs.has(slug)),
     );
 
     // If nothing left after filtering, don't pass overrides at all

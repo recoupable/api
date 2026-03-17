@@ -8,12 +8,12 @@ const getAdminEmailsQuerySchema = z.object({
   account_id: z
     .string()
     .min(1)
-    .transform((val) => val.trim())
+    .transform(val => val.trim())
     .optional(),
   email_id: z
     .string()
     .min(1)
-    .transform((val) => val.trim())
+    .transform(val => val.trim())
     .optional(),
 });
 

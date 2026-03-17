@@ -15,6 +15,10 @@ const transcribeAudioSchema = z.object({
 
 type TranscribeAudioArgs = z.infer<typeof transcribeAudioSchema>;
 
+/**
+ *
+ * @param server
+ */
 export function registerTranscribeAudioTool(server: McpServer): void {
   server.registerTool(
     "transcribe_audio",
@@ -48,4 +52,3 @@ export function registerTranscribeAudioTool(server: McpServer): void {
     },
   );
 }
-

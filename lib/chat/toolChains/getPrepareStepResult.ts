@@ -12,10 +12,10 @@ type PrepareStepOptions = {
 /**
  * Returns the next tool to run based on timeline progression through tool chains.
  * Uses toolCallsContent to track exact execution order and position in sequence.
+ *
+ * @param options
  */
-const getPrepareStepResult = (
-  options: PrepareStepOptions
-): PrepareStepResult | undefined => {
+const getPrepareStepResult = (options: PrepareStepOptions): PrepareStepResult | undefined => {
   const { steps } = options;
   // Extract tool calls timeline (history) from steps
   const executedTimeline = getExecutedToolTimeline(steps);
@@ -32,10 +32,7 @@ const getPrepareStepResult = (
     let timelinePosition = triggerIndex;
 
     // Walk through the timeline starting from trigger
-    while (
-      timelinePosition < executedTimeline.length &&
-      sequencePosition < fullSequence.length
-    ) {
+    while (timelinePosition < executedTimeline.length && sequencePosition < fullSequence.length) {
       const currentTool = executedTimeline[timelinePosition];
       const expectedTool = fullSequence[sequencePosition].toolName;
 
