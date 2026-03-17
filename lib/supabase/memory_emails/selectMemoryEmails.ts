@@ -9,47 +9,36 @@ export type MemoryEmailWithMemory = MemoryEmail & {
 };
 
 interface SelectMemoryEmailsParams {
-  messageIds?: string[];
-  memoryIds?: string[];
+  messageIds: string[];
 }
 
 /**
- * Selects memory_emails with optional filters.
+ * Selects memory_emails by message IDs, joined with the memories table.
  *
- * @param params.messageIds - Filter by message IDs
- * @param params.memoryIds - Filter by memory IDs
+ * @param params - The parameters for the query
+ * @param params.messageIds - Array of message IDs to query
  * @returns Array of memory_emails rows with joined memory data
  */
 export default async function selectMemoryEmails({
   messageIds,
-  memoryIds,
-}: SelectMemoryEmailsParams = {}): Promise<MemoryEmailWithMemory[]> {
-  const hasMessageIds = Array.isArray(messageIds) && messageIds.length > 0;
-  const hasMemoryIds = Array.isArray(memoryIds) && memoryIds.length > 0;
-
-  if (!hasMessageIds && !hasMemoryIds) {
+}: SelectMemoryEmailsParams): Promise<MemoryEmailWithMemory[]> {
+  if (!Array.isArray(messageIds) || messageIds.length === 0) {
     return [];
   }
 
-  let query = supabase
+  const { data, error } = await supabase
     .from("memory_emails")
     .select("*, memories(*)")
-    .order("created_at", { ascending: false });
-
-  if (hasMessageIds) {
-    query = query.in("message_id", messageIds);
-  }
-
-  if (hasMemoryIds) {
-    query = query.in("memory", memoryIds);
-  }
-
-  const { data, error } = await query;
+    .in("message_id", messageIds);
 
   if (error) {
     console.error("Error fetching memory_emails:", error);
     return [];
   }
 
-  return data ?? [];
+  if (!data) {
+    return [];
+  }
+
+  return data;
 }

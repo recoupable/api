@@ -1,5 +1,5 @@
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
-import { getResendClient } from "@/lib/emails/client";
+import { listResendEmails } from "@/lib/emails/listResendEmails";
 
 /**
  * Returns Resend email IDs for all emails sent to a given account's email address
@@ -16,12 +16,9 @@ export async function getAccountEmailIds(
 
   if (!accountEmail) return [];
 
-  const resend = getResendClient();
-  const { data } = await resend.emails.list({ limit: 100 });
+  const emails = await listResendEmails();
 
-  if (!data?.data) return [];
-
-  return data.data
+  return emails
     .filter((email) => email.to.includes(accountEmail))
     .map((email) => email.id);
 }

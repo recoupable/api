@@ -1,17 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getAccountEmailIds } from "../getAccountEmailIds";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
+import { listResendEmails } from "@/lib/emails/listResendEmails";
 import type { ListEmail } from "resend";
 
 vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
   default: vi.fn(),
 }));
 
-const mockResendEmailsList = vi.fn();
-vi.mock("@/lib/emails/client", () => ({
-  getResendClient: () => ({
-    emails: { list: (...args: unknown[]) => mockResendEmailsList(...args) },
-  }),
+vi.mock("@/lib/emails/listResendEmails", () => ({
+  listResendEmails: vi.fn(),
 }));
 
 beforeEach(() => {
@@ -36,15 +34,11 @@ describe("getAccountEmailIds", () => {
     vi.mocked(selectAccountEmails).mockResolvedValueOnce([
       { account_id: "acc-123", email: "user@test.com", id: "ae-1", updated_at: "" },
     ]);
-    mockResendEmailsList.mockResolvedValueOnce({
-      data: {
-        data: [
-          { ...mockListEmail, id: "email-1", to: ["user@test.com"] },
-          { ...mockListEmail, id: "email-2", to: ["other@test.com"] },
-          { ...mockListEmail, id: "email-3", to: ["user@test.com"] },
-        ],
-      },
-    });
+    vi.mocked(listResendEmails).mockResolvedValueOnce([
+      { ...mockListEmail, id: "email-1", to: ["user@test.com"] },
+      { ...mockListEmail, id: "email-2", to: ["other@test.com"] },
+      { ...mockListEmail, id: "email-3", to: ["user@test.com"] },
+    ]);
 
     const result = await getAccountEmailIds("acc-123");
 
@@ -57,30 +51,17 @@ describe("getAccountEmailIds", () => {
     const result = await getAccountEmailIds("acc-123");
 
     expect(result).toEqual([]);
-    expect(mockResendEmailsList).not.toHaveBeenCalled();
+    expect(listResendEmails).not.toHaveBeenCalled();
   });
 
-  it("returns empty when Resend returns no data", async () => {
+  it("returns empty when Resend returns no emails", async () => {
     vi.mocked(selectAccountEmails).mockResolvedValueOnce([
       { account_id: "acc-123", email: "user@test.com", id: "ae-1", updated_at: "" },
     ]);
-    mockResendEmailsList.mockResolvedValueOnce({ data: null });
+    vi.mocked(listResendEmails).mockResolvedValueOnce([]);
 
     const result = await getAccountEmailIds("acc-123");
 
     expect(result).toEqual([]);
-  });
-
-  it("passes limit to resend list call", async () => {
-    vi.mocked(selectAccountEmails).mockResolvedValueOnce([
-      { account_id: "acc-123", email: "user@test.com", id: "ae-1", updated_at: "" },
-    ]);
-    mockResendEmailsList.mockResolvedValueOnce({
-      data: { data: [] },
-    });
-
-    await getAccountEmailIds("acc-123");
-
-    expect(mockResendEmailsList).toHaveBeenCalledWith({ limit: 100 });
   });
 });
