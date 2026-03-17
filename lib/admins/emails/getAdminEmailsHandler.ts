@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAdminAuth } from "@/lib/admins/validateAdminAuth";
+import { validateGetAdminEmailsQuery } from "./validateGetAdminEmailsQuery";
 import { getAccountEmailIds } from "./getAccountEmailIds";
 import { fetchResendEmail } from "@/lib/emails/fetchResendEmail";
 import type { GetEmailResponseSuccess } from "resend";
@@ -20,33 +20,20 @@ import type { GetEmailResponseSuccess } from "resend";
  */
 export async function getAdminEmailsHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const auth = await validateAdminAuth(request);
-    if (auth instanceof NextResponse) {
-      return auth;
+    const query = await validateGetAdminEmailsQuery(request);
+    if (query instanceof NextResponse) {
+      return query;
     }
 
-    const { searchParams } = new URL(request.url);
-    const accountId = searchParams.get("account_id");
-    const emailId = searchParams.get("email_id");
-
-    if (!accountId && !emailId) {
-      return NextResponse.json(
-        { status: "error", error: "must provide either account_id or email_id" },
-        { status: 400, headers: getCorsHeaders() },
-      );
-    }
-
-    // Single email by Resend ID
-    if (emailId) {
-      const email = await fetchResendEmail(emailId);
+    if (query.mode === "email") {
+      const email = await fetchResendEmail(query.emailId);
       return NextResponse.json(
         { status: "success", emails: email ? [email] : [] },
         { status: 200, headers: getCorsHeaders() },
       );
     }
 
-    // All emails for an account
-    const emailIds = await getAccountEmailIds(accountId!);
+    const emailIds = await getAccountEmailIds(query.accountId);
 
     if (emailIds.length === 0) {
       return NextResponse.json(

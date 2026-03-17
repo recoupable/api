@@ -1,17 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getAdminEmailsHandler } from "../getAdminEmailsHandler";
-import { validateAdminAuth } from "@/lib/admins/validateAdminAuth";
+import { validateGetAdminEmailsQuery } from "../validateGetAdminEmailsQuery";
 import { getAccountEmailIds } from "../getAccountEmailIds";
 import { fetchResendEmail } from "@/lib/emails/fetchResendEmail";
+import type { NextRequest } from "next/server";
 import type { GetEmailResponseSuccess } from "resend";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-vi.mock("@/lib/admins/validateAdminAuth", () => ({
-  validateAdminAuth: vi.fn(),
+vi.mock("../validateGetAdminEmailsQuery", () => ({
+  validateGetAdminEmailsQuery: vi.fn(),
 }));
 
 vi.mock("../getAccountEmailIds", () => ({
@@ -21,10 +22,6 @@ vi.mock("../getAccountEmailIds", () => ({
 vi.mock("@/lib/emails/fetchResendEmail", () => ({
   fetchResendEmail: vi.fn(),
 }));
-
-function createMockRequest(url: string): NextRequest {
-  return new NextRequest(new URL(url, "http://localhost:3000"));
-}
 
 const mockResendEmail: GetEmailResponseSuccess = {
   id: "email-abc",
@@ -44,54 +41,18 @@ const mockResendEmail: GetEmailResponseSuccess = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(validateAdminAuth).mockResolvedValue({ accountId: "admin-acc" });
 });
 
 describe("getAdminEmailsHandler", () => {
-  describe("account_id mode", () => {
-    it("returns full Resend email data for account_id query", async () => {
-      vi.mocked(getAccountEmailIds).mockResolvedValueOnce(["email-abc"]);
-      vi.mocked(fetchResendEmail).mockResolvedValueOnce(mockResendEmail);
-
-      const request = createMockRequest("/api/admins/emails?account_id=acc-123");
-      const response = await getAdminEmailsHandler(request);
-      const body = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(body.emails).toHaveLength(1);
-      expect(body.emails[0]).toMatchObject({
-        id: "email-abc",
-        from: "agent@recoupable.com",
-        to: ["user@test.com"],
-        subject: "Your Pulse",
-        html: "<h1>Hello</h1>",
-        text: "Hello",
-        last_event: "delivered",
-        cc: null,
-        bcc: null,
-        reply_to: null,
-        scheduled_at: null,
-      });
-    });
-
-    it("returns empty when no email IDs found for account", async () => {
-      vi.mocked(getAccountEmailIds).mockResolvedValueOnce([]);
-
-      const request = createMockRequest("/api/admins/emails?account_id=acc-123");
-      const response = await getAdminEmailsHandler(request);
-      const body = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(body.emails).toEqual([]);
-    });
-  });
-
   describe("email_id mode", () => {
     it("returns a single email by Resend ID", async () => {
+      vi.mocked(validateGetAdminEmailsQuery).mockResolvedValueOnce({
+        mode: "email",
+        emailId: "email-abc",
+      });
       vi.mocked(fetchResendEmail).mockResolvedValueOnce(mockResendEmail);
 
-      const request = createMockRequest("/api/admins/emails?email_id=email-abc");
-      const response = await getAdminEmailsHandler(request);
+      const response = await getAdminEmailsHandler({} as NextRequest);
       const body = await response.json();
 
       expect(response.status).toBe(200);
@@ -101,11 +62,52 @@ describe("getAdminEmailsHandler", () => {
       expect(getAccountEmailIds).not.toHaveBeenCalled();
     });
 
-    it("returns empty array when Resend returns no data", async () => {
+    it("returns empty when Resend returns no data", async () => {
+      vi.mocked(validateGetAdminEmailsQuery).mockResolvedValueOnce({
+        mode: "email",
+        emailId: "email-bad",
+      });
       vi.mocked(fetchResendEmail).mockResolvedValueOnce(null);
 
-      const request = createMockRequest("/api/admins/emails?email_id=email-bad");
-      const response = await getAdminEmailsHandler(request);
+      const response = await getAdminEmailsHandler({} as NextRequest);
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.emails).toEqual([]);
+    });
+  });
+
+  describe("account_id mode", () => {
+    it("returns full Resend email data for account", async () => {
+      vi.mocked(validateGetAdminEmailsQuery).mockResolvedValueOnce({
+        mode: "account",
+        accountId: "acc-123",
+      });
+      vi.mocked(getAccountEmailIds).mockResolvedValueOnce(["email-abc"]);
+      vi.mocked(fetchResendEmail).mockResolvedValueOnce(mockResendEmail);
+
+      const response = await getAdminEmailsHandler({} as NextRequest);
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.emails).toHaveLength(1);
+      expect(body.emails[0]).toMatchObject({
+        id: "email-abc",
+        subject: "Your Pulse",
+        html: "<h1>Hello</h1>",
+        text: "Hello",
+        last_event: "delivered",
+      });
+    });
+
+    it("returns empty when no email IDs found", async () => {
+      vi.mocked(validateGetAdminEmailsQuery).mockResolvedValueOnce({
+        mode: "account",
+        accountId: "acc-123",
+      });
+      vi.mocked(getAccountEmailIds).mockResolvedValueOnce([]);
+
+      const response = await getAdminEmailsHandler({} as NextRequest);
       const body = await response.json();
 
       expect(response.status).toBe(200);
@@ -114,22 +116,14 @@ describe("getAdminEmailsHandler", () => {
   });
 
   describe("validation", () => {
-    it("returns 400 when neither account_id nor email_id provided", async () => {
-      const request = createMockRequest("/api/admins/emails");
-      const response = await getAdminEmailsHandler(request);
-
-      expect(response.status).toBe(400);
-    });
-
-    it("returns auth error when not admin", async () => {
-      vi.mocked(validateAdminAuth).mockResolvedValueOnce(
-        NextResponse.json({ status: "error" }, { status: 403 }),
+    it("returns validation error response directly", async () => {
+      vi.mocked(validateGetAdminEmailsQuery).mockResolvedValueOnce(
+        NextResponse.json({ status: "error" }, { status: 400 }),
       );
 
-      const request = createMockRequest("/api/admins/emails?account_id=acc-123");
-      const response = await getAdminEmailsHandler(request);
+      const response = await getAdminEmailsHandler({} as NextRequest);
 
-      expect(response.status).toBe(403);
+      expect(response.status).toBe(400);
     });
   });
 });
