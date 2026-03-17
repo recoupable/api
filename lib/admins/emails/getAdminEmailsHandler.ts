@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAdminAuth } from "@/lib/admins/validateAdminAuth";
-import { selectAccountEmailIds } from "@/lib/supabase/memory_emails/selectAccountEmailIds";
-import { getResendClient } from "@/lib/emails/client";
+import { getAccountEmailIds } from "./getAccountEmailIds";
+import { fetchResendEmail } from "@/lib/emails/fetchResendEmail";
 import type { GetEmailResponseSuccess } from "resend";
 
 /**
@@ -36,11 +36,9 @@ export async function getAdminEmailsHandler(request: NextRequest): Promise<NextR
       );
     }
 
-    const resend = getResendClient();
-
     // Single email by Resend ID
     if (emailId) {
-      const email = await fetchResendEmail(resend, emailId);
+      const email = await fetchResendEmail(emailId);
       return NextResponse.json(
         { status: "success", emails: email ? [email] : [] },
         { status: 200, headers: getCorsHeaders() },
@@ -48,9 +46,9 @@ export async function getAdminEmailsHandler(request: NextRequest): Promise<NextR
     }
 
     // All emails for an account
-    const emailIdRows = await selectAccountEmailIds(accountId!);
+    const emailIds = await getAccountEmailIds(accountId!);
 
-    if (emailIdRows.length === 0) {
+    if (emailIds.length === 0) {
       return NextResponse.json(
         { status: "success", emails: [] },
         { status: 200, headers: getCorsHeaders() },
@@ -58,7 +56,7 @@ export async function getAdminEmailsHandler(request: NextRequest): Promise<NextR
     }
 
     const emails = await Promise.all(
-      emailIdRows.map(({ email_id }) => fetchResendEmail(resend, email_id)),
+      emailIds.map((id) => fetchResendEmail(id)),
     );
 
     const validEmails = emails.filter(
@@ -75,17 +73,5 @@ export async function getAdminEmailsHandler(request: NextRequest): Promise<NextR
       { status: "error", message: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
     );
-  }
-}
-
-async function fetchResendEmail(
-  resend: ReturnType<typeof getResendClient>,
-  emailId: string,
-): Promise<GetEmailResponseSuccess | null> {
-  try {
-    const { data } = await resend.emails.get(emailId);
-    return data ?? null;
-  } catch {
-    return null;
   }
 }

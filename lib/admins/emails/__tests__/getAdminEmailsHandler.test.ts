@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminEmailsHandler } from "../getAdminEmailsHandler";
 import { validateAdminAuth } from "@/lib/admins/validateAdminAuth";
+import { getAccountEmailIds } from "../getAccountEmailIds";
+import { fetchResendEmail } from "@/lib/emails/fetchResendEmail";
 import type { GetEmailResponseSuccess } from "resend";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -12,16 +14,12 @@ vi.mock("@/lib/admins/validateAdminAuth", () => ({
   validateAdminAuth: vi.fn(),
 }));
 
-const mockSelectAccountEmailIds = vi.fn();
-vi.mock("@/lib/supabase/memory_emails/selectAccountEmailIds", () => ({
-  selectAccountEmailIds: (...args: unknown[]) => mockSelectAccountEmailIds(...args),
+vi.mock("../getAccountEmailIds", () => ({
+  getAccountEmailIds: vi.fn(),
 }));
 
-const mockResendEmailsGet = vi.fn();
-vi.mock("@/lib/emails/client", () => ({
-  getResendClient: () => ({
-    emails: { get: (...args: unknown[]) => mockResendEmailsGet(...args) },
-  }),
+vi.mock("@/lib/emails/fetchResendEmail", () => ({
+  fetchResendEmail: vi.fn(),
 }));
 
 function createMockRequest(url: string): NextRequest {
@@ -52,10 +50,8 @@ beforeEach(() => {
 describe("getAdminEmailsHandler", () => {
   describe("account_id mode", () => {
     it("returns full Resend email data for account_id query", async () => {
-      mockSelectAccountEmailIds.mockResolvedValueOnce([
-        { email_id: "email-abc", created_at: "2026-03-16T10:00:00Z" },
-      ]);
-      mockResendEmailsGet.mockResolvedValueOnce({ data: mockResendEmail });
+      vi.mocked(getAccountEmailIds).mockResolvedValueOnce(["email-abc"]);
+      vi.mocked(fetchResendEmail).mockResolvedValueOnce(mockResendEmail);
 
       const request = createMockRequest("/api/admins/emails?account_id=acc-123");
       const response = await getAdminEmailsHandler(request);
@@ -77,11 +73,22 @@ describe("getAdminEmailsHandler", () => {
         scheduled_at: null,
       });
     });
+
+    it("returns empty when no email IDs found for account", async () => {
+      vi.mocked(getAccountEmailIds).mockResolvedValueOnce([]);
+
+      const request = createMockRequest("/api/admins/emails?account_id=acc-123");
+      const response = await getAdminEmailsHandler(request);
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.emails).toEqual([]);
+    });
   });
 
   describe("email_id mode", () => {
     it("returns a single email by Resend ID", async () => {
-      mockResendEmailsGet.mockResolvedValueOnce({ data: mockResendEmail });
+      vi.mocked(fetchResendEmail).mockResolvedValueOnce(mockResendEmail);
 
       const request = createMockRequest("/api/admins/emails?email_id=email-abc");
       const response = await getAdminEmailsHandler(request);
@@ -91,11 +98,11 @@ describe("getAdminEmailsHandler", () => {
       expect(body.emails).toHaveLength(1);
       expect(body.emails[0].id).toBe("email-abc");
       expect(body.emails[0].last_event).toBe("delivered");
-      expect(mockSelectAccountEmailIds).not.toHaveBeenCalled();
+      expect(getAccountEmailIds).not.toHaveBeenCalled();
     });
 
     it("returns empty array when Resend returns no data", async () => {
-      mockResendEmailsGet.mockResolvedValueOnce({ data: null });
+      vi.mocked(fetchResendEmail).mockResolvedValueOnce(null);
 
       const request = createMockRequest("/api/admins/emails?email_id=email-bad");
       const response = await getAdminEmailsHandler(request);
