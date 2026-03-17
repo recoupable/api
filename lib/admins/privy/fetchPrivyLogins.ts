@@ -1,7 +1,7 @@
 import { toMs } from "./toMs";
 import { fetchPrivyUsersPage } from "./fetchPrivyUsersPage";
 import { getLatestVerifiedAt } from "./getLatestVerifiedAt";
-import { PERIOD_DAYS } from "./periodDays";
+import { getCutoffMs } from "./getCutoffMs";
 import type { User } from "@privy-io/node";
 
 export type PrivyLoginsPeriod = "all" | "daily" | "weekly" | "monthly";
@@ -23,7 +23,7 @@ export type FetchPrivyLoginsResult = {
 
 export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<FetchPrivyLoginsResult> {
   const isAll = period === "all";
-  const cutoffMs = isAll ? 0 : Date.now() - PERIOD_DAYS[period] * 24 * 60 * 60 * 1000;
+  const cutoffMs = getCutoffMs(period);
 
   const users: User[] = [];
   let totalPrivyUsers = 0;
