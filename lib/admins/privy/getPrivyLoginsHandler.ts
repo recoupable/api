@@ -10,12 +10,12 @@ import { fetchPrivyLogins } from "./fetchPrivyLogins";
  * Period defaults to "daily" (last 24 hours). Supports "weekly" (7 days) and "monthly" (30 days).
  *
  * Each login represents a user account created in Privy (i.e., their first authentication).
- * Results include a total count and a table of individual logins with email and timestamp.
+ * Results include a total count and the full, unmodified user objects from Privy.
  *
  * Requires admin authentication.
  *
  * @param request - The request object
- * @returns A NextResponse with { status: "success", total: number, logins: PrivyLoginRow[] }
+ * @returns A NextResponse with { status: "success", total: number, logins: PrivyUser[] }
  */
 export async function getPrivyLoginsHandler(request: NextRequest): Promise<NextResponse> {
   try {

@@ -19,14 +19,20 @@ import { fetchPrivyLogins } from "../fetchPrivyLogins";
 
 const mockLogins = [
   {
-    privy_did: "did:privy:abc123",
-    email: "user@example.com",
-    created_at: "2026-03-17T10:00:00.000Z",
+    id: "did:privy:abc123",
+    created_at: 1773928800,
+    linked_accounts: [{ type: "email", address: "user@example.com" }],
+    has_accepted_terms: true,
+    is_guest: false,
+    mfa_methods: [],
   },
   {
-    privy_did: "did:privy:def456",
-    email: null,
-    created_at: "2026-03-17T09:00:00.000Z",
+    id: "did:privy:def456",
+    created_at: 1773925200,
+    linked_accounts: [],
+    has_accepted_terms: false,
+    is_guest: true,
+    mfa_methods: [],
   },
 ];
 

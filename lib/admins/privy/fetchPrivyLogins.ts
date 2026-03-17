@@ -1,9 +1,3 @@
-export type PrivyLoginRow = {
-  privy_did: string;
-  email: string | null;
-  created_at: string;
-};
-
 export type PrivyLoginsPeriod = "daily" | "weekly" | "monthly";
 
 const PERIOD_DAYS: Record<PrivyLoginsPeriod, number> = {
@@ -12,30 +6,21 @@ const PERIOD_DAYS: Record<PrivyLoginsPeriod, number> = {
   monthly: 30,
 };
 
-type PrivyUserLinkedAccount = {
-  type: string;
-  address?: string;
-};
-
-type PrivyUser = {
-  id: string;
-  created_at: number; // Unix timestamp in seconds
-  linked_accounts: PrivyUserLinkedAccount[];
-};
-
 type PrivyUsersPage = {
-  data: PrivyUser[];
+  data: Record<string, unknown>[];
   next_cursor?: string;
 };
 
 /**
  * Fetches Privy users created within the given period via the Privy Management API.
+ * Returns the full, unmodified user objects from Privy.
  * Paginates until all users within the time window are retrieved.
  *
+ * @see https://docs.privy.io/api-reference/users/get-all
  * @param period - "daily", "weekly", or "monthly"
- * @returns Array of PrivyLoginRow sorted by created_at descending
+ * @returns Array of full Privy user objects sorted by created_at descending
  */
-export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<PrivyLoginRow[]> {
+export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<Record<string, unknown>[]> {
   const days = PERIOD_DAYS[period];
   const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000;
   const cutoffSec = Math.floor(cutoffMs / 1000);
@@ -44,7 +29,7 @@ export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<Privy
   const appSecret = process.env.PRIVY_PROJECT_SECRET!;
   const authHeader = `Basic ${Buffer.from(`${appId}:${appSecret}`).toString("base64")}`;
 
-  const logins: PrivyLoginRow[] = [];
+  const users: Record<string, unknown>[] = [];
   let cursor: string | undefined = undefined;
 
   while (true) {
@@ -77,17 +62,12 @@ export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<Privy
     let reachedCutoff = false;
 
     for (const user of page.data) {
-      if (user.created_at < cutoffSec) {
+      if ((user.created_at as number) < cutoffSec) {
         reachedCutoff = true;
         break;
       }
 
-      const emailAccount = user.linked_accounts?.find((a) => a.type === "email");
-      logins.push({
-        privy_did: user.id,
-        email: emailAccount?.address ?? null,
-        created_at: new Date(user.created_at * 1000).toISOString(),
-      });
+      users.push(user);
     }
 
     if (reachedCutoff || !page.next_cursor) {
@@ -97,5 +77,5 @@ export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<Privy
     cursor = page.next_cursor;
   }
 
-  return logins;
+  return users;
 }
