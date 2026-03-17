@@ -3,7 +3,6 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetPrivyLoginsQuery } from "./validateGetPrivyLoginsQuery";
 import { fetchPrivyLogins } from "./fetchPrivyLogins";
 import { countNewAccounts } from "./countNewAccounts";
-import { countActiveAccounts } from "./countActiveAccounts";
 
 /**
  * Handler for GET /api/admins/privy
@@ -18,6 +17,7 @@ import { countActiveAccounts } from "./countActiveAccounts";
  *
  * @param request - The request object
  * @returns A NextResponse with { status, total, total_new, total_active, logins }
+ * total = all-time Privy account count, total_active = accounts matching new or active in period
  */
 export async function getPrivyLoginsHandler(request: NextRequest): Promise<NextResponse> {
   try {
@@ -28,17 +28,10 @@ export async function getPrivyLoginsHandler(request: NextRequest): Promise<NextR
 
     const { users, totalPrivyUsers } = await fetchPrivyLogins(query.period);
     const total_new = countNewAccounts(users, query.period);
-    const total_active = countActiveAccounts(users, query.period);
+    const total_active = users.length;
 
     return NextResponse.json(
-      {
-        status: "success",
-        total: users.length,
-        total_new,
-        total_active,
-        total_privy_users: totalPrivyUsers,
-        logins: users,
-      },
+      { status: "success", total: totalPrivyUsers, total_new, total_active, logins: users },
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {
