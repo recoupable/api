@@ -1,4 +1,4 @@
-import type { PrivyLoginsPeriod } from "./fetchPrivyLogins";
+import type { PrivyLoginsPeriod } from "./privyLoginsPeriod";
 
 export const PERIOD_DAYS: Record<Exclude<PrivyLoginsPeriod, "all">, number> = {
   daily: 1,

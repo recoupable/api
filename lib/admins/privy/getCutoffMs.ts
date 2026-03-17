@@ -1,4 +1,4 @@
-import type { PrivyLoginsPeriod } from "./fetchPrivyLogins";
+import type { PrivyLoginsPeriod } from "./privyLoginsPeriod";
 import { PERIOD_DAYS } from "./periodDays";
 
 /**

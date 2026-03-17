@@ -1,5 +1,5 @@
 import { toMs } from "./toMs";
-import type { PrivyLoginsPeriod } from "./fetchPrivyLogins";
+import type { PrivyLoginsPeriod } from "./privyLoginsPeriod";
 import type { User } from "@privy-io/node";
 import { getCutoffMs } from "./getCutoffMs";
 
