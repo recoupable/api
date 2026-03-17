@@ -16,11 +16,17 @@ export type PrivyLoginsPeriod = "daily" | "weekly" | "monthly";
  * @param period - "daily", "weekly", or "monthly"
  * @returns Array of full Privy user objects within the time window, sorted by created_at descending
  */
-export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<User[]> {
+export type FetchPrivyLoginsResult = {
+  users: User[];
+  totalPrivyUsers: number;
+};
+
+export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<FetchPrivyLoginsResult> {
   const days = PERIOD_DAYS[period];
   const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000;
 
   const users: User[] = [];
+  let totalPrivyUsers = 0;
   let cursor: string | undefined = undefined;
 
   while (true) {
@@ -29,6 +35,8 @@ export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<User[
     if (!page.data || page.data.length === 0) {
       break;
     }
+
+    totalPrivyUsers += page.data.length;
 
     for (const user of page.data) {
       const createdAt = user.created_at;
@@ -52,5 +60,5 @@ export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<User[
 
   users.sort((a, b) => b.created_at - a.created_at);
 
-  return users;
+  return { users, totalPrivyUsers };
 }

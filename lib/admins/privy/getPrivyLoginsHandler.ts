@@ -26,12 +26,12 @@ export async function getPrivyLoginsHandler(request: NextRequest): Promise<NextR
       return query;
     }
 
-    const logins = await fetchPrivyLogins(query.period);
+    const { users: logins, totalPrivyUsers } = await fetchPrivyLogins(query.period);
     const total_new = countNewAccounts(logins, query.period);
     const total_active = countActiveAccounts(logins, query.period);
 
     return NextResponse.json(
-      { status: "success", total: logins.length, total_new, total_active, logins },
+      { status: "success", total: logins.length, total_new, total_active, total_privy_users: totalPrivyUsers, logins },
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {

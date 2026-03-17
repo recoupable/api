@@ -54,7 +54,7 @@ describe("getPrivyLoginsHandler", () => {
   describe("successful cases", () => {
     it("returns 200 with logins, total_new, and total_active", async () => {
       vi.mocked(validateGetPrivyLoginsQuery).mockResolvedValue({ period: "daily" });
-      vi.mocked(fetchPrivyLogins).mockResolvedValue(mockLogins);
+      vi.mocked(fetchPrivyLogins).mockResolvedValue({ users: mockLogins, totalPrivyUsers: 10 });
 
       const response = await getPrivyLoginsHandler(makeRequest("daily"));
       const body = await response.json();
@@ -64,12 +64,13 @@ describe("getPrivyLoginsHandler", () => {
       expect(body.total).toBe(2);
       expect(body.total_new).toBe(2);
       expect(body.total_active).toBe(1);
+      expect(body.total_privy_users).toBe(10);
       expect(body.logins).toEqual(mockLogins);
     });
 
     it("returns 200 with zero counts when no logins exist", async () => {
       vi.mocked(validateGetPrivyLoginsQuery).mockResolvedValue({ period: "weekly" });
-      vi.mocked(fetchPrivyLogins).mockResolvedValue([]);
+      vi.mocked(fetchPrivyLogins).mockResolvedValue({ users: [], totalPrivyUsers: 0 });
 
       const response = await getPrivyLoginsHandler(makeRequest("weekly"));
       const body = await response.json();
@@ -79,12 +80,13 @@ describe("getPrivyLoginsHandler", () => {
       expect(body.total).toBe(0);
       expect(body.total_new).toBe(0);
       expect(body.total_active).toBe(0);
+      expect(body.total_privy_users).toBe(0);
       expect(body.logins).toEqual([]);
     });
 
     it("passes the period to fetchPrivyLogins", async () => {
       vi.mocked(validateGetPrivyLoginsQuery).mockResolvedValue({ period: "monthly" });
-      vi.mocked(fetchPrivyLogins).mockResolvedValue([]);
+      vi.mocked(fetchPrivyLogins).mockResolvedValue({ users: [], totalPrivyUsers: 0 });
 
       await getPrivyLoginsHandler(makeRequest("monthly"));
 
