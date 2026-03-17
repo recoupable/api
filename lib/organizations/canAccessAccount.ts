@@ -54,11 +54,11 @@ export async function canAccessAccount(params: CanAccessAccountParams): Promise<
   }
 
   // Admin bypass: if currentAccountId is in the Recoup admin org, grant universal access
-  if (currentOrgs.some((m) => m.organization_id === RECOUP_ORG_ID)) {
+  if (currentOrgs.some(m => m.organization_id === RECOUP_ORG_ID)) {
     return true;
   }
 
-  const orgIds = currentOrgs.map((m) => m.organization_id);
+  const orgIds = currentOrgs.map(m => m.organization_id);
   const shared = await selectAccountOrganizationIds(targetAccountId, orgIds);
 
   return Array.isArray(shared) && shared.length > 0;
