@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ChatRequestBody } from "../validateChatRequest";
 
+// Import after mocks
+import { setupToolsForRequest } from "../setupToolsForRequest";
+import { getMcpTools } from "@/lib/mcp/getMcpTools";
+import { getComposioTools } from "@/lib/composio/toolRouter";
+
 // Mock external dependencies
 vi.mock("@/lib/mcp/getMcpTools", () => ({
   getMcpTools: vi.fn(),
@@ -9,11 +14,6 @@ vi.mock("@/lib/mcp/getMcpTools", () => ({
 vi.mock("@/lib/composio/toolRouter", () => ({
   getComposioTools: vi.fn(),
 }));
-
-// Import after mocks
-import { setupToolsForRequest } from "../setupToolsForRequest";
-import { getMcpTools } from "@/lib/mcp/getMcpTools";
-import { getComposioTools } from "@/lib/composio/toolRouter";
 
 const mockGetMcpTools = vi.mocked(getMcpTools);
 const mockGetComposioTools = vi.mocked(getComposioTools);

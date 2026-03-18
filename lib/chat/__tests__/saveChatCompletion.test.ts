@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+import { getMessages } from "@/lib/messages/getMessages";
+import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
+import insertMemories from "@/lib/supabase/memories/insertMemories";
+import { saveChatCompletion } from "../saveChatCompletion";
+
 // Mock dependencies before importing the module under test
 vi.mock("@/lib/messages/getMessages", () => ({
   getMessages: vi.fn(),
@@ -12,11 +17,6 @@ vi.mock("@/lib/messages/filterMessageContentForMemories", () => ({
 vi.mock("@/lib/supabase/memories/insertMemories", () => ({
   default: vi.fn(),
 }));
-
-import { getMessages } from "@/lib/messages/getMessages";
-import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
-import insertMemories from "@/lib/supabase/memories/insertMemories";
-import { saveChatCompletion } from "../saveChatCompletion";
 
 const mockGetMessages = vi.mocked(getMessages);
 const mockFilterMessageContentForMemories = vi.mocked(filterMessageContentForMemories);

@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { buildGetPulsesParams } from "../buildGetPulsesParams";
 
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+
 vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: vi.fn(),
 }));
@@ -8,8 +10,6 @@ vi.mock("@/lib/organizations/canAccessAccount", () => ({
 vi.mock("@/lib/const", () => ({
   RECOUP_ORG_ID: "recoup-org-id",
 }));
-
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 describe("buildGetPulsesParams", () => {
   beforeEach(() => {
