@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateGetPulsesRequest } from "../validateGetPulsesRequest";
 
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+
 // Mock dependencies
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
@@ -18,9 +21,6 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 vi.mock("@/lib/const", () => ({
   RECOUP_ORG_ID: "recoup-org-id",
 }));
-
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 describe("validateGetPulsesRequest", () => {
   beforeEach(() => {

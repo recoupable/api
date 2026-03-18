@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { getPulsesHandler } from "../getPulsesHandler";
 
+import { validateGetPulsesRequest } from "../validateGetPulsesRequest";
+import { selectPulseAccounts } from "@/lib/supabase/pulse_accounts/selectPulseAccounts";
+
 // Mock dependencies
 vi.mock("../validateGetPulsesRequest", () => ({
   validateGetPulsesRequest: vi.fn(),
@@ -14,9 +17,6 @@ vi.mock("@/lib/supabase/pulse_accounts/selectPulseAccounts", () => ({
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => new Headers()),
 }));
-
-import { validateGetPulsesRequest } from "../validateGetPulsesRequest";
-import { selectPulseAccounts } from "@/lib/supabase/pulse_accounts/selectPulseAccounts";
 
 describe("getPulsesHandler", () => {
   beforeEach(() => {

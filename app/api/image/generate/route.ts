@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { x402GenerateImage } from "@/lib/x402/recoup/x402GenerateImage";
+import { mppGenerateImage } from "@/lib/mpp/recoup/mppGenerateImage";
 import { validateGenerateImageQuery } from "@/lib/image/validateGenerateImageQuery";
 
 /**
@@ -17,7 +17,7 @@ export async function OPTIONS() {
 
 /**
  * GET handler for image generation endpoint.
- * Accepts prompt and account_id, and fetches from the x402-protected endpoint.
+ * Accepts prompt and account_id, and fetches from the MPP-protected endpoint.
  *
  * @param request - The request object containing query parameters.
  * @returns {Promise<NextResponse>} JSON response matching the Recoup API format.
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const files = searchParams.get("files");
 
     const baseUrl = request.nextUrl.origin;
-    const data = await x402GenerateImage(prompt, baseUrl, account_id, files);
+    const data = await mppGenerateImage(prompt, baseUrl, account_id, files);
 
     return NextResponse.json(data, {
       status: 200,

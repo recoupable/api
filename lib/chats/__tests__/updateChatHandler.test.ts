@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { updateChatHandler } from "../updateChatHandler";
 
+import { validateUpdateChatBody } from "@/lib/chats/validateUpdateChatBody";
+import { updateRoom } from "@/lib/supabase/rooms/updateRoom";
+
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
@@ -13,9 +16,6 @@ vi.mock("@/lib/chats/validateUpdateChatBody", () => ({
 vi.mock("@/lib/supabase/rooms/updateRoom", () => ({
   updateRoom: vi.fn(),
 }));
-
-import { validateUpdateChatBody } from "@/lib/chats/validateUpdateChatBody";
-import { updateRoom } from "@/lib/supabase/rooms/updateRoom";
 
 describe("updateChatHandler", () => {
   const mockRequest = () => {

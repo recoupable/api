@@ -2,6 +2,10 @@ import { uploadFileByKey } from "@/lib/supabase/storage/uploadFileByKey";
 import { createFileRecord } from "@/lib/supabase/files/createFileRecord";
 import { SaveTranscriptParams, FileRecord } from "./types";
 
+/**
+ *
+ * @param params
+ */
 export async function saveTranscriptToFiles(params: SaveTranscriptParams): Promise<FileRecord> {
   const { markdown, ownerAccountId, artistAccountId, title = "Transcription" } = params;
 

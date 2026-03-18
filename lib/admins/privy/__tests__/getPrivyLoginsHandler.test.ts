@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getPrivyLoginsHandler } from "../getPrivyLoginsHandler";
 
+import { validateGetPrivyLoginsQuery } from "../validateGetPrivyLoginsQuery";
+import { fetchPrivyLogins } from "../fetchPrivyLogins";
+
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
@@ -13,9 +16,6 @@ vi.mock("../validateGetPrivyLoginsQuery", () => ({
 vi.mock("../fetchPrivyLogins", () => ({
   fetchPrivyLogins: vi.fn(),
 }));
-
-import { validateGetPrivyLoginsQuery } from "../validateGetPrivyLoginsQuery";
-import { fetchPrivyLogins } from "../fetchPrivyLogins";
 
 const now = Date.now();
 const ONE_HOUR_AGO = Math.floor((now - 60 * 60 * 1000) / 1000);
@@ -42,6 +42,10 @@ const mockLogins = [
   },
 ];
 
+/**
+ *
+ * @param period
+ */
 function makeRequest(period = "daily") {
   return new NextRequest(`https://example.com/api/admins/privy?period=${period}`);
 }

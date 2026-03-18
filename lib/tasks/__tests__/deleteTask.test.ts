@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// Import after mocks
+import { deleteTask } from "../deleteTask";
+import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
+import { deleteScheduledAction } from "@/lib/supabase/scheduled_actions/deleteScheduledAction";
+import { deleteSchedule } from "@/lib/trigger/deleteSchedule";
+
 // Mock external dependencies
 vi.mock("@/lib/supabase/scheduled_actions/selectScheduledActions", () => ({
   selectScheduledActions: vi.fn(),
@@ -12,12 +18,6 @@ vi.mock("@/lib/supabase/scheduled_actions/deleteScheduledAction", () => ({
 vi.mock("@/lib/trigger/deleteSchedule", () => ({
   deleteSchedule: vi.fn(),
 }));
-
-// Import after mocks
-import { deleteTask } from "../deleteTask";
-import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
-import { deleteScheduledAction } from "@/lib/supabase/scheduled_actions/deleteScheduledAction";
-import { deleteSchedule } from "@/lib/trigger/deleteSchedule";
 
 const mockSelectScheduledActions = vi.mocked(selectScheduledActions);
 const mockDeleteScheduledAction = vi.mocked(deleteScheduledAction);
