@@ -59,7 +59,6 @@ describe("buildGetSandboxesParams", () => {
       });
 
       expect(canAccessAccount).toHaveBeenCalledWith({
-        orgId: null,
         targetAccountId: "shared-org-member",
         currentAccountId: "personal-123",
       });
@@ -117,7 +116,6 @@ describe("buildGetSandboxesParams", () => {
         error: null,
       });
       expect(canAccessAccount).toHaveBeenCalledWith({
-        orgId: "org-123",
         targetAccountId: "member-account",
         currentAccountId: "account-123",
       });

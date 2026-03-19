@@ -128,7 +128,6 @@ describe("validateGetArtistsRequest", () => {
     const result = await validateGetArtistsRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: mockOrgId,
       targetAccountId,
       currentAccountId: "org-owner",
     });
@@ -169,7 +168,6 @@ describe("validateGetArtistsRequest", () => {
     const result = await validateGetArtistsRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: mockOrgId,
       targetAccountId: notInOrgId,
       currentAccountId: "org-owner",
     });

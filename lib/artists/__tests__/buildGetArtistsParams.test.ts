@@ -68,7 +68,6 @@ describe("buildGetArtistsParams", () => {
     });
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: "org-123",
       targetAccountId: "target-456",
       currentAccountId: "org-owner-123",
     });
@@ -104,7 +103,6 @@ describe("buildGetArtistsParams", () => {
     });
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: null,
       targetAccountId: "shared-org-member",
       currentAccountId: "personal-123",
     });

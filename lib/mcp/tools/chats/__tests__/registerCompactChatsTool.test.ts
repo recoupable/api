@@ -79,13 +79,11 @@ describe("registerCompactChatsTool", () => {
       chatId: "chat-123",
       prompt: undefined,
       accountId: "account-123",
-      orgId: "org-456",
     });
     expect(mockProcessCompactChatRequest).toHaveBeenCalledWith({
       chatId: "chat-456",
       prompt: undefined,
       accountId: "account-123",
-      orgId: "org-456",
     });
   });
 
@@ -104,7 +102,6 @@ describe("registerCompactChatsTool", () => {
       chatId: "chat-123",
       prompt: "Focus on action items",
       accountId: "account-123",
-      orgId: undefined,
     });
   });
 

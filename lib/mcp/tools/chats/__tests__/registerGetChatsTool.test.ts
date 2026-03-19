@@ -148,7 +148,6 @@ describe("registerGetChatsTool", () => {
     );
 
     expect(mockCanAccessAccount).toHaveBeenCalledWith({
-      orgId: "org-account-id",
       targetAccountId: "target-account-789",
       currentAccountId: "org-account-id",
     });

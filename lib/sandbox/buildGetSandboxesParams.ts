@@ -38,7 +38,6 @@ export async function buildGetSandboxesParams(
   // Handle account_id filter if provided
   if (target_account_id) {
     const hasAccess = await canAccessAccount({
-      orgId: org_id,
       targetAccountId: target_account_id,
       currentAccountId: account_id,
     });

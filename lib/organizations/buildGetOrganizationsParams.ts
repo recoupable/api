@@ -35,7 +35,6 @@ export async function buildGetOrganizationsParams(
   // Handle account_id filter if provided
   if (targetAccountId) {
     const hasAccess = await canAccessAccount({
-      orgId,
       targetAccountId,
       currentAccountId: accountId,
     });

@@ -228,7 +228,6 @@ describe("validateAuthContext", () => {
         authToken: "personal-key",
       });
       expect(mockCanAccessAccount).toHaveBeenCalledWith({
-        orgId: null,
         targetAccountId: "member-account-456",
         currentAccountId: "account-123",
       });
@@ -255,7 +254,6 @@ describe("validateAuthContext", () => {
         authToken: "org-key",
       });
       expect(mockCanAccessAccount).toHaveBeenCalledWith({
-        orgId: "org-456",
         targetAccountId: "member-account-789",
         currentAccountId: "org-account-123",
       });

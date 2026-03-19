@@ -170,7 +170,6 @@ describe("validateGetPulsesRequest", () => {
     const result = await validateGetPulsesRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: mockOrgId,
       targetAccountId,
       currentAccountId: mockOrgId,
     });
@@ -195,7 +194,6 @@ describe("validateGetPulsesRequest", () => {
     const result = await validateGetPulsesRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: mockOrgId,
       targetAccountId: notInOrgId,
       currentAccountId: mockOrgId,
     });
@@ -220,7 +218,6 @@ describe("validateGetPulsesRequest", () => {
     const result = await validateGetPulsesRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: recoupOrgId,
       targetAccountId: anyAccountId,
       currentAccountId: recoupOrgId,
     });

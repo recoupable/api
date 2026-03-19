@@ -75,7 +75,6 @@ describe("buildGetPulsesParams", () => {
     });
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: "org-123",
       targetAccountId: "target-456",
       currentAccountId: "org-123",
     });
@@ -95,7 +94,6 @@ describe("buildGetPulsesParams", () => {
     });
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: null,
       targetAccountId: "shared-org-member",
       currentAccountId: "personal-123",
     });

@@ -62,7 +62,6 @@ describe("buildGetOrganizationsParams", () => {
     });
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: "org-123",
       targetAccountId: "target-456",
       currentAccountId: "org-123",
     });
@@ -82,7 +81,6 @@ describe("buildGetOrganizationsParams", () => {
     });
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: null,
       targetAccountId: "shared-org-member",
       currentAccountId: "personal-123",
     });
@@ -132,7 +130,6 @@ describe("buildGetOrganizationsParams", () => {
     });
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: "recoup-org-id",
       targetAccountId: "any-account",
       currentAccountId: "recoup-org-id",
     });

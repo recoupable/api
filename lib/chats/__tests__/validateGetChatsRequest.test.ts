@@ -182,7 +182,6 @@ describe("validateGetChatsRequest", () => {
     const result = await validateGetChatsRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: mockOrgId,
       targetAccountId,
       currentAccountId: mockOrgId,
     });
@@ -209,7 +208,6 @@ describe("validateGetChatsRequest", () => {
     const result = await validateGetChatsRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: mockOrgId,
       targetAccountId: notInOrgId,
       currentAccountId: mockOrgId,
     });
@@ -234,7 +232,6 @@ describe("validateGetChatsRequest", () => {
     const result = await validateGetChatsRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: recoupOrgId,
       targetAccountId: anyAccountId,
       currentAccountId: recoupOrgId,
     });

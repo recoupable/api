@@ -247,7 +247,7 @@ describe("registerCreateNewArtistTool", () => {
     );
 
     expect(mockCanAccessAccount).toHaveBeenCalledWith({
-      orgId: "org-account-id",
+      currentAccountId: "org-account-id",
       targetAccountId: "target-account-456",
     });
     expect(mockCreateArtistInDb).toHaveBeenCalledWith(

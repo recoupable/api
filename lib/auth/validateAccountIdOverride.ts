@@ -10,8 +10,6 @@ export interface ValidateAccountIdOverrideParams {
   currentAccountId: string;
   /** The target account ID to override to */
   targetAccountId: string;
-  /** The organization ID from the API key (null for personal keys) */
-  orgId: string | null;
 }
 
 /**
@@ -34,7 +32,7 @@ export interface ValidateAccountIdOverrideResult {
 export async function validateAccountIdOverride(
   params: ValidateAccountIdOverrideParams,
 ): Promise<NextResponse | ValidateAccountIdOverrideResult> {
-  const { currentAccountId, targetAccountId, orgId } = params;
+  const { currentAccountId, targetAccountId } = params;
 
   // Self-access is always allowed
   if (targetAccountId === currentAccountId) {
@@ -42,7 +40,6 @@ export async function validateAccountIdOverride(
   }
 
   const hasAccess = await canAccessAccount({
-    orgId,
     targetAccountId,
     currentAccountId,
   });
