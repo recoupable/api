@@ -47,12 +47,11 @@ describe("processCompactChatRequest", () => {
       const result = await processCompactChatRequest({
         chatId: "chat-123",
         accountId: "account-123",
-        orgId: undefined,
       });
 
       expect(result).toEqual({ type: "notFound", chatId: "chat-123" });
       expect(mockCanAccessAccount).toHaveBeenCalledWith({
-        orgId: undefined,
+        currentAccountId: "account-123",
         targetAccountId: "other-account",
       });
     });
@@ -90,12 +89,11 @@ describe("processCompactChatRequest", () => {
       const result = await processCompactChatRequest({
         chatId: "chat-123",
         accountId: "org-account",
-        orgId: "org-123",
       });
 
       expect(result.type).toBe("success");
       expect(mockCanAccessAccount).toHaveBeenCalledWith({
-        orgId: "org-123",
+        currentAccountId: "org-account",
         targetAccountId: "member-account",
       });
     });

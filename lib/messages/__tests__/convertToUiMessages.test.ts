@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import convertToUiMessages from "../convertToUiMessages";
+
 // Mock generateUUID before importing the module
 vi.mock("@/lib/uuid/generateUUID", () => ({
   default: vi.fn(() => "generated-uuid"),
   generateUUID: vi.fn(() => "generated-uuid"),
 }));
-
-import convertToUiMessages from "../convertToUiMessages";
 
 describe("convertToUiMessages", () => {
   beforeEach(() => {

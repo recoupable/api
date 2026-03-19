@@ -37,13 +37,14 @@ export async function buildGetChatsParams(
 
   // Handle account_id filter if provided
   if (target_account_id) {
-    const hasAccess = await canAccessAccount({ orgId: org_id, targetAccountId: target_account_id });
+    const hasAccess = await canAccessAccount({
+      targetAccountId: target_account_id,
+      currentAccountId: account_id,
+    });
     if (!hasAccess) {
       return {
         params: null,
-        error: org_id
-          ? "account_id is not a member of this organization"
-          : "Personal API keys cannot filter by account_id",
+        error: "Access denied to specified account_id",
       };
     }
     return { params: { account_ids: [target_account_id], artist_id }, error: null };

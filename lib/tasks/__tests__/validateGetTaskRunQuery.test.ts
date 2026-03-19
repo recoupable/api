@@ -165,7 +165,6 @@ describe("validateGetTaskRunQuery", () => {
       expect(validateAccountIdOverride).toHaveBeenCalledWith({
         currentAccountId: "org_owner_acc",
         targetAccountId: "member_acc",
-        orgId: "org_123",
       });
     });
 

@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+import { gateway } from "@ai-sdk/gateway";
+import { getAvailableModels } from "../getAvailableModels";
+
 vi.mock("@ai-sdk/gateway", () => ({
   gateway: {
     getAvailableModels: vi.fn(),
   },
 }));
-
-import { gateway } from "@ai-sdk/gateway";
-import { getAvailableModels } from "../getAvailableModels";
 
 const mockGatewayGetAvailableModels = vi.mocked(gateway.getAvailableModels);
 

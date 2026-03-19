@@ -64,7 +64,6 @@ export function registerCompactChatsTool(server: McpServer): void {
             chatId,
             prompt,
             accountId,
-            orgId: orgId ?? undefined,
           }),
         ),
       );

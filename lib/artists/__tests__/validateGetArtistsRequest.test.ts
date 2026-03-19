@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateGetArtistsRequest } from "../validateGetArtistsRequest";
 
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
@@ -13,9 +16,6 @@ vi.mock("@/lib/organizations/canAccessAccount", () => ({
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => new Headers()),
 }));
-
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 describe("validateGetArtistsRequest", () => {
   beforeEach(() => {
@@ -128,8 +128,8 @@ describe("validateGetArtistsRequest", () => {
     const result = await validateGetArtistsRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: mockOrgId,
       targetAccountId,
+      currentAccountId: "org-owner",
     });
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
@@ -168,8 +168,8 @@ describe("validateGetArtistsRequest", () => {
     const result = await validateGetArtistsRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: mockOrgId,
       targetAccountId: notInOrgId,
+      currentAccountId: "org-owner",
     });
     expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(403);

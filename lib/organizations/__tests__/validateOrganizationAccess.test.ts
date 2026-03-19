@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { validateOrganizationAccess } from "../validateOrganizationAccess";
 
+import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
+
 // Mock getAccountOrganizations supabase lib
 vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
   getAccountOrganizations: vi.fn(),
 }));
-
-import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 
 const mockGetAccountOrganizations = vi.mocked(getAccountOrganizations);
 

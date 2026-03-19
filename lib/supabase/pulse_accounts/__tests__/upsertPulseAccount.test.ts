@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { upsertPulseAccount } from "../upsertPulseAccount";
+
 const mockFrom = vi.fn();
 const mockUpsert = vi.fn();
 const mockSelect = vi.fn();
@@ -9,8 +11,6 @@ vi.mock("@/lib/supabase/serverClient", () => ({
     from: (...args: unknown[]) => mockFrom(...args),
   },
 }));
-
-import { upsertPulseAccount } from "../upsertPulseAccount";
 
 describe("upsertPulseAccount", () => {
   beforeEach(() => {
