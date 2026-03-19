@@ -2,21 +2,13 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
-/**
- * Parameters for account ID override validation.
- */
 export interface ValidateAccountIdOverrideParams {
   /** The account ID from the authenticated API key/token */
   currentAccountId: string;
   /** The target account ID to override to */
   targetAccountId: string;
-  /** The organization ID (null for personal keys — always null now) */
-  orgId: string | null;
 }
 
-/**
- * Result of successful account ID override validation.
- */
 export interface ValidateAccountIdOverrideResult {
   accountId: string;
 }
@@ -26,7 +18,7 @@ export interface ValidateAccountIdOverrideResult {
  *
  * Access rules:
  * 1. If targetAccountId equals currentAccountId, always allowed (self-access)
- * 2. Delegates to canAccessAccount which checks org membership and admin bypass
+ * 2. Delegates to canAccessAccount which checks shared org membership and admin bypass
  *
  * @param params - The validation parameters
  * @returns NextResponse with error or the validated result
@@ -34,15 +26,14 @@ export interface ValidateAccountIdOverrideResult {
 export async function validateAccountIdOverride(
   params: ValidateAccountIdOverrideParams,
 ): Promise<NextResponse | ValidateAccountIdOverrideResult> {
-  const { currentAccountId, targetAccountId, orgId } = params;
+  const { currentAccountId, targetAccountId } = params;
 
-  // Self-access is always allowed
   if (targetAccountId === currentAccountId) {
     return { accountId: targetAccountId };
   }
 
   const hasAccess = await canAccessAccount({
-    orgId,
+    orgId: null,
     targetAccountId,
     currentAccountId,
   });
