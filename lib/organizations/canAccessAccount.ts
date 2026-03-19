@@ -26,6 +26,10 @@ export async function canAccessAccount(params: CanAccessAccountParams): Promise<
     return false;
   }
 
+  if (currentAccountId === targetAccountId) {
+    return true;
+  }
+
   const currentOrgs = await getAccountOrganizations({
     accountId: currentAccountId,
   });

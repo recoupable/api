@@ -21,6 +21,18 @@ describe("canAccessAccount", () => {
     vi.clearAllMocks();
   });
 
+  describe("self-access", () => {
+    it("returns true when currentAccountId equals targetAccountId", async () => {
+      const result = await canAccessAccount({
+        currentAccountId: "account-123",
+        targetAccountId: "account-123",
+      });
+
+      expect(result).toBe(true);
+      expect(getAccountOrganizations).not.toHaveBeenCalled();
+    });
+  });
+
   describe("shared org membership", () => {
     it("returns true when accounts share an org", async () => {
       vi.mocked(getAccountOrganizations).mockResolvedValue([
