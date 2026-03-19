@@ -7,10 +7,6 @@ vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: vi.fn(),
 }));
 
-vi.mock("@/lib/const", () => ({
-  RECOUP_ORG_ID: "recoup-org-id",
-}));
-
 describe("buildGetOrganizationsParams", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -19,35 +15,10 @@ describe("buildGetOrganizationsParams", () => {
   it("returns accountId for personal key", async () => {
     const result = await buildGetOrganizationsParams({
       accountId: "personal-account-123",
-      orgId: null,
     });
 
     expect(result).toEqual({
       params: { accountId: "personal-account-123" },
-      error: null,
-    });
-  });
-
-  it("returns organizationId for org key", async () => {
-    const result = await buildGetOrganizationsParams({
-      accountId: "org-123",
-      orgId: "org-123",
-    });
-
-    expect(result).toEqual({
-      params: { organizationId: "org-123" },
-      error: null,
-    });
-  });
-
-  it("returns empty params for Recoup admin key", async () => {
-    const result = await buildGetOrganizationsParams({
-      accountId: "recoup-org-id",
-      orgId: "recoup-org-id",
-    });
-
-    expect(result).toEqual({
-      params: {},
       error: null,
     });
   });
@@ -57,7 +28,6 @@ describe("buildGetOrganizationsParams", () => {
 
     const result = await buildGetOrganizationsParams({
       accountId: "org-123",
-      orgId: "org-123",
       targetAccountId: "target-456",
     });
 
@@ -76,7 +46,6 @@ describe("buildGetOrganizationsParams", () => {
 
     const result = await buildGetOrganizationsParams({
       accountId: "personal-123",
-      orgId: null,
       targetAccountId: "shared-org-member",
     });
 
@@ -95,7 +64,6 @@ describe("buildGetOrganizationsParams", () => {
 
     const result = await buildGetOrganizationsParams({
       accountId: "personal-123",
-      orgId: null,
       targetAccountId: "other-account",
     });
 
@@ -105,37 +73,17 @@ describe("buildGetOrganizationsParams", () => {
     });
   });
 
-  it("returns error when org key lacks access to targetAccountId", async () => {
+  it("returns error when access to targetAccountId is denied", async () => {
     vi.mocked(canAccessAccount).mockResolvedValue(false);
 
     const result = await buildGetOrganizationsParams({
       accountId: "org-123",
-      orgId: "org-123",
       targetAccountId: "not-in-org",
     });
 
     expect(result).toEqual({
       params: null,
       error: "Access denied to specified account_id",
-    });
-  });
-
-  it("returns targetAccountId for Recoup admin with filter", async () => {
-    vi.mocked(canAccessAccount).mockResolvedValue(true);
-
-    const result = await buildGetOrganizationsParams({
-      accountId: "recoup-org-id",
-      orgId: "recoup-org-id",
-      targetAccountId: "any-account",
-    });
-
-    expect(canAccessAccount).toHaveBeenCalledWith({
-      targetAccountId: "any-account",
-      currentAccountId: "recoup-org-id",
-    });
-    expect(result).toEqual({
-      params: { accountId: "any-account" },
-      error: null,
     });
   });
 });

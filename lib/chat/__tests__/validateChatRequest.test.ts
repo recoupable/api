@@ -237,11 +237,10 @@ describe("validateChatRequest", () => {
       expect(json.status).toBe("error");
     });
 
-    it("returns orgId for org API key", async () => {
+    it("returns accountId for org API key", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("org-account-123");
       mockGetApiKeyDetails.mockResolvedValue({
         accountId: "org-account-123",
-        orgId: "org-account-123",
       });
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "org-api-key" });
@@ -250,14 +249,12 @@ describe("validateChatRequest", () => {
 
       expect(result).not.toBeInstanceOf(NextResponse);
       expect((result as any).accountId).toBe("org-account-123");
-      expect((result as any).orgId).toBe("org-account-123");
     });
 
-    it("returns null orgId for personal API key", async () => {
+    it("returns accountId for personal API key", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("personal-account-123");
       mockGetApiKeyDetails.mockResolvedValue({
         accountId: "personal-account-123",
-        orgId: null,
       });
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "personal-api-key" });
@@ -266,10 +263,9 @@ describe("validateChatRequest", () => {
 
       expect(result).not.toBeInstanceOf(NextResponse);
       expect((result as any).accountId).toBe("personal-account-123");
-      expect((result as any).orgId).toBeNull();
     });
 
-    it("returns null orgId for bearer token auth", async () => {
+    it("returns accountId for bearer token auth", async () => {
       mockGetAuthenticatedAccountId.mockResolvedValue("jwt-account-456");
 
       const request = createMockRequest(
@@ -281,7 +277,6 @@ describe("validateChatRequest", () => {
 
       expect(result).not.toBeInstanceOf(NextResponse);
       expect((result as any).accountId).toBe("jwt-account-456");
-      expect((result as any).orgId).toBeNull();
     });
   });
 
@@ -491,7 +486,6 @@ describe("validateChatRequest", () => {
       const result = await validateChatRequest(request as any);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).orgId).toBe("org-456");
       expect(mockValidateOrganizationAccess).toHaveBeenCalledWith({
         accountId: "user-account-123",
         organizationId: "org-456",
@@ -502,7 +496,6 @@ describe("validateChatRequest", () => {
       mockGetApiKeyAccountId.mockResolvedValue("api-key-account-123");
       mockGetApiKeyDetails.mockResolvedValue({
         accountId: "api-key-account-123",
-        orgId: null,
       });
       mockValidateOrganizationAccess.mockResolvedValue(true);
 
@@ -512,9 +505,6 @@ describe("validateChatRequest", () => {
       );
 
       const result = await validateChatRequest(request as any);
-
-      expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).orgId).toBe("org-789");
       expect(mockValidateOrganizationAccess).toHaveBeenCalledWith({
         accountId: "api-key-account-123",
         organizationId: "org-789",
@@ -525,7 +515,6 @@ describe("validateChatRequest", () => {
       mockGetApiKeyAccountId.mockResolvedValue("org-account-123");
       mockGetApiKeyDetails.mockResolvedValue({
         accountId: "org-account-123",
-        orgId: "original-org-123",
       });
       mockValidateOrganizationAccess.mockResolvedValue(true);
 
@@ -537,7 +526,6 @@ describe("validateChatRequest", () => {
       const result = await validateChatRequest(request as any);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).orgId).toBe("different-org-456");
     });
 
     it("rejects organizationId when user is NOT a member of org", async () => {
@@ -561,7 +549,6 @@ describe("validateChatRequest", () => {
       mockGetApiKeyAccountId.mockResolvedValue("org-account-123");
       mockGetApiKeyDetails.mockResolvedValue({
         accountId: "org-account-123",
-        orgId: "api-key-org-123",
       });
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "org-api-key" });
@@ -569,7 +556,6 @@ describe("validateChatRequest", () => {
       const result = await validateChatRequest(request as any);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).orgId).toBe("api-key-org-123");
       // Should not validate org access when no organizationId is provided
       expect(mockValidateOrganizationAccess).not.toHaveBeenCalled();
     });
@@ -585,7 +571,6 @@ describe("validateChatRequest", () => {
       const result = await validateChatRequest(request as any);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).orgId).toBeNull();
       expect(mockValidateOrganizationAccess).not.toHaveBeenCalled();
     });
   });

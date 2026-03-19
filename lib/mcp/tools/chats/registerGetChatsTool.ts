@@ -37,7 +37,6 @@ export function registerGetChatsTool(server: McpServer): void {
 
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
       const accountId = authInfo?.extra?.accountId;
-      const orgId = authInfo?.extra?.orgId ?? null;
 
       if (!accountId) {
         return getToolResultError(
@@ -47,7 +46,6 @@ export function registerGetChatsTool(server: McpServer): void {
 
       const { params, error } = await buildGetChatsParams({
         account_id: accountId,
-        org_id: orgId,
         target_account_id: account_id,
         artist_id: artist_account_id,
       });

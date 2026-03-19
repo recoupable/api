@@ -49,11 +49,8 @@ export function registerGetPulsesTool(server: McpServer): void {
         return getToolResultError("Failed to resolve account ID");
       }
 
-      const orgId = authInfo?.extra?.orgId ?? null;
-
       const { params, error } = await buildGetPulsesParams({
         accountId,
-        orgId,
         targetAccountId: undefined,
         active,
       });

@@ -59,12 +59,11 @@ export async function validateGetPulsesRequest(
     return authResult;
   }
 
-  const { accountId, orgId } = authResult;
+  const { accountId } = authResult;
 
   // Use shared function to build params
   const { params, error } = await buildGetPulsesParams({
     accountId,
-    orgId,
     targetAccountId,
     active,
   });

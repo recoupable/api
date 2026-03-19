@@ -84,7 +84,6 @@ export async function validateUpdateChatBody(
   // Check access control
   const { params } = await buildGetChatsParams({
     account_id: accountId,
-    org_id: orgId,
   });
 
   // If params.account_ids is undefined, it means admin access (all records)

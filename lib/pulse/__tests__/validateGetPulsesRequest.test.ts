@@ -60,7 +60,7 @@ describe("validateGetPulsesRequest", () => {
     });
   });
 
-  it("should return orgId for org key", async () => {
+  it("should return accountIds for org key", async () => {
     const mockOrgId = "org-123";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockOrgId,
@@ -75,12 +75,12 @@ describe("validateGetPulsesRequest", () => {
 
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
-      orgId: mockOrgId,
+      accountIds: [mockOrgId],
       active: undefined,
     });
   });
 
-  it("should return undefined accountIds for Recoup admin key", async () => {
+  it("should return accountIds for Recoup admin key", async () => {
     const recoupOrgId = "recoup-org-id";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: recoupOrgId,
@@ -95,7 +95,7 @@ describe("validateGetPulsesRequest", () => {
 
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
-      accountIds: undefined,
+      accountIds: [recoupOrgId],
       active: undefined,
     });
   });

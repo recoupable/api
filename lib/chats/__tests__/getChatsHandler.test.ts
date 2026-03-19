@@ -124,22 +124,15 @@ describe("getChatsHandler", () => {
   });
 
   describe("org key behavior", () => {
-    it("returns chats for all org members without account_id param", async () => {
+    it("returns chats for org key owner without account_id param", async () => {
       const orgId = "123e4567-e89b-12d3-a456-426614174000";
       const mockChats = [
         {
           id: "chat-1",
-          account_id: "member-1",
+          account_id: orgId,
           artist_id: null,
           topic: "Chat 1",
           updated_at: "2024-01-01T00:00:00Z",
-        },
-        {
-          id: "chat-2",
-          account_id: "member-2",
-          artist_id: null,
-          topic: "Chat 2",
-          updated_at: "2024-01-02T00:00:00Z",
         },
       ];
 
@@ -148,10 +141,6 @@ describe("getChatsHandler", () => {
         orgId,
         authToken: "test-token",
       });
-      vi.mocked(getAccountOrganizations).mockResolvedValue([
-        { account_id: "member-1", organization_id: orgId, organization: null },
-        { account_id: "member-2", organization_id: orgId, organization: null },
-      ]);
       vi.mocked(selectRooms).mockResolvedValue(mockChats);
 
       const request = createMockRequest("http://localhost/api/chats");
@@ -162,7 +151,7 @@ describe("getChatsHandler", () => {
       expect(json.status).toBe("success");
       expect(json.chats).toEqual(mockChats);
       expect(selectRooms).toHaveBeenCalledWith({
-        account_ids: ["member-1", "member-2"],
+        account_ids: [orgId],
         artist_id: undefined,
       });
     });
@@ -223,12 +212,12 @@ describe("getChatsHandler", () => {
   });
 
   describe("Recoup admin key behavior", () => {
-    it("returns all chats without account_id param", async () => {
+    it("returns chats for admin account without account_id param", async () => {
       const recoupOrgId = "recoup-org-id";
       const mockChats = [
         {
           id: "chat-1",
-          account_id: "any-account",
+          account_id: recoupOrgId,
           artist_id: null,
           topic: "Chat 1",
           updated_at: "2024-01-01T00:00:00Z",
@@ -249,6 +238,7 @@ describe("getChatsHandler", () => {
       expect(response.status).toBe(200);
       expect(json.status).toBe("success");
       expect(selectRooms).toHaveBeenCalledWith({
+        account_ids: [recoupOrgId],
         artist_id: undefined,
       });
     });
