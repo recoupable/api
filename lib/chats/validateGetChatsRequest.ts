@@ -56,12 +56,11 @@ export async function validateGetChatsRequest(
     return authResult;
   }
 
-  const { accountId: account_id, orgId: org_id } = authResult;
+  const { accountId: account_id } = authResult;
 
   // Use shared function to build params
   const { params, error } = await buildGetChatsParams({
     account_id,
-    org_id,
     target_account_id,
     artist_id,
   });

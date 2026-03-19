@@ -56,7 +56,6 @@ export async function validateGetSandboxesFileRequest(
 
   const { params, error } = await buildGetSandboxesParams({
     account_id: accountId,
-    org_id: orgId,
   });
 
   if (error) {

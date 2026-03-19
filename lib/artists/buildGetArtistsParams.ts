@@ -4,8 +4,6 @@ import type { GetArtistsOptions } from "@/lib/artists/getArtists";
 export interface BuildGetArtistsParamsInput {
   /** The authenticated account ID */
   accountId: string;
-  /** The organization ID from the API key (null for personal keys) */
-  orgId: string | null;
   /** Optional target account ID to filter by */
   targetAccountId?: string;
   /** Optional organization filter for which artists to show */
@@ -31,7 +29,7 @@ export type BuildGetArtistsParamsResult =
 export async function buildGetArtistsParams(
   input: BuildGetArtistsParamsInput,
 ): Promise<BuildGetArtistsParamsResult> {
-  const { accountId, orgId, targetAccountId, orgIdFilter } = input;
+  const { accountId, targetAccountId, orgIdFilter } = input;
 
   let effectiveAccountId = accountId;
 
@@ -50,8 +48,8 @@ export async function buildGetArtistsParams(
     effectiveAccountId = targetAccountId;
   }
 
-  // When org_id is omitted, default to personal artists (null = personal only)
-  // When org_id is provided, filter to that organization's artists
+  // When orgIdFilter is omitted, default to personal artists (null = personal only)
+  // When orgIdFilter is provided, filter to that organization's artists
   const effectiveOrgId = orgIdFilter ?? null;
 
   return {

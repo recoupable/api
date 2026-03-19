@@ -15,10 +15,6 @@ vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: vi.fn(),
 }));
 
-vi.mock("@/lib/const", () => ({
-  RECOUP_ORG_ID: "recoup-org-id",
-}));
-
 type ServerRequestHandlerExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
 
 /**
@@ -26,12 +22,8 @@ type ServerRequestHandlerExtra = RequestHandlerExtra<ServerRequest, ServerNotifi
  *
  * @param authInfo
  * @param authInfo.accountId
- * @param authInfo.orgId
  */
-function createMockExtra(authInfo?: {
-  accountId?: string;
-  orgId?: string | null;
-}): ServerRequestHandlerExtra {
+function createMockExtra(authInfo?: { accountId?: string }): ServerRequestHandlerExtra {
   return {
     authInfo: authInfo
       ? {
@@ -40,7 +32,6 @@ function createMockExtra(authInfo?: {
           clientId: authInfo.accountId,
           extra: {
             accountId: authInfo.accountId,
-            orgId: authInfo.orgId ?? null,
           },
         }
       : undefined,
@@ -126,55 +117,6 @@ describe("registerGetPulsesTool", () => {
         {
           type: "text",
           text: expect.stringContaining("Authentication required"),
-        },
-      ],
-    });
-  });
-
-  it("returns ALL pulses for Recoup Admin key (no filter)", async () => {
-    const allPulses = [
-      { id: "pulse-1", account_id: "account-1", active: true },
-      { id: "pulse-2", account_id: "account-2", active: false },
-      { id: "pulse-3", account_id: "account-3", active: true },
-    ];
-    mockSelectPulseAccounts.mockResolvedValue(allPulses);
-
-    const result = await registeredHandler(
-      {},
-      createMockExtra({ accountId: "recoup-org-id", orgId: "recoup-org-id" }),
-    );
-
-    // Should call selectPulseAccounts with empty object (no filter)
-    expect(mockSelectPulseAccounts).toHaveBeenCalledWith({});
-    expect(result).toEqual({
-      content: [
-        {
-          type: "text",
-          text: expect.stringContaining('"pulses":['),
-        },
-      ],
-    });
-  });
-
-  it("returns pulses filtered by orgId for org key", async () => {
-    const orgPulses = [
-      { id: "pulse-1", account_id: "member-1", active: true },
-      { id: "pulse-2", account_id: "member-2", active: false },
-    ];
-    mockSelectPulseAccounts.mockResolvedValue(orgPulses);
-
-    const result = await registeredHandler(
-      {},
-      createMockExtra({ accountId: "org-123", orgId: "org-123" }),
-    );
-
-    // Should call selectPulseAccounts with orgId filter
-    expect(mockSelectPulseAccounts).toHaveBeenCalledWith({ orgId: "org-123" });
-    expect(result).toEqual({
-      content: [
-        {
-          type: "text",
-          text: expect.stringContaining('"pulses":['),
         },
       ],
     });

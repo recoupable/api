@@ -53,12 +53,11 @@ export async function validateGetOrganizationsRequest(
     return authResult;
   }
 
-  const { accountId, orgId } = authResult;
+  const { accountId } = authResult;
 
   // Use shared function to build params
   const { params, error } = await buildGetOrganizationsParams({
     accountId,
-    orgId,
     targetAccountId,
   });
 

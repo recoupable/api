@@ -22,7 +22,7 @@ describe("verifyBearerToken", () => {
     expect(result).toBeUndefined();
   });
 
-  it("returns auth info with orgId: null for Privy JWT", async () => {
+  it("returns auth info for Privy JWT", async () => {
     vi.mocked(getAccountIdByAuthToken).mockResolvedValue("privy-account-123");
 
     const result = await verifyBearerToken(new Request("http://localhost"), "privy-jwt-token");
@@ -33,12 +33,11 @@ describe("verifyBearerToken", () => {
       clientId: "privy-account-123",
       extra: {
         accountId: "privy-account-123",
-        orgId: null,
       },
     });
   });
 
-  it("returns auth info with orgId for org API key", async () => {
+  it("returns auth info for org API key", async () => {
     vi.mocked(getAccountIdByAuthToken).mockRejectedValue(new Error("Invalid JWT"));
     vi.mocked(getApiKeyDetails).mockResolvedValue({
       accountId: "org-account-123",
@@ -53,12 +52,11 @@ describe("verifyBearerToken", () => {
       clientId: "org-account-123",
       extra: {
         accountId: "org-account-123",
-        orgId: "org-account-123",
       },
     });
   });
 
-  it("returns auth info with orgId: null for personal API key", async () => {
+  it("returns auth info for personal API key", async () => {
     vi.mocked(getAccountIdByAuthToken).mockRejectedValue(new Error("Invalid JWT"));
     vi.mocked(getApiKeyDetails).mockResolvedValue({
       accountId: "personal-account-123",
@@ -73,7 +71,6 @@ describe("verifyBearerToken", () => {
       clientId: "personal-account-123",
       extra: {
         accountId: "personal-account-123",
-        orgId: null,
       },
     });
   });

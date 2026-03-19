@@ -111,7 +111,6 @@ describe("validateGetSandboxesRequest", () => {
 
       expect(buildGetSandboxesParams).toHaveBeenCalledWith({
         account_id: "acc_123",
-        org_id: null,
         target_account_id: "550e8400-e29b-41d4-a716-446655440000",
         sandbox_id: undefined,
       });
@@ -139,7 +138,6 @@ describe("validateGetSandboxesRequest", () => {
 
       expect(buildGetSandboxesParams).toHaveBeenCalledWith({
         account_id: "org-123",
-        org_id: "org-123",
         target_account_id: "550e8400-e29b-41d4-a716-446655440000",
         sandbox_id: undefined,
       });
@@ -170,7 +168,6 @@ describe("validateGetSandboxesRequest", () => {
 
       expect(buildGetSandboxesParams).toHaveBeenCalledWith({
         account_id: "org-123",
-        org_id: "org-123",
         target_account_id: "550e8400-e29b-41d4-a716-446655440000",
         sandbox_id: "sbx_abc123",
       });
@@ -198,7 +195,6 @@ describe("validateGetSandboxesRequest", () => {
 
       expect(buildGetSandboxesParams).toHaveBeenCalledWith({
         account_id: "acc_123",
-        org_id: null,
         target_account_id: undefined,
         sandbox_id: undefined,
       });

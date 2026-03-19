@@ -52,12 +52,11 @@ export async function validateGetSandboxesRequest(
     return authResult;
   }
 
-  const { accountId, orgId } = authResult;
+  const { accountId } = authResult;
 
   // Use shared function to build params
   const { params, error } = await buildGetSandboxesParams({
     account_id: accountId,
-    org_id: orgId,
     target_account_id: targetAccountId,
     sandbox_id: sandboxId,
   });

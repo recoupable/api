@@ -45,7 +45,6 @@ export function registerCompactChatsTool(server: McpServer): void {
 
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
       const accountId = authInfo?.extra?.accountId;
-      const orgId = authInfo?.extra?.orgId ?? null;
 
       if (!accountId) {
         return getToolResultError(
