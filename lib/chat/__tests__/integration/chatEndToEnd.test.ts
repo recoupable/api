@@ -1,6 +1,24 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextResponse } from "next/server";
 
+import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
+import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
+import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
+import { getKnowledgeBaseText } from "@/lib/files/getKnowledgeBaseText";
+import selectRoom from "@/lib/supabase/rooms/selectRoom";
+import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
+import upsertMemory from "@/lib/supabase/memories/upsertMemory";
+import { sendNewConversationNotification } from "@/lib/telegram/sendNewConversationNotification";
+import { handleSendEmailToolOutputs } from "@/lib/emails/handleSendEmailToolOutputs";
+import { getCreditUsage } from "@/lib/credits/getCreditUsage";
+import { deductCredits } from "@/lib/credits/deductCredits";
+import { generateChatTitle } from "../../generateChatTitle";
+import { handleChatCompletion } from "../../handleChatCompletion";
+import { handleChatCredits } from "@/lib/credits/handleChatCredits";
+import { validateChatRequest } from "../../validateChatRequest";
+import { setupChatRequest } from "../../setupChatRequest";
+
 /**
  * Integration tests for chat endpoints.
  *
@@ -136,24 +154,6 @@ vi.mock("ai", () => ({
     tools: {},
   })),
 }));
-
-import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
-import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
-import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
-import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
-import { getKnowledgeBaseText } from "@/lib/files/getKnowledgeBaseText";
-import selectRoom from "@/lib/supabase/rooms/selectRoom";
-import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
-import upsertMemory from "@/lib/supabase/memories/upsertMemory";
-import { sendNewConversationNotification } from "@/lib/telegram/sendNewConversationNotification";
-import { handleSendEmailToolOutputs } from "@/lib/emails/handleSendEmailToolOutputs";
-import { getCreditUsage } from "@/lib/credits/getCreditUsage";
-import { deductCredits } from "@/lib/credits/deductCredits";
-import { generateChatTitle } from "../../generateChatTitle";
-import { handleChatCompletion } from "../../handleChatCompletion";
-import { handleChatCredits } from "@/lib/credits/handleChatCredits";
-import { validateChatRequest } from "../../validateChatRequest";
-import { setupChatRequest } from "../../setupChatRequest";
 
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockSelectAccountEmails = vi.mocked(selectAccountEmails);

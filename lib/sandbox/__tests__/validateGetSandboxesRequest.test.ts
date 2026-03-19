@@ -103,7 +103,7 @@ describe("validateGetSandboxesRequest", () => {
       });
       vi.mocked(buildGetSandboxesParams).mockResolvedValue({
         params: null,
-        error: "Personal API keys cannot filter by account_id",
+        error: "Access denied to specified account_id",
       });
 
       const request = createMockRequest({ account_id: "550e8400-e29b-41d4-a716-446655440000" });
@@ -120,7 +120,7 @@ describe("validateGetSandboxesRequest", () => {
       expect(response.status).toBe(403);
       const json = await response.json();
       expect(json.status).toBe("error");
-      expect(json.error).toBe("Personal API keys cannot filter by account_id");
+      expect(json.error).toBe("Access denied to specified account_id");
     });
 
     it("returns 403 when buildGetSandboxesParams returns non-member error", async () => {
@@ -131,7 +131,7 @@ describe("validateGetSandboxesRequest", () => {
       });
       vi.mocked(buildGetSandboxesParams).mockResolvedValue({
         params: null,
-        error: "account_id is not a member of this organization",
+        error: "Access denied to specified account_id",
       });
 
       const request = createMockRequest({ account_id: "550e8400-e29b-41d4-a716-446655440000" });
@@ -148,7 +148,7 @@ describe("validateGetSandboxesRequest", () => {
       expect(response.status).toBe(403);
       const json = await response.json();
       expect(json.status).toBe("error");
-      expect(json.error).toBe("account_id is not a member of this organization");
+      expect(json.error).toBe("Access denied to specified account_id");
     });
 
     it("passes target_account_id and sandbox_id to buildGetSandboxesParams", async () => {

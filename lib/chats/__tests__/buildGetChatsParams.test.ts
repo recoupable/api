@@ -45,7 +45,26 @@ describe("buildGetChatsParams", () => {
 
       expect(result).toEqual({
         params: null,
-        error: "Personal API keys cannot filter by account_id",
+        error: "Access denied to specified account_id",
+      });
+    });
+
+    it("allows personal key to access target_account_id via shared org", async () => {
+      vi.mocked(canAccessAccount).mockResolvedValue(true);
+
+      const result = await buildGetChatsParams({
+        account_id: "personal-123",
+        org_id: null,
+        target_account_id: "shared-org-member",
+      });
+
+      expect(canAccessAccount).toHaveBeenCalledWith({
+        targetAccountId: "shared-org-member",
+        currentAccountId: "personal-123",
+      });
+      expect(result).toEqual({
+        params: { account_ids: ["shared-org-member"], artist_id: undefined },
+        error: null,
       });
     });
 
@@ -97,8 +116,8 @@ describe("buildGetChatsParams", () => {
         error: null,
       });
       expect(canAccessAccount).toHaveBeenCalledWith({
-        orgId: "org-123",
         targetAccountId: "member-account",
+        currentAccountId: "account-123",
       });
     });
 
@@ -113,7 +132,7 @@ describe("buildGetChatsParams", () => {
 
       expect(result).toEqual({
         params: null,
-        error: "account_id is not a member of this organization",
+        error: "Access denied to specified account_id",
       });
     });
 

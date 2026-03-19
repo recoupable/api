@@ -23,13 +23,12 @@ export async function resolveAccountId({
   accountIdOverride,
 }: ResolveAccountIdParams): Promise<ResolveAccountIdResult> {
   const authAccountId = authInfo?.extra?.accountId;
-  const authOrgId = authInfo?.extra?.orgId;
 
   if (authAccountId) {
     // If account_id override is provided, validate access (for org API keys)
     if (accountIdOverride && accountIdOverride !== authAccountId) {
       const hasAccess = await canAccessAccount({
-        orgId: authOrgId,
+        currentAccountId: authAccountId,
         targetAccountId: accountIdOverride,
       });
       if (!hasAccess) {

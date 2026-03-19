@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { buildGetPulsesParams } from "../buildGetPulsesParams";
 
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+
 vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: vi.fn(),
 }));
@@ -8,8 +10,6 @@ vi.mock("@/lib/organizations/canAccessAccount", () => ({
 vi.mock("@/lib/const", () => ({
   RECOUP_ORG_ID: "recoup-org-id",
 }));
-
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 describe("buildGetPulsesParams", () => {
   beforeEach(() => {
@@ -75,11 +75,30 @@ describe("buildGetPulsesParams", () => {
     });
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: "org-123",
       targetAccountId: "target-456",
+      currentAccountId: "org-123",
     });
     expect(result).toEqual({
       params: { accountIds: ["target-456"], active: undefined },
+      error: null,
+    });
+  });
+
+  it("allows personal key to access targetAccountId via shared org", async () => {
+    vi.mocked(canAccessAccount).mockResolvedValue(true);
+
+    const result = await buildGetPulsesParams({
+      accountId: "personal-123",
+      orgId: null,
+      targetAccountId: "shared-org-member",
+    });
+
+    expect(canAccessAccount).toHaveBeenCalledWith({
+      targetAccountId: "shared-org-member",
+      currentAccountId: "personal-123",
+    });
+    expect(result).toEqual({
+      params: { accountIds: ["shared-org-member"], active: undefined },
       error: null,
     });
   });
@@ -95,7 +114,7 @@ describe("buildGetPulsesParams", () => {
 
     expect(result).toEqual({
       params: null,
-      error: "Personal API keys cannot filter by account_id",
+      error: "Access denied to specified account_id",
     });
   });
 
@@ -110,7 +129,7 @@ describe("buildGetPulsesParams", () => {
 
     expect(result).toEqual({
       params: null,
-      error: "account_id is not a member of this organization",
+      error: "Access denied to specified account_id",
     });
   });
 });

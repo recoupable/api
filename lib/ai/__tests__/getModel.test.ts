@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+import { getAvailableModels } from "@/lib/ai/getAvailableModels";
+import { getModel } from "../getModel";
+
 vi.mock("@/lib/ai/getAvailableModels", () => ({
   getAvailableModels: vi.fn(),
 }));
-
-import { getAvailableModels } from "@/lib/ai/getAvailableModels";
-import { getModel } from "../getModel";
 
 const mockGetAvailableModels = vi.mocked(getAvailableModels);
 

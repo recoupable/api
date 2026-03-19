@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { selectAccountWithSocials } from "../selectAccountWithSocials";
+
 const mockFrom = vi.fn();
 const mockSelect = vi.fn();
 const mockEq = vi.fn();
@@ -10,8 +12,6 @@ vi.mock("@/lib/supabase/serverClient", () => ({
     from: (...args: unknown[]) => mockFrom(...args),
   },
 }));
-
-import { selectAccountWithSocials } from "../selectAccountWithSocials";
 
 describe("selectAccountWithSocials", () => {
   beforeEach(() => {
