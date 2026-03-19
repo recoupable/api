@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import getPrepareStepResult from "../getPrepareStepResult";
+
 // Mock the toolChains module
 vi.mock("../toolChains", () => ({
   TOOL_CHAINS: {
@@ -20,8 +22,6 @@ vi.mock("../toolChains", () => ({
     custom_step_one: "gpt-4-turbo",
   },
 }));
-
-import getPrepareStepResult from "../getPrepareStepResult";
 
 describe("getPrepareStepResult", () => {
   beforeEach(() => {

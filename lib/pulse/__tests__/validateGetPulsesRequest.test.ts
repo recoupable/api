@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateGetPulsesRequest } from "../validateGetPulsesRequest";
 
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+
 // Mock dependencies
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
@@ -18,9 +21,6 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 vi.mock("@/lib/const", () => ({
   RECOUP_ORG_ID: "recoup-org-id",
 }));
-
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 describe("validateGetPulsesRequest", () => {
   beforeEach(() => {
@@ -170,8 +170,8 @@ describe("validateGetPulsesRequest", () => {
     const result = await validateGetPulsesRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: mockOrgId,
       targetAccountId,
+      currentAccountId: mockOrgId,
     });
     expect(result).not.toBeInstanceOf(NextResponse);
     const validResult = result as { accountIds: string[]; active?: boolean };
@@ -194,8 +194,8 @@ describe("validateGetPulsesRequest", () => {
     const result = await validateGetPulsesRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: mockOrgId,
       targetAccountId: notInOrgId,
+      currentAccountId: mockOrgId,
     });
     expect(result).toBeInstanceOf(NextResponse);
     const response = result as NextResponse;
@@ -218,8 +218,8 @@ describe("validateGetPulsesRequest", () => {
     const result = await validateGetPulsesRequest(request);
 
     expect(canAccessAccount).toHaveBeenCalledWith({
-      orgId: recoupOrgId,
       targetAccountId: anyAccountId,
+      currentAccountId: recoupOrgId,
     });
     expect(result).not.toBeInstanceOf(NextResponse);
     const validResult = result as { accountIds: string[]; active?: boolean };

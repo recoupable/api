@@ -41,7 +41,7 @@ describe("validateOverrideAccountId", () => {
       expect(result).toEqual({ accountId: targetAccountId });
       expect(getApiKeyDetails).toHaveBeenCalledWith("valid_api_key");
       expect(canAccessAccount).toHaveBeenCalledWith({
-        orgId,
+        currentAccountId: orgId,
         targetAccountId,
       });
     });

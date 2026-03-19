@@ -81,13 +81,11 @@ describe("compactChatsHandler", () => {
         chatId: "chat-1",
         prompt: "Custom prompt",
         accountId: "account-123",
-        orgId: "org-456",
       });
       expect(mockProcessCompactChatRequest).toHaveBeenCalledWith({
         chatId: "chat-2",
         prompt: "Custom prompt",
         accountId: "account-123",
-        orgId: "org-456",
       });
     });
 

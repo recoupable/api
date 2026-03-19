@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { checkAccountArtistAccess } from "../checkAccountArtistAccess";
 
+import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
+import { selectArtistOrganizationIds } from "@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds";
+import { selectAccountOrganizationIds } from "@/lib/supabase/account_organization_ids/selectAccountOrganizationIds";
+
 vi.mock("@/lib/supabase/account_artist_ids/selectAccountArtistId", () => ({
   selectAccountArtistId: vi.fn(),
 }));
@@ -12,10 +16,6 @@ vi.mock("@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds", ()
 vi.mock("@/lib/supabase/account_organization_ids/selectAccountOrganizationIds", () => ({
   selectAccountOrganizationIds: vi.fn(),
 }));
-
-import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
-import { selectArtistOrganizationIds } from "@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds";
-import { selectAccountOrganizationIds } from "@/lib/supabase/account_organization_ids/selectAccountOrganizationIds";
 
 describe("checkAccountArtistAccess", () => {
   beforeEach(() => {

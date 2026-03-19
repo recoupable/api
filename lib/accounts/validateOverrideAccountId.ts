@@ -57,7 +57,7 @@ export async function validateOverrideAccountId({
   }
 
   const hasAccess = await canAccessAccount({
-    orgId: keyDetails.orgId,
+    currentAccountId: keyDetails.accountId,
     targetAccountId,
   });
 

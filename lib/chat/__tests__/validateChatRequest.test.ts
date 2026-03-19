@@ -2,6 +2,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextResponse } from "next/server";
 import { validateChatRequest, chatRequestSchema } from "../validateChatRequest";
 
+import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
+import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
+import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
+import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
+import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
+import { generateUUID } from "@/lib/uuid/generateUUID";
+import { createNewRoom } from "@/lib/chat/createNewRoom";
+import insertMemories from "@/lib/supabase/memories/insertMemories";
+import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
+import { setupConversation } from "@/lib/chat/setupConversation";
+
 // Mock dependencies
 vi.mock("@/lib/auth/getApiKeyAccountId", () => ({
   getApiKeyAccountId: vi.fn(),
@@ -47,17 +58,6 @@ vi.mock("@/lib/chat/setupConversation", () => ({
   setupConversation: vi.fn(),
 }));
 
-import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
-import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
-import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
-import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
-import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
-import { generateUUID } from "@/lib/uuid/generateUUID";
-import { createNewRoom } from "@/lib/chat/createNewRoom";
-import insertMemories from "@/lib/supabase/memories/insertMemories";
-import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
-import { setupConversation } from "@/lib/chat/setupConversation";
-
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockGetAuthenticatedAccountId = vi.mocked(getAuthenticatedAccountId);
 const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
@@ -70,6 +70,11 @@ const mockFilterMessageContentForMemories = vi.mocked(filterMessageContentForMem
 const mockSetupConversation = vi.mocked(setupConversation);
 
 // Helper to create mock NextRequest
+/**
+ *
+ * @param body
+ * @param headers
+ */
 function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
   return {
     json: () => Promise.resolve(body),

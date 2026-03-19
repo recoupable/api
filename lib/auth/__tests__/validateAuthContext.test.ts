@@ -39,6 +39,10 @@ const mockGetApiKeyDetails = vi.mocked(getApiKeyDetails);
 const mockValidateOrganizationAccess = vi.mocked(validateOrganizationAccess);
 const mockCanAccessAccount = vi.mocked(canAccessAccount);
 
+/**
+ *
+ * @param headers
+ */
 function createMockRequest(headers: Record<string, string> = {}): Request {
   return {
     headers: {
@@ -182,7 +186,7 @@ describe("validateAuthContext", () => {
       expect(mockCanAccessAccount).not.toHaveBeenCalled();
     });
 
-    it("denies personal API key accessing different account_id", async () => {
+    it("denies personal API key accessing different account_id when no shared org", async () => {
       const request = createMockRequest({ "x-api-key": "personal-key" });
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
       mockGetApiKeyDetails.mockResolvedValue({
@@ -190,6 +194,7 @@ describe("validateAuthContext", () => {
         orgId: null,
         name: "personal-key",
       });
+      mockCanAccessAccount.mockResolvedValue(false);
 
       const result = await validateAuthContext(request as never, {
         accountId: "different-account-456", // Different from API key's account
@@ -200,6 +205,32 @@ describe("validateAuthContext", () => {
       expect(response.status).toBe(403);
       const body = await response.json();
       expect(body.error).toBe("Access denied to specified account_id");
+    });
+
+    it("allows personal API key to access account_id in a shared org", async () => {
+      const request = createMockRequest({ "x-api-key": "personal-key" });
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockGetApiKeyDetails.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        name: "personal-key",
+      });
+      mockCanAccessAccount.mockResolvedValue(true);
+
+      const result = await validateAuthContext(request as never, {
+        accountId: "member-account-456",
+      });
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect(result).toEqual({
+        accountId: "member-account-456",
+        orgId: null,
+        authToken: "personal-key",
+      });
+      expect(mockCanAccessAccount).toHaveBeenCalledWith({
+        targetAccountId: "member-account-456",
+        currentAccountId: "account-123",
+      });
     });
 
     it("allows org API key to access member account", async () => {
@@ -223,8 +254,8 @@ describe("validateAuthContext", () => {
         authToken: "org-key",
       });
       expect(mockCanAccessAccount).toHaveBeenCalledWith({
-        orgId: "org-456",
         targetAccountId: "member-account-789",
+        currentAccountId: "org-account-123",
       });
     });
 

@@ -10,7 +10,6 @@ interface ProcessCompactChatRequestParams {
   chatId: string;
   prompt?: string;
   accountId: string;
-  orgId?: string;
 }
 
 /**
@@ -24,7 +23,6 @@ export async function processCompactChatRequest({
   chatId,
   prompt,
   accountId,
-  orgId,
 }: ProcessCompactChatRequestParams): Promise<CompactChatProcessResult> {
   // Verify the chat exists
   const room = await selectRoom(chatId);
@@ -37,7 +35,7 @@ export async function processCompactChatRequest({
   if (roomAccountId && roomAccountId !== accountId) {
     // Check if org key has access to this account
     const hasAccess = await canAccessAccount({
-      orgId,
+      currentAccountId: accountId,
       targetAccountId: roomAccountId,
     });
     if (!hasAccess) {

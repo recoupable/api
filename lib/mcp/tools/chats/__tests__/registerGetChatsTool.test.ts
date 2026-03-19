@@ -148,8 +148,8 @@ describe("registerGetChatsTool", () => {
     );
 
     expect(mockCanAccessAccount).toHaveBeenCalledWith({
-      orgId: "org-account-id",
       targetAccountId: "target-account-789",
+      currentAccountId: "org-account-id",
     });
     expect(mockSelectRooms).toHaveBeenCalledWith({
       account_ids: ["target-account-789"],
@@ -169,7 +169,7 @@ describe("registerGetChatsTool", () => {
       content: [
         {
           type: "text",
-          text: expect.stringContaining("account_id is not a member of this organization"),
+          text: expect.stringContaining("Access denied to specified account_id"),
         },
       ],
     });
@@ -288,7 +288,7 @@ describe("registerGetChatsTool", () => {
       content: [
         {
           type: "text",
-          text: expect.stringContaining("Personal API keys cannot filter by account_id"),
+          text: expect.stringContaining("Access denied to specified account_id"),
         },
       ],
     });

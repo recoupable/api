@@ -85,7 +85,6 @@ export async function validateGetTaskRunQuery(
       const overrideResult = await validateAccountIdOverride({
         currentAccountId: authResult.accountId,
         targetAccountId: result.data.account_id,
-        orgId: authResult.orgId,
       });
 
       if (overrideResult instanceof NextResponse) {

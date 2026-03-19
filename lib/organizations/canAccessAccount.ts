@@ -1,40 +1,49 @@
 import { RECOUP_ORG_ID } from "@/lib/const";
 import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
+import { selectAccountOrganizationIds } from "@/lib/supabase/account_organization_ids/selectAccountOrganizationIds";
 
 export interface CanAccessAccountParams {
-  orgId: string | null;
+  /** The account ID of the API key owner */
+  currentAccountId: string;
+  /** The account ID being accessed */
   targetAccountId: string;
 }
 
 /**
- * Validates if an organization can access a target account.
+ * Checks if currentAccountId can access targetAccountId via shared org membership.
  *
  * Access rules:
- * - If orgId is RECOUP_ORG_ID, always grants access (universal admin access)
- * - Otherwise, checks if targetAccountId is a member of the organization
+ * 1. If currentAccountId is in RECOUP_ORG, grants universal admin access
+ * 2. Otherwise, checks if both accounts share at least one org
  *
  * @param params - The validation parameters
- * @param params.orgId - The organization ID from the API key
- * @param params.targetAccountId - The account ID to access
  * @returns true if access is allowed, false otherwise
  */
 export async function canAccessAccount(params: CanAccessAccountParams): Promise<boolean> {
-  const { orgId, targetAccountId } = params;
+  const { currentAccountId, targetAccountId } = params;
 
-  if (!orgId || !targetAccountId) {
+  if (!currentAccountId || !targetAccountId) {
     return false;
   }
 
-  // Universal access for Recoup admin organization
-  if (orgId === RECOUP_ORG_ID) {
+  if (currentAccountId === targetAccountId) {
     return true;
   }
 
-  // Check if target account is a member of the organization
-  const memberships = await getAccountOrganizations({
-    accountId: targetAccountId,
-    organizationId: orgId,
+  const currentOrgs = await getAccountOrganizations({
+    accountId: currentAccountId,
   });
 
-  return memberships.length > 0;
+  if (!currentOrgs.length) {
+    return false;
+  }
+
+  if (currentOrgs.some(m => m.organization_id === RECOUP_ORG_ID)) {
+    return true;
+  }
+
+  const orgIds = currentOrgs.map(m => m.organization_id);
+  const shared = await selectAccountOrganizationIds(targetAccountId, orgIds);
+
+  return Array.isArray(shared) && shared.length > 0;
 }

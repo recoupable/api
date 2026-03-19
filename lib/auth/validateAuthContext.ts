@@ -94,7 +94,6 @@ export async function validateAuthContext(
     const overrideResult = await validateAccountIdOverride({
       currentAccountId: accountId,
       targetAccountId: input.accountId,
-      orgId,
     });
 
     if (overrideResult instanceof NextResponse) {

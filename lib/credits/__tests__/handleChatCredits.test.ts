@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+import { getCreditUsage } from "@/lib/credits/getCreditUsage";
+import { deductCredits } from "@/lib/credits/deductCredits";
+import { handleChatCredits } from "../handleChatCredits";
+
 vi.mock("@/lib/credits/getCreditUsage", () => ({
   getCreditUsage: vi.fn(),
 }));
@@ -7,10 +11,6 @@ vi.mock("@/lib/credits/getCreditUsage", () => ({
 vi.mock("@/lib/credits/deductCredits", () => ({
   deductCredits: vi.fn(),
 }));
-
-import { getCreditUsage } from "@/lib/credits/getCreditUsage";
-import { deductCredits } from "@/lib/credits/deductCredits";
-import { handleChatCredits } from "../handleChatCredits";
 
 const mockGetCreditUsage = vi.mocked(getCreditUsage);
 const mockDeductCredits = vi.mocked(deductCredits);
