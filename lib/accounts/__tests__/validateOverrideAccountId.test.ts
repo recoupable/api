@@ -29,7 +29,6 @@ describe("validateOverrideAccountId", () => {
 
       vi.mocked(getApiKeyDetails).mockResolvedValue({
         accountId: orgId,
-        orgId: orgId,
       });
       vi.mocked(canAccessAccount).mockResolvedValue(true);
 
@@ -41,8 +40,9 @@ describe("validateOverrideAccountId", () => {
       expect(result).toEqual({ accountId: targetAccountId });
       expect(getApiKeyDetails).toHaveBeenCalledWith("valid_api_key");
       expect(canAccessAccount).toHaveBeenCalledWith({
-        orgId,
+        orgId: null,
         targetAccountId,
+        currentAccountId: orgId,
       });
     });
   });
