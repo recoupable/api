@@ -40,11 +40,11 @@ describe("validateGetPulsesRequest", () => {
     expect(response.status).toBe(401);
   });
 
-  it("should return single account ID for authenticated account", async () => {
+  it("should return single account ID for personal key", async () => {
     const mockAccountId = "personal-account-123";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
-      orgId: null,
+      orgId: null, // Personal key
       authToken: "test-token",
     });
 
@@ -60,7 +60,7 @@ describe("validateGetPulsesRequest", () => {
     });
   });
 
-  it("should return accountIds when account has org membership", async () => {
+  it("should return accountIds for org key", async () => {
     const mockOrgId = "org-123";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockOrgId,
@@ -135,12 +135,12 @@ describe("validateGetPulsesRequest", () => {
     expect(response.status).toBe(400);
   });
 
-  it("should reject filtering by account_id without org access", async () => {
+  it("should reject personal key trying to filter by account_id", async () => {
     const mockAccountId = "a1111111-1111-4111-8111-111111111111";
     const otherAccountId = "b2222222-2222-4222-8222-222222222222";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockAccountId,
-      orgId: null,
+      orgId: null, // Personal key
       authToken: "test-token",
     });
 
@@ -154,7 +154,7 @@ describe("validateGetPulsesRequest", () => {
     expect(response.status).toBe(403);
   });
 
-  it("should allow filtering by account_id within org", async () => {
+  it("should allow org key to filter by account_id within org", async () => {
     const mockOrgId = "c3333333-3333-4333-8333-333333333333";
     const targetAccountId = "d4444444-4444-4444-8444-444444444444";
     vi.mocked(validateAuthContext).mockResolvedValue({
@@ -178,7 +178,7 @@ describe("validateGetPulsesRequest", () => {
     expect(validResult.accountIds).toEqual([targetAccountId]);
   });
 
-  it("should reject filtering by account_id not in org", async () => {
+  it("should reject org key filtering by account_id not in org", async () => {
     const mockOrgId = "f6666666-6666-4666-8666-666666666666";
     const notInOrgId = "b8888888-8888-4888-8888-888888888888";
     vi.mocked(validateAuthContext).mockResolvedValue({

@@ -28,7 +28,6 @@ export async function OPTIONS() {
  * - status: "success"
  * - presets: Array of { name, label, description, requiresAudio, responseFormat }
  *
- * @param request
  * @returns A NextResponse with the list of available presets
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {

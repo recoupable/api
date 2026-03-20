@@ -12,7 +12,7 @@ describe("buildGetPulsesParams", () => {
     vi.clearAllMocks();
   });
 
-  it("returns accountIds for authenticated account", async () => {
+  it("returns accountIds for personal key", async () => {
     const result = await buildGetPulsesParams({
       accountId: "personal-account-123",
     });
@@ -53,7 +53,7 @@ describe("buildGetPulsesParams", () => {
     });
   });
 
-  it("allows account to access targetAccountId via shared org", async () => {
+  it("allows personal key to access targetAccountId via shared org", async () => {
     vi.mocked(canAccessAccount).mockResolvedValue(true);
 
     const result = await buildGetPulsesParams({
@@ -71,7 +71,7 @@ describe("buildGetPulsesParams", () => {
     });
   });
 
-  it("returns error when account lacks access to targetAccountId", async () => {
+  it("returns error when personal key tries to filter by targetAccountId", async () => {
     vi.mocked(canAccessAccount).mockResolvedValue(false);
 
     const result = await buildGetPulsesParams({

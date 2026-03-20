@@ -22,7 +22,7 @@ export async function OPTIONS() {
  * Request body:
  * - name (optional): The name of the workspace to create. Defaults to "Untitled".
  * - account_id (optional): The ID of the account to create the workspace for (UUID).
- *   Only required when creating workspaces on behalf of other accounts within a shared organization.
+ *   Only required for organization API keys creating workspaces on behalf of other accounts.
  * - organization_id (optional): The organization ID to link the new workspace to (UUID).
  *   If provided, the workspace will appear in that organization's view.
  *   Access is validated to ensure the user has access to the organization.

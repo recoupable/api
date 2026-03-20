@@ -33,8 +33,8 @@ export type GetTaskRunQuery = ValidatedRetrieveQuery | ValidatedListQuery;
  *
  * When account_id is provided:
  * - Admin accounts (Bearer token) may query any account
- * - Accounts with org membership may query accounts within their organization
- * - Other accounts may only query their own account
+ * - Org API keys may query accounts within their organization
+ * - Personal API keys may only query their own account
  *
  * @param request - The NextRequest object
  * @returns A NextResponse with an error if validation fails, or the validated query if validation passes.

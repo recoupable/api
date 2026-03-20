@@ -20,13 +20,14 @@ export async function OPTIONS() {
  *
  * Triggers the setup-sandbox background task to create a personal sandbox,
  * provision a GitHub repo, take a snapshot, and shut down.
- * Sets up the sandbox for the key owner's account.
- * Accounts with shared org membership may specify account_id to target another account.
+ * For personal API keys, sets up the sandbox for the key owner's account.
+ * Organization API keys may specify account_id to target any account
+ * within their organization.
  *
  * Authentication: x-api-key header or Authorization Bearer token required.
  *
  * Request body:
- * - account_id: string (optional) - UUID of the account to set up for (requires shared org membership or admin access)
+ * - account_id: string (optional) - UUID of the account to set up for (org keys only)
  *
  * Response (200):
  * - status: "success"

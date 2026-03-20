@@ -56,8 +56,6 @@ export interface ProcessTranscriptionResult {
 /**
  * Formats transcription errors into user-friendly messages.
  * Centralizes error message logic to avoid duplication.
- *
- * @param error
  */
 export function formatTranscriptionError(error: unknown): { message: string; status: number } {
   const rawMessage = error instanceof Error ? error.message : "Transcription failed";

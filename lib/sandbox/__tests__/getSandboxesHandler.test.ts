@@ -324,7 +324,7 @@ describe("getSandboxesHandler", () => {
       expect(json.github_repo).toBeNull();
     });
 
-    it("returns snapshot info using orgId as accountId", async () => {
+    it("returns snapshot info for org keys using orgId as accountId", async () => {
       vi.mocked(validateGetSandboxesRequest).mockResolvedValue({
         orgId: "org_123",
       });

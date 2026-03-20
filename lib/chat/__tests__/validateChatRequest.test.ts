@@ -237,7 +237,7 @@ describe("validateChatRequest", () => {
       expect(json.status).toBe("error");
     });
 
-    it("returns accountId for API key with org membership", async () => {
+    it("returns accountId for org API key", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("org-account-123");
       mockGetApiKeyDetails.mockResolvedValue({
         accountId: "org-account-123",
@@ -251,7 +251,7 @@ describe("validateChatRequest", () => {
       expect((result as any).accountId).toBe("org-account-123");
     });
 
-    it("returns accountId for API key", async () => {
+    it("returns accountId for personal API key", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("personal-account-123");
       mockGetApiKeyDetails.mockResolvedValue({
         accountId: "personal-account-123",
@@ -281,7 +281,7 @@ describe("validateChatRequest", () => {
   });
 
   describe("accountId override", () => {
-    it("allows account with org membership to override accountId", async () => {
+    it("allows org API key to override accountId", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("org-account-123");
       mockValidateOverrideAccountId.mockResolvedValue({
         accountId: "target-account-456",

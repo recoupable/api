@@ -36,7 +36,7 @@ export interface AuthContext {
  * This is the single source of truth for:
  * 1. Authenticating via x-api-key or Authorization bearer token
  * 2. Resolving the accountId (from auth or body override)
- * 3. Validating account_id override access (accounts with shared org membership can access member accounts)
+ * 3. Validating account_id override access (org keys can access member accounts, personal keys can access own account)
  * 4. Validating organization_id access (account must be a member of the org)
  *
  * @param request - The NextRequest object

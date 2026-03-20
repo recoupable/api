@@ -34,7 +34,7 @@ describe("validateGetArtistsRequest", () => {
     expect((result as NextResponse).status).toBe(401);
   });
 
-  it("returns personal artists for authenticated account (no query params)", async () => {
+  it("returns personal artists for personal key (no query params)", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "personal-123",
       orgId: null,
@@ -51,7 +51,7 @@ describe("validateGetArtistsRequest", () => {
     });
   });
 
-  it("returns personal artists for account with org membership (no query params)", async () => {
+  it("returns personal artists for org key (no query params)", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "org-owner-123",
       orgId: "org-123",
@@ -114,7 +114,7 @@ describe("validateGetArtistsRequest", () => {
     expect((result as NextResponse).status).toBe(400);
   });
 
-  it("allows filtering by account_id within org", async () => {
+  it("allows org key to filter by account_id within org", async () => {
     const mockOrgId = "b2222222-2222-4222-8222-222222222222";
     const targetAccountId = "c3333333-3333-4333-8333-333333333333";
     vi.mocked(validateAuthContext).mockResolvedValue({
@@ -138,7 +138,7 @@ describe("validateGetArtistsRequest", () => {
     });
   });
 
-  it("returns 403 when account tries to filter by account_id without org access", async () => {
+  it("returns 403 when personal key tries to filter by account_id", async () => {
     const otherAccountId = "d4444444-4444-4444-8444-444444444444";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "personal-123",
@@ -154,7 +154,7 @@ describe("validateGetArtistsRequest", () => {
     expect((result as NextResponse).status).toBe(403);
   });
 
-  it("returns 403 when account lacks access to account_id", async () => {
+  it("returns 403 when org key lacks access to account_id", async () => {
     const mockOrgId = "e5555555-5555-4555-8555-555555555555";
     const notInOrgId = "f6666666-6666-4666-8666-666666666666";
     vi.mocked(validateAuthContext).mockResolvedValue({

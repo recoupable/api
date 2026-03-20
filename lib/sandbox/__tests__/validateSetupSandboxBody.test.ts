@@ -73,7 +73,7 @@ describe("validateSetupSandboxBody", () => {
     expect(result).toEqual({ accountId: "resolved-account-id" });
   });
 
-  it("passes account_id override to validateAuthContext", async () => {
+  it("passes account_id override to validateAuthContext for org keys", async () => {
     const targetAccountId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(safeParseJson).mockResolvedValue({
       account_id: targetAccountId,

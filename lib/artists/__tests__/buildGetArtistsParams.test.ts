@@ -12,7 +12,7 @@ describe("buildGetArtistsParams", () => {
     vi.clearAllMocks();
   });
 
-  it("returns auth accountId for authenticated account", async () => {
+  it("returns auth accountId for personal key", async () => {
     const result = await buildGetArtistsParams({
       accountId: "personal-account-123",
     });
@@ -23,7 +23,7 @@ describe("buildGetArtistsParams", () => {
     });
   });
 
-  it("returns auth accountId for account with org membership", async () => {
+  it("returns auth accountId for org key", async () => {
     const result = await buildGetArtistsParams({
       accountId: "org-owner-123",
     });
@@ -87,7 +87,7 @@ describe("buildGetArtistsParams", () => {
     });
   });
 
-  it("allows account to access targetAccountId via shared org", async () => {
+  it("allows personal key to access targetAccountId via shared org", async () => {
     vi.mocked(canAccessAccount).mockResolvedValue(true);
 
     const result = await buildGetArtistsParams({
@@ -105,7 +105,7 @@ describe("buildGetArtistsParams", () => {
     });
   });
 
-  it("returns error when account has no shared org with targetAccountId", async () => {
+  it("returns error when personal key has no shared org with targetAccountId", async () => {
     vi.mocked(canAccessAccount).mockResolvedValue(false);
 
     const result = await buildGetArtistsParams({
@@ -119,7 +119,7 @@ describe("buildGetArtistsParams", () => {
     });
   });
 
-  it("returns error when account lacks access to targetAccountId", async () => {
+  it("returns error when org key lacks access to targetAccountId", async () => {
     vi.mocked(canAccessAccount).mockResolvedValue(false);
 
     const result = await buildGetArtistsParams({

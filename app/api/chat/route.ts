@@ -31,7 +31,7 @@ export async function OPTIONS() {
  * - artistId: Optional UUID of the artist account
  * - model: Optional model ID override
  * - excludeTools: Optional array of tool names to exclude
- * - accountId: Optional accountId override (requires shared org membership or admin access)
+ * - accountId: Optional accountId override (requires org API key)
  *
  * @param request - The request object
  * @returns A streaming response or error

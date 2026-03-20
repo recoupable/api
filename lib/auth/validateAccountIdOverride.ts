@@ -24,7 +24,7 @@ export interface ValidateAccountIdOverrideResult {
  *
  * Access rules:
  * 1. If targetAccountId equals currentAccountId, always allowed (self-access)
- * 2. Delegates to canAccessAccount which handles shared org membership and admin access
+ * 2. Delegates to canAccessAccount which handles org key, shared org, and admin access
  *
  * @param params - The validation parameters
  * @returns NextResponse with error or the validated result

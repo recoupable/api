@@ -23,7 +23,7 @@ describe("getPulsesHandler", () => {
     vi.clearAllMocks();
   });
 
-  it("should return array of pulses for authenticated account", async () => {
+  it("should return array of pulses for personal key", async () => {
     const mockAccountId = "account-123";
     vi.mocked(validateGetPulsesRequest).mockResolvedValue({
       accountIds: [mockAccountId],
@@ -42,7 +42,7 @@ describe("getPulsesHandler", () => {
     expect(selectPulseAccounts).toHaveBeenCalledWith({ accountIds: [mockAccountId] });
   });
 
-  it("should return pulses using orgId filter", async () => {
+  it("should return pulses for org key using orgId filter", async () => {
     const mockOrgId = "org-123";
     vi.mocked(validateGetPulsesRequest).mockResolvedValue({
       orgId: mockOrgId,

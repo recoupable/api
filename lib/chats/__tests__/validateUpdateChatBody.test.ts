@@ -132,7 +132,7 @@ describe("validateUpdateChatBody", () => {
       expect(result).toEqual({ chatId, topic });
     });
 
-    it("allows account with org membership to access member's chat", async () => {
+    it("allows org key to access member's chat", async () => {
       const chatId = "123e4567-e89b-12d3-a456-426614174000";
       const memberAccountId = "123e4567-e89b-12d3-a456-426614174001";
       const orgId = "123e4567-e89b-12d3-a456-426614174002";
@@ -374,7 +374,7 @@ describe("validateUpdateChatBody", () => {
       expect(body.error).toContain("Access denied");
     });
 
-    it("returns 403 when account cannot access non-member's chat", async () => {
+    it("returns 403 when org key cannot access non-member's chat", async () => {
       const orgId = "123e4567-e89b-12d3-a456-426614174001";
       const nonMemberAccountId = "123e4567-e89b-12d3-a456-426614174002";
       const chatId = "123e4567-e89b-12d3-a456-426614174000";

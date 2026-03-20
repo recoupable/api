@@ -8,7 +8,7 @@ import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmai
  * Handler for POST /api/notifications.
  * Sends a notification email to the authenticated account's email address.
  * The recipient is automatically resolved from the API key or Bearer token.
- * Supports optional account_id override (requires shared org membership or admin access).
+ * Supports optional account_id override for org API keys.
  * Requires authentication via x-api-key header or Authorization bearer token.
  *
  * @param request - The request object.

@@ -106,13 +106,14 @@ export async function PATCH(request: NextRequest): Promise<Response> {
  * DELETE /api/sandboxes
  *
  * Deletes the GitHub repository and snapshot record for an account.
- * Deletes the sandbox for the key owner's account.
- * Accounts with shared org membership may specify account_id to target another account.
+ * For personal API keys, deletes the sandbox for the key owner's account.
+ * Organization API keys may specify account_id to target any account
+ * within their organization.
  *
  * Authentication: x-api-key header or Authorization Bearer token required.
  *
  * Request body:
- * - account_id: string (optional) - UUID of the account to delete for (requires shared org membership or admin access)
+ * - account_id: string (optional) - UUID of the account to delete for (org keys only)
  *
  * Response (200):
  * - status: "success"

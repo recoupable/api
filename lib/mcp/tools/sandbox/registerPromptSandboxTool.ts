@@ -18,7 +18,7 @@ const promptSandboxSchema = z.object({
     .string()
     .optional()
     .describe(
-      "The account ID to run the sandbox command for. Only applicable when the authenticated account has shared organization membership with the target account.",
+      "The account ID to run the sandbox command for. Only applicable for organization API keys — org keys can target any account within their organization. Do not use with personal API keys.",
     ),
 });
 

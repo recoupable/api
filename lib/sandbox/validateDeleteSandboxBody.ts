@@ -16,7 +16,7 @@ export type DeleteSandboxBody = {
 /**
  * Validates auth and request body for DELETE /api/sandboxes.
  * Handles authentication via x-api-key or Authorization bearer token,
- * body validation, and optional account_id override (requires shared org membership or admin access).
+ * body validation, and optional account_id override for organization API keys.
  *
  * @param request - The NextRequest object
  * @returns A NextResponse with an error if validation fails, or the validated body with auth context.

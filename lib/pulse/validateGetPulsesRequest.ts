@@ -18,8 +18,9 @@ const getPulsesQuerySchema = z.object({
  * Validates GET /api/pulses request.
  * Handles authentication via x-api-key or Authorization bearer token.
  *
- * Returns accountIds with the key owner's account for filtering.
- * For Recoup admin key: Returns empty params to indicate ALL pulse records.
+ * For personal keys: Returns accountIds with the key owner's account
+ * For org keys: Returns orgId for filtering by org membership in database
+ * For Recoup admin key: Returns empty params to indicate ALL pulse records
  *
  * Query parameters:
  * - account_id: Filter to a specific account (validated against org membership)

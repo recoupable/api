@@ -6,7 +6,6 @@ import { extractTextFromResult } from "./extractTextFromResult";
  * This function encapsulates the logic for calling the chat system
  * and can be reused across different evaluations.
  *
- * @param input
  * @deprecated Use callChatFunctionsWithResult for access to tool calls
  */
 export async function callChatFunctions(input: string): Promise<string> {

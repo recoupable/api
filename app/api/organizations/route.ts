@@ -21,11 +21,12 @@ export async function OPTIONS() {
  * Retrieves all organizations an account belongs to.
  * Requires authentication via x-api-key or Authorization bearer token.
  *
- * Returns the key owner's organizations.
+ * For personal keys: returns the key owner's organizations.
+ * For org keys: returns organizations for all accounts in the org.
  * For Recoup admin: returns all organizations.
  *
  * Query parameters:
- * - account_id (optional): Filter to a specific account (requires shared org membership or admin access)
+ * - account_id (optional): Filter to a specific account (org keys only)
  *
  * @param request - The request object
  * @returns A NextResponse with organizations data

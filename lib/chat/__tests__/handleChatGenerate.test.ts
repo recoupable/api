@@ -309,7 +309,7 @@ describe("handleChatGenerate", () => {
   });
 
   describe("accountId override", () => {
-    it("allows account with org membership to override accountId", async () => {
+    it("allows org API key to override accountId", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("org-account-123");
       mockValidateOverrideAccountId.mockResolvedValue({
         accountId: "target-account-456",

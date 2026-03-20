@@ -13,7 +13,7 @@ import { generateChatTitle } from "@/lib/chats/generateChatTitle";
  *
  * Requires authentication via x-api-key header.
  * The account ID is inferred from the API key, unless an accountId is provided
- * in the request body by an account with shared org membership.
+ * in the request body by an organization API key with access to that account.
  *
  * @param request - The NextRequest object
  * @returns A NextResponse with the created chat or an error
@@ -42,7 +42,7 @@ export async function createChatHandler(request: NextRequest): Promise<NextRespo
       topic: providedTopic,
     } = validated;
 
-    // Handle accountId override via org membership
+    // Handle accountId override for org API keys
     if (bodyAccountId) {
       const validated = await validateOverrideAccountId({
         apiKey: request.headers.get("x-api-key"),

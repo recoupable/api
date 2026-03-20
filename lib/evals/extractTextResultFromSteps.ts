@@ -4,8 +4,6 @@ import type { TextPart } from "ai";
 /**
  * Extract text from multi-step GenerateTextResult
  * Handles responses where maxSteps > 1
- *
- * @param result
  */
 export function extractTextResultFromSteps(
   result: Awaited<ReturnType<typeof generateText>>,

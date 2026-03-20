@@ -46,7 +46,7 @@ describe("selectPulseAccounts", () => {
     expect(result).toEqual(pulses);
   });
 
-  it("filters by accountIds with UUID", async () => {
+  it("filters by accountIds with UUID (personal key scenario)", async () => {
     const accountId = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
     const pulses = [{ id: "pulse-uuid-123", account_id: accountId, active: true }];
     mockIn.mockResolvedValue({ data: pulses, error: null });

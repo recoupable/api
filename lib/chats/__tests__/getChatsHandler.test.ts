@@ -68,8 +68,8 @@ describe("getChatsHandler", () => {
     });
   });
 
-  describe("authenticated account behavior", () => {
-    it("returns chats for account owner without account_id param", async () => {
+  describe("personal key behavior", () => {
+    it("returns chats for personal key owner without account_id param", async () => {
       const accountId = "123e4567-e89b-12d3-a456-426614174000";
       const mockChats = [
         {
@@ -83,7 +83,7 @@ describe("getChatsHandler", () => {
 
       vi.mocked(validateAuthContext).mockResolvedValue({
         accountId,
-        orgId: null,
+        orgId: null, // Personal key
         authToken: "test-token",
       });
       vi.mocked(selectRooms).mockResolvedValue(mockChats);
@@ -101,13 +101,13 @@ describe("getChatsHandler", () => {
       });
     });
 
-    it("returns 403 when account tries to filter by account_id without access", async () => {
+    it("returns 403 when personal key tries to filter by account_id", async () => {
       const accountId = "123e4567-e89b-12d3-a456-426614174000";
       const otherAccountId = "223e4567-e89b-12d3-a456-426614174000";
 
       vi.mocked(validateAuthContext).mockResolvedValue({
         accountId,
-        orgId: null,
+        orgId: null, // Personal key
         authToken: "test-token",
       });
       vi.mocked(canAccessAccount).mockResolvedValue(false);
@@ -123,8 +123,8 @@ describe("getChatsHandler", () => {
     });
   });
 
-  describe("org membership behavior", () => {
-    it("returns chats for account without account_id param", async () => {
+  describe("org key behavior", () => {
+    it("returns chats for org key owner without account_id param", async () => {
       const orgId = "123e4567-e89b-12d3-a456-426614174000";
       const mockChats = [
         {
@@ -156,7 +156,7 @@ describe("getChatsHandler", () => {
       });
     });
 
-    it("allows filtering by account_id for org member", async () => {
+    it("allows org key to filter by account_id for org member", async () => {
       const orgId = "123e4567-e89b-12d3-a456-426614174000";
       const memberId = "223e4567-e89b-12d3-a456-426614174000";
       const mockChats = [
@@ -189,7 +189,7 @@ describe("getChatsHandler", () => {
       });
     });
 
-    it("returns 403 when trying to access non-member account", async () => {
+    it("returns 403 when org key tries to access non-member account", async () => {
       const orgId = "123e4567-e89b-12d3-a456-426614174000";
       const nonMemberId = "323e4567-e89b-12d3-a456-426614174000";
 
@@ -294,7 +294,7 @@ describe("getChatsHandler", () => {
 
       vi.mocked(validateAuthContext).mockResolvedValue({
         accountId,
-        orgId: null,
+        orgId: null, // Personal key
         authToken: "test-token",
       });
       vi.mocked(selectRooms).mockResolvedValue(mockChats);

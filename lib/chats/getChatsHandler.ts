@@ -7,7 +7,8 @@ import { selectRooms } from "@/lib/supabase/rooms/selectRooms";
  * Handler for retrieving chats.
  * Requires authentication via x-api-key header or Authorization bearer token.
  *
- * Returns array of chats for the authenticated account.
+ * For personal keys: Returns array of chats for the account (if exists).
+ * For org keys: Returns array of chats for accounts in the organization.
  * For Recoup admin key: Returns array of ALL chat records.
  *
  * Optional query parameters:

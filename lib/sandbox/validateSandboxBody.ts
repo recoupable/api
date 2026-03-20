@@ -14,7 +14,7 @@ export type SandboxBody = z.infer<typeof sandboxBodySchema> & AuthContext;
 
 /**
  * Validates auth and request body for POST /api/sandboxes.
- * Supports optional account_id in the body to target a specific account (requires shared org membership or admin access).
+ * Supports optional account_id in the body for org API keys to target a specific account.
  *
  * @param request - The NextRequest object
  * @returns A NextResponse with an error if validation fails, or the validated body with auth context.

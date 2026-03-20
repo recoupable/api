@@ -8,12 +8,12 @@ import { createArtistInDb } from "@/lib/artists/createArtistInDb";
  *
  * Creates a new artist account. Requires authentication via x-api-key header.
  * The account ID is inferred from the API key, unless an account_id is provided
- * in the request body by an account with shared org membership.
+ * in the request body by an organization API key with access to that account.
  *
  * Request body:
  * - name (required): The name of the artist to create
  * - account_id (optional): The ID of the account to create the artist for (UUID).
- *   Only used when creating artists on behalf of other accounts within a shared organization.
+ *   Only used by organization API keys creating artists on behalf of other accounts.
  * - organization_id (optional): The organization ID to link the new artist to (UUID)
  *
  * @param request - The request object containing JSON body
