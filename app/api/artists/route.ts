@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
  * Request body:
  * - name (required): The name of the artist to create
  * - account_id (optional): The ID of the account to create the artist for (UUID).
- *   Only required for organization API keys creating artists on behalf of other accounts.
+ *   Only required when creating artists on behalf of other accounts within a shared organization.
  * - organization_id (optional): The organization ID to link the new artist to (UUID)
  *
  * @param request - The request object containing JSON body

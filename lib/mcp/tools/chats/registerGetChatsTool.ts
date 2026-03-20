@@ -19,8 +19,7 @@ export type GetChatsArgs = z.infer<typeof getChatsSchema>;
  * Registers the "get_chats" tool on the MCP server.
  * Retrieves chat conversations (rooms) for accounts.
  *
- * For personal keys: Returns chats for the key owner's account.
- * For org keys: Returns chats for all accounts in the organization.
+ * Returns chats for the key owner's account.
  * For Recoup admin key: Returns ALL chat records.
  *
  * @param server - The MCP server instance to register the tool on.

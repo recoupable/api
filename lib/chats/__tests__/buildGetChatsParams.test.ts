@@ -23,7 +23,7 @@ describe("buildGetChatsParams", () => {
     });
   });
 
-  it("returns error when personal key tries to filter by account_id", async () => {
+  it("returns error when account lacks access to filter by account_id", async () => {
     vi.mocked(canAccessAccount).mockResolvedValue(false);
 
     const result = await buildGetChatsParams({

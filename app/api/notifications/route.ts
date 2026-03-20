@@ -28,7 +28,7 @@ export async function OPTIONS() {
  * - cc (optional): array of CC email addresses
  * - headers (optional): custom email headers
  * - room_id (optional): room ID for chat link in footer
- * - account_id (optional): UUID of the account to send to (org keys only)
+ * - account_id (optional): UUID of the account to send to (requires shared org membership or admin access)
  *
  * @param request - The request object.
  * @returns A NextResponse with send result.

@@ -15,7 +15,7 @@ const createNewArtistSchema = z.object({
     .string()
     .optional()
     .describe(
-      "The account ID to create the artist for. Only required for organization API keys creating artists on behalf of other accounts. " +
+      "The account ID to create the artist for. Only required when creating artists on behalf of other accounts within a shared organization. " +
         "If not provided, the account ID will be resolved from the authenticated API key.",
     ),
   active_conversation_id: z
@@ -60,7 +60,7 @@ export function registerCreateNewArtistTool(server: McpServer): void {
       description:
         "Create a new artist account in the system. " +
         "Requires authentication via API key (Authorization: Bearer header). " +
-        "The account_id parameter is optional — only provide it when using an organization API key to create artists on behalf of other accounts. " +
+        "The account_id parameter is optional — only provide it when creating artists on behalf of other accounts within a shared organization. " +
         "The active_conversation_id parameter is optional — when omitted, use the active_conversation_id from the system prompt " +
         "to copy the conversation. Never ask the user to provide a room ID. " +
         "The organization_id parameter is optional — use the organization_id from the system prompt context to link the artist to the user's selected organization.",

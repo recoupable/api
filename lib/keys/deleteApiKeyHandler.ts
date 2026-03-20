@@ -4,13 +4,11 @@ import { validateDeleteApiKeyBody } from "@/lib/keys/validateDeleteApiKeyBody";
 import { deleteApiKey } from "@/lib/supabase/account_api_keys/deleteApiKey";
 import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
 import { getApiKeys } from "@/lib/supabase/account_api_keys/getApiKeys";
-import { onlyOrgAccounts } from "@/lib/keys/org/onlyOrgAccounts";
 
 /**
  * Handler for deleting an API key.
  * Requires authentication via Bearer token in Authorization header.
- * Allows deleting API keys that belong to the authenticated account
- * or to organizations the account is a member of.
+ * Only allows deleting API keys that belong to the authenticated account.
  *
  * Body parameters:
  * - id (required): The ID of the API key to delete
@@ -52,38 +50,7 @@ export async function deleteApiKeyHandler(request: NextRequest): Promise<NextRes
     const key = apiKeys[0];
 
     // Check if the key belongs to the authenticated account
-    if (key.account === accountId) {
-      // Direct ownership: proceed with deletion
-      const { error } = await deleteApiKey(validatedBody.id);
-
-      if (error) {
-        console.error("Error deleting API key:", error);
-        return NextResponse.json(
-          {
-            status: "error",
-            message: "Failed to delete API key",
-          },
-          {
-            status: 500,
-            headers: getCorsHeaders(),
-          },
-        );
-      }
-
-      return NextResponse.json(
-        {
-          status: "success",
-          message: "API key deleted successfully",
-        },
-        {
-          status: 200,
-          headers: getCorsHeaders(),
-        },
-      );
-    }
-
-    const membershipError = await onlyOrgAccounts(accountId, key.account);
-    if (membershipError) {
+    if (key.account !== accountId) {
       return NextResponse.json(
         {
           status: "error",
@@ -96,7 +63,6 @@ export async function deleteApiKeyHandler(request: NextRequest): Promise<NextRes
       );
     }
 
-    // Account is a member of the organization: proceed with deletion
     const { error } = await deleteApiKey(validatedBody.id);
 
     if (error) {

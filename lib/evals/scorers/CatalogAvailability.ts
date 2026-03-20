@@ -5,6 +5,11 @@ import { z } from "zod";
 
 /**
  * Custom scorer that uses AI to check if recommended songs are actually in the catalog
+ *
+ * @param root0
+ * @param root0.output
+ * @param root0.expected
+ * @param root0.input
  */
 export const CatalogAvailability = async ({
   output,

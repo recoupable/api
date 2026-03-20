@@ -11,8 +11,7 @@ import type { SandboxCreatedResponse } from "./createSandbox";
  * Handler for retrieving sandbox statuses for an account.
  * Requires authentication via x-api-key header or Authorization bearer token.
  *
- * For personal keys: Returns sandboxes for the key owner's account.
- * For org keys: Returns sandboxes for all accounts in the organization.
+ * Returns sandboxes for the key owner's account.
  *
  * Optional query parameters:
  * - sandbox_id: Filter to a specific sandbox (must belong to account/org)
