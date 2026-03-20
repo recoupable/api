@@ -19,8 +19,7 @@ export type GetPulsesArgs = z.infer<typeof getPulsesSchema>;
  * Registers the "get_pulses" tool on the MCP server.
  * Retrieves pulse statuses for accounts.
  *
- * For personal keys: Returns pulses for the key owner's account.
- * For org keys: Returns pulses for all accounts in the organization.
+ * Returns pulses for the key owner's account.
  * For Recoup admin key: Returns ALL pulse records.
  *
  * @param server - The MCP server instance to register the tool on.

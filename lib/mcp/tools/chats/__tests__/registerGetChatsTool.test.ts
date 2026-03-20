@@ -206,7 +206,7 @@ describe("registerGetChatsTool", () => {
     });
   });
 
-  it("returns error when personal key tries to filter by account_id", async () => {
+  it("returns error when account lacks access to filter by account_id", async () => {
     mockCanAccessAccount.mockResolvedValue(false);
 
     const result = await registeredHandler(

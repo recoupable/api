@@ -12,7 +12,7 @@ describe("buildGetOrganizationsParams", () => {
     vi.clearAllMocks();
   });
 
-  it("returns accountId for personal key", async () => {
+  it("returns accountId for authenticated account", async () => {
     const result = await buildGetOrganizationsParams({
       accountId: "personal-account-123",
     });
@@ -41,7 +41,7 @@ describe("buildGetOrganizationsParams", () => {
     });
   });
 
-  it("allows personal key to access targetAccountId via shared org", async () => {
+  it("allows account to access targetAccountId via shared org", async () => {
     vi.mocked(canAccessAccount).mockResolvedValue(true);
 
     const result = await buildGetOrganizationsParams({
@@ -59,7 +59,7 @@ describe("buildGetOrganizationsParams", () => {
     });
   });
 
-  it("returns error when personal key tries to filter by targetAccountId", async () => {
+  it("returns error when account lacks access to targetAccountId", async () => {
     vi.mocked(canAccessAccount).mockResolvedValue(false);
 
     const result = await buildGetOrganizationsParams({

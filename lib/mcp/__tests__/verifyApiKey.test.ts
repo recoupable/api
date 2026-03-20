@@ -37,7 +37,7 @@ describe("verifyBearerToken", () => {
     });
   });
 
-  it("returns auth info for org API key", async () => {
+  it("returns auth info for API key with org membership", async () => {
     vi.mocked(getAccountIdByAuthToken).mockRejectedValue(new Error("Invalid JWT"));
     vi.mocked(getApiKeyDetails).mockResolvedValue({
       accountId: "org-account-123",

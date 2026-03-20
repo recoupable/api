@@ -21,12 +21,11 @@ export async function OPTIONS() {
  * Retrieves pulse statuses for accounts.
  * Requires authentication via x-api-key header or Authorization bearer token.
  *
- * For personal keys: Returns array with single pulse for the account.
- * For org keys: Returns array of pulses for all accounts in the organization.
+ * Returns array with pulse for the authenticated account.
  * For Recoup admin key: Returns array of ALL pulse records.
  *
  * Query parameters:
- * - account_id: For org API keys, filter to a specific account within the organization
+ * - account_id: Filter to a specific account (requires shared org membership or admin access)
  * - active: Filter by active status (true/false). If undefined, returns all.
  *
  * @param request - The request object.
@@ -47,7 +46,7 @@ export async function GET(request: NextRequest) {
  *
  * Body parameters:
  * - active (required): boolean - Whether pulse is active for this account
- * - account_id (optional): For org API keys, target a specific account within the organization
+ * - account_id (optional): Target a specific account (requires shared org membership or admin access)
  *
  * @param request - The request object containing the body with active boolean.
  * @returns A NextResponse with array of pulse statuses.

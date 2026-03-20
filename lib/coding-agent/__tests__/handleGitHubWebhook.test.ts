@@ -45,6 +45,12 @@ const BASE_PAYLOAD = {
   },
 };
 
+/**
+ *
+ * @param body
+ * @param event
+ * @param signature
+ */
 function makeRequest(body: unknown, event = "issue_comment", signature = "valid") {
   return {
     text: () => Promise.resolve(JSON.stringify(body)),

@@ -14,9 +14,8 @@ const getOrganizationsQuerySchema = z.object({
  * Validates GET /api/organizations request.
  * Handles authentication via x-api-key or Authorization bearer token.
  *
- * For personal keys: Returns accountId with the key owner's account
- * For org keys: Returns organizationId for filtering by org membership
- * For Recoup admin key: Returns empty params to indicate ALL organization records
+ * Returns accountId with the key owner's account for filtering.
+ * For Recoup admin key: Returns empty params to indicate ALL organization records.
  *
  * Query parameters:
  * - account_id: Filter to a specific account (validated against org membership)

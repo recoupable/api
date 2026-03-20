@@ -261,12 +261,12 @@ const { accountId, orgId, authToken } = authResult;
 
 `validateAuthContext` handles:
 - Both `x-api-key` and `Authorization: Bearer` authentication
-- Account ID override validation (org keys can access member accounts)
+- Account ID override validation (accounts with shared org membership can access member accounts)
 - Organization access validation
 
 ### MCP Tools
 
-**CRITICAL: Never manually extract `accountId` from `extra.authInfo` (e.g. `authInfo?.extra?.accountId`).** Always use `resolveAccountId()` — it handles validation, org-key overrides, and access control in one place.
+**CRITICAL: Never manually extract `accountId` from `extra.authInfo` (e.g. `authInfo?.extra?.accountId`).** Always use `resolveAccountId()` — it handles validation, org-membership overrides, and access control in one place.
 
 ```typescript
 import { resolveAccountId } from "@/lib/mcp/resolveAccountId";

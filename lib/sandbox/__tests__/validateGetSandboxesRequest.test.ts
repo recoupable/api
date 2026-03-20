@@ -95,7 +95,7 @@ describe("validateGetSandboxesRequest", () => {
   });
 
   describe("authorization via buildGetSandboxesParams", () => {
-    it("returns 403 when buildGetSandboxesParams returns personal key error", async () => {
+    it("returns 403 when buildGetSandboxesParams returns access error", async () => {
       vi.mocked(validateAuthContext).mockResolvedValue({
         accountId: "acc_123",
         orgId: null,
@@ -179,7 +179,7 @@ describe("validateGetSandboxesRequest", () => {
   });
 
   describe("default behavior", () => {
-    it("returns params with accountIds for personal key", async () => {
+    it("returns params with accountIds for authenticated account", async () => {
       vi.mocked(validateAuthContext).mockResolvedValue({
         accountId: "acc_123",
         orgId: null,
@@ -205,7 +205,7 @@ describe("validateGetSandboxesRequest", () => {
       });
     });
 
-    it("returns params with org member accountIds for org key", async () => {
+    it("returns params with org member accountIds", async () => {
       vi.mocked(validateAuthContext).mockResolvedValue({
         accountId: "org_456",
         orgId: "org_456",

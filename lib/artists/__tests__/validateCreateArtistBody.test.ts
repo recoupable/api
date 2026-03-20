@@ -9,6 +9,11 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: (...args: unknown[]) => mockValidateAuthContext(...args),
 }));
 
+/**
+ *
+ * @param body
+ * @param headers
+ */
 function createRequest(body: unknown, headers: Record<string, string> = {}): NextRequest {
   const defaultHeaders: Record<string, string> = { "Content-Type": "application/json" };
   return new NextRequest("http://localhost/api/artists", {
@@ -63,7 +68,7 @@ describe("validateCreateArtistBody", () => {
       }
     });
 
-    it("uses account_id override for org API keys with access", async () => {
+    it("uses account_id override for accounts with org access", async () => {
       mockValidateAuthContext.mockResolvedValue({
         accountId: "550e8400-e29b-41d4-a716-446655440000", // Overridden account
         orgId: "org-account-id",
@@ -109,7 +114,7 @@ describe("validateCreateArtistBody", () => {
       }
     });
 
-    it("returns 403 when org API key lacks access to account_id", async () => {
+    it("returns 403 when account lacks access to account_id", async () => {
       mockValidateAuthContext.mockResolvedValue(
         NextResponse.json(
           { status: "error", error: "Access denied to specified account_id" },

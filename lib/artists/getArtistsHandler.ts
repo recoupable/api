@@ -7,10 +7,10 @@ import { getArtists } from "@/lib/artists/getArtists";
  * Handler for retrieving artists with authentication and organization filtering.
  *
  * Authenticates via x-api-key or Authorization Bearer token.
- * The account is derived from auth; org keys can optionally filter by account_id.
+ * The account is derived from auth; accounts with org membership can optionally filter by account_id.
  *
  * Query parameters:
- * - account_id (optional): Filter to a specific account (org keys only)
+ * - account_id (optional): Filter to a specific account (requires shared org membership or admin access)
  * - org_id (optional): Filter to artists in a specific organization
  * - personal (optional): Set to "true" to show only personal (non-org) artists
  *

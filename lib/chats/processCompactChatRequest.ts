@@ -17,6 +17,9 @@ interface ProcessCompactChatRequestParams {
  * Verifies the chat exists and the user has access before compacting.
  *
  * @param params - The parameters for processing the chat compaction.
+ * @param params.chatId
+ * @param params.prompt
+ * @param params.accountId
  * @returns The result of the compaction attempt.
  */
 export async function processCompactChatRequest({
@@ -33,7 +36,7 @@ export async function processCompactChatRequest({
   // Verify user has access to the chat
   const roomAccountId = room.account_id;
   if (roomAccountId && roomAccountId !== accountId) {
-    // Check if org key has access to this account
+    // Check if account has access via shared org membership
     const hasAccess = await canAccessAccount({
       currentAccountId: accountId,
       targetAccountId: roomAccountId,

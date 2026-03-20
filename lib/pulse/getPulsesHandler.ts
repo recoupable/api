@@ -7,8 +7,7 @@ import { selectPulseAccounts } from "@/lib/supabase/pulse_accounts/selectPulseAc
  * Handler for retrieving pulse statuses for accounts.
  * Requires authentication via x-api-key header or Authorization bearer token.
  *
- * For personal keys: Returns array with pulse for the account (if exists).
- * For org keys: Returns array of pulses for accounts in the organization that have records.
+ * Returns array with pulse for the authenticated account (if exists).
  * For Recoup admin key: Returns array of ALL pulse records.
  *
  * Optional query parameters:

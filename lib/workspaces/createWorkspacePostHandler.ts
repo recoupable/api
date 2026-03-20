@@ -8,12 +8,12 @@ import { createWorkspaceInDb } from "@/lib/workspaces/createWorkspaceInDb";
  *
  * Creates a new workspace account. Requires authentication via x-api-key header.
  * The account ID is inferred from the API key, unless an account_id is provided
- * in the request body by an organization API key with access to that account.
+ * in the request body by an account with shared org membership.
  *
  * Request body:
  * - name (optional): The name of the workspace to create. Defaults to "Untitled".
  * - account_id (optional): The ID of the account to create the workspace for (UUID).
- *   Only used by organization API keys creating workspaces on behalf of other accounts.
+ *   Only used when creating workspaces on behalf of other accounts within a shared organization.
  * - organization_id (optional): The organization ID to link the new workspace to (UUID).
  *   If provided, the workspace will appear in that organization's view.
  *

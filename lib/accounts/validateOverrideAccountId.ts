@@ -15,8 +15,8 @@ export type ValidateOverrideAccountIdResult = {
 /**
  * Validates that an API key has permission to override to a target accountId.
  *
- * Used when an org API key wants to create resources on behalf of another account.
- * Checks that the API key belongs to an org with access to the target account.
+ * Used when an account wants to create resources on behalf of another account.
+ * Checks that the account has shared org membership with the target account.
  *
  * @param params.apiKey - The x-api-key header value
  * @param params.targetAccountId - The accountId to override to

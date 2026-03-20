@@ -5,6 +5,10 @@ export type TriggerRunLike = {
   output?: unknown;
 };
 
+/**
+ *
+ * @param run
+ */
 export function isCompletedRun(run: TriggerRunLike): boolean {
   return run.status === "COMPLETED";
 }
