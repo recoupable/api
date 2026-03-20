@@ -13,8 +13,9 @@ import { proxyChartmetricRequest } from "@/lib/chartmetric/proxyChartmetricReque
  * @param context.params.path - Array of path segments to forward to Chartmetric.
  * @returns The Chartmetric API response.
  */
-export async function GET(request: NextRequest, context: { params: { path: string[] } }) {
-  return proxyChartmetricRequest(request, context.params);
+export async function GET(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+  const params = await context.params;
+  return proxyChartmetricRequest(request, params);
 }
 
 /**
@@ -29,8 +30,9 @@ export async function GET(request: NextRequest, context: { params: { path: strin
  * @param context.params.path - Array of path segments to forward to Chartmetric.
  * @returns The Chartmetric API response.
  */
-export async function POST(request: NextRequest, context: { params: { path: string[] } }) {
-  return proxyChartmetricRequest(request, context.params);
+export async function POST(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+  const params = await context.params;
+  return proxyChartmetricRequest(request, params);
 }
 
 export const dynamic = "force-dynamic";
