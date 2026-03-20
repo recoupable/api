@@ -7,10 +7,6 @@ vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: vi.fn(),
 }));
 
-vi.mock("@/lib/const", () => ({
-  RECOUP_ORG_ID: "recoup-org-id",
-}));
-
 describe("buildGetPulsesParams", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -19,7 +15,6 @@ describe("buildGetPulsesParams", () => {
   it("returns accountIds for personal key", async () => {
     const result = await buildGetPulsesParams({
       accountId: "personal-account-123",
-      orgId: null,
     });
 
     expect(result).toEqual({
@@ -28,34 +23,9 @@ describe("buildGetPulsesParams", () => {
     });
   });
 
-  it("returns orgId for org key", async () => {
-    const result = await buildGetPulsesParams({
-      accountId: "org-123",
-      orgId: "org-123",
-    });
-
-    expect(result).toEqual({
-      params: { orgId: "org-123", active: undefined },
-      error: null,
-    });
-  });
-
-  it("returns empty params for Recoup admin key", async () => {
-    const result = await buildGetPulsesParams({
-      accountId: "recoup-org-id",
-      orgId: "recoup-org-id",
-    });
-
-    expect(result).toEqual({
-      params: { active: undefined },
-      error: null,
-    });
-  });
-
   it("includes active filter when provided", async () => {
     const result = await buildGetPulsesParams({
       accountId: "account-123",
-      orgId: null,
       active: true,
     });
 
@@ -70,7 +40,6 @@ describe("buildGetPulsesParams", () => {
 
     const result = await buildGetPulsesParams({
       accountId: "org-123",
-      orgId: "org-123",
       targetAccountId: "target-456",
     });
 
@@ -89,7 +58,6 @@ describe("buildGetPulsesParams", () => {
 
     const result = await buildGetPulsesParams({
       accountId: "personal-123",
-      orgId: null,
       targetAccountId: "shared-org-member",
     });
 
@@ -108,7 +76,6 @@ describe("buildGetPulsesParams", () => {
 
     const result = await buildGetPulsesParams({
       accountId: "personal-123",
-      orgId: null,
       targetAccountId: "other-account",
     });
 
@@ -118,12 +85,11 @@ describe("buildGetPulsesParams", () => {
     });
   });
 
-  it("returns error when org key lacks access to targetAccountId", async () => {
+  it("returns error when access to targetAccountId is denied", async () => {
     vi.mocked(canAccessAccount).mockResolvedValue(false);
 
     const result = await buildGetPulsesParams({
       accountId: "org-123",
-      orgId: "org-123",
       targetAccountId: "not-in-org",
     });
 

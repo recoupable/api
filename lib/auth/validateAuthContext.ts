@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
-import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
 import { validateAccountIdOverride } from "@/lib/auth/validateAccountIdOverride";
 
@@ -62,7 +61,6 @@ export async function validateAuthContext(
   }
 
   let accountId: string;
-  let orgId: string | null = null;
   let authToken: string;
 
   if (hasApiKey) {
@@ -73,12 +71,6 @@ export async function validateAuthContext(
     }
     accountId = accountIdOrError;
     authToken = apiKey!;
-
-    // Get org context from API key details
-    const keyDetails = await getApiKeyDetails(apiKey!);
-    if (keyDetails) {
-      orgId = keyDetails.orgId;
-    }
   } else {
     // Validate bearer token authentication
     const accountIdOrError = await getAuthenticatedAccountId(request);
@@ -116,14 +108,11 @@ export async function validateAuthContext(
         { status: 403, headers: getCorsHeaders() },
       );
     }
-
-    // Use the provided organizationId as the org context
-    orgId = input.organizationId;
   }
 
   return {
     accountId,
-    orgId,
+    orgId: input.organizationId ?? null,
     authToken,
   };
 }

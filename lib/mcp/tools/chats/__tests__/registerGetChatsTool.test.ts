@@ -7,7 +7,6 @@ import { registerGetChatsTool } from "../registerGetChatsTool";
 
 const mockSelectRooms = vi.fn();
 const mockCanAccessAccount = vi.fn();
-const mockGetAccountOrganizations = vi.fn();
 
 vi.mock("@/lib/supabase/rooms/selectRooms", () => ({
   selectRooms: (...args: unknown[]) => mockSelectRooms(...args),
@@ -17,28 +16,16 @@ vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: (...args: unknown[]) => mockCanAccessAccount(...args),
 }));
 
-vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
-  getAccountOrganizations: (...args: unknown[]) => mockGetAccountOrganizations(...args),
-}));
-
-vi.mock("@/lib/const", () => ({
-  RECOUP_ORG_ID: "recoup-org-id",
-}));
-
 type ServerRequestHandlerExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
 
 /**
  * Creates a mock extra object with optional authInfo.
  *
- * @param authInfo - Optional auth info object containing account and org IDs.
+ * @param authInfo - Optional auth info object containing account ID.
  * @param authInfo.accountId - The account ID for authentication.
- * @param authInfo.orgId - The organization ID (null for personal keys).
  * @returns A mock ServerRequestHandlerExtra object.
  */
-function createMockExtra(authInfo?: {
-  accountId?: string;
-  orgId?: string | null;
-}): ServerRequestHandlerExtra {
+function createMockExtra(authInfo?: { accountId?: string }): ServerRequestHandlerExtra {
   return {
     authInfo: authInfo
       ? {
@@ -47,7 +34,6 @@ function createMockExtra(authInfo?: {
           clientId: authInfo.accountId,
           extra: {
             accountId: authInfo.accountId,
-            orgId: authInfo.orgId ?? null,
           },
         }
       : undefined,
@@ -130,7 +116,7 @@ describe("registerGetChatsTool", () => {
     });
   });
 
-  it("allows account_id override for org auth with access", async () => {
+  it("allows account_id override with access", async () => {
     mockCanAccessAccount.mockResolvedValue(true);
     mockSelectRooms.mockResolvedValue([
       {
@@ -144,7 +130,7 @@ describe("registerGetChatsTool", () => {
 
     await registeredHandler(
       { account_id: "target-account-789" },
-      createMockExtra({ accountId: "org-account-id", orgId: "org-account-id" }),
+      createMockExtra({ accountId: "org-account-id" }),
     );
 
     expect(mockCanAccessAccount).toHaveBeenCalledWith({
@@ -157,12 +143,12 @@ describe("registerGetChatsTool", () => {
     });
   });
 
-  it("returns error when org auth lacks access to account_id", async () => {
+  it("returns error when auth lacks access to account_id", async () => {
     mockCanAccessAccount.mockResolvedValue(false);
 
     const result = await registeredHandler(
       { account_id: "target-account-789" },
-      createMockExtra({ accountId: "org-account-id", orgId: "org-account-id" }),
+      createMockExtra({ accountId: "org-account-id" }),
     );
 
     expect(result).toEqual({
@@ -183,62 +169,6 @@ describe("registerGetChatsTool", () => {
         {
           type: "text",
           text: expect.stringContaining("Authentication required"),
-        },
-      ],
-    });
-  });
-
-  it("returns ALL chats for Recoup Admin key (no filter)", async () => {
-    const allChats = [
-      { id: "chat-1", account_id: "account-1", artist_id: null, topic: "Chat 1" },
-      { id: "chat-2", account_id: "account-2", artist_id: null, topic: "Chat 2" },
-      { id: "chat-3", account_id: "account-3", artist_id: null, topic: "Chat 3" },
-    ];
-    mockSelectRooms.mockResolvedValue(allChats);
-
-    const result = await registeredHandler(
-      {},
-      createMockExtra({ accountId: "recoup-org-id", orgId: "recoup-org-id" }),
-    );
-
-    // Should call selectRooms with no account_ids filter (no account_ids key)
-    expect(mockSelectRooms).toHaveBeenCalledWith({ artist_id: undefined });
-    expect(result).toEqual({
-      content: [
-        {
-          type: "text",
-          text: expect.stringContaining('"chats":['),
-        },
-      ],
-    });
-  });
-
-  it("returns chats for org members when using org key", async () => {
-    mockGetAccountOrganizations.mockResolvedValue([
-      { account_id: "member-1", organization_id: "org-123", organization: null },
-      { account_id: "member-2", organization_id: "org-123", organization: null },
-    ]);
-    const orgChats = [
-      { id: "chat-1", account_id: "member-1", artist_id: null, topic: "Chat 1" },
-      { id: "chat-2", account_id: "member-2", artist_id: null, topic: "Chat 2" },
-    ];
-    mockSelectRooms.mockResolvedValue(orgChats);
-
-    const result = await registeredHandler(
-      {},
-      createMockExtra({ accountId: "org-123", orgId: "org-123" }),
-    );
-
-    // Should call selectRooms with member account_ids
-    expect(mockSelectRooms).toHaveBeenCalledWith({
-      account_ids: ["member-1", "member-2"],
-      artist_id: undefined,
-    });
-    expect(result).toEqual({
-      content: [
-        {
-          type: "text",
-          text: expect.stringContaining('"chats":['),
         },
       ],
     });
@@ -281,7 +211,7 @@ describe("registerGetChatsTool", () => {
 
     const result = await registeredHandler(
       { account_id: "other-account" },
-      createMockExtra({ accountId: "account-123", orgId: null }),
+      createMockExtra({ accountId: "account-123" }),
     );
 
     expect(result).toEqual({

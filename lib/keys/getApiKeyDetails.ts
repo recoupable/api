@@ -1,21 +1,19 @@
 import { hashApiKey } from "@/lib/keys/hashApiKey";
 import { PRIVY_PROJECT_SECRET } from "@/lib/const";
 import { selectAccountApiKeys } from "@/lib/supabase/account_api_keys/selectAccountApiKeys";
-import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 
 export interface ApiKeyDetails {
   accountId: string;
-  orgId: string | null;
 }
 
 /**
- * Retrieves details for an API key including the account ID and organization context.
+ * Retrieves the account ID for an API key.
  *
- * For organization API keys, orgId will be set to the organization's account ID.
- * For personal API keys, orgId will be null.
+ * All API keys are personal — they resolve to the account that created them.
+ * Org access is determined at access-check time via account memberships.
  *
  * @param apiKey - The raw API key string
- * @returns ApiKeyDetails object with accountId and orgId, or null if key is invalid
+ * @returns ApiKeyDetails with accountId, or null if key is invalid
  */
 export async function getApiKeyDetails(apiKey: string): Promise<ApiKeyDetails | null> {
   if (!apiKey) {
@@ -36,14 +34,7 @@ export async function getApiKeyDetails(apiKey: string): Promise<ApiKeyDetails | 
       return null;
     }
 
-    // Check if this account is an organization (has any members)
-    const members = await getAccountOrganizations({ organizationId: accountId });
-    const orgId = members.length > 0 ? accountId : null;
-
-    return {
-      accountId,
-      orgId,
-    };
+    return { accountId };
   } catch (error) {
     console.error("[ERROR] getApiKeyDetails:", error);
     return null;

@@ -46,7 +46,7 @@ export async function handleSlackChatMessage(
     return;
   }
 
-  const { accountId, orgId } = keyDetails;
+  const { accountId } = keyDetails;
 
   await thread.setState({
     status: "generating",
@@ -99,7 +99,7 @@ export async function handleSlackChatMessage(
     const body: ChatRequestBody = {
       messages: allUiMessages,
       accountId,
-      orgId,
+      orgId: null,
       roomId,
       authToken,
     };

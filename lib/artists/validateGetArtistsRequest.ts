@@ -58,12 +58,11 @@ export async function validateGetArtistsRequest(
     return authResult;
   }
 
-  const { accountId, orgId } = authResult;
+  const { accountId } = authResult;
 
   // Use shared function to build params
   const { params, error } = await buildGetArtistsParams({
     accountId,
-    orgId,
     targetAccountId,
     orgIdFilter,
   });

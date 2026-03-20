@@ -15,7 +15,6 @@ describe("buildGetArtistsParams", () => {
   it("returns auth accountId for personal key", async () => {
     const result = await buildGetArtistsParams({
       accountId: "personal-account-123",
-      orgId: null,
     });
 
     expect(result).toEqual({
@@ -27,7 +26,6 @@ describe("buildGetArtistsParams", () => {
   it("returns auth accountId for org key", async () => {
     const result = await buildGetArtistsParams({
       accountId: "org-owner-123",
-      orgId: "org-123",
     });
 
     expect(result).toEqual({
@@ -39,7 +37,6 @@ describe("buildGetArtistsParams", () => {
   it("defaults orgId to null when orgIdFilter is omitted", async () => {
     const result = await buildGetArtistsParams({
       accountId: "account-123",
-      orgId: null,
     });
 
     expect(result.params?.orgId).toBeNull();
@@ -48,7 +45,6 @@ describe("buildGetArtistsParams", () => {
   it("passes orgIdFilter through when provided", async () => {
     const result = await buildGetArtistsParams({
       accountId: "account-123",
-      orgId: null,
       orgIdFilter: "filter-org-456",
     });
 
@@ -63,7 +59,6 @@ describe("buildGetArtistsParams", () => {
 
     const result = await buildGetArtistsParams({
       accountId: "org-owner-123",
-      orgId: "org-123",
       targetAccountId: "target-456",
     });
 
@@ -82,7 +77,6 @@ describe("buildGetArtistsParams", () => {
 
     const result = await buildGetArtistsParams({
       accountId: "org-owner-123",
-      orgId: "org-123",
       targetAccountId: "target-456",
       orgIdFilter: "filter-org-789",
     });
@@ -98,7 +92,6 @@ describe("buildGetArtistsParams", () => {
 
     const result = await buildGetArtistsParams({
       accountId: "personal-123",
-      orgId: null,
       targetAccountId: "shared-org-member",
     });
 
@@ -117,7 +110,6 @@ describe("buildGetArtistsParams", () => {
 
     const result = await buildGetArtistsParams({
       accountId: "personal-123",
-      orgId: null,
       targetAccountId: "other-account",
     });
 
@@ -132,7 +124,6 @@ describe("buildGetArtistsParams", () => {
 
     const result = await buildGetArtistsParams({
       accountId: "org-owner-123",
-      orgId: "org-123",
       targetAccountId: "not-in-org",
     });
 

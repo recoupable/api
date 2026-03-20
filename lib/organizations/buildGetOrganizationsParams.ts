@@ -1,12 +1,9 @@
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import type { GetAccountOrganizationsParams } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
-import { RECOUP_ORG_ID } from "@/lib/const";
 
 export interface BuildGetOrganizationsParamsInput {
   /** The authenticated account ID */
   accountId: string;
-  /** The organization ID from the API key (null for personal keys) */
-  orgId: string | null;
   /** Optional target account ID to filter by */
   targetAccountId?: string;
 }
@@ -18,10 +15,7 @@ export type BuildGetOrganizationsParamsResult =
 /**
  * Builds the parameters for getAccountOrganizations based on auth context.
  *
- * For personal keys: Returns accountId with the key owner's account
- * For org keys: Returns organizationId for filtering by org membership
- * For Recoup admin key: Returns empty params to indicate ALL records
- *
+ * Returns accountId with the key owner's account.
  * If targetAccountId is provided, validates access and returns that account.
  *
  * @param input - The auth context and optional filters
@@ -30,7 +24,7 @@ export type BuildGetOrganizationsParamsResult =
 export async function buildGetOrganizationsParams(
   input: BuildGetOrganizationsParamsInput,
 ): Promise<BuildGetOrganizationsParamsResult> {
-  const { accountId, orgId, targetAccountId } = input;
+  const { accountId, targetAccountId } = input;
 
   // Handle account_id filter if provided
   if (targetAccountId) {
@@ -47,17 +41,6 @@ export async function buildGetOrganizationsParams(
     return { params: { accountId: targetAccountId }, error: null };
   }
 
-  // No account_id filter - determine what to return based on key type
-  if (orgId === RECOUP_ORG_ID) {
-    // Recoup admin: return empty params to indicate ALL records
-    return { params: {}, error: null };
-  }
-
-  if (orgId) {
-    // Org key: return organizationId for filtering by org membership
-    return { params: { organizationId: orgId }, error: null };
-  }
-
-  // Personal key: Only return the key owner's organizations
+  // Return the key owner's organizations
   return { params: { accountId }, error: null };
 }

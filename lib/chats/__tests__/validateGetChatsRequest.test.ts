@@ -65,17 +65,13 @@ describe("validateGetChatsRequest", () => {
     });
   });
 
-  it("should return org member account_ids for org key", async () => {
+  it("should return account_ids for org key", async () => {
     const mockOrgId = "org-123";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: mockOrgId,
       orgId: mockOrgId,
       authToken: "test-token",
     });
-    vi.mocked(getAccountOrganizations).mockResolvedValue([
-      { account_id: "member-1", organization_id: mockOrgId, organization: null },
-      { account_id: "member-2", organization_id: mockOrgId, organization: null },
-    ]);
 
     const request = new NextRequest("http://localhost/api/chats", {
       headers: { "x-api-key": "test-api-key" },
@@ -84,12 +80,12 @@ describe("validateGetChatsRequest", () => {
 
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
-      account_ids: ["member-1", "member-2"],
+      account_ids: [mockOrgId],
       artist_id: undefined,
     });
   });
 
-  it("should return undefined account_ids for Recoup admin key", async () => {
+  it("should return account_ids for Recoup admin key", async () => {
     const recoupOrgId = "recoup-org-id";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: recoupOrgId,
@@ -104,7 +100,7 @@ describe("validateGetChatsRequest", () => {
 
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
-      account_ids: undefined,
+      account_ids: [recoupOrgId],
       artist_id: undefined,
     });
   });

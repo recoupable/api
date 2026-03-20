@@ -7,7 +7,6 @@ import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId"
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { getMessages } from "@/lib/messages/getMessages";
 import convertToUiMessages from "@/lib/messages/convertToUiMessages";
-import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
 import { setupConversation } from "@/lib/chat/setupConversation";
 import { validateMessages } from "@/lib/chat/validateMessages";
@@ -119,13 +118,7 @@ export async function validateChatRequest(
     }
     accountId = accountIdOrError;
 
-    // Get org context from API key details
-    const keyDetails = await getApiKeyDetails(apiKey!);
-    if (keyDetails) {
-      orgId = keyDetails.orgId;
-    }
-
-    // Handle accountId override for org API keys
+    // Handle accountId override
     if (validatedBody.accountId) {
       const overrideResult = await validateOverrideAccountId({
         apiKey,
