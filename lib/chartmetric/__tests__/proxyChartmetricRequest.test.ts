@@ -54,7 +54,7 @@ describe("proxyChartmetricRequest", () => {
         authToken: "token_abc",
       });
       vi.mocked(deductCredits).mockRejectedValue(
-        new Error("Insufficient credits. Required: 1, Available: 0"),
+        new Error("Insufficient credits. Required: 5, Available: 0"),
       );
 
       const request = new NextRequest("http://localhost/api/chartmetric/artist/123", {
@@ -75,7 +75,7 @@ describe("proxyChartmetricRequest", () => {
         orgId: null,
         authToken: "token_abc",
       });
-      vi.mocked(deductCredits).mockResolvedValue({ success: true, newBalance: 9 });
+      vi.mocked(deductCredits).mockResolvedValue({ success: true, newBalance: 5 });
       vi.mocked(getChartmetricToken).mockResolvedValue("cm_access_token");
       mockFetch.mockRejectedValue(new Error("Network error"));
 
@@ -98,7 +98,7 @@ describe("proxyChartmetricRequest", () => {
         orgId: null,
         authToken: "token_abc",
       });
-      vi.mocked(deductCredits).mockResolvedValue({ success: true, newBalance: 9 });
+      vi.mocked(deductCredits).mockResolvedValue({ success: true, newBalance: 5 });
       vi.mocked(getChartmetricToken).mockResolvedValue("cm_access_token");
 
       const chartmetricData = { id: 123, name: "Test Artist" };
@@ -126,7 +126,7 @@ describe("proxyChartmetricRequest", () => {
           }),
         }),
       );
-      expect(deductCredits).toHaveBeenCalledWith({ accountId: "acc_123", creditsToDeduct: 1 });
+      expect(deductCredits).toHaveBeenCalledWith({ accountId: "acc_123", creditsToDeduct: 5 });
     });
 
     it("successfully proxies a POST request with body", async () => {
@@ -135,7 +135,7 @@ describe("proxyChartmetricRequest", () => {
         orgId: null,
         authToken: "token_xyz",
       });
-      vi.mocked(deductCredits).mockResolvedValue({ success: true, newBalance: 8 });
+      vi.mocked(deductCredits).mockResolvedValue({ success: true, newBalance: 5 });
       vi.mocked(getChartmetricToken).mockResolvedValue("cm_access_token_2");
 
       const chartmetricData = { success: true };

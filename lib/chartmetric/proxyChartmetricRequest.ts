@@ -7,8 +7,12 @@ import { getChartmetricToken } from "@/lib/chartmetric/getChartmetricToken";
 /**
  * Proxy handler for Chartmetric API requests.
  *
- * Authenticates the caller, deducts 1 credit, then forwards the request
+ * Authenticates the caller, deducts 5 credits, then forwards the request
  * to the Chartmetric API using a server-side access token.
+ *
+ * Credit cost rationale: Chartmetric costs $350/month for API access. At 5 credits
+ * ($0.05) per call, we break even at ~7,000 calls/month (~233/day). A typical
+ * research task (6–7 API calls) costs 30–35 credits ($0.30–$0.35).
  *
  * @param request - The incoming NextRequest.
  * @param params - Route params containing the Chartmetric path segments.
@@ -28,9 +32,9 @@ export async function proxyChartmetricRequest(
 
   const { accountId } = authResult;
 
-  // 2. Deduct 1 credit
+  // 2. Deduct 5 credits per Chartmetric API call
   try {
-    await deductCredits({ accountId, creditsToDeduct: 1 });
+    await deductCredits({ accountId, creditsToDeduct: 5 });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
 
