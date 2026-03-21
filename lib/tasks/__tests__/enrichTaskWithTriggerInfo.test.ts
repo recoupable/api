@@ -31,11 +31,10 @@ const mockTask = {
 const mockRun = {
   id: "run_xyz",
   status: "COMPLETED",
-  createdAt: new Date("2026-03-20T09:00:00Z"),
-  startedAt: new Date("2026-03-20T09:00:01Z"),
-  finishedAt: new Date("2026-03-20T09:01:00Z"),
+  createdAt: "2026-03-20T09:00:00.000Z",
+  startedAt: "2026-03-20T09:00:01.000Z",
+  finishedAt: "2026-03-20T09:01:00.000Z",
   durationMs: 59000,
-  schedule: { id: "sched_abc" },
 };
 
 describe("enrichTaskWithTriggerInfo", () => {
@@ -59,7 +58,7 @@ describe("enrichTaskWithTriggerInfo", () => {
     expect(result.recent_runs[0].status).toBe("COMPLETED");
     expect(result.recent_runs[0].durationMs).toBe(59000);
     expect(result.upcoming).toEqual(["2026-03-27T09:00:00Z", "2026-04-03T09:00:00Z"]);
-    expect(listScheduleRuns).toHaveBeenCalledWith("sched_abc", "account:account-456", 5);
+    expect(listScheduleRuns).toHaveBeenCalledWith("sched_abc", 5);
   });
 
   it("returns empty arrays when trigger_schedule_id is null", async () => {
@@ -70,15 +69,6 @@ describe("enrichTaskWithTriggerInfo", () => {
     expect(result.recent_runs).toEqual([]);
     expect(result.upcoming).toEqual([]);
     expect(listScheduleRuns).not.toHaveBeenCalled();
-  });
-
-  it("returns empty arrays when account_id is null", async () => {
-    const taskWithoutAccount = { ...mockTask, account_id: null };
-
-    const result = await enrichTaskWithTriggerInfo(taskWithoutAccount as never);
-
-    expect(result.recent_runs).toEqual([]);
-    expect(result.upcoming).toEqual([]);
   });
 
   it("returns empty upcoming when no completed runs", async () => {

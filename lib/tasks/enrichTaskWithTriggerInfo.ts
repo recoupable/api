@@ -27,32 +27,33 @@ interface EnrichedTask extends ScheduledAction {
  */
 export async function enrichTaskWithTriggerInfo(task: ScheduledAction): Promise<EnrichedTask> {
   const scheduleId = task.trigger_schedule_id;
-  const accountId = task.account_id;
 
-  if (!scheduleId || !accountId) {
+  if (!scheduleId) {
     return { ...task, recent_runs: [], upcoming: [] };
   }
 
   try {
-    const accountTag = `account:${accountId}`;
-    const recentRuns = await listScheduleRuns(scheduleId, accountTag, 5);
+    const recentRuns = await listScheduleRuns(scheduleId, 5);
 
-    const recent_runs: TaskRunInfo[] = recentRuns.map(run => ({
-      id: run.id,
-      status: run.status,
-      createdAt: run.createdAt.toISOString(),
-      startedAt: run.startedAt?.toISOString() ?? null,
-      finishedAt: run.finishedAt?.toISOString() ?? null,
-      durationMs: run.durationMs ?? null,
+    const recent_runs: TaskRunInfo[] = recentRuns.map((run: Record<string, unknown>) => ({
+      id: run.id as string,
+      status: run.status as string,
+      createdAt: run.createdAt as string,
+      startedAt: (run.startedAt as string) ?? null,
+      finishedAt: (run.finishedAt as string) ?? null,
+      durationMs: (run.durationMs as number) ?? null,
     }));
 
     let upcoming: string[] = [];
 
-    // Get upcoming schedule times from the latest completed run's payload
-    const latestCompleted = recentRuns.find(r => r.status === "COMPLETED");
+    const latestCompleted = recentRuns.find(
+      (r: Record<string, unknown>) => r.status === "COMPLETED",
+    );
     if (latestCompleted) {
       try {
-        const fullRun = await retrieveTaskRun(latestCompleted.id);
+        const fullRun = await retrieveTaskRun(
+          (latestCompleted as Record<string, unknown>).id as string,
+        );
         const payload = fullRun?.payload as { upcoming?: string[] } | undefined;
         if (payload?.upcoming && Array.isArray(payload.upcoming)) {
           upcoming = payload.upcoming;
