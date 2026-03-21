@@ -59,6 +59,24 @@ const basePack: ArtistIntelPack = {
     citations: ["https://pitchfork.com/test", "https://nme.com/test"],
   },
   marketing_pack: {
+    artist_one_sheet:
+      "Test Artist — indie pop artist with 1.5M Spotify followers.\n\nBio: Rising indie pop singer-songwriter from LA. Debut album 2024 to critical acclaim.\n\nKey Stats: 1.5M Spotify followers · 78/100 popularity · indie pop, bedroom pop\n\nFor Booking & Licensing: agent@recoupable.com",
+    ar_memo:
+      "ARTIST: Test Artist\nGENRE: indie pop\nCOMPS: Clairo (bedroom pop), Soccer Mommy (indie)\n\nMOMENTUM: 1.5M followers, 78/100 popularity. Debut album received critical acclaim.\n\nRECOMMENDATION: Development deal conversation. Strong sync and streaming upside.",
+    sync_brief:
+      "ARTIST: Test Artist\nTRACK: Biggest Hit\nMOOD: dreamy, melancholic, 120 BPM\n\nSync use cases:\n- Opening montage of a Netflix coming-of-age drama\n- Luxury skincare campaign targeting 20-35 year olds\n- Coffee shop lifestyle brand social content\n- End credits of an indie film\n\nContact: agent@recoupable.com",
+    spotify_playlist_targets: [
+      "New Music Friday",
+      "Pollen",
+      "bedroom pop",
+      "Lorem",
+      "Fresh Finds",
+      "sad indie",
+      "Late Night Feelings",
+      "indie pop",
+    ],
+    brand_partnership_pitch:
+      "Glossier — bedroom pop aesthetic and female-leaning demo matches their indie-cool beauty positioning. Activation: campaign soundtrack + artist feature.\n\nNike — dreamy indie pop for their mindfulness/yoga vertical. Activation: branded playlist curation.\n\nAesop — understated aesthetic and emotional depth aligns with their luxury positioning. Activation: in-store and digital ambient content.",
     playlist_pitch_email:
       "Dear Curator,\n\nTest Artist is perfect for your playlist.\n\nBest,\nThe Team",
     instagram_caption: "New music from Test Artist is here 🎵 #indiepop #newmusic",
@@ -128,13 +146,55 @@ describe("formatArtistIntelPackAsMarkdown", () => {
 
   it("includes web context and citations", () => {
     const result = formatArtistIntelPackAsMarkdown(basePack);
-    expect(result).toContain("## Recent Web Context");
+    expect(result).toContain("## Recent News & Press");
     expect(result).toContain("rising indie pop singer-songwriter");
     expect(result).toContain("pitchfork.com");
   });
 
-  it("includes marketing pack sections", () => {
+  it("includes industry pack sections", () => {
     const result = formatArtistIntelPackAsMarkdown(basePack);
+    expect(result).toContain("## Industry Pack");
+    expect(result).toContain("### Artist One-Sheet");
+    expect(result).toContain("### A&R Memo");
+    expect(result).toContain("### Sync & Licensing Brief");
+    expect(result).toContain("### Spotify Editorial Playlist Targets");
+    expect(result).toContain("### Brand Partnership Pitch");
+  });
+
+  it("includes artist one-sheet content", () => {
+    const result = formatArtistIntelPackAsMarkdown(basePack);
+    expect(result).toContain("agent@recoupable.com");
+    expect(result).toContain("1.5M Spotify followers");
+  });
+
+  it("includes A&R memo with comps", () => {
+    const result = formatArtistIntelPackAsMarkdown(basePack);
+    expect(result).toContain("Clairo");
+    expect(result).toContain("Development deal");
+  });
+
+  it("includes sync brief with use cases", () => {
+    const result = formatArtistIntelPackAsMarkdown(basePack);
+    expect(result).toContain("Netflix");
+    expect(result).toContain("Sync & Licensing Brief");
+  });
+
+  it("includes spotify playlist targets as bullet list", () => {
+    const result = formatArtistIntelPackAsMarkdown(basePack);
+    expect(result).toContain("- New Music Friday");
+    expect(result).toContain("- Pollen");
+    expect(result).toContain("- bedroom pop");
+  });
+
+  it("includes brand partnership pitch", () => {
+    const result = formatArtistIntelPackAsMarkdown(basePack);
+    expect(result).toContain("Glossier");
+    expect(result).toContain("Brand Partnership Pitch");
+  });
+
+  it("includes outreach and social section", () => {
+    const result = formatArtistIntelPackAsMarkdown(basePack);
+    expect(result).toContain("## Outreach & Social");
     expect(result).toContain("### Playlist Pitch Email");
     expect(result).toContain("### Social Media Captions");
     expect(result).toContain("**Instagram:**");
@@ -166,7 +226,8 @@ describe("formatArtistIntelPackAsMarkdown", () => {
     const pack = { ...basePack, top_track: null };
     const result = formatArtistIntelPackAsMarkdown(pack);
     expect(result).toContain("# Artist Intelligence Pack");
-    expect(result).not.toContain("Biggest Hit");
+    // The top track section line (with popularity) should not appear
+    expect(result).not.toContain("*Great Album* (popularity:");
   });
 
   it("omits citations line when citations array is empty", () => {

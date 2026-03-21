@@ -5,7 +5,8 @@ import type { ArtistIntelPack } from "@/lib/artistIntel/generateArtistIntelPack"
  *
  * Produces a human-readable report with sections for artist profile,
  * music DNA (MusicFlamingo AI analysis), web context (Perplexity), and
- * the full marketing pack (pitch email, social captions, press release).
+ * the full industry pack (one-sheet, A&R memo, sync brief, playlist targets,
+ * brand partnership pitch, social copy).
  *
  * @param pack - The complete artist intelligence pack.
  * @returns A formatted markdown string ready to display in chat or export.
@@ -109,7 +110,7 @@ export function formatArtistIntelPackAsMarkdown(pack: ArtistIntelPack): string {
 
   // Web context
   if (web_context?.summary) {
-    lines.push(`## Recent Web Context`);
+    lines.push(`## Recent News & Press`);
     lines.push(``);
     lines.push(web_context.summary);
     lines.push(``);
@@ -121,22 +122,57 @@ export function formatArtistIntelPackAsMarkdown(pack: ArtistIntelPack): string {
     lines.push(``);
   }
 
-  // Marketing pack
-  lines.push(`## Marketing Pack`);
+  // Industry Pack — highest-value outputs for artists & labels
+  lines.push(`## Industry Pack`);
+  lines.push(``);
+
+  if (marketing_pack.artist_one_sheet) {
+    lines.push(`### Artist One-Sheet`);
+    lines.push(``);
+    lines.push(marketing_pack.artist_one_sheet);
+    lines.push(``);
+  }
+
+  if (marketing_pack.ar_memo) {
+    lines.push(`### A&R Memo`);
+    lines.push(``);
+    lines.push(marketing_pack.ar_memo);
+    lines.push(``);
+  }
+
+  if (marketing_pack.sync_brief) {
+    lines.push(`### Sync & Licensing Brief`);
+    lines.push(``);
+    lines.push(marketing_pack.sync_brief);
+    lines.push(``);
+  }
+
+  if (marketing_pack.spotify_playlist_targets?.length) {
+    lines.push(`### Spotify Editorial Playlist Targets`);
+    lines.push(``);
+    for (const playlist of marketing_pack.spotify_playlist_targets) {
+      lines.push(`- ${playlist}`);
+    }
+    lines.push(``);
+  }
+
+  if (marketing_pack.brand_partnership_pitch) {
+    lines.push(`### Brand Partnership Pitch`);
+    lines.push(``);
+    lines.push(marketing_pack.brand_partnership_pitch);
+    lines.push(``);
+  }
+
+  lines.push(`---`);
+  lines.push(``);
+
+  // Outreach & Social (secondary section)
+  lines.push(`## Outreach & Social`);
   lines.push(``);
 
   lines.push(`### Playlist Pitch Email`);
   lines.push(``);
   lines.push(marketing_pack.playlist_pitch_email);
-  lines.push(``);
-
-  lines.push(`### Social Media Captions`);
-  lines.push(``);
-  lines.push(`**Instagram:** ${marketing_pack.instagram_caption}`);
-  lines.push(``);
-  lines.push(`**TikTok:** ${marketing_pack.tiktok_caption}`);
-  lines.push(``);
-  lines.push(`**Twitter/X:** ${marketing_pack.twitter_post}`);
   lines.push(``);
 
   lines.push(`### Press Release Opener`);
@@ -152,6 +188,15 @@ export function formatArtistIntelPackAsMarkdown(pack: ArtistIntelPack): string {
     }
     lines.push(``);
   }
+
+  lines.push(`### Social Media Captions`);
+  lines.push(``);
+  lines.push(`**Instagram:** ${marketing_pack.instagram_caption}`);
+  lines.push(``);
+  lines.push(`**TikTok:** ${marketing_pack.tiktok_caption}`);
+  lines.push(``);
+  lines.push(`**Twitter/X:** ${marketing_pack.twitter_post}`);
+  lines.push(``);
 
   return lines.join("\n").trim();
 }

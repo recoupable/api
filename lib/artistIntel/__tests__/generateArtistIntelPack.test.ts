@@ -53,6 +53,12 @@ const mockWebContext = {
 };
 
 const mockMarketingCopy = {
+  artist_one_sheet: "Test Artist — rising indie pop act with 1M followers...",
+  ar_memo: "ARTIST: Test Artist\nGENRE: pop\nRECOMMENDATION: Monitor for 90 days.",
+  sync_brief: "Track fits: Netflix drama, lifestyle brand campaign, yoga app.",
+  spotify_playlist_targets: ["New Music Friday", "Pollen", "Fresh Finds"],
+  brand_partnership_pitch:
+    "Nike — high-energy BPM aligns with Run Club. Glossier — indie aesthetic.",
   playlist_pitch_email: "Dear curator...",
   instagram_caption: "New music out now! #pop",
   tiktok_caption: "You need to hear this! #music",
