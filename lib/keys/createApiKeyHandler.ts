@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateApiKeyBody } from "@/lib/keys/validateCreateApiKeyBody";
-import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { createKey } from "@/lib/keys/createKey";
 
 /**
  * Handler for creating a new API key for the authenticated account.
- * Requires authentication via Bearer token in Authorization header.
+ * Supports both x-api-key header and Authorization Bearer token.
  *
  * Body parameters:
  * - key_name (required): The name for the API key
@@ -16,11 +16,11 @@ import { createKey } from "@/lib/keys/createKey";
  */
 export async function createApiKeyHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const accountIdOrError = await getAuthenticatedAccountId(request);
-    if (accountIdOrError instanceof NextResponse) {
-      return accountIdOrError;
+    const authResult = await validateAuthContext(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
-    const accountId = accountIdOrError;
+    const { accountId } = authResult;
 
     const body = await request.json();
 
