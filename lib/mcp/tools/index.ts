@@ -18,6 +18,7 @@ import { registerAllYouTubeTools } from "./youtube";
 import { registerTranscribeTools } from "./transcribe";
 import { registerSendEmailTool } from "./registerSendEmailTool";
 import { registerAllArtistTools } from "./artists";
+import { registerAllArtistIntelTools } from "./artistIntel";
 import { registerAllChatsTools } from "./chats";
 import { registerAllPulseTools } from "./pulse";
 import { registerAllSandboxTools } from "./sandbox";
@@ -33,6 +34,7 @@ import { registerAllSandboxTools } from "./sandbox";
  */
 export const registerAllTools = (server: McpServer): void => {
   registerAllArtistTools(server);
+  registerAllArtistIntelTools(server);
   registerAllArtistSocialsTools(server);
   registerAllCatalogTools(server);
   registerAllChatsTools(server);
