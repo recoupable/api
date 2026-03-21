@@ -90,6 +90,73 @@ const basePack: ArtistIntelPack = {
       "Rising indie pop artist",
     ],
   },
+  peer_benchmark: {
+    peers: [
+      {
+        name: "Clairo",
+        spotify_id: "clairo-id",
+        followers: 2_500_000,
+        popularity: 82,
+        genres: ["indie pop"],
+      },
+      {
+        name: "Soccer Mommy",
+        spotify_id: "soccermommy-id",
+        followers: 1_800_000,
+        popularity: 74,
+        genres: ["indie"],
+      },
+    ],
+    follower_percentile: 45,
+    popularity_percentile: 52,
+    median_followers: 2_000_000,
+    median_popularity: 78,
+    top_peer: {
+      name: "Clairo",
+      spotify_id: "clairo-id",
+      followers: 2_500_000,
+      popularity: 82,
+      genres: ["indie pop"],
+    },
+  },
+  opportunity_scores: {
+    sync: {
+      score: 75,
+      rating: "strong",
+      rationale: "BPM 120 is squarely in the sweet spot for sync placements",
+    },
+    playlist: {
+      score: 82,
+      rating: "exceptional",
+      rationale: "Danceability 7/10 is strong for workout and party playlists",
+    },
+    ar: {
+      score: 68,
+      rating: "strong",
+      rationale: "Solid popularity-to-follower ratio indicates organic traction",
+    },
+    brand: {
+      score: 71,
+      rating: "strong",
+      rationale: "4 lifestyle tags signal strong brand alignment surface area",
+    },
+    overall: 74,
+  },
+  catalog_depth: {
+    track_count: 8,
+    avg_popularity: 62,
+    top_track_popularity: 85,
+    popularity_std_dev: 12.3,
+    consistency_score: 59,
+    top_track_concentration_pct: 21,
+    catalog_type: "hit_driven",
+    catalog_type_label: "Hit-Driven — breakout track anchoring the catalog",
+    ranked_tracks: [
+      { name: "Biggest Hit", popularity: 85 },
+      { name: "Second Track", popularity: 71 },
+      { name: "Third Track", popularity: 58 },
+    ],
+  },
   formatted_report: "",
   elapsed_seconds: 28.5,
 };

@@ -160,9 +160,15 @@ export function computeArtistOpportunityScores(
     arRationale.push(
       `Solid popularity-to-follower ratio (${followerEfficiency.toFixed(1)}) indicates organic traction`,
     );
+  } else if (followers < 1000 && popularity < 10) {
+    // Pre-market artist: very low followers AND very low popularity = early discovery opportunity
+    arScore += 10;
+    arRationale.push(
+      `Pre-market artist (${followers} followers, ${popularity}/100 popularity) — no Spotify traction yet, highest early-discovery upside`,
+    );
   } else {
     arRationale.push(
-      `Popularity-to-follower ratio (${followerEfficiency.toFixed(1)}) suggests established/saturated positioning`,
+      `Popularity-to-follower ratio (${followerEfficiency.toFixed(1)}) suggests a growing or maturing audience positioning`,
     );
   }
 
