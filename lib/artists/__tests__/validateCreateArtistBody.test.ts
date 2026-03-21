@@ -9,6 +9,11 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: (...args: unknown[]) => mockValidateAuthContext(...args),
 }));
 
+/**
+ *
+ * @param body
+ * @param headers
+ */
 function createRequest(body: unknown, headers: Record<string, string> = {}): NextRequest {
   const defaultHeaders: Record<string, string> = { "Content-Type": "application/json" };
   return new NextRequest("http://localhost/api/artists", {

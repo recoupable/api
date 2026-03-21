@@ -19,6 +19,7 @@ interface CallbackOptions {
  *
  * @param options.destination - Where to redirect: "chat" or "connectors"
  * @param options.roomId - For chat destination, the room ID to return to
+ * @param options
  * @returns Full callback URL with success indicator
  */
 export function getCallbackUrl(options: CallbackOptions): string {

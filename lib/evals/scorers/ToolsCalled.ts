@@ -1,5 +1,13 @@
 /**
  * Generic scorer that checks if specific tools were called
+ *
+ * @param root0
+ * @param root0.output
+ * @param root0.expected
+ * @param root0.input
+ * @param root0.toolCalls
+ * @param root0.requiredTools
+ * @param root0.penalizedTools
  */
 export const ToolsCalled = async ({
   toolCalls,
