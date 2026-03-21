@@ -1,14 +1,26 @@
+export interface TriggerRun {
+  id: string;
+  status: string;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  durationMs: number | null;
+  [key: string]: unknown;
+}
+
+export type TriggerRunFilter = { "filter[tag]": string } | { "filter[schedule]": string };
+
 /**
  * Fetches runs from the Trigger.dev Management REST API.
  *
- * @param params - Query parameters for filtering runs
+ * @param params - Filter params (tag or schedule)
  * @param limit - Maximum number of runs to return
  * @returns Array of run objects
  */
 export async function fetchTriggerRuns(
-  params: Record<string, string>,
+  params: TriggerRunFilter,
   limit: number,
-): Promise<unknown[]> {
+): Promise<TriggerRun[]> {
   const apiKey = process.env.TRIGGER_SECRET_KEY;
   if (!apiKey) {
     throw new Error("Missing TRIGGER_SECRET_KEY");
@@ -29,6 +41,6 @@ export async function fetchTriggerRuns(
     throw new Error(`Trigger.dev API error: ${response.status}`);
   }
 
-  const json = (await response.json()) as { data?: unknown[] };
+  const json = (await response.json()) as { data?: TriggerRun[] };
   return json.data ?? [];
 }

@@ -1,20 +1,11 @@
-import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
+import { fetchTriggerRuns, type TriggerRun } from "@/lib/trigger/fetchTriggerRuns";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
 import type { Tables } from "@/types/database.types";
 
 type ScheduledAction = Tables<"scheduled_actions">;
 
-interface TaskRunInfo {
-  id: string;
-  status: string;
-  createdAt: string;
-  startedAt: string | null;
-  finishedAt: string | null;
-  durationMs: number | null;
-}
-
 interface EnrichedTask extends ScheduledAction {
-  recent_runs: TaskRunInfo[];
+  recent_runs: TriggerRun[];
   upcoming: string[];
 }
 
@@ -35,22 +26,12 @@ export async function enrichTaskWithTriggerInfo(task: ScheduledAction): Promise<
   try {
     const recentRuns = await fetchTriggerRuns({ "filter[schedule]": scheduleId }, 5);
 
-    const recent_runs: TaskRunInfo[] = recentRuns.map((run: Record<string, unknown>) => ({
-      id: run.id as string,
-      status: run.status as string,
-      createdAt: run.createdAt as string,
-      startedAt: (run.startedAt as string) ?? null,
-      finishedAt: (run.finishedAt as string) ?? null,
-      durationMs: (run.durationMs as number) ?? null,
-    }));
-
     let upcoming: string[] = [];
 
-    // Get upcoming from the most recent run (API returns desc order)
-    const latestRun = recentRuns[0] as Record<string, unknown> | undefined;
+    const latestRun = recentRuns[0];
     if (latestRun) {
       try {
-        const fullRun = await retrieveTaskRun(latestRun.id as string);
+        const fullRun = await retrieveTaskRun(latestRun.id);
         const payload = fullRun?.payload as { upcoming?: unknown[] } | undefined;
         if (Array.isArray(payload?.upcoming)) {
           upcoming = payload.upcoming.filter((item): item is string => typeof item === "string");
@@ -60,7 +41,7 @@ export async function enrichTaskWithTriggerInfo(task: ScheduledAction): Promise<
       }
     }
 
-    return { ...task, recent_runs, upcoming };
+    return { ...task, recent_runs: recentRuns, upcoming };
   } catch {
     // Trigger.dev API failed — return task without enrichment
     return { ...task, recent_runs: [], upcoming: [] };
