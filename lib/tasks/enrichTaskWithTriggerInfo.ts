@@ -27,13 +27,15 @@ interface EnrichedTask extends ScheduledAction {
  */
 export async function enrichTaskWithTriggerInfo(task: ScheduledAction): Promise<EnrichedTask> {
   const scheduleId = task.trigger_schedule_id;
+  const accountId = task.account_id;
 
-  if (!scheduleId) {
+  if (!scheduleId || !accountId) {
     return { ...task, recent_runs: [], upcoming: [] };
   }
 
   try {
-    const recentRuns = await listScheduleRuns(scheduleId, 5);
+    const accountTag = `account:${accountId}`;
+    const recentRuns = await listScheduleRuns(scheduleId, accountTag, 5);
 
     const recent_runs: TaskRunInfo[] = recentRuns.map(run => ({
       id: run.id,
