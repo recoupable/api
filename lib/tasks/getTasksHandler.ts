@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
 import { validateGetTasksQuery } from "@/lib/tasks/validateGetTasksQuery";
+import { enrichTaskWithTriggerInfo } from "@/lib/tasks/enrichTaskWithTriggerInfo";
 
 /**
- * Retrieves tasks (scheduled actions) from the database.
- * Supports filtering by id, account_id, or artist_account_id.
- * Returns an array of tasks matching the provided filters.
- * When filtering by `id`, the array will contain at most one task.
+ * Retrieves tasks (scheduled actions) from the database, enriched with
+ * recent_runs and upcoming schedule info from the Trigger.dev API.
  *
  * @param request - The request object containing query parameters.
  * @returns A NextResponse with tasks data.
@@ -21,10 +20,12 @@ export async function getTasksHandler(request: NextRequest): Promise<NextRespons
 
     const tasks = await selectScheduledActions(validatedQuery);
 
+    const enrichedTasks = await Promise.all(tasks.map(task => enrichTaskWithTriggerInfo(task)));
+
     return NextResponse.json(
       {
         status: "success",
-        tasks,
+        tasks: enrichedTasks,
       },
       {
         status: 200,

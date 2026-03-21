@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetTaskRunQuery } from "./validateGetTaskRunQuery";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
-import { listTaskRuns } from "@/lib/trigger/listTaskRuns";
+import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
 
 /**
  * Handles GET /api/tasks/runs requests.
@@ -22,7 +22,10 @@ export async function getTaskRunHandler(request: NextRequest): Promise<NextRespo
 
   try {
     if (validatedQuery.mode === "list") {
-      const runs = await listTaskRuns(validatedQuery.accountId, validatedQuery.limit);
+      const runs = await fetchTriggerRuns(
+        { "filter[tag]": `account:${validatedQuery.accountId}` },
+        validatedQuery.limit,
+      );
       return NextResponse.json(
         { status: "success", runs },
         { status: 200, headers: getCorsHeaders() },
