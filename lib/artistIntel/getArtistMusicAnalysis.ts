@@ -1,10 +1,48 @@
 import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRequest";
 
+/** Structured catalog metadata from MusicFlamingo catalog_metadata preset. */
+export interface CatalogMetadata {
+  genre: string;
+  subgenres: string[];
+  mood: string[];
+  tempo_bpm: number;
+  key: string;
+  time_signature: string;
+  instruments: string[];
+  vocal_type: string;
+  vocal_style: string;
+  production_style: string;
+  energy_level: number;
+  danceability: number;
+  lyrical_themes: string[];
+  similar_artists: string[];
+  description: string;
+}
+
+/** Audience demographics from MusicFlamingo audience_profile preset. */
+export interface AudienceProfile {
+  age_range: string;
+  gender_skew: string;
+  lifestyle_tags: string[];
+  listening_contexts: string[];
+  platforms: string[];
+  playlist_types: string[];
+  comparable_fanbases: string[];
+  marketing_hook: string;
+}
+
+/** Mood and vibe tags from MusicFlamingo mood_tags preset. */
+export interface MoodTagsResult {
+  tags: string[];
+  primary_mood: string;
+}
+
 export interface ArtistMusicAnalysis {
-  catalog_metadata: unknown;
-  audience_profile: unknown;
-  playlist_pitch: unknown;
-  mood_tags: unknown;
+  catalog_metadata: CatalogMetadata | null;
+  audience_profile: AudienceProfile | null;
+  /** Text output from the playlist_pitch preset. */
+  playlist_pitch: string | null;
+  mood_tags: MoodTagsResult | null;
 }
 
 const ANALYSIS_PRESETS = [
@@ -39,7 +77,7 @@ export async function getArtistMusicAnalysis(
     ),
   );
 
-  const analysis: Record<AnalysisPreset, unknown> = {
+  const analysis: ArtistMusicAnalysis = {
     catalog_metadata: null,
     audience_profile: null,
     playlist_pitch: null,
@@ -48,13 +86,21 @@ export async function getArtistMusicAnalysis(
 
   let anySuccess = false;
   results.forEach((result, i) => {
-    const preset = ANALYSIS_PRESETS[i];
+    const preset = ANALYSIS_PRESETS[i] as AnalysisPreset;
     if (result.status === "fulfilled" && result.value.type === "success") {
       const value = result.value as { type: "success"; response: unknown };
-      analysis[preset] = value.response;
+      if (preset === "catalog_metadata") {
+        analysis.catalog_metadata = value.response as CatalogMetadata;
+      } else if (preset === "audience_profile") {
+        analysis.audience_profile = value.response as AudienceProfile;
+      } else if (preset === "playlist_pitch") {
+        analysis.playlist_pitch = value.response as string;
+      } else if (preset === "mood_tags") {
+        analysis.mood_tags = value.response as MoodTagsResult;
+      }
       anySuccess = true;
     }
   });
 
-  return anySuccess ? (analysis as ArtistMusicAnalysis) : null;
+  return anySuccess ? analysis : null;
 }

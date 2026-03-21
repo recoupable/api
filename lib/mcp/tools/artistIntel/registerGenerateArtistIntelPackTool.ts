@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
-import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
+import { getCallToolResult } from "@/lib/mcp/getCallToolResult";
 import { generateArtistIntelPack } from "@/lib/artistIntel/generateArtistIntelPack";
 
 const toolSchema = z.object({
@@ -67,7 +67,7 @@ export function registerGenerateArtistIntelPackTool(server: McpServer): void {
         return getToolResultError(result.error);
       }
 
-      return getToolResultSuccess(result.pack);
+      return getCallToolResult(result.pack.formatted_report);
     },
   );
 }

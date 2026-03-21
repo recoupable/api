@@ -2,6 +2,7 @@ import type { ArtistMarketingCopy } from "@/lib/artistIntel/buildArtistMarketing
 import type { ArtistMusicAnalysis } from "@/lib/artistIntel/getArtistMusicAnalysis";
 import type { ArtistWebContext } from "@/lib/artistIntel/getArtistWebContext";
 import { buildArtistMarketingCopy } from "@/lib/artistIntel/buildArtistMarketingCopy";
+import { formatArtistIntelPackAsMarkdown } from "@/lib/artistIntel/formatArtistIntelPackAsMarkdown";
 import { getArtistMusicAnalysis } from "@/lib/artistIntel/getArtistMusicAnalysis";
 import { getArtistSpotifyData } from "@/lib/artistIntel/getArtistSpotifyData";
 import { getArtistWebContext } from "@/lib/artistIntel/getArtistWebContext";
@@ -25,6 +26,7 @@ export interface ArtistIntelPack {
   music_analysis: ArtistMusicAnalysis | null;
   web_context: ArtistWebContext | null;
   marketing_pack: ArtistMarketingCopy;
+  formatted_report: string;
   elapsed_seconds: number;
 }
 
@@ -64,7 +66,7 @@ export async function generateArtistIntelPack(artistName: string): Promise<Artis
   const topTrack = topTracks[0] ?? null;
   const elapsed_seconds = Math.round(((Date.now() - startTime) / 1000) * 100) / 100;
 
-  const pack: ArtistIntelPack = {
+  const packWithoutReport = {
     artist: {
       name: artist.name,
       spotify_id: artist.id,
@@ -86,6 +88,11 @@ export async function generateArtistIntelPack(artistName: string): Promise<Artis
     web_context: webContext,
     marketing_pack: marketingCopy,
     elapsed_seconds,
+  };
+
+  const pack: ArtistIntelPack = {
+    ...packWithoutReport,
+    formatted_report: formatArtistIntelPackAsMarkdown(packWithoutReport as ArtistIntelPack),
   };
 
   return { type: "success", pack };

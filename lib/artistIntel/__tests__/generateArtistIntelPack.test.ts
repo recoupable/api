@@ -48,8 +48,8 @@ const mockMusicAnalysis = {
 };
 
 const mockWebContext = {
-  results: [{ title: "Test", url: "https://example.com", snippet: "Artist news" }],
   summary: "Artist news summary",
+  citations: ["https://example.com"],
 };
 
 const mockMarketingCopy = {
