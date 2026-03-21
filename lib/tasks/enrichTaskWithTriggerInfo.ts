@@ -1,4 +1,4 @@
-import { listScheduleRuns } from "@/lib/trigger/listScheduleRuns";
+import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
 import type { Tables } from "@/types/database.types";
 
@@ -33,7 +33,7 @@ export async function enrichTaskWithTriggerInfo(task: ScheduledAction): Promise<
   }
 
   try {
-    const recentRuns = await listScheduleRuns(scheduleId, 5);
+    const recentRuns = await fetchTriggerRuns({ "filter[schedule]": scheduleId }, 5);
 
     const recent_runs: TaskRunInfo[] = recentRuns.map((run: Record<string, unknown>) => ({
       id: run.id as string,

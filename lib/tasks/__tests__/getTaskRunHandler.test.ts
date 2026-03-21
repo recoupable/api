@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { getTaskRunHandler } from "../getTaskRunHandler";
 import { validateGetTaskRunQuery } from "../validateGetTaskRunQuery";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
-import { listTaskRuns } from "@/lib/trigger/listTaskRuns";
+import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
 
 vi.mock("../validateGetTaskRunQuery", () => ({
   validateGetTaskRunQuery: vi.fn(),
@@ -15,8 +15,8 @@ vi.mock("@/lib/trigger/retrieveTaskRun", () => ({
   retrieveTaskRun: vi.fn(),
 }));
 
-vi.mock("@/lib/trigger/listTaskRuns", () => ({
-  listTaskRuns: vi.fn(),
+vi.mock("@/lib/trigger/fetchTriggerRuns", () => ({
+  fetchTriggerRuns: vi.fn(),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -99,7 +99,7 @@ describe("getTaskRunHandler", () => {
         accountId: "acc_123",
         limit: 20,
       });
-      vi.mocked(listTaskRuns).mockResolvedValue([]);
+      vi.mocked(fetchTriggerRuns).mockResolvedValue([]);
 
       const response = await getTaskRunHandler(createMockRequest());
       const json = await response.json();
@@ -114,7 +114,7 @@ describe("getTaskRunHandler", () => {
         accountId: "acc_123",
         limit: 20,
       });
-      vi.mocked(listTaskRuns).mockResolvedValue([mockRun]);
+      vi.mocked(fetchTriggerRuns).mockResolvedValue([mockRun]);
 
       const response = await getTaskRunHandler(createMockRequest());
       const json = await response.json();
@@ -123,26 +123,26 @@ describe("getTaskRunHandler", () => {
       expect(json.runs).toHaveLength(1);
     });
 
-    it("calls listTaskRuns with accountId and limit", async () => {
+    it("calls fetchTriggerRuns with accountId and limit", async () => {
       vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
         mode: "list",
         accountId: "acc_456",
         limit: 50,
       });
-      vi.mocked(listTaskRuns).mockResolvedValue([]);
+      vi.mocked(fetchTriggerRuns).mockResolvedValue([]);
 
       await getTaskRunHandler(createMockRequest());
 
-      expect(listTaskRuns).toHaveBeenCalledWith("acc_456", 50);
+      expect(fetchTriggerRuns).toHaveBeenCalledWith({ "filter[tag]": "account:acc_456" }, 50);
     });
 
-    it("returns 500 when listTaskRuns throws", async () => {
+    it("returns 500 when fetchTriggerRuns throws", async () => {
       vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
         mode: "list",
         accountId: "acc_123",
         limit: 20,
       });
-      vi.mocked(listTaskRuns).mockRejectedValue(new Error("API error"));
+      vi.mocked(fetchTriggerRuns).mockRejectedValue(new Error("API error"));
 
       const response = await getTaskRunHandler(createMockRequest());
       expect(response.status).toBe(500);

@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { enrichTaskWithTriggerInfo } from "../enrichTaskWithTriggerInfo";
 
-vi.mock("@/lib/trigger/listScheduleRuns", () => ({
-  listScheduleRuns: vi.fn(),
+vi.mock("@/lib/trigger/fetchTriggerRuns", () => ({
+  fetchTriggerRuns: vi.fn(),
 }));
 
 vi.mock("@/lib/trigger/retrieveTaskRun", () => ({
   retrieveTaskRun: vi.fn(),
 }));
 
-import { listScheduleRuns } from "@/lib/trigger/listScheduleRuns";
+import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
 
 const mockTask = {
@@ -43,7 +43,7 @@ describe("enrichTaskWithTriggerInfo", () => {
   });
 
   it("returns recent_runs and upcoming from Trigger.dev", async () => {
-    vi.mocked(listScheduleRuns).mockResolvedValue([mockRun] as never);
+    vi.mocked(fetchTriggerRuns).mockResolvedValue([mockRun] as never);
     vi.mocked(retrieveTaskRun).mockResolvedValue({
       ...mockRun,
       payload: {
@@ -58,7 +58,7 @@ describe("enrichTaskWithTriggerInfo", () => {
     expect(result.recent_runs[0].status).toBe("COMPLETED");
     expect(result.recent_runs[0].durationMs).toBe(59000);
     expect(result.upcoming).toEqual(["2026-03-27T09:00:00Z", "2026-04-03T09:00:00Z"]);
-    expect(listScheduleRuns).toHaveBeenCalledWith("sched_abc", 5);
+    expect(fetchTriggerRuns).toHaveBeenCalledWith({ "filter[schedule]": "sched_abc" }, 5);
   });
 
   it("returns empty arrays when trigger_schedule_id is null", async () => {
@@ -68,11 +68,11 @@ describe("enrichTaskWithTriggerInfo", () => {
 
     expect(result.recent_runs).toEqual([]);
     expect(result.upcoming).toEqual([]);
-    expect(listScheduleRuns).not.toHaveBeenCalled();
+    expect(fetchTriggerRuns).not.toHaveBeenCalled();
   });
 
   it("returns empty upcoming when no runs exist", async () => {
-    vi.mocked(listScheduleRuns).mockResolvedValue([] as never);
+    vi.mocked(fetchTriggerRuns).mockResolvedValue([] as never);
 
     const result = await enrichTaskWithTriggerInfo(mockTask);
 
@@ -82,7 +82,7 @@ describe("enrichTaskWithTriggerInfo", () => {
   });
 
   it("returns empty arrays when Trigger.dev API fails", async () => {
-    vi.mocked(listScheduleRuns).mockRejectedValue(new Error("API error"));
+    vi.mocked(fetchTriggerRuns).mockRejectedValue(new Error("API error"));
 
     const result = await enrichTaskWithTriggerInfo(mockTask);
 
@@ -91,7 +91,7 @@ describe("enrichTaskWithTriggerInfo", () => {
   });
 
   it("returns runs but empty upcoming when payload has no upcoming", async () => {
-    vi.mocked(listScheduleRuns).mockResolvedValue([mockRun] as never);
+    vi.mocked(fetchTriggerRuns).mockResolvedValue([mockRun] as never);
     vi.mocked(retrieveTaskRun).mockResolvedValue({
       ...mockRun,
       payload: {},
