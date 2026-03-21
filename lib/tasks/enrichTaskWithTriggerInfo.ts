@@ -46,17 +46,14 @@ export async function enrichTaskWithTriggerInfo(task: ScheduledAction): Promise<
 
     let upcoming: string[] = [];
 
-    const latestCompleted = recentRuns.find(
-      (r: Record<string, unknown>) => r.status === "COMPLETED",
-    );
-    if (latestCompleted) {
+    // Get upcoming from the most recent run (API returns desc order)
+    const latestRun = recentRuns[0] as Record<string, unknown> | undefined;
+    if (latestRun) {
       try {
-        const fullRun = await retrieveTaskRun(
-          (latestCompleted as Record<string, unknown>).id as string,
-        );
-        const payload = fullRun?.payload as { upcoming?: string[] } | undefined;
-        if (payload?.upcoming && Array.isArray(payload.upcoming)) {
-          upcoming = payload.upcoming;
+        const fullRun = await retrieveTaskRun(latestRun.id as string);
+        const payload = fullRun?.payload as { upcoming?: unknown[] } | undefined;
+        if (Array.isArray(payload?.upcoming)) {
+          upcoming = payload.upcoming.filter((item): item is string => typeof item === "string");
         }
       } catch {
         // payload retrieval failed — skip upcoming

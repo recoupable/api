@@ -71,13 +71,12 @@ describe("enrichTaskWithTriggerInfo", () => {
     expect(listScheduleRuns).not.toHaveBeenCalled();
   });
 
-  it("returns empty upcoming when no completed runs", async () => {
-    const pendingRun = { ...mockRun, status: "EXECUTING" };
-    vi.mocked(listScheduleRuns).mockResolvedValue([pendingRun] as never);
+  it("returns empty upcoming when no runs exist", async () => {
+    vi.mocked(listScheduleRuns).mockResolvedValue([] as never);
 
     const result = await enrichTaskWithTriggerInfo(mockTask);
 
-    expect(result.recent_runs).toHaveLength(1);
+    expect(result.recent_runs).toEqual([]);
     expect(result.upcoming).toEqual([]);
     expect(retrieveTaskRun).not.toHaveBeenCalled();
   });
