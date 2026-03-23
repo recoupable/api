@@ -1,4 +1,6 @@
-import type { SlackTagsPeriod } from "./validateGetSlackTagsQuery";
+import type { AdminPeriod } from "@/lib/admins/adminPeriod";
+import { slackGet } from "@/lib/slack/slackGet";
+import { getCutoffTs } from "./getCutoffTs";
 
 export interface SlackTag {
   user_id: string;
@@ -10,21 +12,22 @@ export interface SlackTag {
   channel_name: string;
 }
 
-interface SlackApiResponse {
+interface AuthTestResponse {
   ok: boolean;
   error?: string;
-}
-
-interface AuthTestResponse extends SlackApiResponse {
   user_id?: string;
 }
 
-interface ConversationsListResponse extends SlackApiResponse {
+interface ConversationsListResponse {
+  ok: boolean;
+  error?: string;
   channels?: Array<{ id: string; name: string }>;
   response_metadata?: { next_cursor?: string };
 }
 
-interface ConversationsHistoryResponse extends SlackApiResponse {
+interface ConversationsHistoryResponse {
+  ok: boolean;
+  error?: string;
   messages?: Array<{
     type: string;
     user?: string;
@@ -35,7 +38,9 @@ interface ConversationsHistoryResponse extends SlackApiResponse {
   response_metadata?: { next_cursor?: string };
 }
 
-interface UsersInfoResponse extends SlackApiResponse {
+interface UsersInfoResponse {
+  ok: boolean;
+  error?: string;
   user?: {
     id: string;
     real_name?: string;
@@ -47,29 +52,6 @@ interface UsersInfoResponse extends SlackApiResponse {
   };
 }
 
-const SLACK_API_BASE = "https://slack.com/api";
-
-async function slackGet<T extends SlackApiResponse>(
-  endpoint: string,
-  token: string,
-  params: Record<string, string> = {},
-): Promise<T> {
-  const url = new URL(`${SLACK_API_BASE}/${endpoint}`);
-  for (const [key, value] of Object.entries(params)) {
-    url.searchParams.set(key, value);
-  }
-  const res = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.json() as Promise<T>;
-}
-
-function getCutoffTs(period: SlackTagsPeriod): number | null {
-  if (period === "all") return null;
-  const days = period === "daily" ? 1 : period === "weekly" ? 7 : 30;
-  return (Date.now() - days * 24 * 60 * 60 * 1000) / 1000;
-}
-
 /**
  * Fetches all Slack messages where the Recoup Coding Agent bot was mentioned.
  * Pulls directly from the Slack API using the bot token as the source of truth.
@@ -77,7 +59,7 @@ function getCutoffTs(period: SlackTagsPeriod): number | null {
  * @param period - Time period filter: "all", "daily", "weekly", or "monthly"
  * @returns Array of SlackTag objects representing each mention event
  */
-export async function fetchSlackMentions(period: SlackTagsPeriod): Promise<SlackTag[]> {
+export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[]> {
   const token = process.env.SLACK_BOT_TOKEN;
   if (!token) {
     throw new Error("SLACK_BOT_TOKEN is not configured");

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getSlackTagsHandler } from "@/lib/admins/coding-agent/getSlackTagsHandler";
+import { getSlackTagsHandler } from "@/lib/admins/slack/getSlackTagsHandler";
 
 /**
  * GET /api/admins/coding/slack
