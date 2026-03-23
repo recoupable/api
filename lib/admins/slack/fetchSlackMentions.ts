@@ -4,6 +4,7 @@ import { getBotUserId } from "@/lib/slack/getBotUserId";
 import { getBotChannels } from "@/lib/slack/getBotChannels";
 import { getSlackUserInfo } from "@/lib/slack/getSlackUserInfo";
 import { getCutoffTs } from "./getCutoffTs";
+import { extractGithubPrUrls, type SlackAttachment } from "./extractGithubPrUrls";
 
 export interface SlackTag {
   user_id: string;
@@ -38,20 +39,13 @@ interface ConversationsRepliesResponse {
     text?: string;
     ts?: string;
     bot_id?: string;
+    attachments?: SlackAttachment[];
   }>;
 }
 
 /**
- * Extracts GitHub pull request URLs from a Slack message text.
- * Handles both plain URLs and Slack-formatted links (<URL> or <URL|label>).
- */
-function extractGithubPrUrls(text: string): string[] {
-  const matches = text.match(/https:\/\/github\.com\/[^\s>|]+\/pull\/\d+/g) ?? [];
-  return [...new Set(matches)];
-}
-
-/**
  * Fetches bot replies in a Slack thread and returns any GitHub PR URLs found.
+ * Extracts URLs from both message text and attachment action buttons.
  */
 async function fetchThreadPullRequests(
   token: string,
@@ -69,7 +63,7 @@ async function fetchThreadPullRequests(
   for (const msg of replies.messages ?? []) {
     if (!msg.bot_id) continue;
     if (msg.ts === threadTs) continue; // skip the original message
-    prUrls.push(...extractGithubPrUrls(msg.text ?? ""));
+    prUrls.push(...extractGithubPrUrls(msg.text ?? "", msg.attachments));
   }
 
   return [...new Set(prUrls)];
