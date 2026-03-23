@@ -4,6 +4,7 @@ import { getBotUserId } from "@/lib/slack/getBotUserId";
 import { getBotChannels } from "@/lib/slack/getBotChannels";
 import { getSlackUserInfo } from "@/lib/slack/getSlackUserInfo";
 import { getCutoffTs } from "./getCutoffTs";
+import { fetchThreadPullRequests } from "./fetchThreadPullRequests";
 
 export interface SlackTag {
   user_id: string;
@@ -13,6 +14,7 @@ export interface SlackTag {
   timestamp: string;
   channel_id: string;
   channel_name: string;
+  pull_requests: string[];
 }
 
 interface ConversationsHistoryResponse {
@@ -77,6 +79,7 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
 
         const { name, avatar } = userCache[userId];
         const prompt = (msg.text ?? "").replace(new RegExp(`<@${botUserId}>\\s*`, "g"), "").trim();
+        const pullRequests = await fetchThreadPullRequests(token, channel.id, msg.ts!);
 
         tags.push({
           user_id: userId,
@@ -86,6 +89,7 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
           timestamp: new Date(parseFloat(msg.ts!) * 1000).toISOString(),
           channel_id: channel.id,
           channel_name: channel.name,
+          pull_requests: pullRequests,
         });
       }
 
