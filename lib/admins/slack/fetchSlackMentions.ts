@@ -15,6 +15,7 @@ export interface SlackTag {
   channel_id: string;
   channel_name: string;
   pull_requests: string[];
+  _rawReplies?: unknown[];
 }
 
 interface ConversationsHistoryResponse {
@@ -33,7 +34,7 @@ interface ConversationsHistoryResponse {
 interface ConversationsRepliesResponse {
   ok: boolean;
   error?: string;
-  messages?: Array<{
+  messages?: Array<Record<string, unknown> & {
     type: string;
     user?: string;
     text?: string;
@@ -60,24 +61,15 @@ async function fetchThreadPullRequests(
   if (!replies.ok) return [];
 
   const prUrls: string[] = [];
-  const _debugReplies: unknown[] = [];
+  const _rawReplies: unknown[] = [];
   for (const msg of replies.messages ?? []) {
     if (!msg.bot_id) continue;
     if (msg.ts === threadTs) continue;
-    _debugReplies.push({
-      text: (msg.text ?? "").substring(0, 200),
-      hasAttachments: !!msg.attachments,
-      attachmentCount: msg.attachments?.length,
-      attachments: msg.attachments,
-      rawKeys: Object.keys(msg),
-    });
+    _rawReplies.push(msg);
     prUrls.push(...extractGithubPrUrls(msg.text ?? "", msg.attachments));
   }
-  if (_debugReplies.length > 0 && prUrls.length === 0) {
-    console.log("[DEBUG] thread with replies but no PRs:", JSON.stringify(_debugReplies));
-  }
 
-  return [...new Set(prUrls)];
+  return { prUrls: [...new Set(prUrls)], _rawReplies };
 }
 
 /**
@@ -129,7 +121,7 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
 
         const { name, avatar } = userCache[userId];
         const prompt = (msg.text ?? "").replace(new RegExp(`<@${botUserId}>\\s*`, "g"), "").trim();
-        const pullRequests = await fetchThreadPullRequests(token, channel.id, msg.ts!);
+        const threadResult = await fetchThreadPullRequests(token, channel.id, msg.ts!);
 
         tags.push({
           user_id: userId,
@@ -139,7 +131,8 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
           timestamp: new Date(parseFloat(msg.ts!) * 1000).toISOString(),
           channel_id: channel.id,
           channel_name: channel.name,
-          pull_requests: pullRequests,
+          pull_requests: threadResult.prUrls,
+          _rawReplies: threadResult._rawReplies,
         });
       }
 
