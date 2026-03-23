@@ -15,8 +15,8 @@ const mockAuth = { accountId: "test-account", orgId: null, authToken: "token" };
 
 function makeRequest(period?: string) {
   const url = period
-    ? `https://example.com/api/admins/coding-agent/slack-tags?period=${period}`
-    : "https://example.com/api/admins/coding-agent/slack-tags";
+    ? `https://example.com/api/admins/coding/slack?period=${period}`
+    : "https://example.com/api/admins/coding/slack";
   return new NextRequest(url);
 }
 

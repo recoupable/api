@@ -4,7 +4,7 @@ import { validateGetSlackTagsQuery } from "./validateGetSlackTagsQuery";
 import { fetchSlackMentions } from "./fetchSlackMentions";
 
 /**
- * Handler for GET /api/admins/coding-agent/slack-tags
+ * Handler for GET /api/admins/coding/slack
  *
  * Returns a list of Slack mentions of the Recoup Coding Agent bot, pulled directly
  * from the Slack API as the source of truth. Supports optional time-period filtering.

@@ -3,7 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getSlackTagsHandler } from "@/lib/admins/coding-agent/getSlackTagsHandler";
 
 /**
- * GET /api/admins/coding-agent/slack-tags
+ * GET /api/admins/coding/slack
  *
  * Returns Slack tagging analytics for the Recoup Coding Agent bot.
  * Pulls directly from the Slack API as the source of truth.

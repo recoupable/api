@@ -38,9 +38,7 @@ const mockTags = [
 ];
 
 function makeRequest(period = "all") {
-  return new NextRequest(
-    `https://example.com/api/admins/coding-agent/slack-tags?period=${period}`,
-  );
+  return new NextRequest(`https://example.com/api/admins/coding/slack?period=${period}`);
 }
 
 describe("getSlackTagsHandler", () => {

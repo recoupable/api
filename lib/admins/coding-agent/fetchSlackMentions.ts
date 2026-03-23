@@ -96,7 +96,10 @@ export async function fetchSlackMentions(period: SlackTagsPeriod): Promise<Slack
   let channelCursor: string | undefined;
 
   do {
-    const params: Record<string, string> = { types: "public_channel,private_channel", limit: "200" };
+    const params: Record<string, string> = {
+      types: "public_channel,private_channel",
+      limit: "200",
+    };
     if (channelCursor) params.cursor = channelCursor;
 
     const resp = await slackGet<ConversationsListResponse>("conversations.list", token, params);
@@ -142,11 +145,7 @@ export async function fetchSlackMentions(period: SlackTagsPeriod): Promise<Slack
           });
           const profile = userResp.user?.profile;
           userCache[userId] = {
-            name:
-              profile?.display_name ||
-              profile?.real_name ||
-              userResp.user?.real_name ||
-              userId,
+            name: profile?.display_name || profile?.real_name || userResp.user?.real_name || userId,
             avatar: profile?.image_48 ?? null,
           };
         }
@@ -154,9 +153,7 @@ export async function fetchSlackMentions(period: SlackTagsPeriod): Promise<Slack
         const { name, avatar } = userCache[userId];
 
         // Strip the bot mention from the prompt text
-        const prompt = (msg.text ?? "")
-          .replace(new RegExp(`<@${botUserId}>\\s*`, "g"), "")
-          .trim();
+        const prompt = (msg.text ?? "").replace(new RegExp(`<@${botUserId}>\\s*`, "g"), "").trim();
 
         tags.push({
           user_id: userId,

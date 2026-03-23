@@ -15,7 +15,7 @@ export const getSlackTagsQuerySchema = z.object({
 export type GetSlackTagsQuery = z.infer<typeof getSlackTagsQuerySchema>;
 
 /**
- * Validates the query parameters and admin auth for GET /api/admins/coding-agent/slack-tags.
+ * Validates the query parameters and admin auth for GET /api/admins/coding/slack.
  *
  * @param request - The incoming Next.js request
  * @returns A NextResponse on error, or { period } on success
