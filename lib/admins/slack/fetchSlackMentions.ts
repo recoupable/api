@@ -13,6 +13,7 @@ export interface SlackTag {
   timestamp: string;
   channel_id: string;
   channel_name: string;
+  pull_requests: string[];
 }
 
 interface ConversationsHistoryResponse {
@@ -26,6 +27,52 @@ interface ConversationsHistoryResponse {
     bot_id?: string;
   }>;
   response_metadata?: { next_cursor?: string };
+}
+
+interface ConversationsRepliesResponse {
+  ok: boolean;
+  error?: string;
+  messages?: Array<{
+    type: string;
+    user?: string;
+    text?: string;
+    ts?: string;
+    bot_id?: string;
+  }>;
+}
+
+/**
+ * Extracts GitHub pull request URLs from a Slack message text.
+ * Handles both plain URLs and Slack-formatted links (<URL> or <URL|label>).
+ */
+function extractGithubPrUrls(text: string): string[] {
+  const matches = text.match(/https:\/\/github\.com\/[^\s>|]+\/pull\/\d+/g) ?? [];
+  return [...new Set(matches)];
+}
+
+/**
+ * Fetches bot replies in a Slack thread and returns any GitHub PR URLs found.
+ */
+async function fetchThreadPullRequests(
+  token: string,
+  channel: string,
+  threadTs: string,
+): Promise<string[]> {
+  const replies = await slackGet<ConversationsRepliesResponse>("conversations.replies", token, {
+    channel,
+    ts: threadTs,
+  });
+
+  if (!replies.ok) return [];
+
+  const prUrls: string[] = [];
+  for (const msg of replies.messages ?? []) {
+    if (!msg.bot_id) continue;
+    if (msg.ts === threadTs) continue; // skip the original message
+    prUrls.push(...extractGithubPrUrls(msg.text ?? ""));
+  }
+
+  return [...new Set(prUrls)];
 }
 
 /**
@@ -77,6 +124,7 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
 
         const { name, avatar } = userCache[userId];
         const prompt = (msg.text ?? "").replace(new RegExp(`<@${botUserId}>\\s*`, "g"), "").trim();
+        const pullRequests = await fetchThreadPullRequests(token, channel.id, msg.ts!);
 
         tags.push({
           user_id: userId,
@@ -86,6 +134,7 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
           timestamp: new Date(parseFloat(msg.ts!) * 1000).toISOString(),
           channel_id: channel.id,
           channel_name: channel.name,
+          pull_requests: pullRequests,
         });
       }
 

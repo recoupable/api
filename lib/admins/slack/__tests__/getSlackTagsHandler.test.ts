@@ -25,6 +25,7 @@ const mockTags = [
     timestamp: "2024-01-15T10:30:00.000Z",
     channel_id: "C012AB3CD",
     channel_name: "dev-team",
+    pull_requests: ["https://github.com/recoupable-com/api/pull/42"],
   },
   {
     user_id: "U098ZY7WX",
@@ -34,6 +35,7 @@ const mockTags = [
     timestamp: "2024-01-14T08:00:00.000Z",
     channel_id: "C012AB3CD",
     channel_name: "dev-team",
+    pull_requests: [],
   },
 ];
 
