@@ -48,6 +48,13 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<FetchSlac
 
   const botUserId = await getBotUserId(token);
   const mentionPattern = `<@${botUserId}>`;
+  // Debug: raw conversations.list response to see if there's an error
+  const rawResp = await slackGet<{
+    ok: boolean;
+    error?: string;
+    channels?: Array<{ id: string; name: string }>;
+  }>("conversations.list", token, { limit: "5" });
+
   const channels = await getBotChannels(token);
   const cutoffTs = getCutoffTs(period);
   const _debug: Record<string, unknown> = {
@@ -57,6 +64,12 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<FetchSlac
     channelNames: channels.map((c) => c.name),
     cutoffTs,
     period,
+    rawConversationsListResponse: {
+      ok: rawResp.ok,
+      error: rawResp.error,
+      channelCount: rawResp.channels?.length,
+      channels: rawResp.channels?.map((c) => c.name),
+    },
     channelDetails: [] as unknown[],
   };
   const tags: SlackTag[] = [];
