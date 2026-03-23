@@ -22,9 +22,10 @@ export async function getSlackTagsHandler(request: NextRequest): Promise<NextRes
     }
 
     const tags = await fetchSlackMentions(query.period);
+    const totalPullRequests = tags.reduce((sum, tag) => sum + tag.pull_requests.length, 0);
 
     return NextResponse.json(
-      { status: "success", total: tags.length, tags },
+      { status: "success", total: tags.length, total_pull_requests: totalPullRequests, tags },
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {
