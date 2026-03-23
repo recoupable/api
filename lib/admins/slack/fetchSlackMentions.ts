@@ -67,6 +67,7 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
         if (msg.bot_id) continue;
         if (!msg.user) continue;
         if (!msg.text?.includes(mentionPattern)) continue;
+        if (!msg.ts) continue;
 
         const userId = msg.user;
 
@@ -82,7 +83,7 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
           user_name: name,
           user_avatar: avatar,
           prompt,
-          timestamp: new Date(parseFloat(msg.ts ?? "0") * 1000).toISOString(),
+          timestamp: new Date(parseFloat(msg.ts!) * 1000).toISOString(),
           channel_id: channel.id,
           channel_name: channel.name,
         });

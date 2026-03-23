@@ -22,6 +22,9 @@ export async function getSlackUserInfo(
   userId: string,
 ): Promise<{ name: string; avatar: string | null }> {
   const resp = await slackGet<UsersInfoResponse>("users.info", token, { user: userId });
+  if (!resp.ok) {
+    return { name: userId, avatar: null };
+  }
   const profile = resp.user?.profile;
   return {
     name: profile?.display_name || profile?.real_name || resp.user?.real_name || userId,

@@ -14,6 +14,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   return getSlackTagsHandler(request);
 }
 
+/** CORS preflight handler. */
 export async function OPTIONS(): Promise<NextResponse> {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
 }
