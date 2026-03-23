@@ -35,7 +35,12 @@ interface ConversationsHistoryResponse {
  * @param period - Time period filter: "all", "daily", "weekly", or "monthly"
  * @returns Array of SlackTag objects representing each mention event
  */
-export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[]> {
+export interface FetchSlackMentionsResult {
+  tags: SlackTag[];
+  _debug: Record<string, unknown>;
+}
+
+export async function fetchSlackMentions(period: AdminPeriod): Promise<FetchSlackMentionsResult> {
   const token = process.env.SLACK_BOT_TOKEN;
   if (!token) {
     throw new Error("SLACK_BOT_TOKEN is not configured");
@@ -45,7 +50,15 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
   const mentionPattern = `<@${botUserId}>`;
   const channels = await getBotChannels(token);
   const cutoffTs = getCutoffTs(period);
-  console.log("[DEBUG] fetchSlackMentions:", { botUserId, mentionPattern, channelCount: channels.length, channelNames: channels.map((c) => c.name), cutoffTs, period });
+  const _debug: Record<string, unknown> = {
+    botUserId,
+    mentionPattern,
+    channelCount: channels.length,
+    channelNames: channels.map((c) => c.name),
+    cutoffTs,
+    period,
+    channelDetails: [] as unknown[],
+  };
   const tags: SlackTag[] = [];
   const userCache: Record<string, { name: string; avatar: string | null }> = {};
 
@@ -63,13 +76,20 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
         params,
       );
       if (!history.ok) {
-        console.log("[DEBUG] history not ok:", { channel: channel.name, error: history.error });
+        (_debug.channelDetails as unknown[]).push({
+          channel: channel.name,
+          error: history.error,
+        });
         break;
       }
 
       const msgs = history.messages ?? [];
-      const mentionMsgs = msgs.filter((m) => m.text?.includes(mentionPattern));
-      console.log("[DEBUG] channel history:", { channel: channel.name, totalMessages: msgs.length, mentionMatches: mentionMsgs.length, sampleTexts: msgs.slice(0, 3).map((m) => m.text?.substring(0, 80)) });
+      (_debug.channelDetails as unknown[]).push({
+        channel: channel.name,
+        totalMessages: msgs.length,
+        mentionMatches: msgs.filter((m) => m.text?.includes(mentionPattern)).length,
+        sampleTexts: msgs.slice(0, 3).map((m) => m.text?.substring(0, 100)),
+      });
 
       for (const msg of msgs) {
         if (msg.bot_id) continue;
@@ -102,5 +122,5 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
 
   tags.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-  return tags;
+  return { tags, _debug };
 }
