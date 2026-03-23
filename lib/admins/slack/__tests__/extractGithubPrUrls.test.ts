@@ -72,4 +72,56 @@ describe("extractGithubPrUrls", () => {
     ];
     expect(extractGithubPrUrls("", attachments)).toEqual([]);
   });
+
+  it("extracts PR URLs from Block Kit blocks", () => {
+    const blocks = [
+      {
+        type: "actions",
+        elements: [
+          { type: "button", url: "https://github.com/recoupable/admin/pull/21" },
+          { type: "button", url: "https://github.com/recoupable/admin/pull/21" },
+        ],
+      },
+    ];
+    expect(extractGithubPrUrls("", undefined, blocks)).toEqual([
+      "https://github.com/recoupable/admin/pull/21",
+    ]);
+  });
+
+  it("extracts PR URLs from nested block elements", () => {
+    const blocks = [
+      {
+        type: "rich_text",
+        elements: [
+          {
+            type: "rich_text_section",
+            elements: [{ type: "link", url: "https://github.com/recoupable/api/pull/332" }],
+          },
+        ],
+      },
+    ];
+    expect(extractGithubPrUrls("", undefined, blocks)).toEqual([
+      "https://github.com/recoupable/api/pull/332",
+    ]);
+  });
+
+  it("extracts PR URLs from text, attachments, and blocks combined", () => {
+    const text = "See https://github.com/recoupable/docs/pull/75";
+    const attachments = [
+      {
+        actions: [{ type: "button", url: "https://github.com/recoupable/api/pull/332" }],
+      },
+    ];
+    const blocks = [
+      {
+        type: "actions",
+        elements: [{ type: "button", url: "https://github.com/recoupable/admin/pull/21" }],
+      },
+    ];
+    expect(extractGithubPrUrls(text, attachments, blocks)).toEqual([
+      "https://github.com/recoupable/docs/pull/75",
+      "https://github.com/recoupable/api/pull/332",
+      "https://github.com/recoupable/admin/pull/21",
+    ]);
+  });
 });

@@ -4,7 +4,7 @@ import { getBotUserId } from "@/lib/slack/getBotUserId";
 import { getBotChannels } from "@/lib/slack/getBotChannels";
 import { getSlackUserInfo } from "@/lib/slack/getSlackUserInfo";
 import { getCutoffTs } from "./getCutoffTs";
-import { extractGithubPrUrls, type SlackAttachment } from "./extractGithubPrUrls";
+import { fetchThreadPullRequests } from "./fetchThreadPullRequests";
 
 export interface SlackTag {
   user_id: string;
@@ -28,85 +28,6 @@ interface ConversationsHistoryResponse {
     bot_id?: string;
   }>;
   response_metadata?: { next_cursor?: string };
-}
-
-interface SlackBlock {
-  type: string;
-  elements?: Array<{
-    type: string;
-    url?: string;
-    elements?: Array<{
-      type: string;
-      url?: string;
-    }>;
-  }>;
-}
-
-interface ConversationsRepliesResponse {
-  ok: boolean;
-  error?: string;
-  messages?: Array<{
-    type: string;
-    user?: string;
-    text?: string;
-    ts?: string;
-    bot_id?: string;
-    attachments?: SlackAttachment[];
-    blocks?: SlackBlock[];
-  }>;
-}
-
-/**
- * Extracts GitHub PR URLs from Slack Block Kit blocks.
- */
-function extractPrUrlsFromBlocks(blocks: SlackBlock[]): string[] {
-  const prUrlPattern = /^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+$/;
-  const urls: string[] = [];
-
-  for (const block of blocks) {
-    for (const element of block.elements ?? []) {
-      if (element.url && prUrlPattern.test(element.url)) {
-        urls.push(element.url);
-      }
-      // Check nested elements (e.g. section blocks with accessory buttons)
-      for (const nested of element.elements ?? []) {
-        if (nested.url && prUrlPattern.test(nested.url)) {
-          urls.push(nested.url);
-        }
-      }
-    }
-  }
-
-  return urls;
-}
-
-/**
- * Fetches bot replies in a Slack thread and returns any GitHub PR URLs found.
- * Extracts URLs from message text, attachment action buttons, and Block Kit blocks.
- */
-async function fetchThreadPullRequests(
-  token: string,
-  channel: string,
-  threadTs: string,
-): Promise<string[]> {
-  const replies = await slackGet<ConversationsRepliesResponse>("conversations.replies", token, {
-    channel,
-    ts: threadTs,
-  });
-
-  if (!replies.ok) return [];
-
-  const prUrls: string[] = [];
-  for (const msg of replies.messages ?? []) {
-    if (!msg.bot_id) continue;
-    if (msg.ts === threadTs) continue;
-    prUrls.push(...extractGithubPrUrls(msg.text ?? "", msg.attachments));
-    if (msg.blocks) {
-      prUrls.push(...extractPrUrlsFromBlocks(msg.blocks));
-    }
-  }
-
-  return [...new Set(prUrls)];
 }
 
 /**
