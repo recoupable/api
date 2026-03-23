@@ -23,7 +23,7 @@ export async function getSlackTagsHandler(request: NextRequest): Promise<NextRes
 
     const tags = await fetchSlackMentions(query.period);
     const totalPullRequests = tags.reduce((sum, tag) => sum + tag.pull_requests.length, 0);
-    const tagsWithPullRequests = tags.filter((tag) => tag.pull_requests.length > 0).length;
+    const tagsWithPullRequests = tags.filter(tag => tag.pull_requests.length > 0).length;
 
     return NextResponse.json(
       {
