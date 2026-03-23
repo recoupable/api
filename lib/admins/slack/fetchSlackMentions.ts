@@ -60,10 +60,21 @@ async function fetchThreadPullRequests(
   if (!replies.ok) return [];
 
   const prUrls: string[] = [];
+  const _debugReplies: unknown[] = [];
   for (const msg of replies.messages ?? []) {
     if (!msg.bot_id) continue;
-    if (msg.ts === threadTs) continue; // skip the original message
+    if (msg.ts === threadTs) continue;
+    _debugReplies.push({
+      text: (msg.text ?? "").substring(0, 200),
+      hasAttachments: !!msg.attachments,
+      attachmentCount: msg.attachments?.length,
+      attachments: msg.attachments,
+      rawKeys: Object.keys(msg),
+    });
     prUrls.push(...extractGithubPrUrls(msg.text ?? "", msg.attachments));
+  }
+  if (_debugReplies.length > 0 && prUrls.length === 0) {
+    console.log("[DEBUG] thread with replies but no PRs:", JSON.stringify(_debugReplies));
   }
 
   return [...new Set(prUrls)];
