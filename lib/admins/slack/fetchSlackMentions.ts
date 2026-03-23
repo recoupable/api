@@ -45,6 +45,7 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
   const mentionPattern = `<@${botUserId}>`;
   const channels = await getBotChannels(token);
   const cutoffTs = getCutoffTs(period);
+  console.log("[DEBUG] fetchSlackMentions:", { botUserId, mentionPattern, channelCount: channels.length, channelNames: channels.map((c) => c.name), cutoffTs, period });
   const tags: SlackTag[] = [];
   const userCache: Record<string, { name: string; avatar: string | null }> = {};
 
@@ -61,9 +62,16 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
         token,
         params,
       );
-      if (!history.ok) break;
+      if (!history.ok) {
+        console.log("[DEBUG] history not ok:", { channel: channel.name, error: history.error });
+        break;
+      }
 
-      for (const msg of history.messages ?? []) {
+      const msgs = history.messages ?? [];
+      const mentionMsgs = msgs.filter((m) => m.text?.includes(mentionPattern));
+      console.log("[DEBUG] channel history:", { channel: channel.name, totalMessages: msgs.length, mentionMatches: mentionMsgs.length, sampleTexts: msgs.slice(0, 3).map((m) => m.text?.substring(0, 80)) });
+
+      for (const msg of msgs) {
         if (msg.bot_id) continue;
         if (!msg.user) continue;
         if (!msg.text?.includes(mentionPattern)) continue;
