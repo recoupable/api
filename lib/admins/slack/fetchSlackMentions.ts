@@ -15,7 +15,6 @@ export interface SlackTag {
   channel_id: string;
   channel_name: string;
   pull_requests: string[];
-  _rawReplies?: unknown[];
 }
 
 interface ConversationsHistoryResponse {
@@ -31,22 +30,59 @@ interface ConversationsHistoryResponse {
   response_metadata?: { next_cursor?: string };
 }
 
+interface SlackBlock {
+  type: string;
+  elements?: Array<{
+    type: string;
+    url?: string;
+    elements?: Array<{
+      type: string;
+      url?: string;
+    }>;
+  }>;
+}
+
 interface ConversationsRepliesResponse {
   ok: boolean;
   error?: string;
-  messages?: Array<Record<string, unknown> & {
+  messages?: Array<{
     type: string;
     user?: string;
     text?: string;
     ts?: string;
     bot_id?: string;
     attachments?: SlackAttachment[];
+    blocks?: SlackBlock[];
   }>;
 }
 
 /**
+ * Extracts GitHub PR URLs from Slack Block Kit blocks.
+ */
+function extractPrUrlsFromBlocks(blocks: SlackBlock[]): string[] {
+  const prUrlPattern = /^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+$/;
+  const urls: string[] = [];
+
+  for (const block of blocks) {
+    for (const element of block.elements ?? []) {
+      if (element.url && prUrlPattern.test(element.url)) {
+        urls.push(element.url);
+      }
+      // Check nested elements (e.g. section blocks with accessory buttons)
+      for (const nested of element.elements ?? []) {
+        if (nested.url && prUrlPattern.test(nested.url)) {
+          urls.push(nested.url);
+        }
+      }
+    }
+  }
+
+  return urls;
+}
+
+/**
  * Fetches bot replies in a Slack thread and returns any GitHub PR URLs found.
- * Extracts URLs from both message text and attachment action buttons.
+ * Extracts URLs from message text, attachment action buttons, and Block Kit blocks.
  */
 async function fetchThreadPullRequests(
   token: string,
@@ -61,15 +97,16 @@ async function fetchThreadPullRequests(
   if (!replies.ok) return [];
 
   const prUrls: string[] = [];
-  const _rawReplies: unknown[] = [];
   for (const msg of replies.messages ?? []) {
     if (!msg.bot_id) continue;
     if (msg.ts === threadTs) continue;
-    _rawReplies.push(msg);
     prUrls.push(...extractGithubPrUrls(msg.text ?? "", msg.attachments));
+    if (msg.blocks) {
+      prUrls.push(...extractPrUrlsFromBlocks(msg.blocks));
+    }
   }
 
-  return { prUrls: [...new Set(prUrls)], _rawReplies };
+  return [...new Set(prUrls)];
 }
 
 /**
@@ -121,7 +158,7 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
 
         const { name, avatar } = userCache[userId];
         const prompt = (msg.text ?? "").replace(new RegExp(`<@${botUserId}>\\s*`, "g"), "").trim();
-        const threadResult = await fetchThreadPullRequests(token, channel.id, msg.ts!);
+        const pullRequests = await fetchThreadPullRequests(token, channel.id, msg.ts!);
 
         tags.push({
           user_id: userId,
@@ -131,8 +168,7 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
           timestamp: new Date(parseFloat(msg.ts!) * 1000).toISOString(),
           channel_id: channel.id,
           channel_name: channel.name,
-          pull_requests: threadResult.prUrls,
-          _rawReplies: threadResult._rawReplies,
+          pull_requests: pullRequests,
         });
       }
 
