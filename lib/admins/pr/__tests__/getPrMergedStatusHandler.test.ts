@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { getPrMergedStatusHandler } from "../getPrMergedStatusHandler";
+import { getPrStatusHandler } from "../getPrStatusHandler";
 import { validateGetCodingPrQuery } from "../validateGetCodingPrQuery";
-import { fetchGithubPrMergedStatus } from "../fetchGithubPrMergedStatus";
+import { fetchGithubPrStatus } from "../fetchGithubPrStatus";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -12,72 +12,65 @@ vi.mock("../validateGetCodingPrQuery", () => ({
   validateGetCodingPrQuery: vi.fn(),
 }));
 
-vi.mock("../fetchGithubPrMergedStatus", () => ({
-  fetchGithubPrMergedStatus: vi.fn(),
+vi.mock("../fetchGithubPrStatus", () => ({
+  fetchGithubPrStatus: vi.fn(),
 }));
 
 const PR_URL_1 = "https://github.com/recoupable/api/pull/42";
 const PR_URL_2 = "https://github.com/recoupable/chat/pull/100";
 
-/**
- * Creates a mock NextRequest with pull_requests query params.
- *
- * @param urls - PR URLs to include as pull_requests query params
- * @returns A NextRequest with the given pull_requests query params
- */
 function makeRequest(urls: string[] = [PR_URL_1]) {
   const params = new URLSearchParams();
   urls.forEach(url => params.append("pull_requests", url));
   return new NextRequest(`https://example.com/api/admins/coding/pr?${params}`);
 }
 
-describe("getPrMergedStatusHandler", () => {
+describe("getPrStatusHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe("successful cases", () => {
-    it("returns 200 with merged status for each PR", async () => {
+    it("returns 200 with status for each PR", async () => {
       vi.mocked(validateGetCodingPrQuery).mockResolvedValue({
         pull_requests: [PR_URL_1, PR_URL_2],
       });
-      vi.mocked(fetchGithubPrMergedStatus).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+      vi.mocked(fetchGithubPrStatus).mockResolvedValueOnce("merged").mockResolvedValueOnce("open");
 
-      const response = await getPrMergedStatusHandler(makeRequest([PR_URL_1, PR_URL_2]));
+      const response = await getPrStatusHandler(makeRequest([PR_URL_1, PR_URL_2]));
       const body = await response.json();
 
       expect(response.status).toBe(200);
       expect(body.status).toBe("success");
       expect(body.pull_requests).toEqual([
-        { url: PR_URL_1, merged: true },
-        { url: PR_URL_2, merged: false },
+        { url: PR_URL_1, status: "merged" },
+        { url: PR_URL_2, status: "open" },
       ]);
     });
 
-    it("returns 200 with single PR status", async () => {
+    it("returns closed status for closed PRs", async () => {
       vi.mocked(validateGetCodingPrQuery).mockResolvedValue({
         pull_requests: [PR_URL_1],
       });
-      vi.mocked(fetchGithubPrMergedStatus).mockResolvedValue(false);
+      vi.mocked(fetchGithubPrStatus).mockResolvedValue("closed");
 
-      const response = await getPrMergedStatusHandler(makeRequest());
+      const response = await getPrStatusHandler(makeRequest());
       const body = await response.json();
 
       expect(response.status).toBe(200);
-      expect(body.pull_requests).toHaveLength(1);
-      expect(body.pull_requests[0]).toEqual({ url: PR_URL_1, merged: false });
+      expect(body.pull_requests[0]).toEqual({ url: PR_URL_1, status: "closed" });
     });
 
-    it("calls fetchGithubPrMergedStatus for each PR URL", async () => {
+    it("calls fetchGithubPrStatus for each PR URL", async () => {
       vi.mocked(validateGetCodingPrQuery).mockResolvedValue({
         pull_requests: [PR_URL_1, PR_URL_2],
       });
-      vi.mocked(fetchGithubPrMergedStatus).mockResolvedValue(true);
+      vi.mocked(fetchGithubPrStatus).mockResolvedValue("merged");
 
-      await getPrMergedStatusHandler(makeRequest([PR_URL_1, PR_URL_2]));
+      await getPrStatusHandler(makeRequest([PR_URL_1, PR_URL_2]));
 
-      expect(fetchGithubPrMergedStatus).toHaveBeenCalledWith(PR_URL_1);
-      expect(fetchGithubPrMergedStatus).toHaveBeenCalledWith(PR_URL_2);
+      expect(fetchGithubPrStatus).toHaveBeenCalledWith(PR_URL_1);
+      expect(fetchGithubPrStatus).toHaveBeenCalledWith(PR_URL_2);
     });
   });
 
@@ -89,18 +82,18 @@ describe("getPrMergedStatusHandler", () => {
       );
       vi.mocked(validateGetCodingPrQuery).mockResolvedValue(errorResponse);
 
-      const response = await getPrMergedStatusHandler(makeRequest());
+      const response = await getPrStatusHandler(makeRequest());
 
       expect(response.status).toBe(403);
     });
 
-    it("returns 500 when fetchGithubPrMergedStatus throws", async () => {
+    it("returns 500 when fetchGithubPrStatus throws", async () => {
       vi.mocked(validateGetCodingPrQuery).mockResolvedValue({
         pull_requests: [PR_URL_1],
       });
-      vi.mocked(fetchGithubPrMergedStatus).mockRejectedValue(new Error("Network error"));
+      vi.mocked(fetchGithubPrStatus).mockRejectedValue(new Error("Network error"));
 
-      const response = await getPrMergedStatusHandler(makeRequest());
+      const response = await getPrStatusHandler(makeRequest());
       const body = await response.json();
 
       expect(response.status).toBe(500);

@@ -1,19 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getPrMergedStatusHandler } from "@/lib/admins/pr/getPrMergedStatusHandler";
+import { getPrStatusHandler } from "@/lib/admins/pr/getPrStatusHandler";
 
 /**
  * GET /api/admins/coding/pr
  *
- * Returns the merged status for each provided GitHub pull request URL.
+ * Returns the status (open, closed, or merged) for each provided GitHub PR URL.
  * Accepts one or more `pull_requests` query parameters (GitHub PR URLs).
- * Uses the GitHub REST API to check merge status.
+ * Uses the GitHub REST API to check each PR's state.
  * Requires admin authentication.
  *
  * @param request
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  return getPrMergedStatusHandler(request);
+  return getPrStatusHandler(request);
 }
 
 /** CORS preflight handler. */
