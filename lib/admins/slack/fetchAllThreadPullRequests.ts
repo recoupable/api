@@ -16,10 +16,14 @@ export async function fetchAllThreadPullRequests(
   token: string,
   threads: ThreadRef[],
 ): Promise<string[][]> {
-  const BATCH_SIZE = 10;
+  const BATCH_SIZE = 5;
+  const BATCH_DELAY_MS = 1100;
   const results: string[][] = new Array(threads.length).fill([]);
 
   for (let i = 0; i < threads.length; i += BATCH_SIZE) {
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+    }
     const batch = threads.slice(i, i + BATCH_SIZE);
     const batchResults = await Promise.all(
       batch.map(t => fetchThreadPullRequests(token, t.channelId, t.ts)),

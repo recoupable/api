@@ -22,9 +22,18 @@ export async function slackGet<T extends SlackApiResponse>(
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, value);
   }
-  const res = await fetch(url.toString(), {
+  let res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${token}` },
   });
+
+  if (res.status === 429) {
+    const retryAfter = parseInt(res.headers.get("Retry-After") ?? "2", 10);
+    await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+    res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }
+
   if (!res.ok) {
     throw new Error(`Slack API ${endpoint} returned HTTP ${res.status}`);
   }

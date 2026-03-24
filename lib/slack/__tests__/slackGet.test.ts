@@ -33,4 +33,40 @@ describe("slackGet", () => {
     const result = await slackGet("auth.test", "token");
     expect(result).toEqual({ ok: true, user_id: "U123" });
   });
+
+  it("retries once on 429 rate limit", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        headers: new Headers({ "Retry-After": "1" }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ ok: true }),
+      });
+
+    const result = await slackGet("auth.test", "token");
+    expect(result).toEqual({ ok: true });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws if retry after 429 also fails", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        headers: new Headers({ "Retry-After": "1" }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        headers: new Headers({ "Retry-After": "1" }),
+      });
+
+    await expect(slackGet("auth.test", "token")).rejects.toThrow(
+      "Slack API auth.test returned HTTP 429",
+    );
+  });
 });
