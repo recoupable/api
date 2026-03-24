@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetCodingPrQuery } from "./validateGetCodingPrQuery";
-import { fetchGithubPrStatus } from "./fetchGithubPrStatus";
+import { fetchGithubPrStatus } from "@/lib/github/fetchGithubPrStatus";
 
 /**
  * Handler for GET /api/admins/coding/pr

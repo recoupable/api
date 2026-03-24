@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getPrStatusHandler } from "../getPrStatusHandler";
 import { validateGetCodingPrQuery } from "../validateGetCodingPrQuery";
-import { fetchGithubPrStatus } from "../fetchGithubPrStatus";
+import { fetchGithubPrStatus } from "@/lib/github/fetchGithubPrStatus";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -12,7 +12,7 @@ vi.mock("../validateGetCodingPrQuery", () => ({
   validateGetCodingPrQuery: vi.fn(),
 }));
 
-vi.mock("../fetchGithubPrStatus", () => ({
+vi.mock("@/lib/github/fetchGithubPrStatus", () => ({
   fetchGithubPrStatus: vi.fn(),
 }));
 
