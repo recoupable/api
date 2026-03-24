@@ -18,18 +18,19 @@ export async function fetchAllThreadPullRequests(
 ): Promise<string[][]> {
   const BATCH_SIZE = 5;
   const BATCH_DELAY_MS = 1100;
-  const results: string[][] = new Array(threads.length).fill([]);
+  const results: string[][] = Array.from({ length: threads.length }, () => []);
 
   for (let i = 0; i < threads.length; i += BATCH_SIZE) {
     if (i > 0) {
       await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
     }
     const batch = threads.slice(i, i + BATCH_SIZE);
-    const batchResults = await Promise.all(
+    const batchResults = await Promise.allSettled(
       batch.map(t => fetchThreadPullRequests(token, t.channelId, t.ts)),
     );
     for (let j = 0; j < batch.length; j++) {
-      results[i + j] = batchResults[j];
+      const result = batchResults[j];
+      results[i + j] = result.status === "fulfilled" ? result.value : [];
     }
   }
 
