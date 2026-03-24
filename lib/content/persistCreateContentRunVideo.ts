@@ -27,6 +27,8 @@ type CreateContentOutput = {
  * and returns the run with normalized output.
  *
  * This keeps Supabase writes in API only.
+ *
+ * @param run
  */
 export async function persistCreateContentRunVideo<T extends TriggerRunLike>(run: T): Promise<T> {
   if (run.taskIdentifier !== CREATE_CONTENT_TASK_ID || !isCompletedRun(run)) {
