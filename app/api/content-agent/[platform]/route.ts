@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
 import { after } from "next/server";
-import { contentAgentBot } from "@/lib/content-agent/bot";
+import { getContentAgentBot } from "@/lib/content-agent/bot";
 import { handleUrlVerification } from "@/lib/slack/handleUrlVerification";
-import "@/lib/content-agent/handlers/registerHandlers";
+import { ensureHandlersRegistered } from "@/lib/content-agent/handlers/registerHandlers";
 
 /**
  * GET /api/content-agent/[platform]
@@ -19,8 +19,10 @@ export async function GET(
   { params }: { params: Promise<{ platform: string }> },
 ) {
   const { platform } = await params;
+  ensureHandlersRegistered();
+  const bot = getContentAgentBot();
 
-  const handler = contentAgentBot.webhooks[platform as keyof typeof contentAgentBot.webhooks];
+  const handler = bot.webhooks[platform as keyof typeof bot.webhooks];
 
   if (!handler) {
     return new Response("Unknown platform", { status: 404 });
@@ -51,9 +53,11 @@ export async function POST(
     if (verification) return verification;
   }
 
-  await contentAgentBot.initialize();
+  ensureHandlersRegistered();
+  const bot = getContentAgentBot();
+  await bot.initialize();
 
-  const handler = contentAgentBot.webhooks[platform as keyof typeof contentAgentBot.webhooks];
+  const handler = bot.webhooks[platform as keyof typeof bot.webhooks];
 
   if (!handler) {
     return new Response("Unknown platform", { status: 404 });

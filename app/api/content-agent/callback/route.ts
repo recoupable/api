@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { contentAgentBot } from "@/lib/content-agent/bot";
+import { getContentAgentBot } from "@/lib/content-agent/bot";
 import { handleContentAgentCallback } from "@/lib/content-agent/handleContentAgentCallback";
 
 /**
@@ -12,6 +12,6 @@ import { handleContentAgentCallback } from "@/lib/content-agent/handleContentAge
  * @returns The callback response
  */
 export async function POST(request: NextRequest) {
-  await contentAgentBot.initialize();
+  await getContentAgentBot().initialize();
   return handleContentAgentCallback(request);
 }

@@ -47,8 +47,18 @@ export function createContentAgentBot() {
 
 export type ContentAgentBot = ReturnType<typeof createContentAgentBot>;
 
+let _bot: ContentAgentBot | null = null;
+
 /**
- * Singleton bot instance. Registers as the Chat SDK singleton
- * so ThreadImpl can resolve adapters lazily from thread IDs.
+ * Returns the lazily-initialized content agent bot singleton.
+ * Defers creation until first call so the Vercel build does not
+ * crash when content-agent env vars are not yet configured.
+ *
+ * @returns The content agent bot singleton
  */
-export const contentAgentBot = createContentAgentBot().registerSingleton();
+export function getContentAgentBot(): ContentAgentBot {
+  if (!_bot) {
+    _bot = createContentAgentBot().registerSingleton();
+  }
+  return _bot;
+}
