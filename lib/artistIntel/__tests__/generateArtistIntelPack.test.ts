@@ -1,0 +1,391 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { generateArtistIntelPack } from "@/lib/artistIntel/generateArtistIntelPack";
+
+import { getArtistSpotifyData } from "@/lib/artistIntel/getArtistSpotifyData";
+import { getArtistMusicAnalysis } from "@/lib/artistIntel/getArtistMusicAnalysis";
+import { getArtistWebContext } from "@/lib/artistIntel/getArtistWebContext";
+import { buildArtistMarketingCopy } from "@/lib/artistIntel/buildArtistMarketingCopy";
+import { getRelatedArtistsData } from "@/lib/artistIntel/getRelatedArtistsData";
+
+vi.mock("@/lib/artistIntel/getArtistSpotifyData", () => ({
+  getArtistSpotifyData: vi.fn(),
+}));
+vi.mock("@/lib/artistIntel/getArtistMusicAnalysis", () => ({
+  getArtistMusicAnalysis: vi.fn(),
+}));
+vi.mock("@/lib/artistIntel/getArtistWebContext", () => ({
+  getArtistWebContext: vi.fn(),
+}));
+vi.mock("@/lib/artistIntel/buildArtistMarketingCopy", () => ({
+  buildArtistMarketingCopy: vi.fn(),
+}));
+vi.mock("@/lib/artistIntel/getRelatedArtistsData", () => ({
+  getRelatedArtistsData: vi.fn(),
+}));
+
+const mockSpotifyData = {
+  artist: {
+    id: "spotify-123",
+    name: "Test Artist",
+    genres: ["pop", "indie"],
+    followers: { total: 1_000_000 },
+    popularity: 75,
+    images: [{ url: "https://example.com/image.jpg", height: 640, width: 640 }],
+  },
+  topTracks: [
+    {
+      id: "track-123",
+      name: "Top Hit",
+      preview_url: "https://p.scdn.co/preview.mp3",
+      popularity: 80,
+      album: { name: "Great Album", images: [] },
+    },
+  ],
+  previewUrl: "https://p.scdn.co/preview.mp3",
+};
+
+const mockMusicAnalysis = {
+  catalog_metadata: { genre: "pop", bpm: 120 },
+  audience_profile: { age_range: "18-34" },
+  playlist_pitch: { playlists: ["Today's Top Hits"] },
+  mood_tags: { moods: ["energetic", "uplifting"] },
+};
+
+const mockWebContext = {
+  summary: "Artist news summary",
+  citations: ["https://example.com"],
+};
+
+const mockMarketingCopy = {
+  artist_one_sheet: "Test Artist — rising indie pop act with 1M followers...",
+  ar_memo: "ARTIST: Test Artist\nGENRE: pop\nRECOMMENDATION: Monitor for 90 days.",
+  sync_brief: "Track fits: Netflix drama, lifestyle brand campaign, yoga app.",
+  spotify_playlist_targets: ["New Music Friday", "Pollen", "Fresh Finds"],
+  brand_partnership_pitch:
+    "Nike — high-energy BPM aligns with Run Club. Glossier — indie aesthetic.",
+  playlist_pitch_email: "Dear curator...",
+  instagram_caption: "New music out now! #pop",
+  tiktok_caption: "You need to hear this! #music",
+  twitter_post: "New drop! 🎵",
+  press_release_opener: "Test Artist releases their latest work...",
+  key_talking_points: ["1M Spotify followers", "Rising indie-pop artist"],
+};
+
+describe("generateArtistIntelPack", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe("successful cases", () => {
+    it("returns a complete intelligence pack when all services succeed", async () => {
+      vi.mocked(getArtistSpotifyData).mockResolvedValue(mockSpotifyData);
+      vi.mocked(getArtistMusicAnalysis).mockResolvedValue(mockMusicAnalysis);
+      vi.mocked(getArtistWebContext).mockResolvedValue(mockWebContext);
+      vi.mocked(buildArtistMarketingCopy).mockResolvedValue(mockMarketingCopy);
+
+      const result = await generateArtistIntelPack("Test Artist");
+
+      expect(result.type).toBe("success");
+      if (result.type !== "success") return;
+
+      expect(result.pack.artist.name).toBe("Test Artist");
+      expect(result.pack.artist.spotify_id).toBe("spotify-123");
+      expect(result.pack.artist.followers).toBe(1_000_000);
+      expect(result.pack.artist.genres).toEqual(["pop", "indie"]);
+      expect(result.pack.artist.popularity).toBe(75);
+      expect(result.pack.artist.image_url).toBe("https://example.com/image.jpg");
+    });
+
+    it("returns top track data correctly", async () => {
+      vi.mocked(getArtistSpotifyData).mockResolvedValue(mockSpotifyData);
+      vi.mocked(getArtistMusicAnalysis).mockResolvedValue(mockMusicAnalysis);
+      vi.mocked(getArtistWebContext).mockResolvedValue(mockWebContext);
+      vi.mocked(buildArtistMarketingCopy).mockResolvedValue(mockMarketingCopy);
+
+      const result = await generateArtistIntelPack("Test Artist");
+
+      expect(result.type).toBe("success");
+      if (result.type !== "success") return;
+
+      expect(result.pack.top_track?.name).toBe("Top Hit");
+      expect(result.pack.top_track?.preview_url).toBe("https://p.scdn.co/preview.mp3");
+      expect(result.pack.top_track?.album_name).toBe("Great Album");
+    });
+
+    it("returns music analysis and web context", async () => {
+      vi.mocked(getArtistSpotifyData).mockResolvedValue(mockSpotifyData);
+      vi.mocked(getArtistMusicAnalysis).mockResolvedValue(mockMusicAnalysis);
+      vi.mocked(getArtistWebContext).mockResolvedValue(mockWebContext);
+      vi.mocked(buildArtistMarketingCopy).mockResolvedValue(mockMarketingCopy);
+
+      const result = await generateArtistIntelPack("Test Artist");
+
+      expect(result.type).toBe("success");
+      if (result.type !== "success") return;
+
+      expect(result.pack.music_analysis).toEqual(mockMusicAnalysis);
+      expect(result.pack.web_context).toEqual(mockWebContext);
+      expect(result.pack.marketing_pack).toEqual(mockMarketingCopy);
+    });
+
+    it("calls music analysis with the preview URL", async () => {
+      vi.mocked(getArtistSpotifyData).mockResolvedValue(mockSpotifyData);
+      vi.mocked(getArtistMusicAnalysis).mockResolvedValue(mockMusicAnalysis);
+      vi.mocked(getArtistWebContext).mockResolvedValue(mockWebContext);
+      vi.mocked(buildArtistMarketingCopy).mockResolvedValue(mockMarketingCopy);
+
+      await generateArtistIntelPack("Test Artist");
+
+      expect(getArtistMusicAnalysis).toHaveBeenCalledWith("https://p.scdn.co/preview.mp3");
+      expect(getArtistWebContext).toHaveBeenCalledWith("Test Artist");
+    });
+
+    it("skips music analysis when no preview URL is available", async () => {
+      const noPreviewData = { ...mockSpotifyData, previewUrl: null };
+      vi.mocked(getArtistSpotifyData).mockResolvedValue(noPreviewData);
+      vi.mocked(getArtistWebContext).mockResolvedValue(mockWebContext);
+      vi.mocked(buildArtistMarketingCopy).mockResolvedValue(mockMarketingCopy);
+
+      const result = await generateArtistIntelPack("Test Artist");
+
+      expect(result.type).toBe("success");
+      expect(getArtistMusicAnalysis).not.toHaveBeenCalled();
+      if (result.type === "success") {
+        expect(result.pack.music_analysis).toBeNull();
+      }
+    });
+
+    it("succeeds even when music analysis returns null", async () => {
+      vi.mocked(getArtistSpotifyData).mockResolvedValue(mockSpotifyData);
+      vi.mocked(getArtistMusicAnalysis).mockResolvedValue(null);
+      vi.mocked(getArtistWebContext).mockResolvedValue(mockWebContext);
+      vi.mocked(buildArtistMarketingCopy).mockResolvedValue(mockMarketingCopy);
+
+      const result = await generateArtistIntelPack("Test Artist");
+
+      expect(result.type).toBe("success");
+      if (result.type === "success") {
+        expect(result.pack.music_analysis).toBeNull();
+      }
+    });
+
+    it("succeeds even when web context returns null", async () => {
+      vi.mocked(getArtistSpotifyData).mockResolvedValue(mockSpotifyData);
+      vi.mocked(getArtistMusicAnalysis).mockResolvedValue(mockMusicAnalysis);
+      vi.mocked(getArtistWebContext).mockResolvedValue(null);
+      vi.mocked(buildArtistMarketingCopy).mockResolvedValue(mockMarketingCopy);
+
+      const result = await generateArtistIntelPack("Test Artist");
+
+      expect(result.type).toBe("success");
+      if (result.type === "success") {
+        expect(result.pack.web_context).toBeNull();
+      }
+    });
+
+    it("returns elapsed_seconds in the pack", async () => {
+      vi.mocked(getArtistSpotifyData).mockResolvedValue(mockSpotifyData);
+      vi.mocked(getArtistMusicAnalysis).mockResolvedValue(mockMusicAnalysis);
+      vi.mocked(getArtistWebContext).mockResolvedValue(mockWebContext);
+      vi.mocked(buildArtistMarketingCopy).mockResolvedValue(mockMarketingCopy);
+
+      const result = await generateArtistIntelPack("Test Artist");
+
+      expect(result.type).toBe("success");
+      if (result.type === "success") {
+        expect(typeof result.pack.elapsed_seconds).toBe("number");
+        expect(result.pack.elapsed_seconds).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it("returns null top_track when artist has no tracks", async () => {
+      const noTracksData = { ...mockSpotifyData, topTracks: [], previewUrl: null };
+      vi.mocked(getArtistSpotifyData).mockResolvedValue(noTracksData);
+      vi.mocked(getArtistWebContext).mockResolvedValue(mockWebContext);
+      vi.mocked(buildArtistMarketingCopy).mockResolvedValue(mockMarketingCopy);
+
+      const result = await generateArtistIntelPack("Test Artist");
+
+      expect(result.type).toBe("success");
+      if (result.type === "success") {
+        expect(result.pack.top_track).toBeNull();
+      }
+    });
+  });
+
+  describe("error cases", () => {
+    it("returns error when artist not found on Spotify", async () => {
+      vi.mocked(getArtistSpotifyData).mockResolvedValue(null);
+
+      const result = await generateArtistIntelPack("Totally Unknown Artist XYZ999");
+
+      expect(result.type).toBe("error");
+      if (result.type === "error") {
+        expect(result.error).toContain("Totally Unknown Artist XYZ999");
+      }
+    });
+  });
+
+  describe("pre-market artist — Gatsby Grace edge case", () => {
+    // Real Spotify data for Gatsby Grace (Spotify ID: 7ljukJB2Ctl0T4vCoYfb2x)
+    // 2 followers, 0 popularity, no genres — tests the pre-market edge case
+    const gatsbyGraceSpotifyData = {
+      artist: {
+        id: "7ljukJB2Ctl0T4vCoYfb2x",
+        name: "Gatsby Grace",
+        genres: [],
+        followers: { total: 2 },
+        popularity: 0,
+        images: [
+          {
+            url: "https://i.scdn.co/image/ab6761610000e5eb5fd8fa1d768bbc789e903a3f",
+            height: 640,
+            width: 640,
+          },
+        ],
+      },
+      topTracks: [
+        {
+          id: "track-gg-001",
+          name: "Stay",
+          preview_url: null, // no preview for very new artists
+          popularity: 0,
+          album: { name: "Stay - Single", images: [] },
+        },
+        {
+          id: "track-gg-002",
+          name: "Running",
+          preview_url: null,
+          popularity: 0,
+          album: { name: "Running - Single", images: [] },
+        },
+      ],
+      previewUrl: null, // no preview URL — triggers fallback scores
+    };
+
+    const gatsbyGraceMarketingCopy = {
+      artist_one_sheet: "Gatsby Grace — an emerging independent artist building early traction.",
+      ar_memo: "ARTIST: Gatsby Grace\nGENRE: not specified\nRECOMMENDATION: Early watch list.",
+      sync_brief: "ARTIST: Gatsby Grace\nSYNC SCORE: 30/100\nEarly stage — monitor catalog growth.",
+      spotify_playlist_targets: ["Fresh Finds", "New Music Friday", "Lorem"],
+      brand_partnership_pitch: "Limited brand data at this stage. Monitor for 6 months.",
+      playlist_pitch_email: "Dear Curator, introducing Gatsby Grace...",
+      press_release_opener: "Gatsby Grace is an emerging artist building their catalog.",
+      key_talking_points: ["Pre-market independent artist", "2 Spotify followers"],
+      instagram_caption: "New music from Gatsby Grace 🎵 #newmusic #indie",
+      tiktok_caption: "You need to hear Gatsby Grace 🔥 #newmusic",
+      twitter_post: "New drop from Gatsby Grace 🎵 #newmusic",
+    };
+
+    beforeEach(() => {
+      vi.mocked(getArtistSpotifyData).mockResolvedValue(gatsbyGraceSpotifyData);
+      vi.mocked(getArtistMusicAnalysis).mockResolvedValue(null); // no preview URL
+      vi.mocked(getArtistWebContext).mockResolvedValue(null); // no web presence yet
+      vi.mocked(getRelatedArtistsData).mockResolvedValue(null); // no related artists yet
+      vi.mocked(buildArtistMarketingCopy).mockResolvedValue(gatsbyGraceMarketingCopy);
+    });
+
+    it("succeeds for a pre-market artist with 0 popularity", async () => {
+      const result = await generateArtistIntelPack("Gatsby-Grace");
+
+      expect(result.type).toBe("success");
+    });
+
+    it("correctly maps Gatsby Grace Spotify profile", async () => {
+      const result = await generateArtistIntelPack("Gatsby-Grace");
+
+      expect(result.type).toBe("success");
+      if (result.type !== "success") return;
+
+      expect(result.pack.artist.name).toBe("Gatsby Grace");
+      expect(result.pack.artist.spotify_id).toBe("7ljukJB2Ctl0T4vCoYfb2x");
+      expect(result.pack.artist.followers).toBe(2);
+      expect(result.pack.artist.popularity).toBe(0);
+      expect(result.pack.artist.genres).toEqual([]);
+      expect(result.pack.artist.image_url).toBe(
+        "https://i.scdn.co/image/ab6761610000e5eb5fd8fa1d768bbc789e903a3f",
+      );
+    });
+
+    it("returns top track even when track popularity is 0", async () => {
+      const result = await generateArtistIntelPack("Gatsby-Grace");
+
+      expect(result.type).toBe("success");
+      if (result.type !== "success") return;
+
+      expect(result.pack.top_track?.name).toBe("Stay");
+      expect(result.pack.top_track?.popularity).toBe(0);
+      expect(result.pack.top_track?.preview_url).toBeNull();
+    });
+
+    it("skips music analysis when no preview URL (no audio to analyze)", async () => {
+      const result = await generateArtistIntelPack("Gatsby-Grace");
+
+      expect(result.type).toBe("success");
+      expect(getArtistMusicAnalysis).not.toHaveBeenCalled();
+      if (result.type === "success") {
+        expect(result.pack.music_analysis).toBeNull();
+      }
+    });
+
+    it("computes fallback opportunity scores for pre-market artist", async () => {
+      const result = await generateArtistIntelPack("Gatsby-Grace");
+
+      expect(result.type).toBe("success");
+      if (result.type !== "success") return;
+
+      const scores = result.pack.opportunity_scores;
+
+      // Sync: fallback = 30 + 0*0.4 = 30
+      expect(scores.sync.score).toBe(30);
+      expect(scores.sync.rating).toBe("weak");
+
+      // Playlist: fallback = 35 + 0*0.5 = 35
+      expect(scores.playlist.score).toBe(35);
+      expect(scores.playlist.rating).toBe("weak");
+
+      // A&R: pre-market bonus (+10) → 40 + 10 = 50, then +0 (no peer data) = 50
+      expect(scores.ar.rationale).toContain("Pre-market artist");
+      expect(scores.ar.rationale).not.toContain("established");
+      expect(scores.ar.score).toBeGreaterThan(40); // gets pre-market discovery bonus
+
+      // Brand: fallback = 35 + 0*0.35 = 35
+      expect(scores.brand.score).toBe(35);
+      expect(scores.brand.rating).toBe("weak");
+    });
+
+    it("catalogs depth shows emerging type with 0 popularity tracks", async () => {
+      const result = await generateArtistIntelPack("Gatsby-Grace");
+
+      expect(result.type).toBe("success");
+      if (result.type !== "success") return;
+
+      // avg_popularity = 0 → "emerging" catalog type
+      expect(result.pack.catalog_depth?.catalog_type).toBe("emerging");
+      expect(result.pack.catalog_depth?.avg_popularity).toBe(0);
+      expect(result.pack.catalog_depth?.track_count).toBe(2);
+    });
+
+    it("returns a formatted_report markdown string", async () => {
+      const result = await generateArtistIntelPack("Gatsby-Grace");
+
+      expect(result.type).toBe("success");
+      if (result.type !== "success") return;
+
+      expect(typeof result.pack.formatted_report).toBe("string");
+      expect(result.pack.formatted_report).toContain("Gatsby Grace");
+      expect(result.pack.formatted_report).toContain("Opportunity Scores");
+      expect(result.pack.formatted_report).toContain("Emerging Catalog");
+    });
+
+    it("returns null web_context and null peer_benchmark for brand-new artist", async () => {
+      const result = await generateArtistIntelPack("Gatsby-Grace");
+
+      expect(result.type).toBe("success");
+      if (result.type !== "success") return;
+
+      expect(result.pack.web_context).toBeNull();
+      expect(result.pack.peer_benchmark).toBeNull();
+    });
+  });
+});
