@@ -24,7 +24,6 @@ export async function slackGet<T extends SlackApiResponse>(
   }
   const res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(30_000),
   });
   if (!res.ok) {
     throw new Error(`Slack API ${endpoint} returned HTTP ${res.status}`);

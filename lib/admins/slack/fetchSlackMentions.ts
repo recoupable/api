@@ -4,7 +4,8 @@ import { getBotUserId } from "@/lib/slack/getBotUserId";
 import { getBotChannels } from "@/lib/slack/getBotChannels";
 import { getSlackUserInfo } from "@/lib/slack/getSlackUserInfo";
 import { getCutoffTs } from "./getCutoffTs";
-import { fetchThreadPullRequests } from "./fetchThreadPullRequests";
+import { fetchAllThreadPullRequests } from "./fetchAllThreadPullRequests";
+import { buildSlackTags } from "./buildSlackTags";
 
 export interface SlackTag {
   user_id: string;
@@ -58,7 +59,6 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
   const mentions: RawMention[] = [];
   const userCache: Record<string, { name: string; avatar: string | null }> = {};
 
-  // Phase 1: Collect all mentions from channel history
   for (const channel of channels) {
     let cursor: string | undefined;
 
@@ -97,36 +97,10 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
     } while (cursor);
   }
 
-  // Phase 2: Fetch thread PRs in parallel batches
-  const BATCH_SIZE = 10;
-  const allPullRequests: string[][] = new Array(mentions.length).fill([]);
+  const pullRequests = await fetchAllThreadPullRequests(
+    token,
+    mentions.map(m => ({ channelId: m.channelId, ts: m.ts })),
+  );
 
-  for (let i = 0; i < mentions.length; i += BATCH_SIZE) {
-    const batch = mentions.slice(i, i + BATCH_SIZE);
-    const results = await Promise.all(
-      batch.map(m => fetchThreadPullRequests(token, m.channelId, m.ts)),
-    );
-    for (let j = 0; j < batch.length; j++) {
-      allPullRequests[i + j] = results[j];
-    }
-  }
-
-  // Phase 3: Build final tags
-  const tags: SlackTag[] = mentions.map((m, i) => {
-    const { name, avatar } = userCache[m.userId];
-    return {
-      user_id: m.userId,
-      user_name: name,
-      user_avatar: avatar,
-      prompt: m.prompt,
-      timestamp: new Date(parseFloat(m.ts) * 1000).toISOString(),
-      channel_id: m.channelId,
-      channel_name: m.channelName,
-      pull_requests: allPullRequests[i],
-    };
-  });
-
-  tags.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-  return tags;
+  return buildSlackTags(mentions, userCache, pullRequests);
 }
