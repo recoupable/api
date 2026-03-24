@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { enrichTaskWithTriggerInfo } from "../enrichTaskWithTriggerInfo";
 
-import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
-import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
-
 vi.mock("@/lib/trigger/fetchTriggerRuns", () => ({
   fetchTriggerRuns: vi.fn(),
 }));
@@ -11,6 +8,9 @@ vi.mock("@/lib/trigger/fetchTriggerRuns", () => ({
 vi.mock("@/lib/trigger/retrieveTaskRun", () => ({
   retrieveTaskRun: vi.fn(),
 }));
+
+import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
+import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
 
 const mockTask = {
   id: "task-123",

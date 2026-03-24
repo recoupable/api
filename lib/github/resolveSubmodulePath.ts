@@ -6,10 +6,8 @@ import { getRepoGitModules } from "./getRepoGitModules";
  * If the path falls within a submodule, returns the submodule's repo URL
  * and the relative path within it. Otherwise returns the original values.
  *
- * @param githubRepo.githubRepo
  * @param githubRepo - The parent GitHub repository URL
  * @param path - The file path to resolve
- * @param githubRepo.path
  * @returns The resolved repo URL and path
  */
 export async function resolveSubmodulePath({

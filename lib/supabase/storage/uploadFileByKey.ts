@@ -3,12 +3,6 @@ import { SUPABASE_STORAGE_BUCKET } from "@/lib/const";
 
 /**
  * Upload file to Supabase storage by key
- *
- * @param key
- * @param file
- * @param options
- * @param options.contentType
- * @param options.upsert
  */
 export async function uploadFileByKey(
   key: string,

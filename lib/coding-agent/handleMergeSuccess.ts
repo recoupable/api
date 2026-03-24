@@ -7,8 +7,6 @@ import type { CodingAgentThreadState } from "./types";
  * Handles post-merge cleanup after all PRs merged successfully.
  * Deletes the shared PR state keys for all repos and persists the latest
  * snapshot via upsertAccountSnapshot.
- *
- * @param state
  */
 export async function handleMergeSuccess(state: CodingAgentThreadState): Promise<void> {
   try {

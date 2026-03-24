@@ -10,7 +10,7 @@ export type AccountWorkspaceRow = Omit<ArtistQueryRow, "artist_info"> & {
  * Get all workspaces for an account, with full info.
  * Returns raw data - formatting should be done by caller.
  *
- * @param accountId - The owner's account ID
+ * @param accountId The owner's account ID
  * @returns Array of raw workspace rows from database
  */
 export async function getAccountWorkspaceIds(accountId: string): Promise<AccountWorkspaceRow[]> {
