@@ -30,6 +30,14 @@ interface ConversationsHistoryResponse {
   response_metadata?: { next_cursor?: string };
 }
 
+interface RawMention {
+  userId: string;
+  prompt: string;
+  ts: string;
+  channelId: string;
+  channelName: string;
+}
+
 /**
  * Fetches all Slack messages where the Recoup Coding Agent bot was mentioned.
  * Pulls directly from the Slack API using the bot token as the source of truth.
@@ -47,9 +55,10 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
   const mentionPattern = `<@${botUserId}>`;
   const channels = await getBotChannels(token);
   const cutoffTs = getCutoffTs(period);
-  const tags: SlackTag[] = [];
+  const mentions: RawMention[] = [];
   const userCache: Record<string, { name: string; avatar: string | null }> = {};
 
+  // Phase 1: Collect all mentions from channel history
   for (const channel of channels) {
     let cursor: string | undefined;
 
@@ -71,25 +80,16 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
         if (!msg.text?.includes(mentionPattern)) continue;
         if (!msg.ts) continue;
 
-        const userId = msg.user;
-
-        if (!userCache[userId]) {
-          userCache[userId] = await getSlackUserInfo(token, userId);
+        if (!userCache[msg.user]) {
+          userCache[msg.user] = await getSlackUserInfo(token, msg.user);
         }
 
-        const { name, avatar } = userCache[userId];
-        const prompt = (msg.text ?? "").replace(new RegExp(`<@${botUserId}>\\s*`, "g"), "").trim();
-
-        tags.push({
-          user_id: userId,
-          user_name: name,
-          user_avatar: avatar,
-          prompt,
-          timestamp: new Date(parseFloat(msg.ts!) * 1000).toISOString(),
-          channel_id: channel.id,
-          channel_name: channel.name,
-          pull_requests: [],
-          _threadTs: msg.ts!,
+        mentions.push({
+          userId: msg.user,
+          prompt: (msg.text ?? "").replace(new RegExp(`<@${botUserId}>\\s*`, "g"), "").trim(),
+          ts: msg.ts,
+          channelId: channel.id,
+          channelName: channel.name,
         });
       }
 
@@ -97,24 +97,34 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
     } while (cursor);
   }
 
-  // Fetch thread PRs in parallel (batches of 10 to avoid rate limits)
+  // Phase 2: Fetch thread PRs in parallel batches
   const BATCH_SIZE = 10;
-  for (let i = 0; i < tags.length; i += BATCH_SIZE) {
-    const batch = tags.slice(i, i + BATCH_SIZE);
+  const allPullRequests: string[][] = new Array(mentions.length).fill([]);
+
+  for (let i = 0; i < mentions.length; i += BATCH_SIZE) {
+    const batch = mentions.slice(i, i + BATCH_SIZE);
     const results = await Promise.all(
-      batch.map(tag =>
-        fetchThreadPullRequests(token, tag.channel_id, (tag as { _threadTs: string })._threadTs),
-      ),
+      batch.map(m => fetchThreadPullRequests(token, m.channelId, m.ts)),
     );
     for (let j = 0; j < batch.length; j++) {
-      batch[j].pull_requests = results[j];
+      allPullRequests[i + j] = results[j];
     }
   }
 
-  // Clean up internal field and sort
-  for (const tag of tags) {
-    delete (tag as Record<string, unknown>)._threadTs;
-  }
+  // Phase 3: Build final tags
+  const tags: SlackTag[] = mentions.map((m, i) => {
+    const { name, avatar } = userCache[m.userId];
+    return {
+      user_id: m.userId,
+      user_name: name,
+      user_avatar: avatar,
+      prompt: m.prompt,
+      timestamp: new Date(parseFloat(m.ts) * 1000).toISOString(),
+      channel_id: m.channelId,
+      channel_name: m.channelName,
+      pull_requests: allPullRequests[i],
+    };
+  });
 
   tags.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
