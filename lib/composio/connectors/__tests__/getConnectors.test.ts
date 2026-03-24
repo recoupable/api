@@ -37,7 +37,20 @@ describe("getConnectors", () => {
 
     expect(getComposioClient).toHaveBeenCalled();
     expect(mockComposio.create).toHaveBeenCalledWith("account-123", {
-      toolkits: ["googlesheets", "googledrive", "googledocs", "tiktok"],
+      toolkits: [
+        "googlesheets",
+        "googledrive",
+        "googledocs",
+        "gmail",
+        "googlecalendar",
+        "tiktok",
+        "spotify",
+        "instagram",
+        "twitter",
+        "youtube",
+        "slack",
+        "linkedin",
+      ],
     });
     expect(result).toEqual([
       {

@@ -8,10 +8,18 @@ import { getConnectors } from "./getConnectors";
  * Display names for connectors.
  */
 const CONNECTOR_DISPLAY_NAMES: Record<string, string> = {
-  tiktok: "TikTok",
   googlesheets: "Google Sheets",
   googledrive: "Google Drive",
   googledocs: "Google Docs",
+  gmail: "Gmail",
+  googlecalendar: "Google Calendar",
+  tiktok: "TikTok",
+  spotify: "Spotify",
+  instagram: "Instagram",
+  twitter: "Twitter / X",
+  youtube: "YouTube",
+  slack: "Slack",
+  linkedin: "LinkedIn",
 };
 
 /**
