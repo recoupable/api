@@ -1,19 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getSlackTagsHandler } from "@/lib/admins/slack/getSlackTagsHandler";
+import { getSlackTagOptionsHandler } from "@/lib/admins/coding-agent/getSlackTagOptionsHandler";
 
 /**
- * GET /api/admins/coding/slack
+ * GET /api/admins/coding-agent/slack-tags
  *
- * Returns Slack tagging analytics for the Recoup Coding Agent bot.
- * Pulls directly from the Slack API as the source of truth.
- * Supports period filtering: all (default), daily, weekly, monthly.
+ * Returns the distinct set of Slack users who have tagged the Recoup Coding Agent bot.
+ * Used by the admin UI to populate tag filter chips.
  * Requires admin authentication.
  *
  * @param request
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  return getSlackTagsHandler(request);
+  return getSlackTagOptionsHandler(request);
 }
 
 /** CORS preflight handler. */
