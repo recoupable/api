@@ -79,7 +79,6 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
 
         const { name, avatar } = userCache[userId];
         const prompt = (msg.text ?? "").replace(new RegExp(`<@${botUserId}>\\s*`, "g"), "").trim();
-        const pullRequests = await fetchThreadPullRequests(token, channel.id, msg.ts!);
 
         tags.push({
           user_id: userId,
@@ -89,12 +88,32 @@ export async function fetchSlackMentions(period: AdminPeriod): Promise<SlackTag[
           timestamp: new Date(parseFloat(msg.ts!) * 1000).toISOString(),
           channel_id: channel.id,
           channel_name: channel.name,
-          pull_requests: pullRequests,
+          pull_requests: [],
+          _threadTs: msg.ts!,
         });
       }
 
       cursor = history.response_metadata?.next_cursor || undefined;
     } while (cursor);
+  }
+
+  // Fetch thread PRs in parallel (batches of 10 to avoid rate limits)
+  const BATCH_SIZE = 10;
+  for (let i = 0; i < tags.length; i += BATCH_SIZE) {
+    const batch = tags.slice(i, i + BATCH_SIZE);
+    const results = await Promise.all(
+      batch.map(tag =>
+        fetchThreadPullRequests(token, tag.channel_id, (tag as { _threadTs: string })._threadTs),
+      ),
+    );
+    for (let j = 0; j < batch.length; j++) {
+      batch[j].pull_requests = results[j];
+    }
+  }
+
+  // Clean up internal field and sort
+  for (const tag of tags) {
+    delete (tag as Record<string, unknown>)._threadTs;
   }
 
   tags.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
