@@ -17,16 +17,22 @@ vi.mock("../fetchPrivyLogins", () => ({
   fetchPrivyLogins: vi.fn(),
 }));
 
-const now = Date.now();
-const ONE_HOUR_AGO = Math.floor((now - 60 * 60 * 1000) / 1000);
-const TWO_HOURS_AGO = Math.floor((now - 2 * 60 * 60 * 1000) / 1000);
+// Use timestamps guaranteed to be after today's midnight UTC
+const nowUtc = new Date();
+const todayMidnightUtc = Date.UTC(
+  nowUtc.getUTCFullYear(),
+  nowUtc.getUTCMonth(),
+  nowUtc.getUTCDate(),
+);
+const AFTER_MIDNIGHT_1 = Math.floor((todayMidnightUtc + 60 * 1000) / 1000); // 1 min after midnight
+const AFTER_MIDNIGHT_2 = Math.floor((todayMidnightUtc + 2 * 60 * 1000) / 1000); // 2 min after midnight
 
 const mockLogins = [
   {
     id: "did:privy:abc123",
-    created_at: ONE_HOUR_AGO,
+    created_at: AFTER_MIDNIGHT_1,
     linked_accounts: [
-      { type: "email", address: "user@example.com", latest_verified_at: ONE_HOUR_AGO },
+      { type: "email", address: "user@example.com", latest_verified_at: AFTER_MIDNIGHT_1 },
     ],
     has_accepted_terms: true,
     is_guest: false,
@@ -34,7 +40,7 @@ const mockLogins = [
   },
   {
     id: "did:privy:def456",
-    created_at: TWO_HOURS_AGO,
+    created_at: AFTER_MIDNIGHT_2,
     linked_accounts: [],
     has_accepted_terms: false,
     is_guest: true,
