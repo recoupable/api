@@ -1,0 +1,52 @@
+import { Chat, ConsoleLogger } from "chat";
+import { SlackAdapter } from "@chat-adapter/slack";
+import { createIoRedisState } from "@chat-adapter/state-ioredis";
+import redis from "@/lib/redis/connection";
+import type { ContentAgentThreadState } from "./types";
+import { validateContentAgentEnv } from "./validateEnv";
+
+const logger = new ConsoleLogger();
+
+type ContentAgentAdapters = {
+  slack: SlackAdapter;
+};
+
+/**
+ * Creates a new Chat bot instance configured with the Slack adapter
+ * for the Recoup Content Agent.
+ */
+export function createContentAgentBot() {
+  validateContentAgentEnv();
+
+  if (redis.status === "wait") {
+    redis.connect().catch(() => {
+      throw new Error("[content-agent] Redis failed to connect");
+    });
+  }
+
+  const state = createIoRedisState({
+    client: redis,
+    keyPrefix: "content-agent",
+    logger,
+  });
+
+  const slack = new SlackAdapter({
+    botToken: process.env.SLACK_CONTENT_BOT_TOKEN!,
+    signingSecret: process.env.SLACK_CONTENT_SIGNING_SECRET!,
+    logger,
+  });
+
+  return new Chat<ContentAgentAdapters, ContentAgentThreadState>({
+    userName: "Recoup Content Agent",
+    adapters: { slack },
+    state,
+  });
+}
+
+export type ContentAgentBot = ReturnType<typeof createContentAgentBot>;
+
+/**
+ * Singleton bot instance. Registers as the Chat SDK singleton
+ * so ThreadImpl can resolve adapters lazily from thread IDs.
+ */
+export const contentAgentBot = createContentAgentBot().registerSingleton();
