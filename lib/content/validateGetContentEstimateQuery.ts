@@ -15,6 +15,8 @@ export type ValidatedGetContentEstimateQuery = z.infer<typeof getContentEstimate
 
 /**
  * Validates auth and query params for GET /api/content/estimate.
+ *
+ * @param request
  */
 export async function validateGetContentEstimateQuery(
   request: NextRequest,

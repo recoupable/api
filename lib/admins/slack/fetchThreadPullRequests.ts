@@ -18,6 +18,10 @@ interface ConversationsRepliesResponse {
 /**
  * Fetches bot replies in a Slack thread and returns any GitHub PR URLs found.
  * Extracts URLs from message text, attachment action buttons, and Block Kit blocks.
+ *
+ * @param token
+ * @param channel
+ * @param threadTs
  */
 export async function fetchThreadPullRequests(
   token: string,
