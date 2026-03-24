@@ -11,10 +11,6 @@ interface RawMention {
 /**
  * Builds SlackTag objects from raw mentions, user cache, and PR results.
  * Returns tags sorted newest first.
- *
- * @param mentions
- * @param userCache
- * @param pullRequests
  */
 export function buildSlackTags(
   mentions: RawMention[],

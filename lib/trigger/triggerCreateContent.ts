@@ -16,8 +16,6 @@ export interface TriggerCreateContentPayload {
 
 /**
  * Triggers the create-content task in Trigger.dev.
- *
- * @param payload
  */
 export async function triggerCreateContent(payload: TriggerCreateContentPayload) {
   const handle = await tasks.trigger(CREATE_CONTENT_TASK_ID, payload);

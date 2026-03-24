@@ -13,10 +13,6 @@ vi.mock("@/lib/admins/validateAdminAuth", () => ({
 
 const mockAuth = { accountId: "test-account", orgId: null, authToken: "token" };
 
-/**
- *
- * @param period
- */
 function makeRequest(period?: string) {
   const url = period
     ? `https://example.com/api/admins/coding/slack?period=${period}`

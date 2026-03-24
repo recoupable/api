@@ -7,8 +7,6 @@ import { ProcessTranscriptionParams, ProcessTranscriptionResult } from "./types"
 /**
  * Fetches audio from URL, transcribes it with OpenAI Whisper, and saves both
  * the original audio and transcript markdown to the customer's files.
- *
- * @param params
  */
 export async function processAudioTranscription(
   params: ProcessTranscriptionParams,
@@ -66,10 +64,6 @@ export async function processAudioTranscription(
   };
 }
 
-/**
- *
- * @param contentType
- */
 function getExtensionFromContentType(contentType: string): string {
   if (contentType.includes("wav")) return "wav";
   if (contentType.includes("m4a") || contentType.includes("mp4")) return "m4a";

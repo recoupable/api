@@ -3,8 +3,6 @@ import { formatCatalogSongsAsCSV } from "./formatCatalogSongsAsCSV";
 
 /**
  * Gets all catalog songs and formats them as CSV for the scorer
- *
- * @param catalogId
  */
 export async function getCatalogDataAsCSV(catalogId: string): Promise<string> {
   const allSongs: CatalogSong[] = [];
