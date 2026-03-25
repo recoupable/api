@@ -5,7 +5,7 @@ const mockThread = {
   setState: vi.fn(),
 };
 
-vi.mock("../getThread", () => ({
+vi.mock("@/lib/agents/getThread", () => ({
   getThread: vi.fn(() => mockThread),
 }));
 

@@ -14,7 +14,7 @@ import { DEFAULT_CONTENT_TEMPLATE } from "@/lib/content/contentTemplates";
  * @param bot - The content agent bot instance to register the handler on
  */
 export function registerOnNewMention(bot: ContentAgentBot) {
-  bot.onNewMention(async (thread, message) => {
+  bot.onNewMention(async (thread, _) => {
     try {
       const accountId = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
       const artistAccountId = "1873859c-dd37-4e9a-9bac-80d3558527a9";
