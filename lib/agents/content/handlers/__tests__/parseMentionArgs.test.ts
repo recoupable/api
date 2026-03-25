@@ -48,4 +48,15 @@ describe("parseMentionArgs", () => {
     expect(result.batch).toBe(3);
     expect(result.lipsync).toBe(true);
   });
+
+  it("strips mentions with mixed-case IDs", () => {
+    const result = parseMentionArgs(`<@U06d5FLHYQZ> ${UUID}`);
+    expect(result.artistAccountId).toBe(UUID);
+    expect(result.template).toBe(DEFAULT_CONTENT_TEMPLATE);
+  });
+
+  it("strips mentions with lowercase IDs", () => {
+    const result = parseMentionArgs(`<@u0abc123> ${UUID}`);
+    expect(result.artistAccountId).toBe(UUID);
+  });
 });
