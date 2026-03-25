@@ -14,7 +14,7 @@ import type { ContentAgentThreadState } from "./types";
  */
 export async function handleContentAgentCallback(request: Request): Promise<NextResponse> {
   const secret = request.headers.get("x-callback-secret");
-  const expectedSecret = process.env.CONTENT_AGENT_CALLBACK_SECRET;
+  const expectedSecret = process.env.CODING_AGENT_CALLBACK_SECRET;
 
   const secretBuf = secret ? Buffer.from(secret) : Buffer.alloc(0);
   const expectedBuf = expectedSecret ? Buffer.from(expectedSecret) : Buffer.alloc(0);
