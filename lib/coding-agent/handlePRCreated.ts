@@ -1,7 +1,8 @@
-import { getThread } from "./getThread";
+import { getThread } from "@/lib/agents/getThread";
 import { buildPRCard } from "./buildPRCard";
 import { setCodingAgentPRState } from "./prState";
 import type { CodingAgentCallbackBody } from "./validateCodingAgentCallback";
+import type { CodingAgentThreadState } from "./types";
 
 /**
  * Handles the pr_created callback status.
@@ -11,7 +12,7 @@ import type { CodingAgentCallbackBody } from "./validateCodingAgentCallback";
  * @param body
  */
 export async function handlePRCreated(threadId: string, body: CodingAgentCallbackBody) {
-  const thread = getThread(threadId);
+  const thread = getThread<CodingAgentThreadState>(threadId);
   const prs = body.prs ?? [];
   const card = buildPRCard("PRs Created", prs);
 
