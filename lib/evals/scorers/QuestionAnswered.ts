@@ -5,6 +5,11 @@ import { z } from "zod";
 /**
  * Custom scorer that checks if the AI actually answered the customer's question
  * with a specific answer, or if it deflected/explained why it couldn't answer
+ *
+ * @param root0
+ * @param root0.output
+ * @param root0.expected
+ * @param root0.input
  */
 export const QuestionAnswered = async ({
   output,

@@ -2,6 +2,8 @@ import { CatalogSong } from "./getCatalogSongs";
 
 /**
  * Formats catalog songs into the CSV-like format expected by the scorer
+ *
+ * @param songs
  */
 export function formatCatalogSongsAsCSV(songs: CatalogSong[]): string {
   const csvLines = songs.map(song => {

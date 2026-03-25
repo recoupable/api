@@ -2,6 +2,10 @@ import { uploadFileByKey } from "@/lib/supabase/storage/uploadFileByKey";
 import { createFileRecord } from "@/lib/supabase/files/createFileRecord";
 import { SaveAudioParams, FileRecord } from "./types";
 
+/**
+ *
+ * @param params
+ */
 export async function saveAudioToFiles(params: SaveAudioParams): Promise<FileRecord> {
   const {
     audioBlob,
