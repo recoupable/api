@@ -50,7 +50,7 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
       try {
         result = await processAnalyzeMusicRequest(args);
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Music analysis failed";
+        const message = err instanceof Error ? err.message : "An unexpected error occurred";
         return getToolResultError(`Music analysis failed: ${message}`);
       }
 
