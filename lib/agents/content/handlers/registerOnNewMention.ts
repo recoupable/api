@@ -4,8 +4,7 @@ import { triggerPollContentRun } from "@/lib/trigger/triggerPollContentRun";
 import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
 import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadiness";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
-import { isSupportedContentTemplate } from "@/lib/content/contentTemplates";
-import { parseMentionArgs } from "./parseMentionArgs";
+import { DEFAULT_CONTENT_TEMPLATE } from "@/lib/content/contentTemplates";
 
 /**
  * Registers the onNewMention handler on the content agent bot.
@@ -17,22 +16,10 @@ import { parseMentionArgs } from "./parseMentionArgs";
 export function registerOnNewMention(bot: ContentAgentBot) {
   bot.onNewMention(async (thread, message) => {
     try {
-      const HARDCODED_ARTIST_ID = "1873859c-dd37-4e9a-9bac-80d3558527a9";
-      const parsed = parseMentionArgs(message.text);
-      const artistAccountId = HARDCODED_ARTIST_ID;
-      const { template, batch, lipsync } = parsed;
-
-      if (!artistAccountId) {
-        await thread.post(
-          "Please provide an artist account ID.\n\nUsage: `@RecoupContentAgent <artist_account_id> [template] [batch=N] [lipsync]`",
-        );
-        return;
-      }
-
-      if (!isSupportedContentTemplate(template)) {
-        await thread.post(`Unsupported template: \`${template}\`. Check available templates.`);
-        return;
-      }
+      const artistAccountId = "1873859c-dd37-4e9a-9bac-80d3558527a9";
+      const template = DEFAULT_CONTENT_TEMPLATE;
+      const batch = 1;
+      const lipsync = false;
 
       // Resolve artist slug
       const artistSlug = await resolveArtistSlug(artistAccountId);
