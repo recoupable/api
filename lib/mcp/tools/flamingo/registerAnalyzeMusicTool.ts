@@ -22,7 +22,7 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
     "analyze_music",
     {
       description:
-        "Analyze music or answer music questions using the Music Flamingo model (NVIDIA, 8B params). " +
+        "Analyze music or answer music questions using Recoupable's Audio Language Model. " +
         "Accepts either a 'preset' name for structured analysis (e.g. 'catalog_metadata', 'mood_tags', 'sync_brief_match', 'full_report') " +
         "or a custom 'prompt' for free-form questions. " +
         "Most presets require an audio_url. Audio files can be up to 20 minutes (MP3, WAV, FLAC).",
@@ -50,7 +50,7 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
       try {
         result = await processAnalyzeMusicRequest(args);
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Flamingo inference failed";
+        const message = err instanceof Error ? err.message : "An unexpected error occurred";
         return getToolResultError(`Music analysis failed: ${message}`);
       }
 

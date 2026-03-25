@@ -42,7 +42,7 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
   try {
     result = await processAnalyzeMusicRequest(validated);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Flamingo inference failed";
+    const message = err instanceof Error ? err.message : "Music analysis failed";
     return NextResponse.json(
       { status: "error", error: message },
       { status: 500, headers: getCorsHeaders() },
