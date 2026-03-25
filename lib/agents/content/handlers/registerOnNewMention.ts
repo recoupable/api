@@ -16,6 +16,7 @@ import { DEFAULT_CONTENT_TEMPLATE } from "@/lib/content/contentTemplates";
 export function registerOnNewMention(bot: ContentAgentBot) {
   bot.onNewMention(async (thread, message) => {
     try {
+      const accountId = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
       const artistAccountId = "1873859c-dd37-4e9a-9bac-80d3558527a9";
       const template = DEFAULT_CONTENT_TEMPLATE;
       const batch = 1;
@@ -34,7 +35,7 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       let githubRepo: string;
       try {
         const readiness = await getArtistContentReadiness({
-          accountId: artistAccountId,
+          accountId,
           artistAccountId,
           artistSlug,
         });
@@ -60,7 +61,7 @@ export function registerOnNewMention(bot: ContentAgentBot) {
 
       // Trigger content creation
       const payload = {
-        accountId: artistAccountId,
+        accountId,
         artistSlug,
         template,
         lipsync,
