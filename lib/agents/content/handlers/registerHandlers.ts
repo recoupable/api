@@ -1,5 +1,5 @@
 import { getContentAgentBot } from "../bot";
-import { registerOnNewMention } from "./handleContentAgentMention";
+import { registerOnNewMention } from "./registerOnNewMention";
 import { registerOnSubscribedMessage } from "./registerOnSubscribedMessage";
 
 let registered = false;

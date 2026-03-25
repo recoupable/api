@@ -1,11 +1,8 @@
-import { Chat, ConsoleLogger } from "chat";
+import { Chat } from "chat";
 import { SlackAdapter } from "@chat-adapter/slack";
-import { createIoRedisState } from "@chat-adapter/state-ioredis";
-import redis from "@/lib/redis/connection";
+import { agentLogger, createAgentState } from "@/lib/agents/createAgentState";
 import type { ContentAgentThreadState } from "./types";
 import { validateContentAgentEnv } from "./validateEnv";
-
-const logger = new ConsoleLogger();
 
 type ContentAgentAdapters = {
   slack: SlackAdapter;
@@ -20,22 +17,12 @@ type ContentAgentAdapters = {
 export function createContentAgentBot() {
   validateContentAgentEnv();
 
-  if (redis.status === "wait") {
-    redis.connect().catch(() => {
-      throw new Error("[content-agent] Redis failed to connect");
-    });
-  }
-
-  const state = createIoRedisState({
-    client: redis,
-    keyPrefix: "content-agent",
-    logger,
-  });
+  const state = createAgentState("content-agent");
 
   const slack = new SlackAdapter({
     botToken: process.env.SLACK_CONTENT_BOT_TOKEN!,
     signingSecret: process.env.SLACK_CONTENT_SIGNING_SECRET!,
-    logger,
+    logger: agentLogger,
   });
 
   return new Chat<ContentAgentAdapters, ContentAgentThreadState>({

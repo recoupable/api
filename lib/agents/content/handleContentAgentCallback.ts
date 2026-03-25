@@ -1,16 +1,32 @@
+import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateContentAgentCallback } from "./validateContentAgentCallback";
 import { getThread } from "./getThread";
 
 /**
- * Handles content agent task callback body parsing and processing.
- * Auth (x-callback-secret) is verified by the route before this is called.
+ * Handles content agent task callback from Trigger.dev.
+ * Verifies the shared secret and dispatches based on callback status.
  *
- * @param request - The authenticated callback request
+ * @param request - The incoming callback request
  * @returns A NextResponse
  */
 export async function handleContentAgentCallback(request: Request): Promise<NextResponse> {
+  const secret = request.headers.get("x-callback-secret");
+  const expectedSecret = process.env.CONTENT_AGENT_CALLBACK_SECRET;
+
+  if (
+    !secret ||
+    !expectedSecret ||
+    secret.length !== expectedSecret.length ||
+    !timingSafeEqual(Buffer.from(secret), Buffer.from(expectedSecret))
+  ) {
+    return NextResponse.json(
+      { status: "error", error: "Unauthorized" },
+      { status: 401, headers: getCorsHeaders() },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
