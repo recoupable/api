@@ -33,12 +33,13 @@ export async function callFlamingoGenerate(
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => "Unknown error");
-    throw new Error(`Flamingo model returned ${response.status}: ${errorText}`);
+    console.error(`Audio model returned ${response.status}: ${errorText}`);
+    throw new Error(`Music analysis failed (status ${response.status})`);
   }
 
   const data = await response.json();
   if (!isFlamingoGenerateResult(data)) {
-    throw new Error("Flamingo model returned an unexpected response shape");
+    throw new Error("Audio model returned an unexpected response shape");
   }
   return data;
 }

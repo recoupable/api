@@ -18,7 +18,7 @@ export async function OPTIONS() {
 /**
  * POST /api/songs/analyze
  *
- * Analyze music or answer music questions using the Music Flamingo model.
+ * Analyze music or answer music questions using Recoupable's Audio Language Model.
  * Accepts a text prompt and an optional audio URL. The model can describe
  * tracks, identify genre/tempo/key, transcribe lyrics, and reason about
  * musical structure.
