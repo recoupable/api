@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { getContentAgentBot } from "@/lib/content-agent/bot";
 import { handleUrlVerification } from "@/lib/slack/handleUrlVerification";
 import { ensureHandlersRegistered } from "@/lib/content-agent/handlers/registerHandlers";
+import { isContentAgentConfigured } from "@/lib/content-agent/validateEnv";
 
 /**
  * GET /api/content-agent/[platform]
@@ -18,6 +19,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ platform: string }> },
 ) {
+  if (!isContentAgentConfigured()) {
+    return Response.json({ error: "Content agent not configured" }, { status: 503 });
+  }
+
   const { platform } = await params;
   ensureHandlersRegistered();
   const bot = getContentAgentBot();
@@ -51,6 +56,10 @@ export async function POST(
   if (platform === "slack") {
     const verification = await handleUrlVerification(request);
     if (verification) return verification;
+  }
+
+  if (!isContentAgentConfigured()) {
+    return Response.json({ error: "Content agent not configured" }, { status: 503 });
   }
 
   ensureHandlersRegistered();

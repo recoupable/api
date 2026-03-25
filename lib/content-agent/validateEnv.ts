@@ -6,6 +6,15 @@ const REQUIRED_ENV_VARS = [
 ] as const;
 
 /**
+ * Returns true if all required content agent environment variables are set.
+ *
+ * @returns Whether the content agent is fully configured
+ */
+export function isContentAgentConfigured(): boolean {
+  return REQUIRED_ENV_VARS.every(name => !!process.env[name]);
+}
+
+/**
  * Validates that all required environment variables for the content agent are set.
  * Throws an error listing all missing variables.
  */
