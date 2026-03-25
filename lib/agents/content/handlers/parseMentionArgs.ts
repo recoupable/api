@@ -9,7 +9,8 @@ import { DEFAULT_CONTENT_TEMPLATE } from "@/lib/content/contentTemplates";
  * @returns Parsed content generation parameters
  */
 export function parseMentionArgs(text: string) {
-  const tokens = text.trim().split(/\s+/);
+  const stripped = text.replace(/<@[A-Z0-9]+>/g, "").trim();
+  const tokens = stripped.split(/\s+/);
   const artistAccountId = tokens[0];
   let template = DEFAULT_CONTENT_TEMPLATE;
   let batch = 1;
