@@ -57,7 +57,10 @@ export async function validateGetTasksQuery(
 
   let targetAccountId = authResult.accountId;
 
-  if (validationResult.data.account_id && validationResult.data.account_id !== authResult.accountId) {
+  if (
+    validationResult.data.account_id &&
+    validationResult.data.account_id !== authResult.accountId
+  ) {
     const isAdmin = await checkIsAdmin(authResult.accountId);
     if (isAdmin) {
       targetAccountId = validationResult.data.account_id;
