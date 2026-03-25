@@ -1,4 +1,4 @@
-import { ThreadImpl } from "chat";
+import { getThread as getAgentThread } from "@/lib/agents/getThread";
 import type { CodingAgentThreadState } from "./types";
 
 /**
@@ -7,11 +7,5 @@ import type { CodingAgentThreadState } from "./types";
  * @param threadId
  */
 export function getThread(threadId: string) {
-  const adapterName = threadId.split(":")[0];
-  const channelId = `${adapterName}:${threadId.split(":")[1]}`;
-  return new ThreadImpl<CodingAgentThreadState>({
-    adapterName,
-    id: threadId,
-    channelId,
-  });
+  return getAgentThread<CodingAgentThreadState>(threadId);
 }

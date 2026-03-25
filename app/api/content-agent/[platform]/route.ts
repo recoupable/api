@@ -1,7 +1,6 @@
 import { createPlatformRoutes } from "@/lib/agents/createPlatformRoutes";
-import { getContentAgentBot } from "@/lib/agents/content/bot";
-import { ensureHandlersRegistered } from "@/lib/agents/content/handlers/registerHandlers";
-import { isContentAgentConfigured } from "@/lib/agents/content/validateEnv";
+import { contentAgentBot } from "@/lib/agents/content/bot";
+import "@/lib/agents/content/handlers/registerHandlers";
 
 /**
  * GET & POST /api/content-agent/[platform]
@@ -10,7 +9,6 @@ import { isContentAgentConfigured } from "@/lib/agents/content/validateEnv";
  * Handles Slack webhooks via dynamic [platform] segment.
  */
 export const { GET, POST } = createPlatformRoutes({
-  getBot: getContentAgentBot,
-  ensureHandlers: ensureHandlersRegistered,
-  isConfigured: isContentAgentConfigured,
+  getBot: () => contentAgentBot!,
+  isConfigured: () => contentAgentBot !== null,
 });

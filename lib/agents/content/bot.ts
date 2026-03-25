@@ -2,7 +2,8 @@ import { Chat } from "chat";
 import { SlackAdapter } from "@chat-adapter/slack";
 import { agentLogger, createAgentState } from "@/lib/agents/createAgentState";
 import type { ContentAgentThreadState } from "./types";
-import { validateContentAgentEnv } from "./validateEnv";
+import { isContentAgentConfigured } from "./isContentAgentConfigured";
+import { validateContentAgentEnv } from "./validateContentAgentEnv";
 
 type ContentAgentAdapters = {
   slack: SlackAdapter;
@@ -14,7 +15,7 @@ type ContentAgentAdapters = {
  *
  * @returns The configured Chat bot instance
  */
-export function createContentAgentBot() {
+function createContentAgentBot() {
   validateContentAgentEnv();
 
   const state = createAgentState("content-agent");
@@ -34,18 +35,10 @@ export function createContentAgentBot() {
 
 export type ContentAgentBot = ReturnType<typeof createContentAgentBot>;
 
-let _bot: ContentAgentBot | null = null;
-
 /**
- * Returns the lazily-initialized content agent bot singleton.
- * Defers creation until first call so the Vercel build does not
- * crash when content-agent env vars are not yet configured.
- *
- * @returns The content agent bot singleton
+ * Singleton bot instance. Only created when content agent env vars are configured.
+ * Registers as the Chat SDK singleton so ThreadImpl can resolve adapters lazily from thread IDs.
  */
-export function getContentAgentBot(): ContentAgentBot {
-  if (!_bot) {
-    _bot = createContentAgentBot().registerSingleton();
-  }
-  return _bot;
-}
+export const contentAgentBot: ContentAgentBot | null = isContentAgentConfigured()
+  ? createContentAgentBot().registerSingleton()
+  : null;

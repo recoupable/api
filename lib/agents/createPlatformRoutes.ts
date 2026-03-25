@@ -1,6 +1,11 @@
 import type { NextRequest } from "next/server";
 import { after } from "next/server";
+import { z } from "zod";
 import { handleUrlVerification } from "@/lib/slack/handleUrlVerification";
+
+const platformSchema = z.object({
+  platform: z.string().min(1),
+});
 
 type WebhookHandler = (
   request: Request,
@@ -39,14 +44,19 @@ export function createPlatformRoutes(config: PlatformRouteConfig) {
       return Response.json({ error: "Agent not configured" }, { status: 503 });
     }
 
-    const { platform } = await params;
+    const parsed = platformSchema.safeParse(await params);
+    if (!parsed.success) {
+      return Response.json({ error: "Invalid platform parameter" }, { status: 400 });
+    }
+
+    const { platform } = parsed.data;
     config.ensureHandlers?.();
 
     const bot = config.getBot();
     const handler = bot.webhooks[platform];
 
     if (!handler) {
-      return new Response("Unknown platform", { status: 404 });
+      return Response.json({ error: "Unknown platform" }, { status: 404 });
     }
 
     return handler(request, { waitUntil: p => after(() => p) });
@@ -61,7 +71,12 @@ export function createPlatformRoutes(config: PlatformRouteConfig) {
    * @returns The webhook response
    */
   async function POST(request: NextRequest, { params }: { params: Promise<{ platform: string }> }) {
-    const { platform } = await params;
+    const parsed = platformSchema.safeParse(await params);
+    if (!parsed.success) {
+      return Response.json({ error: "Invalid platform parameter" }, { status: 400 });
+    }
+
+    const { platform } = parsed.data;
 
     if (platform === "slack") {
       const verification = await handleUrlVerification(request);
@@ -80,7 +95,7 @@ export function createPlatformRoutes(config: PlatformRouteConfig) {
     const handler = bot.webhooks[platform];
 
     if (!handler) {
-      return new Response("Unknown platform", { status: 404 });
+      return Response.json({ error: "Unknown platform" }, { status: 404 });
     }
 
     return handler(request, { waitUntil: p => after(() => p) });

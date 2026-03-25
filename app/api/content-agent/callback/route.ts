@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server";
-import { getContentAgentBot } from "@/lib/agents/content/bot";
+import { contentAgentBot } from "@/lib/agents/content/bot";
 import { handleContentAgentCallback } from "@/lib/agents/content/handleContentAgentCallback";
-import { isContentAgentConfigured } from "@/lib/agents/content/validateEnv";
 
 /**
  * POST /api/content-agent/callback
@@ -13,10 +12,10 @@ import { isContentAgentConfigured } from "@/lib/agents/content/validateEnv";
  * @returns The callback response
  */
 export async function POST(request: NextRequest) {
-  if (!isContentAgentConfigured()) {
+  if (!contentAgentBot) {
     return Response.json({ error: "Content agent not configured" }, { status: 503 });
   }
 
-  await getContentAgentBot().initialize();
+  await contentAgentBot.initialize();
   return handleContentAgentCallback(request);
 }

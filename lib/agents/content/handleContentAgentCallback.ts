@@ -2,7 +2,8 @@ import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateContentAgentCallback } from "./validateContentAgentCallback";
-import { getThread } from "./getThread";
+import { getThread } from "@/lib/agents/getThread";
+import type { ContentAgentThreadState } from "./types";
 
 /**
  * Handles content agent task callback from Trigger.dev.
@@ -43,7 +44,7 @@ export async function handleContentAgentCallback(request: Request): Promise<Next
     return validated;
   }
 
-  const thread = getThread(validated.threadId);
+  const thread = getThread<ContentAgentThreadState>(validated.threadId);
 
   switch (validated.status) {
     case "completed": {
