@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCodingAgentCallback } from "./validateCodingAgentCallback";
-import { getThread } from "./getThread";
+import { getThread } from "@/lib/agents/getThread";
 import { handlePRCreated } from "./handlePRCreated";
 import { buildPRCard } from "./buildPRCard";
 import { setCodingAgentPRState } from "./prState";
@@ -41,7 +41,7 @@ export async function handleCodingAgentCallback(request: Request): Promise<NextR
     return validated;
   }
 
-  const thread = getThread(validated.threadId);
+  const thread = getThread<CodingAgentThreadState>(validated.threadId);
 
   // Post agent stdout to the thread so users see the full agent response
   if (validated.stdout?.trim()) {
