@@ -16,11 +16,14 @@ export async function handleContentAgentCallback(request: Request): Promise<Next
   const secret = request.headers.get("x-callback-secret");
   const expectedSecret = process.env.CONTENT_AGENT_CALLBACK_SECRET;
 
+  const secretBuf = secret ? Buffer.from(secret) : Buffer.alloc(0);
+  const expectedBuf = expectedSecret ? Buffer.from(expectedSecret) : Buffer.alloc(0);
+
   if (
     !secret ||
     !expectedSecret ||
-    secret.length !== expectedSecret.length ||
-    !timingSafeEqual(Buffer.from(secret), Buffer.from(expectedSecret))
+    secretBuf.length !== expectedBuf.length ||
+    !timingSafeEqual(secretBuf, expectedBuf)
   ) {
     return NextResponse.json(
       { status: "error", error: "Unauthorized" },
@@ -45,6 +48,12 @@ export async function handleContentAgentCallback(request: Request): Promise<Next
   }
 
   const thread = getThread<ContentAgentThreadState>(validated.threadId);
+
+  // Idempotency: skip if thread is no longer running (duplicate/retry delivery)
+  const currentState = await thread.state;
+  if (currentState?.status && currentState.status !== "running") {
+    return NextResponse.json({ status: "ok", skipped: true }, { headers: getCorsHeaders() });
+  }
 
   switch (validated.status) {
     case "completed": {

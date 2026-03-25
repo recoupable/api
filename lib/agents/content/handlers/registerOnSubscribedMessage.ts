@@ -7,7 +7,10 @@ import type { ContentAgentBot } from "../bot";
  * @param bot - The content agent bot instance to register the handler on
  */
 export function registerOnSubscribedMessage(bot: ContentAgentBot) {
-  bot.onSubscribedMessage(async (thread, _) => {
+  bot.onSubscribedMessage(async (thread, message) => {
+    // Guard against bot-authored messages to prevent echo loops
+    if (message.author.isBot || message.author.isMe) return;
+
     const state = await thread.state;
 
     if (state?.status === "running") {

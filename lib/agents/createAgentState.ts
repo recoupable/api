@@ -16,8 +16,8 @@ export const agentLogger = new ConsoleLogger();
  */
 export function createAgentState(keyPrefix: string) {
   if (redis.status === "wait") {
-    redis.connect().catch(() => {
-      throw new Error(`[${keyPrefix}] Redis failed to connect`);
+    redis.connect().catch(err => {
+      console.error(`[${keyPrefix}] Redis failed to connect:`, err);
     });
   }
 

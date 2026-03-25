@@ -11,7 +11,10 @@ const contentRunResultSchema = z.object({
 });
 
 export const contentAgentCallbackSchema = z.object({
-  threadId: z.string({ message: "threadId is required" }).min(1, "threadId cannot be empty"),
+  threadId: z
+    .string({ message: "threadId is required" })
+    .min(1, "threadId cannot be empty")
+    .regex(/^[^:]+:[^:]+:[^:]+$/, "threadId must match adapter:channel:thread format"),
   status: z.enum(["completed", "failed", "timeout"]),
   results: z.array(contentRunResultSchema).optional(),
   message: z.string().optional(),

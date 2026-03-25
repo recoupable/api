@@ -102,12 +102,20 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       });
 
       // Trigger polling task
-      await triggerPollContentRun({
-        runIds,
-        callbackThreadId: thread.id,
-      });
+      try {
+        await triggerPollContentRun({
+          runIds,
+          callbackThreadId: thread.id,
+        });
+      } catch (pollError) {
+        console.error("[content-agent] triggerPollContentRun failed:", pollError);
+        await thread.setState({ status: "failed" });
+        await thread.post("Failed to start content polling. Please try again.");
+        return;
+      }
     } catch (error) {
       console.error("[content-agent] onNewMention error:", error);
+      await thread.setState({ status: "failed" });
       await thread.post("Something went wrong starting content generation. Please try again.");
     }
   });
