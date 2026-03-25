@@ -88,7 +88,7 @@ describe("callFlamingoGenerate", () => {
     });
 
     await expect(callFlamingoGenerate({ prompt: "Describe this." })).rejects.toThrow(
-      "Flamingo model returned 503: Service Unavailable",
+      "Audio model returned 503: Service Unavailable",
     );
   });
 
@@ -102,7 +102,7 @@ describe("callFlamingoGenerate", () => {
     });
 
     await expect(callFlamingoGenerate({ prompt: "Describe this." })).rejects.toThrow(
-      "Flamingo model returned 500: Unknown error",
+      "Audio model returned 500: Unknown error",
     );
   });
 
@@ -113,7 +113,7 @@ describe("callFlamingoGenerate", () => {
     });
 
     await expect(callFlamingoGenerate({ prompt: "Describe this." })).rejects.toThrow(
-      "Flamingo model returned an unexpected response shape",
+      "Audio model returned an unexpected response shape",
     );
   });
 });
