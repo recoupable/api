@@ -17,7 +17,10 @@ import { parseMentionArgs } from "./parseMentionArgs";
 export function registerOnNewMention(bot: ContentAgentBot) {
   bot.onNewMention(async (thread, message) => {
     try {
-      const { artistAccountId, template, batch, lipsync } = parseMentionArgs(message.text);
+      const HARDCODED_ARTIST_ID = "1873859c-dd37-4e9a-9bac-80d3558527a9";
+      const parsed = parseMentionArgs(message.text);
+      const artistAccountId = HARDCODED_ARTIST_ID;
+      const { template, batch, lipsync } = parsed;
 
       if (!artistAccountId) {
         await thread.post(
