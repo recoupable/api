@@ -40,7 +40,9 @@ describe("validateGetTasksQuery", () => {
       NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
     );
 
-    const result = await validateGetTasksQuery(createMockRequest("http://localhost:3000/api/tasks"));
+    const result = await validateGetTasksQuery(
+      createMockRequest("http://localhost:3000/api/tasks"),
+    );
 
     expect(result).toBeInstanceOf(NextResponse);
     expect(validateAuthContext).toHaveBeenCalledTimes(1);
@@ -57,7 +59,9 @@ describe("validateGetTasksQuery", () => {
     });
 
     const result = await validateGetTasksQuery(
-      createMockRequest("http://localhost:3000/api/tasks?artist_account_id=artist_456&enabled=true"),
+      createMockRequest(
+        "http://localhost:3000/api/tasks?artist_account_id=artist_456&enabled=true",
+      ),
     );
 
     expect(validateAuthContext).toHaveBeenCalledTimes(1);
