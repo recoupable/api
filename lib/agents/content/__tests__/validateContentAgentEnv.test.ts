@@ -23,9 +23,7 @@ describe("validateContentAgentEnv", () => {
 
   it("throws when a required env var is missing", () => {
     delete process.env.SLACK_CONTENT_BOT_TOKEN;
-    expect(() => validateContentAgentEnv()).toThrow(
-      /Missing required environment variables/,
-    );
+    expect(() => validateContentAgentEnv()).toThrow(/Missing required environment variables/);
   });
 
   it("lists all missing vars in the error message", () => {
