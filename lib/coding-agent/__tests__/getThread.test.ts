@@ -4,9 +4,9 @@ vi.mock("chat", () => ({
   ThreadImpl: vi.fn().mockImplementation((config: Record<string, unknown>) => config),
 }));
 
-describe("getThread", () => {
+describe("getThread (shared)", () => {
   it("parses adapter name and channel ID from thread ID", async () => {
-    const { getThread } = await import("../getThread");
+    const { getThread } = await import("@/lib/agents/getThread");
     const { ThreadImpl } = await import("chat");
 
     getThread("slack:C123:1234567890.123456");
