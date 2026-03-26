@@ -1,6 +1,6 @@
 import type { AdminPeriod } from "@/lib/admins/adminPeriod";
-import { fetchBotMentions, type BotTag } from "@/lib/admins/slack-tags/fetchBotMentions";
-import { fetchAllThreadResponses } from "@/lib/admins/slack-tags/fetchAllThreadResponses";
+import { fetchBotMentions, type BotTag } from "@/lib/admins/slack/fetchBotMentions";
+import { fetchAllThreadResponses } from "@/lib/admins/slack/fetchAllThreadResponses";
 import { fetchThreadVideoLinks } from "./fetchThreadVideoLinks";
 
 export interface ContentSlackTag extends Omit<BotTag, "responses"> {
