@@ -12,10 +12,14 @@ export interface TriggerCreateContentPayload {
   upscale: boolean;
   /** GitHub repo URL so the task can fetch artist files. */
   githubRepo: string;
+  /** Optional list of song slugs to pick from. When omitted, all songs are eligible. */
+  songs?: string[];
 }
 
 /**
  * Triggers the create-content task in Trigger.dev.
+ *
+ * @param payload
  */
 export async function triggerCreateContent(payload: TriggerCreateContentPayload) {
   const handle = await tasks.trigger(CREATE_CONTENT_TASK_ID, payload);
