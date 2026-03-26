@@ -63,8 +63,8 @@ describe("getContentSlackTagsHandler", () => {
       expect(response.status).toBe(200);
       expect(body.status).toBe("success");
       expect(body.total).toBe(2);
-      expect(body.total_video_links).toBe(1);
-      expect(body.tags_with_video_links).toBe(1);
+      expect(body.total_videos).toBe(1);
+      expect(body.tags_with_videos).toBe(1);
       expect(body.tags).toEqual(mockTags);
     });
 

@@ -22,15 +22,15 @@ export async function getContentSlackTagsHandler(request: NextRequest): Promise<
     }
 
     const tags = await fetchContentSlackMentions(query.period);
-    const totalVideoLinks = tags.reduce((sum, tag) => sum + tag.video_links.length, 0);
-    const tagsWithVideoLinks = tags.filter(tag => tag.video_links.length > 0).length;
+    const totalVideos = tags.reduce((sum, tag) => sum + tag.video_links.length, 0);
+    const tagsWithVideos = tags.filter(tag => tag.video_links.length > 0).length;
 
     return NextResponse.json(
       {
         status: "success",
         total: tags.length,
-        total_video_links: totalVideoLinks,
-        tags_with_video_links: tagsWithVideoLinks,
+        total_videos: totalVideos,
+        tags_with_videos: tagsWithVideos,
         tags,
       },
       { status: 200, headers: getCorsHeaders() },
