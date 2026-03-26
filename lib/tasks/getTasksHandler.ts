@@ -13,7 +13,7 @@ import { enrichTaskWithTriggerInfo } from "@/lib/tasks/enrichTaskWithTriggerInfo
  */
 export async function getTasksHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const validatedQuery = validateGetTasksQuery(request);
+    const validatedQuery = await validateGetTasksQuery(request);
     if (validatedQuery instanceof NextResponse) {
       return validatedQuery;
     }
