@@ -6,6 +6,7 @@ import { getSandboxesFileHandler } from "../getSandboxesFileHandler";
 import { validateGetSandboxesFileRequest } from "../validateGetSandboxesFileRequest";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { getRawFileContent } from "@/lib/github/getRawFileContent";
+import { getRawFileContentBase64 } from "@/lib/github/getRawFileContentBase64";
 import { resolveSubmodulePath } from "@/lib/github/resolveSubmodulePath";
 
 vi.mock("../validateGetSandboxesFileRequest", () => ({
@@ -20,6 +21,10 @@ vi.mock("@/lib/github/getRawFileContent", () => ({
   getRawFileContent: vi.fn(),
 }));
 
+vi.mock("@/lib/github/getRawFileContentBase64", () => ({
+  getRawFileContentBase64: vi.fn(),
+}));
+
 vi.mock("@/lib/github/resolveSubmodulePath", () => ({
   resolveSubmodulePath: vi.fn(),
 }));
@@ -28,11 +33,16 @@ vi.mock("@/lib/github/resolveSubmodulePath", () => ({
  * Creates a mock NextRequest for testing.
  *
  * @param path - The file path query parameter
+ * @param format - Optional format query parameter (e.g. "base64")
  * @returns A mock NextRequest object
  */
-function createMockRequest(path = "src/index.ts"): NextRequest {
+function createMockRequest(path = "src/index.ts", format?: string): NextRequest {
+  const params = new URLSearchParams({ path });
+  if (format) params.set("format", format);
+  const url = `http://localhost:3000/api/sandboxes/file?${params.toString()}`;
   return {
-    url: `http://localhost:3000/api/sandboxes/file?path=${encodeURIComponent(path)}`,
+    url,
+    nextUrl: new URL(url),
     headers: new Headers({ "x-api-key": "test-key" }),
   } as unknown as NextRequest;
 }
@@ -203,6 +213,41 @@ describe("getSandboxesFileHandler", () => {
       githubRepo: "https://github.com/user/repo",
       path: "src/utils/helper.ts",
     });
+  });
+
+  it("returns base64-encoded content when format=base64", async () => {
+    vi.mocked(validateGetSandboxesFileRequest).mockResolvedValue({
+      accountIds: ["acc_123"],
+      path: "images/logo.png",
+    });
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([
+      {
+        account_id: "acc_123",
+        snapshot_id: "snap_abc",
+        github_repo: "https://github.com/user/repo",
+        created_at: "2024-01-01T00:00:00.000Z",
+        expires_at: "2024-01-08T00:00:00.000Z",
+      },
+    ]);
+    vi.mocked(getRawFileContentBase64).mockResolvedValue({
+      content: "iVBORw0KGgo=",
+    });
+
+    const request = createMockRequest("images/logo.png", "base64");
+    const response = await getSandboxesFileHandler(request);
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json).toEqual({
+      status: "success",
+      content: "iVBORw0KGgo=",
+      encoding: "base64",
+    });
+    expect(getRawFileContentBase64).toHaveBeenCalledWith({
+      githubRepo: "https://github.com/user/repo",
+      path: "images/logo.png",
+    });
+    expect(getRawFileContent).not.toHaveBeenCalled();
   });
 
   it("fetches from submodule repo when path is inside a submodule", async () => {

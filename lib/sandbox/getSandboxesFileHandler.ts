@@ -3,6 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetSandboxesFileRequest } from "./validateGetSandboxesFileRequest";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { getRawFileContent } from "@/lib/github/getRawFileContent";
+import { getRawFileContentBase64 } from "@/lib/github/getRawFileContentBase64";
 import { resolveSubmodulePath } from "@/lib/github/resolveSubmodulePath";
 
 /**
@@ -46,7 +47,25 @@ export async function getSandboxesFileHandler(request: NextRequest): Promise<Nex
     );
   }
 
+  const format = request.nextUrl.searchParams.get("format");
   const resolved = await resolveSubmodulePath({ githubRepo, path });
+
+  if (format === "base64") {
+    const result = await getRawFileContentBase64(resolved);
+
+    if ("error" in result) {
+      return NextResponse.json(
+        { status: "error", error: result.error },
+        { status: 404, headers: getCorsHeaders() },
+      );
+    }
+
+    return NextResponse.json(
+      { status: "success", content: result.content, encoding: "base64" },
+      { status: 200, headers: getCorsHeaders() },
+    );
+  }
+
   const result = await getRawFileContent(resolved);
 
   if ("error" in result) {
