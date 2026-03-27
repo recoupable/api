@@ -2,23 +2,27 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { createChatHandler } from "../createChatHandler";
 
-import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
-import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { generateChatTitle } from "../generateChatTitle";
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
+import { sendNewConversationNotification } from "@/lib/telegram/sendNewConversationNotification";
 
-// Mock dependencies
-vi.mock("@/lib/auth/getApiKeyAccountId", () => ({
-  getApiKeyAccountId: vi.fn(),
-}));
-
-vi.mock("@/lib/accounts/validateOverrideAccountId", () => ({
-  validateOverrideAccountId: vi.fn(),
+vi.mock("@/lib/auth/validateAuthContext", () => ({
+  validateAuthContext: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/rooms/upsertRoom", () => ({
   upsertRoom: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
+  default: vi.fn(),
+}));
+
+vi.mock("@/lib/telegram/sendNewConversationNotification", () => ({
+  sendNewConversationNotification: vi.fn(),
 }));
 
 vi.mock("@/lib/uuid/generateUUID", () => ({
@@ -37,14 +41,16 @@ vi.mock("../generateChatTitle", () => ({
   generateChatTitle: vi.fn(),
 }));
 
-/**
- *
- * @param apiKey
- */
-function createMockRequest(apiKey = "test-api-key"): NextRequest {
+function createMockRequest(
+  headers: Record<string, string> = { "x-api-key": "test-api-key" },
+): NextRequest {
+  const normalized = Object.fromEntries(
+    Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value]),
+  );
+
   return {
     headers: {
-      get: (name: string) => (name === "x-api-key" ? apiKey : null),
+      get: (name: string) => normalized[name.toLowerCase()] ?? null,
     },
   } as unknown as NextRequest;
 }
@@ -52,18 +58,23 @@ function createMockRequest(apiKey = "test-api-key"): NextRequest {
 describe("createChatHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(selectAccountEmails).mockResolvedValue([]);
   });
 
   describe("without accountId override", () => {
-    it("uses API key's accountId when no accountId in body", async () => {
-      const apiKeyAccountId = "api-key-account-123";
+    it("uses the authenticated accountId when no accountId is in the body", async () => {
+      const accountId = "123e4567-e89b-12d3-a456-426614174111";
       const artistId = "123e4567-e89b-12d3-a456-426614174000";
 
-      vi.mocked(getApiKeyAccountId).mockResolvedValue(apiKeyAccountId);
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId,
+        orgId: null,
+        authToken: "test-api-key",
+      });
       vi.mocked(safeParseJson).mockResolvedValue({ artistId });
       vi.mocked(upsertRoom).mockResolvedValue({
         id: "generated-uuid-123",
-        account_id: apiKeyAccountId,
+        account_id: accountId,
         artist_id: artistId,
         topic: null,
       });
@@ -74,29 +85,39 @@ describe("createChatHandler", () => {
 
       expect(response.status).toBe(200);
       expect(json.status).toBe("success");
-      expect(validateOverrideAccountId).not.toHaveBeenCalled();
+      expect(validateAuthContext).toHaveBeenCalledWith(request, {
+        accountId: undefined,
+      });
       expect(upsertRoom).toHaveBeenCalledWith({
         id: "generated-uuid-123",
-        account_id: apiKeyAccountId,
+        account_id: accountId,
         artist_id: artistId,
         topic: null,
+      });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId,
+        email: "",
+        conversationId: "generated-uuid-123",
+        topic: "",
+        firstMessage: undefined,
       });
     });
   });
 
   describe("with accountId override", () => {
-    it("uses body accountId when validation succeeds", async () => {
-      const apiKeyAccountId = "recoup-org-account";
+    it("uses body accountId when auth validation succeeds", async () => {
+      const authenticatedAccountId = "123e4567-e89b-12d3-a456-426614174009";
       const targetAccountId = "123e4567-e89b-12d3-a456-426614174001";
       const artistId = "123e4567-e89b-12d3-a456-426614174000";
 
-      vi.mocked(getApiKeyAccountId).mockResolvedValue(apiKeyAccountId);
       vi.mocked(safeParseJson).mockResolvedValue({
         artistId,
         accountId: targetAccountId,
       });
-      vi.mocked(validateOverrideAccountId).mockResolvedValue({
+      vi.mocked(validateAuthContext).mockResolvedValue({
         accountId: targetAccountId,
+        orgId: authenticatedAccountId,
+        authToken: "test-api-key",
       });
       vi.mocked(upsertRoom).mockResolvedValue({
         id: "generated-uuid-123",
@@ -111,9 +132,8 @@ describe("createChatHandler", () => {
 
       expect(response.status).toBe(200);
       expect(json.status).toBe("success");
-      expect(validateOverrideAccountId).toHaveBeenCalledWith({
-        apiKey: "test-api-key",
-        targetAccountId,
+      expect(validateAuthContext).toHaveBeenCalledWith(request, {
+        accountId: targetAccountId,
       });
       expect(upsertRoom).toHaveBeenCalledWith({
         id: "generated-uuid-123",
@@ -121,19 +141,24 @@ describe("createChatHandler", () => {
         artist_id: artistId,
         topic: null,
       });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId: targetAccountId,
+        email: "",
+        conversationId: "generated-uuid-123",
+        topic: "",
+        firstMessage: undefined,
+      });
     });
 
-    it("returns 403 when validation returns access denied", async () => {
-      const apiKeyAccountId = "org-account";
+    it("returns auth validation errors unchanged", async () => {
       const targetAccountId = "123e4567-e89b-12d3-a456-426614174001";
 
-      vi.mocked(getApiKeyAccountId).mockResolvedValue(apiKeyAccountId);
       vi.mocked(safeParseJson).mockResolvedValue({
         accountId: targetAccountId,
       });
-      vi.mocked(validateOverrideAccountId).mockResolvedValue(
+      vi.mocked(validateAuthContext).mockResolvedValue(
         NextResponse.json(
-          { status: "error", message: "Access denied to specified accountId" },
+          { status: "error", error: "Access denied to specified account_id" },
           { status: 403 },
         ),
       );
@@ -144,50 +169,30 @@ describe("createChatHandler", () => {
 
       expect(response.status).toBe(403);
       expect(json.status).toBe("error");
-      expect(json.message).toBe("Access denied to specified accountId");
+      expect(json.error).toBe("Access denied to specified account_id");
       expect(upsertRoom).not.toHaveBeenCalled();
-    });
-
-    it("returns 500 when validation returns API key error", async () => {
-      const apiKeyAccountId = "org-account";
-      const targetAccountId = "123e4567-e89b-12d3-a456-426614174001";
-
-      vi.mocked(getApiKeyAccountId).mockResolvedValue(apiKeyAccountId);
-      vi.mocked(safeParseJson).mockResolvedValue({
-        accountId: targetAccountId,
-      });
-      vi.mocked(validateOverrideAccountId).mockResolvedValue(
-        NextResponse.json(
-          { status: "error", message: "Failed to validate API key" },
-          { status: 500 },
-        ),
-      );
-
-      const request = createMockRequest();
-      const response = await createChatHandler(request);
-      const json = await response.json();
-
-      expect(response.status).toBe(500);
-      expect(json.status).toBe("error");
-      expect(json.message).toBe("Failed to validate API key");
-      expect(upsertRoom).not.toHaveBeenCalled();
+      expect(sendNewConversationNotification).not.toHaveBeenCalled();
     });
   });
 
   describe("with topic parameter", () => {
     it("uses provided topic directly without generating", async () => {
-      const apiKeyAccountId = "api-key-account-123";
+      const accountId = "123e4567-e89b-12d3-a456-426614174111";
       const artistId = "123e4567-e89b-12d3-a456-426614174000";
       const topic = "My Custom Topic";
 
-      vi.mocked(getApiKeyAccountId).mockResolvedValue(apiKeyAccountId);
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId,
+        orgId: null,
+        authToken: "test-api-key",
+      });
       vi.mocked(safeParseJson).mockResolvedValue({
         artistId,
         topic,
       });
       vi.mocked(upsertRoom).mockResolvedValue({
         id: "generated-uuid-123",
-        account_id: apiKeyAccountId,
+        account_id: accountId,
         artist_id: artistId,
         topic,
       });
@@ -201,19 +206,30 @@ describe("createChatHandler", () => {
       expect(generateChatTitle).not.toHaveBeenCalled();
       expect(upsertRoom).toHaveBeenCalledWith({
         id: "generated-uuid-123",
-        account_id: apiKeyAccountId,
+        account_id: accountId,
         artist_id: artistId,
         topic,
+      });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId,
+        email: "",
+        conversationId: "generated-uuid-123",
+        topic,
+        firstMessage: undefined,
       });
     });
 
     it("uses provided topic even when firstMessage is also provided", async () => {
-      const apiKeyAccountId = "api-key-account-123";
+      const accountId = "123e4567-e89b-12d3-a456-426614174111";
       const artistId = "123e4567-e89b-12d3-a456-426614174000";
       const topic = "My Custom Topic";
       const firstMessage = "What marketing strategies should I use?";
 
-      vi.mocked(getApiKeyAccountId).mockResolvedValue(apiKeyAccountId);
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId,
+        orgId: null,
+        authToken: "test-api-key",
+      });
       vi.mocked(safeParseJson).mockResolvedValue({
         artistId,
         topic,
@@ -221,7 +237,7 @@ describe("createChatHandler", () => {
       });
       vi.mocked(upsertRoom).mockResolvedValue({
         id: "generated-uuid-123",
-        account_id: apiKeyAccountId,
+        account_id: accountId,
         artist_id: artistId,
         topic,
       });
@@ -235,21 +251,32 @@ describe("createChatHandler", () => {
       expect(generateChatTitle).not.toHaveBeenCalled();
       expect(upsertRoom).toHaveBeenCalledWith({
         id: "generated-uuid-123",
-        account_id: apiKeyAccountId,
+        account_id: accountId,
         artist_id: artistId,
         topic,
+      });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId,
+        email: "",
+        conversationId: "generated-uuid-123",
+        topic,
+        firstMessage,
       });
     });
   });
 
   describe("with firstMessage (title generation)", () => {
     it("generates a title from firstMessage when provided", async () => {
-      const apiKeyAccountId = "api-key-account-123";
+      const accountId = "123e4567-e89b-12d3-a456-426614174111";
       const artistId = "123e4567-e89b-12d3-a456-426614174000";
       const firstMessage = "What marketing strategies should I use?";
       const generatedTitle = "Marketing Plan";
 
-      vi.mocked(getApiKeyAccountId).mockResolvedValue(apiKeyAccountId);
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId,
+        orgId: null,
+        authToken: "test-api-key",
+      });
       vi.mocked(safeParseJson).mockResolvedValue({
         artistId,
         firstMessage,
@@ -257,7 +284,7 @@ describe("createChatHandler", () => {
       vi.mocked(generateChatTitle).mockResolvedValue(generatedTitle);
       vi.mocked(upsertRoom).mockResolvedValue({
         id: "generated-uuid-123",
-        account_id: apiKeyAccountId,
+        account_id: accountId,
         artist_id: artistId,
         topic: generatedTitle,
       });
@@ -271,23 +298,34 @@ describe("createChatHandler", () => {
       expect(generateChatTitle).toHaveBeenCalledWith(firstMessage);
       expect(upsertRoom).toHaveBeenCalledWith({
         id: "generated-uuid-123",
-        account_id: apiKeyAccountId,
+        account_id: accountId,
         artist_id: artistId,
         topic: generatedTitle,
+      });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId,
+        email: "",
+        conversationId: "generated-uuid-123",
+        topic: generatedTitle,
+        firstMessage,
       });
     });
 
     it("uses null topic when firstMessage is not provided", async () => {
-      const apiKeyAccountId = "api-key-account-123";
+      const accountId = "123e4567-e89b-12d3-a456-426614174111";
       const artistId = "123e4567-e89b-12d3-a456-426614174000";
 
-      vi.mocked(getApiKeyAccountId).mockResolvedValue(apiKeyAccountId);
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId,
+        orgId: null,
+        authToken: "test-api-key",
+      });
       vi.mocked(safeParseJson).mockResolvedValue({
         artistId,
       });
       vi.mocked(upsertRoom).mockResolvedValue({
         id: "generated-uuid-123",
-        account_id: apiKeyAccountId,
+        account_id: accountId,
         artist_id: artistId,
         topic: null,
       });
@@ -299,18 +337,29 @@ describe("createChatHandler", () => {
       expect(generateChatTitle).not.toHaveBeenCalled();
       expect(upsertRoom).toHaveBeenCalledWith({
         id: "generated-uuid-123",
-        account_id: apiKeyAccountId,
+        account_id: accountId,
         artist_id: artistId,
         topic: null,
       });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId,
+        email: "",
+        conversationId: "generated-uuid-123",
+        topic: "",
+        firstMessage: undefined,
+      });
     });
 
-    it("handles title generation failure gracefully (uses null)", async () => {
-      const apiKeyAccountId = "api-key-account-123";
+    it("handles title generation failure gracefully", async () => {
+      const accountId = "123e4567-e89b-12d3-a456-426614174111";
       const artistId = "123e4567-e89b-12d3-a456-426614174000";
       const firstMessage = "What marketing strategies should I use?";
 
-      vi.mocked(getApiKeyAccountId).mockResolvedValue(apiKeyAccountId);
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId,
+        orgId: null,
+        authToken: "test-api-key",
+      });
       vi.mocked(safeParseJson).mockResolvedValue({
         artistId,
         firstMessage,
@@ -318,7 +367,7 @@ describe("createChatHandler", () => {
       vi.mocked(generateChatTitle).mockRejectedValue(new Error("AI generation failed"));
       vi.mocked(upsertRoom).mockResolvedValue({
         id: "generated-uuid-123",
-        account_id: apiKeyAccountId,
+        account_id: accountId,
         artist_id: artistId,
         topic: null,
       });
@@ -332,10 +381,129 @@ describe("createChatHandler", () => {
       expect(generateChatTitle).toHaveBeenCalledWith(firstMessage);
       expect(upsertRoom).toHaveBeenCalledWith({
         id: "generated-uuid-123",
-        account_id: apiKeyAccountId,
+        account_id: accountId,
         artist_id: artistId,
         topic: null,
       });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId,
+        email: "",
+        conversationId: "generated-uuid-123",
+        topic: "",
+        firstMessage,
+      });
+    });
+  });
+
+  describe("with bearer authentication", () => {
+    it("creates a chat when authenticated via Authorization bearer token", async () => {
+      const accountId = "123e4567-e89b-12d3-a456-426614174222";
+      const artistId = "123e4567-e89b-12d3-a456-426614174000";
+
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId,
+        orgId: null,
+        authToken: "bearer-token-123",
+      });
+      vi.mocked(safeParseJson).mockResolvedValue({ artistId });
+      vi.mocked(upsertRoom).mockResolvedValue({
+        id: "generated-uuid-123",
+        account_id: accountId,
+        artist_id: artistId,
+        topic: null,
+      });
+
+      const request = createMockRequest({
+        authorization: "Bearer bearer-token-123",
+      });
+      const response = await createChatHandler(request);
+      const json = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(json.status).toBe("success");
+      expect(validateAuthContext).toHaveBeenCalledWith(request, {
+        accountId: undefined,
+      });
+      expect(upsertRoom).toHaveBeenCalledWith({
+        id: "generated-uuid-123",
+        account_id: accountId,
+        artist_id: artistId,
+        topic: null,
+      });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId,
+        email: "",
+        conversationId: "generated-uuid-123",
+        topic: "",
+        firstMessage: undefined,
+      });
+    });
+  });
+
+  describe("notification email lookup", () => {
+    it("uses the first account email when sending telegram notifications", async () => {
+      const accountId = "123e4567-e89b-12d3-a456-426614174333";
+      const artistId = "123e4567-e89b-12d3-a456-426614174000";
+
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId,
+        orgId: null,
+        authToken: "bearer-token-123",
+      });
+      vi.mocked(safeParseJson).mockResolvedValue({ artistId });
+      vi.mocked(upsertRoom).mockResolvedValue({
+        id: "generated-uuid-123",
+        account_id: accountId,
+        artist_id: artistId,
+        topic: null,
+      });
+      vi.mocked(selectAccountEmails).mockResolvedValue([
+        { email: "first@example.com" } as never,
+        { email: "second@example.com" } as never,
+      ]);
+
+      const request = createMockRequest({
+        authorization: "Bearer bearer-token-123",
+      });
+      await createChatHandler(request);
+
+      expect(selectAccountEmails).toHaveBeenCalledWith({
+        accountIds: accountId,
+      });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId,
+        email: "first@example.com",
+        conversationId: "generated-uuid-123",
+        topic: "",
+        firstMessage: undefined,
+      });
+    });
+
+    it("does not fail chat creation when notification sending throws", async () => {
+      const accountId = "123e4567-e89b-12d3-a456-426614174444";
+      const artistId = "123e4567-e89b-12d3-a456-426614174000";
+
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId,
+        orgId: null,
+        authToken: "bearer-token-123",
+      });
+      vi.mocked(safeParseJson).mockResolvedValue({ artistId });
+      vi.mocked(upsertRoom).mockResolvedValue({
+        id: "generated-uuid-123",
+        account_id: accountId,
+        artist_id: artistId,
+        topic: null,
+      });
+      vi.mocked(sendNewConversationNotification).mockRejectedValue(new Error("telegram failed"));
+
+      const request = createMockRequest({
+        authorization: "Bearer bearer-token-123",
+      });
+      const response = await createChatHandler(request);
+
+      expect(response.status).toBe(200);
+      expect(upsertRoom).toHaveBeenCalled();
     });
   });
 });
