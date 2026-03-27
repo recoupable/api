@@ -6,6 +6,8 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { generateChatTitle } from "../generateChatTitle";
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
+import { sendNewConversationNotification } from "@/lib/telegram/sendNewConversationNotification";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
@@ -13,6 +15,14 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 
 vi.mock("@/lib/supabase/rooms/upsertRoom", () => ({
   upsertRoom: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
+  default: vi.fn(),
+}));
+
+vi.mock("@/lib/telegram/sendNewConversationNotification", () => ({
+  sendNewConversationNotification: vi.fn(),
 }));
 
 vi.mock("@/lib/uuid/generateUUID", () => ({
@@ -48,6 +58,7 @@ function createMockRequest(
 describe("createChatHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(selectAccountEmails).mockResolvedValue([]);
   });
 
   describe("without accountId override", () => {
@@ -82,6 +93,13 @@ describe("createChatHandler", () => {
         account_id: accountId,
         artist_id: artistId,
         topic: null,
+      });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId,
+        email: "",
+        conversationId: "generated-uuid-123",
+        topic: "",
+        firstMessage: undefined,
       });
     });
   });
@@ -123,6 +141,13 @@ describe("createChatHandler", () => {
         artist_id: artistId,
         topic: null,
       });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId: targetAccountId,
+        email: "",
+        conversationId: "generated-uuid-123",
+        topic: "",
+        firstMessage: undefined,
+      });
     });
 
     it("returns auth validation errors unchanged", async () => {
@@ -146,6 +171,7 @@ describe("createChatHandler", () => {
       expect(json.status).toBe("error");
       expect(json.error).toBe("Access denied to specified account_id");
       expect(upsertRoom).not.toHaveBeenCalled();
+      expect(sendNewConversationNotification).not.toHaveBeenCalled();
     });
   });
 
@@ -184,6 +210,13 @@ describe("createChatHandler", () => {
         artist_id: artistId,
         topic,
       });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId,
+        email: "",
+        conversationId: "generated-uuid-123",
+        topic,
+        firstMessage: undefined,
+      });
     });
 
     it("uses provided topic even when firstMessage is also provided", async () => {
@@ -221,6 +254,13 @@ describe("createChatHandler", () => {
         account_id: accountId,
         artist_id: artistId,
         topic,
+      });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId,
+        email: "",
+        conversationId: "generated-uuid-123",
+        topic,
+        firstMessage,
       });
     });
   });
@@ -262,6 +302,13 @@ describe("createChatHandler", () => {
         artist_id: artistId,
         topic: generatedTitle,
       });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId,
+        email: "",
+        conversationId: "generated-uuid-123",
+        topic: generatedTitle,
+        firstMessage,
+      });
     });
 
     it("uses null topic when firstMessage is not provided", async () => {
@@ -293,6 +340,13 @@ describe("createChatHandler", () => {
         account_id: accountId,
         artist_id: artistId,
         topic: null,
+      });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId,
+        email: "",
+        conversationId: "generated-uuid-123",
+        topic: "",
+        firstMessage: undefined,
       });
     });
 
@@ -330,6 +384,13 @@ describe("createChatHandler", () => {
         account_id: accountId,
         artist_id: artistId,
         topic: null,
+      });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId,
+        email: "",
+        conversationId: "generated-uuid-123",
+        topic: "",
+        firstMessage,
       });
     });
   });
@@ -369,6 +430,82 @@ describe("createChatHandler", () => {
         artist_id: artistId,
         topic: null,
       });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId,
+        email: "",
+        conversationId: "generated-uuid-123",
+        topic: "",
+        firstMessage: undefined,
+      });
+    });
+  });
+
+  describe("notification email lookup", () => {
+    it("uses the first account email when sending telegram notifications", async () => {
+      const accountId = "123e4567-e89b-12d3-a456-426614174333";
+      const artistId = "123e4567-e89b-12d3-a456-426614174000";
+
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId,
+        orgId: null,
+        authToken: "bearer-token-123",
+      });
+      vi.mocked(safeParseJson).mockResolvedValue({ artistId });
+      vi.mocked(upsertRoom).mockResolvedValue({
+        id: "generated-uuid-123",
+        account_id: accountId,
+        artist_id: artistId,
+        topic: null,
+      });
+      vi.mocked(selectAccountEmails).mockResolvedValue([
+        { email: "first@example.com" } as never,
+        { email: "second@example.com" } as never,
+      ]);
+
+      const request = createMockRequest({
+        authorization: "Bearer bearer-token-123",
+      });
+      await createChatHandler(request);
+
+      expect(selectAccountEmails).toHaveBeenCalledWith({
+        accountIds: accountId,
+      });
+      expect(sendNewConversationNotification).toHaveBeenCalledWith({
+        accountId,
+        email: "first@example.com",
+        conversationId: "generated-uuid-123",
+        topic: "",
+        firstMessage: undefined,
+      });
+    });
+
+    it("does not fail chat creation when notification sending throws", async () => {
+      const accountId = "123e4567-e89b-12d3-a456-426614174444";
+      const artistId = "123e4567-e89b-12d3-a456-426614174000";
+
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId,
+        orgId: null,
+        authToken: "bearer-token-123",
+      });
+      vi.mocked(safeParseJson).mockResolvedValue({ artistId });
+      vi.mocked(upsertRoom).mockResolvedValue({
+        id: "generated-uuid-123",
+        account_id: accountId,
+        artist_id: artistId,
+        topic: null,
+      });
+      vi.mocked(sendNewConversationNotification).mockRejectedValue(
+        new Error("telegram failed"),
+      );
+
+      const request = createMockRequest({
+        authorization: "Bearer bearer-token-123",
+      });
+      const response = await createChatHandler(request);
+
+      expect(response.status).toBe(200);
+      expect(upsertRoom).toHaveBeenCalled();
     });
   });
 });

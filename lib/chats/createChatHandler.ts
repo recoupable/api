@@ -6,6 +6,8 @@ import { generateUUID } from "@/lib/uuid/generateUUID";
 import { validateCreateChatBody } from "@/lib/chats/validateCreateChatBody";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { generateChatTitle } from "@/lib/chats/generateChatTitle";
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
+import { sendNewConversationNotification } from "@/lib/telegram/sendNewConversationNotification";
 
 /**
  * Handler for creating a new chat room.
@@ -61,6 +63,21 @@ export async function createChatHandler(request: NextRequest): Promise<NextRespo
       artist_id: artistId || null,
       topic,
     });
+
+    try {
+      const accountEmails = await selectAccountEmails({ accountIds: accountId });
+      const email = accountEmails[0]?.email || "";
+
+      await sendNewConversationNotification({
+        accountId,
+        email,
+        conversationId: chat.id,
+        topic: chat.topic || "",
+        firstMessage,
+      });
+    } catch (notificationError) {
+      console.error("[ERROR] createChatHandler notification:", notificationError);
+    }
 
     return NextResponse.json(
       {
