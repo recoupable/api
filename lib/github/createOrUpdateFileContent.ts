@@ -38,50 +38,64 @@ export async function createOrUpdateFileContent({
     return { error: "GitHub token not configured" };
   }
 
-  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+  const encodedPath = path
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
 
   // Check if file already exists to get its SHA for updates
   let existingSha: string | undefined;
-  const getResponse = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github.v3+json",
-    },
-  });
+  try {
+    const getResponse = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github.v3+json",
+      },
+    });
 
-  if (getResponse.ok) {
-    const existing = await getResponse.json();
-    existingSha = existing.sha;
+    if (getResponse.ok) {
+      const existing = await getResponse.json();
+      existingSha = existing.sha;
+    } else if (getResponse.status !== 404) {
+      const errorText = await getResponse.text();
+      return { error: `Failed to check existing file: ${getResponse.status} ${errorText}` };
+    }
+  } catch (err) {
+    return { error: `Network error checking existing file: ${err instanceof Error ? err.message : String(err)}` };
   }
 
   const body: Record<string, string> = {
     message,
     content: content.toString("base64"),
-    branch: "main",
   };
 
   if (existingSha) {
     body.sha = existingSha;
   }
 
-  const response = await fetch(url, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github.v3+json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  try {
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github.v3+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    return { error: `Failed to upload file: ${response.status} ${errorText}` };
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { error: `Failed to upload file: ${response.status} ${errorText}` };
+    }
+
+    const result = await response.json();
+    return {
+      path: result.content.path,
+      sha: result.content.sha,
+    };
+  } catch (err) {
+    return { error: `Network error uploading file: ${err instanceof Error ? err.message : String(err)}` };
   }
-
-  const result = await response.json();
-  return {
-    path: result.content.path,
-    sha: result.content.sha,
-  };
 }
