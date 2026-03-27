@@ -6,7 +6,6 @@ import { buildGetSandboxesParams } from "./buildGetSandboxesParams";
 
 export interface ValidatedPostSandboxesFilesParams {
   accountIds?: string[];
-  orgId?: string;
   path: string;
   message: string;
   files: { name: string; content: Buffer }[];
@@ -27,7 +26,7 @@ export async function validatePostSandboxesFilesRequest(
     return authResult;
   }
 
-  const { accountId, orgId } = authResult;
+  const { accountId } = authResult;
 
   const { params, error } = await buildGetSandboxesParams({
     account_id: accountId,
@@ -78,7 +77,6 @@ export async function validatePostSandboxesFilesRequest(
 
   return {
     accountIds: params.accountIds,
-    orgId: orgId ?? undefined,
     path,
     message,
     files,

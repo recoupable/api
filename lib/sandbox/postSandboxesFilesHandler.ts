@@ -27,9 +27,9 @@ export async function postSandboxesFilesHandler(request: NextRequest): Promise<N
     return validated;
   }
 
-  const { accountIds, orgId, path, message, files } = validated;
+  const { accountIds, path, message, files } = validated;
 
-  const snapshotAccountId = accountIds?.length === 1 ? accountIds[0] : orgId;
+  const snapshotAccountId = accountIds?.[0];
 
   if (!snapshotAccountId) {
     return NextResponse.json(
