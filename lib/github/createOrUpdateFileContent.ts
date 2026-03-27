@@ -40,7 +40,7 @@ export async function createOrUpdateFileContent({
 
   const encodedPath = path
     .split("/")
-    .map((segment) => encodeURIComponent(segment))
+    .map(segment => encodeURIComponent(segment))
     .join("/");
   const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
 
@@ -62,7 +62,9 @@ export async function createOrUpdateFileContent({
       return { error: `Failed to check existing file: ${getResponse.status} ${errorText}` };
     }
   } catch (err) {
-    return { error: `Network error checking existing file: ${err instanceof Error ? err.message : String(err)}` };
+    return {
+      error: `Network error checking existing file: ${err instanceof Error ? err.message : String(err)}`,
+    };
   }
 
   const body: Record<string, string> = {
@@ -96,6 +98,8 @@ export async function createOrUpdateFileContent({
       sha: result.content.sha,
     };
   } catch (err) {
-    return { error: `Network error uploading file: ${err instanceof Error ? err.message : String(err)}` };
+    return {
+      error: `Network error uploading file: ${err instanceof Error ? err.message : String(err)}`,
+    };
   }
 }

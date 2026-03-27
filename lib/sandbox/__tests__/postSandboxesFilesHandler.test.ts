@@ -37,7 +37,10 @@ describe("postSandboxesFilesHandler", () => {
   });
 
   it("returns validation error when validation fails", async () => {
-    const errorResponse = NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 });
+    const errorResponse = NextResponse.json(
+      { status: "error", error: "Unauthorized" },
+      { status: 401 },
+    );
     vi.mocked(validatePostSandboxesFilesRequest).mockResolvedValue(errorResponse);
 
     const result = await postSandboxesFilesHandler(mockRequest);

@@ -41,12 +41,10 @@ describe("createOrUpdateFileContent", () => {
   });
 
   it("creates a new file when it does not exist", async () => {
-    mockFetch
-      .mockResolvedValueOnce({ ok: false, status: 404 })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ content: { path: "test/file.txt", sha: "abc123" } }),
-      });
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 404 }).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ content: { path: "test/file.txt", sha: "abc123" } }),
+    });
 
     const result = await createOrUpdateFileContent(validParams);
 
@@ -88,13 +86,11 @@ describe("createOrUpdateFileContent", () => {
   });
 
   it("returns error when PUT fails", async () => {
-    mockFetch
-      .mockResolvedValueOnce({ ok: false, status: 404 })
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 422,
-        text: () => Promise.resolve("Validation failed"),
-      });
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 404 }).mockResolvedValueOnce({
+      ok: false,
+      status: 422,
+      text: () => Promise.resolve("Validation failed"),
+    });
 
     const result = await createOrUpdateFileContent(validParams);
 
@@ -120,12 +116,10 @@ describe("createOrUpdateFileContent", () => {
   });
 
   it("encodes path segments in the URL", async () => {
-    mockFetch
-      .mockResolvedValueOnce({ ok: false, status: 404 })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ content: { path: "dir/file #1.txt", sha: "abc" } }),
-      });
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 404 }).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ content: { path: "dir/file #1.txt", sha: "abc" } }),
+    });
 
     await createOrUpdateFileContent({
       ...validParams,
@@ -137,12 +131,10 @@ describe("createOrUpdateFileContent", () => {
   });
 
   it("does not hardcode branch in PUT body", async () => {
-    mockFetch
-      .mockResolvedValueOnce({ ok: false, status: 404 })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ content: { path: "file.txt", sha: "abc" } }),
-      });
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 404 }).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ content: { path: "file.txt", sha: "abc" } }),
+    });
 
     await createOrUpdateFileContent(validParams);
 
