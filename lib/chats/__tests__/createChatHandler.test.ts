@@ -495,9 +495,7 @@ describe("createChatHandler", () => {
         artist_id: artistId,
         topic: null,
       });
-      vi.mocked(sendNewConversationNotification).mockRejectedValue(
-        new Error("telegram failed"),
-      );
+      vi.mocked(sendNewConversationNotification).mockRejectedValue(new Error("telegram failed"));
 
       const request = createMockRequest({
         authorization: "Bearer bearer-token-123",
