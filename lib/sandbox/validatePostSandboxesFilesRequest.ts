@@ -80,8 +80,6 @@ export async function validatePostSandboxesFilesRequest(
 
   return {
     accountIds: params.accountIds,
-    path: result.data.path,
-    message: result.data.message,
-    files: result.data.files,
+    ...result.data,
   };
 }
