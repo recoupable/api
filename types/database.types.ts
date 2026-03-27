@@ -2763,6 +2763,54 @@ export type Database = {
         };
         Relationships: [];
       };
+      slack_installations: {
+        Row: {
+          id: string;
+          slack_team_id: string;
+          slack_team_name: string;
+          organization_id: string;
+          bot_token: string;
+          installed_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slack_team_id: string;
+          slack_team_name: string;
+          organization_id: string;
+          bot_token: string;
+          installed_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          slack_team_id?: string;
+          slack_team_name?: string;
+          organization_id?: string;
+          bot_token?: string;
+          installed_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "slack_installations_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "slack_installations_installed_by_fkey";
+            columns: ["installed_by"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       social_fans: {
         Row: {
           artist_social_id: string;
