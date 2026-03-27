@@ -22,10 +22,18 @@ vi.mock("@/lib/github/createOrUpdateFileContent", () => ({
   createOrUpdateFileContent: vi.fn(),
 }));
 
+vi.mock("@vercel/blob", () => ({
+  del: vi.fn(),
+}));
+
 import { validatePostSandboxesFilesRequest } from "../validatePostSandboxesFilesRequest";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { resolveSubmodulePath } from "@/lib/github/resolveSubmodulePath";
 import { createOrUpdateFileContent } from "@/lib/github/createOrUpdateFileContent";
+import { del } from "@vercel/blob";
+
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
 
 describe("postSandboxesFilesHandler", () => {
   const mockRequest = new NextRequest("https://example.com/api/sandboxes/files", {
@@ -53,7 +61,7 @@ describe("postSandboxesFilesHandler", () => {
       accountIds: [],
       path: "",
       message: "test",
-      files: [{ name: "f.txt", content: Buffer.from("x") }],
+      files: [{ url: "https://blob.example.com/f.txt", name: "f.txt" }],
     });
 
     const result = await postSandboxesFilesHandler(mockRequest);
@@ -68,7 +76,7 @@ describe("postSandboxesFilesHandler", () => {
       accountIds: ["acc-1"],
       path: "",
       message: "test",
-      files: [{ name: "f.txt", content: Buffer.from("x") }],
+      files: [{ url: "https://blob.example.com/f.txt", name: "f.txt" }],
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([]);
 
@@ -79,16 +87,20 @@ describe("postSandboxesFilesHandler", () => {
     expect(body.error).toBe("No GitHub repository found for this account");
   });
 
-  it("uploads a single file successfully", async () => {
+  it("downloads from URL and uploads a single file successfully", async () => {
     vi.mocked(validatePostSandboxesFilesRequest).mockResolvedValue({
       accountIds: ["acc-1"],
       path: "docs",
       message: "Upload",
-      files: [{ name: "readme.md", content: Buffer.from("# Hello") }],
+      files: [{ url: "https://blob.example.com/readme.md", name: "readme.md" }],
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([
       { github_repo: "https://github.com/owner/repo" } as never,
     ]);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(new TextEncoder().encode("# Hello").buffer),
+    });
     vi.mocked(resolveSubmodulePath).mockResolvedValue({
       githubRepo: "https://github.com/owner/repo",
       path: "docs/readme.md",
@@ -104,59 +116,27 @@ describe("postSandboxesFilesHandler", () => {
     expect(result.status).toBe(200);
     expect(body.status).toBe("success");
     expect(body.uploaded).toEqual([{ path: "docs/readme.md", sha: "abc123" }]);
+    expect(del).toHaveBeenCalledWith("https://blob.example.com/readme.md");
   });
 
-  it("uploads multiple files successfully", async () => {
+  it("returns 500 when download fails", async () => {
     vi.mocked(validatePostSandboxesFilesRequest).mockResolvedValue({
       accountIds: ["acc-1"],
       path: "",
       message: "Upload",
-      files: [
-        { name: "a.txt", content: Buffer.from("a") },
-        { name: "b.txt", content: Buffer.from("b") },
-      ],
+      files: [{ url: "https://blob.example.com/f.txt", name: "f.txt" }],
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([
       { github_repo: "https://github.com/owner/repo" } as never,
     ]);
-    vi.mocked(resolveSubmodulePath).mockResolvedValue({
-      githubRepo: "https://github.com/owner/repo",
-      path: "a.txt",
-    });
-    vi.mocked(createOrUpdateFileContent)
-      .mockResolvedValueOnce({ path: "a.txt", sha: "sha-a" })
-      .mockResolvedValueOnce({ path: "b.txt", sha: "sha-b" });
-
-    const result = await postSandboxesFilesHandler(mockRequest);
-    const body = await result.json();
-
-    expect(result.status).toBe(200);
-    expect(body.uploaded).toHaveLength(2);
-  });
-
-  it("returns 500 when all uploads fail", async () => {
-    vi.mocked(validatePostSandboxesFilesRequest).mockResolvedValue({
-      accountIds: ["acc-1"],
-      path: "",
-      message: "Upload",
-      files: [{ name: "f.txt", content: Buffer.from("x") }],
-    });
-    vi.mocked(selectAccountSnapshots).mockResolvedValue([
-      { github_repo: "https://github.com/owner/repo" } as never,
-    ]);
-    vi.mocked(resolveSubmodulePath).mockResolvedValue({
-      githubRepo: "https://github.com/owner/repo",
-      path: "f.txt",
-    });
-    vi.mocked(createOrUpdateFileContent).mockResolvedValue({
-      error: "Network error",
-    });
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
 
     const result = await postSandboxesFilesHandler(mockRequest);
     const body = await result.json();
 
     expect(result.status).toBe(500);
     expect(body.error).toContain("All uploads failed");
+    expect(del).not.toHaveBeenCalled();
   });
 
   it("returns partial success with errors array", async () => {
@@ -165,20 +145,27 @@ describe("postSandboxesFilesHandler", () => {
       path: "",
       message: "Upload",
       files: [
-        { name: "good.txt", content: Buffer.from("ok") },
-        { name: "bad.txt", content: Buffer.from("fail") },
+        { url: "https://blob.example.com/good.txt", name: "good.txt" },
+        { url: "https://blob.example.com/bad.txt", name: "bad.txt" },
       ],
     });
     vi.mocked(selectAccountSnapshots).mockResolvedValue([
       { github_repo: "https://github.com/owner/repo" } as never,
     ]);
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: () => Promise.resolve(new TextEncoder().encode("ok").buffer),
+      })
+      .mockResolvedValueOnce({ ok: false, status: 404 });
     vi.mocked(resolveSubmodulePath).mockResolvedValue({
       githubRepo: "https://github.com/owner/repo",
       path: "good.txt",
     });
-    vi.mocked(createOrUpdateFileContent)
-      .mockResolvedValueOnce({ path: "good.txt", sha: "sha-good" })
-      .mockResolvedValueOnce({ error: "Upload failed" });
+    vi.mocked(createOrUpdateFileContent).mockResolvedValue({
+      path: "good.txt",
+      sha: "sha-good",
+    });
 
     const result = await postSandboxesFilesHandler(mockRequest);
     const body = await result.json();
@@ -188,5 +175,36 @@ describe("postSandboxesFilesHandler", () => {
     expect(body.uploaded).toHaveLength(1);
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]).toContain("bad.txt");
+    expect(del).toHaveBeenCalledTimes(1);
+    expect(del).toHaveBeenCalledWith("https://blob.example.com/good.txt");
+  });
+
+  it("does not delete blob when GitHub commit fails", async () => {
+    vi.mocked(validatePostSandboxesFilesRequest).mockResolvedValue({
+      accountIds: ["acc-1"],
+      path: "",
+      message: "Upload",
+      files: [{ url: "https://blob.example.com/f.txt", name: "f.txt" }],
+    });
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([
+      { github_repo: "https://github.com/owner/repo" } as never,
+    ]);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(new TextEncoder().encode("data").buffer),
+    });
+    vi.mocked(resolveSubmodulePath).mockResolvedValue({
+      githubRepo: "https://github.com/owner/repo",
+      path: "f.txt",
+    });
+    vi.mocked(createOrUpdateFileContent).mockResolvedValue({
+      error: "GitHub API error",
+    });
+
+    const result = await postSandboxesFilesHandler(mockRequest);
+    const body = await result.json();
+
+    expect(result.status).toBe(500);
+    expect(del).not.toHaveBeenCalled();
   });
 });
