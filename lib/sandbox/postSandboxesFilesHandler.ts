@@ -5,18 +5,20 @@ import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectA
 import { resolveSubmodulePath } from "@/lib/github/resolveSubmodulePath";
 import { createOrUpdateFileContent } from "@/lib/github/createOrUpdateFileContent";
 import type { CreateFileResult } from "@/lib/github/createOrUpdateFileContent";
+import { del } from "@vercel/blob";
+import { downloadFile } from "./downloadFile";
 
 /**
  * Handler for uploading files to a sandbox's GitHub repository.
  * Requires authentication via x-api-key header or Authorization bearer token.
  *
- * Accepts multipart form data with:
- * - files: One or more files to upload
+ * Accepts JSON body with:
+ * - files: Array of { url, name } objects
  * - path: Target directory path within the repository (optional, defaults to root)
  * - message: Commit message (optional, defaults to "Upload files via API")
  *
- * Resolves submodule paths so files in submodule directories are committed
- * to the correct submodule repository.
+ * Downloads each file from its URL, commits to GitHub, then deletes
+ * the temporary blob.
  *
  * @param request - The request object
  * @returns A NextResponse with uploaded file details or error
@@ -50,16 +52,22 @@ export async function postSandboxesFilesHandler(request: NextRequest): Promise<N
 
   const uploaded: CreateFileResult[] = [];
   const errors: string[] = [];
+  const blobUrlsToDelete: string[] = [];
 
   for (const file of files) {
-    const filePath = path ? `${path}/${file.name}` : file.name;
+    const content = await downloadFile(file.url);
+    if ("error" in content) {
+      errors.push(`${file.name}: ${content.error}`);
+      continue;
+    }
 
+    const filePath = path ? `${path}/${file.name}` : file.name;
     const resolved = await resolveSubmodulePath({ githubRepo, path: filePath });
 
     const result = await createOrUpdateFileContent({
       githubRepo: resolved.githubRepo,
       path: resolved.path,
-      content: file.content,
+      content,
       message,
     });
 
@@ -67,8 +75,12 @@ export async function postSandboxesFilesHandler(request: NextRequest): Promise<N
       errors.push(`${file.name}: ${result.error}`);
     } else {
       uploaded.push(result);
+      blobUrlsToDelete.push(file.url);
     }
   }
+
+  // Clean up temporary blobs after successful commits
+  await Promise.allSettled(blobUrlsToDelete.map(url => del(url)));
 
   if (uploaded.length === 0) {
     return NextResponse.json(
