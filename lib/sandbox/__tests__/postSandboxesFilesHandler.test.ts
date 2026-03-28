@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { postSandboxesFilesHandler } from "../postSandboxesFilesHandler";
 
+import { validatePostSandboxesFilesRequest } from "../validatePostSandboxesFilesRequest";
+import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
+import { resolveSubmodulePath } from "@/lib/github/resolveSubmodulePath";
+import { createOrUpdateFileContent } from "@/lib/github/createOrUpdateFileContent";
+import { del } from "@vercel/blob";
+
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
@@ -25,12 +31,6 @@ vi.mock("@/lib/github/createOrUpdateFileContent", () => ({
 vi.mock("@vercel/blob", () => ({
   del: vi.fn(),
 }));
-
-import { validatePostSandboxesFilesRequest } from "../validatePostSandboxesFilesRequest";
-import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
-import { resolveSubmodulePath } from "@/lib/github/resolveSubmodulePath";
-import { createOrUpdateFileContent } from "@/lib/github/createOrUpdateFileContent";
-import { del } from "@vercel/blob";
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -136,7 +136,8 @@ describe("postSandboxesFilesHandler", () => {
 
     expect(result.status).toBe(500);
     expect(body.error).toContain("All uploads failed");
-    expect(del).not.toHaveBeenCalled();
+    // Blobs are always cleaned up, even on failure, to allow retries
+    expect(del).toHaveBeenCalledWith("https://blob.example.com/f.txt");
   });
 
   it("returns partial success with errors array", async () => {
@@ -175,8 +176,10 @@ describe("postSandboxesFilesHandler", () => {
     expect(body.uploaded).toHaveLength(1);
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]).toContain("bad.txt");
-    expect(del).toHaveBeenCalledTimes(1);
+    // All blobs are cleaned up regardless of individual success/failure
+    expect(del).toHaveBeenCalledTimes(2);
     expect(del).toHaveBeenCalledWith("https://blob.example.com/good.txt");
+    expect(del).toHaveBeenCalledWith("https://blob.example.com/bad.txt");
   });
 
   it("does not delete blob when GitHub commit fails", async () => {
@@ -205,6 +208,7 @@ describe("postSandboxesFilesHandler", () => {
     const body = await result.json();
 
     expect(result.status).toBe(500);
-    expect(del).not.toHaveBeenCalled();
+    // Blobs are always cleaned up to allow retries
+    expect(del).toHaveBeenCalledWith("https://blob.example.com/f.txt");
   });
 });

@@ -52,7 +52,7 @@ export async function postSandboxesFilesHandler(request: NextRequest): Promise<N
 
   const uploaded: CreateFileResult[] = [];
   const errors: string[] = [];
-  const blobUrlsToDelete: string[] = [];
+  const allBlobUrls = files.map(file => file.url);
 
   for (const file of files) {
     const content = await downloadFile(file.url);
@@ -75,12 +75,12 @@ export async function postSandboxesFilesHandler(request: NextRequest): Promise<N
       errors.push(`${file.name}: ${result.error}`);
     } else {
       uploaded.push(result);
-      blobUrlsToDelete.push(file.url);
     }
   }
 
-  // Clean up temporary blobs after successful commits
-  await Promise.allSettled(blobUrlsToDelete.map(url => del(url)));
+  // Always clean up all temporary blobs, including failed downloads,
+  // so customers can retry uploads without "blob already exists" errors
+  await Promise.allSettled(allBlobUrls.map(url => del(url)));
 
   if (uploaded.length === 0) {
     return NextResponse.json(
