@@ -20,9 +20,7 @@ export async function getRawFileContent({
   githubRepo: string;
   path: string;
   format?: "base64";
-}): Promise<
-  { content: string; encoding?: "base64" } | { error: string }
-> {
+}): Promise<{ content: string; encoding?: "base64" } | { error: string }> {
   const repoInfo = parseGitHubRepoUrl(githubRepo);
   if (!repoInfo) {
     return { error: "Invalid GitHub repository URL" };

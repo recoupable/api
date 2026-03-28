@@ -49,7 +49,7 @@ export async function getSandboxesFileHandler(request: NextRequest): Promise<Nex
   }
 
   const resolved = await resolveSubmodulePath({ githubRepo, path });
-  const format = isBinaryFile(path) ? "base64" as const : undefined;
+  const format = isBinaryFile(path) ? ("base64" as const) : undefined;
   const result = await getRawFileContent({ ...resolved, format });
 
   if ("error" in result) {
