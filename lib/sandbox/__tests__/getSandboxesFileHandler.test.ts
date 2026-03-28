@@ -205,6 +205,68 @@ describe("getSandboxesFileHandler", () => {
     });
   });
 
+  it("auto-detects binary files and returns base64-encoded content", async () => {
+    vi.mocked(validateGetSandboxesFileRequest).mockResolvedValue({
+      accountIds: ["acc_123"],
+      path: "images/logo.png",
+    });
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([
+      {
+        account_id: "acc_123",
+        snapshot_id: "snap_abc",
+        github_repo: "https://github.com/user/repo",
+        created_at: "2024-01-01T00:00:00.000Z",
+        expires_at: "2024-01-08T00:00:00.000Z",
+      },
+    ]);
+    vi.mocked(getRawFileContent).mockResolvedValue({
+      content: "iVBORw0KGgo=",
+      encoding: "base64",
+    });
+
+    const request = createMockRequest("images/logo.png");
+    const response = await getSandboxesFileHandler(request);
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json).toEqual({
+      status: "success",
+      content: "iVBORw0KGgo=",
+      encoding: "base64",
+    });
+    expect(getRawFileContent).toHaveBeenCalledWith({
+      githubRepo: "https://github.com/user/repo",
+      path: "images/logo.png",
+      format: "base64",
+    });
+  });
+
+  it("returns 404 when binary file not found", async () => {
+    vi.mocked(validateGetSandboxesFileRequest).mockResolvedValue({
+      accountIds: ["acc_123"],
+      path: "images/missing.jpg",
+    });
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([
+      {
+        account_id: "acc_123",
+        snapshot_id: "snap_abc",
+        github_repo: "https://github.com/user/repo",
+        created_at: "2024-01-01T00:00:00.000Z",
+        expires_at: "2024-01-08T00:00:00.000Z",
+      },
+    ]);
+    vi.mocked(getRawFileContent).mockResolvedValue({
+      error: "File not found in repository",
+    });
+
+    const request = createMockRequest("images/missing.jpg");
+    const response = await getSandboxesFileHandler(request);
+
+    expect(response.status).toBe(404);
+    const json = await response.json();
+    expect(json.error).toBe("File not found in repository");
+  });
+
   it("fetches from submodule repo when path is inside a submodule", async () => {
     vi.mocked(validateGetSandboxesFileRequest).mockResolvedValue({
       accountIds: ["acc_123"],
