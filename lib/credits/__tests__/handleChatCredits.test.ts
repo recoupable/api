@@ -91,9 +91,8 @@ describe("handleChatCredits", () => {
       expect(mockDeductCredits).not.toHaveBeenCalled();
     });
 
-    it("deducts minimum 1 credit when usage cost is 0", async () => {
+    it("skips credit deduction when usage cost is 0", async () => {
       mockGetCreditUsage.mockResolvedValue(0);
-      mockDeductCredits.mockResolvedValue({ success: true, newBalance: 332 });
 
       await handleChatCredits({
         usage: { promptTokens: 0, completionTokens: 0 },
@@ -102,10 +101,7 @@ describe("handleChatCredits", () => {
       });
 
       expect(mockGetCreditUsage).toHaveBeenCalled();
-      expect(mockDeductCredits).toHaveBeenCalledWith({
-        accountId: "account-123",
-        creditsToDeduct: 1,
-      });
+      expect(mockDeductCredits).not.toHaveBeenCalled();
     });
   });
 

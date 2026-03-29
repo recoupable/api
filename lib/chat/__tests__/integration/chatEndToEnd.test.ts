@@ -556,9 +556,8 @@ describe("Chat Integration Tests", () => {
       expect(mockDeductCredits).not.toHaveBeenCalled();
     });
 
-    it("deducts minimum 1 credit when cost is zero", async () => {
+    it("handles zero cost gracefully", async () => {
       mockGetCreditUsage.mockResolvedValue(0);
-      mockDeductCredits.mockResolvedValue({ success: true, newBalance: 332 });
 
       await handleChatCredits({
         usage: { promptTokens: 10, completionTokens: 5 },
@@ -567,10 +566,7 @@ describe("Chat Integration Tests", () => {
       });
 
       expect(mockGetCreditUsage).toHaveBeenCalled();
-      expect(mockDeductCredits).toHaveBeenCalledWith({
-        accountId: "account-123",
-        creditsToDeduct: 1,
-      });
+      expect(mockDeductCredits).not.toHaveBeenCalled();
     });
 
     it("catches credit deduction errors without breaking chat flow", async () => {

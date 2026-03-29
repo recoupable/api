@@ -27,12 +27,15 @@ export const handleChatCredits = async ({
 
   try {
     const usageCost = await getCreditUsage(usage, model);
-    const creditsToDeduct = Math.max(1, Math.round(usageCost * 100));
 
-    await deductCredits({
-      accountId,
-      creditsToDeduct,
-    });
+    if (usageCost > 0) {
+      const creditsToDeduct = Math.max(1, Math.round(usageCost * 100));
+
+      await deductCredits({
+        accountId,
+        creditsToDeduct,
+      });
+    }
   } catch (error) {
     console.error("Failed to handle chat credits:", error);
     // Don't throw error to avoid breaking the chat flow
