@@ -22,11 +22,10 @@ export async function handleFeedback(
     return true;
   }
 
-  if (state?.status === "pr_created" && state.snapshotId && state.branch && state.prs?.length) {
+  if (state?.status === "pr_created" && state.branch && state.prs?.length) {
     await thread.setState({ status: "updating" });
     await setCodingAgentPRState(state.prs[0].repo, state.branch, {
       status: "updating",
-      snapshotId: state.snapshotId,
       branch: state.branch,
       repo: state.prs[0].repo,
       prs: state.prs,
@@ -34,7 +33,6 @@ export async function handleFeedback(
 
     const handle = await triggerUpdatePR({
       feedback: messageText,
-      snapshotId: state.snapshotId,
       branch: state.branch,
       repo: state.prs[0].repo,
       callbackThreadId: thread.id,

@@ -72,7 +72,7 @@ export async function handleGitHubWebhook(request: Request): Promise<NextRespons
     return NextResponse.json({ status: "busy" }, { headers: getCorsHeaders() });
   }
 
-  if (prState.status !== "pr_created" || !prState.snapshotId || !prState.prs?.length) {
+  if (prState.status !== "pr_created" || !prState.prs?.length) {
     return NextResponse.json({ status: "no_state" }, { headers: getCorsHeaders() });
   }
 
@@ -88,7 +88,6 @@ export async function handleGitHubWebhook(request: Request): Promise<NextRespons
   try {
     const handle = await triggerUpdatePR({
       feedback,
-      snapshotId: prState.snapshotId,
       branch: prState.branch,
       repo: prState.repo,
       callbackThreadId: threadId,

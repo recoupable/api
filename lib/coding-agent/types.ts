@@ -9,7 +9,6 @@ export interface CodingAgentThreadState {
   /** Platform-agnostic thread identifier (Slack or WhatsApp thread ID). */
   threadId?: string;
   branch?: string;
-  snapshotId?: string;
   prs?: CodingAgentPR[];
 }
 

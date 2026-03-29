@@ -21,14 +21,12 @@ export async function handlePRCreated(threadId: string, body: CodingAgentCallbac
   await thread.setState({
     status: "pr_created",
     branch: body.branch,
-    snapshotId: body.snapshotId,
     prs,
   });
 
   if (body.branch && prs.length) {
     await setCodingAgentPRState(prs[0].repo, body.branch, {
       status: "pr_created",
-      snapshotId: body.snapshotId,
       branch: body.branch,
       repo: prs[0].repo,
       prs,

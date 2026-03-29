@@ -3,16 +3,11 @@ import type { Sandbox } from "@vercel/sandbox";
 
 import { createSandboxFromSnapshot } from "../createSandboxFromSnapshot";
 
-const mockSelectAccountSnapshots = vi.fn();
 const mockInsertAccountSandbox = vi.fn();
 const mockCreateSandbox = vi.fn();
 
 vi.mock("@/lib/sandbox/createSandbox", () => ({
   createSandbox: (...args: unknown[]) => mockCreateSandbox(...args),
-}));
-
-vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
-  selectAccountSnapshots: (...args: unknown[]) => mockSelectAccountSnapshots(...args),
 }));
 
 vi.mock("@/lib/supabase/account_sandboxes/insertAccountSandbox", () => ({
@@ -21,7 +16,7 @@ vi.mock("@/lib/supabase/account_sandboxes/insertAccountSandbox", () => ({
 
 describe("createSandboxFromSnapshot", () => {
   const mockSandbox = {
-    sandboxId: "sbx_new",
+    name: "sbx_new",
     status: "running",
     runCommand: vi.fn(),
   } as unknown as Sandbox;
@@ -43,29 +38,13 @@ describe("createSandboxFromSnapshot", () => {
     });
   });
 
-  it("creates from snapshot when available", async () => {
-    mockSelectAccountSnapshots.mockResolvedValue([
-      { snapshot_id: "snap_abc", account_id: "acc_1" },
-    ]);
-
+  it("creates sandbox with name set to accountId", async () => {
     await createSandboxFromSnapshot("acc_1");
 
-    expect(mockCreateSandbox).toHaveBeenCalledWith({
-      source: { type: "snapshot", snapshotId: "snap_abc" },
-    });
-  });
-
-  it("creates fresh sandbox when no snapshot exists", async () => {
-    mockSelectAccountSnapshots.mockResolvedValue([]);
-
-    await createSandboxFromSnapshot("acc_1");
-
-    expect(mockCreateSandbox).toHaveBeenCalledWith({});
+    expect(mockCreateSandbox).toHaveBeenCalledWith({ name: "acc_1" });
   });
 
   it("inserts account_sandbox record", async () => {
-    mockSelectAccountSnapshots.mockResolvedValue([]);
-
     await createSandboxFromSnapshot("acc_1");
 
     expect(mockInsertAccountSandbox).toHaveBeenCalledWith({
@@ -74,19 +53,7 @@ describe("createSandboxFromSnapshot", () => {
     });
   });
 
-  it("returns { sandbox, fromSnapshot: true } when snapshot exists", async () => {
-    mockSelectAccountSnapshots.mockResolvedValue([
-      { snapshot_id: "snap_abc", account_id: "acc_1" },
-    ]);
-
-    const result = await createSandboxFromSnapshot("acc_1");
-
-    expect(result).toEqual({ sandbox: mockSandbox, fromSnapshot: true });
-  });
-
-  it("returns { sandbox, fromSnapshot: false } when no snapshot", async () => {
-    mockSelectAccountSnapshots.mockResolvedValue([]);
-
+  it("returns { sandbox, fromSnapshot: false }", async () => {
     const result = await createSandboxFromSnapshot("acc_1");
 
     expect(result).toEqual({ sandbox: mockSandbox, fromSnapshot: false });

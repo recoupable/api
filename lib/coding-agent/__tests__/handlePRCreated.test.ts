@@ -30,7 +30,7 @@ describe("handlePRCreated", () => {
       threadId: "slack:C123:ts",
       status: "pr_created",
       branch: "agent/fix-bug",
-      snapshotId: "snap_abc",
+
       prs: [
         {
           repo: "recoupable/api",
@@ -57,7 +57,7 @@ describe("handlePRCreated", () => {
       expect.objectContaining({
         status: "pr_created",
         branch: "agent/fix-bug",
-        snapshotId: "snap_abc",
+  
       }),
     );
 
@@ -66,7 +66,7 @@ describe("handlePRCreated", () => {
       "agent/fix-bug",
       expect.objectContaining({
         status: "pr_created",
-        snapshotId: "snap_abc",
+  
         branch: "agent/fix-bug",
         repo: "recoupable/api",
       }),

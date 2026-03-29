@@ -2,7 +2,7 @@ import ms from "ms";
 import { Sandbox } from "@vercel/sandbox";
 
 export interface SandboxCreatedResponse {
-  sandboxId: Sandbox["sandboxId"];
+  sandboxId: string;
   sandboxStatus: Sandbox["status"];
   timeout: Sandbox["timeout"];
   createdAt: string;
@@ -26,35 +26,26 @@ const DEFAULT_RUNTIME = "node22";
  * The sandbox is left running so that prompts can be executed via the prompt_sandbox tool.
  * Accepts the same parameters as Sandbox.create from @vercel/sandbox.
  *
- * @param params - Sandbox creation parameters (source, timeout, resources, runtime, ports)
+ * Uses the name parameter for persistent sandbox identification when provided.
+ *
+ * @param params - Sandbox creation parameters (name, timeout, resources, runtime, ports)
  * @returns The sandbox creation response
  * @throws Error if sandbox creation fails
  */
 export async function createSandbox(
   params: CreateSandboxParams = {},
 ): Promise<SandboxCreateResult> {
-  const hasSnapshotSource =
-    params.source && "type" in params.source && params.source.type === "snapshot";
-
-  // Pass params directly to SDK - it handles all the type variants
-  const sandbox = await Sandbox.create(
-    hasSnapshotSource
-      ? {
-          ...params,
-          timeout: params.timeout ?? DEFAULT_TIMEOUT,
-        }
-      : {
-          resources: { vcpus: DEFAULT_VCPUS },
-          timeout: params.timeout ?? DEFAULT_TIMEOUT,
-          runtime: DEFAULT_RUNTIME,
-          ...params,
-        },
-  );
+  const sandbox = await Sandbox.create({
+    resources: { vcpus: DEFAULT_VCPUS },
+    timeout: DEFAULT_TIMEOUT,
+    runtime: DEFAULT_RUNTIME,
+    ...params,
+  });
 
   return {
     sandbox,
     response: {
-      sandboxId: sandbox.sandboxId,
+      sandboxId: sandbox.name,
       sandboxStatus: sandbox.status,
       timeout: sandbox.timeout,
       createdAt: sandbox.createdAt.toISOString(),

@@ -36,8 +36,7 @@ export async function getSandboxesHandler(request: NextRequest): Promise<NextRes
     snapshotAccountId ? selectAccountSnapshots(snapshotAccountId) : Promise.resolve([]),
   ]);
 
-  // Extract snapshot info
-  const snapshot_id = snapshots[0]?.snapshot_id ?? null;
+  // Extract metadata
   const github_repo = snapshots[0]?.github_repo ?? null;
 
   // Fetch live sandbox statuses and filetree in parallel
@@ -55,7 +54,6 @@ export async function getSandboxesHandler(request: NextRequest): Promise<NextRes
     {
       status: "success",
       sandboxes,
-      snapshot_id,
       github_repo,
       filetree,
     },
