@@ -20,11 +20,6 @@ export const CONTENT_TEMPLATES: ContentTemplate[] = [
     description: "Small venue concert",
     defaultLipsync: false,
   },
-  {
-    name: "album-record-store",
-    description: "Album art on vinyl in a NYC record store",
-    defaultLipsync: false,
-  },
 ];
 
 /** Derived from the first entry in CONTENT_TEMPLATES to avoid string duplication. */
