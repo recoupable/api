@@ -58,8 +58,9 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       // Post acknowledgment
       const batchNote = batch > 1 ? ` (${batch} videos)` : "";
       const lipsyncNote = lipsync ? " with lipsync" : "";
+      const songsNote = songs && songs.length > 0 ? ` using ${songs.join(", ")}` : "";
       await thread.post(
-        `Generating content for **${artistSlug}**${batchNote}${lipsyncNote}... Template: \`${template}\`. I'll reply here when ready (~5-10 min).`,
+        `Generating content for **${artistSlug}**${batchNote}${lipsyncNote}${songsNote}... Template: \`${template}\`. I'll reply here when ready (~5-10 min).`,
       );
 
       // Trigger content creation

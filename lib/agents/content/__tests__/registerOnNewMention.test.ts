@@ -271,4 +271,31 @@ describe("registerOnNewMention", () => {
     expect(ackMessage).toContain("(2 videos)");
     expect(ackMessage).toContain("test-artist");
   });
+
+  it("includes song names in acknowledgment message", async () => {
+    const bot = createMockBot();
+    registerOnNewMention(bot as never);
+
+    vi.mocked(parseContentPrompt).mockResolvedValue({
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+      songs: ["hiccups"],
+    });
+    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
+    vi.mocked(getArtistContentReadiness).mockResolvedValue({
+      githubRepo: "https://github.com/test/repo",
+    } as never);
+    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+
+    const thread = createMockThread();
+    const message = createMockMessage("make a video for hiccups");
+    await bot.getHandler()!(thread, message);
+
+    const ackMessage = thread.post.mock.calls[0][0] as string;
+    expect(ackMessage).toContain("hiccups");
+  });
 });
