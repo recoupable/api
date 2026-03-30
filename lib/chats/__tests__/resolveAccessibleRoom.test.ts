@@ -2,19 +2,19 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { resolveAccessibleRoom } from "@/lib/chats/resolveAccessibleRoom";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
+import { buildGetChatsParams } from "@/lib/chats/buildGetChatsParams";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/organizations/canAccessAccount", () => ({
-  canAccessAccount: vi.fn(),
-}));
-
 vi.mock("@/lib/supabase/rooms/selectRoom", () => ({
   default: vi.fn(),
+}));
+
+vi.mock("@/lib/chats/buildGetChatsParams", () => ({
+  buildGetChatsParams: vi.fn(),
 }));
 
 const createRequest = () => new NextRequest("http://localhost/api/chats/chat-id/segment");
@@ -63,7 +63,7 @@ describe("resolveAccessibleRoom", () => {
     expect(response.status).toBe(404);
   });
 
-  it("returns 404 when user has no access to room owner account", async () => {
+  it("returns 403 when user has no access to room owner account", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({ accountId, orgId: null });
     vi.mocked(selectRoom).mockResolvedValue({
       id: roomId,
@@ -72,13 +72,16 @@ describe("resolveAccessibleRoom", () => {
       topic: "Test",
       updated_at: null,
     });
-    vi.mocked(canAccessAccount).mockResolvedValue(false);
+    vi.mocked(buildGetChatsParams).mockResolvedValue({
+      params: { account_ids: [accountId] },
+      error: null,
+    });
 
     const result = await resolveAccessibleRoom(createRequest(), roomId);
     expect(result).toBeInstanceOf(NextResponse);
 
     const response = result as NextResponse;
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(403);
   });
 
   it("returns room when requester is the room owner", async () => {
@@ -89,6 +92,10 @@ describe("resolveAccessibleRoom", () => {
       artist_id: null,
       topic: "Test",
       updated_at: null,
+    });
+    vi.mocked(buildGetChatsParams).mockResolvedValue({
+      params: { account_ids: [accountId] },
+      error: null,
     });
 
     const result = await resolveAccessibleRoom(createRequest(), roomId);
