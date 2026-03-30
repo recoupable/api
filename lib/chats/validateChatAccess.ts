@@ -1,3 +1,4 @@
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
@@ -21,7 +22,7 @@ interface ResolveAccessibleRoomResult {
  * @returns The room and authenticated accountId, or an error NextResponse.
  */
 export async function validateChatAccess(
-  request: Request,
+  request: NextRequest,
   id: string,
 ): Promise<ResolveAccessibleRoomResult | NextResponse> {
   const parsedId = chatIdSchema.safeParse(id);
