@@ -1,10 +1,16 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { resolveAccessibleRoom } from "@/lib/chats/resolveAccessibleRoom";
+import { z } from "zod";
+import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import selectRoom from "@/lib/supabase/rooms/selectRoom";
+import { buildGetChatsParams } from "@/lib/chats/buildGetChatsParams";
 
 export interface ValidatedChatAccess {
   roomId: string;
 }
+
+const chatIdSchema = z.string().uuid("id must be a valid UUID");
 
 /**
  * Validates that the authenticated caller can access a chat room.
@@ -17,10 +23,42 @@ export async function validateChatAccess(
   request: NextRequest,
   roomId: string,
 ): Promise<NextResponse | ValidatedChatAccess> {
-  const roomResult = await resolveAccessibleRoom(request, roomId);
-  if (roomResult instanceof NextResponse) {
-    return roomResult;
+  const roomIdResult = chatIdSchema.safeParse(roomId);
+  if (!roomIdResult.success) {
+    return NextResponse.json(
+      { status: "error", error: roomIdResult.error.issues[0]?.message || "Invalid chat ID" },
+      { status: 400, headers: getCorsHeaders() },
+    );
   }
 
-  return { roomId: roomResult.room.id };
+  const authResult = await validateAuthContext(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
+  const { accountId } = authResult;
+
+  const room = await selectRoom(roomIdResult.data);
+  if (!room) {
+    return NextResponse.json(
+      { status: "error", error: "Chat room not found" },
+      { status: 404, headers: getCorsHeaders() },
+    );
+  }
+
+  const { params } = await buildGetChatsParams({
+    account_id: accountId,
+  });
+
+  // If params.account_ids is undefined, it means admin access (all records)
+  if (params.account_ids && room.account_id) {
+    if (!params.account_ids.includes(room.account_id)) {
+      return NextResponse.json(
+        { status: "error", error: "Access denied to this chat" },
+        { status: 403, headers: getCorsHeaders() },
+      );
+    }
+  }
+
+  return { roomId: room.id };
 }
