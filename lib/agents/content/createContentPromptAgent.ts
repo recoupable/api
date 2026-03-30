@@ -2,6 +2,7 @@ import { Output, ToolLoopAgent, stepCountIs } from "ai";
 import { z } from "zod";
 import { LIGHTWEIGHT_MODEL } from "@/lib/const";
 import { CONTENT_TEMPLATES, DEFAULT_CONTENT_TEMPLATE } from "@/lib/content/contentTemplates";
+import { CAPTION_LENGTHS } from "@/lib/content/captionLengths";
 import { songsSchema } from "@/lib/content/songsSchema";
 
 const templateNames = CONTENT_TEMPLATES.map(t => t.name) as [string, ...string[]];
@@ -21,7 +22,7 @@ export const contentPromptFlagsSchema = z.object({
       "How many videos to generate. Extract from phrases like '3 videos', 'a few' (3), 'several' (5). Default 1.",
     ),
   captionLength: z
-    .enum(["short", "medium", "long"])
+    .enum(CAPTION_LENGTHS)
     .describe(
       "Caption length: 'short' (default), 'medium', or 'long'. Extract from phrases like 'long caption', 'detailed text', 'brief caption'.",
     ),

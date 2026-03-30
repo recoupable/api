@@ -11,7 +11,9 @@ import {
 import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
 import { songsSchema } from "@/lib/content/songsSchema";
 
-export const CAPTION_LENGTHS = ["short", "medium", "long"] as const;
+import { CAPTION_LENGTHS } from "@/lib/content/captionLengths";
+
+export { CAPTION_LENGTHS };
 
 export const createContentBodySchema = z.object({
   artist_account_id: z
