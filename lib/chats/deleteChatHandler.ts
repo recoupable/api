@@ -16,10 +16,10 @@ export async function deleteChatHandler(request: NextRequest): Promise<NextRespo
     return validated;
   }
 
-  const { chatId } = validated;
+  const { id } = validated;
 
   try {
-    const deleted = await deleteRoomWithRelations(chatId);
+    const deleted = await deleteRoomWithRelations(id);
 
     if (!deleted) {
       return NextResponse.json(
@@ -31,7 +31,7 @@ export async function deleteChatHandler(request: NextRequest): Promise<NextRespo
     return NextResponse.json(
       {
         status: "success",
-        chatId,
+        id,
         message: "Chat deleted successfully",
       },
       { status: 200, headers: getCorsHeaders() },

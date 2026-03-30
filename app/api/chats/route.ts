@@ -82,7 +82,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
  * Authentication: x-api-key header or Authorization Bearer token required.
  *
  * Body parameters:
- * - chatId (required): UUID of the chat room to delete
+ * - id (required): UUID of the chat room to delete
  *
  * @param request - The request object
  * @returns A NextResponse with deletion result or an error

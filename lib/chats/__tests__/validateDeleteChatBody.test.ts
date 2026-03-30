@@ -22,7 +22,7 @@ vi.mock("@/lib/chats/buildGetChatsParams", () => ({
 }));
 
 describe("validateDeleteChatBody", () => {
-  const chatId = "123e4567-e89b-12d3-a456-426614174000";
+  const id = "123e4567-e89b-12d3-a456-426614174000";
   const accountId = "123e4567-e89b-12d3-a456-426614174001";
 
   const createRequest = (body: object | string) =>
@@ -36,14 +36,14 @@ describe("validateDeleteChatBody", () => {
     vi.clearAllMocks();
   });
 
-  it("returns validated chatId when caller has access", async () => {
+  it("returns validated id when caller has access", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId,
       orgId: null,
       authToken: "test-key",
     });
     vi.mocked(selectRoom).mockResolvedValue({
-      id: chatId,
+      id,
       account_id: accountId,
       artist_id: null,
       topic: "Topic",
@@ -54,8 +54,8 @@ describe("validateDeleteChatBody", () => {
       error: null,
     });
 
-    const result = await validateDeleteChatBody(createRequest({ chatId }));
-    expect(result).toEqual({ chatId });
+    const result = await validateDeleteChatBody(createRequest({ id }));
+    expect(result).toEqual({ id });
   });
 
   it("allows admin access when account_ids is undefined", async () => {
@@ -65,7 +65,7 @@ describe("validateDeleteChatBody", () => {
       authToken: "admin-key",
     });
     vi.mocked(selectRoom).mockResolvedValue({
-      id: chatId,
+      id,
       account_id: "another-account",
       artist_id: null,
       topic: "Topic",
@@ -76,19 +76,19 @@ describe("validateDeleteChatBody", () => {
       error: null,
     });
 
-    const result = await validateDeleteChatBody(createRequest({ chatId }));
-    expect(result).toEqual({ chatId });
+    const result = await validateDeleteChatBody(createRequest({ id }));
+    expect(result).toEqual({ id });
   });
 
-  it("returns 400 when chatId is missing", async () => {
+  it("returns 400 when id is missing", async () => {
     const result = await validateDeleteChatBody(createRequest({}));
     expect(result).toBeInstanceOf(NextResponse);
     const response = result as NextResponse;
     expect(response.status).toBe(400);
   });
 
-  it("returns 400 when chatId is invalid UUID", async () => {
-    const result = await validateDeleteChatBody(createRequest({ chatId: "invalid" }));
+  it("returns 400 when id is invalid UUID", async () => {
+    const result = await validateDeleteChatBody(createRequest({ id: "invalid" }));
     expect(result).toBeInstanceOf(NextResponse);
     const response = result as NextResponse;
     expect(response.status).toBe(400);
@@ -99,7 +99,7 @@ describe("validateDeleteChatBody", () => {
       NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
     );
 
-    const result = await validateDeleteChatBody(createRequest({ chatId }));
+    const result = await validateDeleteChatBody(createRequest({ id }));
     expect(result).toBeInstanceOf(NextResponse);
     const response = result as NextResponse;
     expect(response.status).toBe(401);
@@ -113,7 +113,7 @@ describe("validateDeleteChatBody", () => {
     });
     vi.mocked(selectRoom).mockResolvedValue(null);
 
-    const result = await validateDeleteChatBody(createRequest({ chatId }));
+    const result = await validateDeleteChatBody(createRequest({ id }));
     expect(result).toBeInstanceOf(NextResponse);
     const response = result as NextResponse;
     expect(response.status).toBe(404);
@@ -126,7 +126,7 @@ describe("validateDeleteChatBody", () => {
       authToken: "test-key",
     });
     vi.mocked(selectRoom).mockResolvedValue({
-      id: chatId,
+      id,
       account_id: "another-account",
       artist_id: null,
       topic: "Topic",
@@ -137,7 +137,7 @@ describe("validateDeleteChatBody", () => {
       error: null,
     });
 
-    const result = await validateDeleteChatBody(createRequest({ chatId }));
+    const result = await validateDeleteChatBody(createRequest({ id }));
     expect(result).toBeInstanceOf(NextResponse);
     const response = result as NextResponse;
     expect(response.status).toBe(403);

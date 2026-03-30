@@ -17,12 +17,12 @@ vi.mock("@/lib/supabase/rooms/deleteRoomWithRelations", () => ({
 }));
 
 describe("deleteChatHandler", () => {
-  const chatId = "123e4567-e89b-12d3-a456-426614174000";
+  const id = "123e4567-e89b-12d3-a456-426614174000";
 
   const request = new NextRequest("http://localhost/api/chats", {
     method: "DELETE",
     headers: { "Content-Type": "application/json", "x-api-key": "test-key" },
-    body: JSON.stringify({ chatId }),
+    body: JSON.stringify({ id }),
   });
 
   beforeEach(() => {
@@ -30,7 +30,7 @@ describe("deleteChatHandler", () => {
   });
 
   it("deletes chat and returns success response", async () => {
-    vi.mocked(validateDeleteChatBody).mockResolvedValue({ chatId });
+    vi.mocked(validateDeleteChatBody).mockResolvedValue({ id });
     vi.mocked(deleteRoomWithRelations).mockResolvedValue(true);
 
     const response = await deleteChatHandler(request);
@@ -39,10 +39,10 @@ describe("deleteChatHandler", () => {
     const body = await response.json();
     expect(body).toEqual({
       status: "success",
-      chatId,
+      id,
       message: "Chat deleted successfully",
     });
-    expect(deleteRoomWithRelations).toHaveBeenCalledWith(chatId);
+    expect(deleteRoomWithRelations).toHaveBeenCalledWith(id);
   });
 
   it("returns validation response when request is invalid", async () => {
@@ -56,7 +56,7 @@ describe("deleteChatHandler", () => {
   });
 
   it("returns 500 when deletion fails", async () => {
-    vi.mocked(validateDeleteChatBody).mockResolvedValue({ chatId });
+    vi.mocked(validateDeleteChatBody).mockResolvedValue({ id });
     vi.mocked(deleteRoomWithRelations).mockResolvedValue(false);
 
     const response = await deleteChatHandler(request);
@@ -67,7 +67,7 @@ describe("deleteChatHandler", () => {
   });
 
   it("returns 500 when deletion throws", async () => {
-    vi.mocked(validateDeleteChatBody).mockResolvedValue({ chatId });
+    vi.mocked(validateDeleteChatBody).mockResolvedValue({ id });
     vi.mocked(deleteRoomWithRelations).mockRejectedValue(new Error("Database down"));
 
     const response = await deleteChatHandler(request);

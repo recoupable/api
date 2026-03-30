@@ -7,13 +7,13 @@ import selectRoom from "@/lib/supabase/rooms/selectRoom";
 import { buildGetChatsParams } from "./buildGetChatsParams";
 
 export const deleteChatBodySchema = z.object({
-  chatId: z.string().uuid("chatId must be a valid UUID"),
+  id: z.string().uuid("id must be a valid UUID"),
 });
 
 export type DeleteChatBody = z.infer<typeof deleteChatBodySchema>;
 
 export interface ValidatedDeleteChat {
-  chatId: string;
+  id: string;
 }
 
 /**
@@ -49,7 +49,7 @@ export async function validateDeleteChatBody(
     );
   }
 
-  const { chatId } = result.data;
+  const { id } = result.data;
 
   const authResult = await validateAuthContext(request);
   if (authResult instanceof NextResponse) {
@@ -58,7 +58,7 @@ export async function validateDeleteChatBody(
 
   const { accountId } = authResult;
 
-  const room = await selectRoom(chatId);
+  const room = await selectRoom(id);
   if (!room) {
     return NextResponse.json(
       { status: "error", error: "Chat room not found" },
@@ -80,5 +80,5 @@ export async function validateDeleteChatBody(
     }
   }
 
-  return { chatId };
+  return { id };
 }
