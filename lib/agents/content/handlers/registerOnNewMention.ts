@@ -56,11 +56,17 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       }
 
       // Post acknowledgment
-      const batchNote = batch > 1 ? ` (${batch} videos)` : "";
-      const lipsyncNote = lipsync ? " with lipsync" : "";
-      const songsNote = songs && songs.length > 0 ? ` using ${songs.join(", ")}` : "";
+      const details = [
+        `- Artist: *${artistSlug}*`,
+        `- Template: ${template}`,
+        `- Videos: ${batch}`,
+        `- Lipsync: ${lipsync ? "yes" : "no"}`,
+      ];
+      if (songs && songs.length > 0) {
+        details.push(`- Songs: ${songs.join(", ")}`);
+      }
       await thread.post(
-        `Generating content for **${artistSlug}**${batchNote}${lipsyncNote}${songsNote}... Template: \`${template}\`. I'll reply here when ready (~5-10 min).`,
+        `Generating content...\n${details.join("\n")}\n\nI'll reply here when ready (~5-10 min).`,
       );
 
       // Trigger content creation

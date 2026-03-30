@@ -267,9 +267,10 @@ describe("registerOnNewMention", () => {
     await bot.getHandler()!(thread, message);
 
     const ackMessage = thread.post.mock.calls[0][0] as string;
-    expect(ackMessage).toContain("with lipsync");
-    expect(ackMessage).toContain("(2 videos)");
-    expect(ackMessage).toContain("test-artist");
+    expect(ackMessage).toContain("*test-artist*");
+    expect(ackMessage).not.toContain("**");
+    expect(ackMessage).toContain("Lipsync:");
+    expect(ackMessage).toContain("Videos:");
   });
 
   it("includes song names in acknowledgment message", async () => {
@@ -296,6 +297,7 @@ describe("registerOnNewMention", () => {
     await bot.getHandler()!(thread, message);
 
     const ackMessage = thread.post.mock.calls[0][0] as string;
+    expect(ackMessage).toContain("Songs:");
     expect(ackMessage).toContain("hiccups");
   });
 });
