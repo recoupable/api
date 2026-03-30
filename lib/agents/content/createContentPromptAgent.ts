@@ -3,11 +3,13 @@ import { z } from "zod";
 import { LIGHTWEIGHT_MODEL } from "@/lib/const";
 import { CONTENT_TEMPLATES, DEFAULT_CONTENT_TEMPLATE } from "@/lib/content/contentTemplates";
 
+const templateNames = CONTENT_TEMPLATES.map(t => t.name) as [string, ...string[]];
+
 export const contentPromptFlagsSchema = z.object({
   lipsync: z
     .boolean()
     .describe(
-      "Whether to generate a lipsync video (mouth-synced to audio). True when the user mentions lipsync, lip sync, singing, or mouth movement.",
+      "Whether to generate a lipsync video (mouth-synced to audio). True when the prompt mentions lipsync, lip sync, singing, or mouth movement.",
     ),
   batch: z
     .number()
@@ -25,26 +27,34 @@ export const contentPromptFlagsSchema = z.object({
   upscale: z
     .boolean()
     .describe(
-      "Whether to upscale for higher quality. True when the user mentions high quality, HD, upscale, 4K, or premium.",
+      "Whether to upscale for higher quality. True when the prompt mentions high quality, HD, upscale, 4K, or premium.",
     ),
-  template: z.string().describe("Which visual template/scene to use for the video."),
+  template: z.enum(templateNames).describe("Which visual template/scene to use for the video."),
 });
 
 export type ContentPromptFlags = z.infer<typeof contentPromptFlagsSchema>;
+
+export const DEFAULT_CONTENT_PROMPT_FLAGS: ContentPromptFlags = {
+  lipsync: false,
+  batch: 1,
+  captionLength: "short",
+  upscale: false,
+  template: DEFAULT_CONTENT_TEMPLATE,
+};
 
 const templateDescriptions = CONTENT_TEMPLATES.map(t => `- "${t.name}": ${t.description}`).join(
   "\n",
 );
 
-const instructions = `You extract content creation parameters from a user's natural-language request.
+const instructions = `You extract content creation parameters from a natural-language request.
 
 Available templates:
 ${templateDescriptions}
 
-If the user doesn't specify a template, default to "${DEFAULT_CONTENT_TEMPLATE}".
-If the user doesn't mention a parameter, use the default value.
+If no template is specified, default to "${DEFAULT_CONTENT_PROMPT_FLAGS.template}".
+If a parameter is not mentioned, use the default value.
 
-Defaults: lipsync=false, batch=1, captionLength="short", upscale=false, template="${DEFAULT_CONTENT_TEMPLATE}"`;
+Defaults: lipsync=${DEFAULT_CONTENT_PROMPT_FLAGS.lipsync}, batch=${DEFAULT_CONTENT_PROMPT_FLAGS.batch}, captionLength="${DEFAULT_CONTENT_PROMPT_FLAGS.captionLength}", upscale=${DEFAULT_CONTENT_PROMPT_FLAGS.upscale}, template="${DEFAULT_CONTENT_PROMPT_FLAGS.template}"`;
 
 /**
  * Creates a ToolLoopAgent configured for parsing content creation prompts.

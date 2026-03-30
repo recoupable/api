@@ -8,10 +8,13 @@ vi.mock("../createContentPromptAgent", () => ({
   createContentPromptAgent: vi.fn(() => ({
     generate: mockGenerate,
   })),
-}));
-
-vi.mock("@/lib/content/contentTemplates", () => ({
-  DEFAULT_CONTENT_TEMPLATE: "artist-caption-bedroom",
+  DEFAULT_CONTENT_PROMPT_FLAGS: {
+    lipsync: false,
+    batch: 1,
+    captionLength: "short",
+    upscale: false,
+    template: "artist-caption-bedroom",
+  },
 }));
 
 const { createContentPromptAgent } = await import("../createContentPromptAgent");
