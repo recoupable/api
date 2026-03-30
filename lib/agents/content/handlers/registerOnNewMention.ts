@@ -21,7 +21,7 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       const artistAccountId = "1873859c-dd37-4e9a-9bac-80d3558527a9";
 
       // Parse the user's natural-language prompt into structured flags
-      const { lipsync, batch, captionLength, upscale, template } = await parseContentPrompt(
+      const { lipsync, batch, captionLength, upscale, template, songs } = await parseContentPrompt(
         message.text,
       );
 
@@ -71,6 +71,7 @@ export function registerOnNewMention(bot: ContentAgentBot) {
         captionLength,
         upscale,
         githubRepo,
+        ...(songs && songs.length > 0 && { songs }),
       };
 
       const results = await Promise.allSettled(
