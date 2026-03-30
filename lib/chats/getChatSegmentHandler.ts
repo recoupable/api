@@ -13,7 +13,10 @@ import { selectSegmentRoomByRoomId } from "@/lib/supabase/segment_rooms/selectSe
  * @param id - The chat room ID from route params.
  * @returns A NextResponse with segment linkage data or an error.
  */
-export async function getChatSegmentHandler(request: NextRequest, id: string): Promise<NextResponse> {
+export async function getChatSegmentHandler(
+  request: NextRequest,
+  id: string,
+): Promise<NextResponse> {
   const roomResult = await validateChatAccess(request, id);
   if (roomResult instanceof NextResponse) {
     return roomResult;
