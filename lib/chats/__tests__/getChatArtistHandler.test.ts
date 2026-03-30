@@ -2,19 +2,19 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getChatArtistHandler } from "@/lib/chats/getChatArtistHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
+import { buildGetChatsParams } from "@/lib/chats/buildGetChatsParams";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/organizations/canAccessAccount", () => ({
-  canAccessAccount: vi.fn(),
-}));
-
 vi.mock("@/lib/supabase/rooms/selectRoom", () => ({
   default: vi.fn(),
+}));
+
+vi.mock("@/lib/chats/buildGetChatsParams", () => ({
+  buildGetChatsParams: vi.fn(),
 }));
 
 const createRequest = () => new NextRequest("http://localhost/api/chats/chat-id/artist");
@@ -77,19 +77,18 @@ describe("getChatArtistHandler", () => {
       topic: "Test",
       updated_at: null,
     });
-    vi.mocked(canAccessAccount).mockResolvedValue(false);
+    vi.mocked(buildGetChatsParams).mockResolvedValue({
+      params: { account_ids: [accountId] },
+      error: null,
+    });
 
     const response = await getChatArtistHandler(createRequest(), roomId);
     const body = await response.json();
 
-    expect(canAccessAccount).toHaveBeenCalledWith({
-      currentAccountId: accountId,
-      targetAccountId: "123e4567-e89b-42d3-a456-426614174002",
-    });
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(403);
     expect(body).toEqual({
       status: "error",
-      error: "Chat room not found",
+      error: "Access denied to this chat",
     });
   });
 
@@ -101,6 +100,10 @@ describe("getChatArtistHandler", () => {
       artist_id: artistId,
       topic: "Test",
       updated_at: null,
+    });
+    vi.mocked(buildGetChatsParams).mockResolvedValue({
+      params: { account_ids: [accountId] },
+      error: null,
     });
 
     const response = await getChatArtistHandler(createRequest(), roomId);
@@ -123,6 +126,10 @@ describe("getChatArtistHandler", () => {
       artist_id: null,
       topic: "Test",
       updated_at: null,
+    });
+    vi.mocked(buildGetChatsParams).mockResolvedValue({
+      params: { account_ids: [accountId] },
+      error: null,
     });
 
     const response = await getChatArtistHandler(createRequest(), roomId);
