@@ -2,9 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import selectRoom from "@/lib/supabase/rooms/selectRoom";
-import { buildGetChatsParams } from "./buildGetChatsParams";
+import { validateChatAccess } from "./validateChatAccess";
 
 export const deleteChatBodySchema = z.object({
   id: z.string().uuid("id must be a valid UUID"),
@@ -51,33 +49,9 @@ export async function validateDeleteChatBody(
 
   const { id } = result.data;
 
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) {
-    return authResult;
-  }
-
-  const { accountId } = authResult;
-
-  const room = await selectRoom(id);
-  if (!room) {
-    return NextResponse.json(
-      { status: "error", error: "Chat room not found" },
-      { status: 404, headers: getCorsHeaders() },
-    );
-  }
-
-  const { params } = await buildGetChatsParams({
-    account_id: accountId,
-  });
-
-  // If params.account_ids is undefined, it means admin access (all records)
-  if (params.account_ids && room.account_id) {
-    if (!params.account_ids.includes(room.account_id)) {
-      return NextResponse.json(
-        { status: "error", error: "Access denied to this chat" },
-        { status: 403, headers: getCorsHeaders() },
-      );
-    }
+  const accessResult = await validateChatAccess(request, id);
+  if (accessResult instanceof NextResponse) {
+    return accessResult;
   }
 
   return { id };

@@ -14,8 +14,7 @@ export async function deleteRoomWithRelations(roomId: string): Promise<boolean> 
     .eq("room_id", roomId);
 
   if (selectMemoriesError) {
-    console.error("[ERROR] deleteRoomWithRelations select memories:", selectMemoriesError);
-    return false;
+    console.error("[WARN] deleteRoomWithRelations select memories:", selectMemoriesError);
   }
 
   const memoryIds = (memories || []).map(memory => memory.id);
@@ -27,8 +26,7 @@ export async function deleteRoomWithRelations(roomId: string): Promise<boolean> 
       .in("memory", memoryIds);
 
     if (deleteMemoryEmailsError) {
-      console.error("[ERROR] deleteRoomWithRelations memory_emails:", deleteMemoryEmailsError);
-      return false;
+      console.error("[WARN] deleteRoomWithRelations memory_emails:", deleteMemoryEmailsError);
     }
   }
 
@@ -37,8 +35,7 @@ export async function deleteRoomWithRelations(roomId: string): Promise<boolean> 
     .delete()
     .eq("room_id", roomId);
   if (deleteMemoriesError) {
-    console.error("[ERROR] deleteRoomWithRelations memories:", deleteMemoriesError);
-    return false;
+    console.error("[WARN] deleteRoomWithRelations memories:", deleteMemoriesError);
   }
 
   const { error: deleteRoomReportsError } = await supabase
@@ -46,8 +43,7 @@ export async function deleteRoomWithRelations(roomId: string): Promise<boolean> 
     .delete()
     .eq("room_id", roomId);
   if (deleteRoomReportsError) {
-    console.error("[ERROR] deleteRoomWithRelations room_reports:", deleteRoomReportsError);
-    return false;
+    console.error("[WARN] deleteRoomWithRelations room_reports:", deleteRoomReportsError);
   }
 
   const { error: deleteSegmentRoomsError } = await supabase
@@ -55,8 +51,7 @@ export async function deleteRoomWithRelations(roomId: string): Promise<boolean> 
     .delete()
     .eq("room_id", roomId);
   if (deleteSegmentRoomsError) {
-    console.error("[ERROR] deleteRoomWithRelations segment_rooms:", deleteSegmentRoomsError);
-    return false;
+    console.error("[WARN] deleteRoomWithRelations segment_rooms:", deleteSegmentRoomsError);
   }
 
   const { error: deleteRoomError } = await supabase.from("rooms").delete().eq("id", roomId);
