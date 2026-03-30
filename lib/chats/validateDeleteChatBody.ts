@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateChatAccess } from "./validateChatAccess";
+import { validateChatAccess } from "@/lib/chats/validateChatAccess";
 
 export const deleteChatBodySchema = z.object({
   id: z.string().uuid("id must be a valid UUID"),

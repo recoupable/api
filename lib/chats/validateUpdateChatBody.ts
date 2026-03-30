@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { z } from "zod";
-import { validateChatAccess } from "./validateChatAccess";
+import { validateChatAccess } from "@/lib/chats/validateChatAccess";
 
 /**
  * Zod schema for PATCH /api/chats request body.

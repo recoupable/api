@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
-import { buildGetChatsParams } from "./buildGetChatsParams";
+import { buildGetChatsParams } from "@/lib/chats/buildGetChatsParams";
 
 export interface ValidatedChatAccess {
   roomId: string;

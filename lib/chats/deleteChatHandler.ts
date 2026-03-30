@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateDeleteChatBody } from "./validateDeleteChatBody";
+import { validateDeleteChatBody } from "@/lib/chats/validateDeleteChatBody";
 import { deleteRoomWithRelations } from "@/lib/supabase/rooms/deleteRoomWithRelations";
 
 /**

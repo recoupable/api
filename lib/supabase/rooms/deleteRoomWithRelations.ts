@@ -1,4 +1,4 @@
-import supabase from "../serverClient";
+import supabase from "@/lib/supabase/serverClient";
 
 /**
  * Deletes a room and related room data.
