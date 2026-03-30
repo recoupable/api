@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { resolveAccessibleRoom } from "@/lib/chats/resolveAccessibleRoom";
+import { validateChatAccess } from "@/lib/chats/validateChatAccess";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
 import { buildGetChatsParams } from "@/lib/chats/buildGetChatsParams";
@@ -19,7 +19,7 @@ vi.mock("@/lib/chats/buildGetChatsParams", () => ({
 
 const createRequest = () => new NextRequest("http://localhost/api/chats/chat-id/segment");
 
-describe("resolveAccessibleRoom", () => {
+describe("validateChatAccess", () => {
   const accountId = "11111111-1111-1111-1111-111111111111";
   const roomId = "123e4567-e89b-42d3-a456-426614174000";
 
@@ -28,7 +28,7 @@ describe("resolveAccessibleRoom", () => {
   });
 
   it("returns 400 for invalid chat id", async () => {
-    const result = await resolveAccessibleRoom(createRequest(), "invalid-id");
+    const result = await validateChatAccess(createRequest(), "invalid-id");
     expect(result).toBeInstanceOf(NextResponse);
 
     const response = result as NextResponse;
@@ -45,7 +45,7 @@ describe("resolveAccessibleRoom", () => {
       NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
     );
 
-    const result = await resolveAccessibleRoom(createRequest(), roomId);
+    const result = await validateChatAccess(createRequest(), roomId);
     expect(result).toBeInstanceOf(NextResponse);
 
     const response = result as NextResponse;
@@ -56,7 +56,7 @@ describe("resolveAccessibleRoom", () => {
     vi.mocked(validateAuthContext).mockResolvedValue({ accountId, orgId: null });
     vi.mocked(selectRoom).mockResolvedValue(null);
 
-    const result = await resolveAccessibleRoom(createRequest(), roomId);
+    const result = await validateChatAccess(createRequest(), roomId);
     expect(result).toBeInstanceOf(NextResponse);
 
     const response = result as NextResponse;
@@ -77,7 +77,7 @@ describe("resolveAccessibleRoom", () => {
       error: null,
     });
 
-    const result = await resolveAccessibleRoom(createRequest(), roomId);
+    const result = await validateChatAccess(createRequest(), roomId);
     expect(result).toBeInstanceOf(NextResponse);
 
     const response = result as NextResponse;
@@ -98,7 +98,7 @@ describe("resolveAccessibleRoom", () => {
       error: null,
     });
 
-    const result = await resolveAccessibleRoom(createRequest(), roomId);
+    const result = await validateChatAccess(createRequest(), roomId);
 
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({

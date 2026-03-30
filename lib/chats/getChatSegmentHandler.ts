@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { resolveAccessibleRoom } from "@/lib/chats/resolveAccessibleRoom";
+import { validateChatAccess } from "@/lib/chats/validateChatAccess";
 import { selectSegmentRoomByRoomId } from "@/lib/supabase/segment_rooms/selectSegmentRoomByRoomId";
 
 /**
@@ -13,7 +13,7 @@ import { selectSegmentRoomByRoomId } from "@/lib/supabase/segment_rooms/selectSe
  * @returns A NextResponse with segment linkage data or an error.
  */
 export async function getChatSegmentHandler(request: Request, id: string): Promise<NextResponse> {
-  const roomResult = await resolveAccessibleRoom(request, id);
+  const roomResult = await validateChatAccess(request, id);
   if (roomResult instanceof NextResponse) {
     return roomResult;
   }

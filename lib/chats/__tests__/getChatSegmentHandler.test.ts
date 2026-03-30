@@ -1,11 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getChatSegmentHandler } from "@/lib/chats/getChatSegmentHandler";
-import { resolveAccessibleRoom } from "@/lib/chats/resolveAccessibleRoom";
+import { validateChatAccess } from "@/lib/chats/validateChatAccess";
 import { selectSegmentRoomByRoomId } from "@/lib/supabase/segment_rooms/selectSegmentRoomByRoomId";
 
-vi.mock("@/lib/chats/resolveAccessibleRoom", () => ({
-  resolveAccessibleRoom: vi.fn(),
+vi.mock("@/lib/chats/validateChatAccess", () => ({
+  validateChatAccess: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/segment_rooms/selectSegmentRoomByRoomId", () => ({
@@ -23,7 +23,7 @@ describe("getChatSegmentHandler", () => {
   });
 
   it("returns validation/auth response from resolver", async () => {
-    vi.mocked(resolveAccessibleRoom).mockResolvedValue(
+    vi.mocked(validateChatAccess).mockResolvedValue(
       NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
     );
 
@@ -39,7 +39,7 @@ describe("getChatSegmentHandler", () => {
   });
 
   it("returns linked segment when segment_room exists", async () => {
-    vi.mocked(resolveAccessibleRoom).mockResolvedValue({
+    vi.mocked(validateChatAccess).mockResolvedValue({
       room: {
         id: roomId,
         account_id: "11111111-1111-1111-1111-111111111111",
@@ -70,7 +70,7 @@ describe("getChatSegmentHandler", () => {
   });
 
   it("returns null segment when no segment_room exists", async () => {
-    vi.mocked(resolveAccessibleRoom).mockResolvedValue({
+    vi.mocked(validateChatAccess).mockResolvedValue({
       room: {
         id: roomId,
         account_id: "11111111-1111-1111-1111-111111111111",

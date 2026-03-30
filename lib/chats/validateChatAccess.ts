@@ -20,7 +20,7 @@ interface ResolveAccessibleRoomResult {
  * @param id - The chat room ID from route params.
  * @returns The room and authenticated accountId, or an error NextResponse.
  */
-export async function resolveAccessibleRoom(
+export async function validateChatAccess(
   request: Request,
   id: string,
 ): Promise<ResolveAccessibleRoomResult | NextResponse> {
