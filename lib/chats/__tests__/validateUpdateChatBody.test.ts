@@ -54,6 +54,22 @@ describe("validateUpdateChatBody", () => {
     expect(response.status).toBe(400);
   });
 
+  it("returns 400 when chatId is not a valid UUID", async () => {
+    const result = await validateUpdateChatBody(
+      createRequest({ chatId: "invalid-uuid", topic: "Valid Topic" }),
+    );
+    expect(result).toBeInstanceOf(NextResponse);
+    const response = result as NextResponse;
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 400 when topic is missing", async () => {
+    const result = await validateUpdateChatBody(createRequest({ chatId }));
+    expect(result).toBeInstanceOf(NextResponse);
+    const response = result as NextResponse;
+    expect(response.status).toBe(400);
+  });
+
   it("returns 400 when topic is too short", async () => {
     const result = await validateUpdateChatBody(createRequest({ chatId, topic: "ab" }));
     expect(result).toBeInstanceOf(NextResponse);
@@ -81,6 +97,13 @@ describe("validateUpdateChatBody", () => {
 
   it("returns 400 on invalid JSON body", async () => {
     const result = await validateUpdateChatBody(createRequest("{invalid-json"));
+    expect(result).toBeInstanceOf(NextResponse);
+    const response = result as NextResponse;
+    expect(response.status).toBe(400);
+  });
+
+  it("handles empty body gracefully", async () => {
+    const result = await validateUpdateChatBody(createRequest({}));
     expect(result).toBeInstanceOf(NextResponse);
     const response = result as NextResponse;
     expect(response.status).toBe(400);
