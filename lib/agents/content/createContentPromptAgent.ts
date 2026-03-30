@@ -1,0 +1,61 @@
+import { Output, ToolLoopAgent, stepCountIs } from "ai";
+import { z } from "zod";
+import { LIGHTWEIGHT_MODEL } from "@/lib/const";
+import { CONTENT_TEMPLATES, DEFAULT_CONTENT_TEMPLATE } from "@/lib/content/contentTemplates";
+
+export const contentPromptFlagsSchema = z.object({
+  lipsync: z
+    .boolean()
+    .describe(
+      "Whether to generate a lipsync video (mouth-synced to audio). True when the user mentions lipsync, lip sync, singing, or mouth movement.",
+    ),
+  batch: z
+    .number()
+    .int()
+    .min(1)
+    .max(30)
+    .describe(
+      "How many videos to generate. Extract from phrases like '3 videos', 'a few' (3), 'several' (5). Default 1.",
+    ),
+  captionLength: z
+    .enum(["short", "medium", "long"])
+    .describe(
+      "Caption length: 'short' (default), 'medium', or 'long'. Extract from phrases like 'long caption', 'detailed text', 'brief caption'.",
+    ),
+  upscale: z
+    .boolean()
+    .describe(
+      "Whether to upscale for higher quality. True when the user mentions high quality, HD, upscale, 4K, or premium.",
+    ),
+  template: z.string().describe("Which visual template/scene to use for the video."),
+});
+
+export type ContentPromptFlags = z.infer<typeof contentPromptFlagsSchema>;
+
+const templateDescriptions = CONTENT_TEMPLATES.map(t => `- "${t.name}": ${t.description}`).join(
+  "\n",
+);
+
+const instructions = `You extract content creation parameters from a user's natural-language request.
+
+Available templates:
+${templateDescriptions}
+
+If the user doesn't specify a template, default to "${DEFAULT_CONTENT_TEMPLATE}".
+If the user doesn't mention a parameter, use the default value.
+
+Defaults: lipsync=false, batch=1, captionLength="short", upscale=false, template="${DEFAULT_CONTENT_TEMPLATE}"`;
+
+/**
+ * Creates a ToolLoopAgent configured for parsing content creation prompts.
+ *
+ * @returns A configured ToolLoopAgent that extracts structured content flags from natural language.
+ */
+export function createContentPromptAgent() {
+  return new ToolLoopAgent({
+    model: LIGHTWEIGHT_MODEL,
+    instructions,
+    output: Output.object({ schema: contentPromptFlagsSchema }),
+    stopWhen: stepCountIs(1),
+  });
+}

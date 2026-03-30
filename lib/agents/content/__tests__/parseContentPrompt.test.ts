@@ -2,18 +2,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { parseContentPrompt } from "../parseContentPrompt";
 import type { ContentPromptFlags } from "../parseContentPrompt";
 
-vi.mock("ai", () => ({
-  generateText: vi.fn(),
-  Output: {
-    object: vi.fn(() => "mocked-output"),
-  },
+const mockGenerate = vi.fn();
+
+vi.mock("../createContentPromptAgent", () => ({
+  createContentPromptAgent: vi.fn(() => ({
+    generate: mockGenerate,
+  })),
 }));
 
-vi.mock("@/lib/const", () => ({
-  LIGHTWEIGHT_MODEL: "test-model",
+vi.mock("@/lib/content/contentTemplates", () => ({
+  DEFAULT_CONTENT_TEMPLATE: "artist-caption-bedroom",
 }));
 
-const { generateText } = await import("ai");
+const { createContentPromptAgent } = await import("../createContentPromptAgent");
 
 describe("parseContentPrompt", () => {
   beforeEach(() => {
@@ -28,7 +29,7 @@ describe("parseContentPrompt", () => {
       upscale: false,
       template: "artist-caption-bedroom",
     };
-    vi.mocked(generateText).mockResolvedValue({ output: flags } as never);
+    mockGenerate.mockResolvedValue({ output: flags });
 
     const result = await parseContentPrompt("make me a lipsync video");
 
@@ -43,7 +44,7 @@ describe("parseContentPrompt", () => {
       upscale: false,
       template: "artist-caption-bedroom",
     };
-    vi.mocked(generateText).mockResolvedValue({ output: flags } as never);
+    mockGenerate.mockResolvedValue({ output: flags });
 
     const result = await parseContentPrompt("make me a video");
 
@@ -58,7 +59,7 @@ describe("parseContentPrompt", () => {
       upscale: false,
       template: "artist-caption-bedroom",
     };
-    vi.mocked(generateText).mockResolvedValue({ output: flags } as never);
+    mockGenerate.mockResolvedValue({ output: flags });
 
     const result = await parseContentPrompt("make me 5 videos");
 
@@ -73,7 +74,7 @@ describe("parseContentPrompt", () => {
       upscale: false,
       template: "artist-caption-bedroom",
     };
-    vi.mocked(generateText).mockResolvedValue({ output: flags } as never);
+    mockGenerate.mockResolvedValue({ output: flags });
 
     const result = await parseContentPrompt("make a video with a long caption");
 
@@ -88,7 +89,7 @@ describe("parseContentPrompt", () => {
       upscale: true,
       template: "artist-caption-bedroom",
     };
-    vi.mocked(generateText).mockResolvedValue({ output: flags } as never);
+    mockGenerate.mockResolvedValue({ output: flags });
 
     const result = await parseContentPrompt("make a high quality video");
 
@@ -103,14 +104,14 @@ describe("parseContentPrompt", () => {
       upscale: false,
       template: "artist-caption-stage",
     };
-    vi.mocked(generateText).mockResolvedValue({ output: flags } as never);
+    mockGenerate.mockResolvedValue({ output: flags });
 
     const result = await parseContentPrompt("make a concert video on stage");
 
     expect(result.template).toBe("artist-caption-stage");
   });
 
-  it("passes the user prompt as the user message to generateText", async () => {
+  it("creates a new agent and calls generate with the prompt", async () => {
     const flags: ContentPromptFlags = {
       lipsync: false,
       batch: 1,
@@ -118,24 +119,16 @@ describe("parseContentPrompt", () => {
       upscale: false,
       template: "artist-caption-bedroom",
     };
-    vi.mocked(generateText).mockResolvedValue({ output: flags } as never);
+    mockGenerate.mockResolvedValue({ output: flags });
 
     await parseContentPrompt("make me a cool video");
 
-    expect(generateText).toHaveBeenCalledWith(
-      expect.objectContaining({
-        messages: expect.arrayContaining([
-          expect.objectContaining({
-            role: "user",
-            content: "make me a cool video",
-          }),
-        ]),
-      }),
-    );
+    expect(createContentPromptAgent).toHaveBeenCalledOnce();
+    expect(mockGenerate).toHaveBeenCalledWith({ prompt: "make me a cool video" });
   });
 
-  it("returns defaults when generateText throws", async () => {
-    vi.mocked(generateText).mockRejectedValue(new Error("AI Gateway down"));
+  it("returns defaults when agent.generate throws", async () => {
+    mockGenerate.mockRejectedValue(new Error("AI Gateway down"));
 
     const result = await parseContentPrompt("make me a lipsync video");
 
@@ -149,7 +142,7 @@ describe("parseContentPrompt", () => {
   });
 
   it("returns defaults when output is null", async () => {
-    vi.mocked(generateText).mockResolvedValue({ output: null } as never);
+    mockGenerate.mockResolvedValue({ output: null });
 
     const result = await parseContentPrompt("make me a video");
 
