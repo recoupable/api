@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { resolveAccessibleRoom } from "@/lib/chats/resolveAccessibleRoom";
+import { validateChatAccess } from "@/lib/chats/validateChatAccess";
 
 /**
  * Handles GET /api/chats/[id]/artist.
@@ -12,7 +12,7 @@ import { resolveAccessibleRoom } from "@/lib/chats/resolveAccessibleRoom";
  * @returns A NextResponse with artist linkage data or an error.
  */
 export async function getChatArtistHandler(request: Request, id: string): Promise<NextResponse> {
-  const roomResult = await resolveAccessibleRoom(request, id);
+  const roomResult = await validateChatAccess(request, id);
   if (roomResult instanceof NextResponse) {
     return roomResult;
   }

@@ -8,22 +8,22 @@ import type { Tables } from "@/types/database.types";
 
 const chatIdSchema = z.string().uuid("id must be a valid UUID");
 
-interface ResolveAccessibleRoomResult {
+interface ValidatedChatAccess {
   room: Tables<"rooms">;
   accountId: string;
 }
 
 /**
- * Resolves a chat room and validates access for the authenticated caller.
+ * Validates that the authenticated caller can access a chat room.
  *
  * @param request - The incoming request object for auth context.
  * @param id - The chat room ID from route params.
  * @returns The room and authenticated accountId, or an error NextResponse.
  */
-export async function resolveAccessibleRoom(
+export async function validateChatAccess(
   request: Request,
   id: string,
-): Promise<ResolveAccessibleRoomResult | NextResponse> {
+): Promise<ValidatedChatAccess | NextResponse> {
   const parsedId = chatIdSchema.safeParse(id);
   if (!parsedId.success) {
     return NextResponse.json(
