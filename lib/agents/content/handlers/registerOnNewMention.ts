@@ -4,23 +4,26 @@ import { triggerPollContentRun } from "@/lib/trigger/triggerPollContentRun";
 import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
 import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadiness";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
-import { DEFAULT_CONTENT_TEMPLATE } from "@/lib/content/contentTemplates";
+import { parseContentPrompt } from "../parseContentPrompt";
 
 /**
  * Registers the onNewMention handler on the content agent bot.
- * Parses the mention text, validates the artist, triggers content creation,
- * and starts a polling task to report results back.
+ * Parses the mention text with AI to extract content creation flags,
+ * validates the artist, triggers content creation, and starts a polling
+ * task to report results back.
  *
  * @param bot - The content agent bot instance to register the handler on
  */
 export function registerOnNewMention(bot: ContentAgentBot) {
-  bot.onNewMention(async (thread, _) => {
+  bot.onNewMention(async (thread, message) => {
     try {
       const accountId = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
       const artistAccountId = "1873859c-dd37-4e9a-9bac-80d3558527a9";
-      const template = DEFAULT_CONTENT_TEMPLATE;
-      const batch = 1;
-      const lipsync = false;
+
+      // Parse the user's natural-language prompt into structured flags
+      const { lipsync, batch, captionLength, upscale, template } = await parseContentPrompt(
+        message.text,
+      );
 
       // Resolve artist slug
       const artistSlug = await resolveArtistSlug(artistAccountId);
@@ -65,8 +68,8 @@ export function registerOnNewMention(bot: ContentAgentBot) {
         artistSlug,
         template,
         lipsync,
-        captionLength: "short" as const,
-        upscale: false,
+        captionLength,
+        upscale,
         githubRepo,
       };
 
