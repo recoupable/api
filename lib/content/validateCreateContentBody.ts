@@ -9,6 +9,7 @@ import {
   isSupportedContentTemplate,
 } from "@/lib/content/contentTemplates";
 import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
+import { songsSchema } from "@/lib/content/songsSchema";
 
 export const CAPTION_LENGTHS = ["short", "medium", "long"] as const;
 
@@ -25,7 +26,7 @@ export const createContentBodySchema = z.object({
   caption_length: z.enum(CAPTION_LENGTHS).optional().default("short"),
   upscale: z.boolean().optional().default(false),
   batch: z.number().int().min(1).max(30).optional().default(1),
-  songs: z.array(z.string().min(1)).optional(),
+  songs: songsSchema,
 });
 
 export type ValidatedCreateContentBody = {

@@ -2,6 +2,7 @@ import { Output, ToolLoopAgent, stepCountIs } from "ai";
 import { z } from "zod";
 import { LIGHTWEIGHT_MODEL } from "@/lib/const";
 import { CONTENT_TEMPLATES, DEFAULT_CONTENT_TEMPLATE } from "@/lib/content/contentTemplates";
+import { songsSchema } from "@/lib/content/songsSchema";
 
 const templateNames = CONTENT_TEMPLATES.map(t => t.name) as [string, ...string[]];
 
@@ -30,12 +31,9 @@ export const contentPromptFlagsSchema = z.object({
       "Whether to upscale for higher quality. True when the prompt mentions high quality, HD, upscale, 4K, or premium.",
     ),
   template: z.enum(templateNames).describe("Which visual template/scene to use for the video."),
-  songs: z
-    .array(z.string().min(1))
-    .optional()
-    .describe(
-      "Song names or slugs mentioned in the prompt. Extract from phrases like 'the hiccups song', 'use track X', 'for song Y'. Omit if no specific songs are mentioned.",
-    ),
+  songs: songsSchema.describe(
+    "Song names or slugs mentioned in the prompt. Extract from phrases like 'the hiccups song', 'use track X', 'for song Y'. Omit if no specific songs are mentioned.",
+  ),
 });
 
 export type ContentPromptFlags = z.infer<typeof contentPromptFlagsSchema>;
