@@ -4,6 +4,7 @@ import { validateGetSandboxesFileRequest } from "./validateGetSandboxesFileReque
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { getRawFileContent } from "@/lib/github/getRawFileContent";
 import { resolveSubmodulePath } from "@/lib/github/resolveSubmodulePath";
+import { isBinaryFile } from "@/lib/github/isBinaryFile";
 
 /**
  * Handler for retrieving file contents from a sandbox's GitHub repository.
@@ -11,6 +12,7 @@ import { resolveSubmodulePath } from "@/lib/github/resolveSubmodulePath";
  *
  * Resolves the github_repo from the authenticated account's snapshot,
  * then fetches the raw file content from the repository.
+ * Binary files (images, PDFs, fonts, etc.) are automatically returned as base64.
  *
  * Query parameters:
  * - path: The file path within the repository (required)
@@ -47,7 +49,8 @@ export async function getSandboxesFileHandler(request: NextRequest): Promise<Nex
   }
 
   const resolved = await resolveSubmodulePath({ githubRepo, path });
-  const result = await getRawFileContent(resolved);
+  const format = isBinaryFile(path) ? ("base64" as const) : undefined;
+  const result = await getRawFileContent({ ...resolved, format });
 
   if ("error" in result) {
     return NextResponse.json(
@@ -57,7 +60,11 @@ export async function getSandboxesFileHandler(request: NextRequest): Promise<Nex
   }
 
   return NextResponse.json(
-    { status: "success", content: result.content },
+    {
+      status: "success",
+      content: result.content,
+      ...("encoding" in result && { encoding: result.encoding }),
+    },
     { status: 200, headers: getCorsHeaders() },
   );
 }

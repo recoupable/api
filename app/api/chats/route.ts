@@ -40,12 +40,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
  *
  * Create a new chat room.
  *
- * Authentication: x-api-key header required.
- * The account ID is inferred from the API key.
+ * Authentication: x-api-key header or Authorization Bearer token required.
+ * The account ID is inferred from the authenticated context.
  *
  * Optional body parameters:
  * - artistId: UUID of the artist account the chat is associated with
  * - chatId: UUID for the new chat (auto-generated if not provided)
+ * - accountId: Optional account override if the authenticated account can access it
  *
  * @param request - The request object
  * @returns A NextResponse with the created chat or an error

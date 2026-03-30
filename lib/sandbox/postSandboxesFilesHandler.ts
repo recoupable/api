@@ -52,35 +52,40 @@ export async function postSandboxesFilesHandler(request: NextRequest): Promise<N
 
   const uploaded: CreateFileResult[] = [];
   const errors: string[] = [];
-  const blobUrlsToDelete: string[] = [];
+  const allBlobUrls = files.map(file => file.url);
 
-  for (const file of files) {
-    const content = await downloadFile(file.url);
-    if ("error" in content) {
-      errors.push(`${file.name}: ${content.error}`);
-      continue;
+  try {
+    for (const file of files) {
+      const content = await downloadFile(file.url);
+      if ("error" in content) {
+        errors.push(`${file.name}: ${content.error}`);
+        continue;
+      }
+
+      const filePath = path ? `${path}/${file.name}` : file.name;
+      const resolved = await resolveSubmodulePath({ githubRepo, path: filePath });
+
+      const result = await createOrUpdateFileContent({
+        githubRepo: resolved.githubRepo,
+        path: resolved.path,
+        content,
+        message,
+      });
+
+      if ("error" in result) {
+        errors.push(`${file.name}: ${result.error}`);
+      } else {
+        uploaded.push(result);
+      }
     }
-
-    const filePath = path ? `${path}/${file.name}` : file.name;
-    const resolved = await resolveSubmodulePath({ githubRepo, path: filePath });
-
-    const result = await createOrUpdateFileContent({
-      githubRepo: resolved.githubRepo,
-      path: resolved.path,
-      content,
-      message,
-    });
-
-    if ("error" in result) {
-      errors.push(`${file.name}: ${result.error}`);
-    } else {
-      uploaded.push(result);
-      blobUrlsToDelete.push(file.url);
-    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    errors.push(message);
+  } finally {
+    // Always clean up all temporary blobs, even on unhandled exceptions,
+    // so customers can retry uploads without "blob already exists" errors
+    await Promise.allSettled(allBlobUrls.map(url => del(url)));
   }
-
-  // Clean up temporary blobs after successful commits
-  await Promise.allSettled(blobUrlsToDelete.map(url => del(url)));
 
   if (uploaded.length === 0) {
     return NextResponse.json(
