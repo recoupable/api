@@ -13,8 +13,6 @@ import { songsSchema } from "@/lib/content/songsSchema";
 
 import { CAPTION_LENGTHS } from "@/lib/content/captionLengths";
 
-export { CAPTION_LENGTHS };
-
 export const createContentBodySchema = z.object({
   artist_account_id: z
     .string({ message: "artist_account_id is required" })
