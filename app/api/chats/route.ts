@@ -4,6 +4,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createChatHandler } from "@/lib/chats/createChatHandler";
 import { getChatsHandler } from "@/lib/chats/getChatsHandler";
 import { updateChatHandler } from "@/lib/chats/updateChatHandler";
+import { deleteChatHandler } from "@/lib/chats/deleteChatHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -71,4 +72,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
  */
 export async function PATCH(request: NextRequest): Promise<NextResponse> {
   return updateChatHandler(request);
+}
+
+/**
+ * DELETE /api/chats
+ *
+ * Delete a chat room and related records.
+ *
+ * Authentication: x-api-key header or Authorization Bearer token required.
+ *
+ * Body parameters:
+ * - id (required): UUID of the chat room to delete
+ *
+ * @param request - The request object
+ * @returns A NextResponse with deletion result or an error
+ */
+export async function DELETE(request: NextRequest): Promise<NextResponse> {
+  return deleteChatHandler(request);
 }
