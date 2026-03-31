@@ -88,6 +88,54 @@ describe("validateChatAccess", () => {
     expect(response.status).toBe(403);
   });
 
+  it("returns 403 when buildGetChatsParams returns null params", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId,
+      orgId: null,
+      authToken: "test-key",
+    });
+    vi.mocked(selectRoom).mockResolvedValue({
+      id: roomId,
+      account_id: accountId,
+      artist_id: null,
+      topic: "Topic",
+      updated_at: "2026-03-30T00:00:00Z",
+    });
+    vi.mocked(buildGetChatsParams).mockResolvedValue({
+      params: null,
+      error: "Access denied",
+    });
+
+    const result = await validateChatAccess(request, roomId);
+    expect(result).toBeInstanceOf(NextResponse);
+    const response = result as NextResponse;
+    expect(response.status).toBe(403);
+  });
+
+  it("returns 403 when room has null account_id", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId,
+      orgId: null,
+      authToken: "test-key",
+    });
+    vi.mocked(selectRoom).mockResolvedValue({
+      id: roomId,
+      account_id: null,
+      artist_id: null,
+      topic: "Topic",
+      updated_at: "2026-03-30T00:00:00Z",
+    });
+    vi.mocked(buildGetChatsParams).mockResolvedValue({
+      params: { account_ids: [accountId] },
+      error: null,
+    });
+
+    const result = await validateChatAccess(request, roomId);
+    expect(result).toBeInstanceOf(NextResponse);
+    const response = result as NextResponse;
+    expect(response.status).toBe(403);
+  });
+
   it("returns roomId for accessible room", async () => {
     const room = {
       id: roomId,

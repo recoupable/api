@@ -46,18 +46,22 @@ export async function validateChatAccess(
     );
   }
 
-  const { params } = await buildGetChatsParams({
+  const { params, error } = await buildGetChatsParams({
     account_id: accountId,
   });
 
-  // If params.account_ids is undefined, it means admin access (all records)
-  if (params.account_ids && room.account_id) {
-    if (!params.account_ids.includes(room.account_id)) {
-      return NextResponse.json(
-        { status: "error", error: "Access denied to this chat" },
-        { status: 403, headers: getCorsHeaders() },
-      );
-    }
+  if (!params) {
+    return NextResponse.json(
+      { status: "error", error: error ?? "Access denied" },
+      { status: 403, headers: getCorsHeaders() },
+    );
+  }
+
+  if (!room.account_id || !params.account_ids.includes(room.account_id)) {
+    return NextResponse.json(
+      { status: "error", error: "Access denied to this chat" },
+      { status: 403, headers: getCorsHeaders() },
+    );
   }
 
   return { roomId: room.id };

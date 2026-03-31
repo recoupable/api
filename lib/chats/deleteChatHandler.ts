@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateDeleteChatBody } from "@/lib/chats/validateDeleteChatBody";
-import { deleteRoomWithRelations } from "@/lib/supabase/rooms/deleteRoomWithRelations";
+import { deleteRoom } from "@/lib/supabase/rooms/deleteRoom";
 
 /**
  * Handles DELETE /api/chats - Delete a chat room and related records.
@@ -19,9 +19,9 @@ export async function deleteChatHandler(request: NextRequest): Promise<NextRespo
   const { id } = validated;
 
   try {
-    const deleted = await deleteRoomWithRelations(id);
+    const deleted = await deleteRoom(id);
 
-    if (!deleted) {
+    if (deleted === null) {
       return NextResponse.json(
         { status: "error", error: "Failed to delete chat" },
         { status: 500, headers: getCorsHeaders() },
@@ -37,9 +37,11 @@ export async function deleteChatHandler(request: NextRequest): Promise<NextRespo
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Server error";
+    if (error instanceof Error) {
+      console.error("[ERROR] deleteChatHandler:", error.message);
+    }
     return NextResponse.json(
-      { status: "error", error: message },
+      { status: "error", error: "Server error" },
       { status: 500, headers: getCorsHeaders() },
     );
   }

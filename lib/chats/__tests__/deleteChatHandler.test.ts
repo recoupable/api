@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { deleteChatHandler } from "../deleteChatHandler";
 import { validateDeleteChatBody } from "../validateDeleteChatBody";
-import { deleteRoomWithRelations } from "@/lib/supabase/rooms/deleteRoomWithRelations";
+import { deleteRoom } from "@/lib/supabase/rooms/deleteRoom";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -12,8 +12,8 @@ vi.mock("@/lib/chats/validateDeleteChatBody", () => ({
   validateDeleteChatBody: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/rooms/deleteRoomWithRelations", () => ({
-  deleteRoomWithRelations: vi.fn(),
+vi.mock("@/lib/supabase/rooms/deleteRoom", () => ({
+  deleteRoom: vi.fn(),
 }));
 
 describe("deleteChatHandler", () => {
@@ -31,7 +31,7 @@ describe("deleteChatHandler", () => {
 
   it("deletes chat and returns success response", async () => {
     vi.mocked(validateDeleteChatBody).mockResolvedValue({ id });
-    vi.mocked(deleteRoomWithRelations).mockResolvedValue(true);
+    vi.mocked(deleteRoom).mockResolvedValue([]);
 
     const response = await deleteChatHandler(request);
 
@@ -42,7 +42,7 @@ describe("deleteChatHandler", () => {
       id,
       message: "Chat deleted successfully",
     });
-    expect(deleteRoomWithRelations).toHaveBeenCalledWith(id);
+    expect(deleteRoom).toHaveBeenCalledWith(id);
   });
 
   it("returns validation response when request is invalid", async () => {
@@ -52,12 +52,12 @@ describe("deleteChatHandler", () => {
 
     const response = await deleteChatHandler(request);
     expect(response.status).toBe(400);
-    expect(deleteRoomWithRelations).not.toHaveBeenCalled();
+    expect(deleteRoom).not.toHaveBeenCalled();
   });
 
   it("returns 500 when deletion fails", async () => {
     vi.mocked(validateDeleteChatBody).mockResolvedValue({ id });
-    vi.mocked(deleteRoomWithRelations).mockResolvedValue(false);
+    vi.mocked(deleteRoom).mockResolvedValue(null);
 
     const response = await deleteChatHandler(request);
     expect(response.status).toBe(500);
@@ -66,14 +66,14 @@ describe("deleteChatHandler", () => {
     expect(body.error).toBe("Failed to delete chat");
   });
 
-  it("returns 500 when deletion throws", async () => {
+  it("returns 500 with generic message when deletion throws", async () => {
     vi.mocked(validateDeleteChatBody).mockResolvedValue({ id });
-    vi.mocked(deleteRoomWithRelations).mockRejectedValue(new Error("Database down"));
+    vi.mocked(deleteRoom).mockRejectedValue(new Error("Database down"));
 
     const response = await deleteChatHandler(request);
     expect(response.status).toBe(500);
     const body = await response.json();
     expect(body.status).toBe("error");
-    expect(body.error).toBe("Database down");
+    expect(body.error).toBe("Server error");
   });
 });
