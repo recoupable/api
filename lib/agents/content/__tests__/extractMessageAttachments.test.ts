@@ -166,6 +166,53 @@ describe("extractMessageAttachments", () => {
     expect(result).toEqual({ attachedAudioUrl: null, attachedImageUrl: null });
   });
 
+  it("returns null when attachment has no data and no fetchData", async () => {
+    const message = {
+      text: "hello",
+      attachments: [
+        {
+          type: "audio",
+          name: "empty.mp3",
+        },
+      ],
+    };
+
+    const result = await extractMessageAttachments(message as never);
+
+    expect(put).not.toHaveBeenCalled();
+    expect(result.attachedAudioUrl).toBeNull();
+  });
+
+  it("gracefully handles upload failure without crashing", async () => {
+    const audioBuffer = Buffer.from("fake-audio");
+    const imageBuffer = Buffer.from("fake-image");
+    const message = {
+      text: "hello",
+      attachments: [
+        {
+          type: "audio",
+          name: "song.mp3",
+          fetchData: vi.fn().mockResolvedValue(audioBuffer),
+        },
+        {
+          type: "image",
+          name: "photo.jpg",
+          fetchData: vi.fn().mockResolvedValue(imageBuffer),
+        },
+      ],
+    };
+    // First call (audio) throws, second call (image) succeeds
+    vi.mocked(put).mockRejectedValueOnce(new Error("upload failed"));
+    vi.mocked(put).mockResolvedValueOnce({
+      url: "https://blob.vercel-storage.com/photo.jpg",
+    } as never);
+
+    const result = await extractMessageAttachments(message as never);
+
+    expect(result.attachedAudioUrl).toBeNull();
+    expect(result.attachedImageUrl).toBe("https://blob.vercel-storage.com/photo.jpg");
+  });
+
   it("falls back to generic name when attachment name is missing", async () => {
     const audioBuffer = Buffer.from("audio");
     const message = {

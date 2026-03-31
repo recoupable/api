@@ -40,11 +40,19 @@ export async function extractMessageAttachments(
   const imageAttachment = attachments.find(a => a.type === "image");
 
   if (audioAttachment) {
-    result.attachedAudioUrl = await uploadAttachment(audioAttachment, "audio");
+    try {
+      result.attachedAudioUrl = await uploadAttachment(audioAttachment, "audio");
+    } catch (error) {
+      console.error("[content-agent] Failed to upload audio attachment:", error);
+    }
   }
 
   if (imageAttachment) {
-    result.attachedImageUrl = await uploadAttachment(imageAttachment, "image");
+    try {
+      result.attachedImageUrl = await uploadAttachment(imageAttachment, "image");
+    } catch (error) {
+      console.error("[content-agent] Failed to upload image attachment:", error);
+    }
   }
 
   return result;
@@ -56,11 +64,16 @@ export async function extractMessageAttachments(
  * @param attachment
  * @param prefix
  */
-async function uploadAttachment(attachment: Attachment, prefix: string): Promise<string> {
-  const data = attachment.fetchData ? await attachment.fetchData() : (attachment.data as Buffer);
+async function uploadAttachment(attachment: Attachment, prefix: string): Promise<string | null> {
+  const data = attachment.fetchData ? await attachment.fetchData() : attachment.data;
+
+  if (!data) {
+    console.error(`[content-agent] Attachment "${attachment.name ?? "unknown"}" has no data`);
+    return null;
+  }
 
   const filename = attachment.name ?? "attachment";
-  const blobPath = `content-attachments/${prefix}/${filename}`;
+  const blobPath = `content-attachments/${prefix}/${Date.now()}-${filename}`;
 
   const blob = await put(blobPath, data, { access: "public" });
   return blob.url;
