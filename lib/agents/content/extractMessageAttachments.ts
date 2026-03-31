@@ -63,27 +63,26 @@ export async function extractMessageAttachments(
 }
 
 /**
- * Resolves a public URL for an attachment. Uses the attachment's direct URL
- * if available (avoids re-upload corruption). Falls back to fetchData + Blob
- * upload for platforms with private URLs.
+ * Resolves a public URL for an attachment. Downloads via fetchData and
+ * uploads to Vercel Blob with the correct content type.
  */
 async function resolveAttachmentUrl(attachment: Attachment, prefix: string): Promise<string | null> {
-  // Prefer direct URL — avoids download+reupload corruption
-  if (attachment.url) {
-    console.log(`[content-agent] Using direct attachment URL: ${attachment.url}`);
-    return attachment.url;
-  }
-
-  // Fallback: download and upload to Blob
   const data = attachment.fetchData ? await attachment.fetchData() : attachment.data;
   if (!data) {
-    console.error(`[content-agent] Attachment "${attachment.name ?? "unknown"}" has no URL or data`);
+    console.error(`[content-agent] Attachment "${attachment.name ?? "unknown"}" has no data`);
     return null;
   }
 
   const filename = attachment.name ?? "attachment";
   const blobPath = `content-attachments/${prefix}/${Date.now()}-${filename}`;
-  const blob = await put(blobPath, data, { access: "public" });
+  const contentType = attachment.mimeType ?? (prefix === "audio" ? "audio/mpeg" : "image/png");
+
+  console.log(`[content-agent] Uploading to Blob: path=${blobPath}, contentType=${contentType}, size=${Buffer.isBuffer(data) ? data.byteLength : (data as Blob).size}`);
+
+  const blob = await put(blobPath, data, {
+    access: "public",
+    contentType,
+  });
   console.log(`[content-agent] Uploaded to Blob: ${blob.url}`);
   return blob.url;
 }
