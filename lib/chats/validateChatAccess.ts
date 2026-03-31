@@ -5,9 +5,12 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
 import { buildGetChatsParams } from "@/lib/chats/buildGetChatsParams";
+import type { Tables } from "@/types/database.types";
 
 export interface ValidatedChatAccess {
   roomId: string;
+  room: Tables<"rooms">;
+  accountId: string;
 }
 
 const chatIdSchema = z.string().uuid("id must be a valid UUID");
@@ -17,7 +20,7 @@ const chatIdSchema = z.string().uuid("id must be a valid UUID");
  *
  * @param request - The incoming request (used for auth context)
  * @param roomId - The room/chat UUID to validate access for
- * @returns NextResponse on auth/access failure, or validated roomId
+ * @returns NextResponse on auth/access failure, or validated access data
  */
 export async function validateChatAccess(
   request: NextRequest,
@@ -64,5 +67,5 @@ export async function validateChatAccess(
     );
   }
 
-  return { roomId: room.id };
+  return { roomId: room.id, room, accountId };
 }

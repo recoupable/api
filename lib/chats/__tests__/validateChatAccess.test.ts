@@ -157,6 +157,6 @@ describe("validateChatAccess", () => {
     });
 
     const result = await validateChatAccess(request, roomId);
-    expect(result).toEqual({ roomId });
+    expect(result).toEqual({ roomId, room, accountId });
   });
 });
