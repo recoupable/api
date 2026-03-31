@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { getMemoriesHandler } from "@/lib/memories/getMemoriesHandler";
+import { getChatMessagesHandler } from "@/lib/chats/getChatMessagesHandler";
 import { validateChatAccess } from "@/lib/chats/validateChatAccess";
 import selectMemories from "@/lib/supabase/memories/selectMemories";
 
@@ -15,7 +15,7 @@ vi.mock("@/lib/supabase/memories/selectMemories", () => ({
 const createRequest = (roomId?: string) =>
   new NextRequest(`http://localhost/api/chats/${roomId ?? "missing"}/messages`);
 
-describe("getMemoriesHandler", () => {
+describe("getChatMessagesHandler", () => {
   const roomId = "123e4567-e89b-42d3-a456-426614174000";
 
   beforeEach(() => {
@@ -23,7 +23,7 @@ describe("getMemoriesHandler", () => {
   });
 
   it("returns 400 for invalid chat id", async () => {
-    const response = await getMemoriesHandler(createRequest(), "invalid-id");
+    const response = await getChatMessagesHandler(createRequest(), "invalid-id");
     const body = await response.json();
 
     expect(response.status).toBe(400);
@@ -38,7 +38,7 @@ describe("getMemoriesHandler", () => {
       NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
     );
 
-    const response = await getMemoriesHandler(createRequest(roomId), roomId);
+    const response = await getChatMessagesHandler(createRequest(roomId), roomId);
     expect(response.status).toBe(401);
   });
 
@@ -55,7 +55,7 @@ describe("getMemoriesHandler", () => {
     });
     vi.mocked(selectMemories).mockResolvedValue(null);
 
-    const response = await getMemoriesHandler(createRequest(roomId), roomId);
+    const response = await getChatMessagesHandler(createRequest(roomId), roomId);
     const body = await response.json();
 
     expect(response.status).toBe(500);
@@ -85,7 +85,7 @@ describe("getMemoriesHandler", () => {
       },
     ]);
 
-    const response = await getMemoriesHandler(createRequest(roomId), roomId);
+    const response = await getChatMessagesHandler(createRequest(roomId), roomId);
     const body = await response.json();
 
     expect(response.status).toBe(200);

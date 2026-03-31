@@ -10,10 +10,16 @@ const chatIdSchema = z.string().uuid("id must be a valid UUID");
 /**
  * Handles GET /api/chats/[id]/messages.
  *
- * Returns all memories for a room in ascending order by updated_at.
- * Requires the caller to have access to the target room.
+ * Returns all messages for a chat in ascending order by `updated_at`.
+ *
+ * @param request - Incoming request used to validate chat access.
+ * @param id - Chat identifier from route params.
+ * @returns JSON response containing ordered chat messages.
  */
-export async function getMemoriesHandler(request: NextRequest, id: string): Promise<NextResponse> {
+export async function getChatMessagesHandler(
+  request: NextRequest,
+  id: string,
+): Promise<NextResponse> {
   const parsedId = chatIdSchema.safeParse(id);
   if (!parsedId.success) {
     return NextResponse.json(
