@@ -2,6 +2,7 @@ import { put } from "@vercel/blob";
 
 interface Attachment {
   type: "image" | "file" | "video" | "audio";
+  mimeType?: string;
   name?: string;
   data?: Buffer | Blob;
   fetchData?: () => Promise<Buffer>;
@@ -36,8 +37,11 @@ export async function extractMessageAttachments(
     return result;
   }
 
-  const audioAttachment = attachments.find(a => a.type === "audio");
-  const imageAttachment = attachments.find(a => a.type === "image");
+  const isAudio = (a: Attachment) => a.type === "audio" || a.mimeType?.startsWith("audio/");
+  const isImage = (a: Attachment) => a.type === "image" || a.mimeType?.startsWith("image/");
+
+  const audioAttachment = attachments.find(isAudio);
+  const imageAttachment = attachments.find(isImage);
 
   if (audioAttachment) {
     try {

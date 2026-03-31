@@ -151,6 +151,50 @@ describe("extractMessageAttachments", () => {
     expect(result.songUrl).toBe("https://blob.vercel-storage.com/first.mp3");
   });
 
+  it("detects image from file type with image mimeType (Slack uploads)", async () => {
+    const imageBuffer = Buffer.from("fake-image");
+    const message = {
+      text: "hello",
+      attachments: [
+        {
+          type: "file",
+          name: "photo.jpg",
+          mimeType: "image/jpeg",
+          fetchData: vi.fn().mockResolvedValue(imageBuffer),
+        },
+      ],
+    };
+    vi.mocked(put).mockResolvedValue({
+      url: "https://blob.vercel-storage.com/photo.jpg",
+    } as never);
+
+    const result = await extractMessageAttachments(message as never);
+
+    expect(result.imageUrl).toBe("https://blob.vercel-storage.com/photo.jpg");
+  });
+
+  it("detects audio from file type with audio mimeType (Slack uploads)", async () => {
+    const audioBuffer = Buffer.from("fake-audio");
+    const message = {
+      text: "hello",
+      attachments: [
+        {
+          type: "file",
+          name: "song.mp3",
+          mimeType: "audio/mpeg",
+          fetchData: vi.fn().mockResolvedValue(audioBuffer),
+        },
+      ],
+    };
+    vi.mocked(put).mockResolvedValue({
+      url: "https://blob.vercel-storage.com/song.mp3",
+    } as never);
+
+    const result = await extractMessageAttachments(message as never);
+
+    expect(result.songUrl).toBe("https://blob.vercel-storage.com/song.mp3");
+  });
+
   it("ignores file attachments that are not audio or image", async () => {
     const message = {
       text: "hello",
