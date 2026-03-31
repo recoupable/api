@@ -49,6 +49,7 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
       captionLength: validated.captionLength,
       upscale: validated.upscale,
       githubRepo,
+      songs: validated.songs,
     };
 
     // Always use allSettled — works for single and batch.

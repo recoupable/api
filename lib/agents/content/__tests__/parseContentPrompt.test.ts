@@ -157,4 +157,35 @@ describe("parseContentPrompt", () => {
       template: "artist-caption-bedroom",
     });
   });
+
+  it("extracts songs from prompt when specified", async () => {
+    const flags: ContentPromptFlags = {
+      lipsync: true,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+      songs: ["hiccups"],
+    };
+    mockGenerate.mockResolvedValue({ output: flags });
+
+    const result = await parseContentPrompt("make a lipsync video for the hiccups song");
+
+    expect(result.songs).toEqual(["hiccups"]);
+  });
+
+  it("returns undefined songs when no songs mentioned", async () => {
+    const flags: ContentPromptFlags = {
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+    };
+    mockGenerate.mockResolvedValue({ output: flags });
+
+    const result = await parseContentPrompt("make me a video");
+
+    expect(result.songs).toBeUndefined();
+  });
 });
