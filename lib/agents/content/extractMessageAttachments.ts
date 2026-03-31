@@ -63,11 +63,35 @@ export async function extractMessageAttachments(
 }
 
 /**
- * Resolves a public URL for an attachment. Downloads via fetchData and
- * uploads to Vercel Blob with the correct content type.
+ * Downloads a Slack file using the bot token and uploads to Vercel Blob.
+ * The Chat SDK's fetchData() is broken (returns HTML login page instead of file),
+ * so we download directly from attachment.url with the bot token.
  */
 async function resolveAttachmentUrl(attachment: Attachment, prefix: string): Promise<string | null> {
-  const data = attachment.fetchData ? await attachment.fetchData() : attachment.data;
+  let data: Buffer | null = null;
+
+  // Download directly from Slack using bot token (fetchData returns HTML, not file data)
+  if (attachment.url) {
+    const token = process.env.SLACK_CONTENT_BOT_TOKEN;
+    if (token) {
+      const response = await fetch(attachment.url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        data = Buffer.from(await response.arrayBuffer());
+        console.log(`[content-agent] Downloaded from Slack: ${attachment.url}, size=${data.byteLength}`);
+      } else {
+        console.error(`[content-agent] Slack download failed: ${response.status} ${response.statusText}`);
+      }
+    }
+  }
+
+  // Fallback to fetchData / data
+  if (!data) {
+    const raw = attachment.fetchData ? await attachment.fetchData() : attachment.data;
+    if (raw) data = Buffer.isBuffer(raw) ? raw : Buffer.from(raw as unknown as ArrayBuffer);
+  }
+
   if (!data) {
     console.error(`[content-agent] Attachment "${attachment.name ?? "unknown"}" has no data`);
     return null;
@@ -77,12 +101,7 @@ async function resolveAttachmentUrl(attachment: Attachment, prefix: string): Pro
   const blobPath = `content-attachments/${prefix}/${Date.now()}-${filename}`;
   const contentType = attachment.mimeType ?? (prefix === "audio" ? "audio/mpeg" : "image/png");
 
-  console.log(`[content-agent] Uploading to Blob: path=${blobPath}, contentType=${contentType}, size=${Buffer.isBuffer(data) ? data.byteLength : (data as Blob).size}`);
-
-  const blob = await put(blobPath, data, {
-    access: "public",
-    contentType,
-  });
-  console.log(`[content-agent] Uploaded to Blob: ${blob.url}`);
+  const blob = await put(blobPath, data, { access: "public", contentType });
+  console.log(`[content-agent] Uploaded to Blob: ${blob.url}, size=${data.byteLength}`);
   return blob.url;
 }
