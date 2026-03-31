@@ -7,6 +7,9 @@ import { ProcessTranscriptionParams, ProcessTranscriptionResult } from "./types"
 /**
  * Fetches audio from URL, transcribes it with OpenAI Whisper, and saves both
  * the original audio and transcript markdown to the customer's files.
+ *
+ * @param params - The transcription parameters including audio URL, account IDs, and options
+ * @returns File records for the saved audio and transcript, plus the raw transcription text and language
  */
 export async function processAudioTranscription(
   params: ProcessTranscriptionParams,
@@ -64,6 +67,12 @@ export async function processAudioTranscription(
   };
 }
 
+/**
+ * Derives a file extension from a MIME content type string.
+ *
+ * @param contentType - The MIME type string to map to an extension (e.g. "audio/wav")
+ * @returns The corresponding file extension string without a leading dot
+ */
 function getExtensionFromContentType(contentType: string): string {
   if (contentType.includes("wav")) return "wav";
   if (contentType.includes("m4a") || contentType.includes("mp4")) return "m4a";

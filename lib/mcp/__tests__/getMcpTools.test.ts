@@ -24,7 +24,7 @@ describe("getMcpTools", () => {
 
     mockCreateMCPClient.mockResolvedValue({
       tools: vi.fn().mockResolvedValue(mockTools),
-    } as any);
+    } as unknown);
   });
 
   it("creates MCP client with HTTP transport config", async () => {

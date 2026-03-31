@@ -56,8 +56,10 @@ const MOCK_EMAIL_ID = "email-123";
 const MOCK_MESSAGE_ID = "msg-456";
 
 /**
+ * Creates a mock Resend email received event with sensible defaults.
  *
- * @param overrides
+ * @param overrides - Optional partial data fields to override on the event
+ * @returns A fully-formed mock ResendEmailReceivedEvent
  */
 function createMockEvent(
   overrides?: Partial<ResendEmailReceivedEvent["data"]>,

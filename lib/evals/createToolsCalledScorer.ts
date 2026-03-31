@@ -1,8 +1,12 @@
 import { ToolsCalled } from "./scorers/ToolsCalled";
 
 /**
- * Creates a scorer that checks if required tools were called.
- * Handles extracting output text and toolCalls from the task result.
+ * Creates a scorer that checks whether the required tools were called during
+ * a chat evaluation, and optionally penalizes calls to disallowed tools.
+ *
+ * @param requiredTools - List of tool name substrings that must be called for a full score
+ * @param penalizedTools - List of tool name substrings whose calls reduce the score
+ * @returns An async scorer function compatible with the evaluation framework
  */
 export const createToolsCalledScorer = (requiredTools: string[], penalizedTools: string[] = []) => {
   return async (args: { output: unknown; expected?: string; input: string }) => {

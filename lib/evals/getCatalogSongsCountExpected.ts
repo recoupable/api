@@ -2,6 +2,13 @@ import { getCatalogs } from "@/lib/catalog/getCatalogs";
 import { getCatalogSongs } from "@/lib/catalog/getCatalogSongs";
 import { EVAL_ACCOUNT_ID } from "@/lib/consts";
 
+/**
+ * Fetches the expected catalog song count string for the eval account's first catalog.
+ * Used as ground-truth data when evaluating whether the AI correctly reports catalog size.
+ *
+ * @returns An object with catalogId, catalogName, count, and the formatted expected string;
+ *   falls back to zero-count values if the catalog data cannot be retrieved.
+ */
 async function getCatalogSongsCountExpected() {
   try {
     const catalogsData = await getCatalogs(EVAL_ACCOUNT_ID);

@@ -4,7 +4,14 @@ import { z } from "zod";
 
 /**
  * Custom scorer that checks if the AI actually answered the customer's question
- * with a specific answer, or if it deflected/explained why it couldn't answer
+ * with a specific answer, or if it deflected/explained why it couldn't answer.
+ * Uses an LLM to evaluate the response and returns a 0–1 score.
+ *
+ * @param root0 - The scorer arguments object
+ * @param root0.output - The AI response text to evaluate
+ * @param root0.expected - Optional description of the expected answer type
+ * @param root0.input - The original customer question
+ * @returns A scorer result with name, numeric score, and metadata about the evaluation
  */
 export const QuestionAnswered = async ({
   output,

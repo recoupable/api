@@ -15,7 +15,9 @@ export interface ResolveAccountIdResult {
  * Resolves the accountId from MCP auth info or an override parameter.
  * Validates access when an org API key attempts to use an account_id override.
  *
- * @param params - The auth info and optional account_id override.
+ * @param root0 - The resolution parameters.
+ * @param root0.authInfo - The MCP auth info from the request, containing the authenticated account ID.
+ * @param root0.accountIdOverride - An optional account ID override (used by org API keys to act on behalf of member accounts).
  * @returns The resolved accountId or an error message.
  */
 export async function resolveAccountId({

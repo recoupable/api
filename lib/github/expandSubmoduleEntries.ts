@@ -11,10 +11,14 @@ interface SubmoduleRef {
  * Resolves submodule URLs from .gitmodules, fetches each submodule's tree,
  * and merges the results into the regular entries with correct path prefixes.
  *
- * @param regularEntries - Non-submodule file tree entries
- * @param submoduleEntries - Submodule references (type "commit" from GitHub Trees API)
- * @param repo - Repository context for fetching .gitmodules
- * @returns Combined file tree entries with submodules expanded as directories
+ * @param root0 - Options object.
+ * @param root0.regularEntries - Non-submodule file tree entries.
+ * @param root0.submoduleEntries - Submodule references (type "commit" from GitHub Trees API).
+ * @param root0.repo - Repository context for fetching .gitmodules.
+ * @param root0.repo.owner - The GitHub repository owner.
+ * @param root0.repo.repo - The GitHub repository name.
+ * @param root0.repo.branch - The branch to read .gitmodules from.
+ * @returns Combined file tree entries with submodules expanded as directories.
  */
 export async function expandSubmoduleEntries({
   regularEntries,

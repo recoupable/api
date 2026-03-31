@@ -43,6 +43,10 @@ export type ValidatedCreateContentBody = {
 
 /**
  * Validates auth and request body for POST /api/content/create.
+ *
+ * @param request - The incoming Next.js request containing the JSON body.
+ * @returns A NextResponse with an error if validation or auth fails,
+ *   otherwise the validated and normalized content creation payload.
  */
 export async function validateCreateContentBody(
   request: NextRequest,

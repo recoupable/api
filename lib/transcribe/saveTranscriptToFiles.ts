@@ -2,6 +2,12 @@ import { uploadFileByKey } from "@/lib/supabase/storage/uploadFileByKey";
 import { createFileRecord } from "@/lib/supabase/files/createFileRecord";
 import { SaveTranscriptParams, FileRecord } from "./types";
 
+/**
+ * Converts markdown transcript text to a blob, uploads it to Supabase storage, and creates the file record.
+ *
+ * @param params - The transcript save parameters including markdown content and account IDs
+ * @returns The created file record from the database
+ */
 export async function saveTranscriptToFiles(params: SaveTranscriptParams): Promise<FileRecord> {
   const { markdown, ownerAccountId, artistAccountId, title = "Transcription" } = params;
 

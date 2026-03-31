@@ -11,6 +11,7 @@ import type { CodingAgentThreadState } from "../types";
  * @param thread - The chat thread
  * @param messageText - The user's message text
  * @param state - The current thread state
+ * @returns True if the message was handled (agent was busy or feedback triggered an update), false if no state matched
  */
 export async function handleFeedback(
   thread: Thread<CodingAgentThreadState>,

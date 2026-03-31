@@ -12,6 +12,12 @@ vi.mock("@/lib/admins/validateAdminAuth", () => ({
   validateAdminAuth: vi.fn(),
 }));
 
+/**
+ * Creates a minimal mock NextRequest from a URL string for use in unit tests.
+ *
+ * @param url - The full URL string to construct the mock request from.
+ * @returns A mock NextRequest with url and nextUrl populated.
+ */
 function createMockRequest(url: string): NextRequest {
   return {
     url,

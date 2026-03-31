@@ -7,6 +7,7 @@ import { timingSafeEqual } from "crypto";
  * @param body - Raw request body string
  * @param signature - The x-hub-signature-256 header value
  * @param secret - The webhook secret
+ * @returns True if the signature is valid, false otherwise
  */
 export async function verifyGitHubWebhook(
   body: string,

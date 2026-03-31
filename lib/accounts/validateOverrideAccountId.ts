@@ -18,11 +18,9 @@ export type ValidateOverrideAccountIdResult = {
  * Used when an org API key wants to create resources on behalf of another account.
  * Checks that the API key belongs to an org with access to the target account.
  *
- * @param params.apiKey - The x-api-key header value
- * @param params.targetAccountId - The accountId to override to
- * @param root0
- * @param root0.apiKey
- * @param root0.targetAccountId
+ * @param root0 - The validation parameters
+ * @param root0.apiKey - The x-api-key header value
+ * @param root0.targetAccountId - The accountId to override to
  * @returns The validated accountId or a NextResponse error
  */
 export async function validateOverrideAccountId({

@@ -17,6 +17,11 @@ vi.mock("../presets", () => ({
   getPresetSummaries: vi.fn(),
 }));
 
+/**
+ * Creates a minimal mock NextRequest with an x-api-key header for testing authentication.
+ *
+ * @returns A minimal NextRequest-shaped object for use in handler tests
+ */
 function createMockRequest(): NextRequest {
   return {
     headers: new Headers({ "x-api-key": "test-key" }),

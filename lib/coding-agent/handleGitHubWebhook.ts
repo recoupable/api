@@ -15,6 +15,7 @@ const BOT_MENTION = "@recoup-coding-agent";
  * Verifies signature, extracts PR context, and triggers update-pr when the bot is mentioned.
  *
  * @param request - The incoming webhook request
+ * @returns A NextResponse with status 401 for invalid signatures, 200 for processed or ignored events, or 500 on trigger failure
  */
 export async function handleGitHubWebhook(request: Request): Promise<NextResponse> {
   const body = await request.text();

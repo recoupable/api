@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { processAudioTranscription } from "@/lib/transcribe/processAudioTranscription";
 import { formatTranscriptionError } from "@/lib/transcribe/types";
 
+/**
+ * POST /api/transcribe
+ *
+ * Fetches an audio file from the provided URL, transcribes it using OpenAI Whisper,
+ * and saves both the audio and transcript as file records linked to the artist account.
+ *
+ * @param req - The incoming request containing audio_url, account_id, artist_account_id, title, and include_timestamps
+ * @returns A NextResponse with the created audio file record, transcript file record, and transcription text
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

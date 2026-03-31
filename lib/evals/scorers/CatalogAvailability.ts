@@ -4,7 +4,15 @@ import { getCatalogDataAsCSV } from "@/lib/catalog/getCatalogDataAsCSV";
 import { z } from "zod";
 
 /**
- * Custom scorer that uses AI to check if recommended songs are actually in the catalog
+ * Custom scorer that uses AI to check if recommended songs are actually in the catalog.
+ * Fetches the catalog CSV and asks the model to match each recommendation against it,
+ * returning a 0–1 score based on how many recommended songs were found.
+ *
+ * @param root0 - The scorer arguments object
+ * @param root0.output - The AI response text containing song recommendations to evaluate
+ * @param root0.expected - The expected output (unused by this scorer but required by the interface)
+ * @param root0.input - The original user question that prompted the recommendations
+ * @returns A scorer result with name, numeric score, and metadata about matched/unmatched songs
  */
 export const CatalogAvailability = async ({
   output,

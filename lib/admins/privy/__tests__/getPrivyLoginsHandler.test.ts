@@ -49,8 +49,10 @@ const mockLogins = [
 ];
 
 /**
+ * Creates a NextRequest targeting the Privy logins endpoint with the given period query param.
  *
- * @param period
+ * @param period - The time period to filter logins by (e.g., "daily", "weekly", "monthly", "all").
+ * @returns A NextRequest instance for the Privy logins admin endpoint.
  */
 function makeRequest(period = "daily") {
   return new NextRequest(`https://example.com/api/admins/privy?period=${period}`);

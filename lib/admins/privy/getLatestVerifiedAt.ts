@@ -4,6 +4,9 @@ import type { User } from "@privy-io/node";
 /**
  * Returns the most recent latest_verified_at (in ms) across all linked_accounts for a Privy user.
  * Returns null if no linked account has a latest_verified_at.
+ *
+ * @param user - The Privy user object whose linked accounts are inspected.
+ * @returns The most recent verified-at timestamp in milliseconds, or null if none exists.
  */
 export function getLatestVerifiedAt(user: User): number | null {
   const linkedAccounts = user.linked_accounts;

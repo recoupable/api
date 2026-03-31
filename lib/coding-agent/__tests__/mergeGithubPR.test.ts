@@ -29,7 +29,7 @@ describe("mergeGithubPR", () => {
       ok: false,
       status: 405,
       text: () => Promise.resolve(JSON.stringify({ message: "Not allowed" })),
-    } as any);
+    } as unknown as Response);
 
     const result = await mergeGithubPR("recoupable/api", 42, "ghp_test");
 

@@ -7,7 +7,8 @@ import { CONTENT_TEMPLATES } from "@/lib/content/contentTemplates";
 /**
  * Handler for GET /api/content/templates.
  *
- * @param request
+ * @param request - The incoming Next.js request (requires valid auth token).
+ * @returns A NextResponse containing the list of supported content templates.
  */
 export async function getContentTemplatesHandler(request: NextRequest): Promise<NextResponse> {
   const authResult = await validateAuthContext(request);

@@ -49,7 +49,7 @@ export async function createWorkspaceInDb(
       account_id: workspace.id,
       isWorkspace: true,
     };
-  } catch (error) {
+  } catch {
     return null;
   }
 }

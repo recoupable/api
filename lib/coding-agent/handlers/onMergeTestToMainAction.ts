@@ -6,7 +6,7 @@ import { parseMergeTestToMainActionId } from "../parseMergeTestToMainActionId";
  * Registers the "Merge test to main" button action handler on the bot.
  * Merges the test branch into main for the specified repo via the GitHub API.
  *
- * @param bot
+ * @param bot - The coding agent bot instance to register the action handler on
  */
 export function registerOnMergeTestToMainAction(bot: CodingAgentBot) {
   bot.onAction(async event => {

@@ -4,9 +4,10 @@ import type { FileRecord } from "@/lib/supabase/files/createFileRecord";
 /**
  * Select a file record by storage key for an owner account.
  *
- * @param root0
- * @param root0.ownerAccountId
- * @param root0.storageKey
+ * @param root0 - The lookup parameters
+ * @param root0.ownerAccountId - The account ID that owns the file
+ * @param root0.storageKey - The storage key (path) of the file in Supabase storage
+ * @returns The matching file record, or null if not found
  */
 export async function selectFileByStorageKey({
   ownerAccountId,

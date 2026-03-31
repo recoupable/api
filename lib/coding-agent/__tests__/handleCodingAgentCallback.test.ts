@@ -49,9 +49,11 @@ beforeEach(() => {
 
 describe("handleCodingAgentCallback", () => {
   /**
+   * Builds a mock Request with a JSON body and the callback secret header.
    *
-   * @param body
-   * @param secret
+   * @param body - The request body to serialize as JSON
+   * @param secret - The value to send in the x-callback-secret header
+   * @returns A mock Request object suitable for passing to handleCodingAgentCallback
    */
   function makeRequest(body: unknown, secret = "test-secret") {
     return {

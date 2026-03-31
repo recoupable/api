@@ -1,10 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextResponse } from "next/server";
 
+import { NextRequest } from "next/server";
+
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { setupChatRequest } from "@/lib/chat/setupChatRequest";
 import { setupConversation } from "@/lib/chat/setupConversation";
+import type { ChatConfig } from "@/lib/chat/types";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { handleChatStream } from "../handleChatStream";
 
@@ -68,9 +71,11 @@ const mockCreateUIMessageStreamResponse = vi.mocked(createUIMessageStreamRespons
 
 // Helper to create mock NextRequest
 /**
+ * Creates a mock Request object with a JSON body and optional headers.
  *
- * @param body
- * @param headers
+ * @param body - The request body to be returned by json().
+ * @param headers - Optional map of HTTP header names to values.
+ * @returns A mock Request object suitable for use in tests.
  */
 function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
   return {
@@ -103,7 +108,7 @@ describe("handleChatStream", () => {
 
       const request = createMockRequest({ roomId: "room-123" }, { "x-api-key": "test-key" });
 
-      const result = await handleChatStream(request as any);
+      const result = await handleChatStream(request as unknown as NextRequest);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect(result.status).toBe(400);
@@ -114,7 +119,7 @@ describe("handleChatStream", () => {
     it("returns 401 error when no auth header is provided", async () => {
       const request = createMockRequest({ prompt: "Hello" }, {});
 
-      const result = await handleChatStream(request as any);
+      const result = await handleChatStream(request as unknown as NextRequest);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect(result.status).toBe(401);
@@ -138,7 +143,7 @@ describe("handleChatStream", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown as ChatConfig);
 
       const mockStream = new ReadableStream();
       mockCreateUIMessageStream.mockReturnValue(mockStream);
@@ -148,7 +153,7 @@ describe("handleChatStream", () => {
 
       const request = createMockRequest({ prompt: "Hello, world!" }, { "x-api-key": "valid-key" });
 
-      const result = await handleChatStream(request as any);
+      const result = await handleChatStream(request as unknown as NextRequest);
 
       expect(mockSetupChatRequest).toHaveBeenCalled();
       expect(mockCreateUIMessageStream).toHaveBeenCalled();
@@ -178,7 +183,7 @@ describe("handleChatStream", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown as ChatConfig);
 
       const mockStream = new ReadableStream();
       mockCreateUIMessageStream.mockReturnValue(mockStream);
@@ -187,7 +192,7 @@ describe("handleChatStream", () => {
       const messages = [{ role: "user", content: "Hello" }];
       const request = createMockRequest({ messages }, { "x-api-key": "valid-key" });
 
-      await handleChatStream(request as any);
+      await handleChatStream(request as unknown as NextRequest);
 
       expect(mockSetupChatRequest).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -211,7 +216,7 @@ describe("handleChatStream", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown as ChatConfig);
 
       const mockStream = new ReadableStream();
       mockCreateUIMessageStream.mockReturnValue(mockStream);
@@ -228,7 +233,7 @@ describe("handleChatStream", () => {
         { "x-api-key": "valid-key" },
       );
 
-      await handleChatStream(request as any);
+      await handleChatStream(request as unknown as NextRequest);
 
       expect(mockSetupChatRequest).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -248,7 +253,7 @@ describe("handleChatStream", () => {
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
-      const result = await handleChatStream(request as any);
+      const result = await handleChatStream(request as unknown as NextRequest);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect(result.status).toBe(500);
@@ -275,7 +280,7 @@ describe("handleChatStream", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown as ChatConfig);
 
       const mockStream = new ReadableStream();
       mockCreateUIMessageStream.mockReturnValue(mockStream);
@@ -286,7 +291,7 @@ describe("handleChatStream", () => {
         { "x-api-key": "org-api-key" },
       );
 
-      await handleChatStream(request as any);
+      await handleChatStream(request as unknown as NextRequest);
 
       expect(mockSetupChatRequest).toHaveBeenCalledWith(
         expect.objectContaining({

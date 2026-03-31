@@ -21,9 +21,10 @@ type ServerRequestHandlerExtra = RequestHandlerExtra<ServerRequest, ServerNotifi
 /**
  * Creates a mock extra object with optional authInfo.
  *
- * @param authInfo
- * @param authInfo.accountId
- * @param authInfo.orgId
+ * @param authInfo - Optional auth info to embed in the extra object.
+ * @param authInfo.accountId - The account ID to set in the auth token extras.
+ * @param authInfo.orgId - The organization ID to set in the auth token extras.
+ * @returns A mock ServerRequestHandlerExtra suitable for passing to registered tool handlers.
  */
 function createMockExtra(authInfo?: {
   accountId?: string;

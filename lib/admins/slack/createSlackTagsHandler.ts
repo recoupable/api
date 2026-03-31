@@ -15,7 +15,10 @@ interface SlackTagsHandlerConfig {
  * Factory that creates a handler for admin slack tags endpoints.
  * Parameterized by validation, fetching, and response field naming.
  *
- * @param config
+ * @param config - Configuration object specifying the validate function, fetchMentions function,
+ *   and the response field names used to expose per-tag response counts and totals.
+ * @returns An async request handler function that validates the request, fetches mentions,
+ *   and returns aggregated tag statistics as a JSON response.
  */
 export function createSlackTagsHandler(
   config: SlackTagsHandlerConfig,

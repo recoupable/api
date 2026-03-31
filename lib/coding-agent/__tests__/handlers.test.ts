@@ -30,12 +30,14 @@ beforeEach(() => {
 });
 
 /**
+ * Creates a mock bot object with a stubbed onNewMention method for testing handler registration.
  *
+ * @returns A mock bot with a vitest spy on onNewMention
  */
 function createMockBot() {
   return {
     onNewMention: vi.fn(),
-  } as any;
+  } as unknown as import("../bot").CodingAgentBot;
 }
 
 describe("registerOnNewMention", () => {

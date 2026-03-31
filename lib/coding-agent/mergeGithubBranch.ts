@@ -16,6 +16,7 @@ export type MergeGithubBranchResult = MergeGithubBranchSuccess | MergeGithubBran
  * @param head - Branch to merge from (e.g. "test")
  * @param base - Branch to merge into (e.g. "main")
  * @param token - GitHub API token
+ * @returns An object with ok: true on success, or ok: false with a message on failure
  */
 export async function mergeGithubBranch(
   repo: string,

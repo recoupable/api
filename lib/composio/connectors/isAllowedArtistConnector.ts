@@ -9,7 +9,8 @@ export type AllowedArtistConnector = (typeof ALLOWED_ARTIST_CONNECTORS)[number];
 /**
  * Check if a connector slug is an allowed artist connector.
  *
- * @param slug
+ * @param slug - The toolkit slug to check against the allowed list
+ * @returns True if the slug is in the allowed artist connector list
  */
 export function isAllowedArtistConnector(slug: string): slug is AllowedArtistConnector {
   return (ALLOWED_ARTIST_CONNECTORS as readonly string[]).includes(slug);

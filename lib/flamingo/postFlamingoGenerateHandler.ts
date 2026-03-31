@@ -56,10 +56,10 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
     );
   }
 
-  // 4. Return flat response
-  const { type: _, ...data } = result;
+  // 4. Return flat response — exclude the internal `type` discriminant from the response
+  const responseData = Object.fromEntries(Object.entries(result).filter(([k]) => k !== "type"));
   return NextResponse.json(
-    { status: "success", ...data },
+    { status: "success", ...responseData },
     { status: 200, headers: getCorsHeaders() },
   );
 }

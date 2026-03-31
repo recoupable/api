@@ -9,6 +9,13 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: (...args: unknown[]) => mockValidateAuthContext(...args),
 }));
 
+/**
+ * Creates a mock POST request to the artists endpoint with JSON body and headers.
+ *
+ * @param body - The request body to serialize as JSON
+ * @param headers - Optional extra headers to merge with defaults
+ * @returns A NextRequest instance for use in tests
+ */
 function createRequest(body: unknown, headers: Record<string, string> = {}): NextRequest {
   const defaultHeaders: Record<string, string> = { "Content-Type": "application/json" };
   return new NextRequest("http://localhost/api/artists", {

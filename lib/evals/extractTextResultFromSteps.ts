@@ -2,8 +2,11 @@ import { generateText } from "ai";
 import type { TextPart } from "ai";
 
 /**
- * Extract text from multi-step GenerateTextResult
- * Handles responses where maxSteps > 1
+ * Extracts the final text content from the last step of a multi-step GenerateTextResult.
+ * Joins all TextPart content from the last step's content array into a single string.
+ *
+ * @param result - The GenerateTextResult returned by the AI SDK generateText call
+ * @returns The concatenated text from the last step, or null if no steps or text parts exist
  */
 export function extractTextResultFromSteps(
   result: Awaited<ReturnType<typeof generateText>>,

@@ -13,7 +13,7 @@ import { handleFeedback } from "./handleFeedback";
  * For GitHub PR comments, message.meta may contain { repo, branch } to look up
  * the shared PR state key when thread state is empty.
  *
- * @param bot
+ * @param bot - The coding agent bot instance to register the mention handler on
  */
 export function registerOnNewMention(bot: CodingAgentBot) {
   bot.onNewMention(async (thread, message) => {

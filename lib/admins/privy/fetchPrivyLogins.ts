@@ -20,6 +20,14 @@ export type FetchPrivyLoginsResult = {
   totalPrivyUsers: number;
 };
 
+/**
+ * Fetches Privy users active or created within the given period via the Privy Management API.
+ * Paginates through all users and collects those whose created_at or latest_verified_at
+ * falls within the time window determined by the period.
+ *
+ * @param period - The time window to filter users by ("daily", "weekly", "monthly", or "all").
+ * @returns An object containing the matching users sorted by created_at descending and the total Privy user count.
+ */
 export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<FetchPrivyLoginsResult> {
   const isAll = period === "all";
   const cutoffMs = getCutoffMs(period);

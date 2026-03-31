@@ -9,6 +9,9 @@ import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectA
 /**
  * Handler for POST /api/content/create.
  * Always returns runIds array (KISS — one response shape for single and batch).
+ *
+ * @param request - The incoming Next.js request containing the content creation payload.
+ * @returns A NextResponse with the triggered run IDs and status, or an error response.
  */
 export async function createContentHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateCreateContentBody(request);

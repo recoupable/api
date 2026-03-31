@@ -20,9 +20,10 @@ interface ConversationsRepliesResponse {
  * Fetches bot replies in a Slack thread and returns any video/media URLs found.
  * Extracts URLs from message text, attachment action buttons, and Block Kit blocks.
  *
- * @param token
- * @param channel
- * @param threadTs
+ * @param token - Slack bot token used to authenticate the conversations.replies API call.
+ * @param channel - Slack channel ID containing the thread.
+ * @param threadTs - Timestamp of the parent message that identifies the thread.
+ * @returns A deduplicated array of video/media URLs posted by bots in the thread.
  */
 export async function fetchThreadVideoLinks(
   token: string,

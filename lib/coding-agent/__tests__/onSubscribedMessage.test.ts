@@ -15,12 +15,14 @@ beforeEach(() => {
 });
 
 /**
+ * Creates a mock bot with a stubbed onSubscribedMessage method for testing subscribed message handler registration.
  *
+ * @returns A mock bot with a vitest spy on onSubscribedMessage
  */
 function createMockBot() {
   return {
     onSubscribedMessage: vi.fn(),
-  } as any;
+  } as unknown as import("../bot").CodingAgentBot;
 }
 
 describe("registerOnSubscribedMessage", () => {

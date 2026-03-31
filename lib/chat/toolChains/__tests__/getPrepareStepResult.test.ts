@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { PrepareStepOptions } from "../getPrepareStepResult";
 
 import getPrepareStepResult from "../getPrepareStepResult";
 
@@ -37,7 +38,7 @@ describe("getPrepareStepResult", () => {
         messages: [],
       };
 
-      const result = getPrepareStepResult(options as any);
+      const result = getPrepareStepResult(options as unknown as PrepareStepOptions);
       expect(result).toBeUndefined();
     });
 
@@ -59,7 +60,7 @@ describe("getPrepareStepResult", () => {
         messages: [],
       };
 
-      const result = getPrepareStepResult(options as any);
+      const result = getPrepareStepResult(options as unknown as PrepareStepOptions);
       expect(result).toBeUndefined();
     });
   });
@@ -83,7 +84,7 @@ describe("getPrepareStepResult", () => {
         messages: [],
       };
 
-      const result = getPrepareStepResult(options as any);
+      const result = getPrepareStepResult(options as unknown as PrepareStepOptions);
       expect(result).toEqual({
         toolChoice: { type: "tool", toolName: "step_one" },
       });
@@ -112,7 +113,7 @@ describe("getPrepareStepResult", () => {
         messages: [],
       };
 
-      const result = getPrepareStepResult(options as any);
+      const result = getPrepareStepResult(options as unknown as PrepareStepOptions);
       expect(result).toEqual({
         toolChoice: { type: "tool", toolName: "step_two" },
         model: "gemini-2.5-pro", // From TOOL_MODEL_MAP
@@ -152,7 +153,7 @@ describe("getPrepareStepResult", () => {
         messages: [],
       };
 
-      const result = getPrepareStepResult(options as any);
+      const result = getPrepareStepResult(options as unknown as PrepareStepOptions);
       expect(result).toBeUndefined();
     });
 
@@ -188,7 +189,7 @@ describe("getPrepareStepResult", () => {
         messages: [],
       };
 
-      const result = getPrepareStepResult(options as any);
+      const result = getPrepareStepResult(options as unknown as PrepareStepOptions);
       // Should return step_two since step_one has been executed
       expect(result).toEqual({
         toolChoice: { type: "tool", toolName: "step_two" },
@@ -216,7 +217,7 @@ describe("getPrepareStepResult", () => {
         messages: [],
       };
 
-      const result = getPrepareStepResult(options as any);
+      const result = getPrepareStepResult(options as unknown as PrepareStepOptions);
       expect(result).toEqual({
         toolChoice: { type: "tool", toolName: "custom_step_one" },
         system: "Custom system prompt for step one",
@@ -252,7 +253,7 @@ describe("getPrepareStepResult", () => {
         messages: existingMessages,
       };
 
-      const result = getPrepareStepResult(options as any);
+      const result = getPrepareStepResult(options as unknown as PrepareStepOptions);
       expect(result).toEqual({
         toolChoice: { type: "tool", toolName: "custom_step_two" },
         messages: [
@@ -287,7 +288,7 @@ describe("getPrepareStepResult", () => {
         messages: [],
       };
 
-      const result = getPrepareStepResult(options as any);
+      const result = getPrepareStepResult(options as unknown as PrepareStepOptions);
       expect(result?.model).toBe("gemini-2.5-pro");
     });
 
@@ -309,7 +310,7 @@ describe("getPrepareStepResult", () => {
         messages: [],
       };
 
-      const result = getPrepareStepResult(options as any);
+      const result = getPrepareStepResult(options as unknown as PrepareStepOptions);
       expect(result?.model).toBeUndefined();
     });
   });

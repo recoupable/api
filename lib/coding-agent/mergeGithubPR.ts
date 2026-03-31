@@ -15,6 +15,7 @@ export type MergeGithubPRResult = MergeGithubPRSuccess | MergeGithubPRFailure;
  * @param repo - Full repo identifier (e.g. "recoupable/api")
  * @param prNumber - PR number to merge
  * @param token - GitHub API token
+ * @returns An object with ok: true on success, or ok: false with a message on failure
  */
 export async function mergeGithubPR(
   repo: string,

@@ -5,6 +5,9 @@ import { PERIOD_DAYS } from "./periodDays";
  * Returns the cutoff timestamp in milliseconds for a given period.
  * Uses midnight UTC calendar day boundaries to match Privy dashboard behavior.
  * Returns 0 for "all" (no cutoff).
+ *
+ * @param period - The time window ("daily", "weekly", "monthly", or "all") to compute a cutoff for.
+ * @returns Milliseconds timestamp representing the start of the period, or 0 for "all".
  */
 export function getCutoffMs(period: PrivyLoginsPeriod): number {
   if (period === "all") return 0;

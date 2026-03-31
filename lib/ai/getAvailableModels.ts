@@ -4,6 +4,8 @@ import isEmbedModel from "./isEmbedModel";
 /**
  * Returns the list of available LLMs from the Vercel AI Gateway.
  * Filters out embed models that are not suitable for chat.
+ *
+ * @returns Array of available language model entries, or empty array on error
  */
 export const getAvailableModels = async (): Promise<GatewayLanguageModelEntry[]> => {
   try {

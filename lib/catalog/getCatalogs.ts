@@ -8,6 +8,12 @@ export interface CatalogsResponse {
   error?: string;
 }
 
+/**
+ * Fetches all catalogs for a given account from the Recoup API.
+ *
+ * @param accountId - The account ID whose catalogs to retrieve
+ * @returns A response containing the list of catalogs for the account
+ */
 export async function getCatalogs(accountId: string): Promise<CatalogsResponse> {
   try {
     const response = await fetch(

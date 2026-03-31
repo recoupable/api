@@ -22,6 +22,12 @@ vi.mock("@/lib/admins/checkIsAdmin", () => ({
   checkIsAdmin: vi.fn(),
 }));
 
+/**
+ * Creates a minimal mock NextRequest for the tasks endpoint with an x-api-key header.
+ *
+ * @param url - The full URL string for the mock request including any query params
+ * @returns A minimal NextRequest-shaped object for use in handler tests
+ */
 function createMockRequest(url: string): NextRequest {
   return {
     url,

@@ -15,6 +15,12 @@ const transcribeAudioSchema = z.object({
 
 type TranscribeAudioArgs = z.infer<typeof transcribeAudioSchema>;
 
+/**
+ * Registers the transcribe_audio MCP tool on the server.
+ * Transcribes audio files using OpenAI Whisper and saves the results to Supabase file storage.
+ *
+ * @param server - The MCP server instance to register the tool on.
+ */
 export function registerTranscribeAudioTool(server: McpServer): void {
   server.registerTool(
     "transcribe_audio",

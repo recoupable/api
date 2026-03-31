@@ -21,6 +21,7 @@ const ENABLED_TOOLKITS = ["googlesheets", "googledrive", "googledocs", "tiktok"]
  * @param accountId - Unique identifier for the account
  * @param roomId - Optional chat room ID for OAuth redirect
  * @param artistConnections - Optional mapping of toolkit slug to connected account ID for artist-specific connections
+ * @returns A Composio Tool Router session configured for the account
  */
 export async function createToolRouterSession(
   accountId: string,

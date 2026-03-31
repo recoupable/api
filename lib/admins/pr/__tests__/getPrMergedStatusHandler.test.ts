@@ -19,6 +19,12 @@ vi.mock("@/lib/github/fetchGithubPrStatus", () => ({
 const PR_URL_1 = "https://github.com/recoupable/api/pull/42";
 const PR_URL_2 = "https://github.com/recoupable/chat/pull/100";
 
+/**
+ * Creates a NextRequest targeting the PR status endpoint with the given PR URLs as query params.
+ *
+ * @param urls - Array of GitHub pull request URLs to include as pull_requests query parameters.
+ * @returns A NextRequest with all provided URLs appended as repeated pull_requests params.
+ */
 function makeRequest(urls: string[] = [PR_URL_1]) {
   const params = new URLSearchParams();
   urls.forEach(url => params.append("pull_requests", url));

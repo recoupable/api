@@ -20,6 +20,12 @@ vi.mock("@/lib/content/resolveArtistSlug", () => ({
   resolveArtistSlug: vi.fn().mockResolvedValue("gatsby-grace"),
 }));
 
+/**
+ * Creates a NextRequest with the given body for use in tests.
+ *
+ * @param body - The request body to serialize as JSON.
+ * @returns A NextRequest with the Content-Type and API key headers set.
+ */
 function createRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/content/create", {
     method: "POST",

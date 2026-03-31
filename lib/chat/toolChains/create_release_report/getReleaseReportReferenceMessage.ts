@@ -2,7 +2,9 @@ import { ModelMessage } from "ai";
 import { referenceReleaseReport } from "./referenceReleaseReport";
 
 /**
- * Creates a reference message with the release report example
+ * Creates a reference message with the release report example.
+ *
+ * @returns A ModelMessage containing the release report template as a user message.
  */
 const getReleaseReportReferenceMessage = (): ModelMessage => {
   return {

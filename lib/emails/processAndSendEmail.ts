@@ -34,6 +34,9 @@ export type ProcessAndSendEmailResult = ProcessAndSendEmailSuccess | ProcessAndS
  *
  * Handles room lookup, footer generation, markdown-to-HTML conversion,
  * and the Resend API call.
+ *
+ * @param input - The email input including recipients, subject, body, and optional room context
+ * @returns A result indicating success with the Resend email ID, or an error message
  */
 export async function processAndSendEmail(
   input: ProcessAndSendEmailInput,

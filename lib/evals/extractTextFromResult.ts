@@ -2,7 +2,12 @@ import { generateText } from "ai";
 import { extractTextResultFromSteps } from "./extractTextResultFromSteps";
 
 /**
- * Extract text from a GenerateTextResult
+ * Extracts plain text from a GenerateTextResult, handling both single-step and
+ * multi-step responses. Falls back to the top-level text or content fields when
+ * no steps are present.
+ *
+ * @param result - The GenerateTextResult returned by the AI SDK generateText call
+ * @returns The extracted text string, or a fallback message if no content was found
  */
 export function extractTextFromResult(result: Awaited<ReturnType<typeof generateText>>): string {
   // Handle multi-step responses (when maxSteps > 1)

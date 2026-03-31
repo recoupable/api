@@ -28,7 +28,9 @@ vi.mock("@/lib/github/deleteAccountGithubRepos", () => ({
 }));
 
 /**
+ * Creates a mock DELETE request to the sandboxes endpoint for testing.
  *
+ * @returns A minimal Request object with the DELETE method
  */
 function createMockRequest(): Request {
   return new Request("https://example.com/api/sandboxes", {

@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextResponse } from "next/server";
 
+import { NextRequest } from "next/server";
+
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { setupChatRequest } from "@/lib/chat/setupChatRequest";
 import { saveChatCompletion } from "@/lib/chat/saveChatCompletion";
 import { setupConversation } from "@/lib/chat/setupConversation";
+import type { ChatConfig } from "@/lib/chat/types";
 import { handleChatGenerate } from "../handleChatGenerate";
 
 // Mock all dependencies before importing the module under test
@@ -69,8 +72,10 @@ const mockSetupConversation = vi.mocked(setupConversation);
 
 // Helper to create a mock agent with .generate()
 /**
+ * Creates a mock agent whose generate method resolves with the given result.
  *
- * @param generateResult
+ * @param generateResult - The result object that the agent's generate method will resolve with.
+ * @returns A mock agent object with generate and stream methods.
  */
 function createMockAgent(generateResult: Record<string, unknown>) {
   return {
@@ -82,9 +87,11 @@ function createMockAgent(generateResult: Record<string, unknown>) {
 
 // Helper to create mock NextRequest
 /**
+ * Creates a mock Request object with a JSON body and optional headers.
  *
- * @param body
- * @param headers
+ * @param body - The request body to be returned by json().
+ * @param headers - Optional map of HTTP header names to values.
+ * @returns A mock Request object suitable for use in tests.
  */
 function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
   return {
@@ -116,7 +123,7 @@ describe("handleChatGenerate", () => {
 
       const request = createMockRequest({ roomId: "room-123" }, { "x-api-key": "test-key" });
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown as NextRequest);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect(result.status).toBe(400);
@@ -127,7 +134,7 @@ describe("handleChatGenerate", () => {
     it("returns 401 error when no auth header is provided", async () => {
       const request = createMockRequest({ prompt: "Hello" }, {});
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown as NextRequest);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect(result.status).toBe(401);
@@ -156,11 +163,11 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown as ChatConfig);
 
       const request = createMockRequest({ prompt: "Hello, world!" }, { "x-api-key": "valid-key" });
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown as NextRequest);
 
       expect(mockAgent.generate).toHaveBeenCalled();
       expect(result.status).toBe(200);
@@ -183,12 +190,12 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown as ChatConfig);
 
       const messages = [{ role: "user", content: "Hello" }];
       const request = createMockRequest({ messages }, { "x-api-key": "valid-key" });
 
-      await handleChatGenerate(request as any);
+      await handleChatGenerate(request as unknown as NextRequest);
 
       expect(mockSetupChatRequest).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -215,7 +222,7 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown as ChatConfig);
 
       const request = createMockRequest(
         {
@@ -228,7 +235,7 @@ describe("handleChatGenerate", () => {
         { "x-api-key": "valid-key" },
       );
 
-      await handleChatGenerate(request as any);
+      await handleChatGenerate(request as unknown as NextRequest);
 
       expect(mockSetupChatRequest).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -255,11 +262,11 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown as ChatConfig);
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown as NextRequest);
 
       expect(result.status).toBe(200);
       const json = await result.json();
@@ -275,7 +282,7 @@ describe("handleChatGenerate", () => {
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown as NextRequest);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect(result.status).toBe(500);
@@ -295,11 +302,11 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown as ChatConfig);
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown as NextRequest);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect(result.status).toBe(500);
@@ -325,14 +332,14 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown as ChatConfig);
 
       const request = createMockRequest(
         { prompt: "Hello", accountId: "target-account-456" },
         { "x-api-key": "org-api-key" },
       );
 
-      await handleChatGenerate(request as any);
+      await handleChatGenerate(request as unknown as NextRequest);
 
       expect(mockSetupChatRequest).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -360,7 +367,7 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown as ChatConfig);
 
       mockSaveChatCompletion.mockResolvedValue(null);
 
@@ -369,7 +376,7 @@ describe("handleChatGenerate", () => {
         { "x-api-key": "valid-key" },
       );
 
-      await handleChatGenerate(request as any);
+      await handleChatGenerate(request as unknown as NextRequest);
 
       expect(mockSaveChatCompletion).toHaveBeenCalledWith({
         text: "Hello! How can I help you?",
@@ -394,13 +401,13 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown as ChatConfig);
 
       mockSaveChatCompletion.mockResolvedValue(null);
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
-      await handleChatGenerate(request as any);
+      await handleChatGenerate(request as unknown as NextRequest);
 
       // Since roomId is auto-created, saveChatCompletion should be called
       expect(mockSaveChatCompletion).toHaveBeenCalledWith({
@@ -426,7 +433,7 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown as ChatConfig);
 
       mockSaveChatCompletion.mockResolvedValue(null);
 
@@ -435,7 +442,7 @@ describe("handleChatGenerate", () => {
         { "x-api-key": "valid-key" },
       );
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown as NextRequest);
 
       expect(result.status).toBe(200);
       const json = await result.json();
@@ -459,13 +466,13 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown as ChatConfig);
 
       mockSaveChatCompletion.mockResolvedValue(null);
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown as NextRequest);
 
       expect(result.status).toBe(200);
       const json = await result.json();
@@ -489,7 +496,7 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown as ChatConfig);
 
       mockSaveChatCompletion.mockResolvedValue(null);
 
@@ -498,7 +505,7 @@ describe("handleChatGenerate", () => {
         { "x-api-key": "valid-key" },
       );
 
-      await handleChatGenerate(request as any);
+      await handleChatGenerate(request as unknown as NextRequest);
 
       expect(mockSaveChatCompletion).toHaveBeenCalledWith({
         text: "This is the assistant response text",
@@ -523,7 +530,7 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown as ChatConfig);
 
       mockSaveChatCompletion.mockRejectedValue(new Error("Database error"));
 
@@ -532,7 +539,7 @@ describe("handleChatGenerate", () => {
         { "x-api-key": "valid-key" },
       );
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown as NextRequest);
 
       expect(result.status).toBe(200);
       const json = await result.json();

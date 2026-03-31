@@ -58,7 +58,7 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
         return getToolResultError(result.error);
       }
 
-      const { type: _, ...data } = result;
+      const data = Object.fromEntries(Object.entries(result).filter(([key]) => key !== "type"));
       return getToolResultSuccess(data);
     },
   );

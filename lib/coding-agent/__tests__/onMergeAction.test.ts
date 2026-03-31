@@ -30,12 +30,14 @@ beforeEach(() => {
 });
 
 /**
+ * Creates a mock bot with a stubbed onAction method for testing merge action handler registration.
  *
+ * @returns A mock bot with a vitest spy on onAction
  */
 function createMockBot() {
   return {
     onAction: vi.fn(),
-  } as any;
+  } as unknown as import("../bot").CodingAgentBot;
 }
 
 describe("registerOnMergeAction", () => {

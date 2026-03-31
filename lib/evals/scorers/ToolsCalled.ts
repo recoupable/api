@@ -1,5 +1,16 @@
 /**
- * Generic scorer that checks if specific tools were called
+ * Generic scorer that checks if specific tools were called during an evaluation run.
+ * Scores 0–1 based on the fraction of required tools that appear in the tool call list,
+ * with optional penalties for calls to disallowed tools.
+ *
+ * @param root0 - The scorer arguments object
+ * @param root0.output - The AI response text (used for interface compatibility)
+ * @param root0.expected - The expected output string (unused, required by scorer interface)
+ * @param root0.input - The original user input that triggered the tool calls
+ * @param root0.toolCalls - Array of tool call records collected from all generation steps
+ * @param root0.requiredTools - Tool name substrings that must be called for a full score
+ * @param root0.penalizedTools - Tool name substrings whose calls reduce the score by 0.3 each
+ * @returns A scorer result with name, numeric score, and metadata listing called/missing tools
  */
 export const ToolsCalled = async ({
   toolCalls,

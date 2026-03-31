@@ -6,6 +6,7 @@ import type { CodingAgentPR } from "./types";
  *
  * @param title - Card title (e.g. "PRs Created", "PRs Updated")
  * @param prs - Array of PRs to build review links for
+ * @returns A Card component listing each PR with a review link and merge button
  */
 export function buildPRCard(title: string, prs: CodingAgentPR[]) {
   return Card({

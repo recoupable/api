@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ChatRequestBody } from "../validateChatRequest";
+import type { RoutingDecision } from "../types";
+import type { ModelMessage } from "ai";
 
 import { setupChatRequest } from "../setupChatRequest";
 import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
@@ -25,14 +27,14 @@ const mockConvertToModelMessages = vi.mocked(convertToModelMessages);
 
 describe("setupChatRequest", () => {
   const mockAgent = {
-    model: "claude-sonnet-4-20250514",
+    model: "anthropic/claude-sonnet-4.5",
     tools: {},
     instructions: "You are a helpful assistant",
     stopWhen: undefined,
   };
 
   const mockRoutingDecision = {
-    model: "claude-sonnet-4-20250514",
+    model: "anthropic/claude-sonnet-4.5",
     instructions: "You are a helpful assistant",
     agent: mockAgent,
     stopWhen: undefined,
@@ -40,8 +42,10 @@ describe("setupChatRequest", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetGeneralAgent.mockResolvedValue(mockRoutingDecision as any);
-    mockConvertToModelMessages.mockImplementation(messages => messages as any);
+    mockGetGeneralAgent.mockResolvedValue(mockRoutingDecision as unknown as RoutingDecision);
+    mockConvertToModelMessages.mockImplementation(
+      messages => messages as unknown as ModelMessage[],
+    );
   });
 
   describe("basic functionality", () => {
@@ -126,7 +130,7 @@ describe("setupChatRequest", () => {
           ...mockAgent,
           tools: mockTools,
         },
-      } as any);
+      } as unknown as RoutingDecision);
 
       const body: ChatRequestBody = {
         accountId: "account-123",

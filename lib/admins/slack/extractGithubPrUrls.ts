@@ -25,9 +25,10 @@ const PR_URL_EXACT = /^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+$/;
  * Extracts GitHub pull request URLs from a Slack message's text, attachments, and blocks.
  * Handles plain URLs, Slack-formatted links, action button URLs, and Block Kit element URLs.
  *
- * @param text
- * @param attachments
- * @param blocks
+ * @param text - The plain text body of the Slack message to scan for GitHub PR URLs.
+ * @param attachments - Optional Slack message attachments whose action button URLs are also scanned.
+ * @param blocks - Optional Slack Block Kit blocks whose element URLs are also scanned.
+ * @returns A deduplicated array of GitHub pull request URLs found across all message surfaces.
  */
 export function extractGithubPrUrls(
   text: string,

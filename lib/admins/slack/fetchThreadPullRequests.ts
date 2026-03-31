@@ -19,9 +19,10 @@ interface ConversationsRepliesResponse {
  * Fetches bot replies in a Slack thread and returns any GitHub PR URLs found.
  * Extracts URLs from message text, attachment action buttons, and Block Kit blocks.
  *
- * @param token
- * @param channel
- * @param threadTs
+ * @param token - Slack bot token used to authenticate the conversations.replies API call.
+ * @param channel - Slack channel ID containing the thread.
+ * @param threadTs - Timestamp of the parent message that identifies the thread.
+ * @returns A deduplicated array of GitHub PR URLs posted by bots in the thread.
  */
 export async function fetchThreadPullRequests(
   token: string,

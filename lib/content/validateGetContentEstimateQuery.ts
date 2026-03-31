@@ -15,6 +15,10 @@ export type ValidatedGetContentEstimateQuery = z.infer<typeof getContentEstimate
 
 /**
  * Validates auth and query params for GET /api/content/estimate.
+ *
+ * @param request - The incoming Next.js request with lipsync, batch, and compare query params.
+ * @returns A NextResponse with an error if auth or validation fails,
+ *   otherwise the validated query parameters including lipsync flag, batch count, and compare flag.
  */
 export async function validateGetContentEstimateQuery(
   request: NextRequest,

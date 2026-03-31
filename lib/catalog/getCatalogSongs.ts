@@ -1,7 +1,3 @@
-/**
- * Fetches a single page of songs from a catalog
- */
-
 import { Tables } from "@/types/database.types";
 import { NEW_API_BASE_URL } from "../consts";
 
@@ -25,6 +21,15 @@ export interface CatalogSongsResponse {
   error?: string;
 }
 
+/**
+ * Fetches a single page of songs from a catalog via the Recoup API.
+ *
+ * @param catalogId - The ID of the catalog to fetch songs from
+ * @param pageSize - Number of songs per page (default: 100)
+ * @param page - The page number to fetch (default: 1)
+ * @param artistName - Optional artist name filter to narrow results
+ * @returns A paginated response with songs and pagination metadata
+ */
 export async function getCatalogSongs(
   catalogId: string,
   pageSize: number = 100,

@@ -18,7 +18,9 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 }));
 
 /**
+ * Creates a mock DELETE request to the sandboxes endpoint for testing validation.
  *
+ * @returns A minimal Request object with the DELETE method
  */
 function createMockRequest(): Request {
   return new Request("https://example.com/api/sandboxes", {

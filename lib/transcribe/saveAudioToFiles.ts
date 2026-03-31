@@ -2,6 +2,12 @@ import { uploadFileByKey } from "@/lib/supabase/storage/uploadFileByKey";
 import { createFileRecord } from "@/lib/supabase/files/createFileRecord";
 import { SaveAudioParams, FileRecord } from "./types";
 
+/**
+ * Uploads an audio blob to Supabase storage and creates the corresponding file record.
+ *
+ * @param params - The audio save parameters including blob, content type, file name, and account IDs
+ * @returns The created file record from the database
+ */
 export async function saveAudioToFiles(params: SaveAudioParams): Promise<FileRecord> {
   const {
     audioBlob,
