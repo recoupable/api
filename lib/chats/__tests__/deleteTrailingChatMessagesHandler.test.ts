@@ -74,4 +74,17 @@ describe("deleteTrailingChatMessagesHandler", () => {
       deleted_count: 3,
     });
   });
+
+  it("returns 500 when validation throws unexpectedly", async () => {
+    vi.mocked(validateDeleteTrailingMessagesQuery).mockRejectedValue(new Error("boom"));
+
+    const response = await deleteTrailingChatMessagesHandler(request, chatId);
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      status: "error",
+      error: "Failed to delete trailing messages",
+    });
+  });
 });
