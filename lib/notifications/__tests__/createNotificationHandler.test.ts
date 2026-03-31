@@ -26,6 +26,12 @@ vi.mock("@/lib/networking/safeParseJson", () => ({
   safeParseJson: vi.fn(async (req: Request) => req.json()),
 }));
 
+/**
+ * Creates a mock POST request to the notifications endpoint with JSON body and auth header.
+ *
+ * @param body - The request body to serialize as JSON
+ * @returns A NextRequest instance for use in tests
+ */
 function createRequest(body: unknown): NextRequest {
   return new NextRequest("https://recoup-api.vercel.app/api/notifications", {
     method: "POST",

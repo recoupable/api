@@ -9,6 +9,7 @@ import { handleCodingAgentCallback } from "@/lib/coding-agent/handleCodingAgentC
  * Receives task results and posts them back to the Slack thread.
  *
  * @param request - The incoming callback request
+ * @returns A NextResponse indicating success or failure of the callback processing
  */
 export async function POST(request: NextRequest) {
   await codingAgentBot.initialize();

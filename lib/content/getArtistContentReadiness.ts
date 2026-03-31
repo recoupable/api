@@ -22,6 +22,12 @@ export interface ArtistContentReadiness {
 /**
  * Checks whether an artist has the expected files for content creation.
  * Searches the main repo and org submodule repos.
+ *
+ * @param root0 - Options object.
+ * @param root0.accountId - The account ID that owns the sandbox GitHub repo.
+ * @param root0.artistAccountId - The artist's account ID, returned in the readiness result.
+ * @param root0.artistSlug - The artist's directory slug used to locate files in the repo.
+ * @returns Readiness result with missing required files, warnings, and the resolved GitHub repo URL.
  */
 export async function getArtistContentReadiness({
   accountId,

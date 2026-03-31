@@ -6,9 +6,10 @@ const VIDEO_URL_PATTERN = /https?:\/\/[^\s>|]+/g;
  * Extracts video/media URLs from a Slack bot reply message's text, attachments, and blocks.
  * Filters for common video hosting patterns.
  *
- * @param text
- * @param attachments
- * @param blocks
+ * @param text - The plain text body of the Slack message to scan for URLs.
+ * @param attachments - Optional Slack message attachments whose action button URLs are also scanned.
+ * @param blocks - Optional Slack Block Kit blocks whose element URLs are also scanned.
+ * @returns A deduplicated array of video/media URLs found across all message surfaces.
  */
 export function extractVideoLinks(
   text: string,

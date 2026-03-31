@@ -8,6 +8,7 @@ import { handleGitHubWebhook } from "@/lib/coding-agent/handleGitHubWebhook";
  * Receives issue_comment events and triggers update-pr when the bot is mentioned.
  *
  * @param request - The incoming GitHub webhook request
+ * @returns A NextResponse indicating whether the webhook was processed
  */
 export async function POST(request: NextRequest) {
   return handleGitHubWebhook(request);

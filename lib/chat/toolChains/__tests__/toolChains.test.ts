@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LanguageModel } from "ai";
 import { TOOL_CHAINS, TOOL_MODEL_MAP, ToolChainItem, PrepareStepResult } from "../toolChains";
 
 describe("toolChains", () => {
@@ -38,7 +39,7 @@ describe("toolChains", () => {
     it("allows result with model override", () => {
       const result: PrepareStepResult = {
         toolChoice: { type: "tool", toolName: "test_tool" },
-        model: "gemini-2.5-pro" as any,
+        model: "gemini-2.5-pro" as unknown as LanguageModel,
       };
       expect(result.model).toBe("gemini-2.5-pro");
     });
@@ -46,7 +47,7 @@ describe("toolChains", () => {
     it("allows result with all properties", () => {
       const result: PrepareStepResult = {
         toolChoice: { type: "tool", toolName: "test_tool" },
-        model: "gemini-2.5-pro" as any,
+        model: "gemini-2.5-pro" as unknown as LanguageModel,
         system: "Custom prompt",
         messages: [{ role: "user", content: "Test" }],
       };

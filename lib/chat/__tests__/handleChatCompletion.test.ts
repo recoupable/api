@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { UIMessage } from "ai";
+import type { Tables } from "@/types/database.types";
 
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
@@ -56,10 +57,12 @@ const mockSendErrorNotification = vi.mocked(sendErrorNotification);
 
 // Helper to create mock UIMessage
 /**
+ * Creates a mock UIMessage for use in tests.
  *
- * @param id
- * @param role
- * @param text
+ * @param id - The unique identifier for the message.
+ * @param role - The role of the message sender (user or assistant).
+ * @param text - The text content of the message.
+ * @returns A UIMessage object with the given id, role, and text.
  */
 function createMockUIMessage(id: string, role: "user" | "assistant", text: string): UIMessage {
   return {
@@ -72,8 +75,10 @@ function createMockUIMessage(id: string, role: "user" | "assistant", text: strin
 
 // Helper to create mock ChatRequestBody
 /**
+ * Creates a mock ChatRequestBody with default values and optional overrides.
  *
- * @param overrides
+ * @param overrides - Partial ChatRequestBody fields to override the defaults.
+ * @returns A complete ChatRequestBody object for testing.
  */
 function createMockBody(overrides: Partial<ChatRequestBody> = {}): ChatRequestBody {
   return {
@@ -165,7 +170,9 @@ describe("handleChatCompletion", () => {
     it("sends notification for new conversation", async () => {
       mockSelectRoom.mockResolvedValue(null);
       mockGenerateChatTitle.mockResolvedValue("Test Topic");
-      mockSelectAccountEmails.mockResolvedValue([{ email: "test@example.com" } as any]);
+      mockSelectAccountEmails.mockResolvedValue([
+        { email: "test@example.com" } as unknown as Tables<"account_emails">,
+      ]);
 
       const body = createMockBody({ roomId: "new-room-123" });
       const responseMessages = [createMockUIMessage("resp-1", "assistant", "Hi!")];
@@ -222,8 +229,8 @@ describe("handleChatCompletion", () => {
       mockSelectRoom.mockResolvedValue(null);
       mockGenerateChatTitle.mockResolvedValue("Topic");
       mockSelectAccountEmails.mockResolvedValue([
-        { email: "first@example.com" } as any,
-        { email: "second@example.com" } as any,
+        { email: "first@example.com" } as unknown as Tables<"account_emails">,
+        { email: "second@example.com" } as unknown as Tables<"account_emails">,
       ]);
 
       const body = createMockBody();

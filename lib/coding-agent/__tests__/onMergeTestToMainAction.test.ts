@@ -12,8 +12,13 @@ beforeEach(() => {
   process.env.GITHUB_TOKEN = "ghp_test";
 });
 
+/**
+ * Creates a mock bot with a stubbed onAction method for testing merge-test-to-main action handler registration.
+ *
+ * @returns A mock bot with a vitest spy on onAction
+ */
 function createMockBot() {
-  return { onAction: vi.fn() } as any;
+  return { onAction: vi.fn() } as unknown as import("../bot").CodingAgentBot;
 }
 
 describe("registerOnMergeTestToMainAction", () => {

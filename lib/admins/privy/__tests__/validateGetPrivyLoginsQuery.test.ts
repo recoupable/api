@@ -15,8 +15,10 @@ vi.mock("@/lib/admins/validateAdminAuth", () => ({
 const mockAuth = { accountId: "test-account", orgId: null, authToken: "token" };
 
 /**
+ * Creates a NextRequest targeting the Privy logins query endpoint, optionally with a period param.
  *
- * @param period
+ * @param period - Optional time period value to include as a query parameter.
+ * @returns A NextRequest for the Privy logins admin endpoint with or without a period filter.
  */
 function makeRequest(period?: string) {
   const url = period

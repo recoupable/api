@@ -24,7 +24,10 @@ export interface CreateFileRecordParams {
 }
 
 /**
- * Create a file record in the database
+ * Create a file record in the database.
+ *
+ * @param params - The file record parameters including owner, artist, storage key, and metadata
+ * @returns The created file record row
  */
 export async function createFileRecord(params: CreateFileRecordParams): Promise<FileRecord> {
   const {

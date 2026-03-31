@@ -41,6 +41,12 @@ vi.mock("../generateChatTitle", () => ({
   generateChatTitle: vi.fn(),
 }));
 
+/**
+ * Creates a mock NextRequest with normalized headers for testing.
+ *
+ * @param headers - Key-value map of request headers to include
+ * @returns A partial NextRequest mock with a working headers.get method
+ */
 function createMockRequest(
   headers: Record<string, string> = { "x-api-key": "test-api-key" },
 ): NextRequest {

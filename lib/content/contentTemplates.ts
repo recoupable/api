@@ -25,6 +25,12 @@ export const CONTENT_TEMPLATES: ContentTemplate[] = [
 /** Derived from the first entry in CONTENT_TEMPLATES to avoid string duplication. */
 export const DEFAULT_CONTENT_TEMPLATE = CONTENT_TEMPLATES[0].name;
 
+/**
+ * Returns true if the given template name is a recognized content template.
+ *
+ * @param template - The template name to check.
+ * @returns Whether the template is supported.
+ */
 export function isSupportedContentTemplate(template: string): boolean {
   return CONTENT_TEMPLATES.some(item => item.name === template);
 }

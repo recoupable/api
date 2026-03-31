@@ -31,7 +31,7 @@ describe("getTextContent", () => {
         { type: "text" as const, text: "Hello" },
         { type: "image" as const, image: "data:image/png;base64,..." },
         { type: "text" as const, text: " world" },
-      ] as any;
+      ] as unknown[];
       expect(getTextContent(content)).toBe("Hello world");
     });
 
@@ -40,7 +40,7 @@ describe("getTextContent", () => {
     });
 
     it("returns empty string when no text parts exist", () => {
-      const content = [{ type: "image" as const, image: "data:image/png;base64,..." }] as any;
+      const content = [{ type: "image" as const, image: "data:image/png;base64,..." }] as unknown[];
       expect(getTextContent(content)).toBe("");
     });
   });

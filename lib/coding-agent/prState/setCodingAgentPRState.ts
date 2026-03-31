@@ -5,9 +5,9 @@ import type { CodingAgentPRState } from "./types";
 /**
  * Sets the shared PR state for a repo/branch in Redis.
  *
- * @param repo
- * @param branch
- * @param state
+ * @param repo - Full repo identifier (e.g. "recoupable/api")
+ * @param branch - Branch name to store PR state for (e.g. "agent/fix-bug")
+ * @param state - The PR state object to persist, including status, prs, snapshotId, and branch
  */
 export async function setCodingAgentPRState(
   repo: string,

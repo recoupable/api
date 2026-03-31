@@ -7,6 +7,8 @@ export const WHATSAPP_ENV_VARS = [
 
 /**
  * Returns true when all WhatsApp environment variables are configured.
+ *
+ * @returns True if all required WhatsApp env vars are set and non-empty, false otherwise
  */
 export function isWhatsAppConfigured(): boolean {
   return WHATSAPP_ENV_VARS.every(name => !!process.env[name]);

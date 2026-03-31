@@ -10,13 +10,18 @@ import { getPrStatusHandler } from "@/lib/admins/pr/getPrStatusHandler";
  * Uses the GitHub REST API to check each PR's state.
  * Requires admin authentication.
  *
- * @param request
+ * @param request - The incoming request with pull_requests query params
+ * @returns A NextResponse with the PR status for each provided URL
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   return getPrStatusHandler(request);
 }
 
-/** CORS preflight handler. */
+/**
+ * CORS preflight handler.
+ *
+ * @returns A NextResponse with CORS headers allowing cross-origin access
+ */
 export async function OPTIONS(): Promise<NextResponse> {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
 }

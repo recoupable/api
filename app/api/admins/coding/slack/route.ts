@@ -9,12 +9,19 @@ import { getSlackTagsHandler } from "@/lib/admins/slack/getSlackTagsHandler";
  * Pulls directly from the Slack API as the source of truth.
  * Supports period filtering: all (default), daily, weekly, monthly.
  * Requires admin authentication.
+ *
+ * @param request - The incoming request with optional period query param
+ * @returns A NextResponse with Slack tagging analytics data
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   return getSlackTagsHandler(request);
 }
 
-/** CORS preflight handler. */
+/**
+ * CORS preflight handler.
+ *
+ * @returns A NextResponse with CORS headers allowing cross-origin access
+ */
 export async function OPTIONS(): Promise<NextResponse> {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
 }

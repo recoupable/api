@@ -3,6 +3,9 @@ import { GatewayLanguageModelEntry } from "@ai-sdk/gateway";
 /**
  * Determines if a model is an embedding model (not suitable for chat).
  * Embed models typically have 0 output pricing since they only produce embeddings.
+ *
+ * @param m - The gateway model entry to check
+ * @returns True if the model is an embedding model, false otherwise
  */
 export const isEmbedModel = (m: GatewayLanguageModelEntry): boolean => {
   const pricing = m.pricing;

@@ -21,7 +21,7 @@ export async function compactChatsHandler(request: NextRequest): Promise<NextRes
       return validated;
     }
 
-    const { chatIds, prompt, accountId, orgId } = validated;
+    const { chatIds, prompt, accountId } = validated;
 
     // Process all chats in parallel using Promise.all for performance
     const processResults = await Promise.all(

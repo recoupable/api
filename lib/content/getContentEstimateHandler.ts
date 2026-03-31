@@ -9,7 +9,8 @@ const BASE_AUDIO_TO_VIDEO_COST = 0.95;
 /**
  * Handler for GET /api/content/estimate.
  *
- * @param request
+ * @param request - The incoming Next.js request with lipsync, batch, and compare query params.
+ * @returns A NextResponse containing per-video and total cost estimates in USD.
  */
 export async function getContentEstimateHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateGetContentEstimateQuery(request);

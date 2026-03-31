@@ -23,6 +23,11 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
+/**
+ * Creates a minimal mock NextRequest for the task run endpoint with an x-api-key header.
+ *
+ * @returns A minimal NextRequest-shaped object for use in handler tests
+ */
 function createMockRequest(): NextRequest {
   return {
     url: "http://localhost:3000/api/tasks/runs",

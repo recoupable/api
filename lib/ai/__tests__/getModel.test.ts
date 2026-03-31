@@ -24,7 +24,7 @@ describe("getModel", () => {
         { id: "gpt-4", pricing: { input: "0.00003", output: "0.00006" } },
         { id: "claude-3-opus", pricing: { input: "0.00001", output: "0.00003" } },
       ];
-      mockGetAvailableModels.mockResolvedValue(models as any);
+      mockGetAvailableModels.mockResolvedValue(models as unknown[]);
 
       const model = await getModel("gpt-4");
 
@@ -36,7 +36,7 @@ describe("getModel", () => {
 
     it("returns undefined when model is not found", async () => {
       const models = [{ id: "gpt-4", pricing: { input: "0.00003", output: "0.00006" } }];
-      mockGetAvailableModels.mockResolvedValue(models as any);
+      mockGetAvailableModels.mockResolvedValue(models as unknown[]);
 
       const model = await getModel("unknown-model");
 

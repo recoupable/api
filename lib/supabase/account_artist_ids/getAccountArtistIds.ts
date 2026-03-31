@@ -8,14 +8,18 @@ export type AccountArtistRow = ArtistQueryRow & { artist_id: string; pinned: boo
  * Get all artists for an array of artist IDs or account IDs, with full info.
  * Returns raw data - formatting should be done by caller.
  *
- * @param params Object with artistIds or accountIds array
+ * @param root0 - Object with artistIds or accountIds array
+ * @param root0.artistIds - Optional array of artist account IDs to filter by
+ * @param root0.accountIds - Optional array of owner account IDs to filter by
  * @returns Array of raw artist rows from database
  */
-export async function getAccountArtistIds(params: {
+export async function getAccountArtistIds({
+  artistIds,
+  accountIds,
+}: {
   artistIds?: string[];
   accountIds?: string[];
 }): Promise<AccountArtistRow[]> {
-  const { artistIds, accountIds } = params;
   if (!artistIds && !accountIds) {
     throw new Error("Must provide either artistIds or accountIds");
   }

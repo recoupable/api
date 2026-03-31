@@ -4,9 +4,10 @@ import { SUPABASE_STORAGE_BUCKET } from "@/lib/const";
 /**
  * Creates a signed URL for a file in Supabase storage.
  *
- * @param root0
- * @param root0.key
- * @param root0.expiresInSeconds
+ * @param root0 - The signed URL parameters
+ * @param root0.key - The storage key (path) of the file to sign
+ * @param root0.expiresInSeconds - Number of seconds until the signed URL expires (default: 7 days)
+ * @returns The signed URL string for accessing the file
  */
 export async function createSignedFileUrlByKey({
   key,

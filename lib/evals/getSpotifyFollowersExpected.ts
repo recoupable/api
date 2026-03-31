@@ -1,5 +1,13 @@
 import { getSpotifyFollowers } from "@/lib/spotify/getSpotifyFollowers";
 
+/**
+ * Fetches the expected Spotify follower count string for a given artist.
+ * Used as ground-truth data when evaluating whether the AI correctly reports follower numbers.
+ *
+ * @param artist - The artist name to look up on Spotify
+ * @returns An object with followerCount and the formatted expected string;
+ *   falls back to a zero-count message if the data cannot be retrieved.
+ */
 async function getSpotifyFollowersExpected(artist: string) {
   try {
     const followerCount = await getSpotifyFollowers(artist);

@@ -41,7 +41,7 @@ describe("mergeGithubBranch", () => {
       ok: false,
       status: 409,
       text: () => Promise.resolve(JSON.stringify({ message: "Merge conflict" })),
-    } as any);
+    } as unknown as Response);
 
     const result = await mergeGithubBranch("recoupable/api", "test", "main", "ghp_test");
 

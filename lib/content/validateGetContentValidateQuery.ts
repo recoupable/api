@@ -13,6 +13,10 @@ export type ValidatedGetContentValidateQuery = {
 /**
  * Validates auth and query params for GET /api/content/validate.
  * Requires artist_account_id query parameter.
+ *
+ * @param request - The incoming Next.js request with the artist_account_id query param.
+ * @returns A NextResponse with an error if auth or validation fails,
+ *   otherwise the validated account ID, artist account ID, and resolved artist slug.
  */
 export async function validateGetContentValidateQuery(
   request: NextRequest,

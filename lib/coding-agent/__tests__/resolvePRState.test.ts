@@ -13,8 +13,10 @@ beforeEach(() => {
 });
 
 /**
+ * Creates a mock thread with a stubbed state getter for testing resolvePRState.
  *
- * @param state
+ * @param state - The state value the thread should resolve with
+ * @returns A mock thread object compatible with the Thread interface
  */
 function createMockThread(state: unknown) {
   return {
@@ -22,7 +24,7 @@ function createMockThread(state: unknown) {
     get state() {
       return Promise.resolve(state);
     },
-  } as any;
+  } as unknown as import("chat").Thread<import("../types").CodingAgentThreadState>;
 }
 
 describe("resolvePRState", () => {

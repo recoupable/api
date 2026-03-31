@@ -16,6 +16,13 @@ vi.mock("@/lib/networking/safeParseJson", () => ({
   safeParseJson: vi.fn(async (req: Request) => req.json()),
 }));
 
+/**
+ * Creates a mock POST request to the notifications endpoint with JSON body and optional headers.
+ *
+ * @param body - The request body to serialize as JSON
+ * @param headers - Optional extra headers to merge with defaults
+ * @returns A NextRequest instance for use in tests
+ */
 function createRequest(body: unknown, headers: Record<string, string> = {}): NextRequest {
   const defaultHeaders: Record<string, string> = { "Content-Type": "application/json" };
   return new NextRequest("http://localhost/api/notifications", {

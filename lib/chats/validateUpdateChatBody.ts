@@ -70,7 +70,7 @@ export async function validateUpdateChatBody(
     return authResult;
   }
 
-  const { accountId, orgId } = authResult;
+  const { accountId } = authResult;
 
   // Verify room exists
   const room = await selectRoom(chatId);

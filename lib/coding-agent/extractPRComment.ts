@@ -15,6 +15,7 @@ export interface PRComment {
  *
  * @param event - The x-github-event header value
  * @param payload - The parsed webhook payload
+ * @returns A PRComment with thread, branch, and commentBody, or null if the event should be ignored
  */
 export function extractPRComment(
   event: string,

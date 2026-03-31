@@ -15,7 +15,7 @@ import { buildMergeTestToMainCard } from "../buildMergeTestToMainCard";
  *
  * Uses a prefix pattern so a single handler covers all merge_pr:* actions.
  *
- * @param bot
+ * @param bot - The coding agent bot instance to register the action handler on
  */
 export function registerOnMergeAction(bot: CodingAgentBot) {
   bot.onAction(async event => {

@@ -40,8 +40,10 @@ const mockTags = [
 ];
 
 /**
+ * Creates a mock NextRequest for the content Slack tags endpoint with the given period.
  *
- * @param period
+ * @param period - The time period query parameter (e.g., "all", "daily", "weekly", "monthly").
+ * @returns A NextRequest instance targeting the content Slack tags endpoint.
  */
 function makeRequest(period = "all") {
   return new NextRequest(`https://example.com/api/admins/content/slack?period=${period}`);

@@ -7,6 +7,8 @@ import { disconnectConnectorHandler } from "@/lib/composio/connectors/disconnect
 
 /**
  * OPTIONS handler for CORS preflight requests.
+ *
+ * @returns A NextResponse with CORS headers allowing cross-origin access
  */
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -25,7 +27,7 @@ export async function OPTIONS() {
  *
  * Authentication: x-api-key OR Authorization Bearer token required.
  *
- * @param request
+ * @param request - The incoming request with optional account_id query param
  * @returns List of connectors with connection status
  */
 export async function GET(request: NextRequest) {
@@ -44,7 +46,7 @@ export async function GET(request: NextRequest) {
  * - callback_url: Optional custom callback URL after OAuth
  * - account_id: Optional account ID for account-specific connections
  *
- * @param request
+ * @param request - The incoming request with connector slug and optional callback_url in the body
  * @returns The redirect URL for OAuth authorization
  */
 export async function POST(request: NextRequest) {
@@ -62,7 +64,8 @@ export async function POST(request: NextRequest) {
  *
  * Authentication: x-api-key OR Authorization Bearer token required.
  *
- * @param request
+ * @param request - The incoming request with connected_account_id in the body
+ * @returns A NextResponse confirming the connector was disconnected
  */
 export async function DELETE(request: NextRequest) {
   return disconnectConnectorHandler(request);

@@ -6,6 +6,9 @@ import type { GitHubThreadId } from "@chat-adapter/github";
  *
  * - PR-level: `github:{owner}/{repo}:{prNumber}`
  * - Review comment: `github:{owner}/{repo}:{prNumber}:rc:{reviewCommentId}`
+ *
+ * @param thread - The GitHub thread ID object containing owner, repo, prNumber, and optional reviewCommentId
+ * @returns The encoded thread ID string in Chat SDK format
  */
 export function encodeGitHubThreadId(thread: GitHubThreadId): string {
   const { owner, repo, prNumber, reviewCommentId } = thread;

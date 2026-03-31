@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
-import { ToolLoopAgent, stepCountIs } from "ai";
+import { ToolLoopAgent } from "ai";
 
 // Import after mocks
 import getGeneralAgent from "../getGeneralAgent";
@@ -65,14 +65,14 @@ describe("getGeneralAgent", () => {
 
     // Set up default mock returns
     mockSelectAccountEmails.mockResolvedValue([
-      { email: "user@example.com", account_id: "account-123" } as any,
+      { email: "user@example.com", account_id: "account-123" } as unknown,
     ]);
     mockSelectAccountInfo.mockResolvedValue(null);
     mockGetAccountWithDetails.mockResolvedValue({
       id: "account-123",
       name: "Test User",
       email: "user@example.com",
-    } as any);
+    } as unknown);
     mockGetKnowledgeBaseText.mockResolvedValue(undefined);
     mockSetupToolsForRequest.mockResolvedValue(mockTools);
     mockGetSystemPrompt.mockReturnValue(baseSystemPrompt);
@@ -165,8 +165,8 @@ describe("getGeneralAgent", () => {
 
     it("uses first email from account emails list", async () => {
       mockSelectAccountEmails.mockResolvedValue([
-        { email: "first@example.com", account_id: "account-123" } as any,
-        { email: "second@example.com", account_id: "account-123" } as any,
+        { email: "first@example.com", account_id: "account-123" } as unknown,
+        { email: "second@example.com", account_id: "account-123" } as unknown,
       ]);
 
       const body: ChatRequestBody = {
@@ -229,7 +229,7 @@ describe("getGeneralAgent", () => {
       mockSelectAccountInfo.mockResolvedValue({
         instruction: "Always be formal with this artist",
         knowledges: [],
-      } as any);
+      } as unknown);
 
       const body: ChatRequestBody = {
         accountId: "account-123",
@@ -254,7 +254,7 @@ describe("getGeneralAgent", () => {
       mockSelectAccountInfo.mockResolvedValue({
         instruction: null,
         knowledges: mockKnowledges,
-      } as any);
+      } as unknown);
       mockGetKnowledgeBaseText.mockResolvedValue("FAQ content here");
 
       const body: ChatRequestBody = {
@@ -304,7 +304,7 @@ describe("getGeneralAgent", () => {
         email: "user@example.com",
         job_title: "Music Manager",
       };
-      mockGetAccountWithDetails.mockResolvedValue(mockAccountDetails as any);
+      mockGetAccountWithDetails.mockResolvedValue(mockAccountDetails as unknown);
 
       const body: ChatRequestBody = {
         accountId: "account-123",
@@ -476,7 +476,7 @@ describe("getGeneralAgent", () => {
       const result = await getGeneralAgent(body);
 
       // providerOptions should be baked into the agent constructor (stored in settings)
-      const settings = (result.agent as any).settings;
+      const settings = (result.agent as unknown as { settings: Record<string, unknown> }).settings;
       expect(settings.providerOptions).toBeDefined();
       expect(settings.providerOptions.anthropic).toEqual(
         expect.objectContaining({
@@ -509,7 +509,7 @@ describe("getGeneralAgent", () => {
       const result = await getGeneralAgent(body);
 
       // prepareStep should be baked into the agent constructor (stored in settings)
-      const settings = (result.agent as any).settings;
+      const settings = (result.agent as unknown as { settings: Record<string, unknown> }).settings;
       expect(settings.prepareStep).toBeInstanceOf(Function);
     });
   });

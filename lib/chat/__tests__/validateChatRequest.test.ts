@@ -1,16 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { NextResponse } from "next/server";
-import { validateChatRequest, chatRequestSchema } from "../validateChatRequest";
+import { NextRequest, NextResponse } from "next/server";
+import { validateChatRequest, chatRequestSchema, ChatRequestBody } from "../validateChatRequest";
 
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
-import { generateUUID } from "@/lib/uuid/generateUUID";
-import { createNewRoom } from "@/lib/chat/createNewRoom";
-import insertMemories from "@/lib/supabase/memories/insertMemories";
-import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
 import { setupConversation } from "@/lib/chat/setupConversation";
 
 // Mock dependencies
@@ -63,17 +59,15 @@ const mockGetAuthenticatedAccountId = vi.mocked(getAuthenticatedAccountId);
 const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
 const mockGetApiKeyDetails = vi.mocked(getApiKeyDetails);
 const mockValidateOrganizationAccess = vi.mocked(validateOrganizationAccess);
-const mockGenerateUUID = vi.mocked(generateUUID);
-const mockCreateNewRoom = vi.mocked(createNewRoom);
-const mockInsertMemories = vi.mocked(insertMemories);
-const mockFilterMessageContentForMemories = vi.mocked(filterMessageContentForMemories);
 const mockSetupConversation = vi.mocked(setupConversation);
 
 // Helper to create mock NextRequest
 /**
+ * Creates a mock Request object with a JSON body and optional headers.
  *
- * @param body
- * @param headers
+ * @param body - The request body to be returned by json().
+ * @param headers - Optional map of HTTP header names to values.
+ * @returns A mock Request object suitable for use in tests.
  */
 function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
   return {
@@ -101,7 +95,7 @@ describe("validateChatRequest", () => {
 
       const request = createMockRequest({ roomId: "room-123" }, { "x-api-key": "test-key" });
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).toBeInstanceOf(NextResponse);
       const json = await (result as NextResponse).json();
@@ -120,7 +114,7 @@ describe("validateChatRequest", () => {
         { "x-api-key": "test-key" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).toBeInstanceOf(NextResponse);
       const json = await (result as NextResponse).json();
@@ -136,10 +130,10 @@ describe("validateChatRequest", () => {
         { "x-api-key": "test-key" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("account-123");
+      expect((result as unknown as ChatRequestBody).accountId).toBe("account-123");
     });
 
     it("accepts valid prompt string", async () => {
@@ -147,10 +141,10 @@ describe("validateChatRequest", () => {
 
       const request = createMockRequest({ prompt: "Hello, world!" }, { "x-api-key": "test-key" });
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("account-123");
+      expect((result as unknown as ChatRequestBody).accountId).toBe("account-123");
     });
   });
 
@@ -158,7 +152,7 @@ describe("validateChatRequest", () => {
     it("rejects request without any auth header", async () => {
       const request = createMockRequest({ prompt: "Hello" }, {});
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).toBeInstanceOf(NextResponse);
       const json = await (result as NextResponse).json();
@@ -172,7 +166,7 @@ describe("validateChatRequest", () => {
         { "x-api-key": "test-key", authorization: "Bearer test-token" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).toBeInstanceOf(NextResponse);
       const json = await (result as NextResponse).json();
@@ -187,7 +181,7 @@ describe("validateChatRequest", () => {
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "invalid-key" });
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).toBeInstanceOf(NextResponse);
     });
@@ -197,10 +191,10 @@ describe("validateChatRequest", () => {
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("account-abc-123");
+      expect((result as unknown as ChatRequestBody).accountId).toBe("account-abc-123");
     });
 
     it("accepts valid Authorization Bearer token", async () => {
@@ -211,10 +205,10 @@ describe("validateChatRequest", () => {
         { authorization: "Bearer valid-jwt-token" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("account-from-jwt-456");
+      expect((result as unknown as ChatRequestBody).accountId).toBe("account-from-jwt-456");
     });
 
     it("rejects request with invalid Authorization token", async () => {
@@ -230,7 +224,7 @@ describe("validateChatRequest", () => {
         { authorization: "Bearer invalid-token" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).toBeInstanceOf(NextResponse);
       const json = await (result as NextResponse).json();
@@ -245,10 +239,10 @@ describe("validateChatRequest", () => {
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "org-api-key" });
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("org-account-123");
+      expect((result as unknown as ChatRequestBody).accountId).toBe("org-account-123");
     });
 
     it("returns accountId for personal API key", async () => {
@@ -259,10 +253,10 @@ describe("validateChatRequest", () => {
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "personal-api-key" });
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("personal-account-123");
+      expect((result as unknown as ChatRequestBody).accountId).toBe("personal-account-123");
     });
 
     it("returns accountId for bearer token auth", async () => {
@@ -273,10 +267,10 @@ describe("validateChatRequest", () => {
         { authorization: "Bearer valid-jwt-token" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("jwt-account-456");
+      expect((result as unknown as ChatRequestBody).accountId).toBe("jwt-account-456");
     });
   });
 
@@ -292,10 +286,10 @@ describe("validateChatRequest", () => {
         { "x-api-key": "org-api-key" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("target-account-456");
+      expect((result as unknown as ChatRequestBody).accountId).toBe("target-account-456");
       expect(mockValidateOverrideAccountId).toHaveBeenCalledWith({
         apiKey: "org-api-key",
         targetAccountId: "target-account-456",
@@ -316,7 +310,7 @@ describe("validateChatRequest", () => {
         { "x-api-key": "personal-api-key" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).toBeInstanceOf(NextResponse);
       const json = await (result as NextResponse).json();
@@ -331,12 +325,14 @@ describe("validateChatRequest", () => {
 
       const request = createMockRequest({ prompt: "Hello, world!" }, { "x-api-key": "test-key" });
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).messages).toHaveLength(1);
-      expect((result as any).messages[0].role).toBe("user");
-      expect((result as any).messages[0].parts[0].text).toBe("Hello, world!");
+      expect((result as unknown as ChatRequestBody).messages).toHaveLength(1);
+      expect((result as unknown as ChatRequestBody).messages[0].role).toBe("user");
+      expect((result as unknown as ChatRequestBody).messages[0].parts[0].text).toBe(
+        "Hello, world!",
+      );
     });
 
     it("preserves original messages when provided", async () => {
@@ -351,10 +347,10 @@ describe("validateChatRequest", () => {
         { "x-api-key": "test-key" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).messages).toEqual(originalMessages);
+      expect((result as unknown as ChatRequestBody).messages).toEqual(originalMessages);
     });
   });
 
@@ -371,10 +367,10 @@ describe("validateChatRequest", () => {
         { "x-api-key": "test-key" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).roomId).toBe("room-xyz");
+      expect((result as unknown as ChatRequestBody).roomId).toBe("room-xyz");
     });
 
     it("passes through artistId", async () => {
@@ -385,10 +381,10 @@ describe("validateChatRequest", () => {
         { "x-api-key": "test-key" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).artistId).toBe("artist-abc");
+      expect((result as unknown as ChatRequestBody).artistId).toBe("artist-abc");
     });
 
     it("passes through model selection", async () => {
@@ -399,10 +395,10 @@ describe("validateChatRequest", () => {
         { "x-api-key": "test-key" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).model).toBe("gpt-4");
+      expect((result as unknown as ChatRequestBody).model).toBe("gpt-4");
     });
 
     it("passes through excludeTools array", async () => {
@@ -413,10 +409,10 @@ describe("validateChatRequest", () => {
         { "x-api-key": "test-key" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).excludeTools).toEqual(["tool1", "tool2"]);
+      expect((result as unknown as ChatRequestBody).excludeTools).toEqual(["tool1", "tool2"]);
     });
 
     it("passes through topic", async () => {
@@ -427,10 +423,10 @@ describe("validateChatRequest", () => {
         { "x-api-key": "test-key" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).topic).toBe("Pulse Feb 2");
+      expect((result as unknown as ChatRequestBody).topic).toBe("Pulse Feb 2");
     });
   });
 
@@ -483,7 +479,7 @@ describe("validateChatRequest", () => {
         { authorization: "Bearer valid-jwt-token" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
       expect(mockValidateOrganizationAccess).toHaveBeenCalledWith({
@@ -504,7 +500,7 @@ describe("validateChatRequest", () => {
         { "x-api-key": "personal-api-key" },
       );
 
-      const result = await validateChatRequest(request as any);
+      await validateChatRequest(request as unknown as NextRequest);
       expect(mockValidateOrganizationAccess).toHaveBeenCalledWith({
         accountId: "api-key-account-123",
         organizationId: "org-789",
@@ -523,7 +519,7 @@ describe("validateChatRequest", () => {
         { "x-api-key": "org-api-key" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
     });
@@ -537,7 +533,7 @@ describe("validateChatRequest", () => {
         { authorization: "Bearer valid-jwt-token" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).toBeInstanceOf(NextResponse);
       const json = await (result as NextResponse).json();
@@ -553,7 +549,7 @@ describe("validateChatRequest", () => {
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "org-api-key" });
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
       // Should not validate org access when no organizationId is provided
@@ -568,7 +564,7 @@ describe("validateChatRequest", () => {
         { authorization: "Bearer valid-jwt-token" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
       expect(mockValidateOrganizationAccess).not.toHaveBeenCalled();
@@ -585,10 +581,10 @@ describe("validateChatRequest", () => {
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "test-key" });
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).roomId).toBe("generated-uuid-456");
+      expect((result as unknown as ChatRequestBody).roomId).toBe("generated-uuid-456");
     });
 
     it("calls setupConversation with correct params when roomId is not provided", async () => {
@@ -603,7 +599,7 @@ describe("validateChatRequest", () => {
         { "x-api-key": "test-key" },
       );
 
-      await validateChatRequest(request as any);
+      await validateChatRequest(request as unknown as NextRequest);
 
       expect(mockSetupConversation).toHaveBeenCalledWith({
         accountId: "account-123",
@@ -629,7 +625,7 @@ describe("validateChatRequest", () => {
         { "x-api-key": "test-key" },
       );
 
-      await validateChatRequest(request as any);
+      await validateChatRequest(request as unknown as NextRequest);
 
       expect(mockSetupConversation).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -650,7 +646,7 @@ describe("validateChatRequest", () => {
         { "x-api-key": "test-key" },
       );
 
-      await validateChatRequest(request as any);
+      await validateChatRequest(request as unknown as NextRequest);
 
       expect(mockSetupConversation).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -671,10 +667,10 @@ describe("validateChatRequest", () => {
         { "x-api-key": "test-key" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).roomId).toBe("existing-room-123");
+      expect((result as unknown as ChatRequestBody).roomId).toBe("existing-room-123");
     });
 
     it("passes roomId to setupConversation when provided", async () => {
@@ -689,7 +685,7 @@ describe("validateChatRequest", () => {
         { "x-api-key": "test-key" },
       );
 
-      await validateChatRequest(request as any);
+      await validateChatRequest(request as unknown as NextRequest);
 
       expect(mockSetupConversation).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -710,10 +706,10 @@ describe("validateChatRequest", () => {
         { authorization: "Bearer valid-jwt" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown as NextRequest);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).roomId).toBe("jwt-generated-uuid");
+      expect((result as unknown as ChatRequestBody).roomId).toBe("jwt-generated-uuid");
       expect(mockSetupConversation).toHaveBeenCalledWith(
         expect.objectContaining({
           accountId: "jwt-account-123",
@@ -733,7 +729,7 @@ describe("validateChatRequest", () => {
         { "x-api-key": "test-key" },
       );
 
-      await validateChatRequest(request as any);
+      await validateChatRequest(request as unknown as NextRequest);
 
       expect(mockSetupConversation).toHaveBeenCalledWith({
         accountId: "account-123",
@@ -761,7 +757,7 @@ describe("validateChatRequest", () => {
         { "x-api-key": "test-key" },
       );
 
-      await validateChatRequest(request as any);
+      await validateChatRequest(request as unknown as NextRequest);
 
       // setupConversation handles both new and existing rooms
       expect(mockSetupConversation).toHaveBeenCalledWith({

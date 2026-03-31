@@ -24,6 +24,9 @@ vi.mock("@/lib/admins/checkIsAdmin", () => ({
 
 /**
  * Creates a mock NextRequest with the given URL.
+ *
+ * @param url - The full URL string for the mock request including any query params
+ * @returns A minimal NextRequest-shaped object for testing
  */
 function createMockRequest(url: string): NextRequest {
   return {

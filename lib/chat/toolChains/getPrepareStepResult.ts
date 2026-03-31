@@ -2,7 +2,7 @@ import { LanguageModel, ModelMessage, StepResult, ToolSet } from "ai";
 import { PrepareStepResult, TOOL_CHAINS, TOOL_MODEL_MAP } from "./toolChains";
 import getExecutedToolTimeline from "./getExecutedToolTimeline";
 
-type PrepareStepOptions = {
+export type PrepareStepOptions = {
   steps: Array<StepResult<NoInfer<ToolSet>>>;
   stepNumber: number;
   model: LanguageModel;
@@ -12,6 +12,9 @@ type PrepareStepOptions = {
 /**
  * Returns the next tool to run based on timeline progression through tool chains.
  * Uses toolCallsContent to track exact execution order and position in sequence.
+ *
+ * @param options - The current step options including steps history, step number, model, and messages.
+ * @returns The next PrepareStepResult with toolChoice and optional model/system/messages overrides, or undefined if no chain is active.
  */
 const getPrepareStepResult = (options: PrepareStepOptions): PrepareStepResult | undefined => {
   const { steps } = options;

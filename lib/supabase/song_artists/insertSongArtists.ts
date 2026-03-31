@@ -5,6 +5,8 @@ export type SongArtistInsert = TablesInsert<"song_artists">;
 
 /**
  * Inserts song-artist relationships, skipping duplicates.
+ *
+ * @param songArtists - Array of song-artist relationship records to insert
  */
 export async function insertSongArtists(songArtists: SongArtistInsert[]): Promise<void> {
   const records = songArtists.filter(

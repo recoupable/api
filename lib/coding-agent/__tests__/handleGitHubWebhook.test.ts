@@ -45,6 +45,14 @@ const BASE_PAYLOAD = {
   },
 };
 
+/**
+ * Builds a mock Request with a JSON body and GitHub webhook headers.
+ *
+ * @param body - The webhook payload to serialize as JSON
+ * @param event - The x-github-event header value (default "issue_comment")
+ * @param signature - The x-hub-signature-256 header value (default "valid")
+ * @returns A mock Request object suitable for passing to handleGitHubWebhook
+ */
 function makeRequest(body: unknown, event = "issue_comment", signature = "valid") {
   return {
     text: () => Promise.resolve(JSON.stringify(body)),

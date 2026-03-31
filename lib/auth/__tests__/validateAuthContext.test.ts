@@ -33,6 +33,12 @@ const mockGetAuthenticatedAccountId = vi.mocked(getAuthenticatedAccountId);
 const mockValidateOrganizationAccess = vi.mocked(validateOrganizationAccess);
 const mockCanAccessAccount = vi.mocked(canAccessAccount);
 
+/**
+ * Creates a minimal mock Request object with the given headers for testing auth validation.
+ *
+ * @param headers - Key-value pairs of HTTP headers to include on the mock request
+ * @returns A minimal Request-shaped object suitable for passing to validateAuthContext
+ */
 function createMockRequest(headers: Record<string, string> = {}): Request {
   return {
     headers: {

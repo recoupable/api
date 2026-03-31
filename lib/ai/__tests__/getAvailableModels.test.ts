@@ -29,7 +29,7 @@ describe("getAvailableModels", () => {
           { id: "text-embedding-ada-002", pricing: { input: "0.0001", output: "0" } },
           { id: "claude-3-opus", pricing: { input: "0.00001", output: "0.00003" } },
         ],
-      } as any);
+      } as unknown);
 
       const models = await getAvailableModels();
 
@@ -39,7 +39,7 @@ describe("getAvailableModels", () => {
     });
 
     it("returns empty array when gateway returns no models", async () => {
-      mockGatewayGetAvailableModels.mockResolvedValue({ models: [] } as any);
+      mockGatewayGetAvailableModels.mockResolvedValue({ models: [] } as unknown);
 
       const models = await getAvailableModels();
 
