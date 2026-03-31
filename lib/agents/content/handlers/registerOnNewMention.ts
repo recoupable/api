@@ -5,6 +5,7 @@ import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
 import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadiness";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { parseContentPrompt } from "../parseContentPrompt";
+import { extractMessageAttachments } from "../extractMessageAttachments";
 
 /**
  * Registers the onNewMention handler on the content agent bot.
@@ -24,6 +25,9 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       const { lipsync, batch, captionLength, upscale, template, songs } = await parseContentPrompt(
         message.text,
       );
+
+      // Extract audio/image attachments from the Slack message
+      const { attachedAudioUrl, attachedImageUrl } = await extractMessageAttachments(message);
 
       // Resolve artist slug
       const artistSlug = await resolveArtistSlug(artistAccountId);
@@ -65,6 +69,12 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       if (songs && songs.length > 0) {
         details.push(`- Songs: ${songs.join(", ")}`);
       }
+      if (attachedAudioUrl) {
+        details.push("- Audio: attached file");
+      }
+      if (attachedImageUrl) {
+        details.push("- Image: attached file (face guide)");
+      }
       await thread.post(
         `Generating content...\n${details.join("\n")}\n\nI'll reply here when ready (~5-10 min).`,
       );
@@ -79,6 +89,8 @@ export function registerOnNewMention(bot: ContentAgentBot) {
         upscale,
         githubRepo,
         ...(songs && songs.length > 0 && { songs }),
+        ...(attachedAudioUrl && { attachedAudioUrl }),
+        ...(attachedImageUrl && { attachedImageUrl }),
       };
 
       const results = await Promise.allSettled(

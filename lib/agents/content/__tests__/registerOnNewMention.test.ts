@@ -29,11 +29,16 @@ vi.mock("../parseContentPrompt", () => ({
   parseContentPrompt: vi.fn(),
 }));
 
+vi.mock("../extractMessageAttachments", () => ({
+  extractMessageAttachments: vi.fn(),
+}));
+
 const { triggerCreateContent } = await import("@/lib/trigger/triggerCreateContent");
 const { triggerPollContentRun } = await import("@/lib/trigger/triggerPollContentRun");
 const { resolveArtistSlug } = await import("@/lib/content/resolveArtistSlug");
 const { getArtistContentReadiness } = await import("@/lib/content/getArtistContentReadiness");
 const { parseContentPrompt } = await import("../parseContentPrompt");
+const { extractMessageAttachments } = await import("../extractMessageAttachments");
 
 /**
  * Creates a mock content agent bot for testing.
@@ -76,6 +81,10 @@ function createMockMessage(text: string) {
 describe("registerOnNewMention", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(extractMessageAttachments).mockResolvedValue({
+      attachedAudioUrl: null,
+      attachedImageUrl: null,
+    });
   });
 
   it("registers a handler on the bot", () => {
@@ -271,6 +280,130 @@ describe("registerOnNewMention", () => {
     expect(ackMessage).not.toContain("**");
     expect(ackMessage).toContain("Lipsync:");
     expect(ackMessage).toContain("Videos:");
+  });
+
+  it("passes attachedAudioUrl to triggerCreateContent when audio is attached", async () => {
+    const bot = createMockBot();
+    registerOnNewMention(bot as never);
+
+    vi.mocked(parseContentPrompt).mockResolvedValue({
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+    });
+    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
+    vi.mocked(getArtistContentReadiness).mockResolvedValue({
+      githubRepo: "https://github.com/test/repo",
+    } as never);
+    vi.mocked(extractMessageAttachments).mockResolvedValue({
+      attachedAudioUrl: "https://blob.vercel-storage.com/song.mp3",
+      attachedImageUrl: null,
+    });
+    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+
+    const thread = createMockThread();
+    const message = createMockMessage("make a video");
+    await bot.getHandler()!(thread, message);
+
+    expect(triggerCreateContent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attachedAudioUrl: "https://blob.vercel-storage.com/song.mp3",
+      }),
+    );
+  });
+
+  it("passes attachedImageUrl to triggerCreateContent when image is attached", async () => {
+    const bot = createMockBot();
+    registerOnNewMention(bot as never);
+
+    vi.mocked(parseContentPrompt).mockResolvedValue({
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+    });
+    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
+    vi.mocked(getArtistContentReadiness).mockResolvedValue({
+      githubRepo: "https://github.com/test/repo",
+    } as never);
+    vi.mocked(extractMessageAttachments).mockResolvedValue({
+      attachedAudioUrl: null,
+      attachedImageUrl: "https://blob.vercel-storage.com/face.png",
+    });
+    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+
+    const thread = createMockThread();
+    const message = createMockMessage("make a video");
+    await bot.getHandler()!(thread, message);
+
+    expect(triggerCreateContent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attachedImageUrl: "https://blob.vercel-storage.com/face.png",
+      }),
+    );
+  });
+
+  it("omits attachment URLs from payload when no media is attached", async () => {
+    const bot = createMockBot();
+    registerOnNewMention(bot as never);
+
+    vi.mocked(parseContentPrompt).mockResolvedValue({
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+    });
+    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
+    vi.mocked(getArtistContentReadiness).mockResolvedValue({
+      githubRepo: "https://github.com/test/repo",
+    } as never);
+    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+
+    const thread = createMockThread();
+    const message = createMockMessage("make a video");
+    await bot.getHandler()!(thread, message);
+
+    const payload = vi.mocked(triggerCreateContent).mock.calls[0][0];
+    expect(payload).not.toHaveProperty("attachedAudioUrl");
+    expect(payload).not.toHaveProperty("attachedImageUrl");
+  });
+
+  it("includes attached media notes in acknowledgment message", async () => {
+    const bot = createMockBot();
+    registerOnNewMention(bot as never);
+
+    vi.mocked(parseContentPrompt).mockResolvedValue({
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+    });
+    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
+    vi.mocked(getArtistContentReadiness).mockResolvedValue({
+      githubRepo: "https://github.com/test/repo",
+    } as never);
+    vi.mocked(extractMessageAttachments).mockResolvedValue({
+      attachedAudioUrl: "https://blob.vercel-storage.com/song.mp3",
+      attachedImageUrl: "https://blob.vercel-storage.com/face.png",
+    });
+    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+
+    const thread = createMockThread();
+    const message = createMockMessage("make a video");
+    await bot.getHandler()!(thread, message);
+
+    const ackMessage = thread.post.mock.calls[0][0] as string;
+    expect(ackMessage).toContain("Audio: attached file");
+    expect(ackMessage).toContain("Image: attached file");
   });
 
   it("includes song names in acknowledgment message", async () => {

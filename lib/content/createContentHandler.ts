@@ -9,6 +9,8 @@ import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectA
 /**
  * Handler for POST /api/content/create.
  * Always returns runIds array (KISS — one response shape for single and batch).
+ *
+ * @param request
  */
 export async function createContentHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateCreateContentBody(request);
@@ -50,6 +52,8 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
       upscale: validated.upscale,
       githubRepo,
       songs: validated.songs,
+      ...(validated.attachedAudioUrl && { attachedAudioUrl: validated.attachedAudioUrl }),
+      ...(validated.attachedImageUrl && { attachedImageUrl: validated.attachedImageUrl }),
     };
 
     // Always use allSettled — works for single and batch.

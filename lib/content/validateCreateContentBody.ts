@@ -27,6 +27,8 @@ export const createContentBodySchema = z.object({
   upscale: z.boolean().optional().default(false),
   batch: z.number().int().min(1).max(30).optional().default(1),
   songs: songsSchema,
+  attached_audio_url: z.string().url().optional(),
+  attached_image_url: z.string().url().optional(),
 });
 
 export type ValidatedCreateContentBody = {
@@ -39,10 +41,14 @@ export type ValidatedCreateContentBody = {
   upscale: boolean;
   batch: number;
   songs?: string[];
+  attachedAudioUrl?: string;
+  attachedImageUrl?: string;
 };
 
 /**
  * Validates auth and request body for POST /api/content/create.
+ *
+ * @param request
  */
 export async function validateCreateContentBody(
   request: NextRequest,
@@ -98,5 +104,7 @@ export async function validateCreateContentBody(
     upscale: result.data.upscale ?? false,
     batch: result.data.batch ?? 1,
     songs: result.data.songs,
+    attachedAudioUrl: result.data.attached_audio_url,
+    attachedImageUrl: result.data.attached_image_url,
   };
 }
