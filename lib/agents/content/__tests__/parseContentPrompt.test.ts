@@ -188,4 +188,35 @@ describe("parseContentPrompt", () => {
 
     expect(result.songs).toBeUndefined();
   });
+
+  it("extracts artistName from prompt when an artist is mentioned", async () => {
+    const flags: ContentPromptFlags = {
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+      artistName: "Mac Miller",
+    };
+    mockGenerate.mockResolvedValue({ output: flags });
+
+    const result = await parseContentPrompt("generate a video for Mac Miller");
+
+    expect(result.artistName).toBe("Mac Miller");
+  });
+
+  it("returns undefined artistName when no artist is mentioned", async () => {
+    const flags: ContentPromptFlags = {
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+    };
+    mockGenerate.mockResolvedValue({ output: flags });
+
+    const result = await parseContentPrompt("make me a video");
+
+    expect(result.artistName).toBeUndefined();
+  });
 });
