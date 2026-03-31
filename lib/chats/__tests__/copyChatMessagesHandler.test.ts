@@ -147,4 +147,17 @@ describe("copyChatMessagesHandler", () => {
     expect(body.copied_count).toBe(0);
     expect(body.cleared_existing).toBe(false);
   });
+
+  it("returns 500 when validation throws unexpectedly", async () => {
+    vi.mocked(validateCopyChatMessagesBody).mockRejectedValue(new Error("boom"));
+
+    const response = await copyChatMessagesHandler(request, sourceChatId);
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      status: "error",
+      error: "Failed to copy chat messages",
+    });
+  });
 });
