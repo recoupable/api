@@ -69,6 +69,8 @@ export async function extractMessageAttachments(
  * @param prefix
  */
 async function uploadAttachment(attachment: Attachment, prefix: string): Promise<string | null> {
+  console.log(`[content-agent] uploadAttachment: type=${attachment.type}, name=${attachment.name}, mimeType=${attachment.mimeType}, url=${attachment.url}, hasFetchData=${!!attachment.fetchData}, hasData=${!!attachment.data}`);
+
   const data = attachment.fetchData ? await attachment.fetchData() : attachment.data;
 
   if (!data) {
@@ -76,9 +78,14 @@ async function uploadAttachment(attachment: Attachment, prefix: string): Promise
     return null;
   }
 
+  const isBuffer = Buffer.isBuffer(data);
+  const size = isBuffer ? (data as Buffer).byteLength : (data as Blob).size;
+  console.log(`[content-agent] uploadAttachment: fetched data, isBuffer=${isBuffer}, size=${size}`);
+
   const filename = attachment.name ?? "attachment";
   const blobPath = `content-attachments/${prefix}/${Date.now()}-${filename}`;
 
   const blob = await put(blobPath, data, { access: "public" });
+  console.log(`[content-agent] uploadAttachment: uploaded to ${blob.url}`);
   return blob.url;
 }
