@@ -54,6 +54,14 @@ vi.mock("@/lib/chat/handleChatCompletion", () => ({
   handleChatCompletion: vi.fn(),
 }));
 
+vi.mock("@/lib/credits/handleChatCredits", () => ({
+  handleChatCredits: vi.fn(),
+}));
+
+vi.mock("@/lib/const", () => ({
+  DEFAULT_MODEL: "openai/gpt-5-mini",
+}));
+
 vi.mock("ai", () => ({
   createUIMessageStream: vi.fn(),
   createUIMessageStreamResponse: vi.fn(),
