@@ -4,6 +4,7 @@ interface Attachment {
   type: "image" | "file" | "video" | "audio";
   mimeType?: string;
   name?: string;
+  url?: string;
   data?: Buffer | Blob;
   fetchData?: () => Promise<Buffer>;
 }
