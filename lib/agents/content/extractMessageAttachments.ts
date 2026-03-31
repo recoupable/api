@@ -65,39 +65,23 @@ export async function extractMessageAttachments(
 /**
  * Downloads a Slack file and uploads to Vercel Blob.
  *
- * Slack's attachment.url is a thumbnail/preview URL that returns HTML.
- * We convert it to the download URL format and use the bot token for auth.
- * Pattern: files-tmb/TEAM-FILEID-HASH/name → files-pri/TEAM-FILEID/download/name
+ * Uses Slack's files.info API to get the url_private_download URL,
+ * then downloads with Bearer token auth. The attachment.url from the
+ * Chat SDK is a thumbnail URL that doesn't serve actual file content.
  */
 async function resolveAttachmentUrl(attachment: Attachment, prefix: string): Promise<string | null> {
   let data: Buffer | null = null;
   const token = process.env.SLACK_CONTENT_BOT_TOKEN;
 
+  // Extract Slack file ID from the attachment URL and use files.info API
   if (attachment.url && token) {
-    // Convert thumbnail URL to download URL
-    const downloadUrl = toSlackDownloadUrl(attachment.url);
-    console.log(`[content-agent] Downloading: ${downloadUrl}`);
-
-    const response = await fetch(downloadUrl, {
-      headers: { Authorization: `Bearer ${token}` },
-      redirect: "follow",
-    });
-
-    if (response.ok) {
-      const contentType = response.headers.get("content-type") ?? "";
-      // Verify we got actual file data, not an HTML page
-      if (!contentType.includes("text/html")) {
-        data = Buffer.from(await response.arrayBuffer());
-        console.log(`[content-agent] Downloaded: size=${data.byteLength}, contentType=${contentType}`);
-      } else {
-        console.error(`[content-agent] Got HTML instead of file from: ${downloadUrl}`);
-      }
-    } else {
-      console.error(`[content-agent] Download failed: ${response.status} ${response.statusText}`);
+    const fileId = extractSlackFileId(attachment.url);
+    if (fileId) {
+      data = await downloadSlackFile(fileId, token);
     }
   }
 
-  // Fallback to fetchData / data if Slack download didn't work
+  // Fallback to fetchData / data
   if (!data) {
     const raw = attachment.fetchData ? await attachment.fetchData() : attachment.data;
     if (raw) data = Buffer.isBuffer(raw) ? raw : Buffer.from(raw as unknown as ArrayBuffer);
@@ -118,22 +102,79 @@ async function resolveAttachmentUrl(attachment: Attachment, prefix: string): Pro
 }
 
 /**
- * Converts a Slack thumbnail/preview URL to the private file URL.
- * files-tmb/TEAM-FILEID-HASH/name → files-pri/TEAM-FILEID/name
- * Strips the trailing hash suffix from the ID segment.
+ * Extracts the Slack file ID (e.g. F0APMKTKG9M) from a Slack file URL.
+ * URL format: files-tmb/TEAMID-FILEID-HASH/name or files-pri/TEAMID-FILEID/name
  */
-function toSlackDownloadUrl(url: string): string {
+function extractSlackFileId(url: string): string | null {
   try {
-    const parsed = new URL(url);
-    // Replace files-tmb with files-pri
-    let path = parsed.pathname.replace("/files-tmb/", "/files-pri/");
-    // Strip trailing hash from ID segment (e.g. T06-F0AP-eecb5f6c23 → T06-F0AP)
-    path = path.replace(
-      /\/files-pri\/([A-Z0-9]+-[A-Z0-9]+)-[a-f0-9]+\//,
-      "/files-pri/$1/",
-    );
-    return `https://files.slack.com${path}`;
+    const parts = new URL(url).pathname.split("/").filter(Boolean);
+    // parts[1] is "TEAMID-FILEID-HASH" or "TEAMID-FILEID"
+    if (parts.length >= 2) {
+      const segments = parts[1].split("-");
+      // File ID is the second segment (e.g. F0APMKTKG9M)
+      if (segments.length >= 2) {
+        return segments[1];
+      }
+    }
   } catch {
-    return url;
+    // ignore
   }
+  return null;
+}
+
+/**
+ * Downloads a file from Slack using the files.info API to get
+ * url_private_download, then fetches the actual file content.
+ */
+async function downloadSlackFile(fileId: string, token: string): Promise<Buffer | null> {
+  console.log(`[content-agent] Fetching file info for ${fileId}`);
+
+  // Get url_private_download from files.info
+  const infoResponse = await fetch(`https://slack.com/api/files.info?file=${fileId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!infoResponse.ok) {
+    console.error(`[content-agent] files.info failed: ${infoResponse.status}`);
+    return null;
+  }
+
+  const info = (await infoResponse.json()) as {
+    ok: boolean;
+    file?: { url_private_download?: string; url_private?: string; size?: number };
+    error?: string;
+  };
+
+  if (!info.ok || !info.file) {
+    console.error(`[content-agent] files.info error: ${info.error ?? "no file"}`);
+    return null;
+  }
+
+  const downloadUrl = info.file.url_private_download ?? info.file.url_private;
+  if (!downloadUrl) {
+    console.error(`[content-agent] No download URL in files.info response`);
+    return null;
+  }
+
+  console.log(`[content-agent] Downloading from: ${downloadUrl}, expectedSize=${info.file.size}`);
+
+  // Download the actual file
+  const fileResponse = await fetch(downloadUrl, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!fileResponse.ok) {
+    console.error(`[content-agent] File download failed: ${fileResponse.status}`);
+    return null;
+  }
+
+  const contentType = fileResponse.headers.get("content-type") ?? "";
+  if (contentType.includes("text/html")) {
+    console.error(`[content-agent] Got HTML instead of file content`);
+    return null;
+  }
+
+  const data = Buffer.from(await fileResponse.arrayBuffer());
+  console.log(`[content-agent] Downloaded: size=${data.byteLength}, contentType=${contentType}`);
+  return data;
 }
