@@ -28,7 +28,6 @@ export async function resolveAttachmentUrl(
   let data: Buffer | null = null;
   const token = process.env.SLACK_CONTENT_BOT_TOKEN;
 
-  // Extract Slack file ID from the attachment URL and use files.info API
   if (attachment.url && token) {
     const fileId = extractSlackFileId(attachment.url);
     if (fileId) {
@@ -54,6 +53,5 @@ export async function resolveAttachmentUrl(
   const contentType = attachment.mimeType ?? (prefix === "audio" ? "audio/mpeg" : "image/png");
 
   const blob = await put(blobPath, data, { access: "public", contentType });
-  console.log(`[content-agent] Uploaded to Blob: ${blob.url}, size=${data.byteLength}`);
   return blob.url;
 }

@@ -47,9 +47,7 @@ describe("extractMessageAttachments", () => {
       access: "public",
       contentType: "audio/mpeg",
     });
-    expect(result.songUrl).toBe(
-      "https://blob.vercel-storage.com/content-attachments/my-song.mp3",
-    );
+    expect(result.songUrl).toBe("https://blob.vercel-storage.com/content-attachments/my-song.mp3");
     expect(result.imageUrl).toBeNull();
   });
 
@@ -71,9 +69,7 @@ describe("extractMessageAttachments", () => {
 
     const result = await extractMessageAttachments(message as never);
 
-    expect(result.imageUrl).toBe(
-      "https://blob.vercel-storage.com/content-attachments/face.png",
-    );
+    expect(result.imageUrl).toBe("https://blob.vercel-storage.com/content-attachments/face.png");
     expect(result.songUrl).toBeNull();
   });
 

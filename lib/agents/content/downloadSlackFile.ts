@@ -6,9 +6,6 @@
  * @param token
  */
 export async function downloadSlackFile(fileId: string, token: string): Promise<Buffer | null> {
-  console.log(`[content-agent] Fetching file info for ${fileId}`);
-
-  // Get url_private_download from files.info
   const infoResponse = await fetch(`https://slack.com/api/files.info?file=${fileId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -35,9 +32,6 @@ export async function downloadSlackFile(fileId: string, token: string): Promise<
     return null;
   }
 
-  console.log(`[content-agent] Downloading from: ${downloadUrl}, expectedSize=${info.file.size}`);
-
-  // Download the actual file
   const fileResponse = await fetch(downloadUrl, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -53,7 +47,5 @@ export async function downloadSlackFile(fileId: string, token: string): Promise<
     return null;
   }
 
-  const data = Buffer.from(await fileResponse.arrayBuffer());
-  console.log(`[content-agent] Downloaded: size=${data.byteLength}, contentType=${contentType}`);
-  return data;
+  return Buffer.from(await fileResponse.arrayBuffer());
 }
