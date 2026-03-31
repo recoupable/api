@@ -26,54 +26,46 @@ export async function validateChatAccess(
   request: NextRequest,
   roomId: string,
 ): Promise<NextResponse | ValidatedChatAccess> {
-  try {
-    const roomIdResult = chatIdSchema.safeParse(roomId);
-    if (!roomIdResult.success) {
-      return NextResponse.json(
-        { status: "error", error: roomIdResult.error.issues[0]?.message || "Invalid chat ID" },
-        { status: 400, headers: getCorsHeaders() },
-      );
-    }
-
-    const authResult = await validateAuthContext(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
-
-    const { accountId } = authResult;
-
-    const room = await selectRoom(roomIdResult.data);
-    if (!room) {
-      return NextResponse.json(
-        { status: "error", error: "Chat room not found" },
-        { status: 404, headers: getCorsHeaders() },
-      );
-    }
-
-    const { params, error } = await buildGetChatsParams({
-      account_id: accountId,
-    });
-
-    if (!params) {
-      return NextResponse.json(
-        { status: "error", error: error ?? "Access denied" },
-        { status: 403, headers: getCorsHeaders() },
-      );
-    }
-
-    if (!room.account_id || !params.account_ids.includes(room.account_id)) {
-      return NextResponse.json(
-        { status: "error", error: "Access denied to this chat" },
-        { status: 403, headers: getCorsHeaders() },
-      );
-    }
-
-    return { roomId: room.id, room, accountId };
-  } catch (error) {
-    console.error("Error validating chat access:", error);
+  const roomIdResult = chatIdSchema.safeParse(roomId);
+  if (!roomIdResult.success) {
     return NextResponse.json(
-      { status: "error", error: "Failed to validate chat access" },
-      { status: 500, headers: getCorsHeaders() },
+      { status: "error", error: roomIdResult.error.issues[0]?.message || "Invalid chat ID" },
+      { status: 400, headers: getCorsHeaders() },
     );
   }
+
+  const authResult = await validateAuthContext(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
+  const { accountId } = authResult;
+
+  const room = await selectRoom(roomIdResult.data);
+  if (!room) {
+    return NextResponse.json(
+      { status: "error", error: "Chat room not found" },
+      { status: 404, headers: getCorsHeaders() },
+    );
+  }
+
+  const { params, error } = await buildGetChatsParams({
+    account_id: accountId,
+  });
+
+  if (!params) {
+    return NextResponse.json(
+      { status: "error", error: error ?? "Access denied" },
+      { status: 403, headers: getCorsHeaders() },
+    );
+  }
+
+  if (!room.account_id || !params.account_ids.includes(room.account_id)) {
+    return NextResponse.json(
+      { status: "error", error: "Access denied to this chat" },
+      { status: 403, headers: getCorsHeaders() },
+    );
+  }
+
+  return { roomId: room.id, room, accountId };
 }

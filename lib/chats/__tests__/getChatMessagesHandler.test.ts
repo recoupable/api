@@ -100,4 +100,40 @@ describe("getChatMessagesHandler", () => {
       ],
     });
   });
+
+  it("returns 500 when validateChatAccess throws unexpectedly", async () => {
+    vi.mocked(validateChatAccess).mockRejectedValue(new Error("boom"));
+
+    const response = await getChatMessagesHandler(createRequest(roomId), roomId);
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      status: "error",
+      error: "Failed to retrieve memories",
+    });
+  });
+
+  it("returns 500 when selectMemories throws unexpectedly", async () => {
+    vi.mocked(validateChatAccess).mockResolvedValue({
+      room: {
+        id: roomId,
+        account_id: null,
+        artist_id: null,
+        topic: null,
+        updated_at: null,
+      },
+      accountId: "11111111-1111-1111-1111-111111111111",
+    });
+    vi.mocked(selectMemories).mockRejectedValue(new Error("db blew up"));
+
+    const response = await getChatMessagesHandler(createRequest(roomId), roomId);
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      status: "error",
+      error: "Failed to retrieve memories",
+    });
+  });
 });

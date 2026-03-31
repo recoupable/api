@@ -20,24 +20,42 @@ export async function getChatMessagesHandler(
   request: NextRequest,
   id: string,
 ): Promise<NextResponse> {
-  const parsedId = chatIdSchema.safeParse(id);
-  if (!parsedId.success) {
+  try {
+    const parsedId = chatIdSchema.safeParse(id);
+    if (!parsedId.success) {
+      return NextResponse.json(
+        {
+          status: "error",
+          error: parsedId.error.issues[0]?.message || "Invalid chat ID",
+        },
+        { status: 400, headers: getCorsHeaders() },
+      );
+    }
+
+    const roomResult = await validateChatAccess(request, parsedId.data);
+    if (roomResult instanceof NextResponse) {
+      return roomResult;
+    }
+
+    const memories = await selectMemories(roomResult.room.id, { ascending: true });
+    if (memories === null) {
+      return NextResponse.json(
+        {
+          status: "error",
+          error: "Failed to retrieve memories",
+        },
+        { status: 500, headers: getCorsHeaders() },
+      );
+    }
+
     return NextResponse.json(
       {
-        status: "error",
-        error: parsedId.error.issues[0]?.message || "Invalid chat ID",
+        data: memories,
       },
-      { status: 400, headers: getCorsHeaders() },
+      { status: 200, headers: getCorsHeaders() },
     );
-  }
-
-  const roomResult = await validateChatAccess(request, parsedId.data);
-  if (roomResult instanceof NextResponse) {
-    return roomResult;
-  }
-
-  const memories = await selectMemories(roomResult.room.id, { ascending: true });
-  if (memories === null) {
+  } catch (error) {
+    console.error("Unexpected error in getChatMessagesHandler:", error);
     return NextResponse.json(
       {
         status: "error",
@@ -46,11 +64,4 @@ export async function getChatMessagesHandler(
       { status: 500, headers: getCorsHeaders() },
     );
   }
-
-  return NextResponse.json(
-    {
-      data: memories,
-    },
-    { status: 200, headers: getCorsHeaders() },
-  );
 }
