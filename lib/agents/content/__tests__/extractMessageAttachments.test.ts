@@ -24,7 +24,35 @@ describe("extractMessageAttachments", () => {
     expect(result).toEqual({ songUrl: null, imageUrl: null });
   });
 
-  it("extracts and uploads an audio attachment", async () => {
+  it("uses direct URL when attachment has url field (skips Blob)", async () => {
+    const message = {
+      text: "hello",
+      attachments: [
+        {
+          type: "audio",
+          name: "song.mp3",
+          url: "https://files.slack.com/files-pri/T123/song.mp3",
+          fetchData: vi.fn(),
+        },
+        {
+          type: "image",
+          name: "face.png",
+          url: "https://files.slack.com/files-pri/T123/face.png",
+          fetchData: vi.fn(),
+        },
+      ],
+    };
+
+    const result = await extractMessageAttachments(message as never);
+
+    expect(result.songUrl).toBe("https://files.slack.com/files-pri/T123/song.mp3");
+    expect(result.imageUrl).toBe("https://files.slack.com/files-pri/T123/face.png");
+    expect(put).not.toHaveBeenCalled();
+    expect(message.attachments[0].fetchData).not.toHaveBeenCalled();
+    expect(message.attachments[1].fetchData).not.toHaveBeenCalled();
+  });
+
+  it("falls back to Blob upload when no url field", async () => {
     const audioBuffer = Buffer.from("fake-audio-data");
     const message = {
       text: "hello",

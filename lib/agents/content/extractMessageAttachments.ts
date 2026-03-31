@@ -19,11 +19,10 @@ export interface ExtractedAttachments {
 }
 
 /**
- * Extracts audio and image attachments from a Slack message, uploads them
- * to Vercel Blob storage, and returns public URLs for the content pipeline.
- *
- * @param message - The chat message with optional attachments
- * @returns Public URLs for the first audio and first image attachment found
+ * Extracts audio and image attachments from a Slack message and returns
+ * public URLs for the content pipeline. Prefers the attachment's direct URL
+ * when available; falls back to downloading via fetchData and re-uploading
+ * to Vercel Blob storage.
  */
 export async function extractMessageAttachments(
   message: MessageWithAttachments,
@@ -46,17 +45,17 @@ export async function extractMessageAttachments(
 
   if (audioAttachment) {
     try {
-      result.songUrl = await uploadAttachment(audioAttachment, "audio");
+      result.songUrl = await resolveAttachmentUrl(audioAttachment, "audio");
     } catch (error) {
-      console.error("[content-agent] Failed to upload audio attachment:", error);
+      console.error("[content-agent] Failed to resolve audio attachment:", error);
     }
   }
 
   if (imageAttachment) {
     try {
-      result.imageUrl = await uploadAttachment(imageAttachment, "image");
+      result.imageUrl = await resolveAttachmentUrl(imageAttachment, "image");
     } catch (error) {
-      console.error("[content-agent] Failed to upload image attachment:", error);
+      console.error("[content-agent] Failed to resolve image attachment:", error);
     }
   }
 
@@ -64,29 +63,27 @@ export async function extractMessageAttachments(
 }
 
 /**
- * Downloads attachment data and uploads it to Vercel Blob storage.
- *
- * @param attachment
- * @param prefix
+ * Resolves a public URL for an attachment. Uses the attachment's direct URL
+ * if available (avoids re-upload corruption). Falls back to fetchData + Blob
+ * upload for platforms with private URLs.
  */
-async function uploadAttachment(attachment: Attachment, prefix: string): Promise<string | null> {
-  console.log(`[content-agent] uploadAttachment: type=${attachment.type}, name=${attachment.name}, mimeType=${attachment.mimeType}, url=${attachment.url}, hasFetchData=${!!attachment.fetchData}, hasData=${!!attachment.data}`);
+async function resolveAttachmentUrl(attachment: Attachment, prefix: string): Promise<string | null> {
+  // Prefer direct URL — avoids download+reupload corruption
+  if (attachment.url) {
+    console.log(`[content-agent] Using direct attachment URL: ${attachment.url}`);
+    return attachment.url;
+  }
 
+  // Fallback: download and upload to Blob
   const data = attachment.fetchData ? await attachment.fetchData() : attachment.data;
-
   if (!data) {
-    console.error(`[content-agent] Attachment "${attachment.name ?? "unknown"}" has no data`);
+    console.error(`[content-agent] Attachment "${attachment.name ?? "unknown"}" has no URL or data`);
     return null;
   }
 
-  const isBuffer = Buffer.isBuffer(data);
-  const size = isBuffer ? (data as Buffer).byteLength : (data as Blob).size;
-  console.log(`[content-agent] uploadAttachment: fetched data, isBuffer=${isBuffer}, size=${size}`);
-
   const filename = attachment.name ?? "attachment";
   const blobPath = `content-attachments/${prefix}/${Date.now()}-${filename}`;
-
   const blob = await put(blobPath, data, { access: "public" });
-  console.log(`[content-agent] uploadAttachment: uploaded to ${blob.url}`);
+  console.log(`[content-agent] Uploaded to Blob: ${blob.url}`);
   return blob.url;
 }
