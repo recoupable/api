@@ -27,7 +27,7 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       );
 
       // Extract audio/image attachments from the Slack message
-      const { attachedAudioUrl, attachedImageUrl } = await extractMessageAttachments(message);
+      const { songUrl, imageUrl } = await extractMessageAttachments(message);
 
       // Resolve artist slug
       const artistSlug = await resolveArtistSlug(artistAccountId);
@@ -69,15 +69,18 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       if (songs && songs.length > 0) {
         details.push(`- Songs: ${songs.join(", ")}`);
       }
-      if (attachedAudioUrl) {
+      if (songUrl) {
         details.push("- Audio: attached file");
       }
-      if (attachedImageUrl) {
+      if (imageUrl) {
         details.push("- Image: attached file (face guide)");
       }
       await thread.post(
         `Generating content...\n${details.join("\n")}\n\nI'll reply here when ready (~5-10 min).`,
       );
+
+      // Build songs array: merge parsed slugs with attached audio URL
+      const allSongs = [...(songs ?? []), ...(songUrl ? [songUrl] : [])];
 
       // Trigger content creation
       const payload = {
@@ -88,9 +91,8 @@ export function registerOnNewMention(bot: ContentAgentBot) {
         captionLength,
         upscale,
         githubRepo,
-        ...(songs && songs.length > 0 && { songs }),
-        ...(attachedAudioUrl && { attachedAudioUrl }),
-        ...(attachedImageUrl && { attachedImageUrl }),
+        ...(allSongs.length > 0 && { songs: allSongs }),
+        ...(imageUrl && { images: [imageUrl] }),
       };
 
       const results = await Promise.allSettled(

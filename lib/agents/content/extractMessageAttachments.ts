@@ -12,8 +12,8 @@ interface MessageWithAttachments {
 }
 
 export interface ExtractedAttachments {
-  attachedAudioUrl: string | null;
-  attachedImageUrl: string | null;
+  songUrl: string | null;
+  imageUrl: string | null;
 }
 
 /**
@@ -27,8 +27,8 @@ export async function extractMessageAttachments(
   message: MessageWithAttachments,
 ): Promise<ExtractedAttachments> {
   const result: ExtractedAttachments = {
-    attachedAudioUrl: null,
-    attachedImageUrl: null,
+    songUrl: null,
+    imageUrl: null,
   };
 
   const attachments = message.attachments;
@@ -41,7 +41,7 @@ export async function extractMessageAttachments(
 
   if (audioAttachment) {
     try {
-      result.attachedAudioUrl = await uploadAttachment(audioAttachment, "audio");
+      result.songUrl = await uploadAttachment(audioAttachment, "audio");
     } catch (error) {
       console.error("[content-agent] Failed to upload audio attachment:", error);
     }
@@ -49,7 +49,7 @@ export async function extractMessageAttachments(
 
   if (imageAttachment) {
     try {
-      result.attachedImageUrl = await uploadAttachment(imageAttachment, "image");
+      result.imageUrl = await uploadAttachment(imageAttachment, "image");
     } catch (error) {
       console.error("[content-agent] Failed to upload image attachment:", error);
     }

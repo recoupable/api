@@ -15,13 +15,13 @@ describe("extractMessageAttachments", () => {
   it("returns null values when message has no attachments", async () => {
     const message = { text: "hello", attachments: [] };
     const result = await extractMessageAttachments(message as never);
-    expect(result).toEqual({ attachedAudioUrl: null, attachedImageUrl: null });
+    expect(result).toEqual({ songUrl: null, imageUrl: null });
   });
 
   it("returns null values when attachments is undefined", async () => {
     const message = { text: "hello" };
     const result = await extractMessageAttachments(message as never);
-    expect(result).toEqual({ attachedAudioUrl: null, attachedImageUrl: null });
+    expect(result).toEqual({ songUrl: null, imageUrl: null });
   });
 
   it("extracts and uploads an audio attachment", async () => {
@@ -46,10 +46,10 @@ describe("extractMessageAttachments", () => {
     expect(put).toHaveBeenCalledWith(expect.stringContaining("my-song.mp3"), audioBuffer, {
       access: "public",
     });
-    expect(result.attachedAudioUrl).toBe(
+    expect(result.songUrl).toBe(
       "https://blob.vercel-storage.com/content-attachments/my-song.mp3",
     );
-    expect(result.attachedImageUrl).toBeNull();
+    expect(result.imageUrl).toBeNull();
   });
 
   it("extracts and uploads an image attachment", async () => {
@@ -70,10 +70,10 @@ describe("extractMessageAttachments", () => {
 
     const result = await extractMessageAttachments(message as never);
 
-    expect(result.attachedImageUrl).toBe(
+    expect(result.imageUrl).toBe(
       "https://blob.vercel-storage.com/content-attachments/face.png",
     );
-    expect(result.attachedAudioUrl).toBeNull();
+    expect(result.songUrl).toBeNull();
   });
 
   it("extracts both audio and image when both are attached", async () => {
@@ -103,8 +103,8 @@ describe("extractMessageAttachments", () => {
 
     const result = await extractMessageAttachments(message as never);
 
-    expect(result.attachedAudioUrl).toBe("https://blob.vercel-storage.com/song.mp3");
-    expect(result.attachedImageUrl).toBe("https://blob.vercel-storage.com/photo.jpg");
+    expect(result.songUrl).toBe("https://blob.vercel-storage.com/song.mp3");
+    expect(result.imageUrl).toBe("https://blob.vercel-storage.com/photo.jpg");
   });
 
   it("uses attachment data buffer if fetchData is not available", async () => {
@@ -128,7 +128,7 @@ describe("extractMessageAttachments", () => {
     expect(put).toHaveBeenCalledWith(expect.stringContaining("inline.mp3"), audioBuffer, {
       access: "public",
     });
-    expect(result.attachedAudioUrl).toBe("https://blob.vercel-storage.com/inline.mp3");
+    expect(result.songUrl).toBe("https://blob.vercel-storage.com/inline.mp3");
   });
 
   it("uses first audio and first image when multiple of same type exist", async () => {
@@ -148,7 +148,7 @@ describe("extractMessageAttachments", () => {
     const result = await extractMessageAttachments(message as never);
 
     expect(put).toHaveBeenCalledTimes(1);
-    expect(result.attachedAudioUrl).toBe("https://blob.vercel-storage.com/first.mp3");
+    expect(result.songUrl).toBe("https://blob.vercel-storage.com/first.mp3");
   });
 
   it("ignores file attachments that are not audio or image", async () => {
@@ -163,7 +163,7 @@ describe("extractMessageAttachments", () => {
     const result = await extractMessageAttachments(message as never);
 
     expect(put).not.toHaveBeenCalled();
-    expect(result).toEqual({ attachedAudioUrl: null, attachedImageUrl: null });
+    expect(result).toEqual({ songUrl: null, imageUrl: null });
   });
 
   it("returns null when attachment has no data and no fetchData", async () => {
@@ -180,7 +180,7 @@ describe("extractMessageAttachments", () => {
     const result = await extractMessageAttachments(message as never);
 
     expect(put).not.toHaveBeenCalled();
-    expect(result.attachedAudioUrl).toBeNull();
+    expect(result.songUrl).toBeNull();
   });
 
   it("gracefully handles upload failure without crashing", async () => {
@@ -209,8 +209,8 @@ describe("extractMessageAttachments", () => {
 
     const result = await extractMessageAttachments(message as never);
 
-    expect(result.attachedAudioUrl).toBeNull();
-    expect(result.attachedImageUrl).toBe("https://blob.vercel-storage.com/photo.jpg");
+    expect(result.songUrl).toBeNull();
+    expect(result.imageUrl).toBe("https://blob.vercel-storage.com/photo.jpg");
   });
 
   it("falls back to generic name when attachment name is missing", async () => {

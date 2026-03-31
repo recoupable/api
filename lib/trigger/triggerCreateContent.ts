@@ -12,12 +12,10 @@ export interface TriggerCreateContentPayload {
   upscale: boolean;
   /** GitHub repo URL so the task can fetch artist files. */
   githubRepo: string;
-  /** Optional list of song slugs to restrict which songs the pipeline picks from. */
+  /** Optional list of song slugs or public URLs. URLs are downloaded directly by the task. */
   songs?: string[];
-  /** Public URL of a user-attached audio file to use instead of selecting from Git songs. */
-  attachedAudioUrl?: string;
-  /** Public URL of a user-attached image to use as the face guide instead of the repo face-guide.png. */
-  attachedImageUrl?: string;
+  /** Optional list of public image URLs to use as face guides. */
+  images?: string[];
 }
 
 /**

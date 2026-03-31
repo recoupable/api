@@ -82,8 +82,8 @@ describe("registerOnNewMention", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(extractMessageAttachments).mockResolvedValue({
-      attachedAudioUrl: null,
-      attachedImageUrl: null,
+      songUrl: null,
+      imageUrl: null,
     });
   });
 
@@ -282,7 +282,7 @@ describe("registerOnNewMention", () => {
     expect(ackMessage).toContain("Videos:");
   });
 
-  it("passes attachedAudioUrl to triggerCreateContent when audio is attached", async () => {
+  it("adds song URL to songs array when audio is attached", async () => {
     const bot = createMockBot();
     registerOnNewMention(bot as never);
 
@@ -298,8 +298,8 @@ describe("registerOnNewMention", () => {
       githubRepo: "https://github.com/test/repo",
     } as never);
     vi.mocked(extractMessageAttachments).mockResolvedValue({
-      attachedAudioUrl: "https://blob.vercel-storage.com/song.mp3",
-      attachedImageUrl: null,
+      songUrl: "https://blob.vercel-storage.com/song.mp3",
+      imageUrl: null,
     });
     vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
@@ -308,14 +308,11 @@ describe("registerOnNewMention", () => {
     const message = createMockMessage("make a video");
     await bot.getHandler()!(thread, message);
 
-    expect(triggerCreateContent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        attachedAudioUrl: "https://blob.vercel-storage.com/song.mp3",
-      }),
-    );
+    const payload = vi.mocked(triggerCreateContent).mock.calls[0][0];
+    expect(payload.songs).toContain("https://blob.vercel-storage.com/song.mp3");
   });
 
-  it("passes attachedImageUrl to triggerCreateContent when image is attached", async () => {
+  it("passes images array to triggerCreateContent when image is attached", async () => {
     const bot = createMockBot();
     registerOnNewMention(bot as never);
 
@@ -331,8 +328,8 @@ describe("registerOnNewMention", () => {
       githubRepo: "https://github.com/test/repo",
     } as never);
     vi.mocked(extractMessageAttachments).mockResolvedValue({
-      attachedAudioUrl: null,
-      attachedImageUrl: "https://blob.vercel-storage.com/face.png",
+      songUrl: null,
+      imageUrl: "https://blob.vercel-storage.com/face.png",
     });
     vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
@@ -343,12 +340,12 @@ describe("registerOnNewMention", () => {
 
     expect(triggerCreateContent).toHaveBeenCalledWith(
       expect.objectContaining({
-        attachedImageUrl: "https://blob.vercel-storage.com/face.png",
+        images: ["https://blob.vercel-storage.com/face.png"],
       }),
     );
   });
 
-  it("omits attachment URLs from payload when no media is attached", async () => {
+  it("omits images from payload when no media is attached", async () => {
     const bot = createMockBot();
     registerOnNewMention(bot as never);
 
@@ -371,8 +368,7 @@ describe("registerOnNewMention", () => {
     await bot.getHandler()!(thread, message);
 
     const payload = vi.mocked(triggerCreateContent).mock.calls[0][0];
-    expect(payload).not.toHaveProperty("attachedAudioUrl");
-    expect(payload).not.toHaveProperty("attachedImageUrl");
+    expect(payload).not.toHaveProperty("images");
   });
 
   it("includes attached media notes in acknowledgment message", async () => {
@@ -391,8 +387,8 @@ describe("registerOnNewMention", () => {
       githubRepo: "https://github.com/test/repo",
     } as never);
     vi.mocked(extractMessageAttachments).mockResolvedValue({
-      attachedAudioUrl: "https://blob.vercel-storage.com/song.mp3",
-      attachedImageUrl: "https://blob.vercel-storage.com/face.png",
+      songUrl: "https://blob.vercel-storage.com/song.mp3",
+      imageUrl: "https://blob.vercel-storage.com/face.png",
     });
     vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
