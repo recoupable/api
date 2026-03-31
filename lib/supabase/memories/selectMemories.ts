@@ -17,25 +17,30 @@ export default async function selectMemories(
     limit?: number;
   },
 ): Promise<Tables<"memories">[] | null> {
-  const ascending = options?.ascending ?? false;
-  const limit = options?.limit;
+  try {
+    const ascending = options?.ascending ?? false;
+    const limit = options?.limit;
 
-  let query = supabase
-    .from("memories")
-    .select("*")
-    .eq("room_id", roomId)
-    .order("updated_at", { ascending });
+    let query = supabase
+      .from("memories")
+      .select("*")
+      .eq("room_id", roomId)
+      .order("updated_at", { ascending });
 
-  if (limit) {
-    query = query.limit(limit);
-  }
+    if (limit) {
+      query = query.limit(limit);
+    }
 
-  const { data, error } = await query;
+    const { data, error } = await query;
 
-  if (error) {
-    console.error("Error selecting memories:", error);
+    if (error) {
+      console.error("Error selecting memories:", error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Unexpected error selecting memories:", error);
     return null;
   }
-
-  return data;
 }

@@ -159,4 +159,19 @@ describe("validateChatAccess", () => {
     const result = await validateChatAccess(request, roomId);
     expect(result).toEqual({ roomId, room, accountId });
   });
+
+  it("returns 500 when an unexpected error occurs", async () => {
+    vi.mocked(validateAuthContext).mockRejectedValue(new Error("Unexpected auth error"));
+
+    const result = await validateChatAccess(request, roomId);
+    expect(result).toBeInstanceOf(NextResponse);
+    const response = result as NextResponse;
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      status: "error",
+      error: "Failed to validate chat access",
+    });
+  });
 });
