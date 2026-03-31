@@ -52,7 +52,7 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
       upscale: validated.upscale,
       githubRepo,
       songs: validated.songs,
-      ...(validated.images && validated.images.length > 0 && { images: validated.images }),
+      images: validated.images,
     };
 
     // Always use allSettled — works for single and batch.
