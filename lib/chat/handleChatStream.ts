@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { handleChatCompletion } from "./handleChatCompletion";
+import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import { validateChatRequest } from "./validateChatRequest";
 import { setupChatRequest } from "./setupChatRequest";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import generateUUID from "@/lib/uuid/generateUUID";
+import { DEFAULT_MODEL } from "@/lib/const";
 
 /**
  * Handles a streaming chat request.
@@ -28,15 +30,15 @@ export async function handleChatStream(request: NextRequest): Promise<Response> 
     const chatConfig = await setupChatRequest(body);
     const { agent } = chatConfig;
 
+    let streamResult: Awaited<ReturnType<typeof agent.stream>> | undefined;
+
     const stream = createUIMessageStream({
       originalMessages: body.messages,
       generateId: generateUUID,
       execute: async options => {
         const { writer } = options;
-        const result = await agent.stream(chatConfig);
-        writer.merge(result.toUIMessageStream());
-        // Note: Credit handling and chat completion handling will be added
-        // as part of the handleChatCredits and handleChatCompletion migrations
+        streamResult = await agent.stream(chatConfig);
+        writer.merge(streamResult.toUIMessageStream());
       },
       onFinish: async event => {
         if (event.isAborted) {
@@ -46,6 +48,13 @@ export async function handleChatStream(request: NextRequest): Promise<Response> 
         const responseMessages =
           assistantMessages.length > 0 ? assistantMessages : [event.responseMessage];
         await handleChatCompletion(body, responseMessages);
+        if (streamResult) {
+          await handleChatCredits({
+            usage: await streamResult.usage,
+            model: body.model ?? DEFAULT_MODEL,
+            accountId: body.accountId,
+          });
+        }
       },
       onError: e => {
         console.error("/api/chat onError:", e);
