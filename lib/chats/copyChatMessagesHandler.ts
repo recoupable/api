@@ -4,7 +4,6 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import selectMemories from "@/lib/supabase/memories/selectMemories";
 import insertCopiedMemories from "@/lib/supabase/memories/insertCopiedMemories";
-import deleteMemoriesByRoomId from "@/lib/supabase/memories/deleteMemoriesByRoomId";
 import { validateCopyChatMessagesBody } from "@/lib/chats/validateCopyChatMessagesBody";
 import { validateChatAccess } from "@/lib/chats/validateChatAccess";
 
@@ -40,24 +39,12 @@ export async function copyChatMessagesHandler(
     const accessibleSourceChatId = sourceAccess.roomId;
     const accessibleTargetChatId = targetAccess.roomId;
 
-    const { clearExisting } = validated;
-
     const sourceMemories = await selectMemories(accessibleSourceChatId, { ascending: true });
     if (!sourceMemories) {
       return NextResponse.json(
         { status: "error", error: "Failed to load source chat messages" },
         { status: 500, headers: getCorsHeaders() },
       );
-    }
-
-    if (clearExisting) {
-      const deleted = await deleteMemoriesByRoomId(accessibleTargetChatId);
-      if (!deleted) {
-        return NextResponse.json(
-          { status: "error", error: "Failed to clear target chat messages" },
-          { status: 500, headers: getCorsHeaders() },
-        );
-      }
     }
 
     const copiedCount = await insertCopiedMemories(
@@ -75,7 +62,6 @@ export async function copyChatMessagesHandler(
         source_chat_id: accessibleSourceChatId,
         target_chat_id: accessibleTargetChatId,
         copied_count: copiedCount,
-        cleared_existing: clearExisting,
       },
       { status: 200, headers: getCorsHeaders() },
     );

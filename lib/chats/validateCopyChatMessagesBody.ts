@@ -5,14 +5,12 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 
 export const copyChatMessagesBodySchema = z.object({
   targetChatId: z.string().uuid("targetChatId must be a valid UUID"),
-  clearExisting: z.boolean().optional().default(true),
 });
 
 export type CopyChatMessagesBody = z.infer<typeof copyChatMessagesBodySchema>;
 
 export interface ValidatedCopyChatMessages {
   targetChatId: string;
-  clearExisting: boolean;
 }
 
 /**
@@ -47,7 +45,7 @@ export async function validateCopyChatMessagesBody(
     );
   }
 
-  const { targetChatId, clearExisting } = bodyResult.data;
+  const { targetChatId } = bodyResult.data;
 
   if (sourceChatId === targetChatId) {
     return NextResponse.json(
@@ -58,6 +56,5 @@ export async function validateCopyChatMessagesBody(
 
   return {
     targetChatId,
-    clearExisting,
   };
 }

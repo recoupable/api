@@ -38,7 +38,7 @@ describe("validateCopyChatMessagesBody", () => {
     expect((result as NextResponse).status).toBe(400);
   });
 
-  it("returns validated payload and defaults clearExisting to true", async () => {
+  it("returns validated payload", async () => {
     const result = await validateCopyChatMessagesBody(
       createRequest({ targetChatId }),
       sourceChatId,
@@ -46,7 +46,6 @@ describe("validateCopyChatMessagesBody", () => {
 
     expect(result).toEqual({
       targetChatId,
-      clearExisting: true,
     });
   });
 });
