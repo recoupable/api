@@ -118,24 +118,22 @@ async function resolveAttachmentUrl(attachment: Attachment, prefix: string): Pro
 }
 
 /**
- * Converts a Slack thumbnail/preview URL to the actual file download URL.
- * files-tmb/TEAM-FILEID-HASH/name → files-pri/TEAM-FILEID/download/name
- * files-pri/TEAM-FILEID/name → files-pri/TEAM-FILEID/download/name
+ * Converts a Slack thumbnail/preview URL to the private file URL.
+ * files-tmb/TEAM-FILEID-HASH/name → files-pri/TEAM-FILEID/name
+ * Strips the trailing hash suffix from the ID segment.
  */
 function toSlackDownloadUrl(url: string): string {
   try {
     const parsed = new URL(url);
-    const parts = parsed.pathname.split("/").filter(Boolean);
-    // parts: ["files-tmb"|"files-pri", "TEAM-FILEID-HASH", "filename"]
-    if (parts.length >= 3) {
-      const teamFileId = parts[1];
-      const filename = parts[parts.length - 1];
-      // Strip trailing hash from team-file ID (e.g. T06-F0AP-eecb5f → T06-F0AP)
-      const cleanId = teamFileId.replace(/-[a-f0-9]{10,}$/, "");
-      return `https://files.slack.com/files-pri/${cleanId}/download/${filename}`;
-    }
+    // Replace files-tmb with files-pri
+    let path = parsed.pathname.replace("/files-tmb/", "/files-pri/");
+    // Strip trailing hash from ID segment (e.g. T06-F0AP-eecb5f6c23 → T06-F0AP)
+    path = path.replace(
+      /\/files-pri\/([A-Z0-9]+-[A-Z0-9]+)-[a-f0-9]+\//,
+      "/files-pri/$1/",
+    );
+    return `https://files.slack.com${path}`;
   } catch {
-    // Fall through to original URL
+    return url;
   }
-  return url;
 }
