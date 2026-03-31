@@ -1,6 +1,6 @@
 import { put } from "@vercel/blob";
-import { downloadSlackFile } from "./downloadSlackFile";
-import { extractSlackFileId } from "./extractSlackFileId";
+import { downloadSlackFile } from "@/lib/slack/downloadSlackFile";
+import { extractSlackFileId } from "@/lib/slack/extractSlackFileId";
 
 interface Attachment {
   type: "image" | "file" | "video" | "audio";
