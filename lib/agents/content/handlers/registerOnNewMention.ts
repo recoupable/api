@@ -21,7 +21,7 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       const artistAccountId = "1873859c-dd37-4e9a-9bac-80d3558527a9";
 
       // Parse the user's natural-language prompt into structured flags
-      const { lipsync, batch, captionLength, upscale, template } = await parseContentPrompt(
+      const { lipsync, batch, captionLength, upscale, template, songs } = await parseContentPrompt(
         message.text,
       );
 
@@ -56,10 +56,17 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       }
 
       // Post acknowledgment
-      const batchNote = batch > 1 ? ` (${batch} videos)` : "";
-      const lipsyncNote = lipsync ? " with lipsync" : "";
+      const details = [
+        `- Artist: *${artistSlug}*`,
+        `- Template: ${template}`,
+        `- Videos: ${batch}`,
+        `- Lipsync: ${lipsync ? "yes" : "no"}`,
+      ];
+      if (songs && songs.length > 0) {
+        details.push(`- Songs: ${songs.join(", ")}`);
+      }
       await thread.post(
-        `Generating content for **${artistSlug}**${batchNote}${lipsyncNote}... Template: \`${template}\`. I'll reply here when ready (~5-10 min).`,
+        `Generating content...\n${details.join("\n")}\n\nI'll reply here when ready (~5-10 min).`,
       );
 
       // Trigger content creation
@@ -71,6 +78,7 @@ export function registerOnNewMention(bot: ContentAgentBot) {
         captionLength,
         upscale,
         githubRepo,
+        ...(songs && songs.length > 0 && { songs }),
       };
 
       const results = await Promise.allSettled(

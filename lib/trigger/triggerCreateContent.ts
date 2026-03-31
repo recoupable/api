@@ -12,6 +12,8 @@ export interface TriggerCreateContentPayload {
   upscale: boolean;
   /** GitHub repo URL so the task can fetch artist files. */
   githubRepo: string;
+  /** Optional list of song slugs to restrict which songs the pipeline picks from. */
+  songs?: string[];
 }
 
 /**
