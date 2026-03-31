@@ -1,10 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import selectRoom from "@/lib/supabase/rooms/selectRoom";
-import { buildGetChatsParams } from "./buildGetChatsParams";
 import { z } from "zod";
+import { validateChatAccess } from "@/lib/chats/validateChatAccess";
 
 /**
  * Zod schema for PATCH /api/chats request body.
@@ -64,36 +62,9 @@ export async function validateUpdateChatBody(
 
   const { chatId, topic } = result.data;
 
-  // Validate authentication
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) {
-    return authResult;
-  }
-
-  const { accountId, orgId } = authResult;
-
-  // Verify room exists
-  const room = await selectRoom(chatId);
-  if (!room) {
-    return NextResponse.json(
-      { status: "error", error: "Chat room not found" },
-      { status: 404, headers: getCorsHeaders() },
-    );
-  }
-
-  // Check access control
-  const { params } = await buildGetChatsParams({
-    account_id: accountId,
-  });
-
-  // If params.account_ids is undefined, it means admin access (all records)
-  if (params.account_ids && room.account_id) {
-    if (!params.account_ids.includes(room.account_id)) {
-      return NextResponse.json(
-        { status: "error", error: "Access denied to this chat" },
-        { status: 403, headers: getCorsHeaders() },
-      );
-    }
+  const accessResult = await validateChatAccess(request, chatId);
+  if (accessResult instanceof NextResponse) {
+    return accessResult;
   }
 
   return {

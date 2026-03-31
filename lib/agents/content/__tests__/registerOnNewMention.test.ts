@@ -190,6 +190,60 @@ describe("registerOnNewMention", () => {
     );
   });
 
+  it("passes parsed songs to triggerCreateContent", async () => {
+    const bot = createMockBot();
+    registerOnNewMention(bot as never);
+
+    vi.mocked(parseContentPrompt).mockResolvedValue({
+      lipsync: true,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+      songs: ["hiccups"],
+    });
+    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
+    vi.mocked(getArtistContentReadiness).mockResolvedValue({
+      githubRepo: "https://github.com/test/repo",
+    } as never);
+    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+
+    const thread = createMockThread();
+    const message = createMockMessage("make a lipsync video for the hiccups song");
+    await bot.getHandler()!(thread, message);
+
+    expect(triggerCreateContent).toHaveBeenCalledWith(
+      expect.objectContaining({ songs: ["hiccups"] }),
+    );
+  });
+
+  it("omits songs from triggerCreateContent when not specified", async () => {
+    const bot = createMockBot();
+    registerOnNewMention(bot as never);
+
+    vi.mocked(parseContentPrompt).mockResolvedValue({
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+    });
+    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
+    vi.mocked(getArtistContentReadiness).mockResolvedValue({
+      githubRepo: "https://github.com/test/repo",
+    } as never);
+    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+
+    const thread = createMockThread();
+    const message = createMockMessage("make me a video");
+    await bot.getHandler()!(thread, message);
+
+    const payload = vi.mocked(triggerCreateContent).mock.calls[0][0];
+    expect(payload).not.toHaveProperty("songs");
+  });
+
   it("includes lipsync and batch info in acknowledgment message", async () => {
     const bot = createMockBot();
     registerOnNewMention(bot as never);
@@ -213,8 +267,37 @@ describe("registerOnNewMention", () => {
     await bot.getHandler()!(thread, message);
 
     const ackMessage = thread.post.mock.calls[0][0] as string;
-    expect(ackMessage).toContain("with lipsync");
-    expect(ackMessage).toContain("(2 videos)");
-    expect(ackMessage).toContain("test-artist");
+    expect(ackMessage).toContain("*test-artist*");
+    expect(ackMessage).not.toContain("**");
+    expect(ackMessage).toContain("Lipsync:");
+    expect(ackMessage).toContain("Videos:");
+  });
+
+  it("includes song names in acknowledgment message", async () => {
+    const bot = createMockBot();
+    registerOnNewMention(bot as never);
+
+    vi.mocked(parseContentPrompt).mockResolvedValue({
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+      songs: ["hiccups"],
+    });
+    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
+    vi.mocked(getArtistContentReadiness).mockResolvedValue({
+      githubRepo: "https://github.com/test/repo",
+    } as never);
+    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+
+    const thread = createMockThread();
+    const message = createMockMessage("make a video for hiccups");
+    await bot.getHandler()!(thread, message);
+
+    const ackMessage = thread.post.mock.calls[0][0] as string;
+    expect(ackMessage).toContain("Songs:");
+    expect(ackMessage).toContain("hiccups");
   });
 });

@@ -7,31 +7,29 @@ import selectRoom from "@/lib/supabase/rooms/selectRoom";
 import { buildGetChatsParams } from "@/lib/chats/buildGetChatsParams";
 import type { Tables } from "@/types/database.types";
 
-const chatIdSchema = z.string().uuid("id must be a valid UUID");
-
-interface ResolveAccessibleRoomResult {
+export interface ValidatedChatAccess {
+  roomId: string;
   room: Tables<"rooms">;
   accountId: string;
 }
 
+const chatIdSchema = z.string().uuid("id must be a valid UUID");
+
 /**
- * Resolves a chat room and validates access for the authenticated caller.
+ * Validates that the authenticated caller can access a chat room.
  *
- * @param request - The incoming request object for auth context.
- * @param id - The chat room ID from route params.
- * @returns The room and authenticated accountId, or an error NextResponse.
+ * @param request - The incoming request (used for auth context)
+ * @param roomId - The room/chat UUID to validate access for
+ * @returns NextResponse on auth/access failure, or validated access data
  */
 export async function validateChatAccess(
   request: NextRequest,
-  id: string,
-): Promise<ResolveAccessibleRoomResult | NextResponse> {
-  const parsedId = chatIdSchema.safeParse(id);
-  if (!parsedId.success) {
+  roomId: string,
+): Promise<NextResponse | ValidatedChatAccess> {
+  const roomIdResult = chatIdSchema.safeParse(roomId);
+  if (!roomIdResult.success) {
     return NextResponse.json(
-      {
-        status: "error",
-        error: parsedId.error.issues[0]?.message || "Invalid chat ID",
-      },
+      { status: "error", error: roomIdResult.error.issues[0]?.message || "Invalid chat ID" },
       { status: 400, headers: getCorsHeaders() },
     );
   }
@@ -42,31 +40,32 @@ export async function validateChatAccess(
   }
 
   const { accountId } = authResult;
-  const room = await selectRoom(parsedId.data);
 
+  const room = await selectRoom(roomIdResult.data);
   if (!room) {
     return NextResponse.json(
-      {
-        status: "error",
-        error: "Chat room not found",
-      },
+      { status: "error", error: "Chat room not found" },
       { status: 404, headers: getCorsHeaders() },
     );
   }
 
-  const { params } = await buildGetChatsParams({
+  const { params, error } = await buildGetChatsParams({
     account_id: accountId,
   });
 
-  // If params.account_ids is undefined, it means admin access (all records)
-  if (params.account_ids && room.account_id) {
-    if (!params.account_ids.includes(room.account_id)) {
-      return NextResponse.json(
-        { status: "error", error: "Access denied to this chat" },
-        { status: 403, headers: getCorsHeaders() },
-      );
-    }
+  if (!params) {
+    return NextResponse.json(
+      { status: "error", error: error ?? "Access denied" },
+      { status: 403, headers: getCorsHeaders() },
+    );
   }
 
-  return { room, accountId };
+  if (!room.account_id || !params.account_ids.includes(room.account_id)) {
+    return NextResponse.json(
+      { status: "error", error: "Access denied to this chat" },
+      { status: 403, headers: getCorsHeaders() },
+    );
+  }
+
+  return { roomId: room.id, room, accountId };
 }

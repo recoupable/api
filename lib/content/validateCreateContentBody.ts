@@ -9,8 +9,9 @@ import {
   isSupportedContentTemplate,
 } from "@/lib/content/contentTemplates";
 import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
+import { songsSchema } from "@/lib/content/songsSchema";
 
-export const CAPTION_LENGTHS = ["short", "medium", "long"] as const;
+import { CAPTION_LENGTHS } from "@/lib/content/captionLengths";
 
 export const createContentBodySchema = z.object({
   artist_account_id: z
@@ -25,6 +26,7 @@ export const createContentBodySchema = z.object({
   caption_length: z.enum(CAPTION_LENGTHS).optional().default("short"),
   upscale: z.boolean().optional().default(false),
   batch: z.number().int().min(1).max(30).optional().default(1),
+  songs: songsSchema,
 });
 
 export type ValidatedCreateContentBody = {
@@ -36,6 +38,7 @@ export type ValidatedCreateContentBody = {
   captionLength: "short" | "medium" | "long";
   upscale: boolean;
   batch: number;
+  songs?: string[];
 };
 
 /**
@@ -94,5 +97,6 @@ export async function validateCreateContentBody(
     captionLength: result.data.caption_length ?? "short",
     upscale: result.data.upscale ?? false,
     batch: result.data.batch ?? 1,
+    songs: result.data.songs,
   };
 }
