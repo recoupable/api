@@ -21,7 +21,7 @@ export async function deleteChatHandler(request: NextRequest): Promise<NextRespo
   try {
     const deleted = await deleteRoom(id);
 
-    if (deleted === null) {
+    if (!deleted) {
       return NextResponse.json(
         { status: "error", error: "Failed to delete chat" },
         { status: 500, headers: getCorsHeaders() },

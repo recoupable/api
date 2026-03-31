@@ -31,7 +31,7 @@ describe("deleteChatHandler", () => {
 
   it("deletes chat and returns success response", async () => {
     vi.mocked(validateDeleteChatBody).mockResolvedValue({ id });
-    vi.mocked(deleteRoom).mockResolvedValue([]);
+    vi.mocked(deleteRoom).mockResolvedValue(true);
 
     const response = await deleteChatHandler(request);
 
@@ -57,7 +57,7 @@ describe("deleteChatHandler", () => {
 
   it("returns 500 when deletion fails", async () => {
     vi.mocked(validateDeleteChatBody).mockResolvedValue({ id });
-    vi.mocked(deleteRoom).mockResolvedValue(null);
+    vi.mocked(deleteRoom).mockResolvedValue(false);
 
     const response = await deleteChatHandler(request);
     expect(response.status).toBe(500);
