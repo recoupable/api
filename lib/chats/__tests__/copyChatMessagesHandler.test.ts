@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { copyChatMessagesHandler } from "@/lib/chats/copyChatMessagesHandler";
 import { validateCopyChatMessagesBody } from "@/lib/chats/validateCopyChatMessagesBody";
+import { validateChatAccess } from "@/lib/chats/validateChatAccess";
 import selectMemories from "@/lib/supabase/memories/selectMemories";
 import deleteMemoriesByRoomId from "@/lib/supabase/memories/deleteMemoriesByRoomId";
 import insertCopiedMemories from "@/lib/supabase/memories/insertCopiedMemories";
@@ -13,6 +14,10 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 
 vi.mock("@/lib/chats/validateCopyChatMessagesBody", () => ({
   validateCopyChatMessagesBody: vi.fn(),
+}));
+
+vi.mock("@/lib/chats/validateChatAccess", () => ({
+  validateChatAccess: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/memories/selectMemories", () => ({
@@ -40,6 +45,18 @@ const request = new NextRequest(`http://localhost/api/chats/${sourceChatId}/mess
 });
 
 describe("copyChatMessagesHandler", () => {
+  const accessRoom = (id: string) => ({
+    roomId: id,
+    room: {
+      id,
+      account_id: "11111111-1111-1111-1111-111111111111",
+      artist_id: null,
+      topic: null,
+      updated_at: null,
+    },
+    accountId: "11111111-1111-1111-1111-111111111111",
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -59,10 +76,11 @@ describe("copyChatMessagesHandler", () => {
 
   it("returns 500 when source messages cannot be loaded", async () => {
     vi.mocked(validateCopyChatMessagesBody).mockResolvedValue({
-      sourceChatId,
       targetChatId,
       clearExisting: true,
     });
+    vi.mocked(validateChatAccess).mockResolvedValueOnce(accessRoom(sourceChatId));
+    vi.mocked(validateChatAccess).mockResolvedValueOnce(accessRoom(targetChatId));
     vi.mocked(selectMemories).mockResolvedValue(null);
 
     const response = await copyChatMessagesHandler(request, sourceChatId);
@@ -74,10 +92,11 @@ describe("copyChatMessagesHandler", () => {
 
   it("clears target and copies messages", async () => {
     vi.mocked(validateCopyChatMessagesBody).mockResolvedValue({
-      sourceChatId,
       targetChatId,
       clearExisting: true,
     });
+    vi.mocked(validateChatAccess).mockResolvedValueOnce(accessRoom(sourceChatId));
+    vi.mocked(validateChatAccess).mockResolvedValueOnce(accessRoom(targetChatId));
     vi.mocked(selectMemories).mockResolvedValue([
       {
         id: "mem-1",
@@ -115,10 +134,11 @@ describe("copyChatMessagesHandler", () => {
 
   it("returns 500 when target clear fails", async () => {
     vi.mocked(validateCopyChatMessagesBody).mockResolvedValue({
-      sourceChatId,
       targetChatId,
       clearExisting: true,
     });
+    vi.mocked(validateChatAccess).mockResolvedValueOnce(accessRoom(sourceChatId));
+    vi.mocked(validateChatAccess).mockResolvedValueOnce(accessRoom(targetChatId));
     vi.mocked(selectMemories).mockResolvedValue([]);
     vi.mocked(deleteMemoriesByRoomId).mockResolvedValue(false);
 
@@ -132,10 +152,11 @@ describe("copyChatMessagesHandler", () => {
 
   it("skips clear when clearExisting is false", async () => {
     vi.mocked(validateCopyChatMessagesBody).mockResolvedValue({
-      sourceChatId,
       targetChatId,
       clearExisting: false,
     });
+    vi.mocked(validateChatAccess).mockResolvedValueOnce(accessRoom(sourceChatId));
+    vi.mocked(validateChatAccess).mockResolvedValueOnce(accessRoom(targetChatId));
     vi.mocked(selectMemories).mockResolvedValue([]);
     vi.mocked(insertCopiedMemories).mockResolvedValue(0);
 
@@ -159,5 +180,36 @@ describe("copyChatMessagesHandler", () => {
       status: "error",
       error: "Failed to copy chat messages",
     });
+  });
+
+  it("passes through source chat access errors", async () => {
+    vi.mocked(validateCopyChatMessagesBody).mockResolvedValue({
+      targetChatId,
+      clearExisting: true,
+    });
+    vi.mocked(validateChatAccess).mockResolvedValueOnce(
+      NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
+    );
+
+    const response = await copyChatMessagesHandler(request, sourceChatId);
+
+    expect(response.status).toBe(401);
+    expect(selectMemories).not.toHaveBeenCalled();
+  });
+
+  it("passes through target chat access errors", async () => {
+    vi.mocked(validateCopyChatMessagesBody).mockResolvedValue({
+      targetChatId,
+      clearExisting: true,
+    });
+    vi.mocked(validateChatAccess).mockResolvedValueOnce(accessRoom(sourceChatId));
+    vi.mocked(validateChatAccess).mockResolvedValueOnce(
+      NextResponse.json({ status: "error", error: "Forbidden" }, { status: 403 }),
+    );
+
+    const response = await copyChatMessagesHandler(request, sourceChatId);
+
+    expect(response.status).toBe(403);
+    expect(selectMemories).not.toHaveBeenCalled();
   });
 });

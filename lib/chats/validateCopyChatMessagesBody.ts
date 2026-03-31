@@ -2,7 +2,6 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateChatAccess } from "@/lib/chats/validateChatAccess";
 
 export const copyChatMessagesBodySchema = z.object({
   targetChatId: z.string().uuid("targetChatId must be a valid UUID"),
@@ -12,16 +11,15 @@ export const copyChatMessagesBodySchema = z.object({
 export type CopyChatMessagesBody = z.infer<typeof copyChatMessagesBodySchema>;
 
 export interface ValidatedCopyChatMessages {
-  sourceChatId: string;
   targetChatId: string;
   clearExisting: boolean;
 }
 
 /**
  * Validates POST /api/chats/[id]/messages/copy request.
- * Ensures body shape and that caller can access both source and target chats.
+ * Ensures body shape and basic source/target constraints.
  *
- * @param request - Incoming request with auth context and JSON body.
+ * @param request - Incoming request with JSON body.
  * @param sourceChatId - Source chat ID from route params.
  * @returns Validation error response or validated payload.
  */
@@ -58,19 +56,8 @@ export async function validateCopyChatMessagesBody(
     );
   }
 
-  const sourceAccess = await validateChatAccess(request, sourceChatId);
-  if (sourceAccess instanceof NextResponse) {
-    return sourceAccess;
-  }
-
-  const targetAccess = await validateChatAccess(request, targetChatId);
-  if (targetAccess instanceof NextResponse) {
-    return targetAccess;
-  }
-
   return {
-    sourceChatId: sourceAccess.roomId,
-    targetChatId: targetAccess.roomId,
+    targetChatId,
     clearExisting,
   };
 }

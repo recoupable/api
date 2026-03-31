@@ -6,6 +6,7 @@ import selectMemories from "@/lib/supabase/memories/selectMemories";
 import insertCopiedMemories from "@/lib/supabase/memories/insertCopiedMemories";
 import deleteMemoriesByRoomId from "@/lib/supabase/memories/deleteMemoriesByRoomId";
 import { validateCopyChatMessagesBody } from "@/lib/chats/validateCopyChatMessagesBody";
+import { validateChatAccess } from "@/lib/chats/validateChatAccess";
 
 /**
  * Handles POST /api/chats/[id]/messages/copy.
@@ -26,9 +27,22 @@ export async function copyChatMessagesHandler(
       return validated;
     }
 
-    const { targetChatId, clearExisting } = validated;
+    const sourceAccess = await validateChatAccess(request, sourceChatId);
+    if (sourceAccess instanceof NextResponse) {
+      return sourceAccess;
+    }
 
-    const sourceMemories = await selectMemories(sourceChatId, { ascending: true });
+    const targetAccess = await validateChatAccess(request, validated.targetChatId);
+    if (targetAccess instanceof NextResponse) {
+      return targetAccess;
+    }
+
+    const accessibleSourceChatId = sourceAccess.roomId;
+    const accessibleTargetChatId = targetAccess.roomId;
+
+    const { clearExisting } = validated;
+
+    const sourceMemories = await selectMemories(accessibleSourceChatId, { ascending: true });
     if (!sourceMemories) {
       return NextResponse.json(
         { status: "error", error: "Failed to load source chat messages" },
@@ -37,7 +51,7 @@ export async function copyChatMessagesHandler(
     }
 
     if (clearExisting) {
-      const deleted = await deleteMemoriesByRoomId(targetChatId);
+      const deleted = await deleteMemoriesByRoomId(accessibleTargetChatId);
       if (!deleted) {
         return NextResponse.json(
           { status: "error", error: "Failed to clear target chat messages" },
@@ -49,7 +63,7 @@ export async function copyChatMessagesHandler(
     const copiedCount = await insertCopiedMemories(
       sourceMemories.map(memory => ({
         id: generateUUID(),
-        room_id: targetChatId,
+        room_id: accessibleTargetChatId,
         content: memory.content,
         updated_at: memory.updated_at,
       })),
@@ -58,8 +72,8 @@ export async function copyChatMessagesHandler(
     return NextResponse.json(
       {
         status: "success",
-        source_chat_id: sourceChatId,
-        target_chat_id: targetChatId,
+        source_chat_id: accessibleSourceChatId,
+        target_chat_id: accessibleTargetChatId,
         copied_count: copiedCount,
         cleared_existing: clearExisting,
       },
