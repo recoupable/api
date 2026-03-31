@@ -26,6 +26,10 @@ vi.mock("@/lib/networking/safeParseJson", () => ({
   safeParseJson: vi.fn(async (req: Request) => req.json()),
 }));
 
+/**
+ *
+ * @param body
+ */
 function createRequest(body: unknown): NextRequest {
   return new NextRequest("https://recoup-api.vercel.app/api/notifications", {
     method: "POST",

@@ -33,6 +33,10 @@ const mockGetAuthenticatedAccountId = vi.mocked(getAuthenticatedAccountId);
 const mockValidateOrganizationAccess = vi.mocked(validateOrganizationAccess);
 const mockCanAccessAccount = vi.mocked(canAccessAccount);
 
+/**
+ *
+ * @param headers
+ */
 function createMockRequest(headers: Record<string, string> = {}): Request {
   return {
     headers: {

@@ -43,6 +43,8 @@ export type ValidatedCreateContentBody = {
 
 /**
  * Validates auth and request body for POST /api/content/create.
+ *
+ * @param request
  */
 export async function validateCreateContentBody(
   request: NextRequest,

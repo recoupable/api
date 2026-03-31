@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createOrUpdateFileContent } from "../createOrUpdateFileContent";
 
+import { parseGitHubRepoUrl } from "../parseGitHubRepoUrl";
+
 vi.mock("../parseGitHubRepoUrl", () => ({
   parseGitHubRepoUrl: vi.fn(),
 }));
-
-import { parseGitHubRepoUrl } from "../parseGitHubRepoUrl";
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
