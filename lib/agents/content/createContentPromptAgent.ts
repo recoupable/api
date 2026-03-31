@@ -35,6 +35,12 @@ export const contentPromptFlagsSchema = z.object({
   songs: songsSchema.describe(
     "Song names or slugs mentioned in the prompt. Extract from phrases like 'the hiccups song', 'use track X', 'for song Y'. Omit if no specific songs are mentioned.",
   ),
+  artistName: z
+    .string()
+    .optional()
+    .describe(
+      "The artist name mentioned in the prompt. Extract from phrases like 'for Mac Miller', 'generate a video for [artist]', 'make content for [artist]'. Omit if no specific artist is mentioned.",
+    ),
 });
 
 export type ContentPromptFlags = z.infer<typeof contentPromptFlagsSchema>;

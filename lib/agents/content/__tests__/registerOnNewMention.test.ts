@@ -29,11 +29,16 @@ vi.mock("../parseContentPrompt", () => ({
   parseContentPrompt: vi.fn(),
 }));
 
+vi.mock("../resolveArtistFromName", () => ({
+  resolveArtistFromName: vi.fn(),
+}));
+
 const { triggerCreateContent } = await import("@/lib/trigger/triggerCreateContent");
 const { triggerPollContentRun } = await import("@/lib/trigger/triggerPollContentRun");
 const { resolveArtistSlug } = await import("@/lib/content/resolveArtistSlug");
 const { getArtistContentReadiness } = await import("@/lib/content/getArtistContentReadiness");
 const { parseContentPrompt } = await import("../parseContentPrompt");
+const { resolveArtistFromName } = await import("../resolveArtistFromName");
 
 /**
  * Creates a mock content agent bot for testing.
@@ -299,5 +304,94 @@ describe("registerOnNewMention", () => {
     const ackMessage = thread.post.mock.calls[0][0] as string;
     expect(ackMessage).toContain("Songs:");
     expect(ackMessage).toContain("hiccups");
+  });
+
+  it("uses resolved artist when artistName is provided in prompt", async () => {
+    const bot = createMockBot();
+    registerOnNewMention(bot as never);
+
+    vi.mocked(parseContentPrompt).mockResolvedValue({
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+      artistName: "Mac Miller",
+    });
+    vi.mocked(resolveArtistFromName).mockResolvedValue("bbb-artist-id");
+    vi.mocked(resolveArtistSlug).mockResolvedValue("mac-miller");
+    vi.mocked(getArtistContentReadiness).mockResolvedValue({
+      githubRepo: "https://github.com/test/repo",
+    } as never);
+    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+
+    const thread = createMockThread();
+    const message = createMockMessage("generate a video for Mac Miller");
+    await bot.getHandler()!(thread, message);
+
+    expect(resolveArtistFromName).toHaveBeenCalledWith(
+      "Mac Miller",
+      "fb678396-a68f-4294-ae50-b8cacf9ce77b",
+    );
+    expect(resolveArtistSlug).toHaveBeenCalledWith("bbb-artist-id");
+    expect(triggerCreateContent).toHaveBeenCalledWith(
+      expect.objectContaining({ artistSlug: "mac-miller" }),
+    );
+  });
+
+  it("falls back to default artist when artistName is not provided", async () => {
+    const bot = createMockBot();
+    registerOnNewMention(bot as never);
+
+    vi.mocked(parseContentPrompt).mockResolvedValue({
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+    });
+    vi.mocked(resolveArtistSlug).mockResolvedValue("gatsby-grace");
+    vi.mocked(getArtistContentReadiness).mockResolvedValue({
+      githubRepo: "https://github.com/test/repo",
+    } as never);
+    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+
+    const thread = createMockThread();
+    const message = createMockMessage("make me a video");
+    await bot.getHandler()!(thread, message);
+
+    expect(resolveArtistFromName).not.toHaveBeenCalled();
+    expect(resolveArtistSlug).toHaveBeenCalledWith("1873859c-dd37-4e9a-9bac-80d3558527a9");
+  });
+
+  it("falls back to default artist when resolveArtistFromName returns null", async () => {
+    const bot = createMockBot();
+    registerOnNewMention(bot as never);
+
+    vi.mocked(parseContentPrompt).mockResolvedValue({
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+      artistName: "Unknown Artist",
+    });
+    vi.mocked(resolveArtistFromName).mockResolvedValue(null);
+    vi.mocked(resolveArtistSlug).mockResolvedValue("gatsby-grace");
+    vi.mocked(getArtistContentReadiness).mockResolvedValue({
+      githubRepo: "https://github.com/test/repo",
+    } as never);
+    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+
+    const thread = createMockThread();
+    const message = createMockMessage("generate a video for Unknown Artist");
+    await bot.getHandler()!(thread, message);
+
+    expect(resolveArtistSlug).toHaveBeenCalledWith("1873859c-dd37-4e9a-9bac-80d3558527a9");
+    const ackMessage = thread.post.mock.calls[0][0] as string;
+    expect(ackMessage).toContain("*gatsby-grace*");
   });
 });

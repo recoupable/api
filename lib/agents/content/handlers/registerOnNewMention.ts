@@ -5,6 +5,10 @@ import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
 import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadiness";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { parseContentPrompt } from "../parseContentPrompt";
+import { resolveArtistFromName } from "../resolveArtistFromName";
+
+const DEFAULT_ACCOUNT_ID = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
+const DEFAULT_ARTIST_ACCOUNT_ID = "1873859c-dd37-4e9a-9bac-80d3558527a9";
 
 /**
  * Registers the onNewMention handler on the content agent bot.
@@ -17,13 +21,20 @@ import { parseContentPrompt } from "../parseContentPrompt";
 export function registerOnNewMention(bot: ContentAgentBot) {
   bot.onNewMention(async (thread, message) => {
     try {
-      const accountId = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
-      const artistAccountId = "1873859c-dd37-4e9a-9bac-80d3558527a9";
+      const accountId = DEFAULT_ACCOUNT_ID;
 
       // Parse the user's natural-language prompt into structured flags
-      const { lipsync, batch, captionLength, upscale, template, songs } = await parseContentPrompt(
-        message.text,
-      );
+      const { lipsync, batch, captionLength, upscale, template, songs, artistName } =
+        await parseContentPrompt(message.text);
+
+      // Resolve artist account ID from name, or fall back to default
+      let artistAccountId = DEFAULT_ARTIST_ACCOUNT_ID;
+      if (artistName) {
+        const resolvedId = await resolveArtistFromName(artistName, accountId);
+        if (resolvedId) {
+          artistAccountId = resolvedId;
+        }
+      }
 
       // Resolve artist slug
       const artistSlug = await resolveArtistSlug(artistAccountId);
