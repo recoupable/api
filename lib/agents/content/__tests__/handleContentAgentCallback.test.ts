@@ -13,17 +13,17 @@ vi.mock("@/lib/agents/getThread", () => ({
   getThread: vi.fn(),
 }));
 
-vi.mock("../downloadVideoBuffer", () => ({
-  downloadVideoBuffer: vi.fn(),
+vi.mock("../postVideoResults", () => ({
+  postVideoResults: vi.fn().mockResolvedValue(undefined),
 }));
 
 const { validateContentAgentCallback } = await import("../validateContentAgentCallback");
 const { getThread } = await import("@/lib/agents/getThread");
-const { downloadVideoBuffer } = await import("../downloadVideoBuffer");
+const { postVideoResults } = await import("../postVideoResults");
 
 const mockedValidate = vi.mocked(validateContentAgentCallback);
 const mockedGetThread = vi.mocked(getThread);
-const mockedDownload = vi.mocked(downloadVideoBuffer);
+const mockedPostVideos = vi.mocked(postVideoResults);
 
 describe("handleContentAgentCallback", () => {
   const originalEnv = { ...process.env };
@@ -84,12 +84,6 @@ describe("handleContentAgentCallback", () => {
   });
 
   describe("completed callback with videos", () => {
-    /**
-     * Creates a Request with a valid auth header for testing.
-     *
-     * @param body - The request body to serialize as JSON
-     * @returns A Request instance with valid auth headers
-     */
     function makeAuthRequest(body: object) {
       return new Request("http://localhost/api/content-agent/callback", {
         method: "POST",
@@ -98,11 +92,6 @@ describe("handleContentAgentCallback", () => {
       });
     }
 
-    /**
-     * Creates a mock thread with post, state, and setState.
-     *
-     * @returns A mock thread object
-     */
     function mockThread() {
       const thread = {
         post: vi.fn().mockResolvedValue(undefined),
@@ -113,104 +102,42 @@ describe("handleContentAgentCallback", () => {
       return thread;
     }
 
-    it("posts video as file upload when download succeeds", async () => {
+    it("calls postVideoResults with videos and failed count", async () => {
       const thread = mockThread();
-      const videoData = Buffer.from([0x00, 0x00, 0x00, 0x1c]);
-      mockedDownload.mockResolvedValue(videoData);
       mockedValidate.mockReturnValue({
         threadId: "slack:C123:T456",
         status: "completed",
         results: [
-          {
-            runId: "run-1",
-            status: "completed",
-            videoUrl: "https://cdn.example.com/video.mp4",
-            captionText: "Test caption",
-          },
+          { runId: "run-1", status: "completed", videoUrl: "https://cdn.example.com/video.mp4", captionText: "Test" },
+          { runId: "run-2", status: "failed", error: "render error" },
         ],
       });
 
       const response = await handleContentAgentCallback(makeAuthRequest({}));
 
       expect(response.status).toBe(200);
-      expect(mockedDownload).toHaveBeenCalledWith("https://cdn.example.com/video.mp4");
-      expect(thread.post).toHaveBeenCalledWith(
-        expect.objectContaining({
-          markdown: expect.stringContaining("Test caption"),
-          files: [
-            expect.objectContaining({
-              data: videoData,
-              filename: "video.mp4",
-              mimeType: "video/mp4",
-            }),
-          ],
-        }),
+      expect(mockedPostVideos).toHaveBeenCalledWith(
+        thread,
+        [expect.objectContaining({ videoUrl: "https://cdn.example.com/video.mp4" })],
+        1,
       );
     });
 
-    it("falls back to posting video URL when download fails", async () => {
+    it("posts fallback message when no videos produced", async () => {
       const thread = mockThread();
-      mockedDownload.mockResolvedValue(null);
       mockedValidate.mockReturnValue({
         threadId: "slack:C123:T456",
         status: "completed",
-        results: [
-          {
-            runId: "run-1",
-            status: "completed",
-            videoUrl: "https://cdn.example.com/video.mp4",
-          },
-        ],
+        results: [{ runId: "run-1", status: "failed", error: "render error" }],
       });
 
       const response = await handleContentAgentCallback(makeAuthRequest({}));
 
       expect(response.status).toBe(200);
       expect(thread.post).toHaveBeenCalledWith(
-        expect.stringContaining("https://cdn.example.com/video.mp4"),
+        "Content generation finished but no videos were produced.",
       );
-    });
-
-    it("handles multiple videos with individual file uploads", async () => {
-      const thread = mockThread();
-      const videoData1 = Buffer.from([0x01]);
-      const videoData2 = Buffer.from([0x02]);
-      mockedDownload.mockResolvedValueOnce(videoData1).mockResolvedValueOnce(videoData2);
-      mockedValidate.mockReturnValue({
-        threadId: "slack:C123:T456",
-        status: "completed",
-        results: [
-          { runId: "run-1", status: "completed", videoUrl: "https://cdn.example.com/video1.mp4" },
-          { runId: "run-2", status: "completed", videoUrl: "https://cdn.example.com/video2.mp4" },
-        ],
-      });
-
-      const response = await handleContentAgentCallback(makeAuthRequest({}));
-
-      expect(response.status).toBe(200);
-      expect(thread.post).toHaveBeenCalledTimes(2);
-    });
-
-    it("posts without caption when captionText is absent", async () => {
-      const thread = mockThread();
-      const videoData = Buffer.from([0x01]);
-      mockedDownload.mockResolvedValue(videoData);
-      mockedValidate.mockReturnValue({
-        threadId: "slack:C123:T456",
-        status: "completed",
-        results: [
-          { runId: "run-1", status: "completed", videoUrl: "https://cdn.example.com/clip.mp4" },
-        ],
-      });
-
-      const response = await handleContentAgentCallback(makeAuthRequest({}));
-
-      expect(response.status).toBe(200);
-      expect(thread.post).toHaveBeenCalledWith(
-        expect.objectContaining({
-          files: [expect.objectContaining({ filename: "clip.mp4" })],
-        }),
-      );
+      expect(mockedPostVideos).not.toHaveBeenCalled();
     });
 
     it("skips duplicate delivery when thread status is not running", async () => {
@@ -233,25 +160,19 @@ describe("handleContentAgentCallback", () => {
       expect(thread.post).not.toHaveBeenCalled();
     });
 
-    it("appends failed run count when some runs fail", async () => {
+    it("sets thread state to completed after posting", async () => {
       const thread = mockThread();
-      const videoData = Buffer.from([0x01]);
-      mockedDownload.mockResolvedValue(videoData);
       mockedValidate.mockReturnValue({
         threadId: "slack:C123:T456",
         status: "completed",
         results: [
-          { runId: "run-1", status: "completed", videoUrl: "https://cdn.example.com/video.mp4" },
-          { runId: "run-2", status: "failed", error: "render error" },
+          { runId: "run-1", status: "completed", videoUrl: "https://cdn.example.com/v.mp4" },
         ],
       });
 
-      const response = await handleContentAgentCallback(makeAuthRequest({}));
+      await handleContentAgentCallback(makeAuthRequest({}));
 
-      expect(response.status).toBe(200);
-      // Last post should mention failures
-      const lastCall = thread.post.mock.calls[thread.post.mock.calls.length - 1][0];
-      expect(typeof lastCall === "string" ? lastCall : "").toContain("failed");
+      expect(thread.setState).toHaveBeenCalledWith({ status: "completed" });
     });
   });
 });
