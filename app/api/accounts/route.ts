@@ -9,8 +9,10 @@ import {
   validateUpdateAccountBody,
   type UpdateAccountBody,
 } from "@/lib/accounts/validateUpdateAccountBody";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { createAccountHandler } from "@/lib/accounts/createAccountHandler";
 import { updateAccountHandler } from "@/lib/accounts/updateAccountHandler";
+import { checkIsAdmin } from "@/lib/admins/checkIsAdmin";
 
 /**
  * POST /api/accounts
@@ -43,6 +45,11 @@ export async function POST(req: NextRequest) {
  * @returns NextResponse with updated account data or error
  */
 export async function PATCH(req: NextRequest) {
+  const authResult = await validateAuthContext(req);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   const body = await safeParseJson(req);
 
   const validated = validateUpdateAccountBody(body);
@@ -50,7 +57,21 @@ export async function PATCH(req: NextRequest) {
     return validated;
   }
 
-  return updateAccountHandler(validated as UpdateAccountBody);
+  const targetAccountId = validated.accountId ?? authResult.accountId;
+  if (validated.accountId && validated.accountId !== authResult.accountId) {
+    const isAdmin = await checkIsAdmin(authResult.accountId);
+    if (!isAdmin) {
+      return NextResponse.json(
+        { status: "error", error: "accountId override is only allowed for admin accounts" },
+        { status: 403, headers: getCorsHeaders() },
+      );
+    }
+  }
+
+  return updateAccountHandler({
+    ...(validated as UpdateAccountBody),
+    accountId: targetAccountId,
+  });
 }
 
 /**

@@ -3,7 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { z } from "zod";
 
 export const updateAccountBodySchema = z.object({
-  accountId: z.string().uuid("accountId must be a valid UUID"),
+  accountId: z.string().uuid("accountId must be a valid UUID").optional(),
   name: z.string().optional(),
   instruction: z.string().optional(),
   organization: z.string().optional(),
