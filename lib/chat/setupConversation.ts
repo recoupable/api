@@ -70,11 +70,13 @@ export async function setupConversation({
   }
 
   // Persist user message to memories
-  await insertMemories({
-    id: finalMemoryId,
-    room_id: finalRoomId,
-    content: filterMessageContentForMemories(promptMessage),
-  });
+  await insertMemories([
+    {
+      id: finalMemoryId,
+      room_id: finalRoomId,
+      content: filterMessageContentForMemories(promptMessage),
+    },
+  ]);
 
   return { roomId: finalRoomId, memoryId: finalMemoryId };
 }
