@@ -5,7 +5,7 @@ import { validateCopyChatMessagesBody } from "@/lib/chats/validateCopyChatMessag
 import { validateChatAccess } from "@/lib/chats/validateChatAccess";
 import selectMemories from "@/lib/supabase/memories/selectMemories";
 import deleteMemories from "@/lib/supabase/memories/deleteMemories";
-import insertMemoriesBatch from "@/lib/supabase/memories/insertMemoriesBatch";
+import insertMemories from "@/lib/supabase/memories/insertMemories";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -28,7 +28,7 @@ vi.mock("@/lib/supabase/memories/deleteMemories", () => ({
   default: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/memories/insertMemoriesBatch", () => ({
+vi.mock("@/lib/supabase/memories/insertMemories", () => ({
   default: vi.fn(),
 }));
 
@@ -108,14 +108,14 @@ describe("copyChatMessagesHandler", () => {
     ]);
     vi.mocked(deleteMemories).mockResolvedValue(true);
     vi.mocked(generateUUID).mockReturnValue("new-mem-1");
-    vi.mocked(insertMemoriesBatch).mockResolvedValue(1);
+    vi.mocked(insertMemories).mockResolvedValue(1);
 
     const response = await copyChatMessagesHandler(request, sourceChatId);
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(deleteMemories).toHaveBeenCalledWith(targetChatId);
-    expect(insertMemoriesBatch).toHaveBeenCalledWith([
+    expect(insertMemories).toHaveBeenCalledWith([
       {
         id: "new-mem-1",
         room_id: targetChatId,
@@ -147,7 +147,7 @@ describe("copyChatMessagesHandler", () => {
 
     expect(response.status).toBe(500);
     expect(body.error).toBe("Failed to clear target chat messages");
-    expect(insertMemoriesBatch).not.toHaveBeenCalled();
+    expect(insertMemories).not.toHaveBeenCalled();
   });
 
   it("skips clear when clearExisting is false", async () => {
@@ -158,7 +158,7 @@ describe("copyChatMessagesHandler", () => {
     vi.mocked(validateChatAccess).mockResolvedValueOnce(accessRoom(sourceChatId));
     vi.mocked(validateChatAccess).mockResolvedValueOnce(accessRoom(targetChatId));
     vi.mocked(selectMemories).mockResolvedValue([]);
-    vi.mocked(insertMemoriesBatch).mockResolvedValue(0);
+    vi.mocked(insertMemories).mockResolvedValue(0);
 
     const response = await copyChatMessagesHandler(request, sourceChatId);
     const body = await response.json();

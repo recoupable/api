@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import selectMemories from "@/lib/supabase/memories/selectMemories";
-import insertMemoriesBatch from "@/lib/supabase/memories/insertMemoriesBatch";
+import insertMemories from "@/lib/supabase/memories/insertMemories";
 import deleteMemories from "@/lib/supabase/memories/deleteMemories";
 import { validateCopyChatMessagesBody } from "@/lib/chats/validateCopyChatMessagesBody";
 import { validateChatAccess } from "@/lib/chats/validateChatAccess";
@@ -57,7 +57,7 @@ export async function copyChatMessagesHandler(
       }
     }
 
-    const copiedCount = await insertMemoriesBatch(
+    const copiedCount = await insertMemories(
       sourceMemories.map(memory => ({
         id: generateUUID(),
         room_id: accessibleTargetChatId,
