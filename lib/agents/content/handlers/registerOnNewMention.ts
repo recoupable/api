@@ -5,6 +5,7 @@ import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
 import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadiness";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { parseContentPrompt } from "../parseContentPrompt";
+import { extractMessageAttachments } from "../extractMessageAttachments";
 
 /**
  * Registers the onNewMention handler on the content agent bot.
@@ -21,9 +22,12 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       const artistAccountId = "1873859c-dd37-4e9a-9bac-80d3558527a9";
 
       // Parse the user's natural-language prompt into structured flags
-      const { lipsync, batch, captionLength, upscale, template } = await parseContentPrompt(
+      const { lipsync, batch, captionLength, upscale, template, songs } = await parseContentPrompt(
         message.text,
       );
+
+      // Extract audio/image attachments from the Slack message
+      const { songUrl, imageUrl } = await extractMessageAttachments(message);
 
       // Resolve artist slug
       const artistSlug = await resolveArtistSlug(artistAccountId);
@@ -56,11 +60,27 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       }
 
       // Post acknowledgment
-      const batchNote = batch > 1 ? ` (${batch} videos)` : "";
-      const lipsyncNote = lipsync ? " with lipsync" : "";
+      const details = [
+        `- Artist: *${artistSlug}*`,
+        `- Template: ${template}`,
+        `- Videos: ${batch}`,
+        `- Lipsync: ${lipsync ? "yes" : "no"}`,
+      ];
+      if (songs && songs.length > 0) {
+        details.push(`- Songs: ${songs.join(", ")}`);
+      }
+      if (songUrl) {
+        details.push("- Audio: attached file");
+      }
+      if (imageUrl) {
+        details.push("- Image: attached file (face guide)");
+      }
       await thread.post(
-        `Generating content for **${artistSlug}**${batchNote}${lipsyncNote}... Template: \`${template}\`. I'll reply here when ready (~5-10 min).`,
+        `Generating content...\n${details.join("\n")}\n\nI'll reply here when ready (~5-10 min).`,
       );
+
+      // Build songs array: merge parsed slugs with attached audio URL
+      const allSongs = [...(songs ?? []), ...(songUrl ? [songUrl] : [])];
 
       // Trigger content creation
       const payload = {
@@ -71,6 +91,8 @@ export function registerOnNewMention(bot: ContentAgentBot) {
         captionLength,
         upscale,
         githubRepo,
+        ...(allSongs.length > 0 && { songs: allSongs }),
+        ...(imageUrl && { images: [imageUrl] }),
       };
 
       const results = await Promise.allSettled(

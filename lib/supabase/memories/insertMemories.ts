@@ -1,26 +1,25 @@
 import supabase from "../serverClient";
-import type { Tables } from "@/types/database.types";
-
-type Memory = Tables<"memories">;
-
-type InsertMemoryParams = Pick<Memory, "id" | "room_id" | "content">;
+import type { TablesInsert } from "@/types/database.types";
 
 /**
- * Inserts a new memory into the memories table
+ * Inserts one or more memories.
  *
- * @param params - The parameters for the memory
- * @param params.id - The ID of the memory
- * @param params.room_id - The ID of the room
- * @param params.content - The content of the memory
- * @returns The inserted memory, or null if the insert fails
+ * @param memories - Memory records to insert.
+ * @returns Number of inserted records.
  */
-export default async function insertMemories(params: InsertMemoryParams): Promise<Memory | null> {
-  const { data, error } = await supabase.from("memories").insert(params).select().single();
+export default async function insertMemories(
+  memories: TablesInsert<"memories">[],
+): Promise<number> {
+  if (memories.length === 0) {
+    return 0;
+  }
+
+  const { data, error } = await supabase.from("memories").insert(memories).select("id");
 
   if (error) {
-    console.error("Error creating memory:", error);
+    console.error("Error inserting memories:", error);
     throw error;
   }
 
-  return data;
+  return data?.length ?? 0;
 }
