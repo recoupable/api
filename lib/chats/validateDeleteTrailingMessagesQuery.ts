@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateChatAccess } from "@/lib/chats/validateChatAccess";
-import selectMemoryById from "@/lib/supabase/memories/selectMemoryById";
+import selectMemories from "@/lib/supabase/memories/selectMemories";
 
 const deleteTrailingQuerySchema = z.object({
   from_message_id: z.string().uuid("from_message_id must be a valid UUID"),
@@ -43,7 +43,11 @@ export async function validateDeleteTrailingMessagesQuery(
     );
   }
 
-  const memory = await selectMemoryById(parsedQuery.data.from_message_id);
+  const [memory] =
+    (await selectMemories(undefined, {
+      memoryId: parsedQuery.data.from_message_id,
+      limit: 1,
+    })) ?? [];
   if (!memory) {
     return NextResponse.json(
       { status: "error", error: "Message not found" },

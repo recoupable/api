@@ -16,3 +16,28 @@ export default async function deleteMemories(roomId: string): Promise<boolean> {
 
   return true;
 }
+
+/**
+ * Deletes memories for the given room at/after a timestamp.
+ *
+ * @param roomId - The room ID whose memories should be deleted.
+ * @param timestamp - ISO timestamp threshold (inclusive).
+ * @returns Number of deleted rows, or null on failure.
+ */
+export async function deleteMemoriesAfterTimestamp(
+  roomId: string,
+  timestamp: string,
+): Promise<number | null> {
+  const { error, count } = await supabase
+    .from("memories")
+    .delete({ count: "exact" })
+    .eq("room_id", roomId)
+    .gte("updated_at", timestamp);
+
+  if (error) {
+    console.error("Error deleting trailing memories:", error);
+    return null;
+  }
+
+  return count ?? 0;
+}

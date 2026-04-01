@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateDeleteTrailingMessagesQuery } from "@/lib/chats/validateDeleteTrailingMessagesQuery";
 import { validateChatAccess } from "@/lib/chats/validateChatAccess";
-import selectMemoryById from "@/lib/supabase/memories/selectMemoryById";
+import selectMemories from "@/lib/supabase/memories/selectMemories";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -12,7 +12,7 @@ vi.mock("@/lib/chats/validateChatAccess", () => ({
   validateChatAccess: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/memories/selectMemoryById", () => ({
+vi.mock("@/lib/supabase/memories/selectMemories", () => ({
   default: vi.fn(),
 }));
 
@@ -67,7 +67,7 @@ describe("validateDeleteTrailingMessagesQuery", () => {
       },
       accountId: "11111111-1111-1111-1111-111111111111",
     });
-    vi.mocked(selectMemoryById).mockResolvedValue(null);
+    vi.mocked(selectMemories).mockResolvedValue([]);
 
     const result = await validateDeleteTrailingMessagesQuery(
       createRequest(`?from_message_id=${fromMessageId}`),
@@ -89,11 +89,13 @@ describe("validateDeleteTrailingMessagesQuery", () => {
       },
       accountId: "11111111-1111-1111-1111-111111111111",
     });
-    vi.mocked(selectMemoryById).mockResolvedValue({
-      id: fromMessageId,
-      room_id: "123e4567-e89b-42d3-a456-426614174999",
-      updated_at: "2026-03-31T00:00:00.000Z",
-    });
+    vi.mocked(selectMemories).mockResolvedValue([
+      {
+        id: fromMessageId,
+        room_id: "123e4567-e89b-42d3-a456-426614174999",
+        updated_at: "2026-03-31T00:00:00.000Z",
+      },
+    ]);
 
     const result = await validateDeleteTrailingMessagesQuery(
       createRequest(`?from_message_id=${fromMessageId}`),
@@ -115,11 +117,13 @@ describe("validateDeleteTrailingMessagesQuery", () => {
       },
       accountId: "11111111-1111-1111-1111-111111111111",
     });
-    vi.mocked(selectMemoryById).mockResolvedValue({
-      id: fromMessageId,
-      room_id: chatId,
-      updated_at: "2026-03-31T00:00:00.000Z",
-    });
+    vi.mocked(selectMemories).mockResolvedValue([
+      {
+        id: fromMessageId,
+        room_id: chatId,
+        updated_at: "2026-03-31T00:00:00.000Z",
+      },
+    ] as any);
 
     const result = await validateDeleteTrailingMessagesQuery(
       createRequest(`?from_message_id=${fromMessageId}`),

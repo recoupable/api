@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateDeleteTrailingMessagesQuery } from "@/lib/chats/validateDeleteTrailingMessagesQuery";
-import deleteMemoriesByRoomIdAfterTimestamp from "@/lib/supabase/memories/deleteMemoriesByRoomIdAfterTimestamp";
+import { deleteMemoriesAfterTimestamp } from "@/lib/supabase/memories/deleteMemories";
 
 /**
  * Handles DELETE /api/chats/[id]/messages/trailing.
@@ -21,7 +21,7 @@ export async function deleteTrailingChatMessagesHandler(
       return validated;
     }
 
-    const deletedCount = await deleteMemoriesByRoomIdAfterTimestamp(
+    const deletedCount = await deleteMemoriesAfterTimestamp(
       validated.chatId,
       validated.fromTimestamp,
     );

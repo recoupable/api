@@ -11,20 +11,28 @@ import supabase from "../serverClient";
  * @returns Supabase query result with memories data
  */
 export default async function selectMemories(
-  roomId: string,
+  roomId?: string,
   options?: {
     ascending?: boolean;
     limit?: number;
+    memoryId?: string;
   },
 ): Promise<Tables<"memories">[] | null> {
   const ascending = options?.ascending ?? false;
   const limit = options?.limit;
+  const memoryId = options?.memoryId;
 
-  let query = supabase
-    .from("memories")
-    .select("*")
-    .eq("room_id", roomId)
-    .order("updated_at", { ascending });
+  let query = supabase.from("memories").select("*");
+
+  if (roomId) {
+    query = query.eq("room_id", roomId);
+  }
+
+  if (memoryId) {
+    query = query.eq("id", memoryId);
+  }
+
+  query = query.order("updated_at", { ascending });
 
   if (limit) {
     query = query.limit(limit);
