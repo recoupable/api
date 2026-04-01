@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateContentAgentCallback } from "./validateContentAgentCallback";
 import { getThread } from "@/lib/agents/getThread";
+import { postVideoResults } from "./postVideoResults";
 import type { ContentAgentThreadState } from "./types";
 
 /**
@@ -62,17 +63,7 @@ export async function handleContentAgentCallback(request: Request): Promise<Next
       const failed = results.filter(r => r.status === "failed");
 
       if (videos.length > 0) {
-        const lines = videos.map((v, i) => {
-          const label = videos.length > 1 ? `**Video ${i + 1}:** ` : "";
-          const caption = v.captionText ? `\n> ${v.captionText}` : "";
-          return `${label}${v.videoUrl}${caption}`;
-        });
-
-        if (failed.length > 0) {
-          lines.push(`\n_${failed.length} run(s) failed._`);
-        }
-
-        await thread.post(lines.join("\n\n"));
+        await postVideoResults(thread, videos, failed.length);
       } else {
         await thread.post("Content generation finished but no videos were produced.");
       }
