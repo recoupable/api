@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import selectMemories from "@/lib/supabase/memories/selectMemories";
-import insertCopiedMemories from "@/lib/supabase/memories/insertCopiedMemories";
-import deleteMemoriesByRoomId from "@/lib/supabase/memories/deleteMemoriesByRoomId";
+import insertMemories from "@/lib/supabase/memories/insertMemories";
+import deleteMemories from "@/lib/supabase/memories/deleteMemories";
 import { validateCopyChatMessagesBody } from "@/lib/chats/validateCopyChatMessagesBody";
 import { validateChatAccess } from "@/lib/chats/validateChatAccess";
 
@@ -27,15 +27,12 @@ export async function copyChatMessagesHandler(
       return validated;
     }
 
-    const sourceAccess = await validateChatAccess(request, sourceChatId);
-    if (sourceAccess instanceof NextResponse) {
-      return sourceAccess;
-    }
-
-    const targetAccess = await validateChatAccess(request, validated.targetChatId);
-    if (targetAccess instanceof NextResponse) {
-      return targetAccess;
-    }
+    const [sourceAccess, targetAccess] = await Promise.all([
+      validateChatAccess(request, sourceChatId),
+      validateChatAccess(request, validated.targetChatId),
+    ]);
+    if (sourceAccess instanceof NextResponse) return sourceAccess;
+    if (targetAccess instanceof NextResponse) return targetAccess;
 
     const accessibleSourceChatId = sourceAccess.roomId;
     const accessibleTargetChatId = targetAccess.roomId;
@@ -51,7 +48,7 @@ export async function copyChatMessagesHandler(
     }
 
     if (clearExisting) {
-      const deleted = await deleteMemoriesByRoomId(accessibleTargetChatId);
+      const deleted = await deleteMemories(accessibleTargetChatId);
       if (!deleted) {
         return NextResponse.json(
           { status: "error", error: "Failed to clear target chat messages" },
@@ -60,7 +57,7 @@ export async function copyChatMessagesHandler(
       }
     }
 
-    const copiedCount = await insertCopiedMemories(
+    const copiedCount = await insertMemories(
       sourceMemories.map(memory => ({
         id: generateUUID(),
         room_id: accessibleTargetChatId,

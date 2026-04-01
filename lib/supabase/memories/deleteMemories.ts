@@ -6,7 +6,7 @@ import supabase from "@/lib/supabase/serverClient";
  * @param roomId - The room ID whose memories should be deleted.
  * @returns True when the delete operation succeeds.
  */
-export default async function deleteMemoriesByRoomId(roomId: string): Promise<boolean> {
+export default async function deleteMemories(roomId: string): Promise<boolean> {
   const { error } = await supabase.from("memories").delete().eq("room_id", roomId);
 
   if (error) {

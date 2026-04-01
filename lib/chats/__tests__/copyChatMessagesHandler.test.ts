@@ -4,8 +4,8 @@ import { copyChatMessagesHandler } from "@/lib/chats/copyChatMessagesHandler";
 import { validateCopyChatMessagesBody } from "@/lib/chats/validateCopyChatMessagesBody";
 import { validateChatAccess } from "@/lib/chats/validateChatAccess";
 import selectMemories from "@/lib/supabase/memories/selectMemories";
-import deleteMemoriesByRoomId from "@/lib/supabase/memories/deleteMemoriesByRoomId";
-import insertCopiedMemories from "@/lib/supabase/memories/insertCopiedMemories";
+import deleteMemories from "@/lib/supabase/memories/deleteMemories";
+import insertMemories from "@/lib/supabase/memories/insertMemories";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -24,11 +24,11 @@ vi.mock("@/lib/supabase/memories/selectMemories", () => ({
   default: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/memories/deleteMemoriesByRoomId", () => ({
+vi.mock("@/lib/supabase/memories/deleteMemories", () => ({
   default: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/memories/insertCopiedMemories", () => ({
+vi.mock("@/lib/supabase/memories/insertMemories", () => ({
   default: vi.fn(),
 }));
 
@@ -106,16 +106,16 @@ describe("copyChatMessagesHandler", () => {
         created_at: "2026-03-31T00:00:00.000Z",
       },
     ]);
-    vi.mocked(deleteMemoriesByRoomId).mockResolvedValue(true);
+    vi.mocked(deleteMemories).mockResolvedValue(true);
     vi.mocked(generateUUID).mockReturnValue("new-mem-1");
-    vi.mocked(insertCopiedMemories).mockResolvedValue(1);
+    vi.mocked(insertMemories).mockResolvedValue(1);
 
     const response = await copyChatMessagesHandler(request, sourceChatId);
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(deleteMemoriesByRoomId).toHaveBeenCalledWith(targetChatId);
-    expect(insertCopiedMemories).toHaveBeenCalledWith([
+    expect(deleteMemories).toHaveBeenCalledWith(targetChatId);
+    expect(insertMemories).toHaveBeenCalledWith([
       {
         id: "new-mem-1",
         room_id: targetChatId,
@@ -140,14 +140,14 @@ describe("copyChatMessagesHandler", () => {
     vi.mocked(validateChatAccess).mockResolvedValueOnce(accessRoom(sourceChatId));
     vi.mocked(validateChatAccess).mockResolvedValueOnce(accessRoom(targetChatId));
     vi.mocked(selectMemories).mockResolvedValue([]);
-    vi.mocked(deleteMemoriesByRoomId).mockResolvedValue(false);
+    vi.mocked(deleteMemories).mockResolvedValue(false);
 
     const response = await copyChatMessagesHandler(request, sourceChatId);
     const body = await response.json();
 
     expect(response.status).toBe(500);
     expect(body.error).toBe("Failed to clear target chat messages");
-    expect(insertCopiedMemories).not.toHaveBeenCalled();
+    expect(insertMemories).not.toHaveBeenCalled();
   });
 
   it("skips clear when clearExisting is false", async () => {
@@ -158,13 +158,13 @@ describe("copyChatMessagesHandler", () => {
     vi.mocked(validateChatAccess).mockResolvedValueOnce(accessRoom(sourceChatId));
     vi.mocked(validateChatAccess).mockResolvedValueOnce(accessRoom(targetChatId));
     vi.mocked(selectMemories).mockResolvedValue([]);
-    vi.mocked(insertCopiedMemories).mockResolvedValue(0);
+    vi.mocked(insertMemories).mockResolvedValue(0);
 
     const response = await copyChatMessagesHandler(request, sourceChatId);
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(deleteMemoriesByRoomId).not.toHaveBeenCalled();
+    expect(deleteMemories).not.toHaveBeenCalled();
     expect(body.copied_count).toBe(0);
     expect(body.cleared_existing).toBe(false);
   });
