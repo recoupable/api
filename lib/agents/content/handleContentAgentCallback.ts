@@ -3,7 +3,25 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateContentAgentCallback } from "./validateContentAgentCallback";
 import { getThread } from "@/lib/agents/getThread";
+import { downloadVideoBuffer } from "./downloadVideoBuffer";
 import type { ContentAgentThreadState } from "./types";
+
+/**
+ * Extracts the filename from a URL path, falling back to "video.mp4".
+ *
+ * @param url - The video URL
+ * @returns The extracted filename
+ */
+function getFilenameFromUrl(url: string): string {
+  try {
+    const pathname = new URL(url).pathname;
+    const segments = pathname.split("/");
+    const last = segments[segments.length - 1];
+    return last && last.includes(".") ? last : "video.mp4";
+  } catch {
+    return "video.mp4";
+  }
+}
 
 /**
  * Handles content agent task callback from Trigger.dev.
@@ -62,17 +80,37 @@ export async function handleContentAgentCallback(request: Request): Promise<Next
       const failed = results.filter(r => r.status === "failed");
 
       if (videos.length > 0) {
-        const lines = videos.map((v, i) => {
-          const label = videos.length > 1 ? `**Video ${i + 1}:** ` : "";
-          const caption = v.captionText ? `\n> ${v.captionText}` : "";
-          return `${label}${v.videoUrl}${caption}`;
-        });
+        for (let i = 0; i < videos.length; i++) {
+          const v = videos[i];
+          const videoBuffer = await downloadVideoBuffer(v.videoUrl!);
 
-        if (failed.length > 0) {
-          lines.push(`\n_${failed.length} run(s) failed._`);
+          if (videoBuffer) {
+            const filename = getFilenameFromUrl(v.videoUrl!);
+            const label = videos.length > 1 ? `**Video ${i + 1}**` : "";
+            const caption = v.captionText ? `> ${v.captionText}` : "";
+            const markdown = [label, caption].filter(Boolean).join("\n");
+
+            await thread.post({
+              markdown: markdown || filename,
+              files: [
+                {
+                  data: videoBuffer,
+                  filename,
+                  mimeType: "video/mp4",
+                },
+              ],
+            });
+          } else {
+            // Fallback to URL link if download fails
+            const label = videos.length > 1 ? `**Video ${i + 1}:** ` : "";
+            const caption = v.captionText ? `\n> ${v.captionText}` : "";
+            await thread.post(`${label}${v.videoUrl}${caption}`);
+          }
         }
 
-        await thread.post(lines.join("\n\n"));
+        if (failed.length > 0) {
+          await thread.post(`_${failed.length} run(s) failed._`);
+        }
       } else {
         await thread.post("Content generation finished but no videos were produced.");
       }
