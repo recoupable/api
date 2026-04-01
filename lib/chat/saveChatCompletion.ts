@@ -33,9 +33,7 @@ export async function saveChatCompletion({
   const message = getMessages(text, role)[0];
   const content = filterMessageContentForMemories(message);
 
-  return insertMemories({
-    id: message.id,
-    room_id: roomId,
-    content,
-  });
+  await insertMemories([{ id: message.id, room_id: roomId, content }]);
+
+  return { id: message.id, room_id: roomId, content, updated_at: new Date().toISOString() };
 }
