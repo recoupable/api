@@ -21,12 +21,11 @@ export async function deleteTrailingChatMessagesHandler(
       return validated;
     }
 
-    const deletedCount = await deleteMemories(validated.chatId, {
+    const deleted = await deleteMemories(validated.chatId, {
       fromTimestamp: validated.fromTimestamp,
-      returnCount: true,
     });
 
-    if (deletedCount === null) {
+    if (!deleted) {
       return NextResponse.json(
         { status: "error", error: "Failed to delete trailing messages" },
         { status: 500, headers: getCorsHeaders() },
@@ -38,7 +37,6 @@ export async function deleteTrailingChatMessagesHandler(
         status: "success",
         chat_id: validated.chatId,
         from_message_id: validated.fromMessageId,
-        deleted_count: deletedCount,
       },
       { status: 200, headers: getCorsHeaders() },
     );

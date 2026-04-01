@@ -43,7 +43,7 @@ describe("deleteTrailingChatMessagesHandler", () => {
       fromMessageId,
       fromTimestamp: "2026-03-31T00:00:00.000Z",
     });
-    vi.mocked(deleteMemories).mockResolvedValue(null);
+    vi.mocked(deleteMemories).mockResolvedValue(false);
 
     const response = await deleteTrailingChatMessagesHandler(request, chatId);
     const body = await response.json();
@@ -55,13 +55,13 @@ describe("deleteTrailingChatMessagesHandler", () => {
     });
   });
 
-  it("returns success with deleted count", async () => {
+  it("returns success when delete succeeds", async () => {
     vi.mocked(validateDeleteTrailingMessagesQuery).mockResolvedValue({
       chatId,
       fromMessageId,
       fromTimestamp: "2026-03-31T00:00:00.000Z",
     });
-    vi.mocked(deleteMemories).mockResolvedValue(3);
+    vi.mocked(deleteMemories).mockResolvedValue(true);
 
     const response = await deleteTrailingChatMessagesHandler(request, chatId);
     const body = await response.json();
@@ -71,7 +71,6 @@ describe("deleteTrailingChatMessagesHandler", () => {
       status: "success",
       chat_id: chatId,
       from_message_id: fromMessageId,
-      deleted_count: 3,
     });
   });
 
