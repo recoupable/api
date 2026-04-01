@@ -2,17 +2,33 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { z } from "zod";
 
-export const updateAccountBodySchema = z.object({
-  accountId: z.string().uuid("accountId must be a valid UUID").optional(),
-  name: z.string().optional(),
-  instruction: z.string().optional(),
-  organization: z.string().optional(),
-  image: z.string().url("image must be a valid URL").optional().or(z.literal("")),
-  jobTitle: z.string().optional(),
-  roleType: z.string().optional(),
-  companyName: z.string().optional(),
-  knowledges: z.array(z.string()).optional(),
-});
+export const updateAccountBodySchema = z
+  .object({
+    accountId: z.string().uuid("accountId must be a valid UUID").optional(),
+    name: z.string().optional(),
+    instruction: z.string().optional(),
+    organization: z.string().optional(),
+    image: z.string().url("image must be a valid URL").optional().or(z.literal("")),
+    jobTitle: z.string().optional(),
+    roleType: z.string().optional(),
+    companyName: z.string().optional(),
+    knowledges: z.array(z.string()).optional(),
+  })
+  .refine(
+    body =>
+      body.name !== undefined ||
+      body.instruction !== undefined ||
+      body.organization !== undefined ||
+      body.image !== undefined ||
+      body.jobTitle !== undefined ||
+      body.roleType !== undefined ||
+      body.companyName !== undefined ||
+      body.knowledges !== undefined,
+    {
+      message: "At least one update field is required",
+      path: ["body"],
+    },
+  );
 
 export type UpdateAccountBody = z.infer<typeof updateAccountBodySchema>;
 
