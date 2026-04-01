@@ -98,11 +98,13 @@ describe("saveChatCompletion", () => {
       roomId: "room-123",
     });
 
-    expect(mockInsertMemories).toHaveBeenCalledWith({
-      id: "msg-789",
-      room_id: "room-123",
-      content: mockFilteredContent,
-    });
+    expect(mockInsertMemories).toHaveBeenCalledWith([
+      {
+        id: "msg-789",
+        room_id: "room-123",
+        content: mockFilteredContent,
+      },
+    ]);
   });
 
   it("uses 'assistant' as default role when not specified", async () => {
@@ -153,7 +155,11 @@ describe("saveChatCompletion", () => {
       roomId: "room-return",
     });
 
-    expect(result).toEqual(mockInsertedMemory);
+    expect(result).toMatchObject({
+      id: "msg-return",
+      room_id: "room-return",
+      content: mockFilteredContent,
+    });
   });
 
   it("propagates errors from insertMemories", async () => {
