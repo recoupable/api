@@ -78,6 +78,35 @@ describe("validateDeleteTrailingMessagesQuery", () => {
     expect((result as NextResponse).status).toBe(404);
   });
 
+  it("returns 500 when message created_at is missing", async () => {
+    vi.mocked(validateChatAccess).mockResolvedValue({
+      roomId: chatId,
+      room: {
+        id: chatId,
+        account_id: "11111111-1111-1111-1111-111111111111",
+        artist_id: null,
+        topic: null,
+        updated_at: null,
+      },
+      accountId: "11111111-1111-1111-1111-111111111111",
+    });
+    vi.mocked(selectMemories).mockResolvedValue([
+      {
+        id: fromMessageId,
+        room_id: chatId,
+        created_at: null,
+        updated_at: "2026-03-31T00:00:00.000Z",
+      } as Tables<"memories">,
+    ]);
+
+    const result = await validateDeleteTrailingMessagesQuery(
+      createRequest(`?from_message_id=${fromMessageId}`),
+      chatId,
+    );
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(500);
+  });
+
   it("returns validated payload when query is valid", async () => {
     vi.mocked(validateChatAccess).mockResolvedValue({
       roomId: chatId,
@@ -95,6 +124,7 @@ describe("validateDeleteTrailingMessagesQuery", () => {
         id: fromMessageId,
         room_id: chatId,
         updated_at: "2026-03-31T00:00:00.000Z",
+        created_at: "2026-03-30T00:00:00.000Z",
       } as Tables<"memories">,
     ]);
 
@@ -106,7 +136,7 @@ describe("validateDeleteTrailingMessagesQuery", () => {
     expect(result).toEqual({
       chatId,
       fromMessageId,
-      fromTimestamp: "2026-03-31T00:00:00.000Z",
+      fromCreatedAt: "2026-03-30T00:00:00.000Z",
     });
   });
 });

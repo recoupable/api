@@ -12,7 +12,7 @@ const deleteTrailingQuerySchema = z.object({
 export interface ValidatedDeleteTrailingMessagesQuery {
   chatId: string;
   fromMessageId: string;
-  fromTimestamp: string;
+  fromCreatedAt: string;
 }
 
 /**
@@ -59,9 +59,16 @@ export async function validateDeleteTrailingMessagesQuery(
     );
   }
 
+  if (!memory.created_at) {
+    return NextResponse.json(
+      { status: "error", error: "Message created_at not found" },
+      { status: 500, headers: getCorsHeaders() },
+    );
+  }
+
   return {
     chatId: roomResult.room.id,
     fromMessageId: parsedQuery.data.from_message_id,
-    fromTimestamp: memory.updated_at,
+    fromCreatedAt: memory.created_at,
   };
 }

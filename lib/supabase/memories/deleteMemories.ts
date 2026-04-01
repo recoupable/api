@@ -1,7 +1,7 @@
 import supabase from "@/lib/supabase/serverClient";
 
 interface DeleteMemoriesOptions {
-  fromTimestamp?: string;
+  fromCreatedAt?: string;
 }
 
 /**
@@ -17,8 +17,13 @@ export default async function deleteMemories(
 ): Promise<boolean> {
   let query = supabase.from("memories").delete().eq("room_id", roomId);
 
-  if (options.fromTimestamp) {
-    query = query.gte("updated_at", options.fromTimestamp);
+  if ("fromCreatedAt" in options) {
+    if (typeof options.fromCreatedAt !== "string" || options.fromCreatedAt.trim().length === 0) {
+      console.error("Invalid fromCreatedAt provided for deleteMemories");
+      return false;
+    }
+
+    query = query.gte("created_at", options.fromCreatedAt);
   }
 
   const { error } = await query;
