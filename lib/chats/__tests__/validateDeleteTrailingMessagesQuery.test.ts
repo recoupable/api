@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
+import { Tables } from "@/types/database.types";
 import { validateDeleteTrailingMessagesQuery } from "@/lib/chats/validateDeleteTrailingMessagesQuery";
 import { validateChatAccess } from "@/lib/chats/validateChatAccess";
 import selectMemories from "@/lib/supabase/memories/selectMemories";
@@ -77,34 +78,6 @@ describe("validateDeleteTrailingMessagesQuery", () => {
     expect((result as NextResponse).status).toBe(404);
   });
 
-  it("returns 400 when message does not belong to chat", async () => {
-    vi.mocked(validateChatAccess).mockResolvedValue({
-      roomId: chatId,
-      room: {
-        id: chatId,
-        account_id: "11111111-1111-1111-1111-111111111111",
-        artist_id: null,
-        topic: null,
-        updated_at: null,
-      },
-      accountId: "11111111-1111-1111-1111-111111111111",
-    });
-    vi.mocked(selectMemories).mockResolvedValue([
-      {
-        id: fromMessageId,
-        room_id: "123e4567-e89b-42d3-a456-426614174999",
-        updated_at: "2026-03-31T00:00:00.000Z",
-      },
-    ]);
-
-    const result = await validateDeleteTrailingMessagesQuery(
-      createRequest(`?from_message_id=${fromMessageId}`),
-      chatId,
-    );
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(400);
-  });
-
   it("returns validated payload when query is valid", async () => {
     vi.mocked(validateChatAccess).mockResolvedValue({
       roomId: chatId,
@@ -122,8 +95,8 @@ describe("validateDeleteTrailingMessagesQuery", () => {
         id: fromMessageId,
         room_id: chatId,
         updated_at: "2026-03-31T00:00:00.000Z",
-      },
-    ] as any);
+      } as Tables<"memories">,
+    ]);
 
     const result = await validateDeleteTrailingMessagesQuery(
       createRequest(`?from_message_id=${fromMessageId}`),

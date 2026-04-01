@@ -17,6 +17,10 @@ export interface ValidatedDeleteTrailingMessagesQuery {
 
 /**
  * Validates DELETE /api/chats/[id]/messages/trailing query and chat/message ownership.
+ *
+ * @param request - Incoming request containing query parameters.
+ * @param chatId - Chat UUID from route params.
+ * @returns Either an error response or a validated payload for deletion.
  */
 export async function validateDeleteTrailingMessagesQuery(
   request: NextRequest,
@@ -44,7 +48,7 @@ export async function validateDeleteTrailingMessagesQuery(
   }
 
   const [memory] =
-    (await selectMemories(undefined, {
+    (await selectMemories(roomResult.room.id, {
       memoryId: parsedQuery.data.from_message_id,
       limit: 1,
     })) ?? [];
@@ -52,13 +56,6 @@ export async function validateDeleteTrailingMessagesQuery(
     return NextResponse.json(
       { status: "error", error: "Message not found" },
       { status: 404, headers: getCorsHeaders() },
-    );
-  }
-
-  if (memory.room_id !== roomResult.room.id) {
-    return NextResponse.json(
-      { status: "error", error: "from_message_id does not belong to this chat" },
-      { status: 400, headers: getCorsHeaders() },
     );
   }
 
