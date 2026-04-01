@@ -13,9 +13,9 @@ describe("getFilenameFromUrl", () => {
   });
 
   it("handles URL-encoded characters", () => {
-    expect(
-      getFilenameFromUrl("https://cdn.example.com/my%20video%20file.mp4"),
-    ).toBe("my%20video%20file.mp4");
+    expect(getFilenameFromUrl("https://cdn.example.com/my%20video%20file.mp4")).toBe(
+      "my%20video%20file.mp4",
+    );
   });
 
   it("falls back to video.mp4 when URL has no extension", () => {

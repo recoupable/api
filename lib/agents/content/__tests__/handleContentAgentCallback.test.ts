@@ -108,7 +108,12 @@ describe("handleContentAgentCallback", () => {
         threadId: "slack:C123:T456",
         status: "completed",
         results: [
-          { runId: "run-1", status: "completed", videoUrl: "https://cdn.example.com/video.mp4", captionText: "Test" },
+          {
+            runId: "run-1",
+            status: "completed",
+            videoUrl: "https://cdn.example.com/video.mp4",
+            captionText: "Test",
+          },
           { runId: "run-2", status: "failed", error: "render error" },
         ],
       });

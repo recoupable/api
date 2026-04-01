@@ -9,7 +9,11 @@ interface VideoResult {
 }
 
 interface Thread {
-  post: (message: string | { markdown: string; files: { data: Buffer; filename: string; mimeType: string }[] }) => Promise<void>;
+  post: (
+    message:
+      | string
+      | { markdown: string; files: { data: Buffer; filename: string; mimeType: string }[] },
+  ) => Promise<unknown>;
 }
 
 /**
@@ -26,9 +30,7 @@ export async function postVideoResults(
   failedCount: number,
 ): Promise<void> {
   // Download all videos in parallel
-  const buffers = await Promise.all(
-    videos.map(v => downloadVideoBuffer(v.videoUrl!)),
-  );
+  const buffers = await Promise.all(videos.map(v => downloadVideoBuffer(v.videoUrl!)));
 
   // Post each video sequentially (Slack ordering matters)
   for (let i = 0; i < videos.length; i++) {
