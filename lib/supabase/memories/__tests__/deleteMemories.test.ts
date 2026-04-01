@@ -76,17 +76,17 @@ describe("deleteMemories", () => {
     expect(result).toBe(true);
   });
 
-  it("applies immutable created_at boundary when fromCreatedAt is provided", async () => {
+  it("applies updated_at boundary when fromTimestamp is provided", async () => {
     const result = await deleteMemories(roomId, {
-      fromCreatedAt: "2026-03-31T00:00:00.000Z",
+      fromTimestamp: "2026-03-31T00:00:00.000Z",
     });
 
-    expect(mockGte).toHaveBeenCalledWith("created_at", "2026-03-31T00:00:00.000Z");
+    expect(mockGte).toHaveBeenCalledWith("updated_at", "2026-03-31T00:00:00.000Z");
     expect(result).toBe(true);
   });
 
-  it("returns false for explicit empty fromCreatedAt to avoid broad deletes", async () => {
-    const result = await deleteMemories(roomId, { fromCreatedAt: "" });
+  it("returns false for explicit empty fromTimestamp to avoid broad deletes", async () => {
+    const result = await deleteMemories(roomId, { fromTimestamp: "" });
 
     expect(mockGte).not.toHaveBeenCalled();
     expect(result).toBe(false);
@@ -96,7 +96,7 @@ describe("deleteMemories", () => {
     queryError = { message: "delete failed" };
 
     const result = await deleteMemories(roomId, {
-      fromCreatedAt: "2026-03-31T00:00:00.000Z",
+      fromTimestamp: "2026-03-31T00:00:00.000Z",
     });
 
     expect(result).toBe(false);

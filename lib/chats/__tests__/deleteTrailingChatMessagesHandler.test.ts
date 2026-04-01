@@ -41,7 +41,7 @@ describe("deleteTrailingChatMessagesHandler", () => {
     vi.mocked(validateDeleteTrailingMessagesQuery).mockResolvedValue({
       chatId,
       fromMessageId,
-      fromCreatedAt: "2026-03-31T00:00:00.000Z",
+      fromTimestamp: "2026-03-31T00:00:00.000Z",
     });
     vi.mocked(deleteMemories).mockResolvedValue(false);
 
@@ -59,7 +59,7 @@ describe("deleteTrailingChatMessagesHandler", () => {
     vi.mocked(validateDeleteTrailingMessagesQuery).mockResolvedValue({
       chatId,
       fromMessageId,
-      fromCreatedAt: "2026-03-31T00:00:00.000Z",
+      fromTimestamp: "2026-03-31T00:00:00.000Z",
     });
     vi.mocked(deleteMemories).mockResolvedValue(true);
 

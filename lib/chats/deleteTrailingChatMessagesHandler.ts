@@ -22,7 +22,7 @@ export async function deleteTrailingChatMessagesHandler(
     }
 
     const deleted = await deleteMemories(validated.chatId, {
-      fromCreatedAt: validated.fromCreatedAt,
+      fromTimestamp: validated.fromTimestamp,
     });
 
     if (!deleted) {
