@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getChatMessagesHandler } from "@/lib/chats/getChatMessagesHandler";
-import { validateChatAccess } from "@/lib/chats/validateChatAccess";
+import { validateGetChatMessagesQuery } from "@/lib/chats/validateGetChatMessagesQuery";
 import selectMemories from "@/lib/supabase/memories/selectMemories";
 
-vi.mock("@/lib/chats/validateChatAccess", () => ({
-  validateChatAccess: vi.fn(),
+vi.mock("@/lib/chats/validateGetChatMessagesQuery", () => ({
+  validateGetChatMessagesQuery: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/memories/selectMemories", () => ({
@@ -22,7 +22,11 @@ describe("getChatMessagesHandler", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 400 for invalid chat id", async () => {
+  it("returns 400 when validation fails", async () => {
+    vi.mocked(validateGetChatMessagesQuery).mockResolvedValue(
+      NextResponse.json({ status: "error", error: "id must be a valid UUID" }, { status: 400 }),
+    );
+
     const response = await getChatMessagesHandler(createRequest(), "invalid-id");
     const body = await response.json();
 
@@ -34,7 +38,7 @@ describe("getChatMessagesHandler", () => {
   });
 
   it("returns room access error when validation fails", async () => {
-    vi.mocked(validateChatAccess).mockResolvedValue(
+    vi.mocked(validateGetChatMessagesQuery).mockResolvedValue(
       NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
     );
 
@@ -43,7 +47,7 @@ describe("getChatMessagesHandler", () => {
   });
 
   it("returns 500 when memories query fails", async () => {
-    vi.mocked(validateChatAccess).mockResolvedValue({
+    vi.mocked(validateGetChatMessagesQuery).mockResolvedValue({
       room: {
         id: roomId,
         account_id: null,
@@ -66,7 +70,7 @@ describe("getChatMessagesHandler", () => {
   });
 
   it("returns memories for an accessible room", async () => {
-    vi.mocked(validateChatAccess).mockResolvedValue({
+    vi.mocked(validateGetChatMessagesQuery).mockResolvedValue({
       room: {
         id: roomId,
         account_id: null,
@@ -101,8 +105,8 @@ describe("getChatMessagesHandler", () => {
     });
   });
 
-  it("returns 500 when validateChatAccess throws unexpectedly", async () => {
-    vi.mocked(validateChatAccess).mockRejectedValue(new Error("boom"));
+  it("returns 500 when validateGetChatMessagesQuery throws unexpectedly", async () => {
+    vi.mocked(validateGetChatMessagesQuery).mockRejectedValue(new Error("boom"));
 
     const response = await getChatMessagesHandler(createRequest(roomId), roomId);
     const body = await response.json();
@@ -115,7 +119,7 @@ describe("getChatMessagesHandler", () => {
   });
 
   it("returns 500 when selectMemories throws unexpectedly", async () => {
-    vi.mocked(validateChatAccess).mockResolvedValue({
+    vi.mocked(validateGetChatMessagesQuery).mockResolvedValue({
       room: {
         id: roomId,
         account_id: null,
