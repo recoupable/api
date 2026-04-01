@@ -1,7 +1,5 @@
-import type { Tables } from "@/types/database.types";
-import supabase from "@/lib/supabase/serverClient";
-
-type InsertMemoryParams = Pick<Tables<"memories">, "id" | "room_id" | "content" | "updated_at">[];
+import supabase from "../serverClient";
+import type { TablesInsert } from "@/types/database.types";
 
 /**
  * Inserts one or more memories.
@@ -9,7 +7,9 @@ type InsertMemoryParams = Pick<Tables<"memories">, "id" | "room_id" | "content" 
  * @param memories - Memory records to insert.
  * @returns Number of inserted records.
  */
-export default async function insertMemories(memories: InsertMemoryParams): Promise<number> {
+export default async function insertMemories(
+  memories: TablesInsert<"memories">[],
+): Promise<number> {
   if (memories.length === 0) {
     return 0;
   }

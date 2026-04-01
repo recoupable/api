@@ -169,11 +169,13 @@ describe("setupConversation", () => {
         promptMessage,
       });
 
-      expect(mockInsertMemories).toHaveBeenCalledWith({
-        id: "generated-uuid",
-        room_id: "generated-uuid",
-        content: promptMessage,
-      });
+      expect(mockInsertMemories).toHaveBeenCalledWith([
+        {
+          id: "generated-uuid",
+          room_id: "generated-uuid",
+          content: promptMessage,
+        },
+      ]);
       expect(mockFilterMessageContentForMemories).toHaveBeenCalledWith(promptMessage);
     });
 
@@ -187,11 +189,13 @@ describe("setupConversation", () => {
         memoryId: "custom-memory-id",
       });
 
-      expect(mockInsertMemories).toHaveBeenCalledWith({
-        id: "custom-memory-id",
-        room_id: "existing-room",
-        content: promptMessage,
-      });
+      expect(mockInsertMemories).toHaveBeenCalledWith([
+        {
+          id: "custom-memory-id",
+          room_id: "existing-room",
+          content: promptMessage,
+        },
+      ]);
     });
 
     it("persists message for both new and existing rooms", async () => {
