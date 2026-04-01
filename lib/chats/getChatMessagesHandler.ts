@@ -31,10 +31,7 @@ export async function getChatMessagesHandler(
       );
     }
 
-    return NextResponse.json(
-      { data: memories },
-      { status: 200, headers: getCorsHeaders() },
-    );
+    return NextResponse.json({ data: memories }, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
     console.error("Unexpected error in getChatMessagesHandler:", error);
     return NextResponse.json(

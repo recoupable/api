@@ -8,8 +8,7 @@ vi.mock("@/lib/chats/validateChatAccess", () => ({
 
 const { validateChatAccess } = await import("@/lib/chats/validateChatAccess");
 
-const createRequest = () =>
-  new NextRequest("http://localhost/api/chats/test/messages");
+const createRequest = () => new NextRequest("http://localhost/api/chats/test/messages");
 
 describe("validateGetChatMessagesQuery", () => {
   beforeEach(() => {
