@@ -48,7 +48,13 @@ describe("POST /api/tasks", () => {
 
     const request = new NextRequest("https://example.com/api/tasks", {
       method: "POST",
-      body: JSON.stringify({ title: "t", prompt: "p", schedule: "0 0 * * *", account_id: "a", artist_account_id: "ar" }),
+      body: JSON.stringify({
+        title: "t",
+        prompt: "p",
+        schedule: "0 0 * * *",
+        account_id: "a",
+        artist_account_id: "ar",
+      }),
     });
     const response = await POST(request);
 
