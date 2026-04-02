@@ -52,6 +52,28 @@ describe("createTaskHandler", () => {
     expect(mockCreateTask).not.toHaveBeenCalled();
   });
 
+  it("returns 403 when auth context denies account override", async () => {
+    mockValidateAuthContext.mockResolvedValue(
+      NextResponse.json(
+        { status: "error", error: "Access denied to specified account_id" },
+        { status: 403 },
+      ),
+    );
+
+    const result = await createTaskHandler(
+      createMockRequest({
+        title: "task",
+        prompt: "prompt",
+        schedule: "0 0 * * *",
+        account_id: "other-account",
+        artist_account_id: "artist-1",
+      }),
+    );
+
+    expect(result.status).toBe(403);
+    expect(mockCreateTask).not.toHaveBeenCalled();
+  });
+
   it("uses authenticated accountId instead of body account_id", async () => {
     mockValidateAuthContext.mockResolvedValue({
       accountId: "auth-account-id",

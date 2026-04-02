@@ -56,6 +56,21 @@ describe("deleteTaskHandler", () => {
     expect(mockDeleteTask).not.toHaveBeenCalled();
   });
 
+  it("returns 404 when task id does not exist", async () => {
+    mockValidateAuthContext.mockResolvedValue({
+      accountId: "acc-1",
+      authToken: "token",
+      orgId: null,
+    });
+    mockSelectScheduledActions.mockResolvedValue([]);
+
+    const result = await deleteTaskHandler(createMockRequest({ id: "missing" }));
+
+    expect(result.status).toBe(404);
+    expect(mockValidateAccountIdOverride).not.toHaveBeenCalled();
+    expect(mockDeleteTask).not.toHaveBeenCalled();
+  });
+
   it("returns 403 when task account is not accessible", async () => {
     mockValidateAuthContext.mockResolvedValue({
       accountId: "acc-1",
