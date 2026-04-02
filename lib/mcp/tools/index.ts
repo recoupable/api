@@ -13,6 +13,7 @@ import { registerWebDeepResearchTool } from "./registerWebDeepResearchTool";
 import { registerArtistDeepResearchTool } from "./registerArtistDeepResearchTool";
 import { registerAllFileTools } from "./files";
 import { registerAllFlamingoTools } from "./flamingo";
+import { registerAllMusicTools } from "./music";
 import { registerCreateSegmentsTool } from "./registerCreateSegmentsTool";
 import { registerAllYouTubeTools } from "./youtube";
 import { registerTranscribeTools } from "./transcribe";
@@ -39,6 +40,7 @@ export const registerAllTools = (server: McpServer): void => {
   registerAllFileTools(server);
   registerAllFlamingoTools(server);
   registerAllImageTools(server);
+  registerAllMusicTools(server);
   registerAllPulseTools(server);
   registerAllSandboxTools(server);
   registerAllSearchTools(server);
