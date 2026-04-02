@@ -8,6 +8,7 @@ import supabase from "../serverClient";
  * @param options - Options for the query (ascending order and limit)
  * @param options.ascending - Whether to order the results by ascending order
  * @param options.limit - The limit of the results
+ * @param options.memoryId - Optional memory ID filter within the room
  * @returns Supabase query result with memories data
  */
 export default async function selectMemories(
@@ -15,16 +16,22 @@ export default async function selectMemories(
   options?: {
     ascending?: boolean;
     limit?: number;
+    memoryId?: string;
   },
 ): Promise<Tables<"memories">[] | null> {
   const ascending = options?.ascending ?? false;
   const limit = options?.limit;
+  const memoryId = options?.memoryId;
 
   let query = supabase
     .from("memories")
     .select("*")
     .eq("room_id", roomId)
     .order("updated_at", { ascending });
+
+  if (memoryId) {
+    query = query.eq("id", memoryId);
+  }
 
   if (limit) {
     query = query.limit(limit);
