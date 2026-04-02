@@ -34,9 +34,16 @@ export async function createUpscaleHandler(request: NextRequest): Promise<NextRe
 
     const inputKey = validated.type === "video" ? "video_url" : "image_url";
 
-    const result = await fal.subscribe(model as string, {
-      input: { [inputKey]: validated.url },
-    });
+    const input: Record<string, unknown> = {
+      [inputKey]: validated.url,
+      upscale_factor: validated.upscale_factor,
+    };
+    if (validated.target_resolution) {
+      input.upscale_mode = "target";
+      input.target_resolution = validated.target_resolution;
+    }
+
+    const result = await fal.subscribe(model as string, { input });
 
     const resultData = result.data as Record<string, unknown>;
     const url =

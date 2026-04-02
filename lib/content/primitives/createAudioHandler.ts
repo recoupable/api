@@ -37,8 +37,9 @@ export async function createAudioHandler(request: NextRequest): Promise<NextResp
       input: {
         audio_url: audioUrl,
         task: "transcribe",
-        chunk_level: "word",
-        language: "en",
+        chunk_level: validated.chunk_level,
+        language: validated.language,
+        diarize: validated.diarize,
       },
     });
 

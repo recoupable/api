@@ -24,7 +24,7 @@ export const createVideoBodySchema = z.object({
   duration: z.enum(["4s", "6s", "7s", "8s"]).optional().default("8s"),
   resolution: z.enum(["720p", "1080p", "4k"]).optional().default("720p"),
   negative_prompt: z.string().optional(),
-  generate_audio: z.boolean().optional().default(true),
+  generate_audio: z.boolean().optional().default(false),
   model: z.string().optional(),
 });
 
@@ -35,6 +35,9 @@ export const createTextBodySchema = z.object({
 
 export const createAudioBodySchema = z.object({
   audio_urls: z.array(z.string().url()).min(1),
+  language: z.string().optional().default("en"),
+  chunk_level: z.enum(["none", "segment", "word"]).optional().default("word"),
+  diarize: z.boolean().optional().default(false),
   model: z.string().optional(),
 });
 
@@ -89,6 +92,8 @@ export const editBodySchema = z
 export const createUpscaleBodySchema = z.object({
   url: z.string().url(),
   type: z.enum(["image", "video"]),
+  upscale_factor: z.number().min(1).max(4).optional().default(2),
+  target_resolution: z.enum(["720p", "1080p", "1440p", "2160p"]).optional(),
 });
 
 export const createAnalyzeBodySchema = z.object({
