@@ -7,6 +7,9 @@ import { createTextBodySchema } from "./schemas";
 /**
  * Handles POST /api/content/create/text.
  * Generates on-screen text using the Recoup Chat API (inline, no task).
+ *
+ * @param request - Incoming Next.js request with JSON body validated by the text primitive schema.
+ * @returns JSON with generated text styling fields, or an error NextResponse.
  */
 export async function createTextHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validatePrimitiveBody(request, createTextBodySchema);

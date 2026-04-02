@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import type { triggerPrimitive } from "@/lib/trigger/triggerPrimitive";
 import { createPrimitiveHandler } from "../handlePrimitiveTrigger";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -30,7 +31,9 @@ describe("createPrimitiveHandler", () => {
       accountId: "acc_123",
       data: { name: "test" },
     });
-    vi.mocked(triggerPrimitive).mockResolvedValue({ id: "run_abc123" } as any);
+    vi.mocked(triggerPrimitive).mockResolvedValue({ id: "run_abc123" } as Awaited<
+      ReturnType<typeof triggerPrimitive>
+    >);
 
     const handler = createPrimitiveHandler("create-image", testSchema);
     const request = new NextRequest("http://localhost/api/test", {

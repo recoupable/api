@@ -12,6 +12,8 @@ type PrepareStepOptions = {
 /**
  * Returns the next tool to run based on timeline progression through tool chains.
  * Uses toolCallsContent to track exact execution order and position in sequence.
+ *
+ * @param options
  */
 const getPrepareStepResult = (options: PrepareStepOptions): PrepareStepResult | undefined => {
   const { steps } = options;

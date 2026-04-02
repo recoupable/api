@@ -8,6 +8,10 @@ import { validatePrimitiveBody } from "./validatePrimitiveBody";
 /**
  * Creates a request handler for an async content primitive.
  * Validates body, triggers the Trigger.dev task, returns { runId, status }.
+ *
+ * @param taskId - Trigger.dev task identifier to run for this primitive.
+ * @param schema - Zod schema used to parse and validate the JSON body.
+ * @returns Async route function that accepts a NextRequest and returns a NextResponse.
  */
 export function createPrimitiveHandler(taskId: string, schema: z.ZodSchema) {
   return async (request: NextRequest): Promise<NextResponse> => {

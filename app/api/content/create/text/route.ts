@@ -4,6 +4,8 @@ import { createTextHandler } from "@/lib/content/primitives/createTextHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
+ *
+ * @returns Empty 204 response with CORS headers.
  */
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });

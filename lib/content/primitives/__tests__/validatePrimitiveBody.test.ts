@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import type { AuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "../validatePrimitiveBody";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -34,7 +35,7 @@ describe("validatePrimitiveBody", () => {
       accountId: "acc_123",
       orgId: null,
       authToken: "tok",
-    } as any);
+    } satisfies AuthContext);
 
     const request = new NextRequest("http://localhost/api/test", {
       method: "POST",

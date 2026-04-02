@@ -13,6 +13,10 @@ export interface ValidatedPrimitive<T> {
 /**
  * Validates auth and parses the request body against a Zod schema.
  * Shared by all content primitive endpoints.
+ *
+ * @param request - Incoming Next.js request (body read as JSON).
+ * @param schema - Zod schema for the expected JSON body shape.
+ * @returns Validated account ID and parsed data, or a NextResponse error.
  */
 export async function validatePrimitiveBody<T>(
   request: NextRequest,

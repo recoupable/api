@@ -9,6 +9,8 @@ import { getSlackTagsHandler } from "@/lib/admins/slack/getSlackTagsHandler";
  * Pulls directly from the Slack API as the source of truth.
  * Supports period filtering: all (default), daily, weekly, monthly.
  * Requires admin authentication.
+ *
+ * @param request
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   return getSlackTagsHandler(request);
