@@ -7,7 +7,7 @@ import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { createVideoBodySchema } from "./schemas";
 
 const MODELS: Record<string, string> = {
-  prompt: "fal-ai/veo3.1/text-to-video",
+  prompt: "fal-ai/veo3.1",
   animate: "fal-ai/veo3.1/image-to-video",
   reference: "fal-ai/veo3.1/reference-to-video",
   extend: "fal-ai/veo3.1/extend-video",
