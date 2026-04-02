@@ -10,7 +10,7 @@ const DEFAULT_T2I_MODEL = "fal-ai/nano-banana-2";
 const DEFAULT_EDIT_MODEL = "fal-ai/nano-banana-2/edit";
 
 /**
- * POST /api/content/generate-image
+ * POST /api/content/image
  *
  * @param request - Incoming request with image generation parameters.
  * @returns JSON with the generated image URL.

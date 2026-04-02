@@ -2,7 +2,7 @@ import { createAnalyzeHandler } from "@/lib/content/primitives/createAnalyzeHand
 import { createPrimitiveRoute } from "@/lib/content/primitives/createPrimitiveRoute";
 
 /**
- * POST /api/content/analyze-video
+ * POST /api/content/analyze
  *
  * Analyze a video and generate text based on its content.
  */

@@ -8,7 +8,7 @@ import { createAnalyzeBodySchema } from "./schemas";
 const TWELVELABS_ANALYZE_URL = "https://api.twelvelabs.io/v1.3/analyze";
 
 /**
- * POST /api/content/analyze-video
+ * POST /api/content/analyze
  *
  * @param request - Incoming request with video URL and analysis prompt.
  * @returns JSON with the generated analysis text.

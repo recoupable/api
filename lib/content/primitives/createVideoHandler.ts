@@ -35,7 +35,7 @@ function inferMode(v: {
 }
 
 /**
- * POST /api/content/generate-video
+ * POST /api/content/video
  *
  * @param request - Incoming request with video generation parameters.
  * @returns JSON with the generated video URL.

@@ -2,9 +2,9 @@ import { createImageHandler } from "@/lib/content/primitives/createImageHandler"
 import { createPrimitiveRoute } from "@/lib/content/primitives/createPrimitiveRoute";
 
 /**
- * POST /api/content/generate-image
+ * POST /api/content/image
  *
- * Generate an AI portrait image from a template and face guide.
+ * Generate an image from a prompt and optional reference image.
  */
 export const { OPTIONS, POST } = createPrimitiveRoute(createImageHandler);
 

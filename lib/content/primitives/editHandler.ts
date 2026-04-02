@@ -7,7 +7,7 @@ import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { editBodySchema } from "./schemas";
 
 /**
- * POST /api/content/edit
+ * PATCH /api/content/video
  *
  * @param request - Incoming request with media inputs and edit operations.
  * @returns JSON with the triggered run ID.

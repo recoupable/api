@@ -2,7 +2,7 @@ import { createAudioHandler } from "@/lib/content/primitives/createAudioHandler"
 import { createPrimitiveRoute } from "@/lib/content/primitives/createPrimitiveRoute";
 
 /**
- * POST /api/content/transcribe-audio
+ * POST /api/content/transcribe
  *
  * Transcribe a song into timestamped lyrics.
  */

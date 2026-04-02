@@ -9,7 +9,7 @@ import { createAudioBodySchema } from "./schemas";
 const DEFAULT_MODEL = "fal-ai/whisper";
 
 /**
- * POST /api/content/transcribe-audio
+ * POST /api/content/transcribe
  *
  * @param request - Incoming request with audio URLs to transcribe.
  * @returns JSON with transcription and timestamped segments.

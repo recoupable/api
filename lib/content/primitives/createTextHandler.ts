@@ -88,7 +88,7 @@ function normalizeGeneratedText(json: {
 }
 
 /**
- * POST /api/content/generate-caption
+ * POST /api/content/caption
  *
  * @param request - Incoming Next.js request with JSON body validated by the text primitive schema.
  * @returns JSON with generated text styling fields, or an error NextResponse.

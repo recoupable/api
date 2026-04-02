@@ -44,7 +44,7 @@ describe("createAnalyzeHandler", () => {
     const authError = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     vi.mocked(validateAuthContext).mockResolvedValue(authError);
 
-    const request = new NextRequest("http://localhost/api/content/analyze-video", {
+    const request = new NextRequest("http://localhost/api/content/analyze", {
       method: "POST",
     });
     const result = await createAnalyzeHandler(request);
@@ -55,7 +55,7 @@ describe("createAnalyzeHandler", () => {
   it("returns 500 when TWELVELABS_API_KEY is missing", async () => {
     delete process.env.TWELVELABS_API_KEY;
 
-    const request = new NextRequest("http://localhost/api/content/analyze-video", {
+    const request = new NextRequest("http://localhost/api/content/analyze", {
       method: "POST",
     });
     const result = await createAnalyzeHandler(request);
@@ -77,7 +77,7 @@ describe("createAnalyzeHandler", () => {
       ),
     );
 
-    const request = new NextRequest("http://localhost/api/content/analyze-video", {
+    const request = new NextRequest("http://localhost/api/content/analyze", {
       method: "POST",
     });
     const result = await createAnalyzeHandler(request);
@@ -92,7 +92,7 @@ describe("createAnalyzeHandler", () => {
   it("returns 502 when Twelve Labs returns an error", async () => {
     vi.spyOn(global, "fetch").mockResolvedValueOnce(new Response("Bad Request", { status: 400 }));
 
-    const request = new NextRequest("http://localhost/api/content/analyze-video", {
+    const request = new NextRequest("http://localhost/api/content/analyze", {
       method: "POST",
     });
     const result = await createAnalyzeHandler(request);
@@ -107,7 +107,7 @@ describe("createAnalyzeHandler", () => {
       new Response(JSON.stringify({}), { status: 200 }),
     );
 
-    const request = new NextRequest("http://localhost/api/content/analyze-video", {
+    const request = new NextRequest("http://localhost/api/content/analyze", {
       method: "POST",
     });
     const result = await createAnalyzeHandler(request);
@@ -127,7 +127,7 @@ describe("createAnalyzeHandler", () => {
         ),
       );
 
-    const request = new NextRequest("http://localhost/api/content/analyze-video", {
+    const request = new NextRequest("http://localhost/api/content/analyze", {
       method: "POST",
     });
     await createAnalyzeHandler(request);
