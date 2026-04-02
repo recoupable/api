@@ -71,8 +71,15 @@ export async function createVideoHandler(request: NextRequest): Promise<NextResp
 
     if (validated.prompt) input.prompt = validated.prompt;
     if (validated.negative_prompt) input.negative_prompt = validated.negative_prompt;
-    if (validated.image_url) input.image_url = validated.image_url;
-    if (validated.end_image_url) input.end_image_url = validated.end_image_url;
+
+    if (mode === "reference" && validated.image_url) {
+      input.image_urls = [validated.image_url];
+    } else if (mode === "first-last" && validated.image_url) {
+      input.first_frame_url = validated.image_url;
+      if (validated.end_image_url) input.last_frame_url = validated.end_image_url;
+    } else if (validated.image_url) {
+      input.image_url = validated.image_url;
+    }
     if (validated.video_url) input.video_url = validated.video_url;
     if (validated.audio_url) input.audio_url = validated.audio_url;
 
