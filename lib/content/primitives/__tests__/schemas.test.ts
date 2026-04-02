@@ -6,6 +6,7 @@ import {
   createAudioBodySchema,
   createRenderBodySchema,
   createUpscaleBodySchema,
+  createAnalyzeBodySchema,
 } from "../schemas";
 
 describe("createImageBodySchema", () => {
@@ -117,6 +118,53 @@ describe("createUpscaleBodySchema", () => {
       createUpscaleBodySchema.safeParse({
         url: "https://example.com/f",
         type: "audio",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("createAnalyzeBodySchema", () => {
+  it("parses valid payload", () => {
+    expect(
+      createAnalyzeBodySchema.safeParse({
+        video_url: "https://example.com/video.mp4",
+        prompt: "Describe what happens in this video",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("defaults temperature to 0.2", () => {
+    const result = createAnalyzeBodySchema.safeParse({
+      video_url: "https://example.com/video.mp4",
+      prompt: "Describe this video",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.temperature).toBe(0.2);
+  });
+
+  it("defaults stream to false", () => {
+    const result = createAnalyzeBodySchema.safeParse({
+      video_url: "https://example.com/video.mp4",
+      prompt: "Describe this video",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.stream).toBe(false);
+  });
+
+  it("rejects prompt exceeding 2000 chars", () => {
+    expect(
+      createAnalyzeBodySchema.safeParse({
+        video_url: "https://example.com/video.mp4",
+        prompt: "x".repeat(2001),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects invalid video_url", () => {
+    expect(
+      createAnalyzeBodySchema.safeParse({
+        video_url: "not-a-url",
+        prompt: "Describe this video",
       }).success,
     ).toBe(false);
   });
