@@ -43,6 +43,7 @@ describe("createTaskHandler", () => {
         title: "task",
         prompt: "prompt",
         schedule: "0 0 * * *",
+        account_id: "account-1",
         artist_account_id: "artist-1",
       }),
     );
