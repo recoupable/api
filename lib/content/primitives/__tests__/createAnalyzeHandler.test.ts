@@ -90,9 +90,7 @@ describe("createAnalyzeHandler", () => {
   });
 
   it("returns 502 when Twelve Labs returns an error", async () => {
-    vi.spyOn(global, "fetch").mockResolvedValueOnce(
-      new Response("Bad Request", { status: 400 }),
-    );
+    vi.spyOn(global, "fetch").mockResolvedValueOnce(new Response("Bad Request", { status: 400 }));
 
     const request = new NextRequest("http://localhost/api/content/analyze-video", {
       method: "POST",
@@ -120,12 +118,14 @@ describe("createAnalyzeHandler", () => {
   });
 
   it("sends correct body to Twelve Labs API", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ data: "result", finish_reason: "stop", usage: { output_tokens: 10 } }),
-        { status: 200 },
-      ),
-    );
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ data: "result", finish_reason: "stop", usage: { output_tokens: 10 } }),
+          { status: 200 },
+        ),
+      );
 
     const request = new NextRequest("http://localhost/api/content/analyze-video", {
       method: "POST",

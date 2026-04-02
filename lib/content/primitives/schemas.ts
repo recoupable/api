@@ -59,19 +59,20 @@ export const editOperationSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
-export const editBodySchema = z.object({
-  video_url: z.string().url().optional(),
-  audio_url: z.string().url().optional(),
-  template: z.string().optional(),
-  operations: z.array(editOperationSchema).optional(),
-  output_format: z.enum(["mp4", "webm", "mov"]).optional().default("mp4"),
-}).refine(
-  data => data.video_url || data.audio_url,
-  { message: "Must provide at least one input (video_url or audio_url)" },
-).refine(
-  data => data.template || (data.operations && data.operations.length > 0),
-  { message: "Must provide either template or operations" },
-);
+export const editBodySchema = z
+  .object({
+    video_url: z.string().url().optional(),
+    audio_url: z.string().url().optional(),
+    template: z.string().optional(),
+    operations: z.array(editOperationSchema).optional(),
+    output_format: z.enum(["mp4", "webm", "mov"]).optional().default("mp4"),
+  })
+  .refine(data => data.video_url || data.audio_url, {
+    message: "Must provide at least one input (video_url or audio_url)",
+  })
+  .refine(data => data.template || (data.operations && data.operations.length > 0), {
+    message: "Must provide either template or operations",
+  });
 
 export const createUpscaleBodySchema = z.object({
   url: z.string().url(),

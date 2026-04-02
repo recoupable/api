@@ -182,9 +182,7 @@ describe("editBodySchema", () => {
     expect(
       editBodySchema.safeParse({
         video_url: "https://example.com/v.mp4",
-        operations: [
-          { type: "overlay_text", content: "hello world" },
-        ],
+        operations: [{ type: "overlay_text", content: "hello world" }],
       }).success,
     ).toBe(true);
   });
@@ -193,9 +191,7 @@ describe("editBodySchema", () => {
     expect(
       editBodySchema.safeParse({
         video_url: "https://example.com/v.mp4",
-        operations: [
-          { type: "mux_audio", audio_url: "https://example.com/a.mp3" },
-        ],
+        operations: [{ type: "mux_audio", audio_url: "https://example.com/a.mp3" }],
       }).success,
     ).toBe(true);
   });
