@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createRenderHandler } from "@/lib/content/primitives/createRenderHandler";
+import { editHandler } from "@/lib/content/primitives/editHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -12,11 +12,11 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/content/render
+ * POST /api/content/edit
  *
- * Composite video, audio, and text into a final social video.
+ * Edit media with an operations pipeline or a template preset.
  */
-export { createRenderHandler as POST };
+export { editHandler as POST };
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";

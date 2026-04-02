@@ -29,7 +29,7 @@ export async function createTextHandler(request: NextRequest): Promise<NextRespo
     }
 
     const prompt = `Generate ONE short on-screen text for a social media video.
-Song or theme: "${validated.song}"
+Topic: "${validated.topic}"
 Length: ${validated.length}
 Return ONLY the text, nothing else. No quotes.`;
 

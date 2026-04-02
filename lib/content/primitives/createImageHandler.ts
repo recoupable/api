@@ -6,6 +6,8 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { createImageBodySchema } from "./schemas";
 
+const DEFAULT_MODEL = "fal-ai/nano-banana-pro/edit";
+
 /**
  * POST /api/content/generate-image
  *
@@ -29,10 +31,10 @@ export async function createImageHandler(request: NextRequest): Promise<NextResp
   fal.config({ credentials: falKey });
 
   try {
-    const result = await fal.subscribe("fal-ai/nano-banana-pro/edit" as string, {
+    const result = await fal.subscribe(validated.model ?? DEFAULT_MODEL, {
       input: {
         prompt: validated.prompt ?? "portrait photo, natural lighting",
-        ...(validated.face_guide_url && { image_url: validated.face_guide_url }),
+        ...(validated.reference_image_url && { image_url: validated.reference_image_url }),
       },
     });
 

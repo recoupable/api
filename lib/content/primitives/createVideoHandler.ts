@@ -6,6 +6,9 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { createVideoBodySchema } from "./schemas";
 
+const DEFAULT_I2V_MODEL = "fal-ai/veo3.1/fast/image-to-video";
+const DEFAULT_A2V_MODEL = "fal-ai/ltx-2-19b/audio-to-video";
+
 /**
  * POST /api/content/generate-video
  *
@@ -31,18 +34,20 @@ export async function createVideoHandler(request: NextRequest): Promise<NextResp
   try {
     let videoUrl: string | undefined;
 
-    if (validated.lipsync && validated.song_url) {
-      const result = await fal.subscribe("fal-ai/ltx-2-19b/audio-to-video" as string, {
+    if (validated.lipsync && validated.audio_url) {
+      const model = validated.model ?? DEFAULT_A2V_MODEL;
+      const result = await fal.subscribe(model, {
         input: {
           image_url: validated.image_url,
-          audio_url: validated.song_url,
+          audio_url: validated.audio_url,
           prompt: validated.motion_prompt ?? "person staring at camera, subtle movement",
         },
       });
       const resultData = result.data as Record<string, unknown>;
       videoUrl = (resultData?.video as Record<string, unknown>)?.url as string | undefined;
     } else {
-      const result = await fal.subscribe("fal-ai/veo3.1/fast/image-to-video" as string, {
+      const model = validated.model ?? DEFAULT_I2V_MODEL;
+      const result = await fal.subscribe(model, {
         input: {
           image_url: validated.image_url,
           prompt: validated.motion_prompt ?? "nearly still, only natural breathing",

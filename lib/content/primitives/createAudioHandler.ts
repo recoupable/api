@@ -6,11 +6,13 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { createAudioBodySchema } from "./schemas";
 
+const DEFAULT_MODEL = "fal-ai/whisper";
+
 /**
  * POST /api/content/transcribe-audio
  *
- * @param request - Incoming request with audio selection parameters.
- * @returns JSON with transcription, clip timing, and lyrics.
+ * @param request - Incoming request with audio URLs to transcribe.
+ * @returns JSON with transcription and timestamped segments.
  */
 export async function createAudioHandler(request: NextRequest): Promise<NextResponse> {
   const authResult = await validateAuthContext(request);
@@ -29,18 +31,11 @@ export async function createAudioHandler(request: NextRequest): Promise<NextResp
   fal.config({ credentials: falKey });
 
   try {
-    const songUrl = validated.songs?.find((s: string) => s.startsWith("http"));
+    const audioUrl = validated.audio_urls[0];
 
-    if (!songUrl) {
-      return NextResponse.json(
-        { status: "error", error: "A song URL is required (pass a URL in the songs array)" },
-        { status: 400, headers: getCorsHeaders() },
-      );
-    }
-
-    const result = await fal.subscribe("fal-ai/whisper" as string, {
+    const result = await fal.subscribe(validated.model ?? DEFAULT_MODEL, {
       input: {
-        audio_url: songUrl,
+        audio_url: audioUrl,
         task: "transcribe",
         chunk_level: "word",
         language: "en",
@@ -61,7 +56,7 @@ export async function createAudioHandler(request: NextRequest): Promise<NextResp
 
     return NextResponse.json(
       {
-        songUrl,
+        audioUrl,
         fullLyrics,
         segments,
         segmentCount: segments.length,

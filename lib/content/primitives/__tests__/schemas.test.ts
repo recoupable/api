@@ -4,28 +4,40 @@ import {
   createVideoBodySchema,
   createTextBodySchema,
   createAudioBodySchema,
-  createRenderBodySchema,
+  editBodySchema,
   createUpscaleBodySchema,
   createAnalyzeBodySchema,
 } from "../schemas";
 
 describe("createImageBodySchema", () => {
-  it("parses valid payload", () => {
+  it("parses valid payload with prompt only", () => {
     expect(
       createImageBodySchema.safeParse({
-        artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
-        template: "artist-caption-bedroom",
+        prompt: "a moody portrait",
       }).success,
     ).toBe(true);
   });
 
-  it("rejects non-UUID artist_account_id", () => {
+  it("parses valid payload with reference image", () => {
     expect(
       createImageBodySchema.safeParse({
-        artist_account_id: "not-a-uuid",
-        template: "artist-caption-bedroom",
+        prompt: "portrait photo",
+        reference_image_url: "https://example.com/ref.png",
       }).success,
-    ).toBe(false);
+    ).toBe(true);
+  });
+
+  it("parses empty payload (all fields optional)", () => {
+    expect(createImageBodySchema.safeParse({}).success).toBe(true);
+  });
+
+  it("accepts custom model", () => {
+    const result = createImageBodySchema.safeParse({
+      prompt: "test",
+      model: "fal-ai/some-other-model",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.model).toBe("fal-ai/some-other-model");
   });
 });
 
@@ -45,61 +57,179 @@ describe("createVideoBodySchema", () => {
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.lipsync).toBe(false);
   });
+
+  it("accepts audio_url for lipsync", () => {
+    const result = createVideoBodySchema.safeParse({
+      image_url: "https://example.com/img.png",
+      lipsync: true,
+      audio_url: "https://example.com/audio.mp3",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts custom model", () => {
+    const result = createVideoBodySchema.safeParse({
+      image_url: "https://example.com/img.png",
+      model: "fal-ai/custom-video-model",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.model).toBe("fal-ai/custom-video-model");
+  });
 });
 
 describe("createTextBodySchema", () => {
   it("parses valid payload", () => {
     expect(
       createTextBodySchema.safeParse({
-        artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
-        song: "safe-boy-bestie",
+        topic: "a rainy day in the city",
       }).success,
     ).toBe(true);
   });
 
   it("defaults length to short", () => {
     const result = createTextBodySchema.safeParse({
-      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
-      song: "test",
+      topic: "test",
     });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.length).toBe("short");
   });
+
+  it("rejects missing topic", () => {
+    expect(createTextBodySchema.safeParse({}).success).toBe(false);
+  });
 });
 
 describe("createAudioBodySchema", () => {
-  it("parses valid payload", () => {
+  it("parses valid payload with audio URLs", () => {
     expect(
       createAudioBodySchema.safeParse({
-        artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
+        audio_urls: ["https://example.com/song.mp3"],
       }).success,
     ).toBe(true);
+  });
+
+  it("rejects non-URL strings", () => {
+    expect(
+      createAudioBodySchema.safeParse({
+        audio_urls: ["not-a-url"],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects empty array", () => {
+    expect(
+      createAudioBodySchema.safeParse({
+        audio_urls: [],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts custom model", () => {
+    const result = createAudioBodySchema.safeParse({
+      audio_urls: ["https://example.com/audio.mp3"],
+      model: "fal-ai/custom-whisper",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.model).toBe("fal-ai/custom-whisper");
   });
 });
 
-describe("createRenderBodySchema", () => {
-  it("parses valid payload", () => {
+describe("editBodySchema", () => {
+  it("parses manual mode with operations", () => {
     expect(
-      createRenderBodySchema.safeParse({
+      editBodySchema.safeParse({
         video_url: "https://example.com/v.mp4",
-        song_url: "https://example.com/s.mp3",
-        audio_start_seconds: 10,
-        audio_duration_seconds: 15,
-        text: { content: "hello" },
+        operations: [{ type: "trim", start: 10, duration: 15 }],
       }).success,
     ).toBe(true);
   });
 
-  it("rejects missing text content", () => {
+  it("parses template mode", () => {
     expect(
-      createRenderBodySchema.safeParse({
+      editBodySchema.safeParse({
         video_url: "https://example.com/v.mp4",
-        song_url: "https://example.com/s.mp3",
-        audio_start_seconds: 10,
-        audio_duration_seconds: 15,
-        text: {},
+        template: "artist-caption-bedroom",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects missing both template and operations", () => {
+    expect(
+      editBodySchema.safeParse({
+        video_url: "https://example.com/v.mp4",
       }).success,
     ).toBe(false);
+  });
+
+  it("rejects missing all inputs", () => {
+    expect(
+      editBodySchema.safeParse({
+        operations: [{ type: "trim", start: 0, duration: 5 }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts audio_url as input", () => {
+    expect(
+      editBodySchema.safeParse({
+        audio_url: "https://example.com/a.mp3",
+        operations: [{ type: "trim", start: 0, duration: 15 }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("parses overlay_text operation", () => {
+    expect(
+      editBodySchema.safeParse({
+        video_url: "https://example.com/v.mp4",
+        operations: [
+          { type: "overlay_text", content: "hello world" },
+        ],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("parses mux_audio operation", () => {
+    expect(
+      editBodySchema.safeParse({
+        video_url: "https://example.com/v.mp4",
+        operations: [
+          { type: "mux_audio", audio_url: "https://example.com/a.mp3" },
+        ],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("parses crop operation", () => {
+    expect(
+      editBodySchema.safeParse({
+        video_url: "https://example.com/v.mp4",
+        operations: [{ type: "crop", aspect: "9:16" }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("parses multiple operations", () => {
+    expect(
+      editBodySchema.safeParse({
+        video_url: "https://example.com/v.mp4",
+        operations: [
+          { type: "trim", start: 30, duration: 15 },
+          { type: "crop", aspect: "9:16" },
+          { type: "overlay_text", content: "caption" },
+          { type: "mux_audio", audio_url: "https://example.com/a.mp3" },
+        ],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("defaults output_format to mp4", () => {
+    const result = editBodySchema.safeParse({
+      video_url: "https://example.com/v.mp4",
+      operations: [{ type: "trim", start: 0, duration: 5 }],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.output_format).toBe("mp4");
   });
 });
 

@@ -4,24 +4,28 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { triggerPrimitive } from "@/lib/trigger/triggerPrimitive";
 import { validatePrimitiveBody } from "./validatePrimitiveBody";
-import { createRenderBodySchema } from "./schemas";
+import { editBodySchema } from "./schemas";
 
 /**
- * POST /api/content/render
+ * POST /api/content/edit
  *
- * @param request - Incoming request with video, audio, and text parameters.
+ * @param request - Incoming request with media inputs and edit operations.
  * @returns JSON with the triggered run ID.
  */
-export async function createRenderHandler(request: NextRequest): Promise<NextResponse> {
+export async function editHandler(request: NextRequest): Promise<NextResponse> {
   const authResult = await validateAuthContext(request);
   if (authResult instanceof NextResponse) return authResult;
 
-  const validated = await validatePrimitiveBody(request, createRenderBodySchema);
+  const validated = await validatePrimitiveBody(request, editBodySchema);
   if (validated instanceof NextResponse) return validated;
 
   try {
     const handle = await triggerPrimitive("create-render", {
-      ...(validated as Record<string, unknown>),
+      videoUrl: validated.video_url,
+      audioUrl: validated.audio_url,
+      template: validated.template,
+      operations: validated.operations,
+      outputFormat: validated.output_format,
       accountId: authResult.accountId,
     });
 
@@ -30,9 +34,9 @@ export async function createRenderHandler(request: NextRequest): Promise<NextRes
       { status: 202, headers: getCorsHeaders() },
     );
   } catch (error) {
-    console.error("Failed to trigger create-render:", error);
+    console.error("Failed to trigger edit:", error);
     return NextResponse.json(
-      { status: "error", error: "Failed to trigger render task" },
+      { status: "error", error: "Failed to trigger edit task" },
       { status: 500, headers: getCorsHeaders() },
     );
   }
