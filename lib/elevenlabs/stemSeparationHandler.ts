@@ -4,6 +4,8 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateStemSeparationBody } from "./validateStemSeparationBody";
 import { callElevenLabsMusicMultipart } from "./callElevenLabsMusicMultipart";
+import { handleUpstreamError } from "./handleUpstreamError";
+import { buildUpstreamResponse } from "./buildUpstreamResponse";
 
 /**
  * Handler for POST /api/music/stem-separation.
@@ -66,25 +68,10 @@ export async function stemSeparationHandler(
       validated.output_format,
     );
 
-    if (!upstream.ok) {
-      const errorText = await upstream.text().catch(() => "Unknown error");
-      console.error(`ElevenLabs stem-separation returned ${upstream.status}: ${errorText}`);
-      return NextResponse.json(
-        { status: "error", error: `Stem separation failed (status ${upstream.status})` },
-        { status: upstream.status >= 500 ? 502 : upstream.status, headers: getCorsHeaders() },
-      );
-    }
+    const errorResponse = await handleUpstreamError(upstream, "Stem separation");
+    if (errorResponse) return errorResponse;
 
-    const contentType = upstream.headers.get("content-type") ?? "application/zip";
-    const contentDisposition = upstream.headers.get("content-disposition");
-
-    const headers: Record<string, string> = {
-      ...getCorsHeaders(),
-      "Content-Type": contentType,
-    };
-    if (contentDisposition) headers["Content-Disposition"] = contentDisposition;
-
-    return new Response(upstream.body, { status: 200, headers });
+    return buildUpstreamResponse(upstream, "application/zip", ["content-disposition"]);
   } catch (error) {
     console.error("ElevenLabs stem-separation error:", error);
     return NextResponse.json(

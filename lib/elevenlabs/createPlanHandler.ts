@@ -2,8 +2,10 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateCreatePlanBody } from "./validateCreatePlanBody";
 import { callElevenLabsMusic } from "./callElevenLabsMusic";
+import { handleUpstreamError } from "./handleUpstreamError";
 
 /**
  * Handler for POST /api/music/plan.
@@ -17,30 +19,15 @@ export async function createPlanHandler(request: NextRequest): Promise<NextRespo
   const authResult = await validateAuthContext(request);
   if (authResult instanceof NextResponse) return authResult;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { status: "error", error: "Request body must be valid JSON" },
-      { status: 400, headers: getCorsHeaders() },
-    );
-  }
-
+  const body = await safeParseJson(request);
   const validated = validateCreatePlanBody(body);
   if (validated instanceof NextResponse) return validated;
 
   try {
     const upstream = await callElevenLabsMusic("/v1/music/plan", validated);
 
-    if (!upstream.ok) {
-      const errorText = await upstream.text().catch(() => "Unknown error");
-      console.error(`ElevenLabs plan returned ${upstream.status}: ${errorText}`);
-      return NextResponse.json(
-        { status: "error", error: `Plan creation failed (status ${upstream.status})` },
-        { status: upstream.status >= 500 ? 502 : upstream.status, headers: getCorsHeaders() },
-      );
-    }
+    const errorResponse = await handleUpstreamError(upstream, "Plan creation");
+    if (errorResponse) return errorResponse;
 
     const plan = await upstream.json();
 

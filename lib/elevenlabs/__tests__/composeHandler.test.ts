@@ -9,12 +9,17 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
+vi.mock("@/lib/networking/safeParseJson", () => ({
+  safeParseJson: vi.fn(),
+}));
+
 vi.mock("../callElevenLabsMusic", () => ({
   callElevenLabsMusic: vi.fn(),
 }));
 
 import { composeHandler } from "../composeHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { callElevenLabsMusic } from "../callElevenLabsMusic";
 
 describe("composeHandler", () => {
@@ -28,6 +33,8 @@ describe("composeHandler", () => {
       orgId: null,
       authToken: "test-token",
     });
+
+    vi.mocked(safeParseJson).mockResolvedValue({ prompt: "upbeat pop song" });
 
     vi.mocked(callElevenLabsMusic).mockResolvedValue(
       new Response("audio-bytes", {
@@ -57,6 +64,8 @@ describe("composeHandler", () => {
       orgId: null,
       authToken: "test-token",
     });
+
+    vi.mocked(safeParseJson).mockResolvedValue({});
 
     const request = new NextRequest("http://localhost/api/music/compose", {
       method: "POST",
@@ -89,6 +98,8 @@ describe("composeHandler", () => {
       orgId: null,
       authToken: "test-token",
     });
+
+    vi.mocked(safeParseJson).mockResolvedValue({ prompt: "test" });
 
     vi.mocked(callElevenLabsMusic).mockResolvedValue(
       new Response("Internal error", { status: 500 }),

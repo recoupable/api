@@ -9,12 +9,17 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
+vi.mock("@/lib/networking/safeParseJson", () => ({
+  safeParseJson: vi.fn(),
+}));
+
 vi.mock("../callElevenLabsMusic", () => ({
   callElevenLabsMusic: vi.fn(),
 }));
 
 import { createPlanHandler } from "../createPlanHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { callElevenLabsMusic } from "../callElevenLabsMusic";
 
 describe("createPlanHandler", () => {
@@ -28,6 +33,8 @@ describe("createPlanHandler", () => {
       orgId: null,
       authToken: "test-token",
     });
+
+    vi.mocked(safeParseJson).mockResolvedValue({ prompt: "cinematic piece" });
 
     const planData = {
       positive_global_styles: ["pop", "upbeat"],
@@ -62,6 +69,8 @@ describe("createPlanHandler", () => {
       orgId: null,
       authToken: "test-token",
     });
+
+    vi.mocked(safeParseJson).mockResolvedValue({});
 
     const request = new NextRequest("http://localhost/api/music/plan", {
       method: "POST",

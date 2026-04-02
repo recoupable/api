@@ -4,6 +4,8 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateVideoToMusicBody } from "./validateVideoToMusicBody";
 import { callElevenLabsMusicMultipart } from "./callElevenLabsMusicMultipart";
+import { handleUpstreamError } from "./handleUpstreamError";
+import { buildUpstreamResponse } from "./buildUpstreamResponse";
 
 const MAX_TOTAL_SIZE = 200 * 1024 * 1024; // 200MB
 const MAX_FILES = 10;
@@ -89,25 +91,10 @@ export async function videoToMusicHandler(request: NextRequest): Promise<NextRes
       validated.output_format,
     );
 
-    if (!upstream.ok) {
-      const errorText = await upstream.text().catch(() => "Unknown error");
-      console.error(`ElevenLabs video-to-music returned ${upstream.status}: ${errorText}`);
-      return NextResponse.json(
-        { status: "error", error: `Video-to-music failed (status ${upstream.status})` },
-        { status: upstream.status >= 500 ? 502 : upstream.status, headers: getCorsHeaders() },
-      );
-    }
+    const errorResponse = await handleUpstreamError(upstream, "Video-to-music");
+    if (errorResponse) return errorResponse;
 
-    const songId = upstream.headers.get("song-id");
-    const contentType = upstream.headers.get("content-type") ?? "audio/mpeg";
-
-    const headers: Record<string, string> = {
-      ...getCorsHeaders(),
-      "Content-Type": contentType,
-    };
-    if (songId) headers["song-id"] = songId;
-
-    return new Response(upstream.body, { status: 200, headers });
+    return buildUpstreamResponse(upstream, "audio/mpeg");
   } catch (error) {
     console.error("ElevenLabs video-to-music error:", error);
     return NextResponse.json(
