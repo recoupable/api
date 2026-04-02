@@ -14,8 +14,8 @@ export const createVideoBodySchema = z.object({
   template: z.string().optional(),
   lipsync: z.boolean().optional().default(false),
   song_url: z.string().url().optional(),
-  audio_start_seconds: z.number().optional(),
-  audio_duration_seconds: z.number().optional(),
+  audio_start_seconds: z.number().nonnegative().optional(),
+  audio_duration_seconds: z.number().positive().optional(),
   motion_prompt: z.string().optional(),
 });
 
@@ -35,14 +35,14 @@ export const createAudioBodySchema = z.object({
 export const createRenderBodySchema = z.object({
   video_url: z.string().url(),
   song_url: z.string().url(),
-  audio_start_seconds: z.number(),
-  audio_duration_seconds: z.number(),
+  audio_start_seconds: z.number().nonnegative(),
+  audio_duration_seconds: z.number().positive(),
   text: z.object({
     content: z.string().min(1),
     font: z.string().optional(),
     color: z.string().optional(),
     border_color: z.string().optional(),
-    max_font_size: z.number().optional(),
+    max_font_size: z.number().positive().optional(),
   }),
   has_audio: z.boolean().optional().default(false),
 });

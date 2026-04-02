@@ -2,10 +2,18 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createTextHandler } from "@/lib/content/primitives/createTextHandler";
 
+/**
+ * OPTIONS handler for CORS preflight requests.
+ */
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
 }
 
+/**
+ * POST /api/content/create/text
+ *
+ * Generates on-screen text inline (no background task).
+ */
 export { createTextHandler as POST };
 
 export const dynamic = "force-dynamic";

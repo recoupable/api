@@ -2,8 +2,19 @@ import { createPrimitiveHandler } from "@/lib/content/primitives/handlePrimitive
 import { createPrimitiveRoute } from "@/lib/content/primitives/primitiveRoute";
 import { createImageBodySchema } from "@/lib/content/primitives/schemas";
 
+/**
+ * OPTIONS handler for CORS preflight requests.
+ */
 const handler = createPrimitiveHandler("create-image", createImageBodySchema);
-export const { OPTIONS, POST } = createPrimitiveRoute(handler);
+const route = createPrimitiveRoute(handler);
+export const OPTIONS = route.OPTIONS;
+
+/**
+ * POST /api/content/create/image
+ *
+ * Triggers the create-image background task.
+ */
+export const POST = route.POST;
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";

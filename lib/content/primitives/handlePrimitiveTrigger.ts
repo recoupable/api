@@ -16,7 +16,7 @@ export function createPrimitiveHandler(taskId: string, schema: z.ZodSchema) {
 
     try {
       const handle = await triggerPrimitive(taskId, {
-        ...validated.data as Record<string, unknown>,
+        ...(validated.data as Record<string, unknown>),
         accountId: validated.accountId,
       });
 

@@ -29,47 +29,60 @@ Song or theme: "${data.song}"
 Length: ${data.length}
 Return ONLY the text, nothing else. No quotes.`;
 
-    const response = await fetch(`${recoupApiUrl}/api/chat/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": recoupApiKey },
-      body: JSON.stringify({
-        prompt,
-        model: "google/gemini-2.5-flash",
-        excludeTools: ["create_task"],
-      }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
+    try {
+      const response = await fetch(`${recoupApiUrl}/api/chat/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": recoupApiKey },
+        body: JSON.stringify({
+          prompt,
+          model: "google/gemini-2.5-flash",
+          excludeTools: ["create_task"],
+        }),
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
+      if (!response.ok) {
+        return NextResponse.json(
+          { status: "error", error: `Text generation failed: ${response.status}` },
+          { status: 502, headers: getCorsHeaders() },
+        );
+      }
+
+      const json = (await response.json()) as {
+        text?: string | Array<{ type: string; text?: string }>;
+      };
+
+      let content: string;
+      if (typeof json.text === "string") {
+        content = json.text.trim();
+      } else if (Array.isArray(json.text)) {
+        content = json.text
+          .filter(p => p.type === "text" && p.text)
+          .map(p => p.text!)
+          .join("")
+          .trim();
+      } else {
+        content = "";
+      }
+
+      content = content.replace(/^["']|["']$/g, "").trim();
+
+      if (!content) {
+        return NextResponse.json(
+          { status: "error", error: "Text generation returned empty" },
+          { status: 502, headers: getCorsHeaders() },
+        );
+      }
+
       return NextResponse.json(
-        { status: "error", error: `Text generation failed: ${response.status}` },
-        { status: 502, headers: getCorsHeaders() },
+        { content, font: null, color: "white", borderColor: "black", maxFontSize: 42 },
+        { status: 200, headers: getCorsHeaders() },
       );
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const json = (await response.json()) as { text?: string | Array<{ type: string; text?: string }> };
-
-    let content: string;
-    if (typeof json.text === "string") {
-      content = json.text.trim();
-    } else if (Array.isArray(json.text)) {
-      content = json.text.filter(p => p.type === "text" && p.text).map(p => p.text!).join("").trim();
-    } else {
-      content = "";
-    }
-
-    content = content.replace(/^["']|["']$/g, "").trim();
-
-    if (!content) {
-      return NextResponse.json(
-        { status: "error", error: "Text generation returned empty" },
-        { status: 502, headers: getCorsHeaders() },
-      );
-    }
-
-    return NextResponse.json(
-      { content, font: null, color: "white", borderColor: "black", maxFontSize: 42 },
-      { status: 200, headers: getCorsHeaders() },
-    );
   } catch (error) {
     console.error("Text generation error:", error);
     return NextResponse.json(
