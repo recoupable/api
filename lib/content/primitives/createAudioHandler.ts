@@ -4,6 +4,7 @@ import { fal } from "@fal-ai/client";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "./validatePrimitiveBody";
+import { configureFal } from "./configureFal";
 import { createAudioBodySchema } from "./schemas";
 
 const DEFAULT_MODEL = "fal-ai/whisper";
@@ -21,14 +22,8 @@ export async function createAudioHandler(request: NextRequest): Promise<NextResp
   const validated = await validatePrimitiveBody(request, createAudioBodySchema);
   if (validated instanceof NextResponse) return validated;
 
-  const falKey = process.env.FAL_KEY;
-  if (!falKey) {
-    return NextResponse.json(
-      { status: "error", error: "FAL_KEY is not configured" },
-      { status: 500, headers: getCorsHeaders() },
-    );
-  }
-  fal.config({ credentials: falKey });
+  const falError = configureFal();
+  if (falError) return falError;
 
   try {
     const audioUrl = validated.audio_urls[0];

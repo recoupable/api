@@ -4,6 +4,7 @@ import { fal } from "@fal-ai/client";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "./validatePrimitiveBody";
+import { configureFal } from "./configureFal";
 import { createImageBodySchema } from "./schemas";
 
 const DEFAULT_T2I_MODEL = "fal-ai/nano-banana-2";
@@ -22,14 +23,8 @@ export async function createImageHandler(request: NextRequest): Promise<NextResp
   const validated = await validatePrimitiveBody(request, createImageBodySchema);
   if (validated instanceof NextResponse) return validated;
 
-  const falKey = process.env.FAL_KEY;
-  if (!falKey) {
-    return NextResponse.json(
-      { status: "error", error: "FAL_KEY is not configured" },
-      { status: 500, headers: getCorsHeaders() },
-    );
-  }
-  fal.config({ credentials: falKey });
+  const falError = configureFal();
+  if (falError) return falError;
 
   try {
     const hasReferenceImages =

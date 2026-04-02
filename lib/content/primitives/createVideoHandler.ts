@@ -4,6 +4,7 @@ import { fal } from "@fal-ai/client";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "./validatePrimitiveBody";
+import { configureFal } from "./configureFal";
 import { createVideoBodySchema } from "./schemas";
 
 const MODELS: Record<string, string> = {
@@ -35,6 +36,56 @@ function inferMode(v: {
 }
 
 /**
+ * Maps user-facing fields to the fal input format for each mode.
+ * Different fal models expect different field names for the same concept.
+ *
+ * @param mode - The resolved video generation mode.
+ * @param v - Validated request body.
+ * @returns The fal input object with mode-specific field mappings.
+ */
+function buildFalInput(
+  mode: string,
+  v: {
+    prompt?: string;
+    negative_prompt?: string;
+    image_url?: string;
+    end_image_url?: string;
+    video_url?: string;
+    audio_url?: string;
+    aspect_ratio: string;
+    duration: string;
+    resolution: string;
+    generate_audio: boolean;
+  },
+): Record<string, unknown> {
+  const input: Record<string, unknown> = {
+    prompt: v.prompt ?? "",
+    aspect_ratio: v.aspect_ratio,
+    duration: v.duration,
+    resolution: v.resolution,
+    generate_audio: v.generate_audio,
+    safety_tolerance: "6",
+    auto_fix: true,
+  };
+
+  if (v.negative_prompt) input.negative_prompt = v.negative_prompt;
+
+  if (mode === "reference" && v.image_url) {
+    input.image_urls = [v.image_url];
+  } else if (mode === "first-last" && v.image_url) {
+    input.first_frame_url = v.image_url;
+    if (v.end_image_url) input.last_frame_url = v.end_image_url;
+  } else if (v.image_url) {
+    input.image_url = v.image_url;
+  }
+
+  if (v.video_url) input.video_url = v.video_url;
+  if (v.audio_url) input.audio_url = v.audio_url;
+
+  return input;
+}
+
+/**
  * POST /api/content/video
  *
  * @param request - Incoming request with video generation parameters.
@@ -47,41 +98,13 @@ export async function createVideoHandler(request: NextRequest): Promise<NextResp
   const validated = await validatePrimitiveBody(request, createVideoBodySchema);
   if (validated instanceof NextResponse) return validated;
 
-  const falKey = process.env.FAL_KEY;
-  if (!falKey) {
-    return NextResponse.json(
-      { status: "error", error: "FAL_KEY is not configured" },
-      { status: 500, headers: getCorsHeaders() },
-    );
-  }
-  fal.config({ credentials: falKey });
+  const falError = configureFal();
+  if (falError) return falError;
 
   try {
     const mode = validated.mode ?? inferMode(validated);
     const model = validated.model ?? MODELS[mode] ?? MODELS.prompt;
-
-    const input: Record<string, unknown> = {
-      aspect_ratio: validated.aspect_ratio,
-      duration: validated.duration,
-      resolution: validated.resolution,
-      generate_audio: validated.generate_audio,
-      safety_tolerance: "6",
-      auto_fix: true,
-    };
-
-    input.prompt = validated.prompt ?? "";
-    if (validated.negative_prompt) input.negative_prompt = validated.negative_prompt;
-
-    if (mode === "reference" && validated.image_url) {
-      input.image_urls = [validated.image_url];
-    } else if (mode === "first-last" && validated.image_url) {
-      input.first_frame_url = validated.image_url;
-      if (validated.end_image_url) input.last_frame_url = validated.end_image_url;
-    } else if (validated.image_url) {
-      input.image_url = validated.image_url;
-    }
-    if (validated.video_url) input.video_url = validated.video_url;
-    if (validated.audio_url) input.audio_url = validated.audio_url;
+    const input = buildFalInput(mode, validated);
 
     const result = await fal.subscribe(model, { input });
     const resultData = result.data as Record<string, unknown>;
