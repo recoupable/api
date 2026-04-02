@@ -1,20 +1,22 @@
-import { createPrimitiveHandler } from "@/lib/content/primitives/handlePrimitiveTrigger";
-import { createPrimitiveRoute } from "@/lib/content/primitives/primitiveRoute";
-import { createRenderBodySchema } from "@/lib/content/primitives/schemas";
+import { NextResponse } from "next/server";
+import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { createRenderHandler } from "@/lib/content/primitives/createRenderHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
+ *
+ * @returns Empty 204 response with CORS headers.
  */
-const handler = createPrimitiveHandler("create-render", createRenderBodySchema);
-const route = createPrimitiveRoute(handler);
-export const OPTIONS = route.OPTIONS;
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
+}
 
 /**
  * POST /api/content/create/render
  *
- * Triggers the create-render background task.
+ * Triggers the create-render background task (requires ffmpeg).
  */
-export const POST = route.POST;
+export { createRenderHandler as POST };
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";

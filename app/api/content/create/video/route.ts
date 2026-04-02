@@ -1,20 +1,22 @@
-import { createPrimitiveHandler } from "@/lib/content/primitives/handlePrimitiveTrigger";
-import { createPrimitiveRoute } from "@/lib/content/primitives/primitiveRoute";
-import { createVideoBodySchema } from "@/lib/content/primitives/schemas";
+import { NextResponse } from "next/server";
+import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { createVideoHandler } from "@/lib/content/primitives/createVideoHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
+ *
+ * @returns Empty 204 response with CORS headers.
  */
-const handler = createPrimitiveHandler("create-video", createVideoBodySchema);
-const route = createPrimitiveRoute(handler);
-export const OPTIONS = route.OPTIONS;
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
+}
 
 /**
  * POST /api/content/create/video
  *
- * Triggers the create-video background task.
+ * Generates a video from an image using fal.ai.
  */
-export const POST = route.POST;
+export { createVideoHandler as POST };
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";

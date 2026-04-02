@@ -1,20 +1,22 @@
-import { createPrimitiveHandler } from "@/lib/content/primitives/handlePrimitiveTrigger";
-import { createPrimitiveRoute } from "@/lib/content/primitives/primitiveRoute";
-import { createImageBodySchema } from "@/lib/content/primitives/schemas";
+import { NextResponse } from "next/server";
+import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { createImageHandler } from "@/lib/content/primitives/createImageHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
+ *
+ * @returns Empty 204 response with CORS headers.
  */
-const handler = createPrimitiveHandler("create-image", createImageBodySchema);
-const route = createPrimitiveRoute(handler);
-export const OPTIONS = route.OPTIONS;
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
+}
 
 /**
  * POST /api/content/create/image
  *
- * Triggers the create-image background task.
+ * Generates an AI image using fal.ai.
  */
-export const POST = route.POST;
+export { createImageHandler as POST };
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
