@@ -12,7 +12,7 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/content/create/analyze
+ * POST /api/content/analyze
  *
  * Analyze a video and generate text based on its content.
  */
