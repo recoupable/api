@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createVideoHandler } from "@/lib/content/primitives/createVideoHandler";
+import { createRenderHandler } from "@/lib/content/primitives/createRenderHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -12,11 +12,11 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/content/create/video
+ * POST /api/content/render
  *
- * Generates a video from an image using fal.ai.
+ * Composite video, audio, and text into a final social video.
  */
-export { createVideoHandler as POST };
+export { createRenderHandler as POST };
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";

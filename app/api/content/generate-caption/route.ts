@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createUpscaleHandler } from "@/lib/content/primitives/createUpscaleHandler";
+import { createTextHandler } from "@/lib/content/primitives/createTextHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -12,11 +12,11 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/content/create/upscale
+ * POST /api/content/generate-caption
  *
- * Upscales an image or video using fal.ai.
+ * Generate on-screen caption text for a social video.
  */
-export { createUpscaleHandler as POST };
+export { createTextHandler as POST };
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";

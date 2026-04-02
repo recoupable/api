@@ -7,7 +7,7 @@ import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { createImageBodySchema } from "./schemas";
 
 /**
- * POST /api/content/create/image
+ * POST /api/content/generate-image
  *
  * @param request - Incoming request with image generation parameters.
  * @returns JSON with the generated image URL.

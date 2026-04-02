@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createAudioHandler } from "@/lib/content/primitives/createAudioHandler";
+import { createVideoHandler } from "@/lib/content/primitives/createVideoHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -12,11 +12,11 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/content/create/audio
+ * POST /api/content/generate-video
  *
- * Transcribes a song using fal.ai Whisper.
+ * Generate a video from a still image. Supports lipsync mode.
  */
-export { createAudioHandler as POST };
+export { createVideoHandler as POST };
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";

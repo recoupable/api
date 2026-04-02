@@ -7,7 +7,7 @@ import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { createRenderBodySchema } from "./schemas";
 
 /**
- * POST /api/content/create/render
+ * POST /api/content/render
  *
  * @param request - Incoming request with video, audio, and text parameters.
  * @returns JSON with the triggered run ID.

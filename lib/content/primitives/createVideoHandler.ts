@@ -7,7 +7,7 @@ import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { createVideoBodySchema } from "./schemas";
 
 /**
- * POST /api/content/create/video
+ * POST /api/content/generate-video
  *
  * @param request - Incoming request with video generation parameters.
  * @returns JSON with the generated video URL.

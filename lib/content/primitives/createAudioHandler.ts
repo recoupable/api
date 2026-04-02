@@ -7,7 +7,7 @@ import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { createAudioBodySchema } from "./schemas";
 
 /**
- * POST /api/content/create/audio
+ * POST /api/content/transcribe-audio
  *
  * @param request - Incoming request with audio selection parameters.
  * @returns JSON with transcription, clip timing, and lyrics.

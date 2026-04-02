@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createRenderHandler } from "@/lib/content/primitives/createRenderHandler";
+import { createAnalyzeHandler } from "@/lib/content/primitives/createAnalyzeHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -12,11 +12,11 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/content/create/render
+ * POST /api/content/analyze-video
  *
- * Triggers the create-render background task (requires ffmpeg).
+ * Analyze a video and generate text based on its content.
  */
-export { createRenderHandler as POST };
+export { createAnalyzeHandler as POST };
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";

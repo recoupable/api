@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createTextHandler } from "@/lib/content/primitives/createTextHandler";
+import { createUpscaleHandler } from "@/lib/content/primitives/createUpscaleHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -12,11 +12,11 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/content/create/text
+ * POST /api/content/upscale
  *
- * Generates on-screen text inline (no background task).
+ * Upscale an image or video to higher resolution.
  */
-export { createTextHandler as POST };
+export { createUpscaleHandler as POST };
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";

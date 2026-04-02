@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createImageHandler } from "@/lib/content/primitives/createImageHandler";
+import { createAudioHandler } from "@/lib/content/primitives/createAudioHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -12,11 +12,11 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/content/create/image
+ * POST /api/content/transcribe-audio
  *
- * Generates an AI image using fal.ai.
+ * Transcribe a song into timestamped lyrics.
  */
-export { createImageHandler as POST };
+export { createAudioHandler as POST };
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";

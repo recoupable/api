@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createAnalyzeHandler } from "@/lib/content/primitives/createAnalyzeHandler";
+import { createImageHandler } from "@/lib/content/primitives/createImageHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -12,11 +12,11 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/content/analyze
+ * POST /api/content/generate-image
  *
- * Analyze a video and generate text based on its content.
+ * Generate an AI portrait image from a template and face guide.
  */
-export { createAnalyzeHandler as POST };
+export { createImageHandler as POST };
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";

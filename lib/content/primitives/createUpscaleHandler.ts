@@ -7,7 +7,7 @@ import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { createUpscaleBodySchema } from "./schemas";
 
 /**
- * POST /api/content/create/upscale
+ * POST /api/content/upscale
  *
  * @param request - Incoming request with the URL and type to upscale.
  * @returns JSON with the upscaled URL.
