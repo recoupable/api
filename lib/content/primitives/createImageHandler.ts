@@ -6,7 +6,8 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { createImageBodySchema } from "./schemas";
 
-const DEFAULT_MODEL = "fal-ai/nano-banana-pro/edit";
+const DEFAULT_T2I_MODEL = "fal-ai/nano-banana-2";
+const DEFAULT_EDIT_MODEL = "fal-ai/nano-banana-2/edit";
 
 /**
  * POST /api/content/generate-image
@@ -31,12 +32,25 @@ export async function createImageHandler(request: NextRequest): Promise<NextResp
   fal.config({ credentials: falKey });
 
   try {
-    const result = await fal.subscribe(validated.model ?? DEFAULT_MODEL, {
-      input: {
-        prompt: validated.prompt ?? "portrait photo, natural lighting",
-        ...(validated.reference_image_url && { image_url: validated.reference_image_url }),
-      },
-    });
+    const hasReferenceImages =
+      validated.reference_image_url || (validated.images && validated.images.length > 0);
+
+    let model: string;
+    const input: Record<string, unknown> = {
+      prompt: validated.prompt ?? "portrait photo, natural lighting",
+    };
+
+    if (hasReferenceImages) {
+      model = validated.model ?? DEFAULT_EDIT_MODEL;
+      const imageUrls: string[] = [];
+      if (validated.reference_image_url) imageUrls.push(validated.reference_image_url);
+      if (validated.images) imageUrls.push(...validated.images);
+      input.image_urls = imageUrls;
+    } else {
+      model = validated.model ?? DEFAULT_T2I_MODEL;
+    }
+
+    const result = await fal.subscribe(model, { input });
 
     const resultData = result.data as Record<string, unknown>;
     const images = resultData?.images as Array<Record<string, unknown>> | undefined;
