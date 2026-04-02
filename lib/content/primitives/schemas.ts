@@ -9,7 +9,8 @@ export const createImageBodySchema = z.object({
 });
 
 export const createVideoBodySchema = z.object({
-  image_url: z.string().url(),
+  prompt: z.string().optional(),
+  image_url: z.string().url().optional(),
   lipsync: z.boolean().optional().default(false),
   audio_url: z.string().url().optional(),
   motion_prompt: z.string().optional(),

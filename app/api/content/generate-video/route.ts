@@ -4,7 +4,7 @@ import { createPrimitiveRoute } from "@/lib/content/primitives/createPrimitiveRo
 /**
  * POST /api/content/generate-video
  *
- * Generate a video from a still image. Supports lipsync mode.
+ * Generate a video. Optionally provide a reference image and/or audio.
  */
 export const { OPTIONS, POST } = createPrimitiveRoute(createVideoHandler);
 

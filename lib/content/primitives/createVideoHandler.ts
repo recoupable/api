@@ -33,26 +33,23 @@ export async function createVideoHandler(request: NextRequest): Promise<NextResp
 
   try {
     let videoUrl: string | undefined;
+    const input: Record<string, unknown> = {};
+
+    if (validated.prompt) input.prompt = validated.prompt;
+    if (validated.image_url) input.image_url = validated.image_url;
+    if (validated.motion_prompt) input.prompt = validated.motion_prompt;
 
     if (validated.lipsync && validated.audio_url) {
+      input.audio_url = validated.audio_url;
+      if (!input.prompt) input.prompt = "person staring at camera, subtle movement";
       const model = validated.model ?? DEFAULT_A2V_MODEL;
-      const result = await fal.subscribe(model, {
-        input: {
-          image_url: validated.image_url,
-          audio_url: validated.audio_url,
-          prompt: validated.motion_prompt ?? "person staring at camera, subtle movement",
-        },
-      });
+      const result = await fal.subscribe(model, { input });
       const resultData = result.data as Record<string, unknown>;
       videoUrl = (resultData?.video as Record<string, unknown>)?.url as string | undefined;
     } else {
+      if (!input.prompt) input.prompt = "nearly still, only natural breathing";
       const model = validated.model ?? DEFAULT_I2V_MODEL;
-      const result = await fal.subscribe(model, {
-        input: {
-          image_url: validated.image_url,
-          prompt: validated.motion_prompt ?? "nearly still, only natural breathing",
-        },
-      });
+      const result = await fal.subscribe(model, { input });
       const resultData = result.data as Record<string, unknown>;
       videoUrl = (resultData?.video as Record<string, unknown>)?.url as string | undefined;
     }
