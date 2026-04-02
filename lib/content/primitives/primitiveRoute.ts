@@ -12,7 +12,3 @@ export function createPrimitiveRoute(handler: (req: NextRequest) => Promise<Next
 
   return { OPTIONS, POST };
 }
-
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-export const revalidate = 0;
