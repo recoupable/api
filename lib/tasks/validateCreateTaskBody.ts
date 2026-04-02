@@ -17,8 +17,9 @@ export const createTaskBodySchema = z.object({
   account_id: z
     .string()
     .min(1, "account_id parameter is required")
+    .optional()
     .describe(
-      "The account ID of the account creating the task. Get this from the system prompt. Do not ask for this.",
+      "Optional account override. Authenticated account is used by default. Override is only allowed when authorized.",
     ),
   artist_account_id: z
     .string()

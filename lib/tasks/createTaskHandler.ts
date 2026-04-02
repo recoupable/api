@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateTaskBody } from "@/lib/tasks/validateCreateTaskBody";
 import { createTask } from "@/lib/tasks/createTask";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 /**
  * Creates a new task (scheduled action)
@@ -27,7 +28,17 @@ export async function createTaskHandler(request: NextRequest): Promise<NextRespo
       return validatedBody;
     }
 
-    const createdTask = await createTask(validatedBody);
+    const authResult = await validateAuthContext(request, {
+      accountId: validatedBody.account_id,
+    });
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    const createdTask = await createTask({
+      ...validatedBody,
+      account_id: authResult.accountId,
+    });
 
     return NextResponse.json(
       {

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateUpdateTaskBody } from "@/lib/tasks/validateUpdateTaskBody";
 import { updateTask } from "@/lib/tasks/updateTask";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
+import { validateAccountIdOverride } from "@/lib/auth/validateAccountIdOverride";
 
 /**
  * Updates an existing task (scheduled action)
@@ -24,6 +27,11 @@ import { updateTask } from "@/lib/tasks/updateTask";
  */
 export async function updateTaskHandler(request: NextRequest): Promise<NextResponse> {
   try {
+    const authResult = await validateAuthContext(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const body = await request.json();
 
     const validatedBody = validateUpdateTaskBody(body);
@@ -31,7 +39,27 @@ export async function updateTaskHandler(request: NextRequest): Promise<NextRespo
       return validatedBody;
     }
 
-    const updatedTask = await updateTask(validatedBody);
+    const existingTasks = await selectScheduledActions({ id: validatedBody.id });
+    const existingTask = existingTasks[0];
+
+    if (!existingTask) {
+      return NextResponse.json(
+        { status: "error", error: "Task not found" },
+        { status: 404, headers: getCorsHeaders() },
+      );
+    }
+
+    const accessResult = await validateAccountIdOverride({
+      currentAccountId: authResult.accountId,
+      targetAccountId: existingTask.account_id,
+    });
+
+    if (accessResult instanceof NextResponse) {
+      return accessResult;
+    }
+
+    const { account_id: _ignoredAccountId, ...safeBody } = validatedBody;
+    const updatedTask = await updateTask(safeBody);
 
     return NextResponse.json(
       {
