@@ -8,17 +8,20 @@ import { createVideoBodySchema } from "./schemas";
 
 const DEFAULT_T2V_MODEL = "fal-ai/veo3.1/text-to-video";
 const DEFAULT_I2V_MODEL = "fal-ai/veo3.1/image-to-video";
+const DEFAULT_EXTEND_MODEL = "fal-ai/veo3.1/extend-video";
 const DEFAULT_A2V_MODEL = "fal-ai/ltx-2-19b/audio-to-video";
 
 /**
  * Picks the right model based on what inputs the caller provided.
  *
  * @param hasImage - Whether an image URL was provided.
+ * @param hasVideo - Whether a video URL was provided (extend mode).
  * @param hasLipsync - Whether lipsync mode with audio was requested.
  * @returns The default fal model ID.
  */
-function resolveDefaultModel(hasImage: boolean, hasLipsync: boolean): string {
+function resolveDefaultModel(hasImage: boolean, hasVideo: boolean, hasLipsync: boolean): string {
   if (hasLipsync) return DEFAULT_A2V_MODEL;
+  if (hasVideo) return DEFAULT_EXTEND_MODEL;
   if (hasImage) return DEFAULT_I2V_MODEL;
   return DEFAULT_T2V_MODEL;
 }
@@ -48,12 +51,22 @@ export async function createVideoHandler(request: NextRequest): Promise<NextResp
   try {
     const hasLipsync = !!(validated.lipsync && validated.audio_url);
     const hasImage = !!validated.image_url;
-    const model = validated.model ?? resolveDefaultModel(hasImage, hasLipsync);
+    const hasVideo = !!validated.video_url;
+    const model = validated.model ?? resolveDefaultModel(hasImage, hasVideo, hasLipsync);
 
-    const input: Record<string, unknown> = {};
+    const input: Record<string, unknown> = {
+      aspect_ratio: validated.aspect_ratio,
+      duration: validated.duration,
+      resolution: validated.resolution,
+      generate_audio: validated.generate_audio,
+      safety_tolerance: "6",
+      auto_fix: true,
+    };
+
     if (validated.prompt) input.prompt = validated.prompt;
-    if (validated.motion_prompt) input.prompt = validated.motion_prompt;
+    if (validated.negative_prompt) input.negative_prompt = validated.negative_prompt;
     if (validated.image_url) input.image_url = validated.image_url;
+    if (validated.video_url) input.video_url = validated.video_url;
     if (hasLipsync) input.audio_url = validated.audio_url;
 
     const result = await fal.subscribe(model, { input });
