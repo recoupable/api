@@ -69,7 +69,7 @@ export async function createVideoHandler(request: NextRequest): Promise<NextResp
       auto_fix: true,
     };
 
-    if (validated.prompt) input.prompt = validated.prompt;
+    input.prompt = validated.prompt ?? "";
     if (validated.negative_prompt) input.negative_prompt = validated.negative_prompt;
 
     if (mode === "reference" && validated.image_url) {
