@@ -58,7 +58,8 @@ export async function updateTaskHandler(request: NextRequest): Promise<NextRespo
       return accessResult;
     }
 
-    const { account_id: _ignoredAccountId, ...safeBody } = validatedBody;
+    const safeBody = { ...validatedBody };
+    delete safeBody.account_id;
     const updatedTask = await updateTask(safeBody);
 
     return NextResponse.json(

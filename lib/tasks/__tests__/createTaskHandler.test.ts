@@ -16,8 +16,10 @@ const mockValidateAuthContext = vi.mocked(validateAuthContext);
 const mockCreateTask = vi.mocked(createTask);
 
 /**
+ * Build a mocked NextRequest with a JSON body payload.
  *
- * @param body
+ * @param body - Request body returned by the mocked json() call.
+ * @returns A mocked NextRequest instance for handler tests.
  */
 function createMockRequest(body: unknown): NextRequest {
   return {
