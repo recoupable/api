@@ -42,38 +42,65 @@ describe("createImageBodySchema", () => {
 });
 
 describe("createVideoBodySchema", () => {
-  it("parses valid payload", () => {
+  it("parses prompt-only payload", () => {
     expect(
       createVideoBodySchema.safeParse({
-        image_url: "https://example.com/img.png",
+        prompt: "a calm ocean",
       }).success,
     ).toBe(true);
   });
 
-  it("defaults lipsync to false", () => {
-    const result = createVideoBodySchema.safeParse({
-      image_url: "https://example.com/img.png",
-    });
-    expect(result.success).toBe(true);
-    if (result.success) expect(result.data.lipsync).toBe(false);
+  it("parses animate mode with image", () => {
+    expect(
+      createVideoBodySchema.safeParse({
+        mode: "animate",
+        image_url: "https://example.com/img.png",
+        prompt: "make it move",
+      }).success,
+    ).toBe(true);
   });
 
-  it("accepts audio_url for lipsync", () => {
-    const result = createVideoBodySchema.safeParse({
-      image_url: "https://example.com/img.png",
-      lipsync: true,
-      audio_url: "https://example.com/audio.mp3",
-    });
-    expect(result.success).toBe(true);
+  it("parses extend mode with video", () => {
+    expect(
+      createVideoBodySchema.safeParse({
+        mode: "extend",
+        video_url: "https://example.com/clip.mp4",
+        prompt: "continue the scene",
+      }).success,
+    ).toBe(true);
   });
 
-  it("accepts custom model", () => {
-    const result = createVideoBodySchema.safeParse({
-      image_url: "https://example.com/img.png",
-      model: "fal-ai/custom-video-model",
-    });
+  it("parses first-last mode with two images", () => {
+    expect(
+      createVideoBodySchema.safeParse({
+        mode: "first-last",
+        image_url: "https://example.com/start.png",
+        end_image_url: "https://example.com/end.png",
+        prompt: "transition between these",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("parses lipsync mode", () => {
+    expect(
+      createVideoBodySchema.safeParse({
+        mode: "lipsync",
+        image_url: "https://example.com/face.png",
+        audio_url: "https://example.com/audio.mp3",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("defaults duration to 8s", () => {
+    const result = createVideoBodySchema.safeParse({ prompt: "test" });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.model).toBe("fal-ai/custom-video-model");
+    if (result.success) expect(result.data.duration).toBe("8s");
+  });
+
+  it("defaults generate_audio to false", () => {
+    const result = createVideoBodySchema.safeParse({ prompt: "test" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.generate_audio).toBe(false);
   });
 });
 

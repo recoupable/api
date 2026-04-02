@@ -6,24 +6,32 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { createVideoBodySchema } from "./schemas";
 
-const DEFAULT_T2V_MODEL = "fal-ai/veo3.1/text-to-video";
-const DEFAULT_I2V_MODEL = "fal-ai/veo3.1/image-to-video";
-const DEFAULT_EXTEND_MODEL = "fal-ai/veo3.1/extend-video";
-const DEFAULT_A2V_MODEL = "fal-ai/ltx-2-19b/audio-to-video";
+const MODELS: Record<string, string> = {
+  prompt: "fal-ai/veo3.1/text-to-video",
+  animate: "fal-ai/veo3.1/image-to-video",
+  reference: "fal-ai/veo3.1/reference-to-video",
+  extend: "fal-ai/veo3.1/extend-video",
+  "first-last": "fal-ai/veo3.1/first-last-frame-to-video",
+  lipsync: "fal-ai/ltx-2-19b/audio-to-video",
+};
 
 /**
- * Picks the right model based on what inputs the caller provided.
+ * Infers the mode from the inputs when the caller doesn't specify one.
  *
- * @param hasImage - Whether an image URL was provided.
- * @param hasVideo - Whether a video URL was provided (extend mode).
- * @param hasLipsync - Whether lipsync mode with audio was requested.
- * @returns The default fal model ID.
+ * @param v - Validated request body.
+ * @returns The inferred mode string.
  */
-function resolveDefaultModel(hasImage: boolean, hasVideo: boolean, hasLipsync: boolean): string {
-  if (hasLipsync) return DEFAULT_A2V_MODEL;
-  if (hasVideo) return DEFAULT_EXTEND_MODEL;
-  if (hasImage) return DEFAULT_I2V_MODEL;
-  return DEFAULT_T2V_MODEL;
+function inferMode(v: {
+  audio_url?: string;
+  video_url?: string;
+  image_url?: string;
+  end_image_url?: string;
+}): string {
+  if (v.audio_url && v.image_url) return "lipsync";
+  if (v.video_url) return "extend";
+  if (v.image_url && v.end_image_url) return "first-last";
+  if (v.image_url) return "animate";
+  return "prompt";
 }
 
 /**
@@ -49,10 +57,8 @@ export async function createVideoHandler(request: NextRequest): Promise<NextResp
   fal.config({ credentials: falKey });
 
   try {
-    const hasLipsync = !!(validated.lipsync && validated.audio_url);
-    const hasImage = !!validated.image_url;
-    const hasVideo = !!validated.video_url;
-    const model = validated.model ?? resolveDefaultModel(hasImage, hasVideo, hasLipsync);
+    const mode = validated.mode ?? inferMode(validated);
+    const model = validated.model ?? MODELS[mode] ?? MODELS.prompt;
 
     const input: Record<string, unknown> = {
       aspect_ratio: validated.aspect_ratio,
@@ -66,8 +72,9 @@ export async function createVideoHandler(request: NextRequest): Promise<NextResp
     if (validated.prompt) input.prompt = validated.prompt;
     if (validated.negative_prompt) input.negative_prompt = validated.negative_prompt;
     if (validated.image_url) input.image_url = validated.image_url;
+    if (validated.end_image_url) input.end_image_url = validated.end_image_url;
     if (validated.video_url) input.video_url = validated.video_url;
-    if (hasLipsync) input.audio_url = validated.audio_url;
+    if (validated.audio_url) input.audio_url = validated.audio_url;
 
     const result = await fal.subscribe(model, { input });
     const resultData = result.data as Record<string, unknown>;
@@ -80,7 +87,10 @@ export async function createVideoHandler(request: NextRequest): Promise<NextResp
       );
     }
 
-    return NextResponse.json({ videoUrl }, { status: 200, headers: getCorsHeaders() });
+    return NextResponse.json(
+      { videoUrl, mode },
+      { status: 200, headers: getCorsHeaders() },
+    );
   } catch (error) {
     console.error("Video generation error:", error);
     return NextResponse.json(

@@ -15,10 +15,11 @@ export const createImageBodySchema = z.object({
 });
 
 export const createVideoBodySchema = z.object({
+  mode: z.enum(["prompt", "animate", "reference", "extend", "first-last", "lipsync"]).optional(),
   prompt: z.string().optional(),
   image_url: z.string().url().optional(),
+  end_image_url: z.string().url().optional(),
   video_url: z.string().url().optional(),
-  lipsync: z.boolean().optional().default(false),
   audio_url: z.string().url().optional(),
   aspect_ratio: z.enum(["auto", "16:9", "9:16"]).optional().default("auto"),
   duration: z.enum(["4s", "6s", "7s", "8s"]).optional().default("8s"),
