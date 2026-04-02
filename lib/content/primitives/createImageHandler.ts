@@ -38,6 +38,9 @@ export async function createImageHandler(request: NextRequest): Promise<NextResp
     let model: string;
     const input: Record<string, unknown> = {
       prompt: validated.prompt ?? "portrait photo, natural lighting",
+      num_images: validated.num_images,
+      aspect_ratio: validated.aspect_ratio,
+      resolution: validated.resolution,
     };
 
     if (hasReferenceImages) {
@@ -53,18 +56,21 @@ export async function createImageHandler(request: NextRequest): Promise<NextResp
     const result = await fal.subscribe(model, { input });
 
     const resultData = result.data as Record<string, unknown>;
-    const images = resultData?.images as Array<Record<string, unknown>> | undefined;
-    const image = resultData?.image as Record<string, unknown> | undefined;
-    const imageUrl = images?.[0]?.url ?? image?.url;
+    const imageList = resultData?.images as Array<Record<string, unknown>> | undefined;
 
-    if (!imageUrl) {
+    if (!imageList || imageList.length === 0) {
       return NextResponse.json(
         { status: "error", error: "Image generation returned no image" },
         { status: 502, headers: getCorsHeaders() },
       );
     }
 
-    return NextResponse.json({ imageUrl }, { status: 200, headers: getCorsHeaders() });
+    const urls = imageList.map(img => img.url as string).filter(Boolean);
+
+    return NextResponse.json(
+      { imageUrl: urls[0], images: urls },
+      { status: 200, headers: getCorsHeaders() },
+    );
   } catch (error) {
     console.error("Image generation error:", error);
     return NextResponse.json(
