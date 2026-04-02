@@ -41,6 +41,11 @@ export async function createImageHandler(request: NextRequest): Promise<NextResp
       num_images: validated.num_images,
       aspect_ratio: validated.aspect_ratio,
       resolution: validated.resolution,
+      output_format: "png",
+      safety_tolerance: "6",
+      enable_web_search: true,
+      thinking_level: "high",
+      limit_generations: true,
     };
 
     if (hasReferenceImages) {
