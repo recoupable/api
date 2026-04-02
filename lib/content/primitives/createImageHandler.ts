@@ -2,17 +2,20 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { fal } from "@fal-ai/client";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { createImageBodySchema } from "./schemas";
 
 /**
  * POST /api/content/create/image
- * Generates an AI image using fal.ai inline (no background task).
  *
  * @param request - Incoming request with image generation parameters.
  * @returns JSON with the generated image URL.
  */
 export async function createImageHandler(request: NextRequest): Promise<NextResponse> {
+  const authResult = await validateAuthContext(request);
+  if (authResult instanceof NextResponse) return authResult;
+
   const validated = await validatePrimitiveBody(request, createImageBodySchema);
   if (validated instanceof NextResponse) return validated;
 
@@ -26,11 +29,10 @@ export async function createImageHandler(request: NextRequest): Promise<NextResp
   fal.config({ credentials: falKey });
 
   try {
-    const { data } = validated;
     const result = await fal.subscribe("fal-ai/nano-banana-pro/edit" as string, {
       input: {
-        prompt: data.prompt ?? "portrait photo, natural lighting",
-        ...(data.face_guide_url && { image_url: data.face_guide_url }),
+        prompt: validated.prompt ?? "portrait photo, natural lighting",
+        ...(validated.face_guide_url && { image_url: validated.face_guide_url }),
       },
     });
 

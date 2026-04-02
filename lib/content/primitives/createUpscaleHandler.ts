@@ -2,17 +2,20 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { fal } from "@fal-ai/client";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { createUpscaleBodySchema } from "./schemas";
 
 /**
  * POST /api/content/create/upscale
- * Upscales an image or video using fal.ai inline.
  *
  * @param request - Incoming request with the URL and type to upscale.
  * @returns JSON with the upscaled URL.
  */
 export async function createUpscaleHandler(request: NextRequest): Promise<NextResponse> {
+  const authResult = await validateAuthContext(request);
+  if (authResult instanceof NextResponse) return authResult;
+
   const validated = await validatePrimitiveBody(request, createUpscaleBodySchema);
   if (validated instanceof NextResponse) return validated;
 
@@ -26,19 +29,18 @@ export async function createUpscaleHandler(request: NextRequest): Promise<NextRe
   fal.config({ credentials: falKey });
 
   try {
-    const { data } = validated;
     const model =
-      data.type === "video" ? "fal-ai/seedvr/upscale/video" : "fal-ai/seedvr/upscale/image";
+      validated.type === "video" ? "fal-ai/seedvr/upscale/video" : "fal-ai/seedvr/upscale/image";
 
-    const inputKey = data.type === "video" ? "video_url" : "image_url";
+    const inputKey = validated.type === "video" ? "video_url" : "image_url";
 
     const result = await fal.subscribe(model as string, {
-      input: { [inputKey]: data.url },
+      input: { [inputKey]: validated.url },
     });
 
     const resultData = result.data as Record<string, unknown>;
     const url =
-      data.type === "video"
+      validated.type === "video"
         ? ((resultData?.video as Record<string, unknown>)?.url as string | undefined)
         : ((resultData?.image as Record<string, unknown>)?.url as string | undefined);
 

@@ -1,21 +1,22 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { createTextBodySchema } from "./schemas";
 
 /**
- * Handles POST /api/content/create/text.
- * Generates on-screen text using the Recoup Chat API (inline, no task).
+ * POST /api/content/create/text
  *
  * @param request - Incoming Next.js request with JSON body validated by the text primitive schema.
  * @returns JSON with generated text styling fields, or an error NextResponse.
  */
 export async function createTextHandler(request: NextRequest): Promise<NextResponse> {
+  const authResult = await validateAuthContext(request);
+  if (authResult instanceof NextResponse) return authResult;
+
   const validated = await validatePrimitiveBody(request, createTextBodySchema);
   if (validated instanceof NextResponse) return validated;
-
-  const { data } = validated;
 
   try {
     const recoupApiUrl = process.env.RECOUP_API_URL ?? "https://recoup-api.vercel.app";
@@ -28,8 +29,8 @@ export async function createTextHandler(request: NextRequest): Promise<NextRespo
     }
 
     const prompt = `Generate ONE short on-screen text for a social media video.
-Song or theme: "${data.song}"
-Length: ${data.length}
+Song or theme: "${validated.song}"
+Length: ${validated.length}
 Return ONLY the text, nothing else. No quotes.`;
 
     const controller = new AbortController();

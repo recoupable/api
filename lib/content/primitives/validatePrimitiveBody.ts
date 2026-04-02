@@ -3,25 +3,20 @@ import { NextResponse } from "next/server";
 import type { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-
-export interface ValidatedPrimitive<T> {
-  accountId: string;
-  data: T;
-}
 
 /**
- * Validates auth and parses the request body against a Zod schema.
+ * Parses and validates the request body against a Zod schema.
  * Shared by all content primitive endpoints.
+ * Auth is handled separately by each handler via validateAuthContext.
  *
  * @param request - Incoming Next.js request (body read as JSON).
  * @param schema - Zod schema for the expected JSON body shape.
- * @returns Validated account ID and parsed data, or a NextResponse error.
+ * @returns Validated parsed data, or a NextResponse error.
  */
 export async function validatePrimitiveBody<T>(
   request: NextRequest,
   schema: z.ZodSchema<T>,
-): Promise<NextResponse | ValidatedPrimitive<T>> {
+): Promise<NextResponse | T> {
   const body = await safeParseJson(request);
   const result = schema.safeParse(body);
 
@@ -33,8 +28,5 @@ export async function validatePrimitiveBody<T>(
     );
   }
 
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) return authResult;
-
-  return { accountId: authResult.accountId, data: result.data };
+  return result.data;
 }
