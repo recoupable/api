@@ -6,6 +6,7 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { configureFal } from "./configureFal";
 import { createVideoBodySchema } from "./schemas";
+import { loadTemplate } from "@/lib/content/templates";
 
 const MODELS: Record<string, string> = {
   prompt: "fal-ai/veo3.1",
@@ -102,9 +103,23 @@ export async function createVideoHandler(request: NextRequest): Promise<NextResp
   if (falError) return falError;
 
   try {
+    const tpl = validated.template ? loadTemplate(validated.template) : null;
+
+    let promptOverride = validated.prompt;
+    if (!promptOverride && tpl?.video) {
+      const parts: string[] = [];
+      if (tpl.video.movements.length) {
+        parts.push(tpl.video.movements[Math.floor(Math.random() * tpl.video.movements.length)]);
+      }
+      if (tpl.video.moods.length) {
+        parts.push(tpl.video.moods[Math.floor(Math.random() * tpl.video.moods.length)]);
+      }
+      if (parts.length) promptOverride = parts.join(". ");
+    }
+
     const mode = validated.mode ?? inferMode(validated);
     const model = validated.model ?? MODELS[mode] ?? MODELS.prompt;
-    const input = buildFalInput(mode, validated);
+    const input = buildFalInput(mode, { ...validated, prompt: promptOverride ?? validated.prompt });
 
     const result = await fal.subscribe(model, { input });
     const resultData = result.data as Record<string, unknown>;

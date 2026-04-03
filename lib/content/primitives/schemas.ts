@@ -2,6 +2,7 @@ import { z } from "zod";
 import { CAPTION_LENGTHS } from "@/lib/content/captionLengths";
 
 export const createImageBodySchema = z.object({
+  template: z.string().optional(),
   prompt: z.string().optional(),
   reference_image_url: z.string().url().optional(),
   images: z.array(z.string().url()).optional(),
@@ -30,6 +31,7 @@ export const createVideoBodySchema = z.object({
 });
 
 export const createTextBodySchema = z.object({
+  template: z.string().optional(),
   topic: z.string().min(1),
   length: z.enum(CAPTION_LENGTHS).optional().default("short"),
 });

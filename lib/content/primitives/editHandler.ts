@@ -5,6 +5,7 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { triggerPrimitive } from "@/lib/trigger/triggerPrimitive";
 import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { editBodySchema } from "./schemas";
+import { loadTemplate } from "@/lib/content/templates";
 
 /**
  * PATCH /api/content/video
@@ -20,11 +21,19 @@ export async function editHandler(request: NextRequest): Promise<NextResponse> {
   if (validated instanceof NextResponse) return validated;
 
   try {
+    let operations = validated.operations;
+
+    if (!operations && validated.template) {
+      const tpl = loadTemplate(validated.template);
+      if (tpl?.edit.operations) {
+        operations = tpl.edit.operations;
+      }
+    }
+
     const handle = await triggerPrimitive("create-render", {
       videoUrl: validated.video_url,
       audioUrl: validated.audio_url,
-      template: validated.template,
-      operations: validated.operations,
+      operations,
       outputFormat: validated.output_format,
       accountId: authResult.accountId,
     });

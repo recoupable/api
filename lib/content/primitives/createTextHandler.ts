@@ -6,19 +6,35 @@ import { validatePrimitiveBody } from "./validatePrimitiveBody";
 import { createTextBodySchema } from "./schemas";
 import generateText from "@/lib/ai/generateText";
 import { LIGHTWEIGHT_MODEL } from "@/lib/const";
+import { loadTemplate } from "@/lib/content/templates";
+import type { Template } from "@/lib/content/templates";
 
 /**
- * Builds the LLM prompt for caption generation.
+ * Builds the LLM prompt for caption generation, optionally with template guide.
  *
  * @param topic - Subject or theme for the caption.
  * @param length - Desired caption length tier.
+ * @param tpl - Optional template with caption guide and examples.
  * @returns Formatted prompt string.
  */
-function composeCaptionPrompt(topic: string, length: string): string {
-  return `Generate ONE short on-screen text for a social media video.
+function composeCaptionPrompt(topic: string, length: string, tpl: Template | null): string {
+  let prompt = `Generate ONE short on-screen text for a social media video.
 Topic: "${topic}"
 Length: ${length}
 Return ONLY the text, nothing else. No quotes.`;
+
+  if (tpl?.caption.guide) {
+    const g = tpl.caption.guide;
+    prompt += `\n\nStyle: ${g.tone}`;
+    if (g.rules.length) prompt += `\nRules:\n${g.rules.map(r => `- ${r}`).join("\n")}`;
+    if (g.formats.length) prompt += `\nFormats to try:\n${g.formats.map(f => `- ${f}`).join("\n")}`;
+  }
+
+  if (tpl?.caption.examples.length) {
+    prompt += `\n\nExamples of good captions:\n${tpl.caption.examples.map(e => `- "${e}"`).join("\n")}`;
+  }
+
+  return prompt;
 }
 
 /**
@@ -35,7 +51,8 @@ export async function createTextHandler(request: NextRequest): Promise<NextRespo
   if (validated instanceof NextResponse) return validated;
 
   try {
-    const prompt = composeCaptionPrompt(validated.topic, validated.length);
+    const tpl = validated.template ? loadTemplate(validated.template) : null;
+    const prompt = composeCaptionPrompt(validated.topic, validated.length, tpl);
     const result = await generateText({ prompt, model: LIGHTWEIGHT_MODEL });
 
     let content = result.text.trim();
