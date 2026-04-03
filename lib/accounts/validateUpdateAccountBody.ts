@@ -15,15 +15,10 @@ export const updateAccountBodySchema = z
     knowledges: z.array(z.string()).optional(),
   })
   .refine(
-    body =>
-      body.name !== undefined ||
-      body.instruction !== undefined ||
-      body.organization !== undefined ||
-      body.image !== undefined ||
-      body.jobTitle !== undefined ||
-      body.roleType !== undefined ||
-      body.companyName !== undefined ||
-      body.knowledges !== undefined,
+    body => {
+      const { accountId: _accountId, ...updateFields } = body;
+      return Object.values(updateFields).some(v => v !== undefined);
+    },
     {
       message: "At least one update field is required",
       path: ["body"],

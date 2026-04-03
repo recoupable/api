@@ -23,4 +23,15 @@ describe("validateUpdateAccountBody", () => {
     const result = validateUpdateAccountBody({ accountId, roleType: "manager" });
     expect(result).toEqual({ accountId, roleType: "manager" });
   });
+
+  it("returns 400 when only accountId is provided (no update fields)", async () => {
+    const accountId = "11111111-1111-4111-8111-111111111111";
+    const result = validateUpdateAccountBody({ accountId });
+    expect(result).toBeInstanceOf(NextResponse);
+
+    const response = result as NextResponse;
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("At least one update field is required");
+  });
 });
