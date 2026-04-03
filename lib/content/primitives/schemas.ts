@@ -101,6 +101,5 @@ export const createAnalyzeBodySchema = z.object({
   video_url: z.string().url(),
   prompt: z.string().min(1).max(2000),
   temperature: z.number().min(0).max(1).optional().default(0.2),
-  stream: z.boolean().optional().default(false),
   max_tokens: z.number().int().min(1).max(4096).optional(),
 });

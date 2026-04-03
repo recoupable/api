@@ -295,15 +295,6 @@ describe("createAnalyzeBodySchema", () => {
     if (result.success) expect(result.data.temperature).toBe(0.2);
   });
 
-  it("defaults stream to false", () => {
-    const result = createAnalyzeBodySchema.safeParse({
-      video_url: "https://example.com/video.mp4",
-      prompt: "Describe this video",
-    });
-    expect(result.success).toBe(true);
-    if (result.success) expect(result.data.stream).toBe(false);
-  });
-
   it("rejects prompt exceeding 2000 chars", () => {
     expect(
       createAnalyzeBodySchema.safeParse({

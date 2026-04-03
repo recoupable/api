@@ -12,9 +12,18 @@ type Handler = (request: NextRequest) => Promise<NextResponse>;
  * @param handler - The POST handler function for the route.
  * @returns Object with OPTIONS and POST exports.
  */
+/**
+ * Standard CORS preflight handler for content primitive routes.
+ *
+ * @returns 204 response with CORS headers.
+ */
+export async function primitiveOptionsHandler() {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
+}
+
 export function createPrimitiveRoute(handler: Handler) {
   return {
-    OPTIONS: async () => new NextResponse(null, { status: 204, headers: getCorsHeaders() }),
+    OPTIONS: primitiveOptionsHandler,
     POST: handler,
   };
 }
