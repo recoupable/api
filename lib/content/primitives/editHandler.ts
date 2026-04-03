@@ -8,7 +8,7 @@ import { editBodySchema } from "./schemas";
 import { loadTemplate } from "@/lib/content/templates";
 
 /**
- * PATCH /api/content/video
+ * PATCH /api/content
  *
  * @param request - Incoming request with media inputs and edit operations.
  * @returns JSON with the triggered run ID.

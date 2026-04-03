@@ -30,22 +30,22 @@ export async function createImageHandler(request: NextRequest): Promise<NextResp
   try {
     const tpl = validated.template ? loadTemplate(validated.template) : null;
 
-    const prompt = validated.prompt
-      ?? tpl?.image.prompt
-      ?? "portrait photo, natural lighting";
+    const prompt = validated.prompt ?? tpl?.image.prompt ?? "portrait photo, natural lighting";
 
-    const refImageUrl = validated.reference_image_url
-      ?? (tpl?.image.reference_images.length
+    const refImageUrl =
+      validated.reference_image_url ??
+      (tpl?.image.reference_images.length
         ? tpl.image.reference_images[Math.floor(Math.random() * tpl.image.reference_images.length)]
         : undefined);
 
-    const hasReferenceImages =
-      refImageUrl || (validated.images && validated.images.length > 0);
+    const hasReferenceImages = refImageUrl || (validated.images && validated.images.length > 0);
 
     let model: string;
     const input: Record<string, unknown> = {
       prompt: tpl?.image.style_rules
-        ? `${prompt}\n\nStyle rules: ${Object.entries(tpl.image.style_rules).map(([k, v]) => `${k}: ${Object.values(v).join(", ")}`).join(". ")}`
+        ? `${prompt}\n\nStyle rules: ${Object.entries(tpl.image.style_rules)
+            .map(([k, v]) => `${k}: ${Object.values(v).join(", ")}`)
+            .join(". ")}`
         : prompt,
       num_images: validated.num_images,
       aspect_ratio: validated.aspect_ratio,

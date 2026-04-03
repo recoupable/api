@@ -75,8 +75,22 @@ describe("validateCreateContentBody", () => {
 
     expect(result).not.toBeInstanceOf(NextResponse);
     if (!(result instanceof NextResponse)) {
-      expect(result.template).toBe("artist-caption-bedroom");
+      expect(result.template).toBeUndefined();
       expect(result.lipsync).toBe(false);
+    }
+  });
+
+  it("accepts request without template", async () => {
+    const request = createRequest({
+      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
+    });
+
+    const result = await validateCreateContentBody(request);
+
+    expect(result).not.toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) {
+      expect(result.template).toBeUndefined();
+      expect(result.artistAccountId).toBe("550e8400-e29b-41d4-a716-446655440000");
     }
   });
 

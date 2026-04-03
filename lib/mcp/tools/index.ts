@@ -3,6 +3,7 @@ import { registerGetLocalTimeTool } from "./registerGetLocalTimeTool";
 import { registerAllTaskTools } from "./tasks";
 import { registerAllImageTools } from "./images";
 import { registerAllCatalogTools } from "./catalogs";
+import { registerAllContentTools } from "./content";
 import { registerAllSora2Tools } from "./sora2";
 import { registerAllSpotifyTools } from "./spotify";
 import { registerContactTeamTool } from "./registerContactTeamTool";
@@ -35,6 +36,7 @@ export const registerAllTools = (server: McpServer): void => {
   registerAllArtistTools(server);
   registerAllArtistSocialsTools(server);
   registerAllCatalogTools(server);
+  registerAllContentTools(server);
   registerAllChatsTools(server);
   registerAllFileTools(server);
   registerAllFlamingoTools(server);

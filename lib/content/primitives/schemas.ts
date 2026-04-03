@@ -7,15 +7,32 @@ export const createImageBodySchema = z.object({
   reference_image_url: z.string().url().optional(),
   images: z.array(z.string().url()).optional(),
   num_images: z.number().int().min(1).max(4).optional().default(1),
-  aspect_ratio: z.enum([
-    "auto", "21:9", "16:9", "3:2", "4:3", "5:4",
-    "1:1", "4:5", "3:4", "2:3", "9:16", "4:1", "1:4", "8:1", "1:8",
-  ]).optional().default("auto"),
+  aspect_ratio: z
+    .enum([
+      "auto",
+      "21:9",
+      "16:9",
+      "3:2",
+      "4:3",
+      "5:4",
+      "1:1",
+      "4:5",
+      "3:4",
+      "2:3",
+      "9:16",
+      "4:1",
+      "1:4",
+      "8:1",
+      "1:8",
+    ])
+    .optional()
+    .default("auto"),
   resolution: z.enum(["0.5K", "1K", "2K", "4K"]).optional().default("1K"),
   model: z.string().optional(),
 });
 
 export const createVideoBodySchema = z.object({
+  template: z.string().optional(),
   mode: z.enum(["prompt", "animate", "reference", "extend", "first-last", "lipsync"]).optional(),
   prompt: z.string().optional(),
   image_url: z.string().url().optional(),

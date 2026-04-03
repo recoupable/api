@@ -1,14 +1,14 @@
-import { createVideoHandler } from "@/lib/content/primitives/createVideoHandler";
+import { editHandler } from "@/lib/content/primitives/editHandler";
 import { primitiveOptionsHandler } from "@/lib/content/primitives/createPrimitiveRoute";
 
 export { primitiveOptionsHandler as OPTIONS };
 
 /**
- * POST /api/content/video
+ * PATCH /api/content
  *
- * Generate a video from a prompt, image, or existing video.
+ * Edit media with operations or a template preset.
  */
-export { createVideoHandler as POST };
+export { editHandler as PATCH };
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";

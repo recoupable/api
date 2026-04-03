@@ -102,6 +102,15 @@ describe("createVideoBodySchema", () => {
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.generate_audio).toBe(false);
   });
+
+  it("parses video with template", () => {
+    expect(
+      createVideoBodySchema.safeParse({
+        template: "artist-caption-bedroom",
+        prompt: "subtle motion",
+      }).success,
+    ).toBe(true);
+  });
 });
 
 describe("createTextBodySchema", () => {

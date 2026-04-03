@@ -132,10 +132,7 @@ export async function createVideoHandler(request: NextRequest): Promise<NextResp
       );
     }
 
-    return NextResponse.json(
-      { videoUrl, mode },
-      { status: 200, headers: getCorsHeaders() },
-    );
+    return NextResponse.json({ videoUrl, mode }, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
     console.error("Video generation error:", error);
     return NextResponse.json(
