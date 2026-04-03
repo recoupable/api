@@ -18,6 +18,8 @@ export async function OPTIONS() {
  * GET /api/accounts/[id]
  *
  * Retrieves account details by ID including profile info, emails, and wallets.
+ * Requires authentication via `x-api-key` or `Authorization: Bearer`; the caller must be
+ * allowed to access the requested account (same account, org delegation, or Recoup admin).
  *
  * Path parameters:
  * - id (required): The unique identifier of the account (UUID)
