@@ -15,7 +15,20 @@ export interface ConnectorInfo {
  * Passed explicitly to composio.create() because session.toolkits()
  * only returns the first 20 by default.
  */
-const SUPPORTED_TOOLKITS = ["googlesheets", "googledrive", "googledocs", "tiktok"];
+const SUPPORTED_TOOLKITS = [
+  "googlesheets",
+  "googledrive",
+  "googledocs",
+  "gmail",
+  "googlecalendar",
+  "tiktok",
+  "spotify",
+  "instagram",
+  "twitter",
+  "youtube",
+  "slack",
+  "linkedin",
+];
 
 /**
  * Options for getting connectors.

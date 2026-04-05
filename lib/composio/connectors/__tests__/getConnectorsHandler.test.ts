@@ -68,10 +68,18 @@ describe("getConnectorsHandler", () => {
     // API is unopinionated — no allowedToolkits filtering
     expect(getConnectors).toHaveBeenCalledWith("account-456", {
       displayNames: {
-        tiktok: "TikTok",
         googlesheets: "Google Sheets",
         googledrive: "Google Drive",
         googledocs: "Google Docs",
+        gmail: "Gmail",
+        googlecalendar: "Google Calendar",
+        tiktok: "TikTok",
+        spotify: "Spotify",
+        instagram: "Instagram",
+        twitter: "Twitter / X",
+        youtube: "YouTube",
+        slack: "Slack",
+        linkedin: "LinkedIn",
       },
     });
   });
