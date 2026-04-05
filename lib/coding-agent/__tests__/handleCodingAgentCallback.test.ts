@@ -89,7 +89,7 @@ describe("handleCodingAgentCallback", () => {
       threadId: "slack:C123:1234567890.123456",
       status: "pr_created",
       branch: "agent/fix-bug-1234",
-      snapshotId: "snap_abc",
+
       prs: [
         {
           repo: "recoupable/recoup-api",
@@ -113,7 +113,7 @@ describe("handleCodingAgentCallback", () => {
       threadId: "slack:C123:1234567890.123456",
       status: "pr_created",
       branch: "agent/fix-bug-1234",
-      snapshotId: "snap_abc",
+
       stdout: "Created branch agent/fix-bug-1234\nModified 3 files in api/\n",
       prs: [
         {
@@ -199,7 +199,6 @@ describe("handleCodingAgentCallback", () => {
     const body = {
       threadId: "slack:C123:1234567890.123456",
       status: "updated",
-      snapshotId: "snap_new",
     };
     const request = makeRequest(body);
 
@@ -207,7 +206,7 @@ describe("handleCodingAgentCallback", () => {
 
     expect(response.status).toBe(200);
     expect(mockSetState).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "pr_created", snapshotId: "snap_new" }),
+      expect.objectContaining({ status: "pr_created" }),
     );
     expect(mockPost).toHaveBeenCalledWith(expect.objectContaining({ card: expect.anything() }));
   });

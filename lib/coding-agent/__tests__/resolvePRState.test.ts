@@ -31,7 +31,7 @@ describe("resolvePRState", () => {
       status: "pr_created",
       prompt: "fix bug",
       branch: "agent/fix",
-      snapshotId: "snap_1",
+
       prs: [{ repo: "recoupable/api", number: 1, url: "url", baseBranch: "test" }],
     };
     const thread = createMockThread(threadState);
@@ -45,7 +45,7 @@ describe("resolvePRState", () => {
     const thread = createMockThread(null);
     const prState = {
       status: "pr_created",
-      snapshotId: "snap_1",
+
       branch: "agent/fix",
       repo: "recoupable/api",
       prs: [{ repo: "recoupable/api", number: 1, url: "url", baseBranch: "test" }],
@@ -59,7 +59,7 @@ describe("resolvePRState", () => {
       status: "pr_created",
       prompt: "",
       branch: "agent/fix",
-      snapshotId: "snap_1",
+
       prs: prState.prs,
     });
   });

@@ -75,7 +75,6 @@ describe("getSandboxesHandler", () => {
     expect(json).toEqual({
       status: "success",
       sandboxes: [],
-      snapshot_id: null,
       github_repo: null,
       filetree: null,
     });
@@ -115,7 +114,6 @@ describe("getSandboxesHandler", () => {
           createdAt: "2024-01-01T00:00:00.000Z",
         },
       ],
-      snapshot_id: null,
       github_repo: null,
       filetree: null,
     });
@@ -259,8 +257,8 @@ describe("getSandboxesHandler", () => {
     expect(maxStartIndex).toBeLessThan(minEndIndex);
   });
 
-  describe("snapshot_id and github_repo fields", () => {
-    it("returns snapshot_id and github_repo when account has a snapshot", async () => {
+  describe("github_repo field", () => {
+    it("returns github_repo when account has a snapshot", async () => {
       vi.mocked(validateGetSandboxesRequest).mockResolvedValue({
         accountIds: ["acc_123"],
       });
@@ -280,11 +278,10 @@ describe("getSandboxesHandler", () => {
 
       expect(response.status).toBe(200);
       const json = await response.json();
-      expect(json.snapshot_id).toBe("snap_abc123");
       expect(json.github_repo).toBe("https://github.com/user/repo");
     });
 
-    it("returns null for snapshot_id and github_repo when account has no snapshot", async () => {
+    it("returns null for github_repo when account has no snapshot", async () => {
       vi.mocked(validateGetSandboxesRequest).mockResolvedValue({
         accountIds: ["acc_123"],
       });
@@ -296,7 +293,6 @@ describe("getSandboxesHandler", () => {
 
       expect(response.status).toBe(200);
       const json = await response.json();
-      expect(json.snapshot_id).toBeNull();
       expect(json.github_repo).toBeNull();
     });
 
@@ -320,7 +316,6 @@ describe("getSandboxesHandler", () => {
 
       expect(response.status).toBe(200);
       const json = await response.json();
-      expect(json.snapshot_id).toBe("snap_abc123");
       expect(json.github_repo).toBeNull();
     });
 
@@ -344,7 +339,6 @@ describe("getSandboxesHandler", () => {
 
       expect(response.status).toBe(200);
       const json = await response.json();
-      expect(json.snapshot_id).toBe("snap_org_abc");
       expect(json.github_repo).toBe("https://github.com/org/repo");
       expect(selectAccountSnapshots).toHaveBeenCalledWith("org_123");
     });

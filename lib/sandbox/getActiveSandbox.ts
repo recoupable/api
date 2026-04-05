@@ -19,7 +19,7 @@ export async function getActiveSandbox(accountId: string): Promise<Sandbox | nul
   const mostRecent = sandboxes[0];
 
   try {
-    const sandbox = await Sandbox.get({ sandboxId: mostRecent.sandbox_id });
+    const sandbox = await Sandbox.get({ name: mostRecent.sandbox_id });
 
     if (sandbox.status === "running") {
       return sandbox;

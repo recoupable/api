@@ -42,7 +42,6 @@ describe("registerOnSubscribedMessage", () => {
       state: Promise.resolve({
         status: "pr_created",
         prompt: "fix bug",
-        snapshotId: "snap_abc",
         branch: "agent/fix-bug",
         prs: [{ repo: "recoupable/api", number: 1, url: "url", baseBranch: "test" }],
       }),
@@ -61,7 +60,6 @@ describe("registerOnSubscribedMessage", () => {
     expect(triggerUpdatePR).toHaveBeenCalledWith(
       expect.objectContaining({
         feedback: "make the button blue",
-        snapshotId: "snap_abc",
         repo: "recoupable/api",
       }),
     );

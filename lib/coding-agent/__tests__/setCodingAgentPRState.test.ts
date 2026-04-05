@@ -18,7 +18,6 @@ describe("setCodingAgentPRState", () => {
   it("stores serialized state in Redis", async () => {
     const state = {
       status: "pr_created" as const,
-      snapshotId: "snap_abc",
       branch: "agent/fix-bug",
       repo: "recoupable/api",
       prs: [{ repo: "recoupable/api", number: 42, url: "url", baseBranch: "test" }],

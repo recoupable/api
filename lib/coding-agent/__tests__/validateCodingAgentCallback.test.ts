@@ -9,7 +9,7 @@ describe("validateCodingAgentCallback", () => {
         threadId: "slack:C123:1234567890.123456",
         status: "pr_created",
         branch: "agent/fix-bug-1234",
-        snapshotId: "snap_abc123",
+
         prs: [
           {
             repo: "recoupable/recoup-api",
@@ -44,11 +44,10 @@ describe("validateCodingAgentCallback", () => {
       expect(result).not.toBeInstanceOf(NextResponse);
     });
 
-    it("accepts updated status with new snapshotId", () => {
+    it("accepts updated status", () => {
       const body = {
         threadId: "slack:C123:1234567890.123456",
         status: "updated",
-        snapshotId: "snap_new456",
       };
       const result = validateCodingAgentCallback(body);
       expect(result).not.toBeInstanceOf(NextResponse);

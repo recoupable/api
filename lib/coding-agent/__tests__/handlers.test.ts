@@ -87,7 +87,7 @@ describe("registerOnNewMention", () => {
       state: Promise.resolve({
         status: "pr_created",
         prompt: "original prompt",
-        snapshotId: "snap_abc",
+
         branch: "agent/fix-bug",
         prs: [
           {
@@ -113,7 +113,7 @@ describe("registerOnNewMention", () => {
     expect(mockTriggerUpdatePR).toHaveBeenCalledWith(
       expect.objectContaining({
         feedback: "remove the Project Structure changes",
-        snapshotId: "snap_abc",
+
         branch: "agent/fix-bug",
         repo: "recoupable/tasks",
       }),
@@ -130,7 +130,6 @@ describe("registerOnNewMention", () => {
     const { getCodingAgentPRState } = await import("../prState");
     vi.mocked(getCodingAgentPRState).mockResolvedValue({
       status: "pr_created",
-      snapshotId: "snap_abc",
       branch: "agent/fix-bug",
       repo: "recoupable/api",
       prs: [{ repo: "recoupable/api", number: 42, url: "url", baseBranch: "test" }],
@@ -159,7 +158,7 @@ describe("registerOnNewMention", () => {
     expect(mockTriggerUpdatePR).toHaveBeenCalledWith(
       expect.objectContaining({
         feedback: "make the button blue",
-        snapshotId: "snap_abc",
+
         branch: "agent/fix-bug",
         repo: "recoupable/api",
       }),

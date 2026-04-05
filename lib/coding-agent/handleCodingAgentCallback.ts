@@ -65,7 +65,7 @@ export async function handleCodingAgentCallback(request: Request): Promise<NextR
 
     case "updated": {
       const state = (await thread.state) as CodingAgentThreadState | null;
-      await thread.setState({ status: "pr_created", snapshotId: validated.snapshotId });
+      await thread.setState({ status: "pr_created" });
       const prs = state?.prs ?? [];
       const card = buildPRCard("PRs Updated", prs);
       await thread.post({ card });
@@ -73,7 +73,6 @@ export async function handleCodingAgentCallback(request: Request): Promise<NextR
       if (state?.branch && state?.prs?.length) {
         await setCodingAgentPRState(state.prs[0].repo, state.branch, {
           status: "pr_created",
-          snapshotId: validated.snapshotId,
           branch: state.branch,
           repo: state.prs[0].repo,
           prs: state.prs,

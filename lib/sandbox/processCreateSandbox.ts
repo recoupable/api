@@ -1,6 +1,5 @@
 import { createSandbox, type SandboxCreatedResponse } from "@/lib/sandbox/createSandbox";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
-import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { triggerPromptSandbox } from "@/lib/trigger/triggerPromptSandbox";
 
 type ProcessCreateSandboxInput = {
@@ -13,6 +12,9 @@ type ProcessCreateSandboxResult = SandboxCreatedResponse & { runId?: string };
  * Shared domain logic for creating a sandbox and optionally running a prompt.
  * Used by both POST /api/sandboxes handler and the prompt_sandbox MCP tool.
  *
+ * Uses the Vercel Sandbox names feature to create or resume a sandbox
+ * identified by the accountId, replacing the previous snapshotId-based approach.
+ *
  * @param input - The sandbox creation parameters
  * @returns The sandbox creation result with optional runId
  */
@@ -21,14 +23,8 @@ export async function processCreateSandbox(
 ): Promise<ProcessCreateSandboxResult> {
   const { accountId, prompt } = input;
 
-  // Get account's most recent snapshot if available
-  const accountSnapshots = await selectAccountSnapshots(accountId);
-  const snapshotId = accountSnapshots[0]?.snapshot_id;
-
-  // Create sandbox (from snapshot if valid, otherwise fresh)
-  const { response: result } = await createSandbox(
-    snapshotId ? { source: { type: "snapshot", snapshotId } } : {},
-  );
+  // Create sandbox using name-based persistence (replaces snapshotId approach)
+  const { response: result } = await createSandbox({ name: accountId });
 
   await insertAccountSandbox({
     account_id: accountId,

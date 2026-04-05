@@ -45,6 +45,12 @@ const BASE_PAYLOAD = {
   },
 };
 
+/**
+ *
+ * @param body
+ * @param event
+ * @param signature
+ */
 function makeRequest(body: unknown, event = "issue_comment", signature = "valid") {
   return {
     text: () => Promise.resolve(JSON.stringify(body)),
@@ -144,7 +150,7 @@ describe("handleGitHubWebhook", () => {
     } as Response);
     mockGetPRState.mockResolvedValue({
       status: "pr_created",
-      snapshotId: "snap_abc",
+
       branch: "agent/fix-bug",
       repo: "recoupable/tasks",
       prs: [{ repo: "recoupable/tasks", number: 66, url: "url", baseBranch: "main" }],
@@ -161,7 +167,7 @@ describe("handleGitHubWebhook", () => {
     expect(mockTriggerUpdatePR).toHaveBeenCalledWith(
       expect.objectContaining({
         feedback: "make the button blue",
-        snapshotId: "snap_abc",
+  
         branch: "agent/fix-bug",
         repo: "recoupable/tasks",
       }),
@@ -191,7 +197,7 @@ describe("handleGitHubWebhook", () => {
     };
     mockGetPRState.mockResolvedValue({
       status: "pr_created",
-      snapshotId: "snap_xyz",
+
       branch: "feature/my-branch",
       repo: "recoupable/api",
       prs: [{ repo: "recoupable/api", number: 266, url: "url", baseBranch: "test" }],
@@ -208,7 +214,7 @@ describe("handleGitHubWebhook", () => {
     expect(mockTriggerUpdatePR).toHaveBeenCalledWith(
       expect.objectContaining({
         feedback: "fix the typo",
-        snapshotId: "snap_xyz",
+  
         branch: "feature/my-branch",
         repo: "recoupable/api",
       }),
@@ -233,7 +239,7 @@ describe("handleGitHubWebhook", () => {
     };
     const originalState = {
       status: "pr_created" as const,
-      snapshotId: "snap_abc",
+
       branch: "agent/fix-bug",
       repo: "recoupable/tasks",
       prs: [{ repo: "recoupable/tasks", number: 99, url: "url", baseBranch: "main" }],

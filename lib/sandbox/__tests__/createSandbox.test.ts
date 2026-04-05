@@ -4,7 +4,7 @@ import { createSandbox } from "../createSandbox";
 import { Sandbox } from "@vercel/sandbox";
 
 const mockSandbox = {
-  sandboxId: "sbx_test123",
+  name: "sbx_test123",
   status: "running",
   timeout: 1800000,
   createdAt: new Date("2024-01-01T00:00:00Z"),
@@ -38,12 +38,14 @@ describe("createSandbox", () => {
     });
   });
 
-  it("creates sandbox from snapshot when source is provided", async () => {
-    await createSandbox({ source: { type: "snapshot", snapshotId: "snap_abc123" } });
+  it("creates sandbox with name when provided", async () => {
+    await createSandbox({ name: "acc_123" });
 
     expect(Sandbox.create).toHaveBeenCalledWith({
-      source: { type: "snapshot", snapshotId: "snap_abc123" },
+      resources: { vcpus: 4 },
       timeout: 1800000,
+      runtime: "node22",
+      name: "acc_123",
     });
   });
 

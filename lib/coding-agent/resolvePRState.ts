@@ -30,7 +30,6 @@ export async function resolvePRState(
         status: prState.status,
         prompt: "",
         branch: prState.branch,
-        snapshotId: prState.snapshotId,
         prs: prState.prs,
       };
     }

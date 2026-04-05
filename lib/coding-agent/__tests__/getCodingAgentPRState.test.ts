@@ -25,7 +25,6 @@ describe("getCodingAgentPRState", () => {
   it("returns parsed state when key exists", async () => {
     const state = {
       status: "pr_created",
-      snapshotId: "snap_abc",
       branch: "agent/fix-bug",
       repo: "recoupable/api",
       prs: [

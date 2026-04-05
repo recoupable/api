@@ -13,7 +13,6 @@ export const codingAgentCallbackSchema = z.object({
   threadId: z.string({ message: "threadId is required" }).min(1, "threadId cannot be empty"),
   status: z.enum(["pr_created", "no_changes", "failed", "updated"]),
   branch: z.string().optional(),
-  snapshotId: z.string().optional(),
   prs: z.array(codingAgentPRSchema).optional(),
   message: z.string().optional(),
   stdout: z.string().optional(),
