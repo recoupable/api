@@ -5,6 +5,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import { getMessages } from "@/lib/messages/getMessages";
 import convertToUiMessages from "@/lib/messages/convertToUiMessages";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
@@ -130,12 +131,27 @@ export async function validateChatRequest(
       accountId = overrideResult.accountId;
     }
   } else {
-    // Validate bearer token authentication (no org context for JWT auth)
+    // Validate bearer token authentication
     const accountIdOrError = await getAuthenticatedAccountId(request);
     if (accountIdOrError instanceof NextResponse) {
       return accountIdOrError;
     }
     accountId = accountIdOrError;
+
+    // Handle accountId override for bearer token auth
+    if (validatedBody.accountId && validatedBody.accountId !== accountId) {
+      const hasAccess = await canAccessAccount({
+        currentAccountId: accountId,
+        targetAccountId: validatedBody.accountId,
+      });
+      if (!hasAccess) {
+        return NextResponse.json(
+          { status: "error", message: "Access denied to specified accountId" },
+          { status: 403, headers: getCorsHeaders() },
+        );
+      }
+      accountId = validatedBody.accountId;
+    }
   }
 
   // Handle organizationId override from request body

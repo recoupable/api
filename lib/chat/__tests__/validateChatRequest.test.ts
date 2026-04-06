@@ -12,6 +12,7 @@ import { createNewRoom } from "@/lib/chat/createNewRoom";
 import insertMemories from "@/lib/supabase/memories/insertMemories";
 import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
 import { setupConversation } from "@/lib/chat/setupConversation";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 // Mock dependencies
 vi.mock("@/lib/auth/getApiKeyAccountId", () => ({
@@ -58,6 +59,10 @@ vi.mock("@/lib/chat/setupConversation", () => ({
   setupConversation: vi.fn(),
 }));
 
+vi.mock("@/lib/organizations/canAccessAccount", () => ({
+  canAccessAccount: vi.fn(),
+}));
+
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockGetAuthenticatedAccountId = vi.mocked(getAuthenticatedAccountId);
 const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
@@ -68,6 +73,7 @@ const mockCreateNewRoom = vi.mocked(createNewRoom);
 const mockInsertMemories = vi.mocked(insertMemories);
 const mockFilterMessageContentForMemories = vi.mocked(filterMessageContentForMemories);
 const mockSetupConversation = vi.mocked(setupConversation);
+const mockCanAccessAccount = vi.mocked(canAccessAccount);
 
 // Helper to create mock NextRequest
 /**
@@ -322,6 +328,58 @@ describe("validateChatRequest", () => {
       const json = await (result as NextResponse).json();
       expect(json.status).toBe("error");
       expect(json.message).toBe("Access denied to specified accountId");
+    });
+  });
+
+  describe("accountId override (bearer token)", () => {
+    it("allows bearer token user to override accountId when access is granted", async () => {
+      mockGetAuthenticatedAccountId.mockResolvedValue("admin-account-123");
+      mockCanAccessAccount.mockResolvedValue(true);
+
+      const request = createMockRequest(
+        { prompt: "Hello", accountId: "target-account-456" },
+        { authorization: "Bearer valid-jwt-token" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect((result as any).accountId).toBe("target-account-456");
+      expect(mockCanAccessAccount).toHaveBeenCalledWith({
+        currentAccountId: "admin-account-123",
+        targetAccountId: "target-account-456",
+      });
+    });
+
+    it("rejects bearer token accountId override when access is denied", async () => {
+      mockGetAuthenticatedAccountId.mockResolvedValue("regular-account-123");
+      mockCanAccessAccount.mockResolvedValue(false);
+
+      const request = createMockRequest(
+        { prompt: "Hello", accountId: "target-account-456" },
+        { authorization: "Bearer valid-jwt-token" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).toBeInstanceOf(NextResponse);
+      const json = await (result as NextResponse).json();
+      expect(json.status).toBe("error");
+    });
+
+    it("uses authenticated accountId when no override is provided", async () => {
+      mockGetAuthenticatedAccountId.mockResolvedValue("jwt-account-123");
+
+      const request = createMockRequest(
+        { prompt: "Hello" },
+        { authorization: "Bearer valid-jwt-token" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect((result as any).accountId).toBe("jwt-account-123");
+      expect(mockCanAccessAccount).not.toHaveBeenCalled();
     });
   });
 
