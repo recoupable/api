@@ -50,6 +50,16 @@ export async function validateAuthorizeConnectorRequest(
   }
   const { connector, callback_url, account_id } = validated;
 
+  // Build auth configs for custom OAuth
+  const authConfigs: Record<string, string> = {};
+  if (connector === "tiktok" && process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID) {
+    authConfigs.tiktok = process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID;
+  }
+  if (connector === "instagram" && process.env.COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID) {
+    authConfigs.instagram = process.env.COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID;
+  }
+  const resolvedAuthConfigs = Object.keys(authConfigs).length > 0 ? authConfigs : undefined;
+
   // 3. If account_id is provided, verify access and use that entity
   if (account_id) {
     const accessResult = await checkAccountAccess(accountId, account_id);
@@ -60,17 +70,11 @@ export async function validateAuthorizeConnectorRequest(
       );
     }
 
-    // Build auth configs for custom OAuth
-    const authConfigs: Record<string, string> = {};
-    if (connector === "tiktok" && process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID) {
-      authConfigs.tiktok = process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID;
-    }
-
     return {
       accountId: account_id,
       connector,
       callbackUrl: callback_url,
-      authConfigs: Object.keys(authConfigs).length > 0 ? authConfigs : undefined,
+      authConfigs: resolvedAuthConfigs,
     };
   }
 
@@ -79,5 +83,6 @@ export async function validateAuthorizeConnectorRequest(
     accountId,
     connector,
     callbackUrl: callback_url,
+    authConfigs: resolvedAuthConfigs,
   };
 }

@@ -6,10 +6,13 @@ describe("isAllowedArtistConnector", () => {
     expect(isAllowedArtistConnector("tiktok")).toBe(true);
   });
 
+  it("should return true for 'instagram'", () => {
+    expect(isAllowedArtistConnector("instagram")).toBe(true);
+  });
+
   it("should return false for connectors not in ALLOWED_ARTIST_CONNECTORS", () => {
     expect(isAllowedArtistConnector("googlesheets")).toBe(false);
     expect(isAllowedArtistConnector("googledrive")).toBe(false);
-    expect(isAllowedArtistConnector("instagram")).toBe(false);
     expect(isAllowedArtistConnector("random")).toBe(false);
   });
 
@@ -24,8 +27,9 @@ describe("isAllowedArtistConnector", () => {
 });
 
 describe("ALLOWED_ARTIST_CONNECTORS", () => {
-  it("should include tiktok", () => {
+  it("should include tiktok and instagram", () => {
     expect(ALLOWED_ARTIST_CONNECTORS).toContain("tiktok");
+    expect(ALLOWED_ARTIST_CONNECTORS).toContain("instagram");
   });
 
   it("should be a readonly array", () => {
