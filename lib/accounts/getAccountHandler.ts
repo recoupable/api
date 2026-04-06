@@ -3,15 +3,17 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
+import { selectAccountByEmail } from "@/lib/supabase/account_emails/selectAccountByEmail";
 
 /**
- * Handler for retrieving account details by ID.
+ * Handler for retrieving account details by ID or email.
  *
+ * Accepts either a UUID account ID or an email address as the path parameter.
  * Requires exactly one of `x-api-key` or `Authorization: Bearer`.
- * The caller must be allowed to access the account in the path (self, shared org, or Recoup admin).
+ * The caller must be allowed to access the account (self, shared org, or Recoup admin).
  *
  * @param request - The request object
- * @param params - Route params containing the account ID
+ * @param params - Route params containing the account ID or email
  * @returns A NextResponse with account data or error
  */
 export async function getAccountHandler(
@@ -21,19 +23,33 @@ export async function getAccountHandler(
   try {
     const { id } = await params;
 
-    const validatedParams = validateAccountParams(id);
-    if (validatedParams instanceof NextResponse) {
-      return validatedParams;
+    let accountId: string;
+
+    if (id.includes("@")) {
+      const emailAccount = await selectAccountByEmail(id);
+      if (!emailAccount) {
+        return NextResponse.json(
+          { status: "error", error: "No account found for the provided email" },
+          { status: 404, headers: getCorsHeaders() },
+        );
+      }
+      accountId = emailAccount.account_id;
+    } else {
+      const validatedParams = validateAccountParams(id);
+      if (validatedParams instanceof NextResponse) {
+        return validatedParams;
+      }
+      accountId = validatedParams.id;
     }
 
     const authResult = await validateAuthContext(request, {
-      accountId: validatedParams.id,
+      accountId,
     });
     if (authResult instanceof NextResponse) {
       return authResult;
     }
 
-    const account = await getAccountWithDetails(validatedParams.id);
+    const account = await getAccountWithDetails(accountId);
 
     if (!account) {
       return NextResponse.json(
