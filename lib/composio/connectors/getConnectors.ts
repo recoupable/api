@@ -9,6 +9,8 @@ export interface ConnectorInfo {
   name: string;
   isConnected: boolean;
   connectedAccountId?: string;
+  avatar?: string | null;
+  username?: string | null;
 }
 
 /**
@@ -16,7 +18,13 @@ export interface ConnectorInfo {
  * Passed explicitly to composio.create() because session.toolkits()
  * only returns the first 20 by default.
  */
-const SUPPORTED_TOOLKITS = ["googlesheets", "googledrive", "googledocs", "tiktok", "instagram"];
+const SUPPORTED_TOOLKITS = [
+  "googlesheets",
+  "googledrive",
+  "googledocs",
+  "tiktok",
+  "instagram",
+];
 
 /**
  * Options for getting connectors.
@@ -52,7 +60,7 @@ export async function getConnectors(
   });
   const toolkits = await session.toolkits();
 
-  return toolkits.items.map(toolkit => {
+  return toolkits.items.map((toolkit) => {
     const slug = toolkit.slug.toLowerCase();
     return {
       slug,
