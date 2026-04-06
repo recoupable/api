@@ -26,27 +26,41 @@ export async function getAccountHandler(
     let accountId: string;
 
     if (id.includes("@")) {
+      // Authenticate before email lookup to prevent account-email probing
+      const authResult = await validateAuthContext(request);
+      if (authResult instanceof NextResponse) {
+        return authResult;
+      }
+
       const emailAccount = await selectAccountByEmail(id);
-      if (!emailAccount) {
+      if (!emailAccount?.account_id) {
         return NextResponse.json(
           { status: "error", error: "No account found for the provided email" },
           { status: 404, headers: getCorsHeaders() },
         );
       }
       accountId = emailAccount.account_id;
+
+      // Verify caller can access this account
+      const accessResult = await validateAuthContext(request, {
+        accountId,
+      });
+      if (accessResult instanceof NextResponse) {
+        return accessResult;
+      }
     } else {
       const validatedParams = validateAccountParams(id);
       if (validatedParams instanceof NextResponse) {
         return validatedParams;
       }
       accountId = validatedParams.id;
-    }
 
-    const authResult = await validateAuthContext(request, {
-      accountId,
-    });
-    if (authResult instanceof NextResponse) {
-      return authResult;
+      const authResult = await validateAuthContext(request, {
+        accountId,
+      });
+      if (authResult instanceof NextResponse) {
+        return authResult;
+      }
     }
 
     const account = await getAccountWithDetails(accountId);

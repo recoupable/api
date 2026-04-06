@@ -127,7 +127,12 @@ describe("getAccountHandler", () => {
       expect(validateAuthContext).toHaveBeenCalledWith(req, { accountId });
     });
 
-    it("returns 404 when email has no associated account", async () => {
+    it("returns 404 when email has no associated account (after auth)", async () => {
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId: "admin-account-123",
+        orgId: null,
+        authToken: "token",
+      });
       vi.mocked(selectAccountByEmail).mockResolvedValue(null);
 
       const req = new NextRequest("http://localhost/api/accounts/unknown@example.com");
@@ -136,7 +141,19 @@ describe("getAccountHandler", () => {
 
       expect(res.status).toBe(404);
       expect(body.error).toBe("No account found for the provided email");
-      expect(validateAuthContext).not.toHaveBeenCalled();
+      expect(validateAuthContext).toHaveBeenCalled();
+    });
+
+    it("returns 401 for unauthenticated email lookup", async () => {
+      vi.mocked(validateAuthContext).mockResolvedValue(
+        NextResponse.json({ status: "error", error: "unauthorized" }, { status: 401 }),
+      );
+
+      const req = new NextRequest("http://localhost/api/accounts/test@example.com");
+      const res = await getAccountHandler(req, Promise.resolve({ id: "test@example.com" }));
+
+      expect(res.status).toBe(401);
+      expect(selectAccountByEmail).not.toHaveBeenCalled();
     });
   });
 });
