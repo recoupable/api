@@ -32,7 +32,7 @@ reviews:
           - Functions should do one thing and do it well
           - Avoid god classes or functions with multiple responsibilities
           - Look for functions longer than 20 lines or classes with >200 lines
-          - **File-function name match (CRITICAL):** Each file must export ONE primary function, and the file name must match that function's name. If a new function is added to an existing file and its name does not match the file name, flag it immediately. The developer must create a new file named after the function instead of adding it to an existing file. Example: a function called `buildAuthConfigs` must live in `buildAuthConfigs.ts`, NOT in `getConnectors.ts`.
+          - File-function name match: each file must export ONE primary function, and the file name must match that function's name. If a new function is added to an existing file and its name does not match the file name, flag it. The developer must create a new file named after the function instead of adding it to an existing file. Example: a function called `buildAuthConfigs` must live in `buildAuthConfigs.ts`, NOT in `getConnectors.ts`.
 
           ## Open/Closed Principle (OCP)
           - Classes should be open for extension but closed for modification
