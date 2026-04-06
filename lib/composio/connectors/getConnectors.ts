@@ -1,4 +1,5 @@
 import { getComposioClient } from "../client";
+import { buildAuthConfigs } from "./buildAuthConfigs";
 
 /**
  * Connector info returned by Composio.
@@ -44,8 +45,10 @@ export async function getConnectors(
   const { displayNames = {} } = options;
   const composio = await getComposioClient();
 
+  const authConfigs = buildAuthConfigs();
   const session = await composio.create(accountId, {
     toolkits: SUPPORTED_TOOLKITS,
+    ...(authConfigs && { authConfigs }),
   });
   const toolkits = await session.toolkits();
 

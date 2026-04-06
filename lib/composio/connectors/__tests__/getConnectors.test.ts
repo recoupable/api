@@ -73,6 +73,33 @@ describe("getConnectors", () => {
     expect(result[0].name).toBe("TikTok");
   });
 
+  it("should pass authConfigs when custom OAuth env vars are set", async () => {
+    const origTiktok = process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID;
+    const origInstagram = process.env.COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID;
+
+    try {
+      process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID = "ac_tiktok_123";
+      process.env.COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID = "ac_instagram_456";
+
+      mockToolkits.mockResolvedValue({ items: [] });
+
+      await getConnectors("account-123");
+
+      expect(mockComposio.create).toHaveBeenCalledWith("account-123", {
+        toolkits: ["googlesheets", "googledrive", "googledocs", "tiktok", "instagram"],
+        authConfigs: {
+          tiktok: "ac_tiktok_123",
+          instagram: "ac_instagram_456",
+        },
+      });
+    } finally {
+      if (origTiktok === undefined) delete process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID;
+      else process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID = origTiktok;
+      if (origInstagram === undefined) delete process.env.COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID;
+      else process.env.COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID = origInstagram;
+    }
+  });
+
   it("should handle inactive connections", async () => {
     mockToolkits.mockResolvedValue({
       items: [
