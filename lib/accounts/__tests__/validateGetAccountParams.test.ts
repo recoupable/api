@@ -30,12 +30,17 @@ describe("validateGetAccountParams", () => {
 
   it("delegates to resolveAccountIdByEmail when id contains @", async () => {
     vi.mocked(resolveAccountIdByEmail).mockResolvedValue("account-123");
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "account-123",
+      orgId: null,
+      authToken: "token",
+    });
 
     const req = new NextRequest("http://localhost/api/accounts/test@example.com");
     const result = await validateGetAccountParams(req, "test@example.com");
 
     expect(result).toBe("account-123");
-    expect(resolveAccountIdByEmail).toHaveBeenCalledWith(req, "test@example.com");
+    expect(resolveAccountIdByEmail).toHaveBeenCalledWith("test@example.com");
     expect(validateAccountParams).not.toHaveBeenCalled();
   });
 

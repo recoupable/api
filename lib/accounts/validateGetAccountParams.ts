@@ -17,21 +17,26 @@ export async function validateGetAccountParams(
   request: NextRequest,
   id: string,
 ): Promise<string | NextResponse> {
+  let accountId: string;
+
   if (id.includes("@")) {
-    return resolveAccountIdByEmail(request, id);
+    const resolved = await resolveAccountIdByEmail(id);
+    if (resolved instanceof NextResponse) {
+      return resolved;
+    }
+    accountId = resolved;
+  } else {
+    const validatedParams = validateAccountParams(id);
+    if (validatedParams instanceof NextResponse) {
+      return validatedParams;
+    }
+    accountId = validatedParams.id;
   }
 
-  const validatedParams = validateAccountParams(id);
-  if (validatedParams instanceof NextResponse) {
-    return validatedParams;
-  }
-
-  const authResult = await validateAuthContext(request, {
-    accountId: validatedParams.id,
-  });
+  const authResult = await validateAuthContext(request, { accountId });
   if (authResult instanceof NextResponse) {
     return authResult;
   }
 
-  return validatedParams.id;
+  return accountId;
 }
