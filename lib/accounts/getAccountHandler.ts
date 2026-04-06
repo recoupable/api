@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
-import { resolveAccountIdByEmail } from "@/lib/accounts/resolveAccountIdByEmail";
+import { validateGetAccountParams } from "@/lib/accounts/validateGetAccountParams";
 
 /**
  * Handler for retrieving account details by ID or email.
@@ -23,28 +21,11 @@ export async function getAccountHandler(
   try {
     const { id } = await params;
 
-    let accountId: string;
-
-    if (id.includes("@")) {
-      const resolved = await resolveAccountIdByEmail(request, id);
-      if (resolved instanceof NextResponse) {
-        return resolved;
-      }
-      accountId = resolved;
-    } else {
-      const validatedParams = validateAccountParams(id);
-      if (validatedParams instanceof NextResponse) {
-        return validatedParams;
-      }
-      accountId = validatedParams.id;
-
-      const authResult = await validateAuthContext(request, {
-        accountId,
-      });
-      if (authResult instanceof NextResponse) {
-        return authResult;
-      }
+    const resolved = await validateGetAccountParams(request, id);
+    if (resolved instanceof NextResponse) {
+      return resolved;
     }
+    const accountId = resolved;
 
     const account = await getAccountWithDetails(accountId);
 
