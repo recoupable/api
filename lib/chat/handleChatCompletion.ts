@@ -1,4 +1,4 @@
-import { getToolOrDynamicToolName, isToolOrDynamicToolUIPart, type UIMessage } from "ai";
+import type { UIMessage } from "ai";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
 import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
@@ -11,39 +11,6 @@ import { handleSendEmailToolOutputs } from "@/lib/emails/handleSendEmailToolOutp
 import { sendErrorNotification } from "@/lib/telegram/sendErrorNotification";
 import { serializeError } from "@/lib/errors/serializeError";
 import type { ChatRequestBody } from "./validateChatRequest";
-import { copyRoom } from "@/lib/rooms/copyRoom";
-import type { CreateNewArtistResult } from "@/lib/mcp/tools/artists/registerCreateNewArtistTool";
-import { copyChatMessages } from "@/lib/chats/copyChatMessages";
-
-export interface ChatCompletionResult {
-  redirectPath?: string;
-}
-
-function getCreateArtistResult(responseMessages: UIMessage[]): CreateNewArtistResult | null {
-  for (const message of responseMessages) {
-    for (const part of message.parts) {
-      if (!isToolOrDynamicToolUIPart(part)) continue;
-      if (getToolOrDynamicToolName(part) !== "create_new_artist") continue;
-      if (part.state !== "output-available") continue;
-
-      if (part.type === "dynamic-tool") {
-        const text = (part.output as { content?: Array<{ text?: string }> } | undefined)
-          ?.content?.[0]?.text;
-        if (!text) continue;
-
-        try {
-          return JSON.parse(text) as CreateNewArtistResult;
-        } catch {
-          continue;
-        }
-      }
-
-      return part.output as CreateNewArtistResult;
-    }
-  }
-
-  return null;
-}
 
 /**
  * Handles post-chat-completion tasks:
@@ -61,7 +28,7 @@ function getCreateArtistResult(responseMessages: UIMessage[]): CreateNewArtistRe
 export async function handleChatCompletion(
   body: ChatRequestBody,
   responseMessages: UIMessage[],
-): Promise<ChatCompletionResult> {
+): Promise<void> {
   try {
     const { messages, roomId = "", accountId, artistId } = body;
 
@@ -114,32 +81,8 @@ export async function handleChatCompletion(
       content: filterMessageContentForMemories(responseMessages[responseMessages.length - 1]),
     });
 
-    let redirectPath: string | undefined;
-    const createArtistResult = getCreateArtistResult(responseMessages);
-    if (createArtistResult?.artistAccountId) {
-      const newRoomId = await copyRoom(roomId, createArtistResult.artistAccountId);
-
-      if (newRoomId) {
-        const copyResult = await copyChatMessages({
-          sourceChatId: roomId,
-          targetChatId: newRoomId,
-          clearExisting: true,
-        });
-
-        if (copyResult.status === "success") {
-          redirectPath = `/chat/${newRoomId}`;
-        } else {
-          console.error(copyResult.error);
-        }
-      } else {
-        console.error("Failed to create final artist conversation room");
-      }
-    }
-
     // Process any email tool outputs
     await handleSendEmailToolOutputs(responseMessages);
-
-    return { redirectPath };
   } catch (error) {
     sendErrorNotification({
       ...body,
@@ -147,6 +90,5 @@ export async function handleChatCompletion(
       error: serializeError(error),
     });
     console.error("Failed to save chat", error);
-    return {};
   }
 }

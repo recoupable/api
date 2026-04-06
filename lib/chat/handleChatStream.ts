@@ -7,6 +7,16 @@ import { setupChatRequest } from "./setupChatRequest";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import generateUUID from "@/lib/uuid/generateUUID";
 import { DEFAULT_MODEL } from "@/lib/const";
+import type { ChatRequestBody } from "./validateChatRequest";
+import type { UIMessage } from "ai";
+
+type ChatStreamFinishHandler = (params: {
+  body: ChatRequestBody;
+  responseMessages: UIMessage[];
+  writer: {
+    write: (chunk: unknown) => void;
+  };
+}) => Promise<void>;
 
 /**
  * Handles a streaming chat request.
@@ -19,7 +29,10 @@ import { DEFAULT_MODEL } from "@/lib/const";
  * @param request - The incoming NextRequest
  * @returns A streaming response or error NextResponse
  */
-export async function handleChatStream(request: NextRequest): Promise<Response> {
+export async function handleChatStream(
+  request: NextRequest,
+  onFinish?: ChatStreamFinishHandler,
+): Promise<Response> {
   const validatedBodyOrError = await validateChatRequest(request);
   if (validatedBodyOrError instanceof NextResponse) {
     return validatedBodyOrError;
@@ -51,15 +64,8 @@ export async function handleChatStream(request: NextRequest): Promise<Response> 
               );
               const responseMessages =
                 assistantMessages.length > 0 ? assistantMessages : [event.responseMessage];
-              const { redirectPath } = await handleChatCompletion(body, responseMessages);
-
-              if (redirectPath) {
-                writer.write({
-                  type: "data-redirect",
-                  data: { path: redirectPath },
-                  transient: true,
-                });
-              }
+              await handleChatCompletion(body, responseMessages);
+              await onFinish?.({ body, responseMessages, writer });
 
               writer.write({
                 type: "finish",

@@ -9,8 +9,6 @@ import { sendNewConversationNotification } from "@/lib/telegram/sendNewConversat
 import { generateChatTitle } from "@/lib/chat/generateChatTitle";
 import { handleSendEmailToolOutputs } from "@/lib/emails/handleSendEmailToolOutputs";
 import { sendErrorNotification } from "@/lib/telegram/sendErrorNotification";
-import { copyRoom } from "@/lib/rooms/copyRoom";
-import { copyChatMessages } from "@/lib/chats/copyChatMessages";
 import { handleChatCompletion } from "../handleChatCompletion";
 import type { ChatRequestBody } from "../validateChatRequest";
 
@@ -47,14 +45,6 @@ vi.mock("@/lib/telegram/sendErrorNotification", () => ({
   sendErrorNotification: vi.fn(),
 }));
 
-vi.mock("@/lib/rooms/copyRoom", () => ({
-  copyRoom: vi.fn(),
-}));
-
-vi.mock("@/lib/chats/copyChatMessages", () => ({
-  copyChatMessages: vi.fn(),
-}));
-
 const mockSelectAccountEmails = vi.mocked(selectAccountEmails);
 const mockSelectRoom = vi.mocked(selectRoom);
 const mockUpsertRoom = vi.mocked(upsertRoom);
@@ -63,8 +53,6 @@ const mockSendNewConversationNotification = vi.mocked(sendNewConversationNotific
 const mockGenerateChatTitle = vi.mocked(generateChatTitle);
 const mockHandleSendEmailToolOutputs = vi.mocked(handleSendEmailToolOutputs);
 const mockSendErrorNotification = vi.mocked(sendErrorNotification);
-const mockCopyRoom = vi.mocked(copyRoom);
-const mockCopyChatMessages = vi.mocked(copyChatMessages);
 
 // Helper to create mock UIMessage
 /**
@@ -104,12 +92,6 @@ describe("handleChatCompletion", () => {
     mockSelectRoom.mockResolvedValue({ id: "room-456" });
     mockUpsertMemory.mockResolvedValue(null);
     mockHandleSendEmailToolOutputs.mockResolvedValue();
-    mockCopyRoom.mockResolvedValue("new-room-123");
-    mockCopyChatMessages.mockResolvedValue({
-      status: "success",
-      copiedCount: 1,
-      clearedExisting: true,
-    });
   });
 
   afterEach(() => {
@@ -285,7 +267,7 @@ describe("handleChatCompletion", () => {
       const responseMessages = [createMockUIMessage("resp-1", "assistant", "Hi!")];
 
       // Should not throw
-      await expect(handleChatCompletion(body, responseMessages)).resolves.toEqual({});
+      await expect(handleChatCompletion(body, responseMessages)).resolves.toBeUndefined();
     });
   });
 
@@ -362,15 +344,9 @@ describe("handleChatCompletion", () => {
         },
       ];
 
-      const result = await handleChatCompletion(body, responseMessages);
+      await handleChatCompletion(body, responseMessages);
 
-      expect(mockCopyRoom).toHaveBeenCalledWith("room-456", "artist-123");
-      expect(mockCopyChatMessages).toHaveBeenCalledWith({
-        sourceChatId: "room-456",
-        targetChatId: "new-room-123",
-        clearExisting: true,
-      });
-      expect(result).toEqual({ redirectPath: "/chat/new-room-123" });
+      expect(mockHandleSendEmailToolOutputs).toHaveBeenCalledWith(responseMessages);
     });
   });
 });

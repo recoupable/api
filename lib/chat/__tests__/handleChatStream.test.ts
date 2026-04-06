@@ -6,6 +6,7 @@ import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccoun
 import { setupChatRequest } from "@/lib/chat/setupChatRequest";
 import { setupConversation } from "@/lib/chat/setupConversation";
 import { handleChatCompletion } from "@/lib/chat/handleChatCompletion";
+import { handleCreateArtistRedirect } from "@/lib/chat/handleCreateArtistRedirect";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { handleChatStream } from "../handleChatStream";
 
@@ -55,6 +56,10 @@ vi.mock("@/lib/chat/handleChatCompletion", () => ({
   handleChatCompletion: vi.fn(),
 }));
 
+vi.mock("@/lib/chat/handleCreateArtistRedirect", () => ({
+  handleCreateArtistRedirect: vi.fn(),
+}));
+
 vi.mock("@/lib/credits/handleChatCredits", () => ({
   handleChatCredits: vi.fn(),
 }));
@@ -73,6 +78,7 @@ const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
 const mockSetupConversation = vi.mocked(setupConversation);
 const mockSetupChatRequest = vi.mocked(setupChatRequest);
 const mockHandleChatCompletion = vi.mocked(handleChatCompletion);
+const mockHandleCreateArtistRedirect = vi.mocked(handleCreateArtistRedirect);
 const mockCreateUIMessageStream = vi.mocked(createUIMessageStream);
 const mockCreateUIMessageStreamResponse = vi.mocked(createUIMessageStreamResponse);
 
@@ -101,7 +107,8 @@ describe("handleChatStream", () => {
       roomId: roomId || "mock-room-id",
       memoryId: "mock-memory-id",
     }));
-    mockHandleChatCompletion.mockResolvedValue({});
+    mockHandleChatCompletion.mockResolvedValue();
+    mockHandleCreateArtistRedirect.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -253,8 +260,6 @@ describe("handleChatStream", () => {
 
     it("uses sendFinish false and emits redirect data after completion", async () => {
       mockGetApiKeyAccountId.mockResolvedValue("account-123");
-      mockHandleChatCompletion.mockResolvedValue({ redirectPath: "/chat/new-room-123" });
-
       const toUIMessageStream = vi.fn().mockReturnValue(new ReadableStream());
       const mockAgent = {
         stream: vi.fn().mockResolvedValue({
@@ -275,7 +280,20 @@ describe("handleChatStream", () => {
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
-      await handleChatStream(request as any);
+      await handleChatStream(request as any, async ({ body, responseMessages, writer }) => {
+        const redirectPath = await handleCreateArtistRedirect(body, responseMessages);
+        if (!redirectPath) {
+          return;
+        }
+
+        writer.write({
+          type: "data-redirect",
+          data: { path: redirectPath },
+          transient: true,
+        });
+      });
+
+      mockHandleCreateArtistRedirect.mockResolvedValue("/chat/new-room-123");
 
       const execute = mockCreateUIMessageStream.mock.calls[0][0].execute;
       const writer = {

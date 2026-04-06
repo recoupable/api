@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { handleChatStream } from "@/lib/chat/handleChatStream";
+import { handleCreateArtistRedirect } from "@/lib/chat/handleCreateArtistRedirect";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -37,5 +38,16 @@ export async function OPTIONS() {
  * @returns A streaming response or error
  */
 export async function POST(request: NextRequest): Promise<Response> {
-  return handleChatStream(request);
+  return handleChatStream(request, async ({ body, responseMessages, writer }) => {
+    const redirectPath = await handleCreateArtistRedirect(body, responseMessages);
+    if (!redirectPath) {
+      return;
+    }
+
+    writer.write({
+      type: "data-redirect",
+      data: { path: redirectPath },
+      transient: true,
+    });
+  });
 }
