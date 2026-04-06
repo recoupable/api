@@ -5,6 +5,7 @@ import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
 import { setupChatRequest } from "@/lib/chat/setupChatRequest";
 import { setupConversation } from "@/lib/chat/setupConversation";
+import { handleChatCompletion } from "@/lib/chat/handleChatCompletion";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { handleChatStream } from "../handleChatStream";
 
@@ -71,6 +72,7 @@ const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
 const mockSetupConversation = vi.mocked(setupConversation);
 const mockSetupChatRequest = vi.mocked(setupChatRequest);
+const mockHandleChatCompletion = vi.mocked(handleChatCompletion);
 const mockCreateUIMessageStream = vi.mocked(createUIMessageStream);
 const mockCreateUIMessageStreamResponse = vi.mocked(createUIMessageStreamResponse);
 
@@ -99,6 +101,7 @@ describe("handleChatStream", () => {
       roomId: roomId || "mock-room-id",
       memoryId: "mock-memory-id",
     }));
+    mockHandleChatCompletion.mockResolvedValue({});
   });
 
   afterEach(() => {
@@ -246,6 +249,68 @@ describe("handleChatStream", () => {
           excludeTools: ["tool1"],
         }),
       );
+    });
+
+    it("uses sendFinish false and emits redirect data after completion", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockHandleChatCompletion.mockResolvedValue({ redirectPath: "/chat/new-room-123" });
+
+      const toUIMessageStream = vi.fn().mockReturnValue(new ReadableStream());
+      const mockAgent = {
+        stream: vi.fn().mockResolvedValue({
+          toUIMessageStream,
+          usage: Promise.resolve({ inputTokens: 100, outputTokens: 50 }),
+        }),
+        tools: {},
+      };
+
+      mockSetupChatRequest.mockResolvedValue({
+        agent: mockAgent,
+        messages: [],
+      } as any);
+
+      const mockStream = new ReadableStream();
+      mockCreateUIMessageStream.mockReturnValue(mockStream);
+      mockCreateUIMessageStreamResponse.mockReturnValue(new Response(mockStream));
+
+      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
+
+      await handleChatStream(request as any);
+
+      const execute = mockCreateUIMessageStream.mock.calls[0][0].execute;
+      const writer = {
+        merge: vi.fn(),
+        write: vi.fn(),
+        onError: undefined,
+      };
+
+      await execute({ writer } as any);
+
+      expect(toUIMessageStream).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sendFinish: false,
+          onFinish: expect.any(Function),
+        }),
+      );
+
+      const onFinish = toUIMessageStream.mock.calls[0][0].onFinish;
+      await onFinish({
+        isAborted: false,
+        finishReason: "stop",
+        messages: [{ id: "resp-1", role: "assistant", parts: [] }],
+        responseMessage: { id: "resp-1", role: "assistant", parts: [] },
+        isContinuation: false,
+      });
+
+      expect(writer.write).toHaveBeenCalledWith({
+        type: "data-redirect",
+        data: { path: "/chat/new-room-123" },
+        transient: true,
+      });
+      expect(writer.write).toHaveBeenCalledWith({
+        type: "finish",
+        finishReason: "stop",
+      });
     });
   });
 

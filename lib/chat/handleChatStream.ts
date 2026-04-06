@@ -38,23 +38,42 @@ export async function handleChatStream(request: NextRequest): Promise<Response> 
       execute: async options => {
         const { writer } = options;
         streamResult = await agent.stream(chatConfig);
-        writer.merge(streamResult.toUIMessageStream());
-      },
-      onFinish: async event => {
-        if (event.isAborted) {
-          return;
-        }
-        const assistantMessages = event.messages.filter(message => message.role === "assistant");
-        const responseMessages =
-          assistantMessages.length > 0 ? assistantMessages : [event.responseMessage];
-        await handleChatCompletion(body, responseMessages);
-        if (streamResult) {
-          await handleChatCredits({
-            usage: await streamResult.usage,
-            model: body.model ?? DEFAULT_MODEL,
-            accountId: body.accountId,
-          });
-        }
+        writer.merge(
+          streamResult.toUIMessageStream({
+            sendFinish: false,
+            onFinish: async event => {
+              if (event.isAborted) {
+                return;
+              }
+
+              const assistantMessages = event.messages.filter(
+                message => message.role === "assistant",
+              );
+              const responseMessages =
+                assistantMessages.length > 0 ? assistantMessages : [event.responseMessage];
+              const { redirectPath } = await handleChatCompletion(body, responseMessages);
+
+              if (redirectPath) {
+                writer.write({
+                  type: "data-redirect",
+                  data: { path: redirectPath },
+                  transient: true,
+                });
+              }
+
+              writer.write({
+                type: "finish",
+                finishReason: event.finishReason,
+              });
+
+              await handleChatCredits({
+                usage: await streamResult!.usage,
+                model: body.model ?? DEFAULT_MODEL,
+                accountId: body.accountId,
+              });
+            },
+          }),
+        );
       },
       onError: e => {
         console.error("/api/chat onError:", e);
