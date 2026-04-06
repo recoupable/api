@@ -29,6 +29,22 @@ export interface GetConnectorsOptions {
 }
 
 /**
+ * Build auth configs from environment variables.
+ * Must match the configs used during authorization so Composio
+ * can find connections created with custom OAuth credentials.
+ */
+function buildAuthConfigs(): Record<string, string> | undefined {
+  const configs: Record<string, string> = {};
+  if (process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID) {
+    configs.tiktok = process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID;
+  }
+  if (process.env.COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID) {
+    configs.instagram = process.env.COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID;
+  }
+  return Object.keys(configs).length > 0 ? configs : undefined;
+}
+
+/**
  * Get connectors and their connection status for an account.
  *
  * Works for any account ID. Composio uses the accountId to scope connections.
@@ -44,8 +60,10 @@ export async function getConnectors(
   const { displayNames = {} } = options;
   const composio = await getComposioClient();
 
+  const authConfigs = buildAuthConfigs();
   const session = await composio.create(accountId, {
     toolkits: SUPPORTED_TOOLKITS,
+    ...(authConfigs && { authConfigs }),
   });
   const toolkits = await session.toolkits();
 
