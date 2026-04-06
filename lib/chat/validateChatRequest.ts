@@ -10,6 +10,8 @@ import convertToUiMessages from "@/lib/messages/convertToUiMessages";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
 import { setupConversation } from "@/lib/chat/setupConversation";
 import { validateMessages } from "@/lib/chat/validateMessages";
+import { selectAccountByEmail } from "@/lib/supabase/account_emails/selectAccountByEmail";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 export const chatRequestSchema = z
   .object({
@@ -20,6 +22,7 @@ export const chatRequestSchema = z
     roomId: z.string().optional(),
     topic: z.string().optional(),
     accountId: z.string().optional(),
+    email: z.string().email().optional(),
     artistId: z.string().optional(),
     organizationId: z.string().optional(),
     model: z.string().optional(),
@@ -136,6 +139,43 @@ export async function validateChatRequest(
       return accountIdOrError;
     }
     accountId = accountIdOrError;
+
+    // Handle email-based accountId override for bearer token auth
+    if (validatedBody.email) {
+      const emailAccount = await selectAccountByEmail(validatedBody.email);
+      if (!emailAccount) {
+        return NextResponse.json(
+          {
+            status: "error",
+            message: "No account found for the provided email",
+          },
+          {
+            status: 404,
+            headers: getCorsHeaders(),
+          },
+        );
+      }
+
+      const hasAccess = await canAccessAccount({
+        currentAccountId: accountId,
+        targetAccountId: emailAccount.account_id,
+      });
+
+      if (!hasAccess) {
+        return NextResponse.json(
+          {
+            status: "error",
+            message: "Access denied to specified email's account",
+          },
+          {
+            status: 403,
+            headers: getCorsHeaders(),
+          },
+        );
+      }
+
+      accountId = emailAccount.account_id;
+    }
   }
 
   // Handle organizationId override from request body

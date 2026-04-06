@@ -12,6 +12,8 @@ import { createNewRoom } from "@/lib/chat/createNewRoom";
 import insertMemories from "@/lib/supabase/memories/insertMemories";
 import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
 import { setupConversation } from "@/lib/chat/setupConversation";
+import { selectAccountByEmail } from "@/lib/supabase/account_emails/selectAccountByEmail";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 // Mock dependencies
 vi.mock("@/lib/auth/getApiKeyAccountId", () => ({
@@ -58,6 +60,14 @@ vi.mock("@/lib/chat/setupConversation", () => ({
   setupConversation: vi.fn(),
 }));
 
+vi.mock("@/lib/supabase/account_emails/selectAccountByEmail", () => ({
+  selectAccountByEmail: vi.fn(),
+}));
+
+vi.mock("@/lib/organizations/canAccessAccount", () => ({
+  canAccessAccount: vi.fn(),
+}));
+
 const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
 const mockGetAuthenticatedAccountId = vi.mocked(getAuthenticatedAccountId);
 const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
@@ -68,6 +78,8 @@ const mockCreateNewRoom = vi.mocked(createNewRoom);
 const mockInsertMemories = vi.mocked(insertMemories);
 const mockFilterMessageContentForMemories = vi.mocked(filterMessageContentForMemories);
 const mockSetupConversation = vi.mocked(setupConversation);
+const mockSelectAccountByEmail = vi.mocked(selectAccountByEmail);
+const mockCanAccessAccount = vi.mocked(canAccessAccount);
 
 // Helper to create mock NextRequest
 /**
@@ -776,6 +788,108 @@ describe("validateChatRequest", () => {
         artistId: undefined,
         memoryId: expect.any(String),
       });
+    });
+  });
+
+  describe("email override (bearer token)", () => {
+    it("accepts email field in schema", () => {
+      const result = chatRequestSchema.safeParse({
+        prompt: "test",
+        email: "customer@example.com",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("overrides accountId when email is provided with bearer token auth", async () => {
+      mockGetAuthenticatedAccountId.mockResolvedValue("admin-account-123");
+      mockSelectAccountByEmail.mockResolvedValue({
+        account_id: "customer-account-456",
+        email: "customer@example.com",
+      } as any);
+      mockCanAccessAccount.mockResolvedValue(true);
+
+      const request = createMockRequest(
+        { prompt: "Hello", email: "customer@example.com" },
+        { authorization: "Bearer valid-jwt-token" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect((result as any).accountId).toBe("customer-account-456");
+      expect(mockSelectAccountByEmail).toHaveBeenCalledWith("customer@example.com");
+      expect(mockCanAccessAccount).toHaveBeenCalledWith({
+        currentAccountId: "admin-account-123",
+        targetAccountId: "customer-account-456",
+      });
+    });
+
+    it("returns 404 when email is not found", async () => {
+      mockGetAuthenticatedAccountId.mockResolvedValue("admin-account-123");
+      mockSelectAccountByEmail.mockResolvedValue(null);
+
+      const request = createMockRequest(
+        { prompt: "Hello", email: "unknown@example.com" },
+        { authorization: "Bearer valid-jwt-token" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).toBeInstanceOf(NextResponse);
+      const json = await (result as NextResponse).json();
+      expect(json.status).toBe("error");
+      expect(json.message).toBe("No account found for the provided email");
+    });
+
+    it("returns 403 when bearer token user cannot access the email's account", async () => {
+      mockGetAuthenticatedAccountId.mockResolvedValue("regular-account-123");
+      mockSelectAccountByEmail.mockResolvedValue({
+        account_id: "other-account-456",
+        email: "other@example.com",
+      } as any);
+      mockCanAccessAccount.mockResolvedValue(false);
+
+      const request = createMockRequest(
+        { prompt: "Hello", email: "other@example.com" },
+        { authorization: "Bearer valid-jwt-token" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).toBeInstanceOf(NextResponse);
+      const json = await (result as NextResponse).json();
+      expect(json.status).toBe("error");
+      expect(json.message).toBe("Access denied to specified email's account");
+    });
+
+    it("does not apply email override when using API key auth", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("api-key-account-123");
+
+      const request = createMockRequest(
+        { prompt: "Hello", email: "customer@example.com" },
+        { "x-api-key": "test-key" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect((result as any).accountId).toBe("api-key-account-123");
+      expect(mockSelectAccountByEmail).not.toHaveBeenCalled();
+    });
+
+    it("ignores email field when not provided with bearer token", async () => {
+      mockGetAuthenticatedAccountId.mockResolvedValue("jwt-account-123");
+
+      const request = createMockRequest(
+        { prompt: "Hello" },
+        { authorization: "Bearer valid-jwt-token" },
+      );
+
+      const result = await validateChatRequest(request as any);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect((result as any).accountId).toBe("jwt-account-123");
+      expect(mockSelectAccountByEmail).not.toHaveBeenCalled();
     });
   });
 });
