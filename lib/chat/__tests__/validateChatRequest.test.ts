@@ -836,6 +836,7 @@ describe("validateChatRequest", () => {
       const result = await validateChatRequest(request as any);
 
       expect(result).toBeInstanceOf(NextResponse);
+      expect((result as NextResponse).status).toBe(404);
       const json = await (result as NextResponse).json();
       expect(json.status).toBe("error");
       expect(json.message).toBe("No account found for the provided email");
@@ -857,6 +858,7 @@ describe("validateChatRequest", () => {
       const result = await validateChatRequest(request as any);
 
       expect(result).toBeInstanceOf(NextResponse);
+      expect((result as NextResponse).status).toBe(403);
       const json = await (result as NextResponse).json();
       expect(json.status).toBe("error");
       expect(json.message).toBe("Access denied to specified email's account");

@@ -143,7 +143,7 @@ export async function validateChatRequest(
     // Handle email-based accountId override for bearer token auth
     if (validatedBody.email) {
       const emailAccount = await selectAccountByEmail(validatedBody.email);
-      if (!emailAccount) {
+      if (!emailAccount || !emailAccount.account_id) {
         return NextResponse.json(
           {
             status: "error",
