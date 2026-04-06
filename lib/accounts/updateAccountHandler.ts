@@ -5,7 +5,7 @@ import { updateAccount } from "@/lib/supabase/accounts/updateAccount";
 import { insertAccountInfo } from "@/lib/supabase/account_info/insertAccountInfo";
 import { updateAccountInfo } from "@/lib/supabase/account_info/updateAccountInfo";
 import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
-import type { UpdateAccountRequest } from "./validateUpdateAccountRequest";
+import type { ValidatedUpdateAccountRequest } from "./validateUpdateAccountRequest";
 
 /**
  * Handles PATCH /api/accounts - Update account profile information.
@@ -13,7 +13,9 @@ import type { UpdateAccountRequest } from "./validateUpdateAccountRequest";
  * @param body - Validated request body with accountId and fields to update
  * @returns NextResponse with updated account data
  */
-export async function updateAccountHandler(body: UpdateAccountRequest): Promise<NextResponse> {
+export async function updateAccountHandler(
+  body: ValidatedUpdateAccountRequest,
+): Promise<NextResponse> {
   const {
     accountId,
     name,

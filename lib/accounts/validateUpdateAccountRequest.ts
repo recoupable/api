@@ -10,7 +10,7 @@ const knowledgeSchema = z.object({
   type: z.string(),
 });
 
-export const updateAccountRequestSchema = z.object({
+export const updateAccountBodySchema = z.object({
   accountId: z.string().uuid("accountId must be a valid UUID"),
   name: z.string().optional(),
   instruction: z.string().optional(),
@@ -22,16 +22,21 @@ export const updateAccountRequestSchema = z.object({
   knowledges: z.array(knowledgeSchema).optional(),
 });
 
-export type UpdateAccountRequest = z.infer<typeof updateAccountRequestSchema>;
+export type ValidatedUpdateAccountRequest = Omit<
+  z.infer<typeof updateAccountBodySchema>,
+  "accountId"
+> & {
+  accountId: string;
+};
 
 /**
  * Validates PATCH /api/accounts including auth, account override access, and body schema.
  */
 export async function validateUpdateAccountRequest(
   request: NextRequest,
-): Promise<NextResponse | UpdateAccountRequest> {
+): Promise<NextResponse | ValidatedUpdateAccountRequest> {
   const body = await safeParseJson(request);
-  const result = updateAccountRequestSchema.safeParse(body);
+  const result = updateAccountBodySchema.safeParse(body);
 
   if (!result.success) {
     const firstError = result.error.issues[0];
@@ -57,7 +62,14 @@ export async function validateUpdateAccountRequest(
   }
 
   return {
-    ...result.data,
     accountId: authContext.accountId,
+    name: result.data.name,
+    instruction: result.data.instruction,
+    organization: result.data.organization,
+    image: result.data.image,
+    jobTitle: result.data.jobTitle,
+    roleType: result.data.roleType,
+    companyName: result.data.companyName,
+    knowledges: result.data.knowledges,
   };
 }
