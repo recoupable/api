@@ -2,37 +2,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextResponse } from "next/server";
 import { validateChatRequest, chatRequestSchema } from "../validateChatRequest";
 
-import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
-import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
-import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
-import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
-import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import { createNewRoom } from "@/lib/chat/createNewRoom";
 import insertMemories from "@/lib/supabase/memories/insertMemories";
 import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
 import { setupConversation } from "@/lib/chat/setupConversation";
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 // Mock dependencies
-vi.mock("@/lib/auth/getApiKeyAccountId", () => ({
-  getApiKeyAccountId: vi.fn(),
-}));
-
-vi.mock("@/lib/auth/getAuthenticatedAccountId", () => ({
-  getAuthenticatedAccountId: vi.fn(),
-}));
-
-vi.mock("@/lib/accounts/validateOverrideAccountId", () => ({
-  validateOverrideAccountId: vi.fn(),
-}));
-
-vi.mock("@/lib/keys/getApiKeyDetails", () => ({
-  getApiKeyDetails: vi.fn(),
-}));
-
-vi.mock("@/lib/organizations/validateOrganizationAccess", () => ({
-  validateOrganizationAccess: vi.fn(),
+vi.mock("@/lib/auth/validateAuthContext", () => ({
+  validateAuthContext: vi.fn(),
 }));
 
 vi.mock("@/lib/uuid/generateUUID", () => {
@@ -59,21 +38,12 @@ vi.mock("@/lib/chat/setupConversation", () => ({
   setupConversation: vi.fn(),
 }));
 
-vi.mock("@/lib/organizations/canAccessAccount", () => ({
-  canAccessAccount: vi.fn(),
-}));
-
-const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
-const mockGetAuthenticatedAccountId = vi.mocked(getAuthenticatedAccountId);
-const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
-const mockGetApiKeyDetails = vi.mocked(getApiKeyDetails);
-const mockValidateOrganizationAccess = vi.mocked(validateOrganizationAccess);
+const mockValidateAuthContext = vi.mocked(validateAuthContext);
 const mockGenerateUUID = vi.mocked(generateUUID);
 const mockCreateNewRoom = vi.mocked(createNewRoom);
 const mockInsertMemories = vi.mocked(insertMemories);
 const mockFilterMessageContentForMemories = vi.mocked(filterMessageContentForMemories);
 const mockSetupConversation = vi.mocked(setupConversation);
-const mockCanAccessAccount = vi.mocked(canAccessAccount);
 
 // Helper to create mock NextRequest
 /**
@@ -103,7 +73,11 @@ describe("validateChatRequest", () => {
 
   describe("schema validation", () => {
     it("rejects when neither messages nor prompt is provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest({ roomId: "room-123" }, { "x-api-key": "test-key" });
 
@@ -116,7 +90,11 @@ describe("validateChatRequest", () => {
     });
 
     it("rejects when both messages and prompt are provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest(
         {
@@ -135,7 +113,11 @@ describe("validateChatRequest", () => {
     });
 
     it("accepts valid messages array", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest(
         { messages: [{ role: "user", content: "Hello" }] },
@@ -149,7 +131,11 @@ describe("validateChatRequest", () => {
     });
 
     it("accepts valid prompt string", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest({ prompt: "Hello, world!" }, { "x-api-key": "test-key" });
 
@@ -162,6 +148,12 @@ describe("validateChatRequest", () => {
 
   describe("authentication", () => {
     it("rejects request without any auth header", async () => {
+      mockValidateAuthContext.mockResolvedValue(
+        NextResponse.json(
+          { status: "error", error: "Exactly one of x-api-key or Authorization must be provided" },
+          { status: 401 },
+        ),
+      );
       const request = createMockRequest({ prompt: "Hello" }, {});
 
       const result = await validateChatRequest(request as any);
@@ -169,223 +161,62 @@ describe("validateChatRequest", () => {
       expect(result).toBeInstanceOf(NextResponse);
       const json = await (result as NextResponse).json();
       expect(json.status).toBe("error");
-      expect(json.message).toBe("Exactly one of x-api-key or Authorization must be provided");
+      expect(json.error).toBe("Exactly one of x-api-key or Authorization must be provided");
     });
 
-    it("rejects request with both x-api-key and Authorization headers", async () => {
-      const request = createMockRequest(
-        { prompt: "Hello" },
-        { "x-api-key": "test-key", authorization: "Bearer test-token" },
-      );
-
-      const result = await validateChatRequest(request as any);
-
-      expect(result).toBeInstanceOf(NextResponse);
-      const json = await (result as NextResponse).json();
-      expect(json.status).toBe("error");
-      expect(json.message).toBe("Exactly one of x-api-key or Authorization must be provided");
-    });
-
-    it("rejects request with invalid API key", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue(
-        NextResponse.json({ status: "error", message: "Invalid API key" }, { status: 401 }),
+    it("returns auth error when validateAuthContext fails", async () => {
+      mockValidateAuthContext.mockResolvedValue(
+        NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 }),
       );
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "invalid-key" });
-
       const result = await validateChatRequest(request as any);
 
       expect(result).toBeInstanceOf(NextResponse);
+      expect((result as NextResponse).status).toBe(401);
     });
 
-    it("uses accountId from valid API key", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-abc-123");
+    it("uses accountId from validateAuthContext", async () => {
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "resolved-account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
-
       const result = await validateChatRequest(request as any);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("account-abc-123");
+      expect((result as any).accountId).toBe("resolved-account-123");
     });
 
-    it("accepts valid Authorization Bearer token", async () => {
-      mockGetAuthenticatedAccountId.mockResolvedValue("account-from-jwt-456");
-
-      const request = createMockRequest(
-        { prompt: "Hello" },
-        { authorization: "Bearer valid-jwt-token" },
-      );
-
-      const result = await validateChatRequest(request as any);
-
-      expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("account-from-jwt-456");
-    });
-
-    it("rejects request with invalid Authorization token", async () => {
-      mockGetAuthenticatedAccountId.mockResolvedValue(
-        NextResponse.json(
-          { status: "error", message: "Failed to verify authentication token" },
-          { status: 401 },
-        ),
-      );
-
-      const request = createMockRequest(
-        { prompt: "Hello" },
-        { authorization: "Bearer invalid-token" },
-      );
-
-      const result = await validateChatRequest(request as any);
-
-      expect(result).toBeInstanceOf(NextResponse);
-      const json = await (result as NextResponse).json();
-      expect(json.status).toBe("error");
-    });
-
-    it("returns accountId for org API key", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("org-account-123");
-      mockGetApiKeyDetails.mockResolvedValue({
-        accountId: "org-account-123",
-      });
-
-      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "org-api-key" });
-
-      const result = await validateChatRequest(request as any);
-
-      expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("org-account-123");
-    });
-
-    it("returns accountId for personal API key", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("personal-account-123");
-      mockGetApiKeyDetails.mockResolvedValue({
-        accountId: "personal-account-123",
-      });
-
-      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "personal-api-key" });
-
-      const result = await validateChatRequest(request as any);
-
-      expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("personal-account-123");
-    });
-
-    it("returns accountId for bearer token auth", async () => {
-      mockGetAuthenticatedAccountId.mockResolvedValue("jwt-account-456");
-
-      const request = createMockRequest(
-        { prompt: "Hello" },
-        { authorization: "Bearer valid-jwt-token" },
-      );
-
-      const result = await validateChatRequest(request as any);
-
-      expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("jwt-account-456");
-    });
-  });
-
-  describe("accountId override", () => {
-    it("allows org API key to override accountId", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("org-account-123");
-      mockValidateOverrideAccountId.mockResolvedValue({
-        accountId: "target-account-456",
+    it("passes accountId and organizationId to validateAuthContext", async () => {
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "target-456",
+        orgId: "org-789",
+        authToken: "token",
       });
 
       const request = createMockRequest(
-        { prompt: "Hello", accountId: "target-account-456" },
-        { "x-api-key": "org-api-key" },
+        { prompt: "Hello", accountId: "target-456", organizationId: "org-789" },
+        { "x-api-key": "valid-key" },
       );
+      await validateChatRequest(request as any);
 
-      const result = await validateChatRequest(request as any);
-
-      expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("target-account-456");
-      expect(mockValidateOverrideAccountId).toHaveBeenCalledWith({
-        apiKey: "org-api-key",
-        targetAccountId: "target-account-456",
+      expect(mockValidateAuthContext).toHaveBeenCalledWith(expect.anything(), {
+        accountId: "target-456",
+        organizationId: "org-789",
       });
-    });
-
-    it("rejects unauthorized accountId override", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("personal-account-123");
-      mockValidateOverrideAccountId.mockResolvedValue(
-        NextResponse.json(
-          { status: "error", message: "Access denied to specified accountId" },
-          { status: 403 },
-        ),
-      );
-
-      const request = createMockRequest(
-        { prompt: "Hello", accountId: "target-account-456" },
-        { "x-api-key": "personal-api-key" },
-      );
-
-      const result = await validateChatRequest(request as any);
-
-      expect(result).toBeInstanceOf(NextResponse);
-      const json = await (result as NextResponse).json();
-      expect(json.status).toBe("error");
-      expect(json.message).toBe("Access denied to specified accountId");
-    });
-  });
-
-  describe("accountId override (bearer token)", () => {
-    it("allows bearer token user to override accountId when access is granted", async () => {
-      mockGetAuthenticatedAccountId.mockResolvedValue("admin-account-123");
-      mockCanAccessAccount.mockResolvedValue(true);
-
-      const request = createMockRequest(
-        { prompt: "Hello", accountId: "target-account-456" },
-        { authorization: "Bearer valid-jwt-token" },
-      );
-
-      const result = await validateChatRequest(request as any);
-
-      expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("target-account-456");
-      expect(mockCanAccessAccount).toHaveBeenCalledWith({
-        currentAccountId: "admin-account-123",
-        targetAccountId: "target-account-456",
-      });
-    });
-
-    it("rejects bearer token accountId override when access is denied", async () => {
-      mockGetAuthenticatedAccountId.mockResolvedValue("regular-account-123");
-      mockCanAccessAccount.mockResolvedValue(false);
-
-      const request = createMockRequest(
-        { prompt: "Hello", accountId: "target-account-456" },
-        { authorization: "Bearer valid-jwt-token" },
-      );
-
-      const result = await validateChatRequest(request as any);
-
-      expect(result).toBeInstanceOf(NextResponse);
-      const json = await (result as NextResponse).json();
-      expect(json.status).toBe("error");
-    });
-
-    it("uses authenticated accountId when no override is provided", async () => {
-      mockGetAuthenticatedAccountId.mockResolvedValue("jwt-account-123");
-
-      const request = createMockRequest(
-        { prompt: "Hello" },
-        { authorization: "Bearer valid-jwt-token" },
-      );
-
-      const result = await validateChatRequest(request as any);
-
-      expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("jwt-account-123");
-      expect(mockCanAccessAccount).not.toHaveBeenCalled();
     });
   });
 
   describe("message normalization", () => {
     it("converts prompt to messages array", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest({ prompt: "Hello, world!" }, { "x-api-key": "test-key" });
 
@@ -398,7 +229,11 @@ describe("validateChatRequest", () => {
     });
 
     it("preserves original messages when provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const originalMessages = [
         { role: "user", content: "Hi" },
@@ -418,7 +253,11 @@ describe("validateChatRequest", () => {
 
   describe("optional fields", () => {
     it("passes through roomId", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "room-xyz",
         memoryId: "memory-id",
@@ -436,7 +275,11 @@ describe("validateChatRequest", () => {
     });
 
     it("passes through artistId", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest(
         { prompt: "Hello", artistId: "artist-abc" },
@@ -450,7 +293,11 @@ describe("validateChatRequest", () => {
     });
 
     it("passes through model selection", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest(
         { prompt: "Hello", model: "gpt-4" },
@@ -464,7 +311,11 @@ describe("validateChatRequest", () => {
     });
 
     it("passes through excludeTools array", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest(
         { prompt: "Hello", excludeTools: ["tool1", "tool2"] },
@@ -478,7 +329,11 @@ describe("validateChatRequest", () => {
     });
 
     it("passes through topic", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest(
         { prompt: "Hello", topic: "Pulse Feb 2" },
@@ -532,110 +387,47 @@ describe("validateChatRequest", () => {
       expect(result.success).toBe(true);
     });
 
-    it("uses provided organizationId when user is member of org (bearer token)", async () => {
-      mockGetAuthenticatedAccountId.mockResolvedValue("user-account-123");
-      mockValidateOrganizationAccess.mockResolvedValue(true);
+    it("uses orgId from validateAuthContext when organizationId is provided", async () => {
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: "org-456",
+        authToken: "token",
+      });
 
       const request = createMockRequest(
         { prompt: "Hello", organizationId: "org-456" },
-        { authorization: "Bearer valid-jwt-token" },
+        { "x-api-key": "test-key" },
       );
 
       const result = await validateChatRequest(request as any);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(mockValidateOrganizationAccess).toHaveBeenCalledWith({
-        accountId: "user-account-123",
-        organizationId: "org-456",
-      });
+      expect((result as any).orgId).toBe("org-456");
     });
 
-    it("uses provided organizationId when user is member of org (API key)", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("api-key-account-123");
-      mockGetApiKeyDetails.mockResolvedValue({
-        accountId: "api-key-account-123",
+    it("returns null orgId when no organizationId provided", async () => {
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
       });
-      mockValidateOrganizationAccess.mockResolvedValue(true);
 
-      const request = createMockRequest(
-        { prompt: "Hello", organizationId: "org-789" },
-        { "x-api-key": "personal-api-key" },
-      );
-
-      const result = await validateChatRequest(request as any);
-      expect(mockValidateOrganizationAccess).toHaveBeenCalledWith({
-        accountId: "api-key-account-123",
-        organizationId: "org-789",
-      });
-    });
-
-    it("overwrites API key orgId with provided organizationId when user is member", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("org-account-123");
-      mockGetApiKeyDetails.mockResolvedValue({
-        accountId: "org-account-123",
-      });
-      mockValidateOrganizationAccess.mockResolvedValue(true);
-
-      const request = createMockRequest(
-        { prompt: "Hello", organizationId: "different-org-456" },
-        { "x-api-key": "org-api-key" },
-      );
+      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "test-key" });
 
       const result = await validateChatRequest(request as any);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-    });
-
-    it("rejects organizationId when user is NOT a member of org", async () => {
-      mockGetAuthenticatedAccountId.mockResolvedValue("user-account-123");
-      mockValidateOrganizationAccess.mockResolvedValue(false);
-
-      const request = createMockRequest(
-        { prompt: "Hello", organizationId: "org-not-member" },
-        { authorization: "Bearer valid-jwt-token" },
-      );
-
-      const result = await validateChatRequest(request as any);
-
-      expect(result).toBeInstanceOf(NextResponse);
-      const json = await (result as NextResponse).json();
-      expect(json.status).toBe("error");
-      expect(json.message).toBe("Access denied to specified organizationId");
-    });
-
-    it("uses API key orgId when no organizationId is provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("org-account-123");
-      mockGetApiKeyDetails.mockResolvedValue({
-        accountId: "org-account-123",
-      });
-
-      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "org-api-key" });
-
-      const result = await validateChatRequest(request as any);
-
-      expect(result).not.toBeInstanceOf(NextResponse);
-      // Should not validate org access when no organizationId is provided
-      expect(mockValidateOrganizationAccess).not.toHaveBeenCalled();
-    });
-
-    it("returns null orgId when no organizationId provided and bearer token auth", async () => {
-      mockGetAuthenticatedAccountId.mockResolvedValue("user-account-123");
-
-      const request = createMockRequest(
-        { prompt: "Hello" },
-        { authorization: "Bearer valid-jwt-token" },
-      );
-
-      const result = await validateChatRequest(request as any);
-
-      expect(result).not.toBeInstanceOf(NextResponse);
-      expect(mockValidateOrganizationAccess).not.toHaveBeenCalled();
+      expect((result as any).orgId).toBeNull();
     });
   });
 
   describe("auto room creation", () => {
     it("returns roomId from setupConversation when roomId is not provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "generated-uuid-456",
         memoryId: "memory-id",
@@ -650,7 +442,11 @@ describe("validateChatRequest", () => {
     });
 
     it("calls setupConversation with correct params when roomId is not provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "generated-uuid-789",
         memoryId: "memory-id",
@@ -676,7 +472,11 @@ describe("validateChatRequest", () => {
     });
 
     it("passes artistId to setupConversation when provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "generated-uuid-abc",
         memoryId: "memory-id",
@@ -697,7 +497,11 @@ describe("validateChatRequest", () => {
     });
 
     it("passes topic to setupConversation when provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "generated-uuid-topic",
         memoryId: "memory-id",
@@ -718,7 +522,11 @@ describe("validateChatRequest", () => {
     });
 
     it("returns provided roomId when roomId is provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "existing-room-123",
         memoryId: "memory-id",
@@ -736,7 +544,11 @@ describe("validateChatRequest", () => {
     });
 
     it("passes roomId to setupConversation when provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "existing-room-456",
         memoryId: "memory-id",
@@ -757,7 +569,11 @@ describe("validateChatRequest", () => {
     });
 
     it("works with bearer token auth for auto room creation", async () => {
-      mockGetAuthenticatedAccountId.mockResolvedValue("jwt-account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "jwt-account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "jwt-generated-uuid",
         memoryId: "memory-id",
@@ -780,7 +596,11 @@ describe("validateChatRequest", () => {
     });
 
     it("calls setupConversation when roomId is auto-created", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "new-room-uuid",
         memoryId: "new-room-uuid",
@@ -808,7 +628,11 @@ describe("validateChatRequest", () => {
     });
 
     it("calls setupConversation for existing rooms", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "existing-room-id",
         memoryId: "memory-uuid",
