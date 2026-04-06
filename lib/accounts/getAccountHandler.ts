@@ -3,7 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
-import { resolveAccountIdFromEmail } from "@/lib/accounts/resolveAccountIdFromEmail";
+import { resolveAccountIdByEmail } from "@/lib/accounts/resolveAccountIdByEmail";
 
 /**
  * Handler for retrieving account details by ID or email.
@@ -26,25 +26,11 @@ export async function getAccountHandler(
     let accountId: string;
 
     if (id.includes("@")) {
-      // Authenticate before email lookup to prevent account-email probing
-      const authResult = await validateAuthContext(request);
-      if (authResult instanceof NextResponse) {
-        return authResult;
-      }
-
-      const resolved = await resolveAccountIdFromEmail(id);
+      const resolved = await resolveAccountIdByEmail(request, id);
       if (resolved instanceof NextResponse) {
         return resolved;
       }
       accountId = resolved;
-
-      // Verify caller can access this account
-      const accessResult = await validateAuthContext(request, {
-        accountId,
-      });
-      if (accessResult instanceof NextResponse) {
-        return accessResult;
-      }
     } else {
       const validatedParams = validateAccountParams(id);
       if (validatedParams instanceof NextResponse) {
