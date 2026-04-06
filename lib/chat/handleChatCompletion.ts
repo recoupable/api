@@ -1,8 +1,4 @@
-import {
-  getToolOrDynamicToolName,
-  isToolOrDynamicToolUIPart,
-  type UIMessage,
-} from "ai";
+import { getToolOrDynamicToolName, isToolOrDynamicToolUIPart, type UIMessage } from "ai";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
 import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
@@ -16,8 +12,8 @@ import { sendErrorNotification } from "@/lib/telegram/sendErrorNotification";
 import { serializeError } from "@/lib/errors/serializeError";
 import type { ChatRequestBody } from "./validateChatRequest";
 import { copyRoom } from "@/lib/rooms/copyRoom";
-import { copyChatMessages } from "@/lib/chats/copyChatMessages";
 import type { CreateNewArtistResult } from "@/lib/mcp/tools/artists/registerCreateNewArtistTool";
+import { copyChatMessages } from "@/lib/chats/copyChatMessages";
 
 export interface ChatCompletionResult {
   redirectPath?: string;
@@ -31,7 +27,8 @@ function getCreateArtistResult(responseMessages: UIMessage[]): CreateNewArtistRe
       if (part.state !== "output-available") continue;
 
       if (part.type === "dynamic-tool") {
-        const text = part.output?.content?.[0]?.text;
+        const text = (part.output as { content?: Array<{ text?: string }> } | undefined)
+          ?.content?.[0]?.text;
         if (!text) continue;
 
         try {
@@ -129,10 +126,10 @@ export async function handleChatCompletion(
           clearExisting: true,
         });
 
-        if (copyResult.success) {
+        if (copyResult.status === "success") {
           redirectPath = `/chat/${newRoomId}`;
         } else {
-          console.error("Failed to copy final artist conversation:", copyResult.error);
+          console.error(copyResult.error);
         }
       } else {
         console.error("Failed to create final artist conversation room");

@@ -106,8 +106,8 @@ describe("handleChatCompletion", () => {
     mockHandleSendEmailToolOutputs.mockResolvedValue();
     mockCopyRoom.mockResolvedValue("new-room-123");
     mockCopyChatMessages.mockResolvedValue({
-      success: true,
-      copiedCount: 2,
+      status: "success",
+      copiedCount: 1,
       clearedExisting: true,
     });
   });
