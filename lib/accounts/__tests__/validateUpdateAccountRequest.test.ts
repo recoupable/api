@@ -40,7 +40,7 @@ describe("validateUpdateAccountRequest", () => {
   it("returns validated payload for a valid request", async () => {
     const request = createRequest({
       accountId: "550e8400-e29b-41d4-a716-446655440000",
-      name: "Arpit",
+      name: "Test User",
       knowledges: [
         {
           name: "Strategy",
@@ -56,7 +56,7 @@ describe("validateUpdateAccountRequest", () => {
     if (!(result instanceof NextResponse)) {
       expect(result).toEqual({
         accountId: "550e8400-e29b-41d4-a716-446655440000",
-        name: "Arpit",
+        name: "Test User",
         knowledges: [
           {
             name: "Strategy",
