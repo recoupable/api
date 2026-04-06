@@ -15,6 +15,7 @@ import { registerAllFileTools } from "./files";
 import { registerAllFlamingoTools } from "./flamingo";
 import { registerCreateSegmentsTool } from "./registerCreateSegmentsTool";
 import { registerAllYouTubeTools } from "./youtube";
+import { registerAllResearchTools } from "./research";
 import { registerTranscribeTools } from "./transcribe";
 import { registerSendEmailTool } from "./registerSendEmailTool";
 import { registerAllArtistTools } from "./artists";
@@ -54,4 +55,5 @@ export const registerAllTools = (server: McpServer): void => {
   registerUpdateAccountInfoTool(server);
   registerCreateSegmentsTool(server);
   registerAllYouTubeTools(server);
+  registerAllResearchTools(server);
 };
