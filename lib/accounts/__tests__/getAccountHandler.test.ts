@@ -3,14 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
 import { getAccountHandler } from "@/lib/accounts/getAccountHandler";
-import { selectAccountByEmail } from "@/lib/supabase/account_emails/selectAccountByEmail";
+import { resolveAccountIdFromEmail } from "@/lib/accounts/resolveAccountIdFromEmail";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-vi.mock("@/lib/supabase/account_emails/selectAccountByEmail", () => ({
-  selectAccountByEmail: vi.fn(),
+vi.mock("@/lib/accounts/resolveAccountIdFromEmail", () => ({
+  resolveAccountIdFromEmail: vi.fn(),
 }));
 
 const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -106,10 +106,7 @@ describe("getAccountHandler", () => {
       const accountId = "550e8400-e29b-41d4-a716-446655440099";
       const account = { id: accountId, name: "Customer" };
 
-      vi.mocked(selectAccountByEmail).mockResolvedValue({
-        account_id: accountId,
-        email,
-      } as any);
+      vi.mocked(resolveAccountIdFromEmail).mockResolvedValue(accountId);
       vi.mocked(validateAuthContext).mockResolvedValue({
         accountId,
         orgId: null,
@@ -123,7 +120,7 @@ describe("getAccountHandler", () => {
 
       expect(res.status).toBe(200);
       expect(body.account).toEqual(account);
-      expect(selectAccountByEmail).toHaveBeenCalledWith(email);
+      expect(resolveAccountIdFromEmail).toHaveBeenCalledWith(email);
       expect(validateAuthContext).toHaveBeenCalledWith(req, { accountId });
     });
 
@@ -133,7 +130,9 @@ describe("getAccountHandler", () => {
         orgId: null,
         authToken: "token",
       });
-      vi.mocked(selectAccountByEmail).mockResolvedValue(null);
+      vi.mocked(resolveAccountIdFromEmail).mockResolvedValue(
+        NextResponse.json({ status: "error", error: "No account found for the provided email" }, { status: 404 }),
+      );
 
       const req = new NextRequest("http://localhost/api/accounts/unknown@example.com");
       const res = await getAccountHandler(req, Promise.resolve({ id: "unknown@example.com" }));
@@ -153,7 +152,7 @@ describe("getAccountHandler", () => {
       const res = await getAccountHandler(req, Promise.resolve({ id: "test@example.com" }));
 
       expect(res.status).toBe(401);
-      expect(selectAccountByEmail).not.toHaveBeenCalled();
+      expect(resolveAccountIdFromEmail).not.toHaveBeenCalled();
     });
   });
 });

@@ -3,7 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
-import { selectAccountByEmail } from "@/lib/supabase/account_emails/selectAccountByEmail";
+import { resolveAccountIdFromEmail } from "@/lib/accounts/resolveAccountIdFromEmail";
 
 /**
  * Handler for retrieving account details by ID or email.
@@ -32,14 +32,11 @@ export async function getAccountHandler(
         return authResult;
       }
 
-      const emailAccount = await selectAccountByEmail(id);
-      if (!emailAccount?.account_id) {
-        return NextResponse.json(
-          { status: "error", error: "No account found for the provided email" },
-          { status: 404, headers: getCorsHeaders() },
-        );
+      const resolved = await resolveAccountIdFromEmail(id);
+      if (resolved instanceof NextResponse) {
+        return resolved;
       }
-      accountId = emailAccount.account_id;
+      accountId = resolved;
 
       // Verify caller can access this account
       const accessResult = await validateAuthContext(request, {
