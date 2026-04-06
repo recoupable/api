@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { resolveAccountIdFromEmail } from "@/lib/accounts/resolveAccountIdFromEmail";
+import { selectAccountByEmail } from "@/lib/supabase/account_emails/selectAccountByEmail";
 
 /**
  * Authenticates the caller, resolves an email to an account ID,
@@ -20,18 +21,21 @@ export async function resolveAccountIdByEmail(
     return authResult;
   }
 
-  const resolved = await resolveAccountIdFromEmail(email);
-  if (resolved instanceof NextResponse) {
-    return resolved;
+  const emailAccount = await selectAccountByEmail(email);
+  if (!emailAccount?.account_id) {
+    return NextResponse.json(
+      { status: "error", error: "No account found for the provided email" },
+      { status: 404, headers: getCorsHeaders() },
+    );
   }
 
   // Verify caller can access the resolved account
   const accessResult = await validateAuthContext(request, {
-    accountId: resolved,
+    accountId: emailAccount.account_id,
   });
   if (accessResult instanceof NextResponse) {
     return accessResult;
   }
 
-  return resolved;
+  return emailAccount.account_id;
 }
