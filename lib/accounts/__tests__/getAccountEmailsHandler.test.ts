@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getAccountEmailsHandler } from "../getAccountEmailsHandler";
 import { validateGetAccountEmailsQuery } from "../validateGetAccountEmailsQuery";
-import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
+import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -14,8 +14,8 @@ vi.mock("../validateGetAccountEmailsQuery", () => ({
   validateGetAccountEmailsQuery: vi.fn(),
 }));
 
-vi.mock("@/lib/artists/checkAccountArtistAccess", () => ({
-  checkAccountArtistAccess: vi.fn(),
+vi.mock("@/lib/auth/checkAccountAccess", () => ({
+  checkAccountAccess: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
@@ -37,60 +37,46 @@ describe("getAccountEmailsHandler", () => {
 
   it("returns validation response errors directly", async () => {
     vi.mocked(validateGetAccountEmailsQuery).mockResolvedValue(
-      NextResponse.json({ error: "artist_account_id parameter is required" }, { status: 400 }),
+      NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
     );
 
     const result = await getAccountEmailsHandler(createMockRequest());
 
-    expect(result.status).toBe(400);
+    expect(result.status).toBe(401);
   });
 
   it("returns an empty array when no account IDs are provided", async () => {
     vi.mocked(validateGetAccountEmailsQuery).mockResolvedValue({
       authenticatedAccountId: "account-123",
-      artistAccountId: "artist-456",
       accountIds: [],
     });
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
 
     const result = await getAccountEmailsHandler(createMockRequest());
 
     expect(result.status).toBe(200);
     await expect(result.json()).resolves.toEqual([]);
-    expect(checkAccountArtistAccess).toHaveBeenCalledWith("account-123", "artist-456");
+    expect(checkAccountAccess).not.toHaveBeenCalled();
   });
 
-  it("returns 403 for empty account IDs when the authenticated account cannot access the artist", async () => {
+  it("returns 403 when any requested account is unauthorized", async () => {
     vi.mocked(validateGetAccountEmailsQuery).mockResolvedValue({
       authenticatedAccountId: "account-123",
-      artistAccountId: "artist-456",
-      accountIds: [],
+      accountIds: ["acc-1", "acc-2"],
     });
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(false);
+    vi.mocked(checkAccountAccess)
+      .mockResolvedValueOnce({ hasAccess: true, entityType: "self" })
+      .mockResolvedValueOnce({ hasAccess: false });
 
     const result = await getAccountEmailsHandler(createMockRequest());
 
-    expect(checkAccountArtistAccess).toHaveBeenCalledWith("account-123", "artist-456");
+    expect(checkAccountAccess).toHaveBeenCalledWith("account-123", "acc-1");
+    expect(checkAccountAccess).toHaveBeenCalledWith("account-123", "acc-2");
     expect(result.status).toBe(403);
     await expect(result.json()).resolves.toEqual({ error: "Unauthorized" });
+    expect(selectAccountEmails).not.toHaveBeenCalled();
   });
 
-  it("returns 403 when the authenticated account cannot access the artist", async () => {
-    vi.mocked(validateGetAccountEmailsQuery).mockResolvedValue({
-      authenticatedAccountId: "account-123",
-      artistAccountId: "artist-456",
-      accountIds: ["acc-1"],
-    });
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(false);
-
-    const result = await getAccountEmailsHandler(createMockRequest());
-
-    expect(checkAccountArtistAccess).toHaveBeenCalledWith("account-123", "artist-456");
-    expect(result.status).toBe(403);
-    await expect(result.json()).resolves.toEqual({ error: "Unauthorized" });
-  });
-
-  it("returns raw account email rows when access is allowed", async () => {
+  it("returns raw account email rows when all requested accounts are authorized", async () => {
     const rows = [
       {
         id: "email-1",
@@ -102,10 +88,9 @@ describe("getAccountEmailsHandler", () => {
 
     vi.mocked(validateGetAccountEmailsQuery).mockResolvedValue({
       authenticatedAccountId: "account-123",
-      artistAccountId: "artist-456",
       accountIds: ["acc-1", "acc-2"],
     });
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "artist" });
     vi.mocked(selectAccountEmails).mockResolvedValue(rows);
 
     const result = await getAccountEmailsHandler(createMockRequest());
@@ -118,10 +103,9 @@ describe("getAccountEmailsHandler", () => {
   it("returns an empty array when account email lookup returns no rows", async () => {
     vi.mocked(validateGetAccountEmailsQuery).mockResolvedValue({
       authenticatedAccountId: "account-123",
-      artistAccountId: "artist-456",
       accountIds: ["acc-1"],
     });
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "self" });
     vi.mocked(selectAccountEmails).mockResolvedValue([]);
 
     const result = await getAccountEmailsHandler(createMockRequest());

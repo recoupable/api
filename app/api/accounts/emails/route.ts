@@ -19,13 +19,12 @@ export async function OPTIONS(): Promise<NextResponse> {
  * GET /api/accounts/emails
  *
  * Retrieves account email rows for the requested account IDs after verifying
- * that the authenticated caller has access to the provided artist account.
+ * that the authenticated caller can access every requested account.
  *
  * Query parameters:
- * - artist_account_id (required): Artist account used for access checks
  * - account_id (optional, repeatable): Account IDs to look up
  *
- * @param request - The incoming request with artist and account query parameters.
+ * @param request - The incoming request with account query parameters.
  * @returns A NextResponse with matching account email rows or an error response.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {

@@ -4,10 +4,6 @@ import { NextResponse } from "next/server";
 import { validateGetAccountEmailsQuery } from "../validateGetAccountEmailsQuery";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
-vi.mock("@/lib/networking/getCorsHeaders", () => ({
-  getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
-}));
-
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
@@ -31,7 +27,7 @@ describe("validateGetAccountEmailsQuery", () => {
     );
 
     const result = await validateGetAccountEmailsQuery(
-      createMockRequest("http://localhost:3000/api/accounts/emails?artist_account_id=artist-123"),
+      createMockRequest("http://localhost:3000/api/accounts/emails?account_id=acc-1"),
     );
 
     expect(result).toBeInstanceOf(NextResponse);
@@ -41,7 +37,7 @@ describe("validateGetAccountEmailsQuery", () => {
     }
   });
 
-  it("returns 400 when artist_account_id is missing", async () => {
+  it("returns an empty accountIds array when no account IDs are provided", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "account-123",
       orgId: null,
@@ -52,18 +48,13 @@ describe("validateGetAccountEmailsQuery", () => {
       createMockRequest("http://localhost:3000/api/accounts/emails"),
     );
 
-    expect(result).toBeInstanceOf(NextResponse);
-    if (result instanceof NextResponse) {
-      expect(result.status).toBe(400);
-      await expect(result.json()).resolves.toEqual({
-        status: "error",
-        missing_fields: ["artist_account_id"],
-        error: "artist_account_id parameter is required",
-      });
-    }
+    expect(result).toEqual({
+      authenticatedAccountId: "account-123",
+      accountIds: [],
+    });
   });
 
-  it("returns parsed artist and repeated account IDs", async () => {
+  it("returns parsed repeated account IDs", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "account-123",
       orgId: null,
@@ -71,14 +62,11 @@ describe("validateGetAccountEmailsQuery", () => {
     });
 
     const result = await validateGetAccountEmailsQuery(
-      createMockRequest(
-        "http://localhost:3000/api/accounts/emails?artist_account_id=artist-456&account_id=acc-1&account_id=acc-2",
-      ),
+      createMockRequest("http://localhost:3000/api/accounts/emails?account_id=acc-1&account_id=acc-2"),
     );
 
     expect(result).toEqual({
       authenticatedAccountId: "account-123",
-      artistAccountId: "artist-456",
       accountIds: ["acc-1", "acc-2"],
     });
   });
