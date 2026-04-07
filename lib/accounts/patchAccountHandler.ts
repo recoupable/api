@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import {
   validatePatchAccountRequest,
-  type UpdateAccountBody,
 } from "@/lib/accounts/validateUpdateAccountBody";
 import { updateAccountHandler } from "@/lib/accounts/updateAccountHandler";
+import type { ValidatedUpdateAccountRequest } from "@/lib/accounts/validateUpdateAccountRequest";
 import { checkIsAdmin } from "@/lib/admins/checkIsAdmin";
 
 /**
@@ -34,7 +34,7 @@ export async function patchAccountHandler(req: NextRequest): Promise<NextRespons
   }
 
   return updateAccountHandler({
-    ...(validated as UpdateAccountBody),
+    ...(validated as Omit<ValidatedUpdateAccountRequest, "accountId">),
     accountId: targetAccountId,
   });
 }

@@ -5,6 +5,12 @@ import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext, type AuthContext } from "@/lib/auth/validateAuthContext";
 import { z } from "zod";
 
+const knowledgeSchema = z.object({
+  name: z.string(),
+  url: z.string().url("knowledges.url must be a valid URL"),
+  type: z.string(),
+});
+
 export const updateAccountBodySchema = z
   .object({
     accountId: z.string().uuid("accountId must be a valid UUID").optional(),
@@ -15,7 +21,7 @@ export const updateAccountBodySchema = z
     jobTitle: z.string().optional(),
     roleType: z.string().optional(),
     companyName: z.string().optional(),
-    knowledges: z.array(z.string()).optional(),
+    knowledges: z.array(knowledgeSchema).optional(),
   })
   .refine(
     body => {
