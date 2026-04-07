@@ -37,6 +37,7 @@ export async function createSandbox(
     params.source && "type" in params.source && params.source.type === "snapshot";
 
   // Pass params directly to SDK - it handles all the type variants
+  console.log("[createSandbox] Creating sandbox with params:", JSON.stringify(params, null, 2));
   const sandbox = await Sandbox.create(
     hasSnapshotSource
       ? {

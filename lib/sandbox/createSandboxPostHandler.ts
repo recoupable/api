@@ -19,6 +19,8 @@ import { processCreateSandbox } from "@/lib/sandbox/processCreateSandbox";
 export async function createSandboxPostHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateSandboxBody(request);
   if (validated instanceof NextResponse) {
+    const errorBody = await validated.clone().json();
+    console.error("[POST /api/sandboxes] Validation/auth failed:", errorBody);
     return validated;
   }
 
@@ -33,6 +35,7 @@ export async function createSandboxPostHandler(request: NextRequest): Promise<Ne
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {
+    console.error("[POST /api/sandboxes] Error creating sandbox:", error);
     const message = error instanceof Error ? error.message : "Failed to create sandbox";
     return NextResponse.json(
       { status: "error", error: message },
