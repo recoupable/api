@@ -1,31 +1,14 @@
-import { createSandbox, type SandboxCreatedResponse } from "@/lib/sandbox/createSandbox";
+import { createSandboxWithFallback } from "@/lib/sandbox/createSandboxWithFallback";
 import { getValidSnapshotId } from "@/lib/sandbox/getValidSnapshotId";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 import { triggerPromptSandbox } from "@/lib/trigger/triggerPromptSandbox";
+import type { SandboxCreatedResponse } from "@/lib/sandbox/createSandbox";
 
 type ProcessCreateSandboxInput = {
   accountId: string;
   prompt?: string;
 };
 type ProcessCreateSandboxResult = SandboxCreatedResponse & { runId?: string };
-
-/**
- * Attempts to create a sandbox from the given snapshot, falling back to a fresh sandbox on failure.
- * If no snapshotId is provided, creates a fresh sandbox directly.
- *
- * @param snapshotId - Optional snapshot ID to restore from
- * @returns The sandbox creation response
- */
-async function createSandboxWithFallback(snapshotId: string | undefined) {
-  if (snapshotId) {
-    try {
-      return (await createSandbox({ source: { type: "snapshot", snapshotId } })).response;
-    } catch {
-      // Snapshot invalid or expired on Vercel's side — fall through to fresh
-    }
-  }
-  return (await createSandbox({})).response;
-}
 
 /**
  * Shared domain logic for creating a sandbox and optionally running a prompt.
