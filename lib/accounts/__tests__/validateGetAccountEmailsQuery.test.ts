@@ -4,6 +4,10 @@ import { NextResponse } from "next/server";
 import { validateGetAccountEmailsQuery } from "../validateGetAccountEmailsQuery";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
+vi.mock("@/lib/networking/getCorsHeaders", () => ({
+  getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
+}));
+
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
@@ -37,7 +41,7 @@ describe("validateGetAccountEmailsQuery", () => {
     }
   });
 
-  it("returns an empty accountIds array when no account IDs are provided", async () => {
+  it("returns 400 when no account IDs are provided", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "account-123",
       orgId: null,
@@ -48,10 +52,15 @@ describe("validateGetAccountEmailsQuery", () => {
       createMockRequest("http://localhost:3000/api/accounts/emails"),
     );
 
-    expect(result).toEqual({
-      authenticatedAccountId: "account-123",
-      accountIds: [],
-    });
+    expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(400);
+      await expect(result.json()).resolves.toEqual({
+        status: "error",
+        missing_fields: ["account_id"],
+        error: "At least one account_id parameter is required",
+      });
+    }
   });
 
   it("returns parsed repeated account IDs", async () => {
