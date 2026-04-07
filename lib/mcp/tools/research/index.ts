@@ -27,6 +27,7 @@ import { registerResearchRankTool } from "./registerResearchRankTool";
 import { registerResearchChartsTool } from "./registerResearchChartsTool";
 import { registerResearchRadioTool } from "./registerResearchRadioTool";
 import { registerResearchSearchTool } from "./registerResearchSearchTool";
+import { registerResearchTrackPlaylistsTool } from "./registerResearchTrackPlaylistsTool";
 /**
  * Registers all research-related MCP tools on the server.
  *
@@ -61,4 +62,5 @@ export const registerAllResearchTools = (server: McpServer): void => {
   registerResearchChartsTool(server);
   registerResearchRadioTool(server);
   registerResearchSearchTool(server);
+  registerResearchTrackPlaylistsTool(server);
 };
