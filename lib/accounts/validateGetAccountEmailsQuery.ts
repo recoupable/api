@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 export const getAccountEmailsQuerySchema = z.object({
@@ -42,6 +43,22 @@ export async function validateGetAccountEmailsQuery(
       },
       {
         status: 400,
+        headers: getCorsHeaders(),
+      },
+    );
+  }
+
+  const accessResults = await Promise.all(
+    validationResult.data.account_id.map(accountId =>
+      checkAccountAccess(authResult.accountId, accountId),
+    ),
+  );
+
+  if (accessResults.some(result => !result.hasAccess)) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      {
+        status: 403,
         headers: getCorsHeaders(),
       },
     );

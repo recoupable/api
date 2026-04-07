@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
 import { validateGetAccountEmailsQuery } from "@/lib/accounts/validateGetAccountEmailsQuery";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
@@ -15,22 +14,6 @@ export async function getAccountEmailsHandler(request: NextRequest): Promise<Nex
   }
 
   try {
-    const accessResults = await Promise.all(
-      validatedQuery.accountIds.map(accountId =>
-        checkAccountAccess(validatedQuery.authenticatedAccountId, accountId),
-      ),
-    );
-
-    if (accessResults.some(result => !result.hasAccess)) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        {
-          status: 403,
-          headers: getCorsHeaders(),
-        },
-      );
-    }
-
     const emails = await selectAccountEmails({ accountIds: validatedQuery.accountIds });
 
     return NextResponse.json(emails, {

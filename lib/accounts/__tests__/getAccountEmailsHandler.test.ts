@@ -3,7 +3,6 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getAccountEmailsHandler } from "../getAccountEmailsHandler";
 import { validateGetAccountEmailsQuery } from "../validateGetAccountEmailsQuery";
-import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -12,10 +11,6 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 
 vi.mock("../validateGetAccountEmailsQuery", () => ({
   validateGetAccountEmailsQuery: vi.fn(),
-}));
-
-vi.mock("@/lib/auth/checkAccountAccess", () => ({
-  checkAccountAccess: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
@@ -60,24 +55,16 @@ describe("getAccountEmailsHandler", () => {
     const result = await getAccountEmailsHandler(createMockRequest());
 
     expect(result.status).toBe(400);
-    expect(checkAccountAccess).not.toHaveBeenCalled();
   });
 
-  it("returns 403 when any requested account is unauthorized", async () => {
-    vi.mocked(validateGetAccountEmailsQuery).mockResolvedValue({
-      authenticatedAccountId: "account-123",
-      accountIds: ["acc-1", "acc-2"],
-    });
-    vi.mocked(checkAccountAccess)
-      .mockResolvedValueOnce({ hasAccess: true, entityType: "self" })
-      .mockResolvedValueOnce({ hasAccess: false });
+  it("returns validation response errors directly for unauthorized accounts", async () => {
+    vi.mocked(validateGetAccountEmailsQuery).mockResolvedValue(
+      NextResponse.json({ error: "Unauthorized" }, { status: 403 }),
+    );
 
     const result = await getAccountEmailsHandler(createMockRequest());
 
-    expect(checkAccountAccess).toHaveBeenCalledWith("account-123", "acc-1");
-    expect(checkAccountAccess).toHaveBeenCalledWith("account-123", "acc-2");
     expect(result.status).toBe(403);
-    await expect(result.json()).resolves.toEqual({ error: "Unauthorized" });
     expect(selectAccountEmails).not.toHaveBeenCalled();
   });
 
@@ -95,7 +82,6 @@ describe("getAccountEmailsHandler", () => {
       authenticatedAccountId: "account-123",
       accountIds: ["acc-1", "acc-2"],
     });
-    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "artist" });
     vi.mocked(selectAccountEmails).mockResolvedValue(rows);
 
     const result = await getAccountEmailsHandler(createMockRequest());
@@ -110,7 +96,6 @@ describe("getAccountEmailsHandler", () => {
       authenticatedAccountId: "account-123",
       accountIds: ["acc-1"],
     });
-    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "self" });
     vi.mocked(selectAccountEmails).mockResolvedValue([]);
 
     const result = await getAccountEmailsHandler(createMockRequest());

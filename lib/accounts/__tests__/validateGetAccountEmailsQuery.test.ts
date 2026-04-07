@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { validateGetAccountEmailsQuery } from "../validateGetAccountEmailsQuery";
+import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -10,6 +11,10 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
+}));
+
+vi.mock("@/lib/auth/checkAccountAccess", () => ({
+  checkAccountAccess: vi.fn(),
 }));
 
 function createMockRequest(url: string): NextRequest {
@@ -69,6 +74,7 @@ describe("validateGetAccountEmailsQuery", () => {
       orgId: null,
       authToken: "token",
     });
+    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "self" });
 
     const result = await validateGetAccountEmailsQuery(
       createMockRequest(
@@ -80,5 +86,30 @@ describe("validateGetAccountEmailsQuery", () => {
       authenticatedAccountId: "account-123",
       accountIds: ["acc-1", "acc-2"],
     });
+  });
+
+  it("returns 403 when any requested account is unauthorized", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "account-123",
+      orgId: null,
+      authToken: "token",
+    });
+    vi.mocked(checkAccountAccess)
+      .mockResolvedValueOnce({ hasAccess: true, entityType: "self" })
+      .mockResolvedValueOnce({ hasAccess: false });
+
+    const result = await validateGetAccountEmailsQuery(
+      createMockRequest(
+        "http://localhost:3000/api/accounts/emails?account_id=acc-1&account_id=acc-2",
+      ),
+    );
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect(checkAccountAccess).toHaveBeenCalledWith("account-123", "acc-1");
+    expect(checkAccountAccess).toHaveBeenCalledWith("account-123", "acc-2");
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(403);
+      await expect(result.json()).resolves.toEqual({ error: "Unauthorized" });
+    }
   });
 });
