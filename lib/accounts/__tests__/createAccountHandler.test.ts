@@ -64,10 +64,7 @@ describe("createAccountHandler", () => {
 
     expect(response.status).toBe(200);
     expect(data).toEqual({ data: account });
-    expect(mockAssignAccountToOrg).toHaveBeenCalledWith(
-      "account-123",
-      "user@example.com",
-    );
+    expect(mockAssignAccountToOrg).toHaveBeenCalledWith("account-123", "user@example.com");
     expect(mockGetAccountWithDetails).toHaveBeenCalledWith("account-123");
     expect(mockSelectAccountByWallet).not.toHaveBeenCalled();
     expect(mockInsertAccount).not.toHaveBeenCalled();
@@ -128,14 +125,8 @@ describe("createAccountHandler", () => {
       },
     });
     expect(mockInsertAccount).toHaveBeenCalledWith({ name: "" });
-    expect(mockInsertAccountEmail).toHaveBeenCalledWith(
-      "account-789",
-      "new@example.com",
-    );
-    expect(mockAssignAccountToOrg).toHaveBeenCalledWith(
-      "account-789",
-      "new@example.com",
-    );
+    expect(mockInsertAccountEmail).toHaveBeenCalledWith("account-789", "new@example.com");
+    expect(mockAssignAccountToOrg).toHaveBeenCalledWith("account-789", "new@example.com");
     expect(mockInsertAccountWallet).toHaveBeenCalledWith("account-789", "0xdef");
     expect(mockInsertCreditsUsage).toHaveBeenCalledWith("account-789");
   });
