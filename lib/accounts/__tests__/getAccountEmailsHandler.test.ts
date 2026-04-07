@@ -45,16 +45,21 @@ describe("getAccountEmailsHandler", () => {
     expect(result.status).toBe(401);
   });
 
-  it("returns an empty array when no account IDs are provided", async () => {
-    vi.mocked(validateGetAccountEmailsQuery).mockResolvedValue({
-      authenticatedAccountId: "account-123",
-      accountIds: [],
-    });
+  it("returns validation errors for empty account ID input", async () => {
+    vi.mocked(validateGetAccountEmailsQuery).mockResolvedValue(
+      NextResponse.json(
+        {
+          status: "error",
+          missing_fields: ["account_id"],
+          error: "At least one account_id parameter is required",
+        },
+        { status: 400 },
+      ),
+    );
 
     const result = await getAccountEmailsHandler(createMockRequest());
 
-    expect(result.status).toBe(200);
-    await expect(result.json()).resolves.toEqual([]);
+    expect(result.status).toBe(400);
     expect(checkAccountAccess).not.toHaveBeenCalled();
   });
 

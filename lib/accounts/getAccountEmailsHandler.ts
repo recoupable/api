@@ -15,13 +15,6 @@ export async function getAccountEmailsHandler(request: NextRequest): Promise<Nex
   }
 
   try {
-    if (validatedQuery.accountIds.length === 0) {
-      return NextResponse.json([], {
-        status: 200,
-        headers: getCorsHeaders(),
-      });
-    }
-
     const accessResults = await Promise.all(
       validatedQuery.accountIds.map(accountId =>
         checkAccountAccess(validatedQuery.authenticatedAccountId, accountId),
