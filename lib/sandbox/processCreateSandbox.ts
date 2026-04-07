@@ -40,6 +40,7 @@ export async function processCreateSandbox(
   const { accountId, prompt } = input;
 
   const snapshotId = await getValidSnapshotId(accountId);
+  console.log("[processCreateSandbox] accountId:", accountId, "snapshotId:", snapshotId ?? "none");
 
   let result;
 
@@ -49,19 +50,28 @@ export async function processCreateSandbox(
         source: { type: "snapshot", snapshotId },
       });
       result = createResult.response;
-    } catch {
-      const freshResult = await createSandbox({});
-      result = freshResult.response;
+    } catch (snapshotError) {
+      console.error("[processCreateSandbox] Snapshot creation failed:", snapshotError);
+      try {
+        const freshResult = await createSandbox({});
+        result = freshResult.response;
+      } catch (freshError) {
+        console.error("[processCreateSandbox] Fresh fallback also failed:", freshError);
+        throw freshError;
+      }
     }
   } else {
     const freshResult = await createSandbox({});
     result = freshResult.response;
   }
 
-  await insertAccountSandbox({
+  const insertResult = await insertAccountSandbox({
     account_id: accountId,
     sandbox_id: result.sandboxId,
   });
+  if (insertResult.error) {
+    console.error("[processCreateSandbox] insertAccountSandbox failed:", insertResult.error);
+  }
 
   // Trigger the prompt execution task if a prompt was provided
   let runId: string | undefined;
