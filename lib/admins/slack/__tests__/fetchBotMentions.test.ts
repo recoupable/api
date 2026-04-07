@@ -29,7 +29,7 @@ vi.mock("@/lib/admins/slack/getCutoffTs", () => ({
 
 describe("fetchBotMentions", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it("throws when token is not set", async () => {
@@ -104,6 +104,80 @@ describe("fetchBotMentions", () => {
     });
 
     expect(result).toHaveLength(0);
+
+    vi.unstubAllEnvs();
+  });
+
+  it("finds bot mentions inside thread replies", async () => {
+    vi.stubEnv("TEST_BOT_TOKEN", "xoxb-test");
+
+    vi.mocked(getBotUserId).mockResolvedValue("U_BOT");
+    vi.mocked(getBotChannels).mockResolvedValue([{ id: "C1", name: "general" }]);
+    vi.mocked(getCutoffTs).mockReturnValue(null);
+
+    // conversations.history returns a threaded parent (reply_count > 0) but no top-level mention
+    vi.mocked(slackGet)
+      .mockResolvedValueOnce({
+        ok: true,
+        messages: [
+          {
+            type: "message",
+            user: "U1",
+            text: "check this out",
+            ts: "1705312200.000000",
+            reply_count: 2,
+            thread_ts: "1705312200.000000",
+          },
+        ],
+      })
+      // conversations.replies for the thread
+      .mockResolvedValueOnce({
+        ok: true,
+        messages: [
+          {
+            type: "message",
+            user: "U1",
+            text: "check this out",
+            ts: "1705312200.000000",
+          },
+          {
+            type: "message",
+            user: "U2",
+            text: "<@U_BOT> make a video for this",
+            ts: "1705312400.000000",
+          },
+          {
+            type: "message",
+            bot_id: "B1",
+            text: "here is your video https://example.com/video",
+            ts: "1705312500.000000",
+          },
+        ],
+      });
+
+    vi.mocked(getSlackUserInfo).mockResolvedValue({ name: "Bob", avatar: null });
+
+    const mockFetchThreadResponses = vi.fn().mockResolvedValue([["https://example.com/video"]]);
+
+    const result = await fetchBotMentions({
+      tokenEnvVar: "TEST_BOT_TOKEN",
+      period: "all",
+      fetchThreadResponses: mockFetchThreadResponses,
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      user_id: "U2",
+      user_name: "Bob",
+      prompt: "make a video for this",
+      channel_id: "C1",
+      channel_name: "general",
+    });
+
+    // Should use the thread_ts for fetching responses, not the reply ts
+    expect(mockFetchThreadResponses).toHaveBeenCalledWith("xoxb-test", [
+      { channelId: "C1", ts: "1705312200.000000" },
+    ]);
 
     vi.unstubAllEnvs();
   });
