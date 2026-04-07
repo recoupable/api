@@ -12,10 +12,10 @@ interface SpotifyTrackItem {
 /**
  * Resolves a track name (+ optional artist) to a Chartmetric track ID.
  *
- * Uses Spotify search for accurate matching, then maps the Spotify track ID
- * to a Chartmetric ID via their /track/spotify/{id} endpoint.
+ * Uses Spotify search for accurate matching, then maps the ISRC
+ * to a Chartmetric ID via their /track/isrc/{isrc} endpoint.
  *
- * Falls back to Chartmetric's own search if Spotify lookup fails.
+ * Falls back to Chartmetric's own search if Spotify/ISRC lookup fails.
  */
 export async function resolveTrack(
   q: string,
@@ -44,18 +44,49 @@ export async function resolveTrack(
     return { error: `No track found matching "${q}"${artist ? ` by ${artist}` : ""}` };
   }
 
-  const spotifyTrackId = tracks[0].id;
+  const spotifyTrack = tracks[0];
+  const isrc = spotifyTrack.external_ids?.isrc;
 
-  const cmResult = await proxyToChartmetric(`/track/spotify/${spotifyTrackId}`);
-  if (cmResult.status === 200 && cmResult.data) {
-    const cmData = cmResult.data as { id?: number } | Array<{ id?: number }>;
-    const cmId = Array.isArray(cmData) ? cmData[0]?.id : cmData.id;
-    if (cmId) {
-      return { id: String(cmId) };
-    }
+  if (isrc) {
+    const cmId = await chartmetricIdFromIsrc(isrc);
+    if (cmId) return { id: cmId };
   }
 
+  const cmId = await chartmetricIdFromSpotify(spotifyTrack.id);
+  if (cmId) return { id: cmId };
+
   return fallbackChartmetricSearch(q);
+}
+
+/** Extract a Chartmetric track ID from any response shape. */
+function extractCmTrackId(data: unknown): string | null {
+  if (!data) return null;
+
+  if (Array.isArray(data) && data.length > 0) {
+    const first = data[0] as Record<string, unknown>;
+    const id = first.cm_track ?? first.id;
+    if (id != null) return String(id);
+  }
+
+  if (typeof data === "object" && data !== null) {
+    const obj = data as Record<string, unknown>;
+    const id = obj.cm_track ?? obj.id;
+    if (id != null) return String(id);
+  }
+
+  return null;
+}
+
+async function chartmetricIdFromIsrc(isrc: string): Promise<string | null> {
+  const result = await proxyToChartmetric(`/track/isrc/${isrc}`);
+  if (result.status !== 200) return null;
+  return extractCmTrackId(result.data);
+}
+
+async function chartmetricIdFromSpotify(spotifyId: string): Promise<string | null> {
+  const result = await proxyToChartmetric(`/track/spotify/${spotifyId}`);
+  if (result.status !== 200) return null;
+  return extractCmTrackId(result.data);
 }
 
 async function fallbackChartmetricSearch(
