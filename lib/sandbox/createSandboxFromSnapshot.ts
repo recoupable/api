@@ -25,18 +25,15 @@ export async function createSandboxFromSnapshot(
 
   if (snapshotId) {
     try {
-      const result = await createSandbox({
-        source: { type: "snapshot", snapshotId },
-      });
-      sandbox = result.sandbox;
+      sandbox = (await createSandbox({ source: { type: "snapshot", snapshotId } })).sandbox;
       fromSnapshot = true;
     } catch {
-      const result = await createSandbox({});
-      sandbox = result.sandbox;
+      // Snapshot invalid or expired on Vercel's side — fall through to fresh
     }
-  } else {
-    const result = await createSandbox({});
-    sandbox = result.sandbox;
+  }
+
+  if (!fromSnapshot) {
+    sandbox = (await createSandbox({})).sandbox;
   }
 
   await insertAccountSandbox({
