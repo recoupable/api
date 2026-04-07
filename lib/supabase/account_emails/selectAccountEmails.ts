@@ -1,6 +1,11 @@
 import supabase from "@/lib/supabase/serverClient";
 import type { Tables } from "@/types/database.types";
 
+interface SelectAccountEmailsParams {
+  emails?: string[];
+  accountIds?: string | string[];
+}
+
 /**
  * Select account_emails by email addresses and/or account IDs
  *
@@ -12,10 +17,7 @@ import type { Tables } from "@/types/database.types";
 export default async function selectAccountEmails({
   emails,
   accountIds,
-}: {
-  emails?: string[];
-  accountIds?: string | string[];
-}): Promise<Tables<"account_emails">[]> {
+}: SelectAccountEmailsParams): Promise<Tables<"account_emails">[]> {
   let query = supabase.from("account_emails").select("*");
 
   // Build query based on provided parameters
