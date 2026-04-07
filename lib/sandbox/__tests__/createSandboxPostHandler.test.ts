@@ -361,6 +361,97 @@ describe("createSandboxPostHandler", () => {
     expect(triggerPromptSandbox).not.toHaveBeenCalled();
   });
 
+  it("skips expired snapshot and creates fresh sandbox", async () => {
+    const pastDate = new Date(Date.now() - 86400000).toISOString();
+    vi.mocked(validateSandboxBody).mockResolvedValue({
+      accountId: "acc_123",
+      orgId: null,
+      authToken: "token",
+    });
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([
+      {
+        id: "snap_record_123",
+        account_id: "acc_123",
+        snapshot_id: "snap_expired",
+        created_at: "2024-01-01T00:00:00.000Z",
+        expires_at: pastDate,
+      },
+    ]);
+    vi.mocked(createSandbox).mockResolvedValue({
+      sandbox: {} as never,
+      response: {
+        sandboxId: "sbx_fresh",
+        sandboxStatus: "running",
+        timeout: 600000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
+    });
+    vi.mocked(insertAccountSandbox).mockResolvedValue({
+      data: {
+        id: "record_123",
+        account_id: "acc_123",
+        sandbox_id: "sbx_fresh",
+        created_at: "2024-01-01T00:00:00.000Z",
+      },
+      error: null,
+    });
+
+    const request = createMockRequest();
+    const response = await createSandboxPostHandler(request);
+
+    expect(response.status).toBe(200);
+    expect(createSandbox).toHaveBeenCalledWith({});
+    expect(createSandbox).not.toHaveBeenCalledWith(
+      expect.objectContaining({ source: expect.anything() }),
+    );
+  });
+
+  it("falls back to fresh sandbox when snapshot creation fails", async () => {
+    const futureDate = new Date(Date.now() + 86400000).toISOString();
+    vi.mocked(validateSandboxBody).mockResolvedValue({
+      accountId: "acc_123",
+      orgId: null,
+      authToken: "token",
+    });
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([
+      {
+        id: "snap_record_123",
+        account_id: "acc_123",
+        snapshot_id: "snap_bad",
+        created_at: "2024-01-01T00:00:00.000Z",
+        expires_at: futureDate,
+      },
+    ]);
+    vi.mocked(createSandbox)
+      .mockRejectedValueOnce(new Error("Status code 400 is not ok"))
+      .mockResolvedValueOnce({
+        sandbox: {} as never,
+        response: {
+          sandboxId: "sbx_fallback",
+          sandboxStatus: "running",
+          timeout: 600000,
+          createdAt: "2024-01-01T00:00:00.000Z",
+        },
+      });
+    vi.mocked(insertAccountSandbox).mockResolvedValue({
+      data: {
+        id: "record_123",
+        account_id: "acc_123",
+        sandbox_id: "sbx_fallback",
+        created_at: "2024-01-01T00:00:00.000Z",
+      },
+      error: null,
+    });
+
+    const request = createMockRequest();
+    const response = await createSandboxPostHandler(request);
+
+    expect(response.status).toBe(200);
+    expect(createSandbox).toHaveBeenCalledTimes(2);
+    const json = await response.json();
+    expect(json.sandboxes[0].sandboxId).toBe("sbx_fallback");
+  });
+
   it("returns 200 without runId when triggerPromptSandbox throws", async () => {
     vi.mocked(validateSandboxBody).mockResolvedValue({
       accountId: "acc_123",

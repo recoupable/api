@@ -1,6 +1,6 @@
 import { createSandbox, type SandboxCreatedResponse } from "@/lib/sandbox/createSandbox";
+import { getValidSnapshotId } from "@/lib/sandbox/getValidSnapshotId";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
-import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { triggerPromptSandbox } from "@/lib/trigger/triggerPromptSandbox";
 
 type ProcessCreateSandboxInput = {
@@ -8,6 +8,24 @@ type ProcessCreateSandboxInput = {
   prompt?: string;
 };
 type ProcessCreateSandboxResult = SandboxCreatedResponse & { runId?: string };
+
+/**
+ * Attempts to create a sandbox from the given snapshot, falling back to a fresh sandbox on failure.
+ * If no snapshotId is provided, creates a fresh sandbox directly.
+ *
+ * @param snapshotId - Optional snapshot ID to restore from
+ * @returns The sandbox creation response
+ */
+async function createSandboxWithFallback(snapshotId: string | undefined) {
+  if (snapshotId) {
+    try {
+      return (await createSandbox({ source: { type: "snapshot", snapshotId } })).response;
+    } catch {
+      // Snapshot invalid or expired on Vercel's side — fall through to fresh
+    }
+  }
+  return (await createSandbox({})).response;
+}
 
 /**
  * Shared domain logic for creating a sandbox and optionally running a prompt.
@@ -21,14 +39,8 @@ export async function processCreateSandbox(
 ): Promise<ProcessCreateSandboxResult> {
   const { accountId, prompt } = input;
 
-  // Get account's most recent snapshot if available
-  const accountSnapshots = await selectAccountSnapshots(accountId);
-  const snapshotId = accountSnapshots[0]?.snapshot_id;
-
-  // Create sandbox (from snapshot if valid, otherwise fresh)
-  const { response: result } = await createSandbox(
-    snapshotId ? { source: { type: "snapshot", snapshotId } } : {},
-  );
+  const snapshotId = await getValidSnapshotId(accountId);
+  const result = await createSandboxWithFallback(snapshotId);
 
   await insertAccountSandbox({
     account_id: accountId,
