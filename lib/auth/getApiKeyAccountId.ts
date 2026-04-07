@@ -29,7 +29,10 @@ export async function getApiKeyAccountId(request: NextRequest): Promise<string |
 
   try {
     const keyHash = hashApiKey(apiKey, PRIVY_PROJECT_SECRET);
+    console.log("[getApiKeyAccountId] key prefix:", apiKey.slice(0, 12) + "...");
+    console.log("[getApiKeyAccountId] hash:", keyHash);
     const apiKeys = await selectAccountApiKeys({ keyHash });
+    console.log("[getApiKeyAccountId] matched keys:", apiKeys?.length ?? "null");
 
     if (apiKeys === null) {
       console.error("[ERROR] selectAccountApiKeys returned null");
