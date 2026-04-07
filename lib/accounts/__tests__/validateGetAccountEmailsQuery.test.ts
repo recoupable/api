@@ -71,7 +71,9 @@ describe("validateGetAccountEmailsQuery", () => {
     });
 
     const result = await validateGetAccountEmailsQuery(
-      createMockRequest("http://localhost:3000/api/accounts/emails?account_id=acc-1&account_id=acc-2"),
+      createMockRequest(
+        "http://localhost:3000/api/accounts/emails?account_id=acc-1&account_id=acc-2",
+      ),
     );
 
     expect(result).toEqual({
