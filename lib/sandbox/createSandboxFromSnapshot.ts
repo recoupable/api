@@ -1,5 +1,5 @@
 import type { Sandbox } from "@vercel/sandbox";
-import { createSandbox } from "@/lib/sandbox/createSandbox";
+import { createSandboxWithFallback } from "@/lib/sandbox/createSandboxWithFallback";
 import { getValidSnapshotId } from "@/lib/sandbox/getValidSnapshotId";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 
@@ -19,30 +19,12 @@ export async function createSandboxFromSnapshot(
   accountId: string,
 ): Promise<CreateSandboxFromSnapshotResult> {
   const snapshotId = await getValidSnapshotId(accountId);
-
-  let sandbox: Sandbox;
-  let fromSnapshot = false;
-
-  if (snapshotId) {
-    try {
-      sandbox = (await createSandbox({ source: { type: "snapshot", snapshotId } })).sandbox;
-      fromSnapshot = true;
-    } catch (error) {
-      console.error(
-        "Snapshot sandbox creation failed, falling back to fresh sandbox:",
-        error,
-      );
-    }
-  }
-
-  if (!fromSnapshot) {
-    sandbox = (await createSandbox({})).sandbox;
-  }
+  const { sandbox, fromSnapshot } = await createSandboxWithFallback(snapshotId);
 
   await insertAccountSandbox({
     account_id: accountId,
-    sandbox_id: sandbox!.sandboxId,
+    sandbox_id: sandbox.sandboxId,
   });
 
-  return { sandbox: sandbox!, fromSnapshot };
+  return { sandbox, fromSnapshot };
 }

@@ -23,7 +23,7 @@ export async function processCreateSandbox(
   const { accountId, prompt } = input;
 
   const snapshotId = await getValidSnapshotId(accountId);
-  const result = await createSandboxWithFallback(snapshotId);
+  const { response: result } = await createSandboxWithFallback(snapshotId);
 
   await insertAccountSandbox({
     account_id: accountId,

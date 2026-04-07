@@ -1,24 +1,25 @@
-import { createSandbox, type SandboxCreatedResponse } from "@/lib/sandbox/createSandbox";
+import { createSandbox, type SandboxCreateResult } from "@/lib/sandbox/createSandbox";
+
+export type SandboxWithFallbackResult = SandboxCreateResult & { fromSnapshot: boolean };
 
 /**
  * Attempts to create a sandbox from the given snapshot, falling back to a fresh sandbox on failure.
  * If no snapshotId is provided, creates a fresh sandbox directly.
  *
  * @param snapshotId - Optional snapshot ID to restore from
- * @returns The sandbox creation response
+ * @returns The sandbox creation result with fromSnapshot flag
  */
 export async function createSandboxWithFallback(
   snapshotId: string | undefined,
-): Promise<SandboxCreatedResponse> {
+): Promise<SandboxWithFallbackResult> {
   if (snapshotId) {
     try {
-      return (await createSandbox({ source: { type: "snapshot", snapshotId } })).response;
+      const result = await createSandbox({ source: { type: "snapshot", snapshotId } });
+      return { ...result, fromSnapshot: true };
     } catch (error) {
-      console.error(
-        "Snapshot sandbox creation failed, falling back to fresh sandbox:",
-        error,
-      );
+      console.error("Snapshot sandbox creation failed, falling back to fresh sandbox:", error);
     }
   }
-  return (await createSandbox({})).response;
+  const result = await createSandbox({});
+  return { ...result, fromSnapshot: false };
 }
