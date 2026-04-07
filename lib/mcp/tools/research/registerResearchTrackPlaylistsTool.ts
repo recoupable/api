@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { resolveTrack } from "@/lib/research/resolveTrack";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
@@ -20,6 +21,10 @@ const schema = z.object({
     .string()
     .optional()
     .describe("Track name to search for. Provide this or id."),
+  artist: z
+    .string()
+    .optional()
+    .describe("Artist name — improves track search accuracy when using q."),
   platform: z
     .string()
     .optional()
@@ -71,22 +76,11 @@ export function registerResearchTrackPlaylistsTool(server: McpServer): void {
         let trackId = args.id;
 
         if (!trackId) {
-          const searchResult = await proxyToChartmetric("/search", {
-            q: args.q!,
-            type: "tracks",
-            limit: "1",
-          });
-
-          if (searchResult.status !== 200) {
-            return getToolResultError(`Track search failed with status ${searchResult.status}`);
+          const resolved = await resolveTrack(args.q!, args.artist);
+          if (resolved.error) {
+            return getToolResultError(resolved.error);
           }
-
-          const tracks = (searchResult.data as { tracks?: Array<{ id: number }> })?.tracks;
-          if (!tracks || tracks.length === 0) {
-            return getToolResultError(`No track found matching "${args.q}"`);
-          }
-
-          trackId = String(tracks[0].id);
+          trackId = resolved.id;
         }
 
         const platform = args.platform ?? "spotify";

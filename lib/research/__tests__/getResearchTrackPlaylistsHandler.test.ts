@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getResearchTrackPlaylistsHandler } from "../getResearchTrackPlaylistsHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { resolveTrack } from "@/lib/research/resolveTrack";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -15,6 +16,10 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 
 vi.mock("@/lib/research/proxyToChartmetric", () => ({
   proxyToChartmetric: vi.fn(),
+}));
+
+vi.mock("@/lib/research/resolveTrack", () => ({
+  resolveTrack: vi.fn(),
 }));
 
 vi.mock("@/lib/credits/deductCredits", () => ({
@@ -116,29 +121,27 @@ describe("getResearchTrackPlaylistsHandler", () => {
       authToken: "token",
     });
 
-    vi.mocked(proxyToChartmetric)
-      .mockResolvedValueOnce({
-        data: { tracks: [{ id: 18220712 }] },
-        status: 200,
-      })
-      .mockResolvedValueOnce({
-        data: [
-          {
-            playlist: { name: "Today's Top Hits", image_url: "https://i.scdn.co/image/xyz" },
-            track: { name: "God's Plan" },
-          },
-        ],
-        status: 200,
-      });
+    vi.mocked(resolveTrack).mockResolvedValue({ id: "18220712" });
+
+    vi.mocked(proxyToChartmetric).mockResolvedValue({
+      data: [
+        {
+          playlist: { name: "Today's Top Hits", image_url: "https://i.scdn.co/image/xyz" },
+          track: { name: "God's Plan" },
+        },
+      ],
+      status: 200,
+    });
 
     const req = new NextRequest(
-      "http://localhost/api/research/track/playlists?q=God%27s+Plan+Drake",
+      "http://localhost/api/research/track/playlists?q=God%27s+Plan&artist=Drake",
     );
     const res = await getResearchTrackPlaylistsHandler(req);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.status).toBe("success");
     expect(body.placements).toHaveLength(1);
+    expect(vi.mocked(resolveTrack)).toHaveBeenCalledWith("God's Plan", "Drake");
   });
 
   it("returns 404 when track name search finds nothing", async () => {
@@ -148,10 +151,7 @@ describe("getResearchTrackPlaylistsHandler", () => {
       authToken: "token",
     });
 
-    vi.mocked(proxyToChartmetric).mockResolvedValue({
-      data: { tracks: [] },
-      status: 200,
-    });
+    vi.mocked(resolveTrack).mockResolvedValue({ error: "No track found matching \"nonexistent song\"" });
 
     const req = new NextRequest(
       "http://localhost/api/research/track/playlists?q=nonexistent+song",

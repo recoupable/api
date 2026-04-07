@@ -3,14 +3,15 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { deductCredits } from "@/lib/credits/deductCredits";
 import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { resolveTrack } from "@/lib/research/resolveTrack";
 
 const VALID_PLATFORMS = ["spotify", "applemusic", "deezer", "amazon"];
 
 /**
  * Track playlists handler — returns playlists featuring a specific track.
- * Accepts a Chartmetric track ID or a track name (resolved via search).
+ * Accepts a Chartmetric track ID, or a track name + optional artist for Spotify-powered lookup.
  *
- * @param request - query params: id or q, platform, status, editorial, limit
+ * @param request - query params: id or q (+artist), platform, status, editorial, limit
  * @returns JSON playlist placements for the track or error
  */
 export async function getResearchTrackPlaylistsHandler(
@@ -23,6 +24,7 @@ export async function getResearchTrackPlaylistsHandler(
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
   const q = searchParams.get("q");
+  const artist = searchParams.get("artist") || undefined;
 
   if (!id && !q) {
     return NextResponse.json(
@@ -53,28 +55,14 @@ export async function getResearchTrackPlaylistsHandler(
   let trackId = id;
 
   if (!trackId) {
-    const searchResult = await proxyToChartmetric("/search", {
-      q: q!,
-      type: "tracks",
-      limit: "1",
-    });
-
-    if (searchResult.status !== 200) {
+    const resolved = await resolveTrack(q!, artist);
+    if (resolved.error) {
       return NextResponse.json(
-        { status: "error", error: `Track search failed with status ${searchResult.status}` },
-        { status: searchResult.status, headers: getCorsHeaders() },
-      );
-    }
-
-    const tracks = (searchResult.data as { tracks?: Array<{ id: number }> })?.tracks;
-    if (!tracks || tracks.length === 0) {
-      return NextResponse.json(
-        { status: "error", error: `No track found matching "${q}"` },
+        { status: "error", error: resolved.error },
         { status: 404, headers: getCorsHeaders() },
       );
     }
-
-    trackId = String(tracks[0].id);
+    trackId = resolved.id;
   }
 
   const queryParams: Record<string, string> = {};
