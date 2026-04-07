@@ -53,6 +53,27 @@ describe("getValidSnapshotId", () => {
     expect(result).toBeUndefined();
   });
 
+  it("returns undefined when expires_at equals now", async () => {
+    const now = new Date().toISOString();
+    mockSelectAccountSnapshots.mockResolvedValue([
+      { snapshot_id: "snap_edge", account_id: "acc_1", expires_at: now },
+    ]);
+
+    const result = await getValidSnapshotId("acc_1");
+
+    expect(result).toBeUndefined();
+  });
+
+  it("returns undefined when expires_at is unparsable", async () => {
+    mockSelectAccountSnapshots.mockResolvedValue([
+      { snapshot_id: "snap_bad", account_id: "acc_1", expires_at: "not-a-date" },
+    ]);
+
+    const result = await getValidSnapshotId("acc_1");
+
+    expect(result).toBeUndefined();
+  });
+
   it("returns undefined when snapshot has no snapshot_id", async () => {
     mockSelectAccountSnapshots.mockResolvedValue([
       { snapshot_id: null, account_id: "acc_1", expires_at: null },

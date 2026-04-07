@@ -11,8 +11,11 @@ export async function getValidSnapshotId(accountId: string): Promise<string | un
   const snapshot = accountSnapshots[0];
   if (!snapshot?.snapshot_id) return undefined;
 
-  if (snapshot.expires_at && new Date(snapshot.expires_at) < new Date()) {
-    return undefined;
+  if (snapshot.expires_at) {
+    const expiresAt = new Date(snapshot.expires_at).getTime();
+    if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
+      return undefined;
+    }
   }
 
   return snapshot.snapshot_id;
