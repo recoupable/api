@@ -21,8 +21,7 @@ export async function createSandboxFromSnapshot(
   const snapshots = await selectAccountSnapshots(accountId);
   const snapshot = snapshots[0];
 
-  const isExpired =
-    snapshot?.expires_at && new Date(snapshot.expires_at) < new Date();
+  const isExpired = snapshot?.expires_at && new Date(snapshot.expires_at) < new Date();
   const snapshotId = !isExpired ? snapshot?.snapshot_id : undefined;
 
   let sandbox: Sandbox;
