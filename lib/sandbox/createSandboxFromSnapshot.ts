@@ -1,6 +1,6 @@
 import type { Sandbox } from "@vercel/sandbox";
-import { createSandbox } from "@/lib/sandbox/createSandbox";
-import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
+import { createSandboxWithFallback } from "@/lib/sandbox/createSandboxWithFallback";
+import { getValidSnapshotId } from "@/lib/sandbox/getValidSnapshotId";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 
 export interface CreateSandboxFromSnapshotResult {
@@ -9,8 +9,8 @@ export interface CreateSandboxFromSnapshotResult {
 }
 
 /**
- * Creates a new sandbox from the account's latest snapshot (or fresh if none)
- * and records it in the database.
+ * Creates a new sandbox from the account's latest valid snapshot,
+ * falling back to a fresh sandbox if the snapshot is expired or fails.
  *
  * @param accountId - The account ID to create a sandbox for
  * @returns The created Sandbox instance and whether it was created from a snapshot
@@ -18,17 +18,13 @@ export interface CreateSandboxFromSnapshotResult {
 export async function createSandboxFromSnapshot(
   accountId: string,
 ): Promise<CreateSandboxFromSnapshotResult> {
-  const snapshots = await selectAccountSnapshots(accountId);
-  const snapshotId = snapshots[0]?.snapshot_id;
-
-  const { sandbox, response } = await createSandbox(
-    snapshotId ? { source: { type: "snapshot", snapshotId } } : {},
-  );
+  const snapshotId = await getValidSnapshotId(accountId);
+  const { sandbox, fromSnapshot } = await createSandboxWithFallback(snapshotId);
 
   await insertAccountSandbox({
     account_id: accountId,
-    sandbox_id: response.sandboxId,
+    sandbox_id: sandbox.sandboxId,
   });
 
-  return { sandbox, fromSnapshot: !!snapshotId };
+  return { sandbox, fromSnapshot };
 }
