@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import {
-  validatePatchAccountRequest,
-} from "@/lib/accounts/validateUpdateAccountBody";
+import { validatePatchAccountRequest } from "@/lib/accounts/validateUpdateAccountBody";
 import { updateAccountHandler } from "@/lib/accounts/updateAccountHandler";
 import type { ValidatedUpdateAccountRequest } from "@/lib/accounts/validateUpdateAccountRequest";
 import { checkIsAdmin } from "@/lib/admins/checkIsAdmin";
