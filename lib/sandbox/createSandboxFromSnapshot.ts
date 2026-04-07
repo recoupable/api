@@ -9,8 +9,8 @@ export interface CreateSandboxFromSnapshotResult {
 }
 
 /**
- * Creates a new sandbox from the account's latest snapshot (or fresh if none)
- * and records it in the database.
+ * Creates a new sandbox from the account's latest valid snapshot,
+ * falling back to a fresh sandbox if the snapshot is expired or fails.
  *
  * @param accountId - The account ID to create a sandbox for
  * @returns The created Sandbox instance and whether it was created from a snapshot
@@ -19,16 +19,34 @@ export async function createSandboxFromSnapshot(
   accountId: string,
 ): Promise<CreateSandboxFromSnapshotResult> {
   const snapshots = await selectAccountSnapshots(accountId);
-  const snapshotId = snapshots[0]?.snapshot_id;
+  const snapshot = snapshots[0];
 
-  const { sandbox, response } = await createSandbox(
-    snapshotId ? { source: { type: "snapshot", snapshotId } } : {},
-  );
+  const isExpired = snapshot?.expires_at && new Date(snapshot.expires_at) < new Date();
+  const snapshotId = !isExpired ? snapshot?.snapshot_id : undefined;
+
+  let sandbox: Sandbox;
+  let fromSnapshot = false;
+
+  if (snapshotId) {
+    try {
+      const result = await createSandbox({
+        source: { type: "snapshot", snapshotId },
+      });
+      sandbox = result.sandbox;
+      fromSnapshot = true;
+    } catch {
+      const result = await createSandbox({});
+      sandbox = result.sandbox;
+    }
+  } else {
+    const result = await createSandbox({});
+    sandbox = result.sandbox;
+  }
 
   await insertAccountSandbox({
     account_id: accountId,
-    sandbox_id: response.sandboxId,
+    sandbox_id: sandbox.sandboxId,
   });
 
-  return { sandbox, fromSnapshot: !!snapshotId };
+  return { sandbox, fromSnapshot };
 }

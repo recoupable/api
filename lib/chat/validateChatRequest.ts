@@ -2,12 +2,9 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
-import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
-import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getMessages } from "@/lib/messages/getMessages";
 import convertToUiMessages from "@/lib/messages/convertToUiMessages";
-import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
 import { setupConversation } from "@/lib/chat/setupConversation";
 import { validateMessages } from "@/lib/chat/validateMessages";
 
@@ -86,81 +83,15 @@ export async function validateChatRequest(
 
   const validatedBody: BaseChatRequestBody = validationResult.data;
 
-  // Check which auth mechanism is provided
-  const apiKey = request.headers.get("x-api-key");
-  const authHeader = request.headers.get("authorization");
-  const hasApiKey = !!apiKey;
-  const hasAuth = !!authHeader;
-
-  // Enforce that exactly one auth mechanism is provided
-  if ((hasApiKey && hasAuth) || (!hasApiKey && !hasAuth)) {
-    return NextResponse.json(
-      {
-        status: "error",
-        message: "Exactly one of x-api-key or Authorization must be provided",
-      },
-      {
-        status: 401,
-        headers: getCorsHeaders(),
-      },
-    );
+  // Authenticate, handle accountId/organizationId overrides
+  const authResult = await validateAuthContext(request, {
+    accountId: validatedBody.accountId,
+    organizationId: validatedBody.organizationId,
+  });
+  if (authResult instanceof NextResponse) {
+    return authResult;
   }
-
-  // Authenticate and get accountId and orgId
-  let accountId: string;
-  let orgId: string | null = null;
-
-  if (hasApiKey) {
-    // Validate API key authentication
-    const accountIdOrError = await getApiKeyAccountId(request);
-    if (accountIdOrError instanceof NextResponse) {
-      return accountIdOrError;
-    }
-    accountId = accountIdOrError;
-
-    // Handle accountId override
-    if (validatedBody.accountId) {
-      const overrideResult = await validateOverrideAccountId({
-        apiKey,
-        targetAccountId: validatedBody.accountId,
-      });
-      if (overrideResult instanceof NextResponse) {
-        return overrideResult;
-      }
-      accountId = overrideResult.accountId;
-    }
-  } else {
-    // Validate bearer token authentication (no org context for JWT auth)
-    const accountIdOrError = await getAuthenticatedAccountId(request);
-    if (accountIdOrError instanceof NextResponse) {
-      return accountIdOrError;
-    }
-    accountId = accountIdOrError;
-  }
-
-  // Handle organizationId override from request body
-  if (validatedBody.organizationId) {
-    const hasOrgAccess = await validateOrganizationAccess({
-      accountId,
-      organizationId: validatedBody.organizationId,
-    });
-
-    if (!hasOrgAccess) {
-      return NextResponse.json(
-        {
-          status: "error",
-          message: "Access denied to specified organizationId",
-        },
-        {
-          status: 403,
-          headers: getCorsHeaders(),
-        },
-      );
-    }
-
-    // Use the provided organizationId as orgId
-    orgId = validatedBody.organizationId;
-  }
+  const { accountId, orgId } = authResult;
 
   // Normalize chat content:
   // - If only prompt is provided, convert it into a single user UIMessage
@@ -188,14 +119,11 @@ export async function validateChatRequest(
     memoryId: lastMessage.id,
   });
 
-  // Extract the auth token to forward to MCP server
-  const authToken = hasApiKey ? apiKey! : authHeader!.replace(/^Bearer\s+/i, "");
-
   return {
     ...validatedBody,
     accountId,
     orgId,
     roomId: finalRoomId,
-    authToken,
+    authToken: authResult.authToken,
   } as ChatRequestBody;
 }
