@@ -10,6 +10,24 @@ type ProcessCreateSandboxInput = {
 type ProcessCreateSandboxResult = SandboxCreatedResponse & { runId?: string };
 
 /**
+ * Returns a valid (non-expired) snapshot ID for the account, or undefined.
+ *
+ * @param accountId - The account to look up
+ * @returns The snapshot ID if it exists and has not expired
+ */
+async function getValidSnapshotId(accountId: string): Promise<string | undefined> {
+  const accountSnapshots = await selectAccountSnapshots(accountId);
+  const snapshot = accountSnapshots[0];
+  if (!snapshot?.snapshot_id) return undefined;
+
+  if (snapshot.expires_at && new Date(snapshot.expires_at) < new Date()) {
+    return undefined;
+  }
+
+  return snapshot.snapshot_id;
+}
+
+/**
  * Shared domain logic for creating a sandbox and optionally running a prompt.
  * Used by both POST /api/sandboxes handler and the prompt_sandbox MCP tool.
  *
@@ -21,14 +39,24 @@ export async function processCreateSandbox(
 ): Promise<ProcessCreateSandboxResult> {
   const { accountId, prompt } = input;
 
-  // Get account's most recent snapshot if available
-  const accountSnapshots = await selectAccountSnapshots(accountId);
-  const snapshotId = accountSnapshots[0]?.snapshot_id;
+  const snapshotId = await getValidSnapshotId(accountId);
 
-  // Create sandbox (from snapshot if valid, otherwise fresh)
-  const { response: result } = await createSandbox(
-    snapshotId ? { source: { type: "snapshot", snapshotId } } : {},
-  );
+  let result;
+
+  if (snapshotId) {
+    try {
+      const createResult = await createSandbox({
+        source: { type: "snapshot", snapshotId },
+      });
+      result = createResult.response;
+    } catch {
+      const freshResult = await createSandbox({});
+      result = freshResult.response;
+    }
+  } else {
+    const freshResult = await createSandbox({});
+    result = freshResult.response;
+  }
 
   await insertAccountSandbox({
     account_id: accountId,
