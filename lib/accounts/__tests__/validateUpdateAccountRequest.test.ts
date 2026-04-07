@@ -105,13 +105,38 @@ describe("validateUpdateAccountRequest", () => {
     }
   });
 
+  it("succeeds without accountId in body (derives from auth)", async () => {
+    const request = createRequest({
+      name: "Updated Name",
+    });
+
+    const result = await validateUpdateAccountRequest(request);
+
+    expect(result).not.toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) {
+      expect(result.accountId).toBe("550e8400-e29b-41d4-a716-446655440000");
+      expect(result.name).toBe("Updated Name");
+    }
+  });
+
+  it("returns 400 when no updatable fields are provided", async () => {
+    const request = createRequest({});
+
+    const result = await validateUpdateAccountRequest(request);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(400);
+    }
+  });
+
   it("returns auth error response when auth fails", async () => {
     mockValidateAuthContext.mockResolvedValue(
       NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
     );
 
     const request = createRequest({
-      accountId: "550e8400-e29b-41d4-a716-446655440000",
+      name: "Test",
     });
 
     const result = await validateUpdateAccountRequest(request);
