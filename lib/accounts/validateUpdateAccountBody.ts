@@ -1,5 +1,8 @@
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { safeParseJson } from "@/lib/networking/safeParseJson";
+import { validateAuthContext, type AuthContext } from "@/lib/auth/validateAuthContext";
 import { z } from "zod";
 
 export const updateAccountBodySchema = z
@@ -16,7 +19,8 @@ export const updateAccountBodySchema = z
   })
   .refine(
     body => {
-      const { accountId: _accountId, ...updateFields } = body;
+      const updateFields = { ...body };
+      delete updateFields.accountId;
       return Object.values(updateFields).some(v => v !== undefined);
     },
     {
@@ -52,4 +56,34 @@ export function validateUpdateAccountBody(body: unknown): NextResponse | UpdateA
   }
 
   return result.data;
+}
+
+/** Successful auth + parsed body for PATCH /api/accounts (after validatePatchAccountRequest). */
+export type PatchAccountRequestValidated = {
+  auth: AuthContext;
+  body: UpdateAccountBody;
+};
+
+/**
+ * Authenticates the request, parses JSON, and validates the PATCH /api/accounts body.
+ * Keeps HTTP auth + input validation out of the account patch handler (SRP).
+ *
+ * @param req - Incoming Next.js request
+ * @returns Error response, or auth context plus validated body fields
+ */
+export async function validatePatchAccountRequest(
+  req: NextRequest,
+): Promise<NextResponse | PatchAccountRequestValidated> {
+  const authResult = await validateAuthContext(req);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
+  const rawBody = await safeParseJson(req);
+  const validated = validateUpdateAccountBody(rawBody);
+  if (validated instanceof NextResponse) {
+    return validated;
+  }
+
+  return { auth: authResult, body: validated };
 }

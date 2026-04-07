@@ -1,6 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 import { validateUpdateAccountBody } from "@/lib/accounts/validateUpdateAccountBody";
+
+vi.mock("@/lib/auth/validateAuthContext", () => ({
+  validateAuthContext: vi.fn(),
+}));
+
+vi.mock("@/lib/networking/safeParseJson", () => ({
+  safeParseJson: vi.fn(),
+}));
 
 describe("validateUpdateAccountBody", () => {
   it("returns 400 when no update fields are provided", async () => {

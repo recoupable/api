@@ -1,32 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { safeParseJson } from "@/lib/networking/safeParseJson";
 import {
-  validateUpdateAccountBody,
+  validatePatchAccountRequest,
   type UpdateAccountBody,
 } from "@/lib/accounts/validateUpdateAccountBody";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { updateAccountHandler } from "@/lib/accounts/updateAccountHandler";
 import { checkIsAdmin } from "@/lib/admins/checkIsAdmin";
 
 /**
- * Handles PATCH /api/accounts: auth, optional admin-only accountId override, then profile update.
+ * Handles PATCH /api/accounts: optional admin-only accountId override, then profile update.
+ * Auth and body validation live in {@link validatePatchAccountRequest}.
  *
  * @param req - Incoming Next.js request
  * @returns Updated account JSON or error response
  */
 export async function patchAccountHandler(req: NextRequest): Promise<NextResponse> {
-  const authResult = await validateAuthContext(req);
-  if (authResult instanceof NextResponse) {
-    return authResult;
+  const validatedRequest = await validatePatchAccountRequest(req);
+  if (validatedRequest instanceof NextResponse) {
+    return validatedRequest;
   }
 
-  const body = await safeParseJson(req);
-
-  const validated = validateUpdateAccountBody(body);
-  if (validated instanceof NextResponse) {
-    return validated;
-  }
+  const { auth: authResult, body: validated } = validatedRequest;
 
   const targetAccountId = validated.accountId ?? authResult.accountId;
   if (validated.accountId && validated.accountId !== authResult.accountId) {

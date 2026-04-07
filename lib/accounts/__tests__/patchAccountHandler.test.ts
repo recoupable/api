@@ -3,16 +3,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { patchAccountHandler } from "@/lib/accounts/patchAccountHandler";
 
-vi.mock("@/lib/auth/validateAuthContext", () => ({
-  validateAuthContext: vi.fn(),
-}));
-
-vi.mock("@/lib/networking/safeParseJson", () => ({
-  safeParseJson: vi.fn(),
-}));
-
 vi.mock("@/lib/accounts/validateUpdateAccountBody", () => ({
-  validateUpdateAccountBody: vi.fn(),
+  validatePatchAccountRequest: vi.fn(),
 }));
 
 vi.mock("@/lib/admins/checkIsAdmin", () => ({
@@ -23,9 +15,7 @@ vi.mock("@/lib/accounts/updateAccountHandler", () => ({
   updateAccountHandler: vi.fn(),
 }));
 
-const { validateAuthContext } = await import("@/lib/auth/validateAuthContext");
-const { safeParseJson } = await import("@/lib/networking/safeParseJson");
-const { validateUpdateAccountBody } = await import("@/lib/accounts/validateUpdateAccountBody");
+const { validatePatchAccountRequest } = await import("@/lib/accounts/validateUpdateAccountBody");
 const { checkIsAdmin } = await import("@/lib/admins/checkIsAdmin");
 const { updateAccountHandler } = await import("@/lib/accounts/updateAccountHandler");
 
@@ -38,26 +28,22 @@ describe("patchAccountHandler", () => {
     vi.clearAllMocks();
   });
 
-  it("returns auth error when unauthenticated", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue(
+  it("returns auth error when validatePatchAccountRequest rejects auth", async () => {
+    vi.mocked(validatePatchAccountRequest).mockResolvedValue(
       NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
     );
 
     const response = await patchAccountHandler(req);
 
     expect(response.status).toBe(401);
-    expect(validateUpdateAccountBody).not.toHaveBeenCalled();
     expect(updateAccountHandler).not.toHaveBeenCalled();
   });
 
   it("updates authenticated caller account when body omits accountId", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: accountA,
-      orgId: null,
-      authToken: "token",
+    vi.mocked(validatePatchAccountRequest).mockResolvedValue({
+      auth: { accountId: accountA, orgId: null, authToken: "token" },
+      body: { name: "Alice" },
     });
-    vi.mocked(safeParseJson).mockResolvedValue({ name: "Alice" });
-    vi.mocked(validateUpdateAccountBody).mockReturnValue({ name: "Alice" });
     vi.mocked(updateAccountHandler).mockResolvedValue(
       NextResponse.json({ data: { account_id: accountA } }, { status: 200 }),
     );
@@ -73,18 +59,9 @@ describe("patchAccountHandler", () => {
   });
 
   it("rejects cross-account override for non-admin", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: accountA,
-      orgId: null,
-      authToken: "token",
-    });
-    vi.mocked(safeParseJson).mockResolvedValue({
-      accountId: accountB,
-      name: "Bob",
-    });
-    vi.mocked(validateUpdateAccountBody).mockReturnValue({
-      accountId: accountB,
-      name: "Bob",
+    vi.mocked(validatePatchAccountRequest).mockResolvedValue({
+      auth: { accountId: accountA, orgId: null, authToken: "token" },
+      body: { accountId: accountB, name: "Bob" },
     });
     vi.mocked(checkIsAdmin).mockResolvedValue(false);
 
@@ -97,18 +74,9 @@ describe("patchAccountHandler", () => {
   });
 
   it("allows cross-account override for admin", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: accountA,
-      orgId: null,
-      authToken: "token",
-    });
-    vi.mocked(safeParseJson).mockResolvedValue({
-      accountId: accountB,
-      name: "Bob",
-    });
-    vi.mocked(validateUpdateAccountBody).mockReturnValue({
-      accountId: accountB,
-      name: "Bob",
+    vi.mocked(validatePatchAccountRequest).mockResolvedValue({
+      auth: { accountId: accountA, orgId: null, authToken: "token" },
+      body: { accountId: accountB, name: "Bob" },
     });
     vi.mocked(checkIsAdmin).mockResolvedValue(true);
     vi.mocked(updateAccountHandler).mockResolvedValue(
@@ -125,14 +93,8 @@ describe("patchAccountHandler", () => {
     });
   });
 
-  it("returns validation error for invalid body", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: accountA,
-      orgId: null,
-      authToken: "token",
-    });
-    vi.mocked(safeParseJson).mockResolvedValue({ image: "bad-url" });
-    vi.mocked(validateUpdateAccountBody).mockReturnValue(
+  it("returns validation error when body validation fails", async () => {
+    vi.mocked(validatePatchAccountRequest).mockResolvedValue(
       NextResponse.json({ status: "error", error: "invalid body" }, { status: 400 }),
     );
 
