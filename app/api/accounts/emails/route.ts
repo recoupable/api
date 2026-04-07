@@ -5,8 +5,10 @@ import { getAccountEmailsHandler } from "@/lib/accounts/getAccountEmailsHandler"
 
 /**
  * OPTIONS handler for CORS preflight requests.
+ *
+ * @returns A NextResponse with CORS headers.
  */
-export async function OPTIONS() {
+export async function OPTIONS(): Promise<NextResponse> {
   return new NextResponse(null, {
     status: 200,
     headers: getCorsHeaders(),
@@ -22,8 +24,11 @@ export async function OPTIONS() {
  * Query parameters:
  * - artist_account_id (required): Artist account used for access checks
  * - account_id (optional, repeatable): Account IDs to look up
+ *
+ * @param request - The incoming request with artist and account query parameters.
+ * @returns A NextResponse with matching account email rows or an error response.
  */
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   return getAccountEmailsHandler(request);
 }
 

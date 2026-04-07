@@ -51,12 +51,28 @@ describe("getAccountEmailsHandler", () => {
       artistAccountId: "artist-456",
       accountIds: [],
     });
+    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
 
     const result = await getAccountEmailsHandler(createMockRequest());
 
     expect(result.status).toBe(200);
     await expect(result.json()).resolves.toEqual([]);
-    expect(checkAccountArtistAccess).not.toHaveBeenCalled();
+    expect(checkAccountArtistAccess).toHaveBeenCalledWith("account-123", "artist-456");
+  });
+
+  it("returns 403 for empty account IDs when the authenticated account cannot access the artist", async () => {
+    vi.mocked(validateGetAccountEmailsQuery).mockResolvedValue({
+      authenticatedAccountId: "account-123",
+      artistAccountId: "artist-456",
+      accountIds: [],
+    });
+    vi.mocked(checkAccountArtistAccess).mockResolvedValue(false);
+
+    const result = await getAccountEmailsHandler(createMockRequest());
+
+    expect(checkAccountArtistAccess).toHaveBeenCalledWith("account-123", "artist-456");
+    expect(result.status).toBe(403);
+    await expect(result.json()).resolves.toEqual({ error: "Unauthorized" });
   });
 
   it("returns 403 when the authenticated account cannot access the artist", async () => {

@@ -1,7 +1,23 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+
+export const getAccountEmailsQuerySchema = z.object({
+  artist_account_id: z.preprocess(
+    value => value ?? "",
+    z
+      .string()
+      .min(1, "artist_account_id parameter is required")
+      .describe("Artist account ID to authorize against."),
+  ),
+  account_id: z
+    .array(z.string())
+    .optional()
+    .default([])
+    .describe("Repeat this query parameter to fetch multiple account email rows."),
+});
 
 export interface ValidatedGetAccountEmailsQuery {
   authenticatedAccountId: string;
@@ -21,11 +37,19 @@ export async function validateGetAccountEmailsQuery(
   }
 
   const { searchParams } = new URL(request.url);
-  const artistAccountId = searchParams.get("artist_account_id");
+  const validationResult = getAccountEmailsQuerySchema.safeParse({
+    artist_account_id: searchParams.get("artist_account_id") ?? undefined,
+    account_id: searchParams.getAll("account_id"),
+  });
 
-  if (!artistAccountId) {
+  if (!validationResult.success) {
+    const firstError = validationResult.error.issues[0];
     return NextResponse.json(
-      { error: "artist_account_id parameter is required" },
+      {
+        status: "error",
+        missing_fields: firstError.path,
+        error: firstError.message,
+      },
       {
         status: 400,
         headers: getCorsHeaders(),
@@ -35,7 +59,7 @@ export async function validateGetAccountEmailsQuery(
 
   return {
     authenticatedAccountId: authResult.accountId,
-    artistAccountId,
-    accountIds: searchParams.getAll("account_id"),
+    artistAccountId: validationResult.data.artist_account_id,
+    accountIds: validationResult.data.account_id,
   };
 }

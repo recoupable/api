@@ -14,13 +14,6 @@ export async function getAccountEmailsHandler(request: NextRequest): Promise<Nex
     return validatedQuery;
   }
 
-  if (validatedQuery.accountIds.length === 0) {
-    return NextResponse.json([], {
-      status: 200,
-      headers: getCorsHeaders(),
-    });
-  }
-
   try {
     const hasAccess = await checkAccountArtistAccess(
       validatedQuery.authenticatedAccountId,
@@ -35,6 +28,13 @@ export async function getAccountEmailsHandler(request: NextRequest): Promise<Nex
           headers: getCorsHeaders(),
         },
       );
+    }
+
+    if (validatedQuery.accountIds.length === 0) {
+      return NextResponse.json([], {
+        status: 200,
+        headers: getCorsHeaders(),
+      });
     }
 
     const emails = await selectAccountEmails({ accountIds: validatedQuery.accountIds });

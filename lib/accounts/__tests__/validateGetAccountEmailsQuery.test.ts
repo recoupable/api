@@ -56,6 +56,8 @@ describe("validateGetAccountEmailsQuery", () => {
     if (result instanceof NextResponse) {
       expect(result.status).toBe(400);
       await expect(result.json()).resolves.toEqual({
+        status: "error",
+        missing_fields: ["artist_account_id"],
         error: "artist_account_id parameter is required",
       });
     }
