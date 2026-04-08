@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { CONTENT_TEMPLATES, isSupportedContentTemplate } from "@/lib/content/contentTemplates";
+import { CONTENT_TEMPLATES } from "@/lib/content/contentTemplates";
+import { isSupportedContentTemplate } from "@/lib/content/isSupportedContentTemplate";
 
 describe("contentTemplates", () => {
   it("includes artist-release-editorial template", () => {
