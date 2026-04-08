@@ -1,5 +1,10 @@
 import { LanguageModel, ModelMessage, StepResult, ToolSet } from "ai";
-import { PrepareStepResult, TOOL_CHAIN_FALLBACK_MODEL, TOOL_CHAINS, TOOL_MODEL_MAP } from "./toolChains";
+import {
+  PrepareStepResult,
+  TOOL_CHAIN_FALLBACK_MODEL,
+  TOOL_CHAINS,
+  TOOL_MODEL_MAP,
+} from "./toolChains";
 import getExecutedToolTimeline from "./getExecutedToolTimeline";
 
 type PrepareStepOptions = {
