@@ -154,6 +154,11 @@ const mockDeductCredits = vi.mocked(deductCredits);
 const mockGenerateChatTitle = vi.mocked(generateChatTitle);
 
 // Helper to create mock NextRequest
+/**
+ *
+ * @param body
+ * @param headers
+ */
 function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
   return {
     json: () => Promise.resolve(body),

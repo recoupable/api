@@ -39,6 +39,8 @@ export type ValidatedUpdateAccountRequest = Omit<
 
 /**
  * Validates PATCH /api/accounts including auth, account override access, and body schema.
+ *
+ * @param request
  */
 export async function validateUpdateAccountRequest(
   request: NextRequest,

@@ -17,6 +17,10 @@ export async function OPTIONS() {
  * DELETE /api/chats/[id]/messages/trailing
  *
  * Deletes all messages in chat `id` from `from_message_id` onward.
+ *
+ * @param request
+ * @param root0
+ * @param root0.params
  */
 export async function DELETE(
   request: NextRequest,

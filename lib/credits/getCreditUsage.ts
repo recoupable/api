@@ -3,6 +3,7 @@ import { LanguageModelUsage } from "ai";
 
 /**
  * Calculates the total spend in USD for a given language model usage.
+ *
  * @param usage - The language model usage data
  * @param modelId - The ID of the model used
  * @returns The total spend in USD or 0 if calculation fails

@@ -1,6 +1,8 @@
 /**
  * Parses a merge_test_to_main action ID like "merge_test_to_main:recoupable/api"
  * into the repo string, or null if the format doesn't match.
+ *
+ * @param actionId
  */
 export function parseMergeTestToMainActionId(actionId: string): string | null {
   const prefix = "merge_test_to_main:";

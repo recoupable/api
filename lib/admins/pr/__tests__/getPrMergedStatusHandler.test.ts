@@ -19,6 +19,10 @@ vi.mock("@/lib/github/fetchGithubPrStatus", () => ({
 const PR_URL_1 = "https://github.com/recoupable/api/pull/42";
 const PR_URL_2 = "https://github.com/recoupable/chat/pull/100";
 
+/**
+ *
+ * @param urls
+ */
 function makeRequest(urls: string[] = [PR_URL_1]) {
   const params = new URLSearchParams();
   urls.forEach(url => params.append("pull_requests", url));

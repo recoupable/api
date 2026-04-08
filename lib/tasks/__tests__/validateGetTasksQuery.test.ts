@@ -22,6 +22,10 @@ vi.mock("@/lib/admins/checkIsAdmin", () => ({
   checkIsAdmin: vi.fn(),
 }));
 
+/**
+ *
+ * @param url
+ */
 function createMockRequest(url: string): NextRequest {
   return {
     url,
