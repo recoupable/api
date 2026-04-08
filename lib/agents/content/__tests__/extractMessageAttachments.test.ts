@@ -69,9 +69,7 @@ describe("extractMessageAttachments", () => {
 
     const result = await extractMessageAttachments(message as never);
 
-    expect(result.imageUrls).toContain(
-      "https://blob.vercel-storage.com/content-attachments/face.png",
-    );
+    expect(result.imageUrls).toContain("https://blob.vercel-storage.com/content-attachments/face.png");
     expect(result.songUrl).toBeNull();
   });
 

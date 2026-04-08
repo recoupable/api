@@ -84,10 +84,6 @@ describe("handleContentAgentCallback", () => {
   });
 
   describe("completed callback with videos", () => {
-    /**
-     *
-     * @param body
-     */
     function makeAuthRequest(body: object) {
       return new Request("http://localhost/api/content-agent/callback", {
         method: "POST",
@@ -96,9 +92,6 @@ describe("handleContentAgentCallback", () => {
       });
     }
 
-    /**
-     *
-     */
     function mockThread() {
       const thread = {
         post: vi.fn().mockResolvedValue(undefined),

@@ -16,10 +16,6 @@ vi.mock("@/lib/networking/safeParseJson", () => ({
   safeParseJson: vi.fn(async (req: Request) => req.json()),
 }));
 
-/**
- *
- * @param body
- */
 function createRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/accounts", {
     method: "PATCH",
