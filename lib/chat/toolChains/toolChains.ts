@@ -17,7 +17,7 @@ export type PrepareStepResult = {
 
 // Forced toolChoice is incompatible with Anthropic extended thinking.
 // Tool chain steps use this model unless overridden by TOOL_MODEL_MAP.
-export const TOOL_CHAIN_FALLBACK_MODEL: LanguageModel = "openai/gpt-5-mini";
+export const TOOL_CHAIN_FALLBACK_MODEL: LanguageModel = "openai/gpt-5.4-mini";
 
 // Map specific tools to their required models
 export const TOOL_MODEL_MAP: Record<string, LanguageModel> = {

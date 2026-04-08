@@ -21,7 +21,7 @@ vi.mock("../toolChains", () => ({
     step_two: "gemini-2.5-pro",
     custom_step_one: "gpt-4-turbo",
   },
-  TOOL_CHAIN_FALLBACK_MODEL: "openai/gpt-5-mini",
+  TOOL_CHAIN_FALLBACK_MODEL: "openai/gpt-5.4-mini",
 }));
 
 describe("getPrepareStepResult", () => {
@@ -87,7 +87,7 @@ describe("getPrepareStepResult", () => {
       const result = getPrepareStepResult(options as any);
       expect(result).toEqual({
         toolChoice: { type: "tool", toolName: "step_one" },
-        model: "openai/gpt-5-mini",
+        model: "openai/gpt-5.4-mini",
       });
     });
 
@@ -257,7 +257,7 @@ describe("getPrepareStepResult", () => {
       const result = getPrepareStepResult(options as any);
       expect(result).toEqual({
         toolChoice: { type: "tool", toolName: "custom_step_two" },
-        model: "openai/gpt-5-mini",
+        model: "openai/gpt-5.4-mini",
         messages: [
           { role: "user", content: "Hello" },
           { role: "user", content: "Reference message" },
@@ -313,7 +313,7 @@ describe("getPrepareStepResult", () => {
       };
 
       const result = getPrepareStepResult(options as any);
-      expect(result?.model).toBe("openai/gpt-5-mini");
+      expect(result?.model).toBe("openai/gpt-5.4-mini");
     });
   });
 });
