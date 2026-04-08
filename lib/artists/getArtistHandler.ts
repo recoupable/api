@@ -23,6 +23,14 @@ export async function getArtistHandler(
       return validatedRequest;
     }
 
+    const accessResult = await validateAccountIdOverride({
+      currentAccountId: validatedRequest.requesterAccountId,
+      targetAccountId: validatedRequest.artistId,
+    });
+    if (accessResult instanceof NextResponse) {
+      return accessResult;
+    }
+
     const artist = await getArtistById(validatedRequest.artistId);
 
     if (!artist) {
@@ -36,14 +44,6 @@ export async function getArtistHandler(
           headers: getCorsHeaders(),
         },
       );
-    }
-
-    const accessResult = await validateAccountIdOverride({
-      currentAccountId: validatedRequest.requesterAccountId,
-      targetAccountId: validatedRequest.artistId,
-    });
-    if (accessResult instanceof NextResponse) {
-      return accessResult;
     }
 
     return NextResponse.json(

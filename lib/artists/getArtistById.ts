@@ -26,9 +26,17 @@ export async function getArtistById(artistId: string): Promise<ArtistDetail | nu
   }
 
   const formattedArtist = getFormattedArtist(account);
+  const { account_id, name, image, instruction, knowledges, label, account_socials } =
+    formattedArtist;
 
   return {
     id: artistId,
-    ...formattedArtist,
+    account_id,
+    name,
+    image,
+    instruction,
+    knowledges,
+    label,
+    account_socials,
   };
 }

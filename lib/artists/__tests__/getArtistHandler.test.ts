@@ -45,6 +45,7 @@ describe("getArtistHandler", () => {
       artistId: validUuid,
       requesterAccountId: validUuid,
     });
+    vi.mocked(validateAccountIdOverride).mockResolvedValue({ accountId: validUuid });
     vi.mocked(getArtistById).mockResolvedValue(null);
 
     const req = new NextRequest(`http://localhost/api/artists/${validUuid}`);
@@ -53,6 +54,10 @@ describe("getArtistHandler", () => {
 
     expect(res.status).toBe(404);
     expect(body.error).toBe("Artist not found");
+    expect(validateAccountIdOverride).toHaveBeenCalledWith({
+      currentAccountId: validUuid,
+      targetAccountId: validUuid,
+    });
   });
 
   it("returns 200 with the merged artist payload", async () => {
@@ -101,12 +106,6 @@ describe("getArtistHandler", () => {
       artistId: validUuid,
       requesterAccountId: "11111111-1111-4111-8111-111111111111",
     });
-    vi.mocked(getArtistById).mockResolvedValue({
-      account_id: validUuid,
-      id: validUuid,
-      name: "Test Artist",
-      account_socials: [],
-    } as never);
     vi.mocked(validateAccountIdOverride).mockResolvedValue(
       NextResponse.json({ status: "error", error: "forbidden" }, { status: 403 }),
     );
@@ -115,5 +114,6 @@ describe("getArtistHandler", () => {
     const res = await getArtistHandler(req, Promise.resolve({ id: validUuid }));
 
     expect(res.status).toBe(403);
+    expect(getArtistById).not.toHaveBeenCalled();
   });
 });
