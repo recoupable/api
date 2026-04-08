@@ -27,7 +27,7 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       );
 
       // Extract audio/image attachments from the Slack message
-      const { songUrl, imageUrl } = await extractMessageAttachments(message);
+      const { songUrl, imageUrls } = await extractMessageAttachments(message);
 
       // Resolve artist slug
       const artistSlug = await resolveArtistSlug(artistAccountId);
@@ -72,8 +72,8 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       if (songUrl) {
         details.push("- Audio: attached file");
       }
-      if (imageUrl) {
-        details.push("- Image: attached file (face guide)");
+      if (imageUrls.length > 0) {
+        details.push(`- Images: ${imageUrls.length} attached`);
       }
       await thread.post(
         `Generating content...\n${details.join("\n")}\n\nI'll reply here when ready (~5-10 min).`,
@@ -92,7 +92,7 @@ export function registerOnNewMention(bot: ContentAgentBot) {
         upscale,
         githubRepo,
         ...(allSongs.length > 0 && { songs: allSongs }),
-        ...(imageUrl && { images: [imageUrl] }),
+        ...(imageUrls.length > 0 && { images: imageUrls }),
       };
 
       const results = await Promise.allSettled(
