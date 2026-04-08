@@ -66,7 +66,7 @@ export default async function getGeneralAgent(body: ChatRequestBody): Promise<Ro
     },
     providerOptions: {
       anthropic: {
-        thinking: { type: "disabled" },
+        thinking: { type: "enabled", budgetTokens: 12000 },
       } satisfies AnthropicProviderOptions,
       google: {
         thinkingConfig: {

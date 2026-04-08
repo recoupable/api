@@ -1,5 +1,5 @@
 import { LanguageModel, ModelMessage, StepResult, ToolSet } from "ai";
-import { PrepareStepResult, TOOL_CHAINS, TOOL_MODEL_MAP } from "./toolChains";
+import { PrepareStepResult, TOOL_CHAIN_FALLBACK_MODEL, TOOL_CHAINS, TOOL_MODEL_MAP } from "./toolChains";
 import getExecutedToolTimeline from "./getExecutedToolTimeline";
 
 type PrepareStepOptions = {
@@ -57,11 +57,7 @@ const getPrepareStepResult = (options: PrepareStepOptions): PrepareStepResult | 
         result.messages = options.messages.concat(nextToolItem.messages);
       }
 
-      // Add model if specified for this tool
-      const model = TOOL_MODEL_MAP[nextToolItem.toolName];
-      if (model) {
-        result.model = model;
-      }
+      result.model = TOOL_MODEL_MAP[nextToolItem.toolName] || TOOL_CHAIN_FALLBACK_MODEL;
 
       return result;
     }

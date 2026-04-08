@@ -480,7 +480,7 @@ describe("getGeneralAgent", () => {
       expect(settings.providerOptions).toBeDefined();
       expect(settings.providerOptions.anthropic).toEqual(
         expect.objectContaining({
-          thinking: { type: "disabled" },
+          thinking: { type: "enabled", budgetTokens: 12000 },
         }),
       );
       expect(settings.providerOptions.google).toEqual(

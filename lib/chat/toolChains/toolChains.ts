@@ -15,11 +15,13 @@ export type PrepareStepResult = {
   messages?: ModelMessage[];
 };
 
+// Forced toolChoice is incompatible with Anthropic extended thinking.
+// Tool chain steps use this model unless overridden by TOOL_MODEL_MAP.
+export const TOOL_CHAIN_FALLBACK_MODEL: LanguageModel = "openai/gpt-5-mini";
+
 // Map specific tools to their required models
 export const TOOL_MODEL_MAP: Record<string, LanguageModel> = {
   update_account_info: "gemini-2.5-pro",
-  // Add other tools that need specific models here
-  // e.g., create_segments: "gpt-4-turbo",
 };
 
 // Map trigger tool -> sequence AFTER trigger
