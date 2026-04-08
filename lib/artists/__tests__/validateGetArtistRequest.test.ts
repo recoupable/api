@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateGetArtistRequest } from "../validateGetArtistRequest";
 import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { validateAccountIdOverride } from "@/lib/auth/validateAccountIdOverride";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -14,6 +15,10 @@ vi.mock("@/lib/accounts/validateAccountParams", () => ({
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
+}));
+
+vi.mock("@/lib/auth/validateAccountIdOverride", () => ({
+  validateAccountIdOverride: vi.fn(),
 }));
 
 const validUuid = "550e8400-e29b-41d4-a716-446655440000";
@@ -48,6 +53,29 @@ describe("validateGetArtistRequest", () => {
     expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(401);
     expect(validateAuthContext).toHaveBeenCalledWith(req);
+    expect(validateAccountIdOverride).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when the authenticated account cannot access the artist", async () => {
+    vi.mocked(validateAccountParams).mockReturnValue({ id: validUuid });
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "11111111-1111-4111-8111-111111111111",
+      orgId: null,
+      authToken: "token",
+    });
+    vi.mocked(validateAccountIdOverride).mockResolvedValue(
+      NextResponse.json({ status: "error", error: "forbidden" }, { status: 403 }),
+    );
+
+    const req = new NextRequest(`http://localhost/api/artists/${validUuid}`);
+    const result = await validateGetArtistRequest(req, validUuid);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(403);
+    expect(validateAccountIdOverride).toHaveBeenCalledWith({
+      currentAccountId: "11111111-1111-4111-8111-111111111111",
+      targetAccountId: validUuid,
+    });
   });
 
   it("returns the validated artist id when auth succeeds", async () => {
@@ -57,6 +85,7 @@ describe("validateGetArtistRequest", () => {
       orgId: null,
       authToken: "token",
     });
+    vi.mocked(validateAccountIdOverride).mockResolvedValue({ accountId: validUuid });
 
     const req = new NextRequest(`http://localhost/api/artists/${validUuid}`);
     const result = await validateGetArtistRequest(req, validUuid);
@@ -67,5 +96,9 @@ describe("validateGetArtistRequest", () => {
     });
     expect(validateAccountParams).toHaveBeenCalledWith(validUuid);
     expect(validateAuthContext).toHaveBeenCalledWith(req);
+    expect(validateAccountIdOverride).toHaveBeenCalledWith({
+      currentAccountId: validUuid,
+      targetAccountId: validUuid,
+    });
   });
 });

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetArtistRequest } from "@/lib/artists/validateGetArtistRequest";
 import { getArtistById } from "@/lib/artists/getArtistById";
-import { validateAccountIdOverride } from "@/lib/auth/validateAccountIdOverride";
 
 /**
  * Handler for retrieving a single artist detail by account ID.
@@ -21,14 +20,6 @@ export async function getArtistHandler(
     const validatedRequest = await validateGetArtistRequest(request, id);
     if (validatedRequest instanceof NextResponse) {
       return validatedRequest;
-    }
-
-    const accessResult = await validateAccountIdOverride({
-      currentAccountId: validatedRequest.requesterAccountId,
-      targetAccountId: validatedRequest.artistId,
-    });
-    if (accessResult instanceof NextResponse) {
-      return accessResult;
     }
 
     const artist = await getArtistById(validatedRequest.artistId);

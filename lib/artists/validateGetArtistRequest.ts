@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { validateAccountIdOverride } from "@/lib/auth/validateAccountIdOverride";
 
 export interface GetArtistRequest {
   artistId: string;
@@ -28,8 +29,16 @@ export async function validateGetArtistRequest(
     return authResult;
   }
 
+  const overrideResult = await validateAccountIdOverride({
+    currentAccountId: authResult.accountId,
+    targetAccountId: validatedParams.id,
+  });
+  if (overrideResult instanceof NextResponse) {
+    return overrideResult;
+  }
+
   return {
-    artistId: validatedParams.id,
+    artistId: overrideResult.accountId,
     requesterAccountId: authResult.accountId,
   };
 }
