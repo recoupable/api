@@ -4,10 +4,8 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import {
-  DEFAULT_CONTENT_TEMPLATE,
-  isSupportedContentTemplate,
-} from "@/lib/content/contentTemplates";
+import { DEFAULT_CONTENT_TEMPLATE } from "@/lib/content/contentTemplates";
+import { isSupportedContentTemplate } from "@/lib/content/isSupportedContentTemplate";
 import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
 import { songsSchema } from "@/lib/content/songsSchema";
 
