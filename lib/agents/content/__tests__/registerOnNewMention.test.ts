@@ -83,7 +83,7 @@ describe("registerOnNewMention", () => {
     vi.clearAllMocks();
     vi.mocked(extractMessageAttachments).mockResolvedValue({
       songUrl: null,
-      imageUrl: null,
+      imageUrls: [],
     });
   });
 
@@ -299,7 +299,7 @@ describe("registerOnNewMention", () => {
     } as never);
     vi.mocked(extractMessageAttachments).mockResolvedValue({
       songUrl: "https://blob.vercel-storage.com/song.mp3",
-      imageUrl: null,
+      imageUrls: [],
     });
     vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
@@ -329,7 +329,7 @@ describe("registerOnNewMention", () => {
     } as never);
     vi.mocked(extractMessageAttachments).mockResolvedValue({
       songUrl: null,
-      imageUrl: "https://blob.vercel-storage.com/face.png",
+      imageUrls: ["https://blob.vercel-storage.com/face.png"],
     });
     vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
@@ -341,6 +341,47 @@ describe("registerOnNewMention", () => {
     expect(triggerCreateContent).toHaveBeenCalledWith(
       expect.objectContaining({
         images: ["https://blob.vercel-storage.com/face.png"],
+      }),
+    );
+  });
+
+  it("passes all image URLs when multiple images are attached", async () => {
+    const bot = createMockBot();
+    registerOnNewMention(bot as never);
+
+    vi.mocked(parseContentPrompt).mockResolvedValue({
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-release-editorial",
+    });
+    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
+    vi.mocked(getArtistContentReadiness).mockResolvedValue({
+      githubRepo: "https://github.com/test/repo",
+    } as never);
+    vi.mocked(extractMessageAttachments).mockResolvedValue({
+      songUrl: null,
+      imageUrls: [
+        "https://blob.vercel-storage.com/face.png",
+        "https://blob.vercel-storage.com/cover1.png",
+        "https://blob.vercel-storage.com/cover2.png",
+      ],
+    });
+    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+
+    const thread = createMockThread();
+    const message = createMockMessage("make an editorial video");
+    await bot.getHandler()!(thread, message);
+
+    expect(triggerCreateContent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        images: [
+          "https://blob.vercel-storage.com/face.png",
+          "https://blob.vercel-storage.com/cover1.png",
+          "https://blob.vercel-storage.com/cover2.png",
+        ],
       }),
     );
   });
@@ -388,7 +429,7 @@ describe("registerOnNewMention", () => {
     } as never);
     vi.mocked(extractMessageAttachments).mockResolvedValue({
       songUrl: "https://blob.vercel-storage.com/song.mp3",
-      imageUrl: "https://blob.vercel-storage.com/face.png",
+      imageUrls: ["https://blob.vercel-storage.com/face.png"],
     });
     vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
@@ -399,7 +440,7 @@ describe("registerOnNewMention", () => {
 
     const ackMessage = thread.post.mock.calls[0][0] as string;
     expect(ackMessage).toContain("Audio: attached file");
-    expect(ackMessage).toContain("Image: attached file");
+    expect(ackMessage).toContain("Images: 1 attached");
   });
 
   it("includes song names in acknowledgment message", async () => {
