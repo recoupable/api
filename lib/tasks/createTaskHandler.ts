@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateCreateTaskBody } from "@/lib/tasks/validateCreateTaskBody";
+import { validateCreateTaskRequest } from "@/lib/tasks/validateCreateTaskBody";
 import { createTask } from "@/lib/tasks/createTask";
 
 /**
@@ -20,9 +20,7 @@ import { createTask } from "@/lib/tasks/createTask";
  */
 export async function createTaskHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const body = await request.json();
-
-    const validatedBody = validateCreateTaskBody(body);
+    const validatedBody = await validateCreateTaskRequest(request);
     if (validatedBody instanceof NextResponse) {
       return validatedBody;
     }

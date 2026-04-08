@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { z } from "zod";
 
 export const createTaskBodySchema = z.object({
@@ -61,4 +62,41 @@ export function validateCreateTaskBody(body: unknown): NextResponse | CreateTask
   }
 
   return validationResult.data;
+}
+
+/**
+ * Validates POST /api/tasks: JSON body, Zod schema, and auth + account_id override (same rules as other endpoints).
+ *
+ * @param request - The incoming Next.js request
+ * @returns Error response or {@link CreateTaskBody} with account_id set from resolved auth context
+ */
+export async function validateCreateTaskRequest(
+  request: NextRequest,
+): Promise<NextResponse | CreateTaskBody> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { status: "error", error: "Invalid JSON body" },
+      { status: 400, headers: getCorsHeaders() },
+    );
+  }
+
+  const validatedBody = validateCreateTaskBody(body);
+  if (validatedBody instanceof NextResponse) {
+    return validatedBody;
+  }
+
+  const auth = await validateAuthContext(request, {
+    accountId: validatedBody.account_id,
+  });
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
+  return {
+    ...validatedBody,
+    account_id: auth.accountId,
+  };
 }
