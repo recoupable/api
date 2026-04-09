@@ -96,7 +96,11 @@ describe("getResearchTrackPlaylistsHandler", () => {
     vi.mocked(proxyToChartmetric).mockResolvedValue({
       data: [
         {
-          playlist: { name: "Chill Vibes", image_url: "https://i.scdn.co/image/abc", editorial: true },
+          playlist: {
+            name: "Chill Vibes",
+            image_url: "https://i.scdn.co/image/abc",
+            editorial: true,
+          },
           track: { name: "God's Plan", cm_track: 18220712 },
         },
       ],
@@ -151,11 +155,11 @@ describe("getResearchTrackPlaylistsHandler", () => {
       authToken: "token",
     });
 
-    vi.mocked(resolveTrack).mockResolvedValue({ error: "No track found matching \"nonexistent song\"" });
+    vi.mocked(resolveTrack).mockResolvedValue({
+      error: 'No track found matching "nonexistent song"',
+    });
 
-    const req = new NextRequest(
-      "http://localhost/api/research/track/playlists?q=nonexistent+song",
-    );
+    const req = new NextRequest("http://localhost/api/research/track/playlists?q=nonexistent+song");
     const res = await getResearchTrackPlaylistsHandler(req);
     expect(res.status).toBe(404);
   });

@@ -13,14 +13,8 @@ import { deductCredits } from "@/lib/credits/deductCredits";
 const VALID_PLATFORMS = ["spotify", "applemusic", "deezer", "amazon"];
 
 const schema = z.object({
-  id: z
-    .string()
-    .optional()
-    .describe("Chartmetric track ID. Provide this or q."),
-  q: z
-    .string()
-    .optional()
-    .describe("Track name to search for. Provide this or id."),
+  id: z.string().optional().describe("Chartmetric track ID. Provide this or q."),
+  q: z.string().optional().describe("Track name to search for. Provide this or id."),
   artist: z
     .string()
     .optional()
