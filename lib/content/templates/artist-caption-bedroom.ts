@@ -1,4 +1,4 @@
-import type { Template } from "./index";
+import type { Template } from "./types";
 
 const template: Template = {
   id: "artist-caption-bedroom",
