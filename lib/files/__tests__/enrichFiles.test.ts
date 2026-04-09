@@ -78,6 +78,27 @@ describe("enrichFiles", () => {
     });
   });
 
+  it("uses the most recently updated email when an owner has multiple rows", async () => {
+    vi.mocked(selectAccountEmails).mockResolvedValue([
+      {
+        id: "email-older",
+        account_id: "550e8400-e29b-41d4-a716-446655440100",
+        email: "older@example.com",
+        updated_at: "2026-04-08T00:00:00.000Z",
+      },
+      {
+        id: "email-newer",
+        account_id: "550e8400-e29b-41d4-a716-446655440100",
+        email: "newer@example.com",
+        updated_at: "2026-04-09T00:00:00.000Z",
+      },
+    ]);
+
+    const result = await enrichFiles([baseFile]);
+
+    expect(result).toEqual([{ ...baseFile, owner_email: "newer@example.com" }]);
+  });
+
   it("returns an empty array without fetching emails when no files match", async () => {
     const result = await enrichFiles([]);
 
