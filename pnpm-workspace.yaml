@@ -1,1 +1,3 @@
-onlyBuiltDependencies: '@coinbase/x402'
+packages: []
+onlyBuiltDependencies:
+  - "@coinbase/x402"
