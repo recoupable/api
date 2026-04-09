@@ -4,7 +4,7 @@ import { fal } from "@fal-ai/client";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "./validatePrimitiveBody";
-import { configureFal } from "./configureFal";
+import { configureFal } from "@/lib/fal/server";
 import { createImageBodySchema } from "./schemas";
 import { loadTemplate } from "@/lib/content/templates";
 
