@@ -1,0 +1,147 @@
+import type { Template } from "./types";
+
+const template: Template = {
+  id: "artist-caption-outside",
+  description:
+    "Night street scene. Artist on camera, phone-on-ground angle, urban cinematic feel. Confident short captions. Vertical 9:16 video, 8 seconds. Best for: confident tracks, urban energy, night vibes. Requires: face image, audio.",
+  image: {
+    prompt:
+      "A person standing outside at night, phone propped on the ground filming them. Low angle, full body shot. Street lights and city glow. Real phone footage feel, slightly shaky framing.",
+    reference_images: [
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-outside/ref-01.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1vdXRzaWRlL3JlZi0wMS5wbmciLCJpYXQiOjE3NzUxODUwNTQsImV4cCI6MTgwNjcyMTA1NH0.xV77akF4oFtZGjCkn1roI9M9vPGE96Ux_ZvT5wWgEKA",
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-outside/ref-02.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1vdXRzaWRlL3JlZi0wMi5wbmciLCJpYXQiOjE3NzUxODUwNTQsImV4cCI6MTgwNjcyMTA1NH0.EljTa5aA6egBf4KXPFCjwsZojOZ7S9QgOEyIiH9HjKE",
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-outside/ref-03.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1vdXRzaWRlL3JlZi0wMy5wbmciLCJpYXQiOjE3NzUxODUwNTQsImV4cCI6MTgwNjcyMTA1NH0.pi6r-0q6cxRwbYMso0h5LtacMonbcEUJYtuLoOJdWdU",
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-outside/ref-04.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1vdXRzaWRlL3JlZi0wNC5wbmciLCJpYXQiOjE3NzUxODUwNTQsImV4cCI6MTgwNjcyMTA1NH0.uCQaIDaLv2YM7wMf-6LnfJh3r_A8pu-7i3FNjuQHRUs",
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-outside/ref-05.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1vdXRzaWRlL3JlZi0wNS5wbmciLCJpYXQiOjE3NzUxODUwNTQsImV4cCI6MTgwNjcyMTA1NH0.EA3lTITRof9pSUJ3KxzK9ZgYEIsWkGXPcPMSCGDVfHg",
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-outside/ref-06.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1vdXRzaWRlL3JlZi0wNi5wbmciLCJpYXQiOjE3NzUxODUwNTQsImV4cCI6MTgwNjcyMTA1NH0.qXjexkFDzRrPvYso-_WJUH66No1PXUzNow7jdEw04cc",
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-outside/ref-07.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1vdXRzaWRlL3JlZi0wNy5wbmciLCJpYXQiOjE3NzUxODUwNTQsImV4cCI6MTgwNjcyMTA1NH0.2oExeNxOGr7KEEo5zWThgZWaZhJnnooPWsXj6Gp_4jU",
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-outside/ref-08.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1vdXRzaWRlL3JlZi0wOC5wbmciLCJpYXQiOjE3NzUxODUwNTUsImV4cCI6MTgwNjcyMTA1NX0.LDCXObRzgYJSPs4IoXtY9pinb1gCO1iVgb9-uX-JMv8",
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-outside/ref-09.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1vdXRzaWRlL3JlZi0wOS5wbmciLCJpYXQiOjE3NzUxODUwNTUsImV4cCI6MTgwNjcyMTA1NX0.WD5xCYsI3klZHS2cVsrXW6T_x7bdVku22EdD7qkazDs",
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-outside/ref-10.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1vdXRzaWRlL3JlZi0xMC5wbmciLCJpYXQiOjE3NzUxODUwNTUsImV4cCI6MTgwNjcyMTA1NX0.VfN889NyKAPLKDT6IQVTRzLH4_cegNUGuX3P3bN4oy4",
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-outside/ref-11.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1vdXRzaWRlL3JlZi0xMS5wbmciLCJpYXQiOjE3NzUxODUwNTUsImV4cCI6MTgwNjcyMTA1NX0.Z1IQGbIeKombxFIAO-Y2YqYF1s8MBsggx1JR1_oFshM",
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-outside/ref-12.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1vdXRzaWRlL3JlZi0xMi5wbmciLCJpYXQiOjE3NzUxODUwNTUsImV4cCI6MTgwNjcyMTA1NX0.Ch498MgcnLZcUOAESkbwulqS30ZJn5cL0sCLknsB8es",
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-outside/ref-13.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1vdXRzaWRlL3JlZi0xMy5wbmciLCJpYXQiOjE3NzUxODUwNTUsImV4cCI6MTgwNjcyMTA1NX0.Euiy_gmg3dXaafDS1MCm_IGV3SDvyOmWUja13SffxqQ",
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-outside/ref-14.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1vdXRzaWRlL3JlZi0xNC5wbmciLCJpYXQiOjE3NzUxODUwNTUsImV4cCI6MTgwNjcyMTA1NX0.RvaxLUBmArSzTjDAzOcSpF3VUfxPIBw98nmNt5f2zjU",
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-outside/ref-15.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1vdXRzaWRlL3JlZi0xNS5wbmciLCJpYXQiOjE3NzUxODUwNTUsImV4cCI6MTgwNjcyMTA1NX0.UA30E9V-f-euLuAlWyFKt6zoR7J9BAfUdOzuz7-gNJY",
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-outside/ref-16.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1vdXRzaWRlL3JlZi0xNi5wbmciLCJpYXQiOjE3NzUxODUwNTUsImV4cCI6MTgwNjcyMTA1NX0.s6kmLCjl87FSBGbQ25fGr41YsWndLgot-Spc01WLYxo",
+    ],
+    style_rules: {
+      camera: {
+        type: "iPhone propped on the sidewalk, recording video",
+        angle:
+          "very low, ground level, looking up at the person. Slightly tilted because the phone is leaning against something",
+        quality:
+          "iPhone night mode video — auto-exposure pumping, digital noise everywhere, slight purple fringing on bright lights, compressed quality",
+      },
+      environment: {
+        feel: "somewhere outside at night, wherever they happen to be — doesn't matter where",
+        lighting:
+          "whatever light sources are nearby — street lamps, porch lights, car headlights, neon signs, gas station lights. Uneven, one-directional, casting harsh shadows. Not controlled.",
+        backgrounds:
+          "real places — parking lot, sidewalk, driveway, park, alley, outside a store, under a street light, by a fence. Blurry background details, messy and unplanned.",
+        avoid:
+          "daytime, even lighting, clean or curated backgrounds, professional photography, perfectly exposed, obviously staged locations",
+      },
+      subject: {
+        expression: "deadpan, unbothered, too cool to care about the camera",
+        pose: "full body, standing naturally, weight on one leg, hands in pockets or at sides, not posing",
+        clothing: "dark oversized hoodie or jacket, baggy jeans or cargo pants, dark shoes",
+        framing:
+          "full body visible head to toe, person takes up about 50-60% of the frame height, space around them, ground visible at bottom",
+      },
+      realism: {
+        priority:
+          "MUST look like a real iPhone video screenshot, not AI. if it looks clean or polished it has failed",
+        texture:
+          "heavy digital noise in all dark areas, visible JPEG artifacts, color banding in the sky, slight motion blur on any movement",
+        imperfections:
+          "lens flare streaking across frame from street lights, blown out highlights that are pure white, slightly warm color cast from sodium lamps, the ground has texture and cracks, shadows are noisy not smooth",
+        avoid:
+          "clean noise-free images, perfect skin, sharp focus on everything, symmetrical composition, studio quality, smooth gradients, any sign of AI generation, evenly lit scenes",
+      },
+    },
+  },
+  video: {
+    moods: [
+      "numb, checked out, staring through the camera not at it",
+      "melancholy, like they just remembered something they were trying to forget",
+      "quietly amused, like they heard a joke only they understand",
+      "vulnerable, guard is down, too tired to pretend",
+      "bored but in a way that's almost peaceful",
+      "restless, like they want to say something but won't",
+      "defiant, calm anger, daring you to say something",
+      "lonely but pretending they're fine",
+      "soft, gentle, like they're about to whisper a secret",
+      "dissociating, physically present but mentally somewhere else",
+    ],
+    movements: [
+      "standing still with hands in pockets, staring at the camera",
+      "slowly turns around so their back faces the camera",
+      "looks down at the ground and kicks at it with their shoe",
+      "does a small shrug like whatever",
+      "blows a bubble with gum",
+      "slowly puts their hood up",
+      "does a slow lazy spin",
+      "waves at the camera sarcastically",
+      "starts to walk away, stops, looks back",
+      "sits down on the ground cross legged",
+      "leans against a wall with arms crossed",
+      "throws up a peace sign without changing expression",
+      "tosses something small in the air and catches it",
+      "mouths the words to the song playing",
+      "zones out looking up at the sky",
+      "pulls out phone, looks at it, puts it back",
+    ],
+  },
+  caption: {
+    guide: {
+      templateStyle:
+        "deadpan selfie with music playing — artist staring at camera, too cool to care",
+      captionRole:
+        "the caption is the hook. short, blunt, makes someone stop scrolling. inspired by the songs vibe, not a quote from it.",
+      tone: "deadpan, low effort, like you typed it with one thumb while bored",
+      rules: [
+        "lowercase only",
+        "SHORTER IS ALWAYS BETTER. aim for 20-50 characters. never exceed 60",
+        "no punctuation at the end",
+        "no apostrophes or quotes — write whats up not what's up, write dont not don't",
+        "never promotional",
+        "never describe whats in the video",
+        "dont quote the lyrics directly — riff on the vibe instead",
+        "dont try to be clever or poetic. be blunt and simple",
+        "if it sounds like an AI wrote it, its too long and too try-hard. simplify",
+        "think: what would a bored teenager type as a caption in 3 seconds",
+      ],
+      formats: [
+        "a blunt confession (6-10 words max)",
+        "a 'date idea:' or 'pov:' setup (keep it short)",
+        "a self-deprecating one-liner",
+        "a hyper-specific relatable moment in as few words as possible",
+        "something dumb that somehow hits hard",
+      ],
+    },
+    examples: [
+      "i still keep our photos in the hidden folder in my camera roll in case you come back to me",
+      "i'm touring 14 cities in north america this summer (i'm just looking for the girl i wrote my songs abt cause she won't text me back)",
+      "date idea: we erase our past and fall back in love so i can unwrite this song",
+      "if anyone could've saved me",
+      "this came out 8 months ago and caroline still hasn't texted me back",
+      "it's always 'imy' and never 'islfyiebinfy'",
+    ],
+  },
+  edit: {
+    operations: [
+      { type: "crop", aspect: "9:16" },
+      {
+        type: "overlay_text",
+        color: "white",
+        stroke_color: "black",
+        position: "bottom",
+        max_font_size: 42,
+      },
+      { type: "mux_audio", replace: true },
+    ],
+  },
+};
+
+export default template;
