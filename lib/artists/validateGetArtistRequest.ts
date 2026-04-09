@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { validateAccountIdOverride } from "@/lib/auth/validateAccountIdOverride";
+import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 
 export interface GetArtistRequest {
   artistId: string;
@@ -29,16 +30,22 @@ export async function validateGetArtistRequest(
     return authResult;
   }
 
-  const overrideResult = await validateAccountIdOverride({
-    currentAccountId: authResult.accountId,
-    targetAccountId: validatedParams.id,
-  });
-  if (overrideResult instanceof NextResponse) {
-    return overrideResult;
+  if (validatedParams.id !== authResult.accountId) {
+    const hasArtistAccess = await checkAccountArtistAccess(
+      authResult.accountId,
+      validatedParams.id,
+    );
+
+    if (!hasArtistAccess) {
+      return NextResponse.json(
+        { status: "error", error: "Access denied to specified artist" },
+        { status: 403, headers: getCorsHeaders() },
+      );
+    }
   }
 
   return {
-    artistId: overrideResult.accountId,
+    artistId: validatedParams.id,
     requesterAccountId: authResult.accountId,
   };
 }
