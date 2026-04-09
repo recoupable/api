@@ -4,7 +4,6 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { DEFAULT_CONTENT_TEMPLATE } from "@/lib/content/contentTemplates";
 import { isSupportedContentTemplate } from "@/lib/content/isSupportedContentTemplate";
 import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
 import { songsSchema } from "@/lib/content/songsSchema";
@@ -15,11 +14,7 @@ export const createContentBodySchema = z.object({
   artist_account_id: z
     .string({ message: "artist_account_id is required" })
     .uuid("artist_account_id must be a valid UUID"),
-  template: z
-    .string()
-    .min(1, "template cannot be empty")
-    .optional()
-    .default(DEFAULT_CONTENT_TEMPLATE),
+  template: z.string().min(1, "template cannot be empty").optional(),
   lipsync: z.boolean().optional().default(false),
   caption_length: z.enum(CAPTION_LENGTHS).optional().default("short"),
   upscale: z.boolean().optional().default(false),
@@ -32,7 +27,7 @@ export type ValidatedCreateContentBody = {
   accountId: string;
   artistAccountId: string;
   artistSlug: string;
-  template: string;
+  template?: string;
   lipsync: boolean;
   captionLength: "short" | "medium" | "long";
   upscale: boolean;
@@ -70,8 +65,8 @@ export async function validateCreateContentBody(
     return authResult;
   }
 
-  const template = result.data.template ?? DEFAULT_CONTENT_TEMPLATE;
-  if (!isSupportedContentTemplate(template)) {
+  const template = result.data.template;
+  if (template && !isSupportedContentTemplate(template)) {
     return NextResponse.json(
       {
         status: "error",
