@@ -3,9 +3,9 @@ import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/proto
 import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
+import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
-import { callContentEndpoint } from "./callContentEndpoint";
 
 const inputSchema = z.object({});
 
@@ -28,14 +28,25 @@ export function registerListContentTemplatesTool(server: McpServer): void {
       extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
     ) => {
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
-      const { data, error } = await callContentEndpoint(
-        "/api/content/templates",
-        "GET",
-        undefined,
+      const { accountId, error: authError } = await resolveAccountId({
         authInfo,
-      );
+        accountIdOverride: undefined,
+      });
+      if (authError) return getToolResultError(authError);
+      if (!accountId) return getToolResultError("Authentication required.");
 
-      if (error) return getToolResultError(error);
+      const apiKey = authInfo?.token;
+      if (!apiKey) return getToolResultError("API key required.");
+
+      const API_BASE = process.env.RECOUP_API_URL || "https://recoup-api.vercel.app";
+      const response = await fetch(`${API_BASE}/api/content/templates`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+      });
+
+      const data = await response.json();
+      if (!response.ok)
+        return getToolResultError(data.error || `Request failed: ${response.status}`);
       return getToolResultSuccess(data);
     },
   );
