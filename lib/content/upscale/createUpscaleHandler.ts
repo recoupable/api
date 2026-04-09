@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "@/lib/content/validatePrimitiveBody";
-import fal from "@/lib/fal/server";
 import { createUpscaleBodySchema } from "@/lib/content/schemas";
+import { upscaleMedia } from "./upscaleMedia";
 
 /**
  * POST /api/content/upscale
@@ -20,41 +20,12 @@ export async function createUpscaleHandler(request: NextRequest): Promise<NextRe
   if (validated instanceof NextResponse) return validated;
 
   try {
-    const model =
-      validated.type === "video" ? "fal-ai/seedvr/upscale/video" : "fal-ai/seedvr/upscale/image";
-
-    const inputKey = validated.type === "video" ? "video_url" : "image_url";
-
-    const input: Record<string, unknown> = {
-      [inputKey]: validated.url,
-      upscale_factor: validated.upscale_factor,
-    };
-    if (validated.target_resolution) {
-      input.upscale_mode = "target";
-      input.target_resolution = validated.target_resolution;
-    }
-
-    const result = await fal.subscribe(model as string, { input });
-
-    const resultData = result.data as Record<string, unknown>;
-    const url =
-      validated.type === "video"
-        ? ((resultData?.video as Record<string, unknown>)?.url as string | undefined)
-        : ((resultData?.image as Record<string, unknown>)?.url as string | undefined);
-
-    if (!url) {
-      return NextResponse.json(
-        { status: "error", error: "Upscale returned no result" },
-        { status: 502, headers: getCorsHeaders() },
-      );
-    }
-
+    const url = await upscaleMedia(validated);
     return NextResponse.json({ url }, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
     console.error("Upscale error:", error);
-    return NextResponse.json(
-      { status: "error", error: "Upscale failed" },
-      { status: 500, headers: getCorsHeaders() },
-    );
+    const message = error instanceof Error ? error.message : "Upscale failed";
+    const status = message.includes("no result") ? 502 : 500;
+    return NextResponse.json({ status: "error", error: message }, { status, headers: getCorsHeaders() });
   }
 }

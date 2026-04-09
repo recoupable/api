@@ -3,10 +3,8 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "@/lib/content/validatePrimitiveBody";
-import fal from "@/lib/fal/server";
 import { createAudioBodySchema } from "@/lib/content/schemas";
-
-const DEFAULT_MODEL = "fal-ai/whisper";
+import { transcribeAudio } from "./transcribeAudio";
 
 /**
  * POST /api/content/transcribe
@@ -22,39 +20,8 @@ export async function createAudioHandler(request: NextRequest): Promise<NextResp
   if (validated instanceof NextResponse) return validated;
 
   try {
-    const audioUrl = validated.audio_urls[0];
-
-    const result = await fal.subscribe(validated.model ?? DEFAULT_MODEL, {
-      input: {
-        audio_url: audioUrl,
-        task: "transcribe",
-        chunk_level: validated.chunk_level,
-        language: validated.language,
-        diarize: validated.diarize,
-      },
-    });
-
-    const whisperData = result.data as unknown as {
-      text?: string;
-      chunks?: Array<{ timestamp: number[]; text: string }>;
-    };
-
-    const fullLyrics = whisperData.text ?? "";
-    const segments = (whisperData.chunks ?? []).map(chunk => ({
-      start: chunk.timestamp[0] ?? 0,
-      end: chunk.timestamp[1] ?? 0,
-      text: chunk.text?.trim() ?? "",
-    }));
-
-    return NextResponse.json(
-      {
-        audioUrl,
-        fullLyrics,
-        segments,
-        segmentCount: segments.length,
-      },
-      { status: 200, headers: getCorsHeaders() },
-    );
+    const result = await transcribeAudio(validated);
+    return NextResponse.json(result, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
     console.error("Audio processing error:", error);
     return NextResponse.json(
