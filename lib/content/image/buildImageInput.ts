@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { createImageBodySchema } from "@/lib/content/schemas";
+import type { createImageBodySchema } from "./validateCreateImageBody";
 import { loadTemplate } from "@/lib/content/templates";
 
 const DEFAULT_T2I_MODEL = "fal-ai/nano-banana-2";

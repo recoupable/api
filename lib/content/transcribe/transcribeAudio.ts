@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import fal from "@/lib/fal/server";
-import type { createAudioBodySchema } from "@/lib/content/schemas";
+import type { createAudioBodySchema } from "./validateTranscribeAudioBody";
 
 const DEFAULT_MODEL = "fal-ai/whisper";
 

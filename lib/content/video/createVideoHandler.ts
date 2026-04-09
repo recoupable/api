@@ -1,9 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { validatePrimitiveBody } from "@/lib/content/validatePrimitiveBody";
-import { createVideoBodySchema } from "@/lib/content/schemas";
+import { validateCreateVideoBody } from "./validateCreateVideoBody";
 import { generateVideo } from "./generateVideo";
 
 /**
@@ -13,10 +11,7 @@ import { generateVideo } from "./generateVideo";
  * @returns JSON with the generated video URL.
  */
 export async function createVideoHandler(request: NextRequest): Promise<NextResponse> {
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) return authResult;
-
-  const validated = await validatePrimitiveBody(request, createVideoBodySchema);
+  const validated = await validateCreateVideoBody(request);
   if (validated instanceof NextResponse) return validated;
 
   try {
@@ -26,6 +21,9 @@ export async function createVideoHandler(request: NextRequest): Promise<NextResp
     console.error("Video generation error:", error);
     const message = error instanceof Error ? error.message : "Video generation failed";
     const status = message.includes("no video") ? 502 : 500;
-    return NextResponse.json({ status: "error", error: message }, { status, headers: getCorsHeaders() });
+    return NextResponse.json(
+      { status: "error", error: message },
+      { status, headers: getCorsHeaders() },
+    );
   }
 }

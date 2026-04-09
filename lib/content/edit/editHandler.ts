@@ -1,11 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { triggerPrimitive } from "@/lib/trigger/triggerPrimitive";
-import { validatePrimitiveBody } from "@/lib/content/validatePrimitiveBody";
-import { editBodySchema } from "@/lib/content/schemas";
 import { loadTemplate } from "@/lib/content/templates";
+import { validateEditContentBody } from "./validateEditContentBody";
 
 /**
  * PATCH /api/content
@@ -14,19 +12,16 @@ import { loadTemplate } from "@/lib/content/templates";
  * @returns JSON with the triggered run ID.
  */
 export async function editHandler(request: NextRequest): Promise<NextResponse> {
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) return authResult;
-
-  const validated = await validatePrimitiveBody(request, editBodySchema);
+  const validated = await validateEditContentBody(request);
   if (validated instanceof NextResponse) return validated;
 
   try {
     let operations = validated.operations;
 
     if (!operations && validated.template) {
-      const tpl = loadTemplate(validated.template);
-      if (tpl?.edit.operations) {
-        operations = tpl.edit.operations as typeof operations;
+      const template = loadTemplate(validated.template);
+      if (template?.edit.operations) {
+        operations = template.edit.operations as typeof operations;
       }
     }
 
@@ -35,7 +30,7 @@ export async function editHandler(request: NextRequest): Promise<NextResponse> {
       audioUrl: validated.audio_url,
       operations,
       outputFormat: validated.output_format,
-      accountId: authResult.accountId,
+      accountId: validated.accountId,
     });
 
     return NextResponse.json(

@@ -1,9 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { validatePrimitiveBody } from "@/lib/content/validatePrimitiveBody";
-import { createUpscaleBodySchema } from "@/lib/content/schemas";
+import { validateUpscaleBody } from "./validateUpscaleBody";
 import { upscaleMedia } from "./upscaleMedia";
 
 /**
@@ -13,10 +11,7 @@ import { upscaleMedia } from "./upscaleMedia";
  * @returns JSON with the upscaled URL.
  */
 export async function createUpscaleHandler(request: NextRequest): Promise<NextResponse> {
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) return authResult;
-
-  const validated = await validatePrimitiveBody(request, createUpscaleBodySchema);
+  const validated = await validateUpscaleBody(request);
   if (validated instanceof NextResponse) return validated;
 
   try {
@@ -26,6 +21,9 @@ export async function createUpscaleHandler(request: NextRequest): Promise<NextRe
     console.error("Upscale error:", error);
     const message = error instanceof Error ? error.message : "Upscale failed";
     const status = message.includes("no result") ? 502 : 500;
-    return NextResponse.json({ status: "error", error: message }, { status, headers: getCorsHeaders() });
+    return NextResponse.json(
+      { status: "error", error: message },
+      { status, headers: getCorsHeaders() },
+    );
   }
 }

@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import fal from "@/lib/fal/server";
-import type { createUpscaleBodySchema } from "@/lib/content/schemas";
+import type { createUpscaleBodySchema } from "./validateUpscaleBody";
 
 type UpscaleParams = z.infer<typeof createUpscaleBodySchema>;
 

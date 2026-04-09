@@ -1,9 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { validatePrimitiveBody } from "@/lib/content/validatePrimitiveBody";
-import { createAudioBodySchema } from "@/lib/content/schemas";
+import { validateTranscribeAudioBody } from "./validateTranscribeAudioBody";
 import { transcribeAudio } from "./transcribeAudio";
 
 /**
@@ -13,10 +11,7 @@ import { transcribeAudio } from "./transcribeAudio";
  * @returns JSON with transcription and timestamped segments.
  */
 export async function createAudioHandler(request: NextRequest): Promise<NextResponse> {
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) return authResult;
-
-  const validated = await validatePrimitiveBody(request, createAudioBodySchema);
+  const validated = await validateTranscribeAudioBody(request);
   if (validated instanceof NextResponse) return validated;
 
   try {

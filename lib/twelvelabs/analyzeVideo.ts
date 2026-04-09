@@ -1,12 +1,5 @@
 const TWELVELABS_ANALYZE_URL = "https://api.twelvelabs.io/v1.3/analyze";
 
-export interface AnalyzeVideoParams {
-  videoUrl: string;
-  prompt: string;
-  temperature: number;
-  maxTokens?: number;
-}
-
 export interface AnalyzeVideoResult {
   text: string;
   finishReason: string | null;
@@ -16,11 +9,16 @@ export interface AnalyzeVideoResult {
 /**
  * Call the Twelve Labs video analysis API.
  *
- * @param params - Video URL, prompt, temperature, and optional max tokens.
+ * @param validated - Validated request body with video_url, prompt, temperature, and optional max_tokens.
  * @returns Analysis result with text, finish reason, and usage.
  * @throws Error if TWELVELABS_API_KEY is missing or API call fails.
  */
-export async function analyzeVideo(params: AnalyzeVideoParams): Promise<AnalyzeVideoResult> {
+export async function analyzeVideo(validated: {
+  video_url: string;
+  prompt: string;
+  temperature: number;
+  max_tokens?: number;
+}): Promise<AnalyzeVideoResult> {
   const apiKey = process.env.TWELVELABS_API_KEY;
   if (!apiKey) {
     throw new Error("TWELVELABS_API_KEY is not configured");
@@ -33,11 +31,11 @@ export async function analyzeVideo(params: AnalyzeVideoParams): Promise<AnalyzeV
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      video: { type: "url", url: params.videoUrl },
-      prompt: params.prompt,
-      temperature: params.temperature,
+      video: { type: "url", url: validated.video_url },
+      prompt: validated.prompt,
+      temperature: validated.temperature,
       stream: false,
-      ...(params.maxTokens && { max_tokens: params.maxTokens }),
+      ...(validated.max_tokens && { max_tokens: validated.max_tokens }),
     }),
   });
 

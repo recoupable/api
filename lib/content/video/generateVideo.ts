@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import fal from "@/lib/fal/server";
-import type { createVideoBodySchema } from "@/lib/content/schemas";
+import type { createVideoBodySchema } from "./validateCreateVideoBody";
 import { loadTemplate } from "@/lib/content/templates";
 import { inferMode } from "./inferMode";
 import { buildFalInput } from "./buildFalInput";

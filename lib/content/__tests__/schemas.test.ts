@@ -1,13 +1,17 @@
-import { describe, it, expect } from "vitest";
-import {
-  createImageBodySchema,
-  createVideoBodySchema,
-  createTextBodySchema,
-  createAudioBodySchema,
-  editBodySchema,
-  createUpscaleBodySchema,
-  createAnalyzeBodySchema,
-} from "../schemas";
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("@/lib/supabase/serverClient", () => ({ default: {} }));
+vi.mock("@/lib/auth/validateAuthContext", () => ({
+  validateAuthContext: vi.fn(),
+}));
+
+const { createImageBodySchema } = await import("../image/validateCreateImageBody");
+const { createVideoBodySchema } = await import("../video/validateCreateVideoBody");
+const { createTextBodySchema } = await import("../caption/validateCreateCaptionBody");
+const { createAudioBodySchema } = await import("../transcribe/validateTranscribeAudioBody");
+const { editBodySchema } = await import("../edit/validateEditContentBody");
+const { createUpscaleBodySchema } = await import("../upscale/validateUpscaleBody");
+const { createAnalyzeBodySchema } = await import("../analyze/validateAnalyzeVideoBody");
 
 describe("createImageBodySchema", () => {
   it("parses valid payload with prompt only", () => {
