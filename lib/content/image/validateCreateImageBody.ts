@@ -4,9 +4,10 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { TEMPLATE_IDS } from "@/lib/content/templates";
 
 export const createImageBodySchema = z.object({
-  template: z.string().optional(),
+  template: z.enum(TEMPLATE_IDS).optional(),
   prompt: z.string().optional(),
   reference_image_url: z.string().url().optional(),
   images: z.array(z.string().url()).optional(),

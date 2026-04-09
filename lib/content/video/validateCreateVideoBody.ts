@@ -4,9 +4,10 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { TEMPLATE_IDS } from "@/lib/content/templates";
 
 export const createVideoBodySchema = z.object({
-  template: z.string().optional(),
+  template: z.enum(TEMPLATE_IDS).optional(),
   mode: z.enum(["prompt", "animate", "reference", "extend", "first-last", "lipsync"]).optional(),
   prompt: z.string().optional(),
   image_url: z.string().url().optional(),

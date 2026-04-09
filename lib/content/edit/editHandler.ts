@@ -26,11 +26,8 @@ export async function editHandler(request: NextRequest): Promise<NextResponse> {
     }
 
     const handle = await triggerPrimitive("create-render", {
-      videoUrl: validated.video_url,
-      audioUrl: validated.audio_url,
+      ...validated,
       operations,
-      outputFormat: validated.output_format,
-      accountId: validated.accountId,
     });
 
     return NextResponse.json(

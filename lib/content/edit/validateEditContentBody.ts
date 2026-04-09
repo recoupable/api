@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { TEMPLATE_IDS } from "@/lib/content/templates";
 
 export const editOperationSchema = z.discriminatedUnion("type", [
   z.object({
@@ -42,7 +43,7 @@ export const editBodySchema = z
   .object({
     video_url: z.string().url().optional(),
     audio_url: z.string().url().optional(),
-    template: z.string().optional(),
+    template: z.enum(TEMPLATE_IDS).optional(),
     operations: z.array(editOperationSchema).optional(),
     output_format: z.enum(["mp4", "webm", "mov"]).optional().default("mp4"),
   })

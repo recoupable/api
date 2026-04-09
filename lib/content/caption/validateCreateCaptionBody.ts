@@ -4,10 +4,11 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { TEMPLATE_IDS } from "@/lib/content/templates";
 import { CAPTION_LENGTHS } from "@/lib/content/captionLengths";
 
 export const createTextBodySchema = z.object({
-  template: z.string().optional(),
+  template: z.enum(TEMPLATE_IDS).optional(),
   topic: z.string().min(1),
   length: z.enum(CAPTION_LENGTHS).optional().default("short"),
 });
