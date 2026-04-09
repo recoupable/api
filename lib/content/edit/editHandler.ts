@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { triggerPrimitive } from "@/lib/trigger/triggerPrimitive";
+import { tasks } from "@trigger.dev/sdk";
 import { loadTemplate } from "@/lib/content/templates";
 import { validateEditContentBody } from "./validateEditContentBody";
 
@@ -25,7 +25,7 @@ export async function editHandler(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    const handle = await triggerPrimitive("create-render", {
+    const handle = await tasks.trigger("create-render", {
       ...validated,
       operations,
     });
