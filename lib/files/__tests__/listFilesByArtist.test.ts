@@ -86,6 +86,6 @@ describe("listFilesByArtist", () => {
   it("returns all descendants when recursive is true", async () => {
     const result = await listFilesByArtist("artist-1", "reports", true);
 
-    expect(result.map(file => file.id)).toEqual(["3", "4"]);
+    expect(result.map(file => file.id)).toEqual(["2", "3", "4"]);
   });
 });

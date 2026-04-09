@@ -1,14 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import type { Tables } from "@/types/database.types";
+import { enrichFiles } from "@/lib/files/enrichFiles";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetFilesQuery } from "@/lib/files/validateGetFilesQuery";
 import { listFilesByArtist } from "@/lib/files/listFilesByArtist";
-import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
-
-type ListedFileRecord = Tables<"files"> & {
-  owner_email: string | null;
-};
 
 /**
  * Handles GET /api/files requests.
@@ -28,22 +23,7 @@ export async function getFilesHandler(request: NextRequest): Promise<NextRespons
       validatedQuery.path,
       validatedQuery.recursive,
     );
-
-    const ownerIds = Array.from(new Set(files.map(file => file.owner_account_id)));
-    const ownerEmailRows = ownerIds.length
-      ? await selectAccountEmails({ accountIds: ownerIds })
-      : [];
-
-    const ownerEmails = new Map<string, string | null>();
-    for (const row of ownerEmailRows) {
-      if (!row.account_id || ownerEmails.has(row.account_id)) continue;
-      ownerEmails.set(row.account_id, row.email ?? null);
-    }
-
-    const enrichedFiles: ListedFileRecord[] = files.map(file => ({
-      ...file,
-      owner_email: ownerEmails.get(file.owner_account_id) ?? null,
-    }));
+    const enrichedFiles = await enrichFiles(files);
 
     return NextResponse.json(
       { files: enrichedFiles },

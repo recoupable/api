@@ -26,9 +26,7 @@ export async function listFilesByArtist(
       return allFiles.filter(file => {
         const match = file.storage_key.match(STORAGE_KEY_RELATIVE_PATH_REGEX);
         if (!match) return false;
-        if (!match[1].startsWith(pathPrefix)) return false;
-
-        return match[1] !== pathPrefix;
+        return match[1].startsWith(pathPrefix);
       });
     }
 

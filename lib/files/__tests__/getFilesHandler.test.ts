@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextResponse, type NextRequest } from "next/server";
 import { getFilesHandler } from "../getFilesHandler";
+import { enrichFiles } from "../enrichFiles";
 import { validateGetFilesQuery } from "../validateGetFilesQuery";
 import { listFilesByArtist } from "../listFilesByArtist";
-import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -17,8 +17,8 @@ vi.mock("../listFilesByArtist", () => ({
   listFilesByArtist: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
-  default: vi.fn(),
+vi.mock("../enrichFiles", () => ({
+  enrichFiles: vi.fn(),
 }));
 
 /**
@@ -64,21 +64,14 @@ describe("getFilesHandler", () => {
     expect(result.status).toBe(401);
   });
 
-  it("returns files with owner_email when one exists", async () => {
+  it("returns enriched files", async () => {
     vi.mocked(validateGetFilesQuery).mockResolvedValue({
       artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
       recursive: false,
       requesterAccountId: "acc",
     });
     vi.mocked(listFilesByArtist).mockResolvedValue([baseFile]);
-    vi.mocked(selectAccountEmails).mockResolvedValue([
-      {
-        id: "email-1",
-        account_id: "550e8400-e29b-41d4-a716-446655440100",
-        email: "owner@example.com",
-        updated_at: "2026-04-09T00:00:00.000Z",
-      },
-    ]);
+    vi.mocked(enrichFiles).mockResolvedValue([{ ...baseFile, owner_email: "owner@example.com" }]);
 
     const result = await getFilesHandler(createRequest());
     const body = await result.json();
@@ -88,60 +81,10 @@ describe("getFilesHandler", () => {
       undefined,
       false,
     );
-    expect(selectAccountEmails).toHaveBeenCalledWith({
-      accountIds: ["550e8400-e29b-41d4-a716-446655440100"],
-    });
+    expect(enrichFiles).toHaveBeenCalledWith([baseFile]);
     expect(result.status).toBe(200);
     expect(body).toEqual({
       files: [{ ...baseFile, owner_email: "owner@example.com" }],
-    });
-  });
-
-  it("returns owner_email as null when no email row exists", async () => {
-    vi.mocked(validateGetFilesQuery).mockResolvedValue({
-      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
-      recursive: false,
-      requesterAccountId: "acc",
-    });
-    vi.mocked(listFilesByArtist).mockResolvedValue([baseFile]);
-    vi.mocked(selectAccountEmails).mockResolvedValue([]);
-
-    const result = await getFilesHandler(createRequest());
-    const body = await result.json();
-
-    expect(body).toEqual({
-      files: [{ ...baseFile, owner_email: null }],
-    });
-  });
-
-  it("deduplicates owner account IDs before fetching emails", async () => {
-    vi.mocked(validateGetFilesQuery).mockResolvedValue({
-      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
-      recursive: true,
-      requesterAccountId: "acc",
-    });
-    vi.mocked(listFilesByArtist).mockResolvedValue([
-      baseFile,
-      {
-        ...baseFile,
-        id: "550e8400-e29b-41d4-a716-446655440011",
-        file_name: "second.md",
-      },
-    ]);
-    vi.mocked(selectAccountEmails).mockResolvedValue([
-      {
-        id: "email-1",
-        account_id: "550e8400-e29b-41d4-a716-446655440100",
-        email: "owner@example.com",
-        updated_at: "2026-04-09T00:00:00.000Z",
-      },
-    ]);
-
-    await getFilesHandler(createRequest());
-
-    expect(selectAccountEmails).toHaveBeenCalledTimes(1);
-    expect(selectAccountEmails).toHaveBeenCalledWith({
-      accountIds: ["550e8400-e29b-41d4-a716-446655440100"],
     });
   });
 
@@ -152,11 +95,12 @@ describe("getFilesHandler", () => {
       requesterAccountId: "acc",
     });
     vi.mocked(listFilesByArtist).mockResolvedValue([]);
+    vi.mocked(enrichFiles).mockResolvedValue([]);
 
     const result = await getFilesHandler(createRequest());
     const body = await result.json();
 
-    expect(selectAccountEmails).not.toHaveBeenCalled();
+    expect(enrichFiles).toHaveBeenCalledWith([]);
     expect(body).toEqual({ files: [] });
   });
 
