@@ -1,21 +1,13 @@
-import { NextResponse } from "next/server";
-import { fal } from "@fal-ai/client";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { fal as falClient } from "@fal-ai/client";
 
-/**
- * Checks for FAL_KEY and configures the fal client.
- * Returns null on success, or a 500 NextResponse if the key is missing.
- *
- * @returns Null if configured, or an error NextResponse.
- */
-export function configureFal(): NextResponse | null {
-  const falKey = process.env.FAL_KEY;
-  if (!falKey) {
-    return NextResponse.json(
-      { status: "error", error: "FAL_KEY is not configured" },
-      { status: 500, headers: getCorsHeaders() },
-    );
-  }
-  fal.config({ credentials: falKey });
-  return null;
+const FAL_KEY = process.env.FAL_KEY as string;
+
+if (!FAL_KEY) {
+  throw new Error("FAL_KEY must be set");
 }
+
+falClient.config({ credentials: FAL_KEY });
+
+const fal = falClient;
+
+export default fal;

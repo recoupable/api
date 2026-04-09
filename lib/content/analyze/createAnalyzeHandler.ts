@@ -4,8 +4,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "@/lib/content/validatePrimitiveBody";
 import { createAnalyzeBodySchema } from "@/lib/content/schemas";
-
-const TWELVELABS_ANALYZE_URL = "https://api.twelvelabs.io/v1.3/analyze";
+import { analyzeVideo } from "@/lib/twelvelabs/analyzeVideo";
 
 /**
  * POST /api/content/analyze
@@ -20,65 +19,29 @@ export async function createAnalyzeHandler(request: NextRequest): Promise<NextRe
   const validated = await validatePrimitiveBody(request, createAnalyzeBodySchema);
   if (validated instanceof NextResponse) return validated;
 
-  const apiKey = process.env.TWELVELABS_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { status: "error", error: "TWELVELABS_API_KEY is not configured" },
-      { status: 500, headers: getCorsHeaders() },
-    );
-  }
-
   try {
-    const response = await fetch(TWELVELABS_ANALYZE_URL, {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        video: { type: "url", url: validated.video_url },
-        prompt: validated.prompt,
-        temperature: validated.temperature,
-        stream: false,
-        ...(validated.max_tokens && { max_tokens: validated.max_tokens }),
-      }),
+    const result = await analyzeVideo({
+      videoUrl: validated.video_url,
+      prompt: validated.prompt,
+      temperature: validated.temperature,
+      maxTokens: validated.max_tokens,
     });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error("Twelve Labs analyze error:", response.status, errorBody);
-      return NextResponse.json(
-        { status: "error", error: `Video analysis failed: ${response.status}` },
-        { status: 502, headers: getCorsHeaders() },
-      );
-    }
-
-    const json = (await response.json()) as {
-      data?: string;
-      finish_reason?: string;
-      usage?: { output_tokens?: number };
-    };
-
-    if (!json.data) {
-      return NextResponse.json(
-        { status: "error", error: "Video analysis returned no text" },
-        { status: 502, headers: getCorsHeaders() },
-      );
-    }
 
     return NextResponse.json(
       {
-        text: json.data,
-        finish_reason: json.finish_reason ?? null,
-        usage: json.usage ?? null,
+        text: result.text,
+        finish_reason: result.finishReason,
+        usage: result.usage,
       },
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {
     console.error("Video analysis error:", error);
+    const message = error instanceof Error ? error.message : "Video analysis failed";
+    const status = message.includes("not configured") ? 500 : 502;
     return NextResponse.json(
-      { status: "error", error: "Video analysis failed" },
-      { status: 500, headers: getCorsHeaders() },
+      { status: "error", error: message },
+      { status, headers: getCorsHeaders() },
     );
   }
 }

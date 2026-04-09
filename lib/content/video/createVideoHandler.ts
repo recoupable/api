@@ -1,10 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { fal } from "@fal-ai/client";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "@/lib/content/validatePrimitiveBody";
-import { configureFal } from "@/lib/fal/server";
+import fal from "@/lib/fal/server";
 import { createVideoBodySchema } from "@/lib/content/schemas";
 import { loadTemplate } from "@/lib/content/templates";
 
@@ -98,9 +97,6 @@ export async function createVideoHandler(request: NextRequest): Promise<NextResp
 
   const validated = await validatePrimitiveBody(request, createVideoBodySchema);
   if (validated instanceof NextResponse) return validated;
-
-  const falError = configureFal();
-  if (falError) return falError;
 
   try {
     const tpl = validated.template ? loadTemplate(validated.template) : null;

@@ -36,10 +36,10 @@ export interface Template {
 }
 
 const TEMPLATES: Record<string, Template> = {
-  "artist-caption-bedroom": bedroomTemplate as unknown as Template,
-  "artist-caption-outside": outsideTemplate as unknown as Template,
-  "artist-caption-stage": stageTemplate as unknown as Template,
-  "album-record-store": recordStoreTemplate as unknown as Template,
+  "artist-caption-bedroom": bedroomTemplate satisfies Template,
+  "artist-caption-outside": outsideTemplate satisfies Template,
+  "artist-caption-stage": stageTemplate satisfies Template,
+  "album-record-store": recordStoreTemplate satisfies Template,
 };
 
 /**

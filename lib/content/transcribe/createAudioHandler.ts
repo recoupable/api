@@ -1,10 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { fal } from "@fal-ai/client";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validatePrimitiveBody } from "@/lib/content/validatePrimitiveBody";
-import { configureFal } from "@/lib/fal/server";
+import fal from "@/lib/fal/server";
 import { createAudioBodySchema } from "@/lib/content/schemas";
 
 const DEFAULT_MODEL = "fal-ai/whisper";
@@ -21,9 +20,6 @@ export async function createAudioHandler(request: NextRequest): Promise<NextResp
 
   const validated = await validatePrimitiveBody(request, createAudioBodySchema);
   if (validated instanceof NextResponse) return validated;
-
-  const falError = configureFal();
-  if (falError) return falError;
 
   try {
     const audioUrl = validated.audio_urls[0];
