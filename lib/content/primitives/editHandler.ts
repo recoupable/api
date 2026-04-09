@@ -26,7 +26,7 @@ export async function editHandler(request: NextRequest): Promise<NextResponse> {
     if (!operations && validated.template) {
       const tpl = loadTemplate(validated.template);
       if (tpl?.edit.operations) {
-        operations = tpl.edit.operations;
+        operations = tpl.edit.operations as typeof operations;
       }
     }
 
