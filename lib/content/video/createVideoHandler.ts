@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 import { fal } from "@fal-ai/client";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { validatePrimitiveBody } from "./validatePrimitiveBody";
+import { validatePrimitiveBody } from "@/lib/content/validatePrimitiveBody";
 import { configureFal } from "@/lib/fal/server";
-import { createVideoBodySchema } from "./schemas";
+import { createVideoBodySchema } from "@/lib/content/schemas";
 import { loadTemplate } from "@/lib/content/templates";
 
 const MODELS: Record<string, string> = {

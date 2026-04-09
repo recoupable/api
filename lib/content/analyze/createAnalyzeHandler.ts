@@ -2,8 +2,8 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { validatePrimitiveBody } from "./validatePrimitiveBody";
-import { createAnalyzeBodySchema } from "./schemas";
+import { validatePrimitiveBody } from "@/lib/content/validatePrimitiveBody";
+import { createAnalyzeBodySchema } from "@/lib/content/schemas";
 
 const TWELVELABS_ANALYZE_URL = "https://api.twelvelabs.io/v1.3/analyze";
 

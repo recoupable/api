@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { triggerPrimitive } from "@/lib/trigger/triggerPrimitive";
-import { validatePrimitiveBody } from "./validatePrimitiveBody";
-import { editBodySchema } from "./schemas";
+import { validatePrimitiveBody } from "@/lib/content/validatePrimitiveBody";
+import { editBodySchema } from "@/lib/content/schemas";
 import { loadTemplate } from "@/lib/content/templates";
 
 /**

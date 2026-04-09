@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { editHandler } from "@/lib/content/primitives/editHandler";
+import { editHandler } from "@/lib/content/edit/editHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.

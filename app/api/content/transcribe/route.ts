@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createAudioHandler } from "@/lib/content/primitives/createAudioHandler";
+import { createAudioHandler } from "@/lib/content/transcribe/createAudioHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
