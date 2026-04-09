@@ -1,4 +1,5 @@
 import type { Tables } from "@/types/database.types";
+import { STORAGE_KEY_RELATIVE_PATH_REGEX } from "@/lib/files/constants";
 
 type FileRecord = Tables<"files">;
 
@@ -11,7 +12,7 @@ type FileRecord = Tables<"files">;
  */
 export function filterFilesByPath(files: FileRecord[], path?: string): FileRecord[] {
   return files.filter(file => {
-    const match = file.storage_key.match(/^files\/[^\/]+\/[^\/]+\/(.+)$/);
+    const match = file.storage_key.match(STORAGE_KEY_RELATIVE_PATH_REGEX);
     if (!match) return false;
 
     const relativePath = match[1];

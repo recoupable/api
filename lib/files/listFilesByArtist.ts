@@ -1,12 +1,9 @@
 import type { Tables } from "@/types/database.types";
+import { STORAGE_KEY_RELATIVE_PATH_REGEX } from "@/lib/files/constants";
 import { filterFilesByPath } from "@/lib/files/filterFilesByPath";
 import { getFilesByArtistId } from "@/lib/supabase/files/getFilesByArtistId";
 
 type FileRecord = Tables<"files">;
-
-export interface ListedFileRecord extends FileRecord {
-  owner_email: string | null;
-}
 
 /**
  * Lists files for an artist, optionally filtered by path.
@@ -27,7 +24,7 @@ export async function listFilesByArtist(
     if (path) {
       const pathPrefix = path.endsWith("/") ? path : `${path}/`;
       return allFiles.filter(file => {
-        const match = file.storage_key.match(/^files\/[^\/]+\/[^\/]+\/(.+)$/);
+        const match = file.storage_key.match(STORAGE_KEY_RELATIVE_PATH_REGEX);
         if (!match) return false;
         if (!match[1].startsWith(pathPrefix)) return false;
 

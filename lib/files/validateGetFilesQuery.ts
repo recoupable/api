@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
+import { booleanFromString } from "@/lib/content/booleanFromString";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 
 export const getFilesQuerySchema = z.object({
   artist_account_id: z.string().uuid("artist_account_id must be a valid UUID"),
   path: z.string().optional(),
-  recursive: z.coerce.boolean().optional().default(false),
+  recursive: booleanFromString.optional().default(false),
 });
 
 export type ValidatedGetFilesQuery = z.infer<typeof getFilesQuerySchema> & {

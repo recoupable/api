@@ -120,6 +120,27 @@ describe("validateGetFilesQuery", () => {
     });
   });
 
+  it("parses recursive=false as false", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "account-123",
+      authToken: "token",
+      orgId: null,
+    });
+    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+
+    const result = await validateGetFilesQuery(
+      createRequest(
+        "http://localhost/api/files?artist_account_id=550e8400-e29b-41d4-a716-446655440000&recursive=false",
+      ),
+    );
+
+    expect(result).toEqual({
+      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
+      recursive: false,
+      requesterAccountId: "account-123",
+    });
+  });
+
   it("returns validated params for shared-org artist access", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "account-456",
