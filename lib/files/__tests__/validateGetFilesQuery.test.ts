@@ -116,7 +116,6 @@ describe("validateGetFilesQuery", () => {
       artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
       path: "reports",
       recursive: true,
-      requesterAccountId: "account-123",
     });
   });
 
@@ -137,7 +136,6 @@ describe("validateGetFilesQuery", () => {
     expect(result).toEqual({
       artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
       recursive: false,
-      requesterAccountId: "account-123",
     });
   });
 
@@ -158,7 +156,6 @@ describe("validateGetFilesQuery", () => {
     expect(result).toEqual({
       artist_account_id: "550e8400-e29b-41d4-a716-446655440001",
       recursive: false,
-      requesterAccountId: "account-456",
     });
   });
 });

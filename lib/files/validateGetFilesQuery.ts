@@ -11,9 +11,7 @@ export const getFilesQuerySchema = z.object({
   recursive: booleanFromString.optional().default(false),
 });
 
-export type ValidatedGetFilesQuery = z.infer<typeof getFilesQuerySchema> & {
-  requesterAccountId: string;
-};
+export type ValidatedGetFilesQuery = z.infer<typeof getFilesQuerySchema>;
 
 /**
  * Validates GET /api/files query parameters and artist access.
@@ -67,8 +65,5 @@ export async function validateGetFilesQuery(
     );
   }
 
-  return {
-    ...validationResult.data,
-    requesterAccountId: authResult.accountId,
-  };
+  return validationResult.data;
 }
