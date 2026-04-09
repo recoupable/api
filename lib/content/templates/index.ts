@@ -1,7 +1,7 @@
-import bedroomTemplate from "./artist-caption-bedroom.json";
-import outsideTemplate from "./artist-caption-outside.json";
-import stageTemplate from "./artist-caption-stage.json";
-import recordStoreTemplate from "./album-record-store.json";
+import bedroomTemplate from "./artist-caption-bedroom";
+import outsideTemplate from "./artist-caption-outside";
+import stageTemplate from "./artist-caption-stage";
+import recordStoreTemplate from "./album-record-store";
 
 export interface TemplateEditOperation {
   type: string;
@@ -36,10 +36,10 @@ export interface Template {
 }
 
 const TEMPLATES: Record<string, Template> = {
-  "artist-caption-bedroom": bedroomTemplate satisfies Template,
-  "artist-caption-outside": outsideTemplate satisfies Template,
-  "artist-caption-stage": stageTemplate satisfies Template,
-  "album-record-store": recordStoreTemplate satisfies Template,
+  "artist-caption-bedroom": bedroomTemplate,
+  "artist-caption-outside": outsideTemplate,
+  "artist-caption-stage": stageTemplate,
+  "album-record-store": recordStoreTemplate,
 };
 
 /**

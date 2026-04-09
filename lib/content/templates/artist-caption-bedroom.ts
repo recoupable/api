@@ -1,9 +1,13 @@
-{
-  "id": "artist-caption-bedroom",
-  "description": "Moody bedroom selfie. Artist on camera with deadpan expression, purple LED lighting, dark room. Short blunt captions in lowercase. Vertical 9:16 video, 8 seconds. Best for: introspective songs, vulnerable moments, daily content. Requires: face image, audio.",
-  "image": {
-    "prompt": "A candid front-facing selfie INSIDE A BEDROOM. The person is sitting on an unmade bed or at a desk in their bedroom. Purple LED strip lights glow on the wall behind them. The room is dark with only the purple glow illuminating their face. Phone camera, low light, grainy. Wearing a hoodie, deadpan expression. The setting MUST be indoors in a real bedroom, not outside.",
-    "reference_images": [
+import type { Template } from "./index";
+
+const template: Template = {
+  id: "artist-caption-bedroom",
+  description:
+    "Moody bedroom selfie. Artist on camera with deadpan expression, purple LED lighting, dark room. Short blunt captions in lowercase. Vertical 9:16 video, 8 seconds. Best for: introspective songs, vulnerable moments, daily content. Requires: face image, audio.",
+  image: {
+    prompt:
+      "A candid front-facing selfie INSIDE A BEDROOM. The person is sitting on an unmade bed or at a desk in their bedroom. Purple LED strip lights glow on the wall behind them. The room is dark with only the purple glow illuminating their face. Phone camera, low light, grainy. Wearing a hoodie, deadpan expression. The setting MUST be indoors in a real bedroom, not outside.",
+    reference_images: [
       "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-bedroom/ref-01.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1iZWRyb29tL3JlZi0wMS5wbmciLCJpYXQiOjE3NzUxODUwNTIsImV4cCI6MTgwNjcyMTA1Mn0.LNONuOqaksZeatR8sFGLLlj3d3QWQ1bhETrANiv5VFo",
       "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-bedroom/ref-02.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1iZWRyb29tL3JlZi0wMi5wbmciLCJpYXQiOjE3NzUxODUwNTMsImV4cCI6MTgwNjcyMTA1M30.fmcN6QprMwpHMuVEM72XQ9DZwWC49zfwwB5Hk1DT2_c",
       "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-bedroom/ref-03.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1iZWRyb29tL3JlZi0wMy5wbmciLCJpYXQiOjE3NzUxODUwNTMsImV4cCI6MTgwNjcyMTA1M30.7kRSqn7nnhYmymnOeSf2d8fGTWNWpu87EUL56MTXkkc",
@@ -16,37 +20,41 @@
       "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-bedroom/ref-10.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1iZWRyb29tL3JlZi0xMC5wbmciLCJpYXQiOjE3NzUxODUwNTQsImV4cCI6MTgwNjcyMTA1NH0.hjlEdopp4MstfHLpTl84T2ev54ecedUVsiYXSaV3AP4",
       "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-bedroom/ref-11.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1iZWRyb29tL3JlZi0xMS5wbmciLCJpYXQiOjE3NzUxODUwNTQsImV4cCI6MTgwNjcyMTA1NH0.E8Sp_BSQqzVMGxx5t4SVYKiT3_CnTxPcvqRcEnRB6rU",
       "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-bedroom/ref-12.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1iZWRyb29tL3JlZi0xMi5wbmciLCJpYXQiOjE3NzUxODUwNTQsImV4cCI6MTgwNjcyMTA1NH0.ePlhmDPm2LuK2TD7mDgnO7ta0k_cdV8mWF8kwBR3y9k",
-      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-bedroom/ref-13.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1iZWRyb29tL3JlZi0xMy5wbmciLCJpYXQiOjE3NzUxODUwNTQsImV4cCI6MTgwNjcyMTA1NH0.fe2N42_2A7jj8m-SD3TUel0-wvaOrWn2XiARHLmHp00"
+      "https://godremdqwajrwazhbrue.supabase.co/storage/v1/object/sign/user-files/templates/artist-caption-bedroom/ref-13.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV84MzUzZTIyMy04YWU5LTQxMDYtOWZiYi04Y2NhMjE3NDc5YWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ1c2VyLWZpbGVzL3RlbXBsYXRlcy9hcnRpc3QtY2FwdGlvbi1iZWRyb29tL3JlZi0xMy5wbmciLCJpYXQiOjE3NzUxODUwNTQsImV4cCI6MTgwNjcyMTA1NH0.fe2N42_2A7jj8m-SD3TUel0-wvaOrWn2XiARHLmHp00",
     ],
-    "style_rules": {
-      "camera": {
-        "type": "front-facing phone camera",
-        "angle": "held slightly below face, looking down at lens",
-        "quality": "phone camera in low light, slight noise and grain, not DSLR sharp",
-        "focus": "face in focus, background slightly soft but not artificially blurred"
+    style_rules: {
+      camera: {
+        type: "front-facing phone camera",
+        angle: "held slightly below face, looking down at lens",
+        quality: "phone camera in low light, slight noise and grain, not DSLR sharp",
+        focus: "face in focus, background slightly soft but not artificially blurred",
       },
-      "environment": {
-        "feel": "real, uncontrolled, wherever they happen to be",
-        "lighting": "soft, dim purple glow from a desk lamp or LED strip — barely illuminating the room, heavy shadows, most of the frame is dark, only the face catches light",
-        "backgrounds": "real lived-in bedroom — unmade bed, plain walls, ceiling vents, clutter, nothing curated or staged",
-        "avoid": "clean renders, perfect symmetry, stock-photo rooms, AI-looking environments, smooth surfaces, studio backdrops"
+      environment: {
+        feel: "real, uncontrolled, wherever they happen to be",
+        lighting:
+          "soft, dim purple glow from a desk lamp or LED strip — barely illuminating the room, heavy shadows, most of the frame is dark, only the face catches light",
+        backgrounds:
+          "real lived-in bedroom — unmade bed, plain walls, ceiling vents, clutter, nothing curated or staged",
+        avoid:
+          "clean renders, perfect symmetry, stock-photo rooms, AI-looking environments, smooth surfaces, studio backdrops",
       },
-      "subject": {
-        "expression": "deadpan, slightly bored, vulnerable, not smiling for the camera",
-        "pose": "casual — hand in hair, hood up, slouched, not posed or performative",
-        "clothing": "oversized hoodie, sweater, or dark casual top",
-        "framing": "head and shoulders, close crop, face takes up most of the frame"
+      subject: {
+        expression: "deadpan, slightly bored, vulnerable, not smiling for the camera",
+        pose: "casual — hand in hair, hood up, slouched, not posed or performative",
+        clothing: "oversized hoodie, sweater, or dark casual top",
+        framing: "head and shoulders, close crop, face takes up most of the frame",
       },
-      "realism": {
-        "priority": "the image must look like a real phone photo, not AI-generated",
-        "texture": "grainy, slightly noisy, imperfect skin texture visible",
-        "imperfections": "messy hair, wrinkled fabric, uneven lighting, random objects in background",
-        "avoid": "smooth skin, perfect hair, symmetrical composition, clean backgrounds, hyper-sharp detail, uncanny valley"
-      }
-    }
+      realism: {
+        priority: "the image must look like a real phone photo, not AI-generated",
+        texture: "grainy, slightly noisy, imperfect skin texture visible",
+        imperfections: "messy hair, wrinkled fabric, uneven lighting, random objects in background",
+        avoid:
+          "smooth skin, perfect hair, symmetrical composition, clean backgrounds, hyper-sharp detail, uncanny valley",
+      },
+    },
   },
-  "video": {
-    "moods": [
+  video: {
+    moods: [
       "numb, checked out, staring through the camera not at it",
       "melancholy, like they just remembered something they were trying to forget",
       "quietly amused, like they heard a joke only they understand",
@@ -56,9 +64,9 @@
       "defiant, calm anger, daring you to say something",
       "lonely but pretending theyre fine",
       "soft, gentle, like theyre about to whisper a secret",
-      "dissociating, physically present but mentally somewhere else"
+      "dissociating, physically present but mentally somewhere else",
     ],
-    "movements": [
+    movements: [
       "nearly still, only natural breathing",
       "the very corner of their mouth barely lifts into the faintest smirk",
       "eyes slowly drift up and to the side like thinking about something",
@@ -68,15 +76,17 @@
       "glances away from camera for a moment then slowly looks back",
       "jaw tightens slightly like holding something in",
       "one eyebrow raises just barely, like a silent question",
-      "chest rises and falls in one visible sigh"
-    ]
+      "chest rises and falls in one visible sigh",
+    ],
   },
-  "caption": {
-    "guide": {
-      "templateStyle": "deadpan selfie with music playing — artist staring at camera, too cool to care",
-      "captionRole": "the caption is the hook. short, blunt, makes someone stop scrolling. inspired by the songs vibe, not a quote from it.",
-      "tone": "deadpan, low effort, like you typed it with one thumb while bored",
-      "rules": [
+  caption: {
+    guide: {
+      templateStyle:
+        "deadpan selfie with music playing — artist staring at camera, too cool to care",
+      captionRole:
+        "the caption is the hook. short, blunt, makes someone stop scrolling. inspired by the songs vibe, not a quote from it.",
+      tone: "deadpan, low effort, like you typed it with one thumb while bored",
+      rules: [
         "lowercase only",
         "SHORTER IS ALWAYS BETTER. aim for 20-50 characters. never exceed 60",
         "no punctuation at the end",
@@ -86,30 +96,38 @@
         "dont quote the lyrics directly — riff on the vibe instead",
         "dont try to be clever or poetic. be blunt and simple",
         "if it sounds like an AI wrote it, its too long and too try-hard. simplify",
-        "think: what would a bored teenager type as a caption in 3 seconds"
+        "think: what would a bored teenager type as a caption in 3 seconds",
       ],
-      "formats": [
+      formats: [
         "a blunt confession (6-10 words max)",
         "a 'date idea:' or 'pov:' setup (keep it short)",
         "a self-deprecating one-liner",
         "a hyper-specific relatable moment in as few words as possible",
-        "something dumb that somehow hits hard"
-      ]
+        "something dumb that somehow hits hard",
+      ],
     },
-    "examples": [
+    examples: [
       "i still keep our photos in the hidden folder in my camera roll in case you come back to me",
       "i'm touring 14 cities in north america this summer (i'm just looking for the girl i wrote my songs abt cause she won't text me back)",
       "date idea: we erase our past and fall back in love so i can unwrite this song",
       "if anyone could've saved me",
       "this came out 8 months ago and caroline still hasn't texted me back",
-      "it's always 'imy' and never 'islfyiebinfy'"
-    ]
+      "it's always 'imy' and never 'islfyiebinfy'",
+    ],
   },
-  "edit": {
-    "operations": [
-      { "type": "crop", "aspect": "9:16" },
-      { "type": "overlay_text", "color": "white", "stroke_color": "black", "position": "bottom", "max_font_size": 42 },
-      { "type": "mux_audio", "replace": true }
-    ]
-  }
-}
+  edit: {
+    operations: [
+      { type: "crop", aspect: "9:16" },
+      {
+        type: "overlay_text",
+        color: "white",
+        stroke_color: "black",
+        position: "bottom",
+        max_font_size: 42,
+      },
+      { type: "mux_audio", replace: true },
+    ],
+  },
+};
+
+export default template;
