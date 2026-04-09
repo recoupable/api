@@ -25,7 +25,7 @@ export async function editHandler(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    const handle = await tasks.trigger("create-render", {
+    const handle = await tasks.trigger("ffmpeg-edit", {
       ...validated,
       operations,
     });
