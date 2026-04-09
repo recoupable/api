@@ -22,11 +22,6 @@ export interface ArtistContentReadiness {
 /**
  * Checks whether an artist has the expected files for content creation.
  * Searches the main repo and org submodule repos.
- *
- * @param root0
- * @param root0.accountId
- * @param root0.artistAccountId
- * @param root0.artistSlug
  */
 export async function getArtistContentReadiness({
   accountId,

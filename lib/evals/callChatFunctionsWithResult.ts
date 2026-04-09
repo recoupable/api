@@ -8,8 +8,6 @@ import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
  *
  * Note: result.toolCalls only contains calls from the LAST step. When using multi-step
  * tool chains, we need to collect toolCalls from result.steps to capture all tool usage.
- *
- * @param input
  */
 export async function callChatFunctionsWithResult(input: string) {
   const messages: UIMessage[] = [

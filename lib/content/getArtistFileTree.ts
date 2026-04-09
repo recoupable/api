@@ -4,9 +4,6 @@ import { getOrgRepoUrls } from "@/lib/github/getOrgRepoUrls";
 /**
  * Gets the file tree that contains the artist, checking the main repo
  * first, then falling back to org submodule repos.
- *
- * @param githubRepo
- * @param artistSlug
  */
 export async function getArtistFileTree(
   githubRepo: string,

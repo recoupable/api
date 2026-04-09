@@ -8,8 +8,6 @@ interface AuthTestResponse {
 
 /**
  * Returns the authenticated bot's Slack user ID via auth.test.
- *
- * @param token
  */
 export async function getBotUserId(token: string): Promise<string> {
   const authTest = await slackGet<AuthTestResponse>("auth.test", token);

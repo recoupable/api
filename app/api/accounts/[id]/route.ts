@@ -25,7 +25,6 @@ export async function OPTIONS() {
  * - id (required): The unique identifier of the account (UUID)
  *
  * @param request - The request object
- * @param params.params
  * @param params - Route params containing the account ID
  * @returns A NextResponse with account data
  */

@@ -10,8 +10,6 @@ import { fetchGithubPrStatus } from "@/lib/github/fetchGithubPrStatus";
  * Uses the GitHub REST API to check each PR's state.
  *
  * Requires admin authentication.
- *
- * @param request
  */
 export async function getPrStatusHandler(request: NextRequest): Promise<NextResponse> {
   try {

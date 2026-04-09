@@ -2,9 +2,6 @@ import { getCatalogs } from "@/lib/catalog/getCatalogs";
 import { getCatalogSongs } from "@/lib/catalog/getCatalogSongs";
 import { EVAL_ACCOUNT_ID } from "@/lib/consts";
 
-/**
- *
- */
 async function getCatalogSongsCountExpected() {
   try {
     const catalogsData = await getCatalogs(EVAL_ACCOUNT_ID);
