@@ -6,11 +6,11 @@ import { inferMode } from "./inferMode";
 import { buildFalInput } from "./buildFalInput";
 
 const MODELS: Record<string, string> = {
-  prompt: "fal-ai/veo3.1",
-  animate: "fal-ai/veo3.1/image-to-video",
-  reference: "fal-ai/veo3.1/reference-to-video",
-  extend: "fal-ai/veo3.1/extend-video",
-  "first-last": "fal-ai/veo3.1/first-last-frame-to-video",
+  prompt: "fal-ai/veo3.1/fast/image-to-video",
+  animate: "fal-ai/veo3.1/fast/image-to-video",
+  reference: "fal-ai/veo3.1/fast/image-to-video",
+  extend: "fal-ai/veo3.1/fast/image-to-video",
+  "first-last": "fal-ai/veo3.1/fast/image-to-video",
   lipsync: "fal-ai/ltx-2-19b/audio-to-video",
 };
 
