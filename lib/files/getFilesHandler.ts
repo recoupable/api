@@ -1,6 +1,5 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { enrichFiles } from "@/lib/files/enrichFiles";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetFilesQuery } from "@/lib/files/validateGetFilesQuery";
 import { listFilesByArtist } from "@/lib/files/listFilesByArtist";
@@ -23,10 +22,9 @@ export async function getFilesHandler(request: NextRequest): Promise<NextRespons
       validatedQuery.path,
       validatedQuery.recursive,
     );
-    const enrichedFiles = await enrichFiles(files);
 
     return NextResponse.json(
-      { files: enrichedFiles },
+      { files },
       {
         status: 200,
         headers: getCorsHeaders(),

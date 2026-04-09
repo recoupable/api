@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextResponse, type NextRequest } from "next/server";
 import { getFilesHandler } from "../getFilesHandler";
-import { enrichFiles } from "../enrichFiles";
 import { validateGetFilesQuery } from "../validateGetFilesQuery";
 import { listFilesByArtist } from "../listFilesByArtist";
 
@@ -15,10 +14,6 @@ vi.mock("../validateGetFilesQuery", () => ({
 
 vi.mock("../listFilesByArtist", () => ({
   listFilesByArtist: vi.fn(),
-}));
-
-vi.mock("../enrichFiles", () => ({
-  enrichFiles: vi.fn(),
 }));
 
 /**
@@ -70,7 +65,6 @@ describe("getFilesHandler", () => {
       recursive: false,
     });
     vi.mocked(listFilesByArtist).mockResolvedValue([baseFile]);
-    vi.mocked(enrichFiles).mockResolvedValue([{ ...baseFile, owner_email: "owner@example.com" }]);
 
     const result = await getFilesHandler(createRequest());
     const body = await result.json();
@@ -80,25 +74,22 @@ describe("getFilesHandler", () => {
       undefined,
       false,
     );
-    expect(enrichFiles).toHaveBeenCalledWith([baseFile]);
     expect(result.status).toBe(200);
     expect(body).toEqual({
-      files: [{ ...baseFile, owner_email: "owner@example.com" }],
+      files: [baseFile],
     });
   });
 
-  it("returns an empty files array without fetching emails when no files match", async () => {
+  it("returns an empty files array when no files match", async () => {
     vi.mocked(validateGetFilesQuery).mockResolvedValue({
       artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
       recursive: false,
     });
     vi.mocked(listFilesByArtist).mockResolvedValue([]);
-    vi.mocked(enrichFiles).mockResolvedValue([]);
 
     const result = await getFilesHandler(createRequest());
     const body = await result.json();
 
-    expect(enrichFiles).toHaveBeenCalledWith([]);
     expect(body).toEqual({ files: [] });
   });
 
