@@ -1,7 +1,6 @@
-import { createSandbox, type SandboxCreatedResponse } from "@/lib/sandbox/createSandbox";
-import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
-import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
+import { createSandboxFromSnapshot } from "@/lib/sandbox/createSandboxFromSnapshot";
 import { triggerPromptSandbox } from "@/lib/trigger/triggerPromptSandbox";
+import type { SandboxCreatedResponse } from "@/lib/sandbox/createSandbox";
 
 type ProcessCreateSandboxInput = {
   accountId: string;
@@ -21,19 +20,14 @@ export async function processCreateSandbox(
 ): Promise<ProcessCreateSandboxResult> {
   const { accountId, prompt } = input;
 
-  // Get account's most recent snapshot if available
-  const accountSnapshots = await selectAccountSnapshots(accountId);
-  const snapshotId = accountSnapshots[0]?.snapshot_id;
+  const { sandbox } = await createSandboxFromSnapshot(accountId);
 
-  // Create sandbox (from snapshot if valid, otherwise fresh)
-  const { response: result } = await createSandbox(
-    snapshotId ? { source: { type: "snapshot", snapshotId } } : {},
-  );
-
-  await insertAccountSandbox({
-    account_id: accountId,
-    sandbox_id: result.sandboxId,
-  });
+  const result: SandboxCreatedResponse = {
+    sandboxId: sandbox.sandboxId,
+    sandboxStatus: sandbox.status,
+    timeout: sandbox.timeout,
+    createdAt: sandbox.createdAt.toISOString(),
+  };
 
   // Trigger the prompt execution task if a prompt was provided
   let runId: string | undefined;
@@ -41,7 +35,7 @@ export async function processCreateSandbox(
     try {
       const handle = await triggerPromptSandbox({
         prompt,
-        sandboxId: result.sandboxId,
+        sandboxId: sandbox.sandboxId,
         accountId,
       });
       runId = handle.id;

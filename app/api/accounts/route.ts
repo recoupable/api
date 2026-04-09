@@ -5,12 +5,9 @@ import {
   validateCreateAccountBody,
   type CreateAccountBody,
 } from "@/lib/accounts/validateCreateAccountBody";
-import {
-  validateUpdateAccountBody,
-  type UpdateAccountBody,
-} from "@/lib/accounts/validateUpdateAccountBody";
 import { createAccountHandler } from "@/lib/accounts/createAccountHandler";
 import { updateAccountHandler } from "@/lib/accounts/updateAccountHandler";
+import { validateUpdateAccountRequest } from "@/lib/accounts/validateUpdateAccountRequest";
 
 /**
  * POST /api/accounts
@@ -37,20 +34,18 @@ export async function POST(req: NextRequest) {
  * PATCH /api/accounts
  *
  * Update an existing account's profile information.
- * Requires accountId in the body along with fields to update.
+ * Requires authentication and a permitted accountId in the body.
  *
  * @param req - The incoming request with accountId and update fields
  * @returns NextResponse with updated account data or error
  */
 export async function PATCH(req: NextRequest) {
-  const body = await safeParseJson(req);
-
-  const validated = validateUpdateAccountBody(body);
+  const validated = await validateUpdateAccountRequest(req);
   if (validated instanceof NextResponse) {
     return validated;
   }
 
-  return updateAccountHandler(validated as UpdateAccountBody);
+  return updateAccountHandler(validated);
 }
 
 /**

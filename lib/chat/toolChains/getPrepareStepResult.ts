@@ -57,7 +57,6 @@ const getPrepareStepResult = (options: PrepareStepOptions): PrepareStepResult | 
         result.messages = options.messages.concat(nextToolItem.messages);
       }
 
-      // Add model if specified for this tool
       const model = TOOL_MODEL_MAP[nextToolItem.toolName];
       if (model) {
         result.model = model;

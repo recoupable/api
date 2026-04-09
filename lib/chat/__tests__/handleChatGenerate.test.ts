@@ -1,32 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextResponse } from "next/server";
 
-import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
-import { validateOverrideAccountId } from "@/lib/accounts/validateOverrideAccountId";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { setupChatRequest } from "@/lib/chat/setupChatRequest";
 import { saveChatCompletion } from "@/lib/chat/saveChatCompletion";
 import { setupConversation } from "@/lib/chat/setupConversation";
 import { handleChatGenerate } from "../handleChatGenerate";
 
 // Mock all dependencies before importing the module under test
-vi.mock("@/lib/auth/getApiKeyAccountId", () => ({
-  getApiKeyAccountId: vi.fn(),
-}));
-
-vi.mock("@/lib/auth/getAuthenticatedAccountId", () => ({
-  getAuthenticatedAccountId: vi.fn(),
-}));
-
-vi.mock("@/lib/accounts/validateOverrideAccountId", () => ({
-  validateOverrideAccountId: vi.fn(),
-}));
-
-vi.mock("@/lib/keys/getApiKeyDetails", () => ({
-  getApiKeyDetails: vi.fn(),
-}));
-
-vi.mock("@/lib/organizations/validateOrganizationAccess", () => ({
-  validateOrganizationAccess: vi.fn(),
+vi.mock("@/lib/auth/validateAuthContext", () => ({
+  validateAuthContext: vi.fn(),
 }));
 
 vi.mock("@/lib/chat/setupChatRequest", () => ({
@@ -61,8 +44,7 @@ vi.mock("@/lib/chat/setupConversation", () => ({
   setupConversation: vi.fn(),
 }));
 
-const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
-const mockValidateOverrideAccountId = vi.mocked(validateOverrideAccountId);
+const mockValidateAuthContext = vi.mocked(validateAuthContext);
 const mockSetupChatRequest = vi.mocked(setupChatRequest);
 const mockSaveChatCompletion = vi.mocked(saveChatCompletion);
 const mockSetupConversation = vi.mocked(setupConversation);
@@ -112,7 +94,11 @@ describe("handleChatGenerate", () => {
 
   describe("validation", () => {
     it("returns 400 error when neither messages nor prompt is provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest({ roomId: "room-123" }, { "x-api-key": "test-key" });
 
@@ -125,20 +111,25 @@ describe("handleChatGenerate", () => {
     });
 
     it("returns 401 error when no auth header is provided", async () => {
+      mockValidateAuthContext.mockResolvedValue(
+        NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
+      );
       const request = createMockRequest({ prompt: "Hello" }, {});
 
       const result = await handleChatGenerate(request as any);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect(result.status).toBe(401);
-      const json = await result.json();
-      expect(json.message).toBe("Exactly one of x-api-key or Authorization must be provided");
     });
   });
 
   describe("text generation", () => {
     it("returns generated text using agent.generate() for valid requests", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const mockAgent = createMockAgent({
         text: "Hello! How can I help you?",
@@ -171,7 +162,11 @@ describe("handleChatGenerate", () => {
     });
 
     it("uses messages array when provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const mockAgent = createMockAgent({
         text: "Response",
@@ -199,7 +194,11 @@ describe("handleChatGenerate", () => {
     });
 
     it("passes through optional parameters", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "room-xyz",
         memoryId: "memory-id",
@@ -241,7 +240,11 @@ describe("handleChatGenerate", () => {
     });
 
     it("includes reasoningText when present", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const mockAgent = createMockAgent({
         text: "Response",
@@ -270,7 +273,11 @@ describe("handleChatGenerate", () => {
 
   describe("error handling", () => {
     it("returns 500 error when setupChatRequest fails", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupChatRequest.mockRejectedValue(new Error("Setup failed"));
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
@@ -284,7 +291,11 @@ describe("handleChatGenerate", () => {
     });
 
     it("returns 500 error when agent.generate() fails", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const mockAgent = {
         generate: vi.fn().mockRejectedValue(new Error("Generation failed")),
@@ -309,10 +320,11 @@ describe("handleChatGenerate", () => {
   });
 
   describe("accountId override", () => {
-    it("allows org API key to override accountId", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("org-account-123");
-      mockValidateOverrideAccountId.mockResolvedValue({
+    it("allows accountId override", async () => {
+      mockValidateAuthContext.mockResolvedValue({
         accountId: "target-account-456",
+        orgId: null,
+        authToken: "token",
       });
 
       const mockAgent = createMockAgent({
@@ -344,7 +356,11 @@ describe("handleChatGenerate", () => {
 
   describe("message persistence", () => {
     it("saves assistant message to database when roomId is provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "room-abc-123",
         memoryId: "memory-id",
@@ -378,7 +394,11 @@ describe("handleChatGenerate", () => {
     });
 
     it("saves message with auto-generated roomId when roomId is not provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "auto-generated-room-id",
         memoryId: "memory-id",
@@ -410,7 +430,11 @@ describe("handleChatGenerate", () => {
     });
 
     it("includes roomId in HTTP response when provided by client", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "client-provided-room-id",
         memoryId: "memory-id",
@@ -443,7 +467,11 @@ describe("handleChatGenerate", () => {
     });
 
     it("includes auto-generated roomId in HTTP response when not provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "auto-generated-room-456",
         memoryId: "memory-id",
@@ -473,7 +501,11 @@ describe("handleChatGenerate", () => {
     });
 
     it("passes correct text to saveChatCompletion", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "room-xyz",
         memoryId: "memory-id",
@@ -507,7 +539,11 @@ describe("handleChatGenerate", () => {
     });
 
     it("still returns success response even if saveChatCompletion fails", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSetupConversation.mockResolvedValue({
         roomId: "room-abc",
         memoryId: "memory-id",

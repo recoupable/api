@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextResponse } from "next/server";
 
-import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
 import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
@@ -33,24 +33,8 @@ import { setupChatRequest } from "../../setupChatRequest";
  */
 
 // Mock auth dependencies
-vi.mock("@/lib/auth/getApiKeyAccountId", () => ({
-  getApiKeyAccountId: vi.fn(),
-}));
-
-vi.mock("@/lib/auth/getAuthenticatedAccountId", () => ({
-  getAuthenticatedAccountId: vi.fn(),
-}));
-
-vi.mock("@/lib/accounts/validateOverrideAccountId", () => ({
-  validateOverrideAccountId: vi.fn(),
-}));
-
-vi.mock("@/lib/keys/getApiKeyDetails", () => ({
-  getApiKeyDetails: vi.fn(),
-}));
-
-vi.mock("@/lib/organizations/validateOrganizationAccess", () => ({
-  validateOrganizationAccess: vi.fn(),
+vi.mock("@/lib/auth/validateAuthContext", () => ({
+  validateAuthContext: vi.fn(),
 }));
 
 // Mock Supabase dependencies
@@ -155,7 +139,7 @@ vi.mock("ai", () => ({
   })),
 }));
 
-const mockGetApiKeyAccountId = vi.mocked(getApiKeyAccountId);
+const mockValidateAuthContext = vi.mocked(validateAuthContext);
 const mockSelectAccountEmails = vi.mocked(selectAccountEmails);
 const mockSelectAccountInfo = vi.mocked(selectAccountInfo);
 const mockGetAccountWithDetails = vi.mocked(getAccountWithDetails);
@@ -205,7 +189,11 @@ describe("Chat Integration Tests", () => {
 
   describe("validateChatRequest integration", () => {
     it("validates and returns body for valid request with prompt", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
@@ -218,7 +206,11 @@ describe("Chat Integration Tests", () => {
     });
 
     it("validates and returns body for valid request with messages", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest(
         {
@@ -233,7 +225,10 @@ describe("Chat Integration Tests", () => {
       expect((result as any).messages).toHaveLength(1);
     });
 
-    it("returns 401 when no auth header is provided", async () => {
+    it("returns 401 when auth fails", async () => {
+      mockValidateAuthContext.mockResolvedValue(
+        NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
+      );
       const request = createMockRequest({ prompt: "Hello" }, {});
 
       const result = await validateChatRequest(request as any);
@@ -242,22 +237,12 @@ describe("Chat Integration Tests", () => {
       expect((result as NextResponse).status).toBe(401);
     });
 
-    it("returns 401 when API key lookup fails", async () => {
-      // getApiKeyAccountId returns a NextResponse when authentication fails
-      mockGetApiKeyAccountId.mockResolvedValue(
-        NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 }),
-      );
-
-      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "invalid-key" });
-
-      const result = await validateChatRequest(request as any);
-
-      expect(result).toBeInstanceOf(NextResponse);
-      expect((result as NextResponse).status).toBe(401);
-    });
-
     it("returns 400 when neither messages nor prompt is provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest({ roomId: "room-123" }, { "x-api-key": "valid-key" });
 
@@ -268,7 +253,11 @@ describe("Chat Integration Tests", () => {
     });
 
     it("returns 400 when both prompt and messages are provided", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest(
         {
@@ -285,7 +274,11 @@ describe("Chat Integration Tests", () => {
     });
 
     it("passes through optional parameters", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest(
         {
@@ -604,7 +597,11 @@ describe("Chat Integration Tests", () => {
 
   describe("end-to-end validation flow", () => {
     it("validates prompt-based requests through full pipeline", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest({ prompt: "What is 2+2?" }, { "x-api-key": "valid-key" });
 
@@ -617,7 +614,11 @@ describe("Chat Integration Tests", () => {
     });
 
     it("validates messages-based requests through full pipeline", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
 
       const request = createMockRequest(
         {
@@ -639,7 +640,11 @@ describe("Chat Integration Tests", () => {
     });
 
     it("handles complete chat flow with post-completion", async () => {
-      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      mockValidateAuthContext.mockResolvedValue({
+        accountId: "account-123",
+        orgId: null,
+        authToken: "token",
+      });
       mockSelectRoom.mockResolvedValue(null);
       mockGenerateChatTitle.mockResolvedValue("Math Question");
 
