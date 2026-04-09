@@ -209,13 +209,13 @@ describe("editBodySchema", () => {
     ).toBe(false);
   });
 
-  it("accepts audio_url as input", () => {
+  it("rejects audio_url without video_url", () => {
     expect(
       editBodySchema.safeParse({
         audio_url: "https://example.com/a.mp3",
         operations: [{ type: "trim", start: 0, duration: 15 }],
       }).success,
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("parses overlay_text operation", () => {
@@ -227,13 +227,13 @@ describe("editBodySchema", () => {
     ).toBe(true);
   });
 
-  it("parses mux_audio operation", () => {
+  it("rejects mux_audio operation", () => {
     expect(
       editBodySchema.safeParse({
         video_url: "https://example.com/v.mp4",
         operations: [{ type: "mux_audio", audio_url: "https://example.com/a.mp3" }],
       }).success,
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("parses crop operation", () => {
@@ -253,7 +253,6 @@ describe("editBodySchema", () => {
           { type: "trim", start: 30, duration: 15 },
           { type: "crop", aspect: "9:16" },
           { type: "overlay_text", content: "caption" },
-          { type: "mux_audio", audio_url: "https://example.com/a.mp3" },
         ],
       }).success,
     ).toBe(true);

@@ -8,7 +8,7 @@ import { validateEditContentBody } from "./validateEditContentBody";
 /**
  * PATCH /api/content
  *
- * @param request - Incoming request with media inputs and edit operations.
+ * @param request - Incoming request with video URL and edit operations.
  * @returns JSON with the triggered run ID.
  */
 export async function editHandler(request: NextRequest): Promise<NextResponse> {

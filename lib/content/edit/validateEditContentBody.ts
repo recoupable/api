@@ -32,23 +32,14 @@ export const editOperationSchema = z.discriminatedUnion("type", [
     max_font_size: z.number().positive().optional().default(42),
     position: z.enum(["top", "center", "bottom"]).optional().default("bottom"),
   }),
-  z.object({
-    type: z.literal("mux_audio"),
-    audio_url: z.string().url(),
-    replace: z.boolean().optional().default(true),
-  }),
 ]);
 
 export const editBodySchema = z
   .object({
-    video_url: z.string().url().optional(),
-    audio_url: z.string().url().optional(),
+    video_url: z.string().url(),
     template: z.enum(TEMPLATE_IDS).optional(),
     operations: z.array(editOperationSchema).optional(),
     output_format: z.enum(["mp4", "webm", "mov"]).optional().default("mp4"),
-  })
-  .refine(data => data.video_url || data.audio_url, {
-    message: "Must provide at least one input (video_url or audio_url)",
   })
   .refine(data => data.template || (data.operations && data.operations.length > 0), {
     message: "Must provide either template or operations",
@@ -57,7 +48,7 @@ export const editBodySchema = z
 export type ValidatedEditContentBody = { accountId: string } & z.infer<typeof editBodySchema>;
 
 /**
- * Validates auth and request body for POST /api/content/edit.
+ * Validates auth and request body for PATCH /api/content.
  */
 export async function validateEditContentBody(
   request: NextRequest,
