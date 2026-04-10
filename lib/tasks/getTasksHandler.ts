@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
 import { validateGetTasksQuery } from "@/lib/tasks/validateGetTasksQuery";
-import { enrichTaskWithTriggerInfo } from "@/lib/tasks/enrichTaskWithTriggerInfo";
+import { enrichTasks } from "@/lib/tasks/enrichTasks";
 
 /**
  * Retrieves tasks (scheduled actions) from the database, enriched with
@@ -19,8 +19,7 @@ export async function getTasksHandler(request: NextRequest): Promise<NextRespons
     }
 
     const tasks = await selectScheduledActions(validatedQuery);
-
-    const enrichedTasks = await Promise.all(tasks.map(task => enrichTaskWithTriggerInfo(task)));
+    const enrichedTasks = await enrichTasks(tasks);
 
     return NextResponse.json(
       {
