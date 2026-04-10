@@ -4,13 +4,16 @@ import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sd
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import { createTask } from "@/lib/tasks/createTask";
-import { createTaskBodySchema, type CreateTaskRequestBody } from "@/lib/tasks/createTaskSchemas";
+import {
+  mcpCreateTaskBodySchema,
+  type McpCreateTaskRequestBody,
+} from "@/lib/tasks/createTaskSchemas";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 
 /**
  * Registers the "create_task" tool on the MCP server.
- * Creates a new task in the system. A task represents a scheduled action that will be executed on a schedule.
+ * MCP is **personal context only**: `resolveAccountId` is called with no account override (REST may still send optional `account_id`).
  *
  * @param server - The MCP server instance to register the tool on.
  */
@@ -19,16 +22,16 @@ export function registerCreateTaskTool(server: McpServer): void {
     "create_task",
     {
       description: `Create a new task.`,
-      inputSchema: createTaskBodySchema,
+      inputSchema: mcpCreateTaskBodySchema,
     },
     async (
-      args: CreateTaskRequestBody,
+      args: McpCreateTaskRequestBody,
       extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
     ) => {
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
       const { accountId, error } = await resolveAccountId({
         authInfo,
-        accountIdOverride: args.account_id,
+        accountIdOverride: undefined,
       });
 
       if (error) {

@@ -35,11 +35,18 @@ const createTaskBodyFields = {
 };
 
 /**
- * Request body for POST /api/tasks (and MCP input). `account_id` is optional; when present it is authorized against the caller via `validateAccountIdOverride` / `resolveAccountId`.
+ * Request body for REST `POST /api/tasks`. Optional `account_id` is authorized via `validateAccountIdOverride`.
  */
 export const createTaskBodySchema = z.object(createTaskBodyFields).strict();
 
 export type CreateTaskRequestBody = z.infer<typeof createTaskBodySchema>;
+
+/**
+ * MCP `create_task` tool input: same task fields as REST **except** no `account_id` — MCP runs in the authenticated user’s personal context only; account is taken from MCP auth.
+ */
+export const mcpCreateTaskBodySchema = createTaskBodySchema.omit({ account_id: true });
+
+export type McpCreateTaskRequestBody = z.infer<typeof mcpCreateTaskBodySchema>;
 
 /** Resolved payload for persistence (`account_id` is always set after auth + override checks). */
 export const createTaskPayloadSchema = createTaskBodySchema.omit({ account_id: true }).extend({
