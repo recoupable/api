@@ -1,10 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
-import { validatePinArtistBody } from "../validatePinArtistBody";
+import { validateArtistAccessRequest } from "../validateArtistAccessRequest";
+import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { checkAccountArtistAccess } from "../checkAccountArtistAccess";
 import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
+
+vi.mock("@/lib/accounts/validateAccountParams", () => ({
+  validateAccountParams: vi.fn(),
+}));
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
@@ -22,58 +27,42 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-/**
- * Creates a request for the pin artist validator tests.
- *
- * @param body - JSON payload to attach to the request
- * @returns A POST request targeting the pin artist endpoint
- */
-function createRequest(body: unknown) {
-  return new NextRequest("http://localhost/api/artists/pin", {
-    method: "POST",
-    body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-}
-
-describe("validatePinArtistBody", () => {
+describe("validateArtistAccessRequest", () => {
   const artistId = "550e8400-e29b-41d4-a716-446655440000";
   const requesterAccountId = "660e8400-e29b-41d4-a716-446655440000";
+  const request = new NextRequest(`http://localhost/api/artists/${artistId}/pin`, {
+    method: "POST",
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns 400 when the body is invalid", async () => {
-    const response = await validatePinArtistBody(createRequest({ pinned: true }));
+  it("returns the account params response when the id is invalid", async () => {
+    const invalidResponse = NextResponse.json({ error: "Invalid id" }, { status: 400 });
+    vi.mocked(validateAccountParams).mockReturnValue(invalidResponse);
 
-    expect(response).toBeInstanceOf(NextResponse);
-    const body = await (response as NextResponse).json();
+    const response = await validateArtistAccessRequest(request, "bad-id");
 
-    expect((response as NextResponse).status).toBe(400);
-    expect(body).toEqual({
-      status: "error",
-      missing_fields: ["artistId"],
-      error: "artistId must be a valid UUID",
-    });
+    expect(response).toBe(invalidResponse);
   });
 
   it("returns the auth response when authentication fails", async () => {
+    vi.mocked(validateAccountParams).mockReturnValue({ id: artistId });
     const authError = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     vi.mocked(validateAuthContext).mockResolvedValue(authError);
 
-    const response = await validatePinArtistBody(createRequest({ artistId, pinned: true }));
+    const response = await validateArtistAccessRequest(request, artistId);
 
     expect(response).toBe(authError);
   });
 
   it("returns 404 when the artist does not exist", async () => {
+    vi.mocked(validateAccountParams).mockReturnValue({ id: artistId });
     vi.mocked(validateAuthContext).mockResolvedValue({ accountId: requesterAccountId });
     vi.mocked(selectAccounts).mockResolvedValue([]);
 
-    const response = await validatePinArtistBody(createRequest({ artistId, pinned: false }));
+    const response = await validateArtistAccessRequest(request, artistId);
     const body = await (response as NextResponse).json();
 
     expect((response as NextResponse).status).toBe(404);
@@ -84,11 +73,12 @@ describe("validatePinArtistBody", () => {
   });
 
   it("returns 403 when the requester cannot access the artist", async () => {
+    vi.mocked(validateAccountParams).mockReturnValue({ id: artistId });
     vi.mocked(validateAuthContext).mockResolvedValue({ accountId: requesterAccountId });
     vi.mocked(selectAccounts).mockResolvedValue([{ id: artistId }] as never);
     vi.mocked(checkAccountArtistAccess).mockResolvedValue(false);
 
-    const response = await validatePinArtistBody(createRequest({ artistId, pinned: true }));
+    const response = await validateArtistAccessRequest(request, artistId);
     const body = await (response as NextResponse).json();
 
     expect((response as NextResponse).status).toBe(403);
@@ -98,16 +88,16 @@ describe("validatePinArtistBody", () => {
     });
   });
 
-  it("returns the validated request when the body and auth are valid", async () => {
+  it("returns validated artist access when the requester has access", async () => {
+    vi.mocked(validateAccountParams).mockReturnValue({ id: artistId });
     vi.mocked(validateAuthContext).mockResolvedValue({ accountId: requesterAccountId });
     vi.mocked(selectAccounts).mockResolvedValue([{ id: artistId }] as never);
     vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
 
-    const response = await validatePinArtistBody(createRequest({ artistId, pinned: true }));
+    const response = await validateArtistAccessRequest(request, artistId);
 
     expect(response).toEqual({
       artistId,
-      pinned: true,
       requesterAccountId,
     });
   });

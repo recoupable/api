@@ -1,30 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { pinArtist } from "@/lib/artists/pinArtist";
-import { validatePinArtistBody } from "@/lib/artists/validatePinArtistBody";
+import { validateArtistAccessRequest } from "@/lib/artists/validateArtistAccessRequest";
 
 /**
- * Handler for POST /api/artists/pin.
+ * Handler for POST or DELETE /api/artists/{id}/pin.
  *
  * Updates the authenticated account's pinned state for an accessible artist.
  *
  * @param request - The incoming request
+ * @param params - Route params containing the artist account ID
+ * @param pinned - Desired pinned state derived from the HTTP method
  * @returns A NextResponse with the pin result or an error
  */
-export async function pinArtistHandler(request: NextRequest): Promise<NextResponse> {
-  const validated = await validatePinArtistBody(request);
+export async function pinArtistHandler(
+  request: NextRequest,
+  params: Promise<{ id: string }>,
+  pinned: boolean,
+): Promise<NextResponse> {
+  const { id } = await params;
+
+  const validated = await validateArtistAccessRequest(request, id);
   if (validated instanceof NextResponse) {
     return validated;
   }
 
   try {
-    await pinArtist(validated);
+    await pinArtist({
+      ...validated,
+      pinned,
+    });
 
     return NextResponse.json(
       {
         success: true,
         artistId: validated.artistId,
-        pinned: validated.pinned,
+        pinned,
       },
       {
         status: 200,

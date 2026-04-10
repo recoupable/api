@@ -1,5 +1,9 @@
 import { upsertAccountArtistPin } from "@/lib/supabase/account_artist_ids/upsertAccountArtistPin";
-import type { ValidatedPinArtistRequest } from "@/lib/artists/validatePinArtistBody";
+export interface PinArtistParams {
+  artistId: string;
+  pinned: boolean;
+  requesterAccountId: string;
+}
 
 /**
  * Persists the authenticated account's pin state for an artist.
@@ -13,7 +17,7 @@ export async function pinArtist({
   artistId,
   pinned,
   requesterAccountId,
-}: ValidatedPinArtistRequest): Promise<void> {
+}: PinArtistParams): Promise<void> {
   await upsertAccountArtistPin({
     accountId: requesterAccountId,
     artistId,

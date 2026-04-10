@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
-import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
+import {
+  validateArtistAccessRequest,
+  type ValidatedArtistAccessRequest,
+} from "@/lib/artists/validateArtistAccessRequest";
 
-export interface DeleteArtistRequest {
-  artistId: string;
-  requesterAccountId: string;
-}
+export type DeleteArtistRequest = ValidatedArtistAccessRequest;
 
 /**
  * Validates DELETE /api/artists/{id} path params and authentication.
@@ -21,35 +17,12 @@ export async function validateDeleteArtistRequest(
   request: NextRequest,
   id: string,
 ): Promise<DeleteArtistRequest | NextResponse> {
-  const validatedParams = validateAccountParams(id);
-  if (validatedParams instanceof NextResponse) {
-    return validatedParams;
-  }
+  const validated = await validateArtistAccessRequest(request, id);
+  if (validated instanceof NextResponse) {
+    if (validated.status !== 403) {
+      return validated;
+    }
 
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) {
-    return authResult;
-  }
-
-  const artistId = validatedParams.id;
-  const requesterAccountId = authResult.accountId;
-
-  const existingArtist = await selectAccounts(artistId);
-  if (!existingArtist.length) {
-    return NextResponse.json(
-      {
-        status: "error",
-        error: "Artist not found",
-      },
-      {
-        status: 404,
-        headers: getCorsHeaders(),
-      },
-    );
-  }
-
-  const hasAccess = await checkAccountArtistAccess(requesterAccountId, artistId);
-  if (!hasAccess) {
     return NextResponse.json(
       {
         status: "error",
@@ -57,13 +30,10 @@ export async function validateDeleteArtistRequest(
       },
       {
         status: 403,
-        headers: getCorsHeaders(),
+        headers: validated.headers,
       },
     );
   }
 
-  return {
-    artistId,
-    requesterAccountId,
-  };
+  return validated;
 }

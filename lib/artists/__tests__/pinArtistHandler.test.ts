@@ -2,15 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
 import { pinArtistHandler } from "../pinArtistHandler";
-import { validatePinArtistBody } from "../validatePinArtistBody";
 import { pinArtist } from "../pinArtist";
+import { validateArtistAccessRequest } from "../validateArtistAccessRequest";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-vi.mock("../validatePinArtistBody", () => ({
-  validatePinArtistBody: vi.fn(),
+vi.mock("../validateArtistAccessRequest", () => ({
+  validateArtistAccessRequest: vi.fn(),
 }));
 
 vi.mock("../pinArtist", () => ({
@@ -27,33 +27,30 @@ describe("pinArtistHandler", () => {
 
   it("returns the validation response when request validation fails", async () => {
     const validationError = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    vi.mocked(validatePinArtistBody).mockResolvedValue(validationError);
+    vi.mocked(validateArtistAccessRequest).mockResolvedValue(validationError);
 
-    const request = new NextRequest("http://localhost/api/artists/pin", {
+    const request = new NextRequest(`http://localhost/api/artists/${artistId}/pin`, {
       method: "POST",
-      body: JSON.stringify({ artistId, pinned: true }),
     });
 
-    const response = await pinArtistHandler(request);
+    const response = await pinArtistHandler(request, Promise.resolve({ id: artistId }), true);
 
     expect(response).toBe(validationError);
     expect(pinArtist).not.toHaveBeenCalled();
   });
 
-  it("returns success when the pin is updated", async () => {
-    vi.mocked(validatePinArtistBody).mockResolvedValue({
+  it("returns success when the artist is pinned", async () => {
+    vi.mocked(validateArtistAccessRequest).mockResolvedValue({
       artistId,
-      pinned: true,
       requesterAccountId,
     });
     vi.mocked(pinArtist).mockResolvedValue();
 
-    const request = new NextRequest("http://localhost/api/artists/pin", {
+    const request = new NextRequest(`http://localhost/api/artists/${artistId}/pin`, {
       method: "POST",
-      body: JSON.stringify({ artistId, pinned: true }),
     });
 
-    const response = await pinArtistHandler(request);
+    const response = await pinArtistHandler(request, Promise.resolve({ id: artistId }), true);
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -61,6 +58,28 @@ describe("pinArtistHandler", () => {
       success: true,
       artistId,
       pinned: true,
+    });
+  });
+
+  it("returns success when the artist is unpinned", async () => {
+    vi.mocked(validateArtistAccessRequest).mockResolvedValue({
+      artistId,
+      requesterAccountId,
+    });
+    vi.mocked(pinArtist).mockResolvedValue();
+
+    const request = new NextRequest(`http://localhost/api/artists/${artistId}/pin`, {
+      method: "DELETE",
+    });
+
+    const response = await pinArtistHandler(request, Promise.resolve({ id: artistId }), false);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      artistId,
+      pinned: false,
     });
   });
 });
