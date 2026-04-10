@@ -1,4 +1,6 @@
-import supabase from "../serverClient";
+import { insertAccountArtistId } from "./insertAccountArtistId";
+import { selectAccountArtistId } from "./selectAccountArtistId";
+import { updateAccountArtistPin } from "./updateAccountArtistPin";
 
 export interface UpsertAccountArtistPinParams {
   accountId: string;
@@ -22,16 +24,12 @@ export async function upsertAccountArtistPin({
   artistId,
   pinned,
 }: UpsertAccountArtistPinParams): Promise<void> {
-  const { error } = await supabase.from("account_artist_ids").upsert(
-    {
-      account_id: accountId,
-      artist_id: artistId,
-      pinned,
-    },
-    { onConflict: "account_id,artist_id" },
-  );
+  const existingRow = await selectAccountArtistId(accountId, artistId);
 
-  if (error) {
-    throw new Error(`Failed to update pinned status: ${error.message}`);
+  if (existingRow) {
+    await updateAccountArtistPin(accountId, artistId, pinned);
+    return;
   }
+
+  await insertAccountArtistId(accountId, artistId, pinned);
 }

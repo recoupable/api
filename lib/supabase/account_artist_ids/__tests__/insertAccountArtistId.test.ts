@@ -39,6 +39,24 @@ describe("insertAccountArtistId", () => {
     expect(result).toEqual(mockData);
   });
 
+  it("includes pinned state when provided", async () => {
+    const mockData = {
+      id: "rel-123",
+      account_id: "account-456",
+      artist_id: "artist-789",
+      pinned: true,
+    };
+    mockSingle.mockResolvedValue({ data: mockData, error: null });
+
+    await insertAccountArtistId("account-456", "artist-789", true);
+
+    expect(mockInsert).toHaveBeenCalledWith({
+      account_id: "account-456",
+      artist_id: "artist-789",
+      pinned: true,
+    });
+  });
+
   it("throws an error when insert fails", async () => {
     mockSingle.mockResolvedValue({
       data: null,

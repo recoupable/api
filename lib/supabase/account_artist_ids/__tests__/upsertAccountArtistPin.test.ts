@@ -1,24 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { insertAccountArtistId } from "../insertAccountArtistId";
+import { selectAccountArtistId } from "../selectAccountArtistId";
+import { updateAccountArtistPin } from "../updateAccountArtistPin";
 import { upsertAccountArtistPin } from "../upsertAccountArtistPin";
 
-const mockFrom = vi.fn();
-const mockUpsert = vi.fn();
+vi.mock("../selectAccountArtistId", () => ({
+  selectAccountArtistId: vi.fn(),
+}));
 
-vi.mock("@/lib/supabase/serverClient", () => ({
-  default: {
-    from: (...args: unknown[]) => mockFrom(...args),
-  },
+vi.mock("../updateAccountArtistPin", () => ({
+  updateAccountArtistPin: vi.fn(),
+}));
+
+vi.mock("../insertAccountArtistId", () => ({
+  insertAccountArtistId: vi.fn(),
 }));
 
 describe("upsertAccountArtistPin", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFrom.mockReturnValue({ upsert: mockUpsert });
   });
 
-  it("upserts the pinned state for the account and artist", async () => {
-    mockUpsert.mockResolvedValue({ error: null });
+  it("updates pinned state when the account/artist row already exists", async () => {
+    vi.mocked(selectAccountArtistId).mockResolvedValue({ artist_id: "artist-456" });
 
     await upsertAccountArtistPin({
       accountId: "account-123",
@@ -26,28 +31,20 @@ describe("upsertAccountArtistPin", () => {
       pinned: true,
     });
 
-    expect(mockFrom).toHaveBeenCalledWith("account_artist_ids");
-    expect(mockUpsert).toHaveBeenCalledWith(
-      {
-        account_id: "account-123",
-        artist_id: "artist-456",
-        pinned: true,
-      },
-      { onConflict: "account_id,artist_id" },
-    );
+    expect(updateAccountArtistPin).toHaveBeenCalledWith("account-123", "artist-456", true);
+    expect(insertAccountArtistId).not.toHaveBeenCalled();
   });
 
-  it("throws when the upsert fails", async () => {
-    mockUpsert.mockResolvedValue({
-      error: { message: "database exploded" },
+  it("inserts a row with pinned state when none exists", async () => {
+    vi.mocked(selectAccountArtistId).mockResolvedValue(null);
+
+    await upsertAccountArtistPin({
+      accountId: "account-123",
+      artistId: "artist-456",
+      pinned: false,
     });
 
-    await expect(
-      upsertAccountArtistPin({
-        accountId: "account-123",
-        artistId: "artist-456",
-        pinned: false,
-      }),
-    ).rejects.toThrow("Failed to update pinned status: database exploded");
+    expect(insertAccountArtistId).toHaveBeenCalledWith("account-123", "artist-456", false);
+    expect(updateAccountArtistPin).not.toHaveBeenCalled();
   });
 });
