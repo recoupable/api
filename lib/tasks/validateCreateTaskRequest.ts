@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { validateAccountIdOverride } from "@/lib/auth/validateAccountIdOverride";
 import { createTaskBodySchema, type CreateTaskBody } from "@/lib/tasks/createTaskSchemas";
 
 /**
- * Validates POST /api/tasks: authenticate first, then JSON + Zod; resolves `account_id` from optional body
- * override plus {@link validateAccountIdOverride}.
+ * Validates POST /api/tasks: JSON + Zod first, then `validateAuthContext` with optional body `account_id`
+ * override — matches the canonical validate-body-then-auth shape used by other POST endpoints.
  *
  * @param request - The incoming Next.js request
  * @returns Error response or {@link CreateTaskBody} with resolved `account_id`
@@ -14,11 +13,6 @@ import { createTaskBodySchema, type CreateTaskBody } from "@/lib/tasks/createTas
 export async function validateCreateTaskRequest(
   request: NextRequest,
 ): Promise<NextResponse | CreateTaskBody> {
-  const authBase = await validateAuthContext(request, {});
-  if (authBase instanceof NextResponse) {
-    return authBase;
-  }
-
   let body: unknown;
   try {
     body = await request.json();
@@ -45,19 +39,15 @@ export async function validateCreateTaskRequest(
     );
   }
 
-  const validatedBody = validationResult.data;
-  const targetAccountId = validatedBody.account_id ?? authBase.accountId;
-
-  const overrideResult = await validateAccountIdOverride({
-    currentAccountId: authBase.accountId,
-    targetAccountId,
+  const authContext = await validateAuthContext(request, {
+    accountId: validationResult.data.account_id,
   });
-  if (overrideResult instanceof NextResponse) {
-    return overrideResult;
+  if (authContext instanceof NextResponse) {
+    return authContext;
   }
 
   return {
-    ...validatedBody,
-    account_id: overrideResult.accountId,
+    ...validationResult.data,
+    account_id: authContext.accountId,
   };
 }

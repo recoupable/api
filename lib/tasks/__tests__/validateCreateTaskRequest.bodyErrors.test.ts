@@ -13,9 +13,6 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
-vi.mock("@/lib/auth/validateAccountIdOverride", () => ({
-  validateAccountIdOverride: vi.fn(),
-}));
 
 describe("validateCreateTaskRequest body errors", () => {
   beforeEach(() => {
@@ -23,7 +20,7 @@ describe("validateCreateTaskRequest body errors", () => {
     vi.mocked(validateAuthContext).mockResolvedValue(authOk);
   });
 
-  it("returns 400 for invalid JSON after auth succeeds", async () => {
+  it("returns 400 for invalid JSON without calling auth", async () => {
     const request = new NextRequest("http://localhost/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": "test-key" },
@@ -36,10 +33,10 @@ describe("validateCreateTaskRequest body errors", () => {
       status: "error",
       error: "Invalid JSON body",
     });
-    expect(validateAuthContext).toHaveBeenCalledWith(request, {});
+    expect(validateAuthContext).not.toHaveBeenCalled();
   });
 
-  it("returns 400 when Zod fails (empty title)", async () => {
+  it("returns 400 when Zod fails (empty title) without calling auth", async () => {
     const request = new NextRequest("http://localhost/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": "test-key" },
@@ -47,10 +44,10 @@ describe("validateCreateTaskRequest body errors", () => {
     });
     const res = await validateCreateTaskRequest(request);
     expect((res as NextResponse).status).toBe(400);
-    expect(validateAuthContext).toHaveBeenCalledWith(request, {});
+    expect(validateAuthContext).not.toHaveBeenCalled();
   });
 
-  it("returns 400 when required fields are missing", async () => {
+  it("returns 400 when required fields are missing without calling auth", async () => {
     const request = new NextRequest("http://localhost/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": "test-key" },
@@ -58,9 +55,10 @@ describe("validateCreateTaskRequest body errors", () => {
     });
     const res = await validateCreateTaskRequest(request);
     expect((res as NextResponse).status).toBe(400);
+    expect(validateAuthContext).not.toHaveBeenCalled();
   });
 
-  it("returns 400 when body has unknown keys (strict schema)", async () => {
+  it("returns 400 when body has unknown keys (strict schema) without calling auth", async () => {
     const request = new NextRequest("http://localhost/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": "test-key" },
@@ -71,5 +69,6 @@ describe("validateCreateTaskRequest body errors", () => {
     });
     const res = await validateCreateTaskRequest(request);
     expect((res as NextResponse).status).toBe(400);
+    expect(validateAuthContext).not.toHaveBeenCalled();
   });
 });

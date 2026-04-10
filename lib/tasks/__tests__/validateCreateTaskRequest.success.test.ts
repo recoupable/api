@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateCreateTaskRequest } from "@/lib/tasks/validateCreateTaskRequest";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { validateAccountIdOverride } from "@/lib/auth/validateAccountIdOverride";
 import {
   ACCOUNT_A,
   ACCOUNT_B,
@@ -16,17 +15,11 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
-vi.mock("@/lib/auth/validateAccountIdOverride", () => ({
-  validateAccountIdOverride: vi.fn(),
-}));
 
 describe("validateCreateTaskRequest success", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(validateAuthContext).mockResolvedValue(authOk);
-    vi.mocked(validateAccountIdOverride).mockImplementation(async params => ({
-      accountId: params.targetAccountId,
-    }));
   });
 
   it("returns CreateTaskBody with account_id from auth when body omits account_id", async () => {
@@ -39,15 +32,17 @@ describe("validateCreateTaskRequest success", () => {
     const res = await validateCreateTaskRequest(request);
     expect(res).not.toBeInstanceOf(NextResponse);
     expect(res).toEqual({ ...body, account_id: ACCOUNT_A });
-    expect(validateAccountIdOverride).toHaveBeenCalledWith({
-      currentAccountId: ACCOUNT_A,
-      targetAccountId: ACCOUNT_A,
+    expect(validateAuthContext).toHaveBeenCalledWith(request, {
+      accountId: undefined,
     });
   });
 
-  it("returns CreateTaskBody when body account_id is allowed (override)", async () => {
+  it("returns CreateTaskBody when body account_id override is allowed", async () => {
     const body = validCreateBody({ account_id: ACCOUNT_B });
-    vi.mocked(validateAccountIdOverride).mockResolvedValue({ accountId: ACCOUNT_B });
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      ...authOk,
+      accountId: ACCOUNT_B,
+    });
     const request = new NextRequest("http://localhost/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": "test-key" },
@@ -55,6 +50,9 @@ describe("validateCreateTaskRequest success", () => {
     });
     const res = await validateCreateTaskRequest(request);
     expect(res).toEqual({ ...body, account_id: ACCOUNT_B });
+    expect(validateAuthContext).toHaveBeenCalledWith(request, {
+      accountId: ACCOUNT_B,
+    });
   });
 
   it("preserves optional model", async () => {
@@ -65,6 +63,9 @@ describe("validateCreateTaskRequest success", () => {
       body: JSON.stringify(body),
     });
     const res = await validateCreateTaskRequest(request);
-    expect(res).toMatchObject({ model: "anthropic/claude-sonnet-4.5", account_id: ACCOUNT_A });
+    expect(res).toMatchObject({
+      model: "anthropic/claude-sonnet-4.5",
+      account_id: ACCOUNT_A,
+    });
   });
 });
