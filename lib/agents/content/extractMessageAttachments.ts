@@ -15,7 +15,7 @@ interface MessageWithAttachments {
 
 export interface ExtractedAttachments {
   songUrl: string | null;
-  imageUrl: string | null;
+  imageUrls: string[];
 }
 
 /**
@@ -29,7 +29,7 @@ export async function extractMessageAttachments(
 ): Promise<ExtractedAttachments> {
   const result: ExtractedAttachments = {
     songUrl: null,
-    imageUrl: null,
+    imageUrls: [],
   };
 
   const attachments = message.attachments;
@@ -41,7 +41,7 @@ export async function extractMessageAttachments(
   const isImage = (a: Attachment) => a.type === "image" || a.mimeType?.startsWith("image/");
 
   const audioAttachment = attachments.find(isAudio);
-  const imageAttachment = attachments.find(isImage);
+  const imageAttachments = attachments.filter(isImage);
 
   if (audioAttachment) {
     try {
@@ -51,9 +51,10 @@ export async function extractMessageAttachments(
     }
   }
 
-  if (imageAttachment) {
+  for (const imageAttachment of imageAttachments) {
     try {
-      result.imageUrl = await resolveAttachmentUrl(imageAttachment, "image");
+      const url = await resolveAttachmentUrl(imageAttachment, "image");
+      if (url) result.imageUrls.push(url);
     } catch (error) {
       console.error("[content-agent] Failed to resolve image attachment:", error);
     }

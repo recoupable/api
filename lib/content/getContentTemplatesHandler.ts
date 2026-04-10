@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { CONTENT_TEMPLATES } from "@/lib/content/contentTemplates";
+import { listTemplates } from "@/lib/content/templates";
 
 /**
  * Handler for GET /api/content/templates.
@@ -18,7 +18,7 @@ export async function getContentTemplatesHandler(request: NextRequest): Promise<
   return NextResponse.json(
     {
       status: "success",
-      templates: CONTENT_TEMPLATES,
+      templates: listTemplates(),
     },
     { status: 200, headers: getCorsHeaders() },
   );
