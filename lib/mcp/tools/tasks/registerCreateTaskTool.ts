@@ -42,8 +42,13 @@ export function registerCreateTaskTool(server: McpServer): void {
         return getToolResultError("Failed to resolve account ID");
       }
 
-      const result = await createTask({ ...args, account_id: accountId });
-      return getToolResultSuccess(result);
+      try {
+        const result = await createTask({ ...args, account_id: accountId });
+        return getToolResultSuccess(result);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to create task";
+        return getToolResultError(message);
+      }
     },
   );
 }
