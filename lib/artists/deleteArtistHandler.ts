@@ -25,38 +25,12 @@ export async function deleteArtistHandler(
       return validated;
     }
 
-    const result = await deleteArtist(validated);
-
-    if (!result.ok && result.code === "not_found") {
-      return NextResponse.json(
-        {
-          status: "error",
-          error: "Artist not found",
-        },
-        {
-          status: 404,
-          headers: getCorsHeaders(),
-        },
-      );
-    }
-
-    if (!result.ok && result.code === "forbidden") {
-      return NextResponse.json(
-        {
-          status: "error",
-          error: "Unauthorized delete attempt",
-        },
-        {
-          status: 403,
-          headers: getCorsHeaders(),
-        },
-      );
-    }
+    const artistId = await deleteArtist(validated);
 
     return NextResponse.json(
       {
         success: true,
-        artistId: result.artistId,
+        artistId,
       },
       {
         status: 200,

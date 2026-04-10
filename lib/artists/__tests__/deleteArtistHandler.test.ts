@@ -39,57 +39,12 @@ describe("deleteArtistHandler", () => {
     expect(deleteArtist).not.toHaveBeenCalled();
   });
 
-  it("returns 404 when the artist does not exist", async () => {
-    vi.mocked(validateDeleteArtistRequest).mockResolvedValue({
-      artistId,
-      requesterAccountId,
-    });
-    vi.mocked(deleteArtist).mockResolvedValue({
-      ok: false,
-      code: "not_found",
-    });
-
-    const request = new NextRequest(`http://localhost/api/artists/${artistId}`, {
-      method: "DELETE",
-    });
-
-    const response = await deleteArtistHandler(request, Promise.resolve({ id: artistId }));
-    const body = await response.json();
-
-    expect(response.status).toBe(404);
-    expect(body.error).toBe("Artist not found");
-  });
-
-  it("returns 403 when the delete is not authorized", async () => {
-    vi.mocked(validateDeleteArtistRequest).mockResolvedValue({
-      artistId,
-      requesterAccountId,
-    });
-    vi.mocked(deleteArtist).mockResolvedValue({
-      ok: false,
-      code: "forbidden",
-    });
-
-    const request = new NextRequest(`http://localhost/api/artists/${artistId}`, {
-      method: "DELETE",
-    });
-
-    const response = await deleteArtistHandler(request, Promise.resolve({ id: artistId }));
-    const body = await response.json();
-
-    expect(response.status).toBe(403);
-    expect(body.error).toBe("Unauthorized delete attempt");
-  });
-
   it("returns success when the artist is deleted", async () => {
     vi.mocked(validateDeleteArtistRequest).mockResolvedValue({
       artistId,
       requesterAccountId,
     });
-    vi.mocked(deleteArtist).mockResolvedValue({
-      ok: true,
-      artistId,
-    });
+    vi.mocked(deleteArtist).mockResolvedValue(artistId);
 
     const request = new NextRequest(`http://localhost/api/artists/${artistId}`, {
       method: "DELETE",

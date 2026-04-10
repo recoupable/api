@@ -1,56 +1,31 @@
-import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import { deleteAccountArtistId } from "@/lib/supabase/account_artist_ids/deleteAccountArtistId";
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
 import { deleteAccountById } from "@/lib/supabase/accounts/deleteAccountById";
-import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 
 export interface DeleteArtistParams {
   artistId: string;
   requesterAccountId: string;
 }
 
-export type DeleteArtistResult =
-  | { ok: true; artistId: string }
-  | { ok: false; code: "forbidden" | "not_found" };
-
 /**
- * Deletes an artist for the authenticated requester.
+ * Deletes an artist for an already validated requester.
  *
- * The requester must be able to access the artist and must also have a direct
- * account_artist_ids link to remove. If the deleted link was the last remaining
- * artist link, the artist account itself is deleted as well.
+ * The validator is responsible for existence and access checks. This helper
+ * only removes the direct owner link and deletes the artist account if that
+ * link was the last remaining association.
  *
  * @param params - Delete artist parameters
  * @param params.artistId - Artist account ID to remove
  * @param params.requesterAccountId - Authenticated account performing the delete
- * @returns Delete result describing whether the artist was removed
+ * @returns The deleted artist account ID
  */
 export async function deleteArtist({
   artistId,
   requesterAccountId,
-}: DeleteArtistParams): Promise<DeleteArtistResult> {
-  const existingArtist = await selectAccounts(artistId);
-  if (!existingArtist.length) {
-    return {
-      ok: false,
-      code: "not_found",
-    };
-  }
-
-  const hasAccess = await checkAccountArtistAccess(requesterAccountId, artistId);
-  if (!hasAccess) {
-    return {
-      ok: false,
-      code: "forbidden",
-    };
-  }
-
+}: DeleteArtistParams): Promise<string> {
   const deletedLinks = await deleteAccountArtistId(requesterAccountId, artistId);
   if (!deletedLinks.length) {
-    return {
-      ok: false,
-      code: "forbidden",
-    };
+    throw new Error("Failed to delete artist link");
   }
 
   const remainingLinks = await getAccountArtistIds({
@@ -61,8 +36,5 @@ export async function deleteArtist({
     await deleteAccountById(artistId);
   }
 
-  return {
-    ok: true,
-    artistId,
-  };
+  return artistId;
 }
