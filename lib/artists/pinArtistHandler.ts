@@ -18,14 +18,14 @@ export async function pinArtistHandler(
   params: Promise<{ id: string }>,
   pinned: boolean,
 ): Promise<NextResponse> {
-  const { id } = await params;
-
-  const validated = await validateArtistAccessRequest(request, id);
-  if (validated instanceof NextResponse) {
-    return validated;
-  }
-
   try {
+    const { id } = await params;
+
+    const validated = await validateArtistAccessRequest(request, id);
+    if (validated instanceof NextResponse) {
+      return validated;
+    }
+
     await pinArtist({
       ...validated,
       pinned,
@@ -48,7 +48,7 @@ export async function pinArtistHandler(
     return NextResponse.json(
       {
         status: "error",
-        error: error instanceof Error ? error.message : "Internal server error",
+        error: "Internal server error",
       },
       {
         status: 500,

@@ -82,4 +82,21 @@ describe("pinArtistHandler", () => {
       pinned: false,
     });
   });
+
+  it("returns a generic 500 response when validation throws", async () => {
+    vi.mocked(validateArtistAccessRequest).mockRejectedValue(new Error("db exploded"));
+
+    const request = new NextRequest(`http://localhost/api/artists/${artistId}/pin`, {
+      method: "POST",
+    });
+
+    const response = await pinArtistHandler(request, Promise.resolve({ id: artistId }), true);
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      status: "error",
+      error: "Internal server error",
+    });
+  });
 });
