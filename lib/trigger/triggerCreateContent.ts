@@ -4,7 +4,7 @@ import { CREATE_CONTENT_TASK_ID } from "@/lib/const";
 export interface TriggerCreateContentPayload {
   accountId: string;
   artistSlug: string;
-  template: string;
+  template?: string;
   lipsync: boolean;
   /** Controls caption length: "short", "medium", or "long". */
   captionLength: "short" | "medium" | "long";
