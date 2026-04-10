@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateCreateTaskRequest } from "@/lib/tasks/validateCreateTaskBody";
+import { validateCreateTaskRequest } from "@/lib/tasks/validateCreateTaskRequest";
 import { createTask } from "@/lib/tasks/createTask";
 
 /**

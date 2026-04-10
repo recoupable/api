@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createTask } from "@/lib/tasks/createTask";
-import { createTaskBodySchema, type CreateTaskBody } from "@/lib/tasks/validateCreateTaskBody";
+import { createTaskBodySchema, type CreateTaskBody } from "@/lib/tasks/createTaskBodySchema";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 
 /**
