@@ -36,6 +36,10 @@ export const RECOUP_API_KEY = process.env.RECOUP_API_KEY || "";
 export const FLAMINGO_GENERATE_URL =
   "https://sidney-78147--music-flamingo-musicflamingo-generate.modal.run";
 
+/** TRIBE v2 neural engagement prediction endpoint (Modal) */
+export const TRIBE_PREDICT_URL =
+  "https://sidney-78147--tribe-predict-tribev2predict-predict.modal.run";
+
 /** Snapshot expiration duration (7 days) */
 export const SNAPSHOT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
