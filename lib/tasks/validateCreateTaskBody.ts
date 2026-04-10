@@ -38,33 +38,6 @@ export const createTaskBodySchema = z.object({
 export type CreateTaskBody = z.infer<typeof createTaskBodySchema>;
 
 /**
- * Validates create task request body.
- *
- * @param body - The request body to validate.
- * @returns A NextResponse with an error if validation fails, or the validated body if validation passes.
- */
-export function validateCreateTaskBody(body: unknown): NextResponse | CreateTaskBody {
-  const validationResult = createTaskBodySchema.safeParse(body);
-
-  if (!validationResult.success) {
-    const firstError = validationResult.error.issues[0];
-    return NextResponse.json(
-      {
-        status: "error",
-        missing_fields: firstError.path,
-        error: firstError.message,
-      },
-      {
-        status: 400,
-        headers: getCorsHeaders(),
-      },
-    );
-  }
-
-  return validationResult.data;
-}
-
-/**
  * Validates POST /api/tasks: JSON body, Zod schema, and auth + account_id override (same rules as other endpoints).
  *
  * @param request - The incoming Next.js request
@@ -83,10 +56,23 @@ export async function validateCreateTaskRequest(
     );
   }
 
-  const validatedBody = validateCreateTaskBody(body);
-  if (validatedBody instanceof NextResponse) {
-    return validatedBody;
+  const validationResult = createTaskBodySchema.safeParse(body);
+  if (!validationResult.success) {
+    const firstError = validationResult.error.issues[0];
+    return NextResponse.json(
+      {
+        status: "error",
+        missing_fields: firstError.path,
+        error: firstError.message,
+      },
+      {
+        status: 400,
+        headers: getCorsHeaders(),
+      },
+    );
   }
+
+  const validatedBody = validationResult.data;
 
   const auth = await validateAuthContext(request, {
     accountId: validatedBody.account_id,
