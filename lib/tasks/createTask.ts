@@ -1,7 +1,7 @@
 import { insertScheduledAction } from "@/lib/supabase/scheduled_actions/insertScheduledAction";
 import { updateScheduledAction } from "@/lib/supabase/scheduled_actions/updateScheduledAction";
 import { createSchedule } from "@/lib/trigger/createSchedule";
-import { createTaskPayloadSchema, type CreateTaskBody } from "@/lib/tasks/validateCreateTaskBody";
+import { createTaskPayloadSchema, type CreateTaskBody } from "@/lib/tasks/createTaskSchemas";
 import type { Tables } from "@/types/database.types";
 
 /**

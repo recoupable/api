@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { createTaskBodySchema, type CreateTaskBody } from "@/lib/tasks/validateCreateTaskBody";
+import { validateAccountIdOverride } from "@/lib/auth/validateAccountIdOverride";
+import { createTaskBodySchema, type CreateTaskBody } from "@/lib/tasks/createTaskSchemas";
 
 /**
- * Validates POST /api/tasks: auth first, then JSON body + Zod schema; `account_id` is taken from auth only.
+ * Validates POST /api/tasks: authenticate first, then JSON + Zod; resolves `account_id` from optional body
+ * override plus {@link validateAccountIdOverride}.
  *
  * @param request - The incoming Next.js request
- * @returns Error response or {@link CreateTaskBody} with `account_id` from resolved auth context
+ * @returns Error response or {@link CreateTaskBody} with resolved `account_id`
  */
 export async function validateCreateTaskRequest(
   request: NextRequest,
@@ -43,8 +45,19 @@ export async function validateCreateTaskRequest(
     );
   }
 
+  const validatedBody = validationResult.data;
+  const targetAccountId = validatedBody.account_id ?? authBase.accountId;
+
+  const overrideResult = await validateAccountIdOverride({
+    currentAccountId: authBase.accountId,
+    targetAccountId,
+  });
+  if (overrideResult instanceof NextResponse) {
+    return overrideResult;
+  }
+
   return {
-    ...validationResult.data,
-    account_id: authBase.accountId,
+    ...validatedBody,
+    account_id: overrideResult.accountId,
   };
 }

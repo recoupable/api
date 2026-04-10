@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateCreateTaskRequest } from "@/lib/tasks/validateCreateTaskRequest";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { validateAccountIdOverride } from "@/lib/auth/validateAccountIdOverride";
 import {
+  ACCOUNT_A,
+  ACCOUNT_B,
   authOk,
   validCreateBody,
 } from "@/lib/tasks/__tests__/fixtures/createTaskRequestTestFixtures";
@@ -13,11 +16,17 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
+vi.mock("@/lib/auth/validateAccountIdOverride", () => ({
+  validateAccountIdOverride: vi.fn(),
+}));
 
 describe("validateCreateTaskRequest auth", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(validateAuthContext).mockResolvedValue(authOk);
+    vi.mocked(validateAccountIdOverride).mockImplementation(async params => ({
+      accountId: params.targetAccountId,
+    }));
   });
 
   it("returns 401 when validateAuthContext rejects before body parse", async () => {
@@ -34,6 +43,25 @@ describe("validateCreateTaskRequest auth", () => {
     const res = await validateCreateTaskRequest(request);
     expect(res).toBe(authError);
     expect(validateAuthContext).toHaveBeenCalledWith(request, {});
+  });
+
+  it("returns 403 when validateAccountIdOverride rejects body account_id", async () => {
+    const forbidden = NextResponse.json(
+      { status: "error", error: "Access denied to specified account_id" },
+      { status: 403 },
+    );
+    vi.mocked(validateAccountIdOverride).mockResolvedValue(forbidden);
+    const request = new NextRequest("http://localhost/api/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer test.jwt" },
+      body: JSON.stringify(validCreateBody({ account_id: ACCOUNT_B })),
+    });
+    const res = await validateCreateTaskRequest(request);
+    expect(res).toBe(forbidden);
+    expect(validateAccountIdOverride).toHaveBeenCalledWith({
+      currentAccountId: ACCOUNT_A,
+      targetAccountId: ACCOUNT_B,
+    });
   });
 
   it("calls validateAuthContext with empty input (auth before body)", async () => {

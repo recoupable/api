@@ -4,10 +4,7 @@ import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sd
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import { createTask } from "@/lib/tasks/createTask";
-import {
-  createTaskBodySchema,
-  type CreateTaskRequestBody,
-} from "@/lib/tasks/validateCreateTaskBody";
+import { createTaskBodySchema, type CreateTaskRequestBody } from "@/lib/tasks/createTaskSchemas";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 
@@ -31,7 +28,7 @@ export function registerCreateTaskTool(server: McpServer): void {
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
       const { accountId, error } = await resolveAccountId({
         authInfo,
-        accountIdOverride: undefined,
+        accountIdOverride: args.account_id,
       });
 
       if (error) {

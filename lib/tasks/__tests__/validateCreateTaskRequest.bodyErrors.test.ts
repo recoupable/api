@@ -13,6 +13,9 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
+vi.mock("@/lib/auth/validateAccountIdOverride", () => ({
+  validateAccountIdOverride: vi.fn(),
+}));
 
 describe("validateCreateTaskRequest body errors", () => {
   beforeEach(() => {
@@ -57,13 +60,13 @@ describe("validateCreateTaskRequest body errors", () => {
     expect((res as NextResponse).status).toBe(400);
   });
 
-  it("returns 400 when body includes account_id (strict schema)", async () => {
+  it("returns 400 when body has unknown keys (strict schema)", async () => {
     const request = new NextRequest("http://localhost/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": "test-key" },
       body: JSON.stringify({
         ...validCreateBody(),
-        account_id: "123e4567-e89b-12d3-a456-426614174000",
+        not_in_openapi: true,
       }),
     });
     const res = await validateCreateTaskRequest(request);

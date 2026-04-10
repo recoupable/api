@@ -2,7 +2,7 @@ export const ACCOUNT_A = "123e4567-e89b-12d3-a456-426614174000";
 export const ACCOUNT_B = "223e4567-e89b-12d3-a456-426614174000";
 export const ARTIST_ID = "323e4567-e89b-12d3-a456-426614174000";
 
-/** Request JSON (no `account_id` — server derives from auth). */
+/** Request JSON; optional `account_id` per OpenAPI `CreateTaskRequest`. */
 export function validCreateBody(overrides: Record<string, unknown> = {}) {
   return {
     title: "Daily report",
