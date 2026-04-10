@@ -2,17 +2,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateCreateTaskRequest } from "@/lib/tasks/validateCreateTaskRequest";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { validateAccountIdOverride } from "@/lib/auth/validateAccountIdOverride";
-import { authOk, validCreateBody } from "@/lib/tasks/__tests__/fixtures/createTaskRequestTestFixtures";
+import {
+  authOk,
+  validCreateBody,
+} from "@/lib/tasks/__tests__/fixtures/createTaskRequestTestFixtures";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
-}));
-vi.mock("@/lib/auth/validateAccountIdOverride", () => ({
-  validateAccountIdOverride: vi.fn(),
 }));
 
 describe("validateCreateTaskRequest body errors", () => {
@@ -35,7 +34,6 @@ describe("validateCreateTaskRequest body errors", () => {
       error: "Invalid JSON body",
     });
     expect(validateAuthContext).toHaveBeenCalledWith(request, {});
-    expect(validateAccountIdOverride).not.toHaveBeenCalled();
   });
 
   it("returns 400 when Zod fails (empty title)", async () => {
@@ -47,7 +45,6 @@ describe("validateCreateTaskRequest body errors", () => {
     const res = await validateCreateTaskRequest(request);
     expect((res as NextResponse).status).toBe(400);
     expect(validateAuthContext).toHaveBeenCalledWith(request, {});
-    expect(validateAccountIdOverride).not.toHaveBeenCalled();
   });
 
   it("returns 400 when required fields are missing", async () => {
@@ -58,17 +55,18 @@ describe("validateCreateTaskRequest body errors", () => {
     });
     const res = await validateCreateTaskRequest(request);
     expect((res as NextResponse).status).toBe(400);
-    expect(validateAccountIdOverride).not.toHaveBeenCalled();
   });
 
-  it("returns 400 when account_id is empty string without calling override", async () => {
+  it("returns 400 when body includes account_id (strict schema)", async () => {
     const request = new NextRequest("http://localhost/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": "test-key" },
-      body: JSON.stringify(validCreateBody({ account_id: "" })),
+      body: JSON.stringify({
+        ...validCreateBody(),
+        account_id: "123e4567-e89b-12d3-a456-426614174000",
+      }),
     });
     const res = await validateCreateTaskRequest(request);
     expect((res as NextResponse).status).toBe(400);
-    expect(validateAccountIdOverride).not.toHaveBeenCalled();
   });
 });

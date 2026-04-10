@@ -2,12 +2,12 @@ export const ACCOUNT_A = "123e4567-e89b-12d3-a456-426614174000";
 export const ACCOUNT_B = "223e4567-e89b-12d3-a456-426614174000";
 export const ARTIST_ID = "323e4567-e89b-12d3-a456-426614174000";
 
+/** Request JSON (no `account_id` — server derives from auth). */
 export function validCreateBody(overrides: Record<string, unknown> = {}) {
   return {
     title: "Daily report",
     prompt: "Summarize fans",
     schedule: "0 9 * * *",
-    account_id: ACCOUNT_A,
     artist_account_id: ARTIST_ID,
     ...overrides,
   };

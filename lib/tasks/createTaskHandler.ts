@@ -7,13 +7,14 @@ import { createTask } from "@/lib/tasks/createTask";
  * Creates a new task (scheduled action)
  * Returns the created task in an array, matching GET response shape
  *
- * Body parameters:
+ * Body parameters (JSON):
  * - title (required): The title of the task
  * - prompt (required): The prompt for the task
  * - schedule (required): The cron schedule string
- * - account_id (required): The account ID
  * - artist_account_id (required): The artist account ID
  * - model (optional): The model to use for the task
+ *
+ * Task owner `account_id` is derived from authentication (`x-api-key` or `Authorization: Bearer`); do not send `account_id` in the body.
  *
  * @param request - The request object containing the task data in the body.
  * @returns A NextResponse with the created task.
