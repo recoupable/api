@@ -21,6 +21,15 @@ export const OUTBOUND_EMAIL_DOMAIN = "@recoupable.com";
 /** Default from address for outbound emails */
 export const RECOUP_FROM_EMAIL = `Agent by Recoup <agent${OUTBOUND_EMAIL_DOMAIN}>`;
 
+/**
+ * Generic message returned for every POST /api/agents/signup response,
+ * regardless of which branch (new agent+, existing account, new normal
+ * account) executed. Keeping the response body identical prevents callers
+ * from probing the system to discover which emails already have accounts.
+ */
+export const AGENT_SIGNUP_GENERIC_MESSAGE =
+  "If this is a new agent+ email, your API key is included. Otherwise, check your email for a verification code.";
+
 export const SUPABASE_STORAGE_BUCKET = "user-files";
 export const CREATE_CONTENT_TASK_ID = "create-content";
 
