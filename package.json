@@ -29,6 +29,7 @@
     "@coinbase/x402": "^0.7.3",
     "@composio/core": "^0.3.4",
     "@composio/vercel": "^0.3.4",
+    "@fal-ai/client": "^1.9.5",
     "@modelcontextprotocol/sdk": "^1.24.3",
     "@privy-io/node": "^0.6.2",
     "@supabase/supabase-js": "^2.86.0",

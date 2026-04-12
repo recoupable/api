@@ -32,6 +32,7 @@ reviews:
           - Functions should do one thing and do it well
           - Avoid god classes or functions with multiple responsibilities
           - Look for functions longer than 20 lines or classes with >200 lines
+          - File-function name match: each file must export ONE primary function, and the file name must match that function's name. If a new function is added to an existing file and its name does not match the file name, flag it. The developer must create a new file named after the function instead of adding it to an existing file. Example: a function called `buildAuthConfigs` must live in `buildAuthConfigs.ts`, NOT in `getConnectors.ts`.
 
           ## Open/Closed Principle (OCP)
           - Classes should be open for extension but closed for modification
@@ -88,6 +89,7 @@ reviews:
         For domain functions, ensure:
         - Pure functions when possible
         - Single responsibility per function
+        - **File naming rule: The file name MUST match the exported function name.** If a new function is defined in a file whose name does not match, leave a review comment telling the developer to create a new file named after the function. For example, `buildAuthConfigs` must be in `buildAuthConfigs.ts`, not added to `getConnectors.ts`.
         - Proper error handling
         - Use TypeScript for type safety
         - Avoid side effects
@@ -100,7 +102,7 @@ reviews:
       instructions: |
         For Supabase operations, ensure:
         - Follow naming convention: select*, insert*, update*, delete*, get* (for complex queries)
-        - One exported function per file
+        - One exported function per file — the file name MUST match the exported function name
         - Import serverClient only within lib/supabase/
         - Return typed results using Tables<"table_name">
         - Handle errors gracefully
