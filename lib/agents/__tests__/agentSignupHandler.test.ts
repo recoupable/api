@@ -1,9 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
+import { randomInt } from "crypto";
 import { agentSignupHandler } from "@/lib/agents/agentSignupHandler";
 
 import { selectAccountByEmail } from "@/lib/supabase/account_emails/selectAccountByEmail";
 import { insertAccount } from "@/lib/supabase/accounts/insertAccount";
 import { getPrivyUserByEmail } from "@/lib/privy/getPrivyUserByEmail";
+
+/**
+ * Builds a NextRequest for the agent signup endpoint with the given body.
+ *
+ * @param body - The request body to serialize
+ * @returns A NextRequest targeting `/api/agents/signup`
+ */
+function buildRequest(body: unknown): NextRequest {
+  return new NextRequest("http://localhost/api/agents/signup", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -57,6 +72,14 @@ vi.mock("@/lib/agents/sendVerificationEmail", () => ({
   sendVerificationEmail: vi.fn(),
 }));
 
+vi.mock("crypto", async () => {
+  const actual = await vi.importActual<typeof import("crypto")>("crypto");
+  return {
+    ...actual,
+    randomInt: vi.fn(() => 123456),
+  };
+});
+
 describe("agentSignupHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -70,7 +93,7 @@ describe("agentSignupHandler", () => {
         ReturnType<typeof insertAccount>
       >);
 
-      const result = await agentSignupHandler({ email: "agent+bot@example.com" });
+      const result = await agentSignupHandler(buildRequest({ email: "agent+bot@example.com" }));
       const body = await result.json();
 
       expect(result.status).toBe(200);
@@ -88,7 +111,7 @@ describe("agentSignupHandler", () => {
       } as unknown as Awaited<ReturnType<typeof selectAccountByEmail>>);
       vi.mocked(getPrivyUserByEmail).mockResolvedValue({ id: "privy_456" });
 
-      const result = await agentSignupHandler({ email: "user@example.com" });
+      const result = await agentSignupHandler(buildRequest({ email: "user@example.com" }));
       const body = await result.json();
 
       expect(result.status).toBe(200);
@@ -105,12 +128,38 @@ describe("agentSignupHandler", () => {
       >);
       vi.mocked(getPrivyUserByEmail).mockResolvedValue(null);
 
-      const result = await agentSignupHandler({ email: "user@example.com" });
+      const result = await agentSignupHandler(buildRequest({ email: "user@example.com" }));
       const body = await result.json();
 
       expect(result.status).toBe(200);
       expect(body.account_id).toBe("acc_new");
       expect(body.api_key).toBeNull();
+    });
+
+    it("generates verification code with inclusive upper bound (100000 <= code <= 999999)", async () => {
+      vi.mocked(selectAccountByEmail).mockResolvedValue(null);
+      vi.mocked(insertAccount).mockResolvedValue({ id: "acc_new" } as unknown as Awaited<
+        ReturnType<typeof insertAccount>
+      >);
+      vi.mocked(getPrivyUserByEmail).mockResolvedValue(null);
+
+      await agentSignupHandler(buildRequest({ email: "user@example.com" }));
+
+      // Node's randomInt upper bound is exclusive. Using 1000000 covers 999999
+      // as a possible value; using 999999 would never generate it.
+      expect(randomInt).toHaveBeenCalledWith(100000, 1000000);
+    });
+  });
+
+  describe("validation", () => {
+    it("returns 400 for missing email", async () => {
+      const result = await agentSignupHandler(buildRequest({}));
+      expect(result.status).toBe(400);
+    });
+
+    it("returns 400 for invalid email", async () => {
+      const result = await agentSignupHandler(buildRequest({ email: "not-an-email" }));
+      expect(result.status).toBe(400);
     });
   });
 });

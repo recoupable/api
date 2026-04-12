@@ -1,9 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
 import { agentVerifyHandler } from "@/lib/agents/agentVerifyHandler";
 
 import { selectAccountByEmail } from "@/lib/supabase/account_emails/selectAccountByEmail";
 import { getPrivyUserByEmail } from "@/lib/privy/getPrivyUserByEmail";
 import { setPrivyCustomMetadata } from "@/lib/privy/setPrivyCustomMetadata";
+import { insertApiKey } from "@/lib/supabase/account_api_keys/insertApiKey";
+
+/**
+ * Builds a NextRequest for the agent verify endpoint with the given body.
+ *
+ * @param body - The request body to serialize
+ * @returns A NextRequest targeting `/api/agents/verify`
+ */
+function buildRequest(body: unknown): NextRequest {
+  return new NextRequest("http://localhost/api/agents/verify", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -54,7 +69,9 @@ describe("agentVerifyHandler", () => {
       email: "user@example.com",
     } as unknown as Awaited<ReturnType<typeof selectAccountByEmail>>);
 
-    const result = await agentVerifyHandler({ email: "user@example.com", code: "123456" });
+    const result = await agentVerifyHandler(
+      buildRequest({ email: "user@example.com", code: "123456" }),
+    );
     const body = await result.json();
 
     expect(result.status).toBe(200);
@@ -74,7 +91,9 @@ describe("agentVerifyHandler", () => {
       },
     });
 
-    const result = await agentVerifyHandler({ email: "user@example.com", code: "wrong" });
+    const result = await agentVerifyHandler(
+      buildRequest({ email: "user@example.com", code: "999999" }),
+    );
 
     expect(result.status).toBe(400);
     expect(setPrivyCustomMetadata).toHaveBeenCalledWith(
@@ -95,7 +114,9 @@ describe("agentVerifyHandler", () => {
       },
     });
 
-    const result = await agentVerifyHandler({ email: "user@example.com", code: "123456" });
+    const result = await agentVerifyHandler(
+      buildRequest({ email: "user@example.com", code: "123456" }),
+    );
 
     expect(result.status).toBe(429);
   });
@@ -110,7 +131,9 @@ describe("agentVerifyHandler", () => {
       },
     });
 
-    const result = await agentVerifyHandler({ email: "user@example.com", code: "123456" });
+    const result = await agentVerifyHandler(
+      buildRequest({ email: "user@example.com", code: "123456" }),
+    );
 
     expect(result.status).toBe(400);
   });
@@ -118,7 +141,9 @@ describe("agentVerifyHandler", () => {
   it("returns 400 when no privy user found", async () => {
     vi.mocked(getPrivyUserByEmail).mockResolvedValue(null);
 
-    const result = await agentVerifyHandler({ email: "user@example.com", code: "123456" });
+    const result = await agentVerifyHandler(
+      buildRequest({ email: "user@example.com", code: "123456" }),
+    );
 
     expect(result.status).toBe(400);
   });
@@ -129,8 +154,68 @@ describe("agentVerifyHandler", () => {
       custom_metadata: {},
     });
 
-    const result = await agentVerifyHandler({ email: "user@example.com", code: "123456" });
+    const result = await agentVerifyHandler(
+      buildRequest({ email: "user@example.com", code: "123456" }),
+    );
 
     expect(result.status).toBe(400);
+  });
+
+  it("returns 400 when verification_expires_at is missing (fail-safe)", async () => {
+    vi.mocked(getPrivyUserByEmail).mockResolvedValue({
+      id: "privy_123",
+      custom_metadata: {
+        verification_code_hash: "hashed_123456",
+        // verification_expires_at intentionally omitted
+        verification_attempts: 0,
+      },
+    });
+
+    const result = await agentVerifyHandler(
+      buildRequest({ email: "user@example.com", code: "123456" }),
+    );
+
+    expect(result.status).toBe(400);
+  });
+
+  it("returns 500 and does NOT expose api_key when insertApiKey fails", async () => {
+    vi.mocked(getPrivyUserByEmail).mockResolvedValue({
+      id: "privy_123",
+      custom_metadata: {
+        verification_code_hash: "hashed_123456",
+        verification_expires_at: new Date(Date.now() + 60000).toISOString(),
+        verification_attempts: 0,
+      },
+    });
+    vi.mocked(selectAccountByEmail).mockResolvedValue({
+      account_id: "acc_123",
+      email: "user@example.com",
+    } as unknown as Awaited<ReturnType<typeof selectAccountByEmail>>);
+    vi.mocked(insertApiKey).mockResolvedValueOnce({
+      data: null,
+      error: { message: "DB write failed" },
+    } as unknown as Awaited<ReturnType<typeof insertApiKey>>);
+
+    const result = await agentVerifyHandler(
+      buildRequest({ email: "user@example.com", code: "123456" }),
+    );
+    const body = await result.json();
+
+    expect(result.status).toBe(500);
+    expect(body.api_key).toBeUndefined();
+  });
+
+  describe("validation", () => {
+    it("returns 400 for missing code", async () => {
+      const result = await agentVerifyHandler(buildRequest({ email: "user@example.com" }));
+      expect(result.status).toBe(400);
+    });
+
+    it("returns 400 for non-numeric code", async () => {
+      const result = await agentVerifyHandler(
+        buildRequest({ email: "user@example.com", code: "abcdef" }),
+      );
+      expect(result.status).toBe(400);
+    });
   });
 });

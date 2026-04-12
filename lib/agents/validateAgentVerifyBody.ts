@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export const agentVerifyBodySchema = z.object({
   email: z.string({ message: "email is required" }).email("email must be a valid email address"),
-  code: z.string({ message: "code is required" }).min(1, "code cannot be empty"),
+  code: z.string({ message: "code is required" }).regex(/^\d{6}$/, "code must be a 6-digit number"),
 });
 
 export type AgentVerifyBody = z.infer<typeof agentVerifyBodySchema>;

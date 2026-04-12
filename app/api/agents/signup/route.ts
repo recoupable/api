@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { safeParseJson } from "@/lib/networking/safeParseJson";
-import {
-  validateAgentSignupBody,
-  type AgentSignupBody,
-} from "@/lib/agents/validateAgentSignupBody";
 import { agentSignupHandler } from "@/lib/agents/agentSignupHandler";
 
 /**
@@ -14,18 +9,11 @@ import { agentSignupHandler } from "@/lib/agents/agentSignupHandler";
  * For all other cases, sends a verification code to the email.
  * This endpoint is unauthenticated.
  *
- * @param req - The incoming request with email in body
- * @returns Signup response with account_id, api_key (or null), and message
+ * @param req - The incoming request with `{ email }` in the body
+ * @returns Signup response with `account_id`, `api_key` (or null), and `message`
  */
 export async function POST(req: NextRequest) {
-  const body = await safeParseJson(req);
-
-  const validated = validateAgentSignupBody(body);
-  if (validated instanceof NextResponse) {
-    return validated;
-  }
-
-  return agentSignupHandler(validated as AgentSignupBody);
+  return agentSignupHandler(req);
 }
 
 /**

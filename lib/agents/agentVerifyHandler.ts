@@ -1,26 +1,34 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { safeParseJson } from "@/lib/networking/safeParseJson";
+import { validateAgentVerifyBody } from "@/lib/agents/validateAgentVerifyBody";
 import { selectAccountByEmail } from "@/lib/supabase/account_emails/selectAccountByEmail";
 import { generateApiKey } from "@/lib/keys/generateApiKey";
 import { hashApiKey } from "@/lib/keys/hashApiKey";
 import { insertApiKey } from "@/lib/supabase/account_api_keys/insertApiKey";
 import { getPrivyUserByEmail } from "@/lib/privy/getPrivyUserByEmail";
 import { setPrivyCustomMetadata } from "@/lib/privy/setPrivyCustomMetadata";
-import type { AgentVerifyBody } from "@/lib/agents/validateAgentVerifyBody";
 
 const GENERIC_ERROR = "Invalid or expired verification code.";
 const MAX_ATTEMPTS = 5;
 
 /**
- * Handles agent email verification flow.
+ * Handles agent email verification — validates the request body, checks the
+ * submitted code against the stored hash, and returns an API key on success.
  *
- * @param body - Validated verify request body
- * @returns NextResponse with account_id, api_key, and message
+ * @param request - The incoming Next.js request with `{ email, code }` in the body
+ * @returns NextResponse with `account_id`, `api_key`, and `message` on success
  */
-export async function agentVerifyHandler(body: AgentVerifyBody): Promise<NextResponse> {
-  const { email, code } = body;
-
+export async function agentVerifyHandler(request: NextRequest): Promise<NextResponse> {
   try {
+    const body = await safeParseJson(request);
+
+    const validated = validateAgentVerifyBody(body);
+    if (validated instanceof NextResponse) {
+      return validated;
+    }
+
+    const { email, code } = validated;
     // Look up Privy user and custom_metadata
     const privyUser = await getPrivyUserByEmail(email);
     if (!privyUser?.custom_metadata) {
@@ -44,15 +52,19 @@ export async function agentVerifyHandler(body: AgentVerifyBody): Promise<NextRes
       );
     }
 
-    // Expired
-    if (metadata.verification_expires_at) {
-      const expiresAt = new Date(metadata.verification_expires_at).getTime();
-      if (Date.now() > expiresAt) {
-        return NextResponse.json(
-          { error: GENERIC_ERROR },
-          { status: 400, headers: getCorsHeaders() },
-        );
-      }
+    // Expired — fail-safe: missing expiry is treated as expired
+    if (!metadata.verification_expires_at) {
+      return NextResponse.json(
+        { error: GENERIC_ERROR },
+        { status: 400, headers: getCorsHeaders() },
+      );
+    }
+    const expiresAt = new Date(metadata.verification_expires_at).getTime();
+    if (Date.now() > expiresAt) {
+      return NextResponse.json(
+        { error: GENERIC_ERROR },
+        { status: 400, headers: getCorsHeaders() },
+      );
     }
 
     // Too many attempts
@@ -92,7 +104,18 @@ export async function agentVerifyHandler(body: AgentVerifyBody): Promise<NextRes
     const today = new Date().toISOString().slice(0, 10);
     const rawKey = generateApiKey("recoup_sk");
     const keyHash = hashApiKey(rawKey, process.env.PROJECT_SECRET!);
-    await insertApiKey({ name: `Agent ${today}`, account: accountId, key_hash: keyHash });
+    const { error: insertError } = await insertApiKey({
+      name: `Agent ${today}`,
+      account: accountId,
+      key_hash: keyHash,
+    });
+    if (insertError) {
+      console.error("[ERROR] agentVerifyHandler: insertApiKey failed", insertError);
+      return NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500, headers: getCorsHeaders() },
+      );
+    }
 
     // Clear custom_metadata
     await setPrivyCustomMetadata(privyUser.id, {});
