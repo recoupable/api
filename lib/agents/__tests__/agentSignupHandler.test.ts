@@ -158,4 +158,21 @@ describe("agentSignupHandler", () => {
       expect(result.status).toBe(400);
     });
   });
+
+  describe("internal failures", () => {
+    it("returns 500 with the generic body when an internal error is thrown", async () => {
+      vi.mocked(selectAccountByEmail).mockRejectedValueOnce(new Error("supabase down"));
+
+      const result = await agentSignupHandler(buildRequest({ email: "user@example.com" }));
+      const body = await result.json();
+
+      // 5xx is required so monitoring can distinguish failures from successes
+      // and clients know to retry; the body stays generic to avoid email
+      // enumeration (matches the existing-account branch's body shape).
+      expect(result.status).toBe(500);
+      expect(body.account_id).toBeNull();
+      expect(body.api_key).toBeNull();
+      expect(body.message).toBeTruthy();
+    });
+  });
 });

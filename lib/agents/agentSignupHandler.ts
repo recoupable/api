@@ -39,9 +39,12 @@ export async function agentSignupHandler(request: NextRequest): Promise<NextResp
     return await handleNormalSignup(email);
   } catch (error) {
     console.error("[ERROR] agentSignupHandler:", error);
+    // 5xx so monitoring + client retry behavior can distinguish a real
+    // failure from a successful signup. Body stays the generic shape to
+    // avoid email enumeration via response-body diffing.
     return NextResponse.json(
       { account_id: null, api_key: null, message: AGENT_SIGNUP_GENERIC_MESSAGE },
-      { status: 200, headers: getCorsHeaders() },
+      { status: 500, headers: getCorsHeaders() },
     );
   }
 }

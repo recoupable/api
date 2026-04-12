@@ -72,11 +72,14 @@ export async function validateAgentVerifyBody(
     return errorResponse(GENERIC_ERROR, 400);
   }
 
-  // Fail-safe: missing expiry is treated as expired.
+  // Fail-safe: a missing or malformed expiry is treated as expired.
+  // `new Date("garbage").getTime()` returns NaN, and `Date.now() > NaN` is
+  // false, which would silently bypass the comparison without the isNaN guard.
   if (!metadata.verification_expires_at) {
     return errorResponse(GENERIC_ERROR, 400);
   }
-  if (Date.now() > new Date(metadata.verification_expires_at).getTime()) {
+  const expiresAt = new Date(metadata.verification_expires_at).getTime();
+  if (Number.isNaN(expiresAt) || Date.now() > expiresAt) {
     return errorResponse(GENERIC_ERROR, 400);
   }
 

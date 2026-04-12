@@ -155,6 +155,28 @@ describe("validateAgentVerifyBody", () => {
       expect((result as NextResponse).status).toBe(400);
     });
 
+    it("returns 400 when verification_expires_at is a malformed string (NaN guard)", async () => {
+      // Set the success path up so the ONLY way to fail is the expiry check.
+      // Without the NaN guard, the malformed string parses to NaN, the
+      // `Date.now() > NaN` comparison is `false`, the expiry check is silently
+      // skipped, the (mocked-matching) hash comparison passes, and the function
+      // would succeed instead of rejecting — that's the silent bypass we're
+      // guarding against.
+      vi.mocked(getPrivyUserByEmail).mockResolvedValue({
+        id: "privy_1",
+        custom_metadata: metadataWith({ verification_expires_at: "not-a-real-date" }),
+      });
+      vi.mocked(selectAccountByEmail).mockResolvedValue({
+        account_id: "acc_should_not_be_returned",
+        email: "user@example.com",
+      } as unknown as Awaited<ReturnType<typeof selectAccountByEmail>>);
+
+      const result = await validateAgentVerifyBody(VALID_REQUEST());
+
+      expect(result).toBeInstanceOf(NextResponse);
+      expect((result as NextResponse).status).toBe(400);
+    });
+
     it("returns 429 when verification_attempts is at or above the limit", async () => {
       vi.mocked(getPrivyUserByEmail).mockResolvedValue({
         id: "privy_1",
