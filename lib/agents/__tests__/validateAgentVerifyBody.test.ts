@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { validateAgentVerifyBody } from "@/lib/agents/validateAgentVerifyBody";
 import { getPrivyUserByEmail } from "@/lib/privy/getPrivyUserByEmail";
 import { setPrivyCustomMetadata } from "@/lib/privy/setPrivyCustomMetadata";
@@ -8,6 +8,19 @@ import { selectAccountByEmail } from "@/lib/supabase/account_emails/selectAccoun
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
+
+/**
+ * Builds a NextRequest with the given JSON body for the verify endpoint.
+ *
+ * @param body - JSON-serializable body, or undefined for an empty request
+ * @returns A NextRequest pointed at /api/agents/verify
+ */
+function buildRequest(body: unknown): NextRequest {
+  return new NextRequest("http://localhost/api/agents/verify", {
+    method: "POST",
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
 
 vi.mock("@/lib/privy/getPrivyUserByEmail", () => ({
   getPrivyUserByEmail: vi.fn(),
@@ -25,11 +38,21 @@ vi.mock("@/lib/keys/hashApiKey", () => ({
   hashApiKey: vi.fn((input: string) => `hashed_${input}`),
 }));
 
-const VALID_BODY = { email: "user@example.com", code: "123456" };
+const VALID_REQUEST = () => buildRequest({ email: "user@example.com", code: "123456" });
 
-function metadataWith(
-  overrides: Record<string, unknown> = {},
-): { verification_code_hash: string; verification_expires_at: string; verification_attempts: number } {
+/**
+ * Builds a Privy `custom_metadata` payload with sensible defaults that
+ * pass every prerequisite check, letting individual tests override only
+ * the field they want to exercise.
+ *
+ * @param overrides - Fields to overlay on top of the valid defaults
+ * @returns A fully populated metadata object
+ */
+function metadataWith(overrides: Record<string, unknown> = {}): {
+  verification_code_hash: string;
+  verification_expires_at: string;
+  verification_attempts: number;
+} {
   return {
     verification_code_hash: "hashed_123456",
     verification_expires_at: new Date(Date.now() + 60_000).toISOString(),
@@ -50,37 +73,43 @@ describe("validateAgentVerifyBody", () => {
 
   describe("body shape", () => {
     it("returns 400 for missing email", async () => {
-      const result = await validateAgentVerifyBody({ code: "123456" });
+      const result = await validateAgentVerifyBody(buildRequest({ code: "123456" }));
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
     });
 
     it("returns 400 for missing code", async () => {
-      const result = await validateAgentVerifyBody({ email: "user@example.com" });
+      const result = await validateAgentVerifyBody(buildRequest({ email: "user@example.com" }));
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
     });
 
     it("returns 400 for invalid email", async () => {
-      const result = await validateAgentVerifyBody({ email: "bad", code: "123456" });
+      const result = await validateAgentVerifyBody(buildRequest({ email: "bad", code: "123456" }));
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
     });
 
     it("returns 400 for non-numeric code", async () => {
-      const result = await validateAgentVerifyBody({ email: "user@example.com", code: "abcdef" });
+      const result = await validateAgentVerifyBody(
+        buildRequest({ email: "user@example.com", code: "abcdef" }),
+      );
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
     });
 
     it("returns 400 for 5-digit code", async () => {
-      const result = await validateAgentVerifyBody({ email: "user@example.com", code: "12345" });
+      const result = await validateAgentVerifyBody(
+        buildRequest({ email: "user@example.com", code: "12345" }),
+      );
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
     });
 
     it("returns 400 for 7-digit code", async () => {
-      const result = await validateAgentVerifyBody({ email: "user@example.com", code: "1234567" });
+      const result = await validateAgentVerifyBody(
+        buildRequest({ email: "user@example.com", code: "1234567" }),
+      );
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
     });
@@ -89,7 +118,7 @@ describe("validateAgentVerifyBody", () => {
   describe("stored verification state", () => {
     it("returns 400 when Privy user is missing", async () => {
       vi.mocked(getPrivyUserByEmail).mockResolvedValue(null);
-      const result = await validateAgentVerifyBody(VALID_BODY);
+      const result = await validateAgentVerifyBody(VALID_REQUEST());
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
     });
@@ -99,7 +128,7 @@ describe("validateAgentVerifyBody", () => {
         id: "privy_1",
         custom_metadata: {},
       });
-      const result = await validateAgentVerifyBody(VALID_BODY);
+      const result = await validateAgentVerifyBody(VALID_REQUEST());
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
     });
@@ -109,7 +138,7 @@ describe("validateAgentVerifyBody", () => {
         id: "privy_1",
         custom_metadata: { verification_code_hash: "hashed_123456", verification_attempts: 0 },
       });
-      const result = await validateAgentVerifyBody(VALID_BODY);
+      const result = await validateAgentVerifyBody(VALID_REQUEST());
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
     });
@@ -121,7 +150,7 @@ describe("validateAgentVerifyBody", () => {
           verification_expires_at: new Date(Date.now() - 1_000).toISOString(),
         }),
       });
-      const result = await validateAgentVerifyBody(VALID_BODY);
+      const result = await validateAgentVerifyBody(VALID_REQUEST());
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
     });
@@ -131,7 +160,7 @@ describe("validateAgentVerifyBody", () => {
         id: "privy_1",
         custom_metadata: metadataWith({ verification_attempts: 5 }),
       });
-      const result = await validateAgentVerifyBody(VALID_BODY);
+      const result = await validateAgentVerifyBody(VALID_REQUEST());
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(429);
     });
@@ -143,7 +172,7 @@ describe("validateAgentVerifyBody", () => {
         id: "privy_1",
         custom_metadata: metadataWith({ verification_code_hash: "hashed_999999" }),
       });
-      const result = await validateAgentVerifyBody(VALID_BODY);
+      const result = await validateAgentVerifyBody(VALID_REQUEST());
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
       expect(setPrivyCustomMetadata).toHaveBeenCalledWith(
@@ -160,7 +189,7 @@ describe("validateAgentVerifyBody", () => {
         custom_metadata: metadataWith(),
       });
       vi.mocked(selectAccountByEmail).mockResolvedValue(null);
-      const result = await validateAgentVerifyBody(VALID_BODY);
+      const result = await validateAgentVerifyBody(VALID_REQUEST());
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
     });
@@ -177,7 +206,7 @@ describe("validateAgentVerifyBody", () => {
         email: "user@example.com",
       } as unknown as Awaited<ReturnType<typeof selectAccountByEmail>>);
 
-      const result = await validateAgentVerifyBody(VALID_BODY);
+      const result = await validateAgentVerifyBody(VALID_REQUEST());
 
       expect(result).not.toBeInstanceOf(NextResponse);
       expect(result).toEqual({ accountId: "acc_123", privyUserId: "privy_1" });

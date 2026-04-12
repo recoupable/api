@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAgentVerifyBody } from "@/lib/agents/validateAgentVerifyBody";
 import { generateAndStoreApiKey } from "@/lib/agents/generateAndStoreApiKey";
 import { setPrivyCustomMetadata } from "@/lib/privy/setPrivyCustomMetadata";
@@ -16,9 +15,7 @@ import { setPrivyCustomMetadata } from "@/lib/privy/setPrivyCustomMetadata";
  */
 export async function agentVerifyHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const body = await safeParseJson(request);
-
-    const validated = await validateAgentVerifyBody(body);
+    const validated = await validateAgentVerifyBody(request);
     if (validated instanceof NextResponse) {
       return validated;
     }

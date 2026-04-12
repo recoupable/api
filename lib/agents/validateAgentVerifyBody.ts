@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { safeParseJson } from "@/lib/networking/safeParseJson";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { hashApiKey } from "@/lib/keys/hashApiKey";
 import { getPrivyUserByEmail } from "@/lib/privy/getPrivyUserByEmail";
 import { setPrivyCustomMetadata } from "@/lib/privy/setPrivyCustomMetadata";
@@ -32,30 +34,21 @@ type StoredVerification = {
 };
 
 /**
- * Builds a JSON error response with CORS headers.
+ * Validates a POST /api/agents/verify request end-to-end. Parses the body,
+ * runs the zod schema check, looks up the Privy user, verifies the stored
+ * verification metadata (code hash, expiry, attempts), compares the
+ * supplied code against the stored hash (and increments attempts on
+ * mismatch), and resolves the email to an account. All prerequisite
+ * checks live here so the handler can reduce to "if validation passes,
+ * issue an API key".
  *
- * @param error - Human-readable error message
- * @param status - HTTP status code
- * @returns NextResponse with the given error payload
- */
-function errorResponse(error: string, status: number): NextResponse {
-  return NextResponse.json({ error }, { status, headers: getCorsHeaders() });
-}
-
-/**
- * Validates a POST /api/agents/verify request end-to-end. Checks include:
- * the body shape (email + 6-digit code), the Privy-stored verification
- * metadata (code hash, expiry, attempts), the supplied code against the
- * stored hash (and increments attempts on mismatch), and resolves the
- * email to an account. All prerequisite checks live here so the handler
- * can reduce to "if validation passes, issue an API key".
- *
- * @param body - The raw request body
+ * @param request - The incoming Next.js request
  * @returns NextResponse on any failure, or the resolved `accountId` + `privyUserId` on success
  */
 export async function validateAgentVerifyBody(
-  body: unknown,
+  request: NextRequest,
 ): Promise<NextResponse | ValidatedAgentVerifyRequest> {
+  const body = await safeParseJson(request);
   const parsed = agentVerifyBodySchema.safeParse(body);
   if (!parsed.success) {
     const firstError = parsed.error.issues[0];

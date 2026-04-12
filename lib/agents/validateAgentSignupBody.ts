@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { safeParseJson } from "@/lib/networking/safeParseJson";
 
 export const agentSignupBodySchema = z.object({
   email: z.string({ message: "email is required" }).email("email must be a valid email address"),
@@ -9,12 +10,18 @@ export const agentSignupBodySchema = z.object({
 export type AgentSignupBody = z.infer<typeof agentSignupBodySchema>;
 
 /**
- * Validates request body for POST /api/agents/signup.
+ * Validates POST /api/agents/signup. Parses the request body, runs the
+ * zod schema check, and returns either the validated body or a 400
+ * NextResponse describing the first failure. The handler does not need
+ * to know about JSON parsing or zod — it just receives the typed body.
  *
- * @param body - The request body
- * @returns A NextResponse with an error if validation fails, or the validated body
+ * @param request - The incoming Next.js request
+ * @returns NextResponse with an error if validation fails, or the validated body
  */
-export function validateAgentSignupBody(body: unknown): NextResponse | AgentSignupBody {
+export async function validateAgentSignupBody(
+  request: NextRequest,
+): Promise<NextResponse | AgentSignupBody> {
+  const body = await safeParseJson(request);
   const result = agentSignupBodySchema.safeParse(body);
 
   if (!result.success) {
