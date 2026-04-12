@@ -1,3 +1,4 @@
+import { PRIVY_PROJECT_SECRET } from "@/lib/const";
 import { generateApiKey } from "@/lib/keys/generateApiKey";
 import { hashApiKey } from "@/lib/keys/hashApiKey";
 import { insertApiKey } from "@/lib/supabase/account_api_keys/insertApiKey";
@@ -14,7 +15,7 @@ import { insertApiKey } from "@/lib/supabase/account_api_keys/insertApiKey";
 export async function generateAndStoreApiKey(accountId: string): Promise<string> {
   const today = new Date().toISOString().slice(0, 10);
   const rawKey = generateApiKey("recoup_sk");
-  const keyHash = hashApiKey(rawKey, process.env.PROJECT_SECRET!);
+  const keyHash = hashApiKey(rawKey, PRIVY_PROJECT_SECRET);
   const { error } = await insertApiKey({
     name: `Agent ${today}`,
     account: accountId,

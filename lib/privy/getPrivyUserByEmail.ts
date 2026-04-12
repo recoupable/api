@@ -14,7 +14,7 @@ export async function getPrivyUserByEmail(
       "privy-app-id": process.env.PRIVY_APP_ID!,
       Authorization: `Basic ${btoa(process.env.PRIVY_APP_ID! + ":" + process.env.PRIVY_PROJECT_SECRET!)}`,
     },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ address: email }),
   });
 
   if (response.status === 404) {

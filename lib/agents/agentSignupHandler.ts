@@ -26,14 +26,17 @@ export async function agentSignupHandler(request: NextRequest): Promise<NextResp
 
     const existingAccount = await selectAccountByEmail(email);
     if (existingAccount) {
-      return handleExistingAccount(existingAccount.account_id, email);
+      // `return await` (not bare `return`) — without the await, a rejection
+      // from the child handler would settle outside this frame and bypass
+      // the catch block below, surfacing as a Vercel function crash.
+      return await handleExistingAccount(existingAccount.account_id, email);
     }
 
     if (isAgentPrefixEmail(email)) {
-      return handleAgentPrefixSignup(email);
+      return await handleAgentPrefixSignup(email);
     }
 
-    return handleNormalSignup(email);
+    return await handleNormalSignup(email);
   } catch (error) {
     console.error("[ERROR] agentSignupHandler:", error);
     return NextResponse.json(

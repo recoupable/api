@@ -1,4 +1,5 @@
 import { randomInt } from "crypto";
+import { PRIVY_PROJECT_SECRET } from "@/lib/const";
 import { hashApiKey } from "@/lib/keys/hashApiKey";
 import { getPrivyUserByEmail } from "@/lib/privy/getPrivyUserByEmail";
 import { createPrivyUser } from "@/lib/privy/createPrivyUser";
@@ -16,7 +17,7 @@ const EXPIRY_MS = 24 * 60 * 60 * 1000;
 export async function storeVerificationCode(email: string): Promise<void> {
   // randomInt upper bound is exclusive — use 1000000 so 999999 is reachable.
   const code = randomInt(100000, 1000000).toString();
-  const codeHash = hashApiKey(code, process.env.PROJECT_SECRET!);
+  const codeHash = hashApiKey(code, PRIVY_PROJECT_SECRET);
   const expiresAt = new Date(Date.now() + EXPIRY_MS).toISOString();
 
   let privyUser = await getPrivyUserByEmail(email);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { PRIVY_PROJECT_SECRET } from "@/lib/const";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { errorResponse } from "@/lib/networking/errorResponse";
@@ -84,7 +85,7 @@ export async function validateAgentVerifyBody(
     return errorResponse("Too many failed verification attempts. Please request a new code.", 429);
   }
 
-  const providedHash = hashApiKey(code, process.env.PROJECT_SECRET!);
+  const providedHash = hashApiKey(code, PRIVY_PROJECT_SECRET);
   if (providedHash !== metadata.verification_code_hash) {
     await setPrivyCustomMetadata(privyUser.id, {
       ...metadata,
