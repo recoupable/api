@@ -32,6 +32,9 @@ export const RECOUP_ORG_ID = "04e3aba9-c130-4fb8-8b92-34e95d43e66b";
 
 export const RECOUP_API_KEY = process.env.RECOUP_API_KEY || "";
 
+/** ElevenLabs Music API base URL */
+export const ELEVENLABS_BASE_URL = "https://api.elevenlabs.io";
+
 /** Music Flamingo model inference endpoint (Modal) */
 export const FLAMINGO_GENERATE_URL =
   "https://sidney-78147--music-flamingo-musicflamingo-generate.modal.run";
