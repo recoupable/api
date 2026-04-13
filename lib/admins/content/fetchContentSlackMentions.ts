@@ -1,7 +1,7 @@
 import type { AdminPeriod } from "@/lib/admins/adminPeriod";
 import { fetchBotMentions, type BotTag } from "@/lib/admins/slack/fetchBotMentions";
 import { fetchAllThreadResponses } from "@/lib/admins/slack/fetchAllThreadResponses";
-import { fetchThreadVideoLinks } from "./fetchThreadVideoLinks";
+import { fetchThreadVideoFiles } from "./fetchThreadVideoFiles";
 
 export interface ContentSlackTag extends Omit<BotTag, "responses"> {
   video_links: string[];
@@ -19,7 +19,7 @@ export async function fetchContentSlackMentions(period: AdminPeriod): Promise<Co
     tokenEnvVar: "SLACK_CONTENT_BOT_TOKEN",
     period,
     fetchThreadResponses: (token, threads) =>
-      fetchAllThreadResponses(token, threads, fetchThreadVideoLinks),
+      fetchAllThreadResponses(token, threads, fetchThreadVideoFiles),
   });
 
   return botTags.map(({ responses, ...rest }) => ({
