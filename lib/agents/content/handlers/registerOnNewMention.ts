@@ -60,26 +60,6 @@ export function registerOnNewMention(bot: ContentAgentBot) {
         githubRepo = repo;
       }
 
-      // Post acknowledgment
-      const details = [
-        `- Artist: *${artistSlug}*`,
-        `- Template: ${template}`,
-        `- Videos: ${batch}`,
-        `- Lipsync: ${lipsync ? "yes" : "no"}`,
-      ];
-      if (songs && songs.length > 0) {
-        details.push(`- Songs: ${songs.join(", ")}`);
-      }
-      if (songUrl) {
-        details.push("- Audio: attached file");
-      }
-      if (imageUrls.length > 0) {
-        details.push(`- Images: ${imageUrls.length} attached`);
-      }
-      await thread.post(
-        `Generating content...\n${details.join("\n")}\n\nI'll reply here when ready (~5-10 min).`,
-      );
-
       // Build songs array: merge parsed slugs with attached audio URL
       const allSongs = [...(songs ?? []), ...(songUrl ? [songUrl] : [])];
 
@@ -108,10 +88,25 @@ export function registerOnNewMention(bot: ContentAgentBot) {
         return;
       }
 
-      // Post View Task card with the first run ID
+      // Post View Task card with details and the first run ID
+      const details = [
+        `- Artist: *${artistSlug}*`,
+        `- Template: ${template}`,
+        `- Videos: ${batch}`,
+        `- Lipsync: ${lipsync ? "yes" : "no"}`,
+      ];
+      if (songs && songs.length > 0) {
+        details.push(`- Songs: ${songs.join(", ")}`);
+      }
+      if (songUrl) {
+        details.push("- Audio: attached file");
+      }
+      if (imageUrls.length > 0) {
+        details.push(`- Images: ${imageUrls.length} attached`);
+      }
       const card = buildTaskCard(
         "Content Generation Started",
-        `Generating content for *${artistSlug}*...\n\nI'll reply here when ready (~5-10 min).`,
+        `Generating content for *${artistSlug}*...\n${details.join("\n")}\n\nI'll reply here when ready (~5-10 min).`,
         runIds[0],
       );
       await thread.post({ card });
