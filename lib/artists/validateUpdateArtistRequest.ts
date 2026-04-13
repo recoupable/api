@@ -15,7 +15,7 @@ const updateArtistBodySchema = z
     instruction: z.string().optional(),
     label: z.string().optional(),
     knowledges: z.array(knowledgeSchema).optional(),
-    profileUrls: z.record(z.string()).optional(),
+    profileUrls: z.record(z.string(), z.string()).optional(),
   })
   .refine(data => Object.values(data).some(value => value !== undefined), {
     message: "At least one field to update must be provided",
