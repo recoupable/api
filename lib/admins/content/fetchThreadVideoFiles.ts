@@ -1,6 +1,5 @@
 import { slackGet } from "@/lib/slack/slackGet";
-import { extractVideoLinks } from "./extractVideoLinks";
-import type { SlackAttachment, SlackBlock } from "@/lib/admins/slack/extractGithubPrUrls";
+import { extractVideoFiles, type SlackFile } from "./extractVideoFiles";
 
 interface ConversationsRepliesResponse {
   ok: boolean;
@@ -11,20 +10,20 @@ interface ConversationsRepliesResponse {
     text?: string;
     ts?: string;
     bot_id?: string;
-    attachments?: SlackAttachment[];
-    blocks?: SlackBlock[];
+    files?: SlackFile[];
   }>;
 }
 
 /**
- * Fetches bot replies in a Slack thread and returns any video/media URLs found.
- * Extracts URLs from message text, attachment action buttons, and Block Kit blocks.
+ * Fetches bot replies in a Slack thread and returns video permalinks
+ * from embedded file uploads.
  *
- * @param token
- * @param channel
- * @param threadTs
+ * @param token - Slack bot token
+ * @param channel - Channel ID
+ * @param threadTs - Thread timestamp
+ * @returns Array of unique video permalink URLs found in bot replies
  */
-export async function fetchThreadVideoLinks(
+export async function fetchThreadVideoFiles(
   token: string,
   channel: string,
   threadTs: string,
@@ -40,7 +39,7 @@ export async function fetchThreadVideoLinks(
   for (const msg of replies.messages ?? []) {
     if (!msg.bot_id) continue;
     if (msg.ts === threadTs) continue;
-    videoLinks.push(...extractVideoLinks(msg.text ?? "", msg.attachments, msg.blocks));
+    videoLinks.push(...extractVideoFiles(msg.files));
   }
 
   return [...new Set(videoLinks)];
