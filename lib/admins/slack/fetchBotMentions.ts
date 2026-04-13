@@ -2,8 +2,13 @@ import type { AdminPeriod } from "@/lib/admins/adminPeriod";
 import { slackGet } from "@/lib/slack/slackGet";
 import { getBotUserId } from "@/lib/slack/getBotUserId";
 import { getBotChannels } from "@/lib/slack/getBotChannels";
-import { getSlackUserInfo } from "@/lib/slack/getSlackUserInfo";
 import { getCutoffTs } from "@/lib/admins/slack/getCutoffTs";
+import {
+  fetchThreadReplyMentions,
+  type RawMention,
+  type ThreadToScan,
+} from "@/lib/admins/slack/fetchThreadReplyMentions";
+import { getSlackUserInfo } from "@/lib/slack/getSlackUserInfo";
 
 export interface BotTag {
   user_id: string;
@@ -25,16 +30,9 @@ interface ConversationsHistoryResponse {
     text?: string;
     ts?: string;
     bot_id?: string;
+    reply_count?: number;
   }>;
   response_metadata?: { next_cursor?: string };
-}
-
-interface RawMention {
-  userId: string;
-  prompt: string;
-  ts: string;
-  channelId: string;
-  channelName: string;
 }
 
 interface FetchBotMentionsOptions {
@@ -62,10 +60,12 @@ export async function fetchBotMentions(options: FetchBotMentionsOptions): Promis
 
   const botUserId = await getBotUserId(token);
   const mentionPattern = `<@${botUserId}>`;
+  const mentionRegex = new RegExp(`${mentionPattern}\\s*`, "g");
   const channels = await getBotChannels(token);
   const cutoffTs = getCutoffTs(period);
   const mentions: RawMention[] = [];
   const userCache: Record<string, { name: string; avatar: string | null }> = {};
+  const threadsToScan: ThreadToScan[] = [];
 
   for (const channel of channels) {
     let cursor: string | undefined;
@@ -85,6 +85,15 @@ export async function fetchBotMentions(options: FetchBotMentionsOptions): Promis
       for (const msg of history.messages ?? []) {
         if (msg.bot_id) continue;
         if (!msg.user) continue;
+
+        if (msg.ts && (msg.reply_count ?? 0) > 0) {
+          threadsToScan.push({
+            channelId: channel.id,
+            channelName: channel.name,
+            parentTs: msg.ts,
+          });
+        }
+
         if (!msg.text?.includes(mentionPattern)) continue;
         if (!msg.ts) continue;
 
@@ -94,7 +103,7 @@ export async function fetchBotMentions(options: FetchBotMentionsOptions): Promis
 
         mentions.push({
           userId: msg.user,
-          prompt: (msg.text ?? "").replace(new RegExp(`<@${botUserId}>\\s*`, "g"), "").trim(),
+          prompt: (msg.text ?? "").replace(mentionRegex, "").trim(),
           ts: msg.ts,
           channelId: channel.id,
           channelName: channel.name,
@@ -105,9 +114,19 @@ export async function fetchBotMentions(options: FetchBotMentionsOptions): Promis
     } while (cursor);
   }
 
+  const threadMentions = await fetchThreadReplyMentions({
+    token,
+    threadsToScan,
+    mentionPattern,
+    mentionRegex,
+    cutoffTs,
+    userCache,
+  });
+  mentions.push(...threadMentions);
+
   const responses = await fetchThreadResponses(
     token,
-    mentions.map(m => ({ channelId: m.channelId, ts: m.ts })),
+    mentions.map(m => ({ channelId: m.channelId, ts: m.threadTs ?? m.ts })),
   );
 
   const tags: BotTag[] = mentions.map((m, i) => {
