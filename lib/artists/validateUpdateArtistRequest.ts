@@ -8,10 +8,10 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 
-const updateArtistBodySchema = z
+export const updateArtistBodySchema = z
   .object({
     name: z.string().optional(),
-    image: z.string().url("image must be a valid URL").optional().or(z.literal("")),
+    image: z.string().url("image must be a valid URL").or(z.literal("")).optional(),
     instruction: z.string().optional(),
     label: z.string().optional(),
     knowledges: z.array(knowledgeSchema).optional(),
@@ -21,7 +21,9 @@ const updateArtistBodySchema = z
     message: "At least one field to update must be provided",
   });
 
-export type ValidatedUpdateArtistRequest = z.infer<typeof updateArtistBodySchema> & {
+export type UpdateArtistBody = z.infer<typeof updateArtistBodySchema>;
+
+export type ValidatedUpdateArtistRequest = UpdateArtistBody & {
   artistId: string;
   requesterAccountId: string;
 };

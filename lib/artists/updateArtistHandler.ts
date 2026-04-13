@@ -47,7 +47,7 @@ export async function updateArtistHandler(
           : existingInfo.knowledges;
 
       await updateAccountInfo(artistId, {
-        image: image || existingInfo.image,
+        image: image ?? existingInfo.image,
         instruction: instruction ?? existingInfo.instruction,
         knowledges: nextKnowledges,
         label: label === undefined ? existingInfo.label : label === "" ? null : label,
