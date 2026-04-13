@@ -6,6 +6,7 @@ import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadine
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { parseContentPrompt } from "../parseContentPrompt";
 import { extractMessageAttachments } from "../extractMessageAttachments";
+import { buildTaskCard } from "@/lib/agents/buildTaskCard";
 
 /**
  * Registers the onNewMention handler on the content agent bot.
@@ -106,6 +107,14 @@ export function registerOnNewMention(bot: ContentAgentBot) {
         await thread.post("Failed to trigger content creation. Please try again.");
         return;
       }
+
+      // Post View Task card with the first run ID
+      const card = buildTaskCard(
+        "Content Generation Started",
+        `Generating content for *${artistSlug}*...\n\nI'll reply here when ready (~5-10 min).`,
+        runIds[0],
+      );
+      await thread.post({ card });
 
       // Set thread state
       await thread.setState({
