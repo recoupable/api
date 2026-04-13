@@ -10,7 +10,7 @@ import { CAPTION_LENGTHS } from "@/lib/content/captionLengths";
 export const createTextBodySchema = z.object({
   template: z.enum(TEMPLATE_IDS).optional(),
   topic: z.string().min(1),
-  length: z.enum(CAPTION_LENGTHS).optional().default("short"),
+  length: z.enum(CAPTION_LENGTHS).optional().default("none"),
 });
 
 export type ValidatedCreateCaptionBody = { accountId: string } & z.infer<
@@ -19,6 +19,8 @@ export type ValidatedCreateCaptionBody = { accountId: string } & z.infer<
 
 /**
  * Validates auth and request body for POST /api/content/caption.
+ *
+ * @param request
  */
 export async function validateCreateCaptionBody(
   request: NextRequest,

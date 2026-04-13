@@ -126,12 +126,12 @@ describe("createTextBodySchema", () => {
     ).toBe(true);
   });
 
-  it("defaults length to short", () => {
+  it("defaults length to none", () => {
     const result = createTextBodySchema.safeParse({
       topic: "test",
     });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.length).toBe("short");
+    if (result.success) expect(result.data.length).toBe("none");
   });
 
   it("rejects missing topic", () => {

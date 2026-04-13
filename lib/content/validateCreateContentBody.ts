@@ -16,7 +16,7 @@ export const createContentBodySchema = z.object({
     .uuid("artist_account_id must be a valid UUID"),
   template: z.string().min(1, "template cannot be empty").optional(),
   lipsync: z.boolean().optional().default(false),
-  caption_length: z.enum(CAPTION_LENGTHS).optional().default("short"),
+  caption_length: z.enum(CAPTION_LENGTHS).optional().default("none"),
   upscale: z.boolean().optional().default(false),
   batch: z.number().int().min(1).max(30).optional().default(1),
   songs: songsSchema,
@@ -29,7 +29,7 @@ export type ValidatedCreateContentBody = {
   artistSlug: string;
   template?: string;
   lipsync: boolean;
-  captionLength: "short" | "medium" | "long";
+  captionLength: "none" | "short" | "medium" | "long";
   upscale: boolean;
   batch: number;
   songs?: string[];
@@ -91,7 +91,7 @@ export async function validateCreateContentBody(
     artistSlug,
     template,
     lipsync: result.data.lipsync ?? false,
-    captionLength: result.data.caption_length ?? "short",
+    captionLength: result.data.caption_length ?? "none",
     upscale: result.data.upscale ?? false,
     batch: result.data.batch ?? 1,
     songs: result.data.songs,

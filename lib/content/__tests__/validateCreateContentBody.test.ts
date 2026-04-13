@@ -59,7 +59,7 @@ describe("validateCreateContentBody", () => {
         artistSlug: "gatsby-grace",
         template: "artist-caption-bedroom",
         lipsync: true,
-        captionLength: "short",
+        captionLength: "none",
         upscale: false,
         batch: 1,
       });
