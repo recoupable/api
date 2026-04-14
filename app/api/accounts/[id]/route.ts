@@ -5,7 +5,7 @@ import { getAccountHandler } from "@/lib/accounts/getAccountHandler";
 /**
  * OPTIONS handler for CORS preflight requests.
  *
- * @returns A NextResponse with CORS headers.
+ * @returns A 200 NextResponse carrying the CORS headers.
  */
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -21,13 +21,13 @@ export async function OPTIONS() {
  * Requires authentication via `x-api-key` or `Authorization: Bearer`; the caller must be
  * allowed to access the requested account (same account, org delegation, or Recoup admin).
  *
- * Path parameters:
- * - id (required): The unique identifier of the account (UUID)
- *
- * @param request - The request object
- * @param params - Route params containing the account ID
- * @returns A NextResponse with account data
+ * @param request - The incoming request. Authentication is read from the
+ *   `x-api-key` or `Authorization: Bearer` header by `getAccountHandler`.
+ * @param context - Route context from Next.js.
+ * @param context.params - Promise resolving to `{ id }`, the account UUID from the URL path.
+ * @returns A 200 NextResponse with the account payload, 401/403 if the caller lacks access,
+ *   or 404 when the account does not exist.
  */
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  return getAccountHandler(request, params);
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  return getAccountHandler(request, context.params);
 }
