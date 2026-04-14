@@ -4,7 +4,10 @@ import supabase from "../serverClient";
 export type SongArtistInsert = TablesInsert<"song_artists">;
 
 /**
- * Inserts song-artist relationships, skipping duplicates.
+ * Insert Song Artists.
+ *
+ * @param songArtists - Parameter.
+ * @returns - Result.
  */
 export async function insertSongArtists(songArtists: SongArtistInsert[]): Promise<void> {
   const records = songArtists.filter(

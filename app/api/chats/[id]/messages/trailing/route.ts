@@ -4,7 +4,9 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { deleteTrailingChatMessagesHandler } from "@/lib/chats/deleteTrailingChatMessagesHandler";
 
 /**
- * OPTIONS handler for CORS preflight requests.
+ * OPTIONS.
+ *
+ * @returns - Result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -14,9 +16,12 @@ export async function OPTIONS() {
 }
 
 /**
- * DELETE /api/chats/[id]/messages/trailing
+ * DELETE.
  *
- * Deletes all messages in chat `id` from `from_message_id` onward.
+ * @param request - Parameter.
+ * @param root1 - Parameter.
+ * @param root1.params - Parameter.
+ * @returns - Result.
  */
 export async function DELETE(
   request: NextRequest,

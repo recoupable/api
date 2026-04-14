@@ -4,7 +4,11 @@ import type { User } from "@privy-io/node";
 import { getCutoffMs } from "./getCutoffMs";
 
 /**
- * Counts how many users in the list were created within the cutoff period.
+ * Count New Accounts.
+ *
+ * @param users - Parameter.
+ * @param period - Parameter.
+ * @returns - Result.
  */
 export function countNewAccounts(users: User[], period: PrivyLoginsPeriod): number {
   const cutoffMs = getCutoffMs(period);

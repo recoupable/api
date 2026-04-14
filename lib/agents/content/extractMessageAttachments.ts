@@ -19,10 +19,10 @@ export interface ExtractedAttachments {
 }
 
 /**
- * Extracts audio and image attachments from a Slack message and returns
- * public URLs for the content pipeline.
+ * Extract Message Attachments.
  *
- * @param message
+ * @param message - Parameter.
+ * @returns - Result.
  */
 export async function extractMessageAttachments(
   message: MessageWithAttachments,

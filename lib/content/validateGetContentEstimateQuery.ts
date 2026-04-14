@@ -14,7 +14,10 @@ export const getContentEstimateQuerySchema = z.object({
 export type ValidatedGetContentEstimateQuery = z.infer<typeof getContentEstimateQuerySchema>;
 
 /**
- * Validates auth and query params for GET /api/content/estimate.
+ * Validate Get Content Estimate Query.
+ *
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function validateGetContentEstimateQuery(
   request: NextRequest,

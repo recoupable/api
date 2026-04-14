@@ -41,7 +41,10 @@ export type ValidatedCreateImageBody = { accountId: string } & z.infer<
 >;
 
 /**
- * Validates auth and request body for POST /api/content/image.
+ * Validate Create Image Body.
+ *
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function validateCreateImageBody(
   request: NextRequest,

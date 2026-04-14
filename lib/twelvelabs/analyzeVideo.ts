@@ -7,11 +7,14 @@ export interface AnalyzeVideoResult {
 }
 
 /**
- * Call the Twelve Labs video analysis API.
+ * Analyze Video.
  *
- * @param validated - Validated request body with video_url, prompt, temperature, and optional max_tokens.
- * @returns Analysis result with text, finish reason, and usage.
- * @throws Error if TWELVELABS_API_KEY is missing or API call fails.
+ * @param validated - Parameter.
+ * @param validated.video_url - Parameter.
+ * @param validated.prompt - Parameter.
+ * @param validated.temperature - Parameter.
+ * @param validated.max_tokens - Parameter.
+ * @returns - Result.
  */
 export async function analyzeVideo(validated: {
   video_url: string;

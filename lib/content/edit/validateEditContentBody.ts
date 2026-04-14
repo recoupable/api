@@ -48,7 +48,10 @@ export const editBodySchema = z
 export type ValidatedEditContentBody = { accountId: string } & z.infer<typeof editBodySchema>;
 
 /**
- * Validates auth and request body for PATCH /api/content.
+ * Validate Edit Content Body.
+ *
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function validateEditContentBody(
   request: NextRequest,

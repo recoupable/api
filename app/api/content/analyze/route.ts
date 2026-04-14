@@ -3,16 +3,19 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createAnalyzeHandler } from "@/lib/content/analyze/createAnalyzeHandler";
 
 /**
- * OPTIONS handler for CORS preflight requests.
+ * OPTIONS.
+ *
+ * @returns - Result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
 }
 
 /**
- * POST /api/content/analyze
+ * POST.
  *
- * Analyze a video with AI — describe scenes, check quality, evaluate content.
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   return createAnalyzeHandler(request);

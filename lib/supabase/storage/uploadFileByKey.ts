@@ -2,7 +2,14 @@ import supabase from "@/lib/supabase/serverClient";
 import { SUPABASE_STORAGE_BUCKET } from "@/lib/const";
 
 /**
- * Upload file to Supabase storage by key
+ * Upload File By Key.
+ *
+ * @param key - Parameter.
+ * @param file - Parameter.
+ * @param options - Parameter.
+ * @param options.contentType - Parameter.
+ * @param options.upsert - Parameter.
+ * @returns - Result.
  */
 export async function uploadFileByKey(
   key: string,

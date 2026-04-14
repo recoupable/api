@@ -2,11 +2,10 @@ import { callChatFunctionsWithResult } from "./callChatFunctionsWithResult";
 import { extractTextFromResult } from "./extractTextFromResult";
 
 /**
- * Call the chat functions directly instead of making HTTP requests
- * This function encapsulates the logic for calling the chat system
- * and can be reused across different evaluations.
+ * Call Chat Functions.
  *
- * @deprecated Use callChatFunctionsWithResult for access to tool calls
+ * @param input - Parameter.
+ * @returns - Result.
  */
 export async function callChatFunctions(input: string): Promise<string> {
   try {

@@ -3,16 +3,19 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createUpscaleHandler } from "@/lib/content/upscale/createUpscaleHandler";
 
 /**
- * OPTIONS handler for CORS preflight requests.
+ * OPTIONS.
+ *
+ * @returns - Result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
 }
 
 /**
- * POST /api/content/upscale
+ * POST.
  *
- * Upscale an image or video to higher resolution.
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   return createUpscaleHandler(request);

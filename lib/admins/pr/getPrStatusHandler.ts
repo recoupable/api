@@ -4,12 +4,10 @@ import { validateGetCodingPrQuery } from "./validateGetCodingPrQuery";
 import { fetchGithubPrStatus } from "@/lib/github/fetchGithubPrStatus";
 
 /**
- * Handler for GET /api/admins/coding/pr
+ * Get Pr Status Handler.
  *
- * Returns the status (open, closed, or merged) for each provided GitHub PR URL.
- * Uses the GitHub REST API to check each PR's state.
- *
- * Requires admin authentication.
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function getPrStatusHandler(request: NextRequest): Promise<NextResponse> {
   try {

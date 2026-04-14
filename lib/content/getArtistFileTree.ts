@@ -2,8 +2,11 @@ import { getRepoFileTree, type FileTreeEntry } from "@/lib/github/getRepoFileTre
 import { getOrgRepoUrls } from "@/lib/github/getOrgRepoUrls";
 
 /**
- * Gets the file tree that contains the artist, checking the main repo
- * first, then falling back to org submodule repos.
+ * Get Artist File Tree.
+ *
+ * @param githubRepo - Parameter.
+ * @param artistSlug - Parameter.
+ * @returns - Result.
  */
 export async function getArtistFileTree(
   githubRepo: string,

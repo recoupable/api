@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { processAudioTranscription } from "@/lib/transcribe/processAudioTranscription";
 import { formatTranscriptionError } from "@/lib/transcribe/types";
 
+/**
+ * POST.
+ *
+ * @param req - Parameter.
+ * @returns - Result.
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

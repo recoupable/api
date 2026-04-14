@@ -2,11 +2,12 @@ import supabase from "@/lib/supabase/serverClient";
 import { SUPABASE_STORAGE_BUCKET } from "@/lib/const";
 
 /**
- * Creates a signed URL for a file in Supabase storage.
+ * Create Signed File Url By Key.
  *
- * @param root0
- * @param root0.key
- * @param root0.expiresInSeconds
+ * @param root0 - Parameter.
+ * @param root0.key - Parameter.
+ * @param root0.expiresInSeconds - Parameter.
+ * @returns - Result.
  */
 export async function createSignedFileUrlByKey({
   key,

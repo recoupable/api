@@ -5,12 +5,10 @@ import { getPresetSummaries } from "@/lib/flamingo/presets";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 /**
- * Handler for GET /api/songs/analyze/presets.
+ * Get Flamingo Presets Handler.
  *
- * Returns a list of all available analysis presets.
- * Requires authentication via x-api-key header or Authorization bearer token.
- *
- * @returns A NextResponse with the list of available presets.
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function getFlamingoPresetsHandler(request: NextRequest): Promise<NextResponse> {
   const authResult = await validateAuthContext(request);

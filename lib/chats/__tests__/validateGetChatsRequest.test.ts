@@ -4,7 +4,6 @@ import { validateGetChatsRequest } from "../validateGetChatsRequest";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
-import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 
 // Mock dependencies
 vi.mock("@/lib/auth/validateAuthContext", () => ({
@@ -13,10 +12,6 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 
 vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: vi.fn(),
-}));
-
-vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
-  getAccountOrganizations: vi.fn(),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({

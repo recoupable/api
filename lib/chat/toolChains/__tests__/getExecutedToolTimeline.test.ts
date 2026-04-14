@@ -21,7 +21,7 @@ describe("getExecutedToolTimeline", () => {
         },
       ];
 
-      const result = getExecutedToolTimeline(steps as any);
+      const result = getExecutedToolTimeline(steps as unknown);
       expect(result).toEqual(["get_spotify_search"]);
     });
 
@@ -43,7 +43,7 @@ describe("getExecutedToolTimeline", () => {
         },
       ];
 
-      const result = getExecutedToolTimeline(steps as any);
+      const result = getExecutedToolTimeline(steps as unknown);
       expect(result).toEqual(["tool_a", "tool_b"]);
     });
 
@@ -78,7 +78,7 @@ describe("getExecutedToolTimeline", () => {
         },
       ];
 
-      const result = getExecutedToolTimeline(steps as any);
+      const result = getExecutedToolTimeline(steps as unknown);
       expect(result).toEqual(["create_new_artist", "get_spotify_search", "update_account_info"]);
     });
   });
@@ -98,7 +98,7 @@ describe("getExecutedToolTimeline", () => {
         },
       ];
 
-      const result = getExecutedToolTimeline(steps as any);
+      const result = getExecutedToolTimeline(steps as unknown);
       expect(result).toEqual(["tool_a"]);
     });
 
@@ -116,7 +116,7 @@ describe("getExecutedToolTimeline", () => {
         },
       ];
 
-      const result = getExecutedToolTimeline(steps as any);
+      const result = getExecutedToolTimeline(steps as unknown);
       expect(result).toEqual(["tool_a"]);
     });
 
@@ -141,7 +141,7 @@ describe("getExecutedToolTimeline", () => {
         },
       ];
 
-      const result = getExecutedToolTimeline(steps as any);
+      const result = getExecutedToolTimeline(steps as unknown);
       expect(result).toEqual([
         "step1_tool1",
         "step1_tool2",
@@ -163,7 +163,7 @@ describe("getExecutedToolTimeline", () => {
         },
       ];
 
-      const result = getExecutedToolTimeline(steps as any);
+      const result = getExecutedToolTimeline(steps as unknown);
       expect(result).toEqual(["tool_without_id"]);
     });
   });

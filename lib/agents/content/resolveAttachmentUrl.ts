@@ -12,14 +12,11 @@ interface Attachment {
 }
 
 /**
- * Downloads a Slack file and uploads to Vercel Blob.
+ * Resolve Attachment Url.
  *
- * Uses Slack's files.info API to get the url_private_download URL,
- * then downloads with Bearer token auth. The attachment.url from the
- * Chat SDK is a thumbnail URL that doesn't serve actual file content.
- *
- * @param attachment
- * @param prefix
+ * @param attachment - Parameter.
+ * @param prefix - Parameter.
+ * @returns - Result.
  */
 export async function resolveAttachmentUrl(
   attachment: Attachment,

@@ -12,10 +12,10 @@ interface SlackTagsHandlerConfig {
 }
 
 /**
- * Factory that creates a handler for admin slack tags endpoints.
- * Parameterized by validation, fetching, and response field naming.
+ * Create Slack Tags Handler.
  *
- * @param config
+ * @param config - Parameter.
+ * @returns - Result.
  */
 export function createSlackTagsHandler(
   config: SlackTagsHandlerConfig,

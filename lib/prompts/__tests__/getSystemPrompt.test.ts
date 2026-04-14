@@ -91,7 +91,7 @@ describe("getSystemPrompt", () => {
           id: "acc-1",
           name: "John Doe",
           email: "john@example.com",
-        } as any,
+        } as unknown,
       });
       expect(result).toContain("-----CURRENT USER CONTEXT-----");
       expect(result).toContain("Name: John Doe");
@@ -103,7 +103,7 @@ describe("getSystemPrompt", () => {
         accountId: "acc-1",
         accountWithDetails: {
           id: "acc-1",
-        } as any,
+        } as unknown,
       });
       expect(result).toContain("Name: Not provided");
     });
@@ -117,7 +117,7 @@ describe("getSystemPrompt", () => {
           role_type: "Manager",
           company_name: "Warner Music",
           organization: "Warner Records",
-        } as any,
+        } as unknown,
       });
       expect(result).toContain("Professional Context:");
       expect(result).toContain("Job Title: Music Manager");
@@ -132,7 +132,7 @@ describe("getSystemPrompt", () => {
         accountWithDetails: {
           id: "acc-1",
           name: "John",
-        } as any,
+        } as unknown,
       });
       expect(result).not.toContain("Professional Context:");
     });
@@ -143,7 +143,7 @@ describe("getSystemPrompt", () => {
         accountWithDetails: {
           id: "acc-1",
           instruction: "Always respond in formal English",
-        } as any,
+        } as unknown,
       });
       expect(result).toContain("User's Custom Instructions & Preferences:");
       expect(result).toContain("Always respond in formal English");
@@ -152,7 +152,7 @@ describe("getSystemPrompt", () => {
     it("includes end marker for user context", () => {
       const result = getSystemPrompt({
         accountId: "acc-1",
-        accountWithDetails: { id: "acc-1" } as any,
+        accountWithDetails: { id: "acc-1" } as unknown,
       });
       expect(result).toContain("-----END USER CONTEXT-----");
     });
@@ -164,7 +164,7 @@ describe("getSystemPrompt", () => {
         accountWithDetails: {
           id: "acc-1",
           email: "details@example.com",
-        } as any,
+        } as unknown,
       });
       expect(result).toContain("Email: details@example.com");
     });
@@ -175,7 +175,7 @@ describe("getSystemPrompt", () => {
         email: "fallback@example.com",
         accountWithDetails: {
           id: "acc-1",
-        } as any,
+        } as unknown,
       });
       expect(result).toContain("Email: fallback@example.com");
     });
@@ -233,7 +233,7 @@ describe("getSystemPrompt", () => {
     it("places user context before artist context", () => {
       const result = getSystemPrompt({
         accountId: "acc-1",
-        accountWithDetails: { id: "acc-1", name: "User" } as any,
+        accountWithDetails: { id: "acc-1", name: "User" } as unknown,
         artistInstruction: "Artist instructions",
       });
 

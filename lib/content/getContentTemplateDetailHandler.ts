@@ -5,11 +5,12 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { loadTemplate } from "@/lib/content/templates";
 
 /**
- * Handler for GET /api/content/templates/{id}.
+ * Get Content Template Detail Handler.
  *
- * @param request - Incoming API request.
- * @param params - Route params containing the template id.
- * @returns The full template object, or 404 if not found.
+ * @param request - Parameter.
+ * @param root1 - Parameter.
+ * @param root1.params - Parameter.
+ * @returns - Result.
  */
 export async function getContentTemplateDetailHandler(
   request: NextRequest,

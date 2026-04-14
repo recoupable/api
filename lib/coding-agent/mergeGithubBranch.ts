@@ -10,12 +10,13 @@ export interface MergeGithubBranchFailure {
 export type MergeGithubBranchResult = MergeGithubBranchSuccess | MergeGithubBranchFailure;
 
 /**
- * Merges one branch into another via the GitHub API.
+ * Merge Github Branch.
  *
- * @param repo - Full repo identifier (e.g. "recoupable/api")
- * @param head - Branch to merge from (e.g. "test")
- * @param base - Branch to merge into (e.g. "main")
- * @param token - GitHub API token
+ * @param repo - Parameter.
+ * @param head - Parameter.
+ * @param base - Parameter.
+ * @param token - Parameter.
+ * @returns - Result.
  */
 export async function mergeGithubBranch(
   repo: string,

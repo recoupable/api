@@ -2,10 +2,10 @@ import type { CodingAgentBot } from "../bot";
 import { handleFeedback } from "./handleFeedback";
 
 /**
- * Registers the onSubscribedMessage handler on the bot.
- * Delegates to handleFeedback for busy/update-pr logic.
+ * Register On Subscribed Message.
  *
- * @param bot
+ * @param bot - Parameter.
+ * @returns - Result.
  */
 export function registerOnSubscribedMessage(bot: CodingAgentBot) {
   bot.onSubscribedMessage(async (thread, message) => {

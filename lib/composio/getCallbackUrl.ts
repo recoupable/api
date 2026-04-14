@@ -15,11 +15,10 @@ interface CallbackOptions {
 }
 
 /**
- * Build callback URL for OAuth redirects.
+ * Get Callback Url.
  *
- * @param options.destination - Where to redirect: "chat" or "connectors"
- * @param options.roomId - For chat destination, the room ID to return to
- * @returns Full callback URL with success indicator
+ * @param options - Parameter.
+ * @returns - Result.
  */
 export function getCallbackUrl(options: CallbackOptions): string {
   const baseUrl = getFrontendBaseUrl();

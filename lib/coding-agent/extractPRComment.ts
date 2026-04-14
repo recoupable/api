@@ -10,11 +10,11 @@ export interface PRComment {
 }
 
 /**
- * Extracts GitHub thread ID, branch, and comment body from a GitHub webhook payload.
- * Returns null if the event is not actionable.
+ * Extract PRComment.
  *
- * @param event - The x-github-event header value
- * @param payload - The parsed webhook payload
+ * @param event - Parameter.
+ * @param payload - Parameter.
+ * @returns - Result.
  */
 export function extractPRComment(
   event: string,

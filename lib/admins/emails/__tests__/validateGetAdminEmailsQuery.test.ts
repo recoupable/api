@@ -12,6 +12,12 @@ vi.mock("@/lib/admins/validateAdminAuth", () => ({
   validateAdminAuth: vi.fn(),
 }));
 
+/**
+ * Create Mock Request.
+ *
+ * @param url - Parameter.
+ * @returns - Result.
+ */
 function createMockRequest(url: string): NextRequest {
   return {
     url,

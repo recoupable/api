@@ -40,8 +40,10 @@ const mockTags = [
 ];
 
 /**
+ * Make Request.
  *
- * @param period
+ * @param period - Parameter.
+ * @returns - Result.
  */
 function makeRequest(period = "all") {
   return new NextRequest(`https://example.com/api/admins/content/slack?period=${period}`);

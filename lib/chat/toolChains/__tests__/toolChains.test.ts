@@ -38,7 +38,7 @@ describe("toolChains", () => {
     it("allows result with model override", () => {
       const result: PrepareStepResult = {
         toolChoice: { type: "tool", toolName: "test_tool" },
-        model: "gemini-2.5-pro" as any,
+        model: "gemini-2.5-pro" as unknown,
       };
       expect(result.model).toBe("gemini-2.5-pro");
     });
@@ -46,7 +46,7 @@ describe("toolChains", () => {
     it("allows result with all properties", () => {
       const result: PrepareStepResult = {
         toolChoice: { type: "tool", toolName: "test_tool" },
-        model: "gemini-2.5-pro" as any,
+        model: "gemini-2.5-pro" as unknown,
         system: "Custom prompt",
         messages: [{ role: "user", content: "Test" }],
       };

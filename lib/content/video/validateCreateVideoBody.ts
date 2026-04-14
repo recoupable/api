@@ -27,7 +27,10 @@ export type ValidatedCreateVideoBody = { accountId: string } & z.infer<
 >;
 
 /**
- * Validates auth and request body for POST /api/content/video.
+ * Validate Create Video Body.
+ *
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function validateCreateVideoBody(
   request: NextRequest,

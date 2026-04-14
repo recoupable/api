@@ -5,15 +5,10 @@ import { resolvePRState } from "../resolvePRState";
 import { handleFeedback } from "./handleFeedback";
 
 /**
- * Registers the onNewMention handler on the bot.
- * If the thread already has PRs (via thread state or shared PR state key),
- * treats the mention as feedback and triggers the update-pr task.
- * Otherwise, starts a new coding agent task.
+ * Register On New Mention.
  *
- * For GitHub PR comments, message.meta may contain { repo, branch } to look up
- * the shared PR state key when thread state is empty.
- *
- * @param bot
+ * @param bot - Parameter.
+ * @returns - Result.
  */
 export function registerOnNewMention(bot: CodingAgentBot) {
   bot.onNewMention(async (thread, message) => {

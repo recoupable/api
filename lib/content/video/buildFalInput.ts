@@ -1,10 +1,19 @@
 /**
- * Maps user-facing fields to the fal input format for each video mode.
- * Different fal models expect different field names for the same concept.
+ * Build Fal Input.
  *
- * @param mode - The resolved video generation mode.
- * @param v - Validated request body fields.
- * @returns The fal input object with mode-specific field mappings.
+ * @param mode - Parameter.
+ * @param v - Parameter.
+ * @param v.prompt - Parameter.
+ * @param v.negative_prompt - Parameter.
+ * @param v.image_url - Parameter.
+ * @param v.end_image_url - Parameter.
+ * @param v.video_url - Parameter.
+ * @param v.audio_url - Parameter.
+ * @param v.aspect_ratio - Parameter.
+ * @param v.duration - Parameter.
+ * @param v.resolution - Parameter.
+ * @param v.generate_audio - Parameter.
+ * @returns - Result.
  */
 export function buildFalInput(
   mode: string,

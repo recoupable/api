@@ -154,6 +154,13 @@ const mockDeductCredits = vi.mocked(deductCredits);
 const mockGenerateChatTitle = vi.mocked(generateChatTitle);
 
 // Helper to create mock NextRequest
+/**
+ * Create Mock Request.
+ *
+ * @param body - Parameter.
+ * @param headers - Parameter.
+ * @returns - Result.
+ */
 function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
   return {
     json: () => Promise.resolve(body),
@@ -169,7 +176,7 @@ describe("Chat Integration Tests", () => {
     vi.clearAllMocks();
 
     // Set up default mocks for Supabase operations
-    mockSelectAccountEmails.mockResolvedValue([{ email: "test@example.com" }] as any);
+    mockSelectAccountEmails.mockResolvedValue([{ email: "test@example.com" }] as unknown);
     mockSelectAccountInfo.mockResolvedValue(null);
     mockGetAccountWithDetails.mockResolvedValue(null);
     mockGetKnowledgeBaseText.mockResolvedValue("");
@@ -197,12 +204,12 @@ describe("Chat Integration Tests", () => {
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown);
 
       // Should not be a NextResponse error
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("account-123");
-      expect((result as any).prompt).toBe("Hello");
+      expect((result as unknown).accountId).toBe("account-123");
+      expect((result as unknown).prompt).toBe("Hello");
     });
 
     it("validates and returns body for valid request with messages", async () => {
@@ -219,10 +226,10 @@ describe("Chat Integration Tests", () => {
         { "x-api-key": "valid-key" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).messages).toHaveLength(1);
+      expect((result as unknown).messages).toHaveLength(1);
     });
 
     it("returns 401 when auth fails", async () => {
@@ -231,7 +238,7 @@ describe("Chat Integration Tests", () => {
       );
       const request = createMockRequest({ prompt: "Hello" }, {});
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(401);
@@ -246,7 +253,7 @@ describe("Chat Integration Tests", () => {
 
       const request = createMockRequest({ roomId: "room-123" }, { "x-api-key": "valid-key" });
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
@@ -267,7 +274,7 @@ describe("Chat Integration Tests", () => {
         { "x-api-key": "valid-key" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
@@ -291,26 +298,26 @@ describe("Chat Integration Tests", () => {
         { "x-api-key": "valid-key" },
       );
 
-      const result = await validateChatRequest(request as any);
+      const result = await validateChatRequest(request as unknown);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).roomId).toBe("room-123");
-      expect((result as any).artistId).toBe("artist-456");
-      expect((result as any).model).toBe("gpt-4");
-      expect((result as any).excludeTools).toEqual(["tool1", "tool2"]);
+      expect((result as unknown).roomId).toBe("room-123");
+      expect((result as unknown).artistId).toBe("artist-456");
+      expect((result as unknown).model).toBe("gpt-4");
+      expect((result as unknown).excludeTools).toEqual(["tool1", "tool2"]);
     });
   });
 
   describe("setupChatRequest integration", () => {
     it("correctly retrieves account email for system prompt", async () => {
-      mockSelectAccountEmails.mockResolvedValue([{ email: "user@test.com" }] as any);
+      mockSelectAccountEmails.mockResolvedValue([{ email: "user@test.com" }] as unknown);
 
       const body = {
         accountId: "account-123",
         messages: [{ id: "msg-1", role: "user", content: "Hello" }],
       };
 
-      await setupChatRequest(body as any);
+      await setupChatRequest(body as unknown);
 
       expect(mockSelectAccountEmails).toHaveBeenCalledWith({
         accountIds: "account-123",
@@ -321,7 +328,7 @@ describe("Chat Integration Tests", () => {
       mockSelectAccountInfo.mockResolvedValue({
         instruction: "Be helpful for this artist",
         knowledges: [{ id: "kb-1" }],
-      } as any);
+      } as unknown);
       mockGetKnowledgeBaseText.mockResolvedValue("Artist knowledge base content");
 
       const body = {
@@ -330,7 +337,7 @@ describe("Chat Integration Tests", () => {
         messages: [{ id: "msg-1", role: "user", content: "Hello" }],
       };
 
-      await setupChatRequest(body as any);
+      await setupChatRequest(body as unknown);
 
       expect(mockSelectAccountInfo).toHaveBeenCalledWith("artist-456");
       expect(mockGetKnowledgeBaseText).toHaveBeenCalled();
@@ -342,7 +349,7 @@ describe("Chat Integration Tests", () => {
         messages: [{ id: "msg-1", role: "user", content: "Hello" }],
       };
 
-      await setupChatRequest(body as any);
+      await setupChatRequest(body as unknown);
 
       expect(mockSelectAccountInfo).not.toHaveBeenCalled();
       expect(mockGetKnowledgeBaseText).not.toHaveBeenCalled();
@@ -354,7 +361,7 @@ describe("Chat Integration Tests", () => {
         messages: [{ id: "msg-1", role: "user", content: "Hello" }],
       };
 
-      const result = await setupChatRequest(body as any);
+      const result = await setupChatRequest(body as unknown);
 
       expect(result).toHaveProperty("agent");
       expect(result).toHaveProperty("messages");
@@ -365,14 +372,14 @@ describe("Chat Integration Tests", () => {
       mockGetAccountWithDetails.mockResolvedValue({
         name: "Test User",
         professional_context: "Music producer",
-      } as any);
+      } as unknown);
 
       const body = {
         accountId: "account-123",
         messages: [{ id: "msg-1", role: "user", content: "Hello" }],
       };
 
-      await setupChatRequest(body as any);
+      await setupChatRequest(body as unknown);
 
       expect(mockGetAccountWithDetails).toHaveBeenCalledWith("account-123");
     });
@@ -393,7 +400,7 @@ describe("Chat Integration Tests", () => {
         { id: "response-1", role: "assistant", parts: [{ type: "text", text: "Hi there!" }] },
       ];
 
-      await handleChatCompletion(body as any, responseMessages as any);
+      await handleChatCompletion(body as unknown, responseMessages as unknown);
 
       expect(mockUpsertRoom).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -406,7 +413,7 @@ describe("Chat Integration Tests", () => {
     });
 
     it("skips room creation for existing rooms", async () => {
-      mockSelectRoom.mockResolvedValue({ id: "existing-room" } as any);
+      mockSelectRoom.mockResolvedValue({ id: "existing-room" } as unknown);
 
       const body = {
         messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
@@ -418,14 +425,14 @@ describe("Chat Integration Tests", () => {
         { id: "response-1", role: "assistant", parts: [{ type: "text", text: "Hi!" }] },
       ];
 
-      await handleChatCompletion(body as any, responseMessages as any);
+      await handleChatCompletion(body as unknown, responseMessages as unknown);
 
       expect(mockUpsertRoom).not.toHaveBeenCalled();
       expect(mockSendNewConversationNotification).not.toHaveBeenCalled();
     });
 
     it("stores both user and assistant messages to memories", async () => {
-      mockSelectRoom.mockResolvedValue({ id: "room-123" } as any);
+      mockSelectRoom.mockResolvedValue({ id: "room-123" } as unknown);
 
       const body = {
         messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
@@ -437,7 +444,7 @@ describe("Chat Integration Tests", () => {
         { id: "response-1", role: "assistant", parts: [{ type: "text", text: "Hi!" }] },
       ];
 
-      await handleChatCompletion(body as any, responseMessages as any);
+      await handleChatCompletion(body as unknown, responseMessages as unknown);
 
       expect(mockUpsertMemory).toHaveBeenCalledTimes(2);
       expect(mockUpsertMemory).toHaveBeenCalledWith(
@@ -455,7 +462,7 @@ describe("Chat Integration Tests", () => {
     });
 
     it("processes email tool outputs", async () => {
-      mockSelectRoom.mockResolvedValue({ id: "room-123" } as any);
+      mockSelectRoom.mockResolvedValue({ id: "room-123" } as unknown);
 
       const body = {
         messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Send an email" }] }],
@@ -477,7 +484,7 @@ describe("Chat Integration Tests", () => {
         },
       ];
 
-      await handleChatCompletion(body as any, responseMessages as any);
+      await handleChatCompletion(body as unknown, responseMessages as unknown);
 
       expect(mockHandleSendEmailToolOutputs).toHaveBeenCalledWith(responseMessages);
     });
@@ -497,7 +504,7 @@ describe("Chat Integration Tests", () => {
 
       // Should not throw
       await expect(
-        handleChatCompletion(body as any, responseMessages as any),
+        handleChatCompletion(body as unknown, responseMessages as unknown),
       ).resolves.toBeUndefined();
     });
 
@@ -512,7 +519,7 @@ describe("Chat Integration Tests", () => {
         { id: "response-1", role: "assistant", parts: [{ type: "text", text: "Hi!" }] },
       ];
 
-      await handleChatCompletion(body as any, responseMessages as any);
+      await handleChatCompletion(body as unknown, responseMessages as unknown);
 
       expect(mockSelectRoom).toHaveBeenCalledWith("");
     });
@@ -605,10 +612,10 @@ describe("Chat Integration Tests", () => {
 
       const request = createMockRequest({ prompt: "What is 2+2?" }, { "x-api-key": "valid-key" });
 
-      const validationResult = await validateChatRequest(request as any);
+      const validationResult = await validateChatRequest(request as unknown);
       expect(validationResult).not.toBeInstanceOf(NextResponse);
 
-      const chatConfig = await setupChatRequest(validationResult as any);
+      const chatConfig = await setupChatRequest(validationResult as unknown);
       expect(chatConfig.agent).toBeDefined();
       expect(chatConfig.messages).toBeDefined();
     });
@@ -631,10 +638,10 @@ describe("Chat Integration Tests", () => {
         { "x-api-key": "valid-key" },
       );
 
-      const validationResult = await validateChatRequest(request as any);
+      const validationResult = await validateChatRequest(request as unknown);
       expect(validationResult).not.toBeInstanceOf(NextResponse);
 
-      const chatConfig = await setupChatRequest(validationResult as any);
+      const chatConfig = await setupChatRequest(validationResult as unknown);
       expect(chatConfig.agent).toBeDefined();
       expect(chatConfig.messages.length).toBeLessThanOrEqual(100); // MAX_MESSAGES
     });
@@ -657,11 +664,11 @@ describe("Chat Integration Tests", () => {
         { "x-api-key": "valid-key" },
       );
 
-      const body = await validateChatRequest(request as any);
+      const body = await validateChatRequest(request as unknown);
       expect(body).not.toBeInstanceOf(NextResponse);
 
       // 2. Setup chat request
-      const chatConfig = await setupChatRequest(body as any);
+      const chatConfig = await setupChatRequest(body as unknown);
       expect(chatConfig.agent).toBeDefined();
 
       // 3. Handle post-completion (simulating what would happen after agent response)
@@ -673,7 +680,7 @@ describe("Chat Integration Tests", () => {
         },
       ];
 
-      await handleChatCompletion(body as any, responseMessages as any);
+      await handleChatCompletion(body as unknown, responseMessages as unknown);
 
       expect(mockUpsertRoom).toHaveBeenCalled();
       expect(mockUpsertMemory).toHaveBeenCalledTimes(2);
@@ -681,8 +688,8 @@ describe("Chat Integration Tests", () => {
       // 4. Handle credits
       await handleChatCredits({
         usage: { promptTokens: 100, completionTokens: 50 },
-        model: (body as any).model || "openai/gpt-5-mini",
-        accountId: (body as any).accountId,
+        model: (body as unknown).model || "openai/gpt-5-mini",
+        accountId: (body as unknown).accountId,
       });
 
       expect(mockGetCreditUsage).toHaveBeenCalled();

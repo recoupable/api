@@ -2,11 +2,12 @@ import supabase from "@/lib/supabase/serverClient";
 import type { FileRecord } from "@/lib/supabase/files/createFileRecord";
 
 /**
- * Select a file record by storage key for an owner account.
+ * Select File By Storage Key.
  *
- * @param root0
- * @param root0.ownerAccountId
- * @param root0.storageKey
+ * @param root0 - Parameter.
+ * @param root0.ownerAccountId - Parameter.
+ * @param root0.storageKey - Parameter.
+ * @returns - Result.
  */
 export async function selectFileByStorageKey({
   ownerAccountId,

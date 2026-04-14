@@ -3,16 +3,19 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createImageHandler } from "@/lib/content/image/createImageHandler";
 
 /**
- * OPTIONS handler for CORS preflight requests.
+ * OPTIONS.
+ *
+ * @returns - Result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
 }
 
 /**
- * POST /api/content/image
+ * POST.
  *
- * Generate an image from a prompt and optional reference image.
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   return createImageHandler(request);

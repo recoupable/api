@@ -8,6 +8,12 @@ export interface CatalogsResponse {
   error?: string;
 }
 
+/**
+ * Get Catalogs.
+ *
+ * @param accountId - Parameter.
+ * @returns - Result.
+ */
 export async function getCatalogs(accountId: string): Promise<CatalogsResponse> {
   try {
     const response = await fetch(

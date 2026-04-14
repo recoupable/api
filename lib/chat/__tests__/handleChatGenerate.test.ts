@@ -51,8 +51,10 @@ const mockSetupConversation = vi.mocked(setupConversation);
 
 // Helper to create a mock agent with .generate()
 /**
+ * Create Mock Agent.
  *
- * @param generateResult
+ * @param generateResult - Parameter.
+ * @returns - Result.
  */
 function createMockAgent(generateResult: Record<string, unknown>) {
   return {
@@ -64,9 +66,11 @@ function createMockAgent(generateResult: Record<string, unknown>) {
 
 // Helper to create mock NextRequest
 /**
+ * Create Mock Request.
  *
- * @param body
- * @param headers
+ * @param body - Parameter.
+ * @param headers - Parameter.
+ * @returns - Result.
  */
 function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
   return {
@@ -102,7 +106,7 @@ describe("handleChatGenerate", () => {
 
       const request = createMockRequest({ roomId: "room-123" }, { "x-api-key": "test-key" });
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect(result.status).toBe(400);
@@ -116,7 +120,7 @@ describe("handleChatGenerate", () => {
       );
       const request = createMockRequest({ prompt: "Hello" }, {});
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect(result.status).toBe(401);
@@ -147,11 +151,11 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown);
 
       const request = createMockRequest({ prompt: "Hello, world!" }, { "x-api-key": "valid-key" });
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown);
 
       expect(mockAgent.generate).toHaveBeenCalled();
       expect(result.status).toBe(200);
@@ -178,12 +182,12 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown);
 
       const messages = [{ role: "user", content: "Hello" }];
       const request = createMockRequest({ messages }, { "x-api-key": "valid-key" });
 
-      await handleChatGenerate(request as any);
+      await handleChatGenerate(request as unknown);
 
       expect(mockSetupChatRequest).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -214,7 +218,7 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown);
 
       const request = createMockRequest(
         {
@@ -227,7 +231,7 @@ describe("handleChatGenerate", () => {
         { "x-api-key": "valid-key" },
       );
 
-      await handleChatGenerate(request as any);
+      await handleChatGenerate(request as unknown);
 
       expect(mockSetupChatRequest).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -258,11 +262,11 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown);
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown);
 
       expect(result.status).toBe(200);
       const json = await result.json();
@@ -282,7 +286,7 @@ describe("handleChatGenerate", () => {
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect(result.status).toBe(500);
@@ -306,11 +310,11 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown);
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect(result.status).toBe(500);
@@ -337,14 +341,14 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown);
 
       const request = createMockRequest(
         { prompt: "Hello", accountId: "target-account-456" },
         { "x-api-key": "org-api-key" },
       );
 
-      await handleChatGenerate(request as any);
+      await handleChatGenerate(request as unknown);
 
       expect(mockSetupChatRequest).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -376,7 +380,7 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown);
 
       mockSaveChatCompletion.mockResolvedValue(null);
 
@@ -385,7 +389,7 @@ describe("handleChatGenerate", () => {
         { "x-api-key": "valid-key" },
       );
 
-      await handleChatGenerate(request as any);
+      await handleChatGenerate(request as unknown);
 
       expect(mockSaveChatCompletion).toHaveBeenCalledWith({
         text: "Hello! How can I help you?",
@@ -414,13 +418,13 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown);
 
       mockSaveChatCompletion.mockResolvedValue(null);
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
-      await handleChatGenerate(request as any);
+      await handleChatGenerate(request as unknown);
 
       // Since roomId is auto-created, saveChatCompletion should be called
       expect(mockSaveChatCompletion).toHaveBeenCalledWith({
@@ -450,7 +454,7 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown);
 
       mockSaveChatCompletion.mockResolvedValue(null);
 
@@ -459,7 +463,7 @@ describe("handleChatGenerate", () => {
         { "x-api-key": "valid-key" },
       );
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown);
 
       expect(result.status).toBe(200);
       const json = await result.json();
@@ -487,13 +491,13 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown);
 
       mockSaveChatCompletion.mockResolvedValue(null);
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown);
 
       expect(result.status).toBe(200);
       const json = await result.json();
@@ -521,7 +525,7 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown);
 
       mockSaveChatCompletion.mockResolvedValue(null);
 
@@ -530,7 +534,7 @@ describe("handleChatGenerate", () => {
         { "x-api-key": "valid-key" },
       );
 
-      await handleChatGenerate(request as any);
+      await handleChatGenerate(request as unknown);
 
       expect(mockSaveChatCompletion).toHaveBeenCalledWith({
         text: "This is the assistant response text",
@@ -559,7 +563,7 @@ describe("handleChatGenerate", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown);
 
       mockSaveChatCompletion.mockRejectedValue(new Error("Database error"));
 
@@ -568,7 +572,7 @@ describe("handleChatGenerate", () => {
         { "x-api-key": "valid-key" },
       );
 
-      const result = await handleChatGenerate(request as any);
+      const result = await handleChatGenerate(request as unknown);
 
       expect(result.status).toBe(200);
       const json = await result.json();

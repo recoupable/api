@@ -3,16 +3,21 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getContentTemplateDetailHandler } from "@/lib/content/getContentTemplateDetailHandler";
 
 /**
- * OPTIONS handler for CORS preflight requests.
+ * OPTIONS.
+ *
+ * @returns - Result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
 }
 
 /**
- * GET /api/content/templates/[id]
+ * GET.
  *
- * Returns the full template configuration for a given template id.
+ * @param request - Parameter.
+ * @param context - Parameter.
+ * @param context.params - Parameter.
+ * @returns - Result.
  */
 export async function GET(
   request: NextRequest,

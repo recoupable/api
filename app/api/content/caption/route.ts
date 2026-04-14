@@ -3,16 +3,19 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createTextHandler } from "@/lib/content/caption/createTextHandler";
 
 /**
- * OPTIONS handler for CORS preflight requests.
+ * OPTIONS.
+ *
+ * @returns - Result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
 }
 
 /**
- * POST /api/content/caption
+ * POST.
  *
- * Generate on-screen caption text for a social video.
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   return createTextHandler(request);

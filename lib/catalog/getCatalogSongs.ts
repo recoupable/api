@@ -25,6 +25,15 @@ export interface CatalogSongsResponse {
   error?: string;
 }
 
+/**
+ * Get Catalog Songs.
+ *
+ * @param catalogId - Parameter.
+ * @param pageSize - Parameter.
+ * @param page - Parameter.
+ * @param artistName - Parameter.
+ * @returns - Result.
+ */
 export async function getCatalogSongs(
   catalogId: string,
   pageSize: number = 100,

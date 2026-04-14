@@ -10,11 +10,12 @@ export interface MergeGithubPRFailure {
 export type MergeGithubPRResult = MergeGithubPRSuccess | MergeGithubPRFailure;
 
 /**
- * Squash-merges a GitHub pull request via the API.
+ * Merge Github PR.
  *
- * @param repo - Full repo identifier (e.g. "recoupable/api")
- * @param prNumber - PR number to merge
- * @param token - GitHub API token
+ * @param repo - Parameter.
+ * @param prNumber - Parameter.
+ * @param token - Parameter.
+ * @returns - Result.
  */
 export async function mergeGithubPR(
   repo: string,

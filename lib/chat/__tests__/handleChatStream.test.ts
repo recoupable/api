@@ -58,9 +58,11 @@ const mockCreateUIMessageStreamResponse = vi.mocked(createUIMessageStreamRespons
 
 // Helper to create mock NextRequest
 /**
+ * Create Mock Request.
  *
- * @param body
- * @param headers
+ * @param body - Parameter.
+ * @param headers - Parameter.
+ * @returns - Result.
  */
 function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
   return {
@@ -97,7 +99,7 @@ describe("handleChatStream", () => {
 
       const request = createMockRequest({ roomId: "room-123" }, { "x-api-key": "test-key" });
 
-      const result = await handleChatStream(request as any);
+      const result = await handleChatStream(request as unknown);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect(result.status).toBe(400);
@@ -111,7 +113,7 @@ describe("handleChatStream", () => {
       );
       const request = createMockRequest({ prompt: "Hello" }, {});
 
-      const result = await handleChatStream(request as any);
+      const result = await handleChatStream(request as unknown);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect(result.status).toBe(401);
@@ -137,7 +139,7 @@ describe("handleChatStream", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown);
 
       const mockStream = new ReadableStream();
       mockCreateUIMessageStream.mockReturnValue(mockStream);
@@ -147,7 +149,7 @@ describe("handleChatStream", () => {
 
       const request = createMockRequest({ prompt: "Hello, world!" }, { "x-api-key": "valid-key" });
 
-      const result = await handleChatStream(request as any);
+      const result = await handleChatStream(request as unknown);
 
       expect(mockSetupChatRequest).toHaveBeenCalled();
       expect(mockCreateUIMessageStream).toHaveBeenCalled();
@@ -181,7 +183,7 @@ describe("handleChatStream", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown);
 
       const mockStream = new ReadableStream();
       mockCreateUIMessageStream.mockReturnValue(mockStream);
@@ -190,7 +192,7 @@ describe("handleChatStream", () => {
       const messages = [{ role: "user", content: "Hello" }];
       const request = createMockRequest({ messages }, { "x-api-key": "valid-key" });
 
-      await handleChatStream(request as any);
+      await handleChatStream(request as unknown);
 
       expect(mockSetupChatRequest).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -218,7 +220,7 @@ describe("handleChatStream", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown);
 
       const mockStream = new ReadableStream();
       mockCreateUIMessageStream.mockReturnValue(mockStream);
@@ -235,7 +237,7 @@ describe("handleChatStream", () => {
         { "x-api-key": "valid-key" },
       );
 
-      await handleChatStream(request as any);
+      await handleChatStream(request as unknown);
 
       expect(mockSetupChatRequest).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -259,7 +261,7 @@ describe("handleChatStream", () => {
 
       const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
 
-      const result = await handleChatStream(request as any);
+      const result = await handleChatStream(request as unknown);
 
       expect(result).toBeInstanceOf(NextResponse);
       expect(result.status).toBe(500);
@@ -287,7 +289,7 @@ describe("handleChatStream", () => {
       mockSetupChatRequest.mockResolvedValue({
         agent: mockAgent,
         messages: [],
-      } as any);
+      } as unknown);
 
       const mockStream = new ReadableStream();
       mockCreateUIMessageStream.mockReturnValue(mockStream);
@@ -298,7 +300,7 @@ describe("handleChatStream", () => {
         { "x-api-key": "org-api-key" },
       );
 
-      await handleChatStream(request as any);
+      await handleChatStream(request as unknown);
 
       expect(mockSetupChatRequest).toHaveBeenCalledWith(
         expect.objectContaining({

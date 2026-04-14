@@ -105,12 +105,10 @@ describe("selectAccountSandboxes", () => {
     });
 
     // First call is for account_sandboxes, second is for account_organization_ids
-    let callCount = 0;
     mockFrom.mockImplementation((table: string) => {
       if (table === "account_organization_ids") {
         return { select: mockOrgSelect };
       }
-      callCount++;
       return { select: mockSelect };
     });
 

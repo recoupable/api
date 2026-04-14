@@ -5,11 +5,12 @@ import type { ArtistQueryRow } from "@/lib/artists/getFormattedArtist";
 export type AccountArtistRow = ArtistQueryRow & { artist_id: string; pinned: boolean };
 
 /**
- * Get all artists for an array of artist IDs or account IDs, with full info.
- * Returns raw data - formatting should be done by caller.
+ * Get Account Artist Ids.
  *
- * @param params Object with artistIds or accountIds array
- * @returns Array of raw artist rows from database
+ * @param params - Parameter.
+ * @param params.artistIds - Parameter.
+ * @param params.accountIds - Parameter.
+ * @returns - Result.
  */
 export async function getAccountArtistIds(params: {
   artistIds?: string[];

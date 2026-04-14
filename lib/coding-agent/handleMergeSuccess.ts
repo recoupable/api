@@ -4,9 +4,10 @@ import { RECOUP_ORG_ID, SNAPSHOT_EXPIRY_MS } from "@/lib/const";
 import type { CodingAgentThreadState } from "./types";
 
 /**
- * Handles post-merge cleanup after all PRs merged successfully.
- * Deletes the shared PR state keys for all repos and persists the latest
- * snapshot via upsertAccountSnapshot.
+ * Handle Merge Success.
+ *
+ * @param state - Parameter.
+ * @returns - Result.
  */
 export async function handleMergeSuccess(state: CodingAgentThreadState): Promise<void> {
   try {

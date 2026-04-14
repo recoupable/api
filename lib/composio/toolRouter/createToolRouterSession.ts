@@ -9,18 +9,12 @@ import { getConnectors } from "../connectors/getConnectors";
 const ENABLED_TOOLKITS = ["googlesheets", "googledrive", "googledocs", "tiktok"];
 
 /**
- * Create a Composio Tool Router session for an account.
+ * Create Tool Router Session.
  *
- * This is the opinionated layer — it decides which connections the AI agent uses.
- * When both the account and artist have the same toolkit connected, the account's
- * connection is kept and the artist's is dropped to prevent tool collision
- * (the AI wouldn't know which credentials to use).
- *
- * Artist connections only fill gaps where the account has no connection.
- *
- * @param accountId - Unique identifier for the account
- * @param roomId - Optional chat room ID for OAuth redirect
- * @param artistConnections - Optional mapping of toolkit slug to connected account ID for artist-specific connections
+ * @param accountId - Parameter.
+ * @param roomId - Parameter.
+ * @param artistConnections - Parameter.
+ * @returns - Result.
  */
 export async function createToolRouterSession(
   accountId: string,

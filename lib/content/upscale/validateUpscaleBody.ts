@@ -15,7 +15,10 @@ export const createUpscaleBodySchema = z.object({
 export type ValidatedUpscaleBody = { accountId: string } & z.infer<typeof createUpscaleBodySchema>;
 
 /**
- * Validates auth and request body for POST /api/content/upscale.
+ * Validate Upscale Body.
+ *
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function validateUpscaleBody(
   request: NextRequest,

@@ -42,8 +42,16 @@ const THREAD_BATCH_SIZE = 5;
 const THREAD_BATCH_DELAY_MS = 1100;
 
 /**
- * Scans Slack thread replies for messages that mention the bot.
- * Returns the mentions (with parent thread ts) while caching user info.
+ * Fetch Thread Reply Mentions.
+ *
+ * @param root0 - Parameter.
+ * @param root0.token - Parameter.
+ * @param root0.threadsToScan - Parameter.
+ * @param root0.mentionPattern - Parameter.
+ * @param root0.mentionRegex - Parameter.
+ * @param root0.cutoffTs - Parameter.
+ * @param root0.userCache - Parameter.
+ * @returns - Result.
  */
 export async function fetchThreadReplyMentions({
   token,

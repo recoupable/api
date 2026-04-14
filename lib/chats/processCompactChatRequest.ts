@@ -13,11 +13,13 @@ interface ProcessCompactChatRequestParams {
 }
 
 /**
- * Processes a single chat compaction request.
- * Verifies the chat exists and the user has access before compacting.
+ * Process Compact Chat Request.
  *
- * @param params - The parameters for processing the chat compaction.
- * @returns The result of the compaction attempt.
+ * @param root0 - Parameter.
+ * @param root0.chatId - Parameter.
+ * @param root0.prompt - Parameter.
+ * @param root0.accountId - Parameter.
+ * @returns - Result.
  */
 export async function processCompactChatRequest({
   chatId,

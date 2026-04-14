@@ -18,8 +18,10 @@ const handler = createSlackTagsHandler({
 });
 
 /**
+ * Make Request.
  *
- * @param period
+ * @param period - Parameter.
+ * @returns - Result.
  */
 function makeRequest(period = "all") {
   return new NextRequest(`https://example.com/api/admins/coding/slack?period=${period}`);

@@ -30,12 +30,14 @@ beforeEach(() => {
 });
 
 /**
+ * Create Mock Bot.
  *
+ * @returns - Result.
  */
 function createMockBot() {
   return {
     onNewMention: vi.fn(),
-  } as any;
+  } as unknown;
 }
 
 describe("registerOnNewMention", () => {

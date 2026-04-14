@@ -144,7 +144,7 @@ describe("convertToUiMessages", () => {
         },
       ];
 
-      const result = convertToUiMessages(messages as any);
+      const result = convertToUiMessages(messages as unknown);
 
       expect(result[0].parts[0].text).toBe("Hello world!");
     });

@@ -26,7 +26,7 @@ describe("getCreditUsage", () => {
           input: "0.00003", // $0.03 per 1K tokens
           output: "0.00006", // $0.06 per 1K tokens
         },
-      } as any);
+      } as unknown);
 
       const usage = {
         promptTokens: 1000,
@@ -59,7 +59,7 @@ describe("getCreditUsage", () => {
           input: "0.00003",
           output: "0.00006",
         },
-      } as any);
+      } as unknown);
 
       const usage = {
         promptTokens: undefined as unknown as number,
@@ -78,7 +78,7 @@ describe("getCreditUsage", () => {
           input: "0.00003",
           output: "0.00006",
         },
-      } as any);
+      } as unknown);
 
       const usage = {
         promptTokens: 1000,
@@ -94,7 +94,7 @@ describe("getCreditUsage", () => {
       mockGetModel.mockResolvedValue({
         id: "gpt-4",
         // No pricing property
-      } as any);
+      } as unknown);
 
       const usage = {
         promptTokens: 1000,
@@ -114,7 +114,7 @@ describe("getCreditUsage", () => {
           input: "0.00003",
           output: "0.00006",
         },
-      } as any);
+      } as unknown);
 
       const usage = {
         promptTokens: 0,

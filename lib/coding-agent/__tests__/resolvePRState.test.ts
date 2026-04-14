@@ -13,8 +13,10 @@ beforeEach(() => {
 });
 
 /**
+ * Create Mock Thread.
  *
- * @param state
+ * @param state - Parameter.
+ * @returns - Result.
  */
 function createMockThread(state: unknown) {
   return {
@@ -22,7 +24,7 @@ function createMockThread(state: unknown) {
     get state() {
       return Promise.resolve(state);
     },
-  } as any;
+  } as unknown;
 }
 
 describe("resolvePRState", () => {

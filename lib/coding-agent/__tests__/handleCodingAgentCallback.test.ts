@@ -49,9 +49,11 @@ beforeEach(() => {
 
 describe("handleCodingAgentCallback", () => {
   /**
+   * Make Request.
    *
-   * @param body
-   * @param secret
+   * @param body - Parameter.
+   * @param secret - Parameter.
+   * @returns - Result.
    */
   function makeRequest(body: unknown, secret = "test-secret") {
     return {

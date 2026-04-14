@@ -18,7 +18,7 @@ describe("generateChatTitle", () => {
     it("generates a title from the input text", async () => {
       mockGenerateText.mockResolvedValue({
         text: "Marketing Plan",
-      } as any);
+      } as unknown);
 
       const result = await generateChatTitle("What marketing strategies should I use?");
 
@@ -28,7 +28,7 @@ describe("generateChatTitle", () => {
     it("calls generateText with correct prompt structure", async () => {
       mockGenerateText.mockResolvedValue({
         text: "Test Title",
-      } as any);
+      } as unknown);
 
       await generateChatTitle("Test input");
 
@@ -43,7 +43,7 @@ describe("generateChatTitle", () => {
     it("uses LIGHTWEIGHT_MODEL for efficiency", async () => {
       mockGenerateText.mockResolvedValue({
         text: "Test Title",
-      } as any);
+      } as unknown);
 
       await generateChatTitle("Test input");
 
@@ -59,7 +59,7 @@ describe("generateChatTitle", () => {
     it("removes leading double quotes from generated title", async () => {
       mockGenerateText.mockResolvedValue({
         text: '"Marketing Plan',
-      } as any);
+      } as unknown);
 
       const result = await generateChatTitle("What marketing strategies?");
 
@@ -69,7 +69,7 @@ describe("generateChatTitle", () => {
     it("removes trailing double quotes from generated title", async () => {
       mockGenerateText.mockResolvedValue({
         text: 'Marketing Plan"',
-      } as any);
+      } as unknown);
 
       const result = await generateChatTitle("What marketing strategies?");
 
@@ -79,7 +79,7 @@ describe("generateChatTitle", () => {
     it("removes both leading and trailing double quotes", async () => {
       mockGenerateText.mockResolvedValue({
         text: '"Marketing Plan"',
-      } as any);
+      } as unknown);
 
       const result = await generateChatTitle("What marketing strategies?");
 
@@ -89,7 +89,7 @@ describe("generateChatTitle", () => {
     it("removes leading single quotes", async () => {
       mockGenerateText.mockResolvedValue({
         text: "'Marketing Plan",
-      } as any);
+      } as unknown);
 
       const result = await generateChatTitle("What marketing strategies?");
 
@@ -99,7 +99,7 @@ describe("generateChatTitle", () => {
     it("removes trailing single quotes", async () => {
       mockGenerateText.mockResolvedValue({
         text: "Marketing Plan'",
-      } as any);
+      } as unknown);
 
       const result = await generateChatTitle("What marketing strategies?");
 
@@ -109,7 +109,7 @@ describe("generateChatTitle", () => {
     it("removes both leading and trailing single quotes", async () => {
       mockGenerateText.mockResolvedValue({
         text: "'Marketing Plan'",
-      } as any);
+      } as unknown);
 
       const result = await generateChatTitle("What marketing strategies?");
 
@@ -119,7 +119,7 @@ describe("generateChatTitle", () => {
     it("does not remove quotes in the middle of the title", async () => {
       mockGenerateText.mockResolvedValue({
         text: "User's Plan",
-      } as any);
+      } as unknown);
 
       const result = await generateChatTitle("Help me with the user's plan");
 
@@ -131,7 +131,7 @@ describe("generateChatTitle", () => {
     it("instructs model to generate title under 20 characters", async () => {
       mockGenerateText.mockResolvedValue({
         text: "Short Title",
-      } as any);
+      } as unknown);
 
       await generateChatTitle("A very long question about many things");
 
@@ -145,7 +145,7 @@ describe("generateChatTitle", () => {
     it("instructs model to highlight segment names if present", async () => {
       mockGenerateText.mockResolvedValue({
         text: "Active Fans",
-      } as any);
+      } as unknown);
 
       await generateChatTitle("Show me the Active Fans segment");
 
@@ -159,7 +159,7 @@ describe("generateChatTitle", () => {
     it("instructs model not to wrap title in quotes", async () => {
       mockGenerateText.mockResolvedValue({
         text: "Clean Title",
-      } as any);
+      } as unknown);
 
       await generateChatTitle("Some question");
 
@@ -175,7 +175,7 @@ describe("generateChatTitle", () => {
     it("handles empty input gracefully", async () => {
       mockGenerateText.mockResolvedValue({
         text: "New Chat",
-      } as any);
+      } as unknown);
 
       const result = await generateChatTitle("");
 
@@ -185,7 +185,7 @@ describe("generateChatTitle", () => {
     it("handles very long input", async () => {
       mockGenerateText.mockResolvedValue({
         text: "Long Discussion",
-      } as any);
+      } as unknown);
 
       const longInput = "a".repeat(1000);
       const result = await generateChatTitle(longInput);

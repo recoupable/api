@@ -9,10 +9,6 @@ type PrepareStepOptions = {
   messages: Array<ModelMessage>;
 };
 
-/**
- * Returns the next tool to run based on timeline progression through tool chains.
- * Uses toolCallsContent to track exact execution order and position in sequence.
- */
 const getPrepareStepResult = (options: PrepareStepOptions): PrepareStepResult | undefined => {
   const { steps } = options;
   // Extract tool calls timeline (history) from steps

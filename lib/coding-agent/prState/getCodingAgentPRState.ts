@@ -3,10 +3,11 @@ import { buildPRStateKey } from "./buildPRStateKey";
 import type { CodingAgentPRState } from "./types";
 
 /**
- * Gets the shared PR state for a repo/branch from Redis.
+ * Get Coding Agent PRState.
  *
- * @param repo
- * @param branch
+ * @param repo - Parameter.
+ * @param branch - Parameter.
+ * @returns - Result.
  */
 export async function getCodingAgentPRState(
   repo: string,

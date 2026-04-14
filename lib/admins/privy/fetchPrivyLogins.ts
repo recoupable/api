@@ -20,6 +20,12 @@ export type FetchPrivyLoginsResult = {
   totalPrivyUsers: number;
 };
 
+/**
+ * Fetch Privy Logins.
+ *
+ * @param period - Parameter.
+ * @returns - Result.
+ */
 export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<FetchPrivyLoginsResult> {
   const isAll = period === "all";
   const cutoffMs = getCutoffMs(period);

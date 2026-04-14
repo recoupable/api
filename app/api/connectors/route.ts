@@ -6,7 +6,9 @@ import { authorizeConnectorHandler } from "@/lib/composio/connectors/authorizeCo
 import { disconnectConnectorHandler } from "@/lib/composio/connectors/disconnectConnectorHandler";
 
 /**
- * OPTIONS handler for CORS preflight requests.
+ * OPTIONS.
+ *
+ * @returns - Result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -16,53 +18,30 @@ export async function OPTIONS() {
 }
 
 /**
- * GET /api/connectors
+ * GET.
  *
- * List all available connectors and their connection status.
- *
- * Query params:
- *   - account_id (optional): Entity ID for entity-specific connections (e.g., artist ID)
- *
- * Authentication: x-api-key OR Authorization Bearer token required.
- *
- * @param request
- * @returns List of connectors with connection status
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function GET(request: NextRequest) {
   return getConnectorsHandler(request);
 }
 
 /**
- * POST /api/connectors
+ * POST.
  *
- * Generate an OAuth authorization URL for a specific connector.
- *
- * Authentication: x-api-key OR Authorization Bearer token required.
- *
- * Request body:
- * - connector: The connector slug, e.g., "googlesheets" or "tiktok" (required)
- * - callback_url: Optional custom callback URL after OAuth
- * - account_id: Optional account ID for account-specific connections
- *
- * @param request
- * @returns The redirect URL for OAuth authorization
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function POST(request: NextRequest) {
   return authorizeConnectorHandler(request);
 }
 
 /**
- * DELETE /api/connectors
+ * DELETE.
  *
- * Disconnect a connected account from Composio.
- *
- * Body:
- * - connected_account_id (required): The connected account ID to disconnect
- * - account_id (optional): Entity ID for ownership verification (e.g., artist ID)
- *
- * Authentication: x-api-key OR Authorization Bearer token required.
- *
- * @param request
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function DELETE(request: NextRequest) {
   return disconnectConnectorHandler(request);

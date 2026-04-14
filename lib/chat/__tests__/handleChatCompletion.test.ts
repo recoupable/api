@@ -56,10 +56,12 @@ const mockSendErrorNotification = vi.mocked(sendErrorNotification);
 
 // Helper to create mock UIMessage
 /**
+ * Create Mock UIMessage.
  *
- * @param id
- * @param role
- * @param text
+ * @param id - Parameter.
+ * @param role - Parameter.
+ * @param text - Parameter.
+ * @returns - Result.
  */
 function createMockUIMessage(id: string, role: "user" | "assistant", text: string): UIMessage {
   return {
@@ -72,8 +74,10 @@ function createMockUIMessage(id: string, role: "user" | "assistant", text: strin
 
 // Helper to create mock ChatRequestBody
 /**
+ * Create Mock Body.
  *
- * @param overrides
+ * @param overrides - Parameter.
+ * @returns - Result.
  */
 function createMockBody(overrides: Partial<ChatRequestBody> = {}): ChatRequestBody {
   return {
@@ -165,7 +169,7 @@ describe("handleChatCompletion", () => {
     it("sends notification for new conversation", async () => {
       mockSelectRoom.mockResolvedValue(null);
       mockGenerateChatTitle.mockResolvedValue("Test Topic");
-      mockSelectAccountEmails.mockResolvedValue([{ email: "test@example.com" } as any]);
+      mockSelectAccountEmails.mockResolvedValue([{ email: "test@example.com" } as unknown]);
 
       const body = createMockBody({ roomId: "new-room-123" });
       const responseMessages = [createMockUIMessage("resp-1", "assistant", "Hi!")];
@@ -222,8 +226,8 @@ describe("handleChatCompletion", () => {
       mockSelectRoom.mockResolvedValue(null);
       mockGenerateChatTitle.mockResolvedValue("Topic");
       mockSelectAccountEmails.mockResolvedValue([
-        { email: "first@example.com" } as any,
-        { email: "second@example.com" } as any,
+        { email: "first@example.com" } as unknown,
+        { email: "second@example.com" } as unknown,
       ]);
 
       const body = createMockBody();

@@ -20,7 +20,7 @@ describe("resolveAccountIdByEmail", () => {
     vi.mocked(selectAccountByEmail).mockResolvedValue({
       account_id: "customer-456",
       email: "test@example.com",
-    } as any);
+    } as unknown);
 
     const result = await resolveAccountIdByEmail("test@example.com");
 
@@ -41,7 +41,7 @@ describe("resolveAccountIdByEmail", () => {
     vi.mocked(selectAccountByEmail).mockResolvedValue({
       account_id: null,
       email: "test@example.com",
-    } as any);
+    } as unknown);
 
     const result = await resolveAccountIdByEmail("test@example.com");
 

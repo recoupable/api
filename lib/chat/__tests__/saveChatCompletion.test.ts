@@ -148,7 +148,7 @@ describe("saveChatCompletion", () => {
     };
     mockGetMessages.mockReturnValue([mockMessage]);
     mockFilterMessageContentForMemories.mockReturnValue(mockFilteredContent);
-    mockInsertMemories.mockResolvedValue(mockInsertedMemory as any);
+    mockInsertMemories.mockResolvedValue(mockInsertedMemory as unknown);
 
     const result = await saveChatCompletion({
       text: "Return test",

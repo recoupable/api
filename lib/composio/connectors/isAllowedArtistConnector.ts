@@ -7,9 +7,10 @@ export const ALLOWED_ARTIST_CONNECTORS = ["tiktok", "instagram"] as const;
 export type AllowedArtistConnector = (typeof ALLOWED_ARTIST_CONNECTORS)[number];
 
 /**
- * Check if a connector slug is an allowed artist connector.
+ * Is Allowed Artist Connector.
  *
- * @param slug
+ * @param slug - Parameter.
+ * @returns - Result.
  */
 export function isAllowedArtistConnector(slug: string): slug is AllowedArtistConnector {
   return (ALLOWED_ARTIST_CONNECTORS as readonly string[]).includes(slug);

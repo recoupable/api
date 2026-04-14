@@ -36,9 +36,10 @@ interface SpotifySearchResponse {
 }
 
 /**
- * Get Spotify follower count for an artist
- * @param artistName - The name of the artist to search for
- * @returns Promise<number> - The follower count of the first matching artist
+ * Get Spotify Followers.
+ *
+ * @param artistName - Parameter.
+ * @returns - Result.
  */
 export async function getSpotifyFollowers(artistName: string): Promise<number> {
   try {

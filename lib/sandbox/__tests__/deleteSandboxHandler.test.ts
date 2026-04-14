@@ -28,7 +28,9 @@ vi.mock("@/lib/github/deleteAccountGithubRepos", () => ({
 }));
 
 /**
+ * Create Mock Request.
  *
+ * @returns - Result.
  */
 function createMockRequest(): Request {
   return new Request("https://example.com/api/sandboxes", {

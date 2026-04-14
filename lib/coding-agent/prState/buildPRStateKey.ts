@@ -1,10 +1,11 @@
 const KEY_PREFIX = "coding-agent:pr";
 
 /**
- * Builds the Redis key for a given repo and branch.
+ * Build PRState Key.
  *
- * @param repo
- * @param branch
+ * @param repo - Parameter.
+ * @param branch - Parameter.
+ * @returns - Result.
  */
 export function buildPRStateKey(repo: string, branch: string): string {
   return `${KEY_PREFIX}:${repo}:${branch}`;

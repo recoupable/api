@@ -10,7 +10,7 @@ describe("validateCreateChatBody", () => {
       });
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).artistId).toBe("123e4567-e89b-12d3-a456-426614174000");
+      expect((result as unknown).artistId).toBe("123e4567-e89b-12d3-a456-426614174000");
     });
 
     it("rejects invalid UUID for artistId", () => {
@@ -35,7 +35,7 @@ describe("validateCreateChatBody", () => {
       });
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).chatId).toBe("123e4567-e89b-12d3-a456-426614174000");
+      expect((result as unknown).chatId).toBe("123e4567-e89b-12d3-a456-426614174000");
     });
 
     it("rejects invalid UUID for chatId", () => {
@@ -54,7 +54,7 @@ describe("validateCreateChatBody", () => {
       });
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBe("123e4567-e89b-12d3-a456-426614174000");
+      expect((result as unknown).accountId).toBe("123e4567-e89b-12d3-a456-426614174000");
     });
 
     it("rejects invalid UUID for accountId", () => {
@@ -71,7 +71,7 @@ describe("validateCreateChatBody", () => {
       });
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).accountId).toBeUndefined();
+      expect((result as unknown).accountId).toBeUndefined();
     });
   });
 
@@ -99,7 +99,7 @@ describe("validateCreateChatBody", () => {
       });
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).firstMessage).toBe("What marketing strategies should I use?");
+      expect((result as unknown).firstMessage).toBe("What marketing strategies should I use?");
     });
 
     it("accepts missing firstMessage (optional)", () => {
@@ -108,7 +108,7 @@ describe("validateCreateChatBody", () => {
       });
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).firstMessage).toBeUndefined();
+      expect((result as unknown).firstMessage).toBeUndefined();
     });
 
     it("accepts empty string for firstMessage", () => {
@@ -118,7 +118,7 @@ describe("validateCreateChatBody", () => {
       });
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect((result as any).firstMessage).toBe("");
+      expect((result as unknown).firstMessage).toBe("");
     });
   });
 });

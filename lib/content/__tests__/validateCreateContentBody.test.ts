@@ -21,8 +21,10 @@ vi.mock("@/lib/content/resolveArtistSlug", () => ({
 }));
 
 /**
+ * Create Request.
  *
- * @param body
+ * @param body - Parameter.
+ * @returns - Result.
  */
 function createRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/content/create", {

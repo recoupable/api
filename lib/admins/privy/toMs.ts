@@ -1,6 +1,8 @@
 /**
- * Normalizes a Privy timestamp to milliseconds.
- * Privy docs say milliseconds but examples show seconds (10 digits).
+ * To Ms.
+ *
+ * @param timestamp - Parameter.
+ * @returns - Result.
  */
 export function toMs(timestamp: number): number {
   return timestamp > 1e12 ? timestamp : timestamp * 1000;

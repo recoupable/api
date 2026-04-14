@@ -40,8 +40,8 @@ describe("setupChatRequest", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetGeneralAgent.mockResolvedValue(mockRoutingDecision as any);
-    mockConvertToModelMessages.mockImplementation(messages => messages as any);
+    mockGetGeneralAgent.mockResolvedValue(mockRoutingDecision as unknown);
+    mockConvertToModelMessages.mockImplementation(messages => messages as unknown);
   });
 
   describe("basic functionality", () => {
@@ -126,7 +126,7 @@ describe("setupChatRequest", () => {
           ...mockAgent,
           tools: mockTools,
         },
-      } as any);
+      } as unknown);
 
       const body: ChatRequestBody = {
         accountId: "account-123",

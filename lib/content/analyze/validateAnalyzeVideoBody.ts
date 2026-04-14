@@ -17,7 +17,10 @@ export type ValidatedAnalyzeVideoBody = { accountId: string } & z.infer<
 >;
 
 /**
- * Validates auth and request body for POST /api/content/analyze.
+ * Validate Analyze Video Body.
+ *
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function validateAnalyzeVideoBody(
   request: NextRequest,

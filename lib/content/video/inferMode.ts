@@ -1,8 +1,12 @@
 /**
- * Infers the video generation mode from the inputs when the caller doesn't specify one.
+ * Infer Mode.
  *
- * @param v - Object with optional media URL fields.
- * @returns The inferred mode string.
+ * @param v - Parameter.
+ * @param v.audio_url - Parameter.
+ * @param v.video_url - Parameter.
+ * @param v.image_url - Parameter.
+ * @param v.end_image_url - Parameter.
+ * @returns - Result.
  */
 export function inferMode(v: {
   audio_url?: string;

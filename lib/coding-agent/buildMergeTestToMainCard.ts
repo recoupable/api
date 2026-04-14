@@ -1,9 +1,10 @@
 import { Card, CardText, Actions, Button } from "chat";
 
 /**
- * Builds a Card with a "Merge test to main" button for a specific repo.
+ * Build Merge Test To Main Card.
  *
- * @param repo - Full repo identifier (e.g. "recoupable/chat")
+ * @param repo - Parameter.
+ * @returns - Result.
  */
 export function buildMergeTestToMainCard(repo: string) {
   return Card({

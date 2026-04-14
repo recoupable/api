@@ -19,11 +19,12 @@ vi.mock("@/lib/mcp/resolveAccountId", () => ({
 type ServerRequestHandlerExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
 
 /**
- * Creates a mock extra object with optional authInfo.
+ * Create Mock Extra.
  *
- * @param authInfo
- * @param authInfo.accountId
- * @param authInfo.orgId
+ * @param authInfo - Parameter.
+ * @param authInfo.accountId - Parameter.
+ * @param authInfo.orgId - Parameter.
+ * @returns - Result.
  */
 function createMockExtra(authInfo?: {
   accountId?: string;

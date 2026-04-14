@@ -1,13 +1,13 @@
 import { parseGitModules, type SubmoduleEntry } from "./parseGitModules";
 
 /**
- * Fetches and parses .gitmodules from a GitHub repository.
- * Uses the GitHub Contents API (works for both public and private repos).
+ * Get Repo Git Modules.
  *
- * @param owner - The GitHub repository owner
- * @param repo - The GitHub repository name
- * @param branch - The branch to fetch from
- * @returns Array of submodule entries, or null if .gitmodules doesn't exist or fetch fails
+ * @param root0 - Parameter.
+ * @param root0.owner - Parameter.
+ * @param root0.repo - Parameter.
+ * @param root0.branch - Parameter.
+ * @returns - Result.
  */
 export async function getRepoGitModules({
   owner,

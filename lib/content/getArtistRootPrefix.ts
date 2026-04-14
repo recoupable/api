@@ -1,3 +1,10 @@
+/**
+ * Get Artist Root Prefix.
+ *
+ * @param paths - Parameter.
+ * @param artistSlug - Parameter.
+ * @returns - Result.
+ */
 export function getArtistRootPrefix(paths: string[], artistSlug: string): string {
   const preferredPrefix = `artists/${artistSlug}/`;
   if (paths.some(path => path.startsWith(preferredPrefix))) {

@@ -2,10 +2,11 @@ import redis from "@/lib/redis/connection";
 import { buildPRStateKey } from "./buildPRStateKey";
 
 /**
- * Deletes the shared PR state for a repo/branch from Redis.
+ * Delete Coding Agent PRState.
  *
- * @param repo
- * @param branch
+ * @param repo - Parameter.
+ * @param branch - Parameter.
+ * @returns - Result.
  */
 export async function deleteCodingAgentPRState(repo: string, branch: string): Promise<void> {
   const key = buildPRStateKey(repo, branch);

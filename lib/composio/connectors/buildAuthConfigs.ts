@@ -1,7 +1,7 @@
 /**
- * Build auth configs from environment variables.
- * Must match the configs used during authorization so Composio
- * can find connections created with custom OAuth credentials.
+ * Build Auth Configs.
+ *
+ * @returns - Result.
  */
 export function buildAuthConfigs(): Record<string, string> | undefined {
   const configs: Record<string, string> = {};

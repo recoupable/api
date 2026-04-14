@@ -10,11 +10,10 @@ import { postGitHubComment } from "./postGitHubComment";
 const BOT_MENTION = "@recoup-coding-agent";
 
 /**
- * Handles incoming GitHub webhook requests for PR comment feedback.
- * Supports both issue_comment and pull_request_review_comment events.
- * Verifies signature, extracts PR context, and triggers update-pr when the bot is mentioned.
+ * Handle Git Hub Webhook.
  *
- * @param request - The incoming webhook request
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function handleGitHubWebhook(request: Request): Promise<NextResponse> {
   const body = await request.text();

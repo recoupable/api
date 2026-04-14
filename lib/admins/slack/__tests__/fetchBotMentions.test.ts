@@ -118,7 +118,7 @@ describe("fetchBotMentions", () => {
     // conversations.history returns a thread parent with reply_count > 0 but no bot mention
     // conversations.replies returns a reply that mentions the bot
     vi.mocked(slackGet).mockImplementation(
-      (endpoint: string, _token: string, params?: Record<string, string>): Promise<any> => {
+      (endpoint: string, _token: string, params?: Record<string, string>): Promise<unknown> => {
         if (endpoint === "conversations.history") {
           return Promise.resolve({
             ok: true,
@@ -201,7 +201,7 @@ describe("fetchBotMentions", () => {
     vi.mocked(getCutoffTs).mockReturnValue(null);
 
     vi.mocked(slackGet).mockImplementation(
-      (endpoint: string, _token: string, params?: Record<string, string>): Promise<any> => {
+      (endpoint: string, _token: string, params?: Record<string, string>): Promise<unknown> => {
         if (endpoint === "conversations.history") {
           return Promise.resolve({
             ok: true,
@@ -275,7 +275,7 @@ describe("fetchBotMentions", () => {
     vi.mocked(getCutoffTs).mockReturnValue(1705312400);
 
     vi.mocked(slackGet).mockImplementation(
-      (endpoint: string, _token: string, params?: Record<string, string>): Promise<any> => {
+      (endpoint: string, _token: string, params?: Record<string, string>): Promise<unknown> => {
         if (endpoint === "conversations.history") {
           return Promise.resolve({
             ok: true,

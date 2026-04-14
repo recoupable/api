@@ -11,8 +11,10 @@ export type ValidatedGetContentValidateQuery = {
 };
 
 /**
- * Validates auth and query params for GET /api/content/validate.
- * Requires artist_account_id query parameter.
+ * Validate Get Content Validate Query.
+ *
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function validateGetContentValidateQuery(
   request: NextRequest,

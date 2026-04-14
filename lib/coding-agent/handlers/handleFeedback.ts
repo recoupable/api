@@ -5,12 +5,12 @@ import { setCodingAgentPRState } from "../prState";
 import type { CodingAgentThreadState } from "../types";
 
 /**
- * Handles a message in a thread that already has state.
- * Returns true if the message was handled (busy or feedback), false otherwise.
+ * Handle Feedback.
  *
- * @param thread - The chat thread
- * @param messageText - The user's message text
- * @param state - The current thread state
+ * @param thread - Parameter.
+ * @param messageText - Parameter.
+ * @param state - Parameter.
+ * @returns - Result.
  */
 export async function handleFeedback(
   thread: Thread<CodingAgentThreadState>,

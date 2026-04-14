@@ -5,9 +5,10 @@ import { validateGetContentValidateQuery } from "@/lib/content/validateGetConten
 import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadiness";
 
 /**
- * Handler for GET /api/content/validate.
- * NOTE: Phase 1 returns structural readiness scaffolding. Deep filesystem checks
- * are performed in the background task before spend-heavy steps.
+ * Get Content Validate Handler.
+ *
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function getContentValidateHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateGetContentValidateQuery(request);

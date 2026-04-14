@@ -12,8 +12,13 @@ beforeEach(() => {
   process.env.GITHUB_TOKEN = "ghp_test";
 });
 
+/**
+ * Create Mock Bot.
+ *
+ * @returns - Result.
+ */
 function createMockBot() {
-  return { onAction: vi.fn() } as any;
+  return { onAction: vi.fn() } as unknown;
 }
 
 describe("registerOnMergeTestToMainAction", () => {

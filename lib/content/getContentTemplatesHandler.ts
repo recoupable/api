@@ -5,9 +5,10 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { listTemplates } from "@/lib/content/templates";
 
 /**
- * Handler for GET /api/content/templates.
+ * Get Content Templates Handler.
  *
- * @param request
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function getContentTemplatesHandler(request: NextRequest): Promise<NextResponse> {
   const authResult = await validateAuthContext(request);

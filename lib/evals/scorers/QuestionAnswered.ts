@@ -2,10 +2,6 @@ import { DEFAULT_MODEL } from "@/lib/consts";
 import { generateObject } from "ai";
 import { z } from "zod";
 
-/**
- * Custom scorer that checks if the AI actually answered the customer's question
- * with a specific answer, or if it deflected/explained why it couldn't answer
- */
 export const QuestionAnswered = async ({
   output,
   expected,

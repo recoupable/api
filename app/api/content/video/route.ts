@@ -3,16 +3,19 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createVideoHandler } from "@/lib/content/video/createVideoHandler";
 
 /**
- * OPTIONS handler for CORS preflight requests.
+ * OPTIONS.
+ *
+ * @returns - Result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
 }
 
 /**
- * POST /api/content/video
+ * POST.
  *
- * Generate a video from a prompt, image, or existing video.
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   return createVideoHandler(request);

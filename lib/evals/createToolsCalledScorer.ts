@@ -1,9 +1,5 @@
 import { ToolsCalled } from "./scorers/ToolsCalled";
 
-/**
- * Creates a scorer that checks if required tools were called.
- * Handles extracting output text and toolCalls from the task result.
- */
 export const createToolsCalledScorer = (requiredTools: string[], penalizedTools: string[] = []) => {
   return async (args: { output: unknown; expected?: string; input: string }) => {
     // Extract output text and toolCalls

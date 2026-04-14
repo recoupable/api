@@ -2,7 +2,10 @@ import { generateText } from "ai";
 import { extractTextResultFromSteps } from "./extractTextResultFromSteps";
 
 /**
- * Extract text from a GenerateTextResult
+ * Extract Text From Result.
+ *
+ * @param result - Parameter.
+ * @returns - Result.
  */
 export function extractTextFromResult(result: Awaited<ReturnType<typeof generateText>>): string {
   // Handle multi-step responses (when maxSteps > 1)

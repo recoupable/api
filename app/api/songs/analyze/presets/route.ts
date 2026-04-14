@@ -4,9 +4,9 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getFlamingoPresetsHandler } from "@/lib/flamingo/getFlamingoPresetsHandler";
 
 /**
- * OPTIONS handler for CORS preflight requests.
+ * OPTIONS.
  *
- * @returns A NextResponse with CORS headers.
+ * @returns - Result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -16,19 +16,10 @@ export async function OPTIONS() {
 }
 
 /**
- * GET /api/songs/analyze/presets
+ * GET.
  *
- * Lists all available music analysis presets. Each preset is a curated
- * prompt with optimized generation parameters for a specific use case
- * (e.g. catalog metadata, sync licensing, audience profiling).
- *
- * Authentication: x-api-key header or Authorization Bearer token required.
- *
- * Response (200):
- * - status: "success"
- * - presets: Array of { name, label, description, requiresAudio, responseFormat }
- *
- * @returns A NextResponse with the list of available presets
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   return getFlamingoPresetsHandler(request);

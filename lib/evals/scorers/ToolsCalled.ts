@@ -1,6 +1,3 @@
-/**
- * Generic scorer that checks if specific tools were called
- */
 export const ToolsCalled = async ({
   toolCalls,
   requiredTools = [],

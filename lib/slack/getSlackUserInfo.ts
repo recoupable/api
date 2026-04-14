@@ -15,7 +15,11 @@ interface UsersInfoResponse {
 }
 
 /**
- * Fetches a Slack account's display name and avatar by their Slack ID.
+ * Get Slack User Info.
+ *
+ * @param token - Parameter.
+ * @param userId - Parameter.
+ * @returns - Result.
  */
 export async function getSlackUserInfo(
   token: string,

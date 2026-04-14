@@ -15,12 +15,14 @@ beforeEach(() => {
 });
 
 /**
+ * Create Mock Bot.
  *
+ * @returns - Result.
  */
 function createMockBot() {
   return {
     onSubscribedMessage: vi.fn(),
-  } as any;
+  } as unknown;
 }
 
 describe("registerOnSubscribedMessage", () => {

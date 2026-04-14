@@ -8,7 +8,10 @@ interface ConversationsListResponse {
 }
 
 /**
- * Returns all channels the bot is a member of, paginating through all results.
+ * Get Bot Channels.
+ *
+ * @param token - Parameter.
+ * @returns - Result.
  */
 export async function getBotChannels(token: string): Promise<Array<{ id: string; name: string }>> {
   const channels: Array<{ id: string; name: string }> = [];

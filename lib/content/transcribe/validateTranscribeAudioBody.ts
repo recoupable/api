@@ -18,7 +18,10 @@ export type ValidatedTranscribeAudioBody = { accountId: string } & z.infer<
 >;
 
 /**
- * Validates auth and request body for POST /api/content/transcribe.
+ * Validate Transcribe Audio Body.
+ *
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function validateTranscribeAudioBody(
   request: NextRequest,

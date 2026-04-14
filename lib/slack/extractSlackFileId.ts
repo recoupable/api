@@ -1,8 +1,8 @@
 /**
- * Extracts the Slack file ID (e.g. F0APMKTKG9M) from a Slack file URL.
- * URL format: files-tmb/TEAMID-FILEID-HASH/name or files-pri/TEAMID-FILEID/name
+ * Extract Slack File Id.
  *
- * @param url
+ * @param url - Parameter.
+ * @returns - Result.
  */
 export function extractSlackFileId(url: string): string | null {
   try {

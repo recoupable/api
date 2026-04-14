@@ -7,10 +7,10 @@ import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadine
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 
 /**
- * Handler for POST /api/content/create.
- * Always returns runIds array (KISS — one response shape for single and batch).
+ * Create Content Handler.
  *
- * @param request
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function createContentHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateCreateContentBody(request);

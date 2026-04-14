@@ -1,9 +1,6 @@
 import { ModelMessage } from "ai";
 import { referenceReleaseReport } from "./referenceReleaseReport";
 
-/**
- * Creates a reference message with the release report example
- */
 const getReleaseReportReferenceMessage = (): ModelMessage => {
   return {
     role: "user",

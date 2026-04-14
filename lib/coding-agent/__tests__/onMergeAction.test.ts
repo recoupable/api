@@ -30,12 +30,14 @@ beforeEach(() => {
 });
 
 /**
+ * Create Mock Bot.
  *
+ * @returns - Result.
  */
 function createMockBot() {
   return {
     onAction: vi.fn(),
-  } as any;
+  } as unknown;
 }
 
 describe("registerOnMergeAction", () => {

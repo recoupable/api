@@ -3,16 +3,20 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getPrivyLoginsHandler } from "@/lib/admins/privy/getPrivyLoginsHandler";
 
 /**
- * GET /api/admins/privy
+ * GET.
  *
- * Returns Privy login statistics for the requested time period.
- * Supports daily (last 24h), weekly (last 7 days), and monthly (last 30 days) periods.
- * Requires admin authentication.
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   return getPrivyLoginsHandler(request);
 }
 
+/**
+ * OPTIONS.
+ *
+ * @returns - Result.
+ */
 export async function OPTIONS(): Promise<NextResponse> {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
 }

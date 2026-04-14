@@ -29,11 +29,10 @@ export interface ProcessAndSendEmailError {
 export type ProcessAndSendEmailResult = ProcessAndSendEmailSuccess | ProcessAndSendEmailError;
 
 /**
- * Shared email processing and sending logic used by both the
- * POST /api/notifications handler and the send_email MCP tool.
+ * Process And Send Email.
  *
- * Handles room lookup, footer generation, markdown-to-HTML conversion,
- * and the Resend API call.
+ * @param input - Parameter.
+ * @returns - Result.
  */
 export async function processAndSendEmail(
   input: ProcessAndSendEmailInput,

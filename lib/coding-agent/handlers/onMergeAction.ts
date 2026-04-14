@@ -6,16 +6,10 @@ import { mergeGithubPR } from "../mergeGithubPR";
 import { buildMergeTestToMainCard } from "../buildMergeTestToMainCard";
 
 /**
- * Registers individual per-PR merge button action handlers on the bot.
- * Each button has an ID like "merge_pr:<repo>#<number>" and squash-merges
- * that single PR via the GitHub API.
+ * Register On Merge Action.
  *
- * When a PR targeting the "test" branch is merged, a follow-up
- * "Merge test to main" button is presented.
- *
- * Uses a prefix pattern so a single handler covers all merge_pr:* actions.
- *
- * @param bot
+ * @param bot - Parameter.
+ * @returns - Result.
  */
 export function registerOnMergeAction(bot: CodingAgentBot) {
   bot.onAction(async event => {

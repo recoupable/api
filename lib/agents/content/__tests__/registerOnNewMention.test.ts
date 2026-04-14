@@ -34,7 +34,7 @@ vi.mock("../extractMessageAttachments", () => ({
 }));
 
 vi.mock("@/lib/agents/buildTaskCard", () => ({
-  buildTaskCard: vi.fn((_title: string, _message: string, _runId: string) => ({
+  buildTaskCard: vi.fn((..._: [string, string, string]) => ({
     mockCard: true,
   })),
 }));

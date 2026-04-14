@@ -1,7 +1,9 @@
 const TEST_FRONTEND_URL = "https://test-recoup-chat.vercel.app";
 
 /**
- * Get the frontend base URL based on environment.
+ * Get Frontend Base Url.
+ *
+ * @returns - Result.
  */
 export function getFrontendBaseUrl(): string {
   if (process.env.VERCEL_ENV === "production") {

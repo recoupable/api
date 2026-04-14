@@ -4,10 +4,10 @@ import { setupChatRequest } from "@/lib/chat/setupChatRequest";
 import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
 
 /**
- * Call the chat functions and return the full result including tool calls from ALL steps.
+ * Call Chat Functions With Result.
  *
- * Note: result.toolCalls only contains calls from the LAST step. When using multi-step
- * tool chains, we need to collect toolCalls from result.steps to capture all tool usage.
+ * @param input - Parameter.
+ * @returns - Result.
  */
 export async function callChatFunctionsWithResult(input: string) {
   const messages: UIMessage[] = [

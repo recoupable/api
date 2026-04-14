@@ -24,7 +24,10 @@ export interface CreateFileRecordParams {
 }
 
 /**
- * Create a file record in the database
+ * Create File Record.
+ *
+ * @param params - Parameter.
+ * @returns - Result.
  */
 export async function createFileRecord(params: CreateFileRecordParams): Promise<FileRecord> {
   const {

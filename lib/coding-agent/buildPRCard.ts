@@ -2,10 +2,11 @@ import { Card, CardText, Actions, Button, LinkButton } from "chat";
 import type { CodingAgentPR } from "./types";
 
 /**
- * Builds a Card with PR review links and individual Merge buttons per PR.
+ * Build PRCard.
  *
- * @param title - Card title (e.g. "PRs Created", "PRs Updated")
- * @param prs - Array of PRs to build review links for
+ * @param title - Parameter.
+ * @param prs - Parameter.
+ * @returns - Result.
  */
 export function buildPRCard(title: string, prs: CodingAgentPR[]) {
   return Card({

@@ -3,9 +3,6 @@ import { generateObject } from "ai";
 import { getCatalogDataAsCSV } from "@/lib/catalog/getCatalogDataAsCSV";
 import { z } from "zod";
 
-/**
- * Custom scorer that uses AI to check if recommended songs are actually in the catalog
- */
 export const CatalogAvailability = async ({
   output,
 }: {

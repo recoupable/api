@@ -41,6 +41,12 @@ vi.mock("../generateChatTitle", () => ({
   generateChatTitle: vi.fn(),
 }));
 
+/**
+ * Create Mock Request.
+ *
+ * @param headers - Parameter.
+ * @returns - Result.
+ */
 function createMockRequest(
   headers: Record<string, string> = { "x-api-key": "test-api-key" },
 ): NextRequest {

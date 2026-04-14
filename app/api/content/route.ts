@@ -3,16 +3,19 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { editHandler } from "@/lib/content/edit/editHandler";
 
 /**
- * OPTIONS handler for CORS preflight requests.
+ * OPTIONS.
+ *
+ * @returns - Result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
 }
 
 /**
- * PATCH /api/content
+ * PATCH.
  *
- * Edit media with operations or a template preset.
+ * @param request - Parameter.
+ * @returns - Result.
  */
 export async function PATCH(request: NextRequest): Promise<NextResponse> {
   return editHandler(request);

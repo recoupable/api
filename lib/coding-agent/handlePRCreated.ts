@@ -5,11 +5,11 @@ import type { CodingAgentCallbackBody } from "./validateCodingAgentCallback";
 import type { CodingAgentThreadState } from "./types";
 
 /**
- * Handles the pr_created callback status.
- * Writes to both thread state and shared PR state key.
+ * Handle PRCreated.
  *
- * @param threadId
- * @param body
+ * @param threadId - Parameter.
+ * @param body - Parameter.
+ * @returns - Result.
  */
 export async function handlePRCreated(threadId: string, body: CodingAgentCallbackBody) {
   const thread = getThread<CodingAgentThreadState>(threadId);

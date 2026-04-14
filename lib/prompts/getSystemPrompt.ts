@@ -2,18 +2,19 @@ import { SYSTEM_PROMPT } from "@/lib/chat/const";
 import { AccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
 
 /**
- * Generates a system prompt for the chat
+ * Get System Prompt.
  *
- * @param params - The parameters for the system prompt
- * @param params.roomId - The ID of the room
- * @param params.artistId - The ID of the artist
- * @param params.accountId - The ID of the account
- * @param params.email - The email of the account
- * @param params.knowledgeBaseText - The knowledge base text
- * @param params.artistInstruction - The artist instruction
- * @param params.conversationName - The name of the conversation
- * @param params.accountWithDetails - The account with details
- * @returns The system prompt
+ * @param root0 - Parameter.
+ * @param root0.roomId - Parameter.
+ * @param root0.artistId - Parameter.
+ * @param root0.accountId - Parameter.
+ * @param root0.orgId - Parameter.
+ * @param root0.email - Parameter.
+ * @param root0.knowledgeBaseText - Parameter.
+ * @param root0.artistInstruction - Parameter.
+ * @param root0.conversationName - Parameter.
+ * @param root0.accountWithDetails - Parameter.
+ * @returns - Result.
  */
 export function getSystemPrompt({
   roomId,
