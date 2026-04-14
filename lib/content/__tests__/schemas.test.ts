@@ -134,6 +134,14 @@ describe("createTextBodySchema", () => {
     if (result.success) expect(result.data.length).toBe("short");
   });
 
+  it("rejects length of 'none' — caption endpoint is only invoked when captions are wanted", () => {
+    const result = createTextBodySchema.safeParse({
+      topic: "test",
+      length: "none",
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects missing topic", () => {
     expect(createTextBodySchema.safeParse({}).success).toBe(false);
   });

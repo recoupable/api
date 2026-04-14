@@ -24,7 +24,7 @@ export const contentPromptFlagsSchema = z.object({
   captionLength: z
     .enum(CAPTION_LENGTHS)
     .describe(
-      "Caption length: 'short' (default), 'medium', or 'long'. Extract from phrases like 'long caption', 'detailed text', 'brief caption'.",
+      "Caption length: 'none' (default — no captions), 'short', 'medium', or 'long'. Only set to short/medium/long when captions are explicitly requested. Extract from phrases like 'add a caption', 'with captions', 'long caption', 'detailed text'. If no captions are mentioned or 'no captions', use 'none'.",
     ),
   upscale: z
     .boolean()
@@ -42,7 +42,7 @@ export type ContentPromptFlags = z.infer<typeof contentPromptFlagsSchema>;
 export const DEFAULT_CONTENT_PROMPT_FLAGS: ContentPromptFlags = {
   lipsync: false,
   batch: 1,
-  captionLength: "short",
+  captionLength: "none",
   upscale: false,
   template: DEFAULT_CONTENT_TEMPLATE,
 };

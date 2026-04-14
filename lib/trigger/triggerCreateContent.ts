@@ -6,8 +6,8 @@ export interface TriggerCreateContentPayload {
   artistSlug: string;
   template?: string;
   lipsync: boolean;
-  /** Controls caption length: "short", "medium", or "long". */
-  captionLength: "short" | "medium" | "long";
+  /** Controls caption length: "none" skips captions, "short", "medium", or "long". */
+  captionLength: "none" | "short" | "medium" | "long";
   /** Whether to upscale image and video for higher quality. */
   upscale: boolean;
   /** GitHub repo URL so the task can fetch artist files. */
