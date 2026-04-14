@@ -5,12 +5,18 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { TEMPLATE_IDS } from "@/lib/content/templates";
-import { CAPTION_LENGTHS } from "@/lib/content/captionLengths";
+
+/**
+ * Lengths the caption generator can produce. Narrower than `CAPTION_LENGTHS`
+ * because `/content/caption` is only invoked when the caller wants a caption —
+ * `"none"` is a create-time opt-out, not a generation mode.
+ */
+const GENERATED_CAPTION_LENGTHS = ["short", "medium", "long"] as const;
 
 export const createTextBodySchema = z.object({
   template: z.enum(TEMPLATE_IDS).optional(),
   topic: z.string().min(1),
-  length: z.enum(CAPTION_LENGTHS).optional().default("none"),
+  length: z.enum(GENERATED_CAPTION_LENGTHS).optional().default("short"),
 });
 
 export type ValidatedCreateCaptionBody = { accountId: string } & z.infer<

@@ -8,7 +8,7 @@ import { isSupportedContentTemplate } from "@/lib/content/isSupportedContentTemp
 import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
 import { songsSchema } from "@/lib/content/songsSchema";
 
-import { CAPTION_LENGTHS } from "@/lib/content/captionLengths";
+import { CAPTION_LENGTHS, type CaptionLength } from "@/lib/content/captionLengths";
 
 export const createContentBodySchema = z.object({
   artist_account_id: z
@@ -29,7 +29,7 @@ export type ValidatedCreateContentBody = {
   artistSlug: string;
   template?: string;
   lipsync: boolean;
-  captionLength: "none" | "short" | "medium" | "long";
+  captionLength: CaptionLength;
   upscale: boolean;
   batch: number;
   songs?: string[];
@@ -91,7 +91,7 @@ export async function validateCreateContentBody(
     artistSlug,
     template,
     lipsync: result.data.lipsync ?? false,
-    captionLength: result.data.caption_length ?? "none",
+    captionLength: result.data.caption_length,
     upscale: result.data.upscale ?? false,
     batch: result.data.batch ?? 1,
     songs: result.data.songs,

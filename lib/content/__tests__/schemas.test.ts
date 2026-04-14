@@ -126,12 +126,20 @@ describe("createTextBodySchema", () => {
     ).toBe(true);
   });
 
-  it("defaults length to none", () => {
+  it("defaults length to short", () => {
     const result = createTextBodySchema.safeParse({
       topic: "test",
     });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.length).toBe("none");
+    if (result.success) expect(result.data.length).toBe("short");
+  });
+
+  it("rejects length of 'none' — caption endpoint is only invoked when captions are wanted", () => {
+    const result = createTextBodySchema.safeParse({
+      topic: "test",
+      length: "none",
+    });
+    expect(result.success).toBe(false);
   });
 
   it("rejects missing topic", () => {
