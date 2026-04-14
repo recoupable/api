@@ -205,8 +205,10 @@ describe("postSandboxesFilesHandler", () => {
     });
 
     const result = await postSandboxesFilesHandler(mockRequest);
+    const body = await result.json();
 
     expect(result.status).toBe(500);
+    expect(body).toBeDefined();
     // Blobs are always cleaned up to allow retries
     expect(del).toHaveBeenCalledWith("https://blob.example.com/f.txt");
   });
