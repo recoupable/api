@@ -43,8 +43,8 @@ export type ValidatedCreateImageBody = { accountId: string } & z.infer<
 /**
  * Validate Create Image Body.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function validateCreateImageBody(
   request: NextRequest,

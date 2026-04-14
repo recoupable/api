@@ -26,8 +26,8 @@ export interface CreateFileRecordParams {
 /**
  * Create File Record.
  *
- * @param params - Parameter.
- * @returns - Result.
+ * @param params - Dynamic route parameters.
+ * @returns - Computed result.
  */
 export async function createFileRecord(params: CreateFileRecordParams): Promise<FileRecord> {
   const {

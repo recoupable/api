@@ -4,9 +4,9 @@ import type { CodingAgentPR } from "./types";
 /**
  * Build PRCard.
  *
- * @param title - Parameter.
- * @param prs - Parameter.
- * @returns - Result.
+ * @param title - Value for title.
+ * @param prs - Value for prs.
+ * @returns - Computed result.
  */
 export function buildPRCard(title: string, prs: CodingAgentPR[]) {
   return Card({

@@ -20,9 +20,9 @@ type ServerRequestHandlerExtra = RequestHandlerExtra<ServerRequest, ServerNotifi
 /**
  * Create Mock Extra.
  *
- * @param authInfo - Parameter.
- * @param authInfo.accountId - Parameter.
- * @returns - Result.
+ * @param authInfo - Value for authInfo.
+ * @param authInfo.accountId - Account identifier.
+ * @returns - Computed result.
  */
 function createMockExtra(authInfo?: { accountId?: string }): ServerRequestHandlerExtra {
   return {

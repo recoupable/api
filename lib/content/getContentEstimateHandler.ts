@@ -9,8 +9,8 @@ const BASE_AUDIO_TO_VIDEO_COST = 0.95;
 /**
  * Get Content Estimate Handler.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function getContentEstimateHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateGetContentEstimateQuery(request);

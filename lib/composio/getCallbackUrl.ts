@@ -17,8 +17,8 @@ interface CallbackOptions {
 /**
  * Get Callback Url.
  *
- * @param options - Parameter.
- * @returns - Result.
+ * @param options - Options for this operation.
+ * @returns - Computed result.
  */
 export function getCallbackUrl(options: CallbackOptions): string {
   const baseUrl = getFrontendBaseUrl();

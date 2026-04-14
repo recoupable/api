@@ -36,8 +36,8 @@ const mockCanAccessAccount = vi.mocked(canAccessAccount);
 /**
  * Create Mock Request.
  *
- * @param headers - Parameter.
- * @returns - Result.
+ * @param headers - Headers for the request.
+ * @returns - Computed result.
  */
 function createMockRequest(headers: Record<string, string> = {}): Request {
   return {

@@ -7,8 +7,8 @@ import { ProcessTranscriptionParams, ProcessTranscriptionResult } from "./types"
 /**
  * Process Audio Transcription.
  *
- * @param params - Parameter.
- * @returns - Result.
+ * @param params - Dynamic route parameters.
+ * @returns - Computed result.
  */
 export async function processAudioTranscription(
   params: ProcessTranscriptionParams,
@@ -69,8 +69,8 @@ export async function processAudioTranscription(
 /**
  * Get Extension From Content Type.
  *
- * @param contentType - Parameter.
- * @returns - Result.
+ * @param contentType - Value for contentType.
+ * @returns - Computed result.
  */
 function getExtensionFromContentType(contentType: string): string {
   if (contentType.includes("wav")) return "wav";

@@ -22,11 +22,11 @@ export interface ArtistContentReadiness {
 /**
  * Get Artist Content Readiness.
  *
- * @param root0 - Parameter.
- * @param root0.accountId - Parameter.
- * @param root0.artistAccountId - Parameter.
- * @param root0.artistSlug - Parameter.
- * @returns - Result.
+ * @param root0 - Input object.
+ * @param root0.accountId - Account identifier.
+ * @param root0.artistAccountId - Value for root0.artistAccountId.
+ * @param root0.artistSlug - Value for root0.artistSlug.
+ * @returns - Computed result.
  */
 export async function getArtistContentReadiness({
   accountId,

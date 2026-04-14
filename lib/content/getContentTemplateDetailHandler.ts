@@ -7,10 +7,10 @@ import { loadTemplate } from "@/lib/content/templates";
 /**
  * Get Content Template Detail Handler.
  *
- * @param request - Parameter.
- * @param root1 - Parameter.
- * @param root1.params - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @param root1 - Input object.
+ * @param root1.params - Dynamic route parameters.
+ * @returns - Computed result.
  */
 export async function getContentTemplateDetailHandler(
   request: NextRequest,

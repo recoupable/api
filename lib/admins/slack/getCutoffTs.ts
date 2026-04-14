@@ -4,8 +4,8 @@ import { PERIOD_DAYS } from "@/lib/admins/privy/periodDays";
 /**
  * Get Cutoff Ts.
  *
- * @param period - Parameter.
- * @returns - Result.
+ * @param period - Time range filter.
+ * @returns - Computed result.
  */
 export function getCutoffTs(period: AdminPeriod): number | null {
   if (period === "all") return null;

@@ -87,8 +87,8 @@ describe("handleContentAgentCallback", () => {
     /**
      * Make Auth Request.
      *
-     * @param body - Parameter.
-     * @returns - Result.
+     * @param body - Request payload.
+     * @returns - Computed result.
      */
     function makeAuthRequest(body: object) {
       return new Request("http://localhost/api/content-agent/callback", {
@@ -101,7 +101,7 @@ describe("handleContentAgentCallback", () => {
     /**
      * Mock Thread.
      *
-     * @returns - Result.
+     * @returns - Computed result.
      */
     function mockThread() {
       const thread = {

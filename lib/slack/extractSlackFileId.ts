@@ -1,8 +1,8 @@
 /**
  * Extract Slack File Id.
  *
- * @param url - Parameter.
- * @returns - Result.
+ * @param url - URL to process.
+ * @returns - Computed result.
  */
 export function extractSlackFileId(url: string): string | null {
   try {

@@ -3,10 +3,10 @@ import { codingAgentBot } from "@/lib/coding-agent/bot";
 import { handleCodingAgentCallback } from "@/lib/coding-agent/handleCodingAgentCallback";
 
 /**
- * POST.
+ * Handles POST requests.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function POST(request: NextRequest) {
   await codingAgentBot.initialize();

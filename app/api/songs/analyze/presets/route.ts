@@ -4,9 +4,9 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getFlamingoPresetsHandler } from "@/lib/flamingo/getFlamingoPresetsHandler";
 
 /**
- * OPTIONS.
+ * Handles OPTIONS requests.
  *
- * @returns - Result.
+ * @returns - Computed result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -16,10 +16,10 @@ export async function OPTIONS() {
 }
 
 /**
- * GET.
+ * Handles GET requests.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   return getFlamingoPresetsHandler(request);

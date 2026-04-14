@@ -22,8 +22,8 @@ const PR_URL_2 = "https://github.com/recoupable/chat/pull/100";
 /**
  * Make Request.
  *
- * @param urls - Parameter.
- * @returns - Result.
+ * @param urls - List of URLs to process.
+ * @returns - Computed result.
  */
 function makeRequest(urls: string[] = [PR_URL_1]) {
   const params = new URLSearchParams();

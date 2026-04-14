@@ -8,7 +8,7 @@ export const WHATSAPP_ENV_VARS = [
 /**
  * Is Whats App Configured.
  *
- * @returns - Result.
+ * @returns - Computed result.
  */
 export function isWhatsAppConfigured(): boolean {
   return WHATSAPP_ENV_VARS.every(name => !!process.env[name]);

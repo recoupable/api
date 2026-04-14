@@ -3,19 +3,19 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getSlackTagsHandler } from "@/lib/admins/slack/getSlackTagsHandler";
 
 /**
- * GET.
+ * Handles GET requests.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   return getSlackTagsHandler(request);
 }
 
 /**
- * OPTIONS.
+ * Handles OPTIONS requests.
  *
- * @returns - Result.
+ * @returns - Computed result.
  */
 export async function OPTIONS(): Promise<NextResponse> {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });

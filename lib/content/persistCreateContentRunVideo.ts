@@ -25,8 +25,8 @@ type CreateContentOutput = {
 /**
  * Persist Create Content Run Video.
  *
- * @param run - Parameter.
- * @returns - Result.
+ * @param run - Value for run.
+ * @returns - Computed result.
  */
 export async function persistCreateContentRunVideo<T extends TriggerRunLike>(run: T): Promise<T> {
   if (run.taskIdentifier !== CREATE_CONTENT_TASK_ID || !isCompletedRun(run)) {

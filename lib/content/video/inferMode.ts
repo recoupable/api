@@ -1,12 +1,12 @@
 /**
  * Infer Mode.
  *
- * @param v - Parameter.
- * @param v.audio_url - Parameter.
- * @param v.video_url - Parameter.
- * @param v.image_url - Parameter.
- * @param v.end_image_url - Parameter.
- * @returns - Result.
+ * @param v - Value for v.
+ * @param v.audio_url - Value for v.audio_url.
+ * @param v.video_url - Value for v.video_url.
+ * @param v.image_url - Value for v.image_url.
+ * @param v.end_image_url - Value for v.end_image_url.
+ * @returns - Computed result.
  */
 export function inferMode(v: {
   audio_url?: string;

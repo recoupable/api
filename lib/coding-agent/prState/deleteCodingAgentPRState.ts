@@ -4,9 +4,9 @@ import { buildPRStateKey } from "./buildPRStateKey";
 /**
  * Delete Coding Agent PRState.
  *
- * @param repo - Parameter.
- * @param branch - Parameter.
- * @returns - Result.
+ * @param repo - Value for repo.
+ * @param branch - Value for branch.
+ * @returns - Computed result.
  */
 export async function deleteCodingAgentPRState(repo: string, branch: string): Promise<void> {
   const key = buildPRStateKey(repo, branch);

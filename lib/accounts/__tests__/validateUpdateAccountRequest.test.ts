@@ -19,8 +19,8 @@ vi.mock("@/lib/networking/safeParseJson", () => ({
 /**
  * Create Request.
  *
- * @param body - Parameter.
- * @returns - Result.
+ * @param body - Request payload.
+ * @returns - Computed result.
  */
 function createRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/accounts", {

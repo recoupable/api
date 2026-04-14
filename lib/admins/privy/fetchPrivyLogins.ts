@@ -23,8 +23,8 @@ export type FetchPrivyLoginsResult = {
 /**
  * Fetch Privy Logins.
  *
- * @param period - Parameter.
- * @returns - Result.
+ * @param period - Time range filter.
+ * @returns - Computed result.
  */
 export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<FetchPrivyLoginsResult> {
   const isAll = period === "all";

@@ -4,9 +4,9 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { deleteTrailingChatMessagesHandler } from "@/lib/chats/deleteTrailingChatMessagesHandler";
 
 /**
- * OPTIONS.
+ * Handles OPTIONS requests.
  *
- * @returns - Result.
+ * @returns - Computed result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -16,12 +16,12 @@ export async function OPTIONS() {
 }
 
 /**
- * DELETE.
+ * Handles DELETE requests.
  *
- * @param request - Parameter.
- * @param root1 - Parameter.
- * @param root1.params - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @param root1 - Input object.
+ * @param root1.params - Dynamic route parameters.
+ * @returns - Computed result.
  */
 export async function DELETE(
   request: NextRequest,

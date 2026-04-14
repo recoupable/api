@@ -51,9 +51,9 @@ describe("handleCodingAgentCallback", () => {
   /**
    * Make Request.
    *
-   * @param body - Parameter.
-   * @param secret - Parameter.
-   * @returns - Result.
+   * @param body - Request payload.
+   * @param secret - Value for secret.
+   * @returns - Computed result.
    */
   function makeRequest(body: unknown, secret = "test-secret") {
     return {

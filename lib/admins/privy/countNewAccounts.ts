@@ -6,9 +6,9 @@ import { getCutoffMs } from "./getCutoffMs";
 /**
  * Count New Accounts.
  *
- * @param users - Parameter.
- * @param period - Parameter.
- * @returns - Result.
+ * @param users - Value for users.
+ * @param period - Time range filter.
+ * @returns - Computed result.
  */
 export function countNewAccounts(users: User[], period: PrivyLoginsPeriod): number {
   const cutoffMs = getCutoffMs(period);

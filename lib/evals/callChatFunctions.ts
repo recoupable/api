@@ -4,8 +4,8 @@ import { extractTextFromResult } from "./extractTextFromResult";
 /**
  * Call Chat Functions.
  *
- * @param input - Parameter.
- * @returns - Result.
+ * @param input - Value for input.
+ * @returns - Computed result.
  */
 export async function callChatFunctions(input: string): Promise<string> {
   try {

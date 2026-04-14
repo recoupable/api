@@ -4,10 +4,10 @@ import type { FileRecord } from "@/lib/supabase/files/createFileRecord";
 /**
  * Select File By Storage Key.
  *
- * @param root0 - Parameter.
- * @param root0.ownerAccountId - Parameter.
- * @param root0.storageKey - Parameter.
- * @returns - Result.
+ * @param root0 - Input object.
+ * @param root0.ownerAccountId - Value for root0.ownerAccountId.
+ * @param root0.storageKey - Value for root0.storageKey.
+ * @returns - Computed result.
  */
 export async function selectFileByStorageKey({
   ownerAccountId,

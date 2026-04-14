@@ -14,8 +14,8 @@ interface SlackTagsHandlerConfig {
 /**
  * Create Slack Tags Handler.
  *
- * @param config - Parameter.
- * @returns - Result.
+ * @param config - Configuration options.
+ * @returns - Computed result.
  */
 export function createSlackTagsHandler(
   config: SlackTagsHandlerConfig,

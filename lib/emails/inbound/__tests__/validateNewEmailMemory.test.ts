@@ -58,8 +58,8 @@ const MOCK_MESSAGE_ID = "msg-456";
 /**
  * Create Mock Event.
  *
- * @param overrides - Parameter.
- * @returns - Result.
+ * @param overrides - Optional override values.
+ * @returns - Computed result.
  */
 function createMockEvent(
   overrides?: Partial<ResendEmailReceivedEvent["data"]>,

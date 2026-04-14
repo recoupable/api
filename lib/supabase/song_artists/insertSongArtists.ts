@@ -6,8 +6,8 @@ export type SongArtistInsert = TablesInsert<"song_artists">;
 /**
  * Insert Song Artists.
  *
- * @param songArtists - Parameter.
- * @returns - Result.
+ * @param songArtists - Value for songArtists.
+ * @returns - Computed result.
  */
 export async function insertSongArtists(songArtists: SongArtistInsert[]): Promise<void> {
   const records = songArtists.filter(

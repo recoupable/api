@@ -12,8 +12,8 @@ const BOT_MENTION = "@recoup-coding-agent";
 /**
  * Handle Git Hub Webhook.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function handleGitHubWebhook(request: Request): Promise<NextResponse> {
   const body = await request.text();

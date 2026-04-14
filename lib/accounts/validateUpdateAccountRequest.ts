@@ -48,8 +48,8 @@ export type ValidatedUpdateAccountRequest = Omit<
 /**
  * Validate Update Account Request.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function validateUpdateAccountRequest(
   request: NextRequest,

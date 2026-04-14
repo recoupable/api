@@ -7,8 +7,8 @@ import { listTemplates } from "@/lib/content/templates";
 /**
  * Get Content Templates Handler.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function getContentTemplatesHandler(request: NextRequest): Promise<NextResponse> {
   const authResult = await validateAuthContext(request);

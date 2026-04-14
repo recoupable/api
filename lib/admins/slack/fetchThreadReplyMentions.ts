@@ -44,14 +44,14 @@ const THREAD_BATCH_DELAY_MS = 1100;
 /**
  * Fetch Thread Reply Mentions.
  *
- * @param root0 - Parameter.
- * @param root0.token - Parameter.
- * @param root0.threadsToScan - Parameter.
- * @param root0.mentionPattern - Parameter.
- * @param root0.mentionRegex - Parameter.
- * @param root0.cutoffTs - Parameter.
- * @param root0.userCache - Parameter.
- * @returns - Result.
+ * @param root0 - Input object.
+ * @param root0.token - Authentication token.
+ * @param root0.threadsToScan - Value for root0.threadsToScan.
+ * @param root0.mentionPattern - Value for root0.mentionPattern.
+ * @param root0.mentionRegex - Value for root0.mentionRegex.
+ * @param root0.cutoffTs - Value for root0.cutoffTs.
+ * @param root0.userCache - Value for root0.userCache.
+ * @returns - Computed result.
  */
 export async function fetchThreadReplyMentions({
   token,

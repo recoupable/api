@@ -9,8 +9,8 @@ import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectA
 /**
  * Create Content Handler.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function createContentHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateCreateContentBody(request);

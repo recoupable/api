@@ -53,8 +53,8 @@ const mockSetupConversation = vi.mocked(setupConversation);
 /**
  * Create Mock Agent.
  *
- * @param generateResult - Parameter.
- * @returns - Result.
+ * @param generateResult - Value for generateResult.
+ * @returns - Computed result.
  */
 function createMockAgent(generateResult: Record<string, unknown>) {
   return {
@@ -68,9 +68,9 @@ function createMockAgent(generateResult: Record<string, unknown>) {
 /**
  * Create Mock Request.
  *
- * @param body - Parameter.
- * @param headers - Parameter.
- * @returns - Result.
+ * @param body - Request payload.
+ * @param headers - Headers for the request.
+ * @returns - Computed result.
  */
 function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
   return {

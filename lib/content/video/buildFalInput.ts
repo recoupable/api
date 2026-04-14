@@ -1,19 +1,19 @@
 /**
  * Build Fal Input.
  *
- * @param mode - Parameter.
- * @param v - Parameter.
- * @param v.prompt - Parameter.
- * @param v.negative_prompt - Parameter.
- * @param v.image_url - Parameter.
- * @param v.end_image_url - Parameter.
- * @param v.video_url - Parameter.
- * @param v.audio_url - Parameter.
- * @param v.aspect_ratio - Parameter.
- * @param v.duration - Parameter.
- * @param v.resolution - Parameter.
- * @param v.generate_audio - Parameter.
- * @returns - Result.
+ * @param mode - Value for mode.
+ * @param v - Value for v.
+ * @param v.prompt - Value for v.prompt.
+ * @param v.negative_prompt - Value for v.negative_prompt.
+ * @param v.image_url - Value for v.image_url.
+ * @param v.end_image_url - Value for v.end_image_url.
+ * @param v.video_url - Value for v.video_url.
+ * @param v.audio_url - Value for v.audio_url.
+ * @param v.aspect_ratio - Value for v.aspect_ratio.
+ * @param v.duration - Value for v.duration.
+ * @param v.resolution - Value for v.resolution.
+ * @param v.generate_audio - Value for v.generate_audio.
+ * @returns - Computed result.
  */
 export function buildFalInput(
   mode: string,

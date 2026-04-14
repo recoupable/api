@@ -6,8 +6,8 @@ import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
 /**
  * Call Chat Functions With Result.
  *
- * @param input - Parameter.
- * @returns - Result.
+ * @param input - Value for input.
+ * @returns - Computed result.
  */
 export async function callChatFunctionsWithResult(input: string) {
   const messages: UIMessage[] = [

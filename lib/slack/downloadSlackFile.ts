@@ -1,9 +1,9 @@
 /**
  * Download Slack File.
  *
- * @param fileId - Parameter.
- * @param token - Parameter.
- * @returns - Result.
+ * @param fileId - Value for fileId.
+ * @param token - Authentication token.
+ * @returns - Computed result.
  */
 export async function downloadSlackFile(fileId: string, token: string): Promise<Buffer | null> {
   const infoResponse = await fetch(`https://slack.com/api/files.info?file=${fileId}`, {

@@ -17,9 +17,9 @@ interface UsersInfoResponse {
 /**
  * Get Slack User Info.
  *
- * @param token - Parameter.
- * @param userId - Parameter.
- * @returns - Result.
+ * @param token - Authentication token.
+ * @param userId - Value for userId.
+ * @returns - Computed result.
  */
 export async function getSlackUserInfo(
   token: string,

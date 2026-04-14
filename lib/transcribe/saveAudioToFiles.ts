@@ -5,8 +5,8 @@ import { SaveAudioParams, FileRecord } from "./types";
 /**
  * Save Audio To Files.
  *
- * @param params - Parameter.
- * @returns - Result.
+ * @param params - Dynamic route parameters.
+ * @returns - Computed result.
  */
 export async function saveAudioToFiles(params: SaveAudioParams): Promise<FileRecord> {
   const {

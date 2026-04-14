@@ -14,9 +14,9 @@ interface Attachment {
 /**
  * Resolve Attachment Url.
  *
- * @param attachment - Parameter.
- * @param prefix - Parameter.
- * @returns - Result.
+ * @param attachment - Value for attachment.
+ * @param prefix - Value for prefix.
+ * @returns - Computed result.
  */
 export async function resolveAttachmentUrl(
   attachment: Attachment,

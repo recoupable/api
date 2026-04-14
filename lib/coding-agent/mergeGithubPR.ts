@@ -12,10 +12,10 @@ export type MergeGithubPRResult = MergeGithubPRSuccess | MergeGithubPRFailure;
 /**
  * Merge Github PR.
  *
- * @param repo - Parameter.
- * @param prNumber - Parameter.
- * @param token - Parameter.
- * @returns - Result.
+ * @param repo - Value for repo.
+ * @param prNumber - Value for prNumber.
+ * @param token - Authentication token.
+ * @returns - Computed result.
  */
 export async function mergeGithubPR(
   repo: string,

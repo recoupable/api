@@ -48,10 +48,10 @@ const BASE_PAYLOAD = {
 /**
  * Make Request.
  *
- * @param body - Parameter.
- * @param event - Parameter.
- * @param signature - Parameter.
- * @returns - Result.
+ * @param body - Request payload.
+ * @param event - Value for event.
+ * @param signature - Value for signature.
+ * @returns - Computed result.
  */
 function makeRequest(body: unknown, event = "issue_comment", signature = "valid") {
   return {

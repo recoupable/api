@@ -5,8 +5,8 @@ import { parseMergeTestToMainActionId } from "../parseMergeTestToMainActionId";
 /**
  * Register On Merge Test To Main Action.
  *
- * @param bot - Parameter.
- * @returns - Result.
+ * @param bot - Value for bot.
+ * @returns - Computed result.
  */
 export function registerOnMergeTestToMainAction(bot: CodingAgentBot) {
   bot.onAction(async event => {

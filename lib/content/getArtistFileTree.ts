@@ -4,9 +4,9 @@ import { getOrgRepoUrls } from "@/lib/github/getOrgRepoUrls";
 /**
  * Get Artist File Tree.
  *
- * @param githubRepo - Parameter.
- * @param artistSlug - Parameter.
- * @returns - Result.
+ * @param githubRepo - Value for githubRepo.
+ * @param artistSlug - Value for artistSlug.
+ * @returns - Computed result.
  */
 export async function getArtistFileTree(
   githubRepo: string,

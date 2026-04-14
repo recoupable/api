@@ -31,8 +31,8 @@ export type ProcessAndSendEmailResult = ProcessAndSendEmailSuccess | ProcessAndS
 /**
  * Process And Send Email.
  *
- * @param input - Parameter.
- * @returns - Result.
+ * @param input - Value for input.
+ * @returns - Computed result.
  */
 export async function processAndSendEmail(
   input: ProcessAndSendEmailInput,

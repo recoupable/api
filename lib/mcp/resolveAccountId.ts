@@ -14,10 +14,10 @@ export interface ResolveAccountIdResult {
 /**
  * Resolve Account Id.
  *
- * @param root0 - Parameter.
- * @param root0.authInfo - Parameter.
- * @param root0.accountIdOverride - Parameter.
- * @returns - Result.
+ * @param root0 - Input object.
+ * @param root0.authInfo - Value for root0.authInfo.
+ * @param root0.accountIdOverride - Value for root0.accountIdOverride.
+ * @returns - Computed result.
  */
 export async function resolveAccountId({
   authInfo,

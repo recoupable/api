@@ -15,8 +15,8 @@ beforeEach(() => {
 /**
  * Create Mock Thread.
  *
- * @param state - Parameter.
- * @returns - Result.
+ * @param state - Value for state.
+ * @returns - Computed result.
  */
 function createMockThread(state: unknown) {
   return {

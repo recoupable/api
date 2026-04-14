@@ -11,10 +11,10 @@ const ENABLED_TOOLKITS = ["googlesheets", "googledrive", "googledocs", "tiktok"]
 /**
  * Create Tool Router Session.
  *
- * @param accountId - Parameter.
- * @param roomId - Parameter.
- * @param artistConnections - Parameter.
- * @returns - Result.
+ * @param accountId - Account identifier.
+ * @param roomId - Room identifier.
+ * @param artistConnections - Value for artistConnections.
+ * @returns - Computed result.
  */
 export async function createToolRouterSession(
   accountId: string,

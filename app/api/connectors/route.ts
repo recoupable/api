@@ -6,9 +6,9 @@ import { authorizeConnectorHandler } from "@/lib/composio/connectors/authorizeCo
 import { disconnectConnectorHandler } from "@/lib/composio/connectors/disconnectConnectorHandler";
 
 /**
- * OPTIONS.
+ * Handles OPTIONS requests.
  *
- * @returns - Result.
+ * @returns - Computed result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -18,30 +18,30 @@ export async function OPTIONS() {
 }
 
 /**
- * GET.
+ * Handles GET requests.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function GET(request: NextRequest) {
   return getConnectorsHandler(request);
 }
 
 /**
- * POST.
+ * Handles POST requests.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function POST(request: NextRequest) {
   return authorizeConnectorHandler(request);
 }
 
 /**
- * DELETE.
+ * Handles DELETE requests.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function DELETE(request: NextRequest) {
   return disconnectConnectorHandler(request);

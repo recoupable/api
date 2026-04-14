@@ -21,8 +21,8 @@ export interface ExtractedAttachments {
 /**
  * Extract Message Attachments.
  *
- * @param message - Parameter.
- * @returns - Result.
+ * @param message - Value for message.
+ * @returns - Computed result.
  */
 export async function extractMessageAttachments(
   message: MessageWithAttachments,

@@ -9,14 +9,14 @@ interface SubmoduleRef {
 /**
  * Expand Submodule Entries.
  *
- * @param root0 - Parameter.
- * @param root0.regularEntries - Parameter.
- * @param root0.submoduleEntries - Parameter.
- * @param root0.repo - Parameter.
- * @param root0.repo.owner - Parameter.
- * @param root0.repo.repo - Parameter.
- * @param root0.repo.branch - Parameter.
- * @returns - Result.
+ * @param root0 - Input object.
+ * @param root0.regularEntries - Value for root0.regularEntries.
+ * @param root0.submoduleEntries - Value for root0.submoduleEntries.
+ * @param root0.repo - Value for root0.repo.
+ * @param root0.repo.owner - Value for root0.repo.owner.
+ * @param root0.repo.repo - Value for root0.repo.repo.
+ * @param root0.repo.branch - Value for root0.repo.branch.
+ * @returns - Computed result.
  */
 export async function expandSubmoduleEntries({
   regularEntries,

@@ -58,10 +58,10 @@ const mockSendErrorNotification = vi.mocked(sendErrorNotification);
 /**
  * Create Mock UIMessage.
  *
- * @param id - Parameter.
- * @param role - Parameter.
- * @param text - Parameter.
- * @returns - Result.
+ * @param id - Identifier value.
+ * @param role - Value for role.
+ * @param text - Text content.
+ * @returns - Computed result.
  */
 function createMockUIMessage(id: string, role: "user" | "assistant", text: string): UIMessage {
   return {
@@ -76,8 +76,8 @@ function createMockUIMessage(id: string, role: "user" | "assistant", text: strin
 /**
  * Create Mock Body.
  *
- * @param overrides - Parameter.
- * @returns - Result.
+ * @param overrides - Optional override values.
+ * @returns - Computed result.
  */
 function createMockBody(overrides: Partial<ChatRequestBody> = {}): ChatRequestBody {
   return {

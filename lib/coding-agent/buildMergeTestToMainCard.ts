@@ -3,8 +3,8 @@ import { Card, CardText, Actions, Button } from "chat";
 /**
  * Build Merge Test To Main Card.
  *
- * @param repo - Parameter.
- * @returns - Result.
+ * @param repo - Value for repo.
+ * @returns - Computed result.
  */
 export function buildMergeTestToMainCard(repo: string) {
   return Card({

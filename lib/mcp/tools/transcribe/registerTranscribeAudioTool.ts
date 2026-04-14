@@ -18,8 +18,8 @@ type TranscribeAudioArgs = z.infer<typeof transcribeAudioSchema>;
 /**
  * Register Transcribe Audio Tool.
  *
- * @param server - Parameter.
- * @returns - Result.
+ * @param server - Value for server.
+ * @returns - Computed result.
  */
 export function registerTranscribeAudioTool(server: McpServer): void {
   server.registerTool(

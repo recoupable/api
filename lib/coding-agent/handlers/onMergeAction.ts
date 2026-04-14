@@ -8,8 +8,8 @@ import { buildMergeTestToMainCard } from "../buildMergeTestToMainCard";
 /**
  * Register On Merge Action.
  *
- * @param bot - Parameter.
- * @returns - Result.
+ * @param bot - Value for bot.
+ * @returns - Computed result.
  */
 export function registerOnMergeAction(bot: CodingAgentBot) {
   bot.onAction(async event => {

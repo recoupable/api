@@ -19,9 +19,9 @@ vi.mock("@/lib/networking/safeParseJson", () => ({
 /**
  * Create Request.
  *
- * @param body - Parameter.
- * @param headers - Parameter.
- * @returns - Result.
+ * @param body - Request payload.
+ * @param headers - Headers for the request.
+ * @returns - Computed result.
  */
 function createRequest(body: unknown, headers: Record<string, string> = {}): NextRequest {
   const defaultHeaders: Record<string, string> = { "Content-Type": "application/json" };

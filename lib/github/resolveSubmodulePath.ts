@@ -4,10 +4,10 @@ import { getRepoGitModules } from "./getRepoGitModules";
 /**
  * Resolve Submodule Path.
  *
- * @param root0 - Parameter.
- * @param root0.githubRepo - Parameter.
- * @param root0.path - Parameter.
- * @returns - Result.
+ * @param root0 - Input object.
+ * @param root0.githubRepo - Value for root0.githubRepo.
+ * @param root0.path - Value for root0.path.
+ * @returns - Computed result.
  */
 export async function resolveSubmodulePath({
   githubRepo,

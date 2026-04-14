@@ -7,10 +7,10 @@ export type AccountArtistRow = ArtistQueryRow & { artist_id: string; pinned: boo
 /**
  * Get Account Artist Ids.
  *
- * @param params - Parameter.
- * @param params.artistIds - Parameter.
- * @param params.accountIds - Parameter.
- * @returns - Result.
+ * @param params - Dynamic route parameters.
+ * @param params.artistIds - Value for params.artistIds.
+ * @param params.accountIds - Value for params.accountIds.
+ * @returns - Computed result.
  */
 export async function getAccountArtistIds(params: {
   artistIds?: string[];

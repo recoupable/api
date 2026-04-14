@@ -7,9 +7,9 @@ import type { CodingAgentThreadState } from "./types";
 /**
  * Handle PRCreated.
  *
- * @param threadId - Parameter.
- * @param body - Parameter.
- * @returns - Result.
+ * @param threadId - Value for threadId.
+ * @param body - Request payload.
+ * @returns - Computed result.
  */
 export async function handlePRCreated(threadId: string, body: CodingAgentCallbackBody) {
   const thread = getThread<CodingAgentThreadState>(threadId);

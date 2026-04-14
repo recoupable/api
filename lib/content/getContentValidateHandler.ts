@@ -7,8 +7,8 @@ import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadine
 /**
  * Get Content Validate Handler.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function getContentValidateHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateGetContentValidateQuery(request);

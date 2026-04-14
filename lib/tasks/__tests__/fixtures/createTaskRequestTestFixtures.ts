@@ -5,8 +5,8 @@ export const ARTIST_ID = "323e4567-e89b-12d3-a456-426614174000";
 /**
  * Valid Create Body.
  *
- * @param overrides - Parameter.
- * @returns - Result.
+ * @param overrides - Optional override values.
+ * @returns - Computed result.
  */
 export function validCreateBody(overrides: Record<string, unknown> = {}) {
   return {

@@ -26,7 +26,7 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 /**
  * Create Mock Request.
  *
- * @returns - Result.
+ * @returns - Computed result.
  */
 function createMockRequest(): NextRequest {
   return {

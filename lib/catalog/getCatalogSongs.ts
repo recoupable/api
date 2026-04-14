@@ -28,11 +28,11 @@ export interface CatalogSongsResponse {
 /**
  * Get Catalog Songs.
  *
- * @param catalogId - Parameter.
- * @param pageSize - Parameter.
- * @param page - Parameter.
- * @param artistName - Parameter.
- * @returns - Result.
+ * @param catalogId - Value for catalogId.
+ * @param pageSize - Value for pageSize.
+ * @param page - Value for page.
+ * @param artistName - Value for artistName.
+ * @returns - Computed result.
  */
 export async function getCatalogSongs(
   catalogId: string,

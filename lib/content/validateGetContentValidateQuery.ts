@@ -13,8 +13,8 @@ export type ValidatedGetContentValidateQuery = {
 /**
  * Validate Get Content Validate Query.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function validateGetContentValidateQuery(
   request: NextRequest,

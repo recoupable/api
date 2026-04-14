@@ -6,8 +6,8 @@ import { fetchGithubPrStatus } from "@/lib/github/fetchGithubPrStatus";
 /**
  * Get Pr Status Handler.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function getPrStatusHandler(request: NextRequest): Promise<NextResponse> {
   try {

@@ -1,8 +1,8 @@
 /**
  * Parse Merge Test To Main Action Id.
  *
- * @param actionId - Parameter.
- * @returns - Result.
+ * @param actionId - Value for actionId.
+ * @returns - Computed result.
  */
 export function parseMergeTestToMainActionId(actionId: string): string | null {
   const prefix = "merge_test_to_main:";

@@ -17,7 +17,7 @@ beforeEach(() => {
 /**
  * Create Mock Bot.
  *
- * @returns - Result.
+ * @returns - Computed result.
  */
 function createMockBot() {
   return {

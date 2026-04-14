@@ -1,7 +1,7 @@
 /**
  * Build Auth Configs.
  *
- * @returns - Result.
+ * @returns - Computed result.
  */
 export function buildAuthConfigs(): Record<string, string> | undefined {
   const configs: Record<string, string> = {};

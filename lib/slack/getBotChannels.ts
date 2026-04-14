@@ -10,8 +10,8 @@ interface ConversationsListResponse {
 /**
  * Get Bot Channels.
  *
- * @param token - Parameter.
- * @returns - Result.
+ * @param token - Authentication token.
+ * @returns - Computed result.
  */
 export async function getBotChannels(token: string): Promise<Array<{ id: string; name: string }>> {
   const channels: Array<{ id: string; name: string }> = [];

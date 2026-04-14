@@ -3,11 +3,11 @@ import { parseGitModules, type SubmoduleEntry } from "./parseGitModules";
 /**
  * Get Repo Git Modules.
  *
- * @param root0 - Parameter.
- * @param root0.owner - Parameter.
- * @param root0.repo - Parameter.
- * @param root0.branch - Parameter.
- * @returns - Result.
+ * @param root0 - Input object.
+ * @param root0.owner - Value for root0.owner.
+ * @param root0.repo - Value for root0.repo.
+ * @param root0.branch - Value for root0.branch.
+ * @returns - Computed result.
  */
 export async function getRepoGitModules({
   owner,

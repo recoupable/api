@@ -3,8 +3,8 @@ import { CatalogSong } from "./getCatalogSongs";
 /**
  * Format Catalog Songs As CSV.
  *
- * @param songs - Parameter.
- * @returns - Result.
+ * @param songs - Value for songs.
+ * @returns - Computed result.
  */
 export function formatCatalogSongsAsCSV(songs: CatalogSong[]): string {
   const csvLines = songs.map(song => {

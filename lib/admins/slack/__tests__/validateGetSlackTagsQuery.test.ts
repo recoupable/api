@@ -16,8 +16,8 @@ const mockAuth = { accountId: "test-account", orgId: null, authToken: "token" };
 /**
  * Make Request.
  *
- * @param period - Parameter.
- * @returns - Result.
+ * @param period - Time range filter.
+ * @returns - Computed result.
  */
 function makeRequest(period?: string) {
   const url = period

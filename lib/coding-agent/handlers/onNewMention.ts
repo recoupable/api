@@ -7,8 +7,8 @@ import { handleFeedback } from "./handleFeedback";
 /**
  * Register On New Mention.
  *
- * @param bot - Parameter.
- * @returns - Result.
+ * @param bot - Value for bot.
+ * @returns - Computed result.
  */
 export function registerOnNewMention(bot: CodingAgentBot) {
   bot.onNewMention(async (thread, message) => {

@@ -20,8 +20,8 @@ export type ValidatedTranscribeAudioBody = { accountId: string } & z.infer<
 /**
  * Validate Transcribe Audio Body.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function validateTranscribeAudioBody(
   request: NextRequest,

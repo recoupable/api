@@ -51,8 +51,8 @@ const mockLogins = [
 /**
  * Make Request.
  *
- * @param period - Parameter.
- * @returns - Result.
+ * @param period - Time range filter.
+ * @returns - Computed result.
  */
 function makeRequest(period = "daily") {
   return new NextRequest(`https://example.com/api/admins/privy?period=${period}`);

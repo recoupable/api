@@ -7,8 +7,8 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 /**
  * Get Flamingo Presets Handler.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function getFlamingoPresetsHandler(request: NextRequest): Promise<NextResponse> {
   const authResult = await validateAuthContext(request);

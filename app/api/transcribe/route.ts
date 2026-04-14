@@ -3,10 +3,10 @@ import { processAudioTranscription } from "@/lib/transcribe/processAudioTranscri
 import { formatTranscriptionError } from "@/lib/transcribe/types";
 
 /**
- * POST.
+ * Handles POST requests.
  *
- * @param req - Parameter.
- * @returns - Result.
+ * @param req - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function POST(req: NextRequest) {
   try {

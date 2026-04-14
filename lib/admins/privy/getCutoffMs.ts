@@ -4,8 +4,8 @@ import { PERIOD_DAYS } from "./periodDays";
 /**
  * Get Cutoff Ms.
  *
- * @param period - Parameter.
- * @returns - Result.
+ * @param period - Time range filter.
+ * @returns - Computed result.
  */
 export function getCutoffMs(period: PrivyLoginsPeriod): number {
   if (period === "all") return 0;

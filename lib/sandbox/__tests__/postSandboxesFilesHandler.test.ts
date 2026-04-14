@@ -132,6 +132,7 @@ describe("postSandboxesFilesHandler", () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
 
     const result = await postSandboxesFilesHandler(mockRequest);
+    const body = await result.json();
     expect(result.status).toBe(500);
     expect(body.error).toContain("All uploads failed");
     // Blobs are always cleaned up, even on failure, to allow retries

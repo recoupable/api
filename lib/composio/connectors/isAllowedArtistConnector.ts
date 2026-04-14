@@ -9,8 +9,8 @@ export type AllowedArtistConnector = (typeof ALLOWED_ARTIST_CONNECTORS)[number];
 /**
  * Is Allowed Artist Connector.
  *
- * @param slug - Parameter.
- * @returns - Result.
+ * @param slug - Value for slug.
+ * @returns - Computed result.
  */
 export function isAllowedArtistConnector(slug: string): slug is AllowedArtistConnector {
   return (ALLOWED_ARTIST_CONNECTORS as readonly string[]).includes(slug);

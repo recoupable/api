@@ -4,12 +4,12 @@ import { SUPABASE_STORAGE_BUCKET } from "@/lib/const";
 /**
  * Upload File By Key.
  *
- * @param key - Parameter.
- * @param file - Parameter.
- * @param options - Parameter.
- * @param options.contentType - Parameter.
- * @param options.upsert - Parameter.
- * @returns - Result.
+ * @param key - Value for key.
+ * @param file - Value for file.
+ * @param options - Options for this operation.
+ * @param options.contentType - Value for options.contentType.
+ * @param options.upsert - Value for options.upsert.
+ * @returns - Computed result.
  */
 export async function uploadFileByKey(
   key: string,

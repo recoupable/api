@@ -20,8 +20,8 @@ export type ValidatedCreateCaptionBody = { accountId: string } & z.infer<
 /**
  * Validate Create Caption Body.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function validateCreateCaptionBody(
   request: NextRequest,

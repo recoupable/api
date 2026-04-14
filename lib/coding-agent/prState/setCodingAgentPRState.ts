@@ -5,10 +5,10 @@ import type { CodingAgentPRState } from "./types";
 /**
  * Set Coding Agent PRState.
  *
- * @param repo - Parameter.
- * @param branch - Parameter.
- * @param state - Parameter.
- * @returns - Result.
+ * @param repo - Value for repo.
+ * @param branch - Value for branch.
+ * @param state - Value for state.
+ * @returns - Computed result.
  */
 export async function setCodingAgentPRState(
   repo: string,

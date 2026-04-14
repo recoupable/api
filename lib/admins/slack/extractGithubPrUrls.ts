@@ -24,10 +24,10 @@ const PR_URL_EXACT = /^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+$/;
 /**
  * Extract Github Pr Urls.
  *
- * @param text - Parameter.
- * @param attachments - Parameter.
- * @param blocks - Parameter.
- * @returns - Result.
+ * @param text - Text content.
+ * @param attachments - Value for attachments.
+ * @param blocks - Value for blocks.
+ * @returns - Computed result.
  */
 export function extractGithubPrUrls(
   text: string,

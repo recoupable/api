@@ -3,10 +3,10 @@ import { timingSafeEqual } from "crypto";
 /**
  * Verify Git Hub Webhook.
  *
- * @param body - Parameter.
- * @param signature - Parameter.
- * @param secret - Parameter.
- * @returns - Result.
+ * @param body - Request payload.
+ * @param signature - Value for signature.
+ * @param secret - Value for secret.
+ * @returns - Computed result.
  */
 export async function verifyGitHubWebhook(
   body: string,

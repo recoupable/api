@@ -5,8 +5,8 @@ import { SaveTranscriptParams, FileRecord } from "./types";
 /**
  * Save Transcript To Files.
  *
- * @param params - Parameter.
- * @returns - Result.
+ * @param params - Dynamic route parameters.
+ * @returns - Computed result.
  */
 export async function saveTranscriptToFiles(params: SaveTranscriptParams): Promise<FileRecord> {
   const { markdown, ownerAccountId, artistAccountId, title = "Transcription" } = params;

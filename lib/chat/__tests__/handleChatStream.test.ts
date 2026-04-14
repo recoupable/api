@@ -60,9 +60,9 @@ const mockCreateUIMessageStreamResponse = vi.mocked(createUIMessageStreamRespons
 /**
  * Create Mock Request.
  *
- * @param body - Parameter.
- * @param headers - Parameter.
- * @returns - Result.
+ * @param body - Request payload.
+ * @param headers - Headers for the request.
+ * @returns - Computed result.
  */
 function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
   return {

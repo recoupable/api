@@ -15,11 +15,11 @@ interface ProcessCompactChatRequestParams {
 /**
  * Process Compact Chat Request.
  *
- * @param root0 - Parameter.
- * @param root0.chatId - Parameter.
- * @param root0.prompt - Parameter.
- * @param root0.accountId - Parameter.
- * @returns - Result.
+ * @param root0 - Input object.
+ * @param root0.chatId - Value for root0.chatId.
+ * @param root0.prompt - Value for root0.prompt.
+ * @param root0.accountId - Account identifier.
+ * @returns - Computed result.
  */
 export async function processCompactChatRequest({
   chatId,

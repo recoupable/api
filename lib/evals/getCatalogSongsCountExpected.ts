@@ -5,7 +5,7 @@ import { EVAL_ACCOUNT_ID } from "@/lib/consts";
 /**
  * Get Catalog Songs Count Expected.
  *
- * @returns - Result.
+ * @returns - Computed result.
  */
 async function getCatalogSongsCountExpected() {
   try {

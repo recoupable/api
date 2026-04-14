@@ -15,10 +15,10 @@ export type ValidateOverrideAccountIdResult = {
 /**
  * Validate Override Account Id.
  *
- * @param root0 - Parameter.
- * @param root0.apiKey - Parameter.
- * @param root0.targetAccountId - Parameter.
- * @returns - Result.
+ * @param root0 - Input object.
+ * @param root0.apiKey - Value for root0.apiKey.
+ * @param root0.targetAccountId - Value for root0.targetAccountId.
+ * @returns - Computed result.
  */
 export async function validateOverrideAccountId({
   apiKey,

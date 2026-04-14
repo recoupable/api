@@ -39,8 +39,8 @@ export type ValidatedCreateContentBody = {
 /**
  * Validate Create Content Body.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function validateCreateContentBody(
   request: NextRequest,

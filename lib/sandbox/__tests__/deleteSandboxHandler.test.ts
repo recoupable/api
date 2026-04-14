@@ -30,7 +30,7 @@ vi.mock("@/lib/github/deleteAccountGithubRepos", () => ({
 /**
  * Create Mock Request.
  *
- * @returns - Result.
+ * @returns - Computed result.
  */
 function createMockRequest(): Request {
   return new Request("https://example.com/api/sandboxes", {

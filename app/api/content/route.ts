@@ -3,19 +3,19 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { editHandler } from "@/lib/content/edit/editHandler";
 
 /**
- * OPTIONS.
+ * Handles OPTIONS requests.
  *
- * @returns - Result.
+ * @returns - Computed result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
 }
 
 /**
- * PATCH.
+ * Handles PATCH requests.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function PATCH(request: NextRequest): Promise<NextResponse> {
   return editHandler(request);

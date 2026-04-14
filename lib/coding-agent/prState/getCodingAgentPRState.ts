@@ -5,9 +5,9 @@ import type { CodingAgentPRState } from "./types";
 /**
  * Get Coding Agent PRState.
  *
- * @param repo - Parameter.
- * @param branch - Parameter.
- * @returns - Result.
+ * @param repo - Value for repo.
+ * @param branch - Value for branch.
+ * @returns - Computed result.
  */
 export async function getCodingAgentPRState(
   repo: string,

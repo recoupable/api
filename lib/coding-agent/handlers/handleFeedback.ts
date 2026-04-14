@@ -7,10 +7,10 @@ import type { CodingAgentThreadState } from "../types";
 /**
  * Handle Feedback.
  *
- * @param thread - Parameter.
- * @param messageText - Parameter.
- * @param state - Parameter.
- * @returns - Result.
+ * @param thread - Value for thread.
+ * @param messageText - Value for messageText.
+ * @param state - Value for state.
+ * @returns - Computed result.
  */
 export async function handleFeedback(
   thread: Thread<CodingAgentThreadState>,

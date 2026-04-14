@@ -3,8 +3,8 @@ import type { GitHubThreadId } from "@chat-adapter/github";
 /**
  * Encode Git Hub Thread Id.
  *
- * @param thread - Parameter.
- * @returns - Result.
+ * @param thread - Value for thread.
+ * @returns - Computed result.
  */
 export function encodeGitHubThreadId(thread: GitHubThreadId): string {
   const { owner, repo, prNumber, reviewCommentId } = thread;

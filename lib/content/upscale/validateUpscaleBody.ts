@@ -17,8 +17,8 @@ export type ValidatedUpscaleBody = { accountId: string } & z.infer<typeof create
 /**
  * Validate Upscale Body.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function validateUpscaleBody(
   request: NextRequest,

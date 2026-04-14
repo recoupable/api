@@ -12,11 +12,11 @@ export type MergeGithubBranchResult = MergeGithubBranchSuccess | MergeGithubBran
 /**
  * Merge Github Branch.
  *
- * @param repo - Parameter.
- * @param head - Parameter.
- * @param base - Parameter.
- * @param token - Parameter.
- * @returns - Result.
+ * @param repo - Value for repo.
+ * @param head - Value for head.
+ * @param base - Value for base.
+ * @param token - Authentication token.
+ * @returns - Computed result.
  */
 export async function mergeGithubBranch(
   repo: string,

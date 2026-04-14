@@ -8,8 +8,8 @@ export type TriggerRunLike = {
 /**
  * Is Completed Run.
  *
- * @param run - Parameter.
- * @returns - Result.
+ * @param run - Value for run.
+ * @returns - Computed result.
  */
 export function isCompletedRun(run: TriggerRunLike): boolean {
   return run.status === "COMPLETED";

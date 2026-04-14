@@ -11,8 +11,8 @@ export interface CatalogsResponse {
 /**
  * Get Catalogs.
  *
- * @param accountId - Parameter.
- * @returns - Result.
+ * @param accountId - Account identifier.
+ * @returns - Computed result.
  */
 export async function getCatalogs(accountId: string): Promise<CatalogsResponse> {
   try {

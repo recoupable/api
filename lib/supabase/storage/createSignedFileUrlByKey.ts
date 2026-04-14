@@ -4,10 +4,10 @@ import { SUPABASE_STORAGE_BUCKET } from "@/lib/const";
 /**
  * Create Signed File Url By Key.
  *
- * @param root0 - Parameter.
- * @param root0.key - Parameter.
- * @param root0.expiresInSeconds - Parameter.
- * @returns - Result.
+ * @param root0 - Input object.
+ * @param root0.key - Value for root0.key.
+ * @param root0.expiresInSeconds - Value for root0.expiresInSeconds.
+ * @returns - Computed result.
  */
 export async function createSignedFileUrlByKey({
   key,

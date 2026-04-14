@@ -4,8 +4,8 @@ import type { User } from "@privy-io/node";
 /**
  * Get Latest Verified At.
  *
- * @param user - Parameter.
- * @returns - Result.
+ * @param user - Value for user.
+ * @returns - Computed result.
  */
 export function getLatestVerifiedAt(user: User): number | null {
   const linkedAccounts = user.linked_accounts;

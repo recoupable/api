@@ -50,8 +50,8 @@ export type ValidatedEditContentBody = { accountId: string } & z.infer<typeof ed
 /**
  * Validate Edit Content Body.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function validateEditContentBody(
   request: NextRequest,

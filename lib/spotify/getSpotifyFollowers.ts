@@ -38,8 +38,8 @@ interface SpotifySearchResponse {
 /**
  * Get Spotify Followers.
  *
- * @param artistName - Parameter.
- * @returns - Result.
+ * @param artistName - Value for artistName.
+ * @returns - Computed result.
  */
 export async function getSpotifyFollowers(artistName: string): Promise<number> {
   try {

@@ -3,9 +3,9 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getAccountHandler } from "@/lib/accounts/getAccountHandler";
 
 /**
- * OPTIONS.
+ * Handles OPTIONS requests.
  *
- * @returns - Result.
+ * @returns - Computed result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -15,12 +15,12 @@ export async function OPTIONS() {
 }
 
 /**
- * GET.
+ * Handles GET requests.
  *
- * @param request - Parameter.
- * @param root1 - Parameter.
- * @param root1.params - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @param root1 - Input object.
+ * @param root1.params - Dynamic route parameters.
+ * @returns - Computed result.
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return getAccountHandler(request, params);

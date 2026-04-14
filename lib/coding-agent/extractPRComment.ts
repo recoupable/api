@@ -12,9 +12,9 @@ export interface PRComment {
 /**
  * Extract PRComment.
  *
- * @param event - Parameter.
- * @param payload - Parameter.
- * @returns - Result.
+ * @param event - Value for event.
+ * @param payload - Value for payload.
+ * @returns - Computed result.
  */
 export function extractPRComment(
   event: string,

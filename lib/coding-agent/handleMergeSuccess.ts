@@ -6,8 +6,8 @@ import type { CodingAgentThreadState } from "./types";
 /**
  * Handle Merge Success.
  *
- * @param state - Parameter.
- * @returns - Result.
+ * @param state - Value for state.
+ * @returns - Computed result.
  */
 export async function handleMergeSuccess(state: CodingAgentThreadState): Promise<void> {
   try {

@@ -3,8 +3,8 @@ import { getSpotifyFollowers } from "@/lib/spotify/getSpotifyFollowers";
 /**
  * Get Spotify Followers Expected.
  *
- * @param artist - Parameter.
- * @returns - Result.
+ * @param artist - Value for artist.
+ * @returns - Computed result.
  */
 async function getSpotifyFollowersExpected(artist: string) {
   try {

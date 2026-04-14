@@ -4,8 +4,8 @@ import { extractTextResultFromSteps } from "./extractTextResultFromSteps";
 /**
  * Extract Text From Result.
  *
- * @param result - Parameter.
- * @returns - Result.
+ * @param result - Value for result.
+ * @returns - Computed result.
  */
 export function extractTextFromResult(result: Awaited<ReturnType<typeof generateText>>): string {
   // Handle multi-step responses (when maxSteps > 1)

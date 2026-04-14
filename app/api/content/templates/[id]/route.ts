@@ -3,21 +3,21 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getContentTemplateDetailHandler } from "@/lib/content/getContentTemplateDetailHandler";
 
 /**
- * OPTIONS.
+ * Handles OPTIONS requests.
  *
- * @returns - Result.
+ * @returns - Computed result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
 }
 
 /**
- * GET.
+ * Handles GET requests.
  *
- * @param request - Parameter.
- * @param context - Parameter.
- * @param context.params - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @param context - Route handler context.
+ * @param context.params - Dynamic route parameters.
+ * @returns - Computed result.
  */
 export async function GET(
   request: NextRequest,

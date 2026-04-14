@@ -9,12 +9,12 @@ export interface AnalyzeVideoResult {
 /**
  * Analyze Video.
  *
- * @param validated - Parameter.
- * @param validated.video_url - Parameter.
- * @param validated.prompt - Parameter.
- * @param validated.temperature - Parameter.
- * @param validated.max_tokens - Parameter.
- * @returns - Result.
+ * @param validated - Value for validated.
+ * @param validated.video_url - Value for validated.video_url.
+ * @param validated.prompt - Value for validated.prompt.
+ * @param validated.temperature - Value for validated.temperature.
+ * @param validated.max_tokens - Value for validated.max_tokens.
+ * @returns - Computed result.
  */
 export async function analyzeVideo(validated: {
   video_url: string;

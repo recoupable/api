@@ -4,8 +4,8 @@ import type { TextPart } from "ai";
 /**
  * Extract Text Result From Steps.
  *
- * @param result - Parameter.
- * @returns - Result.
+ * @param result - Value for result.
+ * @returns - Computed result.
  */
 export function extractTextResultFromSteps(
   result: Awaited<ReturnType<typeof generateText>>,

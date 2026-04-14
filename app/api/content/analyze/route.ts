@@ -3,19 +3,19 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createAnalyzeHandler } from "@/lib/content/analyze/createAnalyzeHandler";
 
 /**
- * OPTIONS.
+ * Handles OPTIONS requests.
  *
- * @returns - Result.
+ * @returns - Computed result.
  */
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
 }
 
 /**
- * POST.
+ * Handles POST requests.
  *
- * @param request - Parameter.
- * @returns - Result.
+ * @param request - Incoming HTTP request.
+ * @returns - Computed result.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   return createAnalyzeHandler(request);

@@ -18,10 +18,10 @@ interface ConversationsRepliesResponse {
 /**
  * Fetch Thread Pull Requests.
  *
- * @param token - Parameter.
- * @param channel - Parameter.
- * @param threadTs - Parameter.
- * @returns - Result.
+ * @param token - Authentication token.
+ * @param channel - Slack channel identifier.
+ * @param threadTs - Slack thread timestamp.
+ * @returns - Computed result.
  */
 export async function fetchThreadPullRequests(
   token: string,

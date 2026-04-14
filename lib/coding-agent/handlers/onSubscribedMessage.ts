@@ -4,8 +4,8 @@ import { handleFeedback } from "./handleFeedback";
 /**
  * Register On Subscribed Message.
  *
- * @param bot - Parameter.
- * @returns - Result.
+ * @param bot - Value for bot.
+ * @returns - Computed result.
  */
 export function registerOnSubscribedMessage(bot: CodingAgentBot) {
   bot.onSubscribedMessage(async (thread, message) => {

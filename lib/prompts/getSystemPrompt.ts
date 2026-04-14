@@ -4,17 +4,17 @@ import { AccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetail
 /**
  * Get System Prompt.
  *
- * @param root0 - Parameter.
- * @param root0.roomId - Parameter.
- * @param root0.artistId - Parameter.
- * @param root0.accountId - Parameter.
- * @param root0.orgId - Parameter.
- * @param root0.email - Parameter.
- * @param root0.knowledgeBaseText - Parameter.
- * @param root0.artistInstruction - Parameter.
- * @param root0.conversationName - Parameter.
- * @param root0.accountWithDetails - Parameter.
- * @returns - Result.
+ * @param root0 - Input object.
+ * @param root0.roomId - Room identifier.
+ * @param root0.artistId - Artist identifier.
+ * @param root0.accountId - Account identifier.
+ * @param root0.orgId - Organization identifier.
+ * @param root0.email - Email address.
+ * @param root0.knowledgeBaseText - Value for root0.knowledgeBaseText.
+ * @param root0.artistInstruction - Value for root0.artistInstruction.
+ * @param root0.conversationName - Value for root0.conversationName.
+ * @param root0.accountWithDetails - Value for root0.accountWithDetails.
+ * @returns - Computed result.
  */
 export function getSystemPrompt({
   roomId,
