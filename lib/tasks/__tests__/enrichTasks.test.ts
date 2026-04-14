@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { enrichTasks } from "../enrichTasks";
+import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
+import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
 vi.mock("@/lib/trigger/fetchTriggerRuns", () => ({
   fetchTriggerRuns: vi.fn(),
@@ -12,10 +15,6 @@ vi.mock("@/lib/trigger/retrieveTaskRun", () => ({
 vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
   default: vi.fn(),
 }));
-
-import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
-import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
-import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
 const mockTask = {
   id: "task-123",

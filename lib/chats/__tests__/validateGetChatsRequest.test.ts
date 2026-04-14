@@ -4,7 +4,6 @@ import { validateGetChatsRequest } from "../validateGetChatsRequest";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
-import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 
 // Mock dependencies
 vi.mock("@/lib/auth/validateAuthContext", () => ({

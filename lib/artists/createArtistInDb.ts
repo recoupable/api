@@ -51,7 +51,7 @@ export async function createArtistInDb(
       ...artist,
       account_id: artist.id,
     };
-  } catch (error) {
+  } catch {
     return null;
   }
 }

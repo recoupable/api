@@ -18,17 +18,13 @@ export async function OPTIONS() {
 /**
  * GET /api/songs/analyze/presets
  *
- * Lists all available music analysis presets. Each preset is a curated
- * prompt with optimized generation parameters for a specific use case
- * (e.g. catalog metadata, sync licensing, audience profiling).
+ * Lists all available music analysis presets. Each preset is a curated prompt with
+ * optimized generation parameters for a specific use case (e.g. catalog metadata,
+ * sync licensing, audience profiling). Requires `x-api-key` or `Authorization: Bearer`.
  *
- * Authentication: x-api-key header or Authorization Bearer token required.
- *
- * Response (200):
- * - status: "success"
- * - presets: Array of { name, label, description, requiresAudio, responseFormat }
- *
- * @returns A NextResponse with the list of available presets
+ * @param request - The incoming request. Authentication only; no query or body params.
+ * @returns A 200 NextResponse with `{ status: "success", presets: Array<{ name, label,
+ *   description, requiresAudio, responseFormat }> }`, or 401 when unauthenticated.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   return getFlamingoPresetsHandler(request);
