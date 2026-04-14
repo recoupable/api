@@ -24,8 +24,16 @@ export const updateAccountBodySchema = z
   })
   .refine(
     data => {
-      const { accountId: _, ...fields } = data;
-      return Object.values(fields).some(v => v !== undefined);
+      return [
+        data.name,
+        data.instruction,
+        data.organization,
+        data.image,
+        data.jobTitle,
+        data.roleType,
+        data.companyName,
+        data.knowledges,
+      ].some(value => value !== undefined);
     },
     { message: "At least one field to update must be provided" },
   );

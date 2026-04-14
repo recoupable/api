@@ -1,6 +1,11 @@
 import { getModel } from "@/lib/ai/getModel";
 import { LanguageModelUsage } from "ai";
 
+type CompatibleLanguageModelUsage = LanguageModelUsage & {
+  promptTokens?: number;
+  completionTokens?: number;
+};
+
 /**
  * Calculates the total spend in USD for a given language model usage.
  * @param usage - The language model usage data
@@ -20,8 +25,9 @@ export const getCreditUsage = async (
 
     // LanguageModelUsage uses inputTokens/outputTokens (SDK v3)
     // or promptTokens/completionTokens (SDK v2 compatibility)
-    const inputTokens = (usage as any).inputTokens ?? (usage as any).promptTokens;
-    const outputTokens = (usage as any).outputTokens ?? (usage as any).completionTokens;
+    const usageWithCompatibility = usage as CompatibleLanguageModelUsage;
+    const inputTokens = usage.inputTokens ?? usageWithCompatibility.promptTokens;
+    const outputTokens = usage.outputTokens ?? usageWithCompatibility.completionTokens;
 
     if (!inputTokens || !outputTokens) {
       console.error("No tokens found in usage");

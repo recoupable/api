@@ -22,7 +22,8 @@ export async function getContentValidateHandler(request: NextRequest): Promise<N
       artistSlug: validated.artistSlug,
     });
 
-    const { githubRepo: _, ...publicReadiness } = readiness;
+    const publicReadiness = { ...readiness };
+    delete publicReadiness.githubRepo;
 
     return NextResponse.json(
       {

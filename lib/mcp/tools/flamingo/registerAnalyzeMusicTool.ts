@@ -58,7 +58,8 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
         return getToolResultError(result.error);
       }
 
-      const { type: _, ...data } = result;
+      const data = { ...result };
+      delete data.type;
       return getToolResultSuccess(data);
     },
   );

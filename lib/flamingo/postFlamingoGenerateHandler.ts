@@ -57,7 +57,8 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
   }
 
   // 4. Return flat response
-  const { type: _, ...data } = result;
+  const data = { ...result };
+  delete data.type;
   return NextResponse.json(
     { status: "success", ...data },
     { status: 200, headers: getCorsHeaders() },
