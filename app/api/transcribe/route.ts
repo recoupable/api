@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { processAudioTranscription } from "@/lib/transcribe/processAudioTranscription";
 import { formatTranscriptionError } from "@/lib/transcribe/types";
 
+/**
+ * POST /api/transcribe
+ *
+ * Transcribes a hosted audio file into text and persists both the audio and the
+ * transcript as files against the owner account and artist account. Unlike
+ * `/api/content/transcribe`, this endpoint writes the results to storage and
+ * returns file references in addition to the raw text.
+ *
+ * @param req - The incoming request with JSON body `{ audio_url, account_id,
+ *   artist_account_id, title?, include_timestamps? }`. All three ids are required.
+ * @returns A 200 NextResponse with `{ success, audioFile, transcriptFile, text,
+ *   language }`, 400 when a required field is missing, or the status/message
+ *   produced by `formatTranscriptionError` on downstream failures.
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

@@ -183,9 +183,7 @@ describe("updateArtistSocials", () => {
     mockSelectSocials.mockResolvedValue([]);
 
     // Mock insertSocials to return different IDs for each call
-    let insertCallCount = 0;
     mockInsertSocials.mockImplementation(socials => {
-      insertCallCount++;
       const social = socials[0];
       if (social.profile_url.includes("instagram")) {
         return Promise.resolve([
