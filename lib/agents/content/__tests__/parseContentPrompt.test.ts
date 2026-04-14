@@ -174,6 +174,37 @@ describe("parseContentPrompt", () => {
     expect(result.songs).toEqual(["hiccups"]);
   });
 
+  it("extracts artistName from prompt when specified", async () => {
+    const flags: ContentPromptFlags = {
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+      artistName: "Mac Miller",
+    };
+    mockGenerate.mockResolvedValue({ output: flags });
+
+    const result = await parseContentPrompt("make a video for Mac Miller");
+
+    expect(result.artistName).toBe("Mac Miller");
+  });
+
+  it("returns undefined artistName when no artist mentioned", async () => {
+    const flags: ContentPromptFlags = {
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+    };
+    mockGenerate.mockResolvedValue({ output: flags });
+
+    const result = await parseContentPrompt("make me a video");
+
+    expect(result.artistName).toBeUndefined();
+  });
+
   it("returns undefined songs when no songs mentioned", async () => {
     const flags: ContentPromptFlags = {
       lipsync: false,

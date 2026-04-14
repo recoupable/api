@@ -4,9 +4,12 @@ import { triggerPollContentRun } from "@/lib/trigger/triggerPollContentRun";
 import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
 import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadiness";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
+import { selectAccountByNameInOrg } from "@/lib/supabase/accounts/selectAccountByNameInOrg";
 import { parseContentPrompt } from "../parseContentPrompt";
 import { extractMessageAttachments } from "../extractMessageAttachments";
 import { buildTaskCard } from "@/lib/agents/buildTaskCard";
+
+const ACCOUNT_ID = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
 
 /**
  * Registers the onNewMention handler on the content agent bot.
@@ -19,16 +22,32 @@ import { buildTaskCard } from "@/lib/agents/buildTaskCard";
 export function registerOnNewMention(bot: ContentAgentBot) {
   bot.onNewMention(async (thread, message) => {
     try {
-      const accountId = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
-      const artistAccountId = "1873859c-dd37-4e9a-9bac-80d3558527a9";
+      const accountId = ACCOUNT_ID;
 
       // Parse the user's natural-language prompt into structured flags
-      const { lipsync, batch, captionLength, upscale, template, songs } = await parseContentPrompt(
-        message.text,
-      );
+      const { lipsync, batch, captionLength, upscale, template, songs, artistName } =
+        await parseContentPrompt(message.text);
 
       // Extract audio/image attachments from the Slack message
       const { songUrl, imageUrls } = await extractMessageAttachments(message);
+
+      // Resolve artist from name — no default artist
+      if (!artistName) {
+        await thread.post(
+          'Please specify an artist name in your prompt (e.g. "generate a video for Mac Miller").',
+        );
+        return;
+      }
+
+      const matchedAccounts = await selectAccountByNameInOrg(accountId, artistName);
+      if (matchedAccounts.length === 0) {
+        await thread.post(
+          `No artist found matching \`${artistName}\`. Please check the name and try again.`,
+        );
+        return;
+      }
+
+      const artistAccountId = matchedAccounts[0].id;
 
       // Resolve artist slug
       const artistSlug = await resolveArtistSlug(artistAccountId);
