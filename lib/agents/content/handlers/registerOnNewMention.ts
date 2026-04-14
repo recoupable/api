@@ -23,9 +23,8 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       const artistAccountId = "1873859c-dd37-4e9a-9bac-80d3558527a9";
 
       // Parse the user's natural-language prompt into structured flags
-      const { lipsync, batch, captionLength, upscale, template, songs } = await parseContentPrompt(
-        message.text,
-      );
+      const { lipsync, batch, captionLength, dsp, upscale, template, songs } =
+        await parseContentPrompt(message.text);
 
       // Extract audio/image attachments from the Slack message
       const { songUrl, imageUrls } = await extractMessageAttachments(message);
@@ -70,6 +69,7 @@ export function registerOnNewMention(bot: ContentAgentBot) {
         template,
         lipsync,
         captionLength,
+        dsp,
         upscale,
         githubRepo,
         ...(allSongs.length > 0 && { songs: allSongs }),

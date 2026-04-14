@@ -3,6 +3,7 @@ import { z } from "zod";
 import { LIGHTWEIGHT_MODEL } from "@/lib/const";
 import { CONTENT_TEMPLATES, DEFAULT_CONTENT_TEMPLATE } from "@/lib/content/contentTemplates";
 import { CAPTION_LENGTHS } from "@/lib/content/captionLengths";
+import { DSP_VALUES } from "@/lib/content/dspValues";
 import { songsSchema } from "@/lib/content/songsSchema";
 
 const templateNames = CONTENT_TEMPLATES.map(t => t.name) as [string, ...string[]];
@@ -31,6 +32,11 @@ export const contentPromptFlagsSchema = z.object({
     .describe(
       "Whether to upscale for higher quality. True when the prompt mentions high quality, HD, upscale, 4K, or premium.",
     ),
+  dsp: z
+    .enum(DSP_VALUES)
+    .describe(
+      "Which DSP (digital streaming platform) logo to overlay on the video. 'none' (default — no DSP logo), 'spotify', or 'apple'. Extract from phrases like 'for Spotify', 'Apple Music editorial', 'Spotify playlist'. If no DSP is mentioned, use 'none'.",
+    ),
   template: z.enum(templateNames).describe("Which visual template/scene to use for the video."),
   songs: songsSchema.describe(
     "Song names or slugs mentioned in the prompt. Extract from phrases like 'the hiccups song', 'use track X', 'for song Y'. Omit if no specific songs are mentioned.",
@@ -43,6 +49,7 @@ export const DEFAULT_CONTENT_PROMPT_FLAGS: ContentPromptFlags = {
   lipsync: false,
   batch: 1,
   captionLength: "none",
+  dsp: "none",
   upscale: false,
   template: DEFAULT_CONTENT_TEMPLATE,
 };
@@ -59,7 +66,7 @@ ${templateDescriptions}
 If no template is specified, default to "${DEFAULT_CONTENT_PROMPT_FLAGS.template}".
 If a parameter is not mentioned, use the default value.
 
-Defaults: lipsync=${DEFAULT_CONTENT_PROMPT_FLAGS.lipsync}, batch=${DEFAULT_CONTENT_PROMPT_FLAGS.batch}, captionLength="${DEFAULT_CONTENT_PROMPT_FLAGS.captionLength}", upscale=${DEFAULT_CONTENT_PROMPT_FLAGS.upscale}, template="${DEFAULT_CONTENT_PROMPT_FLAGS.template}"`;
+Defaults: lipsync=${DEFAULT_CONTENT_PROMPT_FLAGS.lipsync}, batch=${DEFAULT_CONTENT_PROMPT_FLAGS.batch}, captionLength="${DEFAULT_CONTENT_PROMPT_FLAGS.captionLength}", dsp="${DEFAULT_CONTENT_PROMPT_FLAGS.dsp}", upscale=${DEFAULT_CONTENT_PROMPT_FLAGS.upscale}, template="${DEFAULT_CONTENT_PROMPT_FLAGS.template}"`;
 
 /**
  * Creates a ToolLoopAgent configured for parsing content creation prompts.

@@ -9,6 +9,7 @@ import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
 import { songsSchema } from "@/lib/content/songsSchema";
 
 import { CAPTION_LENGTHS, type CaptionLength } from "@/lib/content/captionLengths";
+import { DSP_VALUES, type DspValue } from "@/lib/content/dspValues";
 
 export const createContentBodySchema = z.object({
   artist_account_id: z
@@ -17,6 +18,7 @@ export const createContentBodySchema = z.object({
   template: z.string().min(1, "template cannot be empty").optional(),
   lipsync: z.boolean().optional().default(false),
   caption_length: z.enum(CAPTION_LENGTHS).optional().default("none"),
+  dsp: z.enum(DSP_VALUES).optional().default("none"),
   upscale: z.boolean().optional().default(false),
   batch: z.number().int().min(1).max(30).optional().default(1),
   songs: songsSchema,
@@ -30,6 +32,7 @@ export type ValidatedCreateContentBody = {
   template?: string;
   lipsync: boolean;
   captionLength: CaptionLength;
+  dsp: DspValue;
   upscale: boolean;
   batch: number;
   songs?: string[];
@@ -92,6 +95,7 @@ export async function validateCreateContentBody(
     template,
     lipsync: result.data.lipsync ?? false,
     captionLength: result.data.caption_length,
+    dsp: result.data.dsp,
     upscale: result.data.upscale ?? false,
     batch: result.data.batch ?? 1,
     songs: result.data.songs,
