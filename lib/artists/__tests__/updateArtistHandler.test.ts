@@ -8,6 +8,7 @@ import { insertAccountInfo } from "@/lib/supabase/account_info/insertAccountInfo
 import { updateAccountInfo } from "@/lib/supabase/account_info/updateAccountInfo";
 import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
 import { selectAccountWithArtistDetails } from "@/lib/supabase/accounts/selectAccountWithArtistDetails";
+import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
 import { setAccountArtistPin } from "@/lib/supabase/account_artist_ids/setAccountArtistPin";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -40,6 +41,10 @@ vi.mock("@/lib/artist/updateArtistSocials", () => ({
 
 vi.mock("@/lib/supabase/accounts/selectAccountWithArtistDetails", () => ({
   selectAccountWithArtistDetails: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/account_artist_ids/selectAccountArtistId", () => ({
+  selectAccountArtistId: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/account_artist_ids/setAccountArtistPin", () => ({
@@ -201,6 +206,9 @@ describe("updateArtistHandler", () => {
         },
       ],
       account_socials: [],
+    } as never);
+    vi.mocked(selectAccountArtistId).mockResolvedValue({
+      artist_id: artistId,
       pinned: true,
     } as never);
 
@@ -213,7 +221,8 @@ describe("updateArtistHandler", () => {
 
     expect(response.status).toBe(200);
     expect(setAccountArtistPin).not.toHaveBeenCalled();
-    expect(selectAccountWithArtistDetails).toHaveBeenCalledWith(artistId, requesterAccountId);
+    expect(selectAccountWithArtistDetails).toHaveBeenCalledWith(artistId);
+    expect(selectAccountArtistId).toHaveBeenCalledWith(requesterAccountId, artistId);
     expect(body.artist.pinned).toBe(true);
   });
 
@@ -236,6 +245,9 @@ describe("updateArtistHandler", () => {
       name: "Artist",
       account_info: [],
       account_socials: [],
+    } as never);
+    vi.mocked(selectAccountArtistId).mockResolvedValue({
+      artist_id: artistId,
       pinned: true,
     } as never);
 
@@ -274,6 +286,9 @@ describe("updateArtistHandler", () => {
       name: "Artist",
       account_info: [],
       account_socials: [],
+    } as never);
+    vi.mocked(selectAccountArtistId).mockResolvedValue({
+      artist_id: artistId,
       pinned: false,
     } as never);
 

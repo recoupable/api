@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
 import { getFormattedArtist } from "@/lib/artists/getFormattedArtist";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
 import { setAccountArtistPin } from "@/lib/supabase/account_artist_ids/setAccountArtistPin";
 import { insertAccountInfo } from "@/lib/supabase/account_info/insertAccountInfo";
 import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
@@ -81,7 +82,10 @@ export async function updateArtistHandler(
       });
     }
 
-    const updatedArtist = await selectAccountWithArtistDetails(artistId, requesterAccountId);
+    const [updatedArtist, pinRow] = await Promise.all([
+      selectAccountWithArtistDetails(artistId),
+      selectAccountArtistId(requesterAccountId, artistId),
+    ]);
 
     if (!updatedArtist) {
       return NextResponse.json(
@@ -98,7 +102,7 @@ export async function updateArtistHandler(
 
     return NextResponse.json(
       {
-        artist: getFormattedArtist(updatedArtist),
+        artist: getFormattedArtist({ ...updatedArtist, pinned: pinRow?.pinned ?? false }),
       },
       {
         status: 200,
