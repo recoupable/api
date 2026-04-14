@@ -1,11 +1,11 @@
 export interface TriggerRun {
+  [key: string]: unknown;
   id: string;
   status: string;
   createdAt: string;
   startedAt: string | null;
   finishedAt: string | null;
   durationMs: number | null;
-  [key: string]: unknown;
 }
 
 export type TriggerRunFilter = { "filter[tag]": string } | { "filter[schedule]": string };

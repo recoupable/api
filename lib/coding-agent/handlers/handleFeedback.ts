@@ -1,5 +1,5 @@
 import type { Thread } from "chat";
-import { buildTaskCard } from "../buildTaskCard";
+import { buildTaskCard } from "@/lib/agents/buildTaskCard";
 import { triggerUpdatePR } from "@/lib/trigger/triggerUpdatePR";
 import { setCodingAgentPRState } from "../prState";
 import type { CodingAgentThreadState } from "../types";

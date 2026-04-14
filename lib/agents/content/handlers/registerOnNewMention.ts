@@ -6,6 +6,7 @@ import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadine
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { parseContentPrompt } from "../parseContentPrompt";
 import { extractMessageAttachments } from "../extractMessageAttachments";
+import { buildTaskCard } from "@/lib/agents/buildTaskCard";
 
 /**
  * Registers the onNewMention handler on the content agent bot.
@@ -59,26 +60,6 @@ export function registerOnNewMention(bot: ContentAgentBot) {
         githubRepo = repo;
       }
 
-      // Post acknowledgment
-      const details = [
-        `- Artist: *${artistSlug}*`,
-        `- Template: ${template}`,
-        `- Videos: ${batch}`,
-        `- Lipsync: ${lipsync ? "yes" : "no"}`,
-      ];
-      if (songs && songs.length > 0) {
-        details.push(`- Songs: ${songs.join(", ")}`);
-      }
-      if (songUrl) {
-        details.push("- Audio: attached file");
-      }
-      if (imageUrls.length > 0) {
-        details.push(`- Images: ${imageUrls.length} attached`);
-      }
-      await thread.post(
-        `Generating content...\n${details.join("\n")}\n\nI'll reply here when ready (~5-10 min).`,
-      );
-
       // Build songs array: merge parsed slugs with attached audio URL
       const allSongs = [...(songs ?? []), ...(songUrl ? [songUrl] : [])];
 
@@ -106,6 +87,29 @@ export function registerOnNewMention(bot: ContentAgentBot) {
         await thread.post("Failed to trigger content creation. Please try again.");
         return;
       }
+
+      // Post View Task card with details and the first run ID
+      const details = [
+        `- Artist: *${artistSlug}*`,
+        `- Template: ${template}`,
+        `- Videos: ${batch}`,
+        `- Lipsync: ${lipsync ? "yes" : "no"}`,
+      ];
+      if (songs && songs.length > 0) {
+        details.push(`- Songs: ${songs.join(", ")}`);
+      }
+      if (songUrl) {
+        details.push("- Audio: attached file");
+      }
+      if (imageUrls.length > 0) {
+        details.push(`- Images: ${imageUrls.length} attached`);
+      }
+      const card = buildTaskCard(
+        "Content Generation Started",
+        `Generating content for *${artistSlug}*...\n${details.join("\n")}\n\nI'll reply here when ready (~5-10 min).`,
+        runIds[0],
+      );
+      await thread.post({ card });
 
       // Set thread state
       await thread.setState({

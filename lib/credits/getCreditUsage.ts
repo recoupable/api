@@ -18,10 +18,7 @@ export const getCreditUsage = async (
       return 0;
     }
 
-    // LanguageModelUsage uses inputTokens/outputTokens (SDK v3)
-    // or promptTokens/completionTokens (SDK v2 compatibility)
-    const inputTokens = (usage as any).inputTokens ?? (usage as any).promptTokens;
-    const outputTokens = (usage as any).outputTokens ?? (usage as any).completionTokens;
+    const { inputTokens, outputTokens } = usage;
 
     if (!inputTokens || !outputTokens) {
       console.error("No tokens found in usage");

@@ -11,7 +11,7 @@ vi.mock("../createContentPromptAgent", () => ({
   DEFAULT_CONTENT_PROMPT_FLAGS: {
     lipsync: false,
     batch: 1,
-    captionLength: "short",
+    captionLength: "none",
     upscale: false,
     template: "artist-caption-bedroom",
   },
@@ -138,7 +138,7 @@ describe("parseContentPrompt", () => {
     expect(result).toEqual({
       lipsync: false,
       batch: 1,
-      captionLength: "short",
+      captionLength: "none",
       upscale: false,
       template: "artist-caption-bedroom",
     });
@@ -152,7 +152,7 @@ describe("parseContentPrompt", () => {
     expect(result).toEqual({
       lipsync: false,
       batch: 1,
-      captionLength: "short",
+      captionLength: "none",
       upscale: false,
       template: "artist-caption-bedroom",
     });

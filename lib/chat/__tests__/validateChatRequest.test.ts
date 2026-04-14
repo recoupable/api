@@ -3,10 +3,6 @@ import { NextResponse } from "next/server";
 import { validateChatRequest, chatRequestSchema } from "../validateChatRequest";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { generateUUID } from "@/lib/uuid/generateUUID";
-import { createNewRoom } from "@/lib/chat/createNewRoom";
-import insertMemories from "@/lib/supabase/memories/insertMemories";
-import filterMessageContentForMemories from "@/lib/messages/filterMessageContentForMemories";
 import { setupConversation } from "@/lib/chat/setupConversation";
 
 // Mock dependencies
@@ -39,10 +35,6 @@ vi.mock("@/lib/chat/setupConversation", () => ({
 }));
 
 const mockValidateAuthContext = vi.mocked(validateAuthContext);
-const mockGenerateUUID = vi.mocked(generateUUID);
-const mockCreateNewRoom = vi.mocked(createNewRoom);
-const mockInsertMemories = vi.mocked(insertMemories);
-const mockFilterMessageContentForMemories = vi.mocked(filterMessageContentForMemories);
 const mockSetupConversation = vi.mocked(setupConversation);
 
 // Helper to create mock NextRequest

@@ -1,5 +1,5 @@
 import type { CodingAgentBot } from "../bot";
-import { buildTaskCard } from "../buildTaskCard";
+import { buildTaskCard } from "@/lib/agents/buildTaskCard";
 import { triggerCodingAgent } from "@/lib/trigger/triggerCodingAgent";
 import { resolvePRState } from "../resolvePRState";
 import { handleFeedback } from "./handleFeedback";

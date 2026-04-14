@@ -29,8 +29,8 @@ describe("getCreditUsage", () => {
       } as any);
 
       const usage = {
-        promptTokens: 1000,
-        completionTokens: 500,
+        inputTokens: 1000,
+        outputTokens: 500,
       };
 
       const cost = await getCreditUsage(usage, "gpt-4");
@@ -43,8 +43,8 @@ describe("getCreditUsage", () => {
       mockGetModel.mockResolvedValue(undefined);
 
       const usage = {
-        promptTokens: 1000,
-        completionTokens: 500,
+        inputTokens: 1000,
+        outputTokens: 500,
       };
 
       const cost = await getCreditUsage(usage, "unknown-model");
@@ -52,7 +52,7 @@ describe("getCreditUsage", () => {
       expect(cost).toBe(0);
     });
 
-    it("returns 0 when promptTokens is undefined", async () => {
+    it("returns 0 when inputTokens is undefined", async () => {
       mockGetModel.mockResolvedValue({
         id: "gpt-4",
         pricing: {
@@ -62,8 +62,8 @@ describe("getCreditUsage", () => {
       } as any);
 
       const usage = {
-        promptTokens: undefined as unknown as number,
-        completionTokens: 500,
+        inputTokens: undefined as unknown as number,
+        outputTokens: 500,
       };
 
       const cost = await getCreditUsage(usage, "gpt-4");
@@ -71,7 +71,7 @@ describe("getCreditUsage", () => {
       expect(cost).toBe(0);
     });
 
-    it("returns 0 when completionTokens is undefined", async () => {
+    it("returns 0 when outputTokens is undefined", async () => {
       mockGetModel.mockResolvedValue({
         id: "gpt-4",
         pricing: {
@@ -81,8 +81,8 @@ describe("getCreditUsage", () => {
       } as any);
 
       const usage = {
-        promptTokens: 1000,
-        completionTokens: undefined as unknown as number,
+        inputTokens: 1000,
+        outputTokens: undefined as unknown as number,
       };
 
       const cost = await getCreditUsage(usage, "gpt-4");
@@ -97,8 +97,8 @@ describe("getCreditUsage", () => {
       } as any);
 
       const usage = {
-        promptTokens: 1000,
-        completionTokens: 500,
+        inputTokens: 1000,
+        outputTokens: 500,
       };
 
       const cost = await getCreditUsage(usage, "gpt-4");
@@ -117,8 +117,8 @@ describe("getCreditUsage", () => {
       } as any);
 
       const usage = {
-        promptTokens: 0,
-        completionTokens: 0,
+        inputTokens: 0,
+        outputTokens: 0,
       };
 
       const cost = await getCreditUsage(usage, "gpt-4");
@@ -130,8 +130,8 @@ describe("getCreditUsage", () => {
       mockGetModel.mockRejectedValue(new Error("API error"));
 
       const usage = {
-        promptTokens: 1000,
-        completionTokens: 500,
+        inputTokens: 1000,
+        outputTokens: 500,
       };
 
       const cost = await getCreditUsage(usage, "gpt-4");
