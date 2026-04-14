@@ -12,8 +12,10 @@ import { handleGitHubWebhook } from "@/lib/coding-agent/handleGitHubWebhook";
  * @param request - The incoming GitHub webhook POST. Headers `X-GitHub-Event` and
  *   `X-Hub-Signature-256` are required; the JSON body is the raw GitHub event
  *   payload (typically `issue_comment`).
- * @returns A 200 NextResponse with `{ ok: true }` when the event is accepted or
- *   ignored, 401 when the signature is missing or invalid, or 500 on internal error.
+ * @returns A NextResponse JSON payload with a `status` field indicating outcome
+ *   (`update_triggered`, `ignored`, `busy`, `no_state`, or `updating`) on 200;
+ *   `{ status: "error", error }` with 401 when signature validation fails; and
+ *   `{ status: "error", error }` with 500 on internal failure.
  */
 export async function POST(request: NextRequest) {
   return handleGitHubWebhook(request);
