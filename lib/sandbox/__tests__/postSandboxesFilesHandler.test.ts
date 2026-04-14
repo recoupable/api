@@ -205,7 +205,6 @@ describe("postSandboxesFilesHandler", () => {
     });
 
     const result = await postSandboxesFilesHandler(mockRequest);
-    const body = await result.json();
 
     expect(result.status).toBe(500);
     // Blobs are always cleaned up to allow retries

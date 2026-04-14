@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
-import { ToolLoopAgent, stepCountIs } from "ai";
+import { ToolLoopAgent } from "ai";
 
 // Import after mocks
 import getGeneralAgent from "../getGeneralAgent";

@@ -1,6 +1,6 @@
 export interface TemplateEditOperation {
-  type: string;
   [key: string]: unknown;
+  type: string;
 }
 
 export interface Template {

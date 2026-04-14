@@ -4,7 +4,6 @@ import { getChatsHandler } from "../getChatsHandler";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
-import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 import { selectRooms } from "@/lib/supabase/rooms/selectRooms";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
