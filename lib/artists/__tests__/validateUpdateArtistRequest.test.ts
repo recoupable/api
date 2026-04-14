@@ -26,6 +26,12 @@ vi.mock("@/lib/networking/safeParseJson", () => ({
   safeParseJson: vi.fn(async (req: Request) => req.json()),
 }));
 
+/**
+ * Build a PATCH NextRequest with the given JSON body.
+ *
+ * @param body - JSON body to send with the PATCH request
+ * @returns A NextRequest targeting /api/artists/{id}
+ */
 function createRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/artists/550e8400-e29b-41d4-a716-446655440000", {
     method: "PATCH",
@@ -92,6 +98,40 @@ describe("validateUpdateArtistRequest", () => {
           INSTAGRAM: "https://instagram.com/updated_artist",
         },
       });
+    }
+  });
+
+  it("accepts a pinned-only payload", async () => {
+    const request = createRequest({ pinned: true });
+
+    const result = await validateUpdateArtistRequest(request, artistId);
+
+    expect(result).not.toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) {
+      expect(result.pinned).toBe(true);
+      expect(result.artistId).toBe(artistId);
+    }
+  });
+
+  it("accepts pinned: false", async () => {
+    const request = createRequest({ pinned: false });
+
+    const result = await validateUpdateArtistRequest(request, artistId);
+
+    expect(result).not.toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) {
+      expect(result.pinned).toBe(false);
+    }
+  });
+
+  it("rejects non-boolean pinned values", async () => {
+    const request = createRequest({ pinned: "yes" });
+
+    const result = await validateUpdateArtistRequest(request, artistId);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(400);
     }
   });
 

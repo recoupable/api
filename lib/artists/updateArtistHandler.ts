@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
 import { getFormattedArtist } from "@/lib/artists/getFormattedArtist";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { setAccountArtistPin } from "@/lib/supabase/account_artist_ids/setAccountArtistPin";
 import { insertAccountInfo } from "@/lib/supabase/account_info/insertAccountInfo";
 import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
 import { updateAccountInfo } from "@/lib/supabase/account_info/updateAccountInfo";
@@ -11,6 +12,10 @@ import { validateUpdateArtistRequest } from "./validateUpdateArtistRequest";
 
 /**
  * Handles PATCH /api/artists/{id}.
+ *
+ * @param request - The incoming request
+ * @param params - Route params containing the artist account ID
+ * @returns A NextResponse with the updated artist payload or an error
  */
 export async function updateArtistHandler(
   request: NextRequest,
@@ -24,7 +29,17 @@ export async function updateArtistHandler(
       return validated;
     }
 
-    const { artistId, name, image, instruction, label, knowledges, profileUrls } = validated;
+    const {
+      artistId,
+      requesterAccountId,
+      name,
+      image,
+      instruction,
+      label,
+      knowledges,
+      profileUrls,
+      pinned,
+    } = validated;
 
     if (name) {
       await updateAccount(artistId, { name });
@@ -58,7 +73,15 @@ export async function updateArtistHandler(
       await updateArtistSocials(artistId, profileUrls);
     }
 
-    const updatedArtist = await selectAccountWithArtistDetails(artistId);
+    if (pinned !== undefined) {
+      await setAccountArtistPin({
+        accountId: requesterAccountId,
+        artistId,
+        pinned,
+      });
+    }
+
+    const updatedArtist = await selectAccountWithArtistDetails(artistId, requesterAccountId);
 
     if (!updatedArtist) {
       return NextResponse.json(

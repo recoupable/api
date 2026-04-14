@@ -10,7 +10,7 @@ import supabase from "../serverClient";
 export async function selectAccountArtistId(accountId: string, artistId: string) {
   const { data, error } = await supabase
     .from("account_artist_ids")
-    .select("artist_id")
+    .select("artist_id, pinned")
     .eq("account_id", accountId)
     .eq("artist_id", artistId)
     .maybeSingle();

@@ -16,6 +16,7 @@ export const updateArtistBodySchema = z
     label: z.string().optional(),
     knowledges: z.array(knowledgeSchema).optional(),
     profileUrls: z.record(z.string(), z.string()).optional(),
+    pinned: z.boolean().optional(),
   })
   .refine(data => Object.values(data).some(value => value !== undefined), {
     message: "At least one field to update must be provided",
@@ -30,6 +31,10 @@ export type ValidatedUpdateArtistRequest = UpdateArtistBody & {
 
 /**
  * Validates PATCH /api/artists/{id} path params, auth, access, and body.
+ *
+ * @param request - The incoming request
+ * @param id - The artist account ID from the route
+ * @returns The validated update payload, or a NextResponse error
  */
 export async function validateUpdateArtistRequest(
   request: NextRequest,

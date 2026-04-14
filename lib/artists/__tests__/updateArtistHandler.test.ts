@@ -8,6 +8,7 @@ import { insertAccountInfo } from "@/lib/supabase/account_info/insertAccountInfo
 import { updateAccountInfo } from "@/lib/supabase/account_info/updateAccountInfo";
 import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
 import { selectAccountWithArtistDetails } from "@/lib/supabase/accounts/selectAccountWithArtistDetails";
+import { setAccountArtistPin } from "@/lib/supabase/account_artist_ids/setAccountArtistPin";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -39,6 +40,10 @@ vi.mock("@/lib/artist/updateArtistSocials", () => ({
 
 vi.mock("@/lib/supabase/accounts/selectAccountWithArtistDetails", () => ({
   selectAccountWithArtistDetails: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/account_artist_ids/setAccountArtistPin", () => ({
+  setAccountArtistPin: vi.fn(),
 }));
 
 describe("updateArtistHandler", () => {
@@ -165,6 +170,122 @@ describe("updateArtistHandler", () => {
           type: "INSTAGRAM",
         },
       ],
+      pinned: false,
+    });
+  });
+
+  it("preserves an already-pinned artist when only the name is updated (regression)", async () => {
+    const requesterAccountId = "660e8400-e29b-41d4-a716-446655440000";
+    vi.mocked(validateUpdateArtistRequest).mockResolvedValue({
+      artistId,
+      requesterAccountId,
+      name: "Renamed Only",
+    });
+    vi.mocked(selectAccountInfo).mockResolvedValue({
+      account_id: artistId,
+      image: null,
+      instruction: null,
+      knowledges: null,
+      label: null,
+    } as never);
+    vi.mocked(selectAccountWithArtistDetails).mockResolvedValue({
+      id: artistId,
+      name: "Renamed Only",
+      account_info: [
+        {
+          account_id: artistId,
+          image: null,
+          instruction: null,
+          knowledges: null,
+          label: null,
+        },
+      ],
+      account_socials: [],
+      pinned: true,
+    } as never);
+
+    const request = new NextRequest(`http://localhost/api/artists/${artistId}`, {
+      method: "PATCH",
+    });
+
+    const response = await updateArtistHandler(request, Promise.resolve({ id: artistId }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(setAccountArtistPin).not.toHaveBeenCalled();
+    expect(selectAccountWithArtistDetails).toHaveBeenCalledWith(artistId, requesterAccountId);
+    expect(body.artist.pinned).toBe(true);
+  });
+
+  it("persists pin state via setAccountArtistPin when pinned is provided", async () => {
+    const requesterAccountId = "660e8400-e29b-41d4-a716-446655440000";
+    vi.mocked(validateUpdateArtistRequest).mockResolvedValue({
+      artistId,
+      requesterAccountId,
+      pinned: true,
+    });
+    vi.mocked(selectAccountInfo).mockResolvedValue({
+      account_id: artistId,
+      image: null,
+      instruction: null,
+      knowledges: null,
+      label: null,
+    } as never);
+    vi.mocked(selectAccountWithArtistDetails).mockResolvedValue({
+      id: artistId,
+      name: "Artist",
+      account_info: [],
+      account_socials: [],
+      pinned: true,
+    } as never);
+
+    const request = new NextRequest(`http://localhost/api/artists/${artistId}`, {
+      method: "PATCH",
+    });
+
+    const response = await updateArtistHandler(request, Promise.resolve({ id: artistId }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(setAccountArtistPin).toHaveBeenCalledWith({
+      accountId: requesterAccountId,
+      artistId,
+      pinned: true,
+    });
+    expect(body.artist.pinned).toBe(true);
+  });
+
+  it("writes pinned: false when explicitly unpinning", async () => {
+    const requesterAccountId = "660e8400-e29b-41d4-a716-446655440000";
+    vi.mocked(validateUpdateArtistRequest).mockResolvedValue({
+      artistId,
+      requesterAccountId,
+      pinned: false,
+    });
+    vi.mocked(selectAccountInfo).mockResolvedValue({
+      account_id: artistId,
+      image: null,
+      instruction: null,
+      knowledges: null,
+      label: null,
+    } as never);
+    vi.mocked(selectAccountWithArtistDetails).mockResolvedValue({
+      id: artistId,
+      name: "Artist",
+      account_info: [],
+      account_socials: [],
+      pinned: false,
+    } as never);
+
+    const request = new NextRequest(`http://localhost/api/artists/${artistId}`, {
+      method: "PATCH",
+    });
+
+    await updateArtistHandler(request, Promise.resolve({ id: artistId }));
+
+    expect(setAccountArtistPin).toHaveBeenCalledWith({
+      accountId: requesterAccountId,
+      artistId,
       pinned: false,
     });
   });
