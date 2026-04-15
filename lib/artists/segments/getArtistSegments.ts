@@ -1,9 +1,17 @@
 import { selectArtistSegmentsCount } from "@/lib/supabase/artist_segments/selectArtistSegmentsCount";
 import { selectArtistSegmentsWithDetails } from "@/lib/supabase/artist_segments/selectArtistSegmentsWithDetails";
-import type { ArtistSegmentsQuery } from "@/lib/artist/validateArtistSegmentsQuery";
-import { mapArtistSegments, type MappedArtistSegment } from "@/lib/artist/mapArtistSegments";
+import {
+  mapArtistSegments,
+  type MappedArtistSegment,
+} from "@/lib/artists/segments/mapArtistSegments";
 
-interface GetArtistSegmentsResponse {
+export interface GetArtistSegmentsParams {
+  artist_account_id: string;
+  page: number;
+  limit: number;
+}
+
+export interface GetArtistSegmentsResponse {
   status: "success" | "error";
   segments: MappedArtistSegment[];
   pagination: {
@@ -15,11 +23,17 @@ interface GetArtistSegmentsResponse {
   message?: string;
 }
 
+/**
+ * Fetches paginated segments for the given artist account.
+ *
+ * @param params - Artist account ID plus pagination controls
+ * @returns The paginated segments response envelope
+ */
 export const getArtistSegments = async ({
   artist_account_id,
   page,
   limit,
-}: ArtistSegmentsQuery): Promise<GetArtistSegmentsResponse> => {
+}: GetArtistSegmentsParams): Promise<GetArtistSegmentsResponse> => {
   try {
     const offset = (page - 1) * limit;
 

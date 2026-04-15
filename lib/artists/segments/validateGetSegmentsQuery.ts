@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { z } from "zod";
 
-export const artistSegmentsQuerySchema = z.object({
-  artist_account_id: z.string().min(1, "artist_account_id parameter is required"),
+export const getSegmentsQuerySchema = z.object({
   page: z
     .string()
     .optional()
@@ -18,20 +17,23 @@ export const artistSegmentsQuerySchema = z.object({
     .pipe(z.number().int().min(1).max(100)),
 });
 
-export type ArtistSegmentsQuery = z.infer<typeof artistSegmentsQuerySchema>;
+export type GetSegmentsQuery = z.infer<typeof getSegmentsQuerySchema>;
 
 /**
- * Validates artist segments query parameters.
+ * Validates query parameters for GET /api/artists/{id}/segments.
+ *
+ * The artist account ID is taken from the route path, so it is not part of the
+ * query schema. Only `page` and `limit` are accepted.
  *
  * @param searchParams - The URL search parameters to validate.
  * @returns A NextResponse with an error if validation fails, or the validated query parameters if validation passes.
  */
-export function validateArtistSegmentsQuery(
+export function validateGetSegmentsQuery(
   searchParams: URLSearchParams,
-): NextResponse | ArtistSegmentsQuery {
+): NextResponse | GetSegmentsQuery {
   const params = Object.fromEntries(searchParams.entries());
 
-  const validationResult = artistSegmentsQuerySchema.safeParse(params);
+  const validationResult = getSegmentsQuerySchema.safeParse(params);
 
   if (!validationResult.success) {
     const firstError = validationResult.error.issues[0];

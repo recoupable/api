@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getArtistSegmentsHandler } from "@/lib/artist/getArtistSegmentsHandler";
+import { getArtistSegmentsHandler } from "@/lib/artists/segments/getArtistSegmentsHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -15,18 +15,19 @@ export async function OPTIONS() {
 }
 
 /**
- * GET /api/artist/segments
+ * GET /api/artists/{id}/segments
  *
- * Retrieves all segments associated with an artist account.
+ * Retrieves paginated segments for the artist identified by the path `id`.
  *
  * Query parameters:
- * - artist_account_id (required): The unique identifier of the artist account
  * - page (optional): Page number for pagination (default: 1)
  * - limit (optional): Number of segments per page (default: 20, max: 100)
  *
- * @param request - The request object containing query parameters.
+ * @param request - The incoming request
+ * @param options - Route options containing params
+ * @param options.params - Route params containing the artist account ID
  * @returns A NextResponse with segments and pagination metadata.
  */
-export async function GET(request: NextRequest) {
-  return getArtistSegmentsHandler(request);
+export async function GET(request: NextRequest, options: { params: Promise<{ id: string }> }) {
+  return getArtistSegmentsHandler(request, options.params);
 }
