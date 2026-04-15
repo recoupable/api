@@ -9,7 +9,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
  *
  * @param request - The incoming HTTP request.
  */
-export async function requireArtist(
+export async function validateArtistRequest(
   request: NextRequest,
 ): Promise<NextResponse | { accountId: string; artist: string }> {
   const authResult = await validateAuthContext(request);

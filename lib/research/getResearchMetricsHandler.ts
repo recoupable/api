@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { requireArtist } from "@/lib/research/requireArtist";
+import { validateGetResearchMetricsRequest } from "@/lib/research/validateGetResearchMetricsRequest";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { successResponse } from "@/lib/networking/successResponse";
 import { errorResponse } from "@/lib/networking/errorResponse";
@@ -15,49 +15,26 @@ import { errorResponse } from "@/lib/networking/errorResponse";
  * @param request - The incoming HTTP request.
  * @returns The JSON response.
  */
-export async function getResearchMetricsHandler(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const source = searchParams.get("source");
+export async function getResearchMetricsHandler(request: NextRequest): Promise<NextResponse> {
+  try {
+    const validated = await validateGetResearchMetricsRequest(request);
+    if (validated instanceof NextResponse) return validated;
 
-  if (!source) {
-    return errorResponse("source parameter is required", 400);
+    const result = await handleArtistResearch({
+      artist: validated.artist,
+      accountId: validated.accountId,
+      path: cmId => `/artist/${cmId}/stat/${validated.source}`,
+    });
+
+    if ("error" in result) return errorResponse(result.error, result.status);
+    const data = result.data;
+    const body =
+      typeof data === "object" && data !== null && !Array.isArray(data)
+        ? (data as Record<string, unknown>)
+        : { data };
+    return successResponse(body);
+  } catch (error) {
+    console.error("[ERROR] getResearchMetricsHandler:", error);
+    return errorResponse("Internal error", 500);
   }
-
-  const VALID_SOURCES = [
-    "spotify",
-    "instagram",
-    "tiktok",
-    "twitter",
-    "facebook",
-    "youtube_channel",
-    "youtube_artist",
-    "soundcloud",
-    "deezer",
-    "twitch",
-    "line",
-    "melon",
-    "wikipedia",
-    "bandsintown",
-  ];
-
-  if (!VALID_SOURCES.includes(source)) {
-    return errorResponse(`Invalid source. Must be one of: ${VALID_SOURCES.join(", ")}`, 400);
-  }
-
-  const gate = await requireArtist(request);
-  if (gate instanceof NextResponse) return gate;
-
-  const result = await handleArtistResearch({
-    artist: gate.artist,
-    accountId: gate.accountId,
-    path: cmId => `/artist/${cmId}/stat/${source}`,
-  });
-
-  if ("error" in result) return errorResponse(result.error, result.status);
-  const data = result.data;
-  const body =
-    typeof data === "object" && data !== null && !Array.isArray(data)
-      ? (data as Record<string, unknown>)
-      : { data };
-  return successResponse(body);
 }

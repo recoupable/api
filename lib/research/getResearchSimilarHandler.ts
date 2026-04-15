@@ -1,11 +1,9 @@
 import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { requireArtist } from "@/lib/research/requireArtist";
+import { validateGetResearchSimilarRequest } from "@/lib/research/validateGetResearchSimilarRequest";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { successResponse } from "@/lib/networking/successResponse";
 import { errorResponse } from "@/lib/networking/errorResponse";
-
-const CONFIG_PARAMS = ["audience", "genre", "mood", "musicality"] as const;
 
 /**
  * GET /api/research/similar
@@ -18,30 +16,34 @@ const CONFIG_PARAMS = ["audience", "genre", "mood", "musicality"] as const;
  * @param request - The incoming HTTP request.
  * @returns The JSON response.
  */
-export async function getResearchSimilarHandler(request: NextRequest) {
-  const gate = await requireArtist(request);
-  if (gate instanceof NextResponse) return gate;
+export async function getResearchSimilarHandler(request: NextRequest): Promise<NextResponse> {
+  try {
+    const validated = await validateGetResearchSimilarRequest(request);
+    if (validated instanceof NextResponse) return validated;
 
-  const { searchParams } = new URL(request.url);
-  const query: Record<string, string> = {};
-  for (const key of CONFIG_PARAMS) {
-    const val = searchParams.get(key);
-    query[key] = val || "medium";
+    const query: Record<string, string> = {
+      audience: validated.audience,
+      genre: validated.genre,
+      mood: validated.mood,
+      musicality: validated.musicality,
+    };
+    if (validated.limit) query.limit = validated.limit;
+
+    const result = await handleArtistResearch({
+      artist: validated.artist,
+      accountId: validated.accountId,
+      path: cmId => `/artist/${cmId}/similar-artists/by-configurations`,
+      query,
+    });
+
+    if ("error" in result) return errorResponse(result.error, result.status);
+    const data = result.data;
+    return successResponse({
+      artists: Array.isArray(data) ? data : (data as Record<string, unknown>)?.data || [],
+      total: (data as Record<string, unknown>)?.total,
+    });
+  } catch (error) {
+    console.error("[ERROR] getResearchSimilarHandler:", error);
+    return errorResponse("Internal error", 500);
   }
-  const limit = searchParams.get("limit");
-  if (limit) query.limit = limit;
-
-  const result = await handleArtistResearch({
-    artist: gate.artist,
-    accountId: gate.accountId,
-    path: cmId => `/artist/${cmId}/similar-artists/by-configurations`,
-    query,
-  });
-
-  if ("error" in result) return errorResponse(result.error, result.status);
-  const data = result.data;
-  return successResponse({
-    artists: Array.isArray(data) ? data : (data as Record<string, unknown>)?.data || [],
-    total: (data as Record<string, unknown>)?.total,
-  });
 }
