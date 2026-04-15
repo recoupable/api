@@ -1,6 +1,8 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
+import { type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { requireArtist } from "@/lib/research/requireArtist";
+import { getArtistResearch } from "@/lib/research/getArtistResearch";
+import { jsonSuccess, jsonError } from "@/lib/networking/jsonResponse";
 
 /**
  * GET /api/research/metrics
@@ -17,10 +19,7 @@ export async function getResearchMetricsHandler(request: NextRequest) {
   const source = searchParams.get("source");
 
   if (!source) {
-    return NextResponse.json(
-      { status: "error", error: "source parameter is required" },
-      { status: 400, headers: getCorsHeaders() },
-    );
+    return jsonError(400, "source parameter is required");
   }
 
   const VALID_SOURCES = [
@@ -41,11 +40,23 @@ export async function getResearchMetricsHandler(request: NextRequest) {
   ];
 
   if (!VALID_SOURCES.includes(source)) {
-    return NextResponse.json(
-      { status: "error", error: `Invalid source. Must be one of: ${VALID_SOURCES.join(", ")}` },
-      { status: 400, headers: getCorsHeaders() },
-    );
+    return jsonError(400, `Invalid source. Must be one of: ${VALID_SOURCES.join(", ")}`);
   }
 
-  return handleArtistResearch(request, cmId => `/artist/${cmId}/stat/${source}`);
+  const gate = await requireArtist(request);
+  if (gate instanceof NextResponse) return gate;
+
+  const result = await getArtistResearch({
+    artist: gate.artist,
+    accountId: gate.accountId,
+    path: cmId => `/artist/${cmId}/stat/${source}`,
+  });
+
+  if ("error" in result) return jsonError(result.status, result.error);
+  const data = result.data;
+  const body =
+    typeof data === "object" && data !== null && !Array.isArray(data)
+      ? (data as Record<string, unknown>)
+      : { data };
+  return jsonSuccess(body);
 }

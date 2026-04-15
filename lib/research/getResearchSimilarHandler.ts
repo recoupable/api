@@ -1,5 +1,8 @@
 import { type NextRequest } from "next/server";
-import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
+import { NextResponse } from "next/server";
+import { requireArtist } from "@/lib/research/requireArtist";
+import { getArtistResearch } from "@/lib/research/getArtistResearch";
+import { jsonSuccess, jsonError } from "@/lib/networking/jsonResponse";
 
 const CONFIG_PARAMS = ["audience", "genre", "mood", "musicality"] as const;
 
@@ -15,22 +18,29 @@ const CONFIG_PARAMS = ["audience", "genre", "mood", "musicality"] as const;
  * @returns The JSON response.
  */
 export async function getResearchSimilarHandler(request: NextRequest) {
-  return handleArtistResearch(
-    request,
-    cmId => `/artist/${cmId}/similar-artists/by-configurations`,
-    sp => {
-      const params: Record<string, string> = {};
-      for (const key of CONFIG_PARAMS) {
-        const val = sp.get(key);
-        params[key] = val || "medium";
-      }
-      const limit = sp.get("limit");
-      if (limit) params.limit = limit;
-      return params;
-    },
-    data => ({
-      artists: Array.isArray(data) ? data : (data as Record<string, unknown>)?.data || [],
-      total: (data as Record<string, unknown>)?.total,
-    }),
-  );
+  const gate = await requireArtist(request);
+  if (gate instanceof NextResponse) return gate;
+
+  const { searchParams } = new URL(request.url);
+  const query: Record<string, string> = {};
+  for (const key of CONFIG_PARAMS) {
+    const val = searchParams.get(key);
+    query[key] = val || "medium";
+  }
+  const limit = searchParams.get("limit");
+  if (limit) query.limit = limit;
+
+  const result = await getArtistResearch({
+    artist: gate.artist,
+    accountId: gate.accountId,
+    path: cmId => `/artist/${cmId}/similar-artists/by-configurations`,
+    query,
+  });
+
+  if ("error" in result) return jsonError(result.status, result.error);
+  const data = result.data;
+  return jsonSuccess({
+    artists: Array.isArray(data) ? data : (data as Record<string, unknown>)?.data || [],
+    total: (data as Record<string, unknown>)?.total,
+  });
 }

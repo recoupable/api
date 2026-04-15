@@ -1,6 +1,8 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
+import { type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { requireArtist } from "@/lib/research/requireArtist";
+import { getArtistResearch } from "@/lib/research/getArtistResearch";
+import { jsonSuccess, jsonError } from "@/lib/networking/jsonResponse";
 
 /**
  * Playlists handler — returns playlists featuring an artist. Supports `?platform=`, `?status=`, `?limit=`, `?sort=`, `?since=`, and playlist-type filters.
@@ -15,47 +17,48 @@ export async function getResearchPlaylistsHandler(request: NextRequest) {
 
   const VALID_PLATFORMS = ["spotify", "applemusic", "deezer", "amazon", "youtube"];
   if (!VALID_PLATFORMS.includes(platform)) {
-    return NextResponse.json(
-      { status: "error", error: `Invalid platform. Must be one of: ${VALID_PLATFORMS.join(", ")}` },
-      { status: 400, headers: getCorsHeaders() },
-    );
+    return jsonError(400, `Invalid platform. Must be one of: ${VALID_PLATFORMS.join(", ")}`);
   }
 
-  return handleArtistResearch(
-    request,
-    cmId => `/artist/${cmId}/${platform}/${status}/playlists`,
-    sp => {
-      const params: Record<string, string> = {};
-      const limit = sp.get("limit");
-      if (limit) params.limit = limit;
-      const sort = sp.get("sort");
-      if (sort) params.sortColumn = sort;
-      const since = sp.get("since");
-      if (since) params.since = since;
+  const gate = await requireArtist(request);
+  if (gate instanceof NextResponse) return gate;
 
-      const hasFilters =
-        sp.get("editorial") ||
-        sp.get("indie") ||
-        sp.get("majorCurator") ||
-        sp.get("popularIndie") ||
-        sp.get("personalized") ||
-        sp.get("chart");
-      if (hasFilters) {
-        if (sp.get("editorial")) params.editorial = sp.get("editorial")!;
-        if (sp.get("indie")) params.indie = sp.get("indie")!;
-        if (sp.get("majorCurator")) params.majorCurator = sp.get("majorCurator")!;
-        if (sp.get("popularIndie")) params.popularIndie = sp.get("popularIndie")!;
-        if (sp.get("personalized")) params.personalized = sp.get("personalized")!;
-        if (sp.get("chart")) params.chart = sp.get("chart")!;
-      } else {
-        params.editorial = "true";
-        params.indie = "true";
-        params.majorCurator = "true";
-        params.popularIndie = "true";
-      }
+  const query: Record<string, string> = {};
+  const limit = searchParams.get("limit");
+  if (limit) query.limit = limit;
+  const sort = searchParams.get("sort");
+  if (sort) query.sortColumn = sort;
+  const since = searchParams.get("since");
+  if (since) query.since = since;
 
-      return params;
-    },
-    data => ({ placements: Array.isArray(data) ? data : [] }),
-  );
+  const hasFilters =
+    searchParams.get("editorial") ||
+    searchParams.get("indie") ||
+    searchParams.get("majorCurator") ||
+    searchParams.get("popularIndie") ||
+    searchParams.get("personalized") ||
+    searchParams.get("chart");
+  if (hasFilters) {
+    if (searchParams.get("editorial")) query.editorial = searchParams.get("editorial")!;
+    if (searchParams.get("indie")) query.indie = searchParams.get("indie")!;
+    if (searchParams.get("majorCurator")) query.majorCurator = searchParams.get("majorCurator")!;
+    if (searchParams.get("popularIndie")) query.popularIndie = searchParams.get("popularIndie")!;
+    if (searchParams.get("personalized")) query.personalized = searchParams.get("personalized")!;
+    if (searchParams.get("chart")) query.chart = searchParams.get("chart")!;
+  } else {
+    query.editorial = "true";
+    query.indie = "true";
+    query.majorCurator = "true";
+    query.popularIndie = "true";
+  }
+
+  const result = await getArtistResearch({
+    artist: gate.artist,
+    accountId: gate.accountId,
+    path: cmId => `/artist/${cmId}/${platform}/${status}/playlists`,
+    query,
+  });
+
+  if ("error" in result) return jsonError(result.status, result.error);
+  return jsonSuccess({ placements: Array.isArray(result.data) ? result.data : [] });
 }

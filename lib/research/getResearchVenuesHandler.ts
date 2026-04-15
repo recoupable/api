@@ -1,5 +1,8 @@
 import { type NextRequest } from "next/server";
-import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
+import { NextResponse } from "next/server";
+import { requireArtist } from "@/lib/research/requireArtist";
+import { getArtistResearch } from "@/lib/research/getArtistResearch";
+import { jsonSuccess, jsonError } from "@/lib/networking/jsonResponse";
 
 /**
  * GET /api/research/venues
@@ -10,10 +13,15 @@ import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
  * @returns The JSON response.
  */
 export async function getResearchVenuesHandler(request: NextRequest) {
-  return handleArtistResearch(
-    request,
-    cmId => `/artist/${cmId}/venues`,
-    undefined,
-    data => ({ venues: Array.isArray(data) ? data : [] }),
-  );
+  const gate = await requireArtist(request);
+  if (gate instanceof NextResponse) return gate;
+
+  const result = await getArtistResearch({
+    artist: gate.artist,
+    accountId: gate.accountId,
+    path: cmId => `/artist/${cmId}/venues`,
+  });
+
+  if ("error" in result) return jsonError(result.status, result.error);
+  return jsonSuccess({ venues: Array.isArray(result.data) ? result.data : [] });
 }
