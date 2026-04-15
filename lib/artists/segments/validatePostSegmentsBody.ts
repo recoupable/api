@@ -6,7 +6,7 @@ export const postSegmentsBodySchema = z.object({
   prompt: z.string({ message: "prompt is required" }).min(1, "prompt cannot be empty"),
 });
 
-export type PostSegmentsBody = z.infer<typeof postSegmentsBodySchema>;
+export type ValidatedPostSegmentsBody = z.infer<typeof postSegmentsBodySchema>;
 
 /**
  * Validates the request body for POST /api/artists/{id}/segments.
@@ -14,7 +14,7 @@ export type PostSegmentsBody = z.infer<typeof postSegmentsBodySchema>;
  * @param body - The parsed request body to validate.
  * @returns A NextResponse with an error when validation fails, or the validated body when it passes.
  */
-export function validatePostSegmentsBody(body: unknown): NextResponse | PostSegmentsBody {
+export function validatePostSegmentsBody(body: unknown): NextResponse | ValidatedPostSegmentsBody {
   const result = postSegmentsBodySchema.safeParse(body);
 
   if (!result.success) {

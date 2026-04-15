@@ -8,13 +8,13 @@ import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess
 import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 import {
   validatePostSegmentsBody,
-  type PostSegmentsBody,
+  type ValidatedPostSegmentsBody,
 } from "@/lib/artists/segments/validatePostSegmentsBody";
 
-export interface PostArtistSegmentsRequest {
+export interface ValidatedPostArtistSegmentsRequest {
   artistId: string;
   requesterAccountId: string;
-  body: PostSegmentsBody;
+  body: ValidatedPostSegmentsBody;
 }
 
 /**
@@ -28,7 +28,7 @@ export interface PostArtistSegmentsRequest {
 export async function validatePostArtistSegmentsRequest(
   request: NextRequest,
   id: string,
-): Promise<PostArtistSegmentsRequest | NextResponse> {
+): Promise<ValidatedPostArtistSegmentsRequest | NextResponse> {
   const validatedParams = validateAccountParams(id);
   if (validatedParams instanceof NextResponse) {
     return validatedParams;
