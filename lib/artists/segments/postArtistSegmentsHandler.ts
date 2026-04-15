@@ -43,7 +43,7 @@ export async function postArtistSegmentsHandler(
           message: "Segments generated successfully.",
         },
         {
-          status: 200,
+          status: 201,
           headers: getCorsHeaders(),
         },
       );

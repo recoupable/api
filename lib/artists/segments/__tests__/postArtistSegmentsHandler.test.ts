@@ -72,7 +72,7 @@ describe("postArtistSegmentsHandler", () => {
     const response = await postArtistSegmentsHandler(request, Promise.resolve({ id: ARTIST_ID }));
     const body = await response.json();
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
     expect(body).toEqual({
       status: "success",
       segments_created: 5,
