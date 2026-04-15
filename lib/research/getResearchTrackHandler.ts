@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { handleResearch } from "@/lib/research/handleResearch";
@@ -19,13 +18,13 @@ export async function getResearchTrackHandler(request: NextRequest): Promise<Nex
     const validated = await validateGetResearchTrackRequest(request);
     if (validated instanceof NextResponse) return validated;
 
-    const searchResult = await fetchChartmetric("/search", {
-      q: validated.q,
-      type: "tracks",
-      limit: "1",
+    const searchResult = await handleResearch({
+      accountId: validated.accountId,
+      path: "/search",
+      query: { q: validated.q, type: "tracks", limit: "1" },
     });
 
-    if (searchResult.status !== 200) {
+    if ("error" in searchResult) {
       return errorResponse("Track search failed", searchResult.status);
     }
 

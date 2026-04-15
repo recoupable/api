@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { handleResearch } from "@/lib/research/handleResearch";
@@ -23,13 +22,13 @@ export async function getResearchPlaylistHandler(request: NextRequest): Promise<
     let playlistId = id;
 
     if (!/^\d+$/.test(id)) {
-      const searchResult = await fetchChartmetric("/search", {
-        q: id,
-        type: "playlists",
-        limit: "1",
+      const searchResult = await handleResearch({
+        accountId,
+        path: "/search",
+        query: { q: id, type: "playlists", limit: "1" },
       });
 
-      if (searchResult.status !== 200) {
+      if ("error" in searchResult) {
         return errorResponse(
           `Search failed with status ${searchResult.status}`,
           searchResult.status,
