@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { deductCredits } from "@/lib/credits/deductCredits";
-import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
+import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
 
 const SPOTIFY_ARTIST_REGEX = /spotify\.com\/artist\/([a-zA-Z0-9]+)/;
 

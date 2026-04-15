@@ -1,6 +1,6 @@
 import generateAccessToken from "@/lib/spotify/generateAccessToken";
 import getSearch from "@/lib/spotify/getSearch";
-import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
+import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
 
 interface GetIdsResponse {
   chartmetric_ids?: number[];

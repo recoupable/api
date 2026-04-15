@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { handleArtistResearch } from "../handleArtistResearch";
 import { resolveArtist } from "@/lib/research/resolveArtist";
-import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
+import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
 import { deductCredits } from "@/lib/credits/deductCredits";
 
 vi.mock("@/lib/research/resolveArtist", () => ({
   resolveArtist: vi.fn(),
 }));
-vi.mock("@/lib/research/fetchChartmetric", () => ({
+vi.mock("@/lib/chartmetric/fetchChartmetric", () => ({
   fetchChartmetric: vi.fn(),
 }));
 vi.mock("@/lib/credits/deductCredits", () => ({

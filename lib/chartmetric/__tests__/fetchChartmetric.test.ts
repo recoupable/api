@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchChartmetric } from "../fetchChartmetric";
+import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
 
 vi.mock("@/lib/chartmetric/getChartmetricToken", () => ({
   getChartmetricToken: vi.fn().mockResolvedValue("mock-token"),

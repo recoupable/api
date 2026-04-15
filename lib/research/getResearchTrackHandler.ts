@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { deductCredits } from "@/lib/credits/deductCredits";
-import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
+import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
 
 /**
  * Track handler — searches Chartmetric for a track by name, then fetches full details for the top match.

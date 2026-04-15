@@ -1,4 +1,4 @@
-import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
+import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
 import { deductCredits } from "@/lib/credits/deductCredits";
 
 export type HandleResearchParams = {

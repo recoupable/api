@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getResearchTrackPlaylistsHandler } from "../getResearchTrackPlaylistsHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
+import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
 import { resolveTrack } from "@/lib/research/resolveTrack";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -14,7 +14,7 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/research/fetchChartmetric", () => ({
+vi.mock("@/lib/chartmetric/fetchChartmetric", () => ({
   fetchChartmetric: vi.fn(),
 }));
 

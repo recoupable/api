@@ -16,7 +16,7 @@ vi.mock("@/lib/research/resolveArtist", () => ({
   resolveArtist: vi.fn(),
 }));
 
-vi.mock("@/lib/research/fetchChartmetric", () => ({
+vi.mock("@/lib/chartmetric/fetchChartmetric", () => ({
   fetchChartmetric: vi.fn(),
 }));
 

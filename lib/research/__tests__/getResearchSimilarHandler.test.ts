@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 import { getResearchSimilarHandler } from "../getResearchSimilarHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { resolveArtist } from "@/lib/research/resolveArtist";
-import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
+import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -18,7 +18,7 @@ vi.mock("@/lib/research/resolveArtist", () => ({
   resolveArtist: vi.fn(),
 }));
 
-vi.mock("@/lib/research/fetchChartmetric", () => ({
+vi.mock("@/lib/chartmetric/fetchChartmetric", () => ({
   fetchChartmetric: vi.fn(),
 }));
 
