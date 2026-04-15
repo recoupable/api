@@ -1,5 +1,5 @@
 import type { Thread } from "chat";
-import { getCodingAgentPRState, type CodingAgentPRState } from "./prState";
+import { getCodingAgentPRState } from "./prState";
 import type { CodingAgentThreadState } from "./types";
 
 export interface PRContext {

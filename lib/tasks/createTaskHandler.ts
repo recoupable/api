@@ -1,28 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateCreateTaskBody } from "@/lib/tasks/validateCreateTaskBody";
+import { validateCreateTaskRequest } from "@/lib/tasks/validateCreateTaskRequest";
 import { createTask } from "@/lib/tasks/createTask";
 
 /**
  * Creates a new task (scheduled action)
  * Returns the created task in an array, matching GET response shape
  *
- * Body parameters:
+ * Body parameters (JSON):
  * - title (required): The title of the task
  * - prompt (required): The prompt for the task
  * - schedule (required): The cron schedule string
- * - account_id (required): The account ID
  * - artist_account_id (required): The artist account ID
  * - model (optional): The model to use for the task
+ *
+ * Optional body `account_id` selects the account when org/API-key rules allow; otherwise the authenticated account is used. See OpenAPI `CreateTaskRequest`.
  *
  * @param request - The request object containing the task data in the body.
  * @returns A NextResponse with the created task.
  */
 export async function createTaskHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const body = await request.json();
-
-    const validatedBody = validateCreateTaskBody(body);
+    const validatedBody = await validateCreateTaskRequest(request);
     if (validatedBody instanceof NextResponse) {
       return validatedBody;
     }

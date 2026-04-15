@@ -20,6 +20,10 @@ vi.mock("@/lib/content/resolveArtistSlug", () => ({
   resolveArtistSlug: vi.fn().mockResolvedValue("gatsby-grace"),
 }));
 
+/**
+ *
+ * @param body
+ */
 function createRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/content/create", {
     method: "POST",
@@ -55,7 +59,7 @@ describe("validateCreateContentBody", () => {
         artistSlug: "gatsby-grace",
         template: "artist-caption-bedroom",
         lipsync: true,
-        captionLength: "short",
+        captionLength: "none",
         upscale: false,
         batch: 1,
       });
@@ -71,8 +75,22 @@ describe("validateCreateContentBody", () => {
 
     expect(result).not.toBeInstanceOf(NextResponse);
     if (!(result instanceof NextResponse)) {
-      expect(result.template).toBe("artist-caption-bedroom");
+      expect(result.template).toBeUndefined();
       expect(result.lipsync).toBe(false);
+    }
+  });
+
+  it("accepts request without template", async () => {
+    const request = createRequest({
+      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
+    });
+
+    const result = await validateCreateContentBody(request);
+
+    expect(result).not.toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) {
+      expect(result.template).toBeUndefined();
+      expect(result.artistAccountId).toBe("550e8400-e29b-41d4-a716-446655440000");
     }
   });
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getArtistHandler } from "@/lib/artists/getArtistHandler";
+import { deleteArtistHandler } from "@/lib/artists/deleteArtistHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -15,15 +15,16 @@ export async function OPTIONS() {
 }
 
 /**
- * GET /api/artists/[id]
+ * DELETE /api/artists/{id}
  *
- * Retrieves a single artist detail payload for an accessible artist account.
+ * Removes the authenticated account's direct artist link and deletes the artist
+ * account if that link was the last remaining owner association.
  *
  * @param request - The request object
  * @param options - Route options containing params
  * @param options.params - Route params containing the artist account ID
- * @returns A NextResponse with artist data
+ * @returns A NextResponse with the delete result
  */
-export async function GET(request: NextRequest, options: { params: Promise<{ id: string }> }) {
-  return getArtistHandler(request, options.params);
+export async function DELETE(request: NextRequest, options: { params: Promise<{ id: string }> }) {
+  return deleteArtistHandler(request, options.params);
 }
