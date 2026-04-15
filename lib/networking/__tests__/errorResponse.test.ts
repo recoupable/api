@@ -6,16 +6,12 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 }));
 
 describe("errorResponse", () => {
-  it("returns a NextResponse with the given message and status", async () => {
+  it("returns { status: 'error', error } at the given HTTP status with CORS headers", async () => {
     const result = errorResponse("Something went wrong", 400);
     const body = await result.json();
 
     expect(result.status).toBe(400);
-    expect(body.error).toBe("Something went wrong");
-  });
-
-  it("includes CORS headers on the response", () => {
-    const result = errorResponse("nope", 429);
+    expect(body).toEqual({ status: "error", error: "Something went wrong" });
     expect(result.headers.get("Access-Control-Allow-Origin")).toBe("*");
   });
 });

@@ -2,7 +2,8 @@ import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { requireArtist } from "@/lib/research/requireArtist";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
-import { jsonSuccess, jsonError } from "@/lib/networking/jsonResponse";
+import { successResponse } from "@/lib/networking/successResponse";
+import { errorResponse } from "@/lib/networking/errorResponse";
 
 /**
  * GET /api/research/metrics
@@ -19,7 +20,7 @@ export async function getResearchMetricsHandler(request: NextRequest) {
   const source = searchParams.get("source");
 
   if (!source) {
-    return jsonError(400, "source parameter is required");
+    return errorResponse("source parameter is required", 400);
   }
 
   const VALID_SOURCES = [
@@ -40,7 +41,7 @@ export async function getResearchMetricsHandler(request: NextRequest) {
   ];
 
   if (!VALID_SOURCES.includes(source)) {
-    return jsonError(400, `Invalid source. Must be one of: ${VALID_SOURCES.join(", ")}`);
+    return errorResponse(`Invalid source. Must be one of: ${VALID_SOURCES.join(", ")}`, 400);
   }
 
   const gate = await requireArtist(request);
@@ -52,11 +53,11 @@ export async function getResearchMetricsHandler(request: NextRequest) {
     path: cmId => `/artist/${cmId}/stat/${source}`,
   });
 
-  if ("error" in result) return jsonError(result.status, result.error);
+  if ("error" in result) return errorResponse(result.error, result.status);
   const data = result.data;
   const body =
     typeof data === "object" && data !== null && !Array.isArray(data)
       ? (data as Record<string, unknown>)
       : { data };
-  return jsonSuccess(body);
+  return successResponse(body);
 }

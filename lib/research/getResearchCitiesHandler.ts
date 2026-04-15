@@ -2,7 +2,8 @@ import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { requireArtist } from "@/lib/research/requireArtist";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
-import { jsonSuccess, jsonError } from "@/lib/networking/jsonResponse";
+import { successResponse } from "@/lib/networking/successResponse";
+import { errorResponse } from "@/lib/networking/errorResponse";
 
 /**
  * GET /api/research/cities
@@ -23,7 +24,7 @@ export async function getResearchCitiesHandler(request: NextRequest) {
     path: cmId => `/artist/${cmId}/where-people-listen`,
   });
 
-  if ("error" in result) return jsonError(result.status, result.error);
+  if ("error" in result) return errorResponse(result.error, result.status);
 
   const raw =
     (result.data as { cities?: Record<string, Array<{ code2?: string; listeners?: number }>> })
@@ -36,5 +37,5 @@ export async function getResearchCitiesHandler(request: NextRequest) {
     }))
     .sort((a, b) => b.listeners - a.listeners);
 
-  return jsonSuccess({ cities });
+  return successResponse({ cities });
 }

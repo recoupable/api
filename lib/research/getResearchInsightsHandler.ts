@@ -2,7 +2,8 @@ import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { requireArtist } from "@/lib/research/requireArtist";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
-import { jsonSuccess, jsonError } from "@/lib/networking/jsonResponse";
+import { successResponse } from "@/lib/networking/successResponse";
+import { errorResponse } from "@/lib/networking/errorResponse";
 
 /**
  * GET /api/research/insights
@@ -24,6 +25,6 @@ export async function getResearchInsightsHandler(request: NextRequest) {
     path: cmId => `/artist/${cmId}/noteworthy-insights`,
   });
 
-  if ("error" in result) return jsonError(result.status, result.error);
-  return jsonSuccess({ insights: Array.isArray(result.data) ? result.data : [] });
+  if ("error" in result) return errorResponse(result.error, result.status);
+  return successResponse({ insights: Array.isArray(result.data) ? result.data : [] });
 }

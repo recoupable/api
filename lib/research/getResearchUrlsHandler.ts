@@ -2,7 +2,8 @@ import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { requireArtist } from "@/lib/research/requireArtist";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
-import { jsonSuccess, jsonError } from "@/lib/networking/jsonResponse";
+import { successResponse } from "@/lib/networking/successResponse";
+import { errorResponse } from "@/lib/networking/errorResponse";
 
 /**
  * GET /api/research/urls
@@ -24,9 +25,9 @@ export async function getResearchUrlsHandler(request: NextRequest) {
     path: cmId => `/artist/${cmId}/urls`,
   });
 
-  if ("error" in result) return jsonError(result.status, result.error);
+  if ("error" in result) return errorResponse(result.error, result.status);
   const data = result.data;
-  return jsonSuccess({
+  return successResponse({
     urls: Array.isArray(data)
       ? data
       : Object.entries(data as Record<string, string>).map(([domain, url]) => ({ domain, url })),

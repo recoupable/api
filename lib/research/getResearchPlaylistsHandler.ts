@@ -2,7 +2,8 @@ import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { requireArtist } from "@/lib/research/requireArtist";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
-import { jsonSuccess, jsonError } from "@/lib/networking/jsonResponse";
+import { successResponse } from "@/lib/networking/successResponse";
+import { errorResponse } from "@/lib/networking/errorResponse";
 
 /**
  * Playlists handler — returns playlists featuring an artist. Supports `?platform=`, `?status=`, `?limit=`, `?sort=`, `?since=`, and playlist-type filters.
@@ -17,7 +18,7 @@ export async function getResearchPlaylistsHandler(request: NextRequest) {
 
   const VALID_PLATFORMS = ["spotify", "applemusic", "deezer", "amazon", "youtube"];
   if (!VALID_PLATFORMS.includes(platform)) {
-    return jsonError(400, `Invalid platform. Must be one of: ${VALID_PLATFORMS.join(", ")}`);
+    return errorResponse(`Invalid platform. Must be one of: ${VALID_PLATFORMS.join(", ")}`, 400);
   }
 
   const gate = await requireArtist(request);
@@ -59,6 +60,6 @@ export async function getResearchPlaylistsHandler(request: NextRequest) {
     query,
   });
 
-  if ("error" in result) return jsonError(result.status, result.error);
-  return jsonSuccess({ placements: Array.isArray(result.data) ? result.data : [] });
+  if ("error" in result) return errorResponse(result.error, result.status);
+  return successResponse({ placements: Array.isArray(result.data) ? result.data : [] });
 }

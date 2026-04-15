@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { jsonError } from "@/lib/networking/jsonResponse";
+import { errorResponse } from "@/lib/networking/errorResponse";
 
 /**
  * Auth + `artist` query param gate for artist-scoped research endpoints.
@@ -16,7 +16,7 @@ export async function requireArtist(
   if (authResult instanceof NextResponse) return authResult;
 
   const artist = new URL(request.url).searchParams.get("artist");
-  if (!artist) return jsonError(400, "artist parameter is required");
+  if (!artist) return errorResponse("artist parameter is required", 400);
 
   return { accountId: authResult.accountId, artist };
 }

@@ -2,7 +2,8 @@ import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { requireArtist } from "@/lib/research/requireArtist";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
-import { jsonSuccess, jsonError } from "@/lib/networking/jsonResponse";
+import { successResponse } from "@/lib/networking/successResponse";
+import { errorResponse } from "@/lib/networking/errorResponse";
 
 const CONFIG_PARAMS = ["audience", "genre", "mood", "musicality"] as const;
 
@@ -37,9 +38,9 @@ export async function getResearchSimilarHandler(request: NextRequest) {
     query,
   });
 
-  if ("error" in result) return jsonError(result.status, result.error);
+  if ("error" in result) return errorResponse(result.error, result.status);
   const data = result.data;
-  return jsonSuccess({
+  return successResponse({
     artists: Array.isArray(data) ? data : (data as Record<string, unknown>)?.data || [],
     total: (data as Record<string, unknown>)?.total,
   });
