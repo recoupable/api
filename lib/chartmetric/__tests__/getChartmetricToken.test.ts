@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getChartmetricToken, resetTokenCache } from "../getChartmetricToken";
+import { getChartmetricToken } from "../getChartmetricToken";
+import { resetTokenCache } from "../resetTokenCache";
 
 describe("getChartmetricToken", () => {
   const originalEnv = { ...process.env };
