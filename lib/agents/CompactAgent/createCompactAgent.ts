@@ -1,5 +1,6 @@
 import { ToolLoopAgent, stepCountIs } from "ai";
 import { LIGHTWEIGHT_MODEL } from "@/lib/const";
+import { createModel } from "@/lib/ai/createModel";
 
 const DEFAULT_INSTRUCTIONS = `You are a conversation summarizer. Create a concise summary of the conversation that:
 - Preserves key information, decisions, and action items
@@ -17,7 +18,7 @@ Respond with only the summary text, no additional commentary.`;
  */
 export function createCompactAgent(customInstructions?: string) {
   return new ToolLoopAgent({
-    model: LIGHTWEIGHT_MODEL,
+    model: createModel(LIGHTWEIGHT_MODEL),
     instructions: customInstructions || DEFAULT_INSTRUCTIONS,
     stopWhen: stepCountIs(1),
   });

@@ -1,5 +1,6 @@
 import { DEFAULT_MODEL } from "@/lib/consts";
 import { generateObject } from "ai";
+import { createModel } from "@/lib/ai/createModel";
 import { getCatalogDataAsCSV } from "@/lib/catalog/getCatalogDataAsCSV";
 import { z } from "zod";
 
@@ -18,7 +19,7 @@ export const CatalogAvailability = async ({
     const catalog = await getCatalogDataAsCSV(catalogId);
 
     const result = await generateObject({
-      model: DEFAULT_MODEL,
+      model: createModel(DEFAULT_MODEL),
       system: `You are a music catalog analyst. Your job is to analyze song recommendations and determine which ones are available in the provided music catalog.
 
 Instructions:

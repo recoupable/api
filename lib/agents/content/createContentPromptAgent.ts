@@ -1,6 +1,7 @@
 import { Output, ToolLoopAgent, stepCountIs } from "ai";
 import { z } from "zod";
 import { LIGHTWEIGHT_MODEL } from "@/lib/const";
+import { createModel } from "@/lib/ai/createModel";
 import { CONTENT_TEMPLATES, DEFAULT_CONTENT_TEMPLATE } from "@/lib/content/contentTemplates";
 import { CAPTION_LENGTHS } from "@/lib/content/captionLengths";
 import { songsSchema } from "@/lib/content/songsSchema";
@@ -68,7 +69,7 @@ Defaults: lipsync=${DEFAULT_CONTENT_PROMPT_FLAGS.lipsync}, batch=${DEFAULT_CONTE
  */
 export function createContentPromptAgent() {
   return new ToolLoopAgent({
-    model: LIGHTWEIGHT_MODEL,
+    model: createModel(LIGHTWEIGHT_MODEL),
     instructions,
     output: Output.object({ schema: contentPromptFlagsSchema }),
     stopWhen: stepCountIs(1),
