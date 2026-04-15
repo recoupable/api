@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { handleResearchRequest } from "@/lib/research/handleResearchRequest";
 import { validateDiscoverQuery } from "@/lib/research/validateDiscoverQuery";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 
 /**
  * Discover handler — filters artists by country, genre, listener ranges, growth rate.
