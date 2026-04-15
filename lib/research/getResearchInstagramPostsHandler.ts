@@ -23,8 +23,7 @@ export async function getResearchInstagramPostsHandler(
     if (validated instanceof NextResponse) return validated;
 
     const result = await handleArtistResearch({
-      artist: validated.artist,
-      accountId: validated.accountId,
+      ...validated,
       path: cmId => `/SNS/deepSocial/cm_artist/${cmId}/instagram`,
     });
 

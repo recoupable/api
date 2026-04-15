@@ -47,10 +47,10 @@ export async function getResearchPlaylistsHandler(request: NextRequest): Promise
       query.popularIndie = "true";
     }
 
+    const { platform, status, ...rest } = validated;
     const result = await handleArtistResearch({
-      artist: validated.artist,
-      accountId: validated.accountId,
-      path: cmId => `/artist/${cmId}/${validated.platform}/${validated.status}/playlists`,
+      ...rest,
+      path: cmId => `/artist/${cmId}/${platform}/${status}/playlists`,
       query,
     });
 

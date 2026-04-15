@@ -20,8 +20,7 @@ export async function getResearchCareerHandler(request: NextRequest): Promise<Ne
     if (validated instanceof NextResponse) return validated;
 
     const result = await handleArtistResearch({
-      artist: validated.artist,
-      accountId: validated.accountId,
+      ...validated,
       path: cmId => `/artist/${cmId}/career`,
     });
 

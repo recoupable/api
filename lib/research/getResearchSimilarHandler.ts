@@ -21,17 +21,17 @@ export async function getResearchSimilarHandler(request: NextRequest): Promise<N
     const validated = await validateGetResearchSimilarRequest(request);
     if (validated instanceof NextResponse) return validated;
 
+    const { audience, genre, mood, musicality, limit, ...rest } = validated;
     const query: Record<string, string> = {
-      audience: validated.audience,
-      genre: validated.genre,
-      mood: validated.mood,
-      musicality: validated.musicality,
+      audience,
+      genre,
+      mood,
+      musicality,
     };
-    if (validated.limit) query.limit = validated.limit;
+    if (limit) query.limit = limit;
 
     const result = await handleArtistResearch({
-      artist: validated.artist,
-      accountId: validated.accountId,
+      ...rest,
       path: cmId => `/artist/${cmId}/similar-artists/by-configurations`,
       query,
     });

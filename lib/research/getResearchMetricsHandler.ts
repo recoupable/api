@@ -20,10 +20,10 @@ export async function getResearchMetricsHandler(request: NextRequest): Promise<N
     const validated = await validateGetResearchMetricsRequest(request);
     if (validated instanceof NextResponse) return validated;
 
+    const { source, ...rest } = validated;
     const result = await handleArtistResearch({
-      artist: validated.artist,
-      accountId: validated.accountId,
-      path: cmId => `/artist/${cmId}/stat/${validated.source}`,
+      ...rest,
+      path: cmId => `/artist/${cmId}/stat/${source}`,
     });
 
     if ("error" in result) return errorResponse(result.error, result.status);

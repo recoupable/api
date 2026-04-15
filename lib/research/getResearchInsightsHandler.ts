@@ -21,8 +21,7 @@ export async function getResearchInsightsHandler(request: NextRequest): Promise<
     if (validated instanceof NextResponse) return validated;
 
     const result = await handleArtistResearch({
-      artist: validated.artist,
-      accountId: validated.accountId,
+      ...validated,
       path: cmId => `/artist/${cmId}/noteworthy-insights`,
     });
 
