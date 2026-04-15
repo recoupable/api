@@ -23,7 +23,7 @@ export async function getResearchTrackPlaylistsHandler(
 
     let trackId = validated.id;
     if (!trackId) {
-      const resolved = await resolveTrack(validated.q!, validated.artist);
+      const resolved = await resolveTrack(validated.q!, validated.artist, validated.accountId);
       if (resolved.error) return errorResponse(resolved.error, 404);
       trackId = resolved.id;
     }

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
 import { postResearchWebHandler } from "../postResearchWebHandler";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { validatePostResearchWebRequest } from "../validatePostResearchWebRequest";
 import { searchPerplexity } from "@/lib/perplexity/searchPerplexity";
 import { formatSearchResultsAsMarkdown } from "@/lib/perplexity/formatSearchResultsAsMarkdown";
 
@@ -10,8 +10,8 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-vi.mock("@/lib/auth/validateAuthContext", () => ({
-  validateAuthContext: vi.fn(),
+vi.mock("../validatePostResearchWebRequest", () => ({
+  validatePostResearchWebRequest: vi.fn(),
 }));
 
 vi.mock("@/lib/perplexity/searchPerplexity", () => ({
@@ -31,24 +31,21 @@ describe("postResearchWebHandler", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 401 when auth fails", async () => {
-    const errorResponse = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    vi.mocked(validateAuthContext).mockResolvedValue(errorResponse);
+  it("returns validator error response (e.g. 401)", async () => {
+    const err = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    vi.mocked(validatePostResearchWebRequest).mockResolvedValue(err);
 
     const req = new NextRequest("http://localhost/api/research/web", {
       method: "POST",
       body: JSON.stringify({ query: "test" }),
     });
     const res = await postResearchWebHandler(req);
-    expect(res.status).toBe(401);
+    expect(res).toBe(err);
   });
 
-  it("returns 400 when body is missing query", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "test-id",
-      orgId: null,
-      authToken: "token",
-    });
+  it("returns validator 400 when body is invalid", async () => {
+    const err = NextResponse.json({ error: "bad" }, { status: 400 });
+    vi.mocked(validatePostResearchWebRequest).mockResolvedValue(err);
 
     const req = new NextRequest("http://localhost/api/research/web", {
       method: "POST",
@@ -59,10 +56,9 @@ describe("postResearchWebHandler", () => {
   });
 
   it("returns 200 with results and formatted markdown on success", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
+    vi.mocked(validatePostResearchWebRequest).mockResolvedValue({
       accountId: "test-id",
-      orgId: null,
-      authToken: "token",
+      query: "latest music trends",
     });
 
     const mockResults = [{ title: "Test", url: "https://example.com", snippet: "..." }];

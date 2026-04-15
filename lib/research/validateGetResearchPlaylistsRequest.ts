@@ -35,8 +35,8 @@ export async function validateGetResearchPlaylistsRequest(
     return errorResponse(`Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}`, 400);
   }
 
-  const gate = await validateArtistRequest(request);
-  if (gate instanceof NextResponse) return gate;
+  const validated = await validateArtistRequest(request);
+  if (validated instanceof NextResponse) return validated;
 
-  return { ...gate, platform, status };
+  return { ...validated, platform, status };
 }

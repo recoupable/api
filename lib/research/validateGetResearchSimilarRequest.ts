@@ -45,8 +45,8 @@ export async function validateGetResearchSimilarRequest(
     axes[axis] = raw as Level;
   }
 
-  const gate = await validateArtistRequest(request);
-  if (gate instanceof NextResponse) return gate;
+  const validated = await validateArtistRequest(request);
+  if (validated instanceof NextResponse) return validated;
 
-  return { ...gate, ...axes, limit: searchParams.get("limit") ?? undefined };
+  return { ...validated, ...axes, limit: searchParams.get("limit") ?? undefined };
 }

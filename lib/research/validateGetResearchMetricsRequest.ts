@@ -39,8 +39,8 @@ export async function validateGetResearchMetricsRequest(
     return errorResponse(`Invalid source. Must be one of: ${VALID_SOURCES.join(", ")}`, 400);
   }
 
-  const gate = await validateArtistRequest(request);
-  if (gate instanceof NextResponse) return gate;
+  const validated = await validateArtistRequest(request);
+  if (validated instanceof NextResponse) return validated;
 
-  return { ...gate, source };
+  return { ...validated, source };
 }

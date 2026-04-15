@@ -1,14 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { errorResponse } from "@/lib/networking/errorResponse";
+import { successResponse } from "@/lib/networking/successResponse";
 import { deductCredits } from "@/lib/credits/deductCredits";
 import { searchPeople } from "@/lib/exa/searchPeople";
-
-const bodySchema = z.object({
-  query: z.string().min(1, "query is required"),
-  num_results: z.coerce.number().int().min(1).max(100).optional(),
-});
+import { validatePostResearchPeopleRequest } from "@/lib/research/validatePostResearchPeopleRequest";
 
 /**
  * POST /api/research/people
@@ -21,44 +16,20 @@ const bodySchema = z.object({
  * @returns JSON success or error response
  */
 export async function postResearchPeopleHandler(request: NextRequest): Promise<NextResponse> {
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) return authResult;
-  const { accountId } = authResult;
-
-  let body: z.infer<typeof bodySchema>;
   try {
-    body = bodySchema.parse(await request.json());
-  } catch (err) {
-    const message = err instanceof z.ZodError ? err.issues[0]?.message : "Invalid request body";
-    return NextResponse.json(
-      { status: "error", error: message ?? "Invalid request body" },
-      { status: 400, headers: getCorsHeaders() },
-    );
-  }
+    const validated = await validatePostResearchPeopleRequest(request);
+    if (validated instanceof NextResponse) return validated;
 
-  try {
-    const result = await searchPeople(body.query, body.num_results ?? 10);
+    const result = await searchPeople(validated.query, validated.num_results ?? 10);
 
     try {
-      await deductCredits({ accountId, creditsToDeduct: 5 });
+      await deductCredits({ accountId: validated.accountId, creditsToDeduct: 5 });
     } catch {
       // Credit deduction failed but data was fetched — log but don't block
     }
 
-    return NextResponse.json(
-      {
-        status: "success",
-        results: result.results,
-      },
-      { status: 200, headers: getCorsHeaders() },
-    );
+    return successResponse({ results: result.results });
   } catch (error) {
-    return NextResponse.json(
-      {
-        status: "error",
-        error: error instanceof Error ? error.message : "People search failed",
-      },
-      { status: 500, headers: getCorsHeaders() },
-    );
+    return errorResponse(error instanceof Error ? error.message : "People search failed", 500);
   }
 }

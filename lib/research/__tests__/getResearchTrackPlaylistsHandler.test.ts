@@ -88,7 +88,7 @@ describe("getResearchTrackPlaylistsHandler", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.placements).toHaveLength(1);
-    expect(vi.mocked(resolveTrack)).toHaveBeenCalledWith("God's Plan", "Drake");
+    expect(vi.mocked(resolveTrack)).toHaveBeenCalledWith("God's Plan", "Drake", "test-id");
   });
 
   it("returns 404 when track name search finds nothing", async () => {

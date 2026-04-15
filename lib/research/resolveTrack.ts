@@ -1,6 +1,6 @@
 import generateAccessToken from "@/lib/spotify/generateAccessToken";
 import getSearch from "@/lib/spotify/getSearch";
-import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
+import { handleResearch } from "@/lib/research/handleResearch";
 
 interface GetIdsResponse {
   chartmetric_ids?: number[];
@@ -12,10 +12,14 @@ interface GetIdsResponse {
  * Uses Spotify search for accurate matching, gets the ISRC, then maps
  * to a Chartmetric ID via /track/isrc/{isrc}/get-ids.
  * Works across all platforms since ISRC is a universal identifier.
+ *
+ * Chartmetric calls are routed through {@link handleResearch} so each
+ * lookup properly deducts credits from the caller's account.
  */
 export async function resolveTrack(
   q: string,
-  artist?: string,
+  artist: string | undefined,
+  accountId: string,
 ): Promise<{ id: string; error?: never } | { id?: never; error: string }> {
   const searchQuery = artist ? `${q} artist:${artist}` : q;
 
@@ -50,8 +54,11 @@ export async function resolveTrack(
   const isrc = spotifyTrack.external_ids?.isrc;
 
   if (isrc) {
-    const result = await fetchChartmetric(`/track/isrc/${isrc}/get-ids`);
-    if (result.status === 200) {
+    const result = await handleResearch({
+      accountId,
+      path: `/track/isrc/${isrc}/get-ids`,
+    });
+    if ("data" in result) {
       const ids = (Array.isArray(result.data) ? result.data[0] : result.data) as GetIdsResponse;
       const cmId = ids?.chartmetric_ids?.[0];
       if (cmId) return { id: String(cmId) };
@@ -59,8 +66,11 @@ export async function resolveTrack(
   }
 
   const spotifyId = spotifyTrack.id;
-  const result = await fetchChartmetric(`/track/spotify/${spotifyId}/get-ids`);
-  if (result.status === 200) {
+  const result = await handleResearch({
+    accountId,
+    path: `/track/spotify/${spotifyId}/get-ids`,
+  });
+  if ("data" in result) {
     const ids = (Array.isArray(result.data) ? result.data[0] : result.data) as GetIdsResponse;
     const cmId = ids?.chartmetric_ids?.[0];
     if (cmId) return { id: String(cmId) };
