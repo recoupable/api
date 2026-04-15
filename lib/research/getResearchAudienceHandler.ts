@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { requireArtist } from "@/lib/research/requireArtist";
-import { getArtistResearch } from "@/lib/research/getArtistResearch";
+import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { jsonSuccess, jsonError } from "@/lib/networking/jsonResponse";
 
 /**
@@ -21,7 +21,7 @@ export async function getResearchAudienceHandler(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const platform = searchParams.get("platform") || "instagram";
 
-  const result = await getArtistResearch({
+  const result = await handleArtistResearch({
     artist: gate.artist,
     accountId: gate.accountId,
     path: cmId => `/artist/${cmId}/${platform}-audience-stats`,

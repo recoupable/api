@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { getArtistResearch } from "../getArtistResearch";
+import { handleArtistResearch } from "../handleArtistResearch";
 import { resolveArtist } from "@/lib/research/resolveArtist";
 import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
 import { deductCredits } from "@/lib/credits/deductCredits";
@@ -15,7 +15,7 @@ vi.mock("@/lib/credits/deductCredits", () => ({
   deductCredits: vi.fn(),
 }));
 
-describe("getArtistResearch", () => {
+describe("handleArtistResearch", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -23,7 +23,7 @@ describe("getArtistResearch", () => {
   it("returns { error, status: 404 } when artist cannot be resolved", async () => {
     vi.mocked(resolveArtist).mockResolvedValue({ error: "Artist not found" } as never);
 
-    const result = await getArtistResearch({
+    const result = await handleArtistResearch({
       artist: "Unknown",
       accountId: "acc_1",
       path: id => `/artist/${id}/albums`,
@@ -42,7 +42,7 @@ describe("getArtistResearch", () => {
     } as never);
     vi.mocked(deductCredits).mockResolvedValue(undefined as never);
 
-    const result = await getArtistResearch({
+    const result = await handleArtistResearch({
       artist: "Drake",
       accountId: "acc_1",
       path: id => `/artist/${id}/albums`,
@@ -57,7 +57,7 @@ describe("getArtistResearch", () => {
     vi.mocked(resolveArtist).mockResolvedValue({ id: 7 } as never);
     vi.mocked(proxyToChartmetric).mockResolvedValue({ status: 200, data: {} } as never);
 
-    await getArtistResearch({
+    await handleArtistResearch({
       artist: "X",
       accountId: "acc_1",
       path: id => `/artist/${id}/playlists`,
@@ -74,7 +74,7 @@ describe("getArtistResearch", () => {
     vi.mocked(resolveArtist).mockResolvedValue({ id: 1 } as never);
     vi.mocked(proxyToChartmetric).mockResolvedValue({ status: 502, data: null } as never);
 
-    const result = await getArtistResearch({
+    const result = await handleArtistResearch({
       artist: "X",
       accountId: "acc_1",
       path: id => `/artist/${id}/x`,
@@ -89,7 +89,7 @@ describe("getArtistResearch", () => {
     vi.mocked(proxyToChartmetric).mockResolvedValue({ status: 200, data: "ok" } as never);
     vi.mocked(deductCredits).mockRejectedValue(new Error("DB down"));
 
-    const result = await getArtistResearch({
+    const result = await handleArtistResearch({
       artist: "X",
       accountId: "acc_1",
       path: () => "/x",

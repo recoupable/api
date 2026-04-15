@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { requireArtist } from "@/lib/research/requireArtist";
-import { getArtistResearch } from "@/lib/research/getArtistResearch";
+import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { jsonSuccess, jsonError } from "@/lib/networking/jsonResponse";
 
 /**
@@ -52,7 +52,7 @@ export async function getResearchPlaylistsHandler(request: NextRequest) {
     query.popularIndie = "true";
   }
 
-  const result = await getArtistResearch({
+  const result = await handleArtistResearch({
     artist: gate.artist,
     accountId: gate.accountId,
     path: cmId => `/artist/${cmId}/${platform}/${status}/playlists`,

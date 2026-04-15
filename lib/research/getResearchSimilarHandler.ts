@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { requireArtist } from "@/lib/research/requireArtist";
-import { getArtistResearch } from "@/lib/research/getArtistResearch";
+import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { jsonSuccess, jsonError } from "@/lib/networking/jsonResponse";
 
 const CONFIG_PARAMS = ["audience", "genre", "mood", "musicality"] as const;
@@ -30,7 +30,7 @@ export async function getResearchSimilarHandler(request: NextRequest) {
   const limit = searchParams.get("limit");
   if (limit) query.limit = limit;
 
-  const result = await getArtistResearch({
+  const result = await handleArtistResearch({
     artist: gate.artist,
     accountId: gate.accountId,
     path: cmId => `/artist/${cmId}/similar-artists/by-configurations`,

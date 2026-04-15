@@ -2,7 +2,7 @@ import { resolveArtist } from "@/lib/research/resolveArtist";
 import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
 import { deductCredits } from "@/lib/credits/deductCredits";
 
-export type GetArtistResearchParams = {
+export type HandleArtistResearchParams = {
   artist: string;
   accountId: string;
   path: (cmId: number) => string;
@@ -11,7 +11,7 @@ export type GetArtistResearchParams = {
   credits?: number;
 };
 
-export type GetArtistResearchResult = { data: unknown } | { error: string; status: number };
+export type HandleArtistResearchResult = { data: unknown } | { error: string; status: number };
 
 /**
  * Resolves an artist to a Chartmetric ID, proxies to the built upstream path,
@@ -21,9 +21,9 @@ export type GetArtistResearchResult = { data: unknown } | { error: string; statu
  *
  * @returns `{ data }` on success, `{ error, status }` on failure.
  */
-export async function getArtistResearch(
-  params: GetArtistResearchParams,
-): Promise<GetArtistResearchResult> {
+export async function handleArtistResearch(
+  params: HandleArtistResearchParams,
+): Promise<HandleArtistResearchResult> {
   const { artist, accountId, path, query, credits = 5 } = params;
 
   const resolved = await resolveArtist(artist);
