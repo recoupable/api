@@ -1,6 +1,5 @@
 import { getChartmetricToken } from "@/lib/chartmetric/getChartmetricToken";
-
-const CHARTMETRIC_BASE = "https://api.chartmetric.com/api";
+import { CHARTMETRIC_BASE } from "@/lib/chartmetric/chartmetricBase";
 
 interface ProxyResult {
   data: unknown;

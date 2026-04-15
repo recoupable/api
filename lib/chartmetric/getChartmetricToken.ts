@@ -1,4 +1,5 @@
 import { chartmetricTokenCache } from "./chartmetricTokenCache";
+import { CHARTMETRIC_BASE } from "./chartmetricBase";
 
 /**
  * Exchanges the Chartmetric refresh token for a short-lived access token.
@@ -18,7 +19,7 @@ export async function getChartmetricToken(): Promise<string> {
     throw new Error("CHARTMETRIC_REFRESH_TOKEN environment variable is not set");
   }
 
-  const response = await fetch("https://api.chartmetric.com/api/token", {
+  const response = await fetch(`${CHARTMETRIC_BASE}/token`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
