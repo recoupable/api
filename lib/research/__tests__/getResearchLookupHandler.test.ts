@@ -1,48 +1,51 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { getResearchLookupHandler } from "../getResearchLookupHandler";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
+import { validateGetResearchLookupRequest } from "../validateGetResearchLookupRequest";
+import { handleResearch } from "../handleResearch";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-vi.mock("@/lib/auth/validateAuthContext", () => ({
-  validateAuthContext: vi.fn(),
+vi.mock("../validateGetResearchLookupRequest", () => ({
+  validateGetResearchLookupRequest: vi.fn(),
 }));
 
-vi.mock("@/lib/chartmetric/fetchChartmetric", () => ({
-  fetchChartmetric: vi.fn(),
-}));
-
-vi.mock("@/lib/credits/deductCredits", () => ({
-  deductCredits: vi.fn(),
+vi.mock("../handleResearch", () => ({
+  handleResearch: vi.fn(),
 }));
 
 describe("getResearchLookupHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(validateAuthContext).mockResolvedValue({
+    vi.mocked(validateGetResearchLookupRequest).mockResolvedValue({
       accountId: "test-id",
-      orgId: null,
-      authToken: "token",
+      spotifyId: "3TVXtAsR1Inumwj472S9r4",
     });
   });
 
-  it("returns 400 when url is missing", async () => {
+  it("passes through validator error response", async () => {
+    const err = NextResponse.json({ error: "bad" }, { status: 400 });
+    vi.mocked(validateGetResearchLookupRequest).mockResolvedValue(err);
     const req = new NextRequest("http://localhost/api/research/lookup");
     const res = await getResearchLookupHandler(req);
-    expect(res.status).toBe(400);
+    expect(res).toBe(err);
   });
 
-  it("returns 400 when url is not a Spotify artist URL", async () => {
-    const req = new NextRequest("http://localhost/api/research/lookup?url=https://google.com");
+  it("returns 'Lookup failed' on upstream error", async () => {
+    vi.mocked(handleResearch).mockResolvedValue({
+      error: "Request failed with status 502",
+      status: 502,
+    });
+    const req = new NextRequest(
+      "http://localhost/api/research/lookup?url=https://open.spotify.com/artist/3TVXtAsR1Inumwj472S9r4",
+    );
     const res = await getResearchLookupHandler(req);
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(502);
     const body = await res.json();
-    expect(body.error).toContain("Spotify artist URL");
+    expect(body.error).toBe("Lookup failed");
   });
 
   it("wraps array responses in a data field instead of spreading indices", async () => {
@@ -51,10 +54,7 @@ describe("getResearchLookupHandler", () => {
       { id: 2, platform: "apple_music" },
     ];
 
-    vi.mocked(fetchChartmetric).mockResolvedValue({
-      data: arrayData,
-      status: 200,
-    });
+    vi.mocked(handleResearch).mockResolvedValue({ data: arrayData });
 
     const req = new NextRequest(
       "http://localhost/api/research/lookup?url=https://open.spotify.com/artist/3TVXtAsR1Inumwj472S9r4",
@@ -64,18 +64,13 @@ describe("getResearchLookupHandler", () => {
 
     const body = await res.json();
     expect(body.status).toBe("success");
-    // Should wrap in data field, NOT spread as {"0":...,"1":...}
     expect(body.data).toEqual(arrayData);
     expect(body).not.toHaveProperty("0");
   });
 
   it("spreads object responses normally", async () => {
     const objectData = { id: 3380, spotify_id: "3TVXtAsR1Inumwj472S9r4" };
-
-    vi.mocked(fetchChartmetric).mockResolvedValue({
-      data: objectData,
-      status: 200,
-    });
+    vi.mocked(handleResearch).mockResolvedValue({ data: objectData });
 
     const req = new NextRequest(
       "http://localhost/api/research/lookup?url=https://open.spotify.com/artist/3TVXtAsR1Inumwj472S9r4",

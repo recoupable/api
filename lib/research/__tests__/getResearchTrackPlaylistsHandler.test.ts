@@ -2,98 +2,53 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getResearchTrackPlaylistsHandler } from "../getResearchTrackPlaylistsHandler";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
-import { resolveTrack } from "@/lib/research/resolveTrack";
+import { validateGetResearchTrackPlaylistsRequest } from "../validateGetResearchTrackPlaylistsRequest";
+import { handleResearch } from "../handleResearch";
+import { resolveTrack } from "../resolveTrack";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-vi.mock("@/lib/auth/validateAuthContext", () => ({
-  validateAuthContext: vi.fn(),
+vi.mock("../validateGetResearchTrackPlaylistsRequest", () => ({
+  validateGetResearchTrackPlaylistsRequest: vi.fn(),
 }));
 
-vi.mock("@/lib/chartmetric/fetchChartmetric", () => ({
-  fetchChartmetric: vi.fn(),
+vi.mock("../handleResearch", () => ({
+  handleResearch: vi.fn(),
 }));
 
-vi.mock("@/lib/research/resolveTrack", () => ({
+vi.mock("../resolveTrack", () => ({
   resolveTrack: vi.fn(),
 }));
 
-vi.mock("@/lib/credits/deductCredits", () => ({
-  deductCredits: vi.fn(),
-}));
+const baseValidated = {
+  accountId: "test-id",
+  id: "18220712" as string | null,
+  q: null as string | null,
+  artist: undefined as string | undefined,
+  platform: "spotify",
+  status: "current",
+  filters: { editorial: "true" },
+  pagination: {},
+};
 
 describe("getResearchTrackPlaylistsHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(validateGetResearchTrackPlaylistsRequest).mockResolvedValue({ ...baseValidated });
   });
 
-  it("returns 401 when auth fails", async () => {
-    const errorResponse = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    vi.mocked(validateAuthContext).mockResolvedValue(errorResponse);
-
-    const req = new NextRequest("http://localhost/api/research/track/playlists?id=18220712");
-    const res = await getResearchTrackPlaylistsHandler(req);
-    expect(res.status).toBe(401);
-  });
-
-  it("returns 400 when both id and q are missing", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "test-id",
-      orgId: null,
-      authToken: "token",
-    });
-
+  it("passes through validator error response", async () => {
+    const err = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    vi.mocked(validateGetResearchTrackPlaylistsRequest).mockResolvedValue(err);
     const req = new NextRequest("http://localhost/api/research/track/playlists");
     const res = await getResearchTrackPlaylistsHandler(req);
-    expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toContain("id or q parameter is required");
+    expect(res).toBe(err);
   });
 
-  it("returns 400 for invalid platform", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "test-id",
-      orgId: null,
-      authToken: "token",
-    });
-
-    const req = new NextRequest(
-      "http://localhost/api/research/track/playlists?id=123&platform=invalid",
-    );
-    const res = await getResearchTrackPlaylistsHandler(req);
-    expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toContain("Invalid platform");
-  });
-
-  it("returns 400 for invalid status", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "test-id",
-      orgId: null,
-      authToken: "token",
-    });
-
-    const req = new NextRequest(
-      "http://localhost/api/research/track/playlists?id=123&status=invalid",
-    );
-    const res = await getResearchTrackPlaylistsHandler(req);
-    expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toContain("status must be");
-  });
-
-  it("returns 200 with playlists when given a track id", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "test-id",
-      orgId: null,
-      authToken: "token",
-    });
-
-    vi.mocked(fetchChartmetric).mockResolvedValue({
+  it("returns 200 with placements when given a track id", async () => {
+    vi.mocked(handleResearch).mockResolvedValue({
       data: [
         {
           playlist: {
@@ -104,12 +59,8 @@ describe("getResearchTrackPlaylistsHandler", () => {
           track: { name: "God's Plan", cm_track: 18220712 },
         },
       ],
-      status: 200,
     });
-
-    const req = new NextRequest(
-      "http://localhost/api/research/track/playlists?id=18220712&editorial=true",
-    );
+    const req = new NextRequest("http://localhost/api/research/track/playlists?id=18220712");
     const res = await getResearchTrackPlaylistsHandler(req);
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -119,22 +70,15 @@ describe("getResearchTrackPlaylistsHandler", () => {
   });
 
   it("resolves track by name when q is provided", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "test-id",
-      orgId: null,
-      authToken: "token",
+    vi.mocked(validateGetResearchTrackPlaylistsRequest).mockResolvedValue({
+      ...baseValidated,
+      id: null,
+      q: "God's Plan",
+      artist: "Drake",
     });
-
     vi.mocked(resolveTrack).mockResolvedValue({ id: "18220712" });
-
-    vi.mocked(fetchChartmetric).mockResolvedValue({
-      data: [
-        {
-          playlist: { name: "Today's Top Hits", image_url: "https://i.scdn.co/image/xyz" },
-          track: { name: "God's Plan" },
-        },
-      ],
-      status: 200,
+    vi.mocked(handleResearch).mockResolvedValue({
+      data: [{ playlist: { name: "Today's Top Hits" }, track: { name: "God's Plan" } }],
     });
 
     const req = new NextRequest(
@@ -143,43 +87,40 @@ describe("getResearchTrackPlaylistsHandler", () => {
     const res = await getResearchTrackPlaylistsHandler(req);
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.status).toBe("success");
     expect(body.placements).toHaveLength(1);
     expect(vi.mocked(resolveTrack)).toHaveBeenCalledWith("God's Plan", "Drake");
   });
 
   it("returns 404 when track name search finds nothing", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "test-id",
-      orgId: null,
-      authToken: "token",
+    vi.mocked(validateGetResearchTrackPlaylistsRequest).mockResolvedValue({
+      ...baseValidated,
+      id: null,
+      q: "nonexistent",
     });
-
     vi.mocked(resolveTrack).mockResolvedValue({
-      error: 'No track found matching "nonexistent song"',
+      error: 'No track found matching "nonexistent"',
     });
-
-    const req = new NextRequest("http://localhost/api/research/track/playlists?q=nonexistent+song");
+    const req = new NextRequest("http://localhost/api/research/track/playlists?q=nonexistent");
     const res = await getResearchTrackPlaylistsHandler(req);
     expect(res.status).toBe(404);
   });
 
   it("returns empty placements when Chartmetric returns non-array", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "test-id",
-      orgId: null,
-      authToken: "token",
-    });
-
-    vi.mocked(fetchChartmetric).mockResolvedValue({
-      data: null,
-      status: 200,
-    });
-
+    vi.mocked(handleResearch).mockResolvedValue({ data: null });
     const req = new NextRequest("http://localhost/api/research/track/playlists?id=123");
     const res = await getResearchTrackPlaylistsHandler(req);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.placements).toEqual([]);
+  });
+
+  it("propagates upstream error status", async () => {
+    vi.mocked(handleResearch).mockResolvedValue({
+      error: "Request failed with status 502",
+      status: 502,
+    });
+    const req = new NextRequest("http://localhost/api/research/track/playlists?id=123");
+    const res = await getResearchTrackPlaylistsHandler(req);
+    expect(res.status).toBe(502);
   });
 });
