@@ -13,6 +13,7 @@ import { registerWebDeepResearchTool } from "./registerWebDeepResearchTool";
 import { registerArtistDeepResearchTool } from "./registerArtistDeepResearchTool";
 import { registerAllFileTools } from "./files";
 import { registerAllFlamingoTools } from "./flamingo";
+import { registerAllTribeTools } from "./tribe";
 import { registerCreateSegmentsTool } from "./registerCreateSegmentsTool";
 import { registerAllYouTubeTools } from "./youtube";
 import { registerTranscribeTools } from "./transcribe";
@@ -53,5 +54,6 @@ export const registerAllTools = (server: McpServer): void => {
   registerSendEmailTool(server);
   registerUpdateAccountInfoTool(server);
   registerCreateSegmentsTool(server);
+  registerAllTribeTools(server);
   registerAllYouTubeTools(server);
 };
