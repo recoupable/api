@@ -17,7 +17,7 @@ export const getSegmentsQuerySchema = z.object({
     .pipe(z.number().int().min(1).max(100)),
 });
 
-export type GetSegmentsQuery = z.infer<typeof getSegmentsQuerySchema>;
+export type ValidatedGetSegmentsQuery = z.infer<typeof getSegmentsQuerySchema>;
 
 /**
  * Validates query parameters for GET /api/artists/{id}/segments.
@@ -30,7 +30,7 @@ export type GetSegmentsQuery = z.infer<typeof getSegmentsQuerySchema>;
  */
 export function validateGetSegmentsQuery(
   searchParams: URLSearchParams,
-): NextResponse | GetSegmentsQuery {
+): NextResponse | ValidatedGetSegmentsQuery {
   const params = Object.fromEntries(searchParams.entries());
 
   const validationResult = getSegmentsQuerySchema.safeParse(params);

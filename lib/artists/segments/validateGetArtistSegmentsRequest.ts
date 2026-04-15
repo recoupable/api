@@ -4,13 +4,13 @@ import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import {
   validateGetSegmentsQuery,
-  type GetSegmentsQuery,
+  type ValidatedGetSegmentsQuery,
 } from "@/lib/artists/segments/validateGetSegmentsQuery";
 
-export interface GetArtistSegmentsRequest {
+export interface ValidatedGetArtistSegmentsRequest {
   artistId: string;
   requesterAccountId: string;
-  query: GetSegmentsQuery;
+  query: ValidatedGetSegmentsQuery;
 }
 
 /**
@@ -24,7 +24,7 @@ export interface GetArtistSegmentsRequest {
 export async function validateGetArtistSegmentsRequest(
   request: NextRequest,
   id: string,
-): Promise<GetArtistSegmentsRequest | NextResponse> {
+): Promise<ValidatedGetArtistSegmentsRequest | NextResponse> {
   const validatedParams = validateAccountParams(id);
   if (validatedParams instanceof NextResponse) {
     return validatedParams;

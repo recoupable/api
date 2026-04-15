@@ -4,7 +4,7 @@ import {
   mapArtistSegments,
   type MappedArtistSegment,
 } from "@/lib/artists/segments/mapArtistSegments";
-import type { GetSegmentsQuery } from "@/lib/artists/segments/validateGetSegmentsQuery";
+import type { ValidatedGetSegmentsQuery } from "@/lib/artists/segments/validateGetSegmentsQuery";
 
 export interface GetArtistSegmentsResponse {
   status: "success" | "error";
@@ -27,7 +27,7 @@ export interface GetArtistSegmentsResponse {
  */
 export const getArtistSegments = async (
   artistAccountId: string,
-  { page, limit }: GetSegmentsQuery,
+  { page, limit }: ValidatedGetSegmentsQuery,
 ): Promise<GetArtistSegmentsResponse> => {
   try {
     const offset = (page - 1) * limit;
