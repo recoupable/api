@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
 import { getFormattedArtist } from "@/lib/artists/getFormattedArtist";
+import { setAccountArtistPin } from "@/lib/artists/setAccountArtistPin";
+import { upsertArtistInfoFields } from "@/lib/artists/upsertArtistInfoFields";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
-import { setAccountArtistPin } from "@/lib/supabase/account_artist_ids/setAccountArtistPin";
-import { insertAccountInfo } from "@/lib/supabase/account_info/insertAccountInfo";
-import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
-import { updateAccountInfo } from "@/lib/supabase/account_info/updateAccountInfo";
 import { selectAccountWithArtistDetails } from "@/lib/supabase/accounts/selectAccountWithArtistDetails";
 import { updateAccount } from "@/lib/supabase/accounts/updateAccount";
 import { validateUpdateArtistRequest } from "./validateUpdateArtistRequest";
@@ -46,29 +44,7 @@ export async function updateArtistHandler(
       await updateAccount(artistId, { name });
     }
 
-    const existingInfo = await selectAccountInfo(artistId);
-
-    if (!existingInfo) {
-      await insertAccountInfo({
-        account_id: artistId,
-        image,
-        instruction,
-        knowledges,
-        label: label === "" ? null : label,
-      });
-    } else {
-      const nextKnowledges =
-        knowledges !== undefined
-          ? Array.from(new Map(knowledges.map(knowledge => [knowledge.url, knowledge])).values())
-          : existingInfo.knowledges;
-
-      await updateAccountInfo(artistId, {
-        image: image ?? existingInfo.image,
-        instruction: instruction ?? existingInfo.instruction,
-        knowledges: nextKnowledges,
-        label: label === undefined ? existingInfo.label : label === "" ? null : label,
-      });
-    }
+    await upsertArtistInfoFields({ artistId, image, instruction, label, knowledges });
 
     if (profileUrls) {
       await updateArtistSocials(artistId, profileUrls);

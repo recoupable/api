@@ -9,7 +9,8 @@ import { updateAccountInfo } from "@/lib/supabase/account_info/updateAccountInfo
 import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
 import { selectAccountWithArtistDetails } from "@/lib/supabase/accounts/selectAccountWithArtistDetails";
 import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
-import { setAccountArtistPin } from "@/lib/supabase/account_artist_ids/setAccountArtistPin";
+import { setAccountArtistPin } from "@/lib/artists/setAccountArtistPin";
+import { upsertArtistInfoFields } from "@/lib/artists/upsertArtistInfoFields";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -47,8 +48,12 @@ vi.mock("@/lib/supabase/account_artist_ids/selectAccountArtistId", () => ({
   selectAccountArtistId: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/account_artist_ids/setAccountArtistPin", () => ({
+vi.mock("@/lib/artists/setAccountArtistPin", () => ({
   setAccountArtistPin: vi.fn(),
+}));
+
+vi.mock("@/lib/artists/upsertArtistInfoFields", () => ({
+  upsertArtistInfoFields: vi.fn(),
 }));
 
 describe("updateArtistHandler", () => {
@@ -138,7 +143,8 @@ describe("updateArtistHandler", () => {
 
     expect(response.status).toBe(200);
     expect(updateAccount).toHaveBeenCalledWith(artistId, { name: "Updated Artist" });
-    expect(updateAccountInfo).toHaveBeenCalledWith(artistId, {
+    expect(upsertArtistInfoFields).toHaveBeenCalledWith({
+      artistId,
       image: "https://example.com/new-image.jpg",
       instruction: "Stay on brand",
       knowledges: [
@@ -148,7 +154,7 @@ describe("updateArtistHandler", () => {
           type: "application/pdf",
         },
       ],
-      label: null,
+      label: "",
     });
     expect(updateArtistSocials).toHaveBeenCalledWith(artistId, {
       INSTAGRAM: "https://instagram.com/updated_artist",
@@ -334,8 +340,8 @@ describe("updateArtistHandler", () => {
     const response = await updateArtistHandler(request, Promise.resolve({ id: artistId }));
 
     expect(response.status).toBe(200);
-    expect(insertAccountInfo).toHaveBeenCalledWith({
-      account_id: artistId,
+    expect(upsertArtistInfoFields).toHaveBeenCalledWith({
+      artistId,
       image: undefined,
       instruction: "New profile",
       knowledges: undefined,
