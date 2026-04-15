@@ -90,8 +90,7 @@ describe("getArtistSegmentsHandler", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(getArtistSegments).toHaveBeenCalledWith({
-      artist_account_id: artistId,
+    expect(getArtistSegments).toHaveBeenCalledWith(artistId, {
       page: 1,
       limit: 20,
     });
@@ -119,8 +118,7 @@ describe("getArtistSegmentsHandler", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(getArtistSegments).toHaveBeenCalledWith({
-      artist_account_id: artistId,
+    expect(getArtistSegments).toHaveBeenCalledWith(artistId, {
       page: 2,
       limit: 5,
     });

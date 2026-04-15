@@ -39,11 +39,7 @@ export async function getArtistSegmentsHandler(
       return validatedQuery;
     }
 
-    const result = await getArtistSegments({
-      artist_account_id: validatedParams.id,
-      page: validatedQuery.page,
-      limit: validatedQuery.limit,
-    });
+    const result = await getArtistSegments(validatedParams.id, validatedQuery);
 
     const statusCode = result.status === "success" ? 200 : 500;
 

@@ -4,12 +4,7 @@ import {
   mapArtistSegments,
   type MappedArtistSegment,
 } from "@/lib/artists/segments/mapArtistSegments";
-
-export interface GetArtistSegmentsParams {
-  artist_account_id: string;
-  page: number;
-  limit: number;
-}
+import type { GetSegmentsQuery } from "@/lib/artists/segments/validateGetSegmentsQuery";
 
 export interface GetArtistSegmentsResponse {
   status: "success" | "error";
@@ -26,18 +21,18 @@ export interface GetArtistSegmentsResponse {
 /**
  * Fetches paginated segments for the given artist account.
  *
- * @param params - Artist account ID plus pagination controls
+ * @param artistAccountId - Artist account ID from the route path
+ * @param query - Validated pagination controls (`page`, `limit`)
  * @returns The paginated segments response envelope
  */
-export const getArtistSegments = async ({
-  artist_account_id,
-  page,
-  limit,
-}: GetArtistSegmentsParams): Promise<GetArtistSegmentsResponse> => {
+export const getArtistSegments = async (
+  artistAccountId: string,
+  { page, limit }: GetSegmentsQuery,
+): Promise<GetArtistSegmentsResponse> => {
   try {
     const offset = (page - 1) * limit;
 
-    const total_count = await selectArtistSegmentsCount(artist_account_id);
+    const total_count = await selectArtistSegmentsCount(artistAccountId);
 
     if (total_count === 0) {
       return {
@@ -52,7 +47,7 @@ export const getArtistSegments = async ({
       };
     }
 
-    const data = await selectArtistSegmentsWithDetails(artist_account_id, offset, limit);
+    const data = await selectArtistSegmentsWithDetails(artistAccountId, offset, limit);
 
     if (!data) {
       return {
