@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { z } from "zod";
 
 export const discoverQuerySchema = z.object({
@@ -13,10 +14,20 @@ export const discoverQuerySchema = z.object({
 
 export type DiscoverQuery = z.infer<typeof discoverQuerySchema>;
 
+export type ValidatedGetResearchDiscoverRequest = DiscoverQuery & { accountId: string };
+
 /**
- * Validates query params for GET /api/research/discover.
+ * Validates `GET /api/research/discover` — auth + filter query params.
+ *
+ * @param request - The incoming HTTP request.
  */
-export function validateDiscoverQuery(searchParams: URLSearchParams): NextResponse | DiscoverQuery {
+export async function validateGetResearchDiscoverRequest(
+  request: NextRequest,
+): Promise<NextResponse | ValidatedGetResearchDiscoverRequest> {
+  const authResult = await validateAuthContext(request);
+  if (authResult instanceof NextResponse) return authResult;
+
+  const { searchParams } = new URL(request.url);
   const raw: Record<string, string> = {};
   for (const key of [
     "country",
@@ -31,17 +42,13 @@ export function validateDiscoverQuery(searchParams: URLSearchParams): NextRespon
   }
 
   const result = discoverQuerySchema.safeParse(raw);
-
   if (!result.success) {
     const firstError = result.error.issues[0];
     return NextResponse.json(
-      {
-        status: "error",
-        error: firstError.message,
-      },
+      { status: "error", error: firstError.message },
       { status: 400, headers: getCorsHeaders() },
     );
   }
 
-  return result.data;
+  return { accountId: authResult.accountId, ...result.data };
 }

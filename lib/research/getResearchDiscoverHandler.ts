@@ -1,41 +1,49 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { handleResearchRequest } from "@/lib/research/handleResearchRequest";
-import { validateDiscoverQuery } from "@/lib/research/validateDiscoverQuery";
+import { errorResponse } from "@/lib/networking/errorResponse";
+import { successResponse } from "@/lib/networking/successResponse";
+import { handleResearchProxy } from "@/lib/research/handleResearchProxy";
+import { validateGetResearchDiscoverRequest } from "@/lib/research/validateGetResearchDiscoverRequest";
 
 /**
- * Discover handler — filters artists by country, genre, listener ranges, growth rate.
+ * GET /api/research/discover
  *
- * @param request - query params: country, genre, sort, limit, sp_monthly_listeners_min/max
- * @returns JSON artist list or error
+ * Filters artists by country, genre, listener ranges, and growth rate.
+ *
+ * @param request - The incoming HTTP request.
+ * @returns The JSON response.
  */
-export async function getResearchDiscoverHandler(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const validated = validateDiscoverQuery(searchParams);
+export async function getResearchDiscoverHandler(request: NextRequest): Promise<NextResponse> {
+  try {
+    const validated = await validateGetResearchDiscoverRequest(request);
+    if (validated instanceof NextResponse) return validated;
 
-  if (validated instanceof NextResponse) return validated;
+    const query: Record<string, string> = {};
+    if (validated.country) query.code2 = validated.country;
+    if (validated.genre) query.tagId = validated.genre;
+    if (validated.sort) query.sortColumn = validated.sort;
+    if (validated.limit !== undefined) query.limit = String(validated.limit);
+    if (
+      validated.sp_monthly_listeners_min !== undefined &&
+      validated.sp_monthly_listeners_max !== undefined
+    ) {
+      query["sp_ml[]"] =
+        `${validated.sp_monthly_listeners_min},${validated.sp_monthly_listeners_max}`;
+    } else if (validated.sp_monthly_listeners_min !== undefined) {
+      query["sp_ml[]"] = String(validated.sp_monthly_listeners_min);
+    } else if (validated.sp_monthly_listeners_max !== undefined) {
+      query["sp_ml[]"] = String(validated.sp_monthly_listeners_max);
+    }
 
-  return handleResearchRequest(
-    request,
-    () => "/artist/list/filter",
-    () => {
-      const params: Record<string, string> = {};
-      if (validated.country) params.code2 = validated.country;
-      if (validated.genre) params.tagId = validated.genre;
-      if (validated.sort) params.sortColumn = validated.sort;
-      if (validated.limit) params.limit = String(validated.limit);
-      if (
-        validated.sp_monthly_listeners_min !== undefined &&
-        validated.sp_monthly_listeners_max !== undefined
-      ) {
-        params["sp_ml[]"] =
-          `${validated.sp_monthly_listeners_min},${validated.sp_monthly_listeners_max}`;
-      } else if (validated.sp_monthly_listeners_min !== undefined) {
-        params["sp_ml[]"] = String(validated.sp_monthly_listeners_min);
-      } else if (validated.sp_monthly_listeners_max !== undefined) {
-        params["sp_ml[]"] = String(validated.sp_monthly_listeners_max);
-      }
-      return params;
-    },
-    data => ({ artists: Array.isArray(data) ? data : [] }),
-  );
+    const result = await handleResearchProxy({
+      accountId: validated.accountId,
+      path: "/artist/list/filter",
+      query,
+    });
+
+    if ("error" in result) return errorResponse(result.error, result.status);
+    return successResponse({ artists: Array.isArray(result.data) ? result.data : [] });
+  } catch (error) {
+    console.error("[ERROR] getResearchDiscoverHandler:", error);
+    return errorResponse("Internal error", 500);
+  }
 }
