@@ -1,6 +1,6 @@
 import generateAccessToken from "@/lib/spotify/generateAccessToken";
 import getSearch from "@/lib/spotify/getSearch";
-import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
 
 interface GetIdsResponse {
   chartmetric_ids?: number[];
@@ -50,7 +50,7 @@ export async function resolveTrack(
   const isrc = spotifyTrack.external_ids?.isrc;
 
   if (isrc) {
-    const result = await proxyToChartmetric(`/track/isrc/${isrc}/get-ids`);
+    const result = await fetchChartmetric(`/track/isrc/${isrc}/get-ids`);
     if (result.status === 200) {
       const ids = (Array.isArray(result.data) ? result.data[0] : result.data) as GetIdsResponse;
       const cmId = ids?.chartmetric_ids?.[0];
@@ -59,7 +59,7 @@ export async function resolveTrack(
   }
 
   const spotifyId = spotifyTrack.id;
-  const result = await proxyToChartmetric(`/track/spotify/${spotifyId}/get-ids`);
+  const result = await fetchChartmetric(`/track/spotify/${spotifyId}/get-ids`);
   if (result.status === 200) {
     const ids = (Array.isArray(result.data) ? result.data[0] : result.data) as GetIdsResponse;
     const cmId = ids?.chartmetric_ids?.[0];

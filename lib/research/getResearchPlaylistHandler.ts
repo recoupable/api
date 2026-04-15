@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { deductCredits } from "@/lib/credits/deductCredits";
-import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
 
 /**
  * Playlist detail handler — looks up a playlist by platform and ID, falling back to name search.
@@ -37,7 +37,7 @@ export async function getResearchPlaylistHandler(request: NextRequest): Promise<
   let playlistId = id;
 
   if (!/^\d+$/.test(id)) {
-    const searchResult = await proxyToChartmetric("/search", {
+    const searchResult = await fetchChartmetric("/search", {
       q: id,
       type: "playlists",
       limit: "1",
@@ -64,7 +64,7 @@ export async function getResearchPlaylistHandler(request: NextRequest): Promise<
     playlistId = String(playlists[0].id);
   }
 
-  const result = await proxyToChartmetric(`/playlist/${platform}/${playlistId}`);
+  const result = await fetchChartmetric(`/playlist/${platform}/${playlistId}`);
 
   if (result.status !== 200) {
     return NextResponse.json(

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getResearchTrackHandler } from "../getResearchTrackHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -13,8 +13,8 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/research/proxyToChartmetric", () => ({
-  proxyToChartmetric: vi.fn(),
+vi.mock("@/lib/research/fetchChartmetric", () => ({
+  fetchChartmetric: vi.fn(),
 }));
 
 vi.mock("@/lib/credits/deductCredits", () => ({
@@ -56,7 +56,7 @@ describe("getResearchTrackHandler", () => {
       authToken: "token",
     });
 
-    vi.mocked(proxyToChartmetric)
+    vi.mocked(fetchChartmetric)
       .mockResolvedValueOnce({
         data: { tracks: [{ id: 12345 }] },
         status: 200,

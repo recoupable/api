@@ -15,7 +15,7 @@ interface ProxyResult {
  * @param queryParams - Optional query parameters to append
  * @returns The response data (contents of `obj` if present, otherwise full response)
  */
-export async function proxyToChartmetric(
+export async function fetchChartmetric(
   path: string,
   queryParams?: Record<string, string>,
 ): Promise<ProxyResult> {

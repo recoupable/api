@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { deductCredits } from "@/lib/credits/deductCredits";
-import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
 
 const SPOTIFY_ARTIST_REGEX = /spotify\.com\/artist\/([a-zA-Z0-9]+)/;
 
@@ -41,7 +41,7 @@ export async function getResearchLookupHandler(request: NextRequest): Promise<Ne
 
   const spotifyId = match[1];
 
-  const result = await proxyToChartmetric(`/artist/spotify/${spotifyId}/get-ids`);
+  const result = await fetchChartmetric(`/artist/spotify/${spotifyId}/get-ids`);
 
   if (result.status !== 200) {
     return NextResponse.json(

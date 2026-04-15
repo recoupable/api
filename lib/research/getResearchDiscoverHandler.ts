@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
-import { handleResearchProxy } from "@/lib/research/handleResearchProxy";
+import { handleResearch } from "@/lib/research/handleResearch";
 import { validateGetResearchDiscoverRequest } from "@/lib/research/validateGetResearchDiscoverRequest";
 
 /**
@@ -34,7 +34,7 @@ export async function getResearchDiscoverHandler(request: NextRequest): Promise<
       query["sp_ml[]"] = String(validated.sp_monthly_listeners_max);
     }
 
-    const result = await handleResearchProxy({
+    const result = await handleResearch({
       accountId: validated.accountId,
       path: "/artist/list/filter",
       query,

@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 
 import { getResearchLookupHandler } from "../getResearchLookupHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -13,8 +13,8 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/research/proxyToChartmetric", () => ({
-  proxyToChartmetric: vi.fn(),
+vi.mock("@/lib/research/fetchChartmetric", () => ({
+  fetchChartmetric: vi.fn(),
 }));
 
 vi.mock("@/lib/credits/deductCredits", () => ({
@@ -51,7 +51,7 @@ describe("getResearchLookupHandler", () => {
       { id: 2, platform: "apple_music" },
     ];
 
-    vi.mocked(proxyToChartmetric).mockResolvedValue({
+    vi.mocked(fetchChartmetric).mockResolvedValue({
       data: arrayData,
       status: 200,
     });
@@ -72,7 +72,7 @@ describe("getResearchLookupHandler", () => {
   it("spreads object responses normally", async () => {
     const objectData = { id: 3380, spotify_id: "3TVXtAsR1Inumwj472S9r4" };
 
-    vi.mocked(proxyToChartmetric).mockResolvedValue({
+    vi.mocked(fetchChartmetric).mockResolvedValue({
       data: objectData,
       status: 200,
     });

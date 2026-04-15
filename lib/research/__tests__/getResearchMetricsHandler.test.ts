@@ -16,8 +16,8 @@ vi.mock("@/lib/research/resolveArtist", () => ({
   resolveArtist: vi.fn(),
 }));
 
-vi.mock("@/lib/research/proxyToChartmetric", () => ({
-  proxyToChartmetric: vi.fn(),
+vi.mock("@/lib/research/fetchChartmetric", () => ({
+  fetchChartmetric: vi.fn(),
 }));
 
 vi.mock("@/lib/credits/deductCredits", () => ({

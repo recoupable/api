@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getResearchDiscoverHandler } from "../getResearchDiscoverHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -13,8 +13,8 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/research/proxyToChartmetric", () => ({
-  proxyToChartmetric: vi.fn(),
+vi.mock("@/lib/research/fetchChartmetric", () => ({
+  fetchChartmetric: vi.fn(),
 }));
 
 vi.mock("@/lib/credits/deductCredits", () => ({
@@ -75,7 +75,7 @@ describe("getResearchDiscoverHandler", () => {
       ? Exclude<T, NextResponse>
       : never);
 
-    vi.mocked(proxyToChartmetric).mockResolvedValue({
+    vi.mocked(fetchChartmetric).mockResolvedValue({
       data: [
         { name: "Artist A", sp_monthly_listeners: 100000 },
         { name: "Artist B", sp_monthly_listeners: 200000 },
@@ -101,7 +101,7 @@ describe("getResearchDiscoverHandler", () => {
       ? Exclude<T, NextResponse>
       : never);
 
-    vi.mocked(proxyToChartmetric).mockResolvedValue({
+    vi.mocked(fetchChartmetric).mockResolvedValue({
       data: [],
       status: 200,
     });
@@ -111,7 +111,7 @@ describe("getResearchDiscoverHandler", () => {
     );
     await getResearchDiscoverHandler(req);
 
-    expect(proxyToChartmetric).toHaveBeenCalledWith(
+    expect(fetchChartmetric).toHaveBeenCalledWith(
       "/artist/list/filter",
       expect.objectContaining({ "sp_ml[]": "50000,200000" }),
     );
@@ -126,7 +126,7 @@ describe("getResearchDiscoverHandler", () => {
       ? Exclude<T, NextResponse>
       : never);
 
-    vi.mocked(proxyToChartmetric).mockResolvedValue({
+    vi.mocked(fetchChartmetric).mockResolvedValue({
       data: null,
       status: 500,
     });

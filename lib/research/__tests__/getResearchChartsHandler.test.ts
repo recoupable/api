@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 
 import { getResearchChartsHandler } from "../getResearchChartsHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -13,8 +13,8 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/research/proxyToChartmetric", () => ({
-  proxyToChartmetric: vi.fn(),
+vi.mock("@/lib/research/fetchChartmetric", () => ({
+  fetchChartmetric: vi.fn(),
 }));
 
 vi.mock("@/lib/credits/deductCredits", () => ({
@@ -52,7 +52,7 @@ describe("getResearchChartsHandler", () => {
   });
 
   it("defaults type to 'regional' and interval to 'daily'", async () => {
-    vi.mocked(proxyToChartmetric).mockResolvedValue({
+    vi.mocked(fetchChartmetric).mockResolvedValue({
       data: { chart: [] },
       status: 200,
     });
@@ -60,14 +60,14 @@ describe("getResearchChartsHandler", () => {
     const req = new NextRequest("http://localhost/api/research/charts?platform=spotify&country=US");
     await getResearchChartsHandler(req);
 
-    const calledParams = vi.mocked(proxyToChartmetric).mock.calls[0][1];
+    const calledParams = vi.mocked(fetchChartmetric).mock.calls[0][1];
     expect(calledParams).toHaveProperty("type", "regional");
     expect(calledParams).toHaveProperty("interval", "daily");
     expect(calledParams).toHaveProperty("country_code", "US");
   });
 
   it("preserves user-provided type and interval", async () => {
-    vi.mocked(proxyToChartmetric).mockResolvedValue({
+    vi.mocked(fetchChartmetric).mockResolvedValue({
       data: { chart: [] },
       status: 200,
     });
@@ -77,7 +77,7 @@ describe("getResearchChartsHandler", () => {
     );
     await getResearchChartsHandler(req);
 
-    const calledParams = vi.mocked(proxyToChartmetric).mock.calls[0][1];
+    const calledParams = vi.mocked(fetchChartmetric).mock.calls[0][1];
     expect(calledParams).toMatchObject({ type: "viral", interval: "weekly" });
   });
 });

@@ -1,5 +1,5 @@
 import { resolveArtist } from "@/lib/research/resolveArtist";
-import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
 import { deductCredits } from "@/lib/credits/deductCredits";
 
 export type HandleArtistResearchParams = {
@@ -29,7 +29,7 @@ export async function handleArtistResearch(
   const resolved = await resolveArtist(artist);
   if (resolved.error) return { error: resolved.error, status: 404 };
 
-  const result = await proxyToChartmetric(path(resolved.id), query);
+  const result = await fetchChartmetric(path(resolved.id), query);
   if (result.status !== 200) {
     return { error: `Request failed with status ${result.status}`, status: result.status };
   }

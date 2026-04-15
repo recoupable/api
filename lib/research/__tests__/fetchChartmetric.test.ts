@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { proxyToChartmetric } from "../proxyToChartmetric";
+import { fetchChartmetric } from "../fetchChartmetric";
 
 vi.mock("@/lib/chartmetric/getChartmetricToken", () => ({
   getChartmetricToken: vi.fn().mockResolvedValue("mock-token"),
@@ -7,7 +7,7 @@ vi.mock("@/lib/chartmetric/getChartmetricToken", () => ({
 
 const mockFetch = vi.fn();
 
-describe("proxyToChartmetric", () => {
+describe("fetchChartmetric", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", mockFetch);
     mockFetch.mockReset();
@@ -20,7 +20,7 @@ describe("proxyToChartmetric", () => {
       json: async () => ({ obj: { name: "Drake", id: 3380 } }),
     } as Response);
 
-    const result = await proxyToChartmetric("/artist/3380");
+    const result = await fetchChartmetric("/artist/3380");
 
     expect(result.data).toEqual({ name: "Drake", id: 3380 });
     expect(result.status).toBe(200);
@@ -33,7 +33,7 @@ describe("proxyToChartmetric", () => {
       json: async () => ({ results: [{ name: "Drake" }] }),
     } as Response);
 
-    const result = await proxyToChartmetric("/search", { q: "Drake" });
+    const result = await fetchChartmetric("/search", { q: "Drake" });
 
     expect(result.data).toEqual({ results: [{ name: "Drake" }] });
   });
@@ -45,7 +45,7 @@ describe("proxyToChartmetric", () => {
       json: async () => ({ obj: [] }),
     } as Response);
 
-    await proxyToChartmetric("/search", { q: "Drake", type: "artists" });
+    await fetchChartmetric("/search", { q: "Drake", type: "artists" });
 
     const calledUrl = mockFetch.mock.calls[0][0];
     expect(calledUrl).toContain("q=Drake");
@@ -59,7 +59,7 @@ describe("proxyToChartmetric", () => {
       json: async () => ({ obj: {} }),
     } as Response);
 
-    await proxyToChartmetric("/artist/3380");
+    await fetchChartmetric("/artist/3380");
 
     const calledOpts = mockFetch.mock.calls[0][1];
     expect(calledOpts.headers).toMatchObject({ Authorization: "Bearer mock-token" });
@@ -71,7 +71,7 @@ describe("proxyToChartmetric", () => {
       status: 404,
     } as Response);
 
-    const result = await proxyToChartmetric("/artist/99999");
+    const result = await fetchChartmetric("/artist/99999");
 
     expect(result.status).toBe(404);
     expect(result.data).toEqual({ error: "Chartmetric API returned 404" });
@@ -84,7 +84,7 @@ describe("proxyToChartmetric", () => {
       json: async () => ({ obj: [] }),
     } as Response);
 
-    await proxyToChartmetric("/search", { q: "Drake", type: "" });
+    await fetchChartmetric("/search", { q: "Drake", type: "" });
 
     const calledUrl = mockFetch.mock.calls[0][0];
     expect(calledUrl).toContain("q=Drake");

@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { deductCredits } from "@/lib/credits/deductCredits";
-import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
 import { resolveTrack } from "@/lib/research/resolveTrack";
 
 const VALID_PLATFORMS = ["spotify", "applemusic", "deezer", "amazon"];
@@ -106,7 +106,7 @@ export async function getResearchTrackPlaylistsHandler(
     queryParams.popularIndie = "true";
   }
 
-  const result = await proxyToChartmetric(
+  const result = await fetchChartmetric(
     `/track/${trackId}/${platform}/${status}/playlists`,
     queryParams,
   );

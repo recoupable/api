@@ -1,7 +1,7 @@
-import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
 import { deductCredits } from "@/lib/credits/deductCredits";
 
-export type HandleResearchProxyParams = {
+export type HandleResearchParams = {
   accountId: string;
   path: string;
   query?: Record<string, string>;
@@ -9,7 +9,7 @@ export type HandleResearchProxyParams = {
   credits?: number;
 };
 
-export type HandleResearchProxyResult = { data: unknown } | { error: string; status: number };
+export type HandleResearchResult = { data: unknown } | { error: string; status: number };
 
 /**
  * Proxies a non-artist-scoped research call to Chartmetric and deducts credits
@@ -20,12 +20,10 @@ export type HandleResearchProxyResult = { data: unknown } | { error: string; sta
  *
  * @returns `{ data }` on success, `{ error, status }` on upstream failure.
  */
-export async function handleResearchProxy(
-  params: HandleResearchProxyParams,
-): Promise<HandleResearchProxyResult> {
+export async function handleResearch(params: HandleResearchParams): Promise<HandleResearchResult> {
   const { accountId, path, query, credits = 5 } = params;
 
-  const result = await proxyToChartmetric(path, query);
+  const result = await fetchChartmetric(path, query);
   if (result.status !== 200) {
     return { error: `Request failed with status ${result.status}`, status: result.status };
   }

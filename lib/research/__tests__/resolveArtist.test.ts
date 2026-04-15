@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { resolveArtist } from "../resolveArtist";
 
-import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
 
-vi.mock("@/lib/research/proxyToChartmetric", () => ({
-  proxyToChartmetric: vi.fn(),
+vi.mock("@/lib/research/fetchChartmetric", () => ({
+  fetchChartmetric: vi.fn(),
 }));
 
 describe("resolveArtist", () => {
@@ -16,7 +16,7 @@ describe("resolveArtist", () => {
     const result = await resolveArtist("3380");
 
     expect(result).toEqual({ id: 3380 });
-    expect(proxyToChartmetric).not.toHaveBeenCalled();
+    expect(fetchChartmetric).not.toHaveBeenCalled();
   });
 
   it("returns error for UUID (not yet implemented)", async () => {
@@ -27,7 +27,7 @@ describe("resolveArtist", () => {
   });
 
   it("searches Chartmetric by name and returns top match", async () => {
-    vi.mocked(proxyToChartmetric).mockResolvedValue({
+    vi.mocked(fetchChartmetric).mockResolvedValue({
       data: { artists: [{ id: 3380, name: "Drake" }] },
       status: 200,
     });
@@ -35,7 +35,7 @@ describe("resolveArtist", () => {
     const result = await resolveArtist("Drake");
 
     expect(result).toEqual({ id: 3380 });
-    expect(proxyToChartmetric).toHaveBeenCalledWith("/search", {
+    expect(fetchChartmetric).toHaveBeenCalledWith("/search", {
       q: "Drake",
       type: "artists",
       limit: "1",
@@ -43,7 +43,7 @@ describe("resolveArtist", () => {
   });
 
   it("returns error when no artist found", async () => {
-    vi.mocked(proxyToChartmetric).mockResolvedValue({
+    vi.mocked(fetchChartmetric).mockResolvedValue({
       data: { artists: [] },
       status: 200,
     });
@@ -55,7 +55,7 @@ describe("resolveArtist", () => {
   });
 
   it("returns error when search fails", async () => {
-    vi.mocked(proxyToChartmetric).mockResolvedValue({
+    vi.mocked(fetchChartmetric).mockResolvedValue({
       data: { error: "failed" },
       status: 500,
     });

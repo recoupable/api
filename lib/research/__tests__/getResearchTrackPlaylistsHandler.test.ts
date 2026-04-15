@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getResearchTrackPlaylistsHandler } from "../getResearchTrackPlaylistsHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
 import { resolveTrack } from "@/lib/research/resolveTrack";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -14,8 +14,8 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/research/proxyToChartmetric", () => ({
-  proxyToChartmetric: vi.fn(),
+vi.mock("@/lib/research/fetchChartmetric", () => ({
+  fetchChartmetric: vi.fn(),
 }));
 
 vi.mock("@/lib/research/resolveTrack", () => ({
@@ -93,7 +93,7 @@ describe("getResearchTrackPlaylistsHandler", () => {
       authToken: "token",
     });
 
-    vi.mocked(proxyToChartmetric).mockResolvedValue({
+    vi.mocked(fetchChartmetric).mockResolvedValue({
       data: [
         {
           playlist: {
@@ -127,7 +127,7 @@ describe("getResearchTrackPlaylistsHandler", () => {
 
     vi.mocked(resolveTrack).mockResolvedValue({ id: "18220712" });
 
-    vi.mocked(proxyToChartmetric).mockResolvedValue({
+    vi.mocked(fetchChartmetric).mockResolvedValue({
       data: [
         {
           playlist: { name: "Today's Top Hits", image_url: "https://i.scdn.co/image/xyz" },
@@ -171,7 +171,7 @@ describe("getResearchTrackPlaylistsHandler", () => {
       authToken: "token",
     });
 
-    vi.mocked(proxyToChartmetric).mockResolvedValue({
+    vi.mocked(fetchChartmetric).mockResolvedValue({
       data: null,
       status: 200,
     });

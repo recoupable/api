@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
-import { handleResearchProxy } from "@/lib/research/handleResearchProxy";
+import { handleResearch } from "@/lib/research/handleResearch";
 import { validateGetResearchCuratorRequest } from "@/lib/research/validateGetResearchCuratorRequest";
 
 /**
@@ -18,7 +18,7 @@ export async function getResearchCuratorHandler(request: NextRequest): Promise<N
     const validated = await validateGetResearchCuratorRequest(request);
     if (validated instanceof NextResponse) return validated;
 
-    const result = await handleResearchProxy({
+    const result = await handleResearch({
       accountId: validated.accountId,
       path: `/curator/${validated.platform}/${validated.id}`,
     });

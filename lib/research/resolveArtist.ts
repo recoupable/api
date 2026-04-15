@@ -1,4 +1,4 @@
-import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -32,7 +32,7 @@ export async function resolveArtist(
     };
   }
 
-  const result = await proxyToChartmetric("/search", {
+  const result = await fetchChartmetric("/search", {
     q: trimmed,
     type: "artists",
     limit: "1",

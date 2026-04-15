@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { deductCredits } from "@/lib/credits/deductCredits";
-import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
 
 /**
  * Track handler — searches Chartmetric for a track by name, then fetches full details for the top match.
@@ -25,7 +25,7 @@ export async function getResearchTrackHandler(request: NextRequest): Promise<Nex
     );
   }
 
-  const searchResult = await proxyToChartmetric("/search", {
+  const searchResult = await fetchChartmetric("/search", {
     q,
     type: "tracks",
     limit: "1",
@@ -49,7 +49,7 @@ export async function getResearchTrackHandler(request: NextRequest): Promise<Nex
   }
 
   const trackId = tracks[0].id;
-  const detailResult = await proxyToChartmetric(`/track/${trackId}`);
+  const detailResult = await fetchChartmetric(`/track/${trackId}`);
 
   if (detailResult.status !== 200) {
     return NextResponse.json(

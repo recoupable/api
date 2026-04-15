@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { deductCredits } from "@/lib/credits/deductCredits";
-import { proxyToChartmetric } from "@/lib/research/proxyToChartmetric";
+import { fetchChartmetric } from "@/lib/research/fetchChartmetric";
 
 /**
  * Search handler — looks up artists/tracks/albums by name via Chartmetric.
@@ -27,7 +27,7 @@ export async function getResearchSearchHandler(request: NextRequest): Promise<Ne
     );
   }
 
-  const result = await proxyToChartmetric("/search", { q, type, limit });
+  const result = await fetchChartmetric("/search", { q, type, limit });
 
   if (result.status !== 200) {
     return NextResponse.json(
