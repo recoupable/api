@@ -53,6 +53,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.24.3
         version: 1.24.3(zod@4.1.13)
+      '@openrouter/ai-sdk-provider':
+        specifier: ^2.6.0
+        version: 2.6.0(ai@6.0.0-beta.122(zod@4.1.13))(zod@4.1.13)
       '@privy-io/node':
         specifier: ^0.6.2
         version: 0.6.2(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.13))
@@ -1297,6 +1300,13 @@ packages:
 
   '@octokit/types@14.1.0':
     resolution: {integrity: sha512-1y6DgTy8Jomcpu33N+p5w58l6xyt55Ar2I91RPiIA0xCJBXyUAhXCcmZaDWSANiha7R9a6qJJ2CRomGPZ6f46g==}
+
+  '@openrouter/ai-sdk-provider@2.6.0':
+    resolution: {integrity: sha512-6rQw/ORDjV9Q+S+uxJwpDyZtWANUr7cDDxtuS4cQ/8UhS/hNNjKcTJVfx56hwypvd0DlRM+KgWHwxFYb90km3w==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      ai: ^6.0.0
+      zod: ^3.25.0 || ^4.0.0
 
   '@opentelemetry/api-logs@0.203.0':
     resolution: {integrity: sha512-9B9RU0H7Ya1Dx/Rkyc4stuBZSGVQF27WigitInx2QQoj6KUpEFYPKoWjdFTunJYxmXmh17HeBvbMa1EhGyPmqQ==}
@@ -7799,6 +7809,11 @@ snapshots:
   '@octokit/types@14.1.0':
     dependencies:
       '@octokit/openapi-types': 25.1.0
+
+  '@openrouter/ai-sdk-provider@2.6.0(ai@6.0.0-beta.122(zod@4.1.13))(zod@4.1.13)':
+    dependencies:
+      ai: 6.0.0-beta.122(zod@4.1.13)
+      zod: 4.1.13
 
   '@opentelemetry/api-logs@0.203.0':
     dependencies:

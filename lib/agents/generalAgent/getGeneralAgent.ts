@@ -3,6 +3,7 @@ import { AnthropicProviderOptions } from "@ai-sdk/anthropic";
 import { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import { DEFAULT_MODEL } from "@/lib/const";
+import { createModel } from "@/lib/ai/createModel";
 import { RoutingDecision } from "@/lib/chat/types";
 import { extractImageUrlsFromMessages } from "@/lib/messages/extractImageUrlsFromMessages";
 import { buildSystemPromptWithImages } from "@/lib/chat/buildSystemPromptWithImages";
@@ -51,7 +52,7 @@ export default async function getGeneralAgent(body: ChatRequestBody): Promise<Ro
   const instructions = buildSystemPromptWithImages(baseSystemPrompt, imageUrls);
 
   const tools = await setupToolsForRequest(body);
-  const model = bodyModel || DEFAULT_MODEL;
+  const model = createModel(bodyModel || DEFAULT_MODEL);
   const stopWhen = stepCountIs(111);
 
   const agent = new ToolLoopAgent({

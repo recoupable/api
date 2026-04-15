@@ -1,5 +1,6 @@
 import { generateObject } from "ai";
 import { DEFAULT_MODEL } from "@/lib/const";
+import { createModel } from "./createModel";
 import { z } from "zod";
 
 export interface GenerateArrayResult {
@@ -15,7 +16,7 @@ const generateArray = async ({
   prompt: string;
 }): Promise<GenerateArrayResult[]> => {
   const result = await generateObject({
-    model: DEFAULT_MODEL,
+    model: createModel(DEFAULT_MODEL),
     system,
     prompt,
     output: "array",

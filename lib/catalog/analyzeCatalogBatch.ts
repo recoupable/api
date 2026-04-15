@@ -2,6 +2,7 @@ import { z } from "zod";
 import { generateObject } from "ai";
 import type { CatalogSongWithArtists } from "@/lib/supabase/catalog_songs/selectCatalogSongsWithArtists";
 import { DEFAULT_MODEL } from "@/lib/const";
+import { createModel } from "@/lib/ai/createModel";
 
 /**
  * Analyzes a single batch of catalog songs using AI to filter by criteria
@@ -17,7 +18,7 @@ export async function analyzeCatalogBatch(
 ): Promise<CatalogSongWithArtists[]> {
   // Use AI to select relevant songs from this batch
   const { object } = await generateObject({
-    model: DEFAULT_MODEL,
+    model: createModel(DEFAULT_MODEL),
     schema: z.object({
       selected_song_isrcs: z
         .array(z.string())

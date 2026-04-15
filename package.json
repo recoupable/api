@@ -31,6 +31,7 @@
     "@composio/vercel": "^0.3.4",
     "@fal-ai/client": "^1.9.5",
     "@modelcontextprotocol/sdk": "^1.24.3",
+    "@openrouter/ai-sdk-provider": "^2.6.0",
     "@privy-io/node": "^0.6.2",
     "@supabase/supabase-js": "^2.86.0",
     "@trigger.dev/sdk": "^4.4.3",

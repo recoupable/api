@@ -1,5 +1,6 @@
 import { DEFAULT_MODEL } from "@/lib/consts";
 import { generateObject } from "ai";
+import { createModel } from "@/lib/ai/createModel";
 import { z } from "zod";
 
 /**
@@ -17,7 +18,7 @@ export const QuestionAnswered = async ({
 }) => {
   try {
     const result = await generateObject({
-      model: DEFAULT_MODEL,
+      model: createModel(DEFAULT_MODEL),
       system: `You are an AI evaluation expert. Your job is to determine if an AI assistant actually answered the customer's question with a specific answer, or if it deflected, explained why it couldn't answer, or gave generic suggestions without providing the requested information.
 
 Instructions:

@@ -1,6 +1,7 @@
 import { Output, ToolLoopAgent, stepCountIs } from "ai";
 import { z } from "zod";
 import { LIGHTWEIGHT_MODEL, INBOUND_EMAIL_DOMAIN } from "@/lib/const";
+import { createModel } from "@/lib/ai/createModel";
 
 const replyDecisionSchema = z.object({
   shouldReply: z.boolean().describe("Whether the Recoup AI assistant should reply to this email"),
@@ -22,7 +23,7 @@ Rules (check in this order):
  */
 export function createEmailReplyAgent() {
   return new ToolLoopAgent({
-    model: LIGHTWEIGHT_MODEL,
+    model: createModel(LIGHTWEIGHT_MODEL),
     instructions,
     output: Output.object({ schema: replyDecisionSchema }),
     stopWhen: stepCountIs(1),
