@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getArtistSegments } from "@/lib/artists/segments/getArtistSegments";
-import { validateGetSegmentsQuery } from "@/lib/artists/segments/validateGetSegmentsQuery";
+import { validateGetArtistSegmentsRequest } from "@/lib/artists/segments/validateGetArtistSegmentsRequest";
 
 /**
  * Handler for GET /api/artists/{id}/segments.
@@ -23,23 +21,12 @@ export async function getArtistSegmentsHandler(
   try {
     const { id } = await params;
 
-    const validatedParams = validateAccountParams(id);
-    if (validatedParams instanceof NextResponse) {
-      return validatedParams;
+    const validated = await validateGetArtistSegmentsRequest(request, id);
+    if (validated instanceof NextResponse) {
+      return validated;
     }
 
-    const authResult = await validateAuthContext(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
-
-    const { searchParams } = new URL(request.url);
-    const validatedQuery = validateGetSegmentsQuery(searchParams);
-    if (validatedQuery instanceof NextResponse) {
-      return validatedQuery;
-    }
-
-    const result = await getArtistSegments(validatedParams.id, validatedQuery);
+    const result = await getArtistSegments(validated.artistId, validated.query);
 
     const statusCode = result.status === "success" ? 200 : 500;
 
