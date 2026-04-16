@@ -2,15 +2,17 @@ import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { handleResearch } from "@/lib/research/handleResearch";
+import { pickBestTrackMatch, type SearchTrack } from "@/lib/research/pickBestTrackMatch";
 import { validateGetResearchTrackRequest } from "@/lib/research/validateGetResearchTrackRequest";
 
 /**
  * GET /api/research/track
  *
- * Searches Chartmetric for a track by name, then fetches full details for the
- * top match.
+ * Searches Chartmetric for a track by name, picks the best match (optionally
+ * disambiguated by `artist`), then fetches full details for that track.
  *
- * @param request - must include `q` query param
+ * @param request - must include `q` query param; optional `artist` param
+ *   disambiguates against candidate tracks' `artist_names`.
  * @returns JSON track details or error
  */
 export async function getResearchTrackHandler(request: NextRequest): Promise<NextResponse> {
@@ -21,22 +23,28 @@ export async function getResearchTrackHandler(request: NextRequest): Promise<Nex
     const searchResult = await handleResearch({
       accountId: validated.accountId,
       path: "/search",
-      query: { q: validated.q, type: "tracks", limit: "1" },
+      query: { q: validated.q, type: "tracks", limit: "25" },
     });
 
     if ("error" in searchResult) {
       return errorResponse("Track search failed", searchResult.status);
     }
 
-    const tracks = (searchResult.data as { tracks?: Array<{ id: number }> })?.tracks;
-    if (!tracks || tracks.length === 0) {
-      return errorResponse(`No track found matching "${validated.q}"`, 404);
+    const tracks = (searchResult.data as { tracks?: SearchTrack[] })?.tracks ?? [];
+    const match = pickBestTrackMatch({
+      tracks,
+      q: validated.q,
+      artist: validated.artist,
+    });
+
+    if (!match) {
+      const suffix = validated.artist ? ` by "${validated.artist}"` : "";
+      return errorResponse(`No track found matching "${validated.q}"${suffix}`, 404);
     }
 
-    const trackId = tracks[0].id;
     const result = await handleResearch({
       accountId: validated.accountId,
-      path: `/track/${trackId}`,
+      path: `/track/${match.id}`,
     });
 
     if ("error" in result) return errorResponse("Failed to fetch track details", result.status);

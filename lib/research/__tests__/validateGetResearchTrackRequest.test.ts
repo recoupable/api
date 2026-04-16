@@ -44,6 +44,20 @@ describe("validateGetResearchTrackRequest", () => {
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
     const req = new NextRequest("http://localhost/api/research/track?q=Hotline+Bling");
     const res = await validateGetResearchTrackRequest(req);
-    expect(res).toEqual({ accountId: "acc_1", q: "Hotline Bling" });
+    expect(res).toEqual({ accountId: "acc_1", q: "Hotline Bling", artist: undefined });
+  });
+
+  it("passes through an optional artist query param", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest("http://localhost/api/research/track?q=Hotline+Bling&artist=Drake");
+    const res = await validateGetResearchTrackRequest(req);
+    expect(res).toEqual({ accountId: "acc_1", q: "Hotline Bling", artist: "Drake" });
+  });
+
+  it("returns undefined artist when the query param is missing", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest("http://localhost/api/research/track?q=Flowers");
+    const res = await validateGetResearchTrackRequest(req);
+    expect((res as { artist?: string }).artist).toBeUndefined();
   });
 });

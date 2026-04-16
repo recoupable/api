@@ -23,6 +23,7 @@ describe("getResearchTrackHandler", () => {
     vi.mocked(validateGetResearchTrackRequest).mockResolvedValue({
       accountId: "test-id",
       q: "Hotline Bling",
+      artist: undefined,
     });
   });
 
@@ -89,11 +90,87 @@ describe("getResearchTrackHandler", () => {
     expect(handleResearch).toHaveBeenNthCalledWith(1, {
       accountId: "test-id",
       path: "/search",
-      query: { q: "Hotline Bling", type: "tracks", limit: "1" },
+      query: { q: "Hotline Bling", type: "tracks", limit: "25" },
     });
     expect(handleResearch).toHaveBeenNthCalledWith(2, {
       accountId: "test-id",
       path: "/track/999",
     });
+  });
+
+  it("prefers an exact-name match over the first candidate when disambiguating ambiguous titles", async () => {
+    vi.mocked(validateGetResearchTrackRequest).mockResolvedValue({
+      accountId: "test-id",
+      q: "God's Plan",
+      artist: undefined,
+    });
+    vi.mocked(handleResearch)
+      .mockResolvedValueOnce({
+        data: {
+          tracks: [
+            { id: 111, name: "God's", artist_names: ["bobby fox"] },
+            { id: 222, name: "God's Plan", artist_names: ["Drake"] },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({ data: { id: 222, name: "God's Plan" } });
+    const req = new NextRequest("http://localhost/api/research/track?q=God%27s+Plan");
+    const res = await getResearchTrackHandler(req);
+
+    expect(res.status).toBe(200);
+    expect(handleResearch).toHaveBeenNthCalledWith(2, {
+      accountId: "test-id",
+      path: "/track/222",
+    });
+  });
+
+  it("filters candidates by artist_names (case-insensitive) when artist is provided", async () => {
+    vi.mocked(validateGetResearchTrackRequest).mockResolvedValue({
+      accountId: "test-id",
+      q: "Flowers",
+      artist: "miley cyrus",
+    });
+    vi.mocked(handleResearch)
+      .mockResolvedValueOnce({
+        data: {
+          tracks: [
+            { id: 1, name: "Flowers", artist_names: ["Yuda"] },
+            { id: 2, name: "Flowers", artist_names: ["Miley Cyrus"] },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({ data: { id: 2, name: "Flowers" } });
+    const req = new NextRequest("http://localhost/api/research/track?q=Flowers&artist=miley+cyrus");
+    const res = await getResearchTrackHandler(req);
+
+    expect(res.status).toBe(200);
+    expect(handleResearch).toHaveBeenNthCalledWith(2, {
+      accountId: "test-id",
+      path: "/track/2",
+    });
+  });
+
+  it("returns 404 with the artist in the message when the artist filter yields no match", async () => {
+    vi.mocked(validateGetResearchTrackRequest).mockResolvedValue({
+      accountId: "test-id",
+      q: "Flowers",
+      artist: "Miley Cyrus",
+    });
+    vi.mocked(handleResearch).mockResolvedValueOnce({
+      data: {
+        tracks: [
+          { id: 1, name: "Flowers", artist_names: ["Yuda"] },
+          { id: 2, name: "Flowers", artist_names: ["AylexMusic"] },
+        ],
+      },
+    });
+    const req = new NextRequest("http://localhost/api/research/track?q=Flowers&artist=Miley+Cyrus");
+    const res = await getResearchTrackHandler(req);
+
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toContain("Flowers");
+    expect(body.error).toContain("Miley Cyrus");
+    expect(handleResearch).toHaveBeenCalledTimes(1);
   });
 });
