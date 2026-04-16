@@ -16,7 +16,7 @@
     "eval": "braintrust eval --external-packages playwright playwright-core chromium-bidi @browserbasehq/stagehand @composio/core @composio/vercel"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.13",
+    "@ai-sdk/anthropic": "^3.0.70",
     "@ai-sdk/gateway": "^3.0.14",
     "@ai-sdk/google": "^3.0.8",
     "@ai-sdk/mcp": "^0.0.12",
