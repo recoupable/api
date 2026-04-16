@@ -26,38 +26,33 @@ describe("validateGetResearchTrackRequest", () => {
   it("returns the auth response when auth fails", async () => {
     const authErr = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     vi.mocked(validateAuthContext).mockResolvedValue(authErr);
-    const req = new NextRequest("http://localhost/api/research/track?q=foo");
+    const req = new NextRequest("http://localhost/api/research/track?id=12345");
     const res = await validateGetResearchTrackRequest(req);
     expect(res).toBe(authErr);
   });
 
-  it("returns 400 when q is missing", async () => {
+  it("returns 400 when id is missing", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
     const req = new NextRequest("http://localhost/api/research/track");
     const res = await validateGetResearchTrackRequest(req);
     expect((res as NextResponse).status).toBe(400);
     const body = await (res as NextResponse).json();
-    expect(body.error).toBe("q parameter is required");
+    expect(body.error).toBe("id parameter is required");
   });
 
-  it("returns the validated request", async () => {
+  it("returns 400 when id is not a positive integer", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
-    const req = new NextRequest("http://localhost/api/research/track?q=Hotline+Bling");
+    const req = new NextRequest("http://localhost/api/research/track?id=abc");
     const res = await validateGetResearchTrackRequest(req);
-    expect(res).toEqual({ accountId: "acc_1", q: "Hotline Bling", artist: undefined });
+    expect((res as NextResponse).status).toBe(400);
+    const body = await (res as NextResponse).json();
+    expect(body.error).toBe("id must be a positive integer");
   });
 
-  it("passes through an optional artist query param", async () => {
+  it("returns the validated request for a numeric id", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
-    const req = new NextRequest("http://localhost/api/research/track?q=Hotline+Bling&artist=Drake");
+    const req = new NextRequest("http://localhost/api/research/track?id=15194376");
     const res = await validateGetResearchTrackRequest(req);
-    expect(res).toEqual({ accountId: "acc_1", q: "Hotline Bling", artist: "Drake" });
-  });
-
-  it("returns undefined artist when the query param is missing", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
-    const req = new NextRequest("http://localhost/api/research/track?q=Flowers");
-    const res = await validateGetResearchTrackRequest(req);
-    expect((res as { artist?: string }).artist).toBeUndefined();
+    expect(res).toEqual({ accountId: "acc_1", id: "15194376" });
   });
 });

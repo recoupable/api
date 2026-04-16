@@ -4,14 +4,14 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 
 export type ValidatedGetResearchTrackRequest = {
   accountId: string;
-  q: string;
-  artist: string | undefined;
+  id: string;
 };
 
 /**
- * Validates `GET /api/research/track` — auth + required `q` query param, with
- * an optional `artist` param that's used downstream to disambiguate matches
- * against the search result's `artist_names`.
+ * Validates `GET /api/research/track` — auth + required numeric `id` (the
+ * Chartmetric track ID). Discovery (search by name, filter by artist) is the
+ * caller's job via `GET /api/research?type=tracks&beta=true`; this endpoint
+ * is a thin detail-lookup proxy.
  *
  * @param request - The incoming HTTP request.
  */
@@ -22,9 +22,9 @@ export async function validateGetResearchTrackRequest(
   if (authResult instanceof NextResponse) return authResult;
 
   const { searchParams } = new URL(request.url);
-  const q = searchParams.get("q");
-  if (!q) return errorResponse("q parameter is required", 400);
+  const id = searchParams.get("id");
+  if (!id) return errorResponse("id parameter is required", 400);
+  if (!/^[1-9]\d*$/.test(id)) return errorResponse("id must be a positive integer", 400);
 
-  const artist = searchParams.get("artist") ?? undefined;
-  return { accountId: authResult.accountId, q, artist };
+  return { accountId: authResult.accountId, id };
 }

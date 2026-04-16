@@ -12,8 +12,9 @@ export type ValidatedGetResearchPlaylistRequest = {
 
 /**
  * Validates `GET /api/research/playlist` — auth + required `platform` (one of
- * spotify/applemusic/deezer/amazon/youtube) and `id` (numeric ID or playlist
- * name; non-numeric values trigger a name-search fallback in the handler).
+ * spotify/applemusic/deezer/amazon/youtube) and `id` (the platform-native
+ * playlist ID; format varies by platform, e.g. Spotify base62, Apple/Deezer
+ * numeric). Discovery by name is the caller's job via `GET /api/research`.
  *
  * @param request - The incoming HTTP request.
  */
