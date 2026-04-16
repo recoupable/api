@@ -25,6 +25,9 @@ describe("getResearchSearchHandler", () => {
       q: "Drake",
       type: "artists",
       limit: "10",
+      beta: undefined,
+      platforms: undefined,
+      offset: undefined,
     });
   });
 
@@ -58,5 +61,58 @@ describe("getResearchSearchHandler", () => {
     const body = await res.json();
     expect(body.status).toBe("success");
     expect(body.results).toEqual([{ name: "Drake", id: 3380 }]);
+  });
+
+  it("forwards only the defaulted params to Chartmetric when no optional params are provided", async () => {
+    vi.mocked(handleResearch).mockResolvedValue({ data: { artists: [] } });
+    const req = new NextRequest("http://localhost/api/research/search?q=Drake");
+    await getResearchSearchHandler(req);
+
+    expect(handleResearch).toHaveBeenCalledWith({
+      accountId: "test-id",
+      path: "/search",
+      query: { q: "Drake", type: "artists", limit: "10" },
+    });
+  });
+
+  it("forwards beta, platforms, and offset to Chartmetric when provided", async () => {
+    vi.mocked(validateGetResearchSearchRequest).mockResolvedValue({
+      accountId: "test-id",
+      q: "Hotline Bling",
+      type: "tracks",
+      limit: "25",
+      beta: "true",
+      platforms: "cm,spotify",
+      offset: "5",
+    });
+    vi.mocked(handleResearch).mockResolvedValue({ data: { tracks: [] } });
+    const req = new NextRequest(
+      "http://localhost/api/research/search?q=Hotline+Bling&type=tracks&beta=true&platforms=cm,spotify&offset=5&limit=25",
+    );
+    await getResearchSearchHandler(req);
+
+    expect(handleResearch).toHaveBeenCalledWith({
+      accountId: "test-id",
+      path: "/search",
+      query: {
+        q: "Hotline Bling",
+        type: "tracks",
+        limit: "25",
+        beta: "true",
+        platforms: "cm,spotify",
+        offset: "5",
+      },
+    });
+  });
+
+  it("returns suggestions when the beta engine returns a suggestions array", async () => {
+    vi.mocked(handleResearch).mockResolvedValue({
+      data: { suggestions: [{ name: "Drake", target: "artists", match_strength: 0.99 }] },
+    });
+    const req = new NextRequest("http://localhost/api/research/search?q=Drake&beta=true");
+    const res = await getResearchSearchHandler(req);
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.results[0]).toMatchObject({ name: "Drake", target: "artists" });
   });
 });

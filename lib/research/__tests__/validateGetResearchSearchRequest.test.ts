@@ -40,11 +40,19 @@ describe("validateGetResearchSearchRequest", () => {
     expect(body.error).toBe("q parameter is required");
   });
 
-  it("fills defaults for type and limit", async () => {
+  it("fills defaults for type and limit, omits optional params", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
     const req = new NextRequest("http://localhost/api/research/search?q=Drake");
     const res = await validateGetResearchSearchRequest(req);
-    expect(res).toEqual({ accountId: "acc_1", q: "Drake", type: "artists", limit: "10" });
+    expect(res).toEqual({
+      accountId: "acc_1",
+      q: "Drake",
+      type: "artists",
+      limit: "10",
+      beta: undefined,
+      platforms: undefined,
+      offset: undefined,
+    });
   });
 
   it("preserves explicit type and limit", async () => {
@@ -54,5 +62,14 @@ describe("validateGetResearchSearchRequest", () => {
     );
     const res = await validateGetResearchSearchRequest(req);
     expect(res).toMatchObject({ type: "tracks", limit: "25" });
+  });
+
+  it("passes through beta, platforms, and offset when provided", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest(
+      "http://localhost/api/research/search?q=Drake&beta=true&platforms=cm,spotify&offset=5",
+    );
+    const res = await validateGetResearchSearchRequest(req);
+    expect(res).toMatchObject({ beta: "true", platforms: "cm,spotify", offset: "5" });
   });
 });
