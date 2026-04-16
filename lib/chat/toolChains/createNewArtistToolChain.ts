@@ -36,6 +36,5 @@ export const createNewArtistToolChain: ToolChainItem[] = [
     system:
       "Using the arweaveUrl returned from generate_txt_file, update the artist's knowledges array to include the new knowledge base entry. Set the knowledge object with: url (the arweaveUrl), name (e.g., 'Artist Knowledge Base Report'), and type ('text/plain').",
   },
-  { toolName: "create_segments" },
   { toolName: "youtube_login" },
 ];
