@@ -12,9 +12,10 @@ export async function OPTIONS() {
 }
 
 /**
- * GET /api/research/albums — Artist album discography with release dates. Requires `?artist=` query param.
+ * GET /api/research/albums — Album discography for a Chartmetric artist id.
+ * Discovery by name is the caller's job via `GET /api/research`.
  *
- * @param request - must include `artist` query param
+ * @param request - must include numeric `artist_id` query param
  * @returns JSON album list or error
  */
 export async function GET(request: NextRequest) {

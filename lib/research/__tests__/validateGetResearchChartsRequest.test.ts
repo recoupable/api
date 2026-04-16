@@ -80,4 +80,35 @@ describe("validateGetResearchChartsRequest", () => {
       latest: "false",
     });
   });
+
+  it("returns 400 for an unknown type (not regional or viral)", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest("http://localhost/api/research/charts?platform=spotify&type=top");
+    const res = await validateGetResearchChartsRequest(req);
+    expect((res as NextResponse).status).toBe(400);
+    const body = await (res as NextResponse).json();
+    expect(body.error).toContain("type must be one of");
+    expect(body.error).toContain("regional");
+    expect(body.error).toContain("viral");
+  });
+
+  it("returns 400 for an unknown interval (not daily or weekly)", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest(
+      "http://localhost/api/research/charts?platform=spotify&interval=monthly",
+    );
+    const res = await validateGetResearchChartsRequest(req);
+    expect((res as NextResponse).status).toBe(400);
+    const body = await (res as NextResponse).json();
+    expect(body.error).toContain("interval must be one of");
+  });
+
+  it("returns 400 for a latest value that isn't a boolean string", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest("http://localhost/api/research/charts?platform=spotify&latest=yes");
+    const res = await validateGetResearchChartsRequest(req);
+    expect((res as NextResponse).status).toBe(400);
+    const body = await (res as NextResponse).json();
+    expect(body.error).toContain("latest must be");
+  });
 });
