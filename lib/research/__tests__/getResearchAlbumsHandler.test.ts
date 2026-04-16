@@ -23,6 +23,9 @@ describe("getResearchAlbumsHandler", () => {
     vi.mocked(validateGetResearchAlbumsRequest).mockResolvedValue({
       accountId: "test-id",
       artistId: "3380",
+      isPrimary: "true",
+      limit: undefined,
+      offset: undefined,
     });
   });
 
@@ -34,7 +37,7 @@ describe("getResearchAlbumsHandler", () => {
     expect(res).toBe(err);
   });
 
-  it("fetches /artist/:id/albums and returns 200 with albums array", async () => {
+  it("fetches /artist/:id/albums with isPrimary=true and returns 200 with albums array", async () => {
     vi.mocked(handleResearch).mockResolvedValueOnce({
       data: [
         { id: 1, name: "Scorpion" },
@@ -54,6 +57,28 @@ describe("getResearchAlbumsHandler", () => {
     expect(handleResearch).toHaveBeenCalledWith({
       accountId: "test-id",
       path: "/artist/3380/albums",
+      query: { isPrimary: "true" },
+    });
+  });
+
+  it("forwards is_primary=false, limit, and offset to Chartmetric when provided", async () => {
+    vi.mocked(validateGetResearchAlbumsRequest).mockResolvedValue({
+      accountId: "test-id",
+      artistId: "3380",
+      isPrimary: "false",
+      limit: "25",
+      offset: "50",
+    });
+    vi.mocked(handleResearch).mockResolvedValueOnce({ data: [] });
+    const req = new NextRequest(
+      "http://localhost/api/research/albums?artist_id=3380&is_primary=false&limit=25&offset=50",
+    );
+    await getResearchAlbumsHandler(req);
+
+    expect(handleResearch).toHaveBeenCalledWith({
+      accountId: "test-id",
+      path: "/artist/3380/albums",
+      query: { isPrimary: "false", limit: "25", offset: "50" },
     });
   });
 

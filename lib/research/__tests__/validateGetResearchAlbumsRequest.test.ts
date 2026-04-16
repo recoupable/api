@@ -49,10 +49,63 @@ describe("validateGetResearchAlbumsRequest", () => {
     expect(body.error).toBe("artist_id must be a positive integer");
   });
 
-  it("returns the validated request", async () => {
+  it("defaults to is_primary=true and omits pagination when not supplied", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
     const req = new NextRequest("http://localhost/api/research/albums?artist_id=3380");
     const res = await validateGetResearchAlbumsRequest(req);
-    expect(res).toEqual({ accountId: "acc_1", artistId: "3380" });
+    expect(res).toEqual({
+      accountId: "acc_1",
+      artistId: "3380",
+      isPrimary: "true",
+      limit: undefined,
+      offset: undefined,
+    });
+  });
+
+  it("accepts is_primary=false to include features/compilations", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest(
+      "http://localhost/api/research/albums?artist_id=3380&is_primary=false",
+    );
+    const res = await validateGetResearchAlbumsRequest(req);
+    expect(res).toMatchObject({ isPrimary: "false" });
+  });
+
+  it("returns 400 when is_primary isn't true or false", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest(
+      "http://localhost/api/research/albums?artist_id=3380&is_primary=yes",
+    );
+    const res = await validateGetResearchAlbumsRequest(req);
+    expect((res as NextResponse).status).toBe(400);
+    const body = await (res as NextResponse).json();
+    expect(body.error).toContain("is_primary must be");
+  });
+
+  it("passes through limit and offset when provided", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest(
+      "http://localhost/api/research/albums?artist_id=3380&limit=25&offset=50",
+    );
+    const res = await validateGetResearchAlbumsRequest(req);
+    expect(res).toMatchObject({ limit: "25", offset: "50" });
+  });
+
+  it("returns 400 when limit is not a positive integer", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest("http://localhost/api/research/albums?artist_id=3380&limit=abc");
+    const res = await validateGetResearchAlbumsRequest(req);
+    expect((res as NextResponse).status).toBe(400);
+    const body = await (res as NextResponse).json();
+    expect(body.error).toContain("limit must be a positive integer");
+  });
+
+  it("returns 400 when offset is negative", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest("http://localhost/api/research/albums?artist_id=3380&offset=-1");
+    const res = await validateGetResearchAlbumsRequest(req);
+    expect((res as NextResponse).status).toBe(400);
+    const body = await (res as NextResponse).json();
+    expect(body.error).toContain("offset must be a non-negative integer");
   });
 });
