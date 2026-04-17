@@ -6,12 +6,6 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 
-export interface GetArtistSocialsParams {
-  artist_account_id: string;
-  page: number;
-  limit: number;
-}
-
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -24,6 +18,8 @@ export const getArtistSocialsToolSchema = {
   page: pageSchema.describe(`Page number (default: ${DEFAULT_PAGE})`),
   limit: limitSchema.describe(`Per page (default: ${DEFAULT_LIMIT}, max: ${MAX_LIMIT})`),
 };
+
+export type GetArtistSocialsParams = z.infer<z.ZodObject<typeof getArtistSocialsToolSchema>>;
 
 const errorResponse = (status: number, body: Record<string, unknown>) =>
   NextResponse.json(body, { status, headers: getCorsHeaders() });
