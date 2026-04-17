@@ -2,13 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { knowledgeSchema } from "@/lib/artist/knowledge";
 import { z } from "zod";
-
-const knowledgeSchema = z.object({
-  name: z.string(),
-  url: z.string().url("knowledges.url must be a valid URL"),
-  type: z.string(),
-});
 
 export const updateAccountBodySchema = z
   .object({
