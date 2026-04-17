@@ -1,20 +1,5 @@
-const EMAIL_IN_ANGLE_BRACKETS = /<([^>]+)>/;
-const BARE_EMAIL = /[^\s<>"',]+@[^\s<>"',]+/;
-
-function parseEmailString(value: string): string | null {
-  const angled = value.match(EMAIL_IN_ANGLE_BRACKETS)?.[1]?.trim();
-  if (angled) return angled;
-  const bare = value.match(BARE_EMAIL)?.[0]?.trim();
-  return bare || null;
-}
-
-function readHeader(headers: Record<string, string>, name: string): string | undefined {
-  const lowerName = name.toLowerCase();
-  for (const key of Object.keys(headers)) {
-    if (key.toLowerCase() === lowerName) return headers[key];
-  }
-  return undefined;
-}
+import { parseEmailString } from "./parseEmailString";
+import { readHeader } from "./readHeader";
 
 /**
  * Resolves the true sender email address for an inbound Resend email.
