@@ -3,7 +3,7 @@ import { arweaveGatewayUrl } from "@/lib/arweave/arweaveGatewayUrl";
 import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
 import { updateAccountInfo } from "@/lib/supabase/account_info/updateAccountInfo";
 import { insertAccountInfo } from "@/lib/supabase/account_info/insertAccountInfo";
-import type { Knowledge } from "./updateArtistProfile";
+import type { Knowledge } from "./knowledge";
 
 /**
  * Creates a knowledge base entry for an artist by uploading text to Arweave
