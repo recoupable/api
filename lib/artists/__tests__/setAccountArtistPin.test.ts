@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { setAccountArtistPin } from "../setAccountArtistPin";
+import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
+import { updateAccountArtistPinById } from "@/lib/supabase/account_artist_ids/updateAccountArtistPinById";
+import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
+
 vi.mock("@/lib/supabase/account_artist_ids/selectAccountArtistId", () => ({
   selectAccountArtistId: vi.fn(),
 }));
@@ -9,11 +14,6 @@ vi.mock("@/lib/supabase/account_artist_ids/updateAccountArtistPinById", () => ({
 vi.mock("@/lib/supabase/account_artist_ids/insertAccountArtistId", () => ({
   insertAccountArtistId: vi.fn(),
 }));
-
-import { setAccountArtistPin } from "../setAccountArtistPin";
-import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
-import { updateAccountArtistPinById } from "@/lib/supabase/account_artist_ids/updateAccountArtistPinById";
-import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
 
 const ACCOUNT_ID = "acc-1";
 const ARTIST_ID = "artist-1";

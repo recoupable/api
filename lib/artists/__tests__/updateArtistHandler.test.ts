@@ -4,8 +4,6 @@ import { updateArtistHandler } from "../updateArtistHandler";
 import { validateUpdateArtistRequest } from "../validateUpdateArtistRequest";
 import { updateAccount } from "@/lib/supabase/accounts/updateAccount";
 import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
-import { insertAccountInfo } from "@/lib/supabase/account_info/insertAccountInfo";
-import { updateAccountInfo } from "@/lib/supabase/account_info/updateAccountInfo";
 import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
 import { selectAccountWithArtistDetails } from "@/lib/supabase/accounts/selectAccountWithArtistDetails";
 import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";

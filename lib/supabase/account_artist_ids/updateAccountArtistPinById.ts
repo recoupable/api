@@ -8,10 +8,7 @@ import supabase from "../serverClient";
  * @throws Error if the update fails
  */
 export async function updateAccountArtistPinById(id: string, pinned: boolean): Promise<void> {
-  const { error } = await supabase
-    .from("account_artist_ids")
-    .update({ pinned })
-    .eq("id", id);
+  const { error } = await supabase.from("account_artist_ids").update({ pinned }).eq("id", id);
 
   if (error) {
     throw new Error(`Failed to update pinned status: ${error.message}`);

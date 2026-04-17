@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { upsertArtistInfoFields } from "../upsertArtistInfoFields";
+import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
+import { insertAccountInfo } from "@/lib/supabase/account_info/insertAccountInfo";
+import { updateAccountInfo } from "@/lib/supabase/account_info/updateAccountInfo";
+
 vi.mock("@/lib/supabase/account_info/selectAccountInfo", () => ({
   selectAccountInfo: vi.fn(),
 }));
@@ -9,11 +14,6 @@ vi.mock("@/lib/supabase/account_info/insertAccountInfo", () => ({
 vi.mock("@/lib/supabase/account_info/updateAccountInfo", () => ({
   updateAccountInfo: vi.fn(),
 }));
-
-import { upsertArtistInfoFields } from "../upsertArtistInfoFields";
-import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
-import { insertAccountInfo } from "@/lib/supabase/account_info/insertAccountInfo";
-import { updateAccountInfo } from "@/lib/supabase/account_info/updateAccountInfo";
 
 const ARTIST_ID = "artist-1";
 
@@ -48,9 +48,7 @@ describe("upsertArtistInfoFields", () => {
 
     await upsertArtistInfoFields({ artistId: ARTIST_ID, label: "" });
 
-    expect(insertAccountInfo).toHaveBeenCalledWith(
-      expect.objectContaining({ label: null }),
-    );
+    expect(insertAccountInfo).toHaveBeenCalledWith(expect.objectContaining({ label: null }));
   });
 
   it("updates and preserves existing fields when callers omit them", async () => {
