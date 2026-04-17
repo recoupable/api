@@ -23,4 +23,12 @@ describe("parseEmailString", () => {
   it("returns null when no email is present", () => {
     expect(parseEmailString("no email here")).toBeNull();
   });
+
+  it("returns null when angle brackets contain a non-email string", () => {
+    expect(parseEmailString("<not-an-email>")).toBeNull();
+  });
+
+  it("skips non-email angle-bracket content and falls through to the bare-email match", () => {
+    expect(parseEmailString("<junk> sender@example.com")).toBe("sender@example.com");
+  });
 });

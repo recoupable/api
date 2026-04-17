@@ -20,7 +20,10 @@ export function extractSenderEmail(params: {
   }
 
   const replyTo = params.replyTo?.[0];
-  if (replyTo) return replyTo;
+  if (replyTo) {
+    const parsed = parseEmailString(replyTo);
+    if (parsed) return parsed;
+  }
 
   return params.envelopeFrom;
 }

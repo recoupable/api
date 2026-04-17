@@ -1,4 +1,4 @@
-const EMAIL_IN_ANGLE_BRACKETS = /<([^>]+)>/;
+const EMAIL_IN_ANGLE_BRACKETS = /<([^>]+@[^>]+)>/;
 const BARE_EMAIL = /[^\s<>"',]+@[^\s<>"',]+/;
 
 /**

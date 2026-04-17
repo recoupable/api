@@ -38,6 +38,24 @@ describe("extractSenderEmail", () => {
     expect(result).toBe("jessica@rostrumrecords.com");
   });
 
+  it('parses "Name <email>" format in reply_to (providers don\'t guarantee bare addresses)', () => {
+    const result = extractSenderEmail({
+      headers: {},
+      replyTo: ['"Jane Doe" <jane@example.com>'],
+      envelopeFrom: "agent@mail.recoupable.com",
+    });
+    expect(result).toBe("jane@example.com");
+  });
+
+  it("skips unparseable reply_to entries and falls through to envelopeFrom", () => {
+    const result = extractSenderEmail({
+      headers: {},
+      replyTo: ["not-an-email-at-all"],
+      envelopeFrom: "artist@example.com",
+    });
+    expect(result).toBe("artist@example.com");
+  });
+
   it("falls back to envelopeFrom when both headers.from and reply_to are unusable", () => {
     const result = extractSenderEmail({
       headers: {},
