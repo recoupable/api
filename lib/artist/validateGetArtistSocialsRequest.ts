@@ -5,7 +5,12 @@ import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
-import type { GetArtistSocialsParams } from "@/lib/artist/getArtistSocials";
+
+export interface GetArtistSocialsParams {
+  artist_account_id: string;
+  page: number;
+  limit: number;
+}
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;

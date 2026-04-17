@@ -4,12 +4,7 @@ import {
   flattenAccountSocials,
   type AccountSocialResponse,
 } from "@/lib/account/flattenAccountSocials";
-
-export interface GetArtistSocialsParams {
-  artist_account_id: string;
-  page: number;
-  limit: number;
-}
+import type { GetArtistSocialsParams } from "@/lib/artist/validateGetArtistSocialsRequest";
 
 export interface GetArtistSocialsResponse {
   status: "success" | "error";
