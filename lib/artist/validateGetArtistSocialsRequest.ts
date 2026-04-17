@@ -5,6 +5,7 @@ import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
+import type { GetArtistSocialsParams } from "@/lib/artist/getArtistSocials";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -19,19 +20,13 @@ export const getArtistSocialsToolSchema = {
   limit: limitSchema.describe(`Per page (default: ${DEFAULT_LIMIT}, max: ${MAX_LIMIT})`),
 };
 
-export interface GetArtistSocialsRequest {
-  artist_account_id: string;
-  page: number;
-  limit: number;
-}
-
 const errorResponse = (status: number, body: Record<string, unknown>) =>
   NextResponse.json(body, { status, headers: getCorsHeaders() });
 
 export async function validateGetArtistSocialsRequest(
   request: NextRequest,
   id: string,
-): Promise<GetArtistSocialsRequest | NextResponse> {
+): Promise<GetArtistSocialsParams | NextResponse> {
   const validatedParams = validateAccountParams(id);
   if (validatedParams instanceof NextResponse) return validatedParams;
 
