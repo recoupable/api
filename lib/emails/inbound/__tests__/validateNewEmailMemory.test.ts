@@ -167,6 +167,40 @@ describe("validateNewEmailMemory", () => {
     expect(emailText).toContain("https://resend.com/dl/att-1");
   });
 
+  it("returns senderEmail resolved from the raw From header so callers can reply to the right address", async () => {
+    vi.mocked(getEmailContent).mockResolvedValue({
+      html: "<p>please reply</p>",
+      headers: { from: '"sweetman eth" <sweetmantech@gmail.com>' },
+      reply_to: [],
+    } as unknown as Awaited<ReturnType<typeof getEmailContent>>);
+
+    const event = createMockEvent({ from: "agent@mail.recoupable.com" });
+    const result = await validateNewEmailMemory(event);
+
+    expect(result).not.toHaveProperty("response");
+    const { senderEmail } = result as { senderEmail: string };
+    expect(senderEmail).toBe("sweetmantech@gmail.com");
+  });
+
+  it("looks up the account by the raw From header, not the rewritten envelope from", async () => {
+    // Real-world case: Google Groups forwarder rewrites envelope-from to our
+    // own inbound domain. Resend's webhook data.from reflects the envelope,
+    // so looking up an account by data.from would never match.
+    vi.mocked(getEmailContent).mockResolvedValue({
+      html: "<p>please reply</p>",
+      headers: { from: '"sweetman eth" <sweetmantech@gmail.com>' },
+      reply_to: [],
+    } as unknown as Awaited<ReturnType<typeof getEmailContent>>);
+
+    const event = createMockEvent({ from: "agent@mail.recoupable.com" });
+
+    await validateNewEmailMemory(event);
+
+    expect(selectAccountEmails).toHaveBeenCalledWith({
+      emails: ["sweetmantech@gmail.com"],
+    });
+  });
+
   it("does not append text when no attachments exist", async () => {
     vi.mocked(getEmailAttachments).mockResolvedValue([]);
     vi.mocked(formatAttachmentsText).mockReturnValue("");
