@@ -4,9 +4,9 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 
 const resendAttachmentSchema = z.object({
   id: z.string(),
-  filename: z.string(),
+  filename: z.string().nullable(),
   content_type: z.string(),
-  content_disposition: z.string(),
+  content_disposition: z.string().nullable(),
   content_id: z.string().nullable(),
 });
 
