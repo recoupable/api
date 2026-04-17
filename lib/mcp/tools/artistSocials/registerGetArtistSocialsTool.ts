@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getArtistSocials } from "@/lib/artist/getArtistSocials";
-import { getArtistSocialsToolSchema } from "@/lib/artist/validateGetArtistSocialsRequest";
+import { getArtistSocialsParamsSchema } from "@/lib/artist/validateGetArtistSocialsRequest";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 
 export function registerGetArtistSocialsTool(server: McpServer): void {
@@ -9,7 +9,7 @@ export function registerGetArtistSocialsTool(server: McpServer): void {
     {
       description:
         "Retrieve all socials (handle, avatar, profile url, bio, follower count, following count) associated with an artist.",
-      inputSchema: getArtistSocialsToolSchema,
+      inputSchema: getArtistSocialsParamsSchema,
     },
     async args => getToolResultSuccess(await getArtistSocials(args)),
   );

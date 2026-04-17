@@ -13,13 +13,13 @@ const MAX_LIMIT = 100;
 const pageSchema = z.coerce.number().int().positive().default(DEFAULT_PAGE);
 const limitSchema = z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT);
 
-export const getArtistSocialsToolSchema = {
+export const getArtistSocialsParamsSchema = {
   artist_account_id: z.string().min(1).describe("The artist account ID"),
   page: pageSchema.describe(`Page number (default: ${DEFAULT_PAGE})`),
   limit: limitSchema.describe(`Per page (default: ${DEFAULT_LIMIT}, max: ${MAX_LIMIT})`),
 };
 
-export type GetArtistSocialsParams = z.infer<z.ZodObject<typeof getArtistSocialsToolSchema>>;
+export type GetArtistSocialsParams = z.infer<z.ZodObject<typeof getArtistSocialsParamsSchema>>;
 
 const errorResponse = (status: number, body: Record<string, unknown>) =>
   NextResponse.json(body, { status, headers: getCorsHeaders() });
