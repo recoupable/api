@@ -29,7 +29,6 @@ export const TOOL_MODEL_MAP: Record<string, LanguageModel> = {
   get_spotify_album: "openai/gpt-5.4-mini",
   search_web: "openai/gpt-5.4-mini",
   generate_txt_file: "openai/gpt-5.4-mini",
-  create_segments: "openai/gpt-5.4-mini",
   youtube_login: "openai/gpt-5.4-mini",
   web_deep_research: "openai/gpt-5.4-mini",
   create_knowledge_base: "openai/gpt-5.4-mini",
