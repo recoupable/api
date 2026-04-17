@@ -58,14 +58,14 @@ describe("validateGetArtistSocialsRequest", () => {
 
   it("returns validated payload with defaults and parsed query", async () => {
     expect(await validateGetArtistSocialsRequest(makeRequest(), ARTIST_ID)).toEqual({
-      artistAccountId: ARTIST_ID,
+      artist_account_id: ARTIST_ID,
       page: 1,
       limit: 20,
       authContext,
     });
     const path = `/api/artists/${ARTIST_ID}/socials?page=3&limit=50`;
     expect(await validateGetArtistSocialsRequest(makeRequest(path), ARTIST_ID)).toEqual({
-      artistAccountId: ARTIST_ID,
+      artist_account_id: ARTIST_ID,
       page: 3,
       limit: 50,
       authContext,

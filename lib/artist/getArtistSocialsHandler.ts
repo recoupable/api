@@ -23,11 +23,8 @@ export async function getArtistSocialsHandler(
       return validated;
     }
 
-    const result = await getArtistSocials({
-      artist_account_id: validated.artistAccountId,
-      page: validated.page,
-      limit: validated.limit,
-    });
+    const { authContext: _authContext, ...params } = validated;
+    const result = await getArtistSocials(params);
 
     const statusCode = result.status === "success" ? 200 : 500;
 

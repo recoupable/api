@@ -20,7 +20,7 @@ export const getArtistSocialsToolSchema = {
 };
 
 export interface GetArtistSocialsRequest {
-  artistAccountId: string;
+  artist_account_id: string;
   page: number;
   limit: number;
   authContext: AuthContext;
@@ -48,15 +48,15 @@ export async function validateGetArtistSocialsRequest(
   const authResult = await validateAuthContext(request);
   if (authResult instanceof NextResponse) return authResult;
 
-  const artistAccountId = validatedParams.id;
-  const [artist] = await selectAccounts(artistAccountId);
+  const artist_account_id = validatedParams.id;
+  const [artist] = await selectAccounts(artist_account_id);
   if (!artist) return errorResponse(404, { status: "error", error: "Artist not found" });
 
-  const hasAccess = await checkAccountArtistAccess(authResult.accountId, artistAccountId);
+  const hasAccess = await checkAccountArtistAccess(authResult.accountId, artist_account_id);
   if (!hasAccess) return errorResponse(403, { status: "error", error: "Unauthorized" });
 
   return {
-    artistAccountId,
+    artist_account_id,
     page: query.data.page,
     limit: query.data.limit,
     authContext: authResult,
