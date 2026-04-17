@@ -13,7 +13,7 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({ getCorsHeaders: () => ({}) }
 
 const ARTIST_ID = "550e8400-e29b-41d4-a716-446655440000";
 const ACCOUNT_ID = "660e8400-e29b-41d4-a716-446655440000";
-const authContext = { accountId: ACCOUNT_ID, authToken: "t", orgId: null };
+const authResult = { accountId: ACCOUNT_ID, authToken: "t", orgId: null };
 
 const makeRequest = (path = `/api/artists/${ARTIST_ID}/socials`) =>
   new NextRequest(`http://localhost${path}`, { headers: { "x-api-key": "k" } });
@@ -23,7 +23,7 @@ describe("validateGetArtistSocialsRequest", () => {
     vi.clearAllMocks();
     vi.mocked(selectAccounts).mockResolvedValue([{ id: ARTIST_ID } as never]);
     vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
-    vi.mocked(validateAuthContext).mockResolvedValue(authContext);
+    vi.mocked(validateAuthContext).mockResolvedValue(authResult);
   });
 
   it.each([
@@ -61,14 +61,12 @@ describe("validateGetArtistSocialsRequest", () => {
       artist_account_id: ARTIST_ID,
       page: 1,
       limit: 20,
-      authContext,
     });
     const path = `/api/artists/${ARTIST_ID}/socials?page=3&limit=50`;
     expect(await validateGetArtistSocialsRequest(makeRequest(path), ARTIST_ID)).toEqual({
       artist_account_id: ARTIST_ID,
       page: 3,
       limit: 50,
-      authContext,
     });
   });
 });

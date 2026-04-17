@@ -11,12 +11,7 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({ getCorsHeaders: () => ({}) }
 
 const ARTIST_ID = "550e8400-e29b-41d4-a716-446655440000";
 const request = new NextRequest(`http://localhost/api/artists/${ARTIST_ID}/socials`);
-const validated = {
-  artist_account_id: ARTIST_ID,
-  page: 1,
-  limit: 20,
-  authContext: { accountId: "acct", authToken: "t", orgId: null },
-};
+const validated = { artist_account_id: ARTIST_ID, page: 1, limit: 20 };
 const okBody = {
   status: "success" as const,
   socials: [],

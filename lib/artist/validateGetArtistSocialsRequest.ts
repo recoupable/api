@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
-import { validateAuthContext, type AuthContext } from "@/lib/auth/validateAuthContext";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 
@@ -23,7 +23,6 @@ export interface GetArtistSocialsRequest {
   artist_account_id: string;
   page: number;
   limit: number;
-  authContext: AuthContext;
 }
 
 const errorResponse = (status: number, body: Record<string, unknown>) =>
@@ -55,10 +54,5 @@ export async function validateGetArtistSocialsRequest(
   const hasAccess = await checkAccountArtistAccess(authResult.accountId, artist_account_id);
   if (!hasAccess) return errorResponse(403, { status: "error", error: "Unauthorized" });
 
-  return {
-    artist_account_id,
-    page: query.data.page,
-    limit: query.data.limit,
-    authContext: authResult,
-  };
+  return { artist_account_id, page: query.data.page, limit: query.data.limit };
 }
