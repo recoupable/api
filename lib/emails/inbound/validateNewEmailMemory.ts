@@ -22,7 +22,10 @@ import { extractSenderEmail } from "./extractSenderEmail";
  */
 export async function validateNewEmailMemory(
   event: ResendEmailReceivedEvent,
-): Promise<{ chatRequestBody: ChatRequestBody; emailText: string } | { response: NextResponse }> {
+): Promise<
+  | { chatRequestBody: ChatRequestBody; emailText: string; senderEmail: string }
+  | { response: NextResponse }
+> {
   const original = event.data;
   const emailId = original.email_id;
 
@@ -84,5 +87,5 @@ export async function validateNewEmailMemory(
     authToken: RECOUP_API_KEY,
   };
 
-  return { chatRequestBody, emailText };
+  return { chatRequestBody, emailText, senderEmail };
 }
