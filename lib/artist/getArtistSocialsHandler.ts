@@ -1,29 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getArtistSocials } from "@/lib/artist/getArtistSocials";
-import { validateArtistSocialsQuery } from "@/lib/artist/validateArtistSocialsQuery";
+import { validateGetArtistSocialsRequest } from "@/lib/artist/validateGetArtistSocialsRequest";
 
 /**
- * Handler for retrieving artist socials with pagination.
+ * Handler for GET /api/artists/{id}/socials.
  *
- * Parameters:
- * - artist_account_id (required): The unique identifier of the artist account
- * - page (optional): Page number for pagination (default: 1)
- * - limit (optional): Number of socials per page (default: 20, max: 100)
+ * Validates path params, optional `page`/`limit` query, and auth, then returns
+ * the artist's social profiles with pagination metadata.
  *
- * @param request - The request object containing query parameters.
+ * @param request - The incoming request.
+ * @param id - The artist account ID from the route params.
  * @returns A NextResponse with socials and pagination metadata.
  */
-export async function getArtistSocialsHandler(request: NextRequest): Promise<NextResponse> {
+export async function getArtistSocialsHandler(
+  request: NextRequest,
+  id: string,
+): Promise<NextResponse> {
   try {
-    const { searchParams } = new URL(request.url);
-
-    const validatedQuery = validateArtistSocialsQuery(searchParams);
-    if (validatedQuery instanceof NextResponse) {
-      return validatedQuery;
+    const validated = await validateGetArtistSocialsRequest(request, id);
+    if (validated instanceof NextResponse) {
+      return validated;
     }
 
-    const result = await getArtistSocials(validatedQuery);
+    const result = await getArtistSocials({
+      artist_account_id: validated.artistAccountId,
+      page: validated.page,
+      limit: validated.limit,
+    });
 
     const statusCode = result.status === "success" ? 200 : 500;
 

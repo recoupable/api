@@ -4,7 +4,12 @@ import {
   flattenAccountSocials,
   type AccountSocialResponse,
 } from "@/lib/account/flattenAccountSocials";
-import type { ArtistSocialsQuery } from "@/lib/artist/validateArtistSocialsQuery";
+
+export interface GetArtistSocialsParams {
+  artist_account_id: string;
+  page: number;
+  limit: number;
+}
 
 export interface GetArtistSocialsResponse {
   status: "success" | "error";
@@ -25,7 +30,7 @@ export interface GetArtistSocialsResponse {
  * @returns List of social profiles with pagination metadata
  */
 export const getArtistSocials = async (
-  params: ArtistSocialsQuery,
+  params: GetArtistSocialsParams,
 ): Promise<GetArtistSocialsResponse> => {
   try {
     const { artist_account_id, page, limit } = params;
