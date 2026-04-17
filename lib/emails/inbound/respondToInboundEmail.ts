@@ -21,8 +21,6 @@ export async function respondToInboundEmail(
     const original = event.data;
     const subject = original.subject ? `Re: ${original.subject}` : "Re: Your email";
     const messageId = original.message_id;
-    const to = original.from;
-    const toArray = [to];
     const from = getFromWithName(original.to, original.cc);
     const cc = original.cc?.length ? original.cc : undefined;
 
@@ -32,7 +30,11 @@ export async function respondToInboundEmail(
       return validationResult.response;
     }
 
-    const { chatRequestBody, emailText } = validationResult;
+    const { chatRequestBody, emailText, senderEmail } = validationResult;
+    // Use the resolved sender (from raw `From:` header) as the reply target so
+    // envelope-rewritten addresses (Google Groups forwards) don't cause us to
+    // reply to ourselves.
+    const toArray = [senderEmail];
 
     // Check if Recoup is only CC'd - use LLM to determine if reply is expected
     const ccValidation = await validateCcReplyExpected(original, emailText);

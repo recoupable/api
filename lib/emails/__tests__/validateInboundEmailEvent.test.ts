@@ -46,6 +46,27 @@ describe("validateInboundEmailEvent", () => {
     expect(result).toEqual(event);
   });
 
+  it("returns validated event when attachments have null filename and content_disposition (auto-generated parts like Google Docs share)", () => {
+    const event = {
+      ...baseEvent,
+      data: {
+        ...baseEvent.data,
+        attachments: [
+          {
+            id: "3bb493b0-b2d7-4104-b4a9-0466b3b293ba",
+            filename: null,
+            content_type: "text/x-amp-html",
+            content_disposition: null,
+            content_id: null,
+          },
+        ],
+      },
+    };
+    const result = validateInboundEmailEvent(event);
+    expect(result).not.toBeInstanceOf(NextResponse);
+    expect(result).toEqual(event);
+  });
+
   it("returns validated event when attachments have content_id: null", () => {
     const event = {
       ...baseEvent,

@@ -11,6 +11,7 @@ import insertMemoryEmail from "@/lib/supabase/memory_emails/insertMemoryEmail";
 import { trimRepliedContext } from "@/lib/emails/inbound/trimRepliedContext";
 import { getEmailAttachments } from "./getEmailAttachments";
 import { formatAttachmentsText } from "./formatAttachmentsText";
+import { extractSenderEmail } from "./extractSenderEmail";
 
 /**
  * Validates and processes a new memory from an inbound email.
@@ -21,16 +22,24 @@ import { formatAttachmentsText } from "./formatAttachmentsText";
  */
 export async function validateNewEmailMemory(
   event: ResendEmailReceivedEvent,
-): Promise<{ chatRequestBody: ChatRequestBody; emailText: string } | { response: NextResponse }> {
+): Promise<
+  | { chatRequestBody: ChatRequestBody; emailText: string; senderEmail: string }
+  | { response: NextResponse }
+> {
   const original = event.data;
   const emailId = original.email_id;
-  const to = original.from;
 
-  const accountEmails = await selectAccountEmails({ emails: [to] });
+  const emailContent = await getEmailContent(emailId);
+  const senderEmail = extractSenderEmail({
+    headers: emailContent.headers ?? {},
+    replyTo: emailContent.reply_to ?? null,
+    envelopeFrom: original.from,
+  });
+
+  const accountEmails = await selectAccountEmails({ emails: [senderEmail] });
   if (accountEmails.length === 0) throw new Error("Account not found");
   const accountId = accountEmails[0].account_id;
 
-  const emailContent = await getEmailContent(emailId);
   const attachments = await getEmailAttachments(emailId);
   const emailText =
     trimRepliedContext(emailContent.html || "") + formatAttachmentsText(attachments);
@@ -78,5 +87,5 @@ export async function validateNewEmailMemory(
     authToken: RECOUP_API_KEY,
   };
 
-  return { chatRequestBody, emailText };
+  return { chatRequestBody, emailText, senderEmail };
 }
