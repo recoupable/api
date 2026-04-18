@@ -45,11 +45,13 @@ function buildEmptyResponse(
 /**
  * Retrieves paginated fans for an artist by composing `artist_segments` → `fan_segments` → `socials`.
  *
- * TODO: This mirrors the legacy Express route and fetches every deduplicated
- * `fan_social_id` before slicing in memory. For artists with many fans this
- * returns thousands of IDs before paginating — replace with a DB-side paginated
- * query once the legacy envelope can diverge. See
- * `Recoup-Agent-APIs/lib/supabase/getArtistFans.ts:48-64` for the original behavior.
+ * TODO: This composer fetches every deduplicated `fan_social_id` up-front and
+ * then slices in memory — a verbatim mirror of the legacy Express source
+ * (`Recoup-Agent-APIs/lib/supabase/getArtistFans.ts:48-64`). Because Supabase
+ * enforces an implicit 10,000-row ceiling on `select()` responses, this
+ * silently truncates fan lists for very popular artists. A future variant
+ * should push pagination into the DB (e.g., a joined query or view that
+ * paginates at the SQL layer) instead of relying on client-side slicing.
  *
  * @param params - The artist account ID and pagination options
  * @returns The fans envelope including pagination metadata
