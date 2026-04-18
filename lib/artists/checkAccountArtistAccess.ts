@@ -1,13 +1,16 @@
+import { RECOUP_ORG_ID } from "@/lib/const";
 import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
 import { selectArtistOrganizationIds } from "@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds";
 import { selectAccountOrganizationIds } from "@/lib/supabase/account_organization_ids/selectAccountOrganizationIds";
+import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 
 /**
  * Check if an account has access to a specific artist.
  *
  * Access is granted if:
  * 1. Account has direct access via account_artist_ids, OR
- * 2. Account and artist share an organization
+ * 2. Account is a member of RECOUP_ORG (admin bypass), OR
+ * 3. Account and artist share an organization
  *
  * Fails closed: returns false on any database error to deny access safely.
  *
@@ -24,7 +27,12 @@ export async function checkAccountArtistAccess(
 
   if (directAccess) return true;
 
-  // 2. Check organization access: account and artist share an org
+  // 2. Admin bypass: RECOUP_ORG members have access to any artist
+  const accountOrgs = await getAccountOrganizations({ accountId });
+
+  if (accountOrgs.some(m => m.organization_id === RECOUP_ORG_ID)) return true;
+
+  // 3. Check organization access: account and artist share an org
   const artistOrgs = await selectArtistOrganizationIds(artistId);
 
   if (!artistOrgs) return false; // Fail closed on error
