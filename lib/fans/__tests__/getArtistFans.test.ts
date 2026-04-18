@@ -2,10 +2,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { getArtistFans } from "../getArtistFans";
 
-const mockCallGetArtistFans = vi.fn();
+const mockSelectAccountSocialIds = vi.fn();
+const mockSelectArtistFansPage = vi.fn();
 
-vi.mock("@/lib/supabase/rpc/callGetArtistFans", () => ({
-  callGetArtistFans: (...args: unknown[]) => mockCallGetArtistFans(...args),
+vi.mock("@/lib/supabase/account_socials/selectAccountSocialIds", () => ({
+  selectAccountSocialIds: (...args: unknown[]) => mockSelectAccountSocialIds(...args),
+}));
+
+vi.mock("@/lib/supabase/social_fans/selectArtistFansPage", () => ({
+  selectArtistFansPage: (...args: unknown[]) => mockSelectArtistFansPage(...args),
 }));
 
 const baseParams = {
@@ -13,6 +18,8 @@ const baseParams = {
   page: 1,
   limit: 20,
 };
+
+const ARTIST_SOCIAL_IDS = ["social-a", "social-b"];
 
 function makeFan(id: string) {
   return {
@@ -31,11 +38,15 @@ function makeFan(id: string) {
 describe("getArtistFans", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSelectAccountSocialIds.mockResolvedValue({
+      status: "success",
+      socialIds: ARTIST_SOCIAL_IDS,
+    });
   });
 
-  it("returns paginated fans on the happy path and forwards the offset", async () => {
+  it("returns paginated fans on the happy path and forwards the range", async () => {
     const fans = [makeFan("social-20"), makeFan("social-21")];
-    mockCallGetArtistFans.mockResolvedValue({
+    mockSelectArtistFansPage.mockResolvedValue({
       status: "success",
       fans,
       totalCount: 45,
@@ -43,10 +54,11 @@ describe("getArtistFans", () => {
 
     const result = await getArtistFans({ ...baseParams, page: 2, limit: 20 });
 
-    expect(mockCallGetArtistFans).toHaveBeenCalledWith({
-      artistAccountId: baseParams.artistAccountId,
-      limit: 20,
-      offset: 20,
+    expect(mockSelectAccountSocialIds).toHaveBeenCalledWith(baseParams.artistAccountId);
+    expect(mockSelectArtistFansPage).toHaveBeenCalledWith({
+      artistSocialIds: ARTIST_SOCIAL_IDS,
+      from: 20,
+      to: 39,
     });
     expect(result.status).toBe("success");
     expect(result.fans).toEqual(fans);
@@ -58,8 +70,27 @@ describe("getArtistFans", () => {
     });
   });
 
-  it("returns empty success envelope when the RPC returns no rows", async () => {
-    mockCallGetArtistFans.mockResolvedValue({
+  it("short-circuits to a success envelope when the artist has no socials", async () => {
+    mockSelectAccountSocialIds.mockResolvedValue({
+      status: "success",
+      socialIds: [],
+    });
+
+    const result = await getArtistFans(baseParams);
+
+    expect(mockSelectArtistFansPage).not.toHaveBeenCalled();
+    expect(result.status).toBe("success");
+    expect(result.fans).toEqual([]);
+    expect(result.pagination).toEqual({
+      total_count: 0,
+      page: 1,
+      limit: 20,
+      total_pages: 0,
+    });
+  });
+
+  it("returns empty success envelope when the fans page is empty", async () => {
+    mockSelectArtistFansPage.mockResolvedValue({
       status: "success",
       fans: [],
       totalCount: 0,
@@ -77,8 +108,27 @@ describe("getArtistFans", () => {
     });
   });
 
-  it("returns error envelope when the RPC call fails", async () => {
-    mockCallGetArtistFans.mockResolvedValue({
+  it("returns error envelope when account_socials lookup fails", async () => {
+    mockSelectAccountSocialIds.mockResolvedValue({
+      status: "error",
+      socialIds: [],
+    });
+
+    const result = await getArtistFans(baseParams);
+
+    expect(mockSelectArtistFansPage).not.toHaveBeenCalled();
+    expect(result.status).toBe("error");
+    expect(result.fans).toEqual([]);
+    expect(result.pagination).toEqual({
+      total_count: 0,
+      page: 1,
+      limit: 20,
+      total_pages: 0,
+    });
+  });
+
+  it("returns error envelope when the fans page query fails", async () => {
+    mockSelectArtistFansPage.mockResolvedValue({
       status: "error",
       fans: [],
       totalCount: 0,
@@ -97,7 +147,7 @@ describe("getArtistFans", () => {
   });
 
   it("computes total_pages with Math.ceil for uneven totals", async () => {
-    mockCallGetArtistFans.mockResolvedValue({
+    mockSelectArtistFansPage.mockResolvedValue({
       status: "success",
       fans: [makeFan("social-1")],
       totalCount: 21,
@@ -108,8 +158,8 @@ describe("getArtistFans", () => {
     expect(result.pagination.total_pages).toBe(2);
   });
 
-  it("falls back to the error envelope when the RPC throws", async () => {
-    mockCallGetArtistFans.mockRejectedValue(new Error("boom"));
+  it("falls back to the error envelope when a downstream call throws", async () => {
+    mockSelectArtistFansPage.mockRejectedValue(new Error("boom"));
 
     const result = await getArtistFans(baseParams);
 
