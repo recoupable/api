@@ -1,9 +1,4 @@
-import { selectArtistSegments } from "@/lib/supabase/artist_segments/selectArtistSegments";
-import { selectFanSocialIds } from "@/lib/supabase/fan_segments/selectFanSocialIds";
-import {
-  selectSocialsByIds,
-  type SocialByIdProjection,
-} from "@/lib/supabase/socials/selectSocialsByIds";
+import { callGetArtistFans, type ArtistFanProjection } from "@/lib/supabase/rpc/callGetArtistFans";
 
 export interface GetArtistFansParams {
   artistAccountId: string;
@@ -13,7 +8,7 @@ export interface GetArtistFansParams {
 
 export interface GetArtistFansResponse {
   status: "success" | "error";
-  fans: SocialByIdProjection[];
+  fans: ArtistFanProjection[];
   pagination: {
     total_count: number;
     page: number;
@@ -43,15 +38,11 @@ function buildEmptyResponse(
 }
 
 /**
- * Retrieves paginated fans for an artist by composing `artist_segments` → `fan_segments` → `socials`.
- *
- * TODO: This composer fetches every deduplicated `fan_social_id` up-front and
- * then slices in memory — a verbatim mirror of the legacy Express source
- * (`Recoup-Agent-APIs/lib/supabase/getArtistFans.ts:48-64`). Because Supabase
- * enforces an implicit 10,000-row ceiling on `select()` responses, this
- * silently truncates fan lists for very popular artists. A future variant
- * should push pagination into the DB (e.g., a joined query or view that
- * paginates at the SQL layer) instead of relying on client-side slicing.
+ * Retrieves paginated fans for an artist via the `get_artist_fans` Postgres
+ * RPC, which performs the `artist_segments` → `fan_segments` → `socials` join,
+ * applies DISTINCT on `socials.id`, orders stably, and paginates at the
+ * database layer. This removes the implicit Supabase 10,000-row ceiling that
+ * silently truncated the legacy in-memory composer for popular artists.
  *
  * @param params - The artist account ID and pagination options
  * @returns The fans envelope including pagination metadata
@@ -60,40 +51,25 @@ export async function getArtistFans(params: GetArtistFansParams): Promise<GetArt
   const { artistAccountId, page, limit } = params;
 
   try {
-    const { status: segmentsStatus, segmentIds } = await selectArtistSegments(artistAccountId);
-    if (segmentsStatus === "error") {
-      return buildEmptyResponse("error", page, limit);
-    }
-    if (!segmentIds.length) {
-      return buildEmptyResponse("success", page, limit);
-    }
+    const offset = (page - 1) * limit;
+    const { status, fans, totalCount } = await callGetArtistFans({
+      artistAccountId,
+      limit,
+      offset,
+    });
 
-    const { status: fanIdsStatus, socialIds } = await selectFanSocialIds(segmentIds);
-    if (fanIdsStatus === "error") {
-      return buildEmptyResponse("error", page, limit);
-    }
-    if (!socialIds.length) {
-      return buildEmptyResponse("success", page, limit);
-    }
-
-    const total = socialIds.length;
-    const startIndex = (page - 1) * limit;
-    const endIndex = Math.min(startIndex + limit, total);
-    const pagedIds = socialIds.slice(startIndex, endIndex);
-
-    const { status: socialsStatus, socials } = await selectSocialsByIds(pagedIds);
-    if (socialsStatus === "error") {
+    if (status === "error") {
       return buildEmptyResponse("error", page, limit);
     }
 
     return {
-      status: socialsStatus,
-      fans: socials,
+      status,
+      fans,
       pagination: {
-        total_count: total,
+        total_count: totalCount,
         page,
         limit,
-        total_pages: Math.ceil(total / limit) || 1,
+        total_pages: totalCount === 0 ? 0 : Math.ceil(totalCount / limit),
       },
     };
   } catch (error) {
