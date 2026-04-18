@@ -1,16 +1,4 @@
 import supabase from "../serverClient";
-import { Tables } from "@/types/database.types";
-
-type SocialFan = Tables<"social_fans">;
-type Social = Tables<"socials">;
-type PostComment = Tables<"post_comments">;
-
-// Extended type to include joined data
-export interface SocialFanWithDetails extends SocialFan {
-  artist_social: Social;
-  fan_social: Social;
-  latest_engagement_comment: PostComment | null;
-}
 
 // Allowed top-level columns for ordering
 const SOCIAL_FANS_ORDERABLE_COLUMNS = [
@@ -29,17 +17,12 @@ export interface SelectSocialFansParams {
   orderBy?: SocialFansOrderableColumn;
   orderDirection?: "asc" | "desc";
   /**
-   * 1-indexed page. When both `page` and `limit` are provided, the query uses
-   * `.range()` + `{ count: "exact" }` and `totalCount` is populated. Otherwise
-   * all matching rows are returned and `totalCount` is `null`.
+   * 1-indexed page. When both `page` and `limit` are provided, the query is
+   * paginated via `.range()`. `totalCount` is always returned as a number
+   * regardless, because `{ count: "exact" }` is used unconditionally.
    */
   page?: number;
   limit?: number;
-}
-
-export interface SelectSocialFansResult {
-  rows: SocialFanWithDetails[];
-  totalCount: number | null;
 }
 
 const SOCIAL_FANS_SELECT = `
@@ -81,18 +64,14 @@ const SOCIAL_FANS_SELECT = `
  *
  * Supports optional filtering by `artist_social_id` (`social_ids`), ordering
  * on a whitelisted set of top-level columns, and optional pagination via
- * `{ page, limit }`. When pagination is requested the query uses
- * `{ count: "exact" }` and the result includes `totalCount`; otherwise
- * `totalCount` is `null`.
+ * `{ page, limit }`. `totalCount` is always returned as a number (exact
+ * count, regardless of whether pagination was requested).
+ *
+ * Row type is inferred from the Supabase schema + the `.select(...)` string,
+ * so callers get precise typing for free. Use `SocialFanRow` to name it.
  */
-export const selectSocialFans = async (
-  params?: SelectSocialFansParams,
-): Promise<SelectSocialFansResult> => {
-  const paginated = params?.page !== undefined && params?.limit !== undefined;
-
-  let query = paginated
-    ? supabase.from("social_fans").select(SOCIAL_FANS_SELECT, { count: "exact" })
-    : supabase.from("social_fans").select(SOCIAL_FANS_SELECT);
+export const selectSocialFans = async (params?: SelectSocialFansParams) => {
+  let query = supabase.from("social_fans").select(SOCIAL_FANS_SELECT, { count: "exact" });
 
   if (params?.social_ids && params.social_ids.length > 0) {
     query = query.in("artist_social_id", params.social_ids);
@@ -106,11 +85,9 @@ export const selectSocialFans = async (
     });
   }
 
-  if (paginated) {
-    const page = params!.page!;
-    const limit = params!.limit!;
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
+  if (params?.page !== undefined && params?.limit !== undefined) {
+    const from = (params.page - 1) * params.limit;
+    const to = from + params.limit - 1;
     query = query.range(from, to);
   }
 
@@ -122,7 +99,13 @@ export const selectSocialFans = async (
   }
 
   return {
-    rows: (data || []) as SocialFanWithDetails[],
-    totalCount: paginated ? (count ?? 0) : null,
+    rows: data ?? [],
+    totalCount: count ?? 0,
   };
 };
+
+/**
+ * Row shape returned by `selectSocialFans`, inferred from the Supabase
+ * schema and the joined `.select(...)` projection.
+ */
+export type SocialFanRow = Awaited<ReturnType<typeof selectSocialFans>>["rows"][number];

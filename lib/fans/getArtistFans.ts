@@ -1,23 +1,13 @@
 import { selectAccountSocialIds } from "@/lib/supabase/account_socials/selectAccountSocialIds";
-import { selectSocialFans } from "@/lib/supabase/social_fans/selectSocialFans";
-import type { Tables } from "@/types/database.types";
+import { selectSocialFans, type SocialFanRow } from "@/lib/supabase/social_fans/selectSocialFans";
 
 /**
- * Fan projection returned to callers — the 9 fields of `socials` that the
- * public envelope exposes. Extracted from the `fan_social` join on
- * `social_fans` via `selectSocialFans`.
+ * Fan shape returned to callers — narrowed from the `fan_social` relation on
+ * `social_fans` via `selectSocialFans`. The inferred type already matches the
+ * 9 columns projected by the underlying `.select(...)` string.
  */
-export type ArtistFanProjection = Pick<
-  Tables<"socials">,
-  | "id"
-  | "username"
-  | "avatar"
-  | "profile_url"
-  | "region"
-  | "bio"
-  | "followerCount"
-  | "followingCount"
-  | "updated_at"
+export type ArtistFan = NonNullable<
+  SocialFanRow["fan_social"] extends Array<infer U> ? U : SocialFanRow["fan_social"]
 >;
 
 export interface GetArtistFansParams {
@@ -28,7 +18,7 @@ export interface GetArtistFansParams {
 
 export interface GetArtistFansResponse {
   status: "success" | "error";
-  fans: ArtistFanProjection[];
+  fans: ArtistFan[];
   pagination: {
     total_count: number;
     page: number;
@@ -52,20 +42,6 @@ function buildEmptyResponse(
       limit,
       total_pages: totalCount === 0 ? 0 : Math.ceil(totalCount / limit),
     },
-  };
-}
-
-function projectFan(fanSocial: Tables<"socials">): ArtistFanProjection {
-  return {
-    id: fanSocial.id,
-    username: fanSocial.username,
-    avatar: fanSocial.avatar,
-    profile_url: fanSocial.profile_url,
-    region: fanSocial.region,
-    bio: fanSocial.bio,
-    followerCount: fanSocial.followerCount,
-    followingCount: fanSocial.followingCount,
-    updated_at: fanSocial.updated_at,
   };
 }
 
@@ -106,23 +82,29 @@ export async function getArtistFans(params: GetArtistFansParams): Promise<GetArt
       limit,
     });
 
-    const fans: ArtistFanProjection[] = [];
+    // PostgREST may infer `fan_social` as a single row, an array, or null
+    // depending on the FK shape. Narrow both cases here.
+    const fans: ArtistFan[] = [];
     for (const row of rows) {
-      if (row.fan_social) {
-        fans.push(projectFan(row.fan_social));
+      const fanSocial = row.fan_social;
+      if (!fanSocial) continue;
+      if (Array.isArray(fanSocial)) {
+        for (const f of fanSocial) {
+          if (f) fans.push(f as ArtistFan);
+        }
+      } else {
+        fans.push(fanSocial as ArtistFan);
       }
     }
-
-    const total = totalCount ?? 0;
 
     return {
       status: "success",
       fans,
       pagination: {
-        total_count: total,
+        total_count: totalCount,
         page,
         limit,
-        total_pages: total === 0 ? 0 : Math.ceil(total / limit),
+        total_pages: totalCount === 0 ? 0 : Math.ceil(totalCount / limit),
       },
     };
   } catch (error) {
