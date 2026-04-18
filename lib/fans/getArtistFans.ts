@@ -80,6 +80,9 @@ export async function getArtistFans(params: GetArtistFansParams): Promise<GetArt
     const pagedIds = socialIds.slice(startIndex, endIndex);
 
     const { status: socialsStatus, socials } = await selectSocialsByIds(pagedIds);
+    if (socialsStatus === "error") {
+      return buildEmptyResponse("error", page, limit);
+    }
 
     return {
       status: socialsStatus,

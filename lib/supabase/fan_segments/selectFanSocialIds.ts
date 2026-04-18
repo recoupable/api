@@ -22,10 +22,15 @@ export async function selectFanSocialIds(
       };
     }
 
+    // Supabase caps result sets at 1,000 rows by default. The pagination below
+    // happens in memory over the full deduped id list, so a truncated result
+    // would under-count `total_count` and hide later pages. Raise the ceiling
+    // explicitly until a DB-side paginated variant replaces this flow.
     const { data, error } = await supabase
       .from("fan_segments")
       .select("fan_social_id")
-      .in("segment_id", segmentIds);
+      .in("segment_id", segmentIds)
+      .limit(10000);
 
     if (error) {
       console.error("[ERROR] Error fetching fan_segments:", error);

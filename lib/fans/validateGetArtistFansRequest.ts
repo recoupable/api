@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { validateAuthContext, type AuthContext } from "@/lib/auth/validateAuthContext";
+
+const artistIdSchema = z.string({ message: "id is required" }).uuid("id must be a valid UUID");
 
 export interface GetArtistFansRequest {
   artistAccountId: string;
@@ -76,9 +77,17 @@ export async function validateGetArtistFansRequest(
   request: NextRequest,
   id: string,
 ): Promise<GetArtistFansRequest | NextResponse> {
-  const validatedParams = validateAccountParams(id);
-  if (validatedParams instanceof NextResponse) {
-    return validatedParams;
+  // Check auth first so unauthenticated callers always receive 401 regardless
+  // of whether the path/query params are valid.
+  const authResult = await validateAuthContext(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
+  const idResult = artistIdSchema.safeParse(id);
+  if (!idResult.success) {
+    const firstError = idResult.error.issues[0];
+    return buildValidationError(firstError.message, ["id"]);
   }
 
   const { searchParams } = new URL(request.url);
@@ -94,13 +103,8 @@ export async function validateGetArtistFansRequest(
     return buildValidationError(firstError.message, firstError.path as Array<string | number>);
   }
 
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) {
-    return authResult;
-  }
-
   return {
-    artistAccountId: validatedParams.id,
+    artistAccountId: idResult.data,
     page: queryResult.data.page,
     limit: queryResult.data.limit,
     authContext: authResult,

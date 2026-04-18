@@ -31,7 +31,7 @@ describe("validateGetArtistFansRequest", () => {
     });
   });
 
-  it("returns 400 when id is missing/invalid", async () => {
+  it("returns 400 with the empty fans envelope when id is invalid", async () => {
     const req = makeRequest("https://example.com/api/artists/not-a-uuid/fans");
     const result = await validateGetArtistFansRequest(req, "not-a-uuid");
 
@@ -39,6 +39,25 @@ describe("validateGetArtistFansRequest", () => {
     const body = await (result as NextResponse).json();
     expect((result as NextResponse).status).toBe(400);
     expect(body.status).toBe("error");
+    expect(body.fans).toEqual([]);
+    expect(body.pagination).toEqual({
+      total_count: 0,
+      page: 1,
+      limit: 20,
+      total_pages: 0,
+    });
+    expect(body.missing_fields).toEqual(["id"]);
+  });
+
+  it("returns 401 from auth even when params are invalid", async () => {
+    const unauthorized = NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    mockValidateAuthContext.mockResolvedValue(unauthorized);
+
+    const req = new NextRequest("https://example.com/api/artists/not-a-uuid/fans?page=-1");
+    const result = await validateGetArtistFansRequest(req, "not-a-uuid");
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(401);
   });
 
   it("applies default page=1 and limit=20 when query params omitted", async () => {

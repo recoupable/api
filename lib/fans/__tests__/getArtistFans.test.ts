@@ -106,6 +106,32 @@ describe("getArtistFans", () => {
     expect(result.pagination.limit).toBe(20);
   });
 
+  it("zeroes pagination when selectSocialsByIds errors", async () => {
+    mockSelectArtistSegments.mockResolvedValue({
+      status: "success",
+      segmentIds: ["seg-1"],
+    });
+    mockSelectFanSocialIds.mockResolvedValue({
+      status: "success",
+      socialIds: ["social-a", "social-b", "social-c"],
+    });
+    mockSelectSocialsByIds.mockResolvedValue({
+      status: "error",
+      socials: [],
+    });
+
+    const result = await getArtistFans(baseParams);
+
+    expect(result.status).toBe("error");
+    expect(result.fans).toEqual([]);
+    expect(result.pagination).toEqual({
+      total_count: 0,
+      page: 1,
+      limit: 20,
+      total_pages: 0,
+    });
+  });
+
   it("returns error envelope when fan_segments lookup fails", async () => {
     mockSelectArtistSegments.mockResolvedValue({
       status: "success",
