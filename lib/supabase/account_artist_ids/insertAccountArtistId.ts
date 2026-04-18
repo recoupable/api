@@ -9,18 +9,21 @@ type AccountArtistId = Tables<"account_artist_ids">;
  *
  * @param accountId - The account ID of the user/owner
  * @param artistId - The account ID of the artist
+ * @param options - Optional column values to set on insert (e.g. `pinned`)
  * @returns The inserted relationship record
  * @throws Error if the insert fails
  */
 export async function insertAccountArtistId(
   accountId: string,
   artistId: string,
+  options?: { pinned?: boolean },
 ): Promise<AccountArtistId> {
   const { data, error } = await supabase
     .from("account_artist_ids")
     .insert({
       account_id: accountId,
       artist_id: artistId,
+      ...(options?.pinned !== undefined && { pinned: options.pinned }),
     })
     .select()
     .single();
