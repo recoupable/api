@@ -1,8 +1,8 @@
 import { selectAccountSocialIds } from "@/lib/supabase/account_socials/selectAccountSocialIds";
 import {
-  selectArtistFansPage,
+  selectArtistFans,
   type ArtistFanProjection,
-} from "@/lib/supabase/social_fans/selectArtistFansPage";
+} from "@/lib/supabase/social_fans/selectArtistFans";
 
 export type { ArtistFanProjection };
 
@@ -46,7 +46,7 @@ function buildEmptyResponse(
  *
  * 1. `selectAccountSocialIds` — resolves the artist account to the list of
  *    social IDs it owns (one account can connect multiple social profiles).
- * 2. `selectArtistFansPage` — joins `social_fans -> socials` via the
+ * 2. `selectArtistFans` — joins `social_fans -> socials` via the
  *    `fan_social_id` FK, paginates in-database via `.range(from, to)`, and
  *    returns the total count via the Supabase `{ count: "exact" }` option.
  *
@@ -76,7 +76,7 @@ export async function getArtistFans(params: GetArtistFansParams): Promise<GetArt
       status: fansStatus,
       fans,
       totalCount,
-    } = await selectArtistFansPage({
+    } = await selectArtistFans({
       artistSocialIds: socialIds,
       from,
       to,
