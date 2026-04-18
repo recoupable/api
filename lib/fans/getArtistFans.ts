@@ -1,10 +1,24 @@
 import { selectAccountSocialIds } from "@/lib/supabase/account_socials/selectAccountSocialIds";
-import {
-  selectArtistFans,
-  type ArtistFanProjection,
-} from "@/lib/supabase/social_fans/selectArtistFans";
+import { selectSocialFans } from "@/lib/supabase/social_fans/selectSocialFans";
+import type { Tables } from "@/types/database.types";
 
-export type { ArtistFanProjection };
+/**
+ * Fan projection returned to callers — the 9 fields of `socials` that the
+ * public envelope exposes. Extracted from the `fan_social` join on
+ * `social_fans` via `selectSocialFans`.
+ */
+export type ArtistFanProjection = Pick<
+  Tables<"socials">,
+  | "id"
+  | "username"
+  | "avatar"
+  | "profile_url"
+  | "region"
+  | "bio"
+  | "followerCount"
+  | "followingCount"
+  | "updated_at"
+>;
 
 export interface GetArtistFansParams {
   artistAccountId: string;
@@ -41,14 +55,30 @@ function buildEmptyResponse(
   };
 }
 
+function projectFan(fanSocial: Tables<"socials">): ArtistFanProjection {
+  return {
+    id: fanSocial.id,
+    username: fanSocial.username,
+    avatar: fanSocial.avatar,
+    profile_url: fanSocial.profile_url,
+    region: fanSocial.region,
+    bio: fanSocial.bio,
+    followerCount: fanSocial.followerCount,
+    followingCount: fanSocial.followingCount,
+    updated_at: fanSocial.updated_at,
+  };
+}
+
 /**
  * Retrieves paginated fans for an artist by composing two queries:
  *
  * 1. `selectAccountSocialIds` — resolves the artist account to the list of
  *    social IDs it owns (one account can connect multiple social profiles).
- * 2. `selectArtistFans` — joins `social_fans -> socials` via the
- *    `fan_social_id` FK, paginates in-database via `.range(from, to)`, and
- *    returns the total count via the Supabase `{ count: "exact" }` option.
+ * 2. `selectSocialFans` — joins `social_fans -> socials` via the
+ *    `fan_social_id` FK, paginates in-database via `.range()`, and returns
+ *    the total count via the Supabase `{ count: "exact" }` option. Rows are
+ *    ordered by `latest_engagement` descending so the most recently-engaged
+ *    fans appear first.
  *
  * Replaces the previous `get_artist_fans` RPC that joined the now-removed
  * `artist_segments`/`fan_segments` tables. The direct artist→fans relationship
@@ -68,32 +98,31 @@ export async function getArtistFans(params: GetArtistFansParams): Promise<GetArt
       return buildEmptyResponse("success", page, limit);
     }
 
-    const offset = (page - 1) * limit;
-    const from = offset;
-    const to = offset + limit - 1;
-
-    const {
-      status: fansStatus,
-      fans,
-      totalCount,
-    } = await selectArtistFans({
-      artistSocialIds: socialIds,
-      from,
-      to,
+    const { rows, totalCount } = await selectSocialFans({
+      social_ids: socialIds,
+      orderBy: "latest_engagement",
+      orderDirection: "desc",
+      page,
+      limit,
     });
 
-    if (fansStatus === "error") {
-      return buildEmptyResponse("error", page, limit);
+    const fans: ArtistFanProjection[] = [];
+    for (const row of rows) {
+      if (row.fan_social) {
+        fans.push(projectFan(row.fan_social));
+      }
     }
+
+    const total = totalCount ?? 0;
 
     return {
       status: "success",
       fans,
       pagination: {
-        total_count: totalCount,
+        total_count: total,
         page,
         limit,
-        total_pages: totalCount === 0 ? 0 : Math.ceil(totalCount / limit),
+        total_pages: total === 0 ? 0 : Math.ceil(total / limit),
       },
     };
   } catch (error) {
