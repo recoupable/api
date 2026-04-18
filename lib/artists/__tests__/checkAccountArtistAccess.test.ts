@@ -4,6 +4,11 @@ import { checkAccountArtistAccess } from "../checkAccountArtistAccess";
 import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
 import { selectArtistOrganizationIds } from "@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds";
 import { selectAccountOrganizationIds } from "@/lib/supabase/account_organization_ids/selectAccountOrganizationIds";
+import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
+
+vi.mock("@/lib/const", () => ({
+  RECOUP_ORG_ID: "recoup-admin-org-id",
+}));
 
 vi.mock("@/lib/supabase/account_artist_ids/selectAccountArtistId", () => ({
   selectAccountArtistId: vi.fn(),
@@ -17,9 +22,14 @@ vi.mock("@/lib/supabase/account_organization_ids/selectAccountOrganizationIds", 
   selectAccountOrganizationIds: vi.fn(),
 }));
 
+vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
+  getAccountOrganizations: vi.fn(),
+}));
+
 describe("checkAccountArtistAccess", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getAccountOrganizations).mockResolvedValue([]);
   });
 
   it("should return true when account has direct access to artist", async () => {
@@ -71,5 +81,42 @@ describe("checkAccountArtistAccess", () => {
     const result = await checkAccountArtistAccess("account-123", "artist-456");
 
     expect(result).toBe(false);
+  });
+
+  describe("admin bypass", () => {
+    it("should return true for admin accounts regardless of artist membership", async () => {
+      vi.mocked(selectAccountArtistId).mockResolvedValue(null);
+      vi.mocked(getAccountOrganizations).mockResolvedValue([
+        {
+          account_id: "admin-account",
+          organization_id: "recoup-admin-org-id",
+          created_at: new Date().toISOString(),
+          organization: null,
+        },
+      ]);
+
+      const result = await checkAccountArtistAccess("admin-account", "any-artist");
+
+      expect(result).toBe(true);
+      expect(selectArtistOrganizationIds).not.toHaveBeenCalled();
+      expect(selectAccountOrganizationIds).not.toHaveBeenCalled();
+    });
+
+    it("should not grant access to non-admin accounts with no artist membership", async () => {
+      vi.mocked(selectAccountArtistId).mockResolvedValue(null);
+      vi.mocked(getAccountOrganizations).mockResolvedValue([
+        {
+          account_id: "account-123",
+          organization_id: "some-other-org",
+          created_at: new Date().toISOString(),
+          organization: null,
+        },
+      ]);
+      vi.mocked(selectArtistOrganizationIds).mockResolvedValue([]);
+
+      const result = await checkAccountArtistAccess("account-123", "artist-456");
+
+      expect(result).toBe(false);
+    });
   });
 });
