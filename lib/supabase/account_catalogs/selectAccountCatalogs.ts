@@ -12,9 +12,7 @@ type SelectAccountCatalogsParams = {
  * @returns The account_catalogs with related catalog data
  * @throws Error if the query fails
  */
-export async function selectAccountCatalogs(
-  params: SelectAccountCatalogsParams,
-) {
+export async function selectAccountCatalogs(params: SelectAccountCatalogsParams) {
   let query = supabase
     .from("account_catalogs")
     .select(
