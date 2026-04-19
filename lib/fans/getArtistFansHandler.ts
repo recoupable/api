@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { getArtistFans } from "@/lib/fans/getArtistFans";
 import { validateGetArtistFansRequest } from "@/lib/fans/validateGetArtistFansRequest";
 
 /**
  * Handler for GET /api/artists/{id}/fans.
  *
- * Returns paginated fans (unique socials) derived from the artist's segments.
- * Auth is required; `validateGetArtistFansRequest` enforces auth internally.
+ * Returns paginated fans for the artist, ordered by most recent engagement.
+ * Auth is required; `validateGetArtistFansRequest` enforces it and returns
+ * the 401/400 NextResponse directly.
  *
  * @param request - The incoming request
  * @param id - The artist account ID from the route
@@ -29,28 +31,9 @@ export async function getArtistFansHandler(
       limit: validated.limit,
     });
 
-    return NextResponse.json(result, {
-      status: 200,
-      headers: getCorsHeaders(),
-    });
+    return NextResponse.json(result, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
-    console.error("[ERROR] getArtistFansHandler error:", error);
-    return NextResponse.json(
-      {
-        status: "error",
-        error: error instanceof Error ? error.message : "Internal server error",
-        fans: [],
-        pagination: {
-          total_count: 0,
-          page: 1,
-          limit: 20,
-          total_pages: 0,
-        },
-      },
-      {
-        status: 500,
-        headers: getCorsHeaders(),
-      },
-    );
+    console.error("[ERROR] getArtistFansHandler:", error);
+    return errorResponse("Internal server error", 500);
   }
 }

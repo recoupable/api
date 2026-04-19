@@ -31,7 +31,7 @@ describe("validateGetArtistFansRequest", () => {
     });
   });
 
-  it("returns 400 with the empty fans envelope when id is invalid", async () => {
+  it("returns 400 when id is invalid", async () => {
     const req = makeRequest("https://example.com/api/artists/not-a-uuid/fans");
     const result = await validateGetArtistFansRequest(req, "not-a-uuid");
 
@@ -39,13 +39,7 @@ describe("validateGetArtistFansRequest", () => {
     const body = await (result as NextResponse).json();
     expect((result as NextResponse).status).toBe(400);
     expect(body.status).toBe("error");
-    expect(body.fans).toEqual([]);
-    expect(body.pagination).toEqual({
-      total_count: 0,
-      page: 1,
-      limit: 20,
-      total_pages: 0,
-    });
+    expect(body.error).toMatch(/id/i);
     expect(body.missing_fields).toEqual(["id"]);
   });
 
@@ -89,7 +83,7 @@ describe("validateGetArtistFansRequest", () => {
     expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(400);
     const body = await (result as NextResponse).json();
-    expect(body.fans).toEqual([]);
-    expect(body.pagination.total_pages).toBe(0);
+    expect(body.status).toBe("error");
+    expect(body.missing_fields).toEqual(["page"]);
   });
 });

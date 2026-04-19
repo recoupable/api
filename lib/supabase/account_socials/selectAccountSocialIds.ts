@@ -13,7 +13,8 @@ export async function selectAccountSocialIds(artistAccountId: string): Promise<s
   const { data, error } = await supabase
     .from("account_socials")
     .select("social_id")
-    .eq("account_id", artistAccountId);
+    .eq("account_id", artistAccountId)
+    .limit(10000);
 
   if (error) {
     console.error("Error selecting account social IDs:", error);

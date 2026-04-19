@@ -80,7 +80,7 @@ describe("getArtistFansHandler", () => {
     expect(mockGetArtistFans).not.toHaveBeenCalled();
   });
 
-  it("returns 500 on unexpected errors with zeroed pagination envelope", async () => {
+  it("returns 500 on unexpected errors", async () => {
     mockGetArtistFans.mockRejectedValue(new Error("boom"));
 
     const req = makeAuthedRequest(`https://example.com/api/artists/${VALID_UUID}/fans`);
@@ -89,7 +89,6 @@ describe("getArtistFansHandler", () => {
     expect(response.status).toBe(500);
     const body = await response.json();
     expect(body.status).toBe("error");
-    expect(body.fans).toEqual([]);
-    expect(body.pagination.total_pages).toBe(0);
+    expect(body.error).toBe("Internal server error");
   });
 });

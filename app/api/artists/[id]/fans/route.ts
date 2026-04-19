@@ -17,8 +17,8 @@ export async function OPTIONS() {
 /**
  * GET /api/artists/{id}/fans
  *
- * Returns paginated unique fan socials associated with an artist account via
- * its segments. Requires authentication via `x-api-key` or `Authorization: Bearer`.
+ * Returns paginated fans for an artist account, ordered by most recent engagement.
+ * Requires authentication via `x-api-key` or `Authorization: Bearer`.
  *
  * Path params:
  * - id (required): The artist account ID (UUID)
