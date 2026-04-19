@@ -1,11 +1,6 @@
 import { selectAccountSocialIds } from "@/lib/supabase/account_socials/selectAccountSocialIds";
 import { selectSocialFans } from "@/lib/supabase/social_fans/selectSocialFans";
-
-export interface GetArtistFansParams {
-  artistAccountId: string;
-  page: number;
-  limit: number;
-}
+import { GetArtistFansParams } from "@/lib/fans/validateGetArtistFansRequest";
 
 /**
  * Get paginated fans for an artist account, ordered by most recent engagement.

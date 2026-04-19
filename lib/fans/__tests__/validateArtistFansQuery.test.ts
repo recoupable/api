@@ -40,7 +40,7 @@ describe("validateGetArtistFansRequest", () => {
     expect((result as NextResponse).status).toBe(400);
     expect(body.status).toBe("error");
     expect(body.error).toMatch(/id/i);
-    expect(body.missing_fields).toEqual(["id"]);
+    expect(body.missing_fields).toEqual(["artistAccountId"]);
   });
 
   it("returns 401 from auth even when params are invalid", async () => {

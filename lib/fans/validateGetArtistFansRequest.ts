@@ -8,32 +8,26 @@ const getArtistFansRequestSchema = paginationQuerySchema().extend({
   artistAccountId: z.string({ error: "id is required" }).uuid("id must be a valid UUID"),
 });
 
-export type GetArtistFansRequest = z.infer<typeof getArtistFansRequestSchema>;
+export type GetArtistFansParams = z.infer<typeof getArtistFansRequestSchema>;
 
-export async function validateGetArtistFansRequest(
-  request: NextRequest,
-  id: string,
-): Promise<GetArtistFansRequest | NextResponse> {
+export async function validateGetArtistFansRequest(request: NextRequest, id: string) {
   const authResult = await validateAuthContext(request);
   if (authResult instanceof NextResponse) {
     return authResult;
   }
 
   const { searchParams } = new URL(request.url);
-  const result = getArtistFansRequestSchema.safeParse({
+  const { data: validatedRequest, error: validationError } = getArtistFansRequestSchema.safeParse({
     artistAccountId: id,
     page: searchParams.get("page") ?? undefined,
     limit: searchParams.get("limit") ?? undefined,
   });
 
-  if (!result.success) {
-    const firstError = result.error.issues[0];
-    const path =
-      firstError.path[0] === "artistAccountId"
-        ? ["id"]
-        : (firstError.path as Array<string | number>);
+  if (validationError) {
+    const firstError = validationError.issues[0];
+    const path = firstError.path;
     return validationErrorResponse(firstError.message, path);
   }
 
-  return result.data;
+  return validatedRequest;
 }
