@@ -3,7 +3,9 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getArtistFansHandler } from "@/lib/fans/getArtistFansHandler";
 
 /**
+ * CORS preflight.
  *
+ * @returns 200 with CORS headers.
  */
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -13,10 +15,12 @@ export async function OPTIONS() {
 }
 
 /**
+ * GET /api/artists/{id}/fans — paginated fans for an artist account.
  *
- * @param request
- * @param options
- * @param options.params
+ * @param request - Incoming request.
+ * @param options - Route context.
+ * @param options.params - Path params (artist id).
+ * @returns Fans envelope response.
  */
 export async function GET(request: NextRequest, options: { params: Promise<{ id: string }> }) {
   const { id } = await options.params;
