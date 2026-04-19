@@ -71,6 +71,12 @@ const SOCIAL_FANS_SELECT = `
  * so callers get precise typing for free. Use `SocialFanRow` to name it.
  */
 export const selectSocialFans = async (params?: SelectSocialFansParams) => {
+  // Short-circuit: caller passed an explicit empty `social_ids` filter, so the
+  // query would match zero rows by construction. Skip the DB round-trip.
+  if (params?.social_ids !== undefined && params.social_ids.length === 0) {
+    return { rows: [], totalCount: 0 };
+  }
+
   let query = supabase.from("social_fans").select(SOCIAL_FANS_SELECT, { count: "exact" });
 
   if (params?.social_ids && params.social_ids.length > 0) {

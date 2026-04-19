@@ -72,12 +72,19 @@ describe("getArtistFans", () => {
     });
   });
 
-  it("short-circuits to a success envelope when the artist has no socials", async () => {
+  it("forwards empty socials through to selectSocialFans (which owns the short-circuit)", async () => {
     mockSelectAccountSocialIds.mockResolvedValue([]);
+    mockSelectSocialFans.mockResolvedValue({ rows: [], totalCount: 0 });
 
     const result = await getArtistFans(baseParams);
 
-    expect(mockSelectSocialFans).not.toHaveBeenCalled();
+    expect(mockSelectSocialFans).toHaveBeenCalledWith({
+      social_ids: [],
+      orderBy: "latest_engagement",
+      orderDirection: "desc",
+      page: 1,
+      limit: 20,
+    });
     expect(result.status).toBe("success");
     expect(result.fans).toEqual([]);
     expect(result.pagination).toEqual({

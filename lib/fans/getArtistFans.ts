@@ -1,30 +1,10 @@
 import { selectAccountSocialIds } from "@/lib/supabase/account_socials/selectAccountSocialIds";
-import { selectSocialFans, type SocialFanRow } from "@/lib/supabase/social_fans/selectSocialFans";
-
-/**
- * Fan shape returned to callers — narrowed from the `fan_social` relation on
- * `social_fans` via `selectSocialFans`. The inferred type already matches the
- * 9 columns projected by the underlying `.select(...)` string.
- */
-export type ArtistFan = NonNullable<
-  SocialFanRow["fan_social"] extends Array<infer U> ? U : SocialFanRow["fan_social"]
->;
+import { selectSocialFans } from "@/lib/supabase/social_fans/selectSocialFans";
 
 export interface GetArtistFansParams {
   artistAccountId: string;
   page: number;
   limit: number;
-}
-
-export interface GetArtistFansResponse {
-  status: "success" | "error";
-  fans: ArtistFan[];
-  pagination: {
-    total_count: number;
-    page: number;
-    limit: number;
-    total_pages: number;
-  };
 }
 
 /**
@@ -36,23 +16,16 @@ export interface GetArtistFansResponse {
  *    `fan_social_id` FK, paginates in-database via `.range()`, and returns
  *    the total count via the Supabase `{ count: "exact" }` option. Rows are
  *    ordered by `latest_engagement` descending so the most recently-engaged
- *    fans appear first.
+ *    fans appear first. When `social_ids` is an empty array the helper
+ *    short-circuits to an empty envelope without hitting the DB.
  *
  * DB errors from either helper bubble up; the handler's outer try/catch owns
  * the 500 envelope shape.
  */
-export async function getArtistFans(params: GetArtistFansParams): Promise<GetArtistFansResponse> {
+export async function getArtistFans(params: GetArtistFansParams) {
   const { artistAccountId, page, limit } = params;
 
   const socialIds = await selectAccountSocialIds(artistAccountId);
-
-  if (socialIds.length === 0) {
-    return {
-      status: "success",
-      fans: [],
-      pagination: { total_count: 0, page, limit, total_pages: 0 },
-    };
-  }
 
   const { rows, totalCount } = await selectSocialFans({
     social_ids: socialIds,
@@ -63,22 +36,14 @@ export async function getArtistFans(params: GetArtistFansParams): Promise<GetArt
   });
 
   // PostgREST may infer `fan_social` as a single row, an array, or null
-  // depending on the FK shape. Narrow both cases here.
-  const fans: ArtistFan[] = [];
-  for (const row of rows) {
-    const fanSocial = row.fan_social;
-    if (!fanSocial) continue;
-    if (Array.isArray(fanSocial)) {
-      for (const f of fanSocial) {
-        if (f) fans.push(f as ArtistFan);
-      }
-    } else {
-      fans.push(fanSocial as ArtistFan);
-    }
-  }
+  // depending on the FK shape. Normalise all three into a flat list.
+  const fans = rows
+    .map((row) => row.fan_social)
+    .filter(Boolean)
+    .flatMap((f) => (Array.isArray(f) ? f.filter(Boolean) : f));
 
   return {
-    status: "success",
+    status: "success" as const,
     fans,
     pagination: {
       total_count: totalCount,
