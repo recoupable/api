@@ -8,19 +8,13 @@ export interface GetArtistFansParams {
 }
 
 /**
- * Retrieves paginated fans for an artist by composing two queries:
+ * Paginated fans for an artist account, ordered by most recent engagement.
  *
- * 1. `selectAccountSocialIds` — resolves the artist account to the list of
- *    social IDs it owns (one account can connect multiple social profiles).
- * 2. `selectSocialFans` — joins `social_fans -> socials` via the
- *    `fan_social_id` FK, paginates in-database via `.range()`, and returns
- *    the total count via the Supabase `{ count: "exact" }` option. Rows are
- *    ordered by `latest_engagement` descending so the most recently-engaged
- *    fans appear first. When `social_ids` is an empty array the helper
- *    short-circuits to an empty envelope without hitting the DB.
+ * Fans come from `social_fans`, which is trigger-populated from `post_comments`.
+ * An artist account may own several social profiles; fans are aggregated across
+ * all of them. Pagination and total count both happen in the DB.
  *
- * DB errors from either helper bubble up; the handler's outer try/catch owns
- * the 500 envelope shape.
+ * DB errors bubble; the handler owns the 500 envelope.
  */
 export async function getArtistFans(params: GetArtistFansParams) {
   const { artistAccountId, page, limit } = params;
@@ -35,12 +29,7 @@ export async function getArtistFans(params: GetArtistFansParams) {
     limit,
   });
 
-  // PostgREST may infer `fan_social` as a single row, an array, or null
-  // depending on the FK shape. Normalise all three into a flat list.
-  const fans = rows
-    .map((row) => row.fan_social)
-    .filter(Boolean)
-    .flatMap((f) => (Array.isArray(f) ? f.filter(Boolean) : f));
+  const fans = rows.flatMap(row => row.fan_social).filter(Boolean);
 
   return {
     status: "success" as const,
@@ -49,7 +38,7 @@ export async function getArtistFans(params: GetArtistFansParams) {
       total_count: totalCount,
       page,
       limit,
-      total_pages: totalCount === 0 ? 0 : Math.ceil(totalCount / limit),
+      total_pages: Math.ceil(totalCount / limit),
     },
   };
 }
