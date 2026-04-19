@@ -6,14 +6,6 @@ import { validateGetArtistFansRequest } from "@/lib/fans/validateGetArtistFansRe
 
 /**
  * Handler for GET /api/artists/{id}/fans.
- *
- * Returns paginated fans for the artist, ordered by most recent engagement.
- * Auth is required; `validateGetArtistFansRequest` enforces it and returns
- * the 401/400 NextResponse directly.
- *
- * @param request - The incoming request
- * @param id - The artist account ID from the route
- * @returns A NextResponse with the fans envelope or an error
  */
 export async function getArtistFansHandler(
   request: NextRequest,
