@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { validationErrorResponse } from "@/lib/networking/validationErrorResponse";
+import { validationErrorResponse } from "@/lib/zod/validationErrorResponse";
 import { paginationQuerySchema } from "@/lib/zod/paginationQuerySchema";
 
 const getArtistFansRequestSchema = paginationQuerySchema().extend({
