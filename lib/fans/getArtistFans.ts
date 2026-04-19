@@ -27,24 +27,6 @@ export interface GetArtistFansResponse {
   };
 }
 
-function buildEmptyResponse(
-  status: "success" | "error",
-  page: number,
-  limit: number,
-  totalCount: number = 0,
-): GetArtistFansResponse {
-  return {
-    status,
-    fans: [],
-    pagination: {
-      total_count: totalCount,
-      page,
-      limit,
-      total_pages: totalCount === 0 ? 0 : Math.ceil(totalCount / limit),
-    },
-  };
-}
-
 /**
  * Retrieves paginated fans for an artist by composing two queries:
  *
@@ -56,59 +38,53 @@ function buildEmptyResponse(
  *    ordered by `latest_engagement` descending so the most recently-engaged
  *    fans appear first.
  *
- * Replaces the previous `get_artist_fans` RPC that joined the now-removed
- * `artist_segments`/`fan_segments` tables. The direct artist→fans relationship
- * now lives in `social_fans` (auto-populated by a `post_comments` trigger).
+ * DB errors from either helper bubble up; the handler's outer try/catch owns
+ * the 500 envelope shape.
  */
 export async function getArtistFans(params: GetArtistFansParams): Promise<GetArtistFansResponse> {
   const { artistAccountId, page, limit } = params;
 
-  try {
-    const { status: accountStatus, socialIds } = await selectAccountSocialIds(artistAccountId);
+  const socialIds = await selectAccountSocialIds(artistAccountId);
 
-    if (accountStatus === "error") {
-      return buildEmptyResponse("error", page, limit);
-    }
-
-    if (socialIds.length === 0) {
-      return buildEmptyResponse("success", page, limit);
-    }
-
-    const { rows, totalCount } = await selectSocialFans({
-      social_ids: socialIds,
-      orderBy: "latest_engagement",
-      orderDirection: "desc",
-      page,
-      limit,
-    });
-
-    // PostgREST may infer `fan_social` as a single row, an array, or null
-    // depending on the FK shape. Narrow both cases here.
-    const fans: ArtistFan[] = [];
-    for (const row of rows) {
-      const fanSocial = row.fan_social;
-      if (!fanSocial) continue;
-      if (Array.isArray(fanSocial)) {
-        for (const f of fanSocial) {
-          if (f) fans.push(f as ArtistFan);
-        }
-      } else {
-        fans.push(fanSocial as ArtistFan);
-      }
-    }
-
+  if (socialIds.length === 0) {
     return {
       status: "success",
-      fans,
-      pagination: {
-        total_count: totalCount,
-        page,
-        limit,
-        total_pages: totalCount === 0 ? 0 : Math.ceil(totalCount / limit),
-      },
+      fans: [],
+      pagination: { total_count: 0, page, limit, total_pages: 0 },
     };
-  } catch (error) {
-    console.error("[ERROR] Unexpected error in getArtistFans:", error);
-    return buildEmptyResponse("error", page, limit);
   }
+
+  const { rows, totalCount } = await selectSocialFans({
+    social_ids: socialIds,
+    orderBy: "latest_engagement",
+    orderDirection: "desc",
+    page,
+    limit,
+  });
+
+  // PostgREST may infer `fan_social` as a single row, an array, or null
+  // depending on the FK shape. Narrow both cases here.
+  const fans: ArtistFan[] = [];
+  for (const row of rows) {
+    const fanSocial = row.fan_social;
+    if (!fanSocial) continue;
+    if (Array.isArray(fanSocial)) {
+      for (const f of fanSocial) {
+        if (f) fans.push(f as ArtistFan);
+      }
+    } else {
+      fans.push(fanSocial as ArtistFan);
+    }
+  }
+
+  return {
+    status: "success",
+    fans,
+    pagination: {
+      total_count: totalCount,
+      page,
+      limit,
+      total_pages: totalCount === 0 ? 0 : Math.ceil(totalCount / limit),
+    },
+  };
 }

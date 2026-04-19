@@ -42,10 +42,7 @@ function makeFanRow(id: string) {
 describe("getArtistFans", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSelectAccountSocialIds.mockResolvedValue({
-      status: "success",
-      socialIds: ARTIST_SOCIAL_IDS,
-    });
+    mockSelectAccountSocialIds.mockResolvedValue(ARTIST_SOCIAL_IDS);
   });
 
   it("returns paginated fans on the happy path and forwards pagination + ordering", async () => {
@@ -76,10 +73,7 @@ describe("getArtistFans", () => {
   });
 
   it("short-circuits to a success envelope when the artist has no socials", async () => {
-    mockSelectAccountSocialIds.mockResolvedValue({
-      status: "success",
-      socialIds: [],
-    });
+    mockSelectAccountSocialIds.mockResolvedValue([]);
 
     const result = await getArtistFans(baseParams);
 
@@ -112,25 +106,6 @@ describe("getArtistFans", () => {
     });
   });
 
-  it("returns error envelope when account_socials lookup fails", async () => {
-    mockSelectAccountSocialIds.mockResolvedValue({
-      status: "error",
-      socialIds: [],
-    });
-
-    const result = await getArtistFans(baseParams);
-
-    expect(mockSelectSocialFans).not.toHaveBeenCalled();
-    expect(result.status).toBe("error");
-    expect(result.fans).toEqual([]);
-    expect(result.pagination).toEqual({
-      total_count: 0,
-      page: 1,
-      limit: 20,
-      total_pages: 0,
-    });
-  });
-
   it("skips rows whose fan_social join is null", async () => {
     mockSelectSocialFans.mockResolvedValue({
       rows: [makeFanRow("social-1"), { fan_social: null }, makeFanRow("social-2")],
@@ -154,12 +129,16 @@ describe("getArtistFans", () => {
     expect(result.pagination.total_pages).toBe(2);
   });
 
-  it("falls back to the error envelope when a downstream call throws", async () => {
-    mockSelectSocialFans.mockRejectedValue(new Error("boom"));
+  it("propagates errors from selectAccountSocialIds so the handler owns the 500 envelope", async () => {
+    mockSelectAccountSocialIds.mockRejectedValue(new Error("account socials boom"));
 
-    const result = await getArtistFans(baseParams);
+    await expect(getArtistFans(baseParams)).rejects.toThrow("account socials boom");
+    expect(mockSelectSocialFans).not.toHaveBeenCalled();
+  });
 
-    expect(result.status).toBe("error");
-    expect(result.pagination.total_count).toBe(0);
+  it("propagates errors from selectSocialFans so the handler owns the 500 envelope", async () => {
+    mockSelectSocialFans.mockRejectedValue(new Error("social fans boom"));
+
+    await expect(getArtistFans(baseParams)).rejects.toThrow("social fans boom");
   });
 });

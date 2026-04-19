@@ -29,10 +29,8 @@ export async function getArtistFansHandler(
       limit: validated.limit,
     });
 
-    const statusCode = result.status === "success" ? 200 : 500;
-
     return NextResponse.json(result, {
-      status: statusCode,
+      status: 200,
       headers: getCorsHeaders(),
     });
   } catch (error) {
