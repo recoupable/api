@@ -9,10 +9,6 @@ import { pickValid } from "./pickValid";
 import { scopedAuthConfigs } from "./scopedAuthConfigs";
 import { toConnectedSlugs } from "./toConnectedSlugs";
 
-/**
- * Toolkits enabled in Tool Router sessions for the customer. Extend as we
- * onboard more Composio toolkits.
- */
 export const ENABLED_TOOLKITS = [
   "googlesheets",
   "googledrive",
@@ -21,20 +17,8 @@ export const ENABLED_TOOLKITS = [
   "instagram",
 ];
 
-/**
- * Composio account ID for the shared Recoupable Google account. Used as the
- * owner for Google Drive/Sheets/Docs tools when neither the customer nor the
- * artist has their own Google connection.
- */
 const SHARED_ACCOUNT_ID = "recoup-shared-767f498e-e1e9-43c6-a152-a96ae3bd8d07";
 
-/**
- * Meta-tools exposed by every Composio Tool Router session. Only the
- * customer's session surfaces these to the agent — artist and shared tools
- * are surfaced as explicit toolkit tools instead, so the agent can call
- * them directly and hit a session whose owner actually owns the
- * underlying connection.
- */
 const META_TOOLS = new Set([
   "COMPOSIO_MANAGE_CONNECTIONS",
   "COMPOSIO_SEARCH_TOOLS",
@@ -42,30 +26,13 @@ const META_TOOLS = new Set([
   "COMPOSIO_MULTI_EXECUTE_TOOL",
 ]);
 
-/** Composio tool page size when fetching explicit toolkit tools. */
 const TOOLS_LIMIT = 1000;
 
 /**
- * Get Composio Tool Router tools for a chat request.
- *
- * Returns a merged ToolSet drawn from up to three owners:
- * - Customer (always): the 4 Composio meta-tools (SEARCH_TOOLS /
- *   GET_TOOL_SCHEMAS / MULTI_EXECUTE_TOOL / MANAGE_CONNECTIONS) via a Tool
- *   Router session. The agent uses these to dynamically discover and
- *   execute tools against the caller's own connections.
- * - Artist (when artistId has access and covers toolkits the customer
- *   does not): explicit Composio tools (TIKTOK_*, INSTAGRAM_*) fetched
- *   via `composio.tools.get(artistId, …)` so each tool executes against
- *   the artist's connection.
- * - Shared (when the shared Recoupable Google account covers Google
- *   toolkits no one else has): explicit Composio tools
- *   (GOOGLEDOCS_*, GOOGLEDRIVE_*, GOOGLESHEETS_*) fetched the same way.
- *
- * Priority is customer > artist > shared, enforced by toolkit filtering
- * before any tools are fetched so no toolkit appears under two owners.
- *
- * Gracefully returns `{}` if Composio is unreachable or packages fail to
- * load (e.g. bundler incompatibility with createRequire).
+ * Artist and shared tools go through composio.tools.get() rather than a
+ * Tool Router session because Composio rejects cross-account
+ * connectedAccounts overrides at execute time — each explicit tool must
+ * be owned by the account whose id we pass in.
  */
 export async function getComposioTools(
   accountId: string,
@@ -118,11 +85,11 @@ export async function getComposioTools(
         : Promise.resolve({} as Record<string, unknown>),
     ]);
 
-    const customerTools = pickValid(customerRaw, name => META_TOOLS.has(name));
-    const artistExplicit = pickValid(artistTools, name => !META_TOOLS.has(name));
-    const sharedExplicit = pickValid(sharedTools, name => !META_TOOLS.has(name));
-
-    return { ...customerTools, ...artistExplicit, ...sharedExplicit };
+    return {
+      ...pickValid(customerRaw, name => META_TOOLS.has(name)),
+      ...pickValid(artistTools, name => !META_TOOLS.has(name)),
+      ...pickValid(sharedTools, name => !META_TOOLS.has(name)),
+    };
   } catch (error) {
     console.warn("Composio tools unavailable:", (error as Error).message);
     return {};
