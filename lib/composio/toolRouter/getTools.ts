@@ -36,8 +36,17 @@ async function collectTools(
   label: string,
 ): Promise<ToolSet> {
   if (!session) return {};
-  const all = (await session.tools()) as Record<string, unknown>;
-  console.info("[getComposioTools] session.tools()", {
+  let all: Record<string, unknown>;
+  try {
+    all = (await session.tools()) as Record<string, unknown>;
+  } catch (e) {
+    console.warn("[getComposioTools] session.tools() threw", {
+      label,
+      error: e instanceof Error ? e.message : String(e),
+    });
+    return {};
+  }
+  console.warn("[getComposioTools] session.tools()", {
     label,
     totalTools: Object.keys(all).length,
     toolNames: Object.keys(all),
@@ -85,13 +94,24 @@ export async function getComposioTools(
       roomId,
     });
 
+    console.warn("[getComposioTools] sessions created", {
+      hasCustomer: Boolean(sessions.customer),
+      hasArtist: Boolean(sessions.artist),
+      hasShared: Boolean(sessions.shared),
+    });
+
     const [customerTools, artistTools, sharedTools] = await Promise.all([
       collectTools(sessions.customer, name => META_TOOLS.has(name), "customer"),
       collectTools(sessions.artist, name => !META_TOOLS.has(name), "artist"),
       collectTools(sessions.shared, name => !META_TOOLS.has(name), "shared"),
     ]);
 
-    return { ...customerTools, ...artistTools, ...sharedTools };
+    const merged = { ...customerTools, ...artistTools, ...sharedTools };
+    console.warn("[getComposioTools] merged tools", {
+      count: Object.keys(merged).length,
+      names: Object.keys(merged),
+    });
+    return merged;
   } catch (error) {
     console.warn("Composio tools unavailable:", (error as Error).message);
     return {};
