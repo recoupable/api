@@ -212,4 +212,35 @@ describe("validateAuthorizeConnectorRequest", () => {
 
     process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID = originalEnv;
   });
+
+  it.each([
+    ["googlesheets", "COMPOSIO_GOOGLE_SHEETS_AUTH_CONFIG_ID"],
+    ["googledocs", "COMPOSIO_GOOGLE_DOCS_AUTH_CONFIG_ID"],
+    ["googledrive", "COMPOSIO_GOOGLE_DRIVE_AUTH_CONFIG_ID"],
+    ["instagram", "COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID"],
+  ])("should include %s auth config when env var %s is set", async (connector, envVar) => {
+    const mockAccountId = "account-123";
+    const original = process.env[envVar];
+    process.env[envVar] = "ac_custom";
+
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: mockAccountId,
+      orgId: null,
+      authToken: "test-token",
+    });
+
+    const request = new NextRequest("http://localhost/api/connectors/authorize", {
+      method: "POST",
+      body: JSON.stringify({ connector }),
+    });
+    const result = await validateAuthorizeConnectorRequest(request);
+
+    expect(result).not.toBeInstanceOf(NextResponse);
+    expect((result as { authConfigs?: Record<string, string> }).authConfigs).toEqual({
+      [connector]: "ac_custom",
+    });
+
+    if (original === undefined) delete process.env[envVar];
+    else process.env[envVar] = original;
+  });
 });
