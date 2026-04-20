@@ -22,18 +22,36 @@ const SHARED_ACCOUNT_ID = "recoup-shared-767f498e-e1e9-43c6-a152-a96ae3bd8d07";
  * @returns Map of Google toolkit slug to connected account ID
  */
 export async function getSharedAccountConnections(): Promise<Record<string, string>> {
-  const connectors = await getConnectors(SHARED_ACCOUNT_ID);
+  try {
+    const connectors = await getConnectors(SHARED_ACCOUNT_ID);
 
-  const connections: Record<string, string> = {};
-  for (const connector of connectors) {
-    if (
-      SHARED_GOOGLE_TOOLKITS.has(connector.slug) &&
-      connector.isConnected &&
-      connector.connectedAccountId
-    ) {
-      connections[connector.slug] = connector.connectedAccountId;
+    const connections: Record<string, string> = {};
+    for (const connector of connectors) {
+      if (
+        SHARED_GOOGLE_TOOLKITS.has(connector.slug) &&
+        connector.isConnected &&
+        connector.connectedAccountId
+      ) {
+        connections[connector.slug] = connector.connectedAccountId;
+      }
     }
-  }
 
-  return connections;
+    console.info("[getSharedAccountConnections] resolved", {
+      sharedAccountId: SHARED_ACCOUNT_ID,
+      totalConnectors: connectors.length,
+      connectorSlugs: connectors.map(c => ({ slug: c.slug, isConnected: c.isConnected })),
+      resolvedSlugs: Object.keys(connections),
+    });
+
+    return connections;
+  } catch (error) {
+    // Never let a shared-account lookup failure take down the entire
+    // tool router — the rest of the session (account + artist connections
+    // + Composio meta-tools) must still work. Log loudly so we can fix it.
+    console.error("[getSharedAccountConnections] failed — returning no shared connections", {
+      sharedAccountId: SHARED_ACCOUNT_ID,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return {};
+  }
 }

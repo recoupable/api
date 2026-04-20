@@ -91,4 +91,15 @@ describe("getSharedAccountConnections", () => {
 
     expect(getConnectors).toHaveBeenCalledWith(SHARED_ACCOUNT_ID);
   });
+
+  it("should return empty object and not throw when getConnectors fails", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(getConnectors).mockRejectedValue(new Error("composio down"));
+
+    const result = await getSharedAccountConnections();
+
+    expect(result).toEqual({});
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
 });
