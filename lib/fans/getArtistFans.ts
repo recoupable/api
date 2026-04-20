@@ -18,7 +18,14 @@ export async function getArtistFans(params: GetArtistFansParams) {
     limit,
   });
 
-  const fans = rows.flatMap(row => row.fan_social).filter(Boolean);
+  const fans = rows
+    .flatMap(row => row.fan_social)
+    .filter(Boolean)
+    .map(({ followerCount, followingCount, ...rest }) => ({
+      ...rest,
+      follower_count: followerCount,
+      following_count: followingCount,
+    }));
 
   return {
     status: "success" as const,
