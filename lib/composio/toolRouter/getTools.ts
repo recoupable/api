@@ -1,11 +1,13 @@
-import type { Tool, ToolSet } from "ai";
+import type { ToolSet } from "ai";
 import { getComposioClient } from "../client";
 import { getCallbackUrl } from "../getCallbackUrl";
 import { getConnectors } from "../connectors/getConnectors";
-import { buildAuthConfigs } from "../connectors/buildAuthConfigs";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import { getSharedAccountConnections } from "./getSharedAccountConnections";
 import { resolveSessionToolkits } from "./resolveSessionToolkits";
+import { pickValid } from "./pickValid";
+import { scopedAuthConfigs } from "./scopedAuthConfigs";
+import { toConnectedSlugs } from "./toConnectedSlugs";
 
 /**
  * Toolkits enabled in Tool Router sessions for the customer. Extend as we
@@ -42,35 +44,6 @@ const META_TOOLS = new Set([
 
 /** Composio tool page size when fetching explicit toolkit tools. */
 const TOOLS_LIMIT = 1000;
-
-function isValidTool(tool: unknown): tool is Tool {
-  if (typeof tool !== "object" || tool === null) return false;
-  const obj = tool as Record<string, unknown>;
-  const hasExecute = typeof obj.execute === "function";
-  const hasSchema = "parameters" in obj || "inputSchema" in obj;
-  return hasExecute && hasSchema;
-}
-
-function pickValid(tools: Record<string, unknown>, filter: (name: string) => boolean): ToolSet {
-  const out: ToolSet = {};
-  for (const [name, tool] of Object.entries(tools)) {
-    if (!filter(name)) continue;
-    if (isValidTool(tool)) out[name] = tool;
-  }
-  return out;
-}
-
-function scopedAuthConfigs(toolkits: string[]): Record<string, string> | undefined {
-  const all = buildAuthConfigs();
-  if (!all) return undefined;
-  const enabled = new Set(toolkits);
-  const scoped = Object.fromEntries(Object.entries(all).filter(([slug]) => enabled.has(slug)));
-  return Object.keys(scoped).length > 0 ? scoped : undefined;
-}
-
-function toConnectedSlugs(connectors: Awaited<ReturnType<typeof getConnectors>>): Set<string> {
-  return new Set(connectors.filter(c => c.isConnected).map(c => c.slug));
-}
 
 /**
  * Get Composio Tool Router tools for a chat request.
