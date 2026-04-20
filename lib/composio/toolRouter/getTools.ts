@@ -33,9 +33,15 @@ function isValidTool(tool: unknown): tool is Tool {
 async function collectTools(
   session: ToolRouterSessions["customer"] | undefined,
   filter: (toolName: string) => boolean,
+  label: string,
 ): Promise<ToolSet> {
   if (!session) return {};
   const all = (await session.tools()) as Record<string, unknown>;
+  console.info("[getComposioTools] session.tools()", {
+    label,
+    totalTools: Object.keys(all).length,
+    toolNames: Object.keys(all),
+  });
   const out: ToolSet = {};
   for (const [name, tool] of Object.entries(all)) {
     if (!filter(name)) continue;
@@ -80,9 +86,9 @@ export async function getComposioTools(
     });
 
     const [customerTools, artistTools, sharedTools] = await Promise.all([
-      collectTools(sessions.customer, name => META_TOOLS.has(name)),
-      collectTools(sessions.artist, name => !META_TOOLS.has(name)),
-      collectTools(sessions.shared, name => !META_TOOLS.has(name)),
+      collectTools(sessions.customer, name => META_TOOLS.has(name), "customer"),
+      collectTools(sessions.artist, name => !META_TOOLS.has(name), "artist"),
+      collectTools(sessions.shared, name => !META_TOOLS.has(name), "shared"),
     ]);
 
     return { ...customerTools, ...artistTools, ...sharedTools };
