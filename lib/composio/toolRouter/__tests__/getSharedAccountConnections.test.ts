@@ -7,12 +7,11 @@ vi.mock("../../connectors/getConnectors", () => ({
   getConnectors: vi.fn(),
 }));
 
-const SHARED_ENTITY = "shared@recoupable.com";
+const SHARED_ACCOUNT_ID = "recoup-shared-767f498e-e1e9-43c6-a152-a96ae3bd8d07";
 
 describe("getSharedAccountConnections", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    delete process.env.COMPOSIO_SHARED_ENTITY_ID;
   });
 
   it("should return Google connections from the shared account", async () => {
@@ -39,7 +38,7 @@ describe("getSharedAccountConnections", () => {
 
     const result = await getSharedAccountConnections();
 
-    expect(getConnectors).toHaveBeenCalledWith(SHARED_ENTITY);
+    expect(getConnectors).toHaveBeenCalledWith(SHARED_ACCOUNT_ID);
     expect(result).toEqual({
       googledrive: "shared-drive-123",
       googlesheets: "shared-sheets-456",
@@ -85,12 +84,11 @@ describe("getSharedAccountConnections", () => {
     expect(result).toEqual({});
   });
 
-  it("should use COMPOSIO_SHARED_ENTITY_ID env var when set", async () => {
-    process.env.COMPOSIO_SHARED_ENTITY_ID = "custom-shared-entity";
+  it("should use the hardcoded shared account ID", async () => {
     vi.mocked(getConnectors).mockResolvedValue([]);
 
     await getSharedAccountConnections();
 
-    expect(getConnectors).toHaveBeenCalledWith("custom-shared-entity");
+    expect(getConnectors).toHaveBeenCalledWith(SHARED_ACCOUNT_ID);
   });
 });

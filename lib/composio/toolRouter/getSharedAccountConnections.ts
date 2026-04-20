@@ -6,10 +6,10 @@ import { getConnectors } from "../connectors/getConnectors";
 const SHARED_GOOGLE_TOOLKITS = new Set(["googledrive", "googlesheets", "googledocs"]);
 
 /**
- * Default Composio entity ID for the shared Google account.
- * Override with COMPOSIO_SHARED_ENTITY_ID env var.
+ * Composio account ID for the shared Recoupable Google account.
+ * Used across Google Drive, Sheets, and Docs.
  */
-const DEFAULT_SHARED_ENTITY = "shared@recoupable.com";
+const SHARED_ACCOUNT_ID = "recoup-shared-767f498e-e1e9-43c6-a152-a96ae3bd8d07";
 
 /**
  * Get Google Drive/Sheets/Docs connections from the shared Recoupable account.
@@ -22,8 +22,7 @@ const DEFAULT_SHARED_ENTITY = "shared@recoupable.com";
  * @returns Map of Google toolkit slug to connected account ID
  */
 export async function getSharedAccountConnections(): Promise<Record<string, string>> {
-  const entityId = process.env.COMPOSIO_SHARED_ENTITY_ID || DEFAULT_SHARED_ENTITY;
-  const connectors = await getConnectors(entityId);
+  const connectors = await getConnectors(SHARED_ACCOUNT_ID);
 
   const connections: Record<string, string> = {};
   for (const connector of connectors) {
