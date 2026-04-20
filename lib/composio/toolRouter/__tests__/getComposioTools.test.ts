@@ -1,29 +1,34 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { getComposioTools } from "../getTools";
 
-import { createToolRouterSession } from "../createToolRouterSession";
-import { getArtistConnectionsFromComposio } from "../getArtistConnectionsFromComposio";
+import { createToolRouterSessions } from "../createToolRouterSessions";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 
-// Mock dependencies
-vi.mock("../createToolRouterSession", () => ({
-  createToolRouterSession: vi.fn(),
-}));
-
-vi.mock("../getArtistConnectionsFromComposio", () => ({
-  getArtistConnectionsFromComposio: vi.fn(),
+vi.mock("../createToolRouterSessions", () => ({
+  createToolRouterSessions: vi.fn(),
 }));
 
 vi.mock("@/lib/artists/checkAccountArtistAccess", () => ({
   checkAccountArtistAccess: vi.fn(),
 }));
 
-// Mock valid tool structure
-const createMockTool = () => ({
-  description: "Test tool",
+const mockTool = (description = "Mock tool") => ({
+  description,
   inputSchema: { type: "object" },
   execute: vi.fn(),
 });
+
+const META_TOOLS = [
+  "COMPOSIO_MANAGE_CONNECTIONS",
+  "COMPOSIO_SEARCH_TOOLS",
+  "COMPOSIO_GET_TOOL_SCHEMAS",
+  "COMPOSIO_MULTI_EXECUTE_TOOL",
+];
+
+function buildSession(toolNames: string[]) {
+  const tools = Object.fromEntries(toolNames.map(name => [name, mockTool(name)]));
+  return { tools: vi.fn().mockResolvedValue(tools) };
+}
 
 describe("getComposioTools", () => {
   const originalEnv = process.env;
@@ -37,127 +42,119 @@ describe("getComposioTools", () => {
     process.env = originalEnv;
   });
 
-  it("should return empty object when COMPOSIO_API_KEY is not set", async () => {
+  it("returns empty object when COMPOSIO_API_KEY is missing", async () => {
     delete process.env.COMPOSIO_API_KEY;
 
     const result = await getComposioTools("account-123");
 
     expect(result).toEqual({});
-    expect(createToolRouterSession).not.toHaveBeenCalled();
+    expect(createToolRouterSessions).not.toHaveBeenCalled();
   });
 
-  it("should not fetch artist connections when artistId is not provided", async () => {
-    const mockSession = {
-      tools: vi.fn().mockResolvedValue({
-        COMPOSIO_MANAGE_CONNECTIONS: createMockTool(),
-      }),
-    };
-    vi.mocked(createToolRouterSession).mockResolvedValue(mockSession);
-
-    await getComposioTools("account-123");
-
-    expect(getArtistConnectionsFromComposio).not.toHaveBeenCalled();
-    expect(createToolRouterSession).toHaveBeenCalledWith("account-123", undefined, undefined);
-  });
-
-  it("should fetch and pass artist connections when artistId is provided and access is granted", async () => {
-    const mockConnections = { tiktok: "tiktok-account-456" };
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
-    vi.mocked(getArtistConnectionsFromComposio).mockResolvedValue(mockConnections);
-
-    const mockSession = {
-      tools: vi.fn().mockResolvedValue({
-        COMPOSIO_MANAGE_CONNECTIONS: createMockTool(),
-      }),
-    };
-    vi.mocked(createToolRouterSession).mockResolvedValue(mockSession);
-
-    await getComposioTools("account-123", "artist-456", "room-789");
-
-    expect(checkAccountArtistAccess).toHaveBeenCalledWith("account-123", "artist-456");
-    expect(getArtistConnectionsFromComposio).toHaveBeenCalledWith("artist-456");
-    expect(createToolRouterSession).toHaveBeenCalledWith(
-      "account-123",
-      "room-789",
-      mockConnections,
-    );
-  });
-
-  it("should skip artist connections when access is denied", async () => {
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(false);
-
-    const mockSession = {
-      tools: vi.fn().mockResolvedValue({
-        COMPOSIO_MANAGE_CONNECTIONS: createMockTool(),
-      }),
-    };
-    vi.mocked(createToolRouterSession).mockResolvedValue(mockSession);
-
-    await getComposioTools("account-123", "artist-456", "room-789");
-
-    expect(checkAccountArtistAccess).toHaveBeenCalledWith("account-123", "artist-456");
-    expect(getArtistConnectionsFromComposio).not.toHaveBeenCalled();
-    expect(createToolRouterSession).toHaveBeenCalledWith("account-123", "room-789", undefined);
-  });
-
-  it("should pass undefined when artist has no connections", async () => {
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
-    vi.mocked(getArtistConnectionsFromComposio).mockResolvedValue({});
-
-    const mockSession = {
-      tools: vi.fn().mockResolvedValue({
-        COMPOSIO_MANAGE_CONNECTIONS: createMockTool(),
-      }),
-    };
-    vi.mocked(createToolRouterSession).mockResolvedValue(mockSession);
-
-    await getComposioTools("account-123", "artist-no-connections");
-
-    expect(getArtistConnectionsFromComposio).toHaveBeenCalledWith("artist-no-connections");
-    expect(createToolRouterSession).toHaveBeenCalledWith("account-123", undefined, undefined);
-  });
-
-  it("should filter tools to only ALLOWED_TOOLS", async () => {
-    const mockSession = {
-      tools: vi.fn().mockResolvedValue({
-        COMPOSIO_MANAGE_CONNECTIONS: createMockTool(),
-        COMPOSIO_SEARCH_TOOLS: createMockTool(),
-        SOME_OTHER_TOOL: createMockTool(),
-      }),
-    };
-    vi.mocked(createToolRouterSession).mockResolvedValue(mockSession);
+  it("exposes only the 4 meta-tools from the customer session", async () => {
+    vi.mocked(createToolRouterSessions).mockResolvedValue({
+      customer: buildSession([...META_TOOLS, "TIKTOK_GET_USER_STATS"]),
+    });
 
     const result = await getComposioTools("account-123");
 
-    expect(result).toHaveProperty("COMPOSIO_MANAGE_CONNECTIONS");
-    expect(result).toHaveProperty("COMPOSIO_SEARCH_TOOLS");
-    expect(result).not.toHaveProperty("SOME_OTHER_TOOL");
+    for (const name of META_TOOLS) expect(result).toHaveProperty(name);
+    // The customer session's non-meta tool should be hidden — the agent reaches it
+    // via COMPOSIO_MULTI_EXECUTE_TOOL instead.
+    expect(result).not.toHaveProperty("TIKTOK_GET_USER_STATS");
   });
 
-  it("should return empty object when session creation throws", async () => {
-    vi.mocked(createToolRouterSession).mockRejectedValue(new Error("Bundler incompatibility"));
+  it("exposes explicit non-meta tools from the artist session and no artist meta-tools", async () => {
+    vi.mocked(createToolRouterSessions).mockResolvedValue({
+      customer: buildSession(META_TOOLS),
+      artist: buildSession([...META_TOOLS, "TIKTOK_GET_USER_STATS", "INSTAGRAM_LIST_MEDIA"]),
+    });
 
-    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const result = await getComposioTools("account-123");
+
+    expect(result).toHaveProperty("TIKTOK_GET_USER_STATS");
+    expect(result).toHaveProperty("INSTAGRAM_LIST_MEDIA");
+    // Meta-tools appear exactly once — from the customer session, not duplicated by artist
+    const manageCount = Object.keys(result).filter(k => k === "COMPOSIO_MANAGE_CONNECTIONS").length;
+    expect(manageCount).toBe(1);
+  });
+
+  it("exposes explicit non-meta tools from the shared session", async () => {
+    vi.mocked(createToolRouterSessions).mockResolvedValue({
+      customer: buildSession(META_TOOLS),
+      shared: buildSession([...META_TOOLS, "GOOGLEDOCS_GET_DOCUMENT_PLAINTEXT"]),
+    });
+
+    const result = await getComposioTools("account-123");
+
+    expect(result).toHaveProperty("GOOGLEDOCS_GET_DOCUMENT_PLAINTEXT");
+  });
+
+  it("merges tools from all three sessions", async () => {
+    vi.mocked(createToolRouterSessions).mockResolvedValue({
+      customer: buildSession(META_TOOLS),
+      artist: buildSession(["TIKTOK_GET_USER_STATS"]),
+      shared: buildSession(["GOOGLEDOCS_GET_DOCUMENT_PLAINTEXT"]),
+    });
+
+    const result = await getComposioTools("account-123");
+
+    expect(result).toHaveProperty("COMPOSIO_SEARCH_TOOLS");
+    expect(result).toHaveProperty("TIKTOK_GET_USER_STATS");
+    expect(result).toHaveProperty("GOOGLEDOCS_GET_DOCUMENT_PLAINTEXT");
+  });
+
+  it("passes artistId into the session orchestrator only when access is granted", async () => {
+    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+    vi.mocked(createToolRouterSessions).mockResolvedValue({
+      customer: buildSession(META_TOOLS),
+    });
+
+    await getComposioTools("account-123", "artist-456", "room-789");
+
+    expect(checkAccountArtistAccess).toHaveBeenCalledWith("account-123", "artist-456");
+    expect(createToolRouterSessions).toHaveBeenCalledWith({
+      customerAccountId: "account-123",
+      artistId: "artist-456",
+      roomId: "room-789",
+    });
+  });
+
+  it("omits artistId when access is denied", async () => {
+    vi.mocked(checkAccountArtistAccess).mockResolvedValue(false);
+    vi.mocked(createToolRouterSessions).mockResolvedValue({
+      customer: buildSession(META_TOOLS),
+    });
+
+    await getComposioTools("account-123", "artist-456", "room-789");
+
+    expect(createToolRouterSessions).toHaveBeenCalledWith({
+      customerAccountId: "account-123",
+      artistId: undefined,
+      roomId: "room-789",
+    });
+  });
+
+  it("returns empty object and logs when session creation throws", async () => {
+    vi.mocked(createToolRouterSessions).mockRejectedValue(new Error("boom"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const result = await getComposioTools("account-123");
 
     expect(result).toEqual({});
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Composio tools unavailable:",
-      "Bundler incompatibility",
-    );
-
-    consoleSpy.mockRestore();
+    expect(warn).toHaveBeenCalledWith("Composio tools unavailable:", "boom");
+    warn.mockRestore();
   });
 
-  it("should skip invalid tools that lack required properties", async () => {
-    const mockSession = {
-      tools: vi.fn().mockResolvedValue({
-        COMPOSIO_MANAGE_CONNECTIONS: createMockTool(),
-        COMPOSIO_SEARCH_TOOLS: { description: "No execute function" },
-      }),
-    };
-    vi.mocked(createToolRouterSession).mockResolvedValue(mockSession);
+  it("skips tools that lack required Vercel AI SDK shape", async () => {
+    vi.mocked(createToolRouterSessions).mockResolvedValue({
+      customer: {
+        tools: vi.fn().mockResolvedValue({
+          COMPOSIO_MANAGE_CONNECTIONS: mockTool(),
+          COMPOSIO_SEARCH_TOOLS: { description: "missing execute" },
+        }),
+      },
+    });
 
     const result = await getComposioTools("account-123");
 

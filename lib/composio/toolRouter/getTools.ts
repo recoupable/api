@@ -1,109 +1,92 @@
-import { createToolRouterSession } from "./createToolRouterSession";
-import { getArtistConnectionsFromComposio } from "./getArtistConnectionsFromComposio";
+import { createToolRouterSessions, type ToolRouterSessions } from "./createToolRouterSessions";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import type { Tool, ToolSet } from "ai";
 
 /**
- * Tools we want to expose from Composio Tool Router.
- * Once we're ready to add all tools, remove this filter.
+ * Composio meta-tools. Only the customer session exposes these — the agent
+ * uses them to dynamically discover and execute tools against its own
+ * connections. Artist and shared sessions only expose their explicit
+ * toolkit tools by name (TIKTOK_*, GOOGLEDOCS_*, etc.) so the agent can
+ * call them directly and hit a session whose owner actually owns the
+ * underlying connection.
  */
-const ALLOWED_TOOLS = [
+const META_TOOLS = new Set([
   "COMPOSIO_MANAGE_CONNECTIONS",
   "COMPOSIO_SEARCH_TOOLS",
   "COMPOSIO_GET_TOOL_SCHEMAS",
   "COMPOSIO_MULTI_EXECUTE_TOOL",
-];
+]);
 
 /**
- * Runtime validation to check if an object is a valid Vercel AI SDK Tool.
- *
- * Composio SDK returns tools with { description, inputSchema, execute }
- * Vercel AI SDK also accepts inputSchema as an alias for parameters.
- *
- * @param tool - The object to validate
- * @returns true if the object has required Tool properties
+ * Runtime check that an object is a valid Vercel AI SDK Tool.
+ * Composio's SDK returns tools with `inputSchema` + `execute`; the AI SDK
+ * accepts `inputSchema` as an alias for `parameters`.
  */
 function isValidTool(tool: unknown): tool is Tool {
-  if (typeof tool !== "object" || tool === null) {
-    return false;
-  }
-
+  if (typeof tool !== "object" || tool === null) return false;
   const obj = tool as Record<string, unknown>;
-
-  // Tool needs execute function and either parameters or inputSchema
   const hasExecute = typeof obj.execute === "function";
   const hasSchema = "parameters" in obj || "inputSchema" in obj;
-
   return hasExecute && hasSchema;
 }
 
+async function collectTools(
+  session: ToolRouterSessions["customer"] | undefined,
+  filter: (toolName: string) => boolean,
+): Promise<ToolSet> {
+  if (!session) return {};
+  const all = (await session.tools()) as Record<string, unknown>;
+  const out: ToolSet = {};
+  for (const [name, tool] of Object.entries(all)) {
+    if (!filter(name)) continue;
+    if (isValidTool(tool)) out[name] = tool;
+  }
+  return out;
+}
+
 /**
- * Get Composio Tool Router tools for an account.
+ * Get Composio Tool Router tools for a chat request.
  *
- * Returns a filtered subset of meta-tools:
- * - COMPOSIO_MANAGE_CONNECTIONS - OAuth/auth management
- * - COMPOSIO_SEARCH_TOOLS - Find available connectors
- * - COMPOSIO_GET_TOOL_SCHEMAS - Get parameter schemas
- * - COMPOSIO_MULTI_EXECUTE_TOOL - Execute actions
+ * Returns a merged ToolSet drawn from up to three sessions:
+ * - Customer session (always): the 4 Composio meta-tools.
+ * - Artist session (when artistId has access and non-overlapping toolkits):
+ *   explicit Composio tools for that artist's connections (e.g. TIKTOK_*).
+ * - Shared session (when the shared Recoupable Google account covers
+ *   Google toolkits no one else has): explicit Composio tools
+ *   (e.g. GOOGLEDOCS_*).
  *
- * If artistId is provided, queries Composio for the artist's connections
- * and passes them to the session via connectedAccounts override.
+ * Gracefully returns `{}` if Composio is unreachable or packages fail to
+ * load (e.g. bundler incompatibility).
  *
- * Gracefully returns empty ToolSet when:
- * - COMPOSIO_API_KEY is not set
- * - @composio packages fail to load (bundler incompatibility)
- *
- * @param accountId - Unique identifier for the account
- * @param artistId - Optional artist ID to use artist-specific Composio connections
- * @param roomId - Optional chat room ID for OAuth redirect
- * @returns ToolSet containing filtered Vercel AI SDK tools
+ * @param accountId - The caller's account ID.
+ * @param artistId  - Optional artist in context; access-checked here.
+ * @param roomId    - Optional chat room id, used in OAuth callback URLs.
  */
 export async function getComposioTools(
   accountId: string,
   artistId?: string,
   roomId?: string,
 ): Promise<ToolSet> {
-  // Skip Composio if API key is not configured
-  if (!process.env.COMPOSIO_API_KEY) {
-    return {};
-  }
+  if (!process.env.COMPOSIO_API_KEY) return {};
 
   try {
-    // Fetch artist-specific connections from Composio if artistId is provided
-    // Only fetch if the account has access to this artist
-    let artistConnections: Record<string, string> | undefined;
-    if (artistId) {
-      const hasAccess = await checkAccountArtistAccess(accountId, artistId);
-      if (hasAccess) {
-        artistConnections = await getArtistConnectionsFromComposio(artistId);
-        // Only pass if there are actual connections
-        if (Object.keys(artistConnections).length === 0) {
-          artistConnections = undefined;
-        }
-      }
-      // If no access, silently skip artist connections (don't throw)
-    }
+    const effectiveArtistId =
+      artistId && (await checkAccountArtistAccess(accountId, artistId)) ? artistId : undefined;
 
-    const session = await createToolRouterSession(accountId, roomId, artistConnections);
-    const allTools = await session.tools();
+    const sessions = await createToolRouterSessions({
+      customerAccountId: accountId,
+      artistId: effectiveArtistId,
+      roomId,
+    });
 
-    // Filter to only allowed tools with runtime validation
-    const filteredTools: ToolSet = {};
+    const [customerTools, artistTools, sharedTools] = await Promise.all([
+      collectTools(sessions.customer, name => META_TOOLS.has(name)),
+      collectTools(sessions.artist, name => !META_TOOLS.has(name)),
+      collectTools(sessions.shared, name => !META_TOOLS.has(name)),
+    ]);
 
-    for (const toolName of ALLOWED_TOOLS) {
-      if (toolName in allTools) {
-        const tool = (allTools as Record<string, unknown>)[toolName];
-
-        if (isValidTool(tool)) {
-          filteredTools[toolName] = tool;
-        }
-      }
-    }
-
-    return filteredTools;
+    return { ...customerTools, ...artistTools, ...sharedTools };
   } catch (error) {
-    // Gracefully handle Composio loading failures
-    // (e.g., bundler incompatibility with createRequire(import.meta.url))
     console.warn("Composio tools unavailable:", (error as Error).message);
     return {};
   }
