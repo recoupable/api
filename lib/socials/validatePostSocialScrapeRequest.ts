@@ -42,7 +42,7 @@ export async function validatePostSocialScrapeRequest(
   }
 
   const links = await selectAccountSocialsBySocialId(social_id);
-  const owningAccountIds = (links ?? [])
+  const owningAccountIds = links
     .map(link => link.account_id)
     .filter((value): value is string => Boolean(value));
 

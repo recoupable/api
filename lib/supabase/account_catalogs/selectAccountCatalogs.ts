@@ -3,7 +3,7 @@ import { Tables } from "@/types/database.types";
 
 type AccountCatalogWithCatalog = {
   catalog: string;
-  catalogs: Tables<"catalogs">[];
+  catalogs: Pick<Tables<"catalogs">, "id" | "name" | "created_at" | "updated_at">;
 };
 
 type SelectAccountCatalogsParams = {

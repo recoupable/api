@@ -70,10 +70,12 @@ describe("validatePostSocialScrapeRequest", () => {
     expect(checkAccountArtistAccess).not.toHaveBeenCalled();
   });
 
-  it("returns 403 when links table returns null", async () => {
-    vi.mocked(selectAccountSocialsBySocialId).mockResolvedValue(null);
-    const res = (await validatePostSocialScrapeRequest(makeRequest(), SOCIAL_ID)) as NextResponse;
-    expect(res.status).toBe(403);
+  it("propagates DB error from selectAccountSocialsBySocialId (fails closed as 500)", async () => {
+    const dbError = new Error("db blew up");
+    vi.mocked(selectAccountSocialsBySocialId).mockRejectedValue(dbError);
+    await expect(validatePostSocialScrapeRequest(makeRequest(), SOCIAL_ID)).rejects.toThrow(
+      "db blew up",
+    );
     expect(checkAccountArtistAccess).not.toHaveBeenCalled();
   });
 
