@@ -5,6 +5,8 @@ import { getArtistFansHandler } from "../getArtistFansHandler";
 
 const mockGetArtistFans = vi.fn();
 const mockValidateAuthContext = vi.fn();
+const mockSelectAccounts = vi.fn();
+const mockCheckAccountArtistAccess = vi.fn();
 
 vi.mock("@/lib/fans/getArtistFans", () => ({
   getArtistFans: (...args: unknown[]) => mockGetArtistFans(...args),
@@ -12,6 +14,14 @@ vi.mock("@/lib/fans/getArtistFans", () => ({
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: (...args: unknown[]) => mockValidateAuthContext(...args),
+}));
+
+vi.mock("@/lib/supabase/accounts/selectAccounts", () => ({
+  selectAccounts: (...args: unknown[]) => mockSelectAccounts(...args),
+}));
+
+vi.mock("@/lib/artists/checkAccountArtistAccess", () => ({
+  checkAccountArtistAccess: (...args: unknown[]) => mockCheckAccountArtistAccess(...args),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -34,6 +44,8 @@ describe("getArtistFansHandler", () => {
       orgId: null,
       authToken: "test-token",
     });
+    mockSelectAccounts.mockResolvedValue([{ id: VALID_UUID }]);
+    mockCheckAccountArtistAccess.mockResolvedValue(true);
   });
 
   it("returns 200 with the fans envelope and CORS headers on success", async () => {
@@ -77,6 +89,24 @@ describe("getArtistFansHandler", () => {
     const response = await getArtistFansHandler(req, "not-a-uuid");
 
     expect(response.status).toBe(400);
+    expect(mockGetArtistFans).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when the artist does not exist", async () => {
+    mockSelectAccounts.mockResolvedValue([]);
+    const req = makeAuthedRequest(`https://example.com/api/artists/${VALID_UUID}/fans`);
+    const response = await getArtistFansHandler(req, VALID_UUID);
+
+    expect(response.status).toBe(404);
+    expect(mockGetArtistFans).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when the caller lacks access to the artist", async () => {
+    mockCheckAccountArtistAccess.mockResolvedValue(false);
+    const req = makeAuthedRequest(`https://example.com/api/artists/${VALID_UUID}/fans`);
+    const response = await getArtistFansHandler(req, VALID_UUID);
+
+    expect(response.status).toBe(403);
     expect(mockGetArtistFans).not.toHaveBeenCalled();
   });
 

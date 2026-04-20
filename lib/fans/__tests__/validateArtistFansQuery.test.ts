@@ -4,9 +4,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateGetArtistFansRequest } from "../validateGetArtistFansRequest";
 
 const mockValidateAuthContext = vi.fn();
+const mockSelectAccounts = vi.fn();
+const mockCheckAccountArtistAccess = vi.fn();
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: (...args: unknown[]) => mockValidateAuthContext(...args),
+}));
+
+vi.mock("@/lib/supabase/accounts/selectAccounts", () => ({
+  selectAccounts: (...args: unknown[]) => mockSelectAccounts(...args),
+}));
+
+vi.mock("@/lib/artists/checkAccountArtistAccess", () => ({
+  checkAccountArtistAccess: (...args: unknown[]) => mockCheckAccountArtistAccess(...args),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -29,6 +39,8 @@ describe("validateGetArtistFansRequest", () => {
       orgId: null,
       authToken: "test-token",
     });
+    mockSelectAccounts.mockResolvedValue([{ id: VALID_UUID }]);
+    mockCheckAccountArtistAccess.mockResolvedValue(true);
   });
 
   it("returns 400 when id is invalid", async () => {
@@ -85,5 +97,30 @@ describe("validateGetArtistFansRequest", () => {
     const body = await (result as NextResponse).json();
     expect(body.status).toBe("error");
     expect(body.missing_fields).toEqual(["page"]);
+  });
+
+  it("returns 404 when artist account does not exist", async () => {
+    mockSelectAccounts.mockResolvedValue([]);
+    const req = makeRequest(`https://example.com/api/artists/${VALID_UUID}/fans`);
+    const result = await validateGetArtistFansRequest(req, VALID_UUID);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(404);
+    expect(mockCheckAccountArtistAccess).not.toHaveBeenCalled();
+    const body = await (result as NextResponse).json();
+    expect(body.status).toBe("error");
+    expect(body.error).toMatch(/not found/i);
+  });
+
+  it("returns 403 when caller lacks access to the artist", async () => {
+    mockCheckAccountArtistAccess.mockResolvedValue(false);
+    const req = makeRequest(`https://example.com/api/artists/${VALID_UUID}/fans`);
+    const result = await validateGetArtistFansRequest(req, VALID_UUID);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(403);
+    expect(mockCheckAccountArtistAccess).toHaveBeenCalledWith("auth-account", VALID_UUID);
+    const body = await (result as NextResponse).json();
+    expect(body.status).toBe("error");
   });
 });
