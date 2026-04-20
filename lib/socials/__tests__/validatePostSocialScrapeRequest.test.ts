@@ -63,8 +63,24 @@ describe("validatePostSocialScrapeRequest", () => {
     expect(checkAccountArtistAccess).toHaveBeenCalledWith(ACCOUNT_ID, ARTIST_ID);
   });
 
-  it("allows through when social has no linked accounts (auth-only fallback)", async () => {
+  it("returns 403 when social has no linked accounts", async () => {
     vi.mocked(selectAccountSocialsBySocialId).mockResolvedValue([]);
+    const res = (await validatePostSocialScrapeRequest(makeRequest(), SOCIAL_ID)) as NextResponse;
+    expect(res.status).toBe(403);
+    expect(checkAccountArtistAccess).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when links table returns null", async () => {
+    vi.mocked(selectAccountSocialsBySocialId).mockResolvedValue(null);
+    const res = (await validatePostSocialScrapeRequest(makeRequest(), SOCIAL_ID)) as NextResponse;
+    expect(res.status).toBe(403);
+    expect(checkAccountArtistAccess).not.toHaveBeenCalled();
+  });
+
+  it("allows requester who is a direct member (owning account is the caller)", async () => {
+    vi.mocked(selectAccountSocialsBySocialId).mockResolvedValue([
+      { account_id: ACCOUNT_ID } as never,
+    ]);
     expect(await validatePostSocialScrapeRequest(makeRequest(), SOCIAL_ID)).toEqual({
       social_id: SOCIAL_ID,
     });
