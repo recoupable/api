@@ -69,20 +69,36 @@ export async function getComposioTools(
       ...(customerAuthConfigs && { authConfigs: customerAuthConfigs }),
     });
 
+    const empty: Record<string, unknown> = {};
+    const artistFetch =
+      effectiveArtistId && resolved.artist.length > 0
+        ? (
+            composio.tools.get(effectiveArtistId, {
+              toolkits: resolved.artist,
+              limit: TOOLS_LIMIT,
+            }) as Promise<Record<string, unknown>>
+          ).catch(e => {
+            console.warn("Composio artist tools unavailable:", (e as Error).message);
+            return empty;
+          })
+        : Promise.resolve(empty);
+    const sharedFetch =
+      resolved.shared.length > 0
+        ? (
+            composio.tools.get(SHARED_ACCOUNT_ID, {
+              toolkits: resolved.shared,
+              limit: TOOLS_LIMIT,
+            }) as Promise<Record<string, unknown>>
+          ).catch(e => {
+            console.warn("Composio shared tools unavailable:", (e as Error).message);
+            return empty;
+          })
+        : Promise.resolve(empty);
+
     const [customerRaw, artistTools, sharedTools] = await Promise.all([
       customerSession.tools() as Promise<Record<string, unknown>>,
-      effectiveArtistId && resolved.artist.length > 0
-        ? (composio.tools.get(effectiveArtistId, {
-            toolkits: resolved.artist,
-            limit: TOOLS_LIMIT,
-          }) as Promise<Record<string, unknown>>)
-        : Promise.resolve({} as Record<string, unknown>),
-      resolved.shared.length > 0
-        ? (composio.tools.get(SHARED_ACCOUNT_ID, {
-            toolkits: resolved.shared,
-            limit: TOOLS_LIMIT,
-          }) as Promise<Record<string, unknown>>)
-        : Promise.resolve({} as Record<string, unknown>),
+      artistFetch,
+      sharedFetch,
     ]);
 
     return {

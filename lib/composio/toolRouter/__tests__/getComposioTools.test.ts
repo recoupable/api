@@ -218,4 +218,36 @@ describe("getComposioTools", () => {
     expect(result).toHaveProperty("COMPOSIO_MANAGE_CONNECTIONS");
     expect(result).not.toHaveProperty("COMPOSIO_SEARCH_TOOLS");
   });
+
+  it("still returns customer meta-tools when the artist tool fetch rejects", async () => {
+    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+    vi.mocked(getConnectors).mockImplementation(async (id: string) => {
+      if (id === "artist-456") {
+        return [{ slug: "tiktok", name: "TikTok", isConnected: true, connectedAccountId: "ca_tt" }];
+      }
+      return [];
+    });
+    mockToolsGet.mockImplementation(async (owner: string) => {
+      if (owner === "artist-456") throw new Error("artist fetch failed");
+      return {};
+    });
+
+    const result = await getComposioTools("account-123", "artist-456");
+
+    expect(result).toHaveProperty("COMPOSIO_SEARCH_TOOLS");
+    expect(result).toHaveProperty("COMPOSIO_MULTI_EXECUTE_TOOL");
+  });
+
+  it("still returns customer meta-tools when the shared tool fetch rejects", async () => {
+    vi.mocked(getSharedAccountConnections).mockResolvedValue({ googledocs: "ca_docs" });
+    mockToolsGet.mockImplementation(async (owner: string) => {
+      if (owner === SHARED_ACCOUNT_ID) throw new Error("shared fetch failed");
+      return {};
+    });
+
+    const result = await getComposioTools("account-123");
+
+    expect(result).toHaveProperty("COMPOSIO_SEARCH_TOOLS");
+    expect(result).toHaveProperty("COMPOSIO_MULTI_EXECUTE_TOOL");
+  });
 });

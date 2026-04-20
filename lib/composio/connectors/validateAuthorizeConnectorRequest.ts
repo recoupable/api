@@ -4,6 +4,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateAuthorizeConnectorBody } from "./validateAuthorizeConnectorBody";
 import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
+import { scopedAuthConfigs } from "../toolRouter/scopedAuthConfigs";
 
 /**
  * Validated params for authorizing a connector.
@@ -50,15 +51,7 @@ export async function validateAuthorizeConnectorRequest(
   }
   const { connector, callback_url, account_id } = validated;
 
-  // Build auth configs for custom OAuth
-  const authConfigs: Record<string, string> = {};
-  if (connector === "tiktok" && process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID) {
-    authConfigs.tiktok = process.env.COMPOSIO_TIKTOK_AUTH_CONFIG_ID;
-  }
-  if (connector === "instagram" && process.env.COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID) {
-    authConfigs.instagram = process.env.COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID;
-  }
-  const resolvedAuthConfigs = Object.keys(authConfigs).length > 0 ? authConfigs : undefined;
+  const resolvedAuthConfigs = scopedAuthConfigs([connector]);
 
   // 3. If account_id is provided, verify access and use that entity
   if (account_id) {
