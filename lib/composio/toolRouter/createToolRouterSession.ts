@@ -84,7 +84,14 @@ export async function createToolRouterSession(
     mergedConnections = undefined;
   }
 
-  const authConfigs = buildAuthConfigs();
+  // Only pass auth configs for toolkits enabled in this session —
+  // Composio rejects overrides that reference unlisted toolkits.
+  const allAuthConfigs = buildAuthConfigs();
+  const enabledSet = new Set(ENABLED_TOOLKITS);
+  const authConfigs = allAuthConfigs
+    ? Object.fromEntries(Object.entries(allAuthConfigs).filter(([slug]) => enabledSet.has(slug)))
+    : undefined;
+  const hasAuthConfigs = authConfigs && Object.keys(authConfigs).length > 0;
 
   const session = await composio.create(accountId, {
     toolkits: ENABLED_TOOLKITS,
@@ -92,7 +99,7 @@ export async function createToolRouterSession(
       callbackUrl,
     },
     connectedAccounts: mergedConnections,
-    ...(authConfigs && { authConfigs }),
+    ...(hasAuthConfigs && { authConfigs }),
   });
 
   return session;
