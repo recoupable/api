@@ -36,13 +36,6 @@ export async function getSharedAccountConnections(): Promise<Record<string, stri
       }
     }
 
-    console.info("[getSharedAccountConnections] resolved", {
-      sharedAccountId: SHARED_ACCOUNT_ID,
-      totalConnectors: connectors.length,
-      connectorSlugs: connectors.map(c => ({ slug: c.slug, isConnected: c.isConnected })),
-      resolvedSlugs: Object.keys(connections),
-    });
-
     return connections;
   } catch (error) {
     // Never let a shared-account lookup failure take down the entire
