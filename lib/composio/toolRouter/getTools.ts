@@ -1,13 +1,36 @@
-import { createToolRouterSessions, type ToolRouterSessions } from "./createToolRouterSessions";
-import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import type { Tool, ToolSet } from "ai";
+import { getComposioClient } from "../client";
+import { getCallbackUrl } from "../getCallbackUrl";
+import { getConnectors } from "../connectors/getConnectors";
+import { buildAuthConfigs } from "../connectors/buildAuthConfigs";
+import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
+import { getSharedAccountConnections } from "./getSharedAccountConnections";
+import { resolveSessionToolkits } from "./resolveSessionToolkits";
 
 /**
- * Composio meta-tools. Only the customer session exposes these — the agent
- * uses them to dynamically discover and execute tools against its own
- * connections. Artist and shared sessions only expose their explicit
- * toolkit tools by name (TIKTOK_*, GOOGLEDOCS_*, etc.) so the agent can
- * call them directly and hit a session whose owner actually owns the
+ * Toolkits enabled in Tool Router sessions for the customer. Extend as we
+ * onboard more Composio toolkits.
+ */
+export const ENABLED_TOOLKITS = [
+  "googlesheets",
+  "googledrive",
+  "googledocs",
+  "tiktok",
+  "instagram",
+];
+
+/**
+ * Composio account ID for the shared Recoupable Google account. Used as the
+ * owner for Google Drive/Sheets/Docs tools when neither the customer nor the
+ * artist has their own Google connection.
+ */
+const SHARED_ACCOUNT_ID = "recoup-shared-767f498e-e1e9-43c6-a152-a96ae3bd8d07";
+
+/**
+ * Meta-tools exposed by every Composio Tool Router session. Only the
+ * customer's session surfaces these to the agent — artist and shared tools
+ * are surfaced as explicit toolkit tools instead, so the agent can call
+ * them directly and hit a session whose owner actually owns the
  * underlying connection.
  */
 const META_TOOLS = new Set([
@@ -17,11 +40,9 @@ const META_TOOLS = new Set([
   "COMPOSIO_MULTI_EXECUTE_TOOL",
 ]);
 
-/**
- * Runtime check that an object is a valid Vercel AI SDK Tool.
- * Composio's SDK returns tools with `inputSchema` + `execute`; the AI SDK
- * accepts `inputSchema` as an alias for `parameters`.
- */
+/** Composio tool page size when fetching explicit toolkit tools. */
+const TOOLS_LIMIT = 1000;
+
 function isValidTool(tool: unknown): tool is Tool {
   if (typeof tool !== "object" || tool === null) return false;
   const obj = tool as Record<string, unknown>;
@@ -30,52 +51,48 @@ function isValidTool(tool: unknown): tool is Tool {
   return hasExecute && hasSchema;
 }
 
-async function collectTools(
-  session: ToolRouterSessions["customer"] | undefined,
-  filter: (toolName: string) => boolean,
-  label: string,
-): Promise<ToolSet> {
-  if (!session) return {};
-  let all: Record<string, unknown>;
-  try {
-    all = (await session.tools()) as Record<string, unknown>;
-  } catch (e) {
-    console.warn("[getComposioTools] session.tools() threw", {
-      label,
-      error: e instanceof Error ? e.message : String(e),
-    });
-    return {};
-  }
-  console.warn("[getComposioTools] session.tools()", {
-    label,
-    totalTools: Object.keys(all).length,
-    toolNames: Object.keys(all),
-  });
+function pickValid(tools: Record<string, unknown>, filter: (name: string) => boolean): ToolSet {
   const out: ToolSet = {};
-  for (const [name, tool] of Object.entries(all)) {
+  for (const [name, tool] of Object.entries(tools)) {
     if (!filter(name)) continue;
     if (isValidTool(tool)) out[name] = tool;
   }
   return out;
 }
 
+function scopedAuthConfigs(toolkits: string[]): Record<string, string> | undefined {
+  const all = buildAuthConfigs();
+  if (!all) return undefined;
+  const enabled = new Set(toolkits);
+  const scoped = Object.fromEntries(Object.entries(all).filter(([slug]) => enabled.has(slug)));
+  return Object.keys(scoped).length > 0 ? scoped : undefined;
+}
+
+function toConnectedSlugs(connectors: Awaited<ReturnType<typeof getConnectors>>): Set<string> {
+  return new Set(connectors.filter(c => c.isConnected).map(c => c.slug));
+}
+
 /**
  * Get Composio Tool Router tools for a chat request.
  *
- * Returns a merged ToolSet drawn from up to three sessions:
- * - Customer session (always): the 4 Composio meta-tools.
- * - Artist session (when artistId has access and non-overlapping toolkits):
- *   explicit Composio tools for that artist's connections (e.g. TIKTOK_*).
- * - Shared session (when the shared Recoupable Google account covers
- *   Google toolkits no one else has): explicit Composio tools
- *   (e.g. GOOGLEDOCS_*).
+ * Returns a merged ToolSet drawn from up to three owners:
+ * - Customer (always): the 4 Composio meta-tools (SEARCH_TOOLS /
+ *   GET_TOOL_SCHEMAS / MULTI_EXECUTE_TOOL / MANAGE_CONNECTIONS) via a Tool
+ *   Router session. The agent uses these to dynamically discover and
+ *   execute tools against the caller's own connections.
+ * - Artist (when artistId has access and covers toolkits the customer
+ *   does not): explicit Composio tools (TIKTOK_*, INSTAGRAM_*) fetched
+ *   via `composio.tools.get(artistId, …)` so each tool executes against
+ *   the artist's connection.
+ * - Shared (when the shared Recoupable Google account covers Google
+ *   toolkits no one else has): explicit Composio tools
+ *   (GOOGLEDOCS_*, GOOGLEDRIVE_*, GOOGLESHEETS_*) fetched the same way.
+ *
+ * Priority is customer > artist > shared, enforced by toolkit filtering
+ * before any tools are fetched so no toolkit appears under two owners.
  *
  * Gracefully returns `{}` if Composio is unreachable or packages fail to
- * load (e.g. bundler incompatibility).
- *
- * @param accountId - The caller's account ID.
- * @param artistId  - Optional artist in context; access-checked here.
- * @param roomId    - Optional chat room id, used in OAuth callback URLs.
+ * load (e.g. bundler incompatibility with createRequire).
  */
 export async function getComposioTools(
   accountId: string,
@@ -88,30 +105,51 @@ export async function getComposioTools(
     const effectiveArtistId =
       artistId && (await checkAccountArtistAccess(accountId, artistId)) ? artistId : undefined;
 
-    const sessions = await createToolRouterSessions({
-      customerAccountId: accountId,
-      artistId: effectiveArtistId,
-      roomId,
-    });
+    const composio = await getComposioClient();
+    const callbackUrl = getCallbackUrl({ destination: "chat", roomId });
 
-    console.warn("[getComposioTools] sessions created", {
-      hasCustomer: Boolean(sessions.customer),
-      hasArtist: Boolean(sessions.artist),
-      hasShared: Boolean(sessions.shared),
-    });
-
-    const [customerTools, artistTools, sharedTools] = await Promise.all([
-      collectTools(sessions.customer, name => META_TOOLS.has(name), "customer"),
-      collectTools(sessions.artist, name => !META_TOOLS.has(name), "artist"),
-      collectTools(sessions.shared, name => !META_TOOLS.has(name), "shared"),
+    const [customerConnectors, artistConnectors, sharedConnections] = await Promise.all([
+      getConnectors(accountId),
+      effectiveArtistId ? getConnectors(effectiveArtistId) : Promise.resolve([]),
+      getSharedAccountConnections(),
     ]);
 
-    const merged = { ...customerTools, ...artistTools, ...sharedTools };
-    console.warn("[getComposioTools] merged tools", {
-      count: Object.keys(merged).length,
-      names: Object.keys(merged),
+    const resolved = resolveSessionToolkits({
+      enabledToolkits: ENABLED_TOOLKITS,
+      customerConnectedSlugs: toConnectedSlugs(customerConnectors),
+      artistConnectedSlugs: toConnectedSlugs(artistConnectors),
+      sharedConnectedSlugs: new Set(Object.keys(sharedConnections)),
     });
-    return merged;
+
+    const customerAuthConfigs = scopedAuthConfigs(resolved.customer);
+
+    const customerSession = await composio.create(accountId, {
+      toolkits: resolved.customer,
+      manageConnections: { callbackUrl },
+      ...(customerAuthConfigs && { authConfigs: customerAuthConfigs }),
+    });
+
+    const [customerRaw, artistTools, sharedTools] = await Promise.all([
+      customerSession.tools() as Promise<Record<string, unknown>>,
+      effectiveArtistId && resolved.artist.length > 0
+        ? (composio.tools.get(effectiveArtistId, {
+            toolkits: resolved.artist,
+            limit: TOOLS_LIMIT,
+          }) as Promise<Record<string, unknown>>)
+        : Promise.resolve({} as Record<string, unknown>),
+      resolved.shared.length > 0
+        ? (composio.tools.get(SHARED_ACCOUNT_ID, {
+            toolkits: resolved.shared,
+            limit: TOOLS_LIMIT,
+          }) as Promise<Record<string, unknown>>)
+        : Promise.resolve({} as Record<string, unknown>),
+    ]);
+
+    const customerTools = pickValid(customerRaw, name => META_TOOLS.has(name));
+    const artistExplicit = pickValid(artistTools, name => !META_TOOLS.has(name));
+    const sharedExplicit = pickValid(sharedTools, name => !META_TOOLS.has(name));
+
+    return { ...customerTools, ...artistExplicit, ...sharedExplicit };
   } catch (error) {
     console.warn("Composio tools unavailable:", (error as Error).message);
     return {};
