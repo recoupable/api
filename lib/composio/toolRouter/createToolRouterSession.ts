@@ -1,6 +1,7 @@
 import { getComposioClient } from "../client";
 import { getCallbackUrl } from "../getCallbackUrl";
 import { getConnectors } from "../connectors/getConnectors";
+import { getSharedAccountConnections } from "./getSharedAccountConnections";
 
 /**
  * Toolkits available in Tool Router sessions.
@@ -12,11 +13,14 @@ const ENABLED_TOOLKITS = ["googlesheets", "googledrive", "googledocs", "tiktok"]
  * Create a Composio Tool Router session for an account.
  *
  * This is the opinionated layer — it decides which connections the AI agent uses.
- * When both the account and artist have the same toolkit connected, the account's
- * connection is kept and the artist's is dropped to prevent tool collision
- * (the AI wouldn't know which credentials to use).
  *
- * Artist connections only fill gaps where the account has no connection.
+ * Connection priority (highest wins):
+ * 1. Account's own connections
+ * 2. Artist-specific connections (for non-overlapping toolkits)
+ * 3. shared@recoupable.com connections (Google toolkits only, for non-overlapping toolkits)
+ *
+ * The shared account fallback allows customers to share specific Google Drive files
+ * with shared@recoupable.com instead of granting full account access.
  *
  * @param accountId - Unique identifier for the account
  * @param roomId - Optional chat room ID for OAuth redirect
@@ -34,28 +38,49 @@ export async function createToolRouterSession(
     roomId,
   });
 
-  // Filter artist connections to prevent tool collision.
-  // If the account already has a toolkit connected, the account's connection wins.
-  // Artist connections only override toolkits the account hasn't connected.
-  let filteredConnections = artistConnections;
+  // Fetch shared account Google connections (may be empty if not configured).
+  const sharedConnections = await getSharedAccountConnections();
+  const hasArtistConnections = artistConnections && Object.keys(artistConnections).length > 0;
+  const hasSharedConnections = Object.keys(sharedConnections).length > 0;
 
-  if (artistConnections && Object.keys(artistConnections).length > 0) {
+  // Fetch account connectors when we need to check for overlap
+  let accountConnectedSlugs = new Set<string>();
+  if (hasArtistConnections || hasSharedConnections) {
     const accountConnectors = await getConnectors(accountId);
+    accountConnectedSlugs = new Set(accountConnectors.filter(c => c.isConnected).map(c => c.slug));
+  }
 
-    // Find which toolkits the account already has active connections for
-    const accountConnectedSlugs = new Set(
-      accountConnectors.filter(c => c.isConnected).map(c => c.slug),
+  // Filter artist connections to prevent tool collision.
+  // Account connections always win over artist connections.
+  let mergedConnections: Record<string, string> | undefined;
+
+  if (hasArtistConnections) {
+    mergedConnections = Object.fromEntries(
+      Object.entries(artistConnections!).filter(([slug]) => !accountConnectedSlugs.has(slug)),
     );
+  }
 
-    // Only keep artist connections for toolkits the account doesn't have
-    filteredConnections = Object.fromEntries(
-      Object.entries(artistConnections).filter(([slug]) => !accountConnectedSlugs.has(slug)),
-    );
+  // Add shared connections as fallback for Google toolkits.
+  // Only fill toolkits not already covered by account or artist connections.
+  if (hasSharedConnections) {
+    const existingSlugs = new Set([
+      ...accountConnectedSlugs,
+      ...Object.keys(mergedConnections || {}),
+    ]);
 
-    // If nothing left after filtering, don't pass overrides at all
-    if (Object.keys(filteredConnections).length === 0) {
-      filteredConnections = undefined;
+    for (const [slug, connectedAccountId] of Object.entries(sharedConnections)) {
+      if (!existingSlugs.has(slug)) {
+        if (!mergedConnections) {
+          mergedConnections = {};
+        }
+        mergedConnections[slug] = connectedAccountId;
+      }
     }
+  }
+
+  // If nothing in mergedConnections, pass undefined
+  if (mergedConnections && Object.keys(mergedConnections).length === 0) {
+    mergedConnections = undefined;
   }
 
   const session = await composio.create(accountId, {
@@ -63,7 +88,7 @@ export async function createToolRouterSession(
     manageConnections: {
       callbackUrl,
     },
-    connectedAccounts: filteredConnections,
+    connectedAccounts: mergedConnections,
   });
 
   return session;
