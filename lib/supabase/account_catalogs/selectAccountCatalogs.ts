@@ -5,6 +5,13 @@ type SelectAccountCatalogsParams = {
   catalogIds?: string[];
 };
 
+/**
+ * Selects account_catalogs with optional related catalog data
+ *
+ * @param params - The parameters for the query
+ * @returns The account_catalogs with related catalog data
+ * @throws Error if the query fails
+ */
 export async function selectAccountCatalogs(params: SelectAccountCatalogsParams) {
   let query = supabase
     .from("account_catalogs")
