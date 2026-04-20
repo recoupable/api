@@ -1,6 +1,7 @@
 import { getComposioClient } from "../client";
 import { getCallbackUrl } from "../getCallbackUrl";
 import { getConnectors } from "../connectors/getConnectors";
+import { buildAuthConfigs } from "../connectors/buildAuthConfigs";
 import { getSharedAccountConnections } from "./getSharedAccountConnections";
 
 /**
@@ -83,12 +84,15 @@ export async function createToolRouterSession(
     mergedConnections = undefined;
   }
 
+  const authConfigs = buildAuthConfigs();
+
   const session = await composio.create(accountId, {
     toolkits: ENABLED_TOOLKITS,
     manageConnections: {
       callbackUrl,
     },
     connectedAccounts: mergedConnections,
+    ...(authConfigs && { authConfigs }),
   });
 
   return session;
