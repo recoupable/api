@@ -3,7 +3,8 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectSocials } from "@/lib/supabase/socials/selectSocials";
-import { checkAccountSocialAccess } from "@/lib/socials/checkAccountSocialAccess";
+import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
+import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 
 export const postSocialScrapeParamsSchema = z.object({
   social_id: z.string().uuid("social_id must be a valid UUID"),
@@ -40,8 +41,20 @@ export async function validatePostSocialScrapeRequest(
     });
   }
 
-  const hasAccess = await checkAccountSocialAccess(authResult.accountId, social_id);
-  if (!hasAccess) {
+  const links = await selectAccountSocials({ socialId: social_id, limit: 10000 });
+  const owningAccountIds = links.map(l => l.account_id).filter((v): v is string => Boolean(v));
+
+  const hasDirectAccess = owningAccountIds.includes(authResult.accountId);
+  const hasSharedAccess =
+    !hasDirectAccess &&
+    owningAccountIds.length > 0 &&
+    (
+      await Promise.all(
+        owningAccountIds.map(owner => checkAccountArtistAccess(authResult.accountId, owner)),
+      )
+    ).some(Boolean);
+
+  if (!hasDirectAccess && !hasSharedAccess) {
     return errorResponse(403, {
       status: "error",
       error: "Unauthorized social scrape attempt",

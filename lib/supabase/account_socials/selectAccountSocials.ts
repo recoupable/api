@@ -14,33 +14,43 @@ export type AccountSocialWithSocial = AccountSocialRow & {
 };
 
 /**
- * Selects account socials with joined social data, filtered by artist account ID.
+ * Selects account_socials rows with joined social data, filtered by
+ * account id, social id, or both. Throws on DB error so callers fail
+ * closed (e.g. access-control checks cannot be silently bypassed by
+ * treating errors as "no links").
  *
- * @param artist_account_id - The unique identifier of the artist account
- * @param offset - The number of records to skip
- * @param limit - The maximum number of records to return
- * @returns The query results with joined social data
- * @throws Error if the query fails
+ * @param accountId - Filter by owning account id.
+ * @param socialId - Filter by social id.
+ * @param offset - The number of records to skip.
+ * @param limit - The maximum number of records to return.
+ * @returns The matching rows with joined social data.
+ * @throws Error if the query fails.
  */
-export async function selectAccountSocials(
-  artist_account_id: string,
-  offset: number = 0,
-  limit: number = 100,
-): Promise<AccountSocialWithSocial[] | null> {
-  const { data, error } = await supabase
+export async function selectAccountSocials({
+  accountId,
+  socialId,
+  offset = 0,
+  limit = 100,
+}: {
+  accountId?: string;
+  socialId?: string;
+  offset?: number;
+  limit?: number;
+}): Promise<AccountSocialWithSocial[]> {
+  let query = supabase
     .from("account_socials")
-    .select(
-      `*,
-      social:socials!inner (*)
-    `,
-    )
-    .eq("account_id", artist_account_id)
+    .select(`*, social:socials!inner (*)`)
     .order("id", { ascending: true })
     .range(offset, offset + limit - 1);
+
+  if (accountId) query = query.eq("account_id", accountId);
+  if (socialId) query = query.eq("social_id", socialId);
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(`Failed to fetch account socials: ${error.message}`);
   }
 
-  return data;
+  return data ?? [];
 }
