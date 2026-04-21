@@ -52,7 +52,11 @@ export const getArtistSocials = async (
     }
 
     // Fetch social profiles with pagination
-    const accountSocials = await selectAccountSocials(artist_account_id, offset, validatedLimit);
+    const accountSocials = await selectAccountSocials({
+      accountId: artist_account_id,
+      offset,
+      limit: validatedLimit,
+    });
 
     // Transform data to match the expected response format
     const socials = flattenAccountSocials(accountSocials);
