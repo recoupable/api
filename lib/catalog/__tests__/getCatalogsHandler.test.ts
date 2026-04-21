@@ -56,14 +56,19 @@ describe("getCatalogsHandler", () => {
     });
   });
 
-  it("returns 500 when the business function throws", async () => {
+  it("returns 500 with a generic error, not the raw exception message", async () => {
     vi.mocked(validateGetCatalogsRequest).mockResolvedValue({ accountId });
-    vi.mocked(getCatalogsForAccounts).mockRejectedValue(new Error("db down"));
+    vi.mocked(getCatalogsForAccounts).mockRejectedValue(
+      new Error("db down: connection refused at 10.0.0.1:5432"),
+    );
 
     const res = await getCatalogsHandler(makeRequest(), Promise.resolve({ id: accountId }));
     const body = await res.json();
 
     expect(res.status).toBe(500);
-    expect(body).toEqual({ status: "error", error: "db down" });
+    expect(body).toEqual({ status: "error", error: "Internal server error" });
+    // Regression: raw exception text must not leak to the client.
+    expect(body.error).not.toContain("db down");
+    expect(body.error).not.toContain("10.0.0.1");
   });
 });

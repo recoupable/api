@@ -37,7 +37,7 @@ export async function getCatalogsHandler(
     return NextResponse.json(
       {
         status: "error",
-        error: error instanceof Error ? error.message : "Internal server error",
+        error: "Internal server error",
       },
       { status: 500, headers: getCorsHeaders() },
     );
