@@ -19,7 +19,7 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({ getCorsHeaders: () => ({}) }
 
 const SOCIAL_ID = "550e8400-e29b-41d4-a716-446655440000";
 const ACCOUNT_ID = "770e8400-e29b-41d4-a716-446655440000";
-const OWNER_ID = "660e8400-e29b-41d4-a716-446655440000";
+const ARTIST_ID = "660e8400-e29b-41d4-a716-446655440000";
 const authResult = { accountId: ACCOUNT_ID, authToken: "t", orgId: null };
 
 const makeRequest = () =>
@@ -33,8 +33,8 @@ describe("validatePostSocialScrapeRequest", () => {
     vi.clearAllMocks();
     vi.mocked(validateAuthContext).mockResolvedValue(authResult);
     vi.mocked(selectSocials).mockResolvedValue([{ id: SOCIAL_ID } as never]);
-    vi.mocked(selectAccountSocials).mockResolvedValue([{ account_id: ACCOUNT_ID } as never]);
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(false);
+    vi.mocked(selectAccountSocials).mockResolvedValue([{ account_id: ARTIST_ID } as never]);
+    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
   });
 
   it.each([["not-a-uuid"], [""], ["123"]])("returns 400 for invalid uuid %s", async id => {
@@ -56,24 +56,21 @@ describe("validatePostSocialScrapeRequest", () => {
     expect(selectAccountSocials).not.toHaveBeenCalled();
   });
 
-  it("returns 403 when social has no owning accounts", async () => {
+  it("returns 403 when social has no owning artist accounts", async () => {
     vi.mocked(selectAccountSocials).mockResolvedValue([]);
     const res = (await validatePostSocialScrapeRequest(makeRequest(), SOCIAL_ID)) as NextResponse;
     expect(res.status).toBe(403);
     expect(checkAccountArtistAccess).not.toHaveBeenCalled();
   });
 
-  it("returns 403 when caller neither owns nor has shared access to any owner", async () => {
-    vi.mocked(selectAccountSocials).mockResolvedValue([{ account_id: OWNER_ID } as never]);
+  it("returns 403 when caller has no access to any owning artist", async () => {
     vi.mocked(checkAccountArtistAccess).mockResolvedValue(false);
     const res = (await validatePostSocialScrapeRequest(makeRequest(), SOCIAL_ID)) as NextResponse;
     expect(res.status).toBe(403);
-    expect(checkAccountArtistAccess).toHaveBeenCalledWith(ACCOUNT_ID, OWNER_ID);
+    expect(checkAccountArtistAccess).toHaveBeenCalledWith(ACCOUNT_ID, ARTIST_ID);
   });
 
-  it("grants access when any owning account grants shared access", async () => {
-    vi.mocked(selectAccountSocials).mockResolvedValue([{ account_id: OWNER_ID } as never]);
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+  it("returns validated payload when caller has access to an owning artist", async () => {
     expect(await validatePostSocialScrapeRequest(makeRequest(), SOCIAL_ID)).toEqual({
       social_id: SOCIAL_ID,
     });
@@ -84,11 +81,5 @@ describe("validatePostSocialScrapeRequest", () => {
     await expect(validatePostSocialScrapeRequest(makeRequest(), SOCIAL_ID)).rejects.toThrow(
       "db blew up",
     );
-  });
-
-  it("returns validated payload when caller directly owns the social", async () => {
-    expect(await validatePostSocialScrapeRequest(makeRequest(), SOCIAL_ID)).toEqual({
-      social_id: SOCIAL_ID,
-    });
   });
 });

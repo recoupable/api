@@ -41,20 +41,21 @@ export async function validatePostSocialScrapeRequest(
     });
   }
 
+  // Socials are always owned by artist accounts (never directly by user accounts),
+  // so access is gated entirely through checkAccountArtistAccess against each
+  // owning artist — covers direct membership, shared org, and RECOUP_ORG admin.
   const links = await selectAccountSocials({ socialId: social_id, limit: 10000 });
-  const owningAccountIds = links.map(l => l.account_id).filter((v): v is string => Boolean(v));
+  const owningArtistIds = links.map(l => l.account_id).filter((v): v is string => Boolean(v));
 
-  const hasDirectAccess = owningAccountIds.includes(authResult.accountId);
-  const hasSharedAccess =
-    !hasDirectAccess &&
-    owningAccountIds.length > 0 &&
+  const hasAccess =
+    owningArtistIds.length > 0 &&
     (
       await Promise.all(
-        owningAccountIds.map(owner => checkAccountArtistAccess(authResult.accountId, owner)),
+        owningArtistIds.map(artistId => checkAccountArtistAccess(authResult.accountId, artistId)),
       )
     ).some(Boolean);
 
-  if (!hasDirectAccess && !hasSharedAccess) {
+  if (!hasAccess) {
     return errorResponse(403, {
       status: "error",
       error: "Unauthorized social scrape attempt",
