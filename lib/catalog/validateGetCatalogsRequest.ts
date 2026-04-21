@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
-import { checkAccountAccess } from "@/lib/accounts/checkAccountAccess";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 /**
  * Params for GET /api/accounts/{id}/catalogs.
@@ -33,9 +33,10 @@ export interface ValidatedGetCatalogsRequest {
  *    would rewrite `authResult.accountId` to the target, collapsing the
  *    subsequent access check into a self-check that always returns true.
  * 3. `selectAccounts(id)` -> 404 if the account does not exist.
- * 4. `checkAccountAccess(callerAccountId, id)` -> 403 if the caller cannot
- *    see that account's catalogs. Fails closed. Mirrors the canonical
- *    pattern in `lib/artists/validateDeleteArtistRequest.ts`.
+ * 4. `canAccessAccount({ currentAccountId, targetAccountId })` -> 403 if the
+ *    caller cannot see that account's catalogs. Fails closed (self-access,
+ *    RECOUP_ORG admin bypass, or shared-org membership). Mirrors the
+ *    canonical pattern in `lib/artists/validateDeleteArtistRequest.ts`.
  *
  * Returns the snake_case field the business fn consumes (`accountId`) so the
  * handler can pass the validator result straight through with no remap.
@@ -76,7 +77,10 @@ export async function validateGetCatalogsRequest(
     );
   }
 
-  const hasAccess = await checkAccountAccess(authResult.accountId, accountId);
+  const hasAccess = await canAccessAccount({
+    currentAccountId: authResult.accountId,
+    targetAccountId: accountId,
+  });
   if (!hasAccess) {
     return NextResponse.json(
       { status: "error", error: "Access denied to specified account_id" },

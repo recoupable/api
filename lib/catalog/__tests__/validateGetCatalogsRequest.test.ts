@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateGetCatalogsRequest } from "../validateGetCatalogsRequest";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
-import { checkAccountAccess } from "@/lib/accounts/checkAccountAccess";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -18,8 +18,8 @@ vi.mock("@/lib/supabase/accounts/selectAccounts", () => ({
   selectAccounts: vi.fn(),
 }));
 
-vi.mock("@/lib/accounts/checkAccountAccess", () => ({
-  checkAccountAccess: vi.fn(),
+vi.mock("@/lib/organizations/canAccessAccount", () => ({
+  canAccessAccount: vi.fn(),
 }));
 
 const accountId = "550e8400-e29b-41d4-a716-446655440000";
@@ -66,7 +66,7 @@ describe("validateGetCatalogsRequest", () => {
 
     expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(404);
-    expect(checkAccountAccess).not.toHaveBeenCalled();
+    expect(canAccessAccount).not.toHaveBeenCalled();
   });
 
   it("returns 403 when the requester cannot access the account", async () => {
@@ -76,7 +76,7 @@ describe("validateGetCatalogsRequest", () => {
       orgId: null,
     });
     vi.mocked(selectAccounts).mockResolvedValue([{ id: accountId }] as never);
-    vi.mocked(checkAccountAccess).mockResolvedValue(false);
+    vi.mocked(canAccessAccount).mockResolvedValue(false);
 
     const result = await validateGetCatalogsRequest(makeRequest(), accountId);
 
@@ -84,7 +84,10 @@ describe("validateGetCatalogsRequest", () => {
     expect((result as NextResponse).status).toBe(403);
     // Regression: access check must compare the CALLER's account id against
     // the target path id — never the path id against itself.
-    expect(checkAccountAccess).toHaveBeenCalledWith(requesterId, accountId);
+    expect(canAccessAccount).toHaveBeenCalledWith({
+      currentAccountId: requesterId,
+      targetAccountId: accountId,
+    });
   });
 
   it("does not pass the target accountId as an override to validateAuthContext", async () => {
@@ -94,7 +97,7 @@ describe("validateGetCatalogsRequest", () => {
       orgId: null,
     });
     vi.mocked(selectAccounts).mockResolvedValue([{ id: accountId }] as never);
-    vi.mocked(checkAccountAccess).mockResolvedValue(true);
+    vi.mocked(canAccessAccount).mockResolvedValue(true);
 
     await validateGetCatalogsRequest(makeRequest(), accountId);
 
@@ -113,11 +116,14 @@ describe("validateGetCatalogsRequest", () => {
       orgId: null,
     });
     vi.mocked(selectAccounts).mockResolvedValue([{ id: accountId }] as never);
-    vi.mocked(checkAccountAccess).mockResolvedValue(true);
+    vi.mocked(canAccessAccount).mockResolvedValue(true);
 
     const result = await validateGetCatalogsRequest(makeRequest(), accountId);
 
     expect(result).toEqual({ accountId });
-    expect(checkAccountAccess).toHaveBeenCalledWith(requesterId, accountId);
+    expect(canAccessAccount).toHaveBeenCalledWith({
+      currentAccountId: requesterId,
+      targetAccountId: accountId,
+    });
   });
 });
