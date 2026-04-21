@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
+import { validationErrorResponse } from "@/lib/zod/validationErrorResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectSocials } from "@/lib/supabase/socials/selectSocials";
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
@@ -12,20 +13,14 @@ export const postSocialScrapeParamsSchema = z.object({
 
 export type PostSocialScrapeParams = z.infer<typeof postSocialScrapeParamsSchema>;
 
-const errorResponse = (status: number, body: Record<string, unknown>) =>
-  NextResponse.json(body, { status, headers: getCorsHeaders() });
-
 export async function validatePostSocialScrapeRequest(
   request: NextRequest,
   id: string,
 ): Promise<PostSocialScrapeParams | NextResponse> {
   const parsed = postSocialScrapeParamsSchema.safeParse({ social_id: id });
   if (!parsed.success) {
-    return errorResponse(400, {
-      status: "error",
-      missing_fields: parsed.error.issues[0].path,
-      error: parsed.error.issues[0].message,
-    });
+    const issue = parsed.error.issues[0];
+    return validationErrorResponse(issue.message, issue.path);
   }
 
   const authResult = await validateAuthContext(request);
@@ -35,10 +30,7 @@ export async function validatePostSocialScrapeRequest(
 
   const socials = await selectSocials({ id: social_id });
   if (!socials || !socials.length) {
-    return errorResponse(404, {
-      status: "error",
-      error: `Social profile not found for id: ${social_id}`,
-    });
+    return errorResponse(`Social profile not found for id: ${social_id}`, 404);
   }
 
   // Socials are always owned by artist accounts (never directly by user accounts),
@@ -56,10 +48,7 @@ export async function validatePostSocialScrapeRequest(
     ).some(Boolean);
 
   if (!hasAccess) {
-    return errorResponse(403, {
-      status: "error",
-      error: "Unauthorized social scrape attempt",
-    });
+    return errorResponse("Unauthorized social scrape attempt", 403);
   }
 
   return { social_id };
