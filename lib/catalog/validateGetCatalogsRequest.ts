@@ -28,13 +28,14 @@ export interface ValidatedGetCatalogsRequest {
  *
  * Enforces the `auth != access` convention:
  * 1. Parse `id` as a UUID (400 on bad input).
- * 2. `validateAuthContext(request, { accountId: id })` (401 on missing /
- *    invalid auth; `accountId` override is safe here because it is re-checked
- *    below and `validateAuthContext` will itself 403 any unauthorized override
- *    attempt).
+ * 2. `validateAuthContext(request)` (401 on missing / invalid auth). The
+ *    target account id from the path is NOT passed as an override — doing so
+ *    would rewrite `authResult.accountId` to the target, collapsing the
+ *    subsequent access check into a self-check that always returns true.
  * 3. `selectAccounts(id)` -> 404 if the account does not exist.
- * 4. `checkAccountAccess(authAccountId, id)` -> 403 if the caller cannot see
- *    that account's catalogs. Fails closed.
+ * 4. `checkAccountAccess(callerAccountId, id)` -> 403 if the caller cannot
+ *    see that account's catalogs. Fails closed. Mirrors the canonical
+ *    pattern in `lib/artists/validateDeleteArtistRequest.ts`.
  *
  * Returns the snake_case field the business fn consumes (`accountId`) so the
  * handler can pass the validator result straight through with no remap.
@@ -62,7 +63,7 @@ export async function validateGetCatalogsRequest(
 
   const accountId = parsed.data.account_id;
 
-  const authResult = await validateAuthContext(request, { accountId });
+  const authResult = await validateAuthContext(request);
   if (authResult instanceof NextResponse) {
     return authResult;
   }

@@ -82,6 +82,28 @@ describe("validateGetCatalogsRequest", () => {
 
     expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(403);
+    // Regression: access check must compare the CALLER's account id against
+    // the target path id — never the path id against itself.
+    expect(checkAccountAccess).toHaveBeenCalledWith(requesterId, accountId);
+  });
+
+  it("does not pass the target accountId as an override to validateAuthContext", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: requesterId,
+      authToken: "t",
+      orgId: null,
+    });
+    vi.mocked(selectAccounts).mockResolvedValue([{ id: accountId }] as never);
+    vi.mocked(checkAccountAccess).mockResolvedValue(true);
+
+    await validateGetCatalogsRequest(makeRequest(), accountId);
+
+    // Regression: passing `{ accountId: id }` here would rewrite
+    // authResult.accountId to the target, collapsing the access check into a
+    // self-check that always returns true.
+    expect(validateAuthContext).toHaveBeenCalledWith(expect.anything());
+    const call = vi.mocked(validateAuthContext).mock.calls[0];
+    expect(call[1]).toBeUndefined();
   });
 
   it("returns the validated accountId on success", async () => {
