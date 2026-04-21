@@ -1,10 +1,4 @@
 import supabase from "../serverClient";
-import { Tables } from "@/types/database.types";
-
-type AccountCatalogWithCatalog = {
-  catalog: string;
-  catalogs: Tables<"catalogs">[];
-};
 
 type SelectAccountCatalogsParams = {
   accountIds?: string[];
@@ -18,9 +12,7 @@ type SelectAccountCatalogsParams = {
  * @returns The account_catalogs with related catalog data
  * @throws Error if the query fails
  */
-export async function selectAccountCatalogs(
-  params: SelectAccountCatalogsParams,
-): Promise<AccountCatalogWithCatalog[]> {
+export async function selectAccountCatalogs(params: SelectAccountCatalogsParams) {
   let query = supabase
     .from("account_catalogs")
     .select(
