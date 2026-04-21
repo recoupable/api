@@ -1,31 +1,23 @@
 import supabase from "../serverClient";
-import { Tables } from "@/types/database.types";
 
-type AccountCatalogWithCatalog = {
-  catalog: string;
-  catalogs: Tables<"catalogs">[];
-};
-
-type SelectAccountCatalogsParams = {
-  accountIds?: string[];
-  catalogIds?: string[];
-};
+export interface CatalogSummary {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
 
 /**
- * Selects account_catalogs with optional related catalog data
+ * Select catalogs linked to an account via `account_catalogs`, ordered by
+ * `created_at desc`. Returns the flat catalog shape used by callers.
  *
- * @param params - The parameters for the query
- * @returns The account_catalogs with related catalog data
  * @throws Error if the query fails
  */
-export async function selectAccountCatalogs(
-  params: SelectAccountCatalogsParams,
-): Promise<AccountCatalogWithCatalog[]> {
-  let query = supabase
+export async function selectAccountCatalogs(accountId: string): Promise<CatalogSummary[]> {
+  const { data, error } = await supabase
     .from("account_catalogs")
     .select(
       `
-    catalog,
     catalogs!inner (
       id,
       name,
@@ -34,22 +26,19 @@ export async function selectAccountCatalogs(
     )
   `,
     )
+    .eq("account", accountId)
     .order("created_at", { ascending: false });
-
-  // Add filters based on provided parameters
-  if (params.accountIds && params.accountIds.length > 0) {
-    query = query.in("account", params.accountIds);
-  }
-
-  if (params.catalogIds && params.catalogIds.length > 0) {
-    query = query.in("catalog", params.catalogIds);
-  }
-
-  const { data, error } = await query;
 
   if (error) {
     throw new Error(`Failed to fetch account_catalogs: ${error.message}`);
   }
 
-  return data || [];
+  return (data ?? []).flatMap(row => {
+    // `catalogs` is declared as an array by the supabase helper's generated
+    // type, but an `!inner` join on a 1:1 relation can surface as a single
+    // object at runtime. Normalise both shapes.
+    const related = row.catalogs as unknown;
+    const list = Array.isArray(related) ? related : related ? [related] : [];
+    return list as CatalogSummary[];
+  });
 }

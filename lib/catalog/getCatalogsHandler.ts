@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetCatalogsRequest } from "@/lib/catalog/validateGetCatalogsRequest";
-import { getCatalogsForAccounts } from "@/lib/catalog/getCatalogsForAccounts";
+import { selectAccountCatalogs } from "@/lib/supabase/account_catalogs/selectAccountCatalogs";
 
 /**
  * Handler for GET /api/accounts/{id}/catalogs.
@@ -26,12 +26,12 @@ export async function getCatalogsHandler(
       return validated;
     }
 
-    const result = await getCatalogsForAccounts([validated.accountId]);
+    const catalogs = await selectAccountCatalogs(validated.accountId);
 
-    return NextResponse.json(result, {
-      status: 200,
-      headers: getCorsHeaders(),
-    });
+    return NextResponse.json(
+      { status: "success", catalogs },
+      { status: 200, headers: getCorsHeaders() },
+    );
   } catch (error) {
     console.error("[ERROR] getCatalogsHandler:", error);
     return NextResponse.json(
