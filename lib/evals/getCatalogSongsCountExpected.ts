@@ -4,10 +4,6 @@ import { EVAL_ACCOUNT_ID } from "@/lib/consts";
 
 async function getCatalogSongsCountExpected() {
   try {
-    // Call the supabase helper directly (in-process) rather than re-fetching
-    // over HTTP. The new `GET /api/accounts/{id}/catalogs` route requires
-    // auth; evals run inside the same Next app, so the direct call skips the
-    // auth layer and matches the legacy Express behaviour byte-for-byte.
     const catalogs = await selectAccountCatalogs(EVAL_ACCOUNT_ID);
 
     if (catalogs.length === 0) {
