@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { errorResponse } from "@/lib/networking/errorResponse";
-import { getSongsWithArtists } from "@/lib/songs/getSongsWithArtists";
+import { selectSongsWithArtists } from "@/lib/supabase/songs/selectSongsWithArtists";
 import { validateGetSongsRequest } from "@/lib/songs/validateGetSongsRequest";
 
-/**
- * Handler for GET /api/songs — returns songs with their associated artist
- * accounts, optionally filtered by `isrc` and/or `artist_account_id`.
- *
- * Authentication is required (`x-api-key` or `Authorization: Bearer`), but no
- * per-artist access check is applied — song metadata is DSP-public; see the
- * rationale in `validateGetSongsRequest`.
- *
- * Always returns a generic `"Internal server error"` string on 500 — never
- * surfaces the underlying error message.
- */
+/** GET /api/songs — songs with flattened artist accounts, optionally filtered by `isrc` / `artist_account_id`. */
 export async function getSongsHandler(request: NextRequest): Promise<NextResponse> {
   try {
     const validated = await validateGetSongsRequest(request);
@@ -22,9 +12,12 @@ export async function getSongsHandler(request: NextRequest): Promise<NextRespons
       return validated;
     }
 
-    const result = await getSongsWithArtists(validated);
+    const songs = await selectSongsWithArtists(validated);
 
-    return NextResponse.json(result, { status: 200, headers: getCorsHeaders() });
+    return NextResponse.json(
+      { status: "success", songs },
+      { status: 200, headers: getCorsHeaders() },
+    );
   } catch (error) {
     console.error("[ERROR] getSongsHandler:", error);
     return errorResponse("Internal server error", 500);

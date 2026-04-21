@@ -5,7 +5,7 @@ import { selectSongsWithArtists } from "../selectSongsWithArtists";
 const mockFrom = vi.fn();
 const mockSelect = vi.fn();
 const mockOrder = vi.fn();
-const mockIn = vi.fn();
+const mockEq = vi.fn();
 
 vi.mock("@/lib/supabase/serverClient", () => ({
   default: {
@@ -19,16 +19,13 @@ describe("selectSongsWithArtists", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Chain: from().select().order() → thenable; .in() returns thenable + .in chain.
     mockFrom.mockReturnValue({ select: mockSelect });
     mockSelect.mockReturnValue({ order: mockOrder });
-    mockOrder.mockReturnValue({ in: mockIn, then: undefined });
-    // `in` returns itself to allow chained filters, and resolves when awaited.
-    mockIn.mockReturnValue({ in: mockIn });
+    mockOrder.mockReturnValue({ eq: mockEq });
+    mockEq.mockReturnValue({ eq: mockEq });
   });
 
   it("queries songs with the embed and orders by updated_at desc", async () => {
-    // No filters: awaiting the order() result.
     mockOrder.mockResolvedValue({ data: [], error: null });
 
     await selectSongsWithArtists({});
@@ -39,23 +36,23 @@ describe("selectSongsWithArtists", () => {
     expect(selectArg).toContain("song_artists");
     expect(selectArg).toContain("accounts!inner");
     expect(mockOrder).toHaveBeenCalledWith("updated_at", { ascending: false });
-    expect(mockIn).not.toHaveBeenCalled();
+    expect(mockEq).not.toHaveBeenCalled();
   });
 
   it("filters by isrc when provided", async () => {
-    mockIn.mockResolvedValue({ data: [], error: null });
+    mockEq.mockResolvedValue({ data: [], error: null });
 
     await selectSongsWithArtists({ isrc: "USRC17607839" });
 
-    expect(mockIn).toHaveBeenCalledWith("isrc", ["USRC17607839"]);
+    expect(mockEq).toHaveBeenCalledWith("isrc", "USRC17607839");
   });
 
   it("filters by artist_account_id via song_artists.artist when provided", async () => {
-    mockIn.mockResolvedValue({ data: [], error: null });
+    mockEq.mockResolvedValue({ data: [], error: null });
 
     await selectSongsWithArtists({ artist_account_id: VALID_UUID });
 
-    expect(mockIn).toHaveBeenCalledWith("song_artists.artist", [VALID_UUID]);
+    expect(mockEq).toHaveBeenCalledWith("song_artists.artist", VALID_UUID);
   });
 
   it("flattens song_artists[].accounts into a top-level artists[] per song", async () => {
@@ -71,7 +68,7 @@ describe("selectSongsWithArtists", () => {
         ],
       },
     ];
-    mockIn.mockResolvedValue({ data: raw, error: null });
+    mockEq.mockResolvedValue({ data: raw, error: null });
 
     const result = await selectSongsWithArtists({ isrc: "USRC17607839" });
 
