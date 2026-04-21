@@ -1,9 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
-  getCatalogsQuerySchema,
-  type GetCatalogsQuery,
-} from "@/lib/catalog/validateGetCatalogsQuery";
-import { selectAccountCatalogs } from "@/lib/supabase/account_catalogs/selectAccountCatalogs";
+  getCatalogsParamsSchema,
+  type GetCatalogsParams,
+} from "@/lib/catalog/validateGetCatalogsRequest";
+import { getCatalogsForAccounts } from "@/lib/catalog/getCatalogsForAccounts";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 /**
  * Registers the "select_catalogs" tool on the MCP server.
@@ -25,10 +25,10 @@ export function registerGetCatalogsTool(server: McpServer): void {
         - Curated collections for platforms
         
         Returns music catalog metadata including id, name, created_at, and updated_at.`,
-      inputSchema: getCatalogsQuerySchema,
+      inputSchema: getCatalogsParamsSchema,
     },
-    async (args: GetCatalogsQuery) => {
-      const data = await selectAccountCatalogs({ accountIds: [args.account_id] });
+    async (args: GetCatalogsParams) => {
+      const data = await getCatalogsForAccounts([args.account_id]);
       return getToolResultSuccess(data);
     },
   );

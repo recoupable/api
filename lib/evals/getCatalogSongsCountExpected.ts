@@ -1,10 +1,14 @@
-import { getCatalogs } from "@/lib/catalog/getCatalogs";
+import { getCatalogsForAccounts } from "@/lib/catalog/getCatalogsForAccounts";
 import { getCatalogSongs } from "@/lib/catalog/getCatalogSongs";
 import { EVAL_ACCOUNT_ID } from "@/lib/consts";
 
 async function getCatalogSongsCountExpected() {
   try {
-    const catalogsData = await getCatalogs(EVAL_ACCOUNT_ID);
+    // Call the domain helper directly (in-process) rather than re-fetching
+    // over HTTP. The new `GET /api/accounts/{id}/catalogs` route requires
+    // auth; evals run inside the same Next app, so the direct call skips the
+    // auth layer and matches the legacy Express behaviour byte-for-byte.
+    const catalogsData = await getCatalogsForAccounts([EVAL_ACCOUNT_ID]);
 
     if (!catalogsData.catalogs || catalogsData.catalogs.length === 0) {
       throw new Error("No catalogs found for account");
