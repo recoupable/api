@@ -1,5 +1,7 @@
 import type { Sandbox } from "@vercel/sandbox";
+import { cloneGithubRepoInSandbox } from "@/lib/sandbox/cloneGithubRepoInSandbox";
 import { createSandboxWithFallback } from "@/lib/sandbox/createSandboxWithFallback";
+import { getAccountGithubRepo } from "@/lib/sandbox/getAccountGithubRepo";
 import { getValidSnapshotId } from "@/lib/sandbox/getValidSnapshotId";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 
@@ -18,13 +20,23 @@ export interface CreateSandboxFromSnapshotResult {
 export async function createSandboxFromSnapshot(
   accountId: string,
 ): Promise<CreateSandboxFromSnapshotResult> {
-  const snapshotId = await getValidSnapshotId(accountId);
+  const [snapshotId, githubRepo] = await Promise.all([
+    getValidSnapshotId(accountId),
+    getAccountGithubRepo(accountId),
+  ]);
   const { sandbox, fromSnapshot } = await createSandboxWithFallback(snapshotId);
 
   await insertAccountSandbox({
     account_id: accountId,
     sandbox_id: sandbox.sandboxId,
   });
+
+  // Clone the account's GitHub repo into the sandbox if available
+  try {
+    await cloneGithubRepoInSandbox(sandbox, githubRepo);
+  } catch (cloneError) {
+    console.error("Failed to clone GitHub repo into sandbox:", cloneError);
+  }
 
   return { sandbox, fromSnapshot };
 }

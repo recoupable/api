@@ -4,11 +4,21 @@ import type { Sandbox } from "@vercel/sandbox";
 import { createSandboxFromSnapshot } from "../createSandboxFromSnapshot";
 
 const mockGetValidSnapshotId = vi.fn();
+const mockGetAccountGithubRepo = vi.fn();
 const mockInsertAccountSandbox = vi.fn();
 const mockCreateSandboxWithFallback = vi.fn();
+const mockCloneGithubRepoInSandbox = vi.fn();
 
 vi.mock("@/lib/sandbox/createSandboxWithFallback", () => ({
   createSandboxWithFallback: (...args: unknown[]) => mockCreateSandboxWithFallback(...args),
+}));
+
+vi.mock("@/lib/sandbox/cloneGithubRepoInSandbox", () => ({
+  cloneGithubRepoInSandbox: (...args: unknown[]) => mockCloneGithubRepoInSandbox(...args),
+}));
+
+vi.mock("@/lib/sandbox/getAccountGithubRepo", () => ({
+  getAccountGithubRepo: (...args: unknown[]) => mockGetAccountGithubRepo(...args),
 }));
 
 vi.mock("@/lib/sandbox/getValidSnapshotId", () => ({
@@ -28,6 +38,7 @@ describe("createSandboxFromSnapshot", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetAccountGithubRepo.mockResolvedValue(null);
     mockCreateSandboxWithFallback.mockResolvedValue({
       sandbox: mockSandbox,
       response: {
@@ -122,5 +133,46 @@ describe("createSandboxFromSnapshot", () => {
     const result = await createSandboxFromSnapshot("acc_1");
 
     expect(result).toEqual({ sandbox: mockSandbox, fromSnapshot: false });
+  });
+
+  it("clones github_repo into sandbox when account has one", async () => {
+    mockGetValidSnapshotId.mockResolvedValue("snap_abc");
+    mockGetAccountGithubRepo.mockResolvedValue("https://github.com/artist/website");
+
+    await createSandboxFromSnapshot("acc_1");
+
+    expect(mockCloneGithubRepoInSandbox).toHaveBeenCalledWith(
+      mockSandbox,
+      "https://github.com/artist/website",
+    );
+  });
+
+  it("does not clone when account has no github_repo", async () => {
+    mockGetValidSnapshotId.mockResolvedValue("snap_abc");
+    mockGetAccountGithubRepo.mockResolvedValue(null);
+
+    await createSandboxFromSnapshot("acc_1");
+
+    expect(mockCloneGithubRepoInSandbox).toHaveBeenCalledWith(mockSandbox, null);
+  });
+
+  it("still returns result when clone fails (non-fatal)", async () => {
+    mockGetValidSnapshotId.mockResolvedValue("snap_abc");
+    mockGetAccountGithubRepo.mockResolvedValue("https://github.com/artist/website");
+    mockCreateSandboxWithFallback.mockResolvedValue({
+      sandbox: mockSandbox,
+      response: {
+        sandboxId: "sbx_new",
+        sandboxStatus: "running",
+        timeout: 1800000,
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
+      fromSnapshot: true,
+    });
+    mockCloneGithubRepoInSandbox.mockRejectedValue(new Error("Failed to clone GitHub repo"));
+
+    const result = await createSandboxFromSnapshot("acc_1");
+
+    expect(result).toEqual({ sandbox: mockSandbox, fromSnapshot: true });
   });
 });
