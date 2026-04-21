@@ -31,6 +31,10 @@ export const AGENT_SIGNUP_GENERIC_MESSAGE =
   "If this is a new agent+ email, your API key is included. Otherwise, check your email for a verification code.";
 
 export const SUPABASE_STORAGE_BUCKET = "user-files";
+
+/** Stripe price ID for the Recoup subscription plan */
+export const STRIPE_SUBSCRIPTION_PRICE_ID =
+  process.env.STRIPE_SUBSCRIPTION_PRICE_ID ?? "price_1RyDFD00JObOnOb53PcVOeBz";
 export const CREATE_CONTENT_TASK_ID = "create-content";
 
 /**
