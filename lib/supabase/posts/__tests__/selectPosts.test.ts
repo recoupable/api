@@ -10,82 +10,109 @@ vi.mock("../../account_socials/selectAccountSocialIds", () => ({
 
 const ARTIST_ID = "11111111-1111-4111-8111-111111111111";
 const SOCIAL_IDS = ["s1", "s2"];
-const ROW = { id: "p1", post_url: "https://x.example/p/1", updated_at: "t", social_posts: [{}] };
-const CLEAN = { id: "p1", post_url: "https://x.example/p/1", updated_at: "t" };
-const FILTER_COL = "social_posts.social_id";
-const JOIN = "social_posts!inner(social_id)";
+const POST = { id: "p1", post_url: "https://x.example/p/1", updated_at: "2026-04-20T00:00:00Z" };
 
-function mockRows(result: { data: unknown; error: { message: string } | null }) {
-  const thenable = { then: (fn: (r: typeof result) => unknown) => fn(result) };
-  const inFn = vi.fn().mockReturnValue(thenable);
-  const range = vi.fn().mockReturnValue({ in: inFn, ...thenable });
+type Result<T> = { data: T; error: { message: string } | null; count?: number };
+
+function makeThenable<T>(result: Result<T>) {
+  return { then: (fn: (r: Result<T>) => unknown) => fn(result) };
+}
+
+function mockNoFilterPosts(result: Result<(typeof POST)[]>) {
+  const range = vi.fn().mockReturnValue(makeThenable(result));
   const order = vi.fn().mockReturnValue({ range });
   const select = vi.fn().mockReturnValue({ order });
-  return { select, in: inFn, range, order };
+  return { select, order, range };
 }
 
-function mockCount(result: { count: number; error: { message: string } | null }) {
-  const thenable = { then: (fn: (r: typeof result) => unknown) => fn(result) };
-  const inFn = vi.fn().mockReturnValue(thenable);
-  const select = vi.fn().mockReturnValue({ in: inFn, ...thenable });
-  return { select, in: inFn };
+function mockSocialPosts(result: Result<Array<{ post_id: string; updated_at: string }>>) {
+  const order = vi.fn().mockReturnValue(makeThenable(result));
+  const inFn = vi.fn().mockReturnValue({ order });
+  const select = vi.fn().mockReturnValue({ in: inFn });
+  return { select, in: inFn, order };
 }
 
-function wire(rows: ReturnType<typeof mockRows>, count: ReturnType<typeof mockCount>) {
-  vi.mocked(supabase.from)
-    .mockReturnValueOnce({ select: rows.select } as never)
-    .mockReturnValueOnce({ select: count.select } as never);
+function mockPostsByIds(result: Result<(typeof POST)[]>) {
+  const order = vi.fn().mockReturnValue(makeThenable(result));
+  const inFn = vi.fn().mockReturnValue({ order });
+  const select = vi.fn().mockReturnValue({ in: inFn });
+  return { select, in: inFn, order };
 }
 
 describe("selectPosts", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("queries without filter when artistAccountId is absent", async () => {
-    const rows = mockRows({ data: [ROW], error: null });
-    const count = mockCount({ count: 3, error: null });
-    wire(rows, count);
-    const result = await selectPosts({ page: 1, limit: 10 });
-    expect(rows.select).toHaveBeenCalledWith(expect.stringContaining(JOIN));
-    expect(rows.order).toHaveBeenCalledWith("updated_at", { ascending: false, nullsFirst: false });
-    expect(rows.range).toHaveBeenCalledWith(0, 9);
-    expect(rows.in).not.toHaveBeenCalled();
-    expect(count.in).not.toHaveBeenCalled();
+  it("without artistAccountId: single count:exact query with pagination", async () => {
+    const m = mockNoFilterPosts({ data: [POST], error: null, count: 42 });
+    vi.mocked(supabase.from).mockReturnValueOnce({ select: m.select } as never);
+
+    const result = await selectPosts({ page: 2, limit: 5 });
+
+    expect(supabase.from).toHaveBeenCalledWith("posts");
+    expect(m.select).toHaveBeenCalledWith("id, post_url, updated_at", { count: "exact" });
+    expect(m.order).toHaveBeenCalledWith("updated_at", { ascending: false, nullsFirst: false });
+    expect(m.range).toHaveBeenCalledWith(5, 9);
+    expect(result).toEqual({ posts: [POST], totalCount: 42 });
     expect(vi.mocked(selectAccountSocialIds)).not.toHaveBeenCalled();
-    expect(result).toEqual({ posts: [CLEAN], totalCount: 3 });
-    expect(result.posts[0]).not.toHaveProperty("social_posts");
   });
 
-  it("resolves artist social_ids and filters by them with distinct count", async () => {
+  it("with artistAccountId: resolves socials, fetches social_posts then posts by id", async () => {
     vi.mocked(selectAccountSocialIds).mockResolvedValue(SOCIAL_IDS);
-    const rows = mockRows({ data: [ROW], error: null });
-    const count = mockCount({ count: 7, error: null });
-    wire(rows, count);
-    const result = await selectPosts({ artistAccountId: ARTIST_ID, page: 2, limit: 5 });
-    expect(vi.mocked(selectAccountSocialIds)).toHaveBeenCalledWith(ARTIST_ID);
-    expect(rows.in).toHaveBeenCalledWith(FILTER_COL, SOCIAL_IDS);
-    expect(count.select).toHaveBeenCalledWith(expect.stringContaining(JOIN), {
-      count: "exact",
-      head: true,
+    const sp = mockSocialPosts({
+      data: [
+        { post_id: "p1", updated_at: "2026-04-20T00:00:00Z" },
+        { post_id: "p2", updated_at: "2026-04-19T00:00:00Z" },
+        { post_id: "p1", updated_at: "2026-04-18T00:00:00Z" }, // dup, deduped
+      ],
+      error: null,
     });
-    expect(count.in).toHaveBeenCalledWith(FILTER_COL, SOCIAL_IDS);
-    expect(rows.range).toHaveBeenCalledWith(5, 9);
-    expect(result).toEqual({ posts: [CLEAN], totalCount: 7 });
-    expect(result.posts[0]).not.toHaveProperty("social_posts");
+    const posts = mockPostsByIds({ data: [POST], error: null });
+
+    vi.mocked(supabase.from)
+      .mockReturnValueOnce({ select: sp.select } as never)
+      .mockReturnValueOnce({ select: posts.select } as never);
+
+    const result = await selectPosts({ artistAccountId: ARTIST_ID, page: 1, limit: 10 });
+
+    expect(vi.mocked(selectAccountSocialIds)).toHaveBeenCalledWith(ARTIST_ID);
+    expect(sp.select).toHaveBeenCalledWith("post_id, updated_at");
+    expect(sp.in).toHaveBeenCalledWith("social_id", SOCIAL_IDS);
+    expect(posts.select).toHaveBeenCalledWith("id, post_url, updated_at");
+    expect(posts.in).toHaveBeenCalledWith("id", ["p1", "p2"]);
+    expect(result).toEqual({ posts: [POST], totalCount: 2 });
   });
 
-  it("short-circuits to empty result when artist has no socials", async () => {
+  it("short-circuits to empty when artist has no socials", async () => {
     vi.mocked(selectAccountSocialIds).mockResolvedValue([]);
     const result = await selectPosts({ artistAccountId: ARTIST_ID, page: 1, limit: 10 });
     expect(result).toEqual({ posts: [], totalCount: 0 });
     expect(vi.mocked(supabase.from)).not.toHaveBeenCalled();
   });
 
-  it("throws when the rows query errors", async () => {
+  it("short-circuits when socials have no posts", async () => {
     vi.mocked(selectAccountSocialIds).mockResolvedValue(SOCIAL_IDS);
-    wire(
-      mockRows({ data: null, error: { message: "boom" } }),
-      mockCount({ count: 0, error: null }),
-    );
+    const sp = mockSocialPosts({ data: [], error: null });
+    vi.mocked(supabase.from).mockReturnValueOnce({ select: sp.select } as never);
+
+    const result = await selectPosts({ artistAccountId: ARTIST_ID, page: 1, limit: 10 });
+    expect(result).toEqual({ posts: [], totalCount: 0 });
+  });
+
+  it("throws when posts query errors", async () => {
+    vi.mocked(selectAccountSocialIds).mockResolvedValue(SOCIAL_IDS);
+    const sp = mockSocialPosts({
+      data: [{ post_id: "p1", updated_at: "t" }],
+      error: null,
+    });
+    const posts = mockPostsByIds({
+      data: null as unknown as (typeof POST)[],
+      error: { message: "boom" },
+    });
+
+    vi.mocked(supabase.from)
+      .mockReturnValueOnce({ select: sp.select } as never)
+      .mockReturnValueOnce({ select: posts.select } as never);
+
     await expect(selectPosts({ artistAccountId: ARTIST_ID, page: 1, limit: 10 })).rejects.toThrow(
       /Failed to fetch posts/,
     );
