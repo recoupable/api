@@ -15,52 +15,33 @@ export async function selectPosts({
 }) {
   const offset = (page - 1) * limit;
 
-  if (!artistAccountId) {
-    const [rowsResult, countResult] = await Promise.all([
-      supabase
-        .from("posts")
-        .select("*")
-        .order("updated_at", { ascending: false, nullsFirst: false })
-        .range(offset, offset + limit - 1),
-      supabase.from("posts").select("id", { count: "exact", head: true }),
-    ]);
+  let rowsQuery = supabase
+    .from("posts")
+    .select(
+      "*, social_posts!inner(social:socials!inner(profile_url, account_socials!inner(account_id)))",
+    )
+    .order("updated_at", { ascending: false, nullsFirst: false })
+    .range(offset, offset + limit - 1);
 
-    if (rowsResult.error) {
-      throw new Error(`Failed to fetch posts: ${rowsResult.error.message}`);
-    }
-    if (countResult.error) {
-      throw new Error(`Failed to count posts: ${countResult.error.message}`);
-    }
+  let countQuery = supabase
+    .from("posts")
+    .select("id, social_posts!inner(social:socials!inner(account_socials!inner(account_id)))", {
+      count: "exact",
+      head: true,
+    });
 
-    return {
-      posts: rowsResult.data ?? [],
-      totalCount: countResult.count ?? 0,
-    };
+  if (artistAccountId) {
+    rowsQuery = rowsQuery.eq("social_posts.social.account_socials.account_id", artistAccountId);
+    countQuery = countQuery.eq("social_posts.social.account_socials.account_id", artistAccountId);
   }
 
-  const [rowsResult, countResult] = await Promise.all([
-    supabase
-      .from("posts")
-      .select(
-        `*, social_posts!inner(social:socials!inner(profile_url, account_socials!inner(account_id)))`,
-      )
-      .eq("social_posts.social.account_socials.account_id", artistAccountId)
-      .order("updated_at", { ascending: false, nullsFirst: false })
-      .range(offset, offset + limit - 1),
-    supabase
-      .from("posts")
-      .select(`id, social_posts!inner(social:socials!inner(account_socials!inner(account_id)))`, {
-        count: "exact",
-        head: true,
-      })
-      .eq("social_posts.social.account_socials.account_id", artistAccountId),
-  ]);
+  const [rowsResult, countResult] = await Promise.all([rowsQuery, countQuery]);
 
   if (rowsResult.error) {
-    throw new Error(`Failed to fetch artist posts: ${rowsResult.error.message}`);
+    throw new Error(`Failed to fetch posts: ${rowsResult.error.message}`);
   }
   if (countResult.error) {
-    throw new Error(`Failed to count artist posts: ${countResult.error.message}`);
+    throw new Error(`Failed to count posts: ${countResult.error.message}`);
   }
 
   return {
