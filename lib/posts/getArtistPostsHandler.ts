@@ -38,6 +38,7 @@ export async function getArtistPostsHandler(
     );
   } catch (error) {
     console.error("[ERROR] getArtistPostsHandler:", error);
-    return errorResponse("Internal server error", 500);
+    const msg = error instanceof Error ? error.message : String(error);
+    return errorResponse(`Internal server error: ${msg}`, 500);
   }
 }
