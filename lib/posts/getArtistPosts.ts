@@ -2,7 +2,7 @@ import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccou
 import { selectSocialPostsBySocialIds } from "@/lib/supabase/social_posts/selectSocialPostsBySocialIds";
 import { selectPostsByIds } from "@/lib/supabase/posts/selectPostsByIds";
 import { enrichPostsWithPlatform } from "@/lib/posts/enrichPostsWithPlatform";
-import type { GetPostsParams } from "@/lib/posts/validateGetPostsRequest";
+import type { GetArtistPostsParams } from "@/lib/posts/validateGetArtistPostsRequest";
 
 const MAX_SOCIALS_PER_ARTIST = 10000;
 
@@ -11,7 +11,7 @@ const MAX_SOCIALS_PER_ARTIST = 10000;
  * `pagination.total_count` byte-identical across migrations; a DB-side
  * `count(distinct post_id)` would drift observably.
  */
-export async function getPosts({ artist_account_id, page, limit }: GetPostsParams) {
+export async function getArtistPosts({ artist_account_id, page, limit }: GetArtistPostsParams) {
   const accountSocials = await selectAccountSocials({
     accountId: artist_account_id,
     limit: MAX_SOCIALS_PER_ARTIST,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getPostsHandler } from "@/lib/posts/getPostsHandler";
+import { getArtistPostsHandler } from "@/lib/posts/getArtistPostsHandler";
 
 /**
  * CORS preflight.
@@ -25,5 +25,5 @@ export async function OPTIONS() {
  */
 export async function GET(request: NextRequest, options: { params: Promise<{ id: string }> }) {
   const { id } = await options.params;
-  return getPostsHandler(request, id);
+  return getArtistPostsHandler(request, id);
 }

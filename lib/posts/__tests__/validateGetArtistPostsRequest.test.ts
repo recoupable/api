@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
-import { validateGetPostsRequest } from "../validateGetPostsRequest";
+import { validateGetArtistPostsRequest } from "../validateGetArtistPostsRequest";
 
 const mockValidateAuthContext = vi.fn();
 const mockSelectAccounts = vi.fn();
@@ -26,7 +26,7 @@ function makeRequest(url: string): NextRequest {
   return new NextRequest(url, { headers: { authorization: "Bearer test-token" } });
 }
 
-describe("validateGetPostsRequest", () => {
+describe("validateGetArtistPostsRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockValidateAuthContext.mockResolvedValue({
@@ -43,7 +43,7 @@ describe("validateGetPostsRequest", () => {
       NextResponse.json({ error: "unauthorized" }, { status: 401 }),
     );
     const req = new NextRequest("https://ex.com/api/artists/not-a-uuid/posts");
-    const result = await validateGetPostsRequest(req, "not-a-uuid");
+    const result = await validateGetArtistPostsRequest(req, "not-a-uuid");
     expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(401);
     expect(mockSelectAccounts).not.toHaveBeenCalled();
@@ -55,7 +55,7 @@ describe("validateGetPostsRequest", () => {
     [VALID_UUID, "?page=-1", ["page"]],
   ])("returns 400 for invalid input (id=%s, query=%s)", async (id, query, path) => {
     const req = makeRequest(`https://ex.com/api/artists/${id}/posts${query ?? ""}`);
-    const result = await validateGetPostsRequest(req, id);
+    const result = await validateGetArtistPostsRequest(req, id);
     expect(result).toBeInstanceOf(NextResponse);
     const res = result as NextResponse;
     expect(res.status).toBe(400);
@@ -66,7 +66,7 @@ describe("validateGetPostsRequest", () => {
   it("returns 404 when artist account is missing", async () => {
     mockSelectAccounts.mockResolvedValue([]);
     const req = makeRequest(`https://ex.com/api/artists/${VALID_UUID}/posts`);
-    const result = await validateGetPostsRequest(req, VALID_UUID);
+    const result = await validateGetArtistPostsRequest(req, VALID_UUID);
     expect((result as NextResponse).status).toBe(404);
     expect(mockCheckAccountArtistAccess).not.toHaveBeenCalled();
   });
@@ -74,21 +74,21 @@ describe("validateGetPostsRequest", () => {
   it("returns 403 when caller lacks access", async () => {
     mockCheckAccountArtistAccess.mockResolvedValue(false);
     const req = makeRequest(`https://ex.com/api/artists/${VALID_UUID}/posts`);
-    const result = await validateGetPostsRequest(req, VALID_UUID);
+    const result = await validateGetArtistPostsRequest(req, VALID_UUID);
     expect((result as NextResponse).status).toBe(403);
     expect(mockCheckAccountArtistAccess).toHaveBeenCalledWith("auth-account", VALID_UUID);
   });
 
   it("defaults page=1 limit=20 and clamps limit>100 to 100", async () => {
     const req1 = makeRequest(`https://ex.com/api/artists/${VALID_UUID}/posts`);
-    const res1 = await validateGetPostsRequest(req1, VALID_UUID);
+    const res1 = await validateGetArtistPostsRequest(req1, VALID_UUID);
     expect(res1).not.toBeInstanceOf(NextResponse);
     if (!(res1 instanceof NextResponse)) {
       expect(res1).toEqual({ artist_account_id: VALID_UUID, page: 1, limit: 20 });
     }
 
     const req2 = makeRequest(`https://ex.com/api/artists/${VALID_UUID}/posts?limit=500&page=3`);
-    const res2 = await validateGetPostsRequest(req2, VALID_UUID);
+    const res2 = await validateGetArtistPostsRequest(req2, VALID_UUID);
     if (!(res2 instanceof NextResponse)) {
       expect(res2.limit).toBe(100);
       expect(res2.page).toBe(3);

@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
-import { getPostsHandler } from "../getPostsHandler";
+import { getArtistPostsHandler } from "../getArtistPostsHandler";
 
-const mockGetPosts = vi.fn();
+const mockGetArtistPosts = vi.fn();
 const mockValidateAuthContext = vi.fn();
 const mockSelectAccounts = vi.fn();
 const mockCheckAccountArtistAccess = vi.fn();
 
-vi.mock("@/lib/posts/getPosts", () => ({
-  getPosts: (...args: unknown[]) => mockGetPosts(...args),
+vi.mock("@/lib/posts/getArtistPosts", () => ({
+  getArtistPosts: (...args: unknown[]) => mockGetArtistPosts(...args),
 }));
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: (...args: unknown[]) => mockValidateAuthContext(...args),
@@ -30,7 +30,7 @@ function authed(url: string) {
   return new NextRequest(url, { headers: { authorization: "Bearer t" } });
 }
 
-describe("getPostsHandler", () => {
+describe("getArtistPostsHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockValidateAuthContext.mockResolvedValue({
@@ -43,12 +43,12 @@ describe("getPostsHandler", () => {
   });
 
   it("returns 200 with posts envelope on success", async () => {
-    mockGetPosts.mockResolvedValue({
+    mockGetArtistPosts.mockResolvedValue({
       status: "success",
       posts: [{ id: "p1", post_url: "u", updated_at: "t", platform: "INSTAGRAM" }],
       pagination: { total_count: 1, page: 1, limit: 20, total_pages: 1 },
     });
-    const res = await getPostsHandler(
+    const res = await getArtistPostsHandler(
       authed(`https://ex.com/api/artists/${VALID_UUID}/posts`),
       VALID_UUID,
     );
@@ -97,14 +97,14 @@ describe("getPostsHandler", () => {
     ],
   ])("returns %s", async (_label, setup, makeReq, id, expectedStatus) => {
     setup();
-    const res = await getPostsHandler(makeReq(), id);
+    const res = await getArtistPostsHandler(makeReq(), id);
     expect(res.status).toBe(expectedStatus);
-    expect(mockGetPosts).not.toHaveBeenCalled();
+    expect(mockGetArtistPosts).not.toHaveBeenCalled();
   });
 
   it("returns shared error envelope on unexpected error", async () => {
-    mockGetPosts.mockRejectedValue(new Error("boom"));
-    const res = await getPostsHandler(
+    mockGetArtistPosts.mockRejectedValue(new Error("boom"));
+    const res = await getArtistPostsHandler(
       authed(`https://ex.com/api/artists/${VALID_UUID}/posts`),
       VALID_UUID,
     );

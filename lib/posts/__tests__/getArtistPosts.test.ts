@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { getPosts } from "../getPosts";
+import { getArtistPosts } from "../getArtistPosts";
 
 const mockSelectAccountSocials = vi.fn();
 const mockSelectSocialPostsBySocialIds = vi.fn();
@@ -22,14 +22,14 @@ const accountSocial = (id: string, profile_url: string) => ({
   social: { id, profile_url },
 });
 
-describe("getPosts", () => {
+describe("getArtistPosts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("returns empty envelope when artist has no socials", async () => {
     mockSelectAccountSocials.mockResolvedValue([]);
-    const result = await getPosts({ artist_account_id: ARTIST_ID, page: 1, limit: 20 });
+    const result = await getArtistPosts({ artist_account_id: ARTIST_ID, page: 1, limit: 20 });
     expect(result.status).toBe("success");
     expect(result.posts).toEqual([]);
     expect(result.pagination).toEqual({ total_count: 0, page: 1, limit: 20, total_pages: 1 });
@@ -39,7 +39,7 @@ describe("getPosts", () => {
   it("returns empty envelope when socials exist but have no posts", async () => {
     mockSelectAccountSocials.mockResolvedValue([accountSocial("s1", "https://instagram.com/a")]);
     mockSelectSocialPostsBySocialIds.mockResolvedValue([]);
-    const result = await getPosts({ artist_account_id: ARTIST_ID, page: 1, limit: 20 });
+    const result = await getArtistPosts({ artist_account_id: ARTIST_ID, page: 1, limit: 20 });
     expect(result.posts).toEqual([]);
     expect(result.pagination.total_count).toBe(0);
     expect(mockSelectPostsByIds).not.toHaveBeenCalled();
@@ -61,7 +61,7 @@ describe("getPosts", () => {
       { id: "p2", post_url: "u2", updated_at: "t" },
     ]);
 
-    const result = await getPosts({ artist_account_id: ARTIST_ID, page: 1, limit: 2 });
+    const result = await getArtistPosts({ artist_account_id: ARTIST_ID, page: 1, limit: 2 });
     expect(result.pagination).toEqual({ total_count: 3, page: 1, limit: 2, total_pages: 2 });
     expect(mockSelectPostsByIds).toHaveBeenCalledWith(["p1", "p2"]);
     expect(result.posts.map(p => p.platform)).toEqual(["INSTAGRAM", "INSTAGRAM"]);
@@ -71,7 +71,7 @@ describe("getPosts", () => {
     mockSelectAccountSocials.mockResolvedValue([accountSocial("s1", "https://instagram.com/a")]);
     mockSelectSocialPostsBySocialIds.mockResolvedValue([{ post_id: "p1", social_id: "s1" }]);
     mockSelectPostsByIds.mockResolvedValue([]);
-    const result = await getPosts({ artist_account_id: ARTIST_ID, page: 5, limit: 20 });
+    const result = await getArtistPosts({ artist_account_id: ARTIST_ID, page: 5, limit: 20 });
     expect(result.posts).toEqual([]);
     expect(result.pagination.total_count).toBe(1);
     expect(result.pagination.total_pages).toBe(1);
