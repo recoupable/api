@@ -14,15 +14,14 @@ export interface SelectPostsParams {
 export async function selectPosts({ artistAccountId, page, limit }: SelectPostsParams) {
   const offset = (page - 1) * limit;
 
-  const socialIds = artistAccountId ? await selectAccountSocialIds(artistAccountId) : undefined;
-  if (socialIds && socialIds.length === 0) return { posts: [], totalCount: 0 };
+  let query = supabase
+    .from("posts")
+    .select("id, post_url, updated_at, social_posts!inner(social_id)", { count: "exact" });
 
-  const base = supabase.from("posts");
-  const query = socialIds
-    ? base
-        .select("id, post_url, updated_at, social_posts!inner(social_id)", { count: "exact" })
-        .in("social_posts.social_id", socialIds)
-    : base.select("id, post_url, updated_at", { count: "exact" });
+  if (artistAccountId) {
+    const socialIds = await selectAccountSocialIds(artistAccountId);
+    query = query.in("social_posts.social_id", socialIds);
+  }
 
   const { data, error, count } = await query
     .order("updated_at", { ascending: false, nullsFirst: false })
