@@ -1,13 +1,7 @@
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 
-// Socials are always owned by artist accounts (never directly by user accounts),
-// so access is gated entirely through checkAccountArtistAccess against each
-// owning artist — covers direct membership, shared org, and RECOUP_ORG admin.
-//
-// Caller still owns the existence check: selectSocials(id) → 404 stays inline
-// in the validator so the helper only answers the access question. Keeps the
-// helper's contract identical to checkAccountArtistAccess (returns boolean).
+// Social access = access to any owning artist. Caller handles existence (404).
 export async function checkAccountSocialAccess(
   accountId: string,
   socialId: string,
