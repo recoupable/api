@@ -1,33 +1,17 @@
 import supabase from "../serverClient";
 import { selectAccountSocialIds } from "../account_socials/selectAccountSocialIds";
 
-/**
- * Fetches a page of posts, optionally scoped to a given artist account.
- *
- * Artist-scoped path uses intra-helper composition (see
- * `account_sandboxes/selectAccountSandboxes.ts` for the same pattern):
- *   1. `selectAccountSocialIds(artistAccountId)` — indexed on
- *      `account_socials.account_id`.
- *   2. A single DB-joined `posts` query with a 2-deep `!inner` embed on
- *      `social_posts.social_id`, which handles the join, dedup, and
- *      distinct count in one PostgREST round trip.
- *
- * A true single-query 3-deep `!inner` embed
- * (`posts ← social_posts → socials ← account_socials` filtered on
- * `account_id`) is syntactically valid but hits Postgres statement timeout
- * (`57014`) on live data — the planner cannot use the indexes efficiently
- * across that depth. A DB-side view or RPC in `mono/database` would be the
- * correct way to collapse this to one round trip.
- */
-export async function selectPosts({
-  artistAccountId,
-  page,
-  limit,
-}: {
+export interface SelectPostsParams {
   artistAccountId?: string;
   page: number;
   limit: number;
-}) {
+}
+
+/**
+ * Fetches a page of posts. When `artistAccountId` is passed, scopes to
+ * posts linked via `social_posts.social_id` to that artist's socials.
+ */
+export async function selectPosts({ artistAccountId, page, limit }: SelectPostsParams) {
   const offset = (page - 1) * limit;
 
   if (!artistAccountId) {
