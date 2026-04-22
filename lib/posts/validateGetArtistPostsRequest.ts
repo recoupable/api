@@ -13,6 +13,10 @@ export const getArtistPostsParamsSchema = paginationQuerySchema().extend({
 
 export type GetArtistPostsParams = z.infer<typeof getArtistPostsParamsSchema>;
 
+/**
+ * Bundles auth, path-id + query parsing, account existence (404), and
+ * artist-access check (403) so the handler stays a thin orchestration shell.
+ */
 export async function validateGetArtistPostsRequest(
   request: NextRequest,
   id: string,

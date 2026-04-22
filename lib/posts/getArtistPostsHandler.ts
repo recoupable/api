@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { errorResponse } from "@/lib/networking/errorResponse";
-import { getArtistPosts } from "@/lib/supabase/posts/getArtistPosts";
-import { enrichPostWithPlatform } from "@/lib/posts/enrichPostWithPlatform";
+import { selectPosts } from "@/lib/supabase/posts/selectPosts";
 import { validateGetArtistPostsRequest } from "@/lib/posts/validateGetArtistPostsRequest";
+
+function derivePlatform(profileUrl: string): string {
+  if (profileUrl.includes("instagram")) return "INSTAGRAM";
+  if (profileUrl.includes("tiktok")) return "TIKTOK";
+  if (profileUrl.includes("twitter") || profileUrl.includes("x.com")) return "TWITTER";
+  if (profileUrl.includes("spotify")) return "SPOTIFY";
+  return "UNKNOWN";
+}
 
 /**
  * Handler for GET /api/artists/{id}/posts.
@@ -18,15 +25,23 @@ export async function getArtistPostsHandler(
       return validated;
     }
 
-    const { posts, totalCount } = await getArtistPosts({
+    const { posts, totalCount } = await selectPosts({
       artistAccountId: validated.artist_account_id,
       page: validated.page,
       limit: validated.limit,
     });
 
-    const enriched = posts.map(post => {
-      const { social_posts: _sp, ...rest } = enrichPostWithPlatform(post);
-      return rest;
+    const enriched = (
+      posts as Array<
+        {
+          social_posts?: Array<{ social?: { profile_url?: string | null } | null } | null> | null;
+        } & Record<string, unknown>
+      >
+    ).map(post => {
+      const { social_posts, ...rest } = post;
+      const firstUrl =
+        (social_posts ?? []).map(sp => sp?.social?.profile_url ?? "").find(Boolean) ?? "";
+      return { ...rest, platform: derivePlatform(firstUrl) };
     });
 
     return NextResponse.json(

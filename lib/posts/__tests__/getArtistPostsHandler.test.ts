@@ -3,13 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getArtistPostsHandler } from "../getArtistPostsHandler";
 
-const mockGetArtistPosts = vi.fn();
+const mockSelectPosts = vi.fn();
 const mockValidateAuthContext = vi.fn();
 const mockSelectAccounts = vi.fn();
 const mockCheckAccountArtistAccess = vi.fn();
 
-vi.mock("@/lib/supabase/posts/getArtistPosts", () => ({
-  getArtistPosts: (...args: unknown[]) => mockGetArtistPosts(...args),
+vi.mock("@/lib/supabase/posts/selectPosts", () => ({
+  selectPosts: (...args: unknown[]) => mockSelectPosts(...args),
 }));
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: (...args: unknown[]) => mockValidateAuthContext(...args),
@@ -43,7 +43,7 @@ describe("getArtistPostsHandler", () => {
   });
 
   it("returns 200 with platform-enriched envelope and strips embed", async () => {
-    mockGetArtistPosts.mockResolvedValue({
+    mockSelectPosts.mockResolvedValue({
       posts: [
         {
           id: "p1",
@@ -66,6 +66,31 @@ describe("getArtistPostsHandler", () => {
       posts: [{ id: "p1", post_url: "u", updated_at: "t", platform: "INSTAGRAM" }],
       pagination: { total_count: 1, page: 1, limit: 20, total_pages: 1 },
     });
+    expect(body.posts[0]).not.toHaveProperty("social_posts");
+  });
+
+  it.each([
+    ["https://instagram.com/a", "INSTAGRAM"],
+    ["https://tiktok.com/@a", "TIKTOK"],
+    ["https://x.com/a", "TWITTER"],
+    ["https://open.spotify.com/artist/a", "SPOTIFY"],
+    ["https://unmapped.example.com/a", "UNKNOWN"],
+  ])("derives platform %s -> %s", async (profileUrl, expected) => {
+    mockSelectPosts.mockResolvedValue({
+      posts: [
+        {
+          id: "p1",
+          social_posts: [{ social: { profile_url: profileUrl } }],
+        },
+      ],
+      totalCount: 1,
+    });
+    const res = await getArtistPostsHandler(
+      authed(`https://ex.com/api/artists/${VALID_UUID}/posts`),
+      VALID_UUID,
+    );
+    const body = await res.json();
+    expect(body.posts[0].platform).toBe(expected);
     expect(body.posts[0]).not.toHaveProperty("social_posts");
   });
 
@@ -110,11 +135,11 @@ describe("getArtistPostsHandler", () => {
     setup();
     const res = await getArtistPostsHandler(makeReq(), id);
     expect(res.status).toBe(expectedStatus);
-    expect(mockGetArtistPosts).not.toHaveBeenCalled();
+    expect(mockSelectPosts).not.toHaveBeenCalled();
   });
 
   it("returns shared error envelope on unexpected error", async () => {
-    mockGetArtistPosts.mockRejectedValue(new Error("boom"));
+    mockSelectPosts.mockRejectedValue(new Error("boom"));
     const res = await getArtistPostsHandler(
       authed(`https://ex.com/api/artists/${VALID_UUID}/posts`),
       VALID_UUID,

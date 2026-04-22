@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import supabase from "../../serverClient";
-import { getArtistPosts } from "../getArtistPosts";
+import { selectPosts } from "../selectPosts";
 
 vi.mock("../../serverClient", () => ({
   default: { from: vi.fn() },
@@ -8,12 +8,12 @@ vi.mock("../../serverClient", () => ({
 
 const ARTIST_ID = "11111111-1111-4111-8111-111111111111";
 
-describe("getArtistPosts", () => {
+describe("selectPosts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns paginated posts with inner-join filter and distinct count", async () => {
+  it("returns paginated posts with inner-join filter and distinct count when artistAccountId is provided", async () => {
     const postRow = {
       id: "p1",
       updated_at: "t",
@@ -31,7 +31,7 @@ describe("getArtistPosts", () => {
       .mockReturnValueOnce({ select: rowsSelect } as never)
       .mockReturnValueOnce({ select: countSelect } as never);
 
-    const result = await getArtistPosts({ artistAccountId: ARTIST_ID, page: 2, limit: 5 });
+    const result = await selectPosts({ artistAccountId: ARTIST_ID, page: 2, limit: 5 });
 
     expect(supabase.from).toHaveBeenNthCalledWith(1, "posts");
     expect(rowsEq).toHaveBeenCalledWith(
@@ -44,6 +44,30 @@ describe("getArtistPosts", () => {
       head: true,
     });
     expect(result).toEqual({ posts: [postRow], totalCount: 7 });
+  });
+
+  it("issues a plain posts query when artistAccountId is absent", async () => {
+    const postRow = { id: "p1", updated_at: "t" };
+    const rangeMock = vi.fn().mockResolvedValue({ data: [postRow], error: null });
+    const orderMock = vi.fn().mockReturnValue({ range: rangeMock });
+    const rowsSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+    const countSelect = vi.fn().mockResolvedValue({ count: 3, error: null });
+
+    vi.mocked(supabase.from)
+      .mockReturnValueOnce({ select: rowsSelect } as never)
+      .mockReturnValueOnce({ select: countSelect } as never);
+
+    const result = await selectPosts({ page: 1, limit: 10 });
+
+    expect(rowsSelect).toHaveBeenCalledWith("*");
+    expect(orderMock).toHaveBeenCalledWith("updated_at", {
+      ascending: false,
+      nullsFirst: false,
+    });
+    expect(rangeMock).toHaveBeenCalledWith(0, 9);
+    expect(countSelect).toHaveBeenCalledWith("id", { count: "exact", head: true });
+    expect(result).toEqual({ posts: [postRow], totalCount: 3 });
   });
 
   it("throws when the rows query errors", async () => {
@@ -60,8 +84,8 @@ describe("getArtistPosts", () => {
         }),
       } as never);
 
-    await expect(
-      getArtistPosts({ artistAccountId: ARTIST_ID, page: 1, limit: 10 }),
-    ).rejects.toThrow(/Failed to fetch artist posts/);
+    await expect(selectPosts({ artistAccountId: ARTIST_ID, page: 1, limit: 10 })).rejects.toThrow(
+      /Failed to fetch artist posts/,
+    );
   });
 });
