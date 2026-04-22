@@ -4,8 +4,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { validationErrorResponse } from "@/lib/zod/validationErrorResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectSocials } from "@/lib/supabase/socials/selectSocials";
-import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
-import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
+import { checkAccountSocialAccess } from "@/lib/socials/checkAccountSocialAccess";
 
 export const postSocialScrapeParamsSchema = z.object({
   social_id: z.string().uuid("social_id must be a valid UUID"),
@@ -33,20 +32,7 @@ export async function validatePostSocialScrapeRequest(
     return errorResponse(`Social profile not found for id: ${social_id}`, 404);
   }
 
-  // Socials are always owned by artist accounts (never directly by user accounts),
-  // so access is gated entirely through checkAccountArtistAccess against each
-  // owning artist — covers direct membership, shared org, and RECOUP_ORG admin.
-  const links = await selectAccountSocials({ socialId: social_id, limit: 10000 });
-  const owningArtistIds = links.map(l => l.account_id).filter((v): v is string => Boolean(v));
-
-  const hasAccess =
-    owningArtistIds.length > 0 &&
-    (
-      await Promise.all(
-        owningArtistIds.map(artistId => checkAccountArtistAccess(authResult.accountId, artistId)),
-      )
-    ).some(Boolean);
-
+  const hasAccess = await checkAccountSocialAccess(authResult.accountId, social_id);
   if (!hasAccess) {
     return errorResponse("Unauthorized social scrape attempt", 403);
   }
