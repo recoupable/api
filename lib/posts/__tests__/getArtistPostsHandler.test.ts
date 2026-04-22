@@ -8,7 +8,7 @@ const mockValidateAuthContext = vi.fn();
 const mockSelectAccounts = vi.fn();
 const mockCheckAccountArtistAccess = vi.fn();
 
-vi.mock("@/lib/posts/getArtistPosts", () => ({
+vi.mock("@/lib/supabase/posts/getArtistPosts", () => ({
   getArtistPosts: (...args: unknown[]) => mockGetArtistPosts(...args),
 }));
 vi.mock("@/lib/auth/validateAuthContext", () => ({
@@ -42,11 +42,17 @@ describe("getArtistPostsHandler", () => {
     mockCheckAccountArtistAccess.mockResolvedValue(true);
   });
 
-  it("returns 200 with posts envelope on success", async () => {
+  it("returns 200 with platform-enriched envelope and strips embed", async () => {
     mockGetArtistPosts.mockResolvedValue({
-      status: "success",
-      posts: [{ id: "p1", post_url: "u", updated_at: "t", platform: "INSTAGRAM" }],
-      pagination: { total_count: 1, page: 1, limit: 20, total_pages: 1 },
+      posts: [
+        {
+          id: "p1",
+          post_url: "u",
+          updated_at: "t",
+          social_posts: [{ social: { profile_url: "https://instagram.com/a" } }],
+        },
+      ],
+      totalCount: 1,
     });
     const res = await getArtistPostsHandler(
       authed(`https://ex.com/api/artists/${VALID_UUID}/posts`),
@@ -55,7 +61,12 @@ describe("getArtistPostsHandler", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
     const body = await res.json();
-    expect(body.posts).toHaveLength(1);
+    expect(body).toEqual({
+      status: "success",
+      posts: [{ id: "p1", post_url: "u", updated_at: "t", platform: "INSTAGRAM" }],
+      pagination: { total_count: 1, page: 1, limit: 20, total_pages: 1 },
+    });
+    expect(body.posts[0]).not.toHaveProperty("social_posts");
   });
 
   it.each([
