@@ -14,26 +14,21 @@ export interface SelectPostsParams {
 export async function selectPosts({ artistAccountId, page, limit }: SelectPostsParams) {
   const offset = (page - 1) * limit;
 
-  if (!artistAccountId) {
-    const { data, error, count } = await supabase
-      .from("posts")
-      .select("id, post_url, updated_at", { count: "exact" })
-      .order("updated_at", { ascending: false, nullsFirst: false })
-      .range(offset, offset + limit - 1);
+  const socialIds = artistAccountId ? await selectAccountSocialIds(artistAccountId) : undefined;
+  if (socialIds && socialIds.length === 0) return { posts: [], totalCount: 0 };
 
-    if (error) throw new Error(`Failed to fetch posts: ${error.message}`);
-    return { posts: data ?? [], totalCount: count ?? 0 };
-  }
-
-  const socialIds = await selectAccountSocialIds(artistAccountId);
-  if (socialIds.length === 0) return { posts: [], totalCount: 0 };
-
-  const { data, error, count } = await supabase
+  let query = supabase
     .from("posts")
-    .select("id, post_url, updated_at, social_posts!inner(social_id)", {
-      count: "exact",
-    })
-    .in("social_posts.social_id", socialIds)
+    .select(
+      socialIds
+        ? "id, post_url, updated_at, social_posts!inner(social_id)"
+        : "id, post_url, updated_at",
+      { count: "exact" },
+    );
+
+  if (socialIds) query = query.in("social_posts.social_id", socialIds);
+
+  const { data, error, count } = await query
     .order("updated_at", { ascending: false, nullsFirst: false })
     .range(offset, offset + limit - 1);
 

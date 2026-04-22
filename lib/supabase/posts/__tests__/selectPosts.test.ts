@@ -53,7 +53,7 @@ describe("selectPosts", () => {
   });
 
   it("with artistAccountId: resolves socials then runs inner-joined posts query", async () => {
-    vi.mocked(selectAccountSocialIds).mockResolvedValueOnce(SOCIAL_IDS);
+    vi.mocked(selectAccountSocialIds).mockResolvedValue(SOCIAL_IDS);
     const m = mockJoinedChain({ data: [POST_WITH_EMBED], error: null, count: 7 });
     vi.mocked(supabase.from).mockReturnValueOnce({ select: m.select } as never);
 
@@ -69,7 +69,7 @@ describe("selectPosts", () => {
   });
 
   it("short-circuits when the artist has no linked socials", async () => {
-    vi.mocked(selectAccountSocialIds).mockResolvedValueOnce([]);
+    vi.mocked(selectAccountSocialIds).mockResolvedValue([]);
 
     const result = await selectPosts({ artistAccountId: ARTIST_ID, page: 1, limit: 10 });
 
@@ -78,7 +78,7 @@ describe("selectPosts", () => {
   });
 
   it("throws when the joined query errors", async () => {
-    vi.mocked(selectAccountSocialIds).mockResolvedValueOnce(SOCIAL_IDS);
+    vi.mocked(selectAccountSocialIds).mockResolvedValue(SOCIAL_IDS);
     const m = mockJoinedChain({
       data: null as unknown as (typeof POST_WITH_EMBED)[],
       error: { message: "boom" },
