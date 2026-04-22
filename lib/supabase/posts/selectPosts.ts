@@ -1,19 +1,16 @@
 import supabase from "../serverClient";
+import { selectAccountSocialIds } from "../account_socials/selectAccountSocialIds";
 
 /**
  * Fetches a page of posts, optionally scoped to a given artist account.
  *
- * Single PostgREST round trip via nested inner-joined embeds:
- *   posts ← social_posts!inner → socials!inner → account_socials!inner
+ * Artist-scoped path uses a single DB-side joined query via 2-deep
+ * `!inner` embed: `posts` inner-joined to `social_posts` filtered by the
+ * artist's `social_id`s. PostgREST returns each parent post once and
+ * `count: "exact"` yields the distinct post count — no client-side dedup.
  *
- * PostgREST returns parent `posts` rows once with their matching children
- * nested underneath, so `count: "exact"` correctly counts distinct posts and
- * no client-side dedup is needed. The embedded children are stripped before
- * returning.
- *
- * A companion DB view (`public.artist_posts`) will reduce this to a flat
- * single-table query once the `create_artist_posts_view` migration
- * (`mono/database` submodule) deploys — tracked separately.
+ * 3-deep `!inner` filter paths (`social_posts.socials.account_socials.account_id`)
+ * return 500 at runtime, so we resolve `social_id`s separately first.
  */
 export async function selectPosts({
   artistAccountId,
@@ -37,13 +34,15 @@ export async function selectPosts({
     return { posts: data ?? [], totalCount: count ?? 0 };
   }
 
+  const socialIds = await selectAccountSocialIds(artistAccountId);
+  if (socialIds.length === 0) return { posts: [], totalCount: 0 };
+
   const { data, error, count } = await supabase
     .from("posts")
-    .select(
-      "id, post_url, updated_at, social_posts!inner(socials!inner(account_socials!inner(account_id)))",
-      { count: "exact" },
-    )
-    .eq("social_posts.socials.account_socials.account_id", artistAccountId)
+    .select("id, post_url, updated_at, social_posts!inner(social_id)", {
+      count: "exact",
+    })
+    .in("social_posts.social_id", socialIds)
     .order("updated_at", { ascending: false, nullsFirst: false })
     .range(offset, offset + limit - 1);
 
