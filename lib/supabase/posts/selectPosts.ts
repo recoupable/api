@@ -1,6 +1,11 @@
 import supabase from "../serverClient";
+import { selectAccountSocialIds } from "../account_socials/selectAccountSocialIds";
 
 /**
+ * Two-query approach: resolve the artist's social_ids first, then filter
+ * posts via the single-level `social_posts.social_id` join. A 3-deep nested
+ * `!inner` chain with PostgREST filter paths produced 500s on the preview.
+ *
  * Distinct-count requires a separate head-only query because `count: "exact"`
  * over a `!inner` join counts joined-row cardinality, not unique posts.
  */
@@ -15,24 +20,27 @@ export async function selectPosts({
 }) {
   const offset = (page - 1) * limit;
 
+  let socialIds: string[] | undefined;
+  if (artistAccountId) {
+    socialIds = await selectAccountSocialIds(artistAccountId);
+    if (socialIds.length === 0) {
+      return { posts: [], totalCount: 0 };
+    }
+  }
+
   let rowsQuery = supabase
     .from("posts")
-    .select(
-      "id, post_url, updated_at, social_posts!inner(socials!inner(account_socials!inner(account_id)))",
-    )
+    .select("id, post_url, updated_at, social_posts!inner(social_id)")
     .order("updated_at", { ascending: false, nullsFirst: false })
     .range(offset, offset + limit - 1);
 
   let countQuery = supabase
     .from("posts")
-    .select("id, social_posts!inner(socials!inner(account_socials!inner(account_id)))", {
-      count: "exact",
-      head: true,
-    });
+    .select("id, social_posts!inner(social_id)", { count: "exact", head: true });
 
-  if (artistAccountId) {
-    rowsQuery = rowsQuery.eq("social_posts.socials.account_socials.account_id", artistAccountId);
-    countQuery = countQuery.eq("social_posts.socials.account_socials.account_id", artistAccountId);
+  if (socialIds) {
+    rowsQuery = rowsQuery.in("social_posts.social_id", socialIds);
+    countQuery = countQuery.in("social_posts.social_id", socialIds);
   }
 
   const [rowsResult, countResult] = await Promise.all([rowsQuery, countQuery]);
