@@ -22,7 +22,7 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
       return validatedBody;
     }
 
-    const socials = await selectAccountSocials(validatedBody.artist_account_id);
+    const socials = await selectAccountSocials({ accountId: validatedBody.artist_account_id });
 
     if (!socials.length) {
       return NextResponse.json([], {
