@@ -42,16 +42,9 @@ describe("getArtistPostsHandler", () => {
     mockCheckAccountArtistAccess.mockResolvedValue(true);
   });
 
-  it("returns 200 with platform-enriched envelope and strips embed", async () => {
+  it("returns 200 with posts passed through as-is", async () => {
     mockSelectPosts.mockResolvedValue({
-      posts: [
-        {
-          id: "p1",
-          post_url: "u",
-          updated_at: "t",
-          social_posts: [{ social: { profile_url: "https://instagram.com/a" } }],
-        },
-      ],
+      posts: [{ id: "p1", post_url: "u", updated_at: "t" }],
       totalCount: 1,
     });
     const res = await getArtistPostsHandler(
@@ -63,35 +56,9 @@ describe("getArtistPostsHandler", () => {
     const body = await res.json();
     expect(body).toEqual({
       status: "success",
-      posts: [{ id: "p1", post_url: "u", updated_at: "t", platform: "INSTAGRAM" }],
+      posts: [{ id: "p1", post_url: "u", updated_at: "t" }],
       pagination: { total_count: 1, page: 1, limit: 20, total_pages: 1 },
     });
-    expect(body.posts[0]).not.toHaveProperty("social_posts");
-  });
-
-  it.each([
-    ["https://instagram.com/a", "INSTAGRAM"],
-    ["https://tiktok.com/@a", "TIKTOK"],
-    ["https://x.com/a", "TWITTER"],
-    ["https://open.spotify.com/artist/a", "SPOTIFY"],
-    ["https://unmapped.example.com/a", "UNKNOWN"],
-  ])("derives platform %s -> %s", async (profileUrl, expected) => {
-    mockSelectPosts.mockResolvedValue({
-      posts: [
-        {
-          id: "p1",
-          social_posts: [{ social: { profile_url: profileUrl } }],
-        },
-      ],
-      totalCount: 1,
-    });
-    const res = await getArtistPostsHandler(
-      authed(`https://ex.com/api/artists/${VALID_UUID}/posts`),
-      VALID_UUID,
-    );
-    const body = await res.json();
-    expect(body.posts[0].platform).toBe(expected);
-    expect(body.posts[0]).not.toHaveProperty("social_posts");
   });
 
   it.each([
