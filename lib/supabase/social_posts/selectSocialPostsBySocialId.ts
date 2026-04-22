@@ -1,6 +1,11 @@
 import supabase from "../serverClient";
 
-export async function selectSocialPostsWithPosts({
+/**
+ * Project-only query (no embed join) so the helper composes with the shared
+ * `selectPostsByIds` + `enrichPostsWithPlatform` pipeline used by other
+ * post-returning endpoints (e.g. /api/artists/{id}/posts).
+ */
+export async function selectSocialPostsBySocialId({
   social_id,
   offset,
   limit,
@@ -11,12 +16,9 @@ export async function selectSocialPostsWithPosts({
   limit: number;
   latestFirst: boolean;
 }) {
-  // Order on social_posts.updated_at (not posts.updated_at) to match legacy
-  // Express behavior — the embedded post.updated_at often mirrors it but they
-  // are different columns and only sorting the outer row is safe.
   const { data, error } = await supabase
     .from("social_posts")
-    .select("id, post_id, social_id, updated_at, post:posts(id, post_url, updated_at)")
+    .select("post_id, social_id, updated_at")
     .eq("social_id", social_id)
     .order("updated_at", { ascending: !latestFirst })
     .range(offset, offset + limit - 1);

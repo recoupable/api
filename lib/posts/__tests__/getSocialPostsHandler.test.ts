@@ -22,7 +22,15 @@ const SOCIAL_ID = "11111111-1111-4111-8111-111111111111";
 const validated = { social_id: SOCIAL_ID, latestFirst: true, page: 1, limit: 20 };
 const okBody = {
   status: "success" as const,
-  posts: [{ id: "sp1", post_id: "p1", social_id: SOCIAL_ID, post_url: "u", updated_at: "t" }],
+  posts: [
+    {
+      id: "p1",
+      post_url: "https://instagram.com/p/abc",
+      updated_at: "t",
+      platform: "INSTAGRAM",
+      social_id: SOCIAL_ID,
+    },
+  ],
   pagination: { total_count: 1, page: 1, limit: 20, total_pages: 1 },
 };
 
