@@ -18,21 +18,21 @@ export async function selectPosts({
   let rowsQuery = supabase
     .from("posts")
     .select(
-      "*, social_posts!inner(social:socials!inner(profile_url, account_socials!inner(account_id)))",
+      "id, post_url, updated_at, social_posts!inner(socials!inner(account_socials!inner(account_id)))",
     )
     .order("updated_at", { ascending: false, nullsFirst: false })
     .range(offset, offset + limit - 1);
 
   let countQuery = supabase
     .from("posts")
-    .select("id, social_posts!inner(social:socials!inner(account_socials!inner(account_id)))", {
+    .select("id, social_posts!inner(socials!inner(account_socials!inner(account_id)))", {
       count: "exact",
       head: true,
     });
 
   if (artistAccountId) {
-    rowsQuery = rowsQuery.eq("social_posts.social.account_socials.account_id", artistAccountId);
-    countQuery = countQuery.eq("social_posts.social.account_socials.account_id", artistAccountId);
+    rowsQuery = rowsQuery.eq("social_posts.socials.account_socials.account_id", artistAccountId);
+    countQuery = countQuery.eq("social_posts.socials.account_socials.account_id", artistAccountId);
   }
 
   const [rowsResult, countResult] = await Promise.all([rowsQuery, countQuery]);
@@ -44,8 +44,10 @@ export async function selectPosts({
     throw new Error(`Failed to count posts: ${countResult.error.message}`);
   }
 
+  const posts = (rowsResult.data ?? []).map(({ social_posts: _embed, ...rest }) => rest);
+
   return {
-    posts: rowsResult.data ?? [],
+    posts,
     totalCount: countResult.count ?? 0,
   };
 }

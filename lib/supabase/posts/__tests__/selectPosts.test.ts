@@ -5,9 +5,10 @@ import { selectPosts } from "../selectPosts";
 vi.mock("../../serverClient", () => ({ default: { from: vi.fn() } }));
 
 const ARTIST_ID = "11111111-1111-4111-8111-111111111111";
-const ROW = { id: "p1", updated_at: "t" };
-const ARTIST_COL = "social_posts.social.account_socials.account_id";
-const JOIN_CHAIN = "account_socials!inner";
+const ROW = { id: "p1", post_url: "https://x.example/p/1", updated_at: "t", social_posts: [{}] };
+const CLEAN = { id: "p1", post_url: "https://x.example/p/1", updated_at: "t" };
+const ARTIST_COL = "social_posts.socials.account_socials.account_id";
+const JOIN_CHAIN = "social_posts!inner(socials!inner(account_socials!inner(account_id)))";
 
 function mockRows(result: { data: unknown; error: { message: string } | null }) {
   const thenable = { then: (fn: (r: typeof result) => unknown) => fn(result) };
@@ -46,7 +47,8 @@ describe("selectPosts", () => {
     expect(rows.range).toHaveBeenCalledWith(0, 9);
     expect(rows.eq).not.toHaveBeenCalled();
     expect(count.eq).not.toHaveBeenCalled();
-    expect(result).toEqual({ posts: [ROW], totalCount: 3 });
+    expect(result).toEqual({ posts: [CLEAN], totalCount: 3 });
+    expect(result.posts[0]).not.toHaveProperty("social_posts");
   });
 
   it("applies artistAccountId filter with join chain and distinct count", async () => {
@@ -62,7 +64,8 @@ describe("selectPosts", () => {
     });
     expect(count.eq).toHaveBeenCalledWith(ARTIST_COL, ARTIST_ID);
     expect(rows.range).toHaveBeenCalledWith(5, 9);
-    expect(result).toEqual({ posts: [ROW], totalCount: 7 });
+    expect(result).toEqual({ posts: [CLEAN], totalCount: 7 });
+    expect(result.posts[0]).not.toHaveProperty("social_posts");
   });
 
   it("throws when the rows query errors", async () => {
