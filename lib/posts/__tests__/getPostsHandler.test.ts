@@ -102,7 +102,7 @@ describe("getPostsHandler", () => {
     expect(mockGetPosts).not.toHaveBeenCalled();
   });
 
-  it("returns 500 envelope with empty pagination on unexpected error", async () => {
+  it("returns shared error envelope on unexpected error", async () => {
     mockGetPosts.mockRejectedValue(new Error("boom"));
     const res = await getPostsHandler(
       authed(`https://ex.com/api/artists/${VALID_UUID}/posts`),
@@ -110,9 +110,6 @@ describe("getPostsHandler", () => {
     );
     expect(res.status).toBe(500);
     const body = await res.json();
-    expect(body.status).toBe("error");
-    expect(body.error).toBe("Internal server error");
-    expect(body.posts).toEqual([]);
-    expect(body.pagination).toEqual({ total_count: 0, page: 1, limit: 20, total_pages: 0 });
+    expect(body).toEqual({ status: "error", error: "Internal server error" });
   });
 });

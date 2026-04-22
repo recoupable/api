@@ -6,14 +6,6 @@ import type { GetPostsParams } from "@/lib/posts/validateGetPostsRequest";
 
 const MAX_SOCIALS_PER_ARTIST = 10000;
 
-function emptyResponse(page: number, limit: number) {
-  return {
-    status: "success" as const,
-    posts: [] as Array<Record<string, unknown>>,
-    pagination: { total_count: 0, page, limit, total_pages: 1 },
-  };
-}
-
 /**
  * Dedup + slice + fetch-by-id is preserved from the Express source to keep
  * `pagination.total_count` byte-identical across migrations; a DB-side
@@ -29,11 +21,23 @@ export async function getPosts({ artist_account_id, page, limit }: GetPostsParam
     .map(row => row.social)
     .filter((s): s is NonNullable<typeof s> => !!s);
 
-  if (!socials.length) return emptyResponse(page, limit);
+  if (!socials.length) {
+    return {
+      status: "success" as const,
+      posts: [] as Array<Record<string, unknown>>,
+      pagination: { total_count: 0, page, limit, total_pages: 1 },
+    };
+  }
 
   const socialIds = socials.map(s => s.id);
   const socialPosts = await selectSocialPostsBySocialIds(socialIds);
-  if (!socialPosts.length) return emptyResponse(page, limit);
+  if (!socialPosts.length) {
+    return {
+      status: "success" as const,
+      posts: [] as Array<Record<string, unknown>>,
+      pagination: { total_count: 0, page, limit, total_pages: 1 },
+    };
+  }
 
   const uniquePostIds = Array.from(
     new Set(socialPosts.map(sp => sp.post_id).filter((id): id is string => !!id)),

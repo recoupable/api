@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { getPosts } from "@/lib/posts/getPosts";
 import { validateGetPostsRequest } from "@/lib/posts/validateGetPostsRequest";
 
@@ -17,14 +18,6 @@ export async function getPostsHandler(request: NextRequest, id: string): Promise
     return NextResponse.json(result, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
     console.error("[ERROR] getPostsHandler:", error);
-    return NextResponse.json(
-      {
-        status: "error",
-        error: "Internal server error",
-        posts: [],
-        pagination: { total_count: 0, page: 1, limit: 20, total_pages: 0 },
-      },
-      { status: 500, headers: getCorsHeaders() },
-    );
+    return errorResponse("Internal server error", 500);
   }
 }
