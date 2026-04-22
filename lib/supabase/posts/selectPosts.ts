@@ -1,13 +1,19 @@
 import supabase from "../serverClient";
-import { selectAccountSocialIds } from "../account_socials/selectAccountSocialIds";
-
-const SOCIAL_ID_CHUNK_SIZE = 100;
 
 /**
- * Artist-filtered path resolves social_ids → distinct post_ids via
- * `social_posts`, then fetches the paginated slice from `posts` by id.
- * Embedded-filter joins (`social_posts.social_id in (...)`) returned empty
- * or 500 on the preview; this flat approach is empirically reliable.
+ * Fetches a page of posts, optionally scoped to a given artist account.
+ *
+ * Single PostgREST round trip via nested inner-joined embeds:
+ *   posts ← social_posts!inner → socials!inner → account_socials!inner
+ *
+ * PostgREST returns parent `posts` rows once with their matching children
+ * nested underneath, so `count: "exact"` correctly counts distinct posts and
+ * no client-side dedup is needed. The embedded children are stripped before
+ * returning.
+ *
+ * A companion DB view (`public.artist_posts`) will reduce this to a flat
+ * single-table query once the `create_artist_posts_view` migration
+ * (`mono/database` submodule) deploys — tracked separately.
  */
 export async function selectPosts({
   artistAccountId,
@@ -28,55 +34,26 @@ export async function selectPosts({
       .range(offset, offset + limit - 1);
 
     if (error) throw new Error(`Failed to fetch posts: ${error.message}`);
-
     return { posts: data ?? [], totalCount: count ?? 0 };
   }
 
-  const socialIds = await selectAccountSocialIds(artistAccountId);
-  if (socialIds.length === 0) return { posts: [], totalCount: 0 };
-
-  const postIds = await selectDistinctPostIdsForSocials(socialIds);
-  if (postIds.length === 0) return { posts: [], totalCount: 0 };
-
-  const pageIds = postIds.slice(offset, offset + limit);
-  if (pageIds.length === 0) return { posts: [], totalCount: postIds.length };
-
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from("posts")
-    .select("id, post_url, updated_at")
-    .in("id", pageIds)
-    .order("updated_at", { ascending: false, nullsFirst: false });
+    .select(
+      "id, post_url, updated_at, social_posts!inner(socials!inner(account_socials!inner(account_id)))",
+      { count: "exact" },
+    )
+    .eq("social_posts.socials.account_socials.account_id", artistAccountId)
+    .order("updated_at", { ascending: false, nullsFirst: false })
+    .range(offset, offset + limit - 1);
 
   if (error) throw new Error(`Failed to fetch posts: ${error.message}`);
 
-  return { posts: data ?? [], totalCount: postIds.length };
-}
+  const posts = (data ?? []).map(row => ({
+    id: row.id,
+    post_url: row.post_url,
+    updated_at: row.updated_at,
+  }));
 
-/**
- * Returns distinct post_ids for the given socials, ordered by social_posts
- * `updated_at desc` so pagination slice reflects recency.
- */
-async function selectDistinctPostIdsForSocials(socialIds: string[]): Promise<string[]> {
-  const seen = new Set<string>();
-  const ordered: string[] = [];
-
-  for (let i = 0; i < socialIds.length; i += SOCIAL_ID_CHUNK_SIZE) {
-    const chunk = socialIds.slice(i, i + SOCIAL_ID_CHUNK_SIZE);
-    const { data, error } = await supabase
-      .from("social_posts")
-      .select("post_id, updated_at")
-      .in("social_id", chunk)
-      .order("updated_at", { ascending: false, nullsFirst: false });
-
-    if (error) throw new Error(`Failed to fetch social_posts: ${error.message}`);
-
-    for (const row of data ?? []) {
-      if (row.post_id && !seen.has(row.post_id)) {
-        seen.add(row.post_id);
-        ordered.push(row.post_id);
-      }
-    }
-  }
-
-  return ordered;
+  return { posts, totalCount: count ?? 0 };
 }
