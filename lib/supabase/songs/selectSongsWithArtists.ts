@@ -15,7 +15,7 @@ export async function selectSongsWithArtists(params: SelectSongsWithArtistsParam
       album,
       notes,
       updated_at,
-      song_artists (
+      song_artists!inner (
         artist,
         accounts!inner (
           id,
