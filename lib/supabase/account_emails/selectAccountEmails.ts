@@ -2,39 +2,40 @@ import supabase from "@/lib/supabase/serverClient";
 import type { Tables } from "@/types/database.types";
 
 /**
- * Select account_emails by email addresses and/or account IDs
- *
- * @param params - The parameters for the query
- * @param params.emails - Optional array of email addresses to query
- * @param params.accountIds - Optional array of account IDs to query
- * @returns Array of account_emails rows
+ * Select account_emails by email addresses, account IDs, and/or a domain
+ * substring (ilike `%@<domain>%` — matches the legacy behavior that also hits
+ * `user+tag@<domain>.anything`).
  */
 export default async function selectAccountEmails({
   emails,
   accountIds,
+  domain,
 }: {
   emails?: string[];
   accountIds?: string | string[];
+  domain?: string;
 }): Promise<Tables<"account_emails">[]> {
   let query = supabase.from("account_emails").select("*");
 
-  // Build query based on provided parameters
   const ids = accountIds ? (Array.isArray(accountIds) ? accountIds : [accountIds]) : [];
   const hasEmails = Array.isArray(emails) && emails.length > 0;
   const hasAccountIds = ids.length > 0;
+  const hasDomain = typeof domain === "string" && domain.length > 0;
 
-  // If neither parameter is provided, return empty array
-  if (!hasEmails && !hasAccountIds) {
+  if (!hasEmails && !hasAccountIds && !hasDomain) {
     return [];
   }
 
-  // Apply filters
   if (hasEmails) {
     query = query.in("email", emails);
   }
 
   if (hasAccountIds) {
     query = query.in("account_id", ids);
+  }
+
+  if (hasDomain) {
+    query = query.ilike("email", `%@${domain}%`);
   }
 
   const { data, error } = await query;

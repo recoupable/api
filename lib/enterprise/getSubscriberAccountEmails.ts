@@ -1,5 +1,5 @@
 import { getActiveSubscriptions } from "@/lib/stripe/getActiveSubscriptions";
-import { selectAccountEmailsByAccountIds } from "@/lib/supabase/account_emails/selectAccountEmailsByAccountIds";
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
 /**
  * Resolve subscriber account_ids from Stripe subscription metadata and look
@@ -14,5 +14,7 @@ export async function getSubscriberAccountEmails() {
     .map(subscription => subscription.metadata?.accountId)
     .filter((accountId): accountId is string => Boolean(accountId));
 
-  return selectAccountEmailsByAccountIds(accountIds);
+  if (accountIds.length === 0) return [];
+
+  return selectAccountEmails({ accountIds });
 }

@@ -1,5 +1,5 @@
 import { ENTERPRISE_DOMAINS } from "@/lib/enterprise/consts";
-import { selectAccountEmailsByDomain } from "@/lib/supabase/account_emails/selectAccountEmailsByDomain";
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
 /**
  * Fan-out an ilike query per enterprise domain in parallel and flatten the
@@ -8,7 +8,7 @@ import { selectAccountEmailsByDomain } from "@/lib/supabase/account_emails/selec
  */
 export async function getAllEnterpriseAccounts() {
   const emailArrays = await Promise.all(
-    Array.from(ENTERPRISE_DOMAINS).map(domain => selectAccountEmailsByDomain(domain)),
+    Array.from(ENTERPRISE_DOMAINS).map(domain => selectAccountEmails({ domain })),
   );
   return emailArrays.flat();
 }
