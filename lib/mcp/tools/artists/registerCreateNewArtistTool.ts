@@ -5,7 +5,6 @@ import { z } from "zod";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import { createArtistInDb, type CreateArtistResult } from "@/lib/artists/createArtistInDb";
-import { copyRoom } from "@/lib/rooms/copyRoom";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 
@@ -44,7 +43,6 @@ export type CreateNewArtistResult = {
   artistAccountId?: string;
   message: string;
   error?: string;
-  newRoomId?: string | null;
 };
 
 /**
@@ -71,7 +69,7 @@ export function registerCreateNewArtistTool(server: McpServer): void {
       extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
     ) => {
       try {
-        const { name, account_id, active_conversation_id, organization_id } = args;
+        const { name, account_id, organization_id } = args;
 
         // Resolve accountId from auth or use provided account_id
         const authInfo = extra.authInfo as McpAuthInfo | undefined;
@@ -99,12 +97,6 @@ export function registerCreateNewArtistTool(server: McpServer): void {
           return getToolResultError("Failed to create artist");
         }
 
-        // Copy the conversation to the new artist if requested
-        let newRoomId: string | null = null;
-        if (active_conversation_id) {
-          newRoomId = await copyRoom(active_conversation_id, artist.account_id);
-        }
-
         const result: CreateNewArtistResult = {
           artist: {
             account_id: artist.account_id,
@@ -113,7 +105,6 @@ export function registerCreateNewArtistTool(server: McpServer): void {
           },
           artistAccountId: artist.account_id,
           message: `Successfully created artist "${name}". Now searching Spotify for this artist to connect their profile...`,
-          newRoomId,
         };
 
         return getToolResultSuccess(result);

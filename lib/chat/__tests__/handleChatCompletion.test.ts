@@ -317,5 +317,36 @@ describe("handleChatCompletion", () => {
         }),
       );
     });
+
+    it("returns redirect path after creating and copying the final artist room", async () => {
+      const body = createMockBody();
+      const responseMessages: UIMessage[] = [
+        {
+          id: "resp-1",
+          role: "assistant",
+          parts: [
+            {
+              type: "tool-create_new_artist",
+              toolCallId: "tool-1",
+              state: "output-available",
+              input: {},
+              output: {
+                artist: {
+                  account_id: "artist-123",
+                  name: "Test Artist",
+                },
+                artistAccountId: "artist-123",
+                message: "ok",
+              },
+            } as any,
+          ],
+          createdAt: new Date(),
+        },
+      ];
+
+      await handleChatCompletion(body, responseMessages);
+
+      expect(mockHandleSendEmailToolOutputs).toHaveBeenCalledWith(responseMessages);
+    });
   });
 });

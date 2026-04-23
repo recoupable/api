@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { setupChatRequest } from "@/lib/chat/setupChatRequest";
 import { setupConversation } from "@/lib/chat/setupConversation";
+import { handleChatCompletion } from "@/lib/chat/handleChatCompletion";
+import { handleCreateArtistRedirect } from "@/lib/chat/handleCreateArtistRedirect";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { handleChatStream } from "../handleChatStream";
 
@@ -37,6 +39,10 @@ vi.mock("@/lib/chat/handleChatCompletion", () => ({
   handleChatCompletion: vi.fn(),
 }));
 
+vi.mock("@/lib/chat/handleCreateArtistRedirect", () => ({
+  handleCreateArtistRedirect: vi.fn(),
+}));
+
 vi.mock("@/lib/credits/handleChatCredits", () => ({
   handleChatCredits: vi.fn(),
 }));
@@ -53,6 +59,8 @@ vi.mock("ai", () => ({
 const mockValidateAuthContext = vi.mocked(validateAuthContext);
 const mockSetupConversation = vi.mocked(setupConversation);
 const mockSetupChatRequest = vi.mocked(setupChatRequest);
+const mockHandleChatCompletion = vi.mocked(handleChatCompletion);
+const mockHandleCreateArtistRedirect = vi.mocked(handleCreateArtistRedirect);
 const mockCreateUIMessageStream = vi.mocked(createUIMessageStream);
 const mockCreateUIMessageStreamResponse = vi.mocked(createUIMessageStreamResponse);
 
@@ -81,6 +89,8 @@ describe("handleChatStream", () => {
       roomId: roomId || "mock-room-id",
       memoryId: "mock-memory-id",
     }));
+    mockHandleChatCompletion.mockResolvedValue();
+    mockHandleCreateArtistRedirect.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -245,6 +255,79 @@ describe("handleChatStream", () => {
           excludeTools: ["tool1"],
         }),
       );
+    });
+
+    it("uses sendFinish false and emits redirect data after completion", async () => {
+      mockGetApiKeyAccountId.mockResolvedValue("account-123");
+      const toUIMessageStream = vi.fn().mockReturnValue(new ReadableStream());
+      const mockAgent = {
+        stream: vi.fn().mockResolvedValue({
+          toUIMessageStream,
+          usage: Promise.resolve({ inputTokens: 100, outputTokens: 50 }),
+        }),
+        tools: {},
+      };
+
+      mockSetupChatRequest.mockResolvedValue({
+        agent: mockAgent,
+        messages: [],
+      } as any);
+
+      const mockStream = new ReadableStream();
+      mockCreateUIMessageStream.mockReturnValue(mockStream);
+      mockCreateUIMessageStreamResponse.mockReturnValue(new Response(mockStream));
+
+      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
+
+      await handleChatStream(request as any, async ({ body, responseMessages, writer }) => {
+        const redirectPath = await handleCreateArtistRedirect(body, responseMessages);
+        if (!redirectPath) {
+          return;
+        }
+
+        writer.write({
+          type: "data-redirect",
+          data: { path: redirectPath },
+          transient: true,
+        });
+      });
+
+      mockHandleCreateArtistRedirect.mockResolvedValue("/chat/new-room-123");
+
+      const execute = mockCreateUIMessageStream.mock.calls[0][0].execute;
+      const writer = {
+        merge: vi.fn(),
+        write: vi.fn(),
+        onError: undefined,
+      };
+
+      await execute({ writer } as any);
+
+      expect(toUIMessageStream).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sendFinish: false,
+          onFinish: expect.any(Function),
+        }),
+      );
+
+      const onFinish = toUIMessageStream.mock.calls[0][0].onFinish;
+      await onFinish({
+        isAborted: false,
+        finishReason: "stop",
+        messages: [{ id: "resp-1", role: "assistant", parts: [] }],
+        responseMessage: { id: "resp-1", role: "assistant", parts: [] },
+        isContinuation: false,
+      });
+
+      expect(writer.write).toHaveBeenCalledWith({
+        type: "data-redirect",
+        data: { path: "/chat/new-room-123" },
+        transient: true,
+      });
+      expect(writer.write).toHaveBeenCalledWith({
+        type: "finish",
+        finishReason: "stop",
+      });
     });
   });
 
