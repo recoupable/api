@@ -2,26 +2,24 @@ import Stripe from "stripe";
 import stripeClient from "@/lib/stripe/client";
 
 /**
- * Fetch active Stripe subscriptions, optionally filtered by `metadata.accountId`.
- *
- * Subscriptions are tagged with `metadata.accountId` at checkout time in the
- * chat app; this helper is the read side of that contract. The query is
- * bounded at `limit: 100` — historically the active Stripe subscription set
- * has stayed below this cap, but if it grows past it the filter becomes
- * lossy. Flag the cap here rather than silently paginate.
+ * Fetch all active Stripe subscriptions via cursor pagination (Stripe's async
+ * iterator). Filters on `current_period_end > now` to preserve the legacy
+ * semantics (active includes in-grace-period). Returns [] on API error rather
+ * than throwing — callers treat empty as "no subscribers" and degrade safely.
  */
-export async function getActiveSubscriptions(accountId?: string): Promise<Stripe.Subscription[]> {
+export async function getActiveSubscriptions(): Promise<Stripe.Subscription[]> {
   try {
     const nowSec = Math.floor(Date.now() / 1000);
-    const subscriptions = await stripeClient().subscriptions.list({
+    const subscriptions: Stripe.Subscription[] = [];
+
+    for await (const sub of stripeClient().subscriptions.list({
       limit: 100,
       current_period_end: { gt: nowSec },
-    });
+    })) {
+      subscriptions.push(sub);
+    }
 
-    const data = subscriptions?.data ?? [];
-    if (!accountId) return data;
-
-    return data.filter(sub => sub.metadata?.accountId === accountId);
+    return subscriptions;
   } catch (error) {
     console.error("[ERROR] getActiveSubscriptions:", error);
     return [];
