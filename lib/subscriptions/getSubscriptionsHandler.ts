@@ -24,8 +24,6 @@ export async function getSubscriptionsHandler(
     const { account_id } = validated;
 
     const accountEmails = await selectAccountEmails({ accountIds: account_id });
-    if (!accountEmails?.length) return errorResponse("Account not found", 404);
-
     if (accountEmails.some(record => isEnterprise(record.email || ""))) {
       return NextResponse.json(
         { status: "success", isEnterprise: true },

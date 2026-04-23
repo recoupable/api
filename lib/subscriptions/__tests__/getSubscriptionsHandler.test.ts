@@ -45,15 +45,17 @@ describe("getSubscriptionsHandler", () => {
     expect(selectAccountEmails).not.toHaveBeenCalled();
   });
 
-  it("returns 404 when the account has no emails", async () => {
+  it("falls through to Stripe when the account has no emails (not treated as 404)", async () => {
     vi.mocked(validateGetSubscriptionRequest).mockResolvedValue(validated);
     vi.mocked(selectAccountEmails).mockResolvedValue([]);
+    vi.mocked(getActiveSubscription).mockResolvedValue(null);
 
     const res = await getSubscriptionsHandler(makeRequest(), Promise.resolve({ id: accountId }));
-    const body = await res.json();
 
     expect(res.status).toBe(404);
-    expect(body).toEqual({ status: "error", error: "Account not found" });
+    expect(await res.json()).toEqual({ status: "error", error: "No active subscription found" });
+    expect(getActiveSubscription).toHaveBeenCalledWith(accountId);
+    expect(isEnterprise).not.toHaveBeenCalled();
   });
 
   it("returns 200 isEnterprise for enterprise accounts without calling Stripe", async () => {
