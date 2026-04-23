@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { validationErrorResponse } from "@/lib/zod/validationErrorResponse";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
@@ -11,58 +12,32 @@ export const getSubscriptionParamsSchema = z.object({
 
 export type GetSubscriptionParams = z.infer<typeof getSubscriptionParamsSchema>;
 
-export interface ValidatedGetSubscriptionRequest {
-  accountId: string;
-}
-
 /**
- * Validates GET /api/accounts/{id}/subscription: 400 bad UUID, 401 unauth,
- * 404 missing account, 403 no access. The path id is NOT passed as an auth
- * override — doing so would rewrite the caller's id to the target and
- * collapse the access check into a self-check that always passes.
+ * Bundles auth, path-id parsing, account existence (404), and account-access
+ * check (403). Path id is not passed as an auth override — that would collapse
+ * the access check into a self-check that always passes.
  */
 export async function validateGetSubscriptionRequest(
   request: NextRequest,
   id: string,
-): Promise<ValidatedGetSubscriptionRequest | NextResponse> {
+): Promise<GetSubscriptionParams | NextResponse> {
+  const authResult = await validateAuthContext(request);
+  if (authResult instanceof NextResponse) return authResult;
+
   const parsed = getSubscriptionParamsSchema.safeParse({ account_id: id });
   if (!parsed.success) {
     const firstError = parsed.error.issues[0];
-    return NextResponse.json(
-      {
-        status: "error",
-        missing_fields: firstError.path,
-        error: firstError.message,
-      },
-      { status: 400, headers: getCorsHeaders() },
-    );
+    return validationErrorResponse(firstError.message, firstError.path);
   }
 
-  const accountId = parsed.data.account_id;
-
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) {
-    return authResult;
-  }
-
-  const existing = await selectAccounts(accountId);
-  if (!existing.length) {
-    return NextResponse.json(
-      { status: "error", error: "Account not found" },
-      { status: 404, headers: getCorsHeaders() },
-    );
-  }
+  const [account] = await selectAccounts(parsed.data.account_id);
+  if (!account) return errorResponse("Account not found", 404);
 
   const hasAccess = await canAccessAccount({
     currentAccountId: authResult.accountId,
-    targetAccountId: accountId,
+    targetAccountId: parsed.data.account_id,
   });
-  if (!hasAccess) {
-    return NextResponse.json(
-      { status: "error", error: "Access denied to specified account_id" },
-      { status: 403, headers: getCorsHeaders() },
-    );
-  }
+  if (!hasAccess) return errorResponse("Unauthorized", 403);
 
-  return { accountId };
+  return parsed.data;
 }

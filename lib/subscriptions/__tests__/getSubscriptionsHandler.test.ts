@@ -5,7 +5,7 @@ import { getSubscriptionsHandler } from "../getSubscriptionsHandler";
 import { validateGetSubscriptionRequest } from "../validateGetSubscriptionRequest";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { isEnterprise } from "@/lib/enterprise/isEnterprise";
-import { getActiveSubscriptionDetails } from "@/lib/stripe/getActiveSubscriptionDetails";
+import { getActiveSubscription } from "@/lib/stripe/getActiveSubscription";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -23,11 +23,12 @@ vi.mock("@/lib/enterprise/isEnterprise", () => ({
   isEnterprise: vi.fn(),
 }));
 
-vi.mock("@/lib/stripe/getActiveSubscriptionDetails", () => ({
-  getActiveSubscriptionDetails: vi.fn(),
+vi.mock("@/lib/stripe/getActiveSubscription", () => ({
+  getActiveSubscription: vi.fn(),
 }));
 
 const accountId = "550e8400-e29b-41d4-a716-446655440000";
+const validated = { account_id: accountId };
 const makeRequest = () =>
   new NextRequest(`http://localhost/api/accounts/${accountId}/subscription`, { method: "GET" });
 
@@ -45,7 +46,7 @@ describe("getSubscriptionsHandler", () => {
   });
 
   it("returns 404 when the account has no emails", async () => {
-    vi.mocked(validateGetSubscriptionRequest).mockResolvedValue({ accountId });
+    vi.mocked(validateGetSubscriptionRequest).mockResolvedValue(validated);
     vi.mocked(selectAccountEmails).mockResolvedValue([]);
 
     const res = await getSubscriptionsHandler(makeRequest(), Promise.resolve({ id: accountId }));
@@ -56,7 +57,7 @@ describe("getSubscriptionsHandler", () => {
   });
 
   it("returns 200 isEnterprise for enterprise accounts without calling Stripe", async () => {
-    vi.mocked(validateGetSubscriptionRequest).mockResolvedValue({ accountId });
+    vi.mocked(validateGetSubscriptionRequest).mockResolvedValue(validated);
     vi.mocked(selectAccountEmails).mockResolvedValue([
       { email: "someone@recoupable.com" },
     ] as never);
@@ -67,14 +68,14 @@ describe("getSubscriptionsHandler", () => {
 
     expect(res.status).toBe(200);
     expect(body).toEqual({ status: "success", isEnterprise: true });
-    expect(getActiveSubscriptionDetails).not.toHaveBeenCalled();
+    expect(getActiveSubscription).not.toHaveBeenCalled();
   });
 
   it("returns 404 when no active subscription exists for a non-enterprise account", async () => {
-    vi.mocked(validateGetSubscriptionRequest).mockResolvedValue({ accountId });
+    vi.mocked(validateGetSubscriptionRequest).mockResolvedValue(validated);
     vi.mocked(selectAccountEmails).mockResolvedValue([{ email: "user@example.com" }] as never);
     vi.mocked(isEnterprise).mockReturnValue(false);
-    vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(null);
+    vi.mocked(getActiveSubscription).mockResolvedValue(null);
 
     const res = await getSubscriptionsHandler(makeRequest(), Promise.resolve({ id: accountId }));
     const body = await res.json();
@@ -84,14 +85,11 @@ describe("getSubscriptionsHandler", () => {
   });
 
   it("returns 200 with the subscription for a paid account", async () => {
-    const subscription = {
-      id: "sub_123",
-      metadata: { accountId },
-    } as never;
-    vi.mocked(validateGetSubscriptionRequest).mockResolvedValue({ accountId });
+    const subscription = { id: "sub_123", metadata: { accountId } } as never;
+    vi.mocked(validateGetSubscriptionRequest).mockResolvedValue(validated);
     vi.mocked(selectAccountEmails).mockResolvedValue([{ email: "user@example.com" }] as never);
     vi.mocked(isEnterprise).mockReturnValue(false);
-    vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(subscription);
+    vi.mocked(getActiveSubscription).mockResolvedValue(subscription);
 
     const res = await getSubscriptionsHandler(makeRequest(), Promise.resolve({ id: accountId }));
     const body = await res.json();
@@ -101,11 +99,11 @@ describe("getSubscriptionsHandler", () => {
       status: "success",
       subscription: { id: "sub_123", metadata: { accountId } },
     });
-    expect(getActiveSubscriptionDetails).toHaveBeenCalledWith(accountId);
+    expect(getActiveSubscription).toHaveBeenCalledWith(accountId);
   });
 
   it("returns 500 generic error and never leaks the raw exception message", async () => {
-    vi.mocked(validateGetSubscriptionRequest).mockResolvedValue({ accountId });
+    vi.mocked(validateGetSubscriptionRequest).mockResolvedValue(validated);
     vi.mocked(selectAccountEmails).mockRejectedValue(
       new Error("db down: connection refused at 10.0.0.1:5432"),
     );

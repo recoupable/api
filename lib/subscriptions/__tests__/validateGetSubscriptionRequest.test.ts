@@ -24,6 +24,7 @@ vi.mock("@/lib/organizations/canAccessAccount", () => ({
 
 const accountId = "550e8400-e29b-41d4-a716-446655440000";
 const requesterId = "660e8400-e29b-41d4-a716-446655440000";
+const authOk = { accountId: requesterId, authToken: "t", orgId: null };
 const makeRequest = (id = accountId) =>
   new NextRequest(`http://localhost/api/accounts/${id}/subscription`, {
     method: "GET",
@@ -37,11 +38,13 @@ describe("validateGetSubscriptionRequest", () => {
     ["not-a-uuid", "non-UUID id"],
     ["", "empty id"],
   ])("returns 400 for %s (%s)", async id => {
+    vi.mocked(validateAuthContext).mockResolvedValue(authOk);
+
     const result = await validateGetSubscriptionRequest(makeRequest(), id);
 
     expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(400);
-    expect(validateAuthContext).not.toHaveBeenCalled();
+    expect(selectAccounts).not.toHaveBeenCalled();
   });
 
   it("returns the auth error when authentication fails", async () => {
@@ -55,11 +58,7 @@ describe("validateGetSubscriptionRequest", () => {
   });
 
   it("returns 404 when the account does not exist", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: requesterId,
-      authToken: "t",
-      orgId: null,
-    });
+    vi.mocked(validateAuthContext).mockResolvedValue(authOk);
     vi.mocked(selectAccounts).mockResolvedValue([]);
 
     const result = await validateGetSubscriptionRequest(makeRequest(), accountId);
@@ -70,11 +69,7 @@ describe("validateGetSubscriptionRequest", () => {
   });
 
   it("returns 403 when the requester cannot access the account", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: requesterId,
-      authToken: "t",
-      orgId: null,
-    });
+    vi.mocked(validateAuthContext).mockResolvedValue(authOk);
     vi.mocked(selectAccounts).mockResolvedValue([{ id: accountId }] as never);
     vi.mocked(canAccessAccount).mockResolvedValue(false);
 
@@ -91,11 +86,7 @@ describe("validateGetSubscriptionRequest", () => {
   });
 
   it("does not pass the target accountId as an override to validateAuthContext", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: requesterId,
-      authToken: "t",
-      orgId: null,
-    });
+    vi.mocked(validateAuthContext).mockResolvedValue(authOk);
     vi.mocked(selectAccounts).mockResolvedValue([{ id: accountId }] as never);
     vi.mocked(canAccessAccount).mockResolvedValue(true);
 
@@ -104,22 +95,17 @@ describe("validateGetSubscriptionRequest", () => {
     // Regression: passing `{ accountId: id }` here would rewrite
     // authResult.accountId to the target, collapsing the access check into
     // a self-check that always returns true.
-    expect(validateAuthContext).toHaveBeenCalledWith(expect.anything());
     const call = vi.mocked(validateAuthContext).mock.calls[0];
     expect(call[1]).toBeUndefined();
   });
 
-  it("returns the validated accountId on success", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: requesterId,
-      authToken: "t",
-      orgId: null,
-    });
+  it("returns the validated account_id on success", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(authOk);
     vi.mocked(selectAccounts).mockResolvedValue([{ id: accountId }] as never);
     vi.mocked(canAccessAccount).mockResolvedValue(true);
 
     const result = await validateGetSubscriptionRequest(makeRequest(), accountId);
 
-    expect(result).toEqual({ accountId });
+    expect(result).toEqual({ account_id: accountId });
   });
 });
