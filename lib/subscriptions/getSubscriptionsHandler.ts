@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateGetSubscriptionRequest } from "@/lib/subscriptions/validateGetSubscriptionRequest";
-import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
-import { isEnterprise } from "@/lib/enterprise/isEnterprise";
-import { getActiveSubscription } from "@/lib/stripe/getActiveSubscription";
+import { getAccountSubscription } from "@/lib/subscriptions/getAccountSubscription";
 
 /**
- * Handler for GET /api/accounts/{id}/subscription. The `subscription` field is
- * a raw `Stripe.Subscription` — its keys stay camelCase by design (third-party
- * typed payload), despite the rest of the API being snake_case.
+ * Handler for GET /api/accounts/{id}/subscription. When the account is a paid
+ * Stripe customer, `subscription` is a raw `Stripe.Subscription` — its keys
+ * stay camelCase by design (third-party typed payload), despite the rest of
+ * the API being snake_case.
  */
 export async function getSubscriptionsHandler(
   request: NextRequest,
@@ -21,21 +20,11 @@ export async function getSubscriptionsHandler(
     const validated = await validateGetSubscriptionRequest(request, id);
     if (validated instanceof NextResponse) return validated;
 
-    const { account_id } = validated;
-
-    const accountEmails = await selectAccountEmails({ accountIds: account_id });
-    if (accountEmails.some(record => isEnterprise(record.email || ""))) {
-      return NextResponse.json(
-        { status: "success", isEnterprise: true },
-        { status: 200, headers: getCorsHeaders() },
-      );
-    }
-
-    const subscription = await getActiveSubscription(account_id);
-    if (!subscription) return errorResponse("No active subscription found", 404);
+    const result = await getAccountSubscription(validated.account_id);
+    if (!result) return errorResponse("No active subscription found", 404);
 
     return NextResponse.json(
-      { status: "success", subscription },
+      { status: "success", ...result },
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {
