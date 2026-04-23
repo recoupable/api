@@ -6,32 +6,23 @@ export const maxDuration = 30;
 export const dynamic = "force-dynamic";
 
 /**
- * OPTIONS handler for CORS preflight requests.
+ * CORS preflight.
  *
- * @returns A NextResponse with CORS headers.
+ * @returns 200 response with CORS headers.
  */
 export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: getCorsHeaders(),
-  });
+  return new NextResponse(null, { status: 200, headers: getCorsHeaders() });
 }
 
 /**
- * GET /api/apify/runs/{runId}
+ * GET /api/apify/runs/{runId} — returns Apify run status and dataset items.
  *
- * Returns the status (and, on SUCCEEDED, the dataset items) of an Apify actor
- * run. Authentication is required via `x-api-key` or `Authorization: Bearer`.
- *
- * @param request - The incoming request.
- * @param options - Route options containing params.
- * @param options.params - Route params containing the Apify `runId`.
- * @returns A NextResponse with `{ status, dataset_id, data? }` shape.
+ * @param request - Incoming request.
+ * @param ctx - Route context.
+ * @param ctx.params - Route params containing `runId`.
+ * @returns JSON response with `{ status, dataset_id, data? }`.
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ runId: string }> },
-) {
-  const { runId } = await params;
+export async function GET(request: NextRequest, ctx: { params: Promise<{ runId: string }> }) {
+  const { runId } = await ctx.params;
   return getScraperResultsHandler(request, runId);
 }
