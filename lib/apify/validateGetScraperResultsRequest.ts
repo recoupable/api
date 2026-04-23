@@ -31,3 +31,5 @@ export async function validateGetScraperResultsRequest(
 
   return parsed.data;
 }
+
+export default validateGetScraperResultsRequest;

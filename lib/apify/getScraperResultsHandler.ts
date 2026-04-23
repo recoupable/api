@@ -36,3 +36,5 @@ export async function getScraperResultsHandler(
     return NextResponse.json({ error: "Internal server error" }, { status: 500, headers });
   }
 }
+
+export default getScraperResultsHandler;
