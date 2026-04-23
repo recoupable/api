@@ -1,16 +1,16 @@
-import { getCatalogs } from "@/lib/catalog/getCatalogs";
+import { selectAccountCatalogs } from "@/lib/supabase/account_catalogs/selectAccountCatalogs";
 import { getCatalogSongs } from "@/lib/catalog/getCatalogSongs";
 import { EVAL_ACCOUNT_ID } from "@/lib/consts";
 
 async function getCatalogSongsCountExpected() {
   try {
-    const catalogsData = await getCatalogs(EVAL_ACCOUNT_ID);
+    const catalogs = await selectAccountCatalogs(EVAL_ACCOUNT_ID);
 
-    if (!catalogsData.catalogs || catalogsData.catalogs.length === 0) {
+    if (catalogs.length === 0) {
       throw new Error("No catalogs found for account");
     }
 
-    const firstCatalog = catalogsData.catalogs[0];
+    const firstCatalog = catalogs[0];
     const catalogSongs = await getCatalogSongs(firstCatalog.id);
 
     const count = catalogSongs.pagination.total_count;

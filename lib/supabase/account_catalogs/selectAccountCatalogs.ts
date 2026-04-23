@@ -1,23 +1,16 @@
 import supabase from "../serverClient";
 
-type SelectAccountCatalogsParams = {
-  accountIds?: string[];
-  catalogIds?: string[];
-};
-
 /**
- * Selects account_catalogs with optional related catalog data
+ * Select catalogs linked to an account via `account_catalogs`, ordered by
+ * `created_at desc`.
  *
- * @param params - The parameters for the query
- * @returns The account_catalogs with related catalog data
  * @throws Error if the query fails
  */
-export async function selectAccountCatalogs(params: SelectAccountCatalogsParams) {
-  let query = supabase
+export async function selectAccountCatalogs(accountId: string) {
+  const { data, error } = await supabase
     .from("account_catalogs")
     .select(
       `
-    catalog,
     catalogs!inner (
       id,
       name,
@@ -26,22 +19,12 @@ export async function selectAccountCatalogs(params: SelectAccountCatalogsParams)
     )
   `,
     )
+    .eq("account", accountId)
     .order("created_at", { ascending: false });
-
-  // Add filters based on provided parameters
-  if (params.accountIds && params.accountIds.length > 0) {
-    query = query.in("account", params.accountIds);
-  }
-
-  if (params.catalogIds && params.catalogIds.length > 0) {
-    query = query.in("catalog", params.catalogIds);
-  }
-
-  const { data, error } = await query;
 
   if (error) {
     throw new Error(`Failed to fetch account_catalogs: ${error.message}`);
   }
 
-  return data || [];
+  return (data ?? []).map(row => row.catalogs);
 }
