@@ -4,7 +4,7 @@ import { validateCreateStripeSessionBody } from "@/lib/stripe/validateCreateStri
 import { createStripeSession } from "@/lib/stripe/createStripeSession";
 
 /**
- * Handler for POST /api/stripe/session.
+ * Handler for POST /api/subscriptions/sessions.
  *
  * Creates a Stripe checkout session for the authenticated account and returns
  * the session ID and hosted checkout URL. The client should redirect the user

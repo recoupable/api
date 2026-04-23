@@ -15,16 +15,15 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/stripe/session
+ * POST /api/subscriptions/sessions
  *
  * Creates a Stripe checkout session for the authenticated account.
- * Returns a Stripe-hosted checkout URL the client should redirect to.
+ * Returns a hosted checkout URL the client should redirect to.
  *
  * Request body:
  * - successUrl (required): URL to redirect to after a successful payment.
- * - accountId (optional): Admin-override. UUID of the account to create the session for.
- *   Only valid when the authenticated account has admin access to the target account.
- *   If omitted, the session is created for the API key's own account.
+ * - accountId (optional): account override (UUID) when the authenticated key/token
+ *   has access to multiple accounts.
  *
  * Response:
  * - 200: { id: string, url: string }
@@ -34,7 +33,7 @@ export async function OPTIONS() {
  * - 500: { status: "error", error: "Failed to create Stripe session" }
  *
  * @param request - The request object containing JSON body.
- * @returns A NextResponse with the Stripe session data or an error.
+ * @returns A NextResponse with the checkout session data or an error.
  */
 export async function POST(request: NextRequest) {
   return createStripeSessionHandler(request);

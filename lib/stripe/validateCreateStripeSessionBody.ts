@@ -20,7 +20,7 @@ export type ValidatedCreateStripeSessionRequest = {
 };
 
 /**
- * Validates POST /api/stripe/session request.
+ * Validates POST /api/subscriptions/sessions request.
  *
  * Parses and validates the request body, then authenticates via
  * x-api-key or Authorization bearer token. Resolves the accountId
