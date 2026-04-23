@@ -24,9 +24,9 @@ export async function createStripeSessionHandler(request: NextRequest): Promise<
 
     return NextResponse.json(session, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to create Stripe session";
+    console.error("Failed to create Stripe subscription session", error);
     return NextResponse.json(
-      { status: "error", error: message },
+      { status: "error", error: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
     );
   }

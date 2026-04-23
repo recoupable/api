@@ -14,7 +14,8 @@ function getStripeClient(): Stripe {
 
   const stripeSecretKey = process.env.STRIPE_SK;
   if (!stripeSecretKey) {
-    throw new Error("STRIPE_SK environment variable is required");
+    console.error("Missing STRIPE_SK while initializing Stripe client");
+    throw new Error("Failed to initialize Stripe client");
   }
 
   cachedStripeClient = new Stripe(stripeSecretKey);

@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
 import stripeClient from "@/lib/stripe/client";
-import { generateUUID } from "@/lib/uuid/generateUUID";
 import { STRIPE_SUBSCRIPTION_PRICE_ID } from "@/lib/const";
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
 export type StripeSessionResult = {
   id: string;
@@ -24,7 +24,13 @@ export async function createStripeSession(
   accountId: string,
   successUrl: string,
 ): Promise<StripeSessionResult> {
+  if (!STRIPE_SUBSCRIPTION_PRICE_ID) {
+    throw new Error("Failed to create Stripe session");
+  }
+
   const metadata: Stripe.MetadataParam = { accountId };
+  const accountEmails = await selectAccountEmails({ accountIds: accountId });
+  const customerEmail = accountEmails[0]?.email;
 
   const sessionData: Stripe.Checkout.SessionCreateParams = {
     line_items: [
@@ -34,8 +40,12 @@ export async function createStripeSession(
       },
     ],
     mode: "subscription",
-    client_reference_id: generateUUID(),
+    client_reference_id: accountId,
     metadata,
+    customer_email: customerEmail,
+    cancel_url: successUrl,
+    allow_promotion_codes: true,
+    billing_address_collection: "auto",
     subscription_data: {
       metadata,
       trial_period_days: 30,

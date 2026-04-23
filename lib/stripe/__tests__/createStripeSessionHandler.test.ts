@@ -20,7 +20,7 @@ const mockValidate = vi.mocked(validateCreateStripeSessionBody);
 const mockCreate = vi.mocked(createStripeSession);
 
 function makeRequest(): NextRequest {
-  return new NextRequest("http://localhost/api/stripe/session", { method: "POST" });
+  return new NextRequest("http://localhost/api/subscriptions/sessions", { method: "POST" });
 }
 
 describe("createStripeSessionHandler", () => {
@@ -105,7 +105,7 @@ describe("createStripeSessionHandler", () => {
 
       expect(response.status).toBe(500);
       expect(data.status).toBe("error");
-      expect(data.error).toBe("Stripe API error");
+      expect(data.error).toBe("Internal server error");
     });
 
     it("returns generic 500 message for non-Error throws", async () => {
@@ -119,7 +119,7 @@ describe("createStripeSessionHandler", () => {
       const data = await response.json();
 
       expect(response.status).toBe(500);
-      expect(data.error).toBe("Failed to create Stripe session");
+      expect(data.error).toBe("Internal server error");
     });
   });
 });
