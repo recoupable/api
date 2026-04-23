@@ -40,11 +40,9 @@ export const STRIPE_SUBSCRIPTION_PRICE_ID = process.env.STRIPE_SUBSCRIPTION_PRIC
  * Can be overridden via STRIPE_SUCCESS_URL_ALLOWED_ORIGINS (comma-separated).
  */
 export const STRIPE_SUCCESS_URL_ALLOWED_ORIGINS = (
-  process.env.STRIPE_SUCCESS_URL_ALLOWED_ORIGINS?.split(",") ?? [
-    "https://chat.recoupable.com",
-    "http://localhost:3000",
-    "http://localhost:3001",
-  ]
+  process.env.STRIPE_SUCCESS_URL_ALLOWED_ORIGINS?.trim()
+    ? process.env.STRIPE_SUCCESS_URL_ALLOWED_ORIGINS.split(",")
+    : ["https://chat.recoupable.com", "http://localhost:3000", "http://localhost:3001"]
 )
   .map(origin => origin.trim())
   .filter(Boolean);

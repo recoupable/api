@@ -97,6 +97,18 @@ describe("createStripeSession", () => {
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ customer_email: undefined }));
   });
 
+  it("does not set customer_email when account email is null", async () => {
+    mockSelectAccountEmails.mockResolvedValue([{ email: null } as never]);
+    mockCreate.mockResolvedValue({
+      id: "cs_test_abc123",
+      url: "https://checkout.stripe.com/pay/cs_test_abc123",
+    } as never);
+
+    await createStripeSession("account-uuid-111", "https://example.com");
+
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ customer_email: undefined }));
+  });
+
   it("throws when stripe session returns no url", async () => {
     mockCreate.mockResolvedValue({ id: "cs_test_abc123", url: null } as never);
 

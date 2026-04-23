@@ -30,7 +30,9 @@ export async function createStripeSession(
 
   const metadata: Stripe.MetadataParam = { accountId };
   const accountEmails = await selectAccountEmails({ accountIds: accountId });
-  const customerEmail = accountEmails[0]?.email;
+  const customerEmail = accountEmails.find(
+    accountEmail => typeof accountEmail.email === "string",
+  )?.email;
 
   const sessionData: Stripe.Checkout.SessionCreateParams = {
     line_items: [
