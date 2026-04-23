@@ -22,7 +22,7 @@ export async function updateArtistSocials(
   profileUrls: Record<string, string>,
 ): Promise<AccountSocialWithSocial[]> {
   // Get current account socials (with no limit to get all)
-  const accountSocials = await selectAccountSocials(artistId, 0, 10000);
+  const accountSocials = await selectAccountSocials({ accountId: artistId, limit: 10000 });
 
   // Process each platform type
   const profilePromises = Object.entries(profileUrls).map(async ([type, value]) => {
@@ -70,6 +70,5 @@ export async function updateArtistSocials(
   await Promise.all(profilePromises);
 
   // Return the updated account socials
-  const updated = await selectAccountSocials(artistId, 0, 10000);
-  return updated || [];
+  return selectAccountSocials({ accountId: artistId, limit: 10000 });
 }
