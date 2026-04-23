@@ -114,4 +114,82 @@ describe("postVideoResults", () => {
       }),
     );
   });
+
+  it("posts static image before video when imageUrl is present", async () => {
+    const imgBuf = Buffer.from([0x10]);
+    const vidBuf = Buffer.from([0x20]);
+    mockedDownload
+      .mockResolvedValueOnce(imgBuf) // image download
+      .mockResolvedValueOnce(vidBuf); // video download
+
+    const videos = [
+      {
+        runId: "r1",
+        status: "completed" as const,
+        videoUrl: "https://cdn.example.com/v.mp4",
+        imageUrl: "https://cdn.example.com/static.png",
+      },
+    ];
+
+    await postVideoResults(thread as never, videos, 0);
+
+    expect(thread.post).toHaveBeenCalledTimes(2);
+
+    // First call: image
+    expect(thread.post).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        markdown: "**Editorial Image**",
+        files: [expect.objectContaining({ mimeType: "image/png" })],
+      }),
+    );
+
+    // Second call: video
+    expect(thread.post).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        files: [expect.objectContaining({ mimeType: "video/mp4" })],
+      }),
+    );
+  });
+
+  it("falls back to URL text when image download fails", async () => {
+    mockedDownload
+      .mockResolvedValueOnce(null) // image download fails
+      .mockResolvedValueOnce(Buffer.from([0x20])); // video download
+
+    const videos = [
+      {
+        runId: "r1",
+        status: "completed" as const,
+        videoUrl: "https://cdn.example.com/v.mp4",
+        imageUrl: "https://cdn.example.com/static.png",
+      },
+    ];
+
+    await postVideoResults(thread as never, videos, 0);
+
+    expect(thread.post).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("https://cdn.example.com/static.png"),
+    );
+  });
+
+  it("skips image posting when no imageUrl is present", async () => {
+    mockedDownload.mockResolvedValue(Buffer.from([0x01]));
+
+    const videos = [
+      { runId: "r1", status: "completed" as const, videoUrl: "https://cdn.example.com/v.mp4" },
+    ];
+
+    await postVideoResults(thread as never, videos, 0);
+
+    // Only the video post, no image
+    expect(thread.post).toHaveBeenCalledTimes(1);
+    expect(thread.post).toHaveBeenCalledWith(
+      expect.objectContaining({
+        files: [expect.objectContaining({ mimeType: "video/mp4" })],
+      }),
+    );
+  });
 });
