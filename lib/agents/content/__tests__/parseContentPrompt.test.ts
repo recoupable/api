@@ -12,6 +12,7 @@ vi.mock("../createContentPromptAgent", () => ({
     lipsync: false,
     batch: 1,
     captionLength: "none",
+    dsp: "none",
     upscale: false,
     template: "artist-caption-bedroom",
   },
@@ -139,6 +140,7 @@ describe("parseContentPrompt", () => {
       lipsync: false,
       batch: 1,
       captionLength: "none",
+      dsp: "none",
       upscale: false,
       template: "artist-caption-bedroom",
     });
@@ -153,9 +155,26 @@ describe("parseContentPrompt", () => {
       lipsync: false,
       batch: 1,
       captionLength: "none",
+      dsp: "none",
       upscale: false,
       template: "artist-caption-bedroom",
     });
+  });
+
+  it("extracts dsp from prompt", async () => {
+    const flags: ContentPromptFlags = {
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      dsp: "spotify",
+      upscale: false,
+      template: "artist-release-editorial",
+    };
+    mockGenerate.mockResolvedValue({ output: flags });
+
+    const result = await parseContentPrompt("make a Spotify editorial video");
+
+    expect(result.dsp).toBe("spotify");
   });
 
   it("extracts songs from prompt when specified", async () => {

@@ -49,6 +49,7 @@ export async function createContentHandler(request: NextRequest): Promise<NextRe
       template: validated.template,
       lipsync: validated.lipsync,
       captionLength: validated.captionLength,
+      dsp: validated.dsp,
       upscale: validated.upscale,
       githubRepo,
       songs: validated.songs,
