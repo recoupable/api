@@ -1,5 +1,5 @@
 import { getEnterpriseAccountIds } from "@/lib/enterprise/getEnterpriseAccountIds";
-import { getSubscriberAccountIds } from "@/lib/stripe/getSubscriberAccountIds";
+import { getActiveSubscriptions } from "@/lib/stripe/getActiveSubscriptions";
 import { selectAccountArtistIds } from "@/lib/supabase/account_artist_ids/selectAccountArtistIds";
 
 /**
@@ -10,10 +10,14 @@ import { selectAccountArtistIds } from "@/lib/supabase/account_artist_ids/select
  * account_artist_ids query when no pro accounts are found.
  */
 export async function getProArtists(): Promise<string[]> {
-  const [enterpriseIds, subscriberIds] = await Promise.all([
+  const [enterpriseIds, activeSubscriptions] = await Promise.all([
     getEnterpriseAccountIds(),
-    getSubscriberAccountIds(),
+    getActiveSubscriptions(),
   ]);
+
+  const subscriberIds = activeSubscriptions
+    .map(subscription => subscription.metadata?.accountId)
+    .filter((id): id is string => Boolean(id));
 
   const accountIds = Array.from(new Set([...enterpriseIds, ...subscriberIds]));
   if (accountIds.length === 0) return [];
