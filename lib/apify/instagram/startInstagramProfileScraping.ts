@@ -36,5 +36,3 @@ export async function startInstagramProfileScraping(
 
   return { runId: run.id, datasetId: run.defaultDatasetId };
 }
-
-export default startInstagramProfileScraping;

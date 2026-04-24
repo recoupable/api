@@ -41,5 +41,3 @@ export async function startInstagramCommentsScraping(
 
   return { runId: run.id, datasetId: run.defaultDatasetId };
 }
-
-export default startInstagramCommentsScraping;
