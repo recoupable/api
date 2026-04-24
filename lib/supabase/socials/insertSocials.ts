@@ -10,7 +10,10 @@ import type { Tables, TablesInsert } from "@/types/database.types";
 export async function insertSocials(
   socials: TablesInsert<"socials">[],
 ): Promise<Tables<"socials">[]> {
-  const { data, error } = await supabase.from("socials").insert(socials).select("*");
+  const { data, error } = await supabase
+    .from("socials")
+    .upsert(socials, { onConflict: "profile_url" })
+    .select("*");
 
   if (error) {
     console.error("[ERROR] insertSocials:", error);
