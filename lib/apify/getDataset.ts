@@ -13,19 +13,24 @@ export async function getDataset(datasetId: string): Promise<unknown[]> {
     return [];
   }
 
-  const response = await fetch(
-    `https://api.apify.com/v2/datasets/${datasetId}/items?token=${token}`,
-    {
+  try {
+    const response = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items`, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
-    },
-  );
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-  if (!response.ok) {
-    console.error(`[ERROR] getDataset: ${response.status} ${response.statusText}`);
+    if (!response.ok) {
+      console.error(`[ERROR] getDataset: ${response.status} ${response.statusText}`);
+      return [];
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.error("[ERROR] getDataset:", err);
     return [];
   }
-
-  const data = await response.json();
-  return Array.isArray(data) ? data : [];
 }

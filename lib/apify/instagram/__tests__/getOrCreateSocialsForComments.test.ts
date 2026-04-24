@@ -47,20 +47,20 @@ describe("getOrCreateSocialsForComments", () => {
     expect(result.get("bob")?.id).toBe("s2");
   });
 
-  it("returns empty map and swallows DB errors", async () => {
+  it("propagates DB errors so the webhook handler can log + short-circuit", async () => {
     vi.mocked(insertSocials).mockRejectedValue(new Error("boom"));
 
-    const result = await getOrCreateSocialsForComments([
-      {
-        id: "c1",
-        text: "t",
-        timestamp: "2026-01-01",
-        ownerUsername: "alice",
-        ownerProfilePicUrl: "https://a",
-        postUrl: "u1",
-      },
-    ]);
-
-    expect(result.size).toBe(0);
+    await expect(
+      getOrCreateSocialsForComments([
+        {
+          id: "c1",
+          text: "t",
+          timestamp: "2026-01-01",
+          ownerUsername: "alice",
+          ownerProfilePicUrl: "https://a",
+          postUrl: "u1",
+        },
+      ]),
+    ).rejects.toThrow("boom");
   });
 });

@@ -1,4 +1,4 @@
-import { selectPostComments } from "@/lib/supabase/post_comments/selectPostComments";
+import { selectPostUrlsWithComments } from "@/lib/supabase/post_comments/selectPostUrlsWithComments";
 
 /**
  * Partitions `postUrls` into those that already have comments in
@@ -16,14 +16,10 @@ export async function getExistingPostComments(postUrls: string[]): Promise<{
   }
 
   try {
-    const existing = await selectPostComments({ postUrls });
-
-    const withComments = existing
-      .map(c => c.post?.post_url)
-      .filter((url): url is string => Boolean(url));
-
+    const withComments = await selectPostUrlsWithComments(postUrls);
     const urlsWithComments = Array.from(new Set(withComments));
-    const urlsWithoutComments = postUrls.filter(url => !urlsWithComments.includes(url));
+    const withSet = new Set(urlsWithComments);
+    const urlsWithoutComments = postUrls.filter(url => !withSet.has(url));
 
     return { urlsWithComments, urlsWithoutComments };
   } catch (error) {

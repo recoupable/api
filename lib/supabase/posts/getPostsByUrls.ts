@@ -14,7 +14,7 @@ export async function getPostsByUrls(postUrls: string[]): Promise<Tables<"posts"
 
   if (error) {
     console.error("[ERROR] getPostsByUrls:", error);
-    return [];
+    throw error;
   }
 
   return data ?? [];

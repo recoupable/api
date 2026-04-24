@@ -38,15 +38,10 @@ export async function getOrCreateSocialsForComments(
       followingCount: null,
     }));
 
-  try {
-    const upserted = await insertSocials(rows);
-    const map = new Map<string, Tables<"socials">>();
-    upserted.forEach(social => {
-      map.set(social.username, social);
-    });
-    return map;
-  } catch (error) {
-    console.error("[ERROR] getOrCreateSocialsForComments:", error);
-    return new Map();
-  }
+  const upserted = await insertSocials(rows);
+  const map = new Map<string, Tables<"socials">>();
+  upserted.forEach(social => {
+    map.set(social.username, social);
+  });
+  return map;
 }

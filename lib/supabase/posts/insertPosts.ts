@@ -15,6 +15,7 @@ export async function insertPosts(posts: TablesInsert<"posts">[]) {
 
   if (error) {
     console.error("[ERROR] insertPosts:", error);
+    throw error;
   }
 
   return { data, error };

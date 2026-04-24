@@ -15,6 +15,7 @@ export async function insertSocialPosts(socialPosts: TablesInsert<"social_posts"
 
   if (error) {
     console.error("[ERROR] insertSocialPosts:", error);
+    throw error;
   }
 
   return { data, error };

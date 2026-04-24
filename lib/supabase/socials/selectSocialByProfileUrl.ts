@@ -12,12 +12,17 @@ export async function selectSocialByProfileUrl(
 ): Promise<Tables<"socials"> | null> {
   if (!profileUrl) return null;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("socials")
     .select("*")
     .eq("profile_url", profileUrl)
     .neq("profile_url", "")
-    .single();
+    .maybeSingle();
+
+  if (error) {
+    console.error("[ERROR] selectSocialByProfileUrl:", error);
+    throw error;
+  }
 
   return data ?? null;
 }

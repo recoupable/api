@@ -22,7 +22,7 @@ export async function saveApifyInstagramComments(comments: ApifyInstagramComment
     const rows: TablesInsert<"post_comments">[] = [];
 
     for (const comment of comments) {
-      if (!comment.postUrl || !comment.ownerUsername) continue;
+      if (!comment.postUrl || !comment.ownerUsername || !comment.timestamp) continue;
 
       const post = postsMap.get(comment.postUrl);
       const social = socialsMap.get(comment.ownerUsername);
@@ -47,5 +47,6 @@ export async function saveApifyInstagramComments(comments: ApifyInstagramComment
     }
   } catch (error) {
     console.error("[ERROR] saveApifyInstagramComments:", error);
+    throw error;
   }
 }

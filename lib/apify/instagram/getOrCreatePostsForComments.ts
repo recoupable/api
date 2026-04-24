@@ -19,15 +19,17 @@ export async function getOrCreatePostsForComments(
   const existingSet = new Set(existing.map(p => p.post_url));
 
   const missing = unique.filter(url => !existingSet.has(url));
+
+  let all = existing;
   if (missing.length > 0) {
     const rows: TablesInsert<"posts">[] = missing.map(url => ({
       post_url: url,
       updated_at: new Date().toISOString(),
     }));
     await insertPosts(rows);
+    all = await getPostsByUrls(unique);
   }
 
-  const all = await getPostsByUrls(unique);
   const map = new Map<string, Tables<"posts">>();
   all.forEach(post => {
     map.set(post.post_url, post);

@@ -28,7 +28,7 @@ Profile Picture: ${profile.profilePicUrl}
 Biography: ${profile.biography}
 Followers: ${profile.followersCount}
 Following: ${profile.followsCount}
-Latest Posts: ${(profile.latestPosts ?? []).map(p => JSON.stringify(p)).join(", ")}
+Latest Posts: ${(Array.isArray(profile.latestPosts) ? profile.latestPosts : []).map(p => JSON.stringify(p)).join(", ")}
 `;
 
   const { text } = await generateText({

@@ -32,7 +32,7 @@ export async function insertSocials(
 
   if (error) {
     console.error("[ERROR] insertSocials:", error);
-    return [];
+    throw error;
   }
 
   return data || [];
