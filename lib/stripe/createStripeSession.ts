@@ -2,7 +2,6 @@ import type Stripe from "stripe";
 import stripeClient from "@/lib/stripe/client";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
-/** Same Stripe price as `chat/lib/stripe/createSession.ts` (no extra env in API). */
 const RECOUP_SUBSCRIPTION_CHECKOUT_PRICE_ID = "price_1RyDFD00JObOnOb53PcVOeBz";
 
 export type StripeSessionResult = {

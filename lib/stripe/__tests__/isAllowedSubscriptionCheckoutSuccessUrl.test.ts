@@ -27,8 +27,7 @@ describe("isAllowedSubscriptionCheckoutSuccessUrl", () => {
   });
 
   it("allows origin from SUBSCRIPTION_CHECKOUT_SUCCESS_EXTRA_ORIGINS", () => {
-    process.env.SUBSCRIPTION_CHECKOUT_SUCCESS_EXTRA_ORIGINS =
-      "https://custom-preview.example.com";
+    process.env.SUBSCRIPTION_CHECKOUT_SUCCESS_EXTRA_ORIGINS = "https://custom-preview.example.com";
     expect(
       isAllowedSubscriptionCheckoutSuccessUrl(
         "https://custom-preview.example.com/welcome?subscription=success",
