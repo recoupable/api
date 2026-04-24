@@ -10,16 +10,9 @@ import stripeClient from "@/lib/stripe/client";
 export async function getActiveSubscriptions(): Promise<Stripe.Subscription[]> {
   try {
     const nowSec = Math.floor(Date.now() / 1000);
-    const subscriptions: Stripe.Subscription[] = [];
-
-    for await (const sub of stripeClient().subscriptions.list({
-      limit: 100,
-      current_period_end: { gt: nowSec },
-    })) {
-      subscriptions.push(sub);
-    }
-
-    return subscriptions;
+    return await stripeClient()
+      .subscriptions.list({ limit: 100, current_period_end: { gt: nowSec } })
+      .autoPagingToArray({ limit: 10000 });
   } catch (error) {
     console.error("[ERROR] getActiveSubscriptions:", error);
     return [];
