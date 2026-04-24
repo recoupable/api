@@ -1,5 +1,5 @@
 import { getEnterpriseAccountIds } from "@/lib/enterprise/getEnterpriseAccountIds";
-import { getActiveSubscriptionAccountIds } from "@/lib/stripe/getActiveSubscriptionAccountIds";
+import { selectActiveSubscriptionAccountIds } from "@/lib/supabase/subscriptions/selectActiveSubscriptionAccountIds";
 import { selectAccountArtistIds } from "@/lib/supabase/account_artist_ids/selectAccountArtistIds";
 
 /**
@@ -12,7 +12,7 @@ import { selectAccountArtistIds } from "@/lib/supabase/account_artist_ids/select
 export async function getProArtists(): Promise<string[]> {
   const [enterpriseIds, subscriberIds] = await Promise.all([
     getEnterpriseAccountIds(),
-    getActiveSubscriptionAccountIds(),
+    selectActiveSubscriptionAccountIds(),
   ]);
 
   const accountIds = Array.from(new Set([...enterpriseIds, ...subscriberIds]));
