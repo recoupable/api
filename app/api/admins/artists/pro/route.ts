@@ -15,7 +15,7 @@ export async function OPTIONS() {
 }
 
 /**
- * GET /api/artists/pro
+ * GET /api/admins/artists/pro
  *
  * Returns a deduplicated list of artist IDs owned by "pro" accounts
  * (enterprise-domain emails or active Stripe subscriptions). Admin-scoped —

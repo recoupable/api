@@ -12,7 +12,7 @@ vi.mock("@/lib/admins/validateAdminAuth", () => ({
 }));
 
 describe("validateGetArtistsProRequest", () => {
-  const request = new NextRequest("http://localhost/api/artists/pro");
+  const request = new NextRequest("http://localhost/api/admins/artists/pro");
 
   beforeEach(() => {
     vi.clearAllMocks();

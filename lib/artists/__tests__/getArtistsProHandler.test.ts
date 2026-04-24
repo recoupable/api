@@ -17,7 +17,7 @@ vi.mock("@/lib/artists/getProArtists", () => ({
 }));
 
 describe("getArtistsProHandler", () => {
-  const request = new NextRequest("http://localhost/api/artists/pro");
+  const request = new NextRequest("http://localhost/api/admins/artists/pro");
 
   beforeEach(() => {
     vi.clearAllMocks();
