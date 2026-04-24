@@ -20,16 +20,7 @@ export type ValidatedCreateStripeSessionRequest = {
   successUrl: string;
 };
 
-/**
- * Validates POST /api/subscriptions/sessions request.
- *
- * Parses and validates the request body, then authenticates via
- * x-api-key or Authorization bearer token. Resolves the accountId
- * from auth context, with optional admin-override from the request body.
- *
- * @param request - The NextRequest object.
- * @returns A NextResponse with an error if validation fails, or the validated request data.
- */
+/** Validates body, allowed `successUrl` origin, and auth for POST /api/subscriptions/sessions. */
 export async function validateCreateStripeSessionBody(
   request: NextRequest,
 ): Promise<NextResponse | ValidatedCreateStripeSessionRequest> {

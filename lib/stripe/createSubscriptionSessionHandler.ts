@@ -3,15 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateStripeSessionBody } from "@/lib/stripe/validateCreateStripeSessionBody";
 import { createStripeSession } from "@/lib/stripe/createStripeSession";
 
-/**
- * Handler for POST /api/subscriptions/sessions.
- *
- * Creates a hosted subscription checkout session for the authenticated account and returns
- * the session ID and checkout URL. The client should redirect the user to the returned URL.
- *
- * @param request - The NextRequest object.
- * @returns A NextResponse with { id, url } on success, or an error response.
- */
+/** POST /api/subscriptions/sessions — returns `{ id, url }` for hosted Stripe checkout. */
 export async function createSubscriptionSessionHandler(
   request: NextRequest,
 ): Promise<NextResponse> {

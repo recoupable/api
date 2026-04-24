@@ -9,18 +9,6 @@ export type StripeSessionResult = {
   url: string;
 };
 
-/**
- * Creates a Stripe checkout session for the Recoup subscription plan.
- *
- * Configures a 30-day free trial subscription with the platform's default
- * price. Stores accountId in session metadata so webhook handlers can
- * associate a completed payment with a Recoup account.
- *
- * @param accountId - The Recoup account ID to associate with the session.
- * @param successUrl - The URL to redirect the user to after a successful payment.
- * @returns The Stripe session ID and hosted checkout URL.
- * @throws If the Stripe API call fails or the session has no URL.
- */
 export async function createStripeSession(
   accountId: string,
   successUrl: string,

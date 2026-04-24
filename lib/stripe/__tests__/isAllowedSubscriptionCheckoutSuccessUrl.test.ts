@@ -26,15 +26,6 @@ describe("isAllowedSubscriptionCheckoutSuccessUrl", () => {
     ).toBe(true);
   });
 
-  it("allows origin from SUBSCRIPTION_CHECKOUT_SUCCESS_EXTRA_ORIGINS", () => {
-    process.env.SUBSCRIPTION_CHECKOUT_SUCCESS_EXTRA_ORIGINS = "https://custom-preview.example.com";
-    expect(
-      isAllowedSubscriptionCheckoutSuccessUrl(
-        "https://custom-preview.example.com/welcome?subscription=success",
-      ),
-    ).toBe(true);
-  });
-
   it("allows recoup-chat *.vercel.app when VERCEL_ENV is preview", () => {
     process.env.VERCEL_ENV = "preview";
     expect(

@@ -31,7 +31,6 @@ export const AGENT_SIGNUP_GENERIC_MESSAGE =
   "If this is a new agent+ email, your API key is included. Otherwise, check your email for a verification code.";
 
 export const SUPABASE_STORAGE_BUCKET = "user-files";
-
 export const CREATE_CONTENT_TASK_ID = "create-content";
 
 /**
