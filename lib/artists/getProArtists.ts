@@ -1,5 +1,5 @@
 import { getEnterpriseAccountIds } from "@/lib/enterprise/getEnterpriseAccountIds";
-import { selectActiveSubscriptionAccountIds } from "@/lib/supabase/subscriptions/selectActiveSubscriptionAccountIds";
+import selectSubscriptions from "@/lib/supabase/subscriptions/selectSubscriptions";
 import { selectAccountArtistIds } from "@/lib/supabase/account_artist_ids/selectAccountArtistIds";
 
 /**
@@ -10,10 +10,14 @@ import { selectAccountArtistIds } from "@/lib/supabase/account_artist_ids/select
  * account_artist_ids query when no pro accounts are found.
  */
 export async function getProArtists(): Promise<string[]> {
-  const [enterpriseIds, subscriberIds] = await Promise.all([
+  const [enterpriseIds, subscriptionRows] = await Promise.all([
     getEnterpriseAccountIds(),
-    selectActiveSubscriptionAccountIds(),
+    selectSubscriptions({ active: true }),
   ]);
+
+  const subscriberIds = subscriptionRows
+    .map(row => row.account_id)
+    .filter((id): id is string => Boolean(id));
 
   const accountIds = Array.from(new Set([...enterpriseIds, ...subscriberIds]));
   if (accountIds.length === 0) return [];
