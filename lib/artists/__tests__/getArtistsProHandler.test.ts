@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getArtistsProHandler } from "../getArtistsProHandler";
 import { validateGetArtistsProRequest } from "../validateGetArtistsProRequest";
-import { getEnterpriseArtists } from "@/lib/enterprise/getEnterpriseArtists";
+import { getProArtists } from "@/lib/artists/getProArtists";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -12,8 +12,8 @@ vi.mock("../validateGetArtistsProRequest", () => ({
   validateGetArtistsProRequest: vi.fn(),
 }));
 
-vi.mock("@/lib/enterprise/getEnterpriseArtists", () => ({
-  getEnterpriseArtists: vi.fn(),
+vi.mock("@/lib/artists/getProArtists", () => ({
+  getProArtists: vi.fn(),
 }));
 
 describe("getArtistsProHandler", () => {
@@ -30,7 +30,7 @@ describe("getArtistsProHandler", () => {
     ["both enterprise and subscription, deduped", ["a1", "b1", "c1"]],
     ["neither — empty", []],
   ])("returns %s artists on 200", async (_label, artists) => {
-    vi.mocked(getEnterpriseArtists).mockResolvedValue(artists);
+    vi.mocked(getProArtists).mockResolvedValue(artists);
 
     const response = await getArtistsProHandler(request);
     const body = await response.json();
@@ -46,7 +46,7 @@ describe("getArtistsProHandler", () => {
     const response = await getArtistsProHandler(request);
 
     expect(response).toBe(err);
-    expect(getEnterpriseArtists).not.toHaveBeenCalled();
+    expect(getProArtists).not.toHaveBeenCalled();
   });
 
   it("propagates the 403 response for non-admin callers", async () => {
@@ -56,11 +56,11 @@ describe("getArtistsProHandler", () => {
     const response = await getArtistsProHandler(request);
 
     expect(response).toBe(err);
-    expect(getEnterpriseArtists).not.toHaveBeenCalled();
+    expect(getProArtists).not.toHaveBeenCalled();
   });
 
   it("returns a generic 500 without leaking error details", async () => {
-    vi.mocked(getEnterpriseArtists).mockRejectedValue(
+    vi.mocked(getProArtists).mockRejectedValue(
       new Error("db.internal.host=10.0.0.5 connection refused"),
     );
 

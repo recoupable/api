@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getEnterpriseArtists } from "@/lib/enterprise/getEnterpriseArtists";
+import { getProArtists } from "@/lib/artists/getProArtists";
 import { validateGetArtistsProRequest } from "@/lib/artists/validateGetArtistsProRequest";
 
 export async function getArtistsProHandler(request: NextRequest): Promise<NextResponse> {
@@ -10,7 +10,7 @@ export async function getArtistsProHandler(request: NextRequest): Promise<NextRe
       return validated;
     }
 
-    const artists = await getEnterpriseArtists();
+    const artists = await getProArtists();
 
     return NextResponse.json(
       { status: "success", artists },

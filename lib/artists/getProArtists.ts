@@ -1,5 +1,5 @@
 import { getAllEnterpriseAccounts } from "@/lib/enterprise/getAllEnterpriseAccounts";
-import { getSubscriberAccountEmails } from "@/lib/enterprise/getSubscriberAccountEmails";
+import { getSubscriberAccountEmails } from "@/lib/stripe/getSubscriberAccountEmails";
 import { selectAccountArtistIds } from "@/lib/supabase/account_artist_ids/selectAccountArtistIds";
 
 /**
@@ -9,7 +9,7 @@ import { selectAccountArtistIds } from "@/lib/supabase/account_artist_ids/select
  * shared across accounts do not produce cartesian-product rows. Short-circuits
  * when no pro accounts are found before hitting `account_artist_ids`.
  */
-export async function getEnterpriseArtists(): Promise<string[]> {
+export async function getProArtists(): Promise<string[]> {
   const [enterpriseEmails, subscriberEmails] = await Promise.all([
     getAllEnterpriseAccounts(),
     getSubscriberAccountEmails(),
