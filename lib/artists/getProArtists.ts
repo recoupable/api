@@ -1,29 +1,24 @@
-import { getAllEnterpriseAccounts } from "@/lib/enterprise/getAllEnterpriseAccounts";
-import { getSubscriberAccountEmails } from "@/lib/stripe/getSubscriberAccountEmails";
+import { getEnterpriseAccountIds } from "@/lib/enterprise/getEnterpriseAccountIds";
+import { getSubscriberAccountIds } from "@/lib/stripe/getSubscriberAccountIds";
 import { selectAccountArtistIds } from "@/lib/supabase/account_artist_ids/selectAccountArtistIds";
 
 /**
- * Resolve the deduped list of artist_ids owned by "pro" accounts — enterprise
- * email domain or active Stripe subscription. Dedupes at both layers
- * (account_id then artist_id) so accounts present in both sources and artists
- * shared across accounts do not produce cartesian-product rows. Short-circuits
- * when no pro accounts are found before hitting `account_artist_ids`.
+ * Deduped artist_ids owned by "pro" accounts — enterprise email domain OR
+ * active Stripe subscription. Dedupes at both layers (account_id then
+ * artist_id) so accounts present in both sources and artists shared across
+ * accounts do not produce cartesian-product rows. Short-circuits before the
+ * account_artist_ids query when no pro accounts are found.
  */
 export async function getProArtists(): Promise<string[]> {
-  const [enterpriseEmails, subscriberEmails] = await Promise.all([
-    getAllEnterpriseAccounts(),
-    getSubscriberAccountEmails(),
+  const [enterpriseIds, subscriberIds] = await Promise.all([
+    getEnterpriseAccountIds(),
+    getSubscriberAccountIds(),
   ]);
 
-  const accountIds = new Set(
-    [...enterpriseEmails, ...subscriberEmails]
-      .map(row => row.account_id)
-      .filter((id): id is string => Boolean(id)),
-  );
+  const accountIds = Array.from(new Set([...enterpriseIds, ...subscriberIds]));
+  if (accountIds.length === 0) return [];
 
-  if (accountIds.size === 0) return [];
-
-  const artistIdRows = await selectAccountArtistIds(Array.from(accountIds));
+  const artistIdRows = await selectAccountArtistIds(accountIds);
 
   return Array.from(
     new Set(artistIdRows.map(row => row.artist_id).filter((id): id is string => Boolean(id))),
