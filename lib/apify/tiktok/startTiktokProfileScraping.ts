@@ -1,5 +1,6 @@
 import apifyClient from "@/lib/apify/client";
 import { OUTSTANDING_ERROR } from "@/lib/apify/errors";
+import { getSocialsWebhookConfig } from "@/lib/apify/getSocialsWebhookConfig";
 import { ApifyRunInfo } from "@/lib/apify/types";
 
 const startTiktokProfileScraping = async (
@@ -19,7 +20,9 @@ const startTiktokProfileScraping = async (
   };
 
   try {
-    const run = await apifyClient.actor("clockworks~tiktok-scraper").start(input);
+    const run = await apifyClient
+      .actor("clockworks~tiktok-scraper")
+      .start(input, { webhooks: getSocialsWebhookConfig() });
 
     if (!run?.id || !run?.defaultDatasetId) {
       console.error("Failed to start TikTok profile scraping for handle:", handle);

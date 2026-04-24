@@ -1,5 +1,6 @@
 import apifyClient from "@/lib/apify/client";
 import { OUTSTANDING_ERROR } from "@/lib/apify/errors";
+import { getSocialsWebhookConfig } from "@/lib/apify/getSocialsWebhookConfig";
 import { ApifyRunInfo } from "@/lib/apify/types";
 
 const startInstagramProfileScraping = async (handle: string): Promise<ApifyRunInfo | null> => {
@@ -9,9 +10,12 @@ const startInstagramProfileScraping = async (handle: string): Promise<ApifyRunIn
     throw new Error("Invalid Instagram handle");
   }
 
-  const run = await apifyClient.actor("apify~instagram-profile-scraper").start({
-    usernames: [cleanHandle],
-  });
+  const run = await apifyClient.actor("apify~instagram-profile-scraper").start(
+    {
+      usernames: [cleanHandle],
+    },
+    { webhooks: getSocialsWebhookConfig() },
+  );
 
   if (!run?.id || !run?.defaultDatasetId) {
     console.error("Failed to start Instagram profile scraping for handle:", handle);
