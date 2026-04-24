@@ -13,10 +13,6 @@ vi.mock("@/lib/stripe/client", () => ({
   },
 }));
 
-vi.mock("@/lib/const", () => ({
-  STRIPE_SUBSCRIPTION_PRICE_ID: "price_test_123",
-}));
-
 vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
   default: vi.fn(),
 }));
@@ -56,7 +52,7 @@ describe("createStripeSession", () => {
     await createStripeSession("account-uuid-111", "https://chat.recoupable.com?success=1");
 
     expect(mockCreate).toHaveBeenCalledWith({
-      line_items: [{ price: "price_test_123", quantity: 1 }],
+      line_items: [{ price: "price_1RyDFD00JObOnOb53PcVOeBz", quantity: 1 }],
       mode: "subscription",
       client_reference_id: "account-uuid-111",
       metadata: { accountId: "account-uuid-111" },

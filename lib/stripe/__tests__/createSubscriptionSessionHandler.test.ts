@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { createStripeSessionHandler } from "../createStripeSessionHandler";
+import { createSubscriptionSessionHandler } from "../createSubscriptionSessionHandler";
 import { validateCreateStripeSessionBody } from "../validateCreateStripeSessionBody";
 import { createStripeSession } from "../createStripeSession";
 
@@ -23,7 +23,7 @@ function makeRequest(): NextRequest {
   return new NextRequest("http://localhost/api/subscriptions/sessions", { method: "POST" });
 }
 
-describe("createStripeSessionHandler", () => {
+describe("createSubscriptionSessionHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -39,7 +39,7 @@ describe("createStripeSessionHandler", () => {
         url: "https://checkout.stripe.com/pay/cs_test_abc123",
       });
 
-      const response = await createStripeSessionHandler(makeRequest());
+      const response = await createSubscriptionSessionHandler(makeRequest());
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -59,7 +59,7 @@ describe("createStripeSessionHandler", () => {
         url: "https://checkout.stripe.com/pay/cs_test_abc123",
       });
 
-      await createStripeSessionHandler(makeRequest());
+      await createSubscriptionSessionHandler(makeRequest());
 
       expect(mockCreate).toHaveBeenCalledWith(
         "account-uuid-111",
@@ -74,7 +74,7 @@ describe("createStripeSessionHandler", () => {
         NextResponse.json({ status: "error", error: "successUrl is required" }, { status: 400 }),
       );
 
-      const response = await createStripeSessionHandler(makeRequest());
+      const response = await createSubscriptionSessionHandler(makeRequest());
 
       expect(response.status).toBe(400);
       expect(mockCreate).not.toHaveBeenCalled();
@@ -85,14 +85,14 @@ describe("createStripeSessionHandler", () => {
         NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
       );
 
-      const response = await createStripeSessionHandler(makeRequest());
+      const response = await createSubscriptionSessionHandler(makeRequest());
 
       expect(response.status).toBe(401);
       expect(mockCreate).not.toHaveBeenCalled();
     });
   });
 
-  describe("stripe errors", () => {
+  describe("checkout errors", () => {
     it("returns 500 when createStripeSession throws", async () => {
       mockValidate.mockResolvedValue({
         accountId: "account-uuid-111",
@@ -100,7 +100,7 @@ describe("createStripeSessionHandler", () => {
       });
       mockCreate.mockRejectedValue(new Error("Stripe API error"));
 
-      const response = await createStripeSessionHandler(makeRequest());
+      const response = await createSubscriptionSessionHandler(makeRequest());
       const data = await response.json();
 
       expect(response.status).toBe(500);
@@ -115,7 +115,7 @@ describe("createStripeSessionHandler", () => {
       });
       mockCreate.mockRejectedValue("unexpected string error");
 
-      const response = await createStripeSessionHandler(makeRequest());
+      const response = await createSubscriptionSessionHandler(makeRequest());
       const data = await response.json();
 
       expect(response.status).toBe(500);

@@ -32,20 +32,6 @@ export const AGENT_SIGNUP_GENERIC_MESSAGE =
 
 export const SUPABASE_STORAGE_BUCKET = "user-files";
 
-/** Stripe price ID for the Recoup subscription plan */
-export const STRIPE_SUBSCRIPTION_PRICE_ID = process.env.STRIPE_SUBSCRIPTION_PRICE_ID;
-
-/**
- * Allowed origins for checkout success redirects.
- * Can be overridden via STRIPE_SUCCESS_URL_ALLOWED_ORIGINS (comma-separated).
- */
-export const STRIPE_SUCCESS_URL_ALLOWED_ORIGINS = (
-  process.env.STRIPE_SUCCESS_URL_ALLOWED_ORIGINS?.trim()
-    ? process.env.STRIPE_SUCCESS_URL_ALLOWED_ORIGINS.split(",")
-    : ["https://chat.recoupable.com", "http://localhost:3000", "http://localhost:3001"]
-)
-  .map(origin => origin.trim())
-  .filter(Boolean);
 export const CREATE_CONTENT_TASK_ID = "create-content";
 
 /**

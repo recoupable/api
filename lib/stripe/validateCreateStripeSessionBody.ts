@@ -4,7 +4,7 @@ import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { STRIPE_SUCCESS_URL_ALLOWED_ORIGINS } from "@/lib/const";
+import { isAllowedSubscriptionCheckoutSuccessUrl } from "@/lib/stripe/isAllowedSubscriptionCheckoutSuccessUrl";
 
 export const createStripeSessionBodySchema = z.object({
   successUrl: z
@@ -19,15 +19,6 @@ export type ValidatedCreateStripeSessionRequest = {
   accountId: string;
   successUrl: string;
 };
-
-function isAllowedStripeSuccessUrl(successUrl: string): boolean {
-  try {
-    const parsed = new URL(successUrl);
-    return STRIPE_SUCCESS_URL_ALLOWED_ORIGINS.includes(parsed.origin);
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Validates POST /api/subscriptions/sessions request.
@@ -57,7 +48,7 @@ export async function validateCreateStripeSessionBody(
     );
   }
 
-  if (!isAllowedStripeSuccessUrl(result.data.successUrl)) {
+  if (!isAllowedSubscriptionCheckoutSuccessUrl(result.data.successUrl)) {
     return NextResponse.json(
       {
         status: "error",

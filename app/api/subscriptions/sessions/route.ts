@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createStripeSessionHandler } from "@/lib/stripe/createStripeSessionHandler";
+import { createSubscriptionSessionHandler } from "@/lib/stripe/createSubscriptionSessionHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -17,7 +17,7 @@ export async function OPTIONS() {
 /**
  * POST /api/subscriptions/sessions
  *
- * Creates a Stripe checkout session for the authenticated account.
+ * Creates a subscription checkout session for the authenticated account.
  * Returns a hosted checkout URL the client should redirect to.
  *
  * Request body:
@@ -30,13 +30,13 @@ export async function OPTIONS() {
  * - 400: { status: "error", error: "validation error message" }
  * - 401: { status: "error", error: "authentication error" }
  * - 403: { status: "error", error: "access denied" }
- * - 500: { status: "error", error: "Failed to create Stripe session" }
+ * - 500: { status: "error", error: "Internal server error" }
  *
  * @param request - The request object containing JSON body.
  * @returns A NextResponse with the checkout session data or an error.
  */
 export async function POST(request: NextRequest) {
-  return createStripeSessionHandler(request);
+  return createSubscriptionSessionHandler(request);
 }
 
 export const dynamic = "force-dynamic";

@@ -1,7 +1,9 @@
 import type Stripe from "stripe";
 import stripeClient from "@/lib/stripe/client";
-import { STRIPE_SUBSCRIPTION_PRICE_ID } from "@/lib/const";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
+
+/** Same Stripe price as `chat/lib/stripe/createSession.ts` (no extra env in API). */
+const RECOUP_SUBSCRIPTION_CHECKOUT_PRICE_ID = "price_1RyDFD00JObOnOb53PcVOeBz";
 
 export type StripeSessionResult = {
   id: string;
@@ -24,10 +26,6 @@ export async function createStripeSession(
   accountId: string,
   successUrl: string,
 ): Promise<StripeSessionResult> {
-  if (!STRIPE_SUBSCRIPTION_PRICE_ID) {
-    throw new Error("Failed to create Stripe session");
-  }
-
   const metadata: Stripe.MetadataParam = { accountId };
   const accountEmails = await selectAccountEmails({ accountIds: accountId });
   const customerEmail = accountEmails.find(
@@ -37,7 +35,7 @@ export async function createStripeSession(
   const sessionData: Stripe.Checkout.SessionCreateParams = {
     line_items: [
       {
-        price: STRIPE_SUBSCRIPTION_PRICE_ID,
+        price: RECOUP_SUBSCRIPTION_CHECKOUT_PRICE_ID,
         quantity: 1,
       },
     ],
