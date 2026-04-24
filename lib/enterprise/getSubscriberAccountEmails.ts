@@ -1,20 +1,20 @@
-import { getActiveSubscriptions } from "@/lib/stripe/getActiveSubscriptions";
+import { iterateActiveSubscriptions } from "@/lib/stripe/iterateActiveSubscriptions";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
 /**
- * Resolve subscriber account_ids from Stripe subscription metadata and look
- * up their account_emails. The Stripe call is capped at 100 per
- * `getActiveSubscriptions` — acceptable today, revisit with pagination if the
- * active set ever exceeds that.
+ * Stream active Stripe subscriptions and collect the `metadata.accountId`
+ * set, then resolve their account_emails in one Supabase query. Streaming
+ * keeps memory flat — we only retain the deduped account_id strings, not
+ * full Subscription objects.
  */
 export async function getSubscriberAccountEmails() {
-  const activeSubscriptions = await getActiveSubscriptions();
+  const accountIds = new Set<string>();
+  for await (const subscription of iterateActiveSubscriptions()) {
+    const id = subscription.metadata?.accountId;
+    if (id) accountIds.add(id);
+  }
 
-  const accountIds = activeSubscriptions
-    .map(subscription => subscription.metadata?.accountId)
-    .filter((accountId): accountId is string => Boolean(accountId));
+  if (accountIds.size === 0) return [];
 
-  if (accountIds.length === 0) return [];
-
-  return selectAccountEmails({ accountIds });
+  return selectAccountEmails({ accountIds: Array.from(accountIds) });
 }
