@@ -1,6 +1,7 @@
 import generateText from "@/lib/ai/generateText";
 import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 import { RECOUP_FROM_EMAIL } from "@/lib/const";
+import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 
 /**
  * Sends an Apify-webhook summary email to the given recipients using
@@ -11,7 +12,10 @@ import { RECOUP_FROM_EMAIL } from "@/lib/const";
  * @param emails - Recipient email addresses.
  * @returns The Resend response, or `null` when there are no recipients.
  */
-export async function sendApifyWebhookEmail(profile: Record<string, unknown>, emails: string[]) {
+export async function sendApifyWebhookEmail(
+  profile: ApifyInstagramProfileResult,
+  emails: string[],
+) {
   if (!emails?.length) return null;
 
   const prompt = `You have a new Apify dataset update. Here is the data:
@@ -22,10 +26,9 @@ Username: ${profile.username}
 Profile URL: ${profile.url}
 Profile Picture: ${profile.profilePicUrl}
 Biography: ${profile.biography}
-External URL: ${profile.externalUrls}
 Followers: ${profile.followersCount}
 Following: ${profile.followsCount}
-Latest Posts: ${((profile.latestPosts as unknown[]) || []).map(p => JSON.stringify(p)).join(", ")}
+Latest Posts: ${(profile.latestPosts ?? []).map(p => JSON.stringify(p)).join(", ")}
 `;
 
   const { text } = await generateText({
@@ -44,7 +47,7 @@ Latest Posts: ${((profile.latestPosts as unknown[]) || []).map(p => JSON.stringi
   return await sendEmailWithResend({
     from: RECOUP_FROM_EMAIL,
     to: emails,
-    subject: `${profile.fullName} has new posts on Instagram`,
+    subject: `${profile.fullName ?? profile.username ?? "Your artist"} has new posts on Instagram`,
     html: text,
   });
 }

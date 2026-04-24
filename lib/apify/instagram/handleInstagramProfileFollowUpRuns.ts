@@ -1,6 +1,6 @@
 import { startInstagramCommentsScraping } from "@/lib/apify/instagram/startInstagramCommentsScraping";
 import { getExistingPostComments } from "@/lib/apify/instagram/getExistingPostComments";
-import type { ApifyInstagramPost, ApifyInstagramProfileResult } from "@/lib/apify/types";
+import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 
 /**
  * Kicks off a comments-scraper run for the newly-seen posts on a
@@ -21,9 +21,7 @@ export async function handleInstagramProfileFollowUpRuns(
   if (dataset.length !== 1) return;
   if (!firstResult.latestPosts || firstResult.latestPosts.length === 0) return;
 
-  const postUrls = (firstResult.latestPosts as ApifyInstagramPost[])
-    .map(post => post.url)
-    .filter(Boolean);
+  const postUrls = firstResult.latestPosts.map(post => post.url).filter(Boolean);
 
   if (postUrls.length === 0) return;
 
