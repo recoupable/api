@@ -1,20 +1,31 @@
+import type { WebhookUpdateData } from "apify-client";
 import apifyClient from "@/lib/apify/client";
 import { OUTSTANDING_ERROR } from "@/lib/apify/errors";
-import { ApifyRunInfo } from "@/lib/apify/types";
+import type { ApifyRunInfo } from "@/lib/apify/types";
 
-const startInstagramProfileScraping = async (handle: string): Promise<ApifyRunInfo | null> => {
-  const cleanHandle = handle.trim().replace(/^@/, "");
+export interface StartInstagramProfileScrapingInput {
+  handles: string[];
+  webhooks?: readonly WebhookUpdateData[];
+}
 
-  if (!cleanHandle) {
+export async function startInstagramProfileScraping({
+  handles,
+  webhooks,
+}: StartInstagramProfileScrapingInput): Promise<ApifyRunInfo | null> {
+  const cleanHandles = handles
+    .map(handle => handle.trim().replace(/^@/, ""))
+    .filter(handle => handle.length > 0);
+
+  if (cleanHandles.length === 0) {
     throw new Error("Invalid Instagram handle");
   }
 
-  const run = await apifyClient.actor("apify~instagram-profile-scraper").start({
-    usernames: [cleanHandle],
-  });
+  const run = await apifyClient
+    .actor("apify~instagram-profile-scraper")
+    .start({ usernames: cleanHandles, webhooks });
 
   if (!run?.id || !run?.defaultDatasetId) {
-    console.error("Failed to start Instagram profile scraping for handle:", handle);
+    console.error("Failed to start Instagram profile scraping for handles:", handles);
     return null;
   }
 
@@ -23,6 +34,4 @@ const startInstagramProfileScraping = async (handle: string): Promise<ApifyRunIn
   }
 
   return { runId: run.id, datasetId: run.defaultDatasetId };
-};
-
-export default startInstagramProfileScraping;
+}

@@ -1,5 +1,5 @@
 import startTikTokProfileScraping from "@/lib/apify/tiktok/startTiktokProfileScraping";
-import startInstagramProfileScraping from "@/lib/apify/instagram/startInstagramProfileScraping";
+import { startInstagramProfileScraping } from "@/lib/apify/instagram/startInstagramProfileScraping";
 import startTwitterProfileScraping from "@/lib/apify/twitter/startTwitterProfileScraping";
 import startThreadsProfileScraping from "@/lib/apify/threads/startThreadsProfileScraping";
 import startYoutubeProfileScraping from "@/lib/apify/youtube/startYoutubeProfileScraping";
@@ -33,7 +33,7 @@ const PLATFORM_SCRAPERS: Array<{
   },
   {
     match: (url: string) => url.includes("instagram.com"),
-    scraper: startInstagramProfileScraping,
+    scraper: (handle: string) => startInstagramProfileScraping({ handles: [handle] }),
   },
   {
     match: (url: string) => url.includes("twitter.com") || url.includes("x.com"),
