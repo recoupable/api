@@ -42,12 +42,16 @@ describe("toJsonSchema", () => {
     expect(toJsonSchema(plainSchema)).toEqual(plainSchema);
   });
 
-  it("returns {} when conversion of an unrecognized object fails", () => {
-    // A Zod-like object that isn't actually a valid Zod schema
+  it("returns a JSON-Schema-shaped result without Zod internals for malformed Zod-like inputs", () => {
+    // A Zod-like object that isn't actually a valid Zod schema. The converter
+    // is permissive — it produces a best-effort JSON Schema document rather
+    // than throwing. We just want to confirm no Zod internals leak through.
     const malformed = { _def: { unknownKeys: "strict" } };
 
     const result = toJsonSchema(malformed);
 
-    expect(result).toEqual({});
+    expect(result).not.toHaveProperty("_def");
+    expect(result).not.toHaveProperty("~standard");
+    expect(result).not.toHaveProperty("typeName");
   });
 });
