@@ -466,7 +466,7 @@ describe("getGeneralAgent", () => {
       expect(typeof result.stopWhen).toBe("function");
     });
 
-    it("creates ToolLoopAgent with providerOptions for thinking/reasoning", async () => {
+    it("creates ToolLoopAgent with providerOptions for thinking/reasoning (default/legacy model path)", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
         orgId: null,
@@ -478,6 +478,8 @@ describe("getGeneralAgent", () => {
       // providerOptions should be baked into the agent constructor (stored in settings)
       const settings = (result.agent as any).settings;
       expect(settings.providerOptions).toBeDefined();
+      // DEFAULT_MODEL is a non-Anthropic model, so the anthropic branch falls
+      // back to the legacy "enabled" config (safe default for all older models).
       expect(settings.providerOptions.anthropic).toEqual(
         expect.objectContaining({
           thinking: { type: "enabled", budgetTokens: 12000 },
@@ -497,6 +499,56 @@ describe("getGeneralAgent", () => {
           reasoningSummary: "detailed",
         }),
       );
+    });
+
+    it("selects adaptive anthropic providerOptions when body.model is Opus 4.7", async () => {
+      const body: ChatRequestBody = {
+        accountId: "account-123",
+        orgId: null,
+        messages: [{ id: "1", role: "user", content: "Hello" }],
+        model: "anthropic/claude-opus-4.7",
+      };
+
+      const result = await getGeneralAgent(body);
+
+      const settings = (result.agent as any).settings;
+      expect(settings.providerOptions.anthropic).toEqual({
+        thinking: { type: "adaptive", display: "summarized" },
+        effort: "medium",
+      });
+    });
+
+    it("selects adaptive anthropic providerOptions when body.model is Sonnet 4.6", async () => {
+      const body: ChatRequestBody = {
+        accountId: "account-123",
+        orgId: null,
+        messages: [{ id: "1", role: "user", content: "Hello" }],
+        model: "anthropic/claude-sonnet-4.6",
+      };
+
+      const result = await getGeneralAgent(body);
+
+      const settings = (result.agent as any).settings;
+      expect(settings.providerOptions.anthropic).toEqual({
+        thinking: { type: "adaptive", display: "summarized" },
+        effort: "medium",
+      });
+    });
+
+    it("keeps legacy enabled anthropic providerOptions for Sonnet 4.5", async () => {
+      const body: ChatRequestBody = {
+        accountId: "account-123",
+        orgId: null,
+        messages: [{ id: "1", role: "user", content: "Hello" }],
+        model: "anthropic/claude-sonnet-4.5",
+      };
+
+      const result = await getGeneralAgent(body);
+
+      const settings = (result.agent as any).settings;
+      expect(settings.providerOptions.anthropic).toEqual({
+        thinking: { type: "enabled", budgetTokens: 12000 },
+      });
     });
 
     it("creates ToolLoopAgent with prepareStep function", async () => {
