@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { z } from "zod";
 import { getConnectorActions } from "../getConnectorActions";
 
 import { getComposioClient } from "../../client";
@@ -104,6 +105,29 @@ describe("getConnectorActions", () => {
     const result = await getConnectorActions("account-123");
 
     expect(result[0].parameters).toEqual({});
+  });
+
+  it("converts a Zod inputSchema into JSON Schema (no Zod internals leak)", async () => {
+    mockToolkits.mockResolvedValue({ items: [] });
+    mockTools.mockResolvedValue({
+      GMAIL_FETCH_EMAILS: {
+        description: "fetch",
+        inputSchema: z.object({ max_results: z.number().optional() }),
+      },
+    });
+
+    const result = await getConnectorActions("account-123");
+
+    expect(result[0].parameters).toEqual(
+      expect.objectContaining({
+        type: "object",
+        properties: expect.objectContaining({
+          max_results: expect.objectContaining({ type: "number" }),
+        }),
+      }),
+    );
+    expect(result[0].parameters).not.toHaveProperty("_def");
+    expect(result[0].parameters).not.toHaveProperty("~standard");
   });
 
   it("should pass authConfigs when env vars set", async () => {

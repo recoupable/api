@@ -1,5 +1,6 @@
 import { getComposioClient } from "../client";
 import { buildAuthConfigs } from "./buildAuthConfigs";
+import { toJsonSchema } from "./toJsonSchema";
 
 /**
  * A single executable action exposed by a connector.
@@ -52,13 +53,13 @@ export async function getConnectorActions(accountId: string): Promise<ConnectorA
     const connectorSlug = slug.split("_")[0]?.toLowerCase() ?? "";
     const isConnected = connectionByToolkit.get(connectorSlug) ?? false;
 
-    const t = tool as { description?: string; inputSchema?: Record<string, unknown> };
+    const t = tool as { description?: string; inputSchema?: unknown };
 
     return {
       slug,
       name: slug,
       description: t.description ?? "",
-      parameters: t.inputSchema ?? {},
+      parameters: toJsonSchema(t.inputSchema),
       connectorSlug,
       isConnected,
     };
