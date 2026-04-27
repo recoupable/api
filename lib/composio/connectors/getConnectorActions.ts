@@ -1,5 +1,4 @@
-import { getComposioClient } from "../client";
-import { buildAuthConfigs } from "./buildAuthConfigs";
+import { getComposioTools } from "../toolRouter/getTools";
 import { toJsonSchema } from "./toJsonSchema";
 
 /**
@@ -15,53 +14,38 @@ export interface ConnectorAction {
 }
 
 /**
- * All toolkit slugs the platform supports. Mirrors getConnectors.
- */
-const SUPPORTED_TOOLKITS = ["googlesheets", "googledrive", "googledocs", "tiktok", "instagram"];
-
-/**
  * Get the catalog of executable connector actions for an account.
  *
- * Each action returns its slug (UPPERCASE_SNAKE_CASE, e.g. `GMAIL_FETCH_EMAILS`),
- * description, parameters JSON Schema, parent connectorSlug, and connection status
- * derived from the parent toolkit. Actions whose parent toolkit is not connected
- * are returned with `isConnected: false` and cannot be executed.
+ * Mirrors the chat agent's tool resolution by delegating to `getComposioTools`,
+ * which merges the customer's own connections (priority 1), the artist's
+ * connections if scoped (priority 2), and Recoupable's shared platform-level
+ * connections (priority 3). Anything in the returned catalog is executable —
+ * `isConnected` is therefore `true` for every action returned.
+ *
+ * Each action's `slug` (UPPERCASE_SNAKE_CASE, e.g. `GOOGLEDRIVE_LIST_FILES`)
+ * doubles as the `actionSlug` for `POST /api/connectors/actions`. The
+ * `connectorSlug` is derived from the slug prefix.
  *
  * @param accountId - The account to scope the catalog to
- * @returns The list of connector actions
+ * @returns The list of executable connector actions
  */
 export async function getConnectorActions(accountId: string): Promise<ConnectorAction[]> {
-  const composio = await getComposioClient();
-  const authConfigs = buildAuthConfigs();
-  const session = await composio.create(accountId, {
-    toolkits: SUPPORTED_TOOLKITS,
-    ...(authConfigs && { authConfigs }),
-  });
-
-  // Per-toolkit connection status
-  const toolkits = await session.toolkits();
-  const connectionByToolkit = new Map<string, boolean>();
-  for (const toolkit of toolkits.items) {
-    connectionByToolkit.set(toolkit.slug.toLowerCase(), toolkit.connection?.isActive ?? false);
-  }
-
-  // Tool catalog (Vercel AI SDK shape: Record<slug, { description, inputSchema, ... }>)
-  const tools = await session.tools();
+  const tools = await getComposioTools(accountId);
 
   return Object.entries(tools).map(([slug, tool]) => {
     // Derive parent toolkit from the slug prefix (Composio convention: TOOLKIT_ACTION_NAME)
     const connectorSlug = slug.split("_")[0]?.toLowerCase() ?? "";
-    const isConnected = connectionByToolkit.get(connectorSlug) ?? false;
 
-    const t = tool as { description?: string; inputSchema?: unknown };
+    const t = tool as { description?: string; inputSchema?: unknown; parameters?: unknown };
 
     return {
       slug,
       name: slug,
       description: t.description ?? "",
-      parameters: toJsonSchema(t.inputSchema),
+      // Composio's VercelProvider uses `inputSchema`; some versions use `parameters`.
+      parameters: toJsonSchema(t.inputSchema ?? t.parameters),
       connectorSlug,
-      isConnected,
+      isConnected: true,
     };
   });
 }
