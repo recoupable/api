@@ -8,13 +8,13 @@ import type { TablesInsert } from "@/types/database.types";
  *
  * @param socialPosts - Rows to upsert.
  */
-export async function insertSocialPosts(socialPosts: TablesInsert<"social_posts">[]) {
+export async function upsertSocialPosts(socialPosts: TablesInsert<"social_posts">[]) {
   const { data, error } = await supabase
     .from("social_posts")
     .upsert(socialPosts, { onConflict: "post_id,social_id" });
 
   if (error) {
-    console.error("[ERROR] insertSocialPosts:", error);
+    console.error("[ERROR] upsertSocialPosts:", error);
     throw error;
   }
 

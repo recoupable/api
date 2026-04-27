@@ -1,5 +1,5 @@
-import { insertPosts } from "@/lib/supabase/posts/insertPosts";
-import { getPostsByUrls } from "@/lib/supabase/posts/getPostsByUrls";
+import { upsertPosts } from "@/lib/supabase/posts/upsertPosts";
+import { getPosts } from "@/lib/supabase/posts/getPosts";
 import type { Tables, TablesInsert } from "@/types/database.types";
 
 /**
@@ -15,7 +15,7 @@ export async function getOrCreatePostsForComments(
   const unique = Array.from(new Set(postUrls.filter(Boolean)));
   if (unique.length === 0) return new Map();
 
-  const existing = await getPostsByUrls(unique);
+  const existing = await getPosts({ postUrls: unique });
   const existingSet = new Set(existing.map(p => p.post_url));
 
   const missing = unique.filter(url => !existingSet.has(url));
@@ -26,8 +26,8 @@ export async function getOrCreatePostsForComments(
       post_url: url,
       updated_at: new Date().toISOString(),
     }));
-    await insertPosts(rows);
-    all = await getPostsByUrls(unique);
+    await upsertPosts(rows);
+    all = await getPosts({ postUrls: unique });
   }
 
   const map = new Map<string, Tables<"posts">>();

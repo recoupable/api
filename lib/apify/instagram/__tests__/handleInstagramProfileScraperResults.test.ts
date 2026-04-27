@@ -5,8 +5,8 @@ import { saveApifyInstagramPosts } from "../saveApifyInstagramPosts";
 import { handleInstagramProfileFollowUpRuns } from "../handleInstagramProfileFollowUpRuns";
 import { sendApifyWebhookEmail } from "@/lib/apify/sendApifyWebhookEmail";
 import { insertSocials } from "@/lib/supabase/socials/insertSocials";
-import { selectSocialByProfileUrl } from "@/lib/supabase/socials/selectSocialByProfileUrl";
-import { insertSocialPosts } from "@/lib/supabase/social_posts/insertSocialPosts";
+import { selectSocials } from "@/lib/supabase/socials/selectSocials";
+import { upsertSocialPosts } from "@/lib/supabase/social_posts/upsertSocialPosts";
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
@@ -19,10 +19,10 @@ vi.mock("../handleInstagramProfileFollowUpRuns", () => ({
 }));
 vi.mock("@/lib/apify/sendApifyWebhookEmail", () => ({ sendApifyWebhookEmail: vi.fn() }));
 vi.mock("@/lib/supabase/socials/insertSocials", () => ({ insertSocials: vi.fn() }));
-vi.mock("@/lib/supabase/socials/selectSocialByProfileUrl", () => ({
-  selectSocialByProfileUrl: vi.fn(),
+vi.mock("@/lib/supabase/socials/selectSocials", () => ({
+  selectSocials: vi.fn(),
 }));
-vi.mock("@/lib/supabase/social_posts/insertSocialPosts", () => ({ insertSocialPosts: vi.fn() }));
+vi.mock("@/lib/supabase/social_posts/upsertSocialPosts", () => ({ upsertSocialPosts: vi.fn() }));
 vi.mock("@/lib/supabase/account_socials/selectAccountSocials", () => ({
   selectAccountSocials: vi.fn(),
 }));
@@ -68,7 +68,7 @@ describe("handleInstagramProfileScraperResults", () => {
     vi.mocked(saveApifyInstagramPosts).mockResolvedValue({ supabasePosts: posts });
     vi.mocked(uploadLinkToArweave).mockResolvedValue(null);
     vi.mocked(insertSocials).mockResolvedValue([] as never);
-    vi.mocked(selectSocialByProfileUrl).mockResolvedValue({ id: "s1" } as never);
+    vi.mocked(selectSocials).mockResolvedValue([{ id: "s1" }] as never);
     vi.mocked(selectAccountSocials).mockResolvedValue([{ account_id: "a1" }] as never);
     vi.mocked(getAccountArtistIds).mockResolvedValue([{ account_id: "a1" }] as never);
     vi.mocked(selectAccountEmails).mockResolvedValue([{ email: "x@y.com" }] as never);
@@ -76,7 +76,7 @@ describe("handleInstagramProfileScraperResults", () => {
 
     const result = await handleInstagramProfileScraperResults(payload);
 
-    expect(insertSocialPosts).toHaveBeenCalledOnce();
+    expect(upsertSocialPosts).toHaveBeenCalledOnce();
     expect(sendApifyWebhookEmail).toHaveBeenCalledWith(expect.any(Object), ["x@y.com"]);
     expect(handleInstagramProfileFollowUpRuns).toHaveBeenCalledOnce();
     expect(result.social).toEqual({ id: "s1" });

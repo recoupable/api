@@ -1,5 +1,5 @@
-import { insertPosts } from "@/lib/supabase/posts/insertPosts";
-import { getPostsByUrls } from "@/lib/supabase/posts/getPostsByUrls";
+import { upsertPosts } from "@/lib/supabase/posts/upsertPosts";
+import { getPosts } from "@/lib/supabase/posts/getPosts";
 import type { ApifyInstagramPost } from "@/lib/apify/types";
 import type { Tables, TablesInsert } from "@/types/database.types";
 
@@ -21,8 +21,8 @@ export async function saveApifyInstagramPosts(
   }));
   const postUrls = rows.map(p => p.post_url);
 
-  await insertPosts(rows);
+  await upsertPosts(rows);
 
-  const supabasePosts = await getPostsByUrls(postUrls);
+  const supabasePosts = await getPosts({ postUrls });
   return { supabasePosts };
 }

@@ -1,4 +1,4 @@
-import { insertPostComments } from "@/lib/supabase/post_comments/insertPostComments";
+import { upsertPostComments } from "@/lib/supabase/post_comments/upsertPostComments";
 import { getOrCreatePostsForComments } from "@/lib/apify/instagram/getOrCreatePostsForComments";
 import { getOrCreateSocialsForComments } from "@/lib/apify/instagram/getOrCreateSocialsForComments";
 import type { TablesInsert } from "@/types/database.types";
@@ -43,7 +43,7 @@ export async function saveApifyInstagramComments(comments: ApifyInstagramComment
     }
 
     if (rows.length > 0) {
-      await insertPostComments(rows);
+      await upsertPostComments(rows);
     }
   } catch (error) {
     console.error("[ERROR] saveApifyInstagramComments:", error);

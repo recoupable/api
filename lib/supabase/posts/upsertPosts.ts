@@ -8,13 +8,13 @@ import type { TablesInsert } from "@/types/database.types";
  *
  * @param posts - Rows matching the posts-table insert type.
  */
-export async function insertPosts(posts: TablesInsert<"posts">[]) {
+export async function upsertPosts(posts: TablesInsert<"posts">[]) {
   const { data, error } = await supabase
     .from("posts")
     .upsert(posts, { onConflict: "post_url", ignoreDuplicates: true });
 
   if (error) {
-    console.error("[ERROR] insertPosts:", error);
+    console.error("[ERROR] upsertPosts:", error);
     throw error;
   }
 

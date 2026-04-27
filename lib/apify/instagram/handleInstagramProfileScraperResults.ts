@@ -3,8 +3,8 @@ import { saveApifyInstagramPosts } from "@/lib/apify/instagram/saveApifyInstagra
 import { handleInstagramProfileFollowUpRuns } from "@/lib/apify/instagram/handleInstagramProfileFollowUpRuns";
 import { sendApifyWebhookEmail } from "@/lib/apify/sendApifyWebhookEmail";
 import { insertSocials } from "@/lib/supabase/socials/insertSocials";
-import { selectSocialByProfileUrl } from "@/lib/supabase/socials/selectSocialByProfileUrl";
-import { insertSocialPosts } from "@/lib/supabase/social_posts/insertSocialPosts";
+import { selectSocials } from "@/lib/supabase/socials/selectSocials";
+import { upsertSocialPosts } from "@/lib/supabase/social_posts/upsertSocialPosts";
 import {
   selectAccountSocials,
   type AccountSocialWithSocial,
@@ -84,14 +84,15 @@ export async function handleInstagramProfileScraperResults(
     },
   ]);
 
-  const social = await selectSocialByProfileUrl(normalizedUrl);
+  const matches = await selectSocials({ profile_url: normalizedUrl });
+  const social = matches?.[0] ?? null;
 
   if (!social) {
     return { ...empty, posts };
   }
 
   if (posts.length) {
-    await insertSocialPosts(
+    await upsertSocialPosts(
       posts.map(post => ({
         post_id: post.id,
         updated_at: post.updated_at,

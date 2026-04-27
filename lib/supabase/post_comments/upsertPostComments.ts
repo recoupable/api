@@ -1,16 +1,14 @@
 import supabase from "../serverClient";
-import type { Tables, TablesInsert } from "@/types/database.types";
+import type { TablesInsert } from "@/types/database.types";
 
 /**
  * Upserts rows into `post_comments`. Conflicts on
  * `(post_id, social_id, comment, commented_at)` are ignored so replays
  * of the same Apify dataset do not duplicate comments.
  *
- * @param comments - Rows to insert.
+ * @param comments - Rows to upsert.
  */
-export async function insertPostComments(
-  comments: TablesInsert<"post_comments">[],
-): Promise<Tables<"post_comments">[]> {
+export async function upsertPostComments(comments: TablesInsert<"post_comments">[]) {
   if (comments.length === 0) return [];
 
   const { data, error } = await supabase
@@ -22,7 +20,7 @@ export async function insertPostComments(
     .select();
 
   if (error) {
-    console.error("[ERROR] insertPostComments:", error);
+    console.error("[ERROR] upsertPostComments:", error);
     throw error;
   }
 
