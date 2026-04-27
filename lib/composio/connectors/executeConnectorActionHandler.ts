@@ -2,7 +2,8 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateExecuteConnectorActionRequest } from "./validateExecuteConnectorActionRequest";
-import { executeConnectorAction, ConnectorActionNotFoundError } from "./executeConnectorAction";
+import { executeConnectorAction } from "./executeConnectorAction";
+import { ConnectorActionNotFoundError } from "./connectorActionErrors";
 
 /**
  * Handler for POST /api/connectors/actions.

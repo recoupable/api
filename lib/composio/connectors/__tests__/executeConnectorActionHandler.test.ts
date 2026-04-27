@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { executeConnectorActionHandler } from "../executeConnectorActionHandler";
 
 import { validateExecuteConnectorActionRequest } from "../validateExecuteConnectorActionRequest";
-import { executeConnectorAction, ConnectorActionNotFoundError } from "../executeConnectorAction";
+import { executeConnectorAction } from "../executeConnectorAction";
+import { ConnectorActionNotFoundError } from "../connectorActionErrors";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => new Headers()),
@@ -13,15 +14,9 @@ vi.mock("../validateExecuteConnectorActionRequest", () => ({
   validateExecuteConnectorActionRequest: vi.fn(),
 }));
 
-vi.mock("../executeConnectorAction", async () => {
-  const actual = await vi.importActual<typeof import("../executeConnectorAction")>(
-    "../executeConnectorAction",
-  );
-  return {
-    ...actual,
-    executeConnectorAction: vi.fn(),
-  };
-});
+vi.mock("../executeConnectorAction", () => ({
+  executeConnectorAction: vi.fn(),
+}));
 
 const buildRequest = (body: unknown) =>
   new NextRequest("http://localhost/api/connectors/actions", {
