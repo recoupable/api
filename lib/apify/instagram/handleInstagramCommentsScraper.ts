@@ -22,7 +22,7 @@ import type { TablesInsert } from "@/types/database.types";
  */
 export async function handleInstagramCommentsScraper(parsed: ApifyWebhookPayload) {
   const { items } = await apifyClient.dataset(parsed.resource.defaultDatasetId).listItems();
-  const comments = items as ApifyInstagramComment[];
+  const comments = items as unknown as ApifyInstagramComment[];
   const processedPostUrls = Array.from(new Set(comments.map(c => c.postUrl).filter(Boolean)));
 
   if (comments.length > 0) {

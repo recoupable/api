@@ -11,9 +11,13 @@ import type { TablesInsert } from "@/types/database.types";
  * @returns Array of inserted social records
  */
 export async function insertSocials(socials: TablesInsert<"socials">[]) {
+  // stripNullish drops keys, so the inferred type widens to Partial<…>;
+  // cast back since the supabase upsert overload still expects the full
+  // insert type even though missing optional fields are fine at runtime.
+  const cleaned = socials.map(stripNullish) as TablesInsert<"socials">[];
   const { data, error } = await supabase
     .from("socials")
-    .upsert(socials.map(stripNullish), { onConflict: "profile_url" })
+    .upsert(cleaned, { onConflict: "profile_url" })
     .select("*");
 
   if (error) {
