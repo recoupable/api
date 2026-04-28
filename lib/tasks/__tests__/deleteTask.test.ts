@@ -26,6 +26,7 @@ const mockDeleteSchedule = vi.mocked(deleteSchedule);
 describe("deleteTask", () => {
   const mockTaskId = "task-123";
   const mockScheduleId = "schedule-456";
+  const mockResolvedAccountId = "account-123";
 
   const mockScheduledAction = {
     id: mockTaskId,
@@ -53,19 +54,19 @@ describe("deleteTask", () => {
 
   describe("basic functionality", () => {
     it("fetches the scheduled action by id", async () => {
-      await deleteTask({ id: mockTaskId });
+      await deleteTask({ id: mockTaskId, resolvedAccountId: mockResolvedAccountId });
 
       expect(mockSelectScheduledActions).toHaveBeenCalledWith({ id: mockTaskId });
     });
 
     it("deletes the scheduled action from the database", async () => {
-      await deleteTask({ id: mockTaskId });
+      await deleteTask({ id: mockTaskId, resolvedAccountId: mockResolvedAccountId });
 
       expect(mockDeleteScheduledAction).toHaveBeenCalledWith(mockTaskId);
     });
 
     it("deletes the Trigger.dev schedule when trigger_schedule_id exists", async () => {
-      await deleteTask({ id: mockTaskId });
+      await deleteTask({ id: mockTaskId, resolvedAccountId: mockResolvedAccountId });
 
       expect(mockDeleteSchedule).toHaveBeenCalledWith(mockScheduleId);
     });
@@ -75,25 +76,39 @@ describe("deleteTask", () => {
     it("throws error when task is not found", async () => {
       mockSelectScheduledActions.mockResolvedValue([]);
 
-      await expect(deleteTask({ id: "non-existent" })).rejects.toThrow("Task not found");
+      await expect(
+        deleteTask({ id: "non-existent", resolvedAccountId: mockResolvedAccountId }),
+      ).rejects.toThrow("Task not found");
+    });
+
+    it("throws error when account does not own task", async () => {
+      await expect(
+        deleteTask({ id: mockTaskId, resolvedAccountId: "different-account" }),
+      ).rejects.toThrow("Access denied to this task");
     });
 
     it("propagates error from selectScheduledActions", async () => {
       mockSelectScheduledActions.mockRejectedValue(new Error("Database error"));
 
-      await expect(deleteTask({ id: mockTaskId })).rejects.toThrow("Database error");
+      await expect(
+        deleteTask({ id: mockTaskId, resolvedAccountId: mockResolvedAccountId }),
+      ).rejects.toThrow("Database error");
     });
 
     it("propagates error from deleteSchedule", async () => {
       mockDeleteSchedule.mockRejectedValue(new Error("Trigger.dev error"));
 
-      await expect(deleteTask({ id: mockTaskId })).rejects.toThrow("Trigger.dev error");
+      await expect(
+        deleteTask({ id: mockTaskId, resolvedAccountId: mockResolvedAccountId }),
+      ).rejects.toThrow("Trigger.dev error");
     });
 
     it("propagates error from deleteScheduledAction", async () => {
       mockDeleteScheduledAction.mockRejectedValue(new Error("Delete error"));
 
-      await expect(deleteTask({ id: mockTaskId })).rejects.toThrow("Delete error");
+      await expect(
+        deleteTask({ id: mockTaskId, resolvedAccountId: mockResolvedAccountId }),
+      ).rejects.toThrow("Delete error");
     });
   });
 
@@ -103,7 +118,7 @@ describe("deleteTask", () => {
         { ...mockScheduledAction, trigger_schedule_id: null },
       ]);
 
-      await deleteTask({ id: mockTaskId });
+      await deleteTask({ id: mockTaskId, resolvedAccountId: mockResolvedAccountId });
 
       expect(mockDeleteSchedule).not.toHaveBeenCalled();
       expect(mockDeleteScheduledAction).toHaveBeenCalledWith(mockTaskId);
@@ -115,7 +130,7 @@ describe("deleteTask", () => {
       delete taskWithoutScheduleId.trigger_schedule_id;
       mockSelectScheduledActions.mockResolvedValue([taskWithoutScheduleId]);
 
-      await deleteTask({ id: mockTaskId });
+      await deleteTask({ id: mockTaskId, resolvedAccountId: mockResolvedAccountId });
 
       expect(mockDeleteSchedule).not.toHaveBeenCalled();
       expect(mockDeleteScheduledAction).toHaveBeenCalledWith(mockTaskId);
@@ -139,7 +154,7 @@ describe("deleteTask", () => {
         executionOrder.push("deleteScheduledAction:end");
       });
 
-      await deleteTask({ id: mockTaskId });
+      await deleteTask({ id: mockTaskId, resolvedAccountId: mockResolvedAccountId });
 
       // Both should start before either ends (parallel execution)
       const deleteScheduleStartIndex = executionOrder.indexOf("deleteSchedule:start");
@@ -165,7 +180,7 @@ describe("deleteTask", () => {
     it("both operations are called even if they would fail", async () => {
       // This test verifies that both operations are initiated via Promise.all
       // by checking both mocks are called, not their order
-      await deleteTask({ id: mockTaskId });
+      await deleteTask({ id: mockTaskId, resolvedAccountId: mockResolvedAccountId });
 
       expect(mockDeleteSchedule).toHaveBeenCalledTimes(1);
       expect(mockDeleteScheduledAction).toHaveBeenCalledTimes(1);
