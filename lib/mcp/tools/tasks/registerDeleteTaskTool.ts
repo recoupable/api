@@ -41,11 +41,15 @@ export function registerDeleteTaskTool(server: McpServer): void {
       const tasks = await selectScheduledActions({ id: args.id });
       const taskToDelete = tasks.length > 0 ? tasks[0] : null;
 
-      // Delete the task
-      await deleteTask({
-        id: args.id,
-        resolvedAccountId: accountId,
-      });
+      try {
+        await deleteTask({
+          id: args.id,
+          resolvedAccountId: accountId,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to delete task";
+        return getToolResultError(message);
+      }
 
       return getToolResultSuccess(taskToDelete);
     },
