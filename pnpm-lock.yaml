@@ -128,6 +128,9 @@ importers:
       stripe:
         specifier: ^22.0.2
         version: 22.0.2(@types/node@20.19.25)
+      uuid:
+        specifier: ^10.0.0
+        version: 10.0.0
       viem:
         specifier: ^2.21.26
         version: 2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.13)
