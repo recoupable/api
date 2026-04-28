@@ -1,11 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { handleInstagramCommentsScraper } from "../handleInstagramCommentsScraper";
 import apifyClient from "@/lib/apify/client";
-import { saveApifyInstagramComments } from "../saveApifyInstagramComments";
+import { upsertPostComments } from "@/lib/supabase/post_comments/upsertPostComments";
+import { getOrCreatePostsForComments } from "../getOrCreatePostsForComments";
+import { getOrCreateSocialsForComments } from "../getOrCreateSocialsForComments";
 import { startInstagramProfileScraping } from "../startInstagramProfileScraping";
 
 vi.mock("@/lib/apify/client", () => ({ default: { dataset: vi.fn() } }));
-vi.mock("../saveApifyInstagramComments", () => ({ saveApifyInstagramComments: vi.fn() }));
+vi.mock("@/lib/supabase/post_comments/upsertPostComments", () => ({
+  upsertPostComments: vi.fn(),
+}));
+vi.mock("../getOrCreatePostsForComments", () => ({ getOrCreatePostsForComments: vi.fn() }));
+vi.mock("../getOrCreateSocialsForComments", () => ({ getOrCreateSocialsForComments: vi.fn() }));
 vi.mock("../startInstagramProfileScraping", () => ({
   startInstagramProfileScraping: vi.fn(),
 }));
@@ -53,15 +59,43 @@ describe("handleInstagramCommentsScraper", () => {
         postUrl: "u2",
       },
     ]);
+    vi.mocked(getOrCreatePostsForComments).mockResolvedValue(
+      new Map([
+        ["u1", { id: "p1", post_url: "u1" }],
+        ["u2", { id: "p2", post_url: "u2" }],
+      ]) as never,
+    );
+    vi.mocked(getOrCreateSocialsForComments).mockResolvedValue(
+      new Map([
+        ["alice", { id: "s1", username: "alice" }],
+        ["bob", { id: "s2", username: "bob" }],
+      ]) as never,
+    );
     vi.mocked(startInstagramProfileScraping).mockResolvedValue({ runId: "r", datasetId: "d" });
 
     const result = await handleInstagramCommentsScraper(payload);
 
-    expect(saveApifyInstagramComments).toHaveBeenCalledOnce();
+    expect(upsertPostComments).toHaveBeenCalledOnce();
+    const [rows] = vi.mocked(upsertPostComments).mock.calls[0];
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toMatchObject({ post_id: "p1", social_id: "s1", comment: "hi" });
+
     expect(startInstagramProfileScraping).toHaveBeenCalledOnce();
     const [handles] = vi.mocked(startInstagramProfileScraping).mock.calls[0];
     expect(new Set(handles as string[])).toEqual(new Set(["alice", "bob"]));
     expect(result.comments).toHaveLength(3);
     expect(new Set(result.processedPostUrls)).toEqual(new Set(["u1", "u2"]));
+  });
+
+  it("skips persistence when the dataset is empty", async () => {
+    mockDataset([]);
+
+    const result = await handleInstagramCommentsScraper(payload);
+
+    expect(getOrCreatePostsForComments).not.toHaveBeenCalled();
+    expect(getOrCreateSocialsForComments).not.toHaveBeenCalled();
+    expect(upsertPostComments).not.toHaveBeenCalled();
+    expect(startInstagramProfileScraping).not.toHaveBeenCalled();
+    expect(result.comments).toEqual([]);
   });
 });
