@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
  * Updates an existing scheduled task (OpenAPI `UpdateTaskRequest`). Requires auth (`x-api-key` or Bearer);
  * optional body `account_id` follows POST rules (`validateAuthContext`). Validates `id` as UUID; optional
  * fields merge onto the row; unknown keys are rejected. The task row must belong to the resolved account
- * or returns 403. Missing task id → 404. Success body is a `TasksResponse` with one enriched task
+ * or returns 403. Task not found → 404 (missing/invalid `id` returns 400). Success body is a `TasksResponse` with one enriched task
  * (`recent_runs`, `upcoming`, `owner_email`), matching GET shape.
  *
  * If `schedule` changes, Trigger.dev sync runs as before.
