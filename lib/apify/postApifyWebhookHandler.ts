@@ -1,36 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateApifyBody } from "@/lib/apify/validateApifyBody";
-import { handleApifyWebhook } from "@/lib/apify/handleApifyWebhook";
+import { validateApifyWebhookRequest } from "@/lib/apify/validateApifyWebhookRequest";
+import { handleInstagramProfileScraperResults } from "@/lib/apify/instagram/handleInstagramProfileScraperResults";
+import { handleInstagramCommentsScraper } from "@/lib/apify/instagram/handleInstagramCommentsScraper";
+
+const INSTAGRAM_PROFILE_ACTOR_ID = "dSCLg0C3YEZ83HzYX";
+const INSTAGRAM_COMMENTS_ACTOR_ID = "SbK00X0JYCPblD2wp";
 
 /**
  * Handler for `POST /api/apify`. Always responds 200 so Apify does not
- * retry on our side of a failure — malformed payloads and downstream
- * errors are logged and surfaced in the response body.
+ * retry on our side of a failure — malformed payloads, unknown actors,
+ * and downstream errors are logged and surfaced as a `status: "error"`
+ * JSON body.
  *
  * @param request - Incoming webhook request.
- * @returns JSON response (always status 200).
  */
 export async function postApifyWebhookHandler(request: NextRequest): Promise<NextResponse> {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    console.warn("[WARN] postApifyWebhookHandler: invalid JSON");
-    return NextResponse.json({ message: "Invalid JSON" }, { status: 200 });
-  }
+  const validated = await validateApifyWebhookRequest(request);
+  if (validated instanceof NextResponse) return validated;
 
-  const validated = validateApifyBody(body);
-  if (validated instanceof NextResponse) {
-    return validated;
-  }
+  const { actorId } = validated.eventData;
 
   try {
-    const result = await handleApifyWebhook(validated);
-    return NextResponse.json(result, { status: 200 });
+    switch (actorId) {
+      case INSTAGRAM_PROFILE_ACTOR_ID: {
+        const result = await handleInstagramProfileScraperResults(validated);
+        return NextResponse.json(result, { status: 200 });
+      }
+      case INSTAGRAM_COMMENTS_ACTOR_ID: {
+        const result = await handleInstagramCommentsScraper(validated);
+        return NextResponse.json(result, { status: 200 });
+      }
+      default:
+        console.warn(`[WARN] postApifyWebhookHandler: unhandled actorId ${actorId}`);
+        return NextResponse.json(
+          { status: "error", error: `Unhandled actorId: ${actorId}` },
+          { status: 200 },
+        );
+    }
   } catch (error) {
     console.error("[ERROR] postApifyWebhookHandler:", error);
     return NextResponse.json(
-      { message: "Apify webhook received (handler error)" },
+      {
+        status: "error",
+        error: error instanceof Error ? error.message : String(error),
+      },
       { status: 200 },
     );
   }

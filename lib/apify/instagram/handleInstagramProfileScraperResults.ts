@@ -15,7 +15,7 @@ import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
 import { uploadLinkToArweave } from "@/lib/arweave/uploadLinkToArweave";
 import { getFetchableUrl } from "@/lib/arweave/getFetchableUrl";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
-import type { ApifyBody } from "@/lib/apify/validateApifyBody";
+import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 import type { Tables } from "@/types/database.types";
 
 type ProfileScraperResult = {
@@ -38,10 +38,10 @@ type ProfileScraperResult = {
  * failures inside the chain are logged but allowed to propagate to the
  * webhook route's outer try/catch, which always returns 200.
  *
- * @param parsed - Validated Apify webhook body.
+ * @param parsed - Validated Apify webhook payload.
  */
 export async function handleInstagramProfileScraperResults(
-  parsed: ApifyBody,
+  parsed: ApifyWebhookPayload,
 ): Promise<ProfileScraperResult> {
   const datasetId = parsed.resource.defaultDatasetId;
   const empty: ProfileScraperResult = {

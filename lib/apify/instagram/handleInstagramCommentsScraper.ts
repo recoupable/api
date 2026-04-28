@@ -1,18 +1,22 @@
 import { getDataset } from "@/lib/apify/getDataset";
 import { saveApifyInstagramComments } from "@/lib/apify/instagram/saveApifyInstagramComments";
 import { startInstagramProfileScraping } from "@/lib/apify/instagram/startInstagramProfileScraping";
-import type { ApifyBody } from "@/lib/apify/validateApifyBody";
+import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 import type { ApifyInstagramComment } from "@/lib/apify/types";
 
 /**
  * Handles Instagram comments scraper Apify webhook results:
  *  - Persists comments into `post_comments`.
  *  - Kicks off a fan-profile scrape for the distinct commenter
- *    usernames so their socials get indexed.
+ *    usernames so their socials get indexed (best-effort: failures
+ *    are logged but don't fail the comments ingestion).
  *
- * @param parsed - Validated Apify webhook body.
+ * Errors from the dataset fetch or comment persistence propagate up
+ * to the webhook route, which logs and returns an error response.
+ *
+ * @param parsed - Validated Apify webhook payload.
  */
-export async function handleInstagramCommentsScraper(parsed: ApifyBody) {
+export async function handleInstagramCommentsScraper(parsed: ApifyWebhookPayload) {
   const datasetId = parsed.resource.defaultDatasetId;
   const empty = {
     comments: [] as ApifyInstagramComment[],
@@ -22,29 +26,24 @@ export async function handleInstagramCommentsScraper(parsed: ApifyBody) {
 
   if (!datasetId) return empty;
 
-  try {
-    const dataset = await getDataset(datasetId);
-    if (!Array.isArray(dataset)) return empty;
+  const dataset = await getDataset(datasetId);
+  if (!Array.isArray(dataset)) return empty;
 
-    const comments = dataset as ApifyInstagramComment[];
-    const processedPostUrls = Array.from(new Set(comments.map(c => c.postUrl).filter(Boolean)));
-    const totalComments = comments.length;
+  const comments = dataset as ApifyInstagramComment[];
+  const processedPostUrls = Array.from(new Set(comments.map(c => c.postUrl).filter(Boolean)));
+  const totalComments = comments.length;
 
-    await saveApifyInstagramComments(comments);
+  await saveApifyInstagramComments(comments);
 
-    const fanHandles = Array.from(new Set(comments.map(c => c.ownerUsername).filter(Boolean)));
+  const fanHandles = Array.from(new Set(comments.map(c => c.ownerUsername).filter(Boolean)));
 
-    if (fanHandles.length > 0) {
-      try {
-        await startInstagramProfileScraping(fanHandles);
-      } catch (error) {
-        console.error("[ERROR] fan profile scrape failed:", error);
-      }
+  if (fanHandles.length > 0) {
+    try {
+      await startInstagramProfileScraping(fanHandles);
+    } catch (error) {
+      console.error("[ERROR] fan profile scrape failed:", error);
     }
-
-    return { comments, processedPostUrls, totalComments };
-  } catch (error) {
-    console.error("[ERROR] handleInstagramCommentsScraper:", error);
-    return empty;
   }
+
+  return { comments, processedPostUrls, totalComments };
 }
