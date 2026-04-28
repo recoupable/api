@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateDeleteTaskBody } from "@/lib/tasks/validateDeleteTaskBody";
-import { deleteTask } from "@/lib/tasks/deleteTask";
+import { validateDeleteTaskRequest } from "@/lib/tasks/validateDeleteTaskRequest";
+import { TASK_ACCESS_DENIED_MESSAGE, deleteTask } from "@/lib/tasks/deleteTask";
 
 /**
  * Deletes an existing task (scheduled action) by its ID
@@ -16,9 +16,7 @@ import { deleteTask } from "@/lib/tasks/deleteTask";
  */
 export async function deleteTaskHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const body = await request.json();
-
-    const validatedBody = validateDeleteTaskBody(body);
+    const validatedBody = await validateDeleteTaskRequest(request);
     if (validatedBody instanceof NextResponse) {
       return validatedBody;
     }
@@ -46,6 +44,19 @@ export async function deleteTaskHandler(request: NextRequest): Promise<NextRespo
         },
         {
           status: 404,
+          headers: getCorsHeaders(),
+        },
+      );
+    }
+
+    if (error instanceof Error && error.message === TASK_ACCESS_DENIED_MESSAGE) {
+      return NextResponse.json(
+        {
+          status: "error",
+          error: error.message,
+        },
+        {
+          status: 403,
           headers: getCorsHeaders(),
         },
       );
