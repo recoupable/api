@@ -7,9 +7,11 @@ import {
   mcpUpdateTaskBodySchema,
   type McpUpdateTaskRequestBody,
 } from "@/lib/tasks/updateTaskSchemas";
-import { updateTask } from "@/lib/tasks/updateTask";
+import { TASK_ACCESS_DENIED_MESSAGE, updateTask } from "@/lib/tasks/updateTask";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
+
+const TASK_NOT_FOUND_MESSAGE = "Task not found";
 
 /**
  * Registers the "update_task" tool on the MCP server.
@@ -51,8 +53,15 @@ Omitting a field leaves the existing value unchanged.`,
         });
         return getToolResultSuccess(result);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to update task";
-        return getToolResultError(message);
+        if (
+          error instanceof Error &&
+          [TASK_NOT_FOUND_MESSAGE, TASK_ACCESS_DENIED_MESSAGE].includes(error.message)
+        ) {
+          return getToolResultError(error.message);
+        }
+
+        console.error("Failed to update task", error);
+        return getToolResultError("Internal server error");
       }
     },
   );

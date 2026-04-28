@@ -47,7 +47,7 @@ export async function updateTask(
 
   const newTriggerScheduleId = await syncTriggerSchedule({
     taskId: id,
-    enabled: Boolean(finalEnabled),
+    enabled: finalEnabled ?? existingTask.enabled ?? true,
     cronExpression,
     scheduleChanged,
     existingScheduleId: existingTask.trigger_schedule_id ?? null,
