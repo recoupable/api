@@ -1,6 +1,6 @@
 import { upsertPosts } from "@/lib/supabase/posts/upsertPosts";
 import { getPosts } from "@/lib/supabase/posts/getPosts";
-import type { Tables, TablesInsert } from "@/types/database.types";
+import type { Tables } from "@/types/database.types";
 
 /**
  * Ensures a `posts` row exists for every post URL the comment scraper
@@ -16,23 +16,14 @@ export async function getOrCreatePostsForComments(
   if (unique.length === 0) return new Map();
 
   const existing = await getPosts({ postUrls: unique });
-  const existingSet = new Set(existing.map(p => p.post_url));
-
-  const missing = unique.filter(url => !existingSet.has(url));
+  const missing = unique.filter(url => !existing.some(p => p.post_url === url));
 
   let all = existing;
   if (missing.length > 0) {
-    const rows: TablesInsert<"posts">[] = missing.map(url => ({
-      post_url: url,
-      updated_at: new Date().toISOString(),
-    }));
-    await upsertPosts(rows);
+    const now = new Date().toISOString();
+    await upsertPosts(missing.map(url => ({ post_url: url, updated_at: now })));
     all = await getPosts({ postUrls: unique });
   }
 
-  const map = new Map<string, Tables<"posts">>();
-  all.forEach(post => {
-    map.set(post.post_url, post);
-  });
-  return map;
+  return new Map(all.map(post => [post.post_url, post]));
 }

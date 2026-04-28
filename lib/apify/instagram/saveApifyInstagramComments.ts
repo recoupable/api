@@ -15,8 +15,7 @@ import type { ApifyInstagramComment } from "@/lib/apify/types";
 export async function saveApifyInstagramComments(comments: ApifyInstagramComment[]) {
   if (comments.length === 0) return;
 
-  const postUrls = Array.from(new Set(comments.map(c => c.postUrl).filter(Boolean)));
-  const postsMap = await getOrCreatePostsForComments(postUrls);
+  const postsMap = await getOrCreatePostsForComments(comments.map(c => c.postUrl));
   const socialsMap = await getOrCreateSocialsForComments(comments);
 
   const rows: TablesInsert<"post_comments">[] = [];

@@ -13,35 +13,18 @@ import type { ApifyInstagramComment } from "@/lib/apify/types";
 export async function getOrCreateSocialsForComments(
   comments: ApifyInstagramComment[],
 ): Promise<Map<string, Tables<"socials">>> {
-  const uniqueAuthors = Array.from(
-    new Map(
-      comments.map(c => [
-        c.ownerUsername,
-        {
-          username: c.ownerUsername,
-          profilePicUrl: c.ownerProfilePicUrl,
-          profileUrl: `instagram.com/${c.ownerUsername}`,
-        },
-      ]),
-    ).values(),
-  );
-
-  const rows: TablesInsert<"socials">[] = uniqueAuthors
-    .filter(a => a.username && a.profileUrl)
-    .map(a => ({
-      username: a.username,
-      profile_url: a.profileUrl,
-      avatar: a.profilePicUrl,
-      bio: null,
-      region: null,
-      followerCount: null,
-      followingCount: null,
-    }));
+  const seen = new Set<string>();
+  const rows: TablesInsert<"socials">[] = [];
+  for (const c of comments) {
+    if (!c.ownerUsername || seen.has(c.ownerUsername)) continue;
+    seen.add(c.ownerUsername);
+    rows.push({
+      username: c.ownerUsername,
+      profile_url: `instagram.com/${c.ownerUsername}`,
+      avatar: c.ownerProfilePicUrl,
+    });
+  }
 
   const upserted = await insertSocials(rows);
-  const map = new Map<string, Tables<"socials">>();
-  upserted.forEach(social => {
-    map.set(social.username, social);
-  });
-  return map;
+  return new Map(upserted.map(s => [s.username, s]));
 }

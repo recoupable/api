@@ -21,10 +21,7 @@ export async function handleInstagramProfileFollowUpRuns(
   if (dataset.length !== 1) return;
   if (!firstResult.latestPosts || firstResult.latestPosts.length === 0) return;
 
-  const postUrls = firstResult.latestPosts
-    .map(post => (post && typeof post.url === "string" ? post.url : ""))
-    .filter(Boolean);
-
+  const postUrls = firstResult.latestPosts.map(p => p.url).filter(Boolean);
   if (postUrls.length === 0) return;
 
   const withComments = await selectPostUrlsWithComments(postUrls);
