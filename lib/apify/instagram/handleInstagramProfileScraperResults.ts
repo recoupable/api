@@ -92,12 +92,23 @@ export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookP
 
   const accountEmails = await selectAccountEmails({ accountIds: uniqueAccountIds });
 
-  const sentEmails = await sendApifyWebhookEmail(
-    firstResult,
-    accountEmails.map(e => e.email).filter(Boolean),
-  );
+  // Email + follow-up scrape are independent side effects; isolate so a
+  // mail outage doesn't block comment scraping and vice versa.
+  let sentEmails = null;
+  try {
+    sentEmails = await sendApifyWebhookEmail(
+      firstResult,
+      accountEmails.map(e => e.email).filter(Boolean),
+    );
+  } catch (error) {
+    console.error("[WARN] webhook email failed:", error);
+  }
 
-  await handleInstagramProfileFollowUpRuns(dataset, firstResult);
+  try {
+    await handleInstagramProfileFollowUpRuns(dataset, firstResult);
+  } catch (error) {
+    console.error("[WARN] follow-up scrape failed:", error);
+  }
 
   return { posts, social, accountSocials, accountEmails, sentEmails };
 }
