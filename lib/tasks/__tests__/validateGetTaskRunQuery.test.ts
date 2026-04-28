@@ -235,5 +235,23 @@ describe("validateGetTaskRunQuery", () => {
         expect(result.status).toBe(400);
       }
     });
+
+    it("trims whitespace from account_id before UUID validation", async () => {
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId: "admin_acc",
+        orgId: null,
+        authToken: "bearer-token",
+      });
+      vi.mocked(checkIsAdmin).mockResolvedValue(true);
+
+      const request = createMockRequest(
+        `http://localhost:3000/api/tasks/runs?account_id=%20${OTHER_ACCOUNT_ID}%20`,
+      );
+
+      const result = await validateGetTaskRunQuery(request);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect(result).toEqual({ mode: "list", accountId: OTHER_ACCOUNT_ID, limit: 20 });
+    });
   });
 });
