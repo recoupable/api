@@ -2,10 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateUpdateTaskRequest } from "@/lib/tasks/validateUpdateTaskRequest";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import {
-  ACCOUNT_B,
-  authOk,
-} from "@/lib/tasks/__tests__/fixtures/createTaskRequestTestFixtures";
+import { ACCOUNT_B, authOk } from "@/lib/tasks/__tests__/fixtures/createTaskRequestTestFixtures";
 
 const TASK_ID = "423e4567-e89b-12d3-a456-426614174000";
 
