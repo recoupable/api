@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateApifyWebhookRequest } from "@/lib/apify/validateApifyWebhookRequest";
+import { validateApifyBody } from "@/lib/apify/validateApifyBody";
 import { handleApifyWebhook } from "@/lib/apify/handleApifyWebhook";
 
 /**
@@ -11,18 +11,21 @@ import { handleApifyWebhook } from "@/lib/apify/handleApifyWebhook";
  * @returns JSON response (always status 200).
  */
 export async function postApifyWebhookHandler(request: NextRequest): Promise<NextResponse> {
-  const validation = await validateApifyWebhookRequest(request);
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    console.warn("[WARN] postApifyWebhookHandler: invalid JSON");
+    return NextResponse.json({ message: "Invalid JSON" }, { status: 200 });
+  }
 
-  if (!validation.ok || !validation.data) {
-    console.warn("[WARN] postApifyWebhookHandler: invalid payload:", validation.error);
-    return NextResponse.json(
-      { message: "Invalid payload", error: validation.error },
-      { status: 200 },
-    );
+  const validated = validateApifyBody(body);
+  if (validated instanceof NextResponse) {
+    return validated;
   }
 
   try {
-    const result = await handleApifyWebhook(validation.data);
+    const result = await handleApifyWebhook(validated);
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
     console.error("[ERROR] postApifyWebhookHandler:", error);

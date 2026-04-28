@@ -1,4 +1,4 @@
-import type { ApifyPayload } from "@/lib/apify/apifyPayloadSchema";
+import type { ApifyBody } from "@/lib/apify/validateApifyBody";
 import { handleInstagramProfileScraperResults } from "@/lib/apify/instagram/handleInstagramProfileScraperResults";
 import { handleInstagramCommentsScraper } from "@/lib/apify/instagram/handleInstagramCommentsScraper";
 
@@ -20,9 +20,9 @@ const fallbackResponse = {
  * empty-shaped response. Never throws — handler failures are caught
  * and logged so the webhook route can always reply 200.
  *
- * @param parsed - Validated Apify webhook payload.
+ * @param parsed - Validated Apify webhook body.
  */
-export async function handleApifyWebhook(parsed: ApifyPayload) {
+export async function handleApifyWebhook(parsed: ApifyBody) {
   try {
     switch (parsed.eventData.actorId) {
       case INSTAGRAM_PROFILE_ACTOR_ID:

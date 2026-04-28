@@ -34,12 +34,22 @@ describe("postApifyWebhookHandler", () => {
     expect(handleApifyWebhook).toHaveBeenCalledOnce();
   });
 
-  it("returns 200 for invalid payloads so Apify does not retry", async () => {
+  it("returns 200 with the validator's error response for invalid payloads", async () => {
     const res = await postApifyWebhookHandler(makeRequest({ bogus: true }));
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.message).toBe("Invalid payload");
+    expect(body.status).toBe("error");
+    expect(typeof body.error).toBe("string");
+    expect(handleApifyWebhook).not.toHaveBeenCalled();
+  });
+
+  it("returns 200 with an Invalid JSON message for malformed bodies", async () => {
+    const res = await postApifyWebhookHandler(makeRequest(null, "not json"));
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.message).toBe("Invalid JSON");
     expect(handleApifyWebhook).not.toHaveBeenCalled();
   });
 });

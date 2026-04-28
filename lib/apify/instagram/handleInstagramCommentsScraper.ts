@@ -1,7 +1,7 @@
 import { getDataset } from "@/lib/apify/getDataset";
 import { saveApifyInstagramComments } from "@/lib/apify/instagram/saveApifyInstagramComments";
 import { startInstagramProfileScraping } from "@/lib/apify/instagram/startInstagramProfileScraping";
-import type { ApifyPayload } from "@/lib/apify/apifyPayloadSchema";
+import type { ApifyBody } from "@/lib/apify/validateApifyBody";
 import type { ApifyInstagramComment } from "@/lib/apify/types";
 
 /**
@@ -10,9 +10,9 @@ import type { ApifyInstagramComment } from "@/lib/apify/types";
  *  - Kicks off a fan-profile scrape for the distinct commenter
  *    usernames so their socials get indexed.
  *
- * @param parsed - Validated Apify webhook payload.
+ * @param parsed - Validated Apify webhook body.
  */
-export async function handleInstagramCommentsScraper(parsed: ApifyPayload) {
+export async function handleInstagramCommentsScraper(parsed: ApifyBody) {
   const datasetId = parsed.resource.defaultDatasetId;
   const empty = {
     comments: [] as ApifyInstagramComment[],
