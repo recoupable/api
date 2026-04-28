@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { handleInstagramProfileScraperResults } from "../handleInstagramProfileScraperResults";
-import { getDataset } from "@/lib/apify/getDataset";
+import apifyClient from "@/lib/apify/client";
 import { saveApifyInstagramPosts } from "../saveApifyInstagramPosts";
 import { handleInstagramProfileFollowUpRuns } from "../handleInstagramProfileFollowUpRuns";
 import { sendApifyWebhookEmail } from "@/lib/apify/sendApifyWebhookEmail";
@@ -12,7 +12,13 @@ import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccoun
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { uploadLinkToArweave } from "@/lib/arweave/uploadLinkToArweave";
 
-vi.mock("@/lib/apify/getDataset", () => ({ getDataset: vi.fn() }));
+vi.mock("@/lib/apify/client", () => ({ default: { dataset: vi.fn() } }));
+
+const mockDataset = (items: unknown[]) =>
+  vi
+    .mocked(apifyClient.dataset)
+    .mockImplementation(() => ({ listItems: () => Promise.resolve({ items }) }) as never);
+
 vi.mock("../saveApifyInstagramPosts", () => ({ saveApifyInstagramPosts: vi.fn() }));
 vi.mock("../handleInstagramProfileFollowUpRuns", () => ({
   handleInstagramProfileFollowUpRuns: vi.fn(),
@@ -46,7 +52,7 @@ describe("handleInstagramProfileScraperResults", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("returns the empty shape when the dataset has no latest posts", async () => {
-    vi.mocked(getDataset).mockResolvedValue([{ username: "alice" }]);
+    mockDataset([{ username: "alice" }]);
 
     const result = await handleInstagramProfileScraperResults(payload);
 
@@ -56,7 +62,7 @@ describe("handleInstagramProfileScraperResults", () => {
 
   it("persists posts, links social_posts, and fires follow-up runs + email", async () => {
     const posts = [{ id: "p1", post_url: "u1", updated_at: "t" }] as never;
-    vi.mocked(getDataset).mockResolvedValue([
+    mockDataset([
       {
         latestPosts: [{ url: "u1", timestamp: "t" }],
         username: "alice",

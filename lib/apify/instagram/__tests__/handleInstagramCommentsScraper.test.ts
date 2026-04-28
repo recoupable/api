@@ -1,14 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { handleInstagramCommentsScraper } from "../handleInstagramCommentsScraper";
-import { getDataset } from "@/lib/apify/getDataset";
+import apifyClient from "@/lib/apify/client";
 import { saveApifyInstagramComments } from "../saveApifyInstagramComments";
 import { startInstagramProfileScraping } from "../startInstagramProfileScraping";
 
-vi.mock("@/lib/apify/getDataset", () => ({ getDataset: vi.fn() }));
+vi.mock("@/lib/apify/client", () => ({ default: { dataset: vi.fn() } }));
 vi.mock("../saveApifyInstagramComments", () => ({ saveApifyInstagramComments: vi.fn() }));
 vi.mock("../startInstagramProfileScraping", () => ({
   startInstagramProfileScraping: vi.fn(),
 }));
+
+const mockDataset = (items: unknown[]) =>
+  vi
+    .mocked(apifyClient.dataset)
+    .mockImplementation(() => ({ listItems: () => Promise.resolve({ items }) }) as never);
 
 const payload = {
   userId: "u",
@@ -22,7 +27,7 @@ describe("handleInstagramCommentsScraper", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("saves comments and enqueues fan profile scrape for distinct usernames", async () => {
-    vi.mocked(getDataset).mockResolvedValue([
+    mockDataset([
       {
         id: "c1",
         text: "hi",

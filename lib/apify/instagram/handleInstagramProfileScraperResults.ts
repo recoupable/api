@@ -1,4 +1,4 @@
-import { getDataset } from "@/lib/apify/getDataset";
+import apifyClient from "@/lib/apify/client";
 import { saveApifyInstagramPosts } from "@/lib/apify/instagram/saveApifyInstagramPosts";
 import { handleInstagramProfileFollowUpRuns } from "@/lib/apify/instagram/handleInstagramProfileFollowUpRuns";
 import { sendApifyWebhookEmail } from "@/lib/apify/sendApifyWebhookEmail";
@@ -55,7 +55,7 @@ export async function handleInstagramProfileScraperResults(
 
   if (!datasetId) return empty;
 
-  const dataset = await getDataset(datasetId);
+  const { items: dataset } = await apifyClient.dataset(datasetId).listItems();
   const firstResult = dataset[0] as ApifyInstagramProfileResult | undefined;
   if (!firstResult?.latestPosts) return empty;
 

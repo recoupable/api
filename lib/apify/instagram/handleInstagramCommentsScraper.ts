@@ -1,4 +1,4 @@
-import { getDataset } from "@/lib/apify/getDataset";
+import apifyClient from "@/lib/apify/client";
 import { saveApifyInstagramComments } from "@/lib/apify/instagram/saveApifyInstagramComments";
 import { startInstagramProfileScraping } from "@/lib/apify/instagram/startInstagramProfileScraping";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
@@ -26,10 +26,8 @@ export async function handleInstagramCommentsScraper(parsed: ApifyWebhookPayload
 
   if (!datasetId) return empty;
 
-  const dataset = await getDataset(datasetId);
-  if (!Array.isArray(dataset)) return empty;
-
-  const comments = dataset as ApifyInstagramComment[];
+  const { items } = await apifyClient.dataset(datasetId).listItems();
+  const comments = items as ApifyInstagramComment[];
   const processedPostUrls = Array.from(new Set(comments.map(c => c.postUrl).filter(Boolean)));
   const totalComments = comments.length;
 
