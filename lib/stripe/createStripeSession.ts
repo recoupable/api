@@ -2,8 +2,6 @@ import type Stripe from "stripe";
 import stripeClient from "@/lib/stripe/client";
 import { v4 as uuidV4 } from "uuid";
 
-const RECOUP_SUBSCRIPTION_CHECKOUT_PRICE_ID = "price_1RyDFD00JObOnOb53PcVOeBz";
-
 export async function createStripeSession(
   accountId: string,
   successUrl: string,
@@ -13,7 +11,7 @@ export async function createStripeSession(
   const sessionData: Stripe.Checkout.SessionCreateParams = {
     line_items: [
       {
-        price: RECOUP_SUBSCRIPTION_CHECKOUT_PRICE_ID,
+        price: "price_1RyDFD00JObOnOb53PcVOeBz",
         quantity: 1,
       },
     ],

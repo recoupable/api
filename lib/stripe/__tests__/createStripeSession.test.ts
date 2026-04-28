@@ -78,6 +78,16 @@ describe("createStripeSession", () => {
     );
   });
 
+  it("does not add chat-non-parity Stripe session fields", async () => {
+    mockCreate.mockResolvedValue({ id: "cs_x", url: "https://checkout.test/x" } as never);
+    await createStripeSession("00000000-0000-4000-8000-000000000001", "https://chat.recoupable.com/ok");
+    const params = mockCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(params).not.toHaveProperty("cancel_url");
+    expect(params).not.toHaveProperty("customer_email");
+    expect(params).not.toHaveProperty("allow_promotion_codes");
+    expect(params).not.toHaveProperty("billing_address_collection");
+  });
+
   it("throws when stripe api call fails", async () => {
     mockCreate.mockRejectedValue(new Error("Stripe API error"));
 
