@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getLoopsClient } from "@/lib/email/loopsClient";
-import { validateTrackEmailQuery } from "@/lib/email/validateTrackEmailQuery";
+import { validateTrackEmailBody } from "@/lib/email/validateTrackEmailBody";
 
 /**
- * Handles GET /api/email — fire-and-forget Loops contact tracking.
+ * Handles POST /api/email — fire-and-forget Loops contact tracking.
  *
  * Mirrors the chat-side response shape exactly so callers can migrate
  * with a single base-URL swap.
@@ -13,7 +13,7 @@ import { validateTrackEmailQuery } from "@/lib/email/validateTrackEmailQuery";
  * @returns A NextResponse with `{ success, message, id }` on 200 or `{ message }` on 400.
  */
 export async function trackEmailHandler(request: NextRequest): Promise<NextResponse> {
-  const validated = validateTrackEmailQuery(request);
+  const validated = await validateTrackEmailBody(request);
   if (validated instanceof NextResponse) {
     return validated;
   }

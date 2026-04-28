@@ -15,15 +15,16 @@ export async function OPTIONS() {
 }
 
 /**
- * GET /api/email?email=<url-encoded-email>
+ * POST /api/email
  *
  * Fire-and-forget Loops contact tracking. Calls `loopsClient.updateContact`.
+ * Accepts `{ email }` in the JSON body.
  * Returns `{ success, message, id }` on 200, `{ message }` on 400.
  *
- * @param request - The incoming request with the `email` query param.
+ * @param request - The incoming request with the `email` JSON body.
  * @returns A NextResponse with the Loops response shape.
  */
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   return trackEmailHandler(request);
 }
 
