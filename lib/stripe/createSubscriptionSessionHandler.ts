@@ -19,9 +19,6 @@ export async function createSubscriptionSessionHandler(
   } catch (error) {
     console.error("Failed to create subscription checkout session", error);
     const message = error instanceof Error ? error.message : "failed";
-    return NextResponse.json(
-      { message },
-      { status: 400, headers: getCorsHeaders() },
-    );
+    return NextResponse.json({ message }, { status: 400, headers: getCorsHeaders() });
   }
 }
