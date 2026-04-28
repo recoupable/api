@@ -59,7 +59,8 @@
     "viem": "^2.21.26",
     "x402-fetch": "^0.7.3",
     "x402-next": "^0.7.3",
-    "zod": "^4.1.13"
+    "zod": "^4.1.13",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.24.0",
