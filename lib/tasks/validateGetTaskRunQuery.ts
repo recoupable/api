@@ -14,7 +14,7 @@ const getTaskRunQuerySchema = z.object({
     .optional(),
   account_id: z
     .string()
-    .min(1)
+    .uuid("account_id must be a valid UUID")
     .transform(val => val.trim())
     .optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),

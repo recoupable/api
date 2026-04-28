@@ -33,6 +33,10 @@ function createMockRequest(url: string): NextRequest {
   } as unknown as NextRequest;
 }
 
+const ACCOUNT_ID = "123e4567-e89b-12d3-a456-426614174000";
+const OTHER_ACCOUNT_ID = "223e4567-e89b-12d3-a456-426614174000";
+const MEMBER_ACCOUNT_ID = "323e4567-e89b-12d3-a456-426614174000";
+
 describe("validateGetTaskRunQuery", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -134,13 +138,13 @@ describe("validateGetTaskRunQuery", () => {
       vi.mocked(checkIsAdmin).mockResolvedValue(true);
 
       const request = createMockRequest(
-        "http://localhost:3000/api/tasks/runs?account_id=other_acc",
+        `http://localhost:3000/api/tasks/runs?account_id=${OTHER_ACCOUNT_ID}`,
       );
 
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ mode: "list", accountId: "other_acc", limit: 20 });
+      expect(result).toEqual({ mode: "list", accountId: OTHER_ACCOUNT_ID, limit: 20 });
       expect(checkIsAdmin).toHaveBeenCalledWith("admin_acc");
       expect(validateAccountIdOverride).not.toHaveBeenCalled();
     });
@@ -152,19 +156,19 @@ describe("validateGetTaskRunQuery", () => {
         authToken: "api-key",
       });
       vi.mocked(checkIsAdmin).mockResolvedValue(false);
-      vi.mocked(validateAccountIdOverride).mockResolvedValue({ accountId: "member_acc" });
+      vi.mocked(validateAccountIdOverride).mockResolvedValue({ accountId: MEMBER_ACCOUNT_ID });
 
       const request = createMockRequest(
-        "http://localhost:3000/api/tasks/runs?account_id=member_acc",
+        `http://localhost:3000/api/tasks/runs?account_id=${MEMBER_ACCOUNT_ID}`,
       );
 
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ mode: "list", accountId: "member_acc", limit: 20 });
+      expect(result).toEqual({ mode: "list", accountId: MEMBER_ACCOUNT_ID, limit: 20 });
       expect(validateAccountIdOverride).toHaveBeenCalledWith({
         currentAccountId: "org_owner_acc",
-        targetAccountId: "member_acc",
+        targetAccountId: MEMBER_ACCOUNT_ID,
       });
     });
 
@@ -183,7 +187,7 @@ describe("validateGetTaskRunQuery", () => {
       );
 
       const request = createMockRequest(
-        "http://localhost:3000/api/tasks/runs?account_id=other_acc",
+        `http://localhost:3000/api/tasks/runs?account_id=${OTHER_ACCOUNT_ID}`,
       );
 
       const result = await validateGetTaskRunQuery(request);
@@ -196,19 +200,40 @@ describe("validateGetTaskRunQuery", () => {
 
     it("allows self-access via validateAccountIdOverride", async () => {
       vi.mocked(validateAuthContext).mockResolvedValue({
-        accountId: "acc_123",
+        accountId: ACCOUNT_ID,
         orgId: null,
         authToken: "api-key",
       });
       vi.mocked(checkIsAdmin).mockResolvedValue(false);
-      vi.mocked(validateAccountIdOverride).mockResolvedValue({ accountId: "acc_123" });
+      vi.mocked(validateAccountIdOverride).mockResolvedValue({ accountId: ACCOUNT_ID });
 
-      const request = createMockRequest("http://localhost:3000/api/tasks/runs?account_id=acc_123");
+      const request = createMockRequest(
+        `http://localhost:3000/api/tasks/runs?account_id=${ACCOUNT_ID}`,
+      );
 
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ mode: "list", accountId: "acc_123", limit: 20 });
+      expect(result).toEqual({ mode: "list", accountId: ACCOUNT_ID, limit: 20 });
+    });
+
+    it("returns 400 for invalid UUID account_id", async () => {
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId: ACCOUNT_ID,
+        orgId: null,
+        authToken: "api-key",
+      });
+
+      const request = createMockRequest(
+        "http://localhost:3000/api/tasks/runs?account_id=not-a-uuid",
+      );
+
+      const result = await validateGetTaskRunQuery(request);
+
+      expect(result).toBeInstanceOf(NextResponse);
+      if (result instanceof NextResponse) {
+        expect(result.status).toBe(400);
+      }
     });
   });
 });
