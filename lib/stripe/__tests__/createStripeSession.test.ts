@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createStripeSession } from "../createStripeSession";
 import stripeClient from "@/lib/stripe/client";
-import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
+import { v4 as uuidV4 } from "uuid";
 
 vi.mock("@/lib/stripe/client", () => ({
   default: {
@@ -13,23 +13,24 @@ vi.mock("@/lib/stripe/client", () => ({
   },
 }));
 
-vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
-  default: vi.fn(),
+vi.mock("uuid", () => ({
+  v4: vi.fn(),
 }));
 
 const mockCreate = vi.mocked(stripeClient.checkout.sessions.create);
-const mockSelectAccountEmails = vi.mocked(selectAccountEmails);
+const mockUuidV4 = vi.mocked(uuidV4);
 
 describe("createStripeSession", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSelectAccountEmails.mockResolvedValue([{ email: "artist@recoupable.com" } as never]);
+    mockUuidV4.mockReturnValue("uuid-123");
   });
 
-  it("returns session id and url on success", async () => {
+  it("returns the full session object on success", async () => {
     mockCreate.mockResolvedValue({
       id: "cs_test_abc123",
       url: "https://checkout.stripe.com/pay/cs_test_abc123",
+      object: "checkout.session",
     } as never);
 
     const result = await createStripeSession(
@@ -37,7 +38,7 @@ describe("createStripeSession", () => {
       "https://chat.recoupable.com?subscription=success",
     );
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       id: "cs_test_abc123",
       url: "https://checkout.stripe.com/pay/cs_test_abc123",
     });
@@ -54,12 +55,8 @@ describe("createStripeSession", () => {
     expect(mockCreate).toHaveBeenCalledWith({
       line_items: [{ price: "price_1RyDFD00JObOnOb53PcVOeBz", quantity: 1 }],
       mode: "subscription",
-      client_reference_id: "account-uuid-111",
+      client_reference_id: "uuid-123",
       metadata: { accountId: "account-uuid-111" },
-      customer_email: "artist@recoupable.com",
-      cancel_url: "https://chat.recoupable.com?success=1",
-      allow_promotion_codes: true,
-      billing_address_collection: "auto",
       subscription_data: {
         metadata: { accountId: "account-uuid-111" },
         trial_period_days: 30,
@@ -68,7 +65,7 @@ describe("createStripeSession", () => {
     });
   });
 
-  it("uses accountId as client_reference_id", async () => {
+  it("uses a generated uuid as client_reference_id", async () => {
     mockCreate.mockResolvedValue({
       id: "cs_test_abc123",
       url: "https://checkout.stripe.com/pay/cs_test_abc123",
@@ -77,39 +74,7 @@ describe("createStripeSession", () => {
     await createStripeSession("account-uuid-111", "https://example.com");
 
     expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ client_reference_id: "account-uuid-111" }),
-    );
-  });
-
-  it("does not set customer_email when account has no email", async () => {
-    mockSelectAccountEmails.mockResolvedValue([]);
-    mockCreate.mockResolvedValue({
-      id: "cs_test_abc123",
-      url: "https://checkout.stripe.com/pay/cs_test_abc123",
-    } as never);
-
-    await createStripeSession("account-uuid-111", "https://example.com");
-
-    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ customer_email: undefined }));
-  });
-
-  it("does not set customer_email when account email is null", async () => {
-    mockSelectAccountEmails.mockResolvedValue([{ email: null } as never]);
-    mockCreate.mockResolvedValue({
-      id: "cs_test_abc123",
-      url: "https://checkout.stripe.com/pay/cs_test_abc123",
-    } as never);
-
-    await createStripeSession("account-uuid-111", "https://example.com");
-
-    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ customer_email: undefined }));
-  });
-
-  it("throws when stripe session returns no url", async () => {
-    mockCreate.mockResolvedValue({ id: "cs_test_abc123", url: null } as never);
-
-    await expect(createStripeSession("account-uuid-111", "https://example.com")).rejects.toThrow(
-      "Stripe session was created but returned no URL",
+      expect.objectContaining({ client_reference_id: "uuid-123" }),
     );
   });
 

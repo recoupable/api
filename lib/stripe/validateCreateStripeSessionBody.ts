@@ -4,7 +4,6 @@ import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { isAllowedSubscriptionCheckoutSuccessUrl } from "@/lib/stripe/isAllowedSubscriptionCheckoutSuccessUrl";
 
 export const createStripeSessionBodySchema = z.object({
   successUrl: z
@@ -20,7 +19,7 @@ export type ValidatedCreateStripeSessionRequest = {
   successUrl: string;
 };
 
-/** Validates body, allowed `successUrl` origin, and auth for POST /api/subscriptions/sessions. */
+/** Validates body and auth for POST /api/subscriptions/sessions. */
 export async function validateCreateStripeSessionBody(
   request: NextRequest,
 ): Promise<NextResponse | ValidatedCreateStripeSessionRequest> {
@@ -34,16 +33,6 @@ export async function validateCreateStripeSessionBody(
         status: "error",
         missing_fields: firstError.path,
         error: firstError.message,
-      },
-      { status: 400, headers: getCorsHeaders() },
-    );
-  }
-
-  if (!isAllowedSubscriptionCheckoutSuccessUrl(result.data.successUrl)) {
-    return NextResponse.json(
-      {
-        status: "error",
-        error: "successUrl origin is not allowed",
       },
       { status: 400, headers: getCorsHeaders() },
     );

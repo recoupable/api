@@ -29,7 +29,7 @@ describe("createSubscriptionSessionHandler", () => {
   });
 
   describe("success", () => {
-    it("returns 200 with id and url", async () => {
+    it("returns 200 with { data: session }", async () => {
       mockValidate.mockResolvedValue({
         accountId: "account-uuid-111",
         successUrl: "https://chat.recoupable.com?success=1",
@@ -37,6 +37,7 @@ describe("createSubscriptionSessionHandler", () => {
       mockCreate.mockResolvedValue({
         id: "cs_test_abc123",
         url: "https://checkout.stripe.com/pay/cs_test_abc123",
+        object: "checkout.session",
       });
 
       const response = await createSubscriptionSessionHandler(makeRequest());
@@ -44,8 +45,10 @@ describe("createSubscriptionSessionHandler", () => {
 
       expect(response.status).toBe(200);
       expect(data).toEqual({
-        id: "cs_test_abc123",
-        url: "https://checkout.stripe.com/pay/cs_test_abc123",
+        data: expect.objectContaining({
+          id: "cs_test_abc123",
+          url: "https://checkout.stripe.com/pay/cs_test_abc123",
+        }),
       });
     });
 
@@ -93,7 +96,7 @@ describe("createSubscriptionSessionHandler", () => {
   });
 
   describe("checkout errors", () => {
-    it("returns 500 when createStripeSession throws", async () => {
+    it("returns 400 with message when createStripeSession throws", async () => {
       mockValidate.mockResolvedValue({
         accountId: "account-uuid-111",
         successUrl: "https://chat.recoupable.com?success=1",
@@ -103,12 +106,11 @@ describe("createSubscriptionSessionHandler", () => {
       const response = await createSubscriptionSessionHandler(makeRequest());
       const data = await response.json();
 
-      expect(response.status).toBe(500);
-      expect(data.status).toBe("error");
-      expect(data.error).toBe("Internal server error");
+      expect(response.status).toBe(400);
+      expect(data.message).toBe("Stripe API error");
     });
 
-    it("returns generic 500 message for non-Error throws", async () => {
+    it("returns generic failed message for non-Error throws", async () => {
       mockValidate.mockResolvedValue({
         accountId: "account-uuid-111",
         successUrl: "https://chat.recoupable.com?success=1",
@@ -118,8 +120,8 @@ describe("createSubscriptionSessionHandler", () => {
       const response = await createSubscriptionSessionHandler(makeRequest());
       const data = await response.json();
 
-      expect(response.status).toBe(500);
-      expect(data.error).toBe("Internal server error");
+      expect(response.status).toBe(400);
+      expect(data.message).toBe("failed");
     });
   });
 });

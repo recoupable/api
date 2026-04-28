@@ -46,15 +46,6 @@ describe("validateCreateStripeSessionBody validation errors", () => {
     expect(data.error).toBe("successUrl must be a valid URL");
   });
 
-  it("returns 400 when successUrl origin is not in the allowlist", async () => {
-    mockSafeParseJson.mockResolvedValue({ successUrl: "https://evil.example/path" });
-    const result = await validateCreateStripeSessionBody(makeRequest());
-    expect(result).toBeInstanceOf(NextResponse);
-    const data = await (result as NextResponse).json();
-    expect((result as NextResponse).status).toBe(400);
-    expect(data.error).toBe("successUrl origin is not allowed");
-  });
-
   it("returns 400 when accountId is not a valid UUID", async () => {
     mockSafeParseJson.mockResolvedValue({
       successUrl: "https://chat.recoupable.com?success=1",

@@ -19,7 +19,7 @@ export async function OPTIONS() {
  *
  * Creates a Stripe Checkout session for subscription billing.
  *
- * @param request - Incoming request (JSON body: successUrl, optional cancelUrl)
+ * @param request - Incoming request (JSON body: successUrl, optional accountId)
  * @returns Delegates to createSubscriptionSessionHandler (checkout URL or error)
  */
 export async function POST(request: NextRequest) {

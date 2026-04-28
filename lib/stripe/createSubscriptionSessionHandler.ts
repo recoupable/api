@@ -3,7 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateStripeSessionBody } from "@/lib/stripe/validateCreateStripeSessionBody";
 import { createStripeSession } from "@/lib/stripe/createStripeSession";
 
-/** POST /api/subscriptions/sessions — returns `{ id, url }` for hosted Stripe checkout. */
+/** POST /api/subscriptions/sessions — returns `{ data: session }` for hosted Stripe checkout. */
 export async function createSubscriptionSessionHandler(
   request: NextRequest,
 ): Promise<NextResponse> {
@@ -15,12 +15,13 @@ export async function createSubscriptionSessionHandler(
   try {
     const session = await createStripeSession(validated.accountId, validated.successUrl);
 
-    return NextResponse.json(session, { status: 200, headers: getCorsHeaders() });
+    return NextResponse.json({ data: session }, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
     console.error("Failed to create subscription checkout session", error);
+    const message = error instanceof Error ? error.message : "failed";
     return NextResponse.json(
-      { status: "error", error: "Internal server error" },
-      { status: 500, headers: getCorsHeaders() },
+      { message },
+      { status: 400, headers: getCorsHeaders() },
     );
   }
 }

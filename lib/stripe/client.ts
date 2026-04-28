@@ -1,31 +1,5 @@
 import Stripe from "stripe";
 
-/**
- * Lazily resolves a Stripe client.
- * This avoids import-time crashes during build when STRIPE_SK
- * is unavailable in the current environment.
- */
-let cachedStripeClient: Stripe | null = null;
-
-function getStripeClient(): Stripe {
-  if (cachedStripeClient) {
-    return cachedStripeClient;
-  }
-
-  const stripeSecretKey = process.env.STRIPE_SK;
-  if (!stripeSecretKey) {
-    console.error("Missing STRIPE_SK while initializing Stripe client");
-    throw new Error("Failed to initialize Stripe client");
-  }
-
-  cachedStripeClient = new Stripe(stripeSecretKey);
-  return cachedStripeClient;
-}
-
-const stripeClient = {
-  get checkout() {
-    return getStripeClient().checkout;
-  },
-} as Pick<Stripe, "checkout">;
+const stripeClient = new Stripe(process.env.STRIPE_SK as string);
 
 export default stripeClient;

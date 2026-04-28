@@ -1,23 +1,14 @@
 import type Stripe from "stripe";
 import stripeClient from "@/lib/stripe/client";
-import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
+import { v4 as uuidV4 } from "uuid";
 
 const RECOUP_SUBSCRIPTION_CHECKOUT_PRICE_ID = "price_1RyDFD00JObOnOb53PcVOeBz";
-
-export type StripeSessionResult = {
-  id: string;
-  url: string;
-};
 
 export async function createStripeSession(
   accountId: string,
   successUrl: string,
-): Promise<StripeSessionResult> {
+): Promise<Stripe.Checkout.Session> {
   const metadata: Stripe.MetadataParam = { accountId };
-  const accountEmails = await selectAccountEmails({ accountIds: accountId });
-  const customerEmail = accountEmails.find(
-    accountEmail => typeof accountEmail.email === "string",
-  )?.email;
 
   const sessionData: Stripe.Checkout.SessionCreateParams = {
     line_items: [
@@ -27,12 +18,8 @@ export async function createStripeSession(
       },
     ],
     mode: "subscription",
-    client_reference_id: accountId,
+    client_reference_id: uuidV4(),
     metadata,
-    customer_email: customerEmail,
-    cancel_url: successUrl,
-    allow_promotion_codes: true,
-    billing_address_collection: "auto",
     subscription_data: {
       metadata,
       trial_period_days: 30,
@@ -40,11 +27,5 @@ export async function createStripeSession(
     success_url: successUrl,
   };
 
-  const session = await stripeClient.checkout.sessions.create(sessionData);
-
-  if (!session.url) {
-    throw new Error("Stripe session was created but returned no URL");
-  }
-
-  return { id: session.id, url: session.url };
+  return stripeClient.checkout.sessions.create(sessionData);
 }
