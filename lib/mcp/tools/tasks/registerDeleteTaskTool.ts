@@ -1,13 +1,15 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
-import { deleteTask } from "@/lib/tasks/deleteTask";
+import { TASK_ACCESS_DENIED_MESSAGE, deleteTask } from "@/lib/tasks/deleteTask";
 import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
 import { deleteTaskBodySchema, type DeleteTaskBody } from "@/lib/tasks/validateDeleteTaskBody";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
+
+const TASK_NOT_FOUND_MESSAGE = "Task not found";
 
 /**
  * Registers the "delete_task" tool on the MCP server.
@@ -47,8 +49,15 @@ export function registerDeleteTaskTool(server: McpServer): void {
           resolvedAccountId: accountId,
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to delete task";
-        return getToolResultError(message);
+        if (
+          error instanceof Error &&
+          [TASK_NOT_FOUND_MESSAGE, TASK_ACCESS_DENIED_MESSAGE].includes(error.message)
+        ) {
+          return getToolResultError(error.message);
+        }
+
+        console.error("Failed to delete task", error);
+        return getToolResultError("Internal server error");
       }
 
       return getToolResultSuccess(taskToDelete);
