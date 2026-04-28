@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { handleInstagramProfileScraperResults } from "../handleInstagramProfileScraperResults";
 import apifyClient from "@/lib/apify/client";
-import { saveApifyInstagramPosts } from "../saveApifyInstagramPosts";
+import { upsertPosts } from "@/lib/supabase/posts/upsertPosts";
+import { getPosts } from "@/lib/supabase/posts/getPosts";
 import { handleInstagramProfileFollowUpRuns } from "../handleInstagramProfileFollowUpRuns";
 import { sendApifyWebhookEmail } from "@/lib/apify/sendApifyWebhookEmail";
 import { insertSocials } from "@/lib/supabase/socials/insertSocials";
@@ -19,7 +20,8 @@ const mockDataset = (items: unknown[]) =>
     .mocked(apifyClient.dataset)
     .mockImplementation(() => ({ listItems: () => Promise.resolve({ items }) }) as never);
 
-vi.mock("../saveApifyInstagramPosts", () => ({ saveApifyInstagramPosts: vi.fn() }));
+vi.mock("@/lib/supabase/posts/upsertPosts", () => ({ upsertPosts: vi.fn() }));
+vi.mock("@/lib/supabase/posts/getPosts", () => ({ getPosts: vi.fn() }));
 vi.mock("../handleInstagramProfileFollowUpRuns", () => ({
   handleInstagramProfileFollowUpRuns: vi.fn(),
 }));
@@ -51,13 +53,13 @@ const payload = {
 describe("handleInstagramProfileScraperResults", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns the empty shape when the dataset has no latest posts", async () => {
+  it("short-circuits when the dataset has no latest posts", async () => {
     mockDataset([{ username: "alice" }]);
 
     const result = await handleInstagramProfileScraperResults(payload);
 
     expect(result).toMatchObject({ posts: [], social: null });
-    expect(saveApifyInstagramPosts).not.toHaveBeenCalled();
+    expect(upsertPosts).not.toHaveBeenCalled();
   });
 
   it("persists posts, links social_posts, and fires follow-up runs + email", async () => {
@@ -71,7 +73,8 @@ describe("handleInstagramProfileScraperResults", () => {
         fullName: "Alice",
       },
     ]);
-    vi.mocked(saveApifyInstagramPosts).mockResolvedValue({ supabasePosts: posts });
+    vi.mocked(upsertPosts).mockResolvedValue({ data: null, error: null } as never);
+    vi.mocked(getPosts).mockResolvedValue(posts);
     vi.mocked(uploadLinkToArweave).mockResolvedValue(null);
     vi.mocked(insertSocials).mockResolvedValue([] as never);
     vi.mocked(selectSocials).mockResolvedValue([{ id: "s1" }] as never);
@@ -82,6 +85,7 @@ describe("handleInstagramProfileScraperResults", () => {
 
     const result = await handleInstagramProfileScraperResults(payload);
 
+    expect(upsertPosts).toHaveBeenCalledOnce();
     expect(upsertSocialPosts).toHaveBeenCalledOnce();
     expect(sendApifyWebhookEmail).toHaveBeenCalledWith(expect.any(Object), ["x@y.com"]);
     expect(handleInstagramProfileFollowUpRuns).toHaveBeenCalledOnce();

@@ -10,10 +10,10 @@ import { z } from "zod";
  */
 export const apifyWebhookPayloadSchema = z.object({
   eventData: z.object({
-    actorId: z.string({ message: "eventData.actorId is required" }),
+    actorId: z.string().min(1, "eventData.actorId is required"),
   }),
   resource: z.object({
-    defaultDatasetId: z.string({ message: "resource.defaultDatasetId is required" }),
+    defaultDatasetId: z.string().min(1, "resource.defaultDatasetId is required"),
   }),
 });
 

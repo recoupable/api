@@ -1,5 +1,5 @@
 import { startInstagramCommentsScraping } from "@/lib/apify/instagram/startInstagramCommentsScraping";
-import { getExistingPostComments } from "@/lib/apify/instagram/getExistingPostComments";
+import { selectPostUrlsWithComments } from "@/lib/supabase/post_comments/selectPostUrlsWithComments";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 
 /**
@@ -27,13 +27,15 @@ export async function handleInstagramProfileFollowUpRuns(
 
   if (postUrls.length === 0) return;
 
-  const { urlsWithComments, urlsWithoutComments } = await getExistingPostComments(postUrls);
+  const withComments = await selectPostUrlsWithComments(postUrls);
+  const withSet = new Set(withComments);
+  const withoutComments = postUrls.filter(url => !withSet.has(url));
 
-  if (urlsWithComments.length > 0) {
-    await startInstagramCommentsScraping(urlsWithComments, 1);
+  if (withComments.length > 0) {
+    await startInstagramCommentsScraping(withComments, 1);
   }
 
-  if (urlsWithoutComments.length > 0) {
-    await startInstagramCommentsScraping(urlsWithoutComments);
+  if (withoutComments.length > 0) {
+    await startInstagramCommentsScraping(withoutComments);
   }
 }

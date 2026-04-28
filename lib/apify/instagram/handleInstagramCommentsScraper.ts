@@ -17,19 +17,9 @@ import type { ApifyInstagramComment } from "@/lib/apify/types";
  * @param parsed - Validated Apify webhook payload.
  */
 export async function handleInstagramCommentsScraper(parsed: ApifyWebhookPayload) {
-  const datasetId = parsed.resource.defaultDatasetId;
-  const empty = {
-    comments: [] as ApifyInstagramComment[],
-    processedPostUrls: [] as string[],
-    totalComments: 0,
-  };
-
-  if (!datasetId) return empty;
-
-  const { items } = await apifyClient.dataset(datasetId).listItems();
+  const { items } = await apifyClient.dataset(parsed.resource.defaultDatasetId).listItems();
   const comments = items as ApifyInstagramComment[];
   const processedPostUrls = Array.from(new Set(comments.map(c => c.postUrl).filter(Boolean)));
-  const totalComments = comments.length;
 
   await saveApifyInstagramComments(comments);
 
@@ -43,5 +33,5 @@ export async function handleInstagramCommentsScraper(parsed: ApifyWebhookPayload
     }
   }
 
-  return { comments, processedPostUrls, totalComments };
+  return { comments, processedPostUrls };
 }

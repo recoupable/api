@@ -43,14 +43,17 @@ describe("apifyWebhookHandler", () => {
   });
 
   it("dispatches comments scraper for the IG comments actor", async () => {
-    vi.mocked(handleInstagramCommentsScraper).mockResolvedValue({ totalComments: 3 } as never);
+    vi.mocked(handleInstagramCommentsScraper).mockResolvedValue({
+      comments: [],
+      processedPostUrls: ["u1", "u2"],
+    } as never);
 
     const res = await apifyWebhookHandler(
       makeRequest({ ...baseBody, eventData: { actorId: "SbK00X0JYCPblD2wp" } }),
     );
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ totalComments: 3 });
+    expect(await res.json()).toEqual({ comments: [], processedPostUrls: ["u1", "u2"] });
     expect(handleInstagramCommentsScraper).toHaveBeenCalledOnce();
     expect(handleInstagramProfileScraperResults).not.toHaveBeenCalled();
   });

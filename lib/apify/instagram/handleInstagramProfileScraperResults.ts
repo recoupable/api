@@ -1,14 +1,12 @@
 import apifyClient from "@/lib/apify/client";
-import { saveApifyInstagramPosts } from "@/lib/apify/instagram/saveApifyInstagramPosts";
+import { upsertPosts } from "@/lib/supabase/posts/upsertPosts";
+import { getPosts } from "@/lib/supabase/posts/getPosts";
 import { handleInstagramProfileFollowUpRuns } from "@/lib/apify/instagram/handleInstagramProfileFollowUpRuns";
 import { sendApifyWebhookEmail } from "@/lib/apify/sendApifyWebhookEmail";
 import { insertSocials } from "@/lib/supabase/socials/insertSocials";
 import { selectSocials } from "@/lib/supabase/socials/selectSocials";
 import { upsertSocialPosts } from "@/lib/supabase/social_posts/upsertSocialPosts";
-import {
-  selectAccountSocials,
-  type AccountSocialWithSocial,
-} from "@/lib/supabase/account_socials/selectAccountSocials";
+import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
@@ -16,16 +14,7 @@ import { uploadLinkToArweave } from "@/lib/arweave/uploadLinkToArweave";
 import { getFetchableUrl } from "@/lib/arweave/getFetchableUrl";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
-import type { Tables } from "@/types/database.types";
-
-type ProfileScraperResult = {
-  posts: Tables<"posts">[];
-  social: Tables<"socials"> | null;
-  accountSocials: AccountSocialWithSocial[];
-  accountArtistIds: Awaited<ReturnType<typeof getAccountArtistIds>>;
-  accountEmails: Tables<"account_emails">[];
-  sentEmails: Awaited<ReturnType<typeof sendApifyWebhookEmail>>;
-};
+import type { TablesInsert } from "@/types/database.types";
 
 /**
  * Handles Instagram profile scraper Apify webhook results:
@@ -34,32 +23,25 @@ type ProfileScraperResult = {
  *  - Notifies subscribed account emails via Resend.
  *  - Queues the comments scraper for the profile's latest posts.
  *
- * Returns a summary object for logging / downstream inspection. All
- * failures inside the chain are logged but allowed to propagate to the
- * webhook route's outer try/catch, which always returns 200.
+ * Returns a summary object for downstream inspection. Failures
+ * propagate to the webhook route's outer try/catch, which logs and
+ * returns an error response (always HTTP 200 to Apify).
  *
  * @param parsed - Validated Apify webhook payload.
  */
-export async function handleInstagramProfileScraperResults(
-  parsed: ApifyWebhookPayload,
-): Promise<ProfileScraperResult> {
-  const datasetId = parsed.resource.defaultDatasetId;
-  const empty: ProfileScraperResult = {
-    posts: [],
-    social: null,
-    accountSocials: [],
-    accountArtistIds: [],
-    accountEmails: [],
-    sentEmails: null,
-  };
-
-  if (!datasetId) return empty;
-
-  const { items: dataset } = await apifyClient.dataset(datasetId).listItems();
+export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookPayload) {
+  const { items: dataset } = await apifyClient
+    .dataset(parsed.resource.defaultDatasetId)
+    .listItems();
   const firstResult = dataset[0] as ApifyInstagramProfileResult | undefined;
-  if (!firstResult?.latestPosts) return empty;
+  if (!firstResult?.latestPosts) return { posts: [], social: null };
 
-  const { supabasePosts: posts } = await saveApifyInstagramPosts(firstResult.latestPosts);
+  const postRows: TablesInsert<"posts">[] = firstResult.latestPosts.map(post => ({
+    post_url: post.url,
+    updated_at: post.timestamp,
+  }));
+  await upsertPosts(postRows);
+  const posts = await getPosts({ postUrls: postRows.map(p => p.post_url) });
 
   const arweaveTx = await uploadLinkToArweave(
     firstResult.profilePicUrlHD || firstResult.profilePicUrl,
@@ -87,9 +69,7 @@ export async function handleInstagramProfileScraperResults(
   const matches = await selectSocials({ profile_url: normalizedUrl });
   const social = matches?.[0] ?? null;
 
-  if (!social) {
-    return { ...empty, posts };
-  }
+  if (!social) return { posts, social: null };
 
   if (posts.length) {
     await upsertSocialPosts(
@@ -119,12 +99,5 @@ export async function handleInstagramProfileScraperResults(
 
   await handleInstagramProfileFollowUpRuns(dataset, firstResult);
 
-  return {
-    posts,
-    social,
-    accountSocials,
-    accountArtistIds,
-    accountEmails,
-    sentEmails,
-  };
+  return { posts, social, accountSocials, accountEmails, sentEmails };
 }

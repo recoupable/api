@@ -1,5 +1,4 @@
 import apifyClient from "@/lib/apify/client";
-import { OUTSTANDING_ERROR } from "@/lib/apify/errors";
 import { ApifyRunInfo } from "@/lib/apify/types";
 import { getApifyWebhooks } from "@/lib/apify/getApifyWebhooks";
 
@@ -28,10 +27,6 @@ export async function startInstagramProfileScraping(
   if (!run?.id || !run?.defaultDatasetId) {
     console.error("Failed to start Instagram profile scraping for handles:", cleanHandles);
     return null;
-  }
-
-  if (run.status === "FAILED" || run.status === "ABORTED") {
-    throw new Error(OUTSTANDING_ERROR);
   }
 
   return { runId: run.id, datasetId: run.defaultDatasetId };

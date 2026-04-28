@@ -61,16 +61,7 @@ describe("handleInstagramCommentsScraper", () => {
     expect(startInstagramProfileScraping).toHaveBeenCalledOnce();
     const [handles] = vi.mocked(startInstagramProfileScraping).mock.calls[0];
     expect(new Set(handles as string[])).toEqual(new Set(["alice", "bob"]));
-    expect(result.totalComments).toBe(3);
+    expect(result.comments).toHaveLength(3);
     expect(new Set(result.processedPostUrls)).toEqual(new Set(["u1", "u2"]));
-  });
-
-  it("returns empty shape without touching handlers when datasetId is missing", async () => {
-    const result = await handleInstagramCommentsScraper({
-      ...payload,
-      resource: { defaultDatasetId: "" },
-    });
-    expect(result.totalComments).toBe(0);
-    expect(saveApifyInstagramComments).not.toHaveBeenCalled();
   });
 });
