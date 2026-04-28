@@ -1,36 +1,13 @@
+import apifyClient from "@/lib/apify/client";
+
 /**
- * Fetches items from an Apify dataset by id. Uses the REST endpoint
- * rather than the SDK so we do not have to materialize the whole
- * dataset client just to pull items.
+ * Fetches items from an Apify dataset by id via the SDK. Returns the
+ * items array; errors propagate to the caller so the webhook handler
+ * can surface them in its error response.
  *
  * @param datasetId - Apify dataset id.
- * @returns Parsed dataset body (array) or `[]` on failure.
  */
-export async function getDataset(datasetId: string): Promise<unknown[]> {
-  const token = process.env.APIFY_TOKEN;
-  if (!token) {
-    console.error("[ERROR] getDataset: missing APIFY_TOKEN");
-    return [];
-  }
-
-  try {
-    const response = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      console.error(`[ERROR] getDataset: ${response.status} ${response.statusText}`);
-      return [];
-    }
-
-    const data = await response.json();
-    return Array.isArray(data) ? data : [];
-  } catch (err) {
-    console.error("[ERROR] getDataset:", err);
-    return [];
-  }
+export async function getDataset(datasetId: string) {
+  const { items } = await apifyClient.dataset(datasetId).listItems();
+  return items;
 }
