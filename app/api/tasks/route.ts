@@ -61,23 +61,16 @@ export async function POST(request: NextRequest) {
 /**
  * PATCH /api/tasks
  *
- * Updates an existing task (scheduled action).
- * Only the `id` field is required; any additional fields will be updated.
- * If `schedule` (cron) is updated, the corresponding Trigger.dev schedule is also updated.
- * Returns the updated task in an array, matching GET response shape.
+ * Updates an existing scheduled task (OpenAPI `UpdateTaskRequest`). Requires auth (`x-api-key` or Bearer);
+ * optional body `account_id` follows POST rules (`validateAuthContext`). Validates `id` as UUID; optional
+ * fields merge onto the row; unknown keys are rejected. The task row must belong to the resolved account
+ * or returns 403. Missing task id → 404. Success body is a `TasksResponse` with one enriched task
+ * (`recent_runs`, `upcoming`, `owner_email`), matching GET shape.
  *
- * Body parameters:
- * - id (required): The task ID to update
- * - title (optional): The title of the task
- * - prompt (optional): The prompt for the task
- * - schedule (optional): The cron schedule string
- * - account_id (optional): The account ID
- * - artist_account_id (optional): The artist account ID
- * - enabled (optional): Whether the task is enabled
- * - model (optional): The model to use for the task
+ * If `schedule` changes, Trigger.dev sync runs as before.
  *
- * @param request - The request object containing the task data in the body.
- * @returns A NextResponse with the updated task.
+ * @param request - Request with JSON body.
+ * @returns NextResponse (`TasksResponse` on 200).
  */
 export async function PATCH(request: NextRequest) {
   return updateTaskHandler(request);

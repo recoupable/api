@@ -1,22 +1,27 @@
 import { updateScheduledAction } from "@/lib/supabase/scheduled_actions/updateScheduledAction";
 import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
 import { syncTriggerSchedule } from "@/lib/trigger/syncTriggerSchedule";
-import { updateTaskBodySchema, type UpdateTaskBody } from "@/lib/tasks/validateUpdateTaskBody";
+import {
+  updateTaskPersistInputSchema,
+  type UpdateTaskPersistInput,
+} from "@/lib/tasks/updateTaskSchemas";
 import type { Tables, TablesUpdate } from "@/types/database.types";
 
+/** Thrown row exists but `{ resolvedAccountId }` does not match `scheduled_actions.account_id`. */
+export const TASK_ACCESS_DENIED_MESSAGE = "Access denied to this task";
+
 /**
- * Updates an existing task (scheduled action) in the system.
- * If schedule is updated, the corresponding Trigger.dev schedule is also updated.
+ * Updates an existing task (scheduled action) when the authenticated account owns the row.
  *
- * @param input - The task data to update (validated against updateTaskBodySchema)
+ * @param input - Validated PATCH body minus body `account_id`, plus resolved `resolvedAccountId`
  * @returns The updated task
  */
-export async function updateTask(input: UpdateTaskBody): Promise<Tables<"scheduled_actions">> {
-  // Validate input using schema
-  const validatedInput = updateTaskBodySchema.parse(input);
-  const { id, schedule, enabled } = validatedInput;
+export async function updateTask(
+  input: UpdateTaskPersistInput,
+): Promise<Tables<"scheduled_actions">> {
+  const validatedInput = updateTaskPersistInputSchema.parse(input);
+  const { id, schedule, enabled, resolvedAccountId } = validatedInput;
 
-  // Get existing task
   const existingTasks = await selectScheduledActions({ id });
   const existingTask = existingTasks[0];
 
@@ -24,19 +29,25 @@ export async function updateTask(input: UpdateTaskBody): Promise<Tables<"schedul
     throw new Error("Task not found");
   }
 
-  // Prepare update data - only include fields that are defined (exclude id)
+  if (existingTask.account_id !== resolvedAccountId) {
+    throw new Error(TASK_ACCESS_DENIED_MESSAGE);
+  }
+
   const updateData = Object.fromEntries(
-    Object.entries(validatedInput).filter(([key, value]) => key !== "id" && value !== undefined),
+    Object.entries(validatedInput).filter(([key, value]) => {
+      if (value === undefined) return false;
+      if (key === "id" || key === "resolvedAccountId") return false;
+      return true;
+    }),
   ) as Partial<TablesUpdate<"scheduled_actions">>;
 
-  // Sync Trigger.dev schedule if needed
   const finalEnabled = enabled !== undefined ? enabled : (existingTask.enabled ?? true);
-  const cronExpression = schedule ?? existingTask.schedule ?? undefined;
+  const cronExpression = schedule ?? existingTask.schedule;
   const scheduleChanged = schedule !== undefined;
 
   const newTriggerScheduleId = await syncTriggerSchedule({
     taskId: id,
-    enabled: finalEnabled,
+    enabled: Boolean(finalEnabled),
     cronExpression,
     scheduleChanged,
     existingScheduleId: existingTask.trigger_schedule_id ?? null,
@@ -46,7 +57,6 @@ export async function updateTask(input: UpdateTaskBody): Promise<Tables<"schedul
     updateData.trigger_schedule_id = newTriggerScheduleId;
   }
 
-  // Update the task
   const updated = await updateScheduledAction({
     id,
     ...updateData,
