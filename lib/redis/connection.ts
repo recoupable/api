@@ -1,27 +1,34 @@
 import { Redis } from "ioredis";
 
-// Verify environment is loaded
-const redisUrl = process.env.REDIS_URL;
-if (!redisUrl) {
-  throw new Error("REDIS_URL is not set");
+let cachedRedis: Redis | null = null;
+
+function getRedis(): Redis {
+  const redisUrl = process.env.REDIS_URL;
+  if (!redisUrl) {
+    throw new Error("REDIS_URL is not set");
+  }
+  if (!cachedRedis) {
+    const url = new URL(redisUrl);
+    const redisConfig = {
+      host: url.hostname,
+      port: parseInt(url.port, 10),
+      password: url.password,
+      lazyConnect: true,
+      retryDelayOnFailover: 100,
+    };
+    cachedRedis = new Redis(redisConfig);
+    cachedRedis.on("error", error => {
+      console.error("[Redis] Connection error:", error);
+    });
+  }
+  return cachedRedis;
 }
 
-// Parse Redis URL manually to ensure proper connection
-const url = new URL(redisUrl as string);
-const redisConfig = {
-  host: url.hostname,
-  port: parseInt(url.port, 10),
-  password: url.password,
-  lazyConnect: true,
-  retryDelayOnFailover: 100,
-};
-
-// Create Redis connection
-const redis = new Redis(redisConfig);
-
-// Handle connection events
-redis.on("error", error => {
-  console.error("[Redis] Connection error:", error);
+/** Lazy Redis so `next build` can load routes without REDIS_URL at import time. */
+const redis = new Proxy({} as Redis, {
+  get(_target, prop, receiver) {
+    return Reflect.get(getRedis(), prop, receiver);
+  },
 });
 
 export default redis;

@@ -7,13 +7,18 @@ type GenerateAccessTokenResult =
     }
   | { access_token: null; token_type: null; expires_in: null; error: Error };
 
-const clientId = process.env.SPOTIFY_CLIENT_ID;
-const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-if (!clientId || !clientSecret) {
-  throw new Error("Missing SPOTIFY_CLIENT_ID or SPOTIFY_CLIENT_SECRET in environment");
-}
-
 const generateAccessToken = async (): Promise<GenerateAccessTokenResult> => {
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    return {
+      access_token: null,
+      token_type: null,
+      expires_in: null,
+      error: new Error("Missing SPOTIFY_CLIENT_ID or SPOTIFY_CLIENT_SECRET in environment"),
+    };
+  }
+
   const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
   try {
