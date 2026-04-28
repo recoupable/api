@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
-import { postApifyWebhookHandler } from "../postApifyWebhookHandler";
+import { postApifyHandler } from "../postApifyHandler";
 import { handleInstagramProfileScraperResults } from "../instagram/handleInstagramProfileScraperResults";
 import { handleInstagramCommentsScraper } from "../instagram/handleInstagramCommentsScraper";
 
@@ -26,13 +26,13 @@ const baseBody = {
   resource: { defaultDatasetId: "ds_1" },
 };
 
-describe("postApifyWebhookHandler", () => {
+describe("postApifyHandler", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("dispatches profile scraper results for the IG profile actor", async () => {
     vi.mocked(handleInstagramProfileScraperResults).mockResolvedValue({ posts: [1, 2] } as never);
 
-    const res = await postApifyWebhookHandler(
+    const res = await postApifyHandler(
       makeRequest({ ...baseBody, eventData: { actorId: "dSCLg0C3YEZ83HzYX" } }),
     );
 
@@ -45,7 +45,7 @@ describe("postApifyWebhookHandler", () => {
   it("dispatches comments scraper for the IG comments actor", async () => {
     vi.mocked(handleInstagramCommentsScraper).mockResolvedValue({ totalComments: 3 } as never);
 
-    const res = await postApifyWebhookHandler(
+    const res = await postApifyHandler(
       makeRequest({ ...baseBody, eventData: { actorId: "SbK00X0JYCPblD2wp" } }),
     );
 
@@ -56,7 +56,7 @@ describe("postApifyWebhookHandler", () => {
   });
 
   it("returns a 200 error response for unhandled actor ids", async () => {
-    const res = await postApifyWebhookHandler(
+    const res = await postApifyHandler(
       makeRequest({ ...baseBody, eventData: { actorId: "unknown_actor" } }),
     );
 
@@ -71,7 +71,7 @@ describe("postApifyWebhookHandler", () => {
   it("returns a 200 error response when the dispatched handler throws", async () => {
     vi.mocked(handleInstagramProfileScraperResults).mockRejectedValue(new Error("boom"));
 
-    const res = await postApifyWebhookHandler(
+    const res = await postApifyHandler(
       makeRequest({ ...baseBody, eventData: { actorId: "dSCLg0C3YEZ83HzYX" } }),
     );
 
@@ -81,7 +81,7 @@ describe("postApifyWebhookHandler", () => {
   });
 
   it("propagates the validator's error response for invalid payloads", async () => {
-    const res = await postApifyWebhookHandler(makeRequest({ bogus: true }));
+    const res = await postApifyHandler(makeRequest({ bogus: true }));
 
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -92,7 +92,7 @@ describe("postApifyWebhookHandler", () => {
   });
 
   it("propagates the validator's Invalid JSON response for malformed bodies", async () => {
-    const res = await postApifyWebhookHandler(makeRequest(null, "not json"));
+    const res = await postApifyHandler(makeRequest(null, "not json"));
 
     expect(res.status).toBe(200);
     const body = await res.json();

@@ -14,7 +14,7 @@ const INSTAGRAM_COMMENTS_ACTOR_ID = "SbK00X0JYCPblD2wp";
  *
  * @param request - Incoming webhook request.
  */
-export async function postApifyWebhookHandler(request: NextRequest): Promise<NextResponse> {
+export async function postApifyHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateApifyWebhookRequest(request);
   if (validated instanceof NextResponse) return validated;
 
@@ -31,14 +31,14 @@ export async function postApifyWebhookHandler(request: NextRequest): Promise<Nex
         return NextResponse.json(result, { status: 200 });
       }
       default:
-        console.warn(`[WARN] postApifyWebhookHandler: unhandled actorId ${actorId}`);
+        console.warn(`[WARN] postApifyHandler: unhandled actorId ${actorId}`);
         return NextResponse.json(
           { status: "error", error: `Unhandled actorId: ${actorId}` },
           { status: 200 },
         );
     }
   } catch (error) {
-    console.error("[ERROR] postApifyWebhookHandler:", error);
+    console.error("[ERROR] postApifyHandler:", error);
     return NextResponse.json(
       {
         status: "error",

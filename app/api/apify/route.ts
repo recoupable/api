@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { postApifyWebhookHandler } from "@/lib/apify/postApifyWebhookHandler";
+import { postApifyHandler } from "@/lib/apify/postApifyHandler";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -15,5 +15,5 @@ export const revalidate = 0;
  * @returns JSON response describing the processed payload (always 200).
  */
 export async function POST(request: NextRequest) {
-  return postApifyWebhookHandler(request);
+  return postApifyHandler(request);
 }
