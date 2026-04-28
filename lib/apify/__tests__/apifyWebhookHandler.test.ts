@@ -80,7 +80,7 @@ describe("apifyWebhookHandler", () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toEqual({ status: "error", error: "boom" });
+    expect(body).toEqual({ status: "error", error: "Internal server error" });
   });
 
   it("propagates the validator's error response for invalid payloads", async () => {

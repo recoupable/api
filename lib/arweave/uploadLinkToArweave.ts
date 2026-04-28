@@ -2,6 +2,7 @@ import { uploadToArweave } from "./uploadToArweave";
 import { isSafeHttpUrl } from "./isSafeHttpUrl";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const FETCH_TIMEOUT_MS = 10_000;
 
 /**
  * Fetches the image at `imageUrl` and uploads its bytes to Arweave.
@@ -10,8 +11,9 @@ const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
  * back to the original URL in that case.
  *
  * Rejects non-http(s) URLs and private/loopback hosts to avoid SSRF,
- * and caps the download at MAX_IMAGE_BYTES so a malicious server
- * cannot exhaust memory.
+ * caps the download at MAX_IMAGE_BYTES so a malicious server cannot
+ * exhaust memory, and bounds the fetch with a timeout so a slow server
+ * cannot stall the webhook.
  *
  * @param imageUrl - Remote image URL.
  */
@@ -24,7 +26,10 @@ export async function uploadLinkToArweave(
     return null;
   }
   try {
-    const res = await fetch(imageUrl, { redirect: "error" });
+    const res = await fetch(imageUrl, {
+      redirect: "error",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
     if (!res.ok || !res.body) return null;
 
     const contentLength = Number(res.headers.get("content-length") ?? 0);

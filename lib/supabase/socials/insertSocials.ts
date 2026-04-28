@@ -1,5 +1,5 @@
 import supabase from "../serverClient";
-import { stripNullish } from "@/lib/utils/stripNullish";
+import { stripNullish } from "@/lib/objects/stripNullish";
 import type { TablesInsert } from "@/types/database.types";
 
 /**

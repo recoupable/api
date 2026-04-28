@@ -14,7 +14,9 @@ export async function startInstagramProfileScraping(
   handles: string | string[],
 ): Promise<ApifyRunInfo | null> {
   const list = Array.isArray(handles) ? handles : [handles];
-  const cleanHandles = list.map(h => h.trim().replace(/^@/, "")).filter(h => h.length > 0);
+  const cleanHandles = Array.from(
+    new Set(list.map(h => h.trim().replace(/^@/, "")).filter(h => h.length > 0)),
+  );
 
   if (cleanHandles.length === 0) {
     throw new Error("Invalid Instagram handle");

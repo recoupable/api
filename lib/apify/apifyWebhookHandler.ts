@@ -39,12 +39,6 @@ export async function apifyWebhookHandler(request: NextRequest): Promise<NextRes
     }
   } catch (error) {
     console.error("[ERROR] apifyWebhookHandler:", error);
-    return NextResponse.json(
-      {
-        status: "error",
-        error: error instanceof Error ? error.message : String(error),
-      },
-      { status: 200 },
-    );
+    return NextResponse.json({ status: "error", error: "Internal server error" }, { status: 200 });
   }
 }
