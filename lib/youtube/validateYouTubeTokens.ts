@@ -5,7 +5,7 @@ import {
   buildYouTubeUtilityError,
   YouTubeErrorMessages,
   type YouTubeUtilityError,
-} from "@/lib/youtube/youtubeErrors";
+} from "@/lib/youtube/buildYouTubeUtilityError";
 import type { Tables } from "@/types/database.types";
 
 export type YouTubeTokensRow = Tables<"youtube_tokens">;

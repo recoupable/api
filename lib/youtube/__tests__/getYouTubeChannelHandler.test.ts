@@ -110,7 +110,7 @@ describe("getYouTubeChannelHandler", () => {
     expect(body).toEqual({ success: true, channels: channelData, tokenStatus: "valid" });
   });
 
-  it("returns 200 with tokenStatus=error when an unexpected exception bubbles up", async () => {
+  it("returns 200 with tokenStatus=error and no raw error leak when an unexpected exception bubbles up", async () => {
     vi.mocked(validateYouTubeTokens).mockRejectedValue(new Error("db dead"));
 
     const response = await getYouTubeChannelHandler(
@@ -122,9 +122,9 @@ describe("getYouTubeChannelHandler", () => {
     expect(body).toEqual({
       success: false,
       error: "Failed to fetch YouTube channel information",
-      details: "db dead",
       tokenStatus: "error",
       channels: null,
     });
+    expect(JSON.stringify(body)).not.toContain("db dead");
   });
 });

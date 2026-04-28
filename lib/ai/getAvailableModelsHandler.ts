@@ -20,9 +20,8 @@ export async function getAvailableModelsHandler(): Promise<NextResponse> {
     );
   } catch (error) {
     console.error("/api/ai/models error", error);
-    const message = error instanceof Error ? error.message : "failed";
     return NextResponse.json(
-      { message },
+      { message: "Internal server error" },
       {
         status: 500,
         headers: getCorsHeaders(),

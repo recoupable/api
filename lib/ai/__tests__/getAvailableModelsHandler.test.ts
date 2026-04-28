@@ -30,14 +30,15 @@ describe("getAvailableModelsHandler", () => {
     expect(body).toEqual({ models });
   });
 
-  it("returns 500 with { message } when underlying call throws", async () => {
+  it("returns 500 with generic message when underlying call throws (no raw error leak)", async () => {
     vi.mocked(getAvailableModels).mockRejectedValue(new Error("gateway down"));
 
     const response = await getAvailableModelsHandler();
     const body = await response.json();
 
     expect(response.status).toBe(500);
-    expect(body).toEqual({ message: "gateway down" });
+    expect(body).toMatchObject({ message: "Internal server error" });
+    expect(body.message).not.toContain("gateway down");
   });
 
   it("returns 500 with generic message when error is not an Error instance", async () => {
@@ -47,6 +48,6 @@ describe("getAvailableModelsHandler", () => {
     const body = await response.json();
 
     expect(response.status).toBe(500);
-    expect(body).toEqual({ message: "failed" });
+    expect(body).toEqual({ message: "Internal server error" });
   });
 });

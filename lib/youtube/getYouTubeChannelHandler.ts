@@ -42,7 +42,7 @@ export async function getYouTubeChannelHandler(request: NextRequest): Promise<Ne
       includeBranding: true,
     });
 
-    if (!channelResult.success) {
+    if (channelResult.success === false) {
       return NextResponse.json(
         {
           success: false,
@@ -74,7 +74,6 @@ export async function getYouTubeChannelHandler(request: NextRequest): Promise<Ne
       {
         success: false,
         error: "Failed to fetch YouTube channel information",
-        details: error instanceof Error ? error.message : "Unknown error",
         tokenStatus: "error",
         channels: null,
       },
