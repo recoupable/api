@@ -20,7 +20,7 @@ export type YouTubeTokensRow = Tables<"youtube_tokens">;
 export async function refreshStoredYouTubeToken(
   storedTokens: YouTubeTokensRow,
   artist_account_id: string,
-): Promise<YouTubeTokensRow> {
+) {
   if (!storedTokens.refresh_token) {
     throw new Error(`No refresh token available for token refresh (account ${artist_account_id})`);
   }
