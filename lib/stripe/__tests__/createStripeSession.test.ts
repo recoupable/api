@@ -80,7 +80,10 @@ describe("createStripeSession", () => {
 
   it("does not add chat-non-parity Stripe session fields", async () => {
     mockCreate.mockResolvedValue({ id: "cs_x", url: "https://checkout.test/x" } as never);
-    await createStripeSession("00000000-0000-4000-8000-000000000001", "https://chat.recoupable.com/ok");
+    await createStripeSession(
+      "00000000-0000-4000-8000-000000000001",
+      "https://chat.recoupable.com/ok",
+    );
     const params = mockCreate.mock.calls[0][0] as Record<string, unknown>;
     expect(params).not.toHaveProperty("cancel_url");
     expect(params).not.toHaveProperty("customer_email");
