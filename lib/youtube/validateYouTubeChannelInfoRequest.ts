@@ -50,7 +50,17 @@ export async function validateYouTubeChannelInfoRequest(
     );
   }
 
-  const tokens = await validateYouTubeTokens(result.data.artist_account_id);
+  let tokens: YouTubeTokensRow | null;
+  try {
+    tokens = await validateYouTubeTokens(result.data.artist_account_id);
+  } catch (error) {
+    console.error(
+      `YouTube token validation/refresh failed for account ${result.data.artist_account_id}:`,
+      error,
+    );
+    tokens = null;
+  }
+
   if (!tokens) {
     return NextResponse.json(
       {
