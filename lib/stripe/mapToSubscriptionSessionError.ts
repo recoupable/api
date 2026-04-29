@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 
-export function mapToSubscriptionSessionErrorResponse(res: NextResponse): Promise<NextResponse> {
+export function mapToSubscriptionSessionError(res: NextResponse): Promise<NextResponse> {
   return res
     .clone()
     .json()

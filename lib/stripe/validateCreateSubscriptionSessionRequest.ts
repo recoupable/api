@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { createSubscriptionSessionBodySchema } from "@/lib/stripe/createSubscriptionSessionSchemas";
-import { mapToSubscriptionSessionErrorResponse } from "@/lib/stripe/mapToSubscriptionSessionError";
+import { mapToSubscriptionSessionError } from "@/lib/stripe/mapToSubscriptionSessionError";
 
 export type ValidatedCreateSubscriptionSessionRequest = {
   accountId: string;
@@ -32,7 +32,7 @@ export async function validateCreateSubscriptionSessionRequest(
     accountId: parsed.data.accountId,
   });
   if (authContext instanceof NextResponse) {
-    return mapToSubscriptionSessionErrorResponse(authContext);
+    return mapToSubscriptionSessionError(authContext);
   }
 
   return {
