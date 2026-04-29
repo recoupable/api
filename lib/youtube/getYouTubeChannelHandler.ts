@@ -12,7 +12,7 @@ import { fetchYouTubeChannelInfo } from "@/lib/youtube/fetchYouTubeChannelInfo";
  * @param request - The incoming request.
  * @returns A NextResponse with `{ success, channels, tokenStatus }`.
  */
-export async function getYouTubeChannelHandler(request: NextRequest): Promise<NextResponse> {
+export async function getYouTubeChannelHandler(request: NextRequest) {
   const validated = await validateYouTubeChannelInfoRequest(request);
   if (validated instanceof NextResponse) {
     return validated;

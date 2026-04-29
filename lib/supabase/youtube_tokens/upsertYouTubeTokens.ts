@@ -1,5 +1,5 @@
 import supabase from "@/lib/supabase/serverClient";
-import type { Tables, TablesInsert } from "@/types/database.types";
+import type { TablesInsert } from "@/types/database.types";
 
 /**
  * Upserts YouTube tokens for an artist account. Uses `artist_account_id` as
@@ -8,9 +8,7 @@ import type { Tables, TablesInsert } from "@/types/database.types";
  * @param tokens - The YouTube tokens row to insert/update.
  * @returns The upserted row, or null on failure.
  */
-export async function upsertYouTubeTokens(
-  tokens: TablesInsert<"youtube_tokens">,
-): Promise<Tables<"youtube_tokens"> | null> {
+export async function upsertYouTubeTokens(tokens: TablesInsert<"youtube_tokens">) {
   const { data, error } = await supabase
     .from("youtube_tokens")
     .upsert(tokens, { onConflict: "artist_account_id", ignoreDuplicates: false })

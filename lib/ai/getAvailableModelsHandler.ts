@@ -8,7 +8,7 @@ import { getAvailableModels } from "@/lib/ai/getAvailableModels";
  *
  * @returns A NextResponse with `{ models }` on 200 or `{ message }` on 500.
  */
-export async function getAvailableModelsHandler(): Promise<NextResponse> {
+export async function getAvailableModelsHandler() {
   try {
     const models = await getAvailableModels();
     return NextResponse.json(

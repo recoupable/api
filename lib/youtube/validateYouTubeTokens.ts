@@ -20,9 +20,7 @@ export type YouTubeTokensRow = Tables<"youtube_tokens">;
  * @param artist_account_id - The artist account ID.
  * @returns The validated tokens row, or `null` when the user needs to (re-)auth.
  */
-export async function validateYouTubeTokens(
-  artist_account_id: string,
-): Promise<YouTubeTokensRow | null> {
+export async function validateYouTubeTokens(artist_account_id: string) {
   const storedTokens = await selectYouTubeTokens(artist_account_id);
 
   if (!storedTokens) {
