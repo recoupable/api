@@ -1,21 +1,11 @@
 import { createYouTubeOAuthClient } from "@/lib/youtube/oauth-client";
 import { upsertYouTubeTokens } from "@/lib/supabase/youtube_tokens/upsertYouTubeTokens";
-import type { Tables } from "@/types/database.types";
-
-export type YouTubeTokensRow = Tables<"youtube_tokens">;
+import type { YouTubeTokensRow } from "@/lib/youtube/validateYouTubeTokens";
 
 /**
- * Refreshes an expired YouTube access token using the stored refresh token,
- * then persists the new credentials. Mirrors chat's behaviour 1:1.
- *
- * Throws on every failure (missing refresh token, Google rejection, db
- * update failure). The single catch boundary lives in
- * `validateYouTubeChannelInfoRequest`, which collapses thrown errors into
- * the same `{ tokenStatus: "invalid" }` response as the no-tokens case.
- *
- * @param storedTokens - The currently stored token row (must include refresh_token).
- * @param artist_account_id - Artist account ID, used for log context.
- * @returns The refreshed tokens row.
+ * Refreshes an expired YouTube access token via the stored refresh token
+ * and persists the new credentials. Throws on every failure (missing
+ * refresh token, Google rejection, db update failure).
  */
 export async function refreshStoredYouTubeToken(
   storedTokens: YouTubeTokensRow,

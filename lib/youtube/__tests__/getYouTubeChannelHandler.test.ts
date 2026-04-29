@@ -35,7 +35,7 @@ describe("getYouTubeChannelHandler", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("passes through the validator's NextResponse on validation failure", async () => {
-    const validatorResponse = NextResponse.json({ success: false }, { status: 400 });
+    const validatorResponse = NextResponse.json({ status: "error" }, { status: 400 });
     vi.mocked(validateYouTubeChannelInfoRequest).mockResolvedValue(validatorResponse);
 
     const response = await getYouTubeChannelHandler(request);
@@ -44,7 +44,7 @@ describe("getYouTubeChannelHandler", () => {
     expect(fetchYouTubeChannelInfo).not.toHaveBeenCalled();
   });
 
-  it("returns 200 with success:true and channels on success", async () => {
+  it("returns 200 with channels populated on success", async () => {
     vi.mocked(validateYouTubeChannelInfoRequest).mockResolvedValue(validated);
     const channelData: any = [{ id: "ch1", title: "Channel" }];
     vi.mocked(fetchYouTubeChannelInfo).mockResolvedValue({ success: true, channelData });
@@ -58,10 +58,10 @@ describe("getYouTubeChannelHandler", () => {
       includeBranding: true,
     });
     expect(response.status).toBe(200);
-    expect(body).toEqual({ success: true, channels: channelData });
+    expect(body).toEqual({ status: "success", channels: channelData });
   });
 
-  it("returns 200 with success:false when fetchYouTubeChannelInfo returns success:false", async () => {
+  it("returns 200 with channels:null when fetchYouTubeChannelInfo returns success:false", async () => {
     vi.mocked(validateYouTubeChannelInfoRequest).mockResolvedValue(validated);
     vi.mocked(fetchYouTubeChannelInfo).mockResolvedValue({
       success: false,
@@ -72,10 +72,10 @@ describe("getYouTubeChannelHandler", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ success: false, channels: null });
+    expect(body).toEqual({ status: "success", channels: null });
   });
 
-  it("returns 200 with success:false when fetchYouTubeChannelInfo throws (no raw error leak)", async () => {
+  it("returns 200 with channels:null when fetchYouTubeChannelInfo throws (no raw error leak)", async () => {
     vi.mocked(validateYouTubeChannelInfoRequest).mockResolvedValue(validated);
     vi.mocked(fetchYouTubeChannelInfo).mockRejectedValue(new Error("upstream dead"));
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -84,7 +84,7 @@ describe("getYouTubeChannelHandler", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ success: false, channels: null });
+    expect(body).toEqual({ status: "success", channels: null });
     expect(JSON.stringify(body)).not.toContain("upstream dead");
     errorSpy.mockRestore();
   });

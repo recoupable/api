@@ -17,14 +17,12 @@ export async function OPTIONS() {
 /**
  * GET /api/youtube/channel-info?artist_account_id=<uuid>
  *
- * Validates+refreshes the YouTube tokens stored in `youtube_tokens` for the
- * given artist account, then proxies the YouTube Data API. Returns
- * `{ success, channels, tokenStatus }`.
- *
- * tokenStatus ∈ "missing_param" | "invalid" | "api_error" | "error" | "valid".
+ * Validates+refreshes stored YouTube tokens, then proxies the YouTube
+ * Data API. Always responds 200; clients infer "needs re-auth" from
+ * `channels === null`.
  *
  * @param request - The incoming request.
- * @returns A NextResponse with the YouTube channel-info response shape.
+ * @returns A NextResponse with `{ status: "success", channels }`.
  */
 export async function GET(request: NextRequest) {
   return getYouTubeChannelHandler(request);

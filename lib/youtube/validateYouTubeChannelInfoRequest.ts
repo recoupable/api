@@ -10,17 +10,10 @@ export const youTubeChannelInfoRequestSchema = z.object({
 });
 
 /**
- * Validates the request for GET /api/youtube/channel-info: parses the
- * `artist_account_id` query param and resolves the stored YouTube tokens
- * (refreshing them if expired).
- *
- * Returns a `NextResponse` on failure:
- * - 400 when the query param is missing.
- * - 200 + `success: false` when tokens cannot be resolved (re-auth required).
- *
- * @param request - The incoming request.
- * @returns A NextResponse with an error if validation fails, or the
- *          validated request payload (`artist_account_id` + `tokens`).
+ * Validates GET /api/youtube/channel-info: parses the `artist_account_id`
+ * query param and resolves the stored YouTube tokens (refreshing if
+ * expired). On any token failure, returns 200 with `channels: null` so
+ * clients can prompt re-auth without treating it as a network error.
  */
 export async function validateYouTubeChannelInfoRequest(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -30,7 +23,7 @@ export async function validateYouTubeChannelInfoRequest(request: NextRequest) {
 
   if (!result.success) {
     return NextResponse.json(
-      { success: false },
+      { status: "error", message: result.error.issues[0].message },
       {
         status: 400,
         headers: getCorsHeaders(),
@@ -47,7 +40,7 @@ export async function validateYouTubeChannelInfoRequest(request: NextRequest) {
       error,
     );
     return NextResponse.json(
-      { success: false, channels: null },
+      { status: "success", channels: null },
       {
         status: 200,
         headers: getCorsHeaders(),

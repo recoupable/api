@@ -38,32 +38,43 @@ describe("validateYouTubeChannelInfoRequest", () => {
     const response = result as NextResponse;
     expect(response.status).toBe(400);
     const body = await response.json();
-    expect(body).toEqual({ success: false });
+    expect(body).toEqual({
+      status: "error",
+      message: "artist_account_id is required",
+    });
     expect(validateYouTubeTokens).not.toHaveBeenCalled();
   });
 
-  it("returns 200 with success:false when validateYouTubeTokens throws", async () => {
-    // The validator is the single catch boundary: every unusable-token case
-    // (no row, expired no refresh, refresh failure, db error) collapses
-    // into the same response shape.
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.mocked(validateYouTubeTokens).mockRejectedValue(new Error("invalid_grant"));
+  // The validator is the single catch boundary: every unusable-token case
+  // (no row, expired-no-refresh, refresh failure, db error) collapses
+  // into the same response shape.
+  it.each([
+    ["no token row", new Error("youtube tokens not found")],
+    ["expired with no refresh_token", new Error("youtube tokens expired with no refresh_token")],
+    ["refresh failure (invalid_grant)", new Error("invalid_grant")],
+    ["db update failure", new Error("Failed to update refreshed tokens in DB")],
+  ])(
+    "returns 200 with channels:null when validateYouTubeTokens throws (%s)",
+    async (_label, err) => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      vi.mocked(validateYouTubeTokens).mockRejectedValue(err);
 
-    const result = await validateYouTubeChannelInfoRequest(
-      buildRequest(`?artist_account_id=${ARTIST_ID}`),
-    );
+      const result = await validateYouTubeChannelInfoRequest(
+        buildRequest(`?artist_account_id=${ARTIST_ID}`),
+      );
 
-    expect(result).toBeInstanceOf(NextResponse);
-    const response = result as NextResponse;
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body).toEqual({ success: false, channels: null });
-    expect(errorSpy).toHaveBeenCalledWith(
-      `YouTube token validation/refresh failed for account ${ARTIST_ID}:`,
-      expect.any(Error),
-    );
-    errorSpy.mockRestore();
-  });
+      expect(result).toBeInstanceOf(NextResponse);
+      const response = result as NextResponse;
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body).toEqual({ status: "success", channels: null });
+      expect(errorSpy).toHaveBeenCalledWith(
+        `YouTube token validation/refresh failed for account ${ARTIST_ID}:`,
+        expect.any(Error),
+      );
+      errorSpy.mockRestore();
+    },
+  );
 
   it("returns the validated payload when tokens resolve (happy path)", async () => {
     vi.mocked(validateYouTubeTokens).mockResolvedValue(validTokens);

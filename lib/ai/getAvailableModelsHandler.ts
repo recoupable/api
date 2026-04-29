@@ -3,10 +3,8 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getAvailableModels } from "@/lib/ai/getAvailableModels";
 
 /**
- * Handles GET /api/ai/models — proxies the Vercel AI Gateway model catalog
- * (filtered to exclude embed models). Mirrors chat's response shape exactly.
- *
- * @returns A NextResponse with `{ models }` on 200 or `{ message }` on 500.
+ * Handles GET /api/ai/models — proxies the Vercel AI Gateway model
+ * catalog (filtered to exclude embed models).
  */
 export async function getAvailableModelsHandler() {
   try {
