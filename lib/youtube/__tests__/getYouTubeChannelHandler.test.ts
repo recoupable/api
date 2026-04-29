@@ -61,7 +61,7 @@ describe("getYouTubeChannelHandler", () => {
     expect(body).toEqual({ status: "success", channels: channelData });
   });
 
-  it("returns 200 with channels:null when fetchYouTubeChannelInfo returns success:false", async () => {
+  it("returns 502 when fetchYouTubeChannelInfo returns success:false", async () => {
     vi.mocked(validateYouTubeChannelInfoRequest).mockResolvedValue(validated);
     vi.mocked(fetchYouTubeChannelInfo).mockResolvedValue({
       success: false,
@@ -71,11 +71,11 @@ describe("getYouTubeChannelHandler", () => {
     const response = await getYouTubeChannelHandler(request);
     const body = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(body).toEqual({ status: "success", channels: null });
+    expect(response.status).toBe(502);
+    expect(body).toEqual({ status: "error", message: "YouTube API error" });
   });
 
-  it("returns 200 with channels:null when fetchYouTubeChannelInfo throws (no raw error leak)", async () => {
+  it("returns 502 when fetchYouTubeChannelInfo throws (no raw error leak)", async () => {
     vi.mocked(validateYouTubeChannelInfoRequest).mockResolvedValue(validated);
     vi.mocked(fetchYouTubeChannelInfo).mockRejectedValue(new Error("upstream dead"));
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -83,8 +83,8 @@ describe("getYouTubeChannelHandler", () => {
     const response = await getYouTubeChannelHandler(request);
     const body = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(body).toEqual({ status: "success", channels: null });
+    expect(response.status).toBe(502);
+    expect(body).toEqual({ status: "error", message: "YouTube API error" });
     expect(JSON.stringify(body)).not.toContain("upstream dead");
     errorSpy.mockRestore();
   });

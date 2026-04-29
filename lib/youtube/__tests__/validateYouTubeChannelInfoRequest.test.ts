@@ -54,7 +54,7 @@ describe("validateYouTubeChannelInfoRequest", () => {
     ["refresh failure (invalid_grant)", new Error("invalid_grant")],
     ["db update failure", new Error("Failed to update refreshed tokens in DB")],
   ])(
-    "returns 200 with channels:null when validateYouTubeTokens throws (%s)",
+    "returns 401 with re-auth message when validateYouTubeTokens throws (%s)",
     async (_label, err) => {
       const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       vi.mocked(validateYouTubeTokens).mockRejectedValue(err);
@@ -65,9 +65,12 @@ describe("validateYouTubeChannelInfoRequest", () => {
 
       expect(result).toBeInstanceOf(NextResponse);
       const response = result as NextResponse;
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(401);
       const body = await response.json();
-      expect(body).toEqual({ status: "success", channels: null });
+      expect(body).toEqual({
+        status: "error",
+        message: "YouTube authentication required",
+      });
       expect(errorSpy).toHaveBeenCalledWith(
         `YouTube token validation/refresh failed for account ${ARTIST_ID}:`,
         expect.any(Error),

@@ -12,8 +12,8 @@ export const youTubeChannelInfoRequestSchema = z.object({
 /**
  * Validates GET /api/youtube/channel-info: parses the `artist_account_id`
  * query param and resolves the stored YouTube tokens (refreshing if
- * expired). On any token failure, returns 200 with `channels: null` so
- * clients can prompt re-auth without treating it as a network error.
+ * expired). On token validation/refresh failure, returns 401 so clients
+ * can prompt re-auth.
  */
 export async function validateYouTubeChannelInfoRequest(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -40,9 +40,9 @@ export async function validateYouTubeChannelInfoRequest(request: NextRequest) {
       error,
     );
     return NextResponse.json(
-      { status: "success", channels: null },
+      { status: "error", message: "YouTube authentication required" },
       {
-        status: 200,
+        status: 401,
         headers: getCorsHeaders(),
       },
     );
