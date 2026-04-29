@@ -3,6 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateYouTubeChannelInfoRequest } from "@/lib/youtube/validateYouTubeChannelInfoRequest";
 import { validateYouTubeTokens } from "@/lib/youtube/validateYouTubeTokens";
 
+const mockValidateAuthContext = vi.fn();
+const mockCheckAccountArtistAccess = vi.fn();
+
+vi.mock("@/lib/auth/validateAuthContext", () => ({
+  validateAuthContext: (...args: unknown[]) => mockValidateAuthContext(...args),
+}));
+
+vi.mock("@/lib/artists/checkAccountArtistAccess", () => ({
+  checkAccountArtistAccess: (...args: unknown[]) => mockCheckAccountArtistAccess(...args),
+}));
+
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
@@ -14,7 +25,9 @@ vi.mock("@/lib/youtube/validateYouTubeTokens", () => ({
 const ARTIST_ID = "11111111-1111-1111-1111-111111111111";
 
 const buildRequest = (search: string) =>
-  new NextRequest(`https://example.com/api/youtube/channel-info${search}`);
+  new NextRequest(`https://example.com/api/youtube/channel-info${search}`, {
+    headers: { authorization: "Bearer test-token" },
+  });
 
 const validTokens = {
   id: "row-1",
@@ -29,6 +42,27 @@ const validTokens = {
 describe("validateYouTubeChannelInfoRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockValidateAuthContext.mockResolvedValue({
+      accountId: "auth-account",
+      orgId: null,
+      authToken: "t",
+    });
+    mockCheckAccountArtistAccess.mockResolvedValue(true);
+  });
+
+  it("returns 401 when auth fails, short-circuiting validation", async () => {
+    mockValidateAuthContext.mockResolvedValue(
+      NextResponse.json({ error: "unauthorized" }, { status: 401 }),
+    );
+
+    const result = await validateYouTubeChannelInfoRequest(
+      buildRequest(`?artist_account_id=${ARTIST_ID}`),
+    );
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(401);
+    expect(mockCheckAccountArtistAccess).not.toHaveBeenCalled();
+    expect(validateYouTubeTokens).not.toHaveBeenCalled();
   });
 
   it("returns 400 when artist_account_id is missing", async () => {
@@ -42,6 +76,22 @@ describe("validateYouTubeChannelInfoRequest", () => {
       status: "error",
       message: "artist_account_id is required",
     });
+    expect(validateYouTubeTokens).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when caller lacks access to the artist", async () => {
+    mockCheckAccountArtistAccess.mockResolvedValue(false);
+
+    const result = await validateYouTubeChannelInfoRequest(
+      buildRequest(`?artist_account_id=${ARTIST_ID}`),
+    );
+
+    expect(result).toBeInstanceOf(NextResponse);
+    const response = result as NextResponse;
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body).toEqual({ status: "error", message: "forbidden" });
+    expect(mockCheckAccountArtistAccess).toHaveBeenCalledWith("auth-account", ARTIST_ID);
     expect(validateYouTubeTokens).not.toHaveBeenCalled();
   });
 
