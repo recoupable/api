@@ -8,30 +8,28 @@ export type YouTubeTokensRow = Tables<"youtube_tokens">;
 /**
  * Validates the stored YouTube tokens for an artist account. If they are
  * expired (or near-expiry, 1-minute safety buffer) a refresh is attempted
- * automatically. Mirrors chat's `validateYouTubeTokens` 1:1.
+ * automatically.
  *
- * Returns `null` ONLY for the legitimate "tokens not usable, user needs to
- * (re-)auth" cases: no token row exists, or the row is expired and has no
- * refresh_token. These are normal user states, not errors.
- *
- * Throws for actual errors (DB query failure, refresh failure). The single
- * catch boundary lives in `validateYouTubeChannelInfoRequest`.
+ * Throws on every unusable case — no token row, expired with no refresh
+ * token, DB error, or refresh failure. The single catch boundary lives in
+ * `validateYouTubeChannelInfoRequest`, which collapses every failure into
+ * one response shape.
  *
  * @param artist_account_id - The artist account ID.
- * @returns The validated tokens row, or `null` when the user needs to (re-)auth.
+ * @returns The validated tokens row.
  */
-export async function validateYouTubeTokens(artist_account_id: string) {
+export async function validateYouTubeTokens(artist_account_id: string): Promise<YouTubeTokensRow> {
   const storedTokens = await selectYouTubeTokens(artist_account_id);
 
   if (!storedTokens) {
-    return null;
+    throw new Error("youtube tokens not found");
   }
 
   if (isTokenExpired(storedTokens.expires_at)) {
-    if (storedTokens.refresh_token) {
-      return await refreshStoredYouTubeToken(storedTokens, artist_account_id);
+    if (!storedTokens.refresh_token) {
+      throw new Error("youtube tokens expired with no refresh_token");
     }
-    return null;
+    return await refreshStoredYouTubeToken(storedTokens, artist_account_id);
   }
 
   return storedTokens;

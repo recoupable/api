@@ -31,12 +31,10 @@ describe("validateYouTubeTokens", () => {
     vi.clearAllMocks();
   });
 
-  it("returns null when no tokens row exists for the artist", async () => {
+  it("throws when no tokens row exists for the artist", async () => {
     vi.mocked(selectYouTubeTokens).mockResolvedValue(null);
 
-    const result = await validateYouTubeTokens(ARTIST_ID);
-
-    expect(result).toBeNull();
+    await expect(validateYouTubeTokens(ARTIST_ID)).rejects.toThrow("youtube tokens not found");
     expect(isTokenExpired).not.toHaveBeenCalled();
     expect(refreshStoredYouTubeToken).not.toHaveBeenCalled();
   });
@@ -63,16 +61,16 @@ describe("validateYouTubeTokens", () => {
     expect(refreshStoredYouTubeToken).toHaveBeenCalledWith(validTokens, ARTIST_ID);
   });
 
-  it("returns null when expired and there is no refresh_token (user must re-auth)", async () => {
+  it("throws when expired and there is no refresh_token (user must re-auth)", async () => {
     vi.mocked(selectYouTubeTokens).mockResolvedValue({
       ...validTokens,
       refresh_token: null,
     });
     vi.mocked(isTokenExpired).mockReturnValue(true);
 
-    const result = await validateYouTubeTokens(ARTIST_ID);
-
-    expect(result).toBeNull();
+    await expect(validateYouTubeTokens(ARTIST_ID)).rejects.toThrow(
+      "youtube tokens expired with no refresh_token",
+    );
     expect(refreshStoredYouTubeToken).not.toHaveBeenCalled();
   });
 

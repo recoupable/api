@@ -6,11 +6,10 @@ import { fetchYouTubeChannelInfo } from "@/lib/youtube/fetchYouTubeChannelInfo";
 /**
  * Handles GET /api/youtube/channel-info — proxies the YouTube Data API
  * channel-info call after the request validator resolves+refreshes the
- * stored tokens. Mirrors chat's response shapes/status codes 1:1 so chat
- * callers can migrate with a base-URL swap.
+ * stored tokens.
  *
  * @param request - The incoming request.
- * @returns A NextResponse with `{ success, channels, tokenStatus }`.
+ * @returns A NextResponse with `{ success, channels }`.
  */
 export async function getYouTubeChannelHandler(request: NextRequest) {
   const validated = await validateYouTubeChannelInfoRequest(request);
@@ -27,29 +26,19 @@ export async function getYouTubeChannelHandler(request: NextRequest) {
 
     if (channelResult.success === false) {
       return NextResponse.json(
-        {
-          success: false,
-          error: channelResult.error.message,
-          tokenStatus: "api_error",
-          channels: null,
-        },
+        { success: false, channels: null },
         { status: 200, headers: getCorsHeaders() },
       );
     }
 
     return NextResponse.json(
-      { success: true, channels: channelResult.channelData, tokenStatus: "valid" },
+      { success: true, channels: channelResult.channelData },
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {
     console.error("Error in YouTube channel info API:", error);
     return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to fetch YouTube channel information",
-        tokenStatus: "error",
-        channels: null,
-      },
+      { success: false, channels: null },
       { status: 200, headers: getCorsHeaders() },
     );
   }

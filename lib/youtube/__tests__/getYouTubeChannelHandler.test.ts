@@ -44,7 +44,7 @@ describe("getYouTubeChannelHandler", () => {
     expect(fetchYouTubeChannelInfo).not.toHaveBeenCalled();
   });
 
-  it("returns 200 with tokenStatus=valid and channels on success", async () => {
+  it("returns 200 with success:true and channels on success", async () => {
     vi.mocked(validateYouTubeChannelInfoRequest).mockResolvedValue(validated);
     const channelData: any = [{ id: "ch1", title: "Channel" }];
     vi.mocked(fetchYouTubeChannelInfo).mockResolvedValue({ success: true, channelData });
@@ -58,10 +58,10 @@ describe("getYouTubeChannelHandler", () => {
       includeBranding: true,
     });
     expect(response.status).toBe(200);
-    expect(body).toEqual({ success: true, channels: channelData, tokenStatus: "valid" });
+    expect(body).toEqual({ success: true, channels: channelData });
   });
 
-  it("returns 200 with tokenStatus=api_error when fetchYouTubeChannelInfo returns success:false", async () => {
+  it("returns 200 with success:false when fetchYouTubeChannelInfo returns success:false", async () => {
     vi.mocked(validateYouTubeChannelInfoRequest).mockResolvedValue(validated);
     vi.mocked(fetchYouTubeChannelInfo).mockResolvedValue({
       success: false,
@@ -72,28 +72,20 @@ describe("getYouTubeChannelHandler", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({
-      success: false,
-      error: "boom",
-      tokenStatus: "api_error",
-      channels: null,
-    });
+    expect(body).toEqual({ success: false, channels: null });
   });
 
-  it("returns 200 with tokenStatus=error and no raw error leak when fetchYouTubeChannelInfo throws", async () => {
+  it("returns 200 with success:false when fetchYouTubeChannelInfo throws (no raw error leak)", async () => {
     vi.mocked(validateYouTubeChannelInfoRequest).mockResolvedValue(validated);
     vi.mocked(fetchYouTubeChannelInfo).mockRejectedValue(new Error("upstream dead"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     const response = await getYouTubeChannelHandler(request);
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({
-      success: false,
-      error: "Failed to fetch YouTube channel information",
-      tokenStatus: "error",
-      channels: null,
-    });
+    expect(body).toEqual({ success: false, channels: null });
     expect(JSON.stringify(body)).not.toContain("upstream dead");
+    errorSpy.mockRestore();
   });
 });
