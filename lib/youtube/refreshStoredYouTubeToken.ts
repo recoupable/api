@@ -1,6 +1,6 @@
 import { createYouTubeOAuthClient } from "@/lib/youtube/oauth-client";
 import { upsertYouTubeTokens } from "@/lib/supabase/youtube_tokens/upsertYouTubeTokens";
-import type { YouTubeTokensRow } from "@/lib/youtube/validateYouTubeTokens";
+import type { Tables } from "@/types/database.types";
 
 /**
  * Refreshes an expired YouTube access token via the stored refresh token
@@ -8,7 +8,7 @@ import type { YouTubeTokensRow } from "@/lib/youtube/validateYouTubeTokens";
  * refresh token, Google rejection, db update failure).
  */
 export async function refreshStoredYouTubeToken(
-  storedTokens: YouTubeTokensRow,
+  storedTokens: Tables<"youtube_tokens">,
   artist_account_id: string,
 ) {
   if (!storedTokens.refresh_token) {
@@ -27,14 +27,11 @@ export async function refreshStoredYouTubeToken(
       );
     }
 
-    const newExpiresAt = new Date(credentials.expiry_date).toISOString();
-    const updatedTokensData: YouTubeTokensRow = {
+    const updateResult = await upsertYouTubeTokens({
       ...storedTokens,
       access_token: credentials.access_token,
-      expires_at: newExpiresAt,
-    };
-
-    const updateResult = await upsertYouTubeTokens(updatedTokensData);
+      expires_at: new Date(credentials.expiry_date).toISOString(),
+    });
 
     if (!updateResult) {
       throw new Error(`Failed to update refreshed tokens in DB for account ${artist_account_id}`);

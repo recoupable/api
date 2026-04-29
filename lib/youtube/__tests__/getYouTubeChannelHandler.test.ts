@@ -35,7 +35,10 @@ describe("getYouTubeChannelHandler", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("passes through the validator's NextResponse on validation failure", async () => {
-    const validatorResponse = NextResponse.json({ status: "error" }, { status: 400 });
+    const validatorResponse = NextResponse.json(
+      { status: "error", message: "missing field" },
+      { status: 400 },
+    );
     vi.mocked(validateYouTubeChannelInfoRequest).mockResolvedValue(validatorResponse);
 
     const response = await getYouTubeChannelHandler(request);
