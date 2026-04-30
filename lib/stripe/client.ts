@@ -1,5 +1,9 @@
 import Stripe from "stripe";
 
-const stripeClient = new Stripe(process.env.STRIPE_SK as string);
+if (!process.env.STRIPE_SK) {
+  throw new Error("STRIPE_SK environment variable is required");
+}
+
+const stripeClient = new Stripe(process.env.STRIPE_SK);
 
 export default stripeClient;

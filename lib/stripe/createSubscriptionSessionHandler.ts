@@ -26,7 +26,9 @@ export async function createSubscriptionSessionHandler(
     );
   } catch (error) {
     console.error("[createSubscriptionSessionHandler]", error);
-    const message = error instanceof Error ? error.message : "failed";
-    return NextResponse.json({ error: message }, { status: 400, headers: getCorsHeaders() });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500, headers: getCorsHeaders() },
+    );
   }
 }

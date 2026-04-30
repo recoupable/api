@@ -1,29 +1,23 @@
+import "./routeTestMocks";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { createSubscriptionSessionHandler } from "@/lib/stripe/createSubscriptionSessionHandler";
 import { validateCreateSubscriptionSessionRequest } from "@/lib/stripe/validateCreateSubscriptionSessionRequest";
 import { createStripeSession } from "@/lib/stripe/createStripeSession";
 
-vi.mock("@/lib/networking/getCorsHeaders", () => ({
-  getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
-}));
+const { POST } = await import("../route");
 
-vi.mock("@/lib/stripe/validateCreateSubscriptionSessionRequest", () => ({
-  validateCreateSubscriptionSessionRequest: vi.fn(),
-}));
+const ACCOUNT = "123e4567-e89b-12d3-a456-426614174001";
 
-vi.mock("@/lib/stripe/createStripeSession", () => ({
-  createStripeSession: vi.fn(),
-}));
-
-const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
-
-describe("createSubscriptionSessionHandler", () => {
+describe("POST /api/subscriptions/sessions (handler outcomes)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(validateCreateSubscriptionSessionRequest).mockReset();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
-  afterEach(() => vi.mocked(console.error).mockRestore());
+
+  afterEach(() => {
+    vi.mocked(console.error).mockRestore();
+  });
 
   it("returns validation response unchanged", async () => {
     const err = NextResponse.json({ error: "bad" }, { status: 400 });
@@ -32,7 +26,7 @@ describe("createSubscriptionSessionHandler", () => {
       method: "POST",
       body: "{}",
     });
-    expect(await createSubscriptionSessionHandler(req)).toBe(err);
+    expect(await POST(req)).toBe(err);
     expect(createStripeSession).not.toHaveBeenCalled();
   });
 
@@ -46,7 +40,7 @@ describe("createSubscriptionSessionHandler", () => {
       url: "https://checkout.stripe.com/pay/cs_test_abc",
     } as Awaited<ReturnType<typeof createStripeSession>>);
 
-    const res = await createSubscriptionSessionHandler(
+    const res = await POST(
       new NextRequest("http://localhost/api/subscriptions/sessions", {
         method: "POST",
         body: "{}",
@@ -59,7 +53,7 @@ describe("createSubscriptionSessionHandler", () => {
     });
   });
 
-  it("returns 400 { error } when session.url is null", async () => {
+  it("returns 400 when session.url is null", async () => {
     vi.mocked(validateCreateSubscriptionSessionRequest).mockResolvedValue({
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/ok",
@@ -69,7 +63,7 @@ describe("createSubscriptionSessionHandler", () => {
       url: null,
     } as Awaited<ReturnType<typeof createStripeSession>>);
 
-    const res = await createSubscriptionSessionHandler(
+    const res = await POST(
       new NextRequest("http://localhost/api/subscriptions/sessions", {
         method: "POST",
         body: "{}",
@@ -79,14 +73,14 @@ describe("createSubscriptionSessionHandler", () => {
     await expect(res.json()).resolves.toEqual({ error: "Checkout session URL missing" });
   });
 
-  it("returns 500 with generic { error } when createStripeSession throws", async () => {
+  it("returns 500 when createStripeSession throws", async () => {
     vi.mocked(validateCreateSubscriptionSessionRequest).mockResolvedValue({
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/ok",
     });
     vi.mocked(createStripeSession).mockRejectedValue(new Error("Stripe down"));
 
-    const res = await createSubscriptionSessionHandler(
+    const res = await POST(
       new NextRequest("http://localhost/api/subscriptions/sessions", {
         method: "POST",
         body: "{}",

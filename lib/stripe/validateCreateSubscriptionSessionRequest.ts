@@ -28,9 +28,7 @@ export async function validateCreateSubscriptionSessionRequest(
     return NextResponse.json({ error: first.message }, { status: 400, headers: getCorsHeaders() });
   }
 
-  const authContext = await validateAuthContext(request, {
-    accountId: parsed.data.accountId,
-  });
+  const authContext = await validateAuthContext(request, {});
   if (authContext instanceof NextResponse) {
     return mapToSubscriptionSessionError(authContext);
   }

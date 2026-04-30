@@ -86,7 +86,6 @@ describe("validateCreateSubscriptionSessionRequest", () => {
       headers: { "Content-Type": "application/json", "x-api-key": "k" },
       body: JSON.stringify({
         successUrl: "https://chat.recoupable.com/done",
-        accountId: ACCOUNT,
       }),
     });
     const out = await validateCreateSubscriptionSessionRequest(req);
@@ -94,6 +93,6 @@ describe("validateCreateSubscriptionSessionRequest", () => {
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/done",
     });
-    expect(validateAuthContext).toHaveBeenCalledWith(req, { accountId: ACCOUNT });
+    expect(validateAuthContext).toHaveBeenCalledWith(req, {});
   });
 });

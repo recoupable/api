@@ -24,4 +24,14 @@ describe("mapToSubscriptionSessionError", () => {
     const out = await mapToSubscriptionSessionError(res);
     await expect(out.json()).resolves.toEqual({ error: "Unauthorized" });
   });
+
+  it("masks upstream body for 5xx responses", async () => {
+    const res = NextResponse.json(
+      { error: "stripe_secret_revealed_do_not_leak", detail: "internal" },
+      { status: 502 },
+    );
+    const out = await mapToSubscriptionSessionError(res);
+    expect(out.status).toBe(502);
+    await expect(out.json()).resolves.toEqual({ error: "Internal server error" });
+  });
 });
