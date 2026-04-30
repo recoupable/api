@@ -1,5 +1,4 @@
 import type Stripe from "stripe";
-import { v4 as uuidV4 } from "uuid";
 import stripeClient from "@/lib/stripe/client";
 import {
   STRIPE_SUBSCRIPTION_PRICE_ID,
@@ -20,7 +19,7 @@ export async function createStripeSession(
       },
     ],
     mode: "subscription",
-    client_reference_id: uuidV4(),
+    client_reference_id: accountId,
     metadata,
     subscription_data: {
       metadata,

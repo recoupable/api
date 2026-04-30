@@ -15,10 +15,6 @@ vi.mock("@/lib/stripe/client", () => ({
   },
 }));
 
-vi.mock("uuid", () => ({
-  v4: vi.fn(() => "00000000-0000-4000-8000-000000000001"),
-}));
-
 describe("createStripeSession", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -31,7 +27,7 @@ describe("createStripeSession", () => {
     expect(checkoutSessionsCreate).toHaveBeenCalledWith({
       line_items: [{ price: STRIPE_SUBSCRIPTION_PRICE_ID, quantity: 1 }],
       mode: "subscription",
-      client_reference_id: "00000000-0000-4000-8000-000000000001",
+      client_reference_id: "acc-1",
       metadata: { accountId: "acc-1" },
       subscription_data: {
         metadata: { accountId: "acc-1" },
@@ -48,6 +44,6 @@ describe("createStripeSession", () => {
     expect(params).not.toHaveProperty("customer_email");
     expect(params).not.toHaveProperty("allow_promotion_codes");
     expect(params).not.toHaveProperty("billing_address_collection");
-    expect(params.client_reference_id).not.toBe("acc-1");
+    expect(params.client_reference_id).toBe("acc-1");
   });
 });
