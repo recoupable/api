@@ -51,10 +51,31 @@ export async function executeConnectorAction(
     throw new ConnectorActionNotFoundError(actionSlug);
   }
 
-  const result = await tool.execute(parameters);
+  const rawResult = await tool.execute(parameters);
+
+  // Composio's ToolExecuteResponse envelope: { successful, data, error, log_id }.
+  // Unwrap so callers receive the underlying provider response directly
+  // (e.g. Google `youtube.channels.list` with `items`), and surface
+  // upstream failures as exceptions instead of silently returning a
+  // `successful: false` envelope.
+  const envelope = rawResult as {
+    successful?: boolean;
+    data?: unknown;
+    error?: string | null;
+  } | null;
+
+  if (envelope && typeof envelope === "object" && "successful" in envelope) {
+    if (!envelope.successful) {
+      throw new Error(envelope.error ?? "Connector action failed");
+    }
+    return {
+      result: envelope.data,
+      executedAt: new Date().toISOString(),
+    };
+  }
 
   return {
-    result,
+    result: rawResult,
     executedAt: new Date().toISOString(),
   };
 }

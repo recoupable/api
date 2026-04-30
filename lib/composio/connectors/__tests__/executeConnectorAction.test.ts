@@ -13,8 +13,10 @@ describe("executeConnectorAction", () => {
     vi.clearAllMocks();
   });
 
-  it("should call tool.execute with parameters and return result + executedAt", async () => {
-    const mockExecute = vi.fn().mockResolvedValue({ rows: 5 });
+  it("unwraps Composio's ToolExecuteResponse envelope so callers get the provider payload", async () => {
+    const mockExecute = vi
+      .fn()
+      .mockResolvedValue({ successful: true, data: { rows: 5 }, error: null });
     vi.mocked(getComposioTools).mockResolvedValue({
       GOOGLESHEETS_WRITE_SPREADSHEET: {
         description: "Write rows",
@@ -37,6 +39,40 @@ describe("executeConnectorAction", () => {
     expect(mockExecute).toHaveBeenCalledWith({ sheetId: "abc", values: [["a", "b"]] });
     expect(result.result).toEqual({ rows: 5 });
     expect(result.executedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+  });
+
+  it("throws with the upstream error when Composio reports successful: false", async () => {
+    const mockExecute = vi
+      .fn()
+      .mockResolvedValue({ successful: false, data: null, error: "quota exceeded" });
+    vi.mocked(getComposioTools).mockResolvedValue({
+      YOUTUBE_GET_CHANNEL_STATISTICS: {
+        description: "Get channel stats",
+        inputSchema: {},
+        execute: mockExecute,
+      },
+    });
+
+    await expect(
+      executeConnectorAction("account-123", undefined, "YOUTUBE_GET_CHANNEL_STATISTICS", {
+        mine: true,
+      }),
+    ).rejects.toThrow(/quota exceeded/);
+  });
+
+  it("passes through results that are not wrapped in the Composio envelope", async () => {
+    const mockExecute = vi.fn().mockResolvedValue({ rows: 5 });
+    vi.mocked(getComposioTools).mockResolvedValue({
+      LEGACY_TOOL: {
+        description: "Returns raw payload",
+        inputSchema: {},
+        execute: mockExecute,
+      },
+    });
+
+    const result = await executeConnectorAction("account-123", undefined, "LEGACY_TOOL", {});
+
+    expect(result.result).toEqual({ rows: 5 });
   });
 
   it("passes artistId through to getComposioTools so artist-scoped tools resolve", async () => {
