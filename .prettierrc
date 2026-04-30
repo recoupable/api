@@ -7,5 +7,6 @@
   "bracketSpacing": true,
   "arrowParens": "avoid",
   "printWidth": 100,
-  "proseWrap": "never"
+  "proseWrap": "never",
+  "endOfLine": "lf"
 }
