@@ -1,8 +1,4 @@
 import supabase from "../serverClient";
-import type { ArtistQueryRow } from "@/lib/artists/getFormattedArtist";
-
-// Raw row type returned by this query
-export type AccountArtistRow = ArtistQueryRow & { artist_id: string; pinned: boolean };
 
 /**
  * Get all artists for an array of artist IDs or account IDs, with full info.
@@ -11,10 +7,7 @@ export type AccountArtistRow = ArtistQueryRow & { artist_id: string; pinned: boo
  * @param params Object with artistIds or accountIds array
  * @returns Array of raw artist rows from database
  */
-export async function getAccountArtistIds(params: {
-  artistIds?: string[];
-  accountIds?: string[];
-}): Promise<AccountArtistRow[]> {
+export async function getAccountArtistIds(params: { artistIds?: string[]; accountIds?: string[] }) {
   const { artistIds, accountIds } = params;
   if (!artistIds && !accountIds) {
     throw new Error("Must provide either artistIds or accountIds");
@@ -44,5 +37,5 @@ export async function getAccountArtistIds(params: {
     return [];
   }
 
-  return (data || []) as unknown as AccountArtistRow[];
+  return data || [];
 }
