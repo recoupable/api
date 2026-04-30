@@ -2,7 +2,7 @@
  * List of toolkit slugs that artists are allowed to connect.
  * Only these connectors will be shown in the artist-connectors API.
  */
-export const ALLOWED_ARTIST_CONNECTORS = ["tiktok", "instagram"] as const;
+export const ALLOWED_ARTIST_CONNECTORS = ["tiktok", "instagram", "youtube"] as const;
 
 export type AllowedArtistConnector = (typeof ALLOWED_ARTIST_CONNECTORS)[number];
 
