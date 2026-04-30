@@ -25,7 +25,7 @@ const { createStripeSession } = await import("@/lib/stripe/createStripeSession")
 const { getCorsHeaders } = await import("@/lib/networking/getCorsHeaders");
 const { validateAuthContext } = await import("@/lib/auth/validateAuthContext");
 
-const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
+const ACCOUNT = "123e4567-e89b-12d3-a456-426614174001";
 
 async function loadRealValidate() {
   const mod = await vi.importActual<
