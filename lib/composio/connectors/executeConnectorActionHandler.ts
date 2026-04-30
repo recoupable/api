@@ -26,8 +26,13 @@ export async function executeConnectorActionHandler(request: NextRequest): Promi
       return validated;
     }
 
-    const { accountId, actionSlug, parameters } = validated;
-    const { result, executedAt } = await executeConnectorAction(accountId, actionSlug, parameters);
+    const { accountId, artistId, actionSlug, parameters } = validated;
+    const { result, executedAt } = await executeConnectorAction(
+      accountId,
+      artistId,
+      actionSlug,
+      parameters,
+    );
 
     return NextResponse.json(
       {

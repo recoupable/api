@@ -82,10 +82,39 @@ describe("executeConnectorActionHandler", () => {
 
     expect(executeConnectorAction).toHaveBeenCalledWith(
       "account-456",
+      undefined,
       "GOOGLESHEETS_WRITE_SPREADSHEET",
       {
         sheetId: "abc",
       },
+    );
+  });
+
+  it("forwards artistId to executeConnectorAction when present in validated params", async () => {
+    vi.mocked(validateExecuteConnectorActionRequest).mockResolvedValue({
+      accountId: "user-account-1",
+      artistId: "artist-account-2",
+      actionSlug: "YOUTUBE_GET_CHANNEL_STATISTICS",
+      parameters: { mine: true },
+    });
+    vi.mocked(executeConnectorAction).mockResolvedValue({
+      result: { items: [] },
+      executedAt: "2026-04-27T01:00:00.000Z",
+    });
+
+    await executeConnectorActionHandler(
+      buildRequest({
+        actionSlug: "YOUTUBE_GET_CHANNEL_STATISTICS",
+        parameters: { mine: true },
+        account_id: "artist-account-2",
+      }),
+    );
+
+    expect(executeConnectorAction).toHaveBeenCalledWith(
+      "user-account-1",
+      "artist-account-2",
+      "YOUTUBE_GET_CHANNEL_STATISTICS",
+      { mine: true },
     );
   });
 

@@ -23,15 +23,41 @@ describe("executeConnectorAction", () => {
       },
     });
 
-    const result = await executeConnectorAction("account-123", "GOOGLESHEETS_WRITE_SPREADSHEET", {
-      sheetId: "abc",
-      values: [["a", "b"]],
-    });
+    const result = await executeConnectorAction(
+      "account-123",
+      undefined,
+      "GOOGLESHEETS_WRITE_SPREADSHEET",
+      {
+        sheetId: "abc",
+        values: [["a", "b"]],
+      },
+    );
 
-    expect(getComposioTools).toHaveBeenCalledWith("account-123");
+    expect(getComposioTools).toHaveBeenCalledWith("account-123", undefined);
     expect(mockExecute).toHaveBeenCalledWith({ sheetId: "abc", values: [["a", "b"]] });
     expect(result.result).toEqual({ rows: 5 });
     expect(result.executedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+  });
+
+  it("passes artistId through to getComposioTools so artist-scoped tools resolve", async () => {
+    const mockExecute = vi.fn().mockResolvedValue({ items: [{ id: "UC123" }] });
+    vi.mocked(getComposioTools).mockResolvedValue({
+      YOUTUBE_GET_CHANNEL_STATISTICS: {
+        description: "Get channel stats",
+        inputSchema: {},
+        execute: mockExecute,
+      },
+    });
+
+    await executeConnectorAction(
+      "user-account-123",
+      "artist-account-456",
+      "YOUTUBE_GET_CHANNEL_STATISTICS",
+      { mine: true },
+    );
+
+    expect(getComposioTools).toHaveBeenCalledWith("user-account-123", "artist-account-456");
+    expect(mockExecute).toHaveBeenCalledWith({ mine: true });
   });
 
   it("should throw ConnectorActionNotFoundError when slug not in tools", async () => {
@@ -40,7 +66,7 @@ describe("executeConnectorAction", () => {
     });
 
     await expect(
-      executeConnectorAction("account-123", "NOT_A_REAL_SLUG", {}),
+      executeConnectorAction("account-123", undefined, "NOT_A_REAL_SLUG", {}),
     ).rejects.toBeInstanceOf(ConnectorActionNotFoundError);
   });
 
@@ -49,9 +75,9 @@ describe("executeConnectorAction", () => {
       WEIRD_TOOL: { description: "no execute fn", inputSchema: {} } as never,
     });
 
-    await expect(executeConnectorAction("account-123", "WEIRD_TOOL", {})).rejects.toBeInstanceOf(
-      ConnectorActionNotFoundError,
-    );
+    await expect(
+      executeConnectorAction("account-123", undefined, "WEIRD_TOOL", {}),
+    ).rejects.toBeInstanceOf(ConnectorActionNotFoundError);
   });
 
   it("should propagate errors thrown by tool.execute", async () => {
@@ -61,16 +87,16 @@ describe("executeConnectorAction", () => {
       GMAIL_FETCH_EMAILS: { execute: mockExecute, inputSchema: {} },
     });
 
-    await expect(executeConnectorAction("account-123", "GMAIL_FETCH_EMAILS", {})).rejects.toBe(
-      upstreamErr,
-    );
+    await expect(
+      executeConnectorAction("account-123", undefined, "GMAIL_FETCH_EMAILS", {}),
+    ).rejects.toBe(upstreamErr);
   });
 
   it("returns 404 when getComposioTools returns empty", async () => {
     vi.mocked(getComposioTools).mockResolvedValue({});
 
     await expect(
-      executeConnectorAction("account-123", "GOOGLEDOCS_INSERT_TEXT_ACTION", {}),
+      executeConnectorAction("account-123", undefined, "GOOGLEDOCS_INSERT_TEXT_ACTION", {}),
     ).rejects.toBeInstanceOf(ConnectorActionNotFoundError);
   });
 });

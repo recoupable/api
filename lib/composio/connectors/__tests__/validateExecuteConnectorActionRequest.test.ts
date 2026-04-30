@@ -61,7 +61,7 @@ describe("validateExecuteConnectorActionRequest", () => {
     });
   });
 
-  it("should return target accountId when account_id provided + access granted", async () => {
+  it("returns auth accountId + artistId when account_id provided + access granted", async () => {
     const target = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "account-123",
@@ -76,7 +76,8 @@ describe("validateExecuteConnectorActionRequest", () => {
 
     expect(checkAccountAccess).toHaveBeenCalledWith("account-123", target);
     expect(result).toEqual({
-      accountId: target,
+      accountId: "account-123",
+      artistId: target,
       actionSlug: "GMAIL_FETCH_EMAILS",
       parameters: { max_results: 10 },
     });

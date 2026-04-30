@@ -9,7 +9,15 @@ import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
  * Validated params for executing a connector action.
  */
 export interface ExecuteConnectorActionParams {
+  /** Authenticated account (from the bearer token / api key). */
   accountId: string;
+  /**
+   * Optional artist account scope — when provided, the action runs
+   * against the artist's connection rather than the authenticated
+   * account's. Required for any toolkit (e.g. YouTube, TikTok,
+   * Instagram) that's connected at the artist level.
+   */
+  artistId?: string;
   actionSlug: string;
   parameters: Record<string, unknown>;
 }
@@ -45,7 +53,10 @@ export async function validateExecuteConnectorActionRequest(
   }
   const { actionSlug, parameters, account_id } = validated;
 
-  // 3. If account_id is provided, verify access and use that entity
+  // 3. If account_id is provided, verify access and use it as the artist scope.
+  //    Keep the authenticated accountId separate so the customer Tool Router
+  //    session is created against the user (where the meta filter is correct)
+  //    while real toolkit tools come through the artist owner scope.
   if (account_id) {
     const accessResult = await checkAccountAccess(accountId, account_id);
     if (!accessResult.hasAccess) {
@@ -55,7 +66,7 @@ export async function validateExecuteConnectorActionRequest(
       );
     }
 
-    return { accountId: account_id, actionSlug, parameters };
+    return { accountId, artistId: account_id, actionSlug, parameters };
   }
 
   // No account_id: use the authenticated account
