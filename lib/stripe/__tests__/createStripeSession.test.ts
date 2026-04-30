@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createStripeSession } from "@/lib/stripe/createStripeSession";
+import {
+  STRIPE_SUBSCRIPTION_PRICE_ID,
+  STRIPE_SUBSCRIPTION_TRIAL_PERIOD_DAYS,
+} from "@/lib/stripe/config";
 
 const { checkoutSessionsCreate } = vi.hoisted(() => ({
   checkoutSessionsCreate: vi.fn(),
@@ -25,13 +29,13 @@ describe("createStripeSession", () => {
     await createStripeSession("acc-1", "https://example.com/success");
 
     expect(checkoutSessionsCreate).toHaveBeenCalledWith({
-      line_items: [{ price: "price_1RyDFD00JObOnOb53PcVOeBz", quantity: 1 }],
+      line_items: [{ price: STRIPE_SUBSCRIPTION_PRICE_ID, quantity: 1 }],
       mode: "subscription",
       client_reference_id: "00000000-0000-4000-8000-000000000001",
       metadata: { accountId: "acc-1" },
       subscription_data: {
         metadata: { accountId: "acc-1" },
-        trial_period_days: 30,
+        trial_period_days: STRIPE_SUBSCRIPTION_TRIAL_PERIOD_DAYS,
       },
       success_url: "https://example.com/success",
     });

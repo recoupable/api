@@ -13,7 +13,11 @@ describe("lib/stripe/client", () => {
     await expect(import("@/lib/stripe/client")).rejects.toThrow(
       "STRIPE_SK environment variable is required",
     );
-    process.env.STRIPE_SK = saved;
+    if (saved === undefined) {
+      delete process.env.STRIPE_SK;
+    } else {
+      process.env.STRIPE_SK = saved;
+    }
   });
 
   it("loads a Stripe client when STRIPE_SK is set", async () => {
@@ -23,6 +27,10 @@ describe("lib/stripe/client", () => {
     process.env.STRIPE_SK = "stripe_test_key_placeholder";
     const mod = await import("@/lib/stripe/client");
     expect(mod.default).toBeDefined();
-    process.env.STRIPE_SK = saved;
+    if (saved === undefined) {
+      delete process.env.STRIPE_SK;
+    } else {
+      process.env.STRIPE_SK = saved;
+    }
   });
 });
