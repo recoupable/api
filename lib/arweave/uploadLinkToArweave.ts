@@ -32,6 +32,9 @@ export async function uploadLinkToArweave(
     });
     if (!res.ok || !res.body) return null;
 
+    const contentType = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+    if (!contentType.startsWith("image/")) return null;
+
     const contentLength = Number(res.headers.get("content-length") ?? 0);
     if (contentLength > MAX_IMAGE_BYTES) return null;
 
@@ -51,7 +54,6 @@ export async function uploadLinkToArweave(
     }
 
     const buffer = Buffer.concat(chunks.map(c => Buffer.from(c)));
-    const contentType = res.headers.get("content-type") || "image/png";
 
     const transaction = await uploadToArweave(buffer, contentType);
     return transaction?.id ?? null;

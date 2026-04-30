@@ -36,10 +36,10 @@ export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookP
   const firstResult = dataset[0] as ApifyInstagramProfileResult | undefined;
   if (!firstResult?.latestPosts) return { posts: [], social: null };
 
-  const postRows: TablesInsert<"posts">[] = firstResult.latestPosts.map(post => ({
-    post_url: post.url,
-    updated_at: post.timestamp,
-  }));
+  const postRows: TablesInsert<"posts">[] = firstResult.latestPosts.flatMap(post =>
+    post.url ? [{ post_url: post.url, updated_at: post.timestamp }] : [],
+  );
+  if (postRows.length === 0) return { posts: [], social: null };
   await upsertPosts(postRows);
   const posts = await getPosts({ postUrls: postRows.map(p => p.post_url) });
 

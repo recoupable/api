@@ -15,7 +15,7 @@ export async function startInstagramProfileScraping(
 ): Promise<ApifyRunInfo | null> {
   const list = Array.isArray(handles) ? handles : [handles];
   const cleanHandles = Array.from(
-    new Set(list.map(h => h.trim().replace(/^@/, "")).filter(h => h.length > 0)),
+    new Set(list.map(h => h.trim().replace(/^@/, "").toLowerCase()).filter(h => h.length > 0)),
   );
 
   if (cleanHandles.length === 0) {

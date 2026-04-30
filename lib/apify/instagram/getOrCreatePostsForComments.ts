@@ -16,7 +16,8 @@ export async function getOrCreatePostsForComments(
   if (unique.length === 0) return new Map();
 
   const existing = await getPosts({ postUrls: unique });
-  const missing = unique.filter(url => !existing.some(p => p.post_url === url));
+  const existingUrls = new Set(existing.map(p => p.post_url));
+  const missing = unique.filter(url => !existingUrls.has(url));
 
   let all = existing;
   if (missing.length > 0) {
