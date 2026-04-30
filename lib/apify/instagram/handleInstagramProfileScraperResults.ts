@@ -3,7 +3,7 @@ import { upsertPosts } from "@/lib/supabase/posts/upsertPosts";
 import { getPosts } from "@/lib/supabase/posts/getPosts";
 import { handleInstagramProfileFollowUpRuns } from "@/lib/apify/instagram/handleInstagramProfileFollowUpRuns";
 import { sendApifyWebhookEmail } from "@/lib/apify/sendApifyWebhookEmail";
-import { insertSocials } from "@/lib/supabase/socials/insertSocials";
+import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
 import { selectSocials } from "@/lib/supabase/socials/selectSocials";
 import { upsertSocialPosts } from "@/lib/supabase/social_posts/upsertSocialPosts";
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
@@ -55,7 +55,7 @@ export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookP
   // chain (social_posts link, email, follow-up scrape) is short-circuited.
   const normalizedUrl = normalizeProfileUrl(firstResult.url);
 
-  await insertSocials([
+  await upsertSocials([
     {
       username: firstResult.username ?? "",
       avatar: firstResult.profilePicUrl ?? null,

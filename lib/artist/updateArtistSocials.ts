@@ -5,7 +5,7 @@ import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccou
 import { deleteAccountSocial } from "@/lib/supabase/account_socials/deleteAccountSocial";
 import { insertAccountSocial } from "@/lib/supabase/account_socials/insertAccountSocial";
 import { selectSocials } from "@/lib/supabase/socials/selectSocials";
-import { insertSocials } from "@/lib/supabase/socials/insertSocials";
+import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
 import type { AccountSocialWithSocial } from "@/lib/supabase/account_socials/selectAccountSocials";
 
 /**
@@ -55,7 +55,7 @@ export async function updateArtistSocials(
     } else {
       // Create new social record
       const username = getUsernameFromProfileUrl(value);
-      const newSocials = await insertSocials([
+      const newSocials = await upsertSocials([
         {
           username,
           profile_url: normalizedUrl,

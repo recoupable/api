@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getOrCreateSocialsForComments } from "../getOrCreateSocialsForComments";
-import { insertSocials } from "@/lib/supabase/socials/insertSocials";
+import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
 
-vi.mock("@/lib/supabase/socials/insertSocials", () => ({ insertSocials: vi.fn() }));
+vi.mock("@/lib/supabase/socials/upsertSocials", () => ({ upsertSocials: vi.fn() }));
 
 describe("getOrCreateSocialsForComments", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("upserts one row per distinct commenter and keys result by username", async () => {
-    vi.mocked(insertSocials).mockResolvedValue([
+    vi.mocked(upsertSocials).mockResolvedValue([
       { id: "s1", username: "alice", profile_url: "instagram.com/alice" },
       { id: "s2", username: "bob", profile_url: "instagram.com/bob" },
     ] as never);
@@ -40,15 +40,15 @@ describe("getOrCreateSocialsForComments", () => {
       },
     ]);
 
-    expect(insertSocials).toHaveBeenCalledOnce();
-    const [rows] = vi.mocked(insertSocials).mock.calls[0];
+    expect(upsertSocials).toHaveBeenCalledOnce();
+    const [rows] = vi.mocked(upsertSocials).mock.calls[0];
     expect(rows).toHaveLength(2);
     expect(result.get("alice")?.id).toBe("s1");
     expect(result.get("bob")?.id).toBe("s2");
   });
 
   it("propagates DB errors so the webhook handler can log + short-circuit", async () => {
-    vi.mocked(insertSocials).mockRejectedValue(new Error("boom"));
+    vi.mocked(upsertSocials).mockRejectedValue(new Error("boom"));
 
     await expect(
       getOrCreateSocialsForComments([

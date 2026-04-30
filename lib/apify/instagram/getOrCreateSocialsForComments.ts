@@ -1,11 +1,11 @@
-import { insertSocials } from "@/lib/supabase/socials/insertSocials";
+import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
 import type { Tables, TablesInsert } from "@/types/database.types";
 import type { ApifyInstagramComment } from "@/lib/apify/types";
 
 /**
  * Ensures a `socials` row exists for each distinct comment author and
  * returns a map from `username` to the upserted social row. Upstream
- * `insertSocials` upserts on `profile_url`, so repeated calls are
+ * `upsertSocials` upserts on `profile_url`, so repeated calls are
  * idempotent even when the same commenter recurs across posts.
  *
  * @param comments - Apify Instagram comment dataset items.
@@ -25,6 +25,6 @@ export async function getOrCreateSocialsForComments(
     });
   }
 
-  const upserted = await insertSocials(rows);
+  const upserted = await upsertSocials(rows);
   return new Map(upserted.map(s => [s.username, s]));
 }

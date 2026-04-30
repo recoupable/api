@@ -5,7 +5,7 @@ import { upsertPosts } from "@/lib/supabase/posts/upsertPosts";
 import { getPosts } from "@/lib/supabase/posts/getPosts";
 import { handleInstagramProfileFollowUpRuns } from "../handleInstagramProfileFollowUpRuns";
 import { sendApifyWebhookEmail } from "@/lib/apify/sendApifyWebhookEmail";
-import { insertSocials } from "@/lib/supabase/socials/insertSocials";
+import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
 import { selectSocials } from "@/lib/supabase/socials/selectSocials";
 import { upsertSocialPosts } from "@/lib/supabase/social_posts/upsertSocialPosts";
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
@@ -26,7 +26,7 @@ vi.mock("../handleInstagramProfileFollowUpRuns", () => ({
   handleInstagramProfileFollowUpRuns: vi.fn(),
 }));
 vi.mock("@/lib/apify/sendApifyWebhookEmail", () => ({ sendApifyWebhookEmail: vi.fn() }));
-vi.mock("@/lib/supabase/socials/insertSocials", () => ({ insertSocials: vi.fn() }));
+vi.mock("@/lib/supabase/socials/upsertSocials", () => ({ upsertSocials: vi.fn() }));
 vi.mock("@/lib/supabase/socials/selectSocials", () => ({
   selectSocials: vi.fn(),
 }));
@@ -76,7 +76,7 @@ describe("handleInstagramProfileScraperResults", () => {
     vi.mocked(upsertPosts).mockResolvedValue({ data: null, error: null } as never);
     vi.mocked(getPosts).mockResolvedValue(posts);
     vi.mocked(uploadLinkToArweave).mockResolvedValue(null);
-    vi.mocked(insertSocials).mockResolvedValue([] as never);
+    vi.mocked(upsertSocials).mockResolvedValue([] as never);
     vi.mocked(selectSocials).mockResolvedValue([{ id: "s1" }] as never);
     vi.mocked(selectAccountSocials).mockResolvedValue([{ account_id: "a1" }] as never);
     vi.mocked(getAccountArtistIds).mockResolvedValue([{ account_id: "a1" }] as never);

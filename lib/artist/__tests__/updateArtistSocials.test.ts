@@ -24,8 +24,8 @@ vi.mock("@/lib/supabase/socials/selectSocials", () => ({
   selectSocials: (...args: unknown[]) => mockSelectSocials(...args),
 }));
 
-vi.mock("@/lib/supabase/socials/insertSocials", () => ({
-  insertSocials: (...args: unknown[]) => mockInsertSocials(...args),
+vi.mock("@/lib/supabase/socials/upsertSocials", () => ({
+  upsertSocials: (...args: unknown[]) => mockInsertSocials(...args),
 }));
 
 describe("updateArtistSocials", () => {
@@ -182,7 +182,7 @@ describe("updateArtistSocials", () => {
     mockSelectAccountSocials.mockResolvedValue([]);
     mockSelectSocials.mockResolvedValue([]);
 
-    // Mock insertSocials to return different IDs for each call
+    // Mock upsertSocials to return different IDs for each call
     mockInsertSocials.mockImplementation(socials => {
       const social = socials[0];
       if (social.profile_url.includes("instagram")) {

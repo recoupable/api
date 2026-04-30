@@ -10,7 +10,7 @@ import type { TablesInsert } from "@/types/database.types";
  * @param socials - Array of social data to insert
  * @returns Array of inserted social records
  */
-export async function insertSocials(socials: TablesInsert<"socials">[]) {
+export async function upsertSocials(socials: TablesInsert<"socials">[]) {
   // stripNullish drops keys, so the inferred type widens to Partial<…>;
   // cast back since the supabase upsert overload still expects the full
   // insert type even though missing optional fields are fine at runtime.
@@ -21,7 +21,7 @@ export async function insertSocials(socials: TablesInsert<"socials">[]) {
     .select("*");
 
   if (error) {
-    console.error("[ERROR] insertSocials:", error);
+    console.error("[ERROR] upsertSocials:", error);
     throw error;
   }
 
