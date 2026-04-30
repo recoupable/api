@@ -1,5 +1,5 @@
 import { startInstagramCommentsScraping } from "@/lib/apify/instagram/startInstagramCommentsScraping";
-import { getPostsWithComments } from "@/lib/supabase/posts/getPostsWithComments";
+import { getPosts } from "@/lib/supabase/posts/getPosts";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 
 /**
@@ -24,7 +24,7 @@ export async function handleInstagramProfileFollowUpRuns(
   const postUrls = firstResult.latestPosts.map(p => p.url).filter(Boolean);
   if (postUrls.length === 0) return;
 
-  const posts = await getPostsWithComments({ postUrls });
+  const posts = await getPosts({ postUrls });
   if (posts.length === 0) {
     await startInstagramCommentsScraping(postUrls);
     return;
