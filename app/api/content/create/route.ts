@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createContentHandler } from "@/lib/content/createContentHandler";
+import { withMPP } from "@/lib/mpp/withMPP";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -22,9 +23,11 @@ export async function OPTIONS() {
  * @param request - Incoming API request.
  * @returns Trigger response for the created task run.
  */
-export async function POST(request: NextRequest): Promise<NextResponse> {
+async function handler(request: NextRequest): Promise<NextResponse> {
   return createContentHandler(request);
 }
+
+export const POST = withMPP(handler);
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";

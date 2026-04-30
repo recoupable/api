@@ -4,6 +4,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { uploadImageAndCreateMoment } from "@/lib/arweave/uploadImageAndCreateMoment";
 import { getBuyerAccount } from "@/lib/x402/getBuyerAccount";
 import { parseFilesFromQuery } from "@/lib/files/parseFilesFromQuery";
+import { withMPP } from "@/lib/mpp/withMPP"
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -23,7 +24,7 @@ export async function OPTIONS() {
  * @param request - The request object containing query parameters.
  * @returns {Promise<NextResponse>} JSON response with generated image URL or error.
  */
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const prompt = searchParams.get("prompt");
@@ -110,3 +111,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export const GET = withMPP(handler);
