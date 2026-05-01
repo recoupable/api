@@ -1,8 +1,5 @@
 import { getComposioClient } from "./client";
 
-/**
- * OAuth tokens for a Composio connected account.
- */
 export interface ConnectedAccountTokens {
   accessToken: string;
   refreshToken: string | null;
@@ -10,10 +7,8 @@ export interface ConnectedAccountTokens {
 
 /**
  * Retrieve the OAuth access (and refresh) token Composio holds for a
- * connected account. Lets us call provider APIs that Composio's tool
- * catalog does not natively expose (e.g., YouTube Analytics).
- *
- * @throws when the account is not active or has no OAuth state.
+ * connected account, so we can call provider APIs that Composio's tool
+ * catalog doesn't natively expose (e.g. YouTube Analytics).
  */
 export async function getConnectedAccountAccessToken(
   connectedAccountId: string,

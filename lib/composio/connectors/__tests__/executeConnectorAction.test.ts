@@ -1,138 +1,101 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
 import { executeConnectorAction } from "../executeConnectorAction";
 import { ConnectorActionNotFoundError } from "../connectorActionErrors";
+import { getComposioClient } from "../../client";
 
-import { getComposioTools } from "../../toolRouter/getTools";
+vi.mock("../../client", () => ({ getComposioClient: vi.fn() }));
+vi.mock("../../toolRouter/getTools", () => ({ ENABLED_TOOLKITS: ["youtube"] }));
 
-vi.mock("../../toolRouter/getTools", () => ({
-  getComposioTools: vi.fn(),
-}));
+const mockToolsGet = vi.fn();
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(getComposioClient).mockResolvedValue({
+    tools: { get: mockToolsGet },
+  } as never);
+});
 
 describe("executeConnectorAction", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("unwraps Composio's ToolExecuteResponse envelope so callers get the provider payload", async () => {
-    const mockExecute = vi
-      .fn()
-      .mockResolvedValue({ successful: true, data: { rows: 5 }, error: null });
-    vi.mocked(getComposioTools).mockResolvedValue({
-      GOOGLESHEETS_WRITE_SPREADSHEET: {
-        description: "Write rows",
-        inputSchema: {},
-        execute: mockExecute,
-      },
+  it("unwraps Composio's ToolExecuteResponse envelope", async () => {
+    const exec = vi.fn().mockResolvedValue({ successful: true, data: { rows: 5 }, error: null });
+    mockToolsGet.mockResolvedValue({
+      GOOGLESHEETS_WRITE_SPREADSHEET: { execute: exec },
     });
 
     const result = await executeConnectorAction(
-      "account-123",
-      undefined,
+      "artist-account",
       "GOOGLESHEETS_WRITE_SPREADSHEET",
       {
         sheetId: "abc",
-        values: [["a", "b"]],
       },
     );
 
-    expect(getComposioTools).toHaveBeenCalledWith("account-123", undefined);
-    expect(mockExecute).toHaveBeenCalledWith({ sheetId: "abc", values: [["a", "b"]] });
+    expect(mockToolsGet).toHaveBeenCalledWith(
+      "artist-account",
+      expect.objectContaining({ toolkits: expect.any(Array) }),
+    );
+    expect(exec).toHaveBeenCalledWith({ sheetId: "abc" });
     expect(result.result).toEqual({ rows: 5 });
     expect(result.executedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
   });
 
-  it("throws with the upstream error when Composio reports successful: false", async () => {
-    const mockExecute = vi
-      .fn()
-      .mockResolvedValue({ successful: false, data: null, error: "quota exceeded" });
-    vi.mocked(getComposioTools).mockResolvedValue({
+  it("throws when Composio reports successful: false", async () => {
+    mockToolsGet.mockResolvedValue({
       YOUTUBE_GET_CHANNEL_STATISTICS: {
-        description: "Get channel stats",
-        inputSchema: {},
-        execute: mockExecute,
+        execute: vi
+          .fn()
+          .mockResolvedValue({ successful: false, data: null, error: "quota exceeded" }),
       },
     });
 
     await expect(
-      executeConnectorAction("account-123", undefined, "YOUTUBE_GET_CHANNEL_STATISTICS", {
-        mine: true,
-      }),
+      executeConnectorAction("artist", "YOUTUBE_GET_CHANNEL_STATISTICS", { mine: true }),
     ).rejects.toThrow(/quota exceeded/);
   });
 
-  it("passes through results that are not wrapped in the Composio envelope", async () => {
-    const mockExecute = vi.fn().mockResolvedValue({ rows: 5 });
-    vi.mocked(getComposioTools).mockResolvedValue({
-      LEGACY_TOOL: {
-        description: "Returns raw payload",
-        inputSchema: {},
-        execute: mockExecute,
-      },
+  it("passes through results not wrapped in the envelope", async () => {
+    mockToolsGet.mockResolvedValue({
+      LEGACY_TOOL: { execute: vi.fn().mockResolvedValue({ rows: 5 }) },
     });
 
-    const result = await executeConnectorAction("account-123", undefined, "LEGACY_TOOL", {});
+    const result = await executeConnectorAction("artist", "LEGACY_TOOL", {});
 
     expect(result.result).toEqual({ rows: 5 });
   });
 
-  it("passes artistId through to getComposioTools so artist-scoped tools resolve", async () => {
-    const mockExecute = vi.fn().mockResolvedValue({ items: [{ id: "UC123" }] });
-    vi.mocked(getComposioTools).mockResolvedValue({
-      YOUTUBE_GET_CHANNEL_STATISTICS: {
-        description: "Get channel stats",
-        inputSchema: {},
-        execute: mockExecute,
-      },
+  it("throws ConnectorActionNotFoundError when slug not in tools", async () => {
+    mockToolsGet.mockResolvedValue({
+      GOOGLESHEETS_WRITE_SPREADSHEET: { execute: vi.fn() },
     });
 
-    await executeConnectorAction(
-      "user-account-123",
-      "artist-account-456",
-      "YOUTUBE_GET_CHANNEL_STATISTICS",
-      { mine: true },
+    await expect(executeConnectorAction("artist", "NOT_A_REAL_SLUG", {})).rejects.toBeInstanceOf(
+      ConnectorActionNotFoundError,
     );
-
-    expect(getComposioTools).toHaveBeenCalledWith("user-account-123", "artist-account-456");
-    expect(mockExecute).toHaveBeenCalledWith({ mine: true });
   });
 
-  it("should throw ConnectorActionNotFoundError when slug not in tools", async () => {
-    vi.mocked(getComposioTools).mockResolvedValue({
-      GOOGLESHEETS_WRITE_SPREADSHEET: { execute: vi.fn(), inputSchema: {} },
+  it("throws ConnectorActionNotFoundError when tool has no execute fn", async () => {
+    mockToolsGet.mockResolvedValue({ WEIRD_TOOL: { description: "no execute" } });
+
+    await expect(executeConnectorAction("artist", "WEIRD_TOOL", {})).rejects.toBeInstanceOf(
+      ConnectorActionNotFoundError,
+    );
+  });
+
+  it("propagates errors thrown by tool.execute", async () => {
+    const err = new Error("upstream failure");
+    mockToolsGet.mockResolvedValue({
+      GMAIL_FETCH_EMAILS: { execute: vi.fn().mockRejectedValue(err) },
     });
 
-    await expect(
-      executeConnectorAction("account-123", undefined, "NOT_A_REAL_SLUG", {}),
-    ).rejects.toBeInstanceOf(ConnectorActionNotFoundError);
+    await expect(executeConnectorAction("artist", "GMAIL_FETCH_EMAILS", {})).rejects.toBe(err);
   });
 
-  it("should throw ConnectorActionNotFoundError when tool has no execute fn", async () => {
-    vi.mocked(getComposioTools).mockResolvedValue({
-      WEIRD_TOOL: { description: "no execute fn", inputSchema: {} } as never,
-    });
+  it("throws ConnectorActionNotFoundError when no tools are returned", async () => {
+    mockToolsGet.mockResolvedValue({});
 
     await expect(
-      executeConnectorAction("account-123", undefined, "WEIRD_TOOL", {}),
-    ).rejects.toBeInstanceOf(ConnectorActionNotFoundError);
-  });
-
-  it("should propagate errors thrown by tool.execute", async () => {
-    const upstreamErr = new Error("Composio upstream failure");
-    const mockExecute = vi.fn().mockRejectedValue(upstreamErr);
-    vi.mocked(getComposioTools).mockResolvedValue({
-      GMAIL_FETCH_EMAILS: { execute: mockExecute, inputSchema: {} },
-    });
-
-    await expect(
-      executeConnectorAction("account-123", undefined, "GMAIL_FETCH_EMAILS", {}),
-    ).rejects.toBe(upstreamErr);
-  });
-
-  it("returns 404 when getComposioTools returns empty", async () => {
-    vi.mocked(getComposioTools).mockResolvedValue({});
-
-    await expect(
-      executeConnectorAction("account-123", undefined, "GOOGLEDOCS_INSERT_TEXT_ACTION", {}),
+      executeConnectorAction("artist", "GOOGLEDOCS_INSERT_TEXT_ACTION", {}),
     ).rejects.toBeInstanceOf(ConnectorActionNotFoundError);
   });
 });

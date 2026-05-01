@@ -30,15 +30,10 @@ const getYouTubeRevenueSchema = z.object({
 type GetYouTubeRevenueArgs = z.infer<typeof getYouTubeRevenueSchema>;
 
 /**
- * Registers the "get_youtube_revenue" tool on the MCP server.
- *
- * Composio's YouTube toolkit does not expose YouTube Analytics
- * (yt-analytics-monetary.readonly), so this tool stays as a custom
- * MCP entrypoint. It pulls the YouTube OAuth access token from the
- * artist's Composio connected account, then calls
- * youtubeAnalytics.reports.query directly.
- *
- * @param server - The MCP server instance to register the tool on.
+ * Registers the "get_youtube_revenue" MCP tool. Stays custom because
+ * Composio's YouTube toolkit doesn't expose YouTube Analytics — this
+ * tool pulls the OAuth token from the artist's Composio connection
+ * and calls youtubeAnalytics.reports.query directly.
  */
 export function registerGetYouTubeRevenueTool(server: McpServer): void {
   server.registerTool(
