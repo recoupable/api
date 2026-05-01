@@ -65,13 +65,7 @@ export async function getComposioTools(
 
     const customerAuthConfigs = scopedAuthConfigs(resolved.customer);
 
-    // When in artist context, run the Tool Router session against the
-    // artist so COMPOSIO_MANAGE_CONNECTIONS initiates OAuth under the
-    // artist's accountId — connections made via the in-chat connect
-    // prompt land on the artist, not the customer. Meta tools are
-    // identical across owners, so the merge below still works.
-    const sessionOwnerId = effectiveArtistId ?? accountId;
-    const customerSession = await composio.create(sessionOwnerId, {
+    const customerSession = await composio.create(accountId, {
       toolkits: resolved.customer,
       manageConnections: { callbackUrl },
       ...(customerAuthConfigs && { authConfigs: customerAuthConfigs }),
