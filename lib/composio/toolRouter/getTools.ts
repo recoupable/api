@@ -4,6 +4,7 @@ import { getCallbackUrl } from "../getCallbackUrl";
 import { getConnectors } from "../connectors/getConnectors";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import { getSharedAccountConnections } from "./getSharedAccountConnections";
+import { resolveSessionToolkits } from "./resolveSessionToolkits";
 import { pickValid } from "./pickValid";
 import { scopedAuthConfigs } from "./scopedAuthConfigs";
 import { toConnectedSlugs } from "./toConnectedSlugs";
@@ -30,27 +31,10 @@ const META_TOOLS = new Set([
 const TOOLS_LIMIT = 1000;
 
 /**
- * Resolve the LLM tool catalog for a chat request.
- *
- * Every chat is artist-scoped, so the Tool Router session is created
- * against the artist (not the authenticated customer). This ensures
- * `COMPOSIO_MANAGE_CONNECTIONS` initiates OAuth under the artist's
- * accountId — connections made via the in-chat connect prompt land
- * where they belong instead of polluting the customer's account.
- *
- * Real artist tools still go through `composio.tools.get(artistId, ...)`
- * because Composio rejects cross-account `connectedAccounts` overrides
- * at execute time — each explicit tool must be owned by the account
- * whose id we pass in. Shared platform tools come from the
- * `recoup-shared` account the same way.
- *
- * If `artistId` is missing or the customer doesn't have access, no
- * Composio tools are returned — chats without an artist context don't
- * use this code path.
- *
- * @param accountId - Authenticated customer (used only for artist-access check)
- * @param artistId - Artist account this chat is scoped to (required)
- * @param roomId - Optional chat room id used to build the post-OAuth callback URL
+ * Artist and shared tools go through composio.tools.get() rather than a
+ * Tool Router session because Composio rejects cross-account
+ * connectedAccounts overrides at execute time — each explicit tool must
+ * be owned by the account whose id we pass in.
  */
 export async function getComposioTools(
   accountId: string,
@@ -60,53 +44,53 @@ export async function getComposioTools(
   if (!process.env.COMPOSIO_API_KEY) return {};
 
   try {
-    if (!artistId) return {};
-    const hasAccess = await checkAccountArtistAccess(accountId, artistId);
-    if (!hasAccess) return {};
+    const effectiveArtistId =
+      artistId && (await checkAccountArtistAccess(accountId, artistId)) ? artistId : undefined;
 
     const composio = await getComposioClient();
     const callbackUrl = getCallbackUrl({ destination: "chat", roomId });
 
-    const [artistConnectors, sharedConnections] = await Promise.all([
-      getConnectors(artistId),
+    const [customerConnectors, artistConnectors, sharedConnections] = await Promise.all([
+      getConnectors(accountId),
+      effectiveArtistId ? getConnectors(effectiveArtistId) : Promise.resolve([]),
       getSharedAccountConnections(),
     ]);
 
-    const artistConnectedSlugs = toConnectedSlugs(artistConnectors);
-    const sharedConnectedSlugs = new Set(Object.keys(sharedConnections));
-
-    const artistRealToolkits = ENABLED_TOOLKITS.filter(slug => artistConnectedSlugs.has(slug));
-    const sharedRealToolkits = ENABLED_TOOLKITS.filter(
-      slug => sharedConnectedSlugs.has(slug) && !artistConnectedSlugs.has(slug),
-    );
-
-    const authConfigs = scopedAuthConfigs(ENABLED_TOOLKITS);
-    const artistSession = await composio.create(artistId, {
-      toolkits: ENABLED_TOOLKITS,
-      manageConnections: { callbackUrl },
-      ...(authConfigs && { authConfigs }),
+    const resolved = resolveSessionToolkits({
+      enabledToolkits: ENABLED_TOOLKITS,
+      customerConnectedSlugs: toConnectedSlugs(customerConnectors),
+      artistConnectedSlugs: toConnectedSlugs(artistConnectors),
+      sharedConnectedSlugs: new Set(Object.keys(sharedConnections)),
     });
 
-    const [artistSessionRaw, artistTools, sharedTools] = await Promise.all([
-      artistSession.tools() as Promise<Record<string, unknown>>,
+    const customerAuthConfigs = scopedAuthConfigs(resolved.customer);
+
+    const customerSession = await composio.create(accountId, {
+      toolkits: resolved.customer,
+      manageConnections: { callbackUrl },
+      ...(customerAuthConfigs && { authConfigs: customerAuthConfigs }),
+    });
+
+    const [customerRaw, artistTools, sharedTools] = await Promise.all([
+      customerSession.tools() as Promise<Record<string, unknown>>,
       fetchOwnerTools({
         composio,
-        ownerId: artistId,
-        toolkits: artistRealToolkits,
+        ownerId: effectiveArtistId,
+        toolkits: resolved.artist,
         label: "artist",
         limit: TOOLS_LIMIT,
       }),
       fetchOwnerTools({
         composio,
         ownerId: SHARED_ACCOUNT_ID,
-        toolkits: sharedRealToolkits,
+        toolkits: resolved.shared,
         label: "shared",
         limit: TOOLS_LIMIT,
       }),
     ]);
 
     return {
-      ...pickValid(artistSessionRaw, name => META_TOOLS.has(name)),
+      ...pickValid(customerRaw, name => META_TOOLS.has(name)),
       ...pickValid(artistTools, name => !META_TOOLS.has(name)),
       ...pickValid(sharedTools, name => !META_TOOLS.has(name)),
     };
