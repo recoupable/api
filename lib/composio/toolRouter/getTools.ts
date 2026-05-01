@@ -60,9 +60,7 @@ export async function getComposioTools(
     const sharedConnectedSlugs = new Set(Object.keys(sharedConnections));
 
     const customerToolkits = ENABLED_TOOLKITS.filter(s => customerConnectedSlugs.has(s));
-    const artistToolkits = effectiveArtistId
-      ? ENABLED_TOOLKITS.filter(s => artistConnectedSlugs.has(s))
-      : [];
+    const artistToolkits = ENABLED_TOOLKITS.filter(s => artistConnectedSlugs.has(s));
     const sharedToolkits = ENABLED_TOOLKITS.filter(s => sharedConnectedSlugs.has(s));
 
     const customerAuthConfigs = scopedAuthConfigs(ENABLED_TOOLKITS);
