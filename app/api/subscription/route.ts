@@ -15,7 +15,7 @@ export async function OPTIONS() {
 }
 
 /**
- * GET /api/subscriptions/status
+ * GET /api/subscription
  *
  * Returns whether the authenticated account is on a pro Stripe
  * subscription (account or any of its organizations). Auth: API key or

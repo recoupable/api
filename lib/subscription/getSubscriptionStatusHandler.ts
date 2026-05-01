@@ -10,9 +10,9 @@ export interface SubscriptionStatusResponse {
 }
 
 /**
- * Handles GET /api/subscriptions/status — returns whether the
- * authenticated account or any of its organizations has an active
- * Stripe subscription.
+ * Handles GET /api/subscription — returns whether the authenticated
+ * account or any of its organizations has an active Stripe
+ * subscription.
  */
 export async function getSubscriptionStatusHandler(request: NextRequest): Promise<NextResponse> {
   const authContext = await validateAuthContext(request, {});
@@ -31,7 +31,7 @@ export async function getSubscriptionStatusHandler(request: NextRequest): Promis
 
     return NextResponse.json({ isPro }, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
-    console.error("/api/subscriptions/status error", error);
+    console.error("/api/subscription error", error);
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
