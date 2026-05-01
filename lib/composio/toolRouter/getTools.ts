@@ -4,7 +4,6 @@ import { getCallbackUrl } from "../getCallbackUrl";
 import { getConnectors } from "../connectors/getConnectors";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import { getSharedAccountConnections } from "./getSharedAccountConnections";
-import { resolveSessionToolkits } from "./resolveSessionToolkits";
 import { pickValid } from "./pickValid";
 import { scopedAuthConfigs } from "./scopedAuthConfigs";
 import { toConnectedSlugs } from "./toConnectedSlugs";
@@ -31,10 +30,10 @@ const META_TOOLS = new Set([
 const TOOLS_LIMIT = 1000;
 
 /**
- * Artist and shared tools go through composio.tools.get() rather than a
- * Tool Router session because Composio rejects cross-account
- * connectedAccounts overrides at execute time — each explicit tool must
- * be owned by the account whose id we pass in.
+ * Real tools come from `composio.tools.get(ownerId, …)` per owner;
+ * meta-tools come from a customer Tool Router session. The merge
+ * spreads in priority order so collisions resolve to the right owner:
+ * shared (lowest) → customer → artist (highest, when in scope).
  */
 export async function getComposioTools(
   accountId: string,
@@ -56,49 +55,53 @@ export async function getComposioTools(
       getSharedAccountConnections(),
     ]);
 
-    const resolved = resolveSessionToolkits({
-      enabledToolkits: ENABLED_TOOLKITS,
-      customerConnectedSlugs: toConnectedSlugs(customerConnectors),
-      artistConnectedSlugs: toConnectedSlugs(artistConnectors),
-      sharedConnectedSlugs: new Set(Object.keys(sharedConnections)),
-    });
+    const customerConnectedSlugs = toConnectedSlugs(customerConnectors);
+    const artistConnectedSlugs = toConnectedSlugs(artistConnectors);
+    const sharedConnectedSlugs = new Set(Object.keys(sharedConnections));
 
-    const customerAuthConfigs = scopedAuthConfigs(resolved.customer);
+    const customerToolkits = ENABLED_TOOLKITS.filter(s => customerConnectedSlugs.has(s));
+    const artistToolkits = effectiveArtistId
+      ? ENABLED_TOOLKITS.filter(s => artistConnectedSlugs.has(s))
+      : [];
+    const sharedToolkits = ENABLED_TOOLKITS.filter(s => sharedConnectedSlugs.has(s));
 
+    const customerAuthConfigs = scopedAuthConfigs(ENABLED_TOOLKITS);
     const customerSession = await composio.create(accountId, {
-      toolkits: resolved.customer,
+      toolkits: ENABLED_TOOLKITS,
       manageConnections: { callbackUrl },
       ...(customerAuthConfigs && { authConfigs: customerAuthConfigs }),
     });
 
-    const [customerRaw, artistTools, sharedTools] = await Promise.all([
+    const [meta, customerOwn, artistOwn, sharedOwn] = await Promise.all([
       customerSession.tools() as Promise<Record<string, unknown>>,
       fetchOwnerTools({
         composio,
+        ownerId: customerToolkits.length > 0 ? accountId : undefined,
+        toolkits: customerToolkits,
+        label: "customer",
+        limit: TOOLS_LIMIT,
+      }),
+      fetchOwnerTools({
+        composio,
         ownerId: effectiveArtistId,
-        toolkits: resolved.artist,
+        toolkits: artistToolkits,
         label: "artist",
         limit: TOOLS_LIMIT,
       }),
       fetchOwnerTools({
         composio,
         ownerId: SHARED_ACCOUNT_ID,
-        toolkits: resolved.shared,
+        toolkits: sharedToolkits,
         label: "shared",
         limit: TOOLS_LIMIT,
       }),
     ]);
 
-    // When an artistId is in scope, the customer pass keeps only meta
-    // tools so real tools come unambiguously from the artist owner.
-    // When there's no artist scope (e.g. single-account REST execute),
-    // there's no duplication risk and the customer's real tools should
-    // surface — keep everything from the customer session.
-    const customerFilter = effectiveArtistId ? (name: string) => META_TOOLS.has(name) : () => true;
     return {
-      ...pickValid(customerRaw, customerFilter),
-      ...pickValid(artistTools, name => !META_TOOLS.has(name)),
-      ...pickValid(sharedTools, name => !META_TOOLS.has(name)),
+      ...pickValid(meta, name => META_TOOLS.has(name)),
+      ...pickValid(sharedOwn, name => !META_TOOLS.has(name)),
+      ...pickValid(customerOwn, name => !META_TOOLS.has(name)),
+      ...pickValid(artistOwn, name => !META_TOOLS.has(name)),
     };
   } catch (error) {
     console.warn("Composio tools unavailable:", (error as Error).message);
