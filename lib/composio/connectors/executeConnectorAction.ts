@@ -1,8 +1,5 @@
-import { getComposioClient } from "../client";
-import { ENABLED_TOOLKITS } from "../toolRouter/getTools";
+import { getComposioTools } from "../toolRouter/getTools";
 import { ConnectorActionNotFoundError } from "./connectorActionErrors";
-
-const TOOLS_LIMIT = 1000;
 
 export interface ExecuteConnectorActionResult {
   result: unknown;
@@ -11,23 +8,21 @@ export interface ExecuteConnectorActionResult {
 
 /**
  * Execute a single connector action against the given account's connections.
- *
- * Bypasses the LLM tool router's customer/artist/shared merge — for a
- * single-account REST execution we just want the tools owned by that
- * account, with Composio's response envelope unwrapped.
+ * Unwraps Composio's `ToolExecuteResponse` envelope so callers receive the
+ * underlying provider payload (e.g. Google `youtube.channels.list` with
+ * `items`); throws on `successful: false` instead of returning the envelope.
  */
 export async function executeConnectorAction(
   accountId: string,
   actionSlug: string,
   parameters: Record<string, unknown>,
 ): Promise<ExecuteConnectorActionResult> {
-  const composio = await getComposioClient();
-  const tools = (await composio.tools.get(accountId, {
-    toolkits: ENABLED_TOOLKITS,
-    limit: TOOLS_LIMIT,
-  })) as Record<string, { execute?: (args: Record<string, unknown>) => Promise<unknown> }>;
+  const tools = await getComposioTools(accountId);
 
-  const tool = tools[actionSlug];
+  const tool = tools[actionSlug] as
+    | { execute?: (args: Record<string, unknown>) => Promise<unknown> }
+    | undefined;
+
   if (!tool || typeof tool.execute !== "function") {
     throw new ConnectorActionNotFoundError(actionSlug);
   }

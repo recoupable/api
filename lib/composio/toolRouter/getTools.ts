@@ -89,8 +89,14 @@ export async function getComposioTools(
       }),
     ]);
 
+    // When an artistId is in scope, the customer pass keeps only meta
+    // tools so real tools come unambiguously from the artist owner.
+    // When there's no artist scope (e.g. single-account REST execute),
+    // there's no duplication risk and the customer's real tools should
+    // surface — keep everything from the customer session.
+    const customerFilter = effectiveArtistId ? (name: string) => META_TOOLS.has(name) : () => true;
     return {
-      ...pickValid(customerRaw, name => META_TOOLS.has(name)),
+      ...pickValid(customerRaw, customerFilter),
       ...pickValid(artistTools, name => !META_TOOLS.has(name)),
       ...pickValid(sharedTools, name => !META_TOOLS.has(name)),
     };

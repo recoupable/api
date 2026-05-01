@@ -65,11 +65,8 @@ describe("getComposioTools", () => {
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
-  it("exposes only the 4 meta-tools from the customer session", async () => {
-    mockCustomerSession.tools.mockResolvedValue({
-      ...META_TOOLS,
-      SOME_OTHER: mockTool(),
-    });
+  it("exposes meta-tools from the customer session", async () => {
+    mockCustomerSession.tools.mockResolvedValue({ ...META_TOOLS });
 
     const result = await getComposioTools("account-123");
 
@@ -77,7 +74,20 @@ describe("getComposioTools", () => {
     expect(result).toHaveProperty("COMPOSIO_SEARCH_TOOLS");
     expect(result).toHaveProperty("COMPOSIO_GET_TOOL_SCHEMAS");
     expect(result).toHaveProperty("COMPOSIO_MULTI_EXECUTE_TOOL");
-    expect(result).not.toHaveProperty("SOME_OTHER");
+  });
+
+  it("filters customer's real tools out only when an artistId is in scope", async () => {
+    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+    mockCustomerSession.tools.mockResolvedValue({
+      ...META_TOOLS,
+      SOME_OTHER: mockTool(),
+    });
+
+    const withArtist = await getComposioTools("account-123", "artist-456");
+    expect(withArtist).not.toHaveProperty("SOME_OTHER");
+
+    const withoutArtist = await getComposioTools("account-123");
+    expect(withoutArtist).toHaveProperty("SOME_OTHER");
   });
 
   it("fetches explicit artist tools via composio.tools.get when artist has toolkits", async () => {
