@@ -34,10 +34,10 @@ export async function queryAnalyticsReports({
 }): Promise<AnalyticsReportsResult> {
   const composio = await getComposioClient();
 
-  const channelsResp = await composio.tools.proxy({
+  const channelsResp = await composio.tools.proxyExecute({
     endpoint: "https://www.googleapis.com/youtube/v3/channels",
     method: "GET",
-    connected_account_id: connectedAccountId,
+    connectedAccountId,
     parameters: [
       { in: "query", name: "part", value: "id" },
       { in: "query", name: "mine", value: "true" },
@@ -48,10 +48,10 @@ export async function queryAnalyticsReports({
     throw new Error("No YouTube channel found for this account.");
   }
 
-  const analyticsResp = await composio.tools.proxy({
+  const analyticsResp = await composio.tools.proxyExecute({
     endpoint: "https://youtubeanalytics.googleapis.com/v2/reports",
     method: "GET",
-    connected_account_id: connectedAccountId,
+    connectedAccountId,
     parameters: [
       { in: "query", name: "ids", value: `channel==${channelId}` },
       { in: "query", name: "startDate", value: startDate },
