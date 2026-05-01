@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getSubscriptionStatusHandler } from "@/lib/subscription/getSubscriptionStatusHandler";
+import { getCreditsHandler } from "@/lib/credits/getCreditsHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -15,16 +15,17 @@ export async function OPTIONS() {
 }
 
 /**
- * GET /api/subscription/status?accountId=xxx
+ * GET /api/credits
  *
- * Returns whether the account is on a pro Stripe subscription (account
- * or any of its organizations). No authentication required.
+ * Returns the credits row for the authenticated account (auto-refilling
+ * on monthly cadence or just-activated subscription). Auth: API key or
+ * Privy Bearer token.
  *
  * @param request - The incoming HTTP request.
- * @returns A NextResponse with `{ isPro }` on 200 or `{ message }` on 400/500.
+ * @returns A NextResponse with `{ data }` on 200 or `{ message }` on 4xx/5xx.
  */
 export async function GET(request: NextRequest) {
-  return getSubscriptionStatusHandler(request);
+  return getCreditsHandler(request);
 }
 
 export const dynamic = "force-dynamic";
