@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { getComposioTools } from "../getTools";
+import { getComposioTools } from "../getComposioTools";
 
 import { getComposioClient } from "../../client";
 import { getCallbackUrl } from "../../getCallbackUrl";

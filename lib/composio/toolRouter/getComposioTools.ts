@@ -70,7 +70,7 @@ export async function getComposioTools(
       ...(customerAuthConfigs && { authConfigs: customerAuthConfigs }),
     });
 
-    const [meta, customerOwn, artistOwn, sharedOwn] = await Promise.all([
+    const [customerRaw, customerTools, artistTools, sharedTools] = await Promise.all([
       customerSession.tools() as Promise<Record<string, unknown>>,
       fetchOwnerTools({
         composio,
@@ -96,10 +96,10 @@ export async function getComposioTools(
     ]);
 
     return {
-      ...pickValid(meta, name => META_TOOLS.has(name)),
-      ...pickValid(sharedOwn, name => !META_TOOLS.has(name)),
-      ...pickValid(customerOwn, name => !META_TOOLS.has(name)),
-      ...pickValid(artistOwn, name => !META_TOOLS.has(name)),
+      ...pickValid(customerRaw, name => META_TOOLS.has(name)),
+      ...pickValid(sharedTools, name => !META_TOOLS.has(name)),
+      ...pickValid(customerTools, name => !META_TOOLS.has(name)),
+      ...pickValid(artistTools, name => !META_TOOLS.has(name)),
     };
   } catch (error) {
     console.warn("Composio tools unavailable:", (error as Error).message);

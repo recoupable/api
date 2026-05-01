@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { z } from "zod";
 import { getConnectorActions } from "../getConnectorActions";
 
-import { getComposioTools } from "../../toolRouter/getTools";
+import { getComposioTools } from "../../toolRouter/getComposioTools";
 
-vi.mock("../../toolRouter/getTools", () => ({
+vi.mock("../../toolRouter/getComposioTools", () => ({
   getComposioTools: vi.fn(),
 }));
 
