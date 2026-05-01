@@ -1,5 +1,4 @@
-import { createYouTubeAnalyticsClient } from "./createYouTubeAnalyticsClient";
-import { createYouTubeAPIClient } from "./oauth-client";
+import { getComposioClient } from "@/lib/composio/client";
 
 export interface AnalyticsReportsResult {
   dailyRevenue: { date: string; revenue: number }[];
@@ -7,84 +6,74 @@ export interface AnalyticsReportsResult {
   channelId: string;
 }
 
+interface ChannelsListResponse {
+  items?: Array<{ id?: string }>;
+}
+
+interface AnalyticsReportsResponse {
+  rows?: Array<[string, number]>;
+}
+
 /**
- * Query YouTube Analytics reports for specified metrics and date range
+ * Query YouTube Analytics for `metrics` over `[startDate, endDate]` for the
+ * channel owned by the artist's Composio-connected account.
  *
- * @param params - { accessToken, refreshToken, startDate, endDate, metrics }
- * @param params.accessToken - YouTube access token
- * @param params.refreshToken - YouTube refresh token (optional)
- * @param params.startDate - Start date for revenue data in YYYY-MM-DD format
- * @param params.endDate - End date for revenue data in YYYY-MM-DD format
- * @param params.metrics - Metrics to query
- * @returns Analytics data with daily breakdown and totals
+ * Goes through `composio.tools.proxy` so the access token never leaves
+ * Composio — they inject auth and refresh transparently.
  */
 export async function queryAnalyticsReports({
-  accessToken,
-  refreshToken,
+  connectedAccountId,
   startDate,
   endDate,
   metrics,
 }: {
-  accessToken: string;
-  refreshToken?: string;
+  connectedAccountId: string;
   startDate: string;
   endDate: string;
   metrics: string;
 }): Promise<AnalyticsReportsResult> {
-  // Get user's channel ID first
-  const youtube = createYouTubeAPIClient(accessToken, refreshToken);
+  const composio = await getComposioClient();
 
-  const channelResponse = await youtube.channels.list({
-    part: ["id"],
-    mine: true,
+  const channelsResp = await composio.tools.proxy({
+    endpoint: "https://www.googleapis.com/youtube/v3/channels",
+    method: "GET",
+    connected_account_id: connectedAccountId,
+    parameters: [
+      { in: "query", name: "part", value: "id" },
+      { in: "query", name: "mine", value: "true" },
+    ],
   });
-
-  if (!channelResponse.data.items || channelResponse.data.items.length === 0) {
-    throw new Error(
-      "No YouTube channel found for this account. Please ensure you have a YouTube channel.",
-    );
-  }
-
-  const channelId = channelResponse.data.items[0].id;
+  const channelId = (channelsResp.data as ChannelsListResponse).items?.[0]?.id;
   if (!channelId) {
-    throw new Error(
-      "Unable to retrieve channel ID. Please ensure your YouTube account is properly set up.",
-    );
+    throw new Error("No YouTube channel found for this account.");
   }
 
-  // Create YouTube Analytics API client
-  const ytAnalytics = createYouTubeAnalyticsClient(accessToken, refreshToken);
-
-  // Query analytics reports for the specified date range
-  const response = await ytAnalytics.reports.query({
-    ids: `channel==${channelId}`,
-    startDate,
-    endDate,
-    metrics,
-    dimensions: "day",
-    sort: "day",
+  const analyticsResp = await composio.tools.proxy({
+    endpoint: "https://youtubeanalytics.googleapis.com/v2/reports",
+    method: "GET",
+    connected_account_id: connectedAccountId,
+    parameters: [
+      { in: "query", name: "ids", value: `channel==${channelId}` },
+      { in: "query", name: "startDate", value: startDate },
+      { in: "query", name: "endDate", value: endDate },
+      { in: "query", name: "metrics", value: metrics },
+      { in: "query", name: "dimensions", value: "day" },
+      { in: "query", name: "sort", value: "day" },
+    ],
   });
 
-  // Process the response
-  const rows = response.data.rows || [];
+  const rows = (analyticsResp.data as AnalyticsReportsResponse).rows ?? [];
   if (rows.length === 0) {
     throw new Error(
-      "No revenue data found. This could mean your channel is not monetized or you don't have the required Analytics scope permissions. Please ensure your channel is eligible for monetization and you've granted Analytics permissions.",
+      "No revenue data found. This could mean your channel is not monetized or you don't have the required Analytics scope permissions.",
     );
   }
 
-  // Parse daily revenue data
-  const dailyRevenue = rows.map((row: (string | number)[]) => ({
-    date: String(row[0]), // Day dimension (YYYY-MM-DD format)
-    revenue: parseFloat(String(row[1])) || 0, // Estimated revenue
+  const dailyRevenue = rows.map(row => ({
+    date: String(row[0]),
+    revenue: parseFloat(String(row[1])) || 0,
   }));
-
-  // Calculate total revenue
   const totalRevenue = dailyRevenue.reduce((sum, day) => sum + day.revenue, 0);
 
-  return {
-    dailyRevenue,
-    totalRevenue,
-    channelId,
-  };
+  return { dailyRevenue, totalRevenue, channelId };
 }

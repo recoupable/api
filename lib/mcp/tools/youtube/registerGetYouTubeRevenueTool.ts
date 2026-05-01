@@ -7,7 +7,6 @@ import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import { getConnectors } from "@/lib/composio/connectors/getConnectors";
-import { getConnectedAccountAccessToken } from "@/lib/composio/getConnectedAccountAccessToken";
 import { queryAnalyticsReports } from "@/lib/youtube/queryAnalyticsReports";
 import { getDefaultDateRange } from "@/lib/youtube/getDefaultDateRange";
 import { handleRevenueError } from "@/lib/youtube/handleRevenueError";
@@ -36,8 +35,8 @@ type GetYouTubeRevenueArgs = z.infer<typeof getYouTubeRevenueSchema>;
 /**
  * Registers the "get_youtube_revenue" MCP tool. Stays custom because
  * Composio's YouTube toolkit doesn't expose YouTube Analytics — this
- * tool pulls the OAuth token from the artist's Composio connection
- * and calls youtubeAnalytics.reports.query directly.
+ * tool calls the YouTube Analytics API through `composio.tools.proxy`,
+ * so the OAuth token never leaves Composio.
  */
 export function registerGetYouTubeRevenueTool(server: McpServer): void {
   server.registerTool(
@@ -73,17 +72,12 @@ export function registerGetYouTubeRevenueTool(server: McpServer): void {
           );
         }
 
-        const { accessToken, refreshToken } = await getConnectedAccountAccessToken(
-          youtube.connectedAccountId,
-        );
-
         const defaultDates = getDefaultDateRange();
         const startDate = args.startDate || defaultDates.startDate;
         const endDate = args.endDate || defaultDates.endDate;
 
         const analyticsResult = await queryAnalyticsReports({
-          accessToken,
-          refreshToken: refreshToken ?? undefined,
+          connectedAccountId: youtube.connectedAccountId,
           startDate,
           endDate,
           metrics: "estimatedRevenue",
