@@ -22,15 +22,13 @@ export async function getConnectedAccountAccessToken(
     );
   }
 
-  const val = (account.state as { val?: { access_token?: string; refresh_token?: string | null } })
-    ?.val;
-  const accessToken = val?.access_token;
+  const accessToken = account.state.val?.access_token as string;
   if (!accessToken) {
     throw new Error(`Composio connected account ${connectedAccountId} has no access_token`);
   }
 
   return {
     accessToken,
-    refreshToken: val?.refresh_token ?? null,
+    refreshToken: (account.state.val?.refresh_token as string | undefined) ?? null,
   };
 }
