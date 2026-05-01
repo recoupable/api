@@ -9,7 +9,15 @@ import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
  * Validated params for getting connector actions.
  */
 export interface GetConnectorActionsParams {
+  /** Authenticated account (from the bearer token / api key). */
   accountId: string;
+  /**
+   * Optional artist account scope — when provided, the actions catalog
+   * also includes the artist's connected toolkits. Required for any
+   * toolkit (e.g. YouTube, TikTok, Instagram) that's connected at the
+   * artist level.
+   */
+  artistId?: string;
 }
 
 /**
@@ -43,7 +51,10 @@ export async function validateGetConnectorActionsRequest(
   }
   const { account_id } = validated;
 
-  // 3. If account_id is provided, verify access and use that entity
+  // 3. If account_id is provided, verify access and use it as the artist scope.
+  //    Keep the authenticated accountId separate so getComposioTools' merged
+  //    customer/artist/shared catalog can resolve artist-only toolkits via the
+  //    artist owner scope (where non-meta tools survive).
   if (account_id) {
     const accessResult = await checkAccountAccess(accountId, account_id);
     if (!accessResult.hasAccess) {
@@ -53,7 +64,7 @@ export async function validateGetConnectorActionsRequest(
       );
     }
 
-    return { accountId: account_id };
+    return { accountId, artistId: account_id };
   }
 
   // No account_id: use the authenticated account

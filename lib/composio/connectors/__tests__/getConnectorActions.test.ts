@@ -29,7 +29,7 @@ describe("getConnectorActions", () => {
 
     const result = await getConnectorActions("account-123");
 
-    expect(getComposioTools).toHaveBeenCalledWith("account-123");
+    expect(getComposioTools).toHaveBeenCalledWith("account-123", undefined);
     expect(result).toHaveLength(2);
     expect(result).toEqual(
       expect.arrayContaining([
@@ -112,5 +112,19 @@ describe("getConnectorActions", () => {
     const result = await getConnectorActions("account-123");
 
     expect(result).toEqual([]);
+  });
+
+  it("forwards artistId to getComposioTools so artist-scoped tools resolve", async () => {
+    vi.mocked(getComposioTools).mockResolvedValue({
+      YOUTUBE_GET_CHANNEL_STATISTICS: {
+        description: "Get channel stats",
+        inputSchema: {},
+        execute: vi.fn(),
+      },
+    });
+
+    await getConnectorActions("user-account-1", "artist-account-2");
+
+    expect(getComposioTools).toHaveBeenCalledWith("user-account-1", "artist-account-2");
   });
 });

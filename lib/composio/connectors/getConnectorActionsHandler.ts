@@ -22,8 +22,8 @@ export async function getConnectorActionsHandler(request: NextRequest): Promise<
       return validated;
     }
 
-    const { accountId } = validated;
-    const actions = await getConnectorActions(accountId);
+    const { accountId, artistId } = validated;
+    const actions = await getConnectorActions(accountId, artistId);
 
     return NextResponse.json(
       {
