@@ -1,4 +1,4 @@
-import { getComposioTools } from "../toolRouter/getTools";
+import { getComposioTools } from "../toolRouter/getComposioTools";
 import { ConnectorActionNotFoundError } from "./connectorActionErrors";
 
 /**

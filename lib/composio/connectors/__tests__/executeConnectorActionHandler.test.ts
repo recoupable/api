@@ -83,9 +83,7 @@ describe("executeConnectorActionHandler", () => {
     expect(executeConnectorAction).toHaveBeenCalledWith(
       "account-456",
       "GOOGLESHEETS_WRITE_SPREADSHEET",
-      {
-        sheetId: "abc",
-      },
+      { sheetId: "abc" },
     );
   });
 

@@ -43,7 +43,6 @@
     "braintrust": "^0.4.9",
     "bullmq": "^5.65.1",
     "chat": "^4.15.0",
-    "googleapis": "^168.0.0",
     "ioredis": "^5.8.2",
     "marked": "^15.0.12",
     "mcp-handler": "^1.0.4",
