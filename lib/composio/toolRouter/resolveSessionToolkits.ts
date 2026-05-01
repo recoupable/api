@@ -24,15 +24,20 @@ export interface ResolvedSessionToolkits {
 /**
  * Decide which toolkits each Composio session should expose.
  *
- * Priority: customer > artist > shared. A toolkit only appears in one session
- * to avoid duplicate tools across the merged ToolSet.
+ * Priority: artist > customer > shared. A toolkit only appears in one
+ * session to avoid duplicate tools across the merged ToolSet.
  *
  * - Customer session gets every enabled toolkit so its meta-tools can
- *   dynamically discover whatever the caller has connected themselves.
- * - Artist session exposes only artist toolkits that the customer has not
- *   already connected.
- * - Shared session exposes only toolkits that neither the customer nor the
- *   artist already covers.
+ *   dynamically discover whatever the caller has connected themselves —
+ *   but only meta-tools survive the merge in `getComposioTools`, so
+ *   customer's own toolkit tools are not directly exposed here.
+ * - Artist session exposes every toolkit the artist has connected. When
+ *   the same toolkit is connected on both customer and artist accounts,
+ *   the artist wins because the chat agent is acting on behalf of the
+ *   artist; routing to customer would silently drop the tools (the
+ *   merge filters customer to meta-only).
+ * - Shared session exposes only toolkits neither the artist nor the
+ *   customer covers.
  */
 export function resolveSessionToolkits({
   enabledToolkits,
@@ -42,9 +47,7 @@ export function resolveSessionToolkits({
 }: ResolveSessionToolkitsInput): ResolvedSessionToolkits {
   const enabledSet = new Set(enabledToolkits);
 
-  const artist = enabledToolkits.filter(
-    slug => artistConnectedSlugs.has(slug) && !customerConnectedSlugs.has(slug),
-  );
+  const artist = enabledToolkits.filter(slug => artistConnectedSlugs.has(slug));
 
   const artistSet = new Set(artist);
 

@@ -27,7 +27,7 @@ describe("resolveSessionToolkits", () => {
     expect(result.shared).toEqual([]);
   });
 
-  it("gives artist session only toolkits customer has not connected", () => {
+  it("artist wins over customer when both have the same toolkit connected", () => {
     const result = resolveSessionToolkits({
       enabledToolkits,
       customerConnectedSlugs: new Set(["tiktok"]),
@@ -35,7 +35,7 @@ describe("resolveSessionToolkits", () => {
       sharedConnectedSlugs: new Set(),
     });
 
-    expect(result.artist).toEqual(["instagram"]);
+    expect(result.artist).toEqual(["tiktok", "instagram"]);
   });
 
   it("gives shared session only toolkits neither customer nor artist has", () => {
@@ -49,7 +49,7 @@ describe("resolveSessionToolkits", () => {
     expect(result.shared).toEqual(["googlesheets"]);
   });
 
-  it("returns empty artist when every artist toolkit overlaps with customer", () => {
+  it("artist still wins when every artist toolkit overlaps with customer", () => {
     const result = resolveSessionToolkits({
       enabledToolkits,
       customerConnectedSlugs: new Set(["tiktok", "instagram"]),
@@ -57,7 +57,7 @@ describe("resolveSessionToolkits", () => {
       sharedConnectedSlugs: new Set(),
     });
 
-    expect(result.artist).toEqual([]);
+    expect(result.artist).toEqual(["tiktok", "instagram"]);
   });
 
   it("returns empty shared when every shared toolkit is covered by customer or artist", () => {

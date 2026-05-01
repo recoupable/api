@@ -114,7 +114,7 @@ describe("getComposioTools", () => {
     expect(result).toHaveProperty("GOOGLEDOCS_GET_DOCUMENT_PLAINTEXT");
   });
 
-  it("skips artist tool fetch when the customer already covers the same toolkits", async () => {
+  it("artist wins when both customer and artist have connected the same toolkit", async () => {
     vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
     vi.mocked(getConnectors).mockImplementation(async (id: string) => {
       const tiktok = {
@@ -131,7 +131,8 @@ describe("getComposioTools", () => {
     await getComposioTools("account-123", "artist-456");
 
     const artistCalls = mockToolsGet.mock.calls.filter(([id]) => id === "artist-456");
-    expect(artistCalls).toHaveLength(0);
+    expect(artistCalls).toHaveLength(1);
+    expect(artistCalls[0][1]).toMatchObject({ toolkits: ["tiktok"] });
   });
 
   it("skips shared tool fetch when customer already covers the Google toolkits", async () => {
