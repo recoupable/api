@@ -26,19 +26,11 @@ export interface ConnectorAction {
  * doubles as the `actionSlug` for `POST /api/connectors/actions`. The
  * `connectorSlug` is derived from the slug prefix.
  *
- * @param accountId - The authenticated account (customer scope)
- * @param artistId - Optional artist account whose connections should be
- *   merged in. Required for any toolkit (e.g. YouTube, TikTok,
- *   Instagram) that's connected at the artist level — the customer
- *   pass applies a meta-only filter, so real tools only survive when
- *   resolved through the artist owner scope.
+ * @param accountId - The account to scope the catalog to
  * @returns The list of executable connector actions
  */
-export async function getConnectorActions(
-  accountId: string,
-  artistId?: string,
-): Promise<ConnectorAction[]> {
-  const tools = await getComposioTools(accountId, artistId);
+export async function getConnectorActions(accountId: string): Promise<ConnectorAction[]> {
+  const tools = await getComposioTools(accountId);
 
   return Object.entries(tools).map(([slug, tool]) => {
     // Derive parent toolkit from the slug prefix (Composio convention: TOOLKIT_ACTION_NAME)

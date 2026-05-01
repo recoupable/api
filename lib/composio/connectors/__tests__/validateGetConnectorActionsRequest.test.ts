@@ -48,7 +48,7 @@ describe("validateGetConnectorActionsRequest", () => {
     expect(result).toEqual({ accountId: "account-123" });
   });
 
-  it("returns auth accountId + artistId when account_id query param + access granted", async () => {
+  it("should return target accountId when account_id query param + access granted", async () => {
     const target = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "account-123",
@@ -61,7 +61,7 @@ describe("validateGetConnectorActionsRequest", () => {
     const result = await validateGetConnectorActionsRequest(request);
 
     expect(checkAccountAccess).toHaveBeenCalledWith("account-123", target);
-    expect(result).toEqual({ accountId: "account-123", artistId: target });
+    expect(result).toEqual({ accountId: target });
   });
 
   it("should return 403 when account_id provided and access denied", async () => {

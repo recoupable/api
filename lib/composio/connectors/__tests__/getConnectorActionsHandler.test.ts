@@ -70,22 +70,7 @@ describe("getConnectorActionsHandler", () => {
     );
     await getConnectorActionsHandler(request);
 
-    expect(getConnectorActions).toHaveBeenCalledWith("account-target-456", undefined);
-  });
-
-  it("forwards artistId to getConnectorActions when present in validated params", async () => {
-    vi.mocked(validateGetConnectorActionsRequest).mockResolvedValue({
-      accountId: "user-account-1",
-      artistId: "artist-account-2",
-    });
-    vi.mocked(getConnectorActions).mockResolvedValue([]);
-
-    const request = new NextRequest(
-      "http://localhost/api/connectors/actions?account_id=artist-account-2",
-    );
-    await getConnectorActionsHandler(request);
-
-    expect(getConnectorActions).toHaveBeenCalledWith("user-account-1", "artist-account-2");
+    expect(getConnectorActions).toHaveBeenCalledWith("account-target-456");
   });
 
   it("should return 500 when getConnectorActions throws", async () => {
