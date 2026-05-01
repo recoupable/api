@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { executeConnectorAction } from "../executeConnectorAction";
 import { ConnectorActionNotFoundError } from "../connectorActionErrors";
 
-import { getComposioTools } from "../../toolRouter/getTools";
+import { getComposioTools } from "../../toolRouter/getComposioTools";
 
-vi.mock("../../toolRouter/getTools", () => ({
+vi.mock("../../toolRouter/getComposioTools", () => ({
   getComposioTools: vi.fn(),
 }));
 
