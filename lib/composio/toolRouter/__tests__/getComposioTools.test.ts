@@ -56,6 +56,25 @@ describe("getComposioTools", () => {
     process.env = originalEnv;
   });
 
+  it("creates the Tool Router session against the artist when in artist context", async () => {
+    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+
+    await getComposioTools("account-123", "artist-456", "room-789");
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      "artist-456",
+      expect.objectContaining({
+        manageConnections: { callbackUrl: "https://example.com/chat?connected=true" },
+      }),
+    );
+  });
+
+  it("creates the Tool Router session against the customer when no artist context", async () => {
+    await getComposioTools("account-123");
+
+    expect(mockCreate).toHaveBeenCalledWith("account-123", expect.any(Object));
+  });
+
   it("returns empty object when COMPOSIO_API_KEY is missing", async () => {
     delete process.env.COMPOSIO_API_KEY;
 
