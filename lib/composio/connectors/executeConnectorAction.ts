@@ -1,16 +1,30 @@
 import { getComposioTools } from "../toolRouter/getTools";
 import { ConnectorActionNotFoundError } from "./connectorActionErrors";
 
+/**
+ * Result of executing a connector action.
+ */
 export interface ExecuteConnectorActionResult {
   result: unknown;
   executedAt: string;
 }
 
 /**
- * Execute a single connector action against the given account's connections.
- * Unwraps Composio's `ToolExecuteResponse` envelope so callers receive the
- * underlying provider payload (e.g. Google `youtube.channels.list` with
- * `items`); throws on `successful: false` instead of returning the envelope.
+ * Execute a single connector action with the given parameters.
+ *
+ * Uses the same merged customer→artist→shared tool set as the catalog
+ * (`getComposioTools`) and the chat agent, so anything `GET
+ * /api/connectors/actions` lists is executable here. Composio validates
+ * parameters against the action's cached schema and checks the parent
+ * toolkit's connection state before invoking; failures bubble up as
+ * exceptions for the handler to translate into HTTP error codes.
+ *
+ * @param accountId - The account whose connections (and shared platform
+ *   connections) should be used
+ * @param actionSlug - UPPERCASE_SNAKE_CASE action slug (e.g. `GMAIL_FETCH_EMAILS`)
+ * @param parameters - Action-specific parameters matching the action's schema
+ * @returns The action's result plus an ISO 8601 server-side execution timestamp
+ * @throws {ConnectorActionNotFoundError} when the slug is not in the catalog
  */
 export async function executeConnectorAction(
   accountId: string,
@@ -27,14 +41,10 @@ export async function executeConnectorAction(
     throw new ConnectorActionNotFoundError(actionSlug);
   }
 
-  const raw = await tool.execute(parameters);
-  const envelope = raw as { successful?: boolean; data?: unknown; error?: string | null } | null;
-  if (envelope && typeof envelope === "object" && "successful" in envelope) {
-    if (!envelope.successful) {
-      throw new Error(envelope.error ?? "Connector action failed");
-    }
-    return { result: envelope.data, executedAt: new Date().toISOString() };
-  }
+  const result = await tool.execute(parameters);
 
-  return { result: raw, executedAt: new Date().toISOString() };
+  return {
+    result,
+    executedAt: new Date().toISOString(),
+  };
 }
