@@ -19,7 +19,7 @@ describe("validateCreateSubscriptionSessionRequest", () => {
   });
 
   it("returns 400 { error } for invalid JSON", async () => {
-    const req = new NextRequest("http://localhost/api/subscriptions/sessions", {
+    const req = new NextRequest("http://localhost/api/stripe/checkout-sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": "k" },
       body: "not-json",
@@ -32,7 +32,7 @@ describe("validateCreateSubscriptionSessionRequest", () => {
   });
 
   it("returns 400 { error } when successUrl is missing", async () => {
-    const req = new NextRequest("http://localhost/api/subscriptions/sessions", {
+    const req = new NextRequest("http://localhost/api/stripe/checkout-sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": "k" },
       body: JSON.stringify({}),
@@ -44,7 +44,7 @@ describe("validateCreateSubscriptionSessionRequest", () => {
   });
 
   it("returns 400 { error } for unknown body keys (strict)", async () => {
-    const req = new NextRequest("http://localhost/api/subscriptions/sessions", {
+    const req = new NextRequest("http://localhost/api/stripe/checkout-sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": "k" },
       body: JSON.stringify({
@@ -63,7 +63,7 @@ describe("validateCreateSubscriptionSessionRequest", () => {
         { status: 401 },
       ),
     );
-    const req = new NextRequest("http://localhost/api/subscriptions/sessions", {
+    const req = new NextRequest("http://localhost/api/stripe/checkout-sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ successUrl: "https://chat.recoupable.com/done" }),
@@ -81,7 +81,7 @@ describe("validateCreateSubscriptionSessionRequest", () => {
       orgId: null,
       authToken: "t",
     });
-    const req = new NextRequest("http://localhost/api/subscriptions/sessions", {
+    const req = new NextRequest("http://localhost/api/stripe/checkout-sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": "k" },
       body: JSON.stringify({

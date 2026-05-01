@@ -9,7 +9,7 @@ const { POST } = await import("../route");
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174001";
 
-describe("POST /api/subscriptions/portal-sessions (handler outcomes)", () => {
+describe("POST /api/stripe/portal-sessions (handler outcomes)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(validateCreatePortalSessionRequest).mockReset();
@@ -24,7 +24,7 @@ describe("POST /api/subscriptions/portal-sessions (handler outcomes)", () => {
   it("returns validation response unchanged", async () => {
     const err = NextResponse.json({ error: "bad" }, { status: 400 });
     vi.mocked(validateCreatePortalSessionRequest).mockResolvedValue(err);
-    const req = new NextRequest("http://localhost/api/subscriptions/portal-sessions", {
+    const req = new NextRequest("http://localhost/api/stripe/portal-sessions", {
       method: "POST",
       body: "{}",
     });
@@ -41,7 +41,7 @@ describe("POST /api/subscriptions/portal-sessions (handler outcomes)", () => {
     vi.mocked(getStripeCustomerIdByAccountId).mockResolvedValue(null);
 
     const res = await POST(
-      new NextRequest("http://localhost/api/subscriptions/portal-sessions", {
+      new NextRequest("http://localhost/api/stripe/portal-sessions", {
         method: "POST",
         body: "{}",
       }),
@@ -65,7 +65,7 @@ describe("POST /api/subscriptions/portal-sessions (handler outcomes)", () => {
     } as Awaited<ReturnType<typeof createPortalSession>>);
 
     const res = await POST(
-      new NextRequest("http://localhost/api/subscriptions/portal-sessions", {
+      new NextRequest("http://localhost/api/stripe/portal-sessions", {
         method: "POST",
         body: "{}",
       }),
@@ -90,7 +90,7 @@ describe("POST /api/subscriptions/portal-sessions (handler outcomes)", () => {
     } as unknown as Awaited<ReturnType<typeof createPortalSession>>);
 
     const res = await POST(
-      new NextRequest("http://localhost/api/subscriptions/portal-sessions", {
+      new NextRequest("http://localhost/api/stripe/portal-sessions", {
         method: "POST",
         body: "{}",
       }),
@@ -108,7 +108,7 @@ describe("POST /api/subscriptions/portal-sessions (handler outcomes)", () => {
     vi.mocked(createPortalSession).mockRejectedValue(new Error("Stripe down"));
 
     const res = await POST(
-      new NextRequest("http://localhost/api/subscriptions/portal-sessions", {
+      new NextRequest("http://localhost/api/stripe/portal-sessions", {
         method: "POST",
         body: "{}",
       }),

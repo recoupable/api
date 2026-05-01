@@ -28,7 +28,7 @@ describe("createSubscriptionSessionHandler", () => {
   it("returns validation response unchanged", async () => {
     const err = NextResponse.json({ error: "bad" }, { status: 400 });
     vi.mocked(validateCreateSubscriptionSessionRequest).mockResolvedValue(err);
-    const req = new NextRequest("http://localhost/api/subscriptions/sessions", {
+    const req = new NextRequest("http://localhost/api/stripe/checkout-sessions", {
       method: "POST",
       body: "{}",
     });
@@ -47,7 +47,7 @@ describe("createSubscriptionSessionHandler", () => {
     } as Awaited<ReturnType<typeof createStripeSession>>);
 
     const res = await createSubscriptionSessionHandler(
-      new NextRequest("http://localhost/api/subscriptions/sessions", {
+      new NextRequest("http://localhost/api/stripe/checkout-sessions", {
         method: "POST",
         body: "{}",
       }),
@@ -70,7 +70,7 @@ describe("createSubscriptionSessionHandler", () => {
     } as Awaited<ReturnType<typeof createStripeSession>>);
 
     const res = await createSubscriptionSessionHandler(
-      new NextRequest("http://localhost/api/subscriptions/sessions", {
+      new NextRequest("http://localhost/api/stripe/checkout-sessions", {
         method: "POST",
         body: "{}",
       }),
@@ -87,7 +87,7 @@ describe("createSubscriptionSessionHandler", () => {
     vi.mocked(createStripeSession).mockRejectedValue(new Error("Stripe down"));
 
     const res = await createSubscriptionSessionHandler(
-      new NextRequest("http://localhost/api/subscriptions/sessions", {
+      new NextRequest("http://localhost/api/stripe/checkout-sessions", {
         method: "POST",
         body: "{}",
       }),

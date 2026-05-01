@@ -15,7 +15,7 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/subscriptions/sessions: creates a Stripe subscription checkout session.
+ * POST /api/stripe/checkout-sessions: creates a Stripe subscription checkout session.
  *
  * @param request - The incoming HTTP request.
  * @returns A NextResponse with session `id` and `url`, or an error body.

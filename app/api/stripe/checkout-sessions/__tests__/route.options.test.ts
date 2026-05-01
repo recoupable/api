@@ -4,7 +4,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 
 const { OPTIONS } = await import("../route");
 
-describe("OPTIONS /api/subscriptions/portal-sessions", () => {
+describe("OPTIONS /api/stripe/checkout-sessions", () => {
   it("returns 200 with CORS headers", async () => {
     const res = await OPTIONS();
     expect(res.status).toBe(200);

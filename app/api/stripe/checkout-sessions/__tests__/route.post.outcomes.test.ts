@@ -8,7 +8,7 @@ const { POST } = await import("../route");
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174001";
 
-describe("POST /api/subscriptions/sessions (handler outcomes)", () => {
+describe("POST /api/stripe/checkout-sessions (handler outcomes)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(validateCreateSubscriptionSessionRequest).mockReset();
@@ -22,7 +22,7 @@ describe("POST /api/subscriptions/sessions (handler outcomes)", () => {
   it("returns validation response unchanged", async () => {
     const err = NextResponse.json({ error: "bad" }, { status: 400 });
     vi.mocked(validateCreateSubscriptionSessionRequest).mockResolvedValue(err);
-    const req = new NextRequest("http://localhost/api/subscriptions/sessions", {
+    const req = new NextRequest("http://localhost/api/stripe/checkout-sessions", {
       method: "POST",
       body: "{}",
     });
@@ -41,7 +41,7 @@ describe("POST /api/subscriptions/sessions (handler outcomes)", () => {
     } as Awaited<ReturnType<typeof createStripeSession>>);
 
     const res = await POST(
-      new NextRequest("http://localhost/api/subscriptions/sessions", {
+      new NextRequest("http://localhost/api/stripe/checkout-sessions", {
         method: "POST",
         body: "{}",
       }),
@@ -64,7 +64,7 @@ describe("POST /api/subscriptions/sessions (handler outcomes)", () => {
     } as Awaited<ReturnType<typeof createStripeSession>>);
 
     const res = await POST(
-      new NextRequest("http://localhost/api/subscriptions/sessions", {
+      new NextRequest("http://localhost/api/stripe/checkout-sessions", {
         method: "POST",
         body: "{}",
       }),
@@ -81,7 +81,7 @@ describe("POST /api/subscriptions/sessions (handler outcomes)", () => {
     vi.mocked(createStripeSession).mockRejectedValue(new Error("Stripe down"));
 
     const res = await POST(
-      new NextRequest("http://localhost/api/subscriptions/sessions", {
+      new NextRequest("http://localhost/api/stripe/checkout-sessions", {
         method: "POST",
         body: "{}",
       }),

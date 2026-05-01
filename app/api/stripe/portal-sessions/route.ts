@@ -15,7 +15,7 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/subscriptions/portal-sessions: creates a Stripe billing portal
+ * POST /api/stripe/portal-sessions: creates a Stripe billing portal
  * session for the authenticated account's existing Stripe customer.
  *
  * @param request - The incoming HTTP request.
