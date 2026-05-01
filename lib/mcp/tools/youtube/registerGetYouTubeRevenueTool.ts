@@ -1,5 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
+import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { getConnectors } from "@/lib/composio/connectors/getConnectors";
@@ -44,9 +48,20 @@ export function registerGetYouTubeRevenueTool(server: McpServer): void {
         "The startDate and endDate parameters are optional - if not provided, it will default to the last 30 days (1 month). ",
       inputSchema: getYouTubeRevenueSchema,
     },
-    async (args: GetYouTubeRevenueArgs) => {
+    async (
+      args: GetYouTubeRevenueArgs,
+      extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
+    ) => {
+      const authInfo = extra.authInfo as McpAuthInfo | undefined;
+      const { accountId: artistAccountId, error: authError } = await resolveAccountId({
+        authInfo,
+        accountIdOverride: args.artist_account_id,
+      });
+      if (authError) return getToolResultError(authError);
+      if (!artistAccountId) return getToolResultError("Failed to resolve account ID");
+
       try {
-        const connectors = await getConnectors(args.artist_account_id);
+        const connectors = await getConnectors(artistAccountId);
         const youtube = connectors.find(c => c.slug === "youtube");
 
         if (!youtube?.isConnected || !youtube.connectedAccountId) {
