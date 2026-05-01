@@ -2,10 +2,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
+import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import { getConnectors } from "@/lib/composio/connectors/getConnectors";
 import { getConnectedAccountAccessToken } from "@/lib/composio/getConnectedAccountAccessToken";
 import { queryAnalyticsReports } from "@/lib/youtube/queryAnalyticsReports";
@@ -53,15 +53,18 @@ export function registerGetYouTubeRevenueTool(server: McpServer): void {
       extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
     ) => {
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
-      const { accountId: artistAccountId, error: authError } = await resolveAccountId({
-        authInfo,
-        accountIdOverride: args.artist_account_id,
-      });
-      if (authError) return getToolResultError(authError);
-      if (!artistAccountId) return getToolResultError("Failed to resolve account ID");
+      const callerAccountId = authInfo?.extra?.accountId;
+      if (!callerAccountId) {
+        return getToolResultError("Authentication required.");
+      }
+
+      const hasAccess = await checkAccountArtistAccess(callerAccountId, args.artist_account_id);
+      if (!hasAccess) {
+        return getToolResultError("Access denied to specified artist_account_id");
+      }
 
       try {
-        const connectors = await getConnectors(artistAccountId);
+        const connectors = await getConnectors(args.artist_account_id);
         const youtube = connectors.find(c => c.slug === "youtube");
 
         if (!youtube?.isConnected || !youtube.connectedAccountId) {
