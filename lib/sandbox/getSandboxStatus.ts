@@ -9,10 +9,10 @@ import type { SandboxCreatedResponse } from "./createSandbox";
  */
 export async function getSandboxStatus(sandboxId: string): Promise<SandboxCreatedResponse | null> {
   try {
-    const sandbox = await Sandbox.get({ sandboxId });
+    const sandbox = await Sandbox.get({ name: sandboxId });
 
     return {
-      sandboxId: sandbox.sandboxId,
+      sandboxId: sandbox.name,
       sandboxStatus: sandbox.status,
       timeout: sandbox.timeout,
       createdAt: sandbox.createdAt.toISOString(),
