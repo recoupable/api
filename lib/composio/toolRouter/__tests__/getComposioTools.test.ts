@@ -35,7 +35,7 @@ const SHARED_ACCOUNT_ID = "recoup-shared-767f498e-e1e9-43c6-a152-a96ae3bd8d07";
 describe("getComposioTools", () => {
   const originalEnv = process.env;
 
-  const mockCustomerSession = { tools: vi.fn() };
+  const mockArtistSession = { tools: vi.fn() };
   const mockToolsGet = vi.fn();
   const mockCreate = vi.fn();
   const mockComposio = { create: mockCreate, tools: { get: mockToolsGet } };
@@ -47,8 +47,9 @@ describe("getComposioTools", () => {
     vi.mocked(getCallbackUrl).mockReturnValue("https://example.com/chat?connected=true");
     vi.mocked(getConnectors).mockResolvedValue([]);
     vi.mocked(getSharedAccountConnections).mockResolvedValue({});
-    mockCreate.mockResolvedValue(mockCustomerSession);
-    mockCustomerSession.tools.mockResolvedValue({ ...META_TOOLS });
+    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+    mockCreate.mockResolvedValue(mockArtistSession);
+    mockArtistSession.tools.mockResolvedValue({ ...META_TOOLS });
     mockToolsGet.mockResolvedValue({});
   });
 
@@ -59,19 +60,48 @@ describe("getComposioTools", () => {
   it("returns empty object when COMPOSIO_API_KEY is missing", async () => {
     delete process.env.COMPOSIO_API_KEY;
 
-    const result = await getComposioTools("account-123");
+    const result = await getComposioTools("account-123", "artist-456");
 
     expect(result).toEqual({});
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
-  it("exposes only the 4 meta-tools from the customer session", async () => {
-    mockCustomerSession.tools.mockResolvedValue({
+  it("returns empty object when no artistId is provided (chat must be artist-scoped)", async () => {
+    const result = await getComposioTools("account-123");
+
+    expect(result).toEqual({});
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(checkAccountArtistAccess).not.toHaveBeenCalled();
+  });
+
+  it("returns empty object when artist access is denied", async () => {
+    vi.mocked(checkAccountArtistAccess).mockResolvedValue(false);
+
+    const result = await getComposioTools("account-123", "artist-456");
+
+    expect(result).toEqual({});
+    expect(checkAccountArtistAccess).toHaveBeenCalledWith("account-123", "artist-456");
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("creates the Tool Router session against the artist (not the customer)", async () => {
+    await getComposioTools("account-123", "artist-456", "room-789");
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      "artist-456",
+      expect.objectContaining({
+        manageConnections: { callbackUrl: "https://example.com/chat?connected=true" },
+      }),
+    );
+  });
+
+  it("exposes only the 4 meta-tools from the artist session", async () => {
+    mockArtistSession.tools.mockResolvedValue({
       ...META_TOOLS,
       SOME_OTHER: mockTool(),
     });
 
-    const result = await getComposioTools("account-123");
+    const result = await getComposioTools("account-123", "artist-456");
 
     expect(result).toHaveProperty("COMPOSIO_MANAGE_CONNECTIONS");
     expect(result).toHaveProperty("COMPOSIO_SEARCH_TOOLS");
@@ -80,8 +110,7 @@ describe("getComposioTools", () => {
     expect(result).not.toHaveProperty("SOME_OTHER");
   });
 
-  it("fetches explicit artist tools via composio.tools.get when artist has toolkits", async () => {
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+  it("fetches explicit artist tools via composio.tools.get for connected toolkits", async () => {
     vi.mocked(getConnectors).mockImplementation(async (id: string) => {
       if (id === "artist-456") {
         return [{ slug: "tiktok", name: "TikTok", isConnected: true, connectedAccountId: "ca_tt" }];
@@ -90,7 +119,7 @@ describe("getComposioTools", () => {
     });
     mockToolsGet.mockResolvedValue({ TIKTOK_GET_USER_STATS: mockTool("tiktok-stats") });
 
-    const result = await getComposioTools("account-123", "artist-456", "room-789");
+    const result = await getComposioTools("account-123", "artist-456");
 
     expect(mockToolsGet).toHaveBeenCalledWith(
       "artist-456",
@@ -99,13 +128,16 @@ describe("getComposioTools", () => {
     expect(result).toHaveProperty("TIKTOK_GET_USER_STATS");
   });
 
-  it("fetches explicit shared tools via composio.tools.get when shared has toolkits", async () => {
-    vi.mocked(getSharedAccountConnections).mockResolvedValue({ googledocs: "ca_docs" });
-    mockToolsGet.mockResolvedValue({
-      GOOGLEDOCS_GET_DOCUMENT_PLAINTEXT: mockTool("docs-plaintext"),
+  it("fetches shared tools for toolkits the artist hasn't connected", async () => {
+    vi.mocked(getSharedAccountConnections).mockResolvedValue({ googledocs: "ca_shared_docs" });
+    mockToolsGet.mockImplementation(async (owner: string) => {
+      if (owner === SHARED_ACCOUNT_ID) {
+        return { GOOGLEDOCS_GET_DOCUMENT_PLAINTEXT: mockTool("docs-plaintext") };
+      }
+      return {};
     });
 
-    const result = await getComposioTools("account-123");
+    const result = await getComposioTools("account-123", "artist-456");
 
     expect(mockToolsGet).toHaveBeenCalledWith(
       SHARED_ACCOUNT_ID,
@@ -114,69 +146,33 @@ describe("getComposioTools", () => {
     expect(result).toHaveProperty("GOOGLEDOCS_GET_DOCUMENT_PLAINTEXT");
   });
 
-  it("artist wins when both customer and artist have connected the same toolkit", async () => {
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+  it("artist tools take precedence over shared for the same toolkit", async () => {
     vi.mocked(getConnectors).mockImplementation(async (id: string) => {
-      const tiktok = {
-        slug: "tiktok",
-        name: "TikTok",
-        isConnected: true,
-        connectedAccountId: "ca_tt",
-      };
-      if (id === "artist-456") return [tiktok];
-      if (id === "account-123") return [tiktok];
-      return [];
-    });
-
-    await getComposioTools("account-123", "artist-456");
-
-    const artistCalls = mockToolsGet.mock.calls.filter(([id]) => id === "artist-456");
-    expect(artistCalls).toHaveLength(1);
-    expect(artistCalls[0][1]).toMatchObject({ toolkits: ["tiktok"] });
-  });
-
-  it("skips shared tool fetch when customer already covers the Google toolkits", async () => {
-    vi.mocked(getConnectors).mockImplementation(async (id: string) => {
-      if (id === "account-123") {
+      if (id === "artist-456") {
         return [
           {
             slug: "googledocs",
             name: "Google Docs",
             isConnected: true,
-            connectedAccountId: "ca_my_docs",
+            connectedAccountId: "ca_artist_docs",
           },
         ];
       }
       return [];
     });
-    vi.mocked(getSharedAccountConnections).mockResolvedValue({
-      googledocs: "ca_shared_docs",
-    });
-
-    await getComposioTools("account-123");
-
-    const sharedCalls = mockToolsGet.mock.calls.filter(([id]) => id === SHARED_ACCOUNT_ID);
-    expect(sharedCalls).toHaveLength(0);
-  });
-
-  it("omits artistId when access is denied", async () => {
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(false);
-    vi.mocked(getConnectors).mockImplementation(async (id: string) => {
-      if (id === "artist-456") {
-        return [{ slug: "tiktok", name: "TikTok", isConnected: true, connectedAccountId: "ca_tt" }];
-      }
-      return [];
-    });
+    vi.mocked(getSharedAccountConnections).mockResolvedValue({ googledocs: "ca_shared_docs" });
 
     await getComposioTools("account-123", "artist-456");
 
-    expect(checkAccountArtistAccess).toHaveBeenCalledWith("account-123", "artist-456");
+    // Shared fetch is skipped entirely (fetchOwnerTools short-circuits on empty toolkits).
+    const sharedCalls = mockToolsGet.mock.calls.filter(([id]) => id === SHARED_ACCOUNT_ID);
+    expect(sharedCalls).toHaveLength(0);
+    // Artist still fetches googledocs because it's connected on the artist.
     const artistCalls = mockToolsGet.mock.calls.filter(([id]) => id === "artist-456");
-    expect(artistCalls).toHaveLength(0);
+    expect(artistCalls[0][1]).toMatchObject({ toolkits: ["googledocs"] });
   });
 
-  it("merges customer meta-tools, artist tools, and shared tools into a single ToolSet", async () => {
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+  it("merges artist meta-tools, artist real tools, and shared real tools into one ToolSet", async () => {
     vi.mocked(getConnectors).mockImplementation(async (id: string) => {
       if (id === "artist-456") {
         return [{ slug: "tiktok", name: "TikTok", isConnected: true, connectedAccountId: "ca_tt" }];
@@ -201,7 +197,7 @@ describe("getComposioTools", () => {
     mockCreate.mockRejectedValue(new Error("bundler incompatibility"));
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    const result = await getComposioTools("account-123");
+    const result = await getComposioTools("account-123", "artist-456");
 
     expect(result).toEqual({});
     expect(warn).toHaveBeenCalledWith("Composio tools unavailable:", "bundler incompatibility");
@@ -209,19 +205,18 @@ describe("getComposioTools", () => {
   });
 
   it("skips invalid tools that lack required Vercel AI SDK shape", async () => {
-    mockCustomerSession.tools.mockResolvedValue({
+    mockArtistSession.tools.mockResolvedValue({
       COMPOSIO_MANAGE_CONNECTIONS: mockTool(),
       COMPOSIO_SEARCH_TOOLS: { description: "missing execute" },
     });
 
-    const result = await getComposioTools("account-123");
+    const result = await getComposioTools("account-123", "artist-456");
 
     expect(result).toHaveProperty("COMPOSIO_MANAGE_CONNECTIONS");
     expect(result).not.toHaveProperty("COMPOSIO_SEARCH_TOOLS");
   });
 
-  it("still returns customer meta-tools when the artist tool fetch rejects", async () => {
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+  it("still returns artist meta-tools when the artist tool fetch rejects", async () => {
     vi.mocked(getConnectors).mockImplementation(async (id: string) => {
       if (id === "artist-456") {
         return [{ slug: "tiktok", name: "TikTok", isConnected: true, connectedAccountId: "ca_tt" }];
@@ -239,14 +234,14 @@ describe("getComposioTools", () => {
     expect(result).toHaveProperty("COMPOSIO_MULTI_EXECUTE_TOOL");
   });
 
-  it("still returns customer meta-tools when the shared tool fetch rejects", async () => {
+  it("still returns artist meta-tools when the shared tool fetch rejects", async () => {
     vi.mocked(getSharedAccountConnections).mockResolvedValue({ googledocs: "ca_docs" });
     mockToolsGet.mockImplementation(async (owner: string) => {
       if (owner === SHARED_ACCOUNT_ID) throw new Error("shared fetch failed");
       return {};
     });
 
-    const result = await getComposioTools("account-123");
+    const result = await getComposioTools("account-123", "artist-456");
 
     expect(result).toHaveProperty("COMPOSIO_SEARCH_TOOLS");
     expect(result).toHaveProperty("COMPOSIO_MULTI_EXECUTE_TOOL");
