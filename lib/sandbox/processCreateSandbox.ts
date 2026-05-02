@@ -23,7 +23,7 @@ export async function processCreateSandbox(
   const { sandbox } = await createSandboxFromSnapshot(accountId);
 
   const result: SandboxCreatedResponse = {
-    sandboxId: sandbox.sandboxId,
+    sandboxId: sandbox.name,
     sandboxStatus: sandbox.status,
     timeout: sandbox.timeout,
     createdAt: sandbox.createdAt.toISOString(),
@@ -35,7 +35,7 @@ export async function processCreateSandbox(
     try {
       const handle = await triggerPromptSandbox({
         prompt,
-        sandboxId: sandbox.sandboxId,
+        sandboxId: sandbox.name,
         accountId,
       });
       runId = handle.id;
