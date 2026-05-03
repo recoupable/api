@@ -1,129 +1,74 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type Stripe from "stripe";
 import { getActiveSubscriptions } from "@/lib/stripe/getActiveSubscriptions";
 import stripeClient from "@/lib/stripe/client";
+import { ACC, sub, apiList } from "./getActiveSubscriptionsTestHelpers";
 
 vi.mock("@/lib/stripe/client", () => ({
-  default: {
-    subscriptions: { list: vi.fn() },
-  },
+  default: { subscriptions: { list: vi.fn() } },
 }));
 
+const list = () => vi.mocked(stripeClient.subscriptions.list);
+
 describe("getActiveSubscriptions", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  beforeEach(() => vi.clearAllMocks());
 
   it("walks pages until a batch matches accountId", async () => {
-    const subOther = { id: "sub_x", metadata: { accountId: "other" } } as Stripe.Subscription;
-    const sub1 = { id: "sub_1", metadata: { accountId: "acc-a" } } as Stripe.Subscription;
-
-    vi.mocked(stripeClient.subscriptions.list)
-      .mockResolvedValueOnce({
-        data: [subOther],
-        has_more: true,
-      } as Stripe.Response<Stripe.ApiList<Stripe.Subscription>>)
-      .mockResolvedValueOnce({
-        data: [sub1],
-        has_more: true,
-      } as Stripe.Response<Stripe.ApiList<Stripe.Subscription>>);
-
-    const result = await getActiveSubscriptions("acc-a");
-
-    expect(stripeClient.subscriptions.list).toHaveBeenCalledTimes(2);
+    list()
+      .mockResolvedValueOnce(apiList([sub("sub_x", "other")], true))
+      .mockResolvedValueOnce(apiList([sub("sub_1", ACC)], true));
+    const result = await getActiveSubscriptions(ACC);
+    expect(list()).toHaveBeenCalledTimes(2);
     expect(result.map(s => s.id)).toEqual(["sub_1"]);
-
-    const secondCall = vi.mocked(stripeClient.subscriptions.list).mock.calls[1][0];
-    expect(secondCall).toMatchObject({
-      starting_after: "sub_x",
-      limit: 100,
-    });
+    expect(list().mock.calls[1][0]).toMatchObject({ starting_after: "sub_x", limit: 100 });
   });
 
   it("finds a match on a later page (no artificial page limit)", async () => {
-    const subLate = { id: "sub_late", metadata: { accountId: "acc-a" } } as Stripe.Subscription;
-    for (let i = 0; i < 52; i++) {
-      vi.mocked(stripeClient.subscriptions.list).mockResolvedValueOnce({
-        data: [{ id: `sub_${i}`, metadata: { accountId: "other" } } as Stripe.Subscription],
-        has_more: true,
-      } as Stripe.Response<Stripe.ApiList<Stripe.Subscription>>);
-    }
-    vi.mocked(stripeClient.subscriptions.list).mockResolvedValueOnce({
-      data: [subLate],
-      has_more: false,
-    } as Stripe.Response<Stripe.ApiList<Stripe.Subscription>>);
-
-    const result = await getActiveSubscriptions("acc-a");
-
+    for (let i = 0; i < 52; i++)
+      list().mockResolvedValueOnce(apiList([sub(`sub_${i}`, "other")], true));
+    list().mockResolvedValueOnce(apiList([sub("sub_late", ACC)], false));
+    const result = await getActiveSubscriptions(ACC);
     expect(result.map(s => s.id)).toEqual(["sub_late"]);
-    expect(stripeClient.subscriptions.list).toHaveBeenCalledTimes(53);
+    expect(list()).toHaveBeenCalledTimes(53);
   });
 
-  it("stops after the first page that includes a match (no further Stripe calls)", async () => {
-    const subOther = { id: "sub_x", metadata: { accountId: "other" } } as Stripe.Subscription;
-    const sub1 = { id: "sub_1", metadata: { accountId: "acc-a" } } as Stripe.Subscription;
-    const sub2 = { id: "sub_2", metadata: { accountId: "acc-a" } } as Stripe.Subscription;
-
-    vi.mocked(stripeClient.subscriptions.list).mockResolvedValueOnce({
-      data: [subOther, sub1, sub2],
-      has_more: true,
-    } as Stripe.Response<Stripe.ApiList<Stripe.Subscription>>);
-
-    const result = await getActiveSubscriptions("acc-a");
-
-    expect(stripeClient.subscriptions.list).toHaveBeenCalledTimes(1);
+  it("stops after the first page that includes a match", async () => {
+    list().mockResolvedValueOnce(
+      apiList([sub("sub_x", "other"), sub("sub_1", ACC), sub("sub_2", ACC)], true),
+    );
+    const result = await getActiveSubscriptions(ACC);
+    expect(list()).toHaveBeenCalledTimes(1);
     expect(result.map(s => s.id)).toEqual(["sub_1", "sub_2"]);
   });
 
   it("passes stripeCustomerId to subscriptions.list when provided", async () => {
-    const sub1 = { id: "sub_1", metadata: { accountId: "acc-a" } } as Stripe.Subscription;
-
-    vi.mocked(stripeClient.subscriptions.list).mockResolvedValueOnce({
-      data: [sub1],
-      has_more: false,
-    } as Stripe.Response<Stripe.ApiList<Stripe.Subscription>>);
-
-    await getActiveSubscriptions("acc-a", "cus_123");
-
-    expect(stripeClient.subscriptions.list).toHaveBeenCalledWith(
+    list().mockResolvedValueOnce(apiList([sub("sub_1", ACC)], false));
+    await getActiveSubscriptions(ACC, "cus_123");
+    expect(list()).toHaveBeenCalledWith(
       expect.objectContaining({ customer: "cus_123", limit: 100 }),
     );
   });
 
   it("returns [] when nothing matches after Stripe exhausts pages", async () => {
     for (let i = 0; i < 3; i++) {
-      vi.mocked(stripeClient.subscriptions.list).mockResolvedValueOnce({
-        data: [{ id: `sub_${i}`, metadata: { accountId: "other" } } as Stripe.Subscription],
-        has_more: i < 2,
-      } as Stripe.Response<Stripe.ApiList<Stripe.Subscription>>);
+      list().mockResolvedValueOnce(apiList([sub(`sub_${i}`, "other")], i < 2));
     }
-
-    const result = await getActiveSubscriptions("acc-a");
-
+    const result = await getActiveSubscriptions(ACC);
     expect(result).toEqual([]);
-    expect(stripeClient.subscriptions.list).toHaveBeenCalledTimes(3);
+    expect(list()).toHaveBeenCalledTimes(3);
   });
 
   it("breaks if pagination cursor does not advance", async () => {
-    const stuck = { id: "sub_stuck", metadata: { accountId: "other" } } as Stripe.Subscription;
-    vi.mocked(stripeClient.subscriptions.list)
-      .mockResolvedValueOnce({
-        data: [stuck],
-        has_more: true,
-      } as Stripe.Response<Stripe.ApiList<Stripe.Subscription>>)
-      .mockResolvedValueOnce({
-        data: [stuck],
-        has_more: true,
-      } as Stripe.Response<Stripe.ApiList<Stripe.Subscription>>);
-
-    const result = await getActiveSubscriptions("acc-a");
-
+    const s = sub("sub_stuck", "other");
+    list()
+      .mockResolvedValueOnce(apiList([s], true))
+      .mockResolvedValueOnce(apiList([s], true));
+    const result = await getActiveSubscriptions(ACC);
     expect(result).toEqual([]);
-    expect(stripeClient.subscriptions.list).toHaveBeenCalledTimes(2);
+    expect(list()).toHaveBeenCalledTimes(2);
   });
 
   it("returns [] when Stripe throws", async () => {
-    vi.mocked(stripeClient.subscriptions.list).mockRejectedValue(new Error("stripe error"));
-    await expect(getActiveSubscriptions("acc-a")).resolves.toEqual([]);
+    list().mockRejectedValue(new Error("stripe error"));
+    await expect(getActiveSubscriptions(ACC)).resolves.toEqual([]);
   });
 });
