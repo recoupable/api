@@ -35,7 +35,7 @@ export async function processCreateSandbox(
     try {
       const handle = await triggerPromptSandbox({
         prompt,
-        sandboxId: sandbox.name,
+        sandboxId: sandbox.sandboxId,
         accountId,
       });
       runId = handle.id;

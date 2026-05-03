@@ -21,7 +21,7 @@ export async function getOrCreateSandbox(accountId: string): Promise<GetOrCreate
   if (existing) {
     return {
       sandbox: existing,
-      sandboxId: existing.name,
+      sandboxId: existing.sandboxId,
       created: false,
       fromSnapshot: true,
     };
@@ -31,7 +31,7 @@ export async function getOrCreateSandbox(accountId: string): Promise<GetOrCreate
 
   return {
     sandbox,
-    sandboxId: sandbox.name,
+    sandboxId: sandbox.sandboxId,
     created: true,
     fromSnapshot,
   };
