@@ -24,7 +24,7 @@ describe("getActiveSandbox", () => {
     mockSelectAccountSandboxes.mockResolvedValue([{ sandbox_id: "sbx_123", account_id: "acc_1" }]);
 
     const mockSandbox = {
-      sandboxId: "sbx_123",
+      name: "sbx_123",
       status: "running",
       runCommand: vi.fn(),
     };
@@ -35,7 +35,7 @@ describe("getActiveSandbox", () => {
     expect(mockSelectAccountSandboxes).toHaveBeenCalledWith({
       accountIds: ["acc_1"],
     });
-    expect(Sandbox.get).toHaveBeenCalledWith({ sandboxId: "sbx_123" });
+    expect(Sandbox.get).toHaveBeenCalledWith({ name: "sbx_123" });
     expect(result).toBe(mockSandbox);
   });
 
@@ -54,7 +54,7 @@ describe("getActiveSandbox", () => {
     ]);
 
     const mockSandbox = {
-      sandboxId: "sbx_stopped",
+      name: "sbx_stopped",
       status: "stopped",
     };
     vi.mocked(Sandbox.get).mockResolvedValue(mockSandbox as unknown as Sandbox);

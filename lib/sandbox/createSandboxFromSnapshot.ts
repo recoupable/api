@@ -23,7 +23,7 @@ export async function createSandboxFromSnapshot(
 
   await insertAccountSandbox({
     account_id: accountId,
-    sandbox_id: sandbox.sandboxId,
+    sandbox_id: sandbox.name,
   });
 
   return { sandbox, fromSnapshot };

@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getSubscriptionStatusHandler } from "@/lib/stripe/getSubscriptionStatusHandler";
-import { validateSubscriptionStatusQuery } from "@/lib/stripe/validateSubscriptionStatusQuery";
+import { validateGetSubscriptionStatusRequest } from "@/lib/stripe/validateGetSubscriptionStatusRequest";
 import { getSubscriptionIsPro } from "@/lib/stripe/getSubscriptionIsPro";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-vi.mock("@/lib/stripe/validateSubscriptionStatusQuery", () => ({
-  validateSubscriptionStatusQuery: vi.fn(),
+vi.mock("@/lib/stripe/validateGetSubscriptionStatusRequest", () => ({
+  validateGetSubscriptionStatusRequest: vi.fn(),
 }));
 
 vi.mock("@/lib/stripe/getSubscriptionIsPro", () => ({
@@ -27,14 +27,14 @@ describe("getSubscriptionStatusHandler", () => {
 
   it("returns validation response unchanged", async () => {
     const err = NextResponse.json({ error: "accountId is required" }, { status: 400 });
-    vi.mocked(validateSubscriptionStatusQuery).mockResolvedValue(err);
+    vi.mocked(validateGetSubscriptionStatusRequest).mockResolvedValue(err);
     const req = new NextRequest(`http://localhost/api/subscriptions/status`);
     expect(await getSubscriptionStatusHandler(req)).toBe(err);
     expect(getSubscriptionIsPro).not.toHaveBeenCalled();
   });
 
   it("returns 200 { isPro: true }", async () => {
-    vi.mocked(validateSubscriptionStatusQuery).mockResolvedValue({ accountId: ACCOUNT });
+    vi.mocked(validateGetSubscriptionStatusRequest).mockResolvedValue({ accountId: ACCOUNT });
     vi.mocked(getSubscriptionIsPro).mockResolvedValue(true);
 
     const res = await getSubscriptionStatusHandler(
@@ -46,7 +46,7 @@ describe("getSubscriptionStatusHandler", () => {
   });
 
   it("returns 200 { isPro: false }", async () => {
-    vi.mocked(validateSubscriptionStatusQuery).mockResolvedValue({ accountId: ACCOUNT });
+    vi.mocked(validateGetSubscriptionStatusRequest).mockResolvedValue({ accountId: ACCOUNT });
     vi.mocked(getSubscriptionIsPro).mockResolvedValue(false);
 
     const res = await getSubscriptionStatusHandler(
@@ -57,7 +57,7 @@ describe("getSubscriptionStatusHandler", () => {
   });
 
   it("returns 500 when getSubscriptionIsPro throws", async () => {
-    vi.mocked(validateSubscriptionStatusQuery).mockResolvedValue({ accountId: ACCOUNT });
+    vi.mocked(validateGetSubscriptionStatusRequest).mockResolvedValue({ accountId: ACCOUNT });
     vi.mocked(getSubscriptionIsPro).mockRejectedValue(new Error("stripe down"));
 
     const res = await getSubscriptionStatusHandler(
