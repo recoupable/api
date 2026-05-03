@@ -14,7 +14,7 @@ vi.mock("@/lib/trigger/triggerPromptSandbox", () => ({
 }));
 
 const mockSandbox = {
-  name: "sbx_123",
+  sandboxId: "sbx_123",
   status: "running",
   timeout: 600000,
   createdAt: new Date("2024-01-01T00:00:00.000Z"),

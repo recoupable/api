@@ -21,7 +21,7 @@ vi.mock("@/lib/supabase/account_sandboxes/insertAccountSandbox", () => ({
 
 describe("createSandboxFromSnapshot", () => {
   const mockSandbox = {
-    name: "sbx_new",
+    sandboxId: "sbx_new",
     status: "running",
     runCommand: vi.fn(),
   } as unknown as Sandbox;

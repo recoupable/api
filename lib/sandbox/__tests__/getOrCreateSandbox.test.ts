@@ -21,7 +21,7 @@ describe("getOrCreateSandbox", () => {
 
   it("returns existing sandbox with created=false and fromSnapshot=true", async () => {
     const mockSandbox = {
-      name: "sbx_existing",
+      sandboxId: "sbx_existing",
       status: "running",
     } as unknown as Sandbox;
 
@@ -40,7 +40,7 @@ describe("getOrCreateSandbox", () => {
 
   it("creates new sandbox from snapshot with created=true, fromSnapshot=true", async () => {
     const mockSandbox = {
-      name: "sbx_new",
+      sandboxId: "sbx_new",
       status: "running",
     } as unknown as Sandbox;
 
@@ -63,7 +63,7 @@ describe("getOrCreateSandbox", () => {
 
   it("creates fresh sandbox with created=true, fromSnapshot=false", async () => {
     const mockSandbox = {
-      name: "sbx_fresh",
+      sandboxId: "sbx_fresh",
       status: "running",
     } as unknown as Sandbox;
 
