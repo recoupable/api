@@ -1,14 +1,18 @@
 import type Stripe from "stripe";
 
-export const ACC = "acc-a";
+export function getActiveSubscriptionsTestHelpers() {
+  const testAccountId = "acc-a";
 
-export function sub(id: string, accountId: string): Stripe.Subscription {
-  return { id, metadata: { accountId } } as Stripe.Subscription;
-}
+  function subscription(id: string, accountId: string): Stripe.Subscription {
+    return { id, metadata: { accountId } } as Stripe.Subscription;
+  }
 
-export function apiList(
-  data: Stripe.Subscription[],
-  hasMore: boolean,
-): Stripe.Response<Stripe.ApiList<Stripe.Subscription>> {
-  return { data, has_more: hasMore } as Stripe.Response<Stripe.ApiList<Stripe.Subscription>>;
+  function subscriptionListPage(
+    data: Stripe.Subscription[],
+    hasMore: boolean,
+  ): Stripe.Response<Stripe.ApiList<Stripe.Subscription>> {
+    return { data, has_more: hasMore } as Stripe.Response<Stripe.ApiList<Stripe.Subscription>>;
+  }
+
+  return { testAccountId, subscription, subscriptionListPage };
 }

@@ -1,12 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getActiveSubscriptions } from "@/lib/stripe/getActiveSubscriptions";
 import stripeClient from "@/lib/stripe/client";
-import { ACC, sub, apiList } from "./getActiveSubscriptionsTestHelpers";
+import { getActiveSubscriptionsTestHelpers } from "./getActiveSubscriptionsTestHelpers";
 
 vi.mock("@/lib/stripe/client", () => ({
   default: { subscriptions: { list: vi.fn() } },
 }));
 
+const {
+  testAccountId: ACC,
+  subscription: sub,
+  subscriptionListPage: apiList,
+} = getActiveSubscriptionsTestHelpers();
 const list = () => vi.mocked(stripeClient.subscriptions.list);
 
 describe("getActiveSubscriptions", () => {
