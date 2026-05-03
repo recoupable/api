@@ -1,10 +1,12 @@
 import ms from "ms";
 import { Sandbox } from "@vercel/sandbox";
 
+type VercelSandbox = InstanceType<typeof Sandbox>;
+
 export interface SandboxCreatedResponse {
-  sandboxId: Sandbox["name"];
-  sandboxStatus: Sandbox["status"];
-  timeout: Sandbox["timeout"];
+  sandboxId: VercelSandbox["sandboxId"];
+  sandboxStatus: VercelSandbox["status"];
+  timeout: VercelSandbox["timeout"];
   createdAt: string;
 }
 
@@ -54,7 +56,7 @@ export async function createSandbox(
   return {
     sandbox,
     response: {
-      sandboxId: sandbox.name,
+      sandboxId: sandbox.sandboxId,
       sandboxStatus: sandbox.status,
       timeout: sandbox.timeout,
       createdAt: sandbox.createdAt.toISOString(),

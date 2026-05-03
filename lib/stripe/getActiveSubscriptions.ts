@@ -9,7 +9,7 @@ export async function getActiveSubscriptions(accountId: string): Promise<Stripe.
     };
     const matches: Stripe.Subscription[] = [];
 
-    for await (const subscription of stripeClient.subscriptions.list(listParams).autoPagingEach()) {
+    for await (const subscription of stripeClient.subscriptions.list(listParams)) {
       if (subscription.metadata?.accountId === accountId) {
         matches.push(subscription);
       }

@@ -22,9 +22,9 @@ describe("getActiveSubscriptions", () => {
       yield skip;
       yield match;
     }
-    vi.mocked(stripeClient.subscriptions.list).mockReturnValue({
-      autoPagingEach: () => twoPages(),
-    } as ReturnType<typeof stripeClient.subscriptions.list>);
+    vi.mocked(stripeClient.subscriptions.list).mockReturnValue(
+      twoPages() as unknown as ReturnType<typeof stripeClient.subscriptions.list>,
+    );
 
     const out = await getActiveSubscriptions(ACCOUNT);
     expect(out).toEqual([match]);

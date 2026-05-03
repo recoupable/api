@@ -16,7 +16,7 @@ describe("getSandboxStatus", () => {
 
   it("returns sandbox status when sandbox exists", async () => {
     const mockSandbox = {
-      name: "sbx_123",
+      sandboxId: "sbx_123",
       status: "running",
       timeout: 600000,
       createdAt: new Date("2024-01-01T00:00:00.000Z"),
@@ -25,7 +25,7 @@ describe("getSandboxStatus", () => {
 
     const result = await getSandboxStatus("sbx_123");
 
-    expect(Sandbox.get).toHaveBeenCalledWith({ name: "sbx_123" });
+    expect(Sandbox.get).toHaveBeenCalledWith({ sandboxId: "sbx_123" });
     expect(result).toEqual({
       sandboxId: "sbx_123",
       sandboxStatus: "running",
@@ -52,7 +52,7 @@ describe("getSandboxStatus", () => {
 
   it("handles stopped sandbox status", async () => {
     const mockSandbox = {
-      name: "sbx_stopped",
+      sandboxId: "sbx_stopped",
       status: "stopped",
       timeout: 0,
       createdAt: new Date("2024-01-01T00:00:00.000Z"),
@@ -71,7 +71,7 @@ describe("getSandboxStatus", () => {
 
   it("handles pending sandbox status", async () => {
     const mockSandbox = {
-      name: "sbx_pending",
+      sandboxId: "sbx_pending",
       status: "pending",
       timeout: 600000,
       createdAt: new Date("2024-01-01T00:00:00.000Z"),
