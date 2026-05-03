@@ -9,11 +9,11 @@ export const querySchema = z.object({
   accountId: z.string().uuid("accountId must be a valid UUID"),
 });
 
-export type ValidatedGetSubscriptionStatusRequest = z.infer<typeof querySchema>;
+export type ValidatedGetSubscriptionStatusQuery = z.infer<typeof querySchema>;
 
-export async function validateGetSubscriptionStatusRequest(
+export async function validateGetSubscriptionStatusQuery(
   request: NextRequest,
-): Promise<NextResponse | ValidatedGetSubscriptionStatusRequest> {
+): Promise<NextResponse | ValidatedGetSubscriptionStatusQuery> {
   const raw = request.nextUrl.searchParams.get("accountId");
   if (raw === null || raw === "") {
     return NextResponse.json(

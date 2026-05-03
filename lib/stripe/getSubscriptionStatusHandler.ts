@@ -3,11 +3,11 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getActiveSubscriptionDetails } from "@/lib/stripe/getActiveSubscriptionDetails";
 import { getOrgSubscription } from "@/lib/stripe/getOrgSubscription";
 import isActiveSubscription from "@/lib/stripe/isActiveSubscription";
-import { validateGetSubscriptionStatusRequest } from "@/lib/stripe/validateGetSubscriptionStatusRequest";
+import { validateGetSubscriptionStatusQuery } from "@/lib/stripe/validateGetSubscriptionStatusQuery";
 
 export async function getSubscriptionStatusHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const validated = await validateGetSubscriptionStatusRequest(request);
+    const validated = await validateGetSubscriptionStatusQuery(request);
     if (validated instanceof NextResponse) {
       return validated;
     }

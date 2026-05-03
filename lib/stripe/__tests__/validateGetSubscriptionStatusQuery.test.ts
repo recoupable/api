@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { validateGetSubscriptionStatusRequest } from "@/lib/stripe/validateGetSubscriptionStatusRequest";
+import { validateGetSubscriptionStatusQuery } from "@/lib/stripe/validateGetSubscriptionStatusQuery";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -17,14 +17,14 @@ function getRequest(url: string) {
   return new NextRequest(url, { headers: { "x-api-key": "test-key" } });
 }
 
-describe("validateGetSubscriptionStatusRequest", () => {
+describe("validateGetSubscriptionStatusQuery", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("returns 400 { error: accountId is required } when accountId is missing", async () => {
     const req = getRequest("http://localhost/api/subscriptions/status");
-    const res = await validateGetSubscriptionStatusRequest(req);
+    const res = await validateGetSubscriptionStatusQuery(req);
     expect(res).toBeInstanceOf(NextResponse);
     expect((res as NextResponse).status).toBe(400);
     await expect((res as NextResponse).json()).resolves.toEqual({ error: "accountId is required" });
@@ -33,14 +33,14 @@ describe("validateGetSubscriptionStatusRequest", () => {
 
   it("returns 400 when accountId is empty string", async () => {
     const req = getRequest(`http://localhost/api/subscriptions/status?accountId=`);
-    const res = await validateGetSubscriptionStatusRequest(req);
+    const res = await validateGetSubscriptionStatusQuery(req);
     expect((res as NextResponse).status).toBe(400);
     await expect((res as NextResponse).json()).resolves.toEqual({ error: "accountId is required" });
   });
 
   it("returns 400 for invalid UUID", async () => {
     const req = getRequest(`http://localhost/api/subscriptions/status?accountId=not-a-uuid`);
-    const res = await validateGetSubscriptionStatusRequest(req);
+    const res = await validateGetSubscriptionStatusQuery(req);
     expect((res as NextResponse).status).toBe(400);
     const body = await (res as NextResponse).json();
     expect(body.error).toMatch(/accountId must be a valid UUID/i);
@@ -54,7 +54,7 @@ describe("validateGetSubscriptionStatusRequest", () => {
       ),
     );
     const req = getRequest(`http://localhost/api/subscriptions/status?accountId=${ACCOUNT}`);
-    const res = await validateGetSubscriptionStatusRequest(req);
+    const res = await validateGetSubscriptionStatusQuery(req);
     expect((res as NextResponse).status).toBe(401);
     await expect((res as NextResponse).json()).resolves.toEqual({
       error: "Exactly one of x-api-key or Authorization must be provided",
@@ -68,7 +68,7 @@ describe("validateGetSubscriptionStatusRequest", () => {
       authToken: "tok",
     });
     const req = getRequest(`http://localhost/api/subscriptions/status?accountId=${ACCOUNT}`);
-    const res = await validateGetSubscriptionStatusRequest(req);
+    const res = await validateGetSubscriptionStatusQuery(req);
     expect(res).toEqual({ accountId: ACCOUNT });
     expect(validateAuthContext).toHaveBeenCalledWith(req, { accountId: ACCOUNT });
   });
