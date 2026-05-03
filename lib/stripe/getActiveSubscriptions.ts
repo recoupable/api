@@ -3,19 +3,19 @@ import stripeClient from "@/lib/stripe/client";
 
 export async function getActiveSubscriptions(accountId: string): Promise<Stripe.Subscription[]> {
   try {
-    const subscriptions = await stripeClient.subscriptions.list({
-      limit: 100,
-      current_period_end: {
-        gt: Math.floor(Date.now() / 1000),
-      },
-    });
+    const now = Math.floor(Date.now() / 1000);
+    const listParams = {
+      current_period_end: { gt: now },
+    };
+    const matches: Stripe.Subscription[] = [];
 
-    const activeSubscriptions =
-      subscriptions?.data?.filter(
-        (subscription: Stripe.Subscription) => subscription.metadata?.accountId === accountId,
-      ) ?? [];
+    for await (const subscription of stripeClient.subscriptions.list(listParams).autoPagingEach()) {
+      if (subscription.metadata?.accountId === accountId) {
+        matches.push(subscription);
+      }
+    }
 
-    return activeSubscriptions;
+    return matches;
   } catch (error) {
     console.error("[getActiveSubscriptions]", error);
     return [];

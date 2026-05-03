@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getSubscriptionIsPro } from "@/lib/stripe/getSubscriptionIsPro";
-import { validateGetSubscriptionStatusRequest } from "@/lib/stripe/validateGetSubscriptionStatusRequest";
+import { validateSubscriptionStatusQuery } from "@/lib/stripe/validateSubscriptionStatusQuery";
 
 export async function getSubscriptionStatusHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const validated = await validateGetSubscriptionStatusRequest(request);
+    const validated = await validateSubscriptionStatusQuery(request);
     if (validated instanceof NextResponse) {
       return validated;
     }

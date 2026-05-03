@@ -5,32 +5,31 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateAccountIdOverride } from "@/lib/auth/validateAccountIdOverride";
 import { mapToSubscriptionSessionError } from "@/lib/stripe/mapToSubscriptionSessionError";
 
-export type ValidatedGetSubscriptionStatusRequest = {
-  accountId: string;
-};
+export const subscriptionStatusQuerySchema = z.object({
+  accountId: z
+    .string({ message: "accountId is required" })
+    .min(1, "accountId is required")
+    .uuid("accountId must be a valid UUID"),
+});
+
+export type ValidatedSubscriptionStatusQuery = z.infer<typeof subscriptionStatusQuerySchema>;
 
 /**
- * Validates GET /api/subscriptions/status: required query `accountId` (UUID),
- * auth, and access to the target account (same rules as body account_id override).
+ * Validates GET /api/subscriptions/status: query `accountId`, auth, and account access.
  */
-export async function validateGetSubscriptionStatusRequest(
+export async function validateSubscriptionStatusQuery(
   request: NextRequest,
-): Promise<ValidatedGetSubscriptionStatusRequest | NextResponse> {
+): Promise<ValidatedSubscriptionStatusQuery | NextResponse> {
   const raw = request.nextUrl.searchParams.get("accountId");
-  if (raw === null || raw.trim() === "") {
-    return NextResponse.json(
-      { error: "accountId is required" },
-      { status: 400, headers: getCorsHeaders() },
-    );
-  }
-
-  const parsedUuid = z.string().uuid("accountId must be a valid UUID").safeParse(raw);
-  if (!parsedUuid.success) {
-    const first = parsedUuid.error.issues[0];
+  const parsed = subscriptionStatusQuerySchema.safeParse({
+    accountId: raw ?? "",
+  });
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
     return NextResponse.json({ error: first.message }, { status: 400, headers: getCorsHeaders() });
   }
 
-  const accountId = parsedUuid.data;
+  const { accountId } = parsed.data;
 
   const authContext = await validateAuthContext(request);
   if (authContext instanceof NextResponse) {
