@@ -15,7 +15,10 @@ export async function getOrgSubscription(accountId: string): Promise<Stripe.Subs
     .map(org => org.organization_id)
     .filter((id): id is string => id !== null);
 
-  const subscriptions = await Promise.all(orgIds.map(orgId => getActiveSubscriptionDetails(orgId)));
+  for (const orgId of orgIds) {
+    const sub = await getActiveSubscriptionDetails(orgId);
+    if (sub) return sub;
+  }
 
-  return subscriptions.find(sub => sub !== null) ?? null;
+  return null;
 }
