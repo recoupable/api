@@ -5,13 +5,11 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { mapToSubscriptionSessionError } from "@/lib/stripe/mapToSubscriptionSessionError";
 
-const querySchema = z.object({
+export const querySchema = z.object({
   accountId: z.string().uuid("accountId must be a valid UUID"),
 });
 
-export type ValidatedGetSubscriptionStatusRequest = {
-  accountId: string;
-};
+export type ValidatedGetSubscriptionStatusRequest = z.infer<typeof querySchema>;
 
 export async function validateGetSubscriptionStatusRequest(
   request: NextRequest,
