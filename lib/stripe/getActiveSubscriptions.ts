@@ -3,13 +3,11 @@ import Stripe from "stripe";
 
 const PAGE_LIMIT = 100;
 
-/** Caps sequential `subscriptions.list` calls to avoid runaway latency on large Stripe accounts. */
-export const MAX_SUBSCRIPTION_LIST_PAGES = 50;
-
 /**
  * Lists active subscriptions whose `metadata.accountId` matches.
  * Stops after the first page that yields a match (callers only need one).
  * When `stripeCustomerId` is set, scopes the Stripe list to that customer.
+ * Paginates until Stripe reports no more pages (no fixed page cap — avoids missing matches deep in the list).
  */
 export const getActiveSubscriptions = async (accountId: string, stripeCustomerId?: string) => {
   try {
@@ -17,10 +15,8 @@ export const getActiveSubscriptions = async (accountId: string, stripeCustomerId
     const activeSubscriptions: Stripe.Subscription[] = [];
     let startingAfter: string | undefined;
     let hasMore = true;
-    let pageIndex = 0;
 
-    while (hasMore && pageIndex < MAX_SUBSCRIPTION_LIST_PAGES) {
-      pageIndex += 1;
+    while (hasMore) {
       const listParams: Stripe.SubscriptionListParams = {
         limit: PAGE_LIMIT,
         current_period_end: { gt: now },
@@ -45,6 +41,7 @@ export const getActiveSubscriptions = async (accountId: string, stripeCustomerId
       hasMore = page.has_more;
       const lastId = page.data.at(-1)?.id;
       if (!lastId) break;
+      if (startingAfter !== undefined && lastId === startingAfter) break;
       startingAfter = lastId;
     }
 

@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type Stripe from "stripe";
-import {
-  getActiveSubscriptions,
-  MAX_SUBSCRIPTION_LIST_PAGES,
-} from "@/lib/stripe/getActiveSubscriptions";
+import { getActiveSubscriptions } from "@/lib/stripe/getActiveSubscriptions";
 import stripeClient from "@/lib/stripe/client";
 
 vi.mock("@/lib/stripe/client", () => ({
@@ -43,6 +40,25 @@ describe("getActiveSubscriptions", () => {
     });
   });
 
+  it("finds a match on a later page (no artificial page limit)", async () => {
+    const subLate = { id: "sub_late", metadata: { accountId: "acc-a" } } as Stripe.Subscription;
+    for (let i = 0; i < 52; i++) {
+      vi.mocked(stripeClient.subscriptions.list).mockResolvedValueOnce({
+        data: [{ id: `sub_${i}`, metadata: { accountId: "other" } } as Stripe.Subscription],
+        has_more: true,
+      } as Stripe.Response<Stripe.ApiList<Stripe.Subscription>>);
+    }
+    vi.mocked(stripeClient.subscriptions.list).mockResolvedValueOnce({
+      data: [subLate],
+      has_more: false,
+    } as Stripe.Response<Stripe.ApiList<Stripe.Subscription>>);
+
+    const result = await getActiveSubscriptions("acc-a");
+
+    expect(result.map(s => s.id)).toEqual(["sub_late"]);
+    expect(stripeClient.subscriptions.list).toHaveBeenCalledTimes(53);
+  });
+
   it("stops after the first page that includes a match (no further Stripe calls)", async () => {
     const subOther = { id: "sub_x", metadata: { accountId: "other" } } as Stripe.Subscription;
     const sub1 = { id: "sub_1", metadata: { accountId: "acc-a" } } as Stripe.Subscription;
@@ -74,18 +90,36 @@ describe("getActiveSubscriptions", () => {
     );
   });
 
-  it(`returns [] after at most ${MAX_SUBSCRIPTION_LIST_PAGES} pages when nothing matches`, async () => {
-    for (let i = 0; i < MAX_SUBSCRIPTION_LIST_PAGES; i++) {
+  it("returns [] when nothing matches after Stripe exhausts pages", async () => {
+    for (let i = 0; i < 3; i++) {
       vi.mocked(stripeClient.subscriptions.list).mockResolvedValueOnce({
         data: [{ id: `sub_${i}`, metadata: { accountId: "other" } } as Stripe.Subscription],
-        has_more: true,
+        has_more: i < 2,
       } as Stripe.Response<Stripe.ApiList<Stripe.Subscription>>);
     }
 
     const result = await getActiveSubscriptions("acc-a");
 
     expect(result).toEqual([]);
-    expect(stripeClient.subscriptions.list).toHaveBeenCalledTimes(MAX_SUBSCRIPTION_LIST_PAGES);
+    expect(stripeClient.subscriptions.list).toHaveBeenCalledTimes(3);
+  });
+
+  it("breaks if pagination cursor does not advance", async () => {
+    const stuck = { id: "sub_stuck", metadata: { accountId: "other" } } as Stripe.Subscription;
+    vi.mocked(stripeClient.subscriptions.list)
+      .mockResolvedValueOnce({
+        data: [stuck],
+        has_more: true,
+      } as Stripe.Response<Stripe.ApiList<Stripe.Subscription>>)
+      .mockResolvedValueOnce({
+        data: [stuck],
+        has_more: true,
+      } as Stripe.Response<Stripe.ApiList<Stripe.Subscription>>);
+
+    const result = await getActiveSubscriptions("acc-a");
+
+    expect(result).toEqual([]);
+    expect(stripeClient.subscriptions.list).toHaveBeenCalledTimes(2);
   });
 
   it("returns [] when Stripe throws", async () => {
