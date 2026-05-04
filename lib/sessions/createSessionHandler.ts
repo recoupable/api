@@ -4,12 +4,21 @@ import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import { validateCreateSessionBody } from "@/lib/sessions/validateCreateSessionBody";
-import { generateSessionBranchName } from "@/lib/sessions/generateSessionBranchName";
+import { buildSessionInsertRow } from "@/lib/sessions/buildSessionInsertRow";
 import { insertSession } from "@/lib/supabase/sessions/insertSession";
 import { deleteSessionById } from "@/lib/supabase/sessions/deleteSessionById";
 import { insertChat } from "@/lib/supabase/chats/insertChat";
 import { toSessionResponse } from "@/lib/sessions/toSessionResponse";
 import { toChatResponse } from "@/lib/sessions/toChatResponse";
+
+const INITIAL_CHAT_TITLE = "New chat";
+
+function failedToCreateSession(): NextResponse {
+  return NextResponse.json(
+    { status: "error", error: "Failed to create session" },
+    { status: 500, headers: getCorsHeaders() },
+  );
+}
 
 /**
  * Handles `POST /api/sessions`.
@@ -34,44 +43,23 @@ export async function createSessionHandler(request: NextRequest): Promise<NextRe
     return validated;
   }
 
-  const branch = validated.isNewBranch ? generateSessionBranchName() : (validated.branch ?? null);
-  const sessionId = generateUUID();
-
-  const sessionRow = await insertSession({
-    id: sessionId,
-    account_id: auth.accountId,
-    title: validated.title?.trim() || "New session",
-    status: "running",
-    repo_owner: validated.repoOwner ?? null,
-    repo_name: validated.repoName ?? null,
-    branch,
-    clone_url: validated.cloneUrl ?? null,
-    is_new_branch: validated.isNewBranch ?? false,
-    global_skill_refs: [],
-    sandbox_state: { type: validated.sandboxType ?? "vercel" },
-    lifecycle_state: "provisioning",
-    lifecycle_version: 0,
-  });
+  const sessionRow = await insertSession(
+    buildSessionInsertRow({ body: validated, accountId: auth.accountId }),
+  );
 
   if (!sessionRow) {
-    return NextResponse.json(
-      { status: "error", error: "Failed to create session" },
-      { status: 500, headers: getCorsHeaders() },
-    );
+    return failedToCreateSession();
   }
 
   const chatRow = await insertChat({
     id: generateUUID(),
     session_id: sessionRow.id,
-    title: "New chat",
+    title: INITIAL_CHAT_TITLE,
   });
 
   if (!chatRow) {
     await deleteSessionById(sessionRow.id);
-    return NextResponse.json(
-      { status: "error", error: "Failed to create session" },
-      { status: 500, headers: getCorsHeaders() },
-    );
+    return failedToCreateSession();
   }
 
   return NextResponse.json(

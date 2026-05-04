@@ -1,12 +1,17 @@
-const GITHUB_REPO_PATH_SEGMENT_PATTERN = /^[.\w-]+$/;
+const MAX_OWNER_LENGTH = 39;
 
 /**
- * Returns true if `owner` is a valid GitHub repository owner segment
- * (alphanumerics, underscore, hyphen, dot — the same characters GitHub
- * itself accepts in URL path segments).
+ * Returns true if `owner` is a valid GitHub user / org login.
+ *
+ * GitHub's actual rules: 1–39 characters, alphanumerics and hyphens
+ * only, cannot start or end with a hyphen, no consecutive hyphens.
  *
  * @param owner - Candidate owner segment to validate.
  */
 export function isValidGitHubRepoOwner(owner: string): boolean {
-  return GITHUB_REPO_PATH_SEGMENT_PATTERN.test(owner);
+  if (owner.length === 0 || owner.length > MAX_OWNER_LENGTH) return false;
+  if (!/^[a-zA-Z0-9-]+$/.test(owner)) return false;
+  if (owner.startsWith("-") || owner.endsWith("-")) return false;
+  if (owner.includes("--")) return false;
+  return true;
 }

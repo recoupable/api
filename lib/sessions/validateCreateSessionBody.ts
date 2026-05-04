@@ -16,7 +16,6 @@ export const createSessionBodySchema = z.object({
     .optional(),
   branch: z.string().optional(),
   cloneUrl: z.string().optional(),
-  isNewBranch: z.boolean().optional(),
   sandboxType: z.literal("vercel", { message: "Invalid sandbox type" }).optional(),
 });
 
