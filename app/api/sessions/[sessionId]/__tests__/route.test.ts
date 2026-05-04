@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { GET, OPTIONS } from "../route";
-import type { SessionRow } from "@/lib/supabase/sessions/selectSession";
+import type { Tables } from "@/types/database.types";
+
+type SessionRow = Tables<"sessions">;
 
 vi.mock("@/lib/supabase/sessions/selectSession", () => ({
   selectSession: vi.fn(),
