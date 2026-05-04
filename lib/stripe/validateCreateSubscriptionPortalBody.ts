@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { createSubscriptionPortalBodySchema } from "@/lib/stripe/createSubscriptionPortalSchemas";
 import { mapToSubscriptionSessionError } from "@/lib/stripe/mapToSubscriptionSessionError";
 
-export type ValidatedCreateSubscriptionPortalRequest = {
+export const createSubscriptionPortalBodySchema = z
+  .object({
+    returnUrl: z.string().min(1, "returnUrl is required").url("returnUrl must be a valid URL"),
+  })
+  .strict();
+
+export type CreateSubscriptionPortalBody = z.infer<typeof createSubscriptionPortalBodySchema>;
+
+export type ValidatedCreateSubscriptionPortalBody = {
   accountId: string;
   returnUrl: string;
 };
 
-export async function validateCreateSubscriptionPortalRequest(
+export async function validateCreateSubscriptionPortalBody(
   request: NextRequest,
-): Promise<NextResponse | ValidatedCreateSubscriptionPortalRequest> {
+): Promise<NextResponse | ValidatedCreateSubscriptionPortalBody> {
   let body: unknown;
   try {
     body = await request.json();

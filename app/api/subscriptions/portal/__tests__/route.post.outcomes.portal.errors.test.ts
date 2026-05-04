@@ -1,7 +1,7 @@
 import "./routeTestMocks";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
-import { validateCreateSubscriptionPortalRequest } from "@/lib/stripe/validateCreateSubscriptionPortalRequest";
+import { validateCreateSubscriptionPortalBody } from "@/lib/stripe/validateCreateSubscriptionPortalBody";
 import { createBillingPortalSession } from "@/lib/stripe/createBillingPortalSession";
 import { selectStripeBillingCustomerByAccountId } from "@/lib/supabase/billing_customers/selectStripeBillingCustomerByAccountId";
 
@@ -18,7 +18,7 @@ const row = {
 };
 
 function mockValidated() {
-  vi.mocked(validateCreateSubscriptionPortalRequest).mockResolvedValue({
+  vi.mocked(validateCreateSubscriptionPortalBody).mockResolvedValue({
     accountId: ACCOUNT,
     returnUrl: "https://chat.recoupable.com/billing",
   });
@@ -28,7 +28,7 @@ function mockValidated() {
 describe("POST /api/subscriptions/portal (portal session errors)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockReset();
+    vi.mocked(validateCreateSubscriptionPortalBody).mockReset();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 

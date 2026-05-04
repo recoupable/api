@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { selectStripeBillingCustomerByAccountId } from "@/lib/supabase/billing_customers/selectStripeBillingCustomerByAccountId";
 import { createBillingPortalSession } from "@/lib/stripe/createBillingPortalSession";
-import { validateCreateSubscriptionPortalRequest } from "@/lib/stripe/validateCreateSubscriptionPortalRequest";
+import { validateCreateSubscriptionPortalBody } from "@/lib/stripe/validateCreateSubscriptionPortalBody";
 
 export async function createSubscriptionPortalHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const validated = await validateCreateSubscriptionPortalRequest(request);
+    const validated = await validateCreateSubscriptionPortalBody(request);
     if (validated instanceof NextResponse) {
       return validated;
     }

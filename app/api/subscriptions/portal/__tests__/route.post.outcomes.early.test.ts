@@ -1,7 +1,7 @@
 import "./routeTestMocks";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { validateCreateSubscriptionPortalRequest } from "@/lib/stripe/validateCreateSubscriptionPortalRequest";
+import { validateCreateSubscriptionPortalBody } from "@/lib/stripe/validateCreateSubscriptionPortalBody";
 import { createBillingPortalSession } from "@/lib/stripe/createBillingPortalSession";
 import { selectStripeBillingCustomerByAccountId } from "@/lib/supabase/billing_customers/selectStripeBillingCustomerByAccountId";
 
@@ -12,7 +12,7 @@ const ACCOUNT = "123e4567-e89b-12d3-a456-426614174001";
 describe("POST /api/subscriptions/portal (handler outcomes — validation & missing customer)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockReset();
+    vi.mocked(validateCreateSubscriptionPortalBody).mockReset();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
@@ -20,7 +20,7 @@ describe("POST /api/subscriptions/portal (handler outcomes — validation & miss
 
   it("returns validation response unchanged", async () => {
     const err = NextResponse.json({ error: "bad" }, { status: 400 });
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockResolvedValue(err);
+    vi.mocked(validateCreateSubscriptionPortalBody).mockResolvedValue(err);
     const req = new NextRequest("http://localhost/api/subscriptions/portal", {
       method: "POST",
       body: "{}",
@@ -30,7 +30,7 @@ describe("POST /api/subscriptions/portal (handler outcomes — validation & miss
   });
 
   it("returns 400 when no billing customer", async () => {
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockResolvedValue({
+    vi.mocked(validateCreateSubscriptionPortalBody).mockResolvedValue({
       accountId: ACCOUNT,
       returnUrl: "https://chat.recoupable.com/billing",
     });
@@ -44,7 +44,7 @@ describe("POST /api/subscriptions/portal (handler outcomes — validation & miss
   });
 
   it("returns 500 when billing customer lookup fails", async () => {
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockResolvedValue({
+    vi.mocked(validateCreateSubscriptionPortalBody).mockResolvedValue({
       accountId: ACCOUNT,
       returnUrl: "https://chat.recoupable.com/billing",
     });

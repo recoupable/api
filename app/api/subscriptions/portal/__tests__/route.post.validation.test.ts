@@ -1,7 +1,7 @@
 import "./routeTestMocks";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { validateCreateSubscriptionPortalRequest } from "@/lib/stripe/validateCreateSubscriptionPortalRequest";
+import { validateCreateSubscriptionPortalBody } from "@/lib/stripe/validateCreateSubscriptionPortalBody";
 import { createBillingPortalSession } from "@/lib/stripe/createBillingPortalSession";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
@@ -9,15 +9,15 @@ const { POST } = await import("../route");
 
 async function loadRealValidate() {
   const mod = await vi.importActual<
-    typeof import("@/lib/stripe/validateCreateSubscriptionPortalRequest")
-  >("@/lib/stripe/validateCreateSubscriptionPortalRequest");
-  return mod.validateCreateSubscriptionPortalRequest;
+    typeof import("@/lib/stripe/validateCreateSubscriptionPortalBody")
+  >("@/lib/stripe/validateCreateSubscriptionPortalBody");
+  return mod.validateCreateSubscriptionPortalBody;
 }
 
 describe("POST /api/subscriptions/portal (validation)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockReset();
+    vi.mocked(validateCreateSubscriptionPortalBody).mockReset();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
@@ -26,7 +26,7 @@ describe("POST /api/subscriptions/portal (validation)", () => {
   });
 
   it("returns 400 when body is invalid JSON", async () => {
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockImplementationOnce(
+    vi.mocked(validateCreateSubscriptionPortalBody).mockImplementationOnce(
       await loadRealValidate(),
     );
     const res = await POST(
@@ -42,7 +42,7 @@ describe("POST /api/subscriptions/portal (validation)", () => {
   });
 
   it("returns 400 when returnUrl is missing", async () => {
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockImplementationOnce(
+    vi.mocked(validateCreateSubscriptionPortalBody).mockImplementationOnce(
       await loadRealValidate(),
     );
     const res = await POST(
@@ -65,7 +65,7 @@ describe("POST /api/subscriptions/portal (validation)", () => {
         { status: 401 },
       ),
     );
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockImplementationOnce(
+    vi.mocked(validateCreateSubscriptionPortalBody).mockImplementationOnce(
       await loadRealValidate(),
     );
     const res = await POST(

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
-import { validateCreateSubscriptionPortalRequest } from "@/lib/stripe/validateCreateSubscriptionPortalRequest";
+import { validateCreateSubscriptionPortalBody } from "@/lib/stripe/validateCreateSubscriptionPortalBody";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -11,7 +11,7 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-describe("validateCreateSubscriptionPortalRequest (body)", () => {
+describe("validateCreateSubscriptionPortalBody (body)", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("returns 400 { error } for invalid JSON", async () => {
@@ -20,7 +20,7 @@ describe("validateCreateSubscriptionPortalRequest (body)", () => {
       headers: { "Content-Type": "application/json", "x-api-key": "k" },
       body: "not-json",
     });
-    const res = await validateCreateSubscriptionPortalRequest(req);
+    const res = await validateCreateSubscriptionPortalBody(req);
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({ error: "Invalid JSON body" });
     expect(validateAuthContext).not.toHaveBeenCalled();
@@ -32,7 +32,7 @@ describe("validateCreateSubscriptionPortalRequest (body)", () => {
       headers: { "Content-Type": "application/json", "x-api-key": "k" },
       body: JSON.stringify({}),
     });
-    const res = await validateCreateSubscriptionPortalRequest(req);
+    const res = await validateCreateSubscriptionPortalBody(req);
     expect(res.status).toBe(400);
     const j = await res.json();
     expect(j).toEqual({ error: expect.stringMatching(/returnUrl|Invalid input/i) });
@@ -47,6 +47,6 @@ describe("validateCreateSubscriptionPortalRequest (body)", () => {
         extra: true,
       }),
     });
-    expect((await validateCreateSubscriptionPortalRequest(req)).status).toBe(400);
+    expect((await validateCreateSubscriptionPortalBody(req)).status).toBe(400);
   });
 });

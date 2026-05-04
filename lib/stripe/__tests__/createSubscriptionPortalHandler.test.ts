@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { createSubscriptionPortalHandler } from "@/lib/stripe/createSubscriptionPortalHandler";
-import { validateCreateSubscriptionPortalRequest } from "@/lib/stripe/validateCreateSubscriptionPortalRequest";
+import { validateCreateSubscriptionPortalBody } from "@/lib/stripe/validateCreateSubscriptionPortalBody";
 import { selectStripeBillingCustomerByAccountId } from "@/lib/supabase/billing_customers/selectStripeBillingCustomerByAccountId";
 import { createBillingPortalSession } from "@/lib/stripe/createBillingPortalSession";
 
@@ -9,8 +9,8 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-vi.mock("@/lib/stripe/validateCreateSubscriptionPortalRequest", () => ({
-  validateCreateSubscriptionPortalRequest: vi.fn(),
+vi.mock("@/lib/stripe/validateCreateSubscriptionPortalBody", () => ({
+  validateCreateSubscriptionPortalBody: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/billing_customers/selectStripeBillingCustomerByAccountId", () => ({
@@ -32,7 +32,7 @@ describe("createSubscriptionPortalHandler", () => {
 
   it("returns validation response unchanged", async () => {
     const err = NextResponse.json({ error: "bad" }, { status: 400 });
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockResolvedValue(err);
+    vi.mocked(validateCreateSubscriptionPortalBody).mockResolvedValue(err);
     const req = new NextRequest("http://localhost/api/subscriptions/portal", {
       method: "POST",
       body: "{}",
@@ -42,7 +42,7 @@ describe("createSubscriptionPortalHandler", () => {
   });
 
   it("returns 200 with id and url", async () => {
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockResolvedValue({
+    vi.mocked(validateCreateSubscriptionPortalBody).mockResolvedValue({
       accountId: ACCOUNT,
       returnUrl: "https://chat.recoupable.com/billing",
     });
@@ -69,7 +69,7 @@ describe("createSubscriptionPortalHandler", () => {
   });
 
   it("returns 500 when createBillingPortalSession throws", async () => {
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockResolvedValue({
+    vi.mocked(validateCreateSubscriptionPortalBody).mockResolvedValue({
       accountId: ACCOUNT,
       returnUrl: "https://chat.recoupable.com/billing",
     });

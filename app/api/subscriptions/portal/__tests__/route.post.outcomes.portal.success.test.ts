@@ -1,7 +1,7 @@
 import "./routeTestMocks";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
-import { validateCreateSubscriptionPortalRequest } from "@/lib/stripe/validateCreateSubscriptionPortalRequest";
+import { validateCreateSubscriptionPortalBody } from "@/lib/stripe/validateCreateSubscriptionPortalBody";
 import { createBillingPortalSession } from "@/lib/stripe/createBillingPortalSession";
 import { selectStripeBillingCustomerByAccountId } from "@/lib/supabase/billing_customers/selectStripeBillingCustomerByAccountId";
 
@@ -12,14 +12,14 @@ const ACCOUNT = "123e4567-e89b-12d3-a456-426614174001";
 describe("POST /api/subscriptions/portal (200)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockReset();
+    vi.mocked(validateCreateSubscriptionPortalBody).mockReset();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
   afterEach(() => vi.mocked(console.error).mockRestore());
 
   it("returns id and url when portal session is created", async () => {
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockResolvedValue({
+    vi.mocked(validateCreateSubscriptionPortalBody).mockResolvedValue({
       accountId: ACCOUNT,
       returnUrl: "https://chat.recoupable.com/billing",
     });
