@@ -26,7 +26,7 @@ export async function processCreateSandbox(
     sandboxId: sandbox.name,
     sandboxStatus: sandbox.sdkStatus,
     timeout: sandbox.timeout,
-    createdAt: sandbox.createdAt?.toISOString() ?? new Date().toISOString(),
+    createdAt: sandbox.createdAt.toISOString(),
   };
 
   // Trigger the prompt execution task if a prompt was provided

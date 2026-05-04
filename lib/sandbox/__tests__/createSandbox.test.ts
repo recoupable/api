@@ -42,8 +42,10 @@ describe("createSandbox", () => {
     await createSandbox({ restoreSnapshotId: "snap_abc123" });
 
     expect(VercelSandbox.create).toHaveBeenCalledWith({
-      restoreSnapshotId: "snap_abc123",
+      vcpus: 4,
+      runtime: "node22",
       timeout: 1800000,
+      restoreSnapshotId: "snap_abc123",
     });
   });
 

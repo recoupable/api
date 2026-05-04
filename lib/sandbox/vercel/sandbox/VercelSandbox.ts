@@ -974,11 +974,16 @@ ${hostLine}${portLines}${runtimeEnvLine}`;
 
   /**
    * Timestamp when the underlying SDK sandbox was created. Sourced from
-   * the SDK session's createdAt field. Returns `undefined` if the SDK has
-   * not yet populated it (rare — should be set immediately after create).
+   * the SDK session's createdAt field. The SDK populates this on create
+   * and connect, so it is always defined for any reachable instance —
+   * we throw rather than fabricate a fallback if the contract is broken.
    */
-  get createdAt(): Date | undefined {
-    return this.session.createdAt ?? undefined;
+  get createdAt(): Date {
+    this.refreshStateFromCurrentSession();
+    if (!this.session.createdAt) {
+      throw new Error("VercelSandbox session is missing createdAt — SDK contract violation");
+    }
+    return this.session.createdAt;
   }
 
   /**

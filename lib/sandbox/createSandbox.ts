@@ -26,9 +26,11 @@ const DEFAULT_RUNTIME = "node22" as const;
  * its info. The sandbox is left running so subsequent prompts can run
  * against it.
  *
- * Restores from a snapshot when `restoreSnapshotId` is provided —
- * snapshots already encode resources/runtime so we skip our defaults
- * in that case.
+ * Note: VercelSandbox.create applies its own defaults for vcpus and
+ * runtime (vcpus=4, runtime="node22") regardless of source — those
+ * apply to the runtime resources of the new sandbox even when restoring
+ * from a snapshot. We pass our preferred defaults explicitly so api's
+ * intent is documented at the call site.
  *
  * @param config - VercelSandboxConfig (timeout, vcpus, runtime,
  *                 restoreSnapshotId, source, ports, env, etc.)
@@ -38,19 +40,12 @@ const DEFAULT_RUNTIME = "node22" as const;
 export async function createSandbox(
   config: CreateSandboxParams = {},
 ): Promise<SandboxCreateResult> {
-  const sandbox = await VercelSandbox.create(
-    config.restoreSnapshotId
-      ? {
-          ...config,
-          timeout: config.timeout ?? DEFAULT_TIMEOUT,
-        }
-      : {
-          vcpus: DEFAULT_VCPUS,
-          timeout: config.timeout ?? DEFAULT_TIMEOUT,
-          runtime: DEFAULT_RUNTIME,
-          ...config,
-        },
-  );
+  const sandbox = await VercelSandbox.create({
+    vcpus: DEFAULT_VCPUS,
+    runtime: DEFAULT_RUNTIME,
+    timeout: DEFAULT_TIMEOUT,
+    ...config,
+  });
 
   return {
     sandbox,
@@ -58,7 +53,7 @@ export async function createSandbox(
       sandboxId: sandbox.name,
       sandboxStatus: sandbox.sdkStatus,
       timeout: sandbox.timeout,
-      createdAt: sandbox.createdAt?.toISOString() ?? new Date().toISOString(),
+      createdAt: sandbox.createdAt.toISOString(),
     },
   };
 }
