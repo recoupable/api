@@ -31,13 +31,16 @@ export async function getSessionByIdHandler(
 
   if (!row) {
     return NextResponse.json(
-      { error: "Session not found" },
+      { status: "error", error: "Session not found" },
       { status: 404, headers: getCorsHeaders() },
     );
   }
 
   if (row.account_id !== auth.accountId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403, headers: getCorsHeaders() });
+    return NextResponse.json(
+      { status: "error", error: "Forbidden" },
+      { status: 403, headers: getCorsHeaders() },
+    );
   }
 
   return NextResponse.json(

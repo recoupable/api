@@ -90,6 +90,10 @@ describe("GET /api/sessions/[sessionId]", () => {
       params: Promise.resolve({ sessionId: "sess_missing" }),
     });
     expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({
+      status: "error",
+      error: "Session not found",
+    });
     expect(selectSession).toHaveBeenCalledWith("sess_missing");
   });
 
@@ -105,6 +109,10 @@ describe("GET /api/sessions/[sessionId]", () => {
       params: Promise.resolve({ sessionId: "sess_1" }),
     });
     expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({
+      status: "error",
+      error: "Forbidden",
+    });
   });
 
   it("returns 200 with camelCase session shape on happy path", async () => {
