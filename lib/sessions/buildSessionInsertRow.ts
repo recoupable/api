@@ -24,8 +24,6 @@ export function buildSessionInsertRow(input: BuildSessionInsertRowInput): Tables
     account_id: accountId,
     title: body.title?.trim() || DEFAULT_TITLE,
     status: "running",
-    repo_owner: body.repoOwner ?? null,
-    repo_name: body.repoName ?? null,
     branch: body.branch ?? null,
     clone_url: body.cloneUrl ?? null,
     global_skill_refs: [],

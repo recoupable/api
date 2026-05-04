@@ -5,12 +5,9 @@ import { insertSession } from "@/lib/supabase/sessions/insertSession";
 import { deleteSessionById } from "@/lib/supabase/sessions/deleteSessionById";
 import { insertChat } from "@/lib/supabase/chats/insertChat";
 import { createSessionHandler } from "@/lib/sessions/createSessionHandler";
-import {
-  baseChatRow,
-  baseSessionRow,
-  makeCreateSessionReq,
-  okAuth,
-} from "@/lib/sessions/__tests__/createSessionHandlerFixtures";
+import { baseSessionRow } from "@/lib/sessions/__tests__/baseSessionRow";
+import { baseChatRow } from "@/lib/sessions/__tests__/baseChatRow";
+import { makeCreateSessionReq } from "@/lib/sessions/__tests__/makeCreateSessionReq";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
@@ -19,6 +16,8 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() 
 vi.mock("@/lib/supabase/sessions/insertSession", () => ({ insertSession: vi.fn() }));
 vi.mock("@/lib/supabase/sessions/deleteSessionById", () => ({ deleteSessionById: vi.fn() }));
 vi.mock("@/lib/supabase/chats/insertChat", () => ({ insertChat: vi.fn() }));
+
+const okAuth = { accountId: "acc-uuid-1", orgId: null, authToken: "key_test" };
 
 describe("createSessionHandler — persistence", () => {
   beforeEach(() => vi.clearAllMocks());

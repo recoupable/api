@@ -5,6 +5,7 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import { validateCreateSessionBody } from "@/lib/sessions/validateCreateSessionBody";
 import { buildSessionInsertRow } from "@/lib/sessions/buildSessionInsertRow";
+import { failedToCreateSession } from "@/lib/sessions/failedToCreateSession";
 import { insertSession } from "@/lib/supabase/sessions/insertSession";
 import { deleteSessionById } from "@/lib/supabase/sessions/deleteSessionById";
 import { insertChat } from "@/lib/supabase/chats/insertChat";
@@ -12,13 +13,6 @@ import { toSessionResponse } from "@/lib/sessions/toSessionResponse";
 import { toChatResponse } from "@/lib/sessions/toChatResponse";
 
 const INITIAL_CHAT_TITLE = "New chat";
-
-function failedToCreateSession(): NextResponse {
-  return NextResponse.json(
-    { status: "error", error: "Failed to create session" },
-    { status: 500, headers: getCorsHeaders() },
-  );
-}
 
 /**
  * Handles `POST /api/sessions`.

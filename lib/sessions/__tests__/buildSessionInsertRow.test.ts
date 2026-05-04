@@ -10,8 +10,6 @@ describe("buildSessionInsertRow", () => {
     expect(row.lifecycle_state).toBe("provisioning");
     expect(row.lifecycle_version).toBe(0);
     expect(row.sandbox_state).toEqual({ type: "vercel" });
-    expect(row.repo_owner).toBeNull();
-    expect(row.repo_name).toBeNull();
     expect(row.branch).toBeNull();
     expect(row.clone_url).toBeNull();
     expect(row.id).toMatch(/^[0-9a-f-]{36}$/i);
@@ -27,19 +25,15 @@ describe("buildSessionInsertRow", () => {
     expect(row.title).toBe("New session");
   });
 
-  it("forwards repo + branch + clone fields verbatim", () => {
+  it("forwards branch + clone fields verbatim", () => {
     const row = buildSessionInsertRow({
       body: {
-        repoOwner: "vercel",
-        repoName: "ai",
         branch: "main",
-        cloneUrl: "https://github.com/vercel/ai.git",
+        cloneUrl: "https://github.com/recoupable/ai.git",
       },
       accountId: "acc-1",
     });
-    expect(row.repo_owner).toBe("vercel");
-    expect(row.repo_name).toBe("ai");
     expect(row.branch).toBe("main");
-    expect(row.clone_url).toBe("https://github.com/vercel/ai.git");
+    expect(row.clone_url).toBe("https://github.com/recoupable/ai.git");
   });
 });
