@@ -1,4 +1,4 @@
-import type { VercelSandbox } from "./sandbox";
+import type { VercelSandbox } from "./sandbox/VercelSandbox";
 
 /**
  * Configure git user identity on a sandbox.

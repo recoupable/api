@@ -138,10 +138,10 @@ vi.mock("@vercel/sandbox", () => ({
   },
 }));
 
-let sandboxModule: typeof import("../sandbox");
+let sandboxModule: typeof import("../sandbox/VercelSandbox");
 
 beforeAll(async () => {
-  sandboxModule = await import("../sandbox");
+  sandboxModule = await import("../sandbox/VercelSandbox");
 });
 
 beforeEach(() => {

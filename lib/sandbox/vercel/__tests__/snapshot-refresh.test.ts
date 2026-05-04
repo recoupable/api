@@ -1,7 +1,10 @@
 import { describe, expect, vi, test } from "vitest";
 import type { SandboxConnectConfig } from "../../factory";
 import type { ExecResult } from "../../interface";
-import { DEFAULT_BASE_SNAPSHOT_COMMAND_TIMEOUT_MS, refreshBaseSnapshot } from "../snapshot-refresh";
+import {
+  DEFAULT_BASE_SNAPSHOT_COMMAND_TIMEOUT_MS,
+  refreshBaseSnapshot,
+} from "../snapshot-refresh/refreshBaseSnapshot";
 
 interface MockSnapshotSandbox {
   workingDirectory: string;

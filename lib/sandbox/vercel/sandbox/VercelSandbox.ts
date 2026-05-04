@@ -1,132 +1,30 @@
 /* eslint-disable @typescript-eslint/member-ordering -- Inlined from open-agents/packages/sandbox; preserving original member order to keep the diff against the source minimal. */
 import { Sandbox as VercelSandboxSDK } from "@vercel/sandbox";
 import type { Dirent } from "fs";
-import type { ExecResult, Sandbox, SandboxHooks, SandboxStats, SnapshotResult } from "../interface";
-import type { SandboxStatus } from "../types";
-import type { VercelSandboxConfig, VercelSandboxConnectConfig } from "./config";
-import type { VercelState } from "./state";
-
-const MAX_OUTPUT_LENGTH = 50_000;
-const DEFAULT_WORKING_DIRECTORY = "/vercel/sandbox";
-const TIMEOUT_BUFFER_MS = 30_000; // 30 seconds buffer for beforeStop hook
-const MAX_SDK_TIMEOUT_MS = 18_000_000; // Vercel API limit: 5 hours
-const MAX_PROACTIVE_TIMEOUT_MS = MAX_SDK_TIMEOUT_MS - TIMEOUT_BUFFER_MS;
-const DEFAULT_RECONNECT_TIMEOUT_MS = 300_000; // 5 minutes default timeout for reconnected sandboxes
-const DETACHED_QUICK_FAILURE_WINDOW_MS = 2_000;
-
-interface SandboxRouteLike {
-  port: number;
-}
-
-interface SandboxNetworkTransform {
-  headers?: Record<string, string>;
-}
-
-interface SandboxNetworkRule {
-  transform?: SandboxNetworkTransform[];
-}
-
-interface SandboxNetworkPolicy {
-  allow: Record<string, SandboxNetworkRule[]>;
-}
-
-const DEFAULT_NETWORK_POLICY: SandboxNetworkPolicy = {
-  allow: {
-    "*": [],
-  },
-};
-
-function buildGitHubCredentialBrokeringPolicy(token?: string): SandboxNetworkPolicy {
-  if (!token) {
-    return DEFAULT_NETWORK_POLICY;
-  }
-
-  const basicAuthToken = Buffer.from(`x-access-token:${token}`, "utf-8").toString("base64");
-
-  return {
-    allow: {
-      "api.github.com": [
-        {
-          transform: [{ headers: { Authorization: `Bearer ${token}` } }],
-        },
-      ],
-      "uploads.github.com": [
-        {
-          transform: [{ headers: { Authorization: `Bearer ${token}` } }],
-        },
-      ],
-      "codeload.github.com": [
-        {
-          transform: [{ headers: { Authorization: `Bearer ${token}` } }],
-        },
-      ],
-      "github.com": [
-        {
-          transform: [{ headers: { Authorization: `Basic ${basicAuthToken}` } }],
-        },
-      ],
-      "*": [],
-    },
-  };
-}
-
-async function syncGitHubCredentialBrokering(sdk: VercelSandboxSDK, token?: string): Promise<void> {
-  const updateNetworkPolicy = (
-    sdk as VercelSandboxSDK & {
-      updateNetworkPolicy?: (policy: SandboxNetworkPolicy) => Promise<void>;
-    }
-  ).updateNetworkPolicy;
-
-  if (typeof updateNetworkPolicy !== "function") {
-    if (token) {
-      throw new Error(
-        "Current @vercel/sandbox SDK does not support network policy updates required for GitHub credential brokering",
-      );
-    }
-    return;
-  }
-
-  await updateNetworkPolicy.call(sdk, buildGitHubCredentialBrokeringPolicy(token));
-}
-
-function buildAuthenticatedGitHubUrl(repoUrl: string, token: string): string | null {
-  const githubUrlMatch = repoUrl.match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?$/);
-
-  if (!githubUrlMatch) {
-    return null;
-  }
-
-  const [, owner, repo] = githubUrlMatch;
-  return `https://x-access-token:${token}@github.com/${owner}/${repo}.git`;
-}
-
-type VercelSandboxSession = ReturnType<InstanceType<typeof VercelSandboxSDK>["currentSession"]>;
-
-function isStoppedSessionStatus(status: string | undefined): boolean {
-  return (
-    status === "stopped" ||
-    status === "stopping" ||
-    status === "snapshotting" ||
-    status === "aborted" ||
-    status === "failed"
-  );
-}
-
-function getRemainingTimeoutFromSession(session: VercelSandboxSession): number | undefined {
-  const timeout = session.timeout;
-  if (typeof timeout !== "number" || timeout <= 0) {
-    return undefined;
-  }
-
-  const startedAt = session.startedAt?.getTime() ?? session.requestedAt?.getTime();
-  if (typeof startedAt !== "number") {
-    return undefined;
-  }
-
-  const proactiveTimeout = Math.max(timeout - TIMEOUT_BUFFER_MS, 0);
-  const remaining = startedAt + proactiveTimeout - Date.now();
-  return remaining > 10_000 ? remaining : undefined;
-}
+import type {
+  ExecResult,
+  Sandbox,
+  SandboxHooks,
+  SandboxStats,
+  SnapshotResult,
+} from "../../interface";
+import type { SandboxStatus } from "../../types";
+import type { VercelSandboxConfig } from "../config";
+import type { VercelState } from "../state";
+import { buildAuthenticatedGitHubUrl } from "./buildAuthenticatedGitHubUrl";
+import { buildGitHubCredentialBrokeringPolicy } from "./buildGitHubCredentialBrokeringPolicy";
+import {
+  DEFAULT_RECONNECT_TIMEOUT_MS,
+  DEFAULT_WORKING_DIRECTORY,
+  DETACHED_QUICK_FAILURE_WINDOW_MS,
+  MAX_OUTPUT_LENGTH,
+  MAX_PROACTIVE_TIMEOUT_MS,
+  TIMEOUT_BUFFER_MS,
+} from "./constants";
+import { getRemainingTimeoutFromSession } from "./getRemainingTimeoutFromSession";
+import { isStoppedSessionStatus } from "./isStoppedSessionStatus";
+import { syncGitHubCredentialBrokering } from "./syncGitHubCredentialBrokering";
+import type { SandboxRouteLike, VercelSandboxSession } from "./types";
 
 /**
  * Vercel Sandbox implementation using the @vercel/sandbox SDK.
@@ -1075,53 +973,4 @@ ${hostLine}${portLines}${runtimeEnvLine}`;
       ...(this.expiresAt !== undefined ? { expiresAt: this.expiresAt } : {}),
     };
   }
-}
-
-/**
- * Connect to a Vercel Sandbox - either create a new one or reconnect to an existing one.
- *
- * @param config - Configuration options. Pass `sandboxName` to reconnect, or other options to create new.
- *
- * @example
- * // Start a named persistent sandbox
- * const sandbox = await connectVercelSandbox({ name: "session_123" });
- * console.log(sandbox.name); // "session_123"
- *
- * @example
- * // Reconnect to an existing sandbox without resuming it automatically
- * const sandbox = await connectVercelSandbox({
- *   sandboxName: "session_123",
- *   resume: false,
- * });
- *
- * @example
- * // Clone a repo into a new sandbox
- * const sandbox = await connectVercelSandbox({
- *   name: "session_123",
- *   source: {
- *     url: "https://github.com/owner/repo",
- *     branch: "develop",
- *   },
- * });
- */
-export async function connectVercelSandbox(
-  config: VercelSandboxConfig | VercelSandboxConnectConfig = {},
-): Promise<VercelSandbox> {
-  const connectConfig = config as VercelSandboxConnectConfig & {
-    sandboxId?: string;
-  };
-  const sandboxName = connectConfig.sandboxName ?? connectConfig.sandboxId;
-
-  if (sandboxName) {
-    return VercelSandbox.connect(sandboxName, {
-      env: connectConfig.env,
-      githubToken: connectConfig.githubToken,
-      hooks: connectConfig.hooks,
-      remainingTimeout: connectConfig.remainingTimeout,
-      ports: connectConfig.ports,
-      resume: connectConfig.resume,
-    });
-  }
-
-  return VercelSandbox.create(config as VercelSandboxConfig);
 }

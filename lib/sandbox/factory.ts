@@ -1,6 +1,6 @@
 import type { Sandbox, SandboxHooks } from "./interface";
 import type { SandboxStatus } from "./types";
-import { connectVercel } from "./vercel/connect";
+import { connectVercel } from "./vercel/connect/connectVercel";
 import type { VercelState } from "./vercel/state";
 
 // Re-export SandboxStatus from types for convenience

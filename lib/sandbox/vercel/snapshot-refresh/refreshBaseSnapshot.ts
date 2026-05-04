@@ -1,77 +1,14 @@
-import { connectSandbox, type SandboxConnectConfig } from "../factory";
-import type { ExecResult, SnapshotResult } from "../interface";
+import { defaultConnectSnapshotSandbox } from "./defaultConnectSnapshotSandbox";
+import { formatCommandFailure } from "./formatCommandFailure";
+import type {
+  RefreshBaseSnapshotCommandResult,
+  RefreshBaseSnapshotDependencies,
+  RefreshBaseSnapshotOptions,
+  RefreshBaseSnapshotResult,
+  SnapshotSandbox,
+} from "./types";
 
 export const DEFAULT_BASE_SNAPSHOT_COMMAND_TIMEOUT_MS = 10 * 60 * 1000;
-
-interface SnapshotSandbox {
-  workingDirectory: string;
-  exec(command: string, cwd: string, timeoutMs: number): Promise<ExecResult>;
-  stop(): Promise<void>;
-  snapshot?(): Promise<SnapshotResult>;
-}
-
-type SnapshotSandboxConnector = (config: SandboxConnectConfig) => Promise<SnapshotSandbox>;
-
-export interface RefreshBaseSnapshotOptions {
-  baseSnapshotId: string;
-  commands?: string[];
-  sandboxTimeoutMs: number;
-  commandTimeoutMs?: number;
-  ports?: number[];
-  env?: Record<string, string>;
-  log?: (message: string) => void;
-  /**
-   * Optional persistent name for the build sandbox. The Vercel API records
-   * this name against any snapshots the sandbox creates, which lets callers
-   * filter with `Snapshot.list({ name })` later.
-   */
-  sandboxName?: string;
-  /** Optional token for authenticated git operations inside the build sandbox. */
-  githubToken?: string;
-}
-
-export interface RefreshBaseSnapshotCommandResult {
-  command: string;
-  exitCode: number | null;
-  stdout: string;
-  stderr: string;
-  truncated: boolean;
-}
-
-export interface RefreshBaseSnapshotResult {
-  sourceSnapshotId: string;
-  snapshotId: string;
-  commandResults: RefreshBaseSnapshotCommandResult[];
-}
-
-interface RefreshBaseSnapshotDependencies {
-  connectSandbox?: SnapshotSandboxConnector;
-}
-
-function defaultConnectSnapshotSandbox(config: SandboxConnectConfig): Promise<SnapshotSandbox> {
-  return connectSandbox(config);
-}
-
-function formatCommandOutput(label: string, output: string): string | null {
-  const trimmedOutput = output.trim();
-  if (!trimmedOutput) {
-    return null;
-  }
-
-  return `${label}:\n${trimmedOutput}`;
-}
-
-function formatCommandFailure(command: string, result: ExecResult): string {
-  const sections = [
-    `Command failed while preparing base snapshot: ${command}`,
-    result.exitCode === null ? null : `Exit code: ${result.exitCode}`,
-    formatCommandOutput("stdout", result.stdout),
-    formatCommandOutput("stderr", result.stderr),
-    result.truncated ? "Output was truncated." : null,
-  ].filter((section): section is string => section !== null);
-
-  return sections.join("\n\n");
-}
 
 export async function refreshBaseSnapshot(
   options: RefreshBaseSnapshotOptions,
