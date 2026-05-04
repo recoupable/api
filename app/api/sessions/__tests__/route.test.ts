@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
-import { POST } from "@/app/api/sessions/route";
+import { POST, OPTIONS } from "@/app/api/sessions/route";
 import { createSessionHandler } from "@/lib/sessions/createSessionHandler";
 
 vi.mock("@/lib/sessions/createSessionHandler", () => ({
@@ -18,5 +18,12 @@ describe("POST /api/sessions", () => {
 
     expect(createSessionHandler).toHaveBeenCalledWith(req);
     expect(res).toBe(expected);
+  });
+});
+
+describe("OPTIONS /api/sessions", () => {
+  it("returns 200 for CORS preflight", async () => {
+    const res = await OPTIONS();
+    expect(res.status).toBe(200);
   });
 });

@@ -1,5 +1,18 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createSessionHandler } from "@/lib/sessions/createSessionHandler";
+
+/**
+ * OPTIONS handler for CORS preflight requests.
+ *
+ * @returns A NextResponse with CORS headers.
+ */
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: getCorsHeaders(),
+  });
+}
 
 /**
  * `POST /api/sessions` — create a session and an initial chat.
@@ -10,3 +23,7 @@ import { createSessionHandler } from "@/lib/sessions/createSessionHandler";
 export async function POST(request: NextRequest) {
   return createSessionHandler(request);
 }
+
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
