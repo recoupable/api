@@ -9,7 +9,7 @@ const { POST } = await import("../route");
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174001";
 
-const billingRow = {
+const row = {
   id: 1,
   account_id: ACCOUNT,
   customer_id: "cus_test_123",
@@ -17,7 +17,15 @@ const billingRow = {
   provider: "stripe" as const,
 };
 
-describe("POST /api/subscriptions/portal (handler outcomes — portal session)", () => {
+function mockValidated() {
+  vi.mocked(validateCreateSubscriptionPortalRequest).mockResolvedValue({
+    accountId: ACCOUNT,
+    returnUrl: "https://chat.recoupable.com/billing",
+  });
+  vi.mocked(selectStripeBillingCustomerByAccountId).mockResolvedValue(row);
+}
+
+describe("POST /api/subscriptions/portal (portal session errors)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(validateCreateSubscriptionPortalRequest).mockReset();
@@ -26,32 +34,8 @@ describe("POST /api/subscriptions/portal (handler outcomes — portal session)",
 
   afterEach(() => vi.mocked(console.error).mockRestore());
 
-  it("returns 200 with id and url", async () => {
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockResolvedValue({
-      accountId: ACCOUNT,
-      returnUrl: "https://chat.recoupable.com/billing",
-    });
-    vi.mocked(selectStripeBillingCustomerByAccountId).mockResolvedValue(billingRow);
-    vi.mocked(createBillingPortalSession).mockResolvedValue({
-      id: "bps_test_abc",
-      url: "https://billing.example.com/session/abc",
-    } as Awaited<ReturnType<typeof createBillingPortalSession>>);
-    const res = await POST(
-      new NextRequest("http://localhost/api/subscriptions/portal", { method: "POST", body: "{}" }),
-    );
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({
-      id: "bps_test_abc",
-      url: "https://billing.example.com/session/abc",
-    });
-  });
-
   it("returns 400 when session.url is null", async () => {
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockResolvedValue({
-      accountId: ACCOUNT,
-      returnUrl: "https://chat.recoupable.com/billing",
-    });
-    vi.mocked(selectStripeBillingCustomerByAccountId).mockResolvedValue(billingRow);
+    mockValidated();
     vi.mocked(createBillingPortalSession).mockResolvedValue({
       id: "bps_test_abc",
       url: null,
@@ -64,11 +48,7 @@ describe("POST /api/subscriptions/portal (handler outcomes — portal session)",
   });
 
   it("returns 500 when createBillingPortalSession throws", async () => {
-    vi.mocked(validateCreateSubscriptionPortalRequest).mockResolvedValue({
-      accountId: ACCOUNT,
-      returnUrl: "https://chat.recoupable.com/billing",
-    });
-    vi.mocked(selectStripeBillingCustomerByAccountId).mockResolvedValue(billingRow);
+    mockValidated();
     vi.mocked(createBillingPortalSession).mockRejectedValue(new Error("Stripe down"));
     const res = await POST(
       new NextRequest("http://localhost/api/subscriptions/portal", { method: "POST", body: "{}" }),
