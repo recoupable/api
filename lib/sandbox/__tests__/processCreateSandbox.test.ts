@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { Sandbox } from "@vercel/sandbox";
+import type { VercelSandbox } from "@/lib/sandbox/vercel";
 
 import { processCreateSandbox } from "../processCreateSandbox";
 import { createSandboxFromSnapshot } from "@/lib/sandbox/createSandboxFromSnapshot";
@@ -15,10 +15,10 @@ vi.mock("@/lib/trigger/triggerPromptSandbox", () => ({
 
 const mockSandbox = {
   name: "sbx_123",
-  status: "running",
+  sdkStatus: "running",
   timeout: 600000,
   createdAt: new Date("2024-01-01T00:00:00.000Z"),
-} as unknown as Sandbox;
+} as unknown as VercelSandbox;
 
 describe("processCreateSandbox", () => {
   beforeEach(() => {

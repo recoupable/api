@@ -962,6 +962,31 @@ ${hostLine}${portLines}${runtimeEnvLine}`;
   }
 
   /**
+   * Get the raw SDK session status (e.g. "running", "pending", "stopped",
+   * "failed", "aborted", "snapshotting"). Distinct from the abstraction's
+   * normalized `status` getter — exposed for callers that need to surface
+   * the exact SDK lifecycle state in HTTP responses or status polling.
+   */
+  get sdkStatus(): string {
+    this.refreshStateFromCurrentSession();
+    return this.session.status;
+  }
+
+  /**
+   * Timestamp when the underlying SDK sandbox was created. Sourced from
+   * the SDK session's createdAt field. The SDK populates this on create
+   * and connect, so it is always defined for any reachable instance —
+   * we throw rather than fabricate a fallback if the contract is broken.
+   */
+  get createdAt(): Date {
+    this.refreshStateFromCurrentSession();
+    if (!this.session.createdAt) {
+      throw new Error("VercelSandbox session is missing createdAt — SDK contract violation");
+    }
+    return this.session.createdAt;
+  }
+
+  /**
    * Get the current state for persistence.
    * Returns state that can be passed to `connectSandbox()` to restore this sandbox.
    */

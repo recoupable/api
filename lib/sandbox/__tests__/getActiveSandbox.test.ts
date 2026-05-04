@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { Sandbox } from "@vercel/sandbox";
+import { VercelSandbox } from "@/lib/sandbox/vercel";
 
 import { getActiveSandbox } from "../getActiveSandbox";
 
 const mockSelectAccountSandboxes = vi.fn();
 
-vi.mock("@vercel/sandbox", () => ({
-  Sandbox: {
-    get: vi.fn(),
+vi.mock("@/lib/sandbox/vercel", () => ({
+  VercelSandbox: {
+    connect: vi.fn(),
   },
 }));
 
@@ -25,17 +25,16 @@ describe("getActiveSandbox", () => {
 
     const mockSandbox = {
       name: "sbx_123",
-      status: "running",
-      runCommand: vi.fn(),
+      sdkStatus: "running",
     };
-    vi.mocked(Sandbox.get).mockResolvedValue(mockSandbox as unknown as Sandbox);
+    vi.mocked(VercelSandbox.connect).mockResolvedValue(mockSandbox as unknown as VercelSandbox);
 
     const result = await getActiveSandbox("acc_1");
 
     expect(mockSelectAccountSandboxes).toHaveBeenCalledWith({
       accountIds: ["acc_1"],
     });
-    expect(Sandbox.get).toHaveBeenCalledWith({ name: "sbx_123" });
+    expect(VercelSandbox.connect).toHaveBeenCalledWith("sbx_123", {});
     expect(result).toBe(mockSandbox);
   });
 
@@ -45,7 +44,7 @@ describe("getActiveSandbox", () => {
     const result = await getActiveSandbox("acc_1");
 
     expect(result).toBeNull();
-    expect(Sandbox.get).not.toHaveBeenCalled();
+    expect(VercelSandbox.connect).not.toHaveBeenCalled();
   });
 
   it("returns null when sandbox is not running", async () => {
@@ -55,21 +54,21 @@ describe("getActiveSandbox", () => {
 
     const mockSandbox = {
       name: "sbx_stopped",
-      status: "stopped",
+      sdkStatus: "stopped",
     };
-    vi.mocked(Sandbox.get).mockResolvedValue(mockSandbox as unknown as Sandbox);
+    vi.mocked(VercelSandbox.connect).mockResolvedValue(mockSandbox as unknown as VercelSandbox);
 
     const result = await getActiveSandbox("acc_1");
 
     expect(result).toBeNull();
   });
 
-  it("returns null when Sandbox.get throws", async () => {
+  it("returns null when VercelSandbox.connect throws", async () => {
     mockSelectAccountSandboxes.mockResolvedValue([
       { sandbox_id: "sbx_expired", account_id: "acc_1" },
     ]);
 
-    vi.mocked(Sandbox.get).mockRejectedValue(new Error("Sandbox not found"));
+    vi.mocked(VercelSandbox.connect).mockRejectedValue(new Error("Sandbox not found"));
 
     const result = await getActiveSandbox("acc_1");
 
