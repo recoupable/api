@@ -104,10 +104,7 @@ describe("createSessionHandler — persistence", () => {
 
     const res = await createSessionHandler(makeCreateSessionReq({}));
     expect(res.status).toBe(500);
-    expect(errSpy).toHaveBeenCalledWith(
-      expect.stringContaining("orphaned session"),
-      "sess_orphan",
-    );
+    expect(errSpy).toHaveBeenCalledWith(expect.stringContaining("orphaned session"), "sess_orphan");
     errSpy.mockRestore();
   });
 });
