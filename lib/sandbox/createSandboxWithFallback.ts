@@ -14,7 +14,7 @@ export async function createSandboxWithFallback(
 ): Promise<SandboxWithFallbackResult> {
   if (snapshotId) {
     try {
-      const result = await createSandbox({ source: { type: "snapshot", snapshotId } });
+      const result = await createSandbox({ restoreSnapshotId: snapshotId });
       return { ...result, fromSnapshot: true };
     } catch (error) {
       console.error("Snapshot sandbox creation failed, falling back to fresh sandbox:", error);

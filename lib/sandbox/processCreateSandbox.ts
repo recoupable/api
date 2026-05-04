@@ -24,7 +24,7 @@ export async function processCreateSandbox(
 
   const result: SandboxCreatedResponse = {
     sandboxId: sandbox.name,
-    sandboxStatus: sandbox.status,
+    sandboxStatus: sandbox.sdkStatus,
     timeout: sandbox.timeout,
     createdAt: sandbox.createdAt.toISOString(),
   };
