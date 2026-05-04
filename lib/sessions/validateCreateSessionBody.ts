@@ -9,7 +9,7 @@ export const createSessionBodySchema = z.object({
   title: z.string().optional(),
   branch: z.string().optional(),
   cloneUrl: z.string().optional(),
-  sandboxType: z.literal("vercel", { message: "Invalid sandbox type" }).optional(),
+  sandboxType: z.literal("vercel", { error: "Invalid sandbox type" }).optional(),
 });
 
 export type CreateSessionBody = z.infer<typeof createSessionBodySchema>;

@@ -52,7 +52,13 @@ export async function createSessionHandler(request: NextRequest): Promise<NextRe
   });
 
   if (!chatRow) {
-    await deleteSessionById(sessionRow.id);
+    const rolledBack = await deleteSessionById(sessionRow.id);
+    if (!rolledBack) {
+      console.error(
+        "[createSessionHandler] chat insert failed and session rollback failed — orphaned session:",
+        sessionRow.id,
+      );
+    }
     return failedToCreateSession();
   }
 

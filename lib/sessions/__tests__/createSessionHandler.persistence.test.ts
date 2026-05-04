@@ -88,9 +88,26 @@ describe("createSessionHandler — persistence", () => {
     vi.mocked(validateCreateSessionBody).mockResolvedValue(okValidated());
     vi.mocked(insertSession).mockResolvedValue(baseSessionRow({ id: "sess_rollback" }));
     vi.mocked(insertChat).mockResolvedValue(null);
+    vi.mocked(deleteSessionById).mockResolvedValue(true);
 
     const res = await createSessionHandler(makeCreateSessionReq({}));
     expect(res.status).toBe(500);
     expect(deleteSessionById).toHaveBeenCalledWith("sess_rollback");
+  });
+
+  it("logs an orphan-session error when rollback also fails", async () => {
+    vi.mocked(validateCreateSessionBody).mockResolvedValue(okValidated());
+    vi.mocked(insertSession).mockResolvedValue(baseSessionRow({ id: "sess_orphan" }));
+    vi.mocked(insertChat).mockResolvedValue(null);
+    vi.mocked(deleteSessionById).mockResolvedValue(false);
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const res = await createSessionHandler(makeCreateSessionReq({}));
+    expect(res.status).toBe(500);
+    expect(errSpy).toHaveBeenCalledWith(
+      expect.stringContaining("orphaned session"),
+      "sess_orphan",
+    );
+    errSpy.mockRestore();
   });
 });

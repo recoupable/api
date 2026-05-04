@@ -27,10 +27,15 @@ export async function selectSessions(
   if (filter.id) query = query.eq("id", filter.id);
   if (filter.accountId) query = query.eq("account_id", filter.accountId);
 
-  const { data, error } = await query;
-  if (error) {
-    console.error("[selectSessions] error:", error);
+  try {
+    const { data, error } = await query;
+    if (error) {
+      console.error("[selectSessions] error:", error);
+      return [];
+    }
+    return data ?? [];
+  } catch (e) {
+    console.error("[selectSessions] threw:", e);
     return [];
   }
-  return data ?? [];
 }
