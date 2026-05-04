@@ -1,13 +1,14 @@
-import { Sandbox } from "@vercel/sandbox";
+import { VercelSandbox } from "@/lib/sandbox/vercel";
 import { selectAccountSandboxes } from "@/lib/supabase/account_sandboxes/selectAccountSandboxes";
 
 /**
  * Finds the most recent sandbox for an account and returns it if still running.
+ * Reconnects via the open-agents sandbox abstraction.
  *
  * @param accountId - The account ID to find an active sandbox for
- * @returns The running Sandbox instance, or null if none found
+ * @returns The running VercelSandbox instance, or null if none found
  */
-export async function getActiveSandbox(accountId: string): Promise<Sandbox | null> {
+export async function getActiveSandbox(accountId: string): Promise<VercelSandbox | null> {
   const sandboxes = await selectAccountSandboxes({
     accountIds: [accountId],
   });
@@ -19,9 +20,9 @@ export async function getActiveSandbox(accountId: string): Promise<Sandbox | nul
   const mostRecent = sandboxes[0];
 
   try {
-    const sandbox = await Sandbox.get({ name: mostRecent.sandbox_id });
+    const sandbox = await VercelSandbox.connect(mostRecent.sandbox_id, {});
 
-    if (sandbox.status === "running") {
+    if (sandbox.sdkStatus === "running") {
       return sandbox;
     }
 
