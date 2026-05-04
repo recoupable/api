@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { validateCreateSessionBody } from "@/lib/sessions/validateCreateSessionBody";
 import { insertSession } from "@/lib/supabase/sessions/insertSession";
 import { deleteSessionById } from "@/lib/supabase/sessions/deleteSessionById";
 import { insertChat } from "@/lib/supabase/chats/insertChat";
@@ -13,7 +13,9 @@ import { makeCreateSessionReq } from "@/lib/sessions/__tests__/makeCreateSession
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
 }));
-vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
+vi.mock("@/lib/sessions/validateCreateSessionBody", () => ({
+  validateCreateSessionBody: vi.fn(),
+}));
 vi.mock("@/lib/supabase/sessions/insertSession", () => ({ insertSession: vi.fn() }));
 vi.mock("@/lib/supabase/sessions/deleteSessionById", () => ({ deleteSessionById: vi.fn() }));
 vi.mock("@/lib/supabase/chats/insertChat", () => ({ insertChat: vi.fn() }));
@@ -21,13 +23,20 @@ vi.mock("@/lib/sessions/resolveSessionTitle", () => ({
   resolveSessionTitle: vi.fn(async () => "Anchorage"),
 }));
 
-const okAuth = { accountId: "acc-uuid-1", orgId: null, authToken: "key_test" };
+const okValidated = (overrides: { body?: object; accountId?: string } = {}) => ({
+  body: overrides.body ?? {},
+  auth: {
+    accountId: overrides.accountId ?? "acc-uuid-1",
+    orgId: null,
+    authToken: "key_test",
+  },
+});
 
 describe("createSessionHandler — persistence", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("creates session and chat with defaults on empty body", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    vi.mocked(validateCreateSessionBody).mockResolvedValue(okValidated());
     vi.mocked(insertSession).mockResolvedValue(baseSessionRow());
     vi.mocked(insertChat).mockResolvedValue(baseChatRow());
 
@@ -50,7 +59,9 @@ describe("createSessionHandler — persistence", () => {
   });
 
   it("forwards body title to resolveSessionTitle and writes the resolved title", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    vi.mocked(validateCreateSessionBody).mockResolvedValue(
+      okValidated({ body: { title: "Hello world" } }),
+    );
     vi.mocked(resolveSessionTitle).mockResolvedValueOnce("Hello world");
     vi.mocked(insertSession).mockResolvedValue(baseSessionRow({ title: "Hello world" }));
     vi.mocked(insertChat).mockResolvedValue(baseChatRow());
@@ -65,7 +76,7 @@ describe("createSessionHandler — persistence", () => {
   });
 
   it("returns 500 when insertSession fails", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    vi.mocked(validateCreateSessionBody).mockResolvedValue(okValidated());
     vi.mocked(insertSession).mockResolvedValue(null);
 
     const res = await createSessionHandler(makeCreateSessionReq({}));
@@ -74,7 +85,7 @@ describe("createSessionHandler — persistence", () => {
   });
 
   it("rolls back the session and returns 500 when insertChat fails", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    vi.mocked(validateCreateSessionBody).mockResolvedValue(okValidated());
     vi.mocked(insertSession).mockResolvedValue(baseSessionRow({ id: "sess_rollback" }));
     vi.mocked(insertChat).mockResolvedValue(null);
 

@@ -1,4 +1,4 @@
-import { selectSessionTitlesByAccountId } from "@/lib/supabase/sessions/selectSessionTitlesByAccountId";
+import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { getRandomCityName } from "@/lib/sessions/getRandomCityName";
 
 interface ResolveSessionTitleInput {
@@ -24,6 +24,7 @@ export async function resolveSessionTitle(input: ResolveSessionTitleInput): Prom
     return trimmed;
   }
 
-  const usedTitles = await selectSessionTitlesByAccountId(input.accountId);
+  const rows = await selectSessions({ accountId: input.accountId });
+  const usedTitles = rows.map(row => row.title);
   return getRandomCityName(new Set(usedTitles));
 }
