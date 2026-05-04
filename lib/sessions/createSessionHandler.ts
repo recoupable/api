@@ -4,6 +4,7 @@ import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import { validateCreateSessionBody } from "@/lib/sessions/validateCreateSessionBody";
+import { resolveSessionTitle } from "@/lib/sessions/resolveSessionTitle";
 import { buildSessionInsertRow } from "@/lib/sessions/buildSessionInsertRow";
 import { failedToCreateSession } from "@/lib/sessions/failedToCreateSession";
 import { insertSession } from "@/lib/supabase/sessions/insertSession";
@@ -17,10 +18,11 @@ const INITIAL_CHAT_TITLE = "New chat";
 /**
  * Handles `POST /api/sessions`.
  *
- * Authenticates the caller, validates the optional request body, then
- * creates a session row and an initial chat row. If the chat insert
- * fails after the session row is persisted, the session is rolled
- * back so callers never observe an orphaned session.
+ * Authenticates the caller, validates the optional request body,
+ * resolves a final session title (provided > random city fallback),
+ * then creates a session row and an initial chat row. If the chat
+ * insert fails after the session row is persisted, the session is
+ * rolled back so callers never observe an orphaned session.
  *
  * @param request - The incoming request.
  * @returns A NextResponse with `{ session, chat }` on 200, or an error.
@@ -37,8 +39,13 @@ export async function createSessionHandler(request: NextRequest): Promise<NextRe
     return validated;
   }
 
+  const title = await resolveSessionTitle({
+    providedTitle: validated.title,
+    accountId: auth.accountId,
+  });
+
   const sessionRow = await insertSession(
-    buildSessionInsertRow({ body: validated, accountId: auth.accountId }),
+    buildSessionInsertRow({ body: validated, accountId: auth.accountId, title }),
   );
 
   if (!sessionRow) {

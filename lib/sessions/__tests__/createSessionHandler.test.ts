@@ -13,6 +13,9 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() 
 vi.mock("@/lib/supabase/sessions/insertSession", () => ({ insertSession: vi.fn() }));
 vi.mock("@/lib/supabase/sessions/deleteSessionById", () => ({ deleteSessionById: vi.fn() }));
 vi.mock("@/lib/supabase/chats/insertChat", () => ({ insertChat: vi.fn() }));
+vi.mock("@/lib/sessions/resolveSessionTitle", () => ({
+  resolveSessionTitle: vi.fn(async () => "Anchorage"),
+}));
 
 const okAuth = { accountId: "acc-uuid-1", orgId: null, authToken: "key_test" };
 

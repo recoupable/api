@@ -4,6 +4,7 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { insertSession } from "@/lib/supabase/sessions/insertSession";
 import { deleteSessionById } from "@/lib/supabase/sessions/deleteSessionById";
 import { insertChat } from "@/lib/supabase/chats/insertChat";
+import { resolveSessionTitle } from "@/lib/sessions/resolveSessionTitle";
 import { createSessionHandler } from "@/lib/sessions/createSessionHandler";
 import { baseSessionRow } from "@/lib/sessions/__tests__/baseSessionRow";
 import { baseChatRow } from "@/lib/sessions/__tests__/baseChatRow";
@@ -16,6 +17,9 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() 
 vi.mock("@/lib/supabase/sessions/insertSession", () => ({ insertSession: vi.fn() }));
 vi.mock("@/lib/supabase/sessions/deleteSessionById", () => ({ deleteSessionById: vi.fn() }));
 vi.mock("@/lib/supabase/chats/insertChat", () => ({ insertChat: vi.fn() }));
+vi.mock("@/lib/sessions/resolveSessionTitle", () => ({
+  resolveSessionTitle: vi.fn(async () => "Anchorage"),
+}));
 
 const okAuth = { accountId: "acc-uuid-1", orgId: null, authToken: "key_test" };
 
@@ -45,12 +49,18 @@ describe("createSessionHandler — persistence", () => {
     expect(chatArgs.title).toBe("New chat");
   });
 
-  it("uses provided title when present", async () => {
+  it("forwards body title to resolveSessionTitle and writes the resolved title", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    vi.mocked(resolveSessionTitle).mockResolvedValueOnce("Hello world");
     vi.mocked(insertSession).mockResolvedValue(baseSessionRow({ title: "Hello world" }));
     vi.mocked(insertChat).mockResolvedValue(baseChatRow());
 
     await createSessionHandler(makeCreateSessionReq({ title: "Hello world" }));
+
+    expect(resolveSessionTitle).toHaveBeenCalledWith({
+      providedTitle: "Hello world",
+      accountId: "acc-uuid-1",
+    });
     expect(vi.mocked(insertSession).mock.calls[0][0].title).toBe("Hello world");
   });
 
