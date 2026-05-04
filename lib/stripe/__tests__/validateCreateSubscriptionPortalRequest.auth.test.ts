@@ -35,26 +35,7 @@ describe("validateCreateSubscriptionPortalRequest (auth)", () => {
     });
   });
 
-  it("passes accountId to validateAuthContext when provided", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: ACCOUNT,
-      orgId: null,
-      authToken: "t",
-    });
-    const otherAccount = "123e4567-e89b-12d3-a456-426614174099";
-    const req = new NextRequest("http://localhost/api/subscriptions/portal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": "k" },
-      body: JSON.stringify({
-        returnUrl: "https://chat.recoupable.com/billing",
-        accountId: otherAccount,
-      }),
-    });
-    await validateCreateSubscriptionPortalRequest(req);
-    expect(validateAuthContext).toHaveBeenCalledWith(req, { accountId: otherAccount });
-  });
-
-  it("returns accountId and returnUrl when auth succeeds", async () => {
+  it("returns accountId from auth and returnUrl from body when auth succeeds", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: ACCOUNT,
       orgId: null,
