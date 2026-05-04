@@ -13,48 +13,8 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
 
-describe("validateCreateSubscriptionPortalRequest", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("returns 400 { error } for invalid JSON", async () => {
-    const req = new NextRequest("http://localhost/api/subscriptions/portal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": "k" },
-      body: "not-json",
-    });
-    const res = await validateCreateSubscriptionPortalRequest(req);
-    expect(res).toBeInstanceOf(NextResponse);
-    expect((res as NextResponse).status).toBe(400);
-    await expect((res as NextResponse).json()).resolves.toEqual({ error: "Invalid JSON body" });
-    expect(validateAuthContext).not.toHaveBeenCalled();
-  });
-
-  it("returns 400 { error } when returnUrl is missing", async () => {
-    const req = new NextRequest("http://localhost/api/subscriptions/portal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": "k" },
-      body: JSON.stringify({}),
-    });
-    const res = await validateCreateSubscriptionPortalRequest(req);
-    expect((res as NextResponse).status).toBe(400);
-    const j = await (res as NextResponse).json();
-    expect(j).toEqual({ error: expect.stringMatching(/returnUrl|Invalid input/i) });
-  });
-
-  it("returns 400 for unknown body keys (strict)", async () => {
-    const req = new NextRequest("http://localhost/api/subscriptions/portal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": "k" },
-      body: JSON.stringify({
-        returnUrl: "https://chat.recoupable.com/billing",
-        extra: true,
-      }),
-    });
-    const res = await validateCreateSubscriptionPortalRequest(req);
-    expect((res as NextResponse).status).toBe(400);
-  });
+describe("validateCreateSubscriptionPortalRequest (auth)", () => {
+  beforeEach(() => vi.clearAllMocks());
 
   it("maps auth failure to { error } and preserves status", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(
@@ -69,8 +29,8 @@ describe("validateCreateSubscriptionPortalRequest", () => {
       body: JSON.stringify({ returnUrl: "https://chat.recoupable.com/billing" }),
     });
     const res = await validateCreateSubscriptionPortalRequest(req);
-    expect((res as NextResponse).status).toBe(401);
-    await expect((res as NextResponse).json()).resolves.toEqual({
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({
       error: "Exactly one of x-api-key or Authorization must be provided",
     });
   });
@@ -103,15 +63,10 @@ describe("validateCreateSubscriptionPortalRequest", () => {
     const req = new NextRequest("http://localhost/api/subscriptions/portal", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": "k" },
-      body: JSON.stringify({
-        returnUrl: "https://chat.recoupable.com/billing",
-      }),
+      body: JSON.stringify({ returnUrl: "https://chat.recoupable.com/billing" }),
     });
     const out = await validateCreateSubscriptionPortalRequest(req);
-    expect(out).toEqual({
-      accountId: ACCOUNT,
-      returnUrl: "https://chat.recoupable.com/billing",
-    });
+    expect(out).toEqual({ accountId: ACCOUNT, returnUrl: "https://chat.recoupable.com/billing" });
     expect(validateAuthContext).toHaveBeenCalledWith(req, {});
   });
 });

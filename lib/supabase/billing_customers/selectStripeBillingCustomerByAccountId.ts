@@ -16,7 +16,7 @@ export async function selectStripeBillingCustomerByAccountId(
 
   if (error) {
     console.error("selectStripeBillingCustomerByAccountId:", error);
-    return null;
+    throw error;
   }
 
   return data ?? null;
