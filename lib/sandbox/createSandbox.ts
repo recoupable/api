@@ -1,53 +1,54 @@
 import ms from "ms";
-import { Sandbox } from "@vercel/sandbox";
+import { VercelSandbox, type VercelSandboxConfig } from "@/lib/sandbox/vercel";
 
 export interface SandboxCreatedResponse {
-  sandboxId: Sandbox["name"];
-  sandboxStatus: Sandbox["status"];
-  timeout: Sandbox["timeout"];
+  sandboxId: VercelSandbox["name"];
+  sandboxStatus: string;
+  timeout: VercelSandbox["timeout"];
   createdAt: string;
 }
 
 export interface SandboxCreateResult {
-  sandbox: Sandbox;
+  sandbox: VercelSandbox;
   response: SandboxCreatedResponse;
 }
 
-/** Extract CreateSandboxParams from Sandbox.create method signature */
-export type CreateSandboxParams = NonNullable<Parameters<typeof Sandbox.create>[0]>;
+/** Parameters for the api-side createSandbox helper. Wraps the abstraction's
+ *  VercelSandboxConfig so callers do not need to import it directly. */
+export type CreateSandboxParams = VercelSandboxConfig;
 
 const DEFAULT_TIMEOUT = ms("30m");
 const DEFAULT_VCPUS = 4;
-const DEFAULT_RUNTIME = "node22";
+const DEFAULT_RUNTIME = "node22" as const;
 
 /**
- * Creates a Vercel Sandbox and returns its info.
+ * Creates a Vercel Sandbox via the open-agents abstraction and returns
+ * its info. The sandbox is left running so subsequent prompts can run
+ * against it.
  *
- * The sandbox is left running so that prompts can be executed via the prompt_sandbox tool.
- * Accepts the same parameters as Sandbox.create from @vercel/sandbox.
+ * Restores from a snapshot when `restoreSnapshotId` is provided —
+ * snapshots already encode resources/runtime so we skip our defaults
+ * in that case.
  *
- * @param params - Sandbox creation parameters (source, timeout, resources, runtime, ports)
- * @returns The sandbox creation response
+ * @param config - VercelSandboxConfig (timeout, vcpus, runtime,
+ *                 restoreSnapshotId, source, ports, env, etc.)
+ * @returns The sandbox creation result (instance + response shape)
  * @throws Error if sandbox creation fails
  */
 export async function createSandbox(
-  params: CreateSandboxParams = {},
+  config: CreateSandboxParams = {},
 ): Promise<SandboxCreateResult> {
-  const hasSnapshotSource =
-    params.source && "type" in params.source && params.source.type === "snapshot";
-
-  // Pass params directly to SDK - it handles all the type variants
-  const sandbox = await Sandbox.create(
-    hasSnapshotSource
+  const sandbox = await VercelSandbox.create(
+    config.restoreSnapshotId
       ? {
-          ...params,
-          timeout: params.timeout ?? DEFAULT_TIMEOUT,
+          ...config,
+          timeout: config.timeout ?? DEFAULT_TIMEOUT,
         }
       : {
-          resources: { vcpus: DEFAULT_VCPUS },
-          timeout: params.timeout ?? DEFAULT_TIMEOUT,
+          vcpus: DEFAULT_VCPUS,
+          timeout: config.timeout ?? DEFAULT_TIMEOUT,
           runtime: DEFAULT_RUNTIME,
-          ...params,
+          ...config,
         },
   );
 
@@ -55,9 +56,9 @@ export async function createSandbox(
     sandbox,
     response: {
       sandboxId: sandbox.name,
-      sandboxStatus: sandbox.status,
+      sandboxStatus: sandbox.sdkStatus,
       timeout: sandbox.timeout,
-      createdAt: sandbox.createdAt.toISOString(),
+      createdAt: sandbox.createdAt?.toISOString() ?? new Date().toISOString(),
     },
   };
 }

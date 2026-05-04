@@ -962,6 +962,26 @@ ${hostLine}${portLines}${runtimeEnvLine}`;
   }
 
   /**
+   * Get the raw SDK session status (e.g. "running", "pending", "stopped",
+   * "failed", "aborted", "snapshotting"). Distinct from the abstraction's
+   * normalized `status` getter — exposed for callers that need to surface
+   * the exact SDK lifecycle state in HTTP responses or status polling.
+   */
+  get sdkStatus(): string {
+    this.refreshStateFromCurrentSession();
+    return this.session.status;
+  }
+
+  /**
+   * Timestamp when the underlying SDK sandbox was created. Sourced from
+   * the SDK session's createdAt field. Returns `undefined` if the SDK has
+   * not yet populated it (rare — should be set immediately after create).
+   */
+  get createdAt(): Date | undefined {
+    return this.session.createdAt ?? undefined;
+  }
+
+  /**
    * Get the current state for persistence.
    * Returns state that can be passed to `connectSandbox()` to restore this sandbox.
    */

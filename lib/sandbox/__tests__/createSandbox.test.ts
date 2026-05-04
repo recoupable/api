@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { createSandbox } from "../createSandbox";
-import { Sandbox } from "@vercel/sandbox";
+import { VercelSandbox } from "../vercel";
 
 const mockSandbox = {
   name: "sbx_test123",
-  status: "running",
+  sdkStatus: "running",
   timeout: 1800000,
   createdAt: new Date("2024-01-01T00:00:00Z"),
 };
 
-vi.mock("@vercel/sandbox", () => ({
-  Sandbox: {
+vi.mock("../vercel", () => ({
+  VercelSandbox: {
     create: vi.fn(() => Promise.resolve(mockSandbox)),
   },
 }));
@@ -28,21 +28,21 @@ describe("createSandbox", () => {
     vi.clearAllMocks();
   });
 
-  it("creates sandbox with default configuration when no params provided", async () => {
+  it("creates sandbox with default configuration when no config provided", async () => {
     await createSandbox();
 
-    expect(Sandbox.create).toHaveBeenCalledWith({
-      resources: { vcpus: 4 },
+    expect(VercelSandbox.create).toHaveBeenCalledWith({
+      vcpus: 4,
       timeout: 1800000,
       runtime: "node22",
     });
   });
 
-  it("creates sandbox from snapshot when source is provided", async () => {
-    await createSandbox({ source: { type: "snapshot", snapshotId: "snap_abc123" } });
+  it("restores from snapshot when restoreSnapshotId is provided", async () => {
+    await createSandbox({ restoreSnapshotId: "snap_abc123" });
 
-    expect(Sandbox.create).toHaveBeenCalledWith({
-      source: { type: "snapshot", snapshotId: "snap_abc123" },
+    expect(VercelSandbox.create).toHaveBeenCalledWith({
+      restoreSnapshotId: "snap_abc123",
       timeout: 1800000,
     });
   });
@@ -50,18 +50,18 @@ describe("createSandbox", () => {
   it("allows overriding default timeout", async () => {
     await createSandbox({ timeout: 300000 });
 
-    expect(Sandbox.create).toHaveBeenCalledWith({
-      resources: { vcpus: 4 },
+    expect(VercelSandbox.create).toHaveBeenCalledWith({
+      vcpus: 4,
       timeout: 300000,
       runtime: "node22",
     });
   });
 
-  it("allows overriding default resources", async () => {
-    await createSandbox({ resources: { vcpus: 2 } });
+  it("allows overriding default vcpus", async () => {
+    await createSandbox({ vcpus: 2 });
 
-    expect(Sandbox.create).toHaveBeenCalledWith({
-      resources: { vcpus: 2 },
+    expect(VercelSandbox.create).toHaveBeenCalledWith({
+      vcpus: 2,
       timeout: 1800000,
       runtime: "node22",
     });
@@ -84,7 +84,9 @@ describe("createSandbox", () => {
       ...mockSandbox,
       stop: vi.fn(),
     };
-    vi.mocked(Sandbox.create).mockResolvedValue(mockSandboxWithStop as unknown as Sandbox);
+    vi.mocked(VercelSandbox.create).mockResolvedValue(
+      mockSandboxWithStop as unknown as VercelSandbox,
+    );
 
     await createSandbox();
 
