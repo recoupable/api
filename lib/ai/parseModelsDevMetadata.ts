@@ -1,10 +1,8 @@
+import { isRecord } from "@/lib/ai/isRecord";
+
 export interface ModelsDevMetadata {
   context_window?: number;
   cost?: { input: number; output: number };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**

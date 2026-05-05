@@ -1,7 +1,6 @@
 import type { ModelsDevMetadata } from "@/lib/ai/parseModelsDevMetadata";
 
 interface GatewayModelLike {
-  [key: string]: unknown;
   id: string;
 }
 
