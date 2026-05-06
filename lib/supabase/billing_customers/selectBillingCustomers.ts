@@ -1,5 +1,7 @@
 import supabase from "@/lib/supabase/serverClient";
-import type { Tables } from "@/types/database.types";
+import type { Database, Tables } from "@/types/database.types";
+
+type BillingProvider = Database["public"]["Enums"]["billing_provider"];
 
 /**
  * Select rows from `billing_customers`, optionally filtered by account and provider.
@@ -9,7 +11,7 @@ export async function selectBillingCustomers({
   provider,
 }: {
   accountId?: string;
-  provider?: string;
+  provider?: BillingProvider;
 } = {}): Promise<Tables<"billing_customers">[]> {
   let query = supabase.from("billing_customers").select("*");
 
