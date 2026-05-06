@@ -1,10 +1,10 @@
-import type { Sandbox } from "@vercel/sandbox";
+import type { VercelSandbox } from "@/lib/sandbox/vercel";
 import { createSandboxWithFallback } from "@/lib/sandbox/createSandboxWithFallback";
 import { getValidSnapshotId } from "@/lib/sandbox/getValidSnapshotId";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 
 export interface CreateSandboxFromSnapshotResult {
-  sandbox: Sandbox;
+  sandbox: VercelSandbox;
   fromSnapshot: boolean;
 }
 

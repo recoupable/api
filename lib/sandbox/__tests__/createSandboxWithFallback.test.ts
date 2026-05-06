@@ -27,7 +27,7 @@ describe("createSandboxWithFallback", () => {
     const result = await createSandboxWithFallback("snap_abc");
 
     expect(mockCreateSandbox).toHaveBeenCalledWith({
-      source: { type: "snapshot", snapshotId: "snap_abc" },
+      restoreSnapshotId: "snap_abc",
     });
     expect(result).toEqual({ ...mockCreateResult, fromSnapshot: true });
   });
