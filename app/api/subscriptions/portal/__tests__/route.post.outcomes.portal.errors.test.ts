@@ -3,26 +3,20 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import { validateCreateSubscriptionPortalBody } from "@/lib/stripe/validateCreateSubscriptionPortalBody";
 import { createBillingPortalSession } from "@/lib/stripe/createBillingPortalSession";
-import { selectBillingCustomers } from "@/lib/supabase/billing_customers/selectBillingCustomers";
+import { getActiveSubscriptionDetails } from "@/lib/stripe/getActiveSubscriptionDetails";
 
 const { POST } = await import("../route");
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174001";
-
-const row = {
-  id: 1,
-  account_id: ACCOUNT,
-  customer_id: "cus_test_123",
-  email: null,
-  provider: "stripe" as const,
-};
 
 function mockValidated() {
   vi.mocked(validateCreateSubscriptionPortalBody).mockResolvedValue({
     accountId: ACCOUNT,
     returnUrl: "https://chat.recoupable.com/billing",
   });
-  vi.mocked(selectBillingCustomers).mockResolvedValue([row]);
+  vi.mocked(getActiveSubscriptionDetails).mockResolvedValue({
+    customer: "cus_test_123",
+  } as Awaited<ReturnType<typeof getActiveSubscriptionDetails>>);
 }
 
 describe("POST /api/subscriptions/portal (portal session errors)", () => {

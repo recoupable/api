@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { selectBillingCustomers } from "@/lib/supabase/billing_customers/selectBillingCustomers";
 import { createBillingPortalSession } from "@/lib/stripe/createBillingPortalSession";
+import { getActiveSubscriptionDetails } from "@/lib/stripe/getActiveSubscriptionDetails";
 import { validateCreateSubscriptionPortalBody } from "@/lib/stripe/validateCreateSubscriptionPortalBody";
 
 export async function createSubscriptionPortalHandler(request: NextRequest): Promise<NextResponse> {
@@ -11,19 +11,16 @@ export async function createSubscriptionPortalHandler(request: NextRequest): Pro
       return validated;
     }
 
-    const [billingCustomer] = await selectBillingCustomers({
-      accountId: validated.accountId,
-      provider: "stripe",
-    });
-    if (!billingCustomer) {
+    const subscription = await getActiveSubscriptionDetails(validated.accountId);
+    if (!subscription) {
       return NextResponse.json(
-        { error: "Billing customer not found" },
+        { error: "No active subscription found" },
         { status: 400, headers: getCorsHeaders() },
       );
     }
 
     const session = await createBillingPortalSession(
-      billingCustomer.customer_id,
+      subscription.customer as string,
       validated.returnUrl,
     );
     if (!session.url) {

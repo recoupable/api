@@ -3,13 +3,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateCreateSubscriptionPortalBody } from "@/lib/stripe/validateCreateSubscriptionPortalBody";
 import { createBillingPortalSession } from "@/lib/stripe/createBillingPortalSession";
-import { selectBillingCustomers } from "@/lib/supabase/billing_customers/selectBillingCustomers";
+import { getActiveSubscriptionDetails } from "@/lib/stripe/getActiveSubscriptionDetails";
 
 const { POST } = await import("../route");
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174001";
 
-describe("POST /api/subscriptions/portal (handler outcomes — validation & missing customer)", () => {
+describe("POST /api/subscriptions/portal (handler outcomes — validation & no subscription)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(validateCreateSubscriptionPortalBody).mockReset();
@@ -26,29 +26,29 @@ describe("POST /api/subscriptions/portal (handler outcomes — validation & miss
       body: "{}",
     });
     expect(await POST(req)).toBe(err);
-    expect(selectBillingCustomers).not.toHaveBeenCalled();
+    expect(getActiveSubscriptionDetails).not.toHaveBeenCalled();
   });
 
-  it("returns 400 when no billing customer", async () => {
+  it("returns 400 when no active subscription", async () => {
     vi.mocked(validateCreateSubscriptionPortalBody).mockResolvedValue({
       accountId: ACCOUNT,
       returnUrl: "https://chat.recoupable.com/billing",
     });
-    vi.mocked(selectBillingCustomers).mockResolvedValue([]);
+    vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(null);
     const res = await POST(
       new NextRequest("http://localhost/api/subscriptions/portal", { method: "POST", body: "{}" }),
     );
     expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toEqual({ error: "Billing customer not found" });
+    await expect(res.json()).resolves.toEqual({ error: "No active subscription found" });
     expect(createBillingPortalSession).not.toHaveBeenCalled();
   });
 
-  it("returns 500 when billing customer lookup fails", async () => {
+  it("returns 500 when subscription lookup fails", async () => {
     vi.mocked(validateCreateSubscriptionPortalBody).mockResolvedValue({
       accountId: ACCOUNT,
       returnUrl: "https://chat.recoupable.com/billing",
     });
-    vi.mocked(selectBillingCustomers).mockRejectedValue(new Error("supabase down"));
+    vi.mocked(getActiveSubscriptionDetails).mockRejectedValue(new Error("stripe down"));
     const res = await POST(
       new NextRequest("http://localhost/api/subscriptions/portal", { method: "POST", body: "{}" }),
     );
