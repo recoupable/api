@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { createSubscriptionPortalHandler } from "@/lib/stripe/createSubscriptionPortalHandler";
 import { validateCreateSubscriptionPortalBody } from "@/lib/stripe/validateCreateSubscriptionPortalBody";
-import { selectStripeBillingCustomerByAccountId } from "@/lib/supabase/billing_customers/selectStripeBillingCustomerByAccountId";
+import { selectBillingCustomers } from "@/lib/supabase/billing_customers/selectBillingCustomers";
 import { createBillingPortalSession } from "@/lib/stripe/createBillingPortalSession";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -13,8 +13,8 @@ vi.mock("@/lib/stripe/validateCreateSubscriptionPortalBody", () => ({
   validateCreateSubscriptionPortalBody: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/billing_customers/selectStripeBillingCustomerByAccountId", () => ({
-  selectStripeBillingCustomerByAccountId: vi.fn(),
+vi.mock("@/lib/supabase/billing_customers/selectBillingCustomers", () => ({
+  selectBillingCustomers: vi.fn(),
 }));
 
 vi.mock("@/lib/stripe/createBillingPortalSession", () => ({
@@ -38,7 +38,7 @@ describe("createSubscriptionPortalHandler", () => {
       body: "{}",
     });
     expect(await createSubscriptionPortalHandler(req)).toBe(err);
-    expect(selectStripeBillingCustomerByAccountId).not.toHaveBeenCalled();
+    expect(selectBillingCustomers).not.toHaveBeenCalled();
   });
 
   it("returns 200 with id and url", async () => {
@@ -46,13 +46,15 @@ describe("createSubscriptionPortalHandler", () => {
       accountId: ACCOUNT,
       returnUrl: "https://chat.recoupable.com/billing",
     });
-    vi.mocked(selectStripeBillingCustomerByAccountId).mockResolvedValue({
-      id: 1,
-      account_id: ACCOUNT,
-      customer_id: "cus_test_123",
-      email: null,
-      provider: "stripe",
-    });
+    vi.mocked(selectBillingCustomers).mockResolvedValue([
+      {
+        id: 1,
+        account_id: ACCOUNT,
+        customer_id: "cus_test_123",
+        email: null,
+        provider: "stripe",
+      },
+    ]);
     vi.mocked(createBillingPortalSession).mockResolvedValue({
       id: "bps_test_abc",
       url: "https://billing.example.com/session/abc",
@@ -73,13 +75,15 @@ describe("createSubscriptionPortalHandler", () => {
       accountId: ACCOUNT,
       returnUrl: "https://chat.recoupable.com/billing",
     });
-    vi.mocked(selectStripeBillingCustomerByAccountId).mockResolvedValue({
-      id: 1,
-      account_id: ACCOUNT,
-      customer_id: "cus_test_123",
-      email: null,
-      provider: "stripe",
-    });
+    vi.mocked(selectBillingCustomers).mockResolvedValue([
+      {
+        id: 1,
+        account_id: ACCOUNT,
+        customer_id: "cus_test_123",
+        email: null,
+        provider: "stripe",
+      },
+    ]);
     vi.mocked(createBillingPortalSession).mockRejectedValue(new Error("Stripe down"));
 
     const res = await createSubscriptionPortalHandler(

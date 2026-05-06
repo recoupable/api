@@ -12,8 +12,8 @@ vi.mock("@/lib/stripe/validateCreateSubscriptionPortalBody", () => ({
   validateCreateSubscriptionPortalBody: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/billing_customers/selectStripeBillingCustomerByAccountId", () => ({
-  selectStripeBillingCustomerByAccountId: vi.fn(),
+vi.mock("@/lib/supabase/billing_customers/selectBillingCustomers", () => ({
+  selectBillingCustomers: vi.fn(),
 }));
 
 vi.mock("@/lib/stripe/createBillingPortalSession", () => ({

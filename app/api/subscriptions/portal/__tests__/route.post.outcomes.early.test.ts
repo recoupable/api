@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateCreateSubscriptionPortalBody } from "@/lib/stripe/validateCreateSubscriptionPortalBody";
 import { createBillingPortalSession } from "@/lib/stripe/createBillingPortalSession";
-import { selectStripeBillingCustomerByAccountId } from "@/lib/supabase/billing_customers/selectStripeBillingCustomerByAccountId";
+import { selectBillingCustomers } from "@/lib/supabase/billing_customers/selectBillingCustomers";
 
 const { POST } = await import("../route");
 
@@ -26,7 +26,7 @@ describe("POST /api/subscriptions/portal (handler outcomes — validation & miss
       body: "{}",
     });
     expect(await POST(req)).toBe(err);
-    expect(selectStripeBillingCustomerByAccountId).not.toHaveBeenCalled();
+    expect(selectBillingCustomers).not.toHaveBeenCalled();
   });
 
   it("returns 400 when no billing customer", async () => {
@@ -34,7 +34,7 @@ describe("POST /api/subscriptions/portal (handler outcomes — validation & miss
       accountId: ACCOUNT,
       returnUrl: "https://chat.recoupable.com/billing",
     });
-    vi.mocked(selectStripeBillingCustomerByAccountId).mockResolvedValue(null);
+    vi.mocked(selectBillingCustomers).mockResolvedValue([]);
     const res = await POST(
       new NextRequest("http://localhost/api/subscriptions/portal", { method: "POST", body: "{}" }),
     );
@@ -48,7 +48,7 @@ describe("POST /api/subscriptions/portal (handler outcomes — validation & miss
       accountId: ACCOUNT,
       returnUrl: "https://chat.recoupable.com/billing",
     });
-    vi.mocked(selectStripeBillingCustomerByAccountId).mockRejectedValue(new Error("supabase down"));
+    vi.mocked(selectBillingCustomers).mockRejectedValue(new Error("supabase down"));
     const res = await POST(
       new NextRequest("http://localhost/api/subscriptions/portal", { method: "POST", body: "{}" }),
     );

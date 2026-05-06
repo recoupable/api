@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import { validateCreateSubscriptionPortalBody } from "@/lib/stripe/validateCreateSubscriptionPortalBody";
 import { createBillingPortalSession } from "@/lib/stripe/createBillingPortalSession";
-import { selectStripeBillingCustomerByAccountId } from "@/lib/supabase/billing_customers/selectStripeBillingCustomerByAccountId";
+import { selectBillingCustomers } from "@/lib/supabase/billing_customers/selectBillingCustomers";
 
 const { POST } = await import("../route");
 
@@ -23,13 +23,15 @@ describe("POST /api/subscriptions/portal (200)", () => {
       accountId: ACCOUNT,
       returnUrl: "https://chat.recoupable.com/billing",
     });
-    vi.mocked(selectStripeBillingCustomerByAccountId).mockResolvedValue({
-      id: 1,
-      account_id: ACCOUNT,
-      customer_id: "cus_test_123",
-      email: null,
-      provider: "stripe",
-    });
+    vi.mocked(selectBillingCustomers).mockResolvedValue([
+      {
+        id: 1,
+        account_id: ACCOUNT,
+        customer_id: "cus_test_123",
+        email: null,
+        provider: "stripe",
+      },
+    ]);
     vi.mocked(createBillingPortalSession).mockResolvedValue({
       id: "bps_test_abc",
       url: "https://billing.example.com/session/abc",

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { selectStripeBillingCustomerByAccountId } from "@/lib/supabase/billing_customers/selectStripeBillingCustomerByAccountId";
+import { selectBillingCustomers } from "@/lib/supabase/billing_customers/selectBillingCustomers";
 import { createBillingPortalSession } from "@/lib/stripe/createBillingPortalSession";
 import { validateCreateSubscriptionPortalBody } from "@/lib/stripe/validateCreateSubscriptionPortalBody";
 
@@ -11,7 +11,10 @@ export async function createSubscriptionPortalHandler(request: NextRequest): Pro
       return validated;
     }
 
-    const billingCustomer = await selectStripeBillingCustomerByAccountId(validated.accountId);
+    const [billingCustomer] = await selectBillingCustomers({
+      accountId: validated.accountId,
+      provider: "stripe",
+    });
     if (!billingCustomer) {
       return NextResponse.json(
         { error: "Billing customer not found" },
