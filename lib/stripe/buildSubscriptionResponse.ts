@@ -1,27 +1,15 @@
 import type Stripe from "stripe";
 import isActiveSubscription from "@/lib/stripe/isActiveSubscription";
+import { toStatus, type SubscriptionStatus } from "@/lib/stripe/toStatus";
 
 export type SubscriptionSource = "account" | "organization";
-export type SubscriptionStatus = "active" | "trialing" | "canceled" | "past_due" | "none";
+export type { SubscriptionStatus };
 
 export interface SubscriptionResponse {
   isPro: boolean;
   status: SubscriptionStatus;
   plan: string | null;
   source: SubscriptionSource | null;
-}
-
-const SUPPORTED_STATUSES = new Set<SubscriptionStatus>([
-  "active",
-  "trialing",
-  "canceled",
-  "past_due",
-]);
-
-function toStatus(stripeStatus: Stripe.Subscription.Status): SubscriptionStatus {
-  return SUPPORTED_STATUSES.has(stripeStatus as SubscriptionStatus)
-    ? (stripeStatus as SubscriptionStatus)
-    : "none";
 }
 
 const inactive: SubscriptionResponse = {

@@ -45,14 +45,6 @@ describe("getActiveSubscriptions", () => {
     expect(result.map(s => s.id)).toEqual(["sub_1", "sub_2"]);
   });
 
-  it("passes stripeCustomerId to subscriptions.list when provided", async () => {
-    list().mockResolvedValueOnce(apiList([sub("sub_1", ACC)], false));
-    await getActiveSubscriptions(ACC, "cus_123");
-    expect(list()).toHaveBeenCalledWith(
-      expect.objectContaining({ customer: "cus_123", limit: 100 }),
-    );
-  });
-
   it("returns [] when nothing matches after Stripe exhausts pages", async () => {
     for (let i = 0; i < 3; i++) {
       list().mockResolvedValueOnce(apiList([sub(`sub_${i}`, "other")], i < 2));
