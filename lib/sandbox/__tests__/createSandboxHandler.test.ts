@@ -6,6 +6,7 @@ import { validateCreateSandboxBody } from "@/lib/sandbox/validateCreateSandboxBo
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { connectSandbox } from "@/lib/sandbox/factory";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
+import { installSessionGlobalSkills } from "@/lib/sandbox/installSessionGlobalSkills";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
@@ -24,6 +25,9 @@ vi.mock("@/lib/supabase/sessions/updateSession", () => ({
 }));
 vi.mock("@/lib/github/getServiceGithubToken", () => ({
   getServiceGithubToken: vi.fn(() => "ghs_test_token"),
+}));
+vi.mock("@/lib/sandbox/installSessionGlobalSkills", () => ({
+  installSessionGlobalSkills: vi.fn(async () => undefined),
 }));
 
 const ACCOUNT_ID = "acc-1";
@@ -145,6 +149,33 @@ describe("createSandboxHandler", () => {
     expect(arg).toBeDefined();
     if (!arg || !("options" in arg)) throw new Error("expected new-API config shape");
     expect(arg.options?.githubToken).toBe("ghs_test_token");
+  });
+
+  it("installs global skills into the freshly-provisioned sandbox", async () => {
+    await createSandboxHandler(makeReq());
+
+    expect(installSessionGlobalSkills).toHaveBeenCalledOnce();
+    const call = vi.mocked(installSessionGlobalSkills).mock.calls[0][0];
+    expect(call.sessionRow.id).toBe("sess-1");
+  });
+
+  it("returns 200 even when skill installation throws (best-effort)", async () => {
+    vi.mocked(installSessionGlobalSkills).mockRejectedValueOnce(new Error("npx skills add failed"));
+
+    const res = await createSandboxHandler(makeReq());
+
+    expect(res.status).toBe(200);
+  });
+
+  it("does not attempt skill installation when no sessionId is provided", async () => {
+    vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce({
+      body: { repoUrl: "https://github.com/o/r" },
+      auth: { accountId: ACCOUNT_ID, orgId: null, authToken: "k" },
+    });
+
+    await createSandboxHandler(makeReq());
+
+    expect(installSessionGlobalSkills).not.toHaveBeenCalled();
   });
 
   it("skips the session-row write when no sessionId is provided", async () => {
