@@ -1,46 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { hasRuntimeSandboxState } from "@/lib/sandbox/hasRuntimeSandboxState";
+import { buildLifecycle } from "@/lib/sandbox/buildLifecycle";
+import { isSandboxActive } from "@/lib/sandbox/isSandboxActive";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
-import type { Tables } from "@/types/database.types";
-
-const SANDBOX_EXPIRES_BUFFER_MS = 10_000;
-
-function isoToEpochMs(value: string | null): number | null {
-  if (!value) return null;
-  const ms = Date.parse(value);
-  return Number.isFinite(ms) ? ms : null;
-}
-
-function buildLifecycle(row: Tables<"sessions">) {
-  return {
-    serverTime: Date.now(),
-    state: row.lifecycle_state,
-    lastActivityAt: isoToEpochMs(row.last_activity_at),
-    hibernateAfter: isoToEpochMs(row.hibernate_after),
-    sandboxExpiresAt: isoToEpochMs(row.sandbox_expires_at),
-  };
-}
-
-function isSandboxActive(row: Tables<"sessions">): boolean {
-  // Reject the type-only stub written by POST /api/sessions — only real
-  // runtime metadata (a non-empty sandboxName) counts as an active sandbox.
-  // Without this guard, every freshly-created session reports "active"
-  // before any sandbox has actually been provisioned.
-  if (!hasRuntimeSandboxState(row.sandbox_state)) return false;
-  const expiresAt = isoToEpochMs(row.sandbox_expires_at);
-  if (expiresAt === null) return true;
-  return Date.now() < expiresAt - SANDBOX_EXPIRES_BUFFER_MS;
-}
 
 /**
  * Handles `GET /api/sandbox/status`. Returns the current lifecycle and
  * runtime state for the sandbox bound to a session — DB-only read, no
  * upstream probe. Status is `"active"` when the session row carries a
- * non-expired `sandbox_state`, otherwise `"no_sandbox"`. `hasSnapshot`
- * is true when the row records a saved snapshot the UI can offer to
- * resume.
+ * non-expired `sandbox_state` (with real runtime metadata), otherwise
+ * `"no_sandbox"`. `hasSnapshot` is true when the row records a saved
+ * snapshot the UI can offer to resume.
  */
 export async function getSandboxStatusHandler(request: NextRequest): Promise<NextResponse> {
   const auth = await validateAuthContext(request);

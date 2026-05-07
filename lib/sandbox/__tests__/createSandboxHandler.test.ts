@@ -5,7 +5,7 @@ import { createSandboxHandler } from "@/lib/sandbox/createSandboxHandler";
 import { validateCreateSandboxBody } from "@/lib/sandbox/validateCreateSandboxBody";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { connectSandbox } from "@/lib/sandbox/factory";
-import { updateSessionSandboxState } from "@/lib/supabase/sessions/updateSessionSandboxState";
+import { updateSession } from "@/lib/supabase/sessions/updateSession";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
@@ -19,8 +19,11 @@ vi.mock("@/lib/supabase/sessions/selectSessions", () => ({
 vi.mock("@/lib/sandbox/factory", () => ({
   connectSandbox: vi.fn(),
 }));
-vi.mock("@/lib/supabase/sessions/updateSessionSandboxState", () => ({
-  updateSessionSandboxState: vi.fn(),
+vi.mock("@/lib/supabase/sessions/updateSession", () => ({
+  updateSession: vi.fn(),
+}));
+vi.mock("@/lib/github/getServiceGithubToken", () => ({
+  getServiceGithubToken: vi.fn(() => "ghs_test_token"),
 }));
 
 const ACCOUNT_ID = "acc-1";
@@ -53,7 +56,7 @@ describe("createSandboxHandler", () => {
     vi.mocked(connectSandbox).mockResolvedValue(
       fakeSandbox() as unknown as Awaited<ReturnType<typeof connectSandbox>>,
     );
-    vi.mocked(updateSessionSandboxState).mockResolvedValue({} as any);
+    vi.mocked(updateSession).mockResolvedValue({} as any);
   });
 
   it("short-circuits with the validator's response on validation failure", async () => {
@@ -108,15 +111,27 @@ describe("createSandboxHandler", () => {
     expect(typeof body.timing.readyMs).toBe("number");
   });
 
-  it("persists sandbox state to the session row when sessionId is provided", async () => {
+  it("persists sandbox state and clears stale snapshot fields on the session row", async () => {
     await createSandboxHandler(makeReq());
 
-    expect(updateSessionSandboxState).toHaveBeenCalledWith(
+    expect(updateSession).toHaveBeenCalledWith(
+      "sess-1",
       expect.objectContaining({
-        id: "sess-1",
-        sandboxState: { type: "vercel", sandboxName: "session-sess-1" },
+        sandbox_state: { type: "vercel", sandboxName: "session-sess-1" },
+        lifecycle_state: "active",
+        snapshot_url: null,
+        snapshot_created_at: null,
       }),
     );
+  });
+
+  it("plumbs the service github token into connectSandbox options", async () => {
+    await createSandboxHandler(makeReq());
+
+    const arg = vi.mocked(connectSandbox).mock.calls[0]?.[0];
+    expect(arg).toBeDefined();
+    if (!arg || !("options" in arg)) throw new Error("expected new-API config shape");
+    expect(arg.options?.githubToken).toBe("ghs_test_token");
   });
 
   it("skips the session-row write when no sessionId is provided", async () => {
@@ -128,29 +143,7 @@ describe("createSandboxHandler", () => {
     const res = await createSandboxHandler(makeReq());
 
     expect(res.status).toBe(200);
-    expect(updateSessionSandboxState).not.toHaveBeenCalled();
+    expect(updateSession).not.toHaveBeenCalled();
     expect(selectSessions).not.toHaveBeenCalled();
-  });
-
-  it("uses isNewBranch=true to flip source.branch into source.newBranch", async () => {
-    vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce({
-      body: {
-        repoUrl: "https://github.com/o/r",
-        sessionId: "sess-1",
-        branch: "feat/x",
-        isNewBranch: true,
-      },
-      auth: { accountId: ACCOUNT_ID, orgId: null, authToken: "k" },
-    });
-
-    await createSandboxHandler(makeReq());
-
-    const arg = vi.mocked(connectSandbox).mock.calls[0]?.[0];
-    expect(arg).toBeDefined();
-    if (!arg || !("state" in arg)) throw new Error("expected new-API config shape");
-
-    const source = (arg.state as any).source;
-    expect(source.newBranch).toBe("feat/x");
-    expect(source.branch).toBeUndefined();
   });
 });

@@ -4,12 +4,17 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import type { AuthContext } from "@/lib/auth/validateAuthContext";
+import { parseGitHubRepoUrl } from "@/lib/github/parseGitHubRepoUrl";
 
 export const createSandboxBodySchema = z.object({
-  repoUrl: z.string({ message: "repoUrl is required" }).min(1, "repoUrl cannot be empty"),
+  repoUrl: z
+    .string({ message: "repoUrl is required" })
+    .min(1, "repoUrl cannot be empty")
+    .refine(value => parseGitHubRepoUrl(value) !== null, {
+      message: "repoUrl must be a valid GitHub repository URL",
+    }),
   sessionId: z.string().optional(),
   branch: z.string().optional(),
-  isNewBranch: z.boolean().optional(),
 });
 
 export type CreateSandboxBody = z.infer<typeof createSandboxBodySchema>;
@@ -22,8 +27,8 @@ export interface ValidatedCreateSandboxRequest {
 /**
  * Validates a `POST /api/sandbox` request: authenticates the caller,
  * tolerates malformed JSON (treated as an empty body), then enforces
- * the Zod schema. Returns either the first 4xx response or the
- * validated `{ body, auth }`.
+ * the Zod schema (including a strict GitHub URL check). Returns either
+ * the first 4xx response or the validated `{ body, auth }`.
  */
 export async function validateCreateSandboxBody(
   request: NextRequest,

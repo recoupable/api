@@ -65,6 +65,20 @@ describe("validateCreateSandboxBody", () => {
     expect((result as NextResponse).status).toBe(400);
   });
 
+  it("returns 400 when repoUrl is not a valid GitHub repository URL", async () => {
+    const result = await validateCreateSandboxBody(makeReq({ repoUrl: "https://gitlab.com/o/r" }));
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(400);
+  });
+
+  it("returns 400 when repoUrl is not a URL at all", async () => {
+    const result = await validateCreateSandboxBody(makeReq({ repoUrl: "x" }));
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(400);
+  });
+
   it("returns the validated body + auth on a minimal happy path", async () => {
     const result = await validateCreateSandboxBody(makeReq({ repoUrl: "https://github.com/o/r" }));
 
@@ -73,17 +87,15 @@ describe("validateCreateSandboxBody", () => {
     expect(result.body.repoUrl).toBe("https://github.com/o/r");
     expect(result.body.sessionId).toBeUndefined();
     expect(result.body.branch).toBeUndefined();
-    expect(result.body.isNewBranch).toBeUndefined();
     expect(result.auth.accountId).toBe(ACCOUNT_ID);
   });
 
-  it("accepts a full request with sessionId, branch, isNewBranch", async () => {
+  it("accepts a full request with sessionId and branch", async () => {
     const result = await validateCreateSandboxBody(
       makeReq({
         repoUrl: "https://github.com/o/r",
         sessionId: "sess-1",
         branch: "feat/x",
-        isNewBranch: true,
       }),
     );
 
@@ -91,13 +103,5 @@ describe("validateCreateSandboxBody", () => {
     if (result instanceof NextResponse) return;
     expect(result.body.sessionId).toBe("sess-1");
     expect(result.body.branch).toBe("feat/x");
-    expect(result.body.isNewBranch).toBe(true);
-  });
-
-  it("returns 400 when isNewBranch is the wrong type", async () => {
-    const result = await validateCreateSandboxBody(makeReq({ repoUrl: "x", isNewBranch: "yes" }));
-
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(400);
   });
 });
