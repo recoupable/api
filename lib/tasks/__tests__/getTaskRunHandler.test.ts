@@ -61,7 +61,11 @@ describe("getTaskRunHandler", () => {
 
   describe("retrieve mode", () => {
     it("wraps a single run in { status, runs[] }", async () => {
-      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ mode: "retrieve", runId: "run_123" });
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
+        mode: "retrieve",
+        runId: "run_123",
+        accountId: "acc_123",
+      });
       vi.mocked(retrieveTaskRun).mockResolvedValue(mockRun);
 
       const response = await getTaskRunHandler(createMockRequest());
@@ -74,7 +78,11 @@ describe("getTaskRunHandler", () => {
     });
 
     it("returns 404 when run is not found", async () => {
-      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ mode: "retrieve", runId: "run_x" });
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
+        mode: "retrieve",
+        runId: "run_x",
+        accountId: "acc_123",
+      });
       vi.mocked(retrieveTaskRun).mockResolvedValue(null);
 
       const response = await getTaskRunHandler(createMockRequest());
@@ -82,13 +90,32 @@ describe("getTaskRunHandler", () => {
     });
 
     it("returns 500 when retrieveTaskRun throws", async () => {
-      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ mode: "retrieve", runId: "run_123" });
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
+        mode: "retrieve",
+        runId: "run_123",
+        accountId: "acc_123",
+      });
       vi.mocked(retrieveTaskRun).mockRejectedValue(new Error("API error"));
 
       const response = await getTaskRunHandler(createMockRequest());
       expect(response.status).toBe(500);
       const json = await response.json();
       expect(json.error).toBe("API error");
+    });
+
+    it("returns 403 when run does not belong to the authorized account", async () => {
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
+        mode: "retrieve",
+        runId: "run_123",
+        accountId: "acc_999",
+      });
+      vi.mocked(retrieveTaskRun).mockResolvedValue(mockRun);
+
+      const response = await getTaskRunHandler(createMockRequest());
+      const json = await response.json();
+
+      expect(response.status).toBe(403);
+      expect(json.error).toBe("Access denied to this task run");
     });
   });
 

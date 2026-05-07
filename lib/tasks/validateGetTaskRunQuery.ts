@@ -20,7 +20,7 @@ const getTaskRunQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
-export type ValidatedRetrieveQuery = { mode: "retrieve"; runId: string };
+export type ValidatedRetrieveQuery = { mode: "retrieve"; runId: string; accountId: string };
 export type ValidatedListQuery = { mode: "list"; accountId: string; limit: number };
 export type GetTaskRunQuery = ValidatedRetrieveQuery | ValidatedListQuery;
 
@@ -68,10 +68,6 @@ export async function validateGetTaskRunQuery(
     );
   }
 
-  if (result.data.runId) {
-    return { mode: "retrieve", runId: result.data.runId };
-  }
-
   // Resolve the target account ID
   let targetAccountId = authResult.accountId;
 
@@ -93,6 +89,10 @@ export async function validateGetTaskRunQuery(
 
       targetAccountId = overrideResult.accountId;
     }
+  }
+
+  if (result.data.runId) {
+    return { mode: "retrieve", runId: result.data.runId, accountId: targetAccountId };
   }
 
   return { mode: "list", accountId: targetAccountId, limit: result.data.limit };
