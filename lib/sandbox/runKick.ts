@@ -4,7 +4,7 @@ import { createLifecycleRunId } from "@/lib/sandbox/createLifecycleRunId";
 import { isLifecycleRunStale } from "@/lib/sandbox/isLifecycleRunStale";
 import { reclaimStaleLease } from "@/lib/sandbox/reclaimStaleLease";
 import { shouldStartLifecycle } from "@/lib/sandbox/shouldStartLifecycle";
-import { claimSessionLifecycleRunId } from "@/lib/supabase/sessions/claimSessionLifecycleRunId";
+import { claimSessionLifecycleRunId } from "@/lib/sessions/claimSessionLifecycleRunId";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import type { SandboxLifecycleReason } from "@/lib/sandbox/sandboxLifecycleTypes";

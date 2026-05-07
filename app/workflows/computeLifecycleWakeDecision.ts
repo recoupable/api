@@ -1,6 +1,6 @@
 import { getLifecycleDueAtMs } from "@/lib/sandbox/getLifecycleDueAtMs";
 import { hasRuntimeSandboxState } from "@/lib/sandbox/hasRuntimeSandboxState";
-import { claimSessionLifecycleRunId } from "@/lib/supabase/sessions/claimSessionLifecycleRunId";
+import { claimSessionLifecycleRunId } from "@/lib/sessions/claimSessionLifecycleRunId";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 
 interface LifecycleWakeDecision {
