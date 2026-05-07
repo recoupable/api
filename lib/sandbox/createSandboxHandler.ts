@@ -7,6 +7,7 @@ import { connectSandbox } from "@/lib/sandbox/factory";
 import { findOrgSnapshot } from "@/lib/sandbox/findOrgSnapshot";
 import { getSessionSandboxName } from "@/lib/sandbox/getSessionSandboxName";
 import { installSessionGlobalSkills } from "@/lib/sandbox/installSessionGlobalSkills";
+import { kickBuildOrgSnapshotWorkflow } from "@/lib/sandbox/kickBuildOrgSnapshotWorkflow";
 import { extractOrgRepoName } from "@/lib/recoupable/extractOrgRepoName";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
@@ -66,6 +67,17 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
   // sandbox provisioning; an error is logged and treated as a miss.
   const orgRepoName = extractOrgRepoName(body.repoUrl);
   const orgSnapshotId = orgRepoName ? await findOrgSnapshot(orgRepoName) : null;
+
+  // Miss: kick a background workflow to build a snapshot for this org so
+  // the *next* session warm-boots from it. This request still pays the
+  // full-clone cold-start path — the workflow runs durably outside the
+  // request lifecycle.
+  if (orgRepoName && !orgSnapshotId) {
+    kickBuildOrgSnapshotWorkflow({
+      cloneUrl: body.repoUrl,
+      sandboxName: orgRepoName,
+    });
+  }
 
   const startTime = Date.now();
 
