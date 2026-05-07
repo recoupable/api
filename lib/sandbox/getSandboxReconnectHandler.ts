@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { buildLifecycle } from "@/lib/sandbox/buildLifecycle";
 import { connectSandbox } from "@/lib/sandbox/factory";
 import { hasRuntimeSandboxState } from "@/lib/sandbox/hasRuntimeSandboxState";
 import { noSandboxResponse } from "@/lib/sandbox/noSandboxResponse";
-import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
+import { validateSandboxReconnectRequest } from "@/lib/sandbox/validateSandboxReconnectRequest";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import type { SandboxState } from "@/lib/sandbox/factory";
 
@@ -31,42 +30,21 @@ interface ReconnectBody {
  * `GET /api/sandbox/status` agree with the probe.
  */
 export async function getSandboxReconnectHandler(request: NextRequest): Promise<NextResponse> {
-  const auth = await validateAuthContext(request);
-  if (auth instanceof NextResponse) {
-    return auth;
+  const validated = await validateSandboxReconnectRequest(request);
+  if (validated instanceof NextResponse) {
+    return validated;
   }
-
-  const sessionId = request.nextUrl.searchParams.get("sessionId");
-  if (!sessionId) {
-    return NextResponse.json(
-      { status: "error", error: "Missing sessionId" },
-      { status: 400, headers: getCorsHeaders() },
-    );
-  }
-
-  const rows = await selectSessions({ id: sessionId });
-  const row = rows[0];
-
-  if (!row) {
-    return NextResponse.json(
-      { status: "error", error: "Session not found" },
-      { status: 404, headers: getCorsHeaders() },
-    );
-  }
-
-  if (row.account_id !== auth.accountId) {
-    return NextResponse.json(
-      { status: "error", error: "Forbidden" },
-      { status: 403, headers: getCorsHeaders() },
-    );
-  }
+  const { row } = validated;
 
   if (!hasRuntimeSandboxState(row.sandbox_state)) {
     return noSandboxResponse(row);
   }
 
   try {
-    const sandbox = await connectSandbox(row.sandbox_state as SandboxState);
+    // Safe cast: hasRuntimeSandboxState above narrowed sandbox_state to an
+    // object with a non-empty `sandboxName` — but the Json type is wider, so
+    // TS needs the unknown bridge to accept the conversion.
+    const sandbox = await connectSandbox(row.sandbox_state as unknown as SandboxState);
     await sandbox.exec("pwd", sandbox.workingDirectory, PROBE_TIMEOUT_MS);
 
     const body: ReconnectBody = {
@@ -78,9 +56,9 @@ export async function getSandboxReconnectHandler(request: NextRequest): Promise<
     return NextResponse.json(body, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[getSandboxReconnectHandler] probe failed for ${sessionId}: ${message}`);
+    console.warn(`[getSandboxReconnectHandler] probe failed for ${row.id}: ${message}`);
 
-    await updateSession(sessionId, {
+    await updateSession(row.id, {
       sandbox_state: null,
       lifecycle_state: "hibernated",
       sandbox_expires_at: null,
