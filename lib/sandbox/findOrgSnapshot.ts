@@ -21,6 +21,9 @@ export async function findOrgSnapshot(sandboxName: string): Promise<string | nul
       limit: 5,
     });
     const ready = result.snapshots.find(s => s.status === "created");
+    console.log(
+      `[findOrgSnapshot] '${sandboxName}' → ${ready ? `hit ${ready.id}` : "miss"} (${result.snapshots.length} total snapshots returned)`,
+    );
     return ready?.id ?? null;
   } catch (error) {
     console.error(`[findOrgSnapshot] failed to list snapshots for '${sandboxName}':`, error);
