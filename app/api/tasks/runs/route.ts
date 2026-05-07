@@ -24,7 +24,8 @@ export async function OPTIONS() {
  *
  * Query parameters:
  * - runId (optional): The unique identifier of the task run
- * - account_id (optional): Account override (admin/org-authorized only)
+ * - account_id (optional): Scope to this account when allowed: admin, org-authorized member, or
+ *   personal key with account_id equal to the authenticated account (self-access).
  * - limit (optional): Number of runs to return in list mode (default 20, max 100)
  *
  * @param request - The request object containing query parameters.

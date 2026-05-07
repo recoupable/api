@@ -28,7 +28,7 @@ export type GetTaskRunQuery = ValidatedRetrieveQuery | ValidatedListQuery;
  * Validates auth context and query parameters for GET /api/tasks/runs.
  *
  * Returns a discriminated union:
- * - `{ mode: "retrieve", runId }` when runId is provided
+ * - `{ mode: "retrieve", runId, accountId }` when runId is provided
  * - `{ mode: "list", accountId, limit }` when runId is omitted
  *
  * When account_id is provided:

@@ -103,7 +103,7 @@ describe("getTaskRunHandler", () => {
       expect(json.error).toBe("API error");
     });
 
-    it("returns 403 when run does not belong to the authorized account", async () => {
+    it("returns 404 when run does not belong to the authorized account (no enumeration)", async () => {
       vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
         mode: "retrieve",
         runId: "run_123",
@@ -114,8 +114,8 @@ describe("getTaskRunHandler", () => {
       const response = await getTaskRunHandler(createMockRequest());
       const json = await response.json();
 
-      expect(response.status).toBe(403);
-      expect(json.error).toBe("Access denied to this task run");
+      expect(response.status).toBe(404);
+      expect(json.error).toBe("Task run not found");
     });
   });
 

@@ -47,8 +47,8 @@ export async function getTaskRunHandler(request: NextRequest): Promise<NextRespo
     const hasAccountAccess = tags.includes(`account:${validatedQuery.accountId}`);
     if (!hasAccountAccess) {
       return NextResponse.json(
-        { status: "error", error: "Access denied to this task run" },
-        { status: 403, headers: getCorsHeaders() },
+        { status: "error", error: "Task run not found" },
+        { status: 404, headers: getCorsHeaders() },
       );
     }
 
