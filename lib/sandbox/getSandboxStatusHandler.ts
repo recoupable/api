@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { buildLifecycle } from "@/lib/sandbox/buildLifecycle";
+import { getLifecycleDueAtMs } from "@/lib/sandbox/getLifecycleDueAtMs";
 import { isSandboxActive } from "@/lib/sandbox/isSandboxActive";
+import { kickSandboxLifecycleWorkflow } from "@/lib/sandbox/kickSandboxLifecycleWorkflow";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 
 /**
@@ -12,6 +14,12 @@ import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
  * non-expired `sandbox_state` (with real runtime metadata), otherwise
  * `"no_sandbox"`. `hasSnapshot` is true when the row records a saved
  * snapshot the UI can offer to resume.
+ *
+ * Side-effect: when the row reports `lifecycle_state: "active"` but
+ * the lifecycle is past due (workflow never woke or its lease died),
+ * fires a `status-check-overdue` lifecycle kick. The kick reclaims
+ * stale leases and starts a fresh workflow run — that's how the
+ * lifecycle FSM self-heals from crashed workflows.
  */
 export async function getSandboxStatusHandler(request: NextRequest): Promise<NextResponse> {
   const auth = await validateAuthContext(request);
@@ -44,9 +52,15 @@ export async function getSandboxStatusHandler(request: NextRequest): Promise<Nex
     );
   }
 
+  const active = isSandboxActive(row);
+
+  if (active && row.lifecycle_state === "active" && Date.now() >= getLifecycleDueAtMs(row)) {
+    kickSandboxLifecycleWorkflow({ sessionId: row.id, reason: "status-check-overdue" });
+  }
+
   return NextResponse.json(
     {
-      status: isSandboxActive(row) ? "active" : "no_sandbox",
+      status: active ? "active" : "no_sandbox",
       hasSnapshot: !!row.snapshot_url,
       lifecycleVersion: row.lifecycle_version,
       lifecycle: buildLifecycle(row),

@@ -14,6 +14,9 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 vi.mock("@/lib/supabase/sessions/selectSessions", () => ({
   selectSessions: vi.fn(),
 }));
+vi.mock("@/lib/sandbox/kickSandboxLifecycleWorkflow", () => ({
+  kickSandboxLifecycleWorkflow: vi.fn(),
+}));
 
 const ACCOUNT_ID = "acc-1";
 const FAR_FUTURE = "2099-01-01T00:00:00.000Z";

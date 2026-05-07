@@ -8,6 +8,7 @@ import { findOrgSnapshot } from "@/lib/sandbox/findOrgSnapshot";
 import { getSessionSandboxName } from "@/lib/sandbox/getSessionSandboxName";
 import { installSessionGlobalSkills } from "@/lib/sandbox/installSessionGlobalSkills";
 import { kickBuildOrgSnapshotWorkflow } from "@/lib/sandbox/kickBuildOrgSnapshotWorkflow";
+import { kickSandboxLifecycleWorkflow } from "@/lib/sandbox/kickSandboxLifecycleWorkflow";
 import { extractOrgRepoName } from "@/lib/recoupable/extractOrgRepoName";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
@@ -142,6 +143,13 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
         error,
       );
     }
+
+    // Register the new sandbox with the lifecycle workflow so it gets
+    // auto-paused after SANDBOX_INACTIVITY_TIMEOUT_MS of idle. Fire-and-
+    // forget — failure to start the workflow doesn't fail the request,
+    // and a future status read will reclaim a stale lease if the
+    // workflow never picked up.
+    kickSandboxLifecycleWorkflow({ sessionId: sessionRow.id, reason: "sandbox-created" });
   }
 
   return NextResponse.json(
