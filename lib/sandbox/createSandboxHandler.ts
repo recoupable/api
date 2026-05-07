@@ -1,5 +1,5 @@
 import ms from "ms";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateSandboxBody } from "@/lib/sandbox/validateCreateSandboxBody";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
@@ -145,11 +145,17 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
     }
 
     // Register the new sandbox with the lifecycle workflow so it gets
-    // auto-paused after SANDBOX_INACTIVITY_TIMEOUT_MS of idle. Fire-and-
-    // forget — failure to start the workflow doesn't fail the request,
-    // and a future status read will reclaim a stale lease if the
-    // workflow never picked up.
-    kickSandboxLifecycleWorkflow({ sessionId: sessionRow.id, reason: "sandbox-created" });
+    // auto-paused after SANDBOX_INACTIVITY_TIMEOUT_MS of idle. The
+    // kick chain (selectSessions → claim lease → start workflow) is
+    // registered with `after()` so the serverless platform keeps the
+    // function alive past the response until the chain completes —
+    // without that, the chain dies on function teardown and the
+    // workflow never starts. Failures are logged and never surfaced.
+    kickSandboxLifecycleWorkflow({
+      sessionId: sessionRow.id,
+      reason: "sandbox-created",
+      scheduleBackgroundWork: task => after(() => task),
+    });
   }
 
   return NextResponse.json(

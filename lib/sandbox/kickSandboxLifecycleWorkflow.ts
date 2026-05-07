@@ -12,6 +12,15 @@ import type { Tables } from "@/types/database.types";
 interface KickInput {
   sessionId: string;
   reason: SandboxLifecycleReason;
+  /**
+   * Optional scheduler for the kick chain (selectSessions → claim
+   * lease → start workflow). Callers in serverless contexts should
+   * pass `p => after(() => p)` (or `waitUntil(p)`) so the platform
+   * keeps the function alive until the chain completes — without it
+   * the chain dies when the request returns. Mirrors open-agents'
+   * `scheduleBackgroundWork` parameter.
+   */
+  scheduleBackgroundWork?: (task: Promise<void>) => void;
 }
 
 /**
@@ -29,9 +38,16 @@ interface KickInput {
  * is considered stale and gets reclaimed.
  */
 export function kickSandboxLifecycleWorkflow(input: KickInput): void {
-  void runKick(input).catch(error =>
+  const task = runKick(input).catch(error =>
     console.error(`[kickSandboxLifecycleWorkflow] failed for session ${input.sessionId}:`, error),
   );
+
+  if (input.scheduleBackgroundWork) {
+    input.scheduleBackgroundWork(task);
+    return;
+  }
+
+  void task;
 }
 
 async function runKick(input: KickInput): Promise<void> {

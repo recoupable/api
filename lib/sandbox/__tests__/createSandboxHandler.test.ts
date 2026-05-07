@@ -288,10 +288,13 @@ describe("createSandboxHandler", () => {
   it("kicks the sandbox lifecycle workflow with reason='sandbox-created' when sessionId is provided", async () => {
     await createSandboxHandler(makeReq());
 
-    expect(kickSandboxLifecycleWorkflow).toHaveBeenCalledWith({
-      sessionId: "sess-1",
-      reason: "sandbox-created",
-    });
+    expect(kickSandboxLifecycleWorkflow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "sess-1",
+        reason: "sandbox-created",
+        scheduleBackgroundWork: expect.any(Function),
+      }),
+    );
   });
 
   it("does not kick the lifecycle workflow when no sessionId is provided", async () => {

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { buildLifecycle } from "@/lib/sandbox/buildLifecycle";
@@ -55,7 +55,11 @@ export async function getSandboxStatusHandler(request: NextRequest): Promise<Nex
   const active = isSandboxActive(row);
 
   if (active && row.lifecycle_state === "active" && Date.now() >= getLifecycleDueAtMs(row)) {
-    kickSandboxLifecycleWorkflow({ sessionId: row.id, reason: "status-check-overdue" });
+    kickSandboxLifecycleWorkflow({
+      sessionId: row.id,
+      reason: "status-check-overdue",
+      scheduleBackgroundWork: task => after(() => task),
+    });
   }
 
   return NextResponse.json(
