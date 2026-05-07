@@ -4,8 +4,10 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateSandboxBody } from "@/lib/sandbox/validateCreateSandboxBody";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { connectSandbox } from "@/lib/sandbox/factory";
+import { findOrgSnapshot } from "@/lib/sandbox/findOrgSnapshot";
 import { getSessionSandboxName } from "@/lib/sandbox/getSessionSandboxName";
 import { installSessionGlobalSkills } from "@/lib/sandbox/installSessionGlobalSkills";
+import { extractOrgRepoName } from "@/lib/recoupable/extractOrgRepoName";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
 import type { Json, Tables } from "@/types/database.types";
@@ -57,6 +59,14 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
   }
 
   const sandboxName = sessionId ? getSessionSandboxName(sessionId) : undefined;
+
+  // Per-org base snapshot lookup — saves ~75s on cold start when found.
+  // Skipped entirely for non-recoupable repos so this only costs latency
+  // for the case where it can pay off. A miss falls through to default
+  // sandbox provisioning; an error is logged and treated as a miss.
+  const orgRepoName = extractOrgRepoName(body.repoUrl);
+  const orgSnapshotId = orgRepoName ? await findOrgSnapshot(orgRepoName) : null;
+
   const startTime = Date.now();
 
   let sandbox;
@@ -65,12 +75,19 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
       state: {
         type: "vercel",
         ...(sandboxName ? { sandboxName } : {}),
-        source: { repo: body.repoUrl },
+        // `prebuilt: true` when restoring from an org snapshot tells the
+        // Vercel sandbox runtime to skip the fresh `git clone` and instead
+        // `git fetch` + `git reset --hard` the repo that's already inside
+        // the snapshot. Without this flag, Vercel treats the snapshot as a
+        // base image and tries to clone fresh on top — which often fails
+        // for private repos and definitely defeats the warm-boot benefit.
+        source: { repo: body.repoUrl, prebuilt: !!orgSnapshotId },
       },
       options: {
         timeout: DEFAULT_TIMEOUT_MS,
         ports: DEFAULT_PORTS,
         githubToken: getServiceGithubToken(),
+        ...(orgSnapshotId ? { baseSnapshotId: orgSnapshotId } : {}),
         persistent: !!sandboxName,
         resume: !!sandboxName,
         createIfMissing: !!sandboxName,
