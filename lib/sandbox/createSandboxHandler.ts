@@ -75,7 +75,13 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
       state: {
         type: "vercel",
         ...(sandboxName ? { sandboxName } : {}),
-        source: { repo: body.repoUrl },
+        // `prebuilt: true` when restoring from an org snapshot tells the
+        // Vercel sandbox runtime to skip the fresh `git clone` and instead
+        // `git fetch` + `git reset --hard` the repo that's already inside
+        // the snapshot. Without this flag, Vercel treats the snapshot as a
+        // base image and tries to clone fresh on top — which often fails
+        // for private repos and definitely defeats the warm-boot benefit.
+        source: { repo: body.repoUrl, prebuilt: !!orgSnapshotId },
       },
       options: {
         timeout: DEFAULT_TIMEOUT_MS,

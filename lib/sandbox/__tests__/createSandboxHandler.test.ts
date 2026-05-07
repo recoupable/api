@@ -186,7 +186,10 @@ describe("createSandboxHandler", () => {
     expect(findOrgSnapshot).toHaveBeenCalledWith("org-acme-xyz");
     const arg = vi.mocked(connectSandbox).mock.calls[0]?.[0];
     if (!arg || !("options" in arg)) throw new Error("expected new-API config shape");
+    if (!("state" in arg)) throw new Error("expected new-API state shape");
     expect(arg.options?.baseSnapshotId).toBe("snap_abc123");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((arg.state as any).source.prebuilt).toBe(true);
   });
 
   it("skips the snapshot lookup entirely for non-recoupable repos", async () => {
@@ -221,7 +224,10 @@ describe("createSandboxHandler", () => {
     expect(findOrgSnapshot).toHaveBeenCalledWith("org-no-snap-yet");
     const arg = vi.mocked(connectSandbox).mock.calls[0]?.[0];
     if (!arg || !("options" in arg)) throw new Error("expected new-API config shape");
+    if (!("state" in arg)) throw new Error("expected new-API state shape");
     expect(arg.options?.baseSnapshotId).toBeUndefined();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((arg.state as any).source.prebuilt).toBe(false);
   });
 
   it("does not attempt skill installation when no sessionId is provided", async () => {
