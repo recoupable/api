@@ -1,59 +1,9 @@
 import { sleep } from "workflow";
-import { canOperateOnSandbox } from "@/lib/sandbox/canOperateOnSandbox";
-import { evaluateSandboxLifecycle } from "@/lib/sandbox/evaluateSandboxLifecycle";
-import { getLifecycleDueAtMs } from "@/lib/sandbox/getLifecycleDueAtMs";
+import { clearLifecycleRunIdIfOwned } from "@/app/workflows/clearLifecycleRunIdIfOwned";
+import { computeLifecycleWakeDecision } from "@/app/workflows/computeLifecycleWakeDecision";
+import { runLifecycleEvaluation } from "@/app/workflows/runLifecycleEvaluation";
 import { SANDBOX_LIFECYCLE_MIN_SLEEP_MS } from "@/lib/sandbox/sandboxLifecycleConfig";
-import { claimSessionLifecycleRunId } from "@/lib/supabase/sessions/claimSessionLifecycleRunId";
-import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
-import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import type { SandboxLifecycleReason } from "@/lib/sandbox/sandboxLifecycleTypes";
-
-interface LifecycleWakeDecision {
-  shouldContinue: boolean;
-  wakeAtMs?: number;
-  reason?: string;
-}
-
-async function computeLifecycleWakeDecision(
-  sessionId: string,
-  runId: string,
-): Promise<LifecycleWakeDecision> {
-  "use step";
-
-  const rows = await selectSessions({ id: sessionId });
-  const session = rows[0];
-  if (!session) return { shouldContinue: false, reason: "session-not-found" };
-  if (session.status === "archived" || session.lifecycle_state === "archived") {
-    return { shouldContinue: false, reason: "session-archived" };
-  }
-  if (
-    !canOperateOnSandbox(session.sandbox_state) ||
-    (session.sandbox_state as { type?: unknown } | null)?.type !== "vercel"
-  ) {
-    return { shouldContinue: false, reason: "sandbox-not-operable" };
-  }
-
-  // Refresh the lease — anyone else who claimed it in the meantime wins.
-  const claimed = await claimSessionLifecycleRunId(sessionId, runId, runId);
-  if (!claimed) return { shouldContinue: false, reason: "run-replaced" };
-
-  return { shouldContinue: true, wakeAtMs: getLifecycleDueAtMs(session) };
-}
-
-async function runLifecycleEvaluation(sessionId: string, reason: SandboxLifecycleReason) {
-  "use step";
-  return evaluateSandboxLifecycle(sessionId, reason);
-}
-
-async function clearLifecycleRunIdIfOwned(sessionId: string, runId: string): Promise<void> {
-  "use step";
-
-  const rows = await selectSessions({ id: sessionId });
-  const session = rows[0];
-  if (!session || session.lifecycle_run_id !== runId) return;
-
-  await updateSession(sessionId, { lifecycle_run_id: null });
-}
 
 /**
  * Vercel Workflow that pauses idle sandboxes. Runs as a `while(true)`

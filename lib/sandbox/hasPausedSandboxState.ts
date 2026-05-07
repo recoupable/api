@@ -1,4 +1,4 @@
-import { hasResumableSandboxState } from "@/lib/sandbox/hasResumableSandboxState";
+import { getResumableSandboxName } from "@/lib/sandbox/getResumableSandboxName";
 import { hasRuntimeSandboxState } from "@/lib/sandbox/hasRuntimeSandboxState";
 
 /**
@@ -10,5 +10,5 @@ import { hasRuntimeSandboxState } from "@/lib/sandbox/hasRuntimeSandboxState";
  * @returns true when the sandbox is paused-but-resumable.
  */
 export function hasPausedSandboxState(state: unknown): boolean {
-  return hasResumableSandboxState(state) && !hasRuntimeSandboxState(state);
+  return getResumableSandboxName(state) !== null && !hasRuntimeSandboxState(state);
 }

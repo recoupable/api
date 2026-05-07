@@ -1,11 +1,12 @@
 import { connectSandbox } from "@/lib/sandbox/factory";
 import { buildHibernatedLifecycleUpdate } from "@/lib/sandbox/buildHibernatedLifecycleUpdate";
-import { canOperateOnSandbox } from "@/lib/sandbox/canOperateOnSandbox";
 import { clearSandboxState } from "@/lib/sandbox/clearSandboxState";
 import { getLifecycleDueAtMs } from "@/lib/sandbox/getLifecycleDueAtMs";
 import { getPersistentSandboxName } from "@/lib/sandbox/getPersistentSandboxName";
-import { getSandboxExpiresAtDate } from "@/lib/sandbox/getSandboxExpiresAtDate";
 import { hasActiveStreamForSession } from "@/lib/sandbox/hasActiveStreamForSession";
+import { hasRuntimeSandboxState } from "@/lib/sandbox/hasRuntimeSandboxState";
+import { restoreActiveLifecycleState } from "@/lib/sandbox/restoreActiveLifecycleState";
+import { wasLifecycleTimingExtended } from "@/lib/sandbox/wasLifecycleTimingExtended";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import type { SandboxState } from "@/lib/sandbox/factory";
@@ -13,7 +14,7 @@ import type {
   SandboxLifecycleEvaluationResult,
   SandboxLifecycleReason,
 } from "@/lib/sandbox/sandboxLifecycleTypes";
-import type { Json, Tables } from "@/types/database.types";
+import type { Json } from "@/types/database.types";
 
 /**
  * One-shot lifecycle evaluator called by the sandbox-lifecycle
@@ -29,10 +30,6 @@ import type { Json, Tables } from "@/types/database.types";
  *   - `failed` — an error occurred mid-evaluation; row's
  *     `lifecycle_state` is set to `"failed"` for self-healing on
  *     the next status read
- *
- * @param sessionId - The session whose sandbox to evaluate.
- * @param reason - Why the workflow was triggered (for logging only).
- * @returns The result of this single evaluation pass.
  */
 export async function evaluateSandboxLifecycle(
   sessionId: string,
@@ -47,15 +44,14 @@ export async function evaluateSandboxLifecycle(
   }
 
   const sandboxState = session.sandbox_state;
-  if (!canOperateOnSandbox(sandboxState)) {
+  if (!hasRuntimeSandboxState(sandboxState)) {
     return { action: "skipped", reason: "sandbox-not-operable" };
   }
   if ((sandboxState as { type?: unknown }).type !== "vercel") {
     return { action: "skipped", reason: "unsupported-sandbox-type" };
   }
 
-  const dueAtMs = getLifecycleDueAtMs(session);
-  if (Date.now() < dueAtMs) {
+  if (Date.now() < getLifecycleDueAtMs(session)) {
     return { action: "skipped", reason: "not-due-yet" };
   }
 
@@ -107,30 +103,4 @@ export async function evaluateSandboxLifecycle(
     );
     return { action: "failed", reason: message };
   }
-}
-
-async function restoreActiveLifecycleState(
-  sessionId: string,
-  sandboxState: unknown,
-): Promise<void> {
-  await updateSession(sessionId, {
-    lifecycle_state: "active",
-    lifecycle_error: null,
-    sandbox_expires_at: getSandboxExpiresAtDate(sandboxState),
-  });
-}
-
-async function wasLifecycleTimingExtended(
-  sessionId: string,
-  prior: Tables<"sessions">,
-): Promise<boolean> {
-  const refreshed = (await selectSessions({ id: sessionId }))[0];
-  if (!refreshed?.sandbox_state || !canOperateOnSandbox(refreshed.sandbox_state)) return false;
-
-  const timingChanged =
-    refreshed.last_activity_at !== prior.last_activity_at ||
-    refreshed.hibernate_after !== prior.hibernate_after ||
-    refreshed.sandbox_expires_at !== prior.sandbox_expires_at;
-
-  return timingChanged && Date.now() < getLifecycleDueAtMs(refreshed);
 }
