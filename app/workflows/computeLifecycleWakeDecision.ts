@@ -1,6 +1,5 @@
 import { getLifecycleDueAtMs } from "@/lib/sandbox/getLifecycleDueAtMs";
 import { hasRuntimeSandboxState } from "@/lib/sandbox/hasRuntimeSandboxState";
-import { claimSessionLifecycleRunId } from "@/lib/sessions/claimSessionLifecycleRunId";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 
 interface LifecycleWakeDecision {
@@ -12,8 +11,9 @@ interface LifecycleWakeDecision {
 /**
  * Workflow step run at the top of each `sandboxLifecycleWorkflow`
  * iteration. Reads the session, decides whether to continue looping,
- * and (when continuing) returns the next wake time. Re-claims the
- * lease so a concurrent kick that took it over wins.
+ * and (when continuing) returns the next wake time. Bails when a
+ * concurrent kick has overwritten `lifecycle_run_id` with a different
+ * value — that newer run is now responsible for the session.
  *
  * @param sessionId - The session id the workflow is tracking.
  * @param runId - The lease this workflow run owns.
@@ -39,8 +39,9 @@ export async function computeLifecycleWakeDecision(
     return { shouldContinue: false, reason: "sandbox-not-operable" };
   }
 
-  const claimed = await claimSessionLifecycleRunId(sessionId, runId, runId);
-  if (!claimed) return { shouldContinue: false, reason: "run-replaced" };
+  if (session.lifecycle_run_id !== null && session.lifecycle_run_id !== runId) {
+    return { shouldContinue: false, reason: "run-replaced" };
+  }
 
   return { shouldContinue: true, wakeAtMs: getLifecycleDueAtMs(session) };
 }

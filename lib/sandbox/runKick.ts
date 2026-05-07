@@ -4,7 +4,6 @@ import { createLifecycleRunId } from "@/lib/sandbox/createLifecycleRunId";
 import { isLifecycleRunStale } from "@/lib/sandbox/isLifecycleRunStale";
 import { reclaimStaleLease } from "@/lib/sandbox/reclaimStaleLease";
 import { shouldStartLifecycle } from "@/lib/sandbox/shouldStartLifecycle";
-import { claimSessionLifecycleRunId } from "@/lib/sessions/claimSessionLifecycleRunId";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import type { SandboxLifecycleReason } from "@/lib/sandbox/sandboxLifecycleTypes";
@@ -20,7 +19,9 @@ interface RunKickInput {
  *   1. Read the session row
  *   2. Reclaim the lease if it's stale (workflow crashed)
  *   3. Skip if the session isn't in a shape where lifecycle makes sense
- *   4. Generate a fresh run id and atomically claim it
+ *      (`shouldStartLifecycle` already filters out rows that already
+ *      have a `lifecycle_run_id` — best-effort concurrency guard)
+ *   4. Generate a fresh run id and write it to the session row
  *   5. `start()` the Vercel Workflow run
  *   6. On `start()` failure, clear the lease so retry can succeed
  *
@@ -40,8 +41,7 @@ export async function runKick(input: RunKickInput): Promise<void> {
   if (!shouldStartLifecycle(sessionForStart)) return;
 
   const runId = createLifecycleRunId();
-  const claimed = await claimSessionLifecycleRunId(input.sessionId, runId);
-  if (!claimed) return;
+  await updateSession(input.sessionId, { lifecycle_run_id: runId });
 
   try {
     const run = await start(sandboxLifecycleWorkflow, [input.sessionId, input.reason, runId]);
