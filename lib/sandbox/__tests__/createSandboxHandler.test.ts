@@ -10,9 +10,13 @@ import { installSessionGlobalSkills } from "@/lib/sandbox/installSessionGlobalSk
 import { findOrgSnapshot } from "@/lib/sandbox/findOrgSnapshot";
 import { kickBuildOrgSnapshotWorkflow } from "@/lib/sandbox/kickBuildOrgSnapshotWorkflow";
 import { kickSandboxLifecycleWorkflow } from "@/lib/sandbox/kickSandboxLifecycleWorkflow";
+import { resolveGitUser } from "@/lib/sandbox/resolveGitUser";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
+}));
+vi.mock("@/lib/sandbox/resolveGitUser", () => ({
+  resolveGitUser: vi.fn(),
 }));
 vi.mock("@/lib/sandbox/validateCreateSandboxBody", () => ({
   validateCreateSandboxBody: vi.fn(),
@@ -73,6 +77,23 @@ describe("createSandboxHandler", () => {
       fakeSandbox() as unknown as Awaited<ReturnType<typeof connectSandbox>>,
     );
     vi.mocked(updateSession).mockResolvedValue({} as any);
+    vi.mocked(resolveGitUser).mockResolvedValue({
+      name: "Ada Lovelace",
+      email: "ada@example.com",
+    });
+  });
+
+  it("passes the resolved gitUser through to connectSandbox", async () => {
+    await createSandboxHandler(makeReq());
+
+    expect(resolveGitUser).toHaveBeenCalledWith(ACCOUNT_ID);
+    const args = vi.mocked(connectSandbox).mock.calls[0]?.[0] as {
+      options?: { gitUser?: { name: string; email: string } };
+    };
+    expect(args.options?.gitUser).toEqual({
+      name: "Ada Lovelace",
+      email: "ada@example.com",
+    });
   });
 
   it("short-circuits with the validator's response on validation failure", async () => {
