@@ -5,9 +5,10 @@ import { validateCreateSandboxBody } from "@/lib/sandbox/validateCreateSandboxBo
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { connectSandbox } from "@/lib/sandbox/factory";
 import { getSessionSandboxName } from "@/lib/sandbox/getSessionSandboxName";
+import { installSessionGlobalSkills } from "@/lib/sandbox/installSessionGlobalSkills";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
-import type { Json } from "@/types/database.types";
+import type { Json, Tables } from "@/types/database.types";
 
 const DEFAULT_TIMEOUT_MS = ms("30m");
 const DEFAULT_PORTS = [3000];
@@ -35,26 +36,24 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
 
   const sessionId = body.sessionId;
 
-  let currentLifecycleVersion = 0;
+  let sessionRow: Tables<"sessions"> | null = null;
   if (sessionId) {
     const rows = await selectSessions({ id: sessionId });
-    const row = rows[0];
+    sessionRow = rows[0] ?? null;
 
-    if (!row) {
+    if (!sessionRow) {
       return NextResponse.json(
         { status: "error", error: "Session not found" },
         { status: 404, headers: getCorsHeaders() },
       );
     }
 
-    if (row.account_id !== auth.accountId) {
+    if (sessionRow.account_id !== auth.accountId) {
       return NextResponse.json(
         { status: "error", error: "Forbidden" },
         { status: 403, headers: getCorsHeaders() },
       );
     }
-
-    currentLifecycleVersion = row.lifecycle_version;
   }
 
   const sandboxName = sessionId ? getSessionSandboxName(sessionId) : undefined;
@@ -85,19 +84,35 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
     );
   }
 
-  if (sessionId && sandbox.getState) {
+  if (sessionRow && sandbox.getState) {
     const nextState = sandbox.getState() as Json;
     const expiresAt =
       typeof sandbox.expiresAt === "number" ? new Date(sandbox.expiresAt).toISOString() : null;
-    await updateSession(sessionId, {
+    await updateSession(sessionRow.id, {
       sandbox_state: nextState,
       lifecycle_state: "active",
-      lifecycle_version: currentLifecycleVersion + 1,
+      lifecycle_version: sessionRow.lifecycle_version + 1,
       sandbox_expires_at: expiresAt,
       last_activity_at: new Date().toISOString(),
       snapshot_url: null,
       snapshot_created_at: null,
     });
+  }
+
+  // Best-effort skill installation — a failure here does not fail the
+  // sandbox creation request. The agent will start without skills loaded
+  // (or with whatever subset successfully installed before the throw),
+  // which the user can recover from with a follow-up request once the
+  // underlying issue is fixed.
+  if (sessionRow) {
+    try {
+      await installSessionGlobalSkills({ sessionRow, sandbox });
+    } catch (error) {
+      console.error(
+        `[createSandboxHandler] installSessionGlobalSkills failed for session ${sessionRow.id}:`,
+        error,
+      );
+    }
   }
 
   return NextResponse.json(
