@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { hasRuntimeSandboxState } from "@/lib/sandbox/hasRuntimeSandboxState";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import type { Tables } from "@/types/database.types";
 
@@ -23,7 +24,11 @@ function buildLifecycle(row: Tables<"sessions">) {
 }
 
 function isSandboxActive(row: Tables<"sessions">): boolean {
-  if (!row.sandbox_state) return false;
+  // Reject the type-only stub written by POST /api/sessions — only real
+  // runtime metadata (a non-empty sandboxName) counts as an active sandbox.
+  // Without this guard, every freshly-created session reports "active"
+  // before any sandbox has actually been provisioned.
+  if (!hasRuntimeSandboxState(row.sandbox_state)) return false;
   const expiresAt = isoToEpochMs(row.sandbox_expires_at);
   if (expiresAt === null) return true;
   return Date.now() < expiresAt - SANDBOX_EXPIRES_BUFFER_MS;

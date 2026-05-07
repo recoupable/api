@@ -135,4 +135,42 @@ describe("getSandboxStatusHandler", () => {
     const body = await res.json();
     expect(body.hasSnapshot).toBe(true);
   });
+
+  // Regression: see PR #522 smoke-test comment. POST /api/sessions writes
+  // sandbox_state: { type: "vercel" } as a type stub on insert. Before the
+  // fix, isSandboxActive treated any truthy sandbox_state + null
+  // sandbox_expires_at as active, so the chat loading UX would flip to
+  // "ready" the moment the session was created — before any sandbox
+  // existed. Status must report no_sandbox until real runtime metadata
+  // (sandboxName) is written by POST /api/sandbox.
+  it("returns status='no_sandbox' for the freshly-created-session type stub (no sandboxName, no expiry)", async () => {
+    vi.mocked(selectSessions).mockResolvedValue([
+      {
+        ...baseRow,
+        sandbox_state: { type: "vercel" },
+        sandbox_expires_at: null,
+        lifecycle_state: "provisioning",
+      } as any,
+    ]);
+
+    const res = await getSandboxStatusHandler(makeReq());
+
+    const body = await res.json();
+    expect(body.status).toBe("no_sandbox");
+  });
+
+  it("returns status='active' once sandboxName is set on the state, even without explicit expiry", async () => {
+    vi.mocked(selectSessions).mockResolvedValue([
+      {
+        ...baseRow,
+        sandbox_state: { type: "vercel", sandboxName: "session-sess-1" },
+        sandbox_expires_at: null,
+      } as any,
+    ]);
+
+    const res = await getSandboxStatusHandler(makeReq());
+
+    const body = await res.json();
+    expect(body.status).toBe("active");
+  });
 });
