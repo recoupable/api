@@ -4,27 +4,18 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { buildLifecycle } from "@/lib/sandbox/buildLifecycle";
 import { connectSandbox } from "@/lib/sandbox/factory";
 import { hasRuntimeSandboxState } from "@/lib/sandbox/hasRuntimeSandboxState";
+import { noSandboxResponse } from "@/lib/sandbox/noSandboxResponse";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import type { SandboxState } from "@/lib/sandbox/factory";
-import type { Tables } from "@/types/database.types";
 
 const PROBE_TIMEOUT_MS = 15_000;
 
 interface ReconnectBody {
-  status: "connected" | "expired" | "no_sandbox";
+  status: "connected" | "expired";
   hasSnapshot: boolean;
   expiresAt?: number;
   lifecycle: ReturnType<typeof buildLifecycle>;
-}
-
-function noSandboxResponse(row: Tables<"sessions">): NextResponse {
-  const body: ReconnectBody = {
-    status: "no_sandbox",
-    hasSnapshot: !!row.snapshot_url,
-    lifecycle: buildLifecycle(row),
-  };
-  return NextResponse.json(body, { status: 200, headers: getCorsHeaders() });
 }
 
 /**
