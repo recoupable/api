@@ -86,22 +86,32 @@ describe("validateCreateSandboxBody", () => {
     if (result instanceof NextResponse) return;
     expect(result.body.repoUrl).toBe("https://github.com/o/r");
     expect(result.body.sessionId).toBeUndefined();
-    expect(result.body.branch).toBeUndefined();
     expect(result.auth.accountId).toBe(ACCOUNT_ID);
   });
 
-  it("accepts a full request with sessionId and branch", async () => {
+  it("accepts a request with sessionId", async () => {
     const result = await validateCreateSandboxBody(
       makeReq({
         repoUrl: "https://github.com/o/r",
         sessionId: "sess-1",
-        branch: "feat/x",
       }),
     );
 
     expect(result).not.toBeInstanceOf(NextResponse);
     if (result instanceof NextResponse) return;
     expect(result.body.sessionId).toBe("sess-1");
-    expect(result.body.branch).toBe("feat/x");
+  });
+
+  it("strips an unknown branch input from the validated body", async () => {
+    const result = await validateCreateSandboxBody(
+      makeReq({
+        repoUrl: "https://github.com/o/r",
+        branch: "feat/x",
+      }),
+    );
+
+    expect(result).not.toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) return;
+    expect((result.body as Record<string, unknown>).branch).toBeUndefined();
   });
 });

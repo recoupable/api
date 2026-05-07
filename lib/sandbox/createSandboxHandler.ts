@@ -5,18 +5,21 @@ import { validateCreateSandboxBody } from "@/lib/sandbox/validateCreateSandboxBo
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { connectSandbox } from "@/lib/sandbox/factory";
 import { getSessionSandboxName } from "@/lib/sandbox/getSessionSandboxName";
-import { buildSource } from "@/lib/sandbox/buildSource";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
 import type { Json } from "@/types/database.types";
 
 const DEFAULT_TIMEOUT_MS = ms("30m");
 const DEFAULT_PORTS = [3000];
+const DEFAULT_BRANCH = "main";
 
 /**
  * Handles `POST /api/sandbox`. Provisions a Sandbox bound to the given
- * session (or a one-shot sandbox when no `sessionId` is supplied). When
- * a session is bound, the resolved `sandboxState`, lifecycle, and
+ * session (or a one-shot sandbox when no `sessionId` is supplied) using
+ * the repo's default branch — there is no input branch override; the
+ * chat UX always works against whatever the repo treats as default.
+ *
+ * When a session is bound, the resolved `sandbox_state`, lifecycle, and
  * expiry are written back to the `sessions` row so subsequent reads via
  * `GET /api/sandbox/status` can report the sandbox as active. Stale
  * `snapshot_url` / `snapshot_created_at` are cleared on a fresh
@@ -55,7 +58,6 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
   }
 
   const sandboxName = sessionId ? getSessionSandboxName(sessionId) : undefined;
-  const branch = body.branch ?? "main";
   const startTime = Date.now();
 
   let sandbox;
@@ -64,7 +66,7 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
       state: {
         type: "vercel",
         ...(sandboxName ? { sandboxName } : {}),
-        source: buildSource({ repoUrl: body.repoUrl, branch: body.branch }),
+        source: { repo: body.repoUrl },
       },
       options: {
         timeout: DEFAULT_TIMEOUT_MS,
@@ -102,7 +104,7 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
     {
       createdAt: Date.now(),
       timeout: sandbox.timeout ?? DEFAULT_TIMEOUT_MS,
-      currentBranch: branch,
+      currentBranch: sandbox.currentBranch ?? DEFAULT_BRANCH,
       mode: "vercel",
       timing: { readyMs: Date.now() - startTime },
     },

@@ -14,7 +14,6 @@ export const createSandboxBodySchema = z.object({
       message: "repoUrl must be a valid GitHub repository URL",
     }),
   sessionId: z.string().optional(),
-  branch: z.string().optional(),
 });
 
 export type CreateSandboxBody = z.infer<typeof createSandboxBodySchema>;

@@ -36,6 +36,7 @@ function fakeSandbox(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     timeout: 1_800_000,
     expiresAt: Date.parse("2030-01-01T00:00:00.000Z"),
+    currentBranch: "main",
     getState: () => ({ type: "vercel", sandboxName: "session-sess-1" }),
     ...overrides,
   };
@@ -48,7 +49,6 @@ describe("createSandboxHandler", () => {
       body: {
         repoUrl: "https://github.com/o/r",
         sessionId: "sess-1",
-        branch: "main",
       },
       auth: { accountId: ACCOUNT_ID, orgId: null, authToken: "k" },
     });
@@ -111,6 +111,19 @@ describe("createSandboxHandler", () => {
     expect(typeof body.timing.readyMs).toBe("number");
   });
 
+  it("reports currentBranch from the sandbox handle (not request input)", async () => {
+    vi.mocked(connectSandbox).mockResolvedValueOnce(
+      fakeSandbox({ currentBranch: "release/v2" }) as unknown as Awaited<
+        ReturnType<typeof connectSandbox>
+      >,
+    );
+
+    const res = await createSandboxHandler(makeReq());
+
+    const body = await res.json();
+    expect(body.currentBranch).toBe("release/v2");
+  });
+
   it("persists sandbox state and clears stale snapshot fields on the session row", async () => {
     await createSandboxHandler(makeReq());
 
@@ -136,7 +149,7 @@ describe("createSandboxHandler", () => {
 
   it("skips the session-row write when no sessionId is provided", async () => {
     vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce({
-      body: { repoUrl: "https://github.com/o/r", branch: "main" },
+      body: { repoUrl: "https://github.com/o/r" },
       auth: { accountId: ACCOUNT_ID, orgId: null, authToken: "k" },
     });
 
