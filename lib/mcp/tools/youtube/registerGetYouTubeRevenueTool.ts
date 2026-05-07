@@ -1,9 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { selectYouTubeTokens } from "@/lib/supabase/youtube_tokens/selectYouTubeTokens";
+import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
-import { isTokenExpired } from "@/lib/youtube/isTokenExpired";
+import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
+import { getConnectors } from "@/lib/composio/connectors/getConnectors";
 import { queryAnalyticsReports } from "@/lib/youtube/queryAnalyticsReports";
 import { getDefaultDateRange } from "@/lib/youtube/getDefaultDateRange";
 import { handleRevenueError } from "@/lib/youtube/handleRevenueError";
@@ -30,10 +33,10 @@ const getYouTubeRevenueSchema = z.object({
 type GetYouTubeRevenueArgs = z.infer<typeof getYouTubeRevenueSchema>;
 
 /**
- * Registers the "get_youtube_revenue" tool on the MCP server.
- * Gets YouTube revenue data for a specific account.
- *
- * @param server - The MCP server instance to register the tool on.
+ * Registers the "get_youtube_revenue" MCP tool. Stays custom because
+ * Composio's YouTube toolkit doesn't expose YouTube Analytics — this
+ * tool calls the YouTube Analytics API through `composio.tools.proxy`,
+ * so the OAuth token never leaves Composio.
  */
 export function registerGetYouTubeRevenueTool(server: McpServer): void {
   server.registerTool(
@@ -44,40 +47,42 @@ export function registerGetYouTubeRevenueTool(server: McpServer): void {
         "The startDate and endDate parameters are optional - if not provided, it will default to the last 30 days (1 month). ",
       inputSchema: getYouTubeRevenueSchema,
     },
-    async (args: GetYouTubeRevenueArgs) => {
+    async (
+      args: GetYouTubeRevenueArgs,
+      extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
+    ) => {
+      const authInfo = extra.authInfo as McpAuthInfo | undefined;
+      const callerAccountId = authInfo?.extra?.accountId;
+      if (!callerAccountId) {
+        return getToolResultError("Authentication required.");
+      }
+
+      const hasAccess = await checkAccountArtistAccess(callerAccountId, args.artist_account_id);
+      if (!hasAccess) {
+        return getToolResultError("Access denied to specified artist_account_id");
+      }
+
       try {
-        if (!args.artist_account_id || args.artist_account_id.trim() === "") {
+        const connectors = await getConnectors(args.artist_account_id);
+        const youtube = connectors.find(c => c.slug === "youtube");
+
+        if (!youtube?.isConnected || !youtube.connectedAccountId) {
           return getToolResultError(
-            "No artist_account_id provided to YouTube revenue tool. The LLM must pass the artist_account_id parameter. Please ensure you're passing the current artist's artist_account_id.",
+            "YouTube authentication required for this account. Please connect YouTube via the connectors panel.",
           );
         }
 
-        const tokens = await selectYouTubeTokens(args.artist_account_id);
-
-        if (!tokens) {
-          return getToolResultError(
-            "YouTube authentication required for this account. Please authenticate by connecting your YouTube account.",
-          );
-        }
-
-        if (isTokenExpired(tokens.expires_at)) {
-          return getToolResultError(
-            "YouTube access token has expired. Please re-authenticate your YouTube account.",
-          );
-        }
-
-        // Get date range (use defaults if not provided)
         const defaultDates = getDefaultDateRange();
         const startDate = args.startDate || defaultDates.startDate;
         const endDate = args.endDate || defaultDates.endDate;
 
         const analyticsResult = await queryAnalyticsReports({
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token || undefined,
+          connectedAccountId: youtube.connectedAccountId,
           startDate,
           endDate,
           metrics: "estimatedRevenue",
         });
+
         return getToolResultSuccess({
           success: true,
           status: "success",
@@ -85,10 +90,7 @@ export function registerGetYouTubeRevenueTool(server: McpServer): void {
           revenueData: {
             totalRevenue: parseFloat(analyticsResult.totalRevenue.toFixed(2)),
             dailyRevenue: analyticsResult.dailyRevenue,
-            dateRange: {
-              startDate,
-              endDate,
-            },
+            dateRange: { startDate, endDate },
             channelId: analyticsResult.channelId,
             isMonetized: true,
           },

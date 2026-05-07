@@ -1,0 +1,65 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest, NextResponse } from "next/server";
+
+import { validateCreateSessionBody } from "@/lib/sessions/validateCreateSessionBody";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+
+vi.mock("@/lib/networking/getCorsHeaders", () => ({
+  getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
+}));
+vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
+
+const okAuth = { accountId: "acc-1", orgId: null, authToken: "key" };
+
+function req(body: unknown): NextRequest {
+  return new NextRequest("http://localhost/api/sessions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: typeof body === "string" ? body : JSON.stringify(body),
+  });
+}
+
+describe("validateCreateSessionBody", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns the auth NextResponse when validateAuthContext rejects", async () => {
+    const failure = NextResponse.json({ status: "error", error: "no auth" }, { status: 401 });
+    vi.mocked(validateAuthContext).mockResolvedValue(failure);
+
+    const result = await validateCreateSessionBody(req({}));
+    expect(result).toBe(failure);
+  });
+
+  it("returns 400 when sandboxType is not 'vercel'", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+
+    const result = await validateCreateSessionBody(req({ sandboxType: "wrong" }));
+    expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(400);
+      const body = (await result.json()) as { status: string; error: string };
+      expect(body.error).toBe("Invalid sandbox type");
+    }
+  });
+
+  it("returns body + auth on success", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+
+    const result = await validateCreateSessionBody(req({ title: "Hello", sandboxType: "vercel" }));
+    expect(result).not.toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) {
+      expect(result.body).toEqual({ title: "Hello", sandboxType: "vercel" });
+      expect(result.auth).toBe(okAuth);
+    }
+  });
+
+  it("treats malformed JSON as an empty body and accepts it", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+
+    const result = await validateCreateSessionBody(req("{not valid"));
+    expect(result).not.toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) {
+      expect(result.body).toEqual({});
+    }
+  });
+});

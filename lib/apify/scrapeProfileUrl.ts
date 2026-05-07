@@ -1,5 +1,5 @@
 import startTikTokProfileScraping from "@/lib/apify/tiktok/startTiktokProfileScraping";
-import startInstagramProfileScraping from "@/lib/apify/instagram/startInstagramProfileScraping";
+import { startInstagramProfileScraping } from "@/lib/apify/instagram/startInstagramProfileScraping";
 import startTwitterProfileScraping from "@/lib/apify/twitter/startTwitterProfileScraping";
 import startThreadsProfileScraping from "@/lib/apify/threads/startThreadsProfileScraping";
 import startYoutubeProfileScraping from "@/lib/apify/youtube/startYoutubeProfileScraping";

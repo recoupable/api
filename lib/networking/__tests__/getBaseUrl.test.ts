@@ -21,6 +21,15 @@ describe("getBaseUrl", () => {
     expect(result).toBe("https://my-app.vercel.app");
   });
 
+  it("returns the canonical prod URL when VERCEL_ENV is production", () => {
+    process.env.VERCEL_ENV = "production";
+    process.env.VERCEL_URL = "recoup-api-abc123.vercel.app";
+
+    const result = getBaseUrl();
+
+    expect(result).toBe("https://recoup-api.vercel.app");
+  });
+
   it("returns localhost when VERCEL_URL is not set", () => {
     delete process.env.VERCEL_URL;
 
