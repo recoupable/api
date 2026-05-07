@@ -1,5 +1,5 @@
 import ms from "ms";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateSandboxBody } from "@/lib/sandbox/validateCreateSandboxBody";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
@@ -8,6 +8,7 @@ import { findOrgSnapshot } from "@/lib/sandbox/findOrgSnapshot";
 import { getSessionSandboxName } from "@/lib/sandbox/getSessionSandboxName";
 import { installSessionGlobalSkills } from "@/lib/sandbox/installSessionGlobalSkills";
 import { kickBuildOrgSnapshotWorkflow } from "@/lib/sandbox/kickBuildOrgSnapshotWorkflow";
+import { kickSandboxLifecycleWorkflow } from "@/lib/sandbox/kickSandboxLifecycleWorkflow";
 import { extractOrgRepoName } from "@/lib/recoupable/extractOrgRepoName";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
@@ -142,6 +143,19 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
         error,
       );
     }
+
+    // Register the new sandbox with the lifecycle workflow so it gets
+    // auto-paused after SANDBOX_INACTIVITY_TIMEOUT_MS of idle. The
+    // kick chain (selectSessions → claim lease → start workflow) is
+    // registered with `after()` so the serverless platform keeps the
+    // function alive past the response until the chain completes —
+    // without that, the chain dies on function teardown and the
+    // workflow never starts. Failures are logged and never surfaced.
+    kickSandboxLifecycleWorkflow({
+      sessionId: sessionRow.id,
+      reason: "sandbox-created",
+      scheduleBackgroundWork: task => after(() => task),
+    });
   }
 
   return NextResponse.json(

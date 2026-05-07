@@ -9,6 +9,7 @@ import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import { installSessionGlobalSkills } from "@/lib/sandbox/installSessionGlobalSkills";
 import { findOrgSnapshot } from "@/lib/sandbox/findOrgSnapshot";
 import { kickBuildOrgSnapshotWorkflow } from "@/lib/sandbox/kickBuildOrgSnapshotWorkflow";
+import { kickSandboxLifecycleWorkflow } from "@/lib/sandbox/kickSandboxLifecycleWorkflow";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
@@ -36,6 +37,9 @@ vi.mock("@/lib/sandbox/findOrgSnapshot", () => ({
 }));
 vi.mock("@/lib/sandbox/kickBuildOrgSnapshotWorkflow", () => ({
   kickBuildOrgSnapshotWorkflow: vi.fn(),
+}));
+vi.mock("@/lib/sandbox/kickSandboxLifecycleWorkflow", () => ({
+  kickSandboxLifecycleWorkflow: vi.fn(),
 }));
 
 const ACCOUNT_ID = "acc-1";
@@ -279,6 +283,29 @@ describe("createSandboxHandler", () => {
     await createSandboxHandler(makeReq());
 
     expect(kickBuildOrgSnapshotWorkflow).not.toHaveBeenCalled();
+  });
+
+  it("kicks the sandbox lifecycle workflow with reason='sandbox-created' when sessionId is provided", async () => {
+    await createSandboxHandler(makeReq());
+
+    expect(kickSandboxLifecycleWorkflow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "sess-1",
+        reason: "sandbox-created",
+        scheduleBackgroundWork: expect.any(Function),
+      }),
+    );
+  });
+
+  it("does not kick the lifecycle workflow when no sessionId is provided", async () => {
+    vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce({
+      body: { repoUrl: "https://github.com/o/r" },
+      auth: { accountId: ACCOUNT_ID, orgId: null, authToken: "k" },
+    });
+
+    await createSandboxHandler(makeReq());
+
+    expect(kickSandboxLifecycleWorkflow).not.toHaveBeenCalled();
   });
 
   it("does not attempt skill installation when no sessionId is provided", async () => {
