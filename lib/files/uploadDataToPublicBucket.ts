@@ -26,7 +26,7 @@ export async function uploadDataToPublicBucket(input: {
   const blob =
     typeof data === "string"
       ? new Blob([data], { type: contentType })
-      : new Blob([data as Uint8Array], { type: contentType });
+      : new Blob([data instanceof Buffer ? data : Buffer.from(data)], { type: contentType });
 
   await uploadFileByKey(key, blob, {
     bucket: SUPABASE_PUBLIC_UPLOADS_BUCKET,
