@@ -3,6 +3,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateSandboxBody } from "@/lib/sandbox/validateCreateSandboxBody";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
+import { buildActiveLifecycleUpdate } from "@/lib/sandbox/buildActiveLifecycleUpdate";
 import { connectSandbox } from "@/lib/sandbox/factory";
 import { findOrgSnapshot } from "@/lib/sandbox/findOrgSnapshot";
 import { getSessionSandboxName } from "@/lib/sandbox/getSessionSandboxName";
@@ -124,14 +125,17 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
 
   if (sessionRow && sandbox.getState) {
     const nextState = sandbox.getState() as Json;
-    const expiresAt =
-      typeof sandbox.expiresAt === "number" ? new Date(sandbox.expiresAt).toISOString() : null;
+    // Match open-agents' contract: derive lifecycle fields from the
+    // state object's `expiresAt` (always populated by the SDK, even on
+    // prebuilt-snapshot paths) rather than `sandbox.expiresAt`, which
+    // is only set on some creation paths and was leaving
+    // `sandbox_expires_at: null` for org-snapshot-restored provisions —
+    // which the lifecycle workflow then interpreted as "no live runtime"
+    // and immediately wrote `lifecycle_state: "hibernated"`.
     await updateSession(sessionRow.id, {
       sandbox_state: nextState,
-      lifecycle_state: "active",
       lifecycle_version: sessionRow.lifecycle_version + 1,
-      sandbox_expires_at: expiresAt,
-      last_activity_at: new Date().toISOString(),
+      ...buildActiveLifecycleUpdate(nextState),
       snapshot_url: null,
       snapshot_created_at: null,
     });
