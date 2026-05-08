@@ -9,6 +9,7 @@ import { getSessionSandboxName } from "@/lib/sandbox/getSessionSandboxName";
 import { installSessionGlobalSkills } from "@/lib/sandbox/installSessionGlobalSkills";
 import { kickBuildOrgSnapshotWorkflow } from "@/lib/sandbox/kickBuildOrgSnapshotWorkflow";
 import { kickSandboxLifecycleWorkflow } from "@/lib/sandbox/kickSandboxLifecycleWorkflow";
+import { resolveGitUser } from "@/lib/sandbox/resolveGitUser";
 import { extractOrgRepoName } from "@/lib/recoupable/extractOrgRepoName";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
@@ -82,6 +83,12 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
 
   const startTime = Date.now();
 
+  // Per-account `gitUser` controls commit authorship inside the sandbox
+  // (`git config user.name` / `user.email`). The push credential is a
+  // separate hardcoded service token — `gitUser` is purely about who
+  // each commit object is *authored* by.
+  const gitUser = await resolveGitUser(auth.accountId);
+
   let sandbox;
   try {
     sandbox = await connectSandbox({
@@ -100,6 +107,7 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
         timeout: DEFAULT_TIMEOUT_MS,
         ports: DEFAULT_PORTS,
         githubToken: getServiceGithubToken(),
+        gitUser,
         ...(orgSnapshotId ? { baseSnapshotId: orgSnapshotId } : {}),
         persistent: !!sandboxName,
         resume: !!sandboxName,
