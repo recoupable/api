@@ -213,7 +213,7 @@ describe("getSandboxReconnectHandler", () => {
       { ...baseRow, sandbox_state: RUNTIME_STATE, lifecycle_state: "active" } as never,
     ]);
     const sb = fakeAliveSandbox(newExpiresAt);
-    (sb as { getState: () => unknown }).getState = () => ({
+    (sb as unknown as { getState: () => unknown }).getState = () => ({
       type: "vercel",
       sandboxName: "session-sess-1",
       expiresAt: newExpiresAt,
