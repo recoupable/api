@@ -6,6 +6,10 @@ import { validateCreateSandboxBody } from "@/lib/sandbox/validateCreateSandboxBo
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { connectSandbox } from "@/lib/sandbox/factory";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
+import { installSessionGlobalSkills } from "@/lib/sandbox/installSessionGlobalSkills";
+import { findOrgSnapshot } from "@/lib/sandbox/findOrgSnapshot";
+import { kickBuildOrgSnapshotWorkflow } from "@/lib/sandbox/kickBuildOrgSnapshotWorkflow";
+import { kickSandboxLifecycleWorkflow } from "@/lib/sandbox/kickSandboxLifecycleWorkflow";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
@@ -24,6 +28,18 @@ vi.mock("@/lib/supabase/sessions/updateSession", () => ({
 }));
 vi.mock("@/lib/github/getServiceGithubToken", () => ({
   getServiceGithubToken: vi.fn(() => "ghs_test_token"),
+}));
+vi.mock("@/lib/sandbox/installSessionGlobalSkills", () => ({
+  installSessionGlobalSkills: vi.fn(async () => undefined),
+}));
+vi.mock("@/lib/sandbox/findOrgSnapshot", () => ({
+  findOrgSnapshot: vi.fn(async () => null),
+}));
+vi.mock("@/lib/sandbox/kickBuildOrgSnapshotWorkflow", () => ({
+  kickBuildOrgSnapshotWorkflow: vi.fn(),
+}));
+vi.mock("@/lib/sandbox/kickSandboxLifecycleWorkflow", () => ({
+  kickSandboxLifecycleWorkflow: vi.fn(),
 }));
 
 const ACCOUNT_ID = "acc-1";
@@ -145,6 +161,162 @@ describe("createSandboxHandler", () => {
     expect(arg).toBeDefined();
     if (!arg || !("options" in arg)) throw new Error("expected new-API config shape");
     expect(arg.options?.githubToken).toBe("ghs_test_token");
+  });
+
+  it("installs global skills into the freshly-provisioned sandbox", async () => {
+    await createSandboxHandler(makeReq());
+
+    expect(installSessionGlobalSkills).toHaveBeenCalledOnce();
+    const call = vi.mocked(installSessionGlobalSkills).mock.calls[0][0];
+    expect(call.sessionRow.id).toBe("sess-1");
+  });
+
+  it("returns 200 even when skill installation throws (best-effort)", async () => {
+    vi.mocked(installSessionGlobalSkills).mockRejectedValueOnce(new Error("npx skills add failed"));
+
+    const res = await createSandboxHandler(makeReq());
+
+    expect(res.status).toBe(200);
+  });
+
+  it("looks up an org snapshot and plumbs its id into baseSnapshotId when the repo is a recoupable org repo", async () => {
+    vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce({
+      body: {
+        repoUrl: "https://github.com/recoupable/org-acme-xyz",
+        sessionId: "sess-1",
+      },
+      auth: { accountId: ACCOUNT_ID, orgId: null, authToken: "k" },
+    });
+    vi.mocked(findOrgSnapshot).mockResolvedValueOnce("snap_abc123");
+
+    await createSandboxHandler(makeReq());
+
+    expect(findOrgSnapshot).toHaveBeenCalledWith("org-acme-xyz");
+    const arg = vi.mocked(connectSandbox).mock.calls[0]?.[0];
+    if (!arg || !("options" in arg)) throw new Error("expected new-API config shape");
+    if (!("state" in arg)) throw new Error("expected new-API state shape");
+    expect(arg.options?.baseSnapshotId).toBe("snap_abc123");
+
+    expect((arg.state as any).source.prebuilt).toBe(true);
+  });
+
+  it("skips the snapshot lookup entirely for non-recoupable repos", async () => {
+    vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce({
+      body: {
+        repoUrl: "https://github.com/someoneelse/repo",
+        sessionId: "sess-1",
+      },
+      auth: { accountId: ACCOUNT_ID, orgId: null, authToken: "k" },
+    });
+
+    await createSandboxHandler(makeReq());
+
+    expect(findOrgSnapshot).not.toHaveBeenCalled();
+    const arg = vi.mocked(connectSandbox).mock.calls[0]?.[0];
+    if (!arg || !("options" in arg)) throw new Error("expected new-API config shape");
+    expect(arg.options?.baseSnapshotId).toBeUndefined();
+  });
+
+  it("does not pass baseSnapshotId when the org snapshot lookup misses", async () => {
+    vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce({
+      body: {
+        repoUrl: "https://github.com/recoupable/org-no-snap-yet",
+        sessionId: "sess-1",
+      },
+      auth: { accountId: ACCOUNT_ID, orgId: null, authToken: "k" },
+    });
+    vi.mocked(findOrgSnapshot).mockResolvedValueOnce(null);
+
+    await createSandboxHandler(makeReq());
+
+    expect(findOrgSnapshot).toHaveBeenCalledWith("org-no-snap-yet");
+    const arg = vi.mocked(connectSandbox).mock.calls[0]?.[0];
+    if (!arg || !("options" in arg)) throw new Error("expected new-API config shape");
+    if (!("state" in arg)) throw new Error("expected new-API state shape");
+    expect(arg.options?.baseSnapshotId).toBeUndefined();
+
+    expect((arg.state as any).source.prebuilt).toBe(false);
+  });
+
+  it("kicks the build-org-snapshot workflow on a recoupable miss so the next session warm-boots", async () => {
+    vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce({
+      body: {
+        repoUrl: "https://github.com/recoupable/org-no-snap-yet",
+        sessionId: "sess-1",
+      },
+      auth: { accountId: ACCOUNT_ID, orgId: null, authToken: "k" },
+    });
+    vi.mocked(findOrgSnapshot).mockResolvedValueOnce(null);
+
+    await createSandboxHandler(makeReq());
+
+    expect(kickBuildOrgSnapshotWorkflow).toHaveBeenCalledWith({
+      cloneUrl: "https://github.com/recoupable/org-no-snap-yet",
+      sandboxName: "org-no-snap-yet",
+    });
+  });
+
+  it("does not kick the build workflow when an org snapshot already exists (hit case)", async () => {
+    vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce({
+      body: {
+        repoUrl: "https://github.com/recoupable/org-already-snapped",
+        sessionId: "sess-1",
+      },
+      auth: { accountId: ACCOUNT_ID, orgId: null, authToken: "k" },
+    });
+    vi.mocked(findOrgSnapshot).mockResolvedValueOnce("snap_existing");
+
+    await createSandboxHandler(makeReq());
+
+    expect(kickBuildOrgSnapshotWorkflow).not.toHaveBeenCalled();
+  });
+
+  it("does not kick the build workflow for non-recoupable repos", async () => {
+    vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce({
+      body: {
+        repoUrl: "https://github.com/someoneelse/repo",
+        sessionId: "sess-1",
+      },
+      auth: { accountId: ACCOUNT_ID, orgId: null, authToken: "k" },
+    });
+
+    await createSandboxHandler(makeReq());
+
+    expect(kickBuildOrgSnapshotWorkflow).not.toHaveBeenCalled();
+  });
+
+  it("kicks the sandbox lifecycle workflow with reason='sandbox-created' when sessionId is provided", async () => {
+    await createSandboxHandler(makeReq());
+
+    expect(kickSandboxLifecycleWorkflow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "sess-1",
+        reason: "sandbox-created",
+        scheduleBackgroundWork: expect.any(Function),
+      }),
+    );
+  });
+
+  it("does not kick the lifecycle workflow when no sessionId is provided", async () => {
+    vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce({
+      body: { repoUrl: "https://github.com/o/r" },
+      auth: { accountId: ACCOUNT_ID, orgId: null, authToken: "k" },
+    });
+
+    await createSandboxHandler(makeReq());
+
+    expect(kickSandboxLifecycleWorkflow).not.toHaveBeenCalled();
+  });
+
+  it("does not attempt skill installation when no sessionId is provided", async () => {
+    vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce({
+      body: { repoUrl: "https://github.com/o/r" },
+      auth: { accountId: ACCOUNT_ID, orgId: null, authToken: "k" },
+    });
+
+    await createSandboxHandler(makeReq());
+
+    expect(installSessionGlobalSkills).not.toHaveBeenCalled();
   });
 
   it("skips the session-row write when no sessionId is provided", async () => {

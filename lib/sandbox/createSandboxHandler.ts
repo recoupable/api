@@ -1,13 +1,18 @@
 import ms from "ms";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateSandboxBody } from "@/lib/sandbox/validateCreateSandboxBody";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { connectSandbox } from "@/lib/sandbox/factory";
+import { findOrgSnapshot } from "@/lib/sandbox/findOrgSnapshot";
 import { getSessionSandboxName } from "@/lib/sandbox/getSessionSandboxName";
+import { installSessionGlobalSkills } from "@/lib/sandbox/installSessionGlobalSkills";
+import { kickBuildOrgSnapshotWorkflow } from "@/lib/sandbox/kickBuildOrgSnapshotWorkflow";
+import { kickSandboxLifecycleWorkflow } from "@/lib/sandbox/kickSandboxLifecycleWorkflow";
+import { extractOrgRepoName } from "@/lib/recoupable/extractOrgRepoName";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
-import type { Json } from "@/types/database.types";
+import type { Json, Tables } from "@/types/database.types";
 
 const DEFAULT_TIMEOUT_MS = ms("30m");
 const DEFAULT_PORTS = [3000];
@@ -35,29 +40,46 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
 
   const sessionId = body.sessionId;
 
-  let currentLifecycleVersion = 0;
+  let sessionRow: Tables<"sessions"> | null = null;
   if (sessionId) {
     const rows = await selectSessions({ id: sessionId });
-    const row = rows[0];
+    sessionRow = rows[0] ?? null;
 
-    if (!row) {
+    if (!sessionRow) {
       return NextResponse.json(
         { status: "error", error: "Session not found" },
         { status: 404, headers: getCorsHeaders() },
       );
     }
 
-    if (row.account_id !== auth.accountId) {
+    if (sessionRow.account_id !== auth.accountId) {
       return NextResponse.json(
         { status: "error", error: "Forbidden" },
         { status: 403, headers: getCorsHeaders() },
       );
     }
-
-    currentLifecycleVersion = row.lifecycle_version;
   }
 
   const sandboxName = sessionId ? getSessionSandboxName(sessionId) : undefined;
+
+  // Per-org base snapshot lookup — saves ~75s on cold start when found.
+  // Skipped entirely for non-recoupable repos so this only costs latency
+  // for the case where it can pay off. A miss falls through to default
+  // sandbox provisioning; an error is logged and treated as a miss.
+  const orgRepoName = extractOrgRepoName(body.repoUrl);
+  const orgSnapshotId = orgRepoName ? await findOrgSnapshot(orgRepoName) : null;
+
+  // Miss: kick a background workflow to build a snapshot for this org so
+  // the *next* session warm-boots from it. This request still pays the
+  // full-clone cold-start path — the workflow runs durably outside the
+  // request lifecycle.
+  if (orgRepoName && !orgSnapshotId) {
+    kickBuildOrgSnapshotWorkflow({
+      cloneUrl: body.repoUrl,
+      sandboxName: orgRepoName,
+    });
+  }
+
   const startTime = Date.now();
 
   let sandbox;
@@ -66,12 +88,19 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
       state: {
         type: "vercel",
         ...(sandboxName ? { sandboxName } : {}),
-        source: { repo: body.repoUrl },
+        // `prebuilt: true` when restoring from an org snapshot tells the
+        // Vercel sandbox runtime to skip the fresh `git clone` and instead
+        // `git fetch` + `git reset --hard` the repo that's already inside
+        // the snapshot. Without this flag, Vercel treats the snapshot as a
+        // base image and tries to clone fresh on top — which often fails
+        // for private repos and definitely defeats the warm-boot benefit.
+        source: { repo: body.repoUrl, prebuilt: !!orgSnapshotId },
       },
       options: {
         timeout: DEFAULT_TIMEOUT_MS,
         ports: DEFAULT_PORTS,
         githubToken: getServiceGithubToken(),
+        ...(orgSnapshotId ? { baseSnapshotId: orgSnapshotId } : {}),
         persistent: !!sandboxName,
         resume: !!sandboxName,
         createIfMissing: !!sandboxName,
@@ -85,18 +114,47 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
     );
   }
 
-  if (sessionId && sandbox.getState) {
+  if (sessionRow && sandbox.getState) {
     const nextState = sandbox.getState() as Json;
     const expiresAt =
       typeof sandbox.expiresAt === "number" ? new Date(sandbox.expiresAt).toISOString() : null;
-    await updateSession(sessionId, {
+    await updateSession(sessionRow.id, {
       sandbox_state: nextState,
       lifecycle_state: "active",
-      lifecycle_version: currentLifecycleVersion + 1,
+      lifecycle_version: sessionRow.lifecycle_version + 1,
       sandbox_expires_at: expiresAt,
       last_activity_at: new Date().toISOString(),
       snapshot_url: null,
       snapshot_created_at: null,
+    });
+  }
+
+  // Best-effort skill installation — a failure here does not fail the
+  // sandbox creation request. The agent will start without skills loaded
+  // (or with whatever subset successfully installed before the throw),
+  // which the user can recover from with a follow-up request once the
+  // underlying issue is fixed.
+  if (sessionRow) {
+    try {
+      await installSessionGlobalSkills({ sessionRow, sandbox });
+    } catch (error) {
+      console.error(
+        `[createSandboxHandler] installSessionGlobalSkills failed for session ${sessionRow.id}:`,
+        error,
+      );
+    }
+
+    // Register the new sandbox with the lifecycle workflow so it gets
+    // auto-paused after SANDBOX_INACTIVITY_TIMEOUT_MS of idle. The
+    // kick chain (selectSessions → claim lease → start workflow) is
+    // registered with `after()` so the serverless platform keeps the
+    // function alive past the response until the chain completes —
+    // without that, the chain dies on function teardown and the
+    // workflow never starts. Failures are logged and never surfaced.
+    kickSandboxLifecycleWorkflow({
+      sessionId: sessionRow.id,
+      reason: "sandbox-created",
+      scheduleBackgroundWork: task => after(() => task),
     });
   }
 
