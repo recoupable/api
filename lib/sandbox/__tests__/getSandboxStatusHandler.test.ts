@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSandboxStatusHandler } from "@/lib/sandbox/getSandboxStatusHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
+import { updateSession } from "@/lib/supabase/sessions/updateSession";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
@@ -13,6 +14,9 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 }));
 vi.mock("@/lib/supabase/sessions/selectSessions", () => ({
   selectSessions: vi.fn(),
+}));
+vi.mock("@/lib/supabase/sessions/updateSession", () => ({
+  updateSession: vi.fn(),
 }));
 vi.mock("@/lib/sandbox/kickSandboxLifecycleWorkflow", () => ({
   kickSandboxLifecycleWorkflow: vi.fn(),
@@ -175,5 +179,100 @@ describe("getSandboxStatusHandler", () => {
 
     const body = await res.json();
     expect(body.status).toBe("active");
+  });
+
+  // Open-agents parity: the lifecycle evaluator can leave a session in
+  // `lifecycle_state: "failed"` with an error message, but the runtime
+  // sandbox is still alive. The UI shouldn't surface that as "Paused" —
+  // the status read self-heals to `active` and reports the recovered
+  // value back to the client.
+  it("self-heals lifecycle_state from 'failed' to 'active' when runtime is alive", async () => {
+    vi.mocked(selectSessions).mockResolvedValue([
+      {
+        ...baseRow,
+        sandbox_state: {
+          type: "vercel",
+          sandboxName: "session-sess-1",
+          expiresAt: 4_102_444_800_000,
+        },
+        lifecycle_state: "failed",
+        lifecycle_error: "previous-eval-blew-up",
+        sandbox_expires_at: FAR_FUTURE,
+      } as any,
+    ]);
+    vi.mocked(updateSession).mockResolvedValueOnce({
+      ...baseRow,
+      sandbox_state: { type: "vercel", sandboxName: "session-sess-1" },
+      lifecycle_state: "active",
+      lifecycle_error: null,
+      sandbox_expires_at: FAR_FUTURE,
+    } as any);
+
+    const res = await getSandboxStatusHandler(makeReq());
+
+    expect(updateSession).toHaveBeenCalledWith(
+      "sess-1",
+      expect.objectContaining({
+        lifecycle_state: "active",
+        lifecycle_error: null,
+      }),
+    );
+    const body = await res.json();
+    expect(body.status).toBe("active");
+    expect(body.lifecycle.state).toBe("active");
+  });
+
+  it("does NOT self-heal lifecycle when runtime is gone (lifecycle stays 'failed')", async () => {
+    vi.mocked(selectSessions).mockResolvedValue([
+      {
+        ...baseRow,
+        sandbox_state: null,
+        lifecycle_state: "failed",
+      } as any,
+    ]);
+
+    const res = await getSandboxStatusHandler(makeReq());
+
+    expect(updateSession).not.toHaveBeenCalled();
+    const body = await res.json();
+    expect(body.status).toBe("no_sandbox");
+    expect(body.lifecycle.state).toBe("failed");
+  });
+
+  // Open-agents parity: hasSnapshot must also recognize hibernated
+  // sessions that still carry a resumable `sandboxName`. This is what
+  // the UI needs to render a "Resume" affordance for paused sandboxes
+  // with no explicit `snapshot_url`.
+  it("reports hasSnapshot=true when lifecycle is 'hibernated' and sandbox_state is resumable", async () => {
+    vi.mocked(selectSessions).mockResolvedValue([
+      {
+        ...baseRow,
+        sandbox_state: { type: "vercel", sandboxName: "session-sess-1" },
+        lifecycle_state: "hibernated",
+        snapshot_url: null,
+      } as any,
+    ]);
+
+    const res = await getSandboxStatusHandler(makeReq());
+
+    const body = await res.json();
+    expect(body.hasSnapshot).toBe(true);
+  });
+
+  it("reports hasSnapshot=false when lifecycle is 'active' and there's no snapshot_url (no resume affordance needed)", async () => {
+    vi.mocked(selectSessions).mockResolvedValue([
+      {
+        ...baseRow,
+        sandbox_state: { type: "vercel", sandboxName: "session-sess-1" },
+        lifecycle_state: "active",
+        sandbox_expires_at: FAR_FUTURE,
+        snapshot_url: null,
+      } as any,
+    ]);
+
+    const res = await getSandboxStatusHandler(makeReq());
+
+    const body = await res.json();
+    expect(body.hasSnapshot).toBe(false);
   });
 });

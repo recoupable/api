@@ -3,9 +3,12 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { buildLifecycle } from "@/lib/sandbox/buildLifecycle";
 import { getLifecycleDueAtMs } from "@/lib/sandbox/getLifecycleDueAtMs";
+import { getSandboxExpiresAtDate } from "@/lib/sandbox/getSandboxExpiresAtDate";
+import { getResumableSandboxName } from "@/lib/sandbox/getResumableSandboxName";
 import { isSandboxActive } from "@/lib/sandbox/isSandboxActive";
 import { kickSandboxLifecycleWorkflow } from "@/lib/sandbox/kickSandboxLifecycleWorkflow";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
+import { updateSession } from "@/lib/supabase/sessions/updateSession";
 
 /**
  * Handles `GET /api/sandbox/status`. Returns the current lifecycle and
@@ -54,20 +57,48 @@ export async function getSandboxStatusHandler(request: NextRequest): Promise<Nex
 
   const active = isSandboxActive(row);
 
-  if (active && row.lifecycle_state === "active" && Date.now() >= getLifecycleDueAtMs(row)) {
+  // Self-heal: a previous lifecycle evaluation may have set state to
+  // `failed` while the runtime sandbox is still alive. Recover so the
+  // UI doesn't get stuck on "Paused" — refresh `sandbox_expires_at`
+  // from the persisted state at the same time.
+  let effectiveRow = row;
+  if (active && row.lifecycle_state === "failed") {
+    const recovered = await updateSession(row.id, {
+      lifecycle_state: "active",
+      lifecycle_error: null,
+      sandbox_expires_at: getSandboxExpiresAtDate(row.sandbox_state),
+    });
+    if (recovered) effectiveRow = recovered;
+  }
+
+  if (
+    active &&
+    effectiveRow.lifecycle_state === "active" &&
+    Date.now() >= getLifecycleDueAtMs(effectiveRow)
+  ) {
     kickSandboxLifecycleWorkflow({
-      sessionId: row.id,
+      sessionId: effectiveRow.id,
       reason: "status-check-overdue",
       scheduleBackgroundWork: task => after(() => task),
     });
   }
 
+  // `hasSnapshot` is true when there's any way back to this sandbox:
+  // a saved snapshot URL, OR a hibernated session that still has a
+  // resumable name in `sandbox_state`. The lifecycle FSM is the
+  // source of truth for "is this sandbox paused" — the row-level
+  // `sandbox_expires_at` alone can't disambiguate hibernated from
+  // freshly-provisioned-but-not-yet-expiry-stamped.
+  const isResumable = getResumableSandboxName(effectiveRow.sandbox_state) !== null;
+  const isHibernated = effectiveRow.lifecycle_state === "hibernated";
+  const hasSnapshot = !!effectiveRow.snapshot_url || (isResumable && isHibernated);
+
   return NextResponse.json(
     {
       status: active ? "active" : "no_sandbox",
-      hasSnapshot: !!row.snapshot_url,
-      lifecycleVersion: row.lifecycle_version,
-      lifecycle: buildLifecycle(row),
+      hasSnapshot,
+      lifecycleVersion: effectiveRow.lifecycle_version,
+      lifecycle: buildLifecycle(effectiveRow),
     },
     { status: 200, headers: getCorsHeaders() },
   );
