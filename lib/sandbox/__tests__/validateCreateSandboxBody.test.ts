@@ -102,16 +102,31 @@ describe("validateCreateSandboxBody", () => {
     expect(result.body.sessionId).toBe("sess-1");
   });
 
-  it("strips an unknown branch input from the validated body", async () => {
+  it("preserves `branch` and `isNewBranch` on the validated body", async () => {
     const result = await validateCreateSandboxBody(
       makeReq({
         repoUrl: "https://github.com/o/r",
         branch: "feat/x",
+        isNewBranch: true,
       }),
     );
 
     expect(result).not.toBeInstanceOf(NextResponse);
     if (result instanceof NextResponse) return;
-    expect((result.body as Record<string, unknown>).branch).toBeUndefined();
+    expect(result.body.branch).toBe("feat/x");
+    expect(result.body.isNewBranch).toBe(true);
+  });
+
+  it("rejects a non-boolean isNewBranch", async () => {
+    const result = await validateCreateSandboxBody(
+      makeReq({
+        repoUrl: "https://github.com/o/r",
+        isNewBranch: "yes",
+      }),
+    );
+
+    expect(result).toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) return;
+    expect(result.status).toBe(400);
   });
 });

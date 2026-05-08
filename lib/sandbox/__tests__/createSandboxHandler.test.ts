@@ -96,6 +96,56 @@ describe("createSandboxHandler", () => {
     });
   });
 
+  it("forwards `branch` (existing branch) to the source as branch when isNewBranch is false", async () => {
+    vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce({
+      body: {
+        repoUrl: "https://github.com/o/r",
+        sessionId: "sess-1",
+        branch: "develop",
+        isNewBranch: false,
+      },
+      auth: { accountId: ACCOUNT_ID, orgId: null, authToken: "k" },
+    });
+
+    await createSandboxHandler(makeReq());
+
+    const args = vi.mocked(connectSandbox).mock.calls[0]?.[0] as {
+      state: { source?: { repo: string; branch?: string; newBranch?: string } };
+    };
+    expect(args.state.source).toMatchObject({ repo: "https://github.com/o/r", branch: "develop" });
+    expect(args.state.source?.newBranch).toBeUndefined();
+  });
+
+  it("forwards `branch` to the source as newBranch when isNewBranch is true", async () => {
+    vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce({
+      body: {
+        repoUrl: "https://github.com/o/r",
+        sessionId: "sess-1",
+        branch: "xy/abcd1234",
+        isNewBranch: true,
+      },
+      auth: { accountId: ACCOUNT_ID, orgId: null, authToken: "k" },
+    });
+
+    await createSandboxHandler(makeReq());
+
+    const args = vi.mocked(connectSandbox).mock.calls[0]?.[0] as {
+      state: { source?: { repo: string; branch?: string; newBranch?: string } };
+    };
+    expect(args.state.source?.newBranch).toBe("xy/abcd1234");
+    expect(args.state.source?.branch).toBeUndefined();
+  });
+
+  it("omits both branch and newBranch when neither is provided (current default)", async () => {
+    await createSandboxHandler(makeReq());
+
+    const args = vi.mocked(connectSandbox).mock.calls[0]?.[0] as {
+      state: { source?: { repo: string; branch?: string; newBranch?: string } };
+    };
+    expect(args.state.source?.branch).toBeUndefined();
+    expect(args.state.source?.newBranch).toBeUndefined();
+  });
+
   it("short-circuits with the validator's response on validation failure", async () => {
     const fail = NextResponse.json({ status: "error", error: "bad" }, { status: 400 });
     vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce(fail);

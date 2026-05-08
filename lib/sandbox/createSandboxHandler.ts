@@ -101,7 +101,17 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
         // the snapshot. Without this flag, Vercel treats the snapshot as a
         // base image and tries to clone fresh on top — which often fails
         // for private repos and definitely defeats the warm-boot benefit.
-        source: { repo: body.repoUrl, prebuilt: !!orgSnapshotId },
+        //
+        // Branch routing: `isNewBranch` flips the body's `branch` between
+        // "check out this existing ref" (`branch`) and "cut a fresh ref
+        // off default" (`newBranch`). When neither is set, the runtime
+        // resolves to the repo's default branch.
+        source: {
+          repo: body.repoUrl,
+          ...(body.branch && !body.isNewBranch ? { branch: body.branch } : {}),
+          ...(body.branch && body.isNewBranch ? { newBranch: body.branch } : {}),
+          prebuilt: !!orgSnapshotId,
+        },
       },
       options: {
         timeout: DEFAULT_TIMEOUT_MS,

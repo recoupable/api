@@ -14,6 +14,14 @@ export const createSandboxBodySchema = z.object({
       message: "repoUrl must be a valid GitHub repository URL",
     }),
   sessionId: z.string().optional(),
+  // Branch routing matches the open-agents contract: when
+  // `isNewBranch` is false (or omitted), `branch` names an existing
+  // ref to check out; when `isNewBranch` is true, `branch` names the
+  // *new* ref to create off the repo's default. The handler passes
+  // these to `connectSandbox.state.source` as `branch` / `newBranch`
+  // respectively.
+  branch: z.string().optional(),
+  isNewBranch: z.boolean().optional(),
 });
 
 export type CreateSandboxBody = z.infer<typeof createSandboxBodySchema>;
