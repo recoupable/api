@@ -175,6 +175,47 @@ describe("createSandboxHandler", () => {
     );
   });
 
+  // Regression: org-snapshot-restored sandboxes don't always populate
+  // `sandbox.expiresAt` at the top level — that field comes from the
+  // SDK only on certain creation paths. The runtime expiry is *always*
+  // available inside `sandbox.getState().expiresAt`, which open-agents
+  // relies on via `buildActiveLifecycleUpdate`. Reading from the
+  // top-level handle was writing `sandbox_expires_at: null` for prebuilt
+  // org-snapshot provisions, which then caused the lifecycle workflow
+  // to immediately mark the session `hibernated` because it interprets
+  // a null expiry as "no live runtime".
+  it("derives sandbox_expires_at from sandbox.getState().expiresAt, not the top-level handle", async () => {
+    const stateExpiresAt = Date.parse("2030-06-15T00:00:00.000Z");
+    vi.mocked(connectSandbox).mockResolvedValueOnce(
+      fakeSandbox({
+        // Top-level expiresAt is undefined (mirrors the org-snapshot path)
+        expiresAt: undefined,
+        getState: () => ({
+          type: "vercel",
+          sandboxName: "session-sess-1",
+          expiresAt: stateExpiresAt,
+        }),
+      }) as unknown as Awaited<ReturnType<typeof connectSandbox>>,
+    );
+
+    await createSandboxHandler(makeReq());
+
+    expect(updateSession).toHaveBeenCalledWith(
+      "sess-1",
+      expect.objectContaining({
+        sandbox_expires_at: new Date(stateExpiresAt).toISOString(),
+      }),
+    );
+  });
+
+  it("sets hibernate_after on the session row so the lifecycle workflow has a deadline", async () => {
+    await createSandboxHandler(makeReq());
+
+    const updateArgs = vi.mocked(updateSession).mock.calls[0]?.[1] ?? {};
+    expect(updateArgs).toHaveProperty("hibernate_after");
+    expect(typeof (updateArgs as { hibernate_after: unknown }).hibernate_after).toBe("string");
+  });
+
   it("plumbs the service github token into connectSandbox options", async () => {
     await createSandboxHandler(makeReq());
 
