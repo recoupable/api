@@ -4,6 +4,7 @@ import { buildLifecycle } from "@/lib/sandbox/buildLifecycle";
 import { clearUnavailableSandboxState } from "@/lib/sandbox/clearUnavailableSandboxState";
 import { connectSandbox } from "@/lib/sandbox/factory";
 import { getSandboxExpiresAtDate } from "@/lib/sandbox/getSandboxExpiresAtDate";
+import { getStateExpiresAt } from "@/lib/sandbox/getStateExpiresAt";
 import { hasRuntimeSandboxState } from "@/lib/sandbox/hasRuntimeSandboxState";
 import { isSandboxUnavailableError } from "@/lib/sandbox/isSandboxUnavailableError";
 import { noSandboxResponse } from "@/lib/sandbox/noSandboxResponse";
@@ -19,12 +20,6 @@ interface ReconnectBody {
   hasSnapshot: boolean;
   expiresAt?: number;
   lifecycle: ReturnType<typeof buildLifecycle>;
-}
-
-function getStateExpiresAt(state: unknown): number | undefined {
-  if (!state || typeof state !== "object") return undefined;
-  const expiresAt = (state as { expiresAt?: unknown }).expiresAt;
-  return typeof expiresAt === "number" ? expiresAt : undefined;
 }
 
 /**
