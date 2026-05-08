@@ -1,21 +1,21 @@
-import { uploadTextToArweave } from "@/lib/arweave/uploadTextToArweave";
-import uploadJsonToArweave from "@/lib/arweave/uploadJsonToArweave";
+import { uploadDataToPublicBucket } from "@/lib/files/uploadDataToPublicBucket";
 
 export interface GeneratedTxtResponse {
   txt: {
     base64Data: string;
     mimeType: string;
   };
-  arweave?: string | null;
-  metadataArweave?: string | null;
+  txtUrl?: string | null;
+  metadataUrl?: string | null;
 }
 
 /**
- * Generates and stores a TXT file by uploading it to Arweave.
- * Creates both the text file and metadata JSON on Arweave.
+ * Generates and stores a TXT file by uploading it (and a JSON metadata file
+ * referencing it) to the public-uploads Supabase bucket. Returns the
+ * resulting CDN URLs alongside a base64 encoding of the original text.
  *
  * @param contents - The text contents to store
- * @returns The generated TXT response with Arweave URLs
+ * @returns The generated TXT response with public CDN URLs
  */
 export async function generateAndStoreTxtFile(contents: string): Promise<GeneratedTxtResponse> {
   if (!contents) {
@@ -24,36 +24,41 @@ export async function generateAndStoreTxtFile(contents: string): Promise<Generat
 
   const mimeType = "text/plain";
 
-  // Upload the TXT file to Arweave
-  let txtFile: string | null = null;
+  let txtUrl: string | null = null;
   try {
-    txtFile = await uploadTextToArweave(contents);
-  } catch (arweaveError) {
-    console.error("Error uploading TXT to Arweave:", arweaveError);
-    // Continue even if Arweave upload fails
+    const result = await uploadDataToPublicBucket({
+      data: contents,
+      contentType: mimeType,
+      fileExtension: ".txt",
+    });
+    txtUrl = result.url;
+  } catch (uploadError) {
+    console.error("Error uploading TXT to public bucket:", uploadError);
   }
 
   const image = "ar://EXwe2peizXKxjUMop6W-JPflC5sWyeQR1y0JiRDwUB0";
 
-  // Upload metadata JSON to Arweave
-  let metadataArweave: string | null = null;
+  let metadataUrl: string | null = null;
   try {
-    const transaction = await uploadJsonToArweave({
-      image,
-      animation_url: txtFile || undefined,
-      content: {
-        mime: mimeType,
-        uri: txtFile || "",
-      },
-      description: contents,
-      name: contents.substring(0, 100), // Limit name length
+    const result = await uploadDataToPublicBucket({
+      data: JSON.stringify({
+        image,
+        animation_url: txtUrl || undefined,
+        content: {
+          mime: mimeType,
+          uri: txtUrl || "",
+        },
+        description: contents,
+        name: contents.substring(0, 100),
+      }),
+      contentType: "application/json",
+      fileExtension: ".json",
     });
-    metadataArweave = `ar://${transaction.id}`;
+    metadataUrl = result.url;
   } catch (metadataError) {
-    console.error("Error uploading metadata to Arweave:", metadataError);
+    console.error("Error uploading metadata to public bucket:", metadataError);
   }
 
-  // Encode contents to base64 for response
   const base64Data = Buffer.from(contents, "utf-8").toString("base64");
 
   return {
@@ -61,7 +66,7 @@ export async function generateAndStoreTxtFile(contents: string): Promise<Generat
       base64Data,
       mimeType,
     },
-    arweave: txtFile,
-    metadataArweave,
+    txtUrl,
+    metadataUrl,
   };
 }

@@ -10,8 +10,7 @@ import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccou
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
-import { uploadLinkToArweave } from "@/lib/arweave/uploadLinkToArweave";
-import { getFetchableUrl } from "@/lib/arweave/getFetchableUrl";
+import { mirrorUrlToPublicBucket } from "@/lib/files/mirrorUrlToPublicBucket";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 import type { TablesInsert } from "@/types/database.types";
@@ -19,7 +18,7 @@ import type { TablesInsert } from "@/types/database.types";
 /**
  * Handles Instagram profile scraper Apify webhook results:
  *  - Persists the returned posts + social profile row.
- *  - Mirrors the profile pic to Arweave.
+ *  - Mirrors the profile pic to the public-uploads Supabase bucket.
  *  - Notifies subscribed account emails via Resend.
  *  - Queues the comments scraper for the profile's latest posts.
  *
@@ -43,11 +42,11 @@ export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookP
   await upsertPosts(postRows);
   const posts = await getPosts({ postUrls: postRows.map(p => p.post_url) });
 
-  const arweaveTx = await uploadLinkToArweave(
+  const mirroredProfilePicUrl = await mirrorUrlToPublicBucket(
     firstResult.profilePicUrlHD || firstResult.profilePicUrl,
   );
-  if (arweaveTx) {
-    firstResult.profilePicUrl = getFetchableUrl(`ar://${arweaveTx}`) ?? firstResult.profilePicUrl;
+  if (mirroredProfilePicUrl) {
+    firstResult.profilePicUrl = mirroredProfilePicUrl;
   }
 
   // Normalize once so the upsert and the subsequent lookup agree on the

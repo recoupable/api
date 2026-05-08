@@ -1,7 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { generateAndStoreTxtFile } from "@/lib/files/generateAndStoreTxtFile";
-import { getFetchableUrl } from "@/lib/arweave/getFetchableUrl";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 
@@ -13,7 +12,8 @@ type GenerateTxtFileArgs = z.infer<typeof generateTxtFileSchema>;
 
 /**
  * Registers the "generate_txt_file" tool on the MCP server.
- * Creates a downloadable TXT file from provided contents and stores it on Arweave.
+ * Creates a downloadable TXT file from provided contents and stores it
+ * in the public-uploads Supabase bucket.
  *
  * @param server - The MCP server instance to register the tool on.
  */
@@ -22,20 +22,18 @@ export function registerGenerateTxtFileTool(server: McpServer): void {
     "generate_txt_file",
     {
       description:
-        "Create a downloadable TXT file from provided contents. The file will be stored onchain with Arweave and metadata will be created.",
+        "Create a downloadable TXT file from provided contents. Returns a permanent CDN URL for the text file plus a metadata JSON URL.",
       inputSchema: generateTxtFileSchema,
     },
     async (args: GenerateTxtFileArgs) => {
       try {
         const result = await generateAndStoreTxtFile(args.contents);
 
-        const arweaveUrl = getFetchableUrl(result.arweave || null);
-
         const response = {
           success: true,
-          arweaveUrl,
-          metadataArweave: result.metadataArweave ? getFetchableUrl(result.metadataArweave) : null,
-          message: "TXT file successfully generated and stored on Arweave.",
+          txtUrl: result.txtUrl ?? null,
+          metadataUrl: result.metadataUrl ?? null,
+          message: "TXT file successfully generated and stored.",
         };
 
         return getToolResultSuccess(response);

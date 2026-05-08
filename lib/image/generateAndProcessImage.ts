@@ -1,5 +1,5 @@
 import generateImage from "@/lib/ai/generateImage";
-import { uploadImageAndCreateMoment } from "@/lib/arweave/uploadImageAndCreateMoment";
+import { uploadImageAndCreateMoment } from "@/lib/image/uploadImageAndCreateMoment";
 import type { FilePart } from "ai";
 
 export interface GenerateAndProcessImageResult {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { uploadFileHandler } from "@/lib/arweave/uploadFileHandler";
+import { uploadFileHandler } from "@/lib/files/uploadFileHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -17,12 +17,12 @@ export async function OPTIONS() {
 /**
  * POST /api/upload
  *
- * Uploads a file (multipart/form-data, field name `file`) to Arweave and
- * returns the gateway URL.
+ * Uploads a file (multipart/form-data, field name `file`) to the public-uploads
+ * Supabase bucket and returns the permanent CDN URL.
  *
  * @param request - The incoming request carrying the file.
  * @returns A NextResponse with `{ success, fileName, fileType, fileSize, url }` on 200
- *   or `{ success: false, error }` on 500.
+ *   or `{ success: false, error }` on 400/500.
  */
 export async function POST(request: NextRequest) {
   return uploadFileHandler(request);

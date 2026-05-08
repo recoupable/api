@@ -31,6 +31,33 @@ export const AGENT_SIGNUP_GENERIC_MESSAGE =
   "If this is a new agent+ email, your API key is included. Otherwise, check your email for a verification code.";
 
 export const SUPABASE_STORAGE_BUCKET = "user-files";
+
+/** Public Supabase Storage bucket for arweave→supabase migration uploads. */
+export const SUPABASE_PUBLIC_UPLOADS_BUCKET = "public-uploads";
+
+/** Maximum bytes accepted by POST /api/upload. */
+export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+
+/**
+ * MIME types accepted by POST /api/upload. Mirrors chat's CHAT_INPUT_SUPPORTED_FILE.
+ * Server-internal callers (knowledge files, generated text, contract metadata)
+ * use uploadDataToPublicBucket directly and are not gated by this set.
+ */
+export const SUPPORTED_UPLOAD_MIME = new Set<string>([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "application/pdf",
+  "text/csv",
+  "text/markdown",
+  "text/x-markdown",
+  "audio/mpeg",
+  "audio/wav",
+  "audio/x-m4a",
+  "audio/webm",
+]);
+
 export const CREATE_CONTENT_TASK_ID = "create-content";
 
 /**
