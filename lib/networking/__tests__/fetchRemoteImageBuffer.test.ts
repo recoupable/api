@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mirrorUrlToPublicBucket } from "@/lib/files/mirrorUrlToPublicBucket";
-import { uploadDataToPublicBucket } from "@/lib/files/uploadDataToPublicBucket";
+import { fetchRemoteImageBuffer } from "@/lib/networking/fetchRemoteImageBuffer";
 import { isSafeHttpUrl } from "@/lib/networking/isSafeHttpUrl";
-
-vi.mock("@/lib/files/uploadDataToPublicBucket", () => ({
-  uploadDataToPublicBucket: vi.fn(),
-}));
 
 vi.mock("@/lib/networking/isSafeHttpUrl", () => ({
   isSafeHttpUrl: vi.fn(),
@@ -25,7 +20,7 @@ function mockOkResponse({
   return new Response(body, { status: 200, headers });
 }
 
-describe("mirrorUrlToPublicBucket", () => {
+describe("fetchRemoteImageBuffer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(isSafeHttpUrl).mockReturnValue(true);
@@ -33,9 +28,9 @@ describe("mirrorUrlToPublicBucket", () => {
 
   it("returns null for null/undefined/empty input without calling fetch", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
-    expect(await mirrorUrlToPublicBucket(null)).toBeNull();
-    expect(await mirrorUrlToPublicBucket(undefined)).toBeNull();
-    expect(await mirrorUrlToPublicBucket("")).toBeNull();
+    expect(await fetchRemoteImageBuffer(null)).toBeNull();
+    expect(await fetchRemoteImageBuffer(undefined)).toBeNull();
+    expect(await fetchRemoteImageBuffer("")).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });
@@ -43,7 +38,7 @@ describe("mirrorUrlToPublicBucket", () => {
   it("returns null when isSafeHttpUrl rejects the URL", async () => {
     vi.mocked(isSafeHttpUrl).mockReturnValueOnce(false);
     const fetchSpy = vi.spyOn(globalThis, "fetch");
-    expect(await mirrorUrlToPublicBucket("file:///etc/passwd")).toBeNull();
+    expect(await fetchRemoteImageBuffer("file:///etc/passwd")).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });
@@ -54,8 +49,7 @@ describe("mirrorUrlToPublicBucket", () => {
       .mockResolvedValueOnce(
         mockOkResponse({ contentType: "text/html", body: new Uint8Array([1]) }),
       );
-    expect(await mirrorUrlToPublicBucket("https://example.com/x")).toBeNull();
-    expect(uploadDataToPublicBucket).not.toHaveBeenCalled();
+    expect(await fetchRemoteImageBuffer("https://example.com/x")).toBeNull();
     fetchSpy.mockRestore();
   });
 
@@ -67,12 +61,11 @@ describe("mirrorUrlToPublicBucket", () => {
         contentLength: String(11 * 1024 * 1024),
       }),
     );
-    expect(await mirrorUrlToPublicBucket("https://example.com/x.png")).toBeNull();
-    expect(uploadDataToPublicBucket).not.toHaveBeenCalled();
+    expect(await fetchRemoteImageBuffer("https://example.com/x.png")).toBeNull();
     fetchSpy.mockRestore();
   });
 
-  it("uploads valid image and returns the public URL", async () => {
+  it("returns the buffer + content-type on a valid image response", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       mockOkResponse({
         contentType: "image/png",
@@ -80,25 +73,18 @@ describe("mirrorUrlToPublicBucket", () => {
         contentLength: "4",
       }),
     );
-    vi.mocked(uploadDataToPublicBucket).mockResolvedValueOnce({
-      url: "https://example.supabase.co/storage/v1/object/public/public-uploads/abc.png",
-      key: "abc.png",
-    });
 
-    const result = await mirrorUrlToPublicBucket("https://example.com/img.png");
-    expect(result).toBe(
-      "https://example.supabase.co/storage/v1/object/public/public-uploads/abc.png",
-    );
-    expect(uploadDataToPublicBucket).toHaveBeenCalledWith(
-      expect.objectContaining({ contentType: "image/png" }),
-    );
+    const result = await fetchRemoteImageBuffer("https://example.com/img.png");
+    expect(result).not.toBeNull();
+    expect(result!.contentType).toBe("image/png");
+    expect(result!.buffer).toBeInstanceOf(Buffer);
+    expect(result!.buffer.length).toBe(4);
     fetchSpy.mockRestore();
   });
 
   it("returns null when fetch throws", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("ETIMEDOUT"));
-    expect(await mirrorUrlToPublicBucket("https://example.com/x.png")).toBeNull();
-    expect(uploadDataToPublicBucket).not.toHaveBeenCalled();
+    expect(await fetchRemoteImageBuffer("https://example.com/x.png")).toBeNull();
     fetchSpy.mockRestore();
   });
 });

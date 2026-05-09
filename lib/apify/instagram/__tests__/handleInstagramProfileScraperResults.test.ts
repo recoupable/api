@@ -11,7 +11,7 @@ import { upsertSocialPosts } from "@/lib/supabase/social_posts/upsertSocialPosts
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
-import { mirrorUrlToPublicBucket } from "@/lib/files/mirrorUrlToPublicBucket";
+import { fetchRemoteImageBuffer } from "@/lib/networking/fetchRemoteImageBuffer";
 
 vi.mock("@/lib/apify/client", () => ({ default: { dataset: vi.fn() } }));
 
@@ -40,7 +40,8 @@ vi.mock("@/lib/supabase/account_artist_ids/getAccountArtistIds", () => ({
 vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
   default: vi.fn(),
 }));
-vi.mock("@/lib/files/mirrorUrlToPublicBucket", () => ({ mirrorUrlToPublicBucket: vi.fn() }));
+vi.mock("@/lib/networking/fetchRemoteImageBuffer", () => ({ fetchRemoteImageBuffer: vi.fn() }));
+vi.mock("@/lib/files/uploadDataToPublicBucket", () => ({ uploadDataToPublicBucket: vi.fn() }));
 
 const payload = {
   userId: "u",
@@ -75,7 +76,7 @@ describe("handleInstagramProfileScraperResults", () => {
     ]);
     vi.mocked(upsertPosts).mockResolvedValue({ data: null, error: null } as never);
     vi.mocked(getPosts).mockResolvedValue(posts);
-    vi.mocked(mirrorUrlToPublicBucket).mockResolvedValue(null);
+    vi.mocked(fetchRemoteImageBuffer).mockResolvedValue(null);
     vi.mocked(upsertSocials).mockResolvedValue([] as never);
     vi.mocked(selectSocials).mockResolvedValue([{ id: "s1" }] as never);
     vi.mocked(selectAccountSocials).mockResolvedValue([{ account_id: "a1" }] as never);

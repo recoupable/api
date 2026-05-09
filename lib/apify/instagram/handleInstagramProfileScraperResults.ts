@@ -10,7 +10,8 @@ import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccou
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
-import { mirrorUrlToPublicBucket } from "@/lib/files/mirrorUrlToPublicBucket";
+import { fetchRemoteImageBuffer } from "@/lib/networking/fetchRemoteImageBuffer";
+import { uploadDataToPublicBucket } from "@/lib/files/uploadDataToPublicBucket";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 import type { TablesInsert } from "@/types/database.types";
@@ -42,11 +43,22 @@ export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookP
   await upsertPosts(postRows);
   const posts = await getPosts({ postUrls: postRows.map(p => p.post_url) });
 
-  const mirroredProfilePicUrl = await mirrorUrlToPublicBucket(
+  // Mirror the profile pic to durable storage so we don't lose it when
+  // Instagram's CDN rotates / expires the original URL. Fall back to the
+  // original on any failure.
+  const fetched = await fetchRemoteImageBuffer(
     firstResult.profilePicUrlHD || firstResult.profilePicUrl,
   );
-  if (mirroredProfilePicUrl) {
-    firstResult.profilePicUrl = mirroredProfilePicUrl;
+  if (fetched) {
+    try {
+      const { url } = await uploadDataToPublicBucket({
+        data: fetched.buffer,
+        contentType: fetched.contentType,
+      });
+      firstResult.profilePicUrl = url;
+    } catch (err) {
+      console.error("[ERROR] uploading profile pic to public bucket:", err);
+    }
   }
 
   // Normalize once so the upsert and the subsequent lookup agree on the
