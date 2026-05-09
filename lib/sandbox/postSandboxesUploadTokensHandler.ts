@@ -44,9 +44,10 @@ export async function postSandboxesUploadTokensHandler(
 
     return NextResponse.json(jsonResponse, { headers: getCorsHeaders() });
   } catch (error) {
+    console.error("[postSandboxesUploadTokensHandler] handleUpload failed:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Upload failed" },
-      { status: 400, headers: getCorsHeaders() },
+      { status: "error", error: "Failed to issue upload token" },
+      { status: 500, headers: getCorsHeaders() },
     );
   }
 }

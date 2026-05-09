@@ -37,7 +37,7 @@ export async function OPTIONS() {
  * client token or an upload-completed acknowledgement).
  *
  * Error (401): missing or invalid auth on the handshake POST.
- * Error (400): invalid body or upstream Vercel Blob failure.
+ * Error (500): invalid body or upstream Vercel Blob failure.
  *
  * @param request - The request object
  * @returns A NextResponse with the handshake result or error

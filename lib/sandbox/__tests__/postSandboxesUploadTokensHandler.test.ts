@@ -88,14 +88,18 @@ describe("postSandboxesUploadTokensHandler", () => {
     });
   });
 
-  it("returns 400 when handleUpload throws", async () => {
+  it("returns 500 with a generic message when handleUpload throws", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(handleUpload).mockRejectedValue(new Error("blob client failure"));
 
     const request = createMockRequest(handshakeBody, { Authorization: "Bearer xyz" });
     const response = await postSandboxesUploadTokensHandler(request);
 
-    expect(response.status).toBe(400);
-    expect((await response.json()).error).toBe("blob client failure");
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body).toEqual({ status: "error", error: "Failed to issue upload token" });
+    expect(consoleSpy).toHaveBeenCalledOnce();
+    consoleSpy.mockRestore();
   });
 
   it("includes CORS headers on success", async () => {
@@ -108,11 +112,13 @@ describe("postSandboxesUploadTokensHandler", () => {
   });
 
   it("includes CORS headers on error", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(handleUpload).mockRejectedValue(new Error("nope"));
 
     const request = createMockRequest(handshakeBody, { Authorization: "Bearer xyz" });
     const response = await postSandboxesUploadTokensHandler(request);
 
     expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    consoleSpy.mockRestore();
   });
 });
