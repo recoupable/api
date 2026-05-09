@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { getSubscriptionStatusHandler } from "@/lib/subscription/getSubscriptionStatusHandler";
+import type Stripe from "stripe";
+import { getSubscriptionHandler } from "@/lib/subscription/getSubscriptionHandler";
 import { getActiveSubscriptionDetails } from "@/lib/stripe/getActiveSubscriptionDetails";
 import { getOrgSubscription } from "@/lib/stripe/getOrgSubscription";
 import isActiveSubscription from "@/lib/stripe/isActiveSubscription";
@@ -37,7 +38,10 @@ const mockAuthOk = () =>
     authToken: "token",
   });
 
-describe("getSubscriptionStatusHandler", () => {
+const accountSub = { id: "sub_account", status: "active" } as unknown as Stripe.Subscription;
+const orgSub = { id: "sub_org", status: "active" } as unknown as Stripe.Subscription;
+
+describe("getSubscriptionHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -48,42 +52,54 @@ describe("getSubscriptionStatusHandler", () => {
     const err = NextResponse.json({ message: "unauthorized" }, { status: 401 });
     vi.mocked(validateAuthContext).mockResolvedValue(err);
 
-    const res = await getSubscriptionStatusHandler(buildRequest());
+    const res = await getSubscriptionHandler(buildRequest());
     expect(res).toBe(err);
     expect(getActiveSubscriptionDetails).not.toHaveBeenCalled();
   });
 
-  it("returns isPro:true when the account has an active subscription", async () => {
+  it("prefers the account-level subscription when both are active", async () => {
     mockAuthOk();
-    vi.mocked(getActiveSubscriptionDetails).mockResolvedValue({} as never);
-    vi.mocked(getOrgSubscription).mockResolvedValue(null);
-    vi.mocked(isActiveSubscription).mockImplementation(sub => sub !== null && sub !== undefined);
+    vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(accountSub);
+    vi.mocked(getOrgSubscription).mockResolvedValue(orgSub);
+    vi.mocked(isActiveSubscription).mockImplementation(sub => sub != null);
 
-    const res = await getSubscriptionStatusHandler(buildRequest());
+    const res = await getSubscriptionHandler(buildRequest());
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ isPro: true });
+    await expect(res.json()).resolves.toEqual({
+      isPro: true,
+      source: "account",
+      subscription: accountSub,
+    });
   });
 
-  it("returns isPro:true when only the org has a subscription", async () => {
+  it("falls back to the organization subscription when only the org is active", async () => {
     mockAuthOk();
     vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(null);
-    vi.mocked(getOrgSubscription).mockResolvedValue({} as never);
-    vi.mocked(isActiveSubscription).mockImplementation(sub => sub !== null && sub !== undefined);
+    vi.mocked(getOrgSubscription).mockResolvedValue(orgSub);
+    vi.mocked(isActiveSubscription).mockImplementation(sub => sub != null);
 
-    const res = await getSubscriptionStatusHandler(buildRequest());
+    const res = await getSubscriptionHandler(buildRequest());
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ isPro: true });
+    await expect(res.json()).resolves.toEqual({
+      isPro: true,
+      source: "organization",
+      subscription: orgSub,
+    });
   });
 
-  it("returns isPro:false when neither the account nor its orgs have one", async () => {
+  it("returns isPro:false with null subscription when neither is active", async () => {
     mockAuthOk();
     vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(null);
     vi.mocked(getOrgSubscription).mockResolvedValue(null);
     vi.mocked(isActiveSubscription).mockReturnValue(false);
 
-    const res = await getSubscriptionStatusHandler(buildRequest());
+    const res = await getSubscriptionHandler(buildRequest());
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ isPro: false });
+    await expect(res.json()).resolves.toEqual({
+      isPro: false,
+      source: null,
+      subscription: null,
+    });
   });
 
   it("returns 500 with generic message when an upstream call throws", async () => {
@@ -91,7 +107,7 @@ describe("getSubscriptionStatusHandler", () => {
     vi.mocked(getActiveSubscriptionDetails).mockRejectedValue(new Error("Stripe down"));
     vi.mocked(getOrgSubscription).mockResolvedValue(null);
 
-    const res = await getSubscriptionStatusHandler(buildRequest());
+    const res = await getSubscriptionHandler(buildRequest());
     expect(res.status).toBe(500);
     const body = await res.json();
     expect(body).toEqual({ message: "Internal server error" });
