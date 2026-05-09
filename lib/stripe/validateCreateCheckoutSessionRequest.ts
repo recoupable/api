@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { createCheckoutSessionBodySchema } from "@/lib/stripe/createCheckoutSessionSchemas";
 import { mapToSubscriptionSessionError } from "@/lib/stripe/mapToSubscriptionSessionError";
+
+export const createCheckoutSessionBodySchema = z
+  .object({
+    successUrl: z.string().min(1, "successUrl is required").url("successUrl must be a valid URL"),
+  })
+  .strict();
 
 export type ValidatedCreateCheckoutSessionRequest = {
   accountId: string;

@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { createPortalSessionBodySchema } from "@/lib/stripe/createPortalSessionSchemas";
 import { mapToSubscriptionSessionError } from "@/lib/stripe/mapToSubscriptionSessionError";
+
+export const createPortalSessionBodySchema = z
+  .object({
+    returnUrl: z.string().min(1, "returnUrl is required").url("returnUrl must be a valid URL"),
+  })
+  .strict();
 
 export type ValidatedCreatePortalSessionRequest = {
   accountId: string;

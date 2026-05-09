@@ -43,6 +43,16 @@ describe("validateCreateCheckoutSessionRequest", () => {
     expect(j).toEqual({ error: expect.stringMatching(/successUrl|Invalid input/i) });
   });
 
+  it("returns 400 when successUrl is not a valid URL", async () => {
+    const req = new NextRequest("http://localhost/api/stripe/checkout-sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": "k" },
+      body: JSON.stringify({ successUrl: "not-a-url" }),
+    });
+    const res = await validateCreateCheckoutSessionRequest(req);
+    expect((res as NextResponse).status).toBe(400);
+  });
+
   it("returns 400 { error } for unknown body keys (strict)", async () => {
     const req = new NextRequest("http://localhost/api/stripe/checkout-sessions", {
       method: "POST",
