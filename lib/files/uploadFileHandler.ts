@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { uploadDataToPublicBucket } from "@/lib/files/uploadDataToPublicBucket";
-import { MAX_UPLOAD_BYTES, SUPPORTED_UPLOAD_MIME } from "@/lib/const";
+import { SUPPORTED_UPLOAD_MIME } from "@/lib/const";
 
 /**
  * Handles POST /api/upload — uploads a file to the public-uploads Supabase
@@ -28,9 +28,9 @@ export async function uploadFileHandler(request: NextRequest): Promise<NextRespo
     return errorResponse(400, "No file provided");
   }
 
-  if (file.size > MAX_UPLOAD_BYTES) {
-    return errorResponse(400, "File too large");
-  }
+  // Note: per-request size cap is enforced by the Vercel platform (returns
+  // 413 FUNCTION_PAYLOAD_TOO_LARGE before the handler runs) and again by the
+  // bucket's `file_size_limit` server-side. We don't duplicate it here.
 
   const fileType = file.type || "application/octet-stream";
   const isOctet = fileType === "application/octet-stream";

@@ -82,20 +82,6 @@ describe("uploadFileHandler", () => {
     expect(uploadDataToPublicBucket).not.toHaveBeenCalled();
   });
 
-  it("returns 400 when file exceeds size cap", async () => {
-    const big = new Uint8Array(26 * 1024 * 1024); // 26 MiB
-    const file = new File([big], "big.png", { type: "image/png" });
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const response = await uploadFileHandler(buildRequest(formData));
-    const body = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(body).toEqual({ success: false, error: "File too large" });
-    expect(uploadDataToPublicBucket).not.toHaveBeenCalled();
-  });
-
   it("returns 400 when mime is not in the allowlist", async () => {
     const file = new File([new Uint8Array([1])], "bad.exe", { type: "application/x-msdownload" });
     const formData = new FormData();

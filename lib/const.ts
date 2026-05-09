@@ -35,9 +35,6 @@ export const SUPABASE_STORAGE_BUCKET = "user-files";
 /** Public Supabase Storage bucket for arweave→supabase migration uploads. */
 export const SUPABASE_PUBLIC_UPLOADS_BUCKET = "public-uploads";
 
-/** Maximum bytes accepted by POST /api/upload. */
-export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
-
 /**
  * MIME types accepted by POST /api/upload. Mirrors chat's CHAT_INPUT_SUPPORTED_FILE.
  * Server-internal callers (knowledge files, generated text, contract metadata)
