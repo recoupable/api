@@ -8,7 +8,7 @@ vi.mock("@vercel/blob/client", () => ({
 }));
 
 function createMockRequest(body: unknown): Request {
-  return new Request("http://localhost:3000/api/sandboxes/staged-files", {
+  return new Request("http://localhost:3000/api/sandboxes/stage-files", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

@@ -15,7 +15,7 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/sandboxes/staged-files
+ * POST /api/sandboxes/stage-files
  *
  * Issues presigned client-upload tokens for the Vercel Blob handshake used by
  * the sandbox file-staging flow. The browser POSTs the `HandleUploadBody`
