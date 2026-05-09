@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { validateCreateCheckoutSessionRequest } from "@/lib/stripe/validateCreateCheckoutSessionRequest";
+import { validateCreateCheckoutSessionRequest } from "@/lib/stripe/checkout/validateCreateCheckoutSessionRequest";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({

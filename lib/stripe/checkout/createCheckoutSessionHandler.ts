@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createStripeSession } from "@/lib/stripe/createStripeSession";
-import { validateCreateCheckoutSessionRequest } from "@/lib/stripe/validateCreateCheckoutSessionRequest";
+import { createCheckoutSession } from "@/lib/stripe/checkout/createCheckoutSession";
+import { validateCreateCheckoutSessionRequest } from "@/lib/stripe/checkout/validateCreateCheckoutSessionRequest";
 
 export async function createCheckoutSessionHandler(request: NextRequest): Promise<NextResponse> {
   try {
@@ -10,7 +10,7 @@ export async function createCheckoutSessionHandler(request: NextRequest): Promis
       return validated;
     }
 
-    const session = await createStripeSession(validated.accountId, validated.successUrl);
+    const session = await createCheckoutSession(validated.accountId, validated.successUrl);
     if (!session.url) {
       return NextResponse.json(
         { error: "Checkout session URL missing" },

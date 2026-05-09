@@ -1,15 +1,36 @@
-import "./routeTestMocks";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { validateCreatePortalSessionRequest } from "@/lib/stripe/validateCreatePortalSessionRequest";
-import { createPortalSession } from "@/lib/stripe/createPortalSession";
-import { getStripeCustomerIdByAccountId } from "@/lib/supabase/billing_customers/getStripeCustomerIdByAccountId";
 
-const { POST } = await import("../route");
+vi.mock("@/lib/networking/getCorsHeaders", () => ({
+  getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
+}));
+
+vi.mock("@/lib/stripe/portal/validateCreatePortalSessionRequest", () => ({
+  validateCreatePortalSessionRequest: vi.fn(),
+}));
+
+vi.mock("@/lib/stripe/portal/createPortalSession", () => ({
+  createPortalSession: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/billing_customers/getStripeCustomerIdByAccountId", () => ({
+  getStripeCustomerIdByAccountId: vi.fn(),
+}));
+
+const { createPortalSessionHandler } = await import(
+  "@/lib/stripe/portal/createPortalSessionHandler"
+);
+const { validateCreatePortalSessionRequest } = await import(
+  "@/lib/stripe/portal/validateCreatePortalSessionRequest"
+);
+const { createPortalSession } = await import("@/lib/stripe/portal/createPortalSession");
+const { getStripeCustomerIdByAccountId } = await import(
+  "@/lib/supabase/billing_customers/getStripeCustomerIdByAccountId"
+);
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174001";
 
-describe("POST /api/stripe/portal-sessions (handler outcomes)", () => {
+describe("createPortalSessionHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(validateCreatePortalSessionRequest).mockReset();
@@ -21,14 +42,14 @@ describe("POST /api/stripe/portal-sessions (handler outcomes)", () => {
     vi.mocked(console.error).mockRestore();
   });
 
-  it("returns validation response unchanged", async () => {
+  it("returns the validation response unchanged when validation fails", async () => {
     const err = NextResponse.json({ error: "bad" }, { status: 400 });
     vi.mocked(validateCreatePortalSessionRequest).mockResolvedValue(err);
     const req = new NextRequest("http://localhost/api/stripe/portal-sessions", {
       method: "POST",
       body: "{}",
     });
-    expect(await POST(req)).toBe(err);
+    expect(await createPortalSessionHandler(req)).toBe(err);
     expect(getStripeCustomerIdByAccountId).not.toHaveBeenCalled();
     expect(createPortalSession).not.toHaveBeenCalled();
   });
@@ -40,7 +61,7 @@ describe("POST /api/stripe/portal-sessions (handler outcomes)", () => {
     });
     vi.mocked(getStripeCustomerIdByAccountId).mockResolvedValue(null);
 
-    const res = await POST(
+    const res = await createPortalSessionHandler(
       new NextRequest("http://localhost/api/stripe/portal-sessions", {
         method: "POST",
         body: "{}",
@@ -53,7 +74,7 @@ describe("POST /api/stripe/portal-sessions (handler outcomes)", () => {
     expect(createPortalSession).not.toHaveBeenCalled();
   });
 
-  it("returns 200 with id and url", async () => {
+  it("returns 200 with id and url on success", async () => {
     vi.mocked(validateCreatePortalSessionRequest).mockResolvedValue({
       accountId: ACCOUNT,
       returnUrl: "https://chat.recoupable.com/back",
@@ -64,7 +85,7 @@ describe("POST /api/stripe/portal-sessions (handler outcomes)", () => {
       url: "https://billing.stripe.com/p/session/abc",
     } as Awaited<ReturnType<typeof createPortalSession>>);
 
-    const res = await POST(
+    const res = await createPortalSessionHandler(
       new NextRequest("http://localhost/api/stripe/portal-sessions", {
         method: "POST",
         body: "{}",
@@ -89,7 +110,7 @@ describe("POST /api/stripe/portal-sessions (handler outcomes)", () => {
       url: null,
     } as unknown as Awaited<ReturnType<typeof createPortalSession>>);
 
-    const res = await POST(
+    const res = await createPortalSessionHandler(
       new NextRequest("http://localhost/api/stripe/portal-sessions", {
         method: "POST",
         body: "{}",
@@ -107,7 +128,7 @@ describe("POST /api/stripe/portal-sessions (handler outcomes)", () => {
     vi.mocked(getStripeCustomerIdByAccountId).mockResolvedValue("cus_123");
     vi.mocked(createPortalSession).mockRejectedValue(new Error("Stripe down"));
 
-    const res = await POST(
+    const res = await createPortalSessionHandler(
       new NextRequest("http://localhost/api/stripe/portal-sessions", {
         method: "POST",
         body: "{}",

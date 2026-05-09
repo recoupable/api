@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createPortalSession } from "@/lib/stripe/createPortalSession";
-import { validateCreatePortalSessionRequest } from "@/lib/stripe/validateCreatePortalSessionRequest";
+import { createPortalSession } from "@/lib/stripe/portal/createPortalSession";
+import { validateCreatePortalSessionRequest } from "@/lib/stripe/portal/validateCreatePortalSessionRequest";
 import { getStripeCustomerIdByAccountId } from "@/lib/supabase/billing_customers/getStripeCustomerIdByAccountId";
 
 export async function createPortalSessionHandler(request: NextRequest): Promise<NextResponse> {

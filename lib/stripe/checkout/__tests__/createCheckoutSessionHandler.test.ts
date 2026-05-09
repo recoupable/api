@@ -1,23 +1,29 @@
-import "./routeTestMocks";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { validateCreateCheckoutSessionRequest } from "@/lib/stripe/validateCreateCheckoutSessionRequest";
-import { createStripeSession } from "@/lib/stripe/createStripeSession";
+import { createCheckoutSessionHandler } from "@/lib/stripe/checkout/createCheckoutSessionHandler";
+import { validateCreateCheckoutSessionRequest } from "@/lib/stripe/checkout/validateCreateCheckoutSessionRequest";
+import { createCheckoutSession } from "@/lib/stripe/checkout/createCheckoutSession";
 
-const { POST } = await import("../route");
+vi.mock("@/lib/networking/getCorsHeaders", () => ({
+  getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
+}));
 
-const ACCOUNT = "123e4567-e89b-12d3-a456-426614174001";
+vi.mock("@/lib/stripe/checkout/validateCreateCheckoutSessionRequest", () => ({
+  validateCreateCheckoutSessionRequest: vi.fn(),
+}));
 
-describe("POST /api/stripe/checkout-sessions (handler outcomes)", () => {
+vi.mock("@/lib/stripe/checkout/createCheckoutSession", () => ({
+  createCheckoutSession: vi.fn(),
+}));
+
+const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
+
+describe("createCheckoutSessionHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(validateCreateCheckoutSessionRequest).mockReset();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
-
-  afterEach(() => {
-    vi.mocked(console.error).mockRestore();
-  });
+  afterEach(() => vi.mocked(console.error).mockRestore());
 
   it("returns validation response unchanged", async () => {
     const err = NextResponse.json({ error: "bad" }, { status: 400 });
@@ -26,8 +32,8 @@ describe("POST /api/stripe/checkout-sessions (handler outcomes)", () => {
       method: "POST",
       body: "{}",
     });
-    expect(await POST(req)).toBe(err);
-    expect(createStripeSession).not.toHaveBeenCalled();
+    expect(await createCheckoutSessionHandler(req)).toBe(err);
+    expect(createCheckoutSession).not.toHaveBeenCalled();
   });
 
   it("returns 200 with id and url", async () => {
@@ -35,12 +41,12 @@ describe("POST /api/stripe/checkout-sessions (handler outcomes)", () => {
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/ok",
     });
-    vi.mocked(createStripeSession).mockResolvedValue({
+    vi.mocked(createCheckoutSession).mockResolvedValue({
       id: "cs_test_abc",
       url: "https://checkout.stripe.com/pay/cs_test_abc",
-    } as Awaited<ReturnType<typeof createStripeSession>>);
+    } as Awaited<ReturnType<typeof createCheckoutSession>>);
 
-    const res = await POST(
+    const res = await createCheckoutSessionHandler(
       new NextRequest("http://localhost/api/stripe/checkout-sessions", {
         method: "POST",
         body: "{}",
@@ -53,17 +59,17 @@ describe("POST /api/stripe/checkout-sessions (handler outcomes)", () => {
     });
   });
 
-  it("returns 400 when session.url is null", async () => {
+  it("returns 400 { error } when session.url is null", async () => {
     vi.mocked(validateCreateCheckoutSessionRequest).mockResolvedValue({
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/ok",
     });
-    vi.mocked(createStripeSession).mockResolvedValue({
+    vi.mocked(createCheckoutSession).mockResolvedValue({
       id: "cs_test_abc",
       url: null,
-    } as Awaited<ReturnType<typeof createStripeSession>>);
+    } as Awaited<ReturnType<typeof createCheckoutSession>>);
 
-    const res = await POST(
+    const res = await createCheckoutSessionHandler(
       new NextRequest("http://localhost/api/stripe/checkout-sessions", {
         method: "POST",
         body: "{}",
@@ -73,14 +79,14 @@ describe("POST /api/stripe/checkout-sessions (handler outcomes)", () => {
     await expect(res.json()).resolves.toEqual({ error: "Checkout session URL missing" });
   });
 
-  it("returns 500 when createStripeSession throws", async () => {
+  it("returns 500 with generic { error } when createCheckoutSession throws", async () => {
     vi.mocked(validateCreateCheckoutSessionRequest).mockResolvedValue({
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/ok",
     });
-    vi.mocked(createStripeSession).mockRejectedValue(new Error("Stripe down"));
+    vi.mocked(createCheckoutSession).mockRejectedValue(new Error("Stripe down"));
 
-    const res = await POST(
+    const res = await createCheckoutSessionHandler(
       new NextRequest("http://localhost/api/stripe/checkout-sessions", {
         method: "POST",
         body: "{}",

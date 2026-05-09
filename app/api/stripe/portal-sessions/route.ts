@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createPortalSessionHandler } from "@/lib/stripe/createPortalSessionHandler";
+import { createPortalSessionHandler } from "@/lib/stripe/portal/createPortalSessionHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.

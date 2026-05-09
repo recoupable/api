@@ -5,7 +5,7 @@ import {
   STRIPE_SUBSCRIPTION_TRIAL_PERIOD_DAYS,
 } from "@/lib/stripe/config";
 
-export async function createStripeSession(
+export async function createCheckoutSession(
   accountId: string,
   successUrl: string,
 ): Promise<Stripe.Checkout.Session> {

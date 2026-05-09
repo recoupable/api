@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createStripeSession } from "@/lib/stripe/createStripeSession";
+import { createCheckoutSession } from "@/lib/stripe/checkout/createCheckoutSession";
 import {
   STRIPE_SUBSCRIPTION_PRICE_ID,
   STRIPE_SUBSCRIPTION_TRIAL_PERIOD_DAYS,
@@ -15,14 +15,14 @@ vi.mock("@/lib/stripe/client", () => ({
   },
 }));
 
-describe("createStripeSession", () => {
+describe("createCheckoutSession", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     checkoutSessionsCreate.mockResolvedValue({ id: "cs_x", url: "https://checkout.stripe.com/x" });
   });
 
   it("creates subscription checkout with expected params", async () => {
-    await createStripeSession("acc-1", "https://example.com/success");
+    await createCheckoutSession("acc-1", "https://example.com/success");
 
     expect(checkoutSessionsCreate).toHaveBeenCalledWith({
       line_items: [{ price: STRIPE_SUBSCRIPTION_PRICE_ID, quantity: 1 }],
@@ -38,7 +38,7 @@ describe("createStripeSession", () => {
   });
 
   it("does not set cancel_url, customer_email, promo or billing-collection fields", async () => {
-    await createStripeSession("acc-1", "https://example.com/success");
+    await createCheckoutSession("acc-1", "https://example.com/success");
     const params = checkoutSessionsCreate.mock.calls[0][0] as Record<string, unknown>;
     expect(params).not.toHaveProperty("cancel_url");
     expect(params).not.toHaveProperty("customer_email");

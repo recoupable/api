@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createCheckoutSessionHandler } from "@/lib/stripe/createCheckoutSessionHandler";
+import { createCheckoutSessionHandler } from "@/lib/stripe/checkout/createCheckoutSessionHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
