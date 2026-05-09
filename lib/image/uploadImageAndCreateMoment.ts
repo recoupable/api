@@ -1,5 +1,5 @@
 import { GeneratedFile } from "ai";
-import { uploadDataToPublicBucket } from "@/lib/files/uploadDataToPublicBucket";
+import { uploadPublicAsset } from "@/lib/files/uploadPublicAsset";
 import { createImageMoment } from "@/lib/inprocess/createImageMoment";
 
 export interface UploadImageAndCreateMomentParams {
@@ -36,7 +36,7 @@ export async function uploadImageAndCreateMoment(
 
   try {
     const buffer = Buffer.from(image.base64, "base64");
-    const { url } = await uploadDataToPublicBucket({
+    const { url } = await uploadPublicAsset({
       data: buffer,
       contentType: image.mediaType,
     });

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { uploadDataToPublicBucket } from "@/lib/files/uploadDataToPublicBucket";
+import { uploadPublicAsset } from "@/lib/files/uploadPublicAsset";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 
@@ -27,7 +27,7 @@ export function registerGenerateTxtFileTool(server: McpServer): void {
     },
     async (args: GenerateTxtFileArgs) => {
       try {
-        const { url } = await uploadDataToPublicBucket({
+        const { url } = await uploadPublicAsset({
           data: args.contents,
           contentType: "text/plain",
         });

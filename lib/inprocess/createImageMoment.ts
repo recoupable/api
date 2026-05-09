@@ -1,4 +1,4 @@
-import { uploadDataToPublicBucket } from "@/lib/files/uploadDataToPublicBucket";
+import { uploadPublicAsset } from "@/lib/files/uploadPublicAsset";
 import { createMoment, type CreateMomentResponse } from "./createMoment";
 
 export interface CreateImageMomentParams {
@@ -35,7 +35,7 @@ export async function createImageMoment(
       },
     };
 
-    const { url: contractMetadataUri } = await uploadDataToPublicBucket({
+    const { url: contractMetadataUri } = await uploadPublicAsset({
       data: JSON.stringify(contractMetadata),
       contentType: "application/json",
     });

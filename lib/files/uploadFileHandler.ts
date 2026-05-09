@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { uploadDataToPublicBucket } from "@/lib/files/uploadDataToPublicBucket";
+import { uploadPublicAsset } from "@/lib/files/uploadPublicAsset";
 import { SUPPORTED_UPLOAD_MIME } from "@/lib/const";
 
 /**
@@ -43,7 +43,7 @@ export async function uploadFileHandler(request: NextRequest): Promise<NextRespo
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { url } = await uploadDataToPublicBucket({
+    const { url } = await uploadPublicAsset({
       data: buffer,
       contentType: fileType,
     });

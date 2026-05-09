@@ -1,4 +1,4 @@
-import { uploadDataToPublicBucket } from "@/lib/files/uploadDataToPublicBucket";
+import { uploadPublicAsset } from "@/lib/files/uploadPublicAsset";
 import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
 import { updateAccountInfo } from "@/lib/supabase/account_info/updateAccountInfo";
 import { insertAccountInfo } from "@/lib/supabase/account_info/insertAccountInfo";
@@ -21,7 +21,7 @@ export async function createKnowledgeBase(
     throw new Error("Knowledge base text is required");
   }
 
-  const { url } = await uploadDataToPublicBucket({
+  const { url } = await uploadPublicAsset({
     data: knowledgeBaseText,
     contentType: "text/plain",
   });

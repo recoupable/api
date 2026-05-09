@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { uploadDataToPublicBucket } from "@/lib/files/uploadDataToPublicBucket";
+import { uploadPublicAsset } from "@/lib/files/uploadPublicAsset";
 import { uploadFileByKey } from "@/lib/supabase/storage/uploadFileByKey";
 import { getPublicUrlByKey } from "@/lib/supabase/storage/getPublicUrlByKey";
 import { SUPABASE_PUBLIC_UPLOADS_BUCKET } from "@/lib/const";
@@ -12,7 +12,7 @@ vi.mock("@/lib/supabase/storage/getPublicUrlByKey", () => ({
   getPublicUrlByKey: vi.fn(),
 }));
 
-describe("uploadDataToPublicBucket", () => {
+describe("uploadPublicAsset", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getPublicUrlByKey).mockReturnValue(
@@ -21,7 +21,7 @@ describe("uploadDataToPublicBucket", () => {
   });
 
   it("uploads at the bucket root with a uuid key and returns the public URL", async () => {
-    const result = await uploadDataToPublicBucket({
+    const result = await uploadPublicAsset({
       data: Buffer.from([1, 2, 3]),
       contentType: "image/png",
     });
@@ -39,14 +39,14 @@ describe("uploadDataToPublicBucket", () => {
       upsert: false,
     });
     expect(getPublicUrlByKey).toHaveBeenCalledWith(keyArg, SUPABASE_PUBLIC_UPLOADS_BUCKET);
-    expect(result.key).toBe(keyArg);
+    expect(result.id).toBe(keyArg);
     expect(result.url).toBe(
       "https://example.supabase.co/storage/v1/object/public/public-uploads/abc",
     );
   });
 
   it("accepts a string body", async () => {
-    await uploadDataToPublicBucket({
+    await uploadPublicAsset({
       data: "{}",
       contentType: "application/json",
     });

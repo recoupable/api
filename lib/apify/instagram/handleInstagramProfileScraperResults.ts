@@ -11,7 +11,7 @@ import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccoun
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
 import { fetchRemoteImageBuffer } from "@/lib/networking/fetchRemoteImageBuffer";
-import { uploadDataToPublicBucket } from "@/lib/files/uploadDataToPublicBucket";
+import { uploadPublicAsset } from "@/lib/files/uploadPublicAsset";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 import type { TablesInsert } from "@/types/database.types";
@@ -51,7 +51,7 @@ export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookP
   );
   if (fetched) {
     try {
-      const { url } = await uploadDataToPublicBucket({
+      const { url } = await uploadPublicAsset({
         data: fetched.buffer,
         contentType: fetched.contentType,
       });

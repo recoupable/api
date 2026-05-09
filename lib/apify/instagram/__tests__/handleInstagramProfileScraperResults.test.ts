@@ -41,7 +41,7 @@ vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
   default: vi.fn(),
 }));
 vi.mock("@/lib/networking/fetchRemoteImageBuffer", () => ({ fetchRemoteImageBuffer: vi.fn() }));
-vi.mock("@/lib/files/uploadDataToPublicBucket", () => ({ uploadDataToPublicBucket: vi.fn() }));
+vi.mock("@/lib/files/uploadPublicAsset", () => ({ uploadPublicAsset: vi.fn() }));
 
 const payload = {
   userId: "u",

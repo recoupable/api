@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { uploadFileHandler } from "@/lib/files/uploadFileHandler";
-import { uploadDataToPublicBucket } from "@/lib/files/uploadDataToPublicBucket";
+import { uploadPublicAsset } from "@/lib/files/uploadPublicAsset";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-vi.mock("@/lib/files/uploadDataToPublicBucket", () => ({
-  uploadDataToPublicBucket: vi.fn(),
+vi.mock("@/lib/files/uploadPublicAsset", () => ({
+  uploadPublicAsset: vi.fn(),
 }));
 
 const buildRequest = (formData: FormData) =>
@@ -23,9 +23,9 @@ describe("uploadFileHandler", () => {
   });
 
   it("uploads the file and returns the public URL", async () => {
-    vi.mocked(uploadDataToPublicBucket).mockResolvedValue({
+    vi.mocked(uploadPublicAsset).mockResolvedValue({
       url: "https://example.supabase.co/storage/v1/object/public/public-uploads/abc.png",
-      key: "abc.png",
+      id: "abc",
     });
 
     const file = new File([new Uint8Array([1, 2, 3, 4])], "hello.png", { type: "image/png" });
@@ -36,11 +36,11 @@ describe("uploadFileHandler", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(uploadDataToPublicBucket).toHaveBeenCalledWith({
+    expect(uploadPublicAsset).toHaveBeenCalledWith({
       data: expect.any(Buffer),
       contentType: "image/png",
     });
-    const callArgs = vi.mocked(uploadDataToPublicBucket).mock.calls[0][0];
+    const callArgs = vi.mocked(uploadPublicAsset).mock.calls[0][0];
     expect((callArgs.data as Buffer).length).toBe(4);
     expect(body).toEqual({
       success: true,
@@ -52,9 +52,9 @@ describe("uploadFileHandler", () => {
   });
 
   it("falls back to application/octet-stream when file.type is empty (and accepts the upload)", async () => {
-    vi.mocked(uploadDataToPublicBucket).mockResolvedValue({
+    vi.mocked(uploadPublicAsset).mockResolvedValue({
       url: "https://example.supabase.co/storage/v1/object/public/public-uploads/x.bin",
-      key: "x.bin",
+      id: "xyz",
     });
 
     const file = new File([new Uint8Array([9])], "blob.bin", { type: "" });
@@ -65,7 +65,7 @@ describe("uploadFileHandler", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(uploadDataToPublicBucket).toHaveBeenCalledWith(
+    expect(uploadPublicAsset).toHaveBeenCalledWith(
       expect.objectContaining({ contentType: "application/octet-stream" }),
     );
     expect(body.fileType).toBe("application/octet-stream");
@@ -78,7 +78,7 @@ describe("uploadFileHandler", () => {
 
     expect(response.status).toBe(400);
     expect(body).toEqual({ success: false, error: "No file provided" });
-    expect(uploadDataToPublicBucket).not.toHaveBeenCalled();
+    expect(uploadPublicAsset).not.toHaveBeenCalled();
   });
 
   it("returns 400 when mime is not in the allowlist", async () => {
@@ -91,11 +91,11 @@ describe("uploadFileHandler", () => {
 
     expect(response.status).toBe(400);
     expect(body).toEqual({ success: false, error: "Unsupported file type" });
-    expect(uploadDataToPublicBucket).not.toHaveBeenCalled();
+    expect(uploadPublicAsset).not.toHaveBeenCalled();
   });
 
   it("returns 500 with success:false when the upload helper throws", async () => {
-    vi.mocked(uploadDataToPublicBucket).mockRejectedValue(new Error("network down"));
+    vi.mocked(uploadPublicAsset).mockRejectedValue(new Error("network down"));
 
     const file = new File([new Uint8Array([1])], "x.png", { type: "image/png" });
     const formData = new FormData();

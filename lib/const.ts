@@ -38,7 +38,7 @@ export const SUPABASE_PUBLIC_UPLOADS_BUCKET = "public-uploads";
 /**
  * MIME types accepted by POST /api/upload. Mirrors chat's CHAT_INPUT_SUPPORTED_FILE.
  * Server-internal callers (knowledge files, generated text, contract metadata)
- * use uploadDataToPublicBucket directly and are not gated by this set.
+ * use uploadPublicAsset directly and are not gated by this set.
  */
 export const SUPPORTED_UPLOAD_MIME = new Set<string>([
   "image/jpeg",
