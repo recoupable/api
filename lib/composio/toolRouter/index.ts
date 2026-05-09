@@ -1,2 +1,2 @@
-export { getComposioTools } from "./getTools";
+export { getComposioTools } from "./getComposioTools";
 export { getSharedAccountConnections } from "./getSharedAccountConnections";

@@ -1,10 +1,10 @@
-import type { Sandbox } from "@vercel/sandbox";
+import type { VercelSandbox } from "@/lib/sandbox/vercel";
 import { createSandboxWithFallback } from "@/lib/sandbox/createSandboxWithFallback";
 import { getValidSnapshotId } from "@/lib/sandbox/getValidSnapshotId";
 import { insertAccountSandbox } from "@/lib/supabase/account_sandboxes/insertAccountSandbox";
 
 export interface CreateSandboxFromSnapshotResult {
-  sandbox: Sandbox;
+  sandbox: VercelSandbox;
   fromSnapshot: boolean;
 }
 
@@ -23,7 +23,7 @@ export async function createSandboxFromSnapshot(
 
   await insertAccountSandbox({
     account_id: accountId,
-    sandbox_id: sandbox.sandboxId,
+    sandbox_id: sandbox.name,
   });
 
   return { sandbox, fromSnapshot };

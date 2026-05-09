@@ -1,0 +1,31 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+
+const idSchema = z.string().uuid("id must be a valid UUID");
+
+/**
+ * Validates the `[id]` path param and confirms the caller may access that account.
+ *
+ * @returns The validated account UUID, or a NextResponse with the error to forward.
+ */
+export async function validateAccountSubscriptionParams(
+  request: NextRequest,
+  id: string,
+): Promise<string | NextResponse> {
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0].message },
+      { status: 400, headers: getCorsHeaders() },
+    );
+  }
+
+  const auth = await validateAuthContext(request, { accountId: parsed.data });
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
+  return parsed.data;
+}
