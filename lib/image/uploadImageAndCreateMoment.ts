@@ -39,7 +39,6 @@ export async function uploadImageAndCreateMoment(
     const { url } = await uploadDataToPublicBucket({
       data: buffer,
       contentType: image.mediaType,
-      fileExtension: extensionFromMediaType(image.mediaType),
     });
     imageUrl = url;
 
@@ -65,19 +64,4 @@ export async function uploadImageAndCreateMoment(
     moment: momentResult,
     uploadError,
   };
-}
-
-function extensionFromMediaType(mediaType: string): string {
-  switch (mediaType) {
-    case "image/jpeg":
-      return ".jpg";
-    case "image/png":
-      return ".png";
-    case "image/gif":
-      return ".gif";
-    case "image/webp":
-      return ".webp";
-    default:
-      return ".bin";
-  }
 }

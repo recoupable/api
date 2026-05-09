@@ -57,30 +57,13 @@ export async function mirrorUrlToPublicBucket(
     }
 
     const buffer = Buffer.concat(chunks.map(c => Buffer.from(c)));
-    const fileExtension = extensionFromContentType(contentType);
     const { url } = await uploadDataToPublicBucket({
       data: buffer,
       contentType,
-      fileExtension,
     });
     return url;
   } catch (err) {
     console.error("[ERROR] mirrorUrlToPublicBucket:", err);
     return null;
-  }
-}
-
-function extensionFromContentType(contentType: string): string {
-  switch (contentType) {
-    case "image/jpeg":
-      return ".jpg";
-    case "image/png":
-      return ".png";
-    case "image/gif":
-      return ".gif";
-    case "image/webp":
-      return ".webp";
-    default:
-      return ".bin";
   }
 }

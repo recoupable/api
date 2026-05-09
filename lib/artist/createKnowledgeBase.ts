@@ -24,7 +24,6 @@ export async function createKnowledgeBase(
   const { url } = await uploadDataToPublicBucket({
     data: knowledgeBaseText,
     contentType: "text/plain",
-    fileExtension: ".txt",
   });
 
   // Generate a name from the first line or a default name

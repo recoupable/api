@@ -90,7 +90,7 @@ describe("mirrorUrlToPublicBucket", () => {
       "https://example.supabase.co/storage/v1/object/public/public-uploads/abc.png",
     );
     expect(uploadDataToPublicBucket).toHaveBeenCalledWith(
-      expect.objectContaining({ contentType: "image/png", fileExtension: ".png" }),
+      expect.objectContaining({ contentType: "image/png" }),
     );
     fetchSpy.mockRestore();
   });

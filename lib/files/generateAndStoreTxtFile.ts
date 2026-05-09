@@ -29,7 +29,6 @@ export async function generateAndStoreTxtFile(contents: string): Promise<Generat
     const result = await uploadDataToPublicBucket({
       data: contents,
       contentType: mimeType,
-      fileExtension: ".txt",
     });
     txtUrl = result.url;
   } catch (uploadError) {
@@ -52,7 +51,6 @@ export async function generateAndStoreTxtFile(contents: string): Promise<Generat
         name: contents.substring(0, 100),
       }),
       contentType: "application/json",
-      fileExtension: ".json",
     });
     metadataUrl = result.url;
   } catch (metadataError) {

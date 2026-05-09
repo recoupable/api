@@ -46,7 +46,6 @@ export async function uploadFileHandler(request: NextRequest): Promise<NextRespo
     const { url } = await uploadDataToPublicBucket({
       data: buffer,
       contentType: fileType,
-      fileExtension: extensionFromFilename(file.name) || extensionFromContentType(fileType),
     });
 
     return NextResponse.json(
@@ -76,40 +75,4 @@ function errorResponse(status: number, message: string): NextResponse {
     { success: false, error: message },
     { status, headers: getCorsHeaders() },
   );
-}
-
-function extensionFromFilename(name: string): string {
-  const idx = name.lastIndexOf(".");
-  if (idx <= 0 || idx === name.length - 1) return "";
-  return name.slice(idx).toLowerCase();
-}
-
-function extensionFromContentType(contentType: string): string {
-  switch (contentType) {
-    case "image/jpeg":
-      return ".jpg";
-    case "image/png":
-      return ".png";
-    case "image/gif":
-      return ".gif";
-    case "image/webp":
-      return ".webp";
-    case "application/pdf":
-      return ".pdf";
-    case "text/csv":
-      return ".csv";
-    case "text/markdown":
-    case "text/x-markdown":
-      return ".md";
-    case "audio/mpeg":
-      return ".mp3";
-    case "audio/wav":
-      return ".wav";
-    case "audio/x-m4a":
-      return ".m4a";
-    case "audio/webm":
-      return ".webm";
-    default:
-      return ".bin";
-  }
 }

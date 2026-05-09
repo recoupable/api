@@ -39,7 +39,6 @@ describe("uploadFileHandler", () => {
     expect(uploadDataToPublicBucket).toHaveBeenCalledWith({
       data: expect.any(Buffer),
       contentType: "image/png",
-      fileExtension: ".png",
     });
     const callArgs = vi.mocked(uploadDataToPublicBucket).mock.calls[0][0];
     expect((callArgs.data as Buffer).length).toBe(4);

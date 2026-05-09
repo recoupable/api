@@ -38,7 +38,6 @@ export async function createImageMoment(
     const { url: contractMetadataUri } = await uploadDataToPublicBucket({
       data: JSON.stringify(contractMetadata),
       contentType: "application/json",
-      fileExtension: ".json",
     });
 
     const momentResult = await createMoment({
