@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { generateAndStoreTxtFile } from "@/lib/files/generateAndStoreTxtFile";
+import { uploadDataToPublicBucket } from "@/lib/files/uploadDataToPublicBucket";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 
@@ -12,8 +12,8 @@ type GenerateTxtFileArgs = z.infer<typeof generateTxtFileSchema>;
 
 /**
  * Registers the "generate_txt_file" tool on the MCP server.
- * Creates a downloadable TXT file from provided contents and stores it
- * in the public-uploads Supabase bucket.
+ * Uploads provided contents as a text/plain file to the public-uploads
+ * Supabase bucket and returns the permanent CDN URL.
  *
  * @param server - The MCP server instance to register the tool on.
  */
@@ -22,21 +22,21 @@ export function registerGenerateTxtFileTool(server: McpServer): void {
     "generate_txt_file",
     {
       description:
-        "Create a downloadable TXT file from provided contents. Returns a permanent CDN URL for the text file plus a metadata JSON URL.",
+        "Create a downloadable TXT file from provided contents. Returns a permanent CDN URL (`txtUrl`) for the stored text file.",
       inputSchema: generateTxtFileSchema,
     },
     async (args: GenerateTxtFileArgs) => {
       try {
-        const result = await generateAndStoreTxtFile(args.contents);
+        const { url } = await uploadDataToPublicBucket({
+          data: args.contents,
+          contentType: "text/plain",
+        });
 
-        const response = {
+        return getToolResultSuccess({
           success: true,
-          txtUrl: result.txtUrl ?? null,
-          metadataUrl: result.metadataUrl ?? null,
+          txtUrl: url,
           message: "TXT file successfully generated and stored.",
-        };
-
-        return getToolResultSuccess(response);
+        });
       } catch (error) {
         console.error("Error generating TXT file:", error);
 
