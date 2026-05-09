@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getCreditsHandler } from "@/lib/credits/getCreditsHandler";
 import { checkAndResetCredits } from "@/lib/credits/checkAndResetCredits";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { validateGetCreditsRequest } from "@/lib/credits/validateGetCreditsRequest";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -12,8 +12,8 @@ vi.mock("@/lib/credits/checkAndResetCredits", () => ({
   checkAndResetCredits: vi.fn(),
 }));
 
-vi.mock("@/lib/auth/validateAuthContext", () => ({
-  validateAuthContext: vi.fn(),
+vi.mock("@/lib/credits/validateGetCreditsRequest", () => ({
+  validateGetCreditsRequest: vi.fn(),
 }));
 
 const ACCOUNT = "11111111-2222-3333-4444-555555555555";
@@ -27,9 +27,9 @@ describe("getCreditsHandler", () => {
   });
   afterEach(() => vi.mocked(console.error).mockRestore());
 
-  it("returns the auth-error response unchanged when auth fails", async () => {
+  it("returns the validator's error response unchanged", async () => {
     const err = NextResponse.json({ message: "unauthorized" }, { status: 401 });
-    vi.mocked(validateAuthContext).mockResolvedValue(err);
+    vi.mocked(validateGetCreditsRequest).mockResolvedValue(err);
 
     const res = await getCreditsHandler(buildRequest());
     expect(res).toBe(err);
@@ -37,11 +37,7 @@ describe("getCreditsHandler", () => {
   });
 
   it("returns 200 with the credits row for the authenticated account", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: ACCOUNT,
-      orgId: null,
-      authToken: "token",
-    });
+    vi.mocked(validateGetCreditsRequest).mockResolvedValue({ accountId: ACCOUNT });
 
     const row = {
       account_id: ACCOUNT,
@@ -59,11 +55,7 @@ describe("getCreditsHandler", () => {
   });
 
   it("returns 200 with data:null when no credits row exists", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: ACCOUNT,
-      orgId: null,
-      authToken: "token",
-    });
+    vi.mocked(validateGetCreditsRequest).mockResolvedValue({ accountId: ACCOUNT });
     vi.mocked(checkAndResetCredits).mockResolvedValue(null);
 
     const res = await getCreditsHandler(buildRequest());
@@ -72,11 +64,7 @@ describe("getCreditsHandler", () => {
   });
 
   it("returns 500 with generic message when checkAndResetCredits throws", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: ACCOUNT,
-      orgId: null,
-      authToken: "token",
-    });
+    vi.mocked(validateGetCreditsRequest).mockResolvedValue({ accountId: ACCOUNT });
     vi.mocked(checkAndResetCredits).mockRejectedValue(new Error("DB down"));
 
     const res = await getCreditsHandler(buildRequest());

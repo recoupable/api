@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { checkAndResetCredits } from "@/lib/credits/checkAndResetCredits";
+import { validateGetCreditsRequest } from "@/lib/credits/validateGetCreditsRequest";
 
 /**
  * Handles GET /api/credits — returns the credits row for the
@@ -9,13 +9,13 @@ import { checkAndResetCredits } from "@/lib/credits/checkAndResetCredits";
  * cycle.
  */
 export async function getCreditsHandler(request: NextRequest): Promise<NextResponse> {
-  const authContext = await validateAuthContext(request, {});
-  if (authContext instanceof NextResponse) {
-    return authContext;
+  const validated = await validateGetCreditsRequest(request);
+  if (validated instanceof NextResponse) {
+    return validated;
   }
 
   try {
-    const creditsUsage = await checkAndResetCredits(authContext.accountId);
+    const creditsUsage = await checkAndResetCredits(validated.accountId);
     return NextResponse.json({ data: creditsUsage }, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
     console.error("/api/credits error", error);
