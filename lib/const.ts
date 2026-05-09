@@ -48,6 +48,14 @@ export const FLAMINGO_GENERATE_URL =
 /** Snapshot expiration duration (7 days) */
 export const SNAPSHOT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
+/**
+ * Email addresses with platform-admin privileges.
+ *
+ * Surfaced as `creator.is_admin` in `/api/agent-templates` so clients can flag
+ * official Recoup templates. Mirrors `chat/lib/admin.ts`.
+ */
+export const ADMIN_EMAILS: string[] = ["sidney+1@recoupable.com"];
+
 // EVALS
 export const EVAL_ACCOUNT_ID = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
 export const EVAL_ACCESS_TOKEN = process.env.EVAL_ACCESS_TOKEN || "";
