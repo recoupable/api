@@ -1,7 +1,7 @@
 import "./routeTestMocks";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { validateCreateSubscriptionSessionRequest } from "@/lib/stripe/validateCreateSubscriptionSessionRequest";
+import { validateCreateCheckoutSessionRequest } from "@/lib/stripe/validateCreateCheckoutSessionRequest";
 import { createStripeSession } from "@/lib/stripe/createStripeSession";
 
 const { POST } = await import("../route");
@@ -11,7 +11,7 @@ const ACCOUNT = "123e4567-e89b-12d3-a456-426614174001";
 describe("POST /api/stripe/checkout-sessions (handler outcomes)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(validateCreateSubscriptionSessionRequest).mockReset();
+    vi.mocked(validateCreateCheckoutSessionRequest).mockReset();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
@@ -21,7 +21,7 @@ describe("POST /api/stripe/checkout-sessions (handler outcomes)", () => {
 
   it("returns validation response unchanged", async () => {
     const err = NextResponse.json({ error: "bad" }, { status: 400 });
-    vi.mocked(validateCreateSubscriptionSessionRequest).mockResolvedValue(err);
+    vi.mocked(validateCreateCheckoutSessionRequest).mockResolvedValue(err);
     const req = new NextRequest("http://localhost/api/stripe/checkout-sessions", {
       method: "POST",
       body: "{}",
@@ -31,7 +31,7 @@ describe("POST /api/stripe/checkout-sessions (handler outcomes)", () => {
   });
 
   it("returns 200 with id and url", async () => {
-    vi.mocked(validateCreateSubscriptionSessionRequest).mockResolvedValue({
+    vi.mocked(validateCreateCheckoutSessionRequest).mockResolvedValue({
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/ok",
     });
@@ -54,7 +54,7 @@ describe("POST /api/stripe/checkout-sessions (handler outcomes)", () => {
   });
 
   it("returns 400 when session.url is null", async () => {
-    vi.mocked(validateCreateSubscriptionSessionRequest).mockResolvedValue({
+    vi.mocked(validateCreateCheckoutSessionRequest).mockResolvedValue({
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/ok",
     });
@@ -74,7 +74,7 @@ describe("POST /api/stripe/checkout-sessions (handler outcomes)", () => {
   });
 
   it("returns 500 when createStripeSession throws", async () => {
-    vi.mocked(validateCreateSubscriptionSessionRequest).mockResolvedValue({
+    vi.mocked(validateCreateCheckoutSessionRequest).mockResolvedValue({
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/ok",
     });

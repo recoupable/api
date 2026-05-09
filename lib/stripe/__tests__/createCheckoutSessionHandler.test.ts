@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { createSubscriptionSessionHandler } from "@/lib/stripe/createSubscriptionSessionHandler";
-import { validateCreateSubscriptionSessionRequest } from "@/lib/stripe/validateCreateSubscriptionSessionRequest";
+import { createCheckoutSessionHandler } from "@/lib/stripe/createCheckoutSessionHandler";
+import { validateCreateCheckoutSessionRequest } from "@/lib/stripe/validateCreateCheckoutSessionRequest";
 import { createStripeSession } from "@/lib/stripe/createStripeSession";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-vi.mock("@/lib/stripe/validateCreateSubscriptionSessionRequest", () => ({
-  validateCreateSubscriptionSessionRequest: vi.fn(),
+vi.mock("@/lib/stripe/validateCreateCheckoutSessionRequest", () => ({
+  validateCreateCheckoutSessionRequest: vi.fn(),
 }));
 
 vi.mock("@/lib/stripe/createStripeSession", () => ({
@@ -18,7 +18,7 @@ vi.mock("@/lib/stripe/createStripeSession", () => ({
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
 
-describe("createSubscriptionSessionHandler", () => {
+describe("createCheckoutSessionHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -27,17 +27,17 @@ describe("createSubscriptionSessionHandler", () => {
 
   it("returns validation response unchanged", async () => {
     const err = NextResponse.json({ error: "bad" }, { status: 400 });
-    vi.mocked(validateCreateSubscriptionSessionRequest).mockResolvedValue(err);
+    vi.mocked(validateCreateCheckoutSessionRequest).mockResolvedValue(err);
     const req = new NextRequest("http://localhost/api/stripe/checkout-sessions", {
       method: "POST",
       body: "{}",
     });
-    expect(await createSubscriptionSessionHandler(req)).toBe(err);
+    expect(await createCheckoutSessionHandler(req)).toBe(err);
     expect(createStripeSession).not.toHaveBeenCalled();
   });
 
   it("returns 200 with id and url", async () => {
-    vi.mocked(validateCreateSubscriptionSessionRequest).mockResolvedValue({
+    vi.mocked(validateCreateCheckoutSessionRequest).mockResolvedValue({
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/ok",
     });
@@ -46,7 +46,7 @@ describe("createSubscriptionSessionHandler", () => {
       url: "https://checkout.stripe.com/pay/cs_test_abc",
     } as Awaited<ReturnType<typeof createStripeSession>>);
 
-    const res = await createSubscriptionSessionHandler(
+    const res = await createCheckoutSessionHandler(
       new NextRequest("http://localhost/api/stripe/checkout-sessions", {
         method: "POST",
         body: "{}",
@@ -60,7 +60,7 @@ describe("createSubscriptionSessionHandler", () => {
   });
 
   it("returns 400 { error } when session.url is null", async () => {
-    vi.mocked(validateCreateSubscriptionSessionRequest).mockResolvedValue({
+    vi.mocked(validateCreateCheckoutSessionRequest).mockResolvedValue({
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/ok",
     });
@@ -69,7 +69,7 @@ describe("createSubscriptionSessionHandler", () => {
       url: null,
     } as Awaited<ReturnType<typeof createStripeSession>>);
 
-    const res = await createSubscriptionSessionHandler(
+    const res = await createCheckoutSessionHandler(
       new NextRequest("http://localhost/api/stripe/checkout-sessions", {
         method: "POST",
         body: "{}",
@@ -80,13 +80,13 @@ describe("createSubscriptionSessionHandler", () => {
   });
 
   it("returns 500 with generic { error } when createStripeSession throws", async () => {
-    vi.mocked(validateCreateSubscriptionSessionRequest).mockResolvedValue({
+    vi.mocked(validateCreateCheckoutSessionRequest).mockResolvedValue({
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/ok",
     });
     vi.mocked(createStripeSession).mockRejectedValue(new Error("Stripe down"));
 
-    const res = await createSubscriptionSessionHandler(
+    const res = await createCheckoutSessionHandler(
       new NextRequest("http://localhost/api/stripe/checkout-sessions", {
         method: "POST",
         body: "{}",

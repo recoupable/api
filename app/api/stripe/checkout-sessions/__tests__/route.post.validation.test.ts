@@ -1,7 +1,7 @@
 import "./routeTestMocks";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { validateCreateSubscriptionSessionRequest } from "@/lib/stripe/validateCreateSubscriptionSessionRequest";
+import { validateCreateCheckoutSessionRequest } from "@/lib/stripe/validateCreateCheckoutSessionRequest";
 import { createStripeSession } from "@/lib/stripe/createStripeSession";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
@@ -9,15 +9,15 @@ const { POST } = await import("../route");
 
 async function loadRealValidate() {
   const mod = await vi.importActual<
-    typeof import("@/lib/stripe/validateCreateSubscriptionSessionRequest")
-  >("@/lib/stripe/validateCreateSubscriptionSessionRequest");
-  return mod.validateCreateSubscriptionSessionRequest;
+    typeof import("@/lib/stripe/validateCreateCheckoutSessionRequest")
+  >("@/lib/stripe/validateCreateCheckoutSessionRequest");
+  return mod.validateCreateCheckoutSessionRequest;
 }
 
 describe("POST /api/stripe/checkout-sessions (validation)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(validateCreateSubscriptionSessionRequest).mockReset();
+    vi.mocked(validateCreateCheckoutSessionRequest).mockReset();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
@@ -26,7 +26,7 @@ describe("POST /api/stripe/checkout-sessions (validation)", () => {
   });
 
   it("returns 400 when body is invalid JSON", async () => {
-    vi.mocked(validateCreateSubscriptionSessionRequest).mockImplementationOnce(
+    vi.mocked(validateCreateCheckoutSessionRequest).mockImplementationOnce(
       await loadRealValidate(),
     );
     const res = await POST(
@@ -42,7 +42,7 @@ describe("POST /api/stripe/checkout-sessions (validation)", () => {
   });
 
   it("returns 400 when successUrl is missing", async () => {
-    vi.mocked(validateCreateSubscriptionSessionRequest).mockImplementationOnce(
+    vi.mocked(validateCreateCheckoutSessionRequest).mockImplementationOnce(
       await loadRealValidate(),
     );
     const res = await POST(
@@ -65,7 +65,7 @@ describe("POST /api/stripe/checkout-sessions (validation)", () => {
         { status: 401 },
       ),
     );
-    vi.mocked(validateCreateSubscriptionSessionRequest).mockImplementationOnce(
+    vi.mocked(validateCreateCheckoutSessionRequest).mockImplementationOnce(
       await loadRealValidate(),
     );
     const res = await POST(

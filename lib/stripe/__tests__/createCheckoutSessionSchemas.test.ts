@@ -1,19 +1,19 @@
 import { describe, it, expect } from "vitest";
-import { createSubscriptionSessionBodySchema } from "@/lib/stripe/createSubscriptionSessionSchemas";
+import { createCheckoutSessionBodySchema } from "@/lib/stripe/createCheckoutSessionSchemas";
 
-describe("createSubscriptionSessionBodySchema", () => {
+describe("createCheckoutSessionBodySchema", () => {
   it("requires successUrl", () => {
-    const r = createSubscriptionSessionBodySchema.safeParse({});
+    const r = createCheckoutSessionBodySchema.safeParse({});
     expect(r.success).toBe(false);
   });
 
   it("rejects invalid URL", () => {
-    const r = createSubscriptionSessionBodySchema.safeParse({ successUrl: "not-a-url" });
+    const r = createCheckoutSessionBodySchema.safeParse({ successUrl: "not-a-url" });
     expect(r.success).toBe(false);
   });
 
   it("rejects unknown keys (strict)", () => {
-    const r = createSubscriptionSessionBodySchema.safeParse({
+    const r = createCheckoutSessionBodySchema.safeParse({
       successUrl: "https://chat.recoupable.com/done",
       accountId: "123e4567-e89b-12d3-a456-426614174000",
     });
@@ -21,7 +21,7 @@ describe("createSubscriptionSessionBodySchema", () => {
   });
 
   it("accepts successUrl only", () => {
-    const r = createSubscriptionSessionBodySchema.safeParse({
+    const r = createCheckoutSessionBodySchema.safeParse({
       successUrl: "https://chat.recoupable.com/done",
     });
     expect(r.success).toBe(true);

@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { createSubscriptionSessionBodySchema } from "@/lib/stripe/createSubscriptionSessionSchemas";
+import { createCheckoutSessionBodySchema } from "@/lib/stripe/createCheckoutSessionSchemas";
 import { mapToSubscriptionSessionError } from "@/lib/stripe/mapToSubscriptionSessionError";
 
-export type ValidatedCreateSubscriptionSessionRequest = {
+export type ValidatedCreateCheckoutSessionRequest = {
   accountId: string;
   successUrl: string;
 };
 
-export async function validateCreateSubscriptionSessionRequest(
+export async function validateCreateCheckoutSessionRequest(
   request: NextRequest,
-): Promise<NextResponse | ValidatedCreateSubscriptionSessionRequest> {
+): Promise<NextResponse | ValidatedCreateCheckoutSessionRequest> {
   let body: unknown;
   try {
     body = await request.json();
@@ -22,7 +22,7 @@ export async function validateCreateSubscriptionSessionRequest(
     );
   }
 
-  const parsed = createSubscriptionSessionBodySchema.safeParse(body);
+  const parsed = createCheckoutSessionBodySchema.safeParse(body);
   if (!parsed.success) {
     const first = parsed.error.issues[0];
     return NextResponse.json({ error: first.message }, { status: 400, headers: getCorsHeaders() });

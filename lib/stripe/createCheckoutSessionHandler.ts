@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createStripeSession } from "@/lib/stripe/createStripeSession";
-import { validateCreateSubscriptionSessionRequest } from "@/lib/stripe/validateCreateSubscriptionSessionRequest";
+import { validateCreateCheckoutSessionRequest } from "@/lib/stripe/validateCreateCheckoutSessionRequest";
 
-export async function createSubscriptionSessionHandler(
-  request: NextRequest,
-): Promise<NextResponse> {
+export async function createCheckoutSessionHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const validated = await validateCreateSubscriptionSessionRequest(request);
+    const validated = await validateCreateCheckoutSessionRequest(request);
     if (validated instanceof NextResponse) {
       return validated;
     }
@@ -25,7 +23,7 @@ export async function createSubscriptionSessionHandler(
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {
-    console.error("[createSubscriptionSessionHandler]", error);
+    console.error("[createCheckoutSessionHandler]", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },

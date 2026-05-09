@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { validateCreateSubscriptionSessionRequest } from "@/lib/stripe/validateCreateSubscriptionSessionRequest";
+import { validateCreateCheckoutSessionRequest } from "@/lib/stripe/validateCreateCheckoutSessionRequest";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -13,7 +13,7 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
 
-describe("validateCreateSubscriptionSessionRequest", () => {
+describe("validateCreateCheckoutSessionRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -24,7 +24,7 @@ describe("validateCreateSubscriptionSessionRequest", () => {
       headers: { "Content-Type": "application/json", "x-api-key": "k" },
       body: "not-json",
     });
-    const res = await validateCreateSubscriptionSessionRequest(req);
+    const res = await validateCreateCheckoutSessionRequest(req);
     expect(res).toBeInstanceOf(NextResponse);
     expect((res as NextResponse).status).toBe(400);
     await expect((res as NextResponse).json()).resolves.toEqual({ error: "Invalid JSON body" });
@@ -37,7 +37,7 @@ describe("validateCreateSubscriptionSessionRequest", () => {
       headers: { "Content-Type": "application/json", "x-api-key": "k" },
       body: JSON.stringify({}),
     });
-    const res = await validateCreateSubscriptionSessionRequest(req);
+    const res = await validateCreateCheckoutSessionRequest(req);
     expect((res as NextResponse).status).toBe(400);
     const j = await (res as NextResponse).json();
     expect(j).toEqual({ error: expect.stringMatching(/successUrl|Invalid input/i) });
@@ -52,7 +52,7 @@ describe("validateCreateSubscriptionSessionRequest", () => {
         extra: true,
       }),
     });
-    const res = await validateCreateSubscriptionSessionRequest(req);
+    const res = await validateCreateCheckoutSessionRequest(req);
     expect((res as NextResponse).status).toBe(400);
   });
 
@@ -68,7 +68,7 @@ describe("validateCreateSubscriptionSessionRequest", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ successUrl: "https://chat.recoupable.com/done" }),
     });
-    const res = await validateCreateSubscriptionSessionRequest(req);
+    const res = await validateCreateCheckoutSessionRequest(req);
     expect((res as NextResponse).status).toBe(401);
     await expect((res as NextResponse).json()).resolves.toEqual({
       error: "Exactly one of x-api-key or Authorization must be provided",
@@ -88,7 +88,7 @@ describe("validateCreateSubscriptionSessionRequest", () => {
         successUrl: "https://chat.recoupable.com/done",
       }),
     });
-    const out = await validateCreateSubscriptionSessionRequest(req);
+    const out = await validateCreateCheckoutSessionRequest(req);
     expect(out).toEqual({
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/done",

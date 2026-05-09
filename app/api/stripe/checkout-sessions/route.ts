@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createSubscriptionSessionHandler } from "@/lib/stripe/createSubscriptionSessionHandler";
+import { createCheckoutSessionHandler } from "@/lib/stripe/createCheckoutSessionHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -21,7 +21,7 @@ export async function OPTIONS() {
  * @returns A NextResponse with session `id` and `url`, or an error body.
  */
 export async function POST(request: NextRequest) {
-  return createSubscriptionSessionHandler(request);
+  return createCheckoutSessionHandler(request);
 }
 
 export const dynamic = "force-dynamic";
