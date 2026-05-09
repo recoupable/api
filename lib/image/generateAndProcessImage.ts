@@ -1,5 +1,6 @@
 import generateImage from "@/lib/ai/generateImage";
-import { uploadImageAndCreateMoment } from "@/lib/image/uploadImageAndCreateMoment";
+import { uploadPublicAsset } from "@/lib/files/uploadPublicAsset";
+import { createImageMoment } from "@/lib/inprocess/createImageMoment";
 import type { FilePart } from "ai";
 
 export interface GenerateAndProcessImageResult {
@@ -12,12 +13,15 @@ export interface FileInput {
 }
 
 /**
- * Generates an image and processes it (uploads to Arweave).
+ * Generates an image, uploads it to the public-uploads Supabase bucket, and
+ * (best-effort) creates a moment on the In Process protocol if the account
+ * is set. Moment-creation failures are swallowed so they don't block the
+ * caller, which only needs the image URL.
  *
  * @param prompt - The text prompt describing the image to generate
  * @param accountId - The account ID
  * @param files - Optional array of file inputs for image editing
- * @returns The Arweave URL of the generated/processed image
+ * @returns The URL of the uploaded generated image
  */
 export async function generateAndProcessImage(
   prompt: string,
@@ -39,21 +43,26 @@ export async function generateAndProcessImage(
     mediaType: file.type,
   }));
 
-  // Generate the image
   const result = await generateImage(prompt, fileParts);
-
   if (!result) {
     throw new Error("Failed to generate image");
   }
 
-  // Upload to Arweave and create moment
-  const { imageUrl } = await uploadImageAndCreateMoment({
-    image: result.image,
-    prompt,
-    account: accountId,
+  const { url: imageUrl } = await uploadPublicAsset({
+    data: Buffer.from(result.image.base64, "base64"),
+    contentType: result.image.mediaType,
   });
 
-  return {
-    imageUrl,
-  };
+  try {
+    await createImageMoment({
+      prompt,
+      account: accountId,
+      imageUri: imageUrl,
+      mediaType: result.image.mediaType,
+    });
+  } catch (momentError) {
+    console.error("Error creating moment:", momentError);
+  }
+
+  return { imageUrl };
 }
