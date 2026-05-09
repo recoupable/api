@@ -1,3 +1,4 @@
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { postSandboxesUploadTokensHandler } from "@/lib/sandbox/postSandboxesUploadTokensHandler";
@@ -23,22 +24,24 @@ export async function OPTIONS() {
  * passes the resulting blob URLs to `POST /api/sandboxes/files` which commits
  * them to the account's sandbox GitHub repo and cleans up the blobs.
  *
- * Authentication: pass the caller's Privy access token in
- * `clientPayload` as `JSON.stringify({ token })`. `@vercel/blob/client.upload()`
- * does not allow setting arbitrary `Authorization` headers on the handshake
- * POST, so token transport rides on `clientPayload` rather than `Authorization`.
+ * Authentication: x-api-key header or Authorization Bearer token, matching
+ * other sandbox endpoints. `@vercel/blob/client.upload()` forwards the
+ * caller's headers onto the handshake POST. The upload-completed callback
+ * from Vercel Blob's backend does not carry the user's auth header — its
+ * signature is verified internally by `handleUpload()` against the token
+ * issued during the handshake.
  *
  * Request body: `HandleUploadBody` (from `@vercel/blob/client`).
  *
  * Response (200): the JSON envelope from `handleUpload()` (either a generated
  * client token or an upload-completed acknowledgement).
  *
- * Error (400):
- * - error: string
+ * Error (401): missing or invalid auth on the handshake POST.
+ * Error (400): invalid body or upstream Vercel Blob failure.
  *
  * @param request - The request object
  * @returns A NextResponse with the handshake result or error
  */
-export async function POST(request: Request): Promise<Response> {
+export async function POST(request: NextRequest): Promise<Response> {
   return postSandboxesUploadTokensHandler(request);
 }

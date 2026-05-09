@@ -1,40 +1,44 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 const MAX_UPLOAD_SIZE_BYTES = 100 * 1024 * 1024; // 100MB
 
 /**
  * Handler for issuing client-upload tokens for sandbox file staging.
  *
- * Vercel Blob client uploads are a two-step handshake:
- *   1. Browser POSTs `HandleUploadBody` here to get a presigned token.
- *   2. Browser uploads directly to Vercel Blob, then Blob calls back to this
- *      same URL with a completion event.
- *
- * The `@vercel/blob/client` library does not allow setting an `Authorization`
- * header on the handshake POST, so callers pass the Privy access token via
- * `clientPayload`. The token is validated by presence here; downstream commit
- * (POST /api/sandboxes/files) re-authenticates with a real Bearer token.
+ * Vercel Blob client uploads are a two-phase handshake:
+ *   1. Browser POSTs `HandleUploadBody` here (`type: "blob.generate-client-token"`)
+ *      to get a presigned token. This phase carries the user's Bearer token in
+ *      the `Authorization` header — `@vercel/blob/client.upload()` forwards
+ *      headers from its `headers` option onto the handshake POST.
+ *   2. Browser uploads directly to Vercel Blob, then Vercel Blob's backend
+ *      POSTs back here (`type: "blob.upload-completed"`). This callback does
+ *      not carry the user's auth header — instead, `handleUpload()` verifies
+ *      the callback's signature against the token issued in phase 1.
  */
-export async function postSandboxesUploadTokensHandler(request: Request): Promise<NextResponse> {
+export async function postSandboxesUploadTokensHandler(
+  request: NextRequest,
+): Promise<NextResponse> {
   try {
     const body = (await request.json()) as HandleUploadBody;
+
+    if (body.type === "blob.generate-client-token") {
+      const auth = await validateAuthContext(request);
+      if (auth instanceof NextResponse) {
+        return auth;
+      }
+    }
 
     const jsonResponse = await handleUpload({
       body,
       request,
-      onBeforeGenerateToken: async (_pathname, clientPayload) => {
-        const payload = clientPayload ? JSON.parse(clientPayload) : null;
-        if (!payload?.token) {
-          throw new Error("Authentication required");
-        }
-
-        return {
-          maximumSizeInBytes: MAX_UPLOAD_SIZE_BYTES,
-          addRandomSuffix: true,
-        };
-      },
+      onBeforeGenerateToken: async () => ({
+        maximumSizeInBytes: MAX_UPLOAD_SIZE_BYTES,
+        addRandomSuffix: true,
+      }),
       onUploadCompleted: async () => {},
     });
 

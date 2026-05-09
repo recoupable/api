@@ -1,76 +1,84 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { handleUpload } from "@vercel/blob/client";
 
 import { postSandboxesUploadTokensHandler } from "../postSandboxesUploadTokensHandler";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 vi.mock("@vercel/blob/client", () => ({
   handleUpload: vi.fn(),
 }));
 
-function createMockRequest(body: unknown): Request {
+vi.mock("@/lib/auth/validateAuthContext", () => ({
+  validateAuthContext: vi.fn(),
+}));
+
+function createMockRequest(body: unknown, headers: Record<string, string> = {}): NextRequest {
   return new Request("http://localhost:3000/api/sandboxes/staged-file", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(body),
-  });
+  }) as unknown as NextRequest;
 }
+
+const handshakeBody = { type: "blob.generate-client-token", payload: {} };
+const callbackBody = { type: "blob.upload-completed", payload: {} };
 
 describe("postSandboxesUploadTokensHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc_123",
+      orgId: null,
+      authToken: "tkn",
+    });
   });
 
-  it("returns 200 with the handleUpload result on success", async () => {
+  it("returns 200 with the handleUpload result on a valid handshake", async () => {
     const blobResponse = { type: "blob.generate-client-token", clientToken: "tkn_abc" };
     vi.mocked(handleUpload).mockResolvedValue(blobResponse as never);
 
-    const request = createMockRequest({ pathname: "file.png", callbackUrl: "x" });
+    const request = createMockRequest(handshakeBody, { Authorization: "Bearer xyz" });
     const response = await postSandboxesUploadTokensHandler(request);
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(blobResponse);
+    expect(validateAuthContext).toHaveBeenCalledOnce();
     expect(handleUpload).toHaveBeenCalledOnce();
   });
 
-  it("rejects when clientPayload is missing a token", async () => {
-    vi.mocked(handleUpload).mockImplementation(async ({ onBeforeGenerateToken }) => {
-      await onBeforeGenerateToken!("file.png", null, false);
-      return {} as never;
-    });
+  it("returns 401 when handshake auth fails", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(
+      NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    );
 
-    const request = createMockRequest({});
+    const request = createMockRequest(handshakeBody);
     const response = await postSandboxesUploadTokensHandler(request);
 
-    expect(response.status).toBe(400);
-    const body = await response.json();
-    expect(body.error).toBe("Authentication required");
+    expect(response.status).toBe(401);
+    expect(handleUpload).not.toHaveBeenCalled();
   });
 
-  it("rejects when clientPayload token field is missing", async () => {
-    vi.mocked(handleUpload).mockImplementation(async ({ onBeforeGenerateToken }) => {
-      await onBeforeGenerateToken!("file.png", JSON.stringify({ foo: "bar" }), false);
-      return {} as never;
-    });
+  it("skips auth on the upload-completed callback", async () => {
+    vi.mocked(handleUpload).mockResolvedValue({ type: "blob.upload-completed" } as never);
 
-    const request = createMockRequest({});
+    const request = createMockRequest(callbackBody);
     const response = await postSandboxesUploadTokensHandler(request);
 
-    expect(response.status).toBe(400);
-    expect((await response.json()).error).toBe("Authentication required");
+    expect(response.status).toBe(200);
+    expect(validateAuthContext).not.toHaveBeenCalled();
+    expect(handleUpload).toHaveBeenCalledOnce();
   });
 
-  it("returns the configured upload constraints when clientPayload has a token", async () => {
+  it("configures the upload constraints in onBeforeGenerateToken", async () => {
     let constraints: unknown;
     vi.mocked(handleUpload).mockImplementation(async ({ onBeforeGenerateToken }) => {
-      constraints = await onBeforeGenerateToken!(
-        "file.png",
-        JSON.stringify({ token: "user-access-token" }),
-        false,
-      );
+      constraints = await onBeforeGenerateToken!("file.png", null, false);
       return { type: "blob.generate-client-token" } as never;
     });
 
-    const request = createMockRequest({});
+    const request = createMockRequest(handshakeBody, { Authorization: "Bearer xyz" });
     const response = await postSandboxesUploadTokensHandler(request);
 
     expect(response.status).toBe(200);
@@ -83,7 +91,7 @@ describe("postSandboxesUploadTokensHandler", () => {
   it("returns 400 when handleUpload throws", async () => {
     vi.mocked(handleUpload).mockRejectedValue(new Error("blob client failure"));
 
-    const request = createMockRequest({});
+    const request = createMockRequest(handshakeBody, { Authorization: "Bearer xyz" });
     const response = await postSandboxesUploadTokensHandler(request);
 
     expect(response.status).toBe(400);
@@ -93,7 +101,7 @@ describe("postSandboxesUploadTokensHandler", () => {
   it("includes CORS headers on success", async () => {
     vi.mocked(handleUpload).mockResolvedValue({ type: "blob.generate-client-token" } as never);
 
-    const request = createMockRequest({});
+    const request = createMockRequest(handshakeBody, { Authorization: "Bearer xyz" });
     const response = await postSandboxesUploadTokensHandler(request);
 
     expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
@@ -102,7 +110,7 @@ describe("postSandboxesUploadTokensHandler", () => {
   it("includes CORS headers on error", async () => {
     vi.mocked(handleUpload).mockRejectedValue(new Error("nope"));
 
-    const request = createMockRequest({});
+    const request = createMockRequest(handshakeBody, { Authorization: "Bearer xyz" });
     const response = await postSandboxesUploadTokensHandler(request);
 
     expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
