@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getSessionByIdHandler } from "@/lib/sessions/getSessionByIdHandler";
+import { patchSessionByIdHandler } from "@/lib/sessions/patchSessionByIdHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -35,6 +36,26 @@ export async function GET(
 ) {
   const { sessionId } = await options.params;
   return getSessionByIdHandler(request, sessionId);
+}
+
+/**
+ * PATCH /api/sessions/{sessionId}
+ *
+ * Updates a session's title (rename) or status (archive/unarchive).
+ * All fields are optional; omitted fields are left unchanged.
+ * Authenticates via Privy Bearer token or x-api-key header.
+ *
+ * @param request - The request object
+ * @param options - Route options containing the async params
+ * @param options.params - Route params containing the session id
+ * @returns A NextResponse with `{ session }` on 200, or an error.
+ */
+export async function PATCH(
+  request: NextRequest,
+  options: { params: Promise<{ sessionId: string }> },
+) {
+  const { sessionId } = await options.params;
+  return patchSessionByIdHandler(request, sessionId);
 }
 
 export const dynamic = "force-dynamic";

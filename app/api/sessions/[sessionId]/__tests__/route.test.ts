@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { GET, OPTIONS } from "../route";
+import { GET, PATCH, OPTIONS } from "../route";
 import type { Tables } from "@/types/database.types";
 
 type SessionRow = Tables<"sessions">;
 
 vi.mock("@/lib/supabase/sessions/selectSessions", () => ({
   selectSessions: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/sessions/updateSession", () => ({
+  updateSession: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
@@ -18,10 +22,22 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 }));
 
 const { selectSessions } = await import("@/lib/supabase/sessions/selectSessions");
+const { updateSession } = await import("@/lib/supabase/sessions/updateSession");
 const { validateAuthContext } = await import("@/lib/auth/validateAuthContext");
 
 function makeReq(url = "https://example.com/api/sessions/sess_1"): NextRequest {
   return new NextRequest(url);
+}
+
+function makePatchReq(
+  body: Record<string, unknown>,
+  url = "https://example.com/api/sessions/sess_1",
+): NextRequest {
+  return new NextRequest(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
 const mockRow: SessionRow = {
@@ -158,6 +174,103 @@ describe("GET /api/sessions/[sessionId]", () => {
         createdAt: "2026-05-01T00:00:00.000Z",
         updatedAt: "2026-05-04T00:00:00.000Z",
       },
+    });
+  });
+});
+
+describe("PATCH /api/sessions/[sessionId]", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns 401 when auth fails", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(
+      NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    );
+
+    const res = await PATCH(makePatchReq({ title: "New title" }), {
+      params: Promise.resolve({ sessionId: "sess_1" }),
+    });
+    expect(res.status).toBe(401);
+    expect(selectSessions).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when session does not exist", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc-uuid-1",
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue([]);
+
+    const res = await PATCH(makePatchReq({ title: "New title" }), {
+      params: Promise.resolve({ sessionId: "sess_missing" }),
+    });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({
+      status: "error",
+      error: "Session not found",
+    });
+  });
+
+  it("returns 403 when session is owned by a different account", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc-uuid-OTHER",
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue([mockRow]);
+
+    const res = await PATCH(makePatchReq({ title: "New title" }), {
+      params: Promise.resolve({ sessionId: "sess_1" }),
+    });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({
+      status: "error",
+      error: "Forbidden",
+    });
+  });
+
+  it("returns 400 when status value is invalid", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc-uuid-1",
+      orgId: null,
+      authToken: "tok",
+    });
+
+    const res = await PATCH(makePatchReq({ status: "completed" }), {
+      params: Promise.resolve({ sessionId: "sess_1" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.status).toBe("error");
+  });
+
+  it("returns 200 with updated session on happy path", async () => {
+    const updatedRow: SessionRow = {
+      ...mockRow,
+      title: "Renamed session",
+      status: "archived",
+    };
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc-uuid-1",
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue([mockRow]);
+    vi.mocked(updateSession).mockResolvedValue(updatedRow);
+
+    const res = await PATCH(
+      makePatchReq({ title: "Renamed session", status: "archived" }),
+      { params: Promise.resolve({ sessionId: "sess_1" }) },
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.session.title).toBe("Renamed session");
+    expect(body.session.status).toBe("archived");
+    expect(updateSession).toHaveBeenCalledWith("sess_1", {
+      title: "Renamed session",
+      status: "archived",
     });
   });
 });
