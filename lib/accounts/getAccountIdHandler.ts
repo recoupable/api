@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
-import { getBearerToken } from "@/lib/auth/getBearerToken";
-import { getOrCreateAccountIdByAuthToken } from "@/lib/privy/getOrCreateAccountIdByAuthToken";
+import { validateAccountIdHeadersOrCreate } from "@/lib/accounts/validateAccountIdHeadersOrCreate";
 
 /**
  * Handler for `GET /api/accounts/id`.
@@ -20,55 +18,13 @@ import { getOrCreateAccountIdByAuthToken } from "@/lib/privy/getOrCreateAccountI
  */
 export async function getAccountIdHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const apiKey = request.headers.get("x-api-key");
-    const authHeader = request.headers.get("authorization");
-
-    const hasApiKey = !!apiKey;
-    const hasAuth = !!authHeader;
-
-    if ((hasApiKey && hasAuth) || (!hasApiKey && !hasAuth)) {
-      return NextResponse.json(
-        {
-          status: "error",
-          message: "Exactly one of x-api-key or Authorization must be provided",
-        },
-        { status: 401, headers: getCorsHeaders() },
-      );
-    }
-
-    let accountId: string;
-
-    if (hasApiKey) {
-      const result = await getApiKeyAccountId(request);
-      if (result instanceof NextResponse) {
-        return result;
-      }
-      accountId = result;
-    } else {
-      const authToken = getBearerToken(authHeader);
-      if (!authToken) {
-        return NextResponse.json(
-          {
-            status: "error",
-            message: "Authorization header with Bearer token required",
-          },
-          { status: 401, headers: getCorsHeaders() },
-        );
-      }
-      try {
-        accountId = await getOrCreateAccountIdByAuthToken(authToken);
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Failed to verify authentication token";
-        return NextResponse.json(
-          { status: "error", message },
-          { status: 401, headers: getCorsHeaders() },
-        );
-      }
+    const validated = await validateAccountIdHeadersOrCreate(request);
+    if (validated instanceof NextResponse) {
+      return validated;
     }
 
     return NextResponse.json(
-      { status: "success", accountId },
+      { status: "success", accountId: validated.accountId },
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {
