@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBearerToken } from "@/lib/auth/getBearerToken";
-import { getAccountIdByAuthToken } from "@/lib/privy/getAccountIdByAuthToken";
+import { getOrCreateAccountIdByAuthToken } from "@/lib/privy/getOrCreateAccountIdByAuthToken";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 
 /**
  * Extracts and validates the authentication token from the request,
- * then returns the authenticated account ID.
+ * then returns the authenticated account ID. A recoupable account is
+ * provisioned on the fly when none yet exists for the user's Privy
+ * email, mirroring the idempotent fetch-or-create semantics of
+ * `POST /api/accounts`.
  *
  * @param request - The NextRequest object
  * @returns Either the account ID string, or a NextResponse error if authentication fails
@@ -30,7 +33,7 @@ export async function getAuthenticatedAccountId(
   }
 
   try {
-    const accountId = await getAccountIdByAuthToken(authToken);
+    const accountId = await getOrCreateAccountIdByAuthToken(authToken);
     return accountId;
   } catch (error) {
     console.error("[ERROR] Authentication failed:", error);
