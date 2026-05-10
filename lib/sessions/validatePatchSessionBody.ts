@@ -44,7 +44,7 @@ export async function validatePatchSessionBody(
     return NextResponse.json(
       {
         status: "error",
-        missing_fields: firstError.path,
+        path: firstError.path,
         error: firstError.message,
       },
       {
