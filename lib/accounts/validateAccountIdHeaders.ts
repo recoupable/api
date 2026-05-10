@@ -9,25 +9,21 @@ export type AccountIdHeaders = {
 };
 
 /**
- * Validates auth headers and resolves the associated account ID.
+ * Validates auth headers and resolves the associated account ID for
+ * `GET /api/accounts/id` — the "establish identity" endpoint. Bearer
+ * tokens for brand-new Privy users are provisioned on the fly so the
+ * caller always gets back an accountId on first request.
  *
  * Exactly one of:
  * - x-api-key
  * - Authorization: Bearer <token>
  * must be provided.
  *
- * Pass `createIfMissing: true` to provision a recoupable account on the
- * fly when the Bearer token resolves to an email that has no row yet —
- * appropriate for the "establish identity" endpoint (`GET /api/accounts/id`),
- * not for routes that should treat a missing account as an error.
- *
  * @param request - The NextRequest object
- * @param options - Resolution options. `createIfMissing` defaults to false.
  * @returns A NextResponse with an error if validation fails, or the validated accountId if validation passes.
  */
 export async function validateAccountIdHeaders(
   request: NextRequest,
-  { createIfMissing = false }: { createIfMissing?: boolean } = {},
 ): Promise<NextResponse | AccountIdHeaders> {
   const apiKey = request.headers.get("x-api-key");
   const authHeader = request.headers.get("authorization");
@@ -59,8 +55,10 @@ export async function validateAccountIdHeaders(
     return { accountId: accountIdOrError };
   }
 
-  // Delegate to bearer token auth
-  const accountIdOrError = await getAuthenticatedAccountId(request, { createIfMissing });
+  // Delegate to bearer token auth — always provision on first sign-in
+  const accountIdOrError = await getAuthenticatedAccountId(request, {
+    createIfMissing: true,
+  });
   if (accountIdOrError instanceof NextResponse) {
     return accountIdOrError;
   }

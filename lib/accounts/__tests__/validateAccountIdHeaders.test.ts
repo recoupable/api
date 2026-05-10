@@ -69,22 +69,10 @@ describe("validateAccountIdHeaders", () => {
   });
 
   describe("Bearer path", () => {
-    it("delegates to getAuthenticatedAccountId with default createIfMissing=false", async () => {
+    it("delegates to getAuthenticatedAccountId with createIfMissing: true", async () => {
       vi.mocked(getAuthenticatedAccountId).mockResolvedValue("acc-existing");
 
       await validateAccountIdHeaders(buildRequest({ authorization: "Bearer t" }));
-
-      expect(getAuthenticatedAccountId).toHaveBeenCalledWith(expect.any(NextRequest), {
-        createIfMissing: false,
-      });
-    });
-
-    it("forwards createIfMissing: true to getAuthenticatedAccountId", async () => {
-      vi.mocked(getAuthenticatedAccountId).mockResolvedValue("acc-new");
-
-      await validateAccountIdHeaders(buildRequest({ authorization: "Bearer t" }), {
-        createIfMissing: true,
-      });
 
       expect(getAuthenticatedAccountId).toHaveBeenCalledWith(expect.any(NextRequest), {
         createIfMissing: true,

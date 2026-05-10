@@ -20,16 +20,6 @@ describe("getAccountIdHandler", () => {
     vi.clearAllMocks();
   });
 
-  it("delegates to validateAccountIdHeaders with createIfMissing: true", async () => {
-    vi.mocked(validateAccountIdHeaders).mockResolvedValue({ accountId: "acc-1" });
-
-    await getAccountIdHandler(buildRequest());
-
-    expect(validateAccountIdHeaders).toHaveBeenCalledWith(expect.any(NextRequest), {
-      createIfMissing: true,
-    });
-  });
-
   it("returns 200 with accountId when validation succeeds", async () => {
     vi.mocked(validateAccountIdHeaders).mockResolvedValue({ accountId: "acc-1" });
 

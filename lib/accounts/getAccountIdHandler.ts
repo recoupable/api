@@ -18,7 +18,7 @@ import { validateAccountIdHeaders } from "@/lib/accounts/validateAccountIdHeader
  */
 export async function getAccountIdHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const validated = await validateAccountIdHeaders(request, { createIfMissing: true });
+    const validated = await validateAccountIdHeaders(request);
     if (validated instanceof NextResponse) {
       return validated;
     }
