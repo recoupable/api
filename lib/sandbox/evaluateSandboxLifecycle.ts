@@ -72,7 +72,8 @@ export async function evaluateSandboxLifecycle(
 
     if (await wasLifecycleTimingExtended(sessionId, session)) {
       const refreshedRows = await selectSessions({ id: sessionId });
-      if (!refreshedRows) throw new Error("Failed to refresh session during lifecycle extension check");
+      if (!refreshedRows)
+        throw new Error("Failed to refresh session during lifecycle extension check");
       const refreshed = refreshedRows[0];
       if (refreshed?.sandbox_state) {
         await restoreActiveLifecycleState(sessionId, refreshed.sandbox_state);
