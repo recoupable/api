@@ -30,7 +30,7 @@ interface RunKickInput {
  * design.
  */
 export async function runKick(input: RunKickInput): Promise<void> {
-  const rows = await selectSessions({ id: input.sessionId });
+  const rows = (await selectSessions({ id: input.sessionId })) ?? [];
   const session = rows[0];
   if (!session) return;
 

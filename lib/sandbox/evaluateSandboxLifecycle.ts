@@ -35,7 +35,7 @@ export async function evaluateSandboxLifecycle(
   sessionId: string,
   reason: SandboxLifecycleReason,
 ): Promise<SandboxLifecycleEvaluationResult> {
-  const rows = await selectSessions({ id: sessionId });
+  const rows = (await selectSessions({ id: sessionId })) ?? [];
   const session = rows[0];
 
   if (!session) return { action: "skipped", reason: "session-not-found" };
@@ -70,7 +70,7 @@ export async function evaluateSandboxLifecycle(
     }
 
     if (await wasLifecycleTimingExtended(sessionId, session)) {
-      const refreshed = (await selectSessions({ id: sessionId }))[0];
+      const refreshed = ((await selectSessions({ id: sessionId })) ?? [])[0];
       if (refreshed?.sandbox_state) {
         await restoreActiveLifecycleState(sessionId, refreshed.sandbox_state);
       }

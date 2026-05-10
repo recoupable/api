@@ -30,6 +30,14 @@ export async function patchSessionByIdHandler(
   const { body, auth } = validated;
 
   const rows = await selectSessions({ id: sessionId });
+
+  if (rows === null) {
+    return NextResponse.json(
+      { status: "error", error: "Internal server error" },
+      { status: 500, headers: getCorsHeaders() },
+    );
+  }
+
   const row = rows[0] ?? null;
 
   if (!row) {
@@ -53,7 +61,7 @@ export async function patchSessionByIdHandler(
 
   if (!updated) {
     return NextResponse.json(
-      { status: "error", error: "Failed to update session" },
+      { status: "error", error: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
     );
   }

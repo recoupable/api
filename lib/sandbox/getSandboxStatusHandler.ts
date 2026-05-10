@@ -38,7 +38,7 @@ export async function getSandboxStatusHandler(request: NextRequest): Promise<Nex
     );
   }
 
-  const rows = await selectSessions({ id: sessionId });
+  const rows = (await selectSessions({ id: sessionId })) ?? [];
   const row = rows[0];
 
   if (!row) {

@@ -10,19 +10,23 @@ interface SelectSessionsFilter {
 
 /**
  * General-purpose `sessions` reader. Pass any combination of filters
- * to narrow the result set; an unset filter is ignored. Returns an
- * empty array on Supabase error after logging.
+ * to narrow the result set; an unset filter is ignored.
+ *
+ * Returns `null` on Supabase error (DB unreachable / query failure) so
+ * callers can distinguish a transient backend failure from a legitimately
+ * empty result set. Returns `[]` when the query succeeds but matches no
+ * rows.
  *
  * Callers project to whatever shape they need (single row by id,
  * titles by account, etc.) — keeping this single function as the
  * sole entry point keeps `lib/supabase/sessions/` DRY.
  *
  * @param filter - Optional filters narrowing the query.
- * @returns Matching rows, or `[]` on error / no match.
+ * @returns Matching rows, `[]` on no match, or `null` on DB error.
  */
 export async function selectSessions(
   filter: SelectSessionsFilter = {},
-): Promise<Tables<"sessions">[]> {
+): Promise<Tables<"sessions">[] | null> {
   let query = supabase.from("sessions").select("*");
   if (filter.id) query = query.eq("id", filter.id);
   if (filter.accountId) query = query.eq("account_id", filter.accountId);
@@ -31,11 +35,11 @@ export async function selectSessions(
     const { data, error } = await query;
     if (error) {
       console.error("[selectSessions] error:", error);
-      return [];
+      return null;
     }
     return data ?? [];
   } catch (e) {
     console.error("[selectSessions] threw:", e);
-    return [];
+    return null;
   }
 }
