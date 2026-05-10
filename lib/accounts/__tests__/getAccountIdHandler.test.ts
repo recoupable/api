@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountIdHandler } from "@/lib/accounts/getAccountIdHandler";
-import { validateAccountIdHeadersOrCreate } from "@/lib/accounts/validateAccountIdHeadersOrCreate";
+import { validateAccountIdHeaders } from "@/lib/accounts/validateAccountIdHeaders";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-vi.mock("@/lib/accounts/validateAccountIdHeadersOrCreate", () => ({
-  validateAccountIdHeadersOrCreate: vi.fn(),
+vi.mock("@/lib/accounts/validateAccountIdHeaders", () => ({
+  validateAccountIdHeaders: vi.fn(),
 }));
 
 function buildRequest(): NextRequest {
@@ -20,10 +20,18 @@ describe("getAccountIdHandler", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 200 with accountId when validation succeeds", async () => {
-    vi.mocked(validateAccountIdHeadersOrCreate).mockResolvedValue({
-      accountId: "acc-1",
+  it("delegates to validateAccountIdHeaders with createIfMissing: true", async () => {
+    vi.mocked(validateAccountIdHeaders).mockResolvedValue({ accountId: "acc-1" });
+
+    await getAccountIdHandler(buildRequest());
+
+    expect(validateAccountIdHeaders).toHaveBeenCalledWith(expect.any(NextRequest), {
+      createIfMissing: true,
     });
+  });
+
+  it("returns 200 with accountId when validation succeeds", async () => {
+    vi.mocked(validateAccountIdHeaders).mockResolvedValue({ accountId: "acc-1" });
 
     const res = await getAccountIdHandler(buildRequest());
 
@@ -34,7 +42,7 @@ describe("getAccountIdHandler", () => {
 
   it("forwards the validator's error response", async () => {
     const errorResponse = NextResponse.json({ status: "error", message: "boom" }, { status: 401 });
-    vi.mocked(validateAccountIdHeadersOrCreate).mockResolvedValue(errorResponse);
+    vi.mocked(validateAccountIdHeaders).mockResolvedValue(errorResponse);
 
     const res = await getAccountIdHandler(buildRequest());
 
@@ -42,7 +50,7 @@ describe("getAccountIdHandler", () => {
   });
 
   it("returns 500 when the validator throws", async () => {
-    vi.mocked(validateAccountIdHeadersOrCreate).mockRejectedValue(new Error("unexpected"));
+    vi.mocked(validateAccountIdHeaders).mockRejectedValue(new Error("unexpected"));
 
     const res = await getAccountIdHandler(buildRequest());
 

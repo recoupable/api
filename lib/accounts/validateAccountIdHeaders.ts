@@ -16,11 +16,18 @@ export type AccountIdHeaders = {
  * - Authorization: Bearer <token>
  * must be provided.
  *
+ * Pass `createIfMissing: true` to provision a recoupable account on the
+ * fly when the Bearer token resolves to an email that has no row yet —
+ * appropriate for the "establish identity" endpoint (`GET /api/accounts/id`),
+ * not for routes that should treat a missing account as an error.
+ *
  * @param request - The NextRequest object
+ * @param options - Resolution options. `createIfMissing` defaults to false.
  * @returns A NextResponse with an error if validation fails, or the validated accountId if validation passes.
  */
 export async function validateAccountIdHeaders(
   request: NextRequest,
+  { createIfMissing = false }: { createIfMissing?: boolean } = {},
 ): Promise<NextResponse | AccountIdHeaders> {
   const apiKey = request.headers.get("x-api-key");
   const authHeader = request.headers.get("authorization");
@@ -53,7 +60,7 @@ export async function validateAccountIdHeaders(
   }
 
   // Delegate to bearer token auth
-  const accountIdOrError = await getAuthenticatedAccountId(request);
+  const accountIdOrError = await getAuthenticatedAccountId(request, { createIfMissing });
   if (accountIdOrError instanceof NextResponse) {
     return accountIdOrError;
   }

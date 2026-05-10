@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAccountIdHeadersOrCreate } from "@/lib/accounts/validateAccountIdHeadersOrCreate";
+import { validateAccountIdHeaders } from "@/lib/accounts/validateAccountIdHeaders";
 
 /**
  * Handler for `GET /api/accounts/id`.
@@ -18,7 +18,7 @@ import { validateAccountIdHeadersOrCreate } from "@/lib/accounts/validateAccount
  */
 export async function getAccountIdHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const validated = await validateAccountIdHeadersOrCreate(request);
+    const validated = await validateAccountIdHeaders(request, { createIfMissing: true });
     if (validated instanceof NextResponse) {
       return validated;
     }
