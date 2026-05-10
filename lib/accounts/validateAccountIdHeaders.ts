@@ -9,10 +9,7 @@ export type AccountIdHeaders = {
 };
 
 /**
- * Validates auth headers and resolves the associated account ID for
- * `GET /api/accounts/id` — the "establish identity" endpoint. Bearer
- * tokens for brand-new Privy users are provisioned on the fly so the
- * caller always gets back an accountId on first request.
+ * Validates auth headers and resolves the associated account ID.
  *
  * Exactly one of:
  * - x-api-key
@@ -55,10 +52,8 @@ export async function validateAccountIdHeaders(
     return { accountId: accountIdOrError };
   }
 
-  // Delegate to bearer token auth — always provision on first sign-in
-  const accountIdOrError = await getAuthenticatedAccountId(request, {
-    createIfMissing: true,
-  });
+  // Delegate to bearer token auth
+  const accountIdOrError = await getAuthenticatedAccountId(request);
   if (accountIdOrError instanceof NextResponse) {
     return accountIdOrError;
   }
