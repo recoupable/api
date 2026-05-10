@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { verifyBearerToken } from "../verifyApiKey";
 
-import { getAccountIdByAuthToken } from "@/lib/privy/getAccountIdByAuthToken";
+import { getOrCreateAccountIdByAuthToken } from "@/lib/privy/getOrCreateAccountIdByAuthToken";
 import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 
-vi.mock("@/lib/privy/getAccountIdByAuthToken", () => ({
-  getAccountIdByAuthToken: vi.fn(),
+vi.mock("@/lib/privy/getOrCreateAccountIdByAuthToken", () => ({
+  getOrCreateAccountIdByAuthToken: vi.fn(),
 }));
 
 vi.mock("@/lib/keys/getApiKeyDetails", () => ({
@@ -23,7 +23,7 @@ describe("verifyBearerToken", () => {
   });
 
   it("returns auth info for Privy JWT", async () => {
-    vi.mocked(getAccountIdByAuthToken).mockResolvedValue("privy-account-123");
+    vi.mocked(getOrCreateAccountIdByAuthToken).mockResolvedValue("privy-account-123");
 
     const result = await verifyBearerToken(new Request("http://localhost"), "privy-jwt-token");
 
@@ -38,7 +38,7 @@ describe("verifyBearerToken", () => {
   });
 
   it("returns auth info for org API key", async () => {
-    vi.mocked(getAccountIdByAuthToken).mockRejectedValue(new Error("Invalid JWT"));
+    vi.mocked(getOrCreateAccountIdByAuthToken).mockRejectedValue(new Error("Invalid JWT"));
     vi.mocked(getApiKeyDetails).mockResolvedValue({
       accountId: "org-account-123",
       orgId: "org-account-123",
@@ -57,7 +57,7 @@ describe("verifyBearerToken", () => {
   });
 
   it("returns auth info for personal API key", async () => {
-    vi.mocked(getAccountIdByAuthToken).mockRejectedValue(new Error("Invalid JWT"));
+    vi.mocked(getOrCreateAccountIdByAuthToken).mockRejectedValue(new Error("Invalid JWT"));
     vi.mocked(getApiKeyDetails).mockResolvedValue({
       accountId: "personal-account-123",
       orgId: null,
@@ -76,7 +76,7 @@ describe("verifyBearerToken", () => {
   });
 
   it("returns undefined for invalid API key", async () => {
-    vi.mocked(getAccountIdByAuthToken).mockRejectedValue(new Error("Invalid JWT"));
+    vi.mocked(getOrCreateAccountIdByAuthToken).mockRejectedValue(new Error("Invalid JWT"));
     vi.mocked(getApiKeyDetails).mockResolvedValue(null);
 
     const result = await verifyBearerToken(new Request("http://localhost"), "invalid-key");
