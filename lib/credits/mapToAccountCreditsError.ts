@@ -9,24 +9,21 @@ const INTERNAL_ERROR_MESSAGE = "Internal server error";
  * `{ error }` shapes that `validateAuthContext` and its helpers produce, and
  * masks any 5xx into a generic internal-error message.
  */
-export function mapToAccountCreditsError(res: NextResponse): Promise<NextResponse> {
+export async function mapToAccountCreditsError(res: NextResponse): Promise<NextResponse> {
   const status = res.status;
   if (status >= 500) {
-    return Promise.resolve(
-      NextResponse.json({ error: INTERNAL_ERROR_MESSAGE }, { status, headers: getCorsHeaders() }),
+    return NextResponse.json(
+      { error: INTERNAL_ERROR_MESSAGE },
+      { status, headers: getCorsHeaders() },
     );
   }
 
-  return res
-    .clone()
-    .json()
-    .then((data: unknown) => {
-      let message = "Unauthorized";
-      if (data && typeof data === "object") {
-        const o = data as Record<string, unknown>;
-        if (typeof o.error === "string") message = o.error;
-        else if (typeof o.message === "string") message = o.message;
-      }
-      return NextResponse.json({ error: message }, { status, headers: getCorsHeaders() });
-    });
+  const data: unknown = await res.clone().json();
+  let message = "Unauthorized";
+  if (data && typeof data === "object") {
+    const o = data as Record<string, unknown>;
+    if (typeof o.error === "string") message = o.error;
+    else if (typeof o.message === "string") message = o.message;
+  }
+  return NextResponse.json({ error: message }, { status, headers: getCorsHeaders() });
 }
