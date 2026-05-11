@@ -5,26 +5,23 @@ import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateCreateAgentTemplateBody } from "@/lib/agent_templates/validateCreateAgentTemplateBody";
 import { insertAgentTemplate } from "@/lib/supabase/agent_templates/insertAgentTemplate";
 import { insertAgentTemplateShares } from "@/lib/supabase/agent_template_shares/insertAgentTemplateShares";
-import { getAgentTemplateWithDetails } from "@/lib/supabase/agent_templates/getAgentTemplateWithDetails";
+import { getAgentTemplateForAccount } from "@/lib/agent_templates/getAgentTemplateForAccount";
 
 /**
  * Handler for POST /api/agent-templates.
  *
  * Creates an agent template owned by the authenticated account. When
- * `is_private=true`, the supplied `share_emails` are resolved to accounts and
+ * `is_private=true`, supplied `share_emails` are resolved to accounts and
  * upserted into `agent_template_shares`.
- *
- * @param request - The incoming request
- * @returns A 201 NextResponse with `{ status, template }`, or an error.
  */
 export async function createAgentTemplateHandler(request: NextRequest): Promise<NextResponse> {
   try {
+    const authResult = await validateAuthContext(request);
+    if (authResult instanceof NextResponse) return authResult;
+
     const body = await safeParseJson(request);
     const parsedBody = validateCreateAgentTemplateBody(body);
     if (parsedBody instanceof NextResponse) return parsedBody;
-
-    const authResult = await validateAuthContext(request);
-    if (authResult instanceof NextResponse) return authResult;
 
     const accountId = authResult.accountId;
 
@@ -48,7 +45,7 @@ export async function createAgentTemplateHandler(request: NextRequest): Promise<
       await insertAgentTemplateShares(inserted.id, parsedBody.share_emails);
     }
 
-    const template = await getAgentTemplateWithDetails(inserted.id, accountId);
+    const template = await getAgentTemplateForAccount(inserted.id, accountId);
 
     return NextResponse.json(
       { status: "success", template },

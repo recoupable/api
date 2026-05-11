@@ -4,6 +4,8 @@ import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
+import { selectAgentTemplateById } from "@/lib/supabase/agent_templates/selectAgentTemplateById";
+import { selectAgentTemplateShares } from "@/lib/supabase/agent_template_shares/selectAgentTemplateShares";
 
 export const toggleFavoriteBodySchema = z.object({
   is_favourite: z.boolean({ message: "is_favourite is required" }),
@@ -18,17 +20,16 @@ export interface ValidatedToggleFavoriteRequest {
 }
 
 /**
- * Validates PUT /api/agent-templates/{id}/favorite: id format, auth, and the
- * `{ is_favourite: boolean }` body.
- *
- * @param request - The incoming request
- * @param id - The template id from the route
- * @returns Validated payload, or a NextResponse error.
+ * Validates PUT /api/agent-templates/{id}/favorite: auth, id format, body,
+ * and that the caller can see the template (own, public, or shared).
  */
 export async function validateToggleFavoriteRequest(
   request: NextRequest,
   id: string,
 ): Promise<ValidatedToggleFavoriteRequest | NextResponse> {
+  const authResult = await validateAuthContext(request);
+  if (authResult instanceof NextResponse) return authResult;
+
   const validatedParams = validateAccountParams(id);
   if (validatedParams instanceof NextResponse) return validatedParams;
 
@@ -46,12 +47,34 @@ export async function validateToggleFavoriteRequest(
     );
   }
 
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) return authResult;
+  const templateId = validatedParams.id;
+  const accountId = authResult.accountId;
+
+  const existing = await selectAgentTemplateById(templateId);
+  if (!existing) {
+    return NextResponse.json(
+      { status: "error", error: "Agent template not found" },
+      { status: 404, headers: getCorsHeaders() },
+    );
+  }
+
+  const creator = Array.isArray(existing.creator) ? existing.creator[0] : existing.creator;
+  const isOwner = creator?.id === accountId;
+  let canAccess = isOwner || !existing.is_private;
+  if (!canAccess) {
+    const shares = await selectAgentTemplateShares([templateId]);
+    canAccess = shares.some(s => s.user_id === accountId);
+  }
+  if (!canAccess) {
+    return NextResponse.json(
+      { status: "error", error: "Forbidden" },
+      { status: 403, headers: getCorsHeaders() },
+    );
+  }
 
   return {
-    templateId: validatedParams.id,
-    accountId: authResult.accountId,
+    templateId,
+    accountId,
     isFavourite: parsedBody.data.is_favourite,
   };
 }

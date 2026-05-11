@@ -17,8 +17,8 @@ vi.mock("@/lib/supabase/agent_template_shares/insertAgentTemplateShares", () => 
   insertAgentTemplateShares: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/agent_templates/getAgentTemplateWithDetails", () => ({
-  getAgentTemplateWithDetails: vi.fn(),
+vi.mock("@/lib/agent_templates/getAgentTemplateForAccount", () => ({
+  getAgentTemplateForAccount: vi.fn(),
 }));
 
 const { createAgentTemplateHandler } = await import("../createAgentTemplateHandler");
@@ -27,54 +27,51 @@ const { insertAgentTemplate } = await import("@/lib/supabase/agent_templates/ins
 const { insertAgentTemplateShares } = await import(
   "@/lib/supabase/agent_template_shares/insertAgentTemplateShares"
 );
-const { getAgentTemplateWithDetails } = await import(
-  "@/lib/supabase/agent_templates/getAgentTemplateWithDetails"
+const { getAgentTemplateForAccount } = await import(
+  "@/lib/agent_templates/getAgentTemplateForAccount"
 );
 
 const ACCOUNT_ID = "11111111-1111-1111-1111-111111111111";
 const TEMPLATE_ID = "22222222-2222-2222-2222-222222222222";
 
-function makeRequest(body: unknown) {
-  return new NextRequest("http://localhost/api/agent-templates", {
+const mockAuthOk = () =>
+  vi.mocked(validateAuthContext).mockResolvedValue({
+    accountId: ACCOUNT_ID,
+    orgId: null,
+    authToken: "k",
+  });
+
+const makeRequest = (body: unknown) =>
+  new NextRequest("http://localhost/api/agent-templates", {
     method: "POST",
     headers: { "x-api-key": "k", "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-}
+
+const validBody = {
+  title: "Valid title",
+  description: "valid description",
+  prompt: "Valid prompt content for template",
+  tags: [],
+  is_private: false,
+  share_emails: [],
+};
 
 describe("createAgentTemplateHandler", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  beforeEach(() => vi.clearAllMocks());
 
   it("creates a template and shares emails when private", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: ACCOUNT_ID,
-      orgId: null,
-      authToken: "k",
-    });
-
-    vi.mocked(insertAgentTemplate).mockResolvedValue({ id: TEMPLATE_ID } as any);
+    mockAuthOk();
+    vi.mocked(insertAgentTemplate).mockResolvedValue({ id: TEMPLATE_ID } as never);
     vi.mocked(insertAgentTemplateShares).mockResolvedValue(1);
-    vi.mocked(getAgentTemplateWithDetails).mockResolvedValue({
-      id: TEMPLATE_ID,
-      title: "Hello world title",
-    } as any);
+    vi.mocked(getAgentTemplateForAccount).mockResolvedValue({ id: TEMPLATE_ID } as never);
 
-    const req = makeRequest({
-      title: "My Template",
-      description: "A useful description",
-      prompt: "This is the prompt content for the template",
-      tags: ["a", "b"],
-      is_private: true,
-      share_emails: ["a@x.com"],
-    });
+    const res = await createAgentTemplateHandler(
+      makeRequest({ ...validBody, is_private: true, share_emails: ["a@x.com"] }),
+    );
 
-    const res = await createAgentTemplateHandler(req);
     expect(res.status).toBe(201);
-    const body = await res.json();
-    expect(body.status).toBe("success");
-    expect(body.template.id).toBe(TEMPLATE_ID);
+    expect((await res.json()).template.id).toBe(TEMPLATE_ID);
     expect(insertAgentTemplate).toHaveBeenCalledWith(
       expect.objectContaining({ creator: ACCOUNT_ID, is_private: true }),
     );
@@ -82,26 +79,16 @@ describe("createAgentTemplateHandler", () => {
   });
 
   it("returns 400 when validation fails", async () => {
-    const req = makeRequest({ title: "no" });
-    const res = await createAgentTemplateHandler(req);
+    mockAuthOk();
+    const res = await createAgentTemplateHandler(makeRequest({ title: "no" }));
     expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.status).toBe("error");
-    expect(validateAuthContext).not.toHaveBeenCalled();
+    expect(insertAgentTemplate).not.toHaveBeenCalled();
   });
 
   it("returns 401 when auth fails", async () => {
     const failure = NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 });
     vi.mocked(validateAuthContext).mockResolvedValue(failure);
-    const req = makeRequest({
-      title: "Valid title",
-      description: "valid description",
-      prompt: "Valid prompt content for template",
-      tags: [],
-      is_private: false,
-      share_emails: [],
-    });
-    const res = await createAgentTemplateHandler(req);
+    const res = await createAgentTemplateHandler(makeRequest(validBody));
     expect(res).toBe(failure);
   });
 });

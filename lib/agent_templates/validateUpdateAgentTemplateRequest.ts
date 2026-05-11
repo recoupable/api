@@ -4,7 +4,7 @@ import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
-import { selectAgentTemplate } from "@/lib/supabase/agent_templates/selectAgentTemplate";
+import { selectAgentTemplateById } from "@/lib/supabase/agent_templates/selectAgentTemplateById";
 
 export const updateAgentTemplateBodySchema = z
   .object({
@@ -28,17 +28,16 @@ export interface ValidatedUpdateAgentTemplateRequest {
 }
 
 /**
- * Validates PATCH /api/agent-templates/{id}: id format, body, auth, and that
+ * Validates PATCH /api/agent-templates/{id}: auth, id format, body, and that
  * the caller is the template's creator.
- *
- * @param request - The incoming request
- * @param id - The template id from the route
- * @returns Validated payload, or a NextResponse error.
  */
 export async function validateUpdateAgentTemplateRequest(
   request: NextRequest,
   id: string,
 ): Promise<ValidatedUpdateAgentTemplateRequest | NextResponse> {
+  const authResult = await validateAuthContext(request);
+  if (authResult instanceof NextResponse) return authResult;
+
   const validatedParams = validateAccountParams(id);
   if (validatedParams instanceof NextResponse) return validatedParams;
 
@@ -56,13 +55,10 @@ export async function validateUpdateAgentTemplateRequest(
     );
   }
 
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) return authResult;
-
   const templateId = validatedParams.id;
   const accountId = authResult.accountId;
 
-  const existing = await selectAgentTemplate(templateId);
+  const existing = await selectAgentTemplateById(templateId);
   if (!existing) {
     return NextResponse.json(
       { status: "error", error: "Agent template not found" },
@@ -70,7 +66,8 @@ export async function validateUpdateAgentTemplateRequest(
     );
   }
 
-  if (existing.creator !== accountId) {
+  const creator = Array.isArray(existing.creator) ? existing.creator[0] : existing.creator;
+  if (creator?.id !== accountId) {
     return NextResponse.json(
       { status: "error", error: "Forbidden" },
       { status: 403, headers: getCorsHeaders() },

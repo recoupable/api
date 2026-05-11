@@ -1,21 +1,24 @@
 import supabase from "@/lib/supabase/serverClient";
+import type { Tables } from "@/types/database.types";
 
 /**
- * Returns the set of template ids the given account has favorited.
+ * Selects raw `agent_template_favorites` rows for the given account.
  *
- * @param accountId - The account UUID
- * @returns Set of template ids; empty Set on no rows or on error.
+ * Returns an empty array on database error (and logs it). Callers that need
+ * a Set of template ids should compose it themselves.
  */
-export async function selectAgentTemplateFavorites(accountId: string): Promise<Set<string>> {
+export async function selectAgentTemplateFavorites(
+  accountId: string,
+): Promise<Tables<"agent_template_favorites">[]> {
   const { data, error } = await supabase
     .from("agent_template_favorites")
-    .select("template_id")
+    .select("*")
     .eq("user_id", accountId);
 
   if (error) {
     console.error("Error selecting agent_template_favorites:", error);
-    return new Set<string>();
+    return [];
   }
 
-  return new Set<string>((data ?? []).map(row => row.template_id));
+  return data ?? [];
 }

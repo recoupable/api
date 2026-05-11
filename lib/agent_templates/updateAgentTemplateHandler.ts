@@ -4,7 +4,7 @@ import { validateUpdateAgentTemplateRequest } from "@/lib/agent_templates/valida
 import { updateAgentTemplate } from "@/lib/supabase/agent_templates/updateAgentTemplate";
 import { deleteAgentTemplateShares } from "@/lib/supabase/agent_template_shares/deleteAgentTemplateShares";
 import { insertAgentTemplateShares } from "@/lib/supabase/agent_template_shares/insertAgentTemplateShares";
-import { getAgentTemplateWithDetails } from "@/lib/supabase/agent_templates/getAgentTemplateWithDetails";
+import { getAgentTemplateForAccount } from "@/lib/agent_templates/getAgentTemplateForAccount";
 import type { TablesUpdate } from "@/types/database.types";
 
 /**
@@ -13,10 +13,6 @@ import type { TablesUpdate } from "@/types/database.types";
  * Applies a partial update to an agent template the caller owns. When
  * `share_emails` is provided, existing shares are wiped and re-inserted from
  * the resolved emails.
- *
- * @param request - The incoming request
- * @param params - Route params containing the template id
- * @returns A 200 NextResponse with `{ status, template }`, or an error.
  */
 export async function updateAgentTemplateHandler(
   request: NextRequest,
@@ -46,11 +42,10 @@ export async function updateAgentTemplateHandler(
       }
     }
 
-    // NOTE: this delete-then-insert is not atomic. If the insert fails after
-    // the delete succeeds the template will end up with no shares. A real fix
+    // NOTE: delete-then-insert is not atomic. If the insert fails after the
+    // delete succeeds the template will end up with no shares. A real fix
     // requires a Postgres RPC; for now both helpers throw on DB error so the
-    // outer catch returns a 500 and the client knows the operation didn't
-    // complete cleanly.
+    // outer catch returns a 500.
     if (typeof body.share_emails !== "undefined") {
       await deleteAgentTemplateShares(templateId);
       if (body.share_emails.length > 0) {
@@ -58,7 +53,7 @@ export async function updateAgentTemplateHandler(
       }
     }
 
-    const template = await getAgentTemplateWithDetails(templateId, accountId);
+    const template = await getAgentTemplateForAccount(templateId, accountId);
 
     return NextResponse.json(
       { status: "success", template },

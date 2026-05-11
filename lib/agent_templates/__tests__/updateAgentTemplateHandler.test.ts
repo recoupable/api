@@ -21,8 +21,8 @@ vi.mock("@/lib/supabase/agent_template_shares/insertAgentTemplateShares", () => 
   insertAgentTemplateShares: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/agent_templates/getAgentTemplateWithDetails", () => ({
-  getAgentTemplateWithDetails: vi.fn(),
+vi.mock("@/lib/agent_templates/getAgentTemplateForAccount", () => ({
+  getAgentTemplateForAccount: vi.fn(),
 }));
 
 const { updateAgentTemplateHandler } = await import("../updateAgentTemplateHandler");
@@ -36,17 +36,15 @@ const { deleteAgentTemplateShares } = await import(
 const { insertAgentTemplateShares } = await import(
   "@/lib/supabase/agent_template_shares/insertAgentTemplateShares"
 );
-const { getAgentTemplateWithDetails } = await import(
-  "@/lib/supabase/agent_templates/getAgentTemplateWithDetails"
+const { getAgentTemplateForAccount } = await import(
+  "@/lib/agent_templates/getAgentTemplateForAccount"
 );
 
 const ACCOUNT_ID = "11111111-1111-1111-1111-111111111111";
 const TEMPLATE_ID = "22222222-2222-2222-2222-222222222222";
 
 describe("updateAgentTemplateHandler", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  beforeEach(() => vi.clearAllMocks());
 
   it("updates the template and replaces shares when share_emails provided", async () => {
     vi.mocked(validateUpdateAgentTemplateRequest).mockResolvedValue({
@@ -54,12 +52,10 @@ describe("updateAgentTemplateHandler", () => {
       accountId: ACCOUNT_ID,
       body: { title: "New Title", share_emails: ["x@y.com"] },
     });
-
-    vi.mocked(updateAgentTemplate).mockResolvedValue({ id: TEMPLATE_ID } as any);
+    vi.mocked(updateAgentTemplate).mockResolvedValue({ id: TEMPLATE_ID } as never);
     vi.mocked(deleteAgentTemplateShares).mockResolvedValue(undefined);
     vi.mocked(insertAgentTemplateShares).mockResolvedValue(1);
-
-    vi.mocked(getAgentTemplateWithDetails).mockResolvedValue({ id: TEMPLATE_ID } as any);
+    vi.mocked(getAgentTemplateForAccount).mockResolvedValue({ id: TEMPLATE_ID } as never);
 
     const req = new NextRequest(`http://localhost/api/agent-templates/${TEMPLATE_ID}`, {
       method: "PATCH",
@@ -67,8 +63,6 @@ describe("updateAgentTemplateHandler", () => {
     const res = await updateAgentTemplateHandler(req, Promise.resolve({ id: TEMPLATE_ID }));
 
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.status).toBe("success");
     expect(updateAgentTemplate).toHaveBeenCalledWith(TEMPLATE_ID, { title: "New Title" });
     expect(deleteAgentTemplateShares).toHaveBeenCalledWith(TEMPLATE_ID);
     expect(insertAgentTemplateShares).toHaveBeenCalledWith(TEMPLATE_ID, ["x@y.com"]);
