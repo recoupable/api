@@ -32,8 +32,8 @@ export async function createSessionChatHandler(
   sessionId: string,
 ): Promise<NextResponse> {
   const gate = await requireOwnedSession(request, sessionId);
-  if (!gate.ok) {
-    return gate.response;
+  if (gate instanceof NextResponse) {
+    return gate;
   }
 
   const rawBody = await safeParseJson(request);
