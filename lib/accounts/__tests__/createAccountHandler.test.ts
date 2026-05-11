@@ -7,7 +7,7 @@ const mockGetAccountWithDetails = vi.fn();
 const mockInsertAccount = vi.fn();
 const mockInsertAccountEmail = vi.fn();
 const mockInsertAccountWallet = vi.fn();
-const mockInsertCreditsUsage = vi.fn();
+const mockInitializeAccountCredits = vi.fn();
 const mockAssignAccountToOrg = vi.fn();
 
 vi.mock("@/lib/supabase/account_emails/selectAccountByEmail", () => ({
@@ -34,8 +34,8 @@ vi.mock("@/lib/supabase/account_wallets/insertAccountWallet", () => ({
   insertAccountWallet: (...args: unknown[]) => mockInsertAccountWallet(...args),
 }));
 
-vi.mock("@/lib/supabase/credits_usage/insertCreditsUsage", () => ({
-  insertCreditsUsage: (...args: unknown[]) => mockInsertCreditsUsage(...args),
+vi.mock("@/lib/credits/initializeAccountCredits", () => ({
+  initializeAccountCredits: (...args: unknown[]) => mockInitializeAccountCredits(...args),
 }));
 
 vi.mock("@/lib/organizations/assignAccountToOrg", () => ({
@@ -128,7 +128,7 @@ describe("createAccountHandler", () => {
     expect(mockInsertAccountEmail).toHaveBeenCalledWith("account-789", "new@example.com");
     expect(mockAssignAccountToOrg).toHaveBeenCalledWith("account-789", "new@example.com");
     expect(mockInsertAccountWallet).toHaveBeenCalledWith("account-789", "0xdef");
-    expect(mockInsertCreditsUsage).toHaveBeenCalledWith("account-789");
+    expect(mockInitializeAccountCredits).toHaveBeenCalledWith("account-789");
   });
 
   it("returns 400 when account creation fails", async () => {
