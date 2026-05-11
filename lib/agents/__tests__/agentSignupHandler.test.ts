@@ -36,8 +36,8 @@ vi.mock("@/lib/supabase/account_emails/insertAccountEmail", () => ({
   insertAccountEmail: vi.fn(() => ({ id: "ae_1" })),
 }));
 
-vi.mock("@/lib/supabase/credits_usage/insertCreditsUsage", () => ({
-  insertCreditsUsage: vi.fn(() => ({ id: "cu_1" })),
+vi.mock("@/lib/credits/initializeAccountCredits", () => ({
+  initializeAccountCredits: vi.fn(() => ({ id: "cu_1" })),
 }));
 
 vi.mock("@/lib/keys/generateApiKey", () => ({

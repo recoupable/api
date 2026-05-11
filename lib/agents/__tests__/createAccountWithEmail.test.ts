@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createAccountWithEmail } from "@/lib/agents/createAccountWithEmail";
 import { insertAccount } from "@/lib/supabase/accounts/insertAccount";
 import { insertAccountEmail } from "@/lib/supabase/account_emails/insertAccountEmail";
-import { insertCreditsUsage } from "@/lib/supabase/credits_usage/insertCreditsUsage";
+import { initializeAccountCredits } from "@/lib/credits/initializeAccountCredits";
 
 vi.mock("@/lib/supabase/accounts/insertAccount", () => ({
   insertAccount: vi.fn(),
@@ -12,8 +12,8 @@ vi.mock("@/lib/supabase/account_emails/insertAccountEmail", () => ({
   insertAccountEmail: vi.fn(() => ({ id: "ae_1" })),
 }));
 
-vi.mock("@/lib/supabase/credits_usage/insertCreditsUsage", () => ({
-  insertCreditsUsage: vi.fn(() => ({ id: "cu_1" })),
+vi.mock("@/lib/credits/initializeAccountCredits", () => ({
+  initializeAccountCredits: vi.fn(() => ({ id: "cu_1" })),
 }));
 
 describe("createAccountWithEmail", () => {
@@ -25,9 +25,9 @@ describe("createAccountWithEmail", () => {
     vi.mocked(insertAccountEmail).mockResolvedValue({
       id: "ae_1",
     } as unknown as Awaited<ReturnType<typeof insertAccountEmail>>);
-    vi.mocked(insertCreditsUsage).mockResolvedValue({
+    vi.mocked(initializeAccountCredits).mockResolvedValue({
       id: "cu_1",
-    } as unknown as Awaited<ReturnType<typeof insertCreditsUsage>>);
+    } as unknown as Awaited<ReturnType<typeof initializeAccountCredits>>);
   });
 
   it("creates the account, inserts the email link and credits row, and returns the new account id", async () => {
@@ -36,7 +36,7 @@ describe("createAccountWithEmail", () => {
     expect(result).toBe("acc_new");
     expect(insertAccount).toHaveBeenCalledOnce();
     expect(insertAccountEmail).toHaveBeenCalledWith("acc_new", "user@example.com");
-    expect(insertCreditsUsage).toHaveBeenCalledWith("acc_new");
+    expect(initializeAccountCredits).toHaveBeenCalledWith("acc_new");
   });
 
   it("throws when insertAccountEmail returns null so the caller cannot end up with an emailless account", async () => {
@@ -47,11 +47,13 @@ describe("createAccountWithEmail", () => {
     await expect(createAccountWithEmail("user@example.com")).rejects.toThrow(/insertAccountEmail/);
   });
 
-  it("throws when insertCreditsUsage returns null", async () => {
-    vi.mocked(insertCreditsUsage).mockResolvedValueOnce(
-      null as unknown as Awaited<ReturnType<typeof insertCreditsUsage>>,
+  it("throws when initializeAccountCredits returns null", async () => {
+    vi.mocked(initializeAccountCredits).mockResolvedValueOnce(
+      null as unknown as Awaited<ReturnType<typeof initializeAccountCredits>>,
     );
 
-    await expect(createAccountWithEmail("user@example.com")).rejects.toThrow(/insertCreditsUsage/);
+    await expect(createAccountWithEmail("user@example.com")).rejects.toThrow(
+      /initializeAccountCredits/,
+    );
   });
 });
