@@ -1,7 +1,6 @@
-import { selectOwnedAndPublicAgentTemplates } from "@/lib/supabase/agent_templates/selectOwnedAndPublicAgentTemplates";
-import { selectSharedAgentTemplates } from "@/lib/supabase/agent_templates/selectSharedAgentTemplates";
+import { selectAgentTemplates } from "@/lib/supabase/agent_templates/selectAgentTemplates";
+import type { AgentTemplateWithCreator } from "@/lib/supabase/agent_templates/selectAgentTemplates";
 import { selectAgentTemplateFavorites } from "@/lib/supabase/agent_template_favorites/selectAgentTemplateFavorites";
-import type { AgentTemplateWithCreator } from "@/lib/supabase/agent_templates/agentTemplateWithCreatorSelect";
 import {
   buildAgentTemplateResponse,
   type AgentTemplateResponse,
@@ -16,25 +15,16 @@ function creatorIdOf(row: AgentTemplateWithCreator): string | null {
 
 /**
  * Returns every agent template visible to `accountId` (own, public, shared),
- * shaped for the API response with `creator`, `is_favourite`, and (for
- * private templates the caller owns) `shared_emails` populated.
- *
- * Sharees never see `shared_emails` — only the template's creator does.
+ * shaped for the API with `creator`, `is_favourite`, and `shared_emails`
+ * (only when the caller is the template's creator) populated.
  */
 export async function getAccessibleAgentTemplatesForAccount(
   accountId: string,
 ): Promise<AgentTemplateResponse[]> {
-  const [ownedAndPublic, shared, favorites] = await Promise.all([
-    selectOwnedAndPublicAgentTemplates(accountId),
-    selectSharedAgentTemplates(accountId),
+  const [rows, favorites] = await Promise.all([
+    selectAgentTemplates({ accessibleTo: accountId }),
     selectAgentTemplateFavorites(accountId),
   ]);
-
-  const byId = new Map<string, AgentTemplateWithCreator>();
-  [...ownedAndPublic, ...shared].forEach(row => {
-    if (!byId.has(row.id)) byId.set(row.id, row);
-  });
-  const rows = Array.from(byId.values());
 
   const favoriteIds = new Set(favorites.map(f => f.template_id));
   const ownedPrivateIds = rows

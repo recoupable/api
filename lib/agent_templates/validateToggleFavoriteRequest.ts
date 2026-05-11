@@ -4,7 +4,7 @@ import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
-import { selectAgentTemplateById } from "@/lib/supabase/agent_templates/selectAgentTemplateById";
+import { selectAgentTemplates } from "@/lib/supabase/agent_templates/selectAgentTemplates";
 import { selectAgentTemplateShares } from "@/lib/supabase/agent_template_shares/selectAgentTemplateShares";
 
 export const toggleFavoriteBodySchema = z.object({
@@ -50,7 +50,7 @@ export async function validateToggleFavoriteRequest(
   const templateId = validatedParams.id;
   const accountId = authResult.accountId;
 
-  const existing = await selectAgentTemplateById(templateId);
+  const [existing] = await selectAgentTemplates({ id: templateId });
   if (!existing) {
     return NextResponse.json(
       { status: "error", error: "Agent template not found" },

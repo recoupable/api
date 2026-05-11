@@ -1,6 +1,6 @@
 import type { Tables } from "@/types/database.types";
 import { ADMIN_EMAILS } from "@/lib/const";
-import type { AgentTemplateWithCreator } from "@/lib/supabase/agent_templates/agentTemplateWithCreatorSelect";
+import type { AgentTemplateWithCreator } from "@/lib/supabase/agent_templates/selectAgentTemplates";
 
 export interface AgentTemplateCreator {
   id: string;
@@ -38,8 +38,7 @@ function buildCreator(joined: AgentTemplateWithCreator["creator"]): AgentTemplat
 
 /**
  * Shapes a raw joined agent template row into the API response, layering in
- * caller-specific signals (`is_favourite`, `shared_emails`) that are computed
- * upstream.
+ * caller-specific signals (`is_favourite`, `shared_emails`) computed upstream.
  */
 export function buildAgentTemplateResponse(
   row: AgentTemplateWithCreator,
