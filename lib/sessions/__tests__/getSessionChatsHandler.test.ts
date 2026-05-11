@@ -7,8 +7,8 @@ import { baseChatRow } from "@/lib/sessions/__tests__/baseChatRow";
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
 }));
-vi.mock("@/lib/sessions/validateOwnedSessionRequest", () => ({
-  validateOwnedSessionRequest: vi.fn(),
+vi.mock("@/lib/sessions/validateGetSessionChatsRequest", () => ({
+  validateGetSessionChatsRequest: vi.fn(),
 }));
 vi.mock("@/lib/supabase/chats/selectChats", () => ({
   selectChats: vi.fn(),
@@ -17,7 +17,9 @@ vi.mock("@/lib/supabase/chat_reads/selectChatReads", () => ({
   selectChatReads: vi.fn(),
 }));
 
-const { validateOwnedSessionRequest } = await import("@/lib/sessions/validateOwnedSessionRequest");
+const { validateGetSessionChatsRequest } = await import(
+  "@/lib/sessions/validateGetSessionChatsRequest"
+);
 const { selectChats } = await import("@/lib/supabase/chats/selectChats");
 const { selectChatReads } = await import("@/lib/supabase/chat_reads/selectChatReads");
 const { getSessionChatsHandler } = await import("@/lib/sessions/getSessionChatsHandler");
@@ -33,7 +35,7 @@ function chatRow(overrides: Partial<Tables<"chats">>): Tables<"chats"> {
 }
 
 function mockOwned() {
-  vi.mocked(validateOwnedSessionRequest).mockResolvedValue({
+  vi.mocked(validateGetSessionChatsRequest).mockResolvedValue({
     auth: { accountId, orgId: null, authToken: "tok" },
     session: baseSessionRow({ id: "sess_1", account_id: accountId }),
   });
@@ -44,9 +46,9 @@ describe("getSessionChatsHandler", () => {
     vi.clearAllMocks();
   });
 
-  it("forwards the NextResponse from validateOwnedSessionRequest as-is", async () => {
+  it("forwards the NextResponse from validateGetSessionChatsRequest as-is", async () => {
     const failure = NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    vi.mocked(validateOwnedSessionRequest).mockResolvedValue(failure);
+    vi.mocked(validateGetSessionChatsRequest).mockResolvedValue(failure);
 
     const res = await getSessionChatsHandler(makeReq(), "sess_1");
     expect(res).toBe(failure);

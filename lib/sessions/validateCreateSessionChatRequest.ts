@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
-import { validateOwnedSessionRequest } from "@/lib/sessions/validateOwnedSessionRequest";
-import type { ValidatedOwnedSessionRequest } from "@/lib/sessions/validateOwnedSessionRequest";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import type { AuthContext } from "@/lib/auth/validateAuthContext";
+import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
+import type { Tables } from "@/types/database.types";
 
 export const createSessionChatBodySchema = z.object({
   id: z.string({ error: "Invalid chat id" }).min(1, "Invalid chat id").optional(),
@@ -11,16 +13,19 @@ export const createSessionChatBodySchema = z.object({
 
 export type CreateSessionChatBody = z.infer<typeof createSessionChatBodySchema>;
 
-export interface ValidatedCreateSessionChatRequest extends ValidatedOwnedSessionRequest {
+export interface ValidatedCreateSessionChatRequest {
+  auth: AuthContext;
+  session: Tables<"sessions">;
   body: CreateSessionChatBody;
 }
 
 /**
  * Validates a `POST /api/sessions/{sessionId}/chats` request end-to-end:
- *   1. Authenticates the caller and verifies they own the session
- *      (via `validateOwnedSessionRequest`)
- *   2. Parses the JSON body (malformed JSON is treated as empty)
- *   3. Validates the optional `{ id }` field
+ *   1. Authenticates the caller via Privy Bearer / x-api-key
+ *   2. Loads the session row at the given id
+ *   3. Confirms the authenticated account owns it
+ *   4. Parses the JSON body (malformed JSON is treated as empty)
+ *   5. Validates the optional `{ id }` field
  *
  * An explicitly empty or non-string id is rejected with the same 400
  * shape open-agents used (`{ error: "Invalid chat id" }`) for parity.
@@ -33,9 +38,26 @@ export async function validateCreateSessionChatRequest(
   request: NextRequest,
   sessionId: string,
 ): Promise<NextResponse | ValidatedCreateSessionChatRequest> {
-  const owned = await validateOwnedSessionRequest(request, sessionId);
-  if (owned instanceof NextResponse) {
-    return owned;
+  const auth = await validateAuthContext(request);
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
+  const rows = await selectSessions({ id: sessionId });
+  const session = rows[0] ?? null;
+
+  if (!session) {
+    return NextResponse.json(
+      { status: "error", error: "Session not found" },
+      { status: 404, headers: getCorsHeaders() },
+    );
+  }
+
+  if (session.account_id !== auth.accountId) {
+    return NextResponse.json(
+      { status: "error", error: "Forbidden" },
+      { status: 403, headers: getCorsHeaders() },
+    );
   }
 
   const rawBody = await safeParseJson(request);
@@ -50,5 +72,5 @@ export async function validateCreateSessionChatRequest(
     );
   }
 
-  return { auth: owned.auth, session: owned.session, body: result.data };
+  return { auth, session, body: result.data };
 }

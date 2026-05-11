@@ -14,15 +14,17 @@ vi.mock("@/lib/supabase/sessions/selectSessions", () => ({
 
 const { validateAuthContext } = await import("@/lib/auth/validateAuthContext");
 const { selectSessions } = await import("@/lib/supabase/sessions/selectSessions");
-const { validateOwnedSessionRequest } = await import("@/lib/sessions/validateOwnedSessionRequest");
+const { validateGetSessionChatsRequest } = await import(
+  "@/lib/sessions/validateGetSessionChatsRequest"
+);
 
 const accountId = "acc-uuid-1";
 
 function makeReq(): NextRequest {
-  return new NextRequest("https://example.com/api/sessions/sess_1");
+  return new NextRequest("https://example.com/api/sessions/sess_1/chats");
 }
 
-describe("validateOwnedSessionRequest", () => {
+describe("validateGetSessionChatsRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -31,7 +33,7 @@ describe("validateOwnedSessionRequest", () => {
     const failure = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     vi.mocked(validateAuthContext).mockResolvedValue(failure);
 
-    const res = await validateOwnedSessionRequest(makeReq(), "sess_1");
+    const res = await validateGetSessionChatsRequest(makeReq(), "sess_1");
     expect(res).toBe(failure);
     expect(selectSessions).not.toHaveBeenCalled();
   });
@@ -44,7 +46,7 @@ describe("validateOwnedSessionRequest", () => {
     });
     vi.mocked(selectSessions).mockResolvedValue([]);
 
-    const res = await validateOwnedSessionRequest(makeReq(), "sess_missing");
+    const res = await validateGetSessionChatsRequest(makeReq(), "sess_missing");
     expect(res).toBeInstanceOf(NextResponse);
     if (res instanceof NextResponse) {
       expect(res.status).toBe(404);
@@ -65,7 +67,7 @@ describe("validateOwnedSessionRequest", () => {
       baseSessionRow({ id: "sess_1", account_id: "acc-OTHER" }),
     ]);
 
-    const res = await validateOwnedSessionRequest(makeReq(), "sess_1");
+    const res = await validateGetSessionChatsRequest(makeReq(), "sess_1");
     expect(res).toBeInstanceOf(NextResponse);
     if (res instanceof NextResponse) {
       expect(res.status).toBe(403);
@@ -83,7 +85,7 @@ describe("validateOwnedSessionRequest", () => {
       baseSessionRow({ id: "sess_1", account_id: accountId }),
     ]);
 
-    const res = await validateOwnedSessionRequest(makeReq(), "sess_1");
+    const res = await validateGetSessionChatsRequest(makeReq(), "sess_1");
     expect(res).not.toBeInstanceOf(NextResponse);
     if (!(res instanceof NextResponse)) {
       expect(res.auth.accountId).toBe(accountId);

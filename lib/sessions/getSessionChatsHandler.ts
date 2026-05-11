@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { APP_DEFAULT_MODEL_ID } from "@/lib/const";
-import { validateOwnedSessionRequest } from "@/lib/sessions/validateOwnedSessionRequest";
+import { validateGetSessionChatsRequest } from "@/lib/sessions/validateGetSessionChatsRequest";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { selectChatReads } from "@/lib/supabase/chat_reads/selectChatReads";
 import { toChatSummaryResponse } from "@/lib/sessions/toChatSummaryResponse";
@@ -24,7 +24,7 @@ export async function getSessionChatsHandler(
   request: NextRequest,
   sessionId: string,
 ): Promise<NextResponse> {
-  const validated = await validateOwnedSessionRequest(request, sessionId);
+  const validated = await validateGetSessionChatsRequest(request, sessionId);
   if (validated instanceof NextResponse) {
     return validated;
   }

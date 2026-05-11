@@ -5,14 +5,14 @@ import type { AuthContext } from "@/lib/auth/validateAuthContext";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import type { Tables } from "@/types/database.types";
 
-export interface ValidatedOwnedSessionRequest {
+export interface ValidatedGetSessionChatsRequest {
   auth: AuthContext;
   session: Tables<"sessions">;
 }
 
 /**
- * Validates a session-scoped request end-to-end:
- *   1. Authenticates via Privy Bearer / x-api-key
+ * Validates a `GET /api/sessions/{sessionId}/chats` request end-to-end:
+ *   1. Authenticates the caller via Privy Bearer / x-api-key
  *   2. Loads the session row at the given id
  *   3. Confirms the authenticated account owns it
  *
@@ -20,13 +20,13 @@ export interface ValidatedOwnedSessionRequest {
  * failure, or the resolved `{ auth, session }` for the handler.
  *
  * @param request - The incoming request.
- * @param sessionId - The id of the session to gate access on.
+ * @param sessionId - The id of the parent session.
  * @returns A NextResponse on failure, or the validated auth + session row.
  */
-export async function validateOwnedSessionRequest(
+export async function validateGetSessionChatsRequest(
   request: NextRequest,
   sessionId: string,
-): Promise<NextResponse | ValidatedOwnedSessionRequest> {
+): Promise<NextResponse | ValidatedGetSessionChatsRequest> {
   const auth = await validateAuthContext(request);
   if (auth instanceof NextResponse) {
     return auth;
