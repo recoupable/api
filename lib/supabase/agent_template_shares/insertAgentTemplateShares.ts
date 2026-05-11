@@ -5,9 +5,13 @@ import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmai
  * Resolves the supplied emails to account ids and upserts an
  * `agent_template_shares` row for each. Unknown emails are silently ignored.
  *
+ * Throws on database error so callers can distinguish a real write failure
+ * from "nothing to insert" (the latter returns 0).
+ *
  * @param templateId - The agent template UUID
  * @param emails - Email addresses to share with
- * @returns Number of shares inserted (counts pre-existing rows as 0).
+ * @returns Number of shares inserted (pre-existing rows count as 0).
+ * @throws If the Supabase upsert fails.
  */
 export async function insertAgentTemplateShares(
   templateId: string,
@@ -32,7 +36,7 @@ export async function insertAgentTemplateShares(
 
   if (error) {
     console.error("Error inserting agent_template_shares:", error);
-    return 0;
+    throw new Error(`insertAgentTemplateShares failed: ${error.message}`);
   }
 
   return data?.length ?? 0;

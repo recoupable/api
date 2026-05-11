@@ -68,7 +68,7 @@ function buildCreator(row: CreatorJoin | null): AgentTemplateCreator | null {
 /**
  * Fetches every agent template visible to `accountId` and enriches each row
  * with the creator block, the caller's `is_favourite` flag, and (for private
- * templates) the list of `shared_emails`.
+ * templates the caller owns) the list of `shared_emails`.
  *
  * Visibility rules:
  *   - templates the caller created
@@ -76,8 +76,18 @@ function buildCreator(row: CreatorJoin | null): AgentTemplateCreator | null {
  *   - private templates the caller has been granted access to via
  *     `agent_template_shares`
  *
+ * Privacy: `shared_emails` is only populated for templates where the caller
+ * is the creator. Sharees would otherwise leak each other's emails.
+ *
+ * Throws on database error so the handler surfaces a real 500 instead of
+ * returning an empty list that looks like "no templates".
+ *
+ * TODO: paginate. The owned-and-public query is subject to Supabase's
+ * default 1000-row cap; as public templates grow this will silently truncate.
+ *
  * @param accountId - The authenticated account's UUID.
- * @returns Array of enriched template rows; empty array on database error.
+ * @returns Array of enriched template rows.
+ * @throws If any underlying Supabase query fails.
  */
 export async function getAccessibleAgentTemplates(
   accountId: string,
@@ -100,7 +110,7 @@ export async function getAccessibleAgentTemplates(
 
   if (ownedErr) {
     console.error("Error selecting owned/public agent_templates:", ownedErr);
-    return [];
+    throw new Error(`getAccessibleAgentTemplates (owned/public) failed: ${ownedErr.message}`);
   }
 
   const { data: sharedJoin, error: sharedErr } = await supabase
@@ -114,7 +124,7 @@ export async function getAccessibleAgentTemplates(
 
   if (sharedErr) {
     console.error("Error selecting shared agent_templates:", sharedErr);
-    return [];
+    throw new Error(`getAccessibleAgentTemplates (shared) failed: ${sharedErr.message}`);
   }
 
   // Deduplicate by template id.
@@ -141,9 +151,12 @@ export async function getAccessibleAgentTemplates(
 
   const favourites = await selectAgentTemplateFavorites(accountId);
 
-  // Resolve shared_emails for the private templates only.
-  const privateIds = templates.filter(t => t.is_private).map(t => t.id);
-  const sharedEmailsByTemplate = await getSharedEmailsByTemplateId(privateIds);
+  // Resolve shared_emails only for private templates the caller owns.
+  // Sharees do not see who else a template was shared with.
+  const ownedPrivateIds = templates
+    .filter(t => t.is_private && t.creator?.id === accountId)
+    .map(t => t.id);
+  const sharedEmailsByTemplate = await getSharedEmailsByTemplateId(ownedPrivateIds);
 
   return templates.map(t => ({
     id: t.id,
@@ -155,7 +168,8 @@ export async function getAccessibleAgentTemplates(
     is_private: t.is_private,
     is_favourite: favourites.has(t.id),
     favorites_count: t.favorites_count ?? null,
-    shared_emails: t.is_private ? (sharedEmailsByTemplate[t.id] ?? []) : [],
+    shared_emails:
+      t.is_private && t.creator?.id === accountId ? (sharedEmailsByTemplate[t.id] ?? []) : [],
     created_at: t.created_at ?? null,
     updated_at: t.updated_at ?? null,
   }));
@@ -173,31 +187,31 @@ async function getSharedEmailsByTemplateId(
   const shares = await selectAgentTemplateShares(templateIds);
   if (shares.length === 0) return {};
 
-  const userIds = Array.from(new Set(shares.map(s => s.user_id)));
+  const accountIds = Array.from(new Set(shares.map(s => s.user_id)));
 
   const { data: emailRows, error } = await supabase
     .from("account_emails")
     .select("account_id, email")
-    .in("account_id", userIds);
+    .in("account_id", accountIds);
 
   if (error) {
     console.error("Error selecting account_emails for shares:", error);
-    return {};
+    throw new Error(`getSharedEmailsByTemplateId failed: ${error.message}`);
   }
 
-  const emailsByUser = new Map<string, string[]>();
+  const emailsByAccount = new Map<string, string[]>();
   (emailRows ?? []).forEach(row => {
     if (!row.account_id || !row.email) return;
-    const list = emailsByUser.get(row.account_id) ?? [];
+    const list = emailsByAccount.get(row.account_id) ?? [];
     list.push(row.email);
-    emailsByUser.set(row.account_id, list);
+    emailsByAccount.set(row.account_id, list);
   });
 
   const result: Record<string, string[]> = {};
   shares.forEach(share => {
     const list = result[share.template_id] ?? [];
-    const userEmails = emailsByUser.get(share.user_id) ?? [];
-    list.push(...userEmails);
+    const accountEmails = emailsByAccount.get(share.user_id) ?? [];
+    list.push(...accountEmails);
     result[share.template_id] = list;
   });
 

@@ -56,7 +56,7 @@ describe("updateAgentTemplateHandler", () => {
     });
 
     vi.mocked(updateAgentTemplate).mockResolvedValue({ id: TEMPLATE_ID } as any);
-    vi.mocked(deleteAgentTemplateShares).mockResolvedValue(true);
+    vi.mocked(deleteAgentTemplateShares).mockResolvedValue(undefined);
     vi.mocked(insertAgentTemplateShares).mockResolvedValue(1);
 
     vi.mocked(getAgentTemplateWithDetails).mockResolvedValue({ id: TEMPLATE_ID } as any);

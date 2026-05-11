@@ -41,10 +41,7 @@ export async function toggleAgentTemplateFavoriteHandler(
   } catch (error) {
     console.error("[ERROR] toggleAgentTemplateFavoriteHandler:", error);
     return NextResponse.json(
-      {
-        status: "error",
-        error: error instanceof Error ? error.message : "Internal server error",
-      },
+      { status: "error", error: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
     );
   }

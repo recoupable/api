@@ -46,6 +46,11 @@ export async function updateAgentTemplateHandler(
       }
     }
 
+    // NOTE: this delete-then-insert is not atomic. If the insert fails after
+    // the delete succeeds the template will end up with no shares. A real fix
+    // requires a Postgres RPC; for now both helpers throw on DB error so the
+    // outer catch returns a 500 and the client knows the operation didn't
+    // complete cleanly.
     if (typeof body.share_emails !== "undefined") {
       await deleteAgentTemplateShares(templateId);
       if (body.share_emails.length > 0) {
@@ -62,10 +67,7 @@ export async function updateAgentTemplateHandler(
   } catch (error) {
     console.error("[ERROR] updateAgentTemplateHandler:", error);
     return NextResponse.json(
-      {
-        status: "error",
-        error: error instanceof Error ? error.message : "Internal server error",
-      },
+      { status: "error", error: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
     );
   }

@@ -52,7 +52,7 @@ export async function getAgentTemplateWithDetails(
 
   if (error) {
     console.error("Error selecting agent_template with details:", error);
-    return null;
+    throw new Error(`getAgentTemplateWithDetails failed: ${error.message}`);
   }
 
   if (!data) return null;
@@ -61,8 +61,10 @@ export async function getAgentTemplateWithDetails(
 
   const favourites = await selectAgentTemplateFavorites(accountId);
 
+  // Privacy: only the template owner can see who else it was shared with.
+  // Sharees would otherwise leak each other's emails.
   let sharedEmails: string[] = [];
-  if (row.is_private) {
+  if (row.is_private && row.creator?.id === accountId) {
     sharedEmails = await getSharedEmailsForTemplate(row.id);
   }
 
@@ -89,16 +91,16 @@ async function getSharedEmailsForTemplate(templateId: string): Promise<string[]>
   const shares = await selectAgentTemplateShares([templateId]);
   if (shares.length === 0) return [];
 
-  const userIds = Array.from(new Set(shares.map(s => s.user_id)));
+  const accountIds = Array.from(new Set(shares.map(s => s.user_id)));
 
   const { data, error } = await supabase
     .from("account_emails")
     .select("email")
-    .in("account_id", userIds);
+    .in("account_id", accountIds);
 
   if (error) {
     console.error("Error selecting account_emails for template shares:", error);
-    return [];
+    throw new Error(`getSharedEmailsForTemplate failed: ${error.message}`);
   }
 
   return Array.from(

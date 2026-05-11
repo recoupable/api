@@ -1,20 +1,20 @@
 import supabase from "@/lib/supabase/serverClient";
 
 /**
- * Inserts a favorite row for `(template_id, user_id)`. Idempotent — a
+ * Inserts a favorite row for `(template_id, account)`. Idempotent — a
  * pre-existing row (Postgres unique-violation 23505) is treated as success.
  *
  * @param templateId - The agent template UUID
- * @param userId - The favoriting account UUID
+ * @param accountId - The favoriting account UUID
  * @returns True if the favorite exists after the call, false on unexpected error.
  */
 export async function insertAgentTemplateFavorite(
   templateId: string,
-  userId: string,
+  accountId: string,
 ): Promise<boolean> {
   const { error } = await supabase
     .from("agent_template_favorites")
-    .insert({ template_id: templateId, user_id: userId })
+    .insert({ template_id: templateId, user_id: accountId })
     .select("template_id")
     .maybeSingle();
 

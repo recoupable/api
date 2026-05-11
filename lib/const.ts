@@ -54,7 +54,7 @@ export const SNAPSHOT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
  * Surfaced as `creator.is_admin` in `/api/agent-templates` so clients can flag
  * official Recoup templates. Mirrors `chat/lib/admin.ts`.
  */
-export const ADMIN_EMAILS: string[] = ["sidney+1@recoupable.com"];
+export const ADMIN_EMAILS: readonly string[] = ["sidney+1@recoupable.com"] as const;
 
 // EVALS
 export const EVAL_ACCOUNT_ID = "fb678396-a68f-4294-ae50-b8cacf9ce77b";

@@ -27,10 +27,7 @@ export async function listAgentTemplatesHandler(request: NextRequest): Promise<N
   } catch (error) {
     console.error("[ERROR] listAgentTemplatesHandler:", error);
     return NextResponse.json(
-      {
-        status: "error",
-        error: error instanceof Error ? error.message : "Internal server error",
-      },
+      { status: "error", error: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
     );
   }
