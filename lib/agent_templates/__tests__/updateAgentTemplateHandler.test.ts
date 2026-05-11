@@ -21,8 +21,8 @@ vi.mock("@/lib/supabase/agent_template_shares/insertAgentTemplateShares", () => 
   insertAgentTemplateShares: vi.fn(),
 }));
 
-vi.mock("@/lib/agent_templates/getAgentTemplateForAccount", () => ({
-  getAgentTemplateForAccount: vi.fn(),
+vi.mock("@/lib/supabase/agent_templates/selectAgentTemplates", () => ({
+  selectAgentTemplates: vi.fn(),
 }));
 
 const { updateAgentTemplateHandler } = await import("../updateAgentTemplateHandler");
@@ -36,8 +36,8 @@ const { deleteAgentTemplateShares } = await import(
 const { insertAgentTemplateShares } = await import(
   "@/lib/supabase/agent_template_shares/insertAgentTemplateShares"
 );
-const { getAgentTemplateForAccount } = await import(
-  "@/lib/agent_templates/getAgentTemplateForAccount"
+const { selectAgentTemplates } = await import(
+  "@/lib/supabase/agent_templates/selectAgentTemplates"
 );
 
 const ACCOUNT_ID = "11111111-1111-1111-1111-111111111111";
@@ -55,7 +55,7 @@ describe("updateAgentTemplateHandler", () => {
     vi.mocked(updateAgentTemplate).mockResolvedValue({ id: TEMPLATE_ID } as never);
     vi.mocked(deleteAgentTemplateShares).mockResolvedValue(undefined);
     vi.mocked(insertAgentTemplateShares).mockResolvedValue(1);
-    vi.mocked(getAgentTemplateForAccount).mockResolvedValue({ id: TEMPLATE_ID } as never);
+    vi.mocked(selectAgentTemplates).mockResolvedValue([{ id: TEMPLATE_ID } as never]);
 
     const req = new NextRequest(`http://localhost/api/agent-templates/${TEMPLATE_ID}`, {
       method: "PATCH",
@@ -66,6 +66,7 @@ describe("updateAgentTemplateHandler", () => {
     expect(updateAgentTemplate).toHaveBeenCalledWith(TEMPLATE_ID, { title: "New Title" });
     expect(deleteAgentTemplateShares).toHaveBeenCalledWith(TEMPLATE_ID);
     expect(insertAgentTemplateShares).toHaveBeenCalledWith(TEMPLATE_ID, ["x@y.com"]);
+    expect(selectAgentTemplates).toHaveBeenCalledWith({ id: TEMPLATE_ID }, ACCOUNT_ID);
   });
 
   it("returns the validator error response when validation fails", async () => {

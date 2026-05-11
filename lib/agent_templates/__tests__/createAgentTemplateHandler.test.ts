@@ -17,8 +17,8 @@ vi.mock("@/lib/supabase/agent_template_shares/insertAgentTemplateShares", () => 
   insertAgentTemplateShares: vi.fn(),
 }));
 
-vi.mock("@/lib/agent_templates/getAgentTemplateForAccount", () => ({
-  getAgentTemplateForAccount: vi.fn(),
+vi.mock("@/lib/supabase/agent_templates/selectAgentTemplates", () => ({
+  selectAgentTemplates: vi.fn(),
 }));
 
 const { createAgentTemplateHandler } = await import("../createAgentTemplateHandler");
@@ -27,8 +27,8 @@ const { insertAgentTemplate } = await import("@/lib/supabase/agent_templates/ins
 const { insertAgentTemplateShares } = await import(
   "@/lib/supabase/agent_template_shares/insertAgentTemplateShares"
 );
-const { getAgentTemplateForAccount } = await import(
-  "@/lib/agent_templates/getAgentTemplateForAccount"
+const { selectAgentTemplates } = await import(
+  "@/lib/supabase/agent_templates/selectAgentTemplates"
 );
 
 const ACCOUNT_ID = "11111111-1111-1111-1111-111111111111";
@@ -64,7 +64,7 @@ describe("createAgentTemplateHandler", () => {
     mockAuthOk();
     vi.mocked(insertAgentTemplate).mockResolvedValue({ id: TEMPLATE_ID } as never);
     vi.mocked(insertAgentTemplateShares).mockResolvedValue(1);
-    vi.mocked(getAgentTemplateForAccount).mockResolvedValue({ id: TEMPLATE_ID } as never);
+    vi.mocked(selectAgentTemplates).mockResolvedValue([{ id: TEMPLATE_ID } as never]);
 
     const res = await createAgentTemplateHandler(
       makeRequest({ ...validBody, is_private: true, share_emails: ["a@x.com"] }),
@@ -76,6 +76,7 @@ describe("createAgentTemplateHandler", () => {
       expect.objectContaining({ creator: ACCOUNT_ID, is_private: true }),
     );
     expect(insertAgentTemplateShares).toHaveBeenCalledWith(TEMPLATE_ID, ["a@x.com"]);
+    expect(selectAgentTemplates).toHaveBeenCalledWith({ id: TEMPLATE_ID }, ACCOUNT_ID);
   });
 
   it("returns 400 when validation fails", async () => {

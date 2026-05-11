@@ -66,8 +66,7 @@ export async function validateUpdateAgentTemplateRequest(
     );
   }
 
-  const creator = Array.isArray(existing.creator) ? existing.creator[0] : existing.creator;
-  if (creator?.id !== accountId) {
+  if (existing.creator?.id !== accountId) {
     return NextResponse.json(
       { status: "error", error: "Forbidden" },
       { status: 403, headers: getCorsHeaders() },

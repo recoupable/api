@@ -58,8 +58,7 @@ export async function validateToggleFavoriteRequest(
     );
   }
 
-  const creator = Array.isArray(existing.creator) ? existing.creator[0] : existing.creator;
-  const isOwner = creator?.id === accountId;
+  const isOwner = existing.creator?.id === accountId;
   let canAccess = isOwner || !existing.is_private;
   if (!canAccess) {
     const shares = await selectAgentTemplateShares([templateId]);

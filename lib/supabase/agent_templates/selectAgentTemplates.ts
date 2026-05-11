@@ -1,5 +1,9 @@
 import type { QueryData } from "@supabase/supabase-js";
 import supabase from "@/lib/supabase/serverClient";
+import { ADMIN_EMAILS } from "@/lib/const";
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
+import { selectAgentTemplateFavorites } from "@/lib/supabase/agent_template_favorites/selectAgentTemplateFavorites";
+import { selectAgentTemplateShares } from "@/lib/supabase/agent_template_shares/selectAgentTemplateShares";
 
 const SELECT = `
   *,
@@ -13,25 +17,67 @@ const SELECT = `
 
 const _typedQuery = supabase.from("agent_templates").select(SELECT);
 
-export type AgentTemplateWithCreator = QueryData<typeof _typedQuery>[number];
+type RawAgentTemplate = QueryData<typeof _typedQuery>[number];
+
+export interface AgentTemplateCreator {
+  id: string;
+  name: string | null;
+  image: string | null;
+  is_admin: boolean;
+}
+
+export type AgentTemplate = Omit<RawAgentTemplate, "creator"> & {
+  creator: AgentTemplateCreator | null;
+  is_favourite: boolean;
+  shared_emails: string[];
+};
 
 type SelectAgentTemplatesParams = { id: string } | { accessibleTo: string };
 
-/**
- * Single entry point for reading agent_templates joined with the creator
- * block (id, name, image, admin-email markers).
- *
- *  - `{ id }` returns the row with that id, or empty when not found.
- *  - `{ accessibleTo }` returns every row the account can see: ones they
- *    own, public ones, and ones shared with them via agent_template_shares
- *    — deduped.
- *
- * Throws on database error so callers can distinguish a real failure from
- * an empty result.
- */
-export async function selectAgentTemplates(
-  params: SelectAgentTemplatesParams,
-): Promise<AgentTemplateWithCreator[]> {
+function flattenCreator(creator: RawAgentTemplate["creator"]): AgentTemplateCreator | null {
+  if (!creator) return null;
+  const row = Array.isArray(creator) ? creator[0] : creator;
+  if (!row) return null;
+  const emails = (row.account_emails ?? [])
+    .map(e => e.email)
+    .filter((e): e is string => typeof e === "string");
+  return {
+    id: row.id,
+    name: row.name ?? null,
+    image: row.account_info?.[0]?.image ?? null,
+    is_admin: emails.some(email => ADMIN_EMAILS.includes(email)),
+  };
+}
+
+async function resolveSharedEmails(templateIds: string[]): Promise<Record<string, string[]>> {
+  if (templateIds.length === 0) return {};
+  const shares = await selectAgentTemplateShares(templateIds);
+  if (shares.length === 0) return {};
+
+  const accountIds = Array.from(new Set(shares.map(s => s.user_id)));
+  const accountEmails = await selectAccountEmails({ accountIds });
+
+  const emailsByAccount = new Map<string, string[]>();
+  accountEmails.forEach(row => {
+    if (!row.account_id || !row.email) return;
+    const list = emailsByAccount.get(row.account_id) ?? [];
+    list.push(row.email);
+    emailsByAccount.set(row.account_id, list);
+  });
+
+  const result: Record<string, string[]> = {};
+  shares.forEach(share => {
+    const list = result[share.template_id] ?? [];
+    list.push(...(emailsByAccount.get(share.user_id) ?? []));
+    result[share.template_id] = list;
+  });
+  Object.keys(result).forEach(id => {
+    result[id] = Array.from(new Set(result[id]));
+  });
+  return result;
+}
+
+async function fetchRaw(params: SelectAgentTemplatesParams): Promise<RawAgentTemplate[]> {
   if ("id" in params) {
     const { data, error } = await supabase
       .from("agent_templates")
@@ -68,12 +114,10 @@ export async function selectAgentTemplates(
     throw new Error(`selectAgentTemplates(accessibleTo) shared failed: ${shared.error.message}`);
   }
 
-  const byId = new Map<string, AgentTemplateWithCreator>();
+  const byId = new Map<string, RawAgentTemplate>();
   (ownedAndPublic.data ?? []).forEach(row => byId.set(row.id, row));
-  (shared.data ?? []).forEach(share => {
-    const { template } = share as {
-      template: AgentTemplateWithCreator | AgentTemplateWithCreator[] | null;
-    };
+  (shared.data ?? []).forEach(s => {
+    const { template } = s as { template: RawAgentTemplate | RawAgentTemplate[] | null };
     if (!template) return;
     const list = Array.isArray(template) ? template : [template];
     list.forEach(t => {
@@ -81,4 +125,52 @@ export async function selectAgentTemplates(
     });
   });
   return Array.from(byId.values());
+}
+
+/**
+ * Reads agent_templates and returns them fully shaped for the API:
+ *   - creator block flattened to `{ id, name, image, is_admin }`
+ *   - `is_favourite` populated against `forAccountId` (defaults to `false`)
+ *   - `shared_emails` populated only for private templates `forAccountId` owns
+ *
+ * `{ id }`         → row with that id, or empty array when not found.
+ * `{ accessibleTo }` → own + public + shared (deduped) for that account.
+ *
+ * Pass `forAccountId` whenever you need is_favourite / shared_emails marked.
+ * Internal callers (e.g. ownership validators) can omit it to skip the
+ * caller-specific enrichment queries.
+ *
+ * Throws on database error.
+ */
+export async function selectAgentTemplates(
+  params: SelectAgentTemplatesParams,
+  forAccountId?: string,
+): Promise<AgentTemplate[]> {
+  const rawRows = await fetchRaw(params);
+  if (rawRows.length === 0) return [];
+
+  const flattened = rawRows.map(row => {
+    const { creator, ...rest } = row;
+    return { ...rest, creator: flattenCreator(creator) };
+  });
+
+  if (!forAccountId) {
+    return flattened.map(row => ({ ...row, is_favourite: false, shared_emails: [] }));
+  }
+
+  const ownedPrivateIds = flattened
+    .filter(r => r.is_private && r.creator?.id === forAccountId)
+    .map(r => r.id);
+  const [favorites, sharedEmailsMap] = await Promise.all([
+    selectAgentTemplateFavorites(forAccountId),
+    resolveSharedEmails(ownedPrivateIds),
+  ]);
+  const favoriteIds = new Set(favorites.map(f => f.template_id));
+
+  return flattened.map(row => ({
+    ...row,
+    is_favourite: favoriteIds.has(row.id),
+    shared_emails:
+      row.is_private && row.creator?.id === forAccountId ? (sharedEmailsMap[row.id] ?? []) : [],
+  }));
 }

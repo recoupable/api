@@ -5,7 +5,7 @@ import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateCreateAgentTemplateBody } from "@/lib/agent_templates/validateCreateAgentTemplateBody";
 import { insertAgentTemplate } from "@/lib/supabase/agent_templates/insertAgentTemplate";
 import { insertAgentTemplateShares } from "@/lib/supabase/agent_template_shares/insertAgentTemplateShares";
-import { getAgentTemplateForAccount } from "@/lib/agent_templates/getAgentTemplateForAccount";
+import { selectAgentTemplates } from "@/lib/supabase/agent_templates/selectAgentTemplates";
 
 /**
  * Handler for POST /api/agent-templates.
@@ -45,10 +45,10 @@ export async function createAgentTemplateHandler(request: NextRequest): Promise<
       await insertAgentTemplateShares(inserted.id, parsedBody.share_emails);
     }
 
-    const template = await getAgentTemplateForAccount(inserted.id, accountId);
+    const [template] = await selectAgentTemplates({ id: inserted.id }, accountId);
 
     return NextResponse.json(
-      { status: "success", template },
+      { status: "success", template: template ?? null },
       { status: 201, headers: getCorsHeaders() },
     );
   } catch (error) {
