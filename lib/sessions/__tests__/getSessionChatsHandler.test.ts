@@ -1,0 +1,200 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest, NextResponse } from "next/server";
+import type { Tables } from "@/types/database.types";
+import { baseSessionRow } from "@/lib/sessions/__tests__/baseSessionRow";
+import { baseChatRow } from "@/lib/sessions/__tests__/baseChatRow";
+
+vi.mock("@/lib/networking/getCorsHeaders", () => ({
+  getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
+}));
+vi.mock("@/lib/auth/validateAuthContext", () => ({
+  validateAuthContext: vi.fn(),
+}));
+vi.mock("@/lib/supabase/sessions/selectSessions", () => ({
+  selectSessions: vi.fn(),
+}));
+vi.mock("@/lib/supabase/chats/selectChats", () => ({
+  selectChats: vi.fn(),
+}));
+vi.mock("@/lib/supabase/chat_reads/selectChatReads", () => ({
+  selectChatReads: vi.fn(),
+}));
+
+const { validateAuthContext } = await import("@/lib/auth/validateAuthContext");
+const { selectSessions } = await import("@/lib/supabase/sessions/selectSessions");
+const { selectChats } = await import("@/lib/supabase/chats/selectChats");
+const { selectChatReads } = await import("@/lib/supabase/chat_reads/selectChatReads");
+const { getSessionChatsHandler } = await import("@/lib/sessions/getSessionChatsHandler");
+
+const accountId = "acc-uuid-1";
+
+function makeReq(url = "https://example.com/api/sessions/sess_1/chats"): NextRequest {
+  return new NextRequest(url);
+}
+
+function chatRow(overrides: Partial<Tables<"chats">>): Tables<"chats"> {
+  return baseChatRow({ session_id: "sess_1", ...overrides });
+}
+
+describe("getSessionChatsHandler", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns 401 when auth fails", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(
+      NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    );
+
+    const res = await getSessionChatsHandler(makeReq(), "sess_1");
+    expect(res.status).toBe(401);
+    expect(selectSessions).not.toHaveBeenCalled();
+    expect(selectChats).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when session does not exist", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId,
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue([]);
+
+    const res = await getSessionChatsHandler(makeReq(), "sess_missing");
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({
+      status: "error",
+      error: "Session not found",
+    });
+    expect(selectChats).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when session is owned by a different account", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId,
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue([
+      baseSessionRow({ id: "sess_1", account_id: "acc-uuid-OTHER" }),
+    ]);
+
+    const res = await getSessionChatsHandler(makeReq(), "sess_1");
+    expect(res.status).toBe(403);
+    expect(selectChats).not.toHaveBeenCalled();
+  });
+
+  it("returns 200 with chats sorted by created_at and APP_DEFAULT_MODEL_ID", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId,
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue([
+      baseSessionRow({ id: "sess_1", account_id: accountId }),
+    ]);
+    vi.mocked(selectChats).mockResolvedValue([
+      chatRow({
+        id: "chat_late",
+        title: "Late",
+        created_at: "2026-05-04T00:00:00.000Z",
+      }),
+      chatRow({
+        id: "chat_early",
+        title: "Early",
+        created_at: "2026-05-01T00:00:00.000Z",
+      }),
+    ]);
+    vi.mocked(selectChatReads).mockResolvedValue([]);
+
+    const res = await getSessionChatsHandler(makeReq(), "sess_1");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      chats: Array<{ id: string; hasUnread: boolean; isStreaming: boolean }>;
+      defaultModelId: string;
+    };
+    expect(body.chats.map(c => c.id)).toEqual(["chat_early", "chat_late"]);
+    expect(body.defaultModelId).toBe("openai/gpt-5.4");
+    expect(selectChatReads).toHaveBeenCalledWith({
+      accountId,
+      chatIds: ["chat_late", "chat_early"],
+    });
+  });
+
+  it("skips chat_reads lookup when the session has no chats", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId,
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue([
+      baseSessionRow({ id: "sess_1", account_id: accountId }),
+    ]);
+    vi.mocked(selectChats).mockResolvedValue([]);
+
+    const res = await getSessionChatsHandler(makeReq(), "sess_1");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      chats: unknown[];
+      defaultModelId: string;
+    };
+    expect(body.chats).toEqual([]);
+    expect(body.defaultModelId).toBe("openai/gpt-5.4");
+    expect(selectChatReads).not.toHaveBeenCalled();
+  });
+
+  it("derives hasUnread from last_assistant_message_at vs last_read_at", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId,
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue([
+      baseSessionRow({ id: "sess_1", account_id: accountId }),
+    ]);
+    vi.mocked(selectChats).mockResolvedValue([
+      chatRow({
+        id: "chat_unread",
+        last_assistant_message_at: "2026-05-04T10:00:00.000Z",
+        active_stream_id: null,
+      }),
+      chatRow({
+        id: "chat_read",
+        last_assistant_message_at: "2026-05-03T10:00:00.000Z",
+        active_stream_id: null,
+      }),
+      chatRow({
+        id: "chat_streaming",
+        last_assistant_message_at: null,
+        active_stream_id: "stream_xyz",
+      }),
+    ]);
+    vi.mocked(selectChatReads).mockResolvedValue([
+      {
+        account_id: accountId,
+        chat_id: "chat_unread",
+        last_read_at: "2026-05-04T09:00:00.000Z",
+        created_at: "2026-05-01T00:00:00.000Z",
+        updated_at: "2026-05-04T09:00:00.000Z",
+      },
+      {
+        account_id: accountId,
+        chat_id: "chat_read",
+        last_read_at: "2026-05-04T00:00:00.000Z",
+        created_at: "2026-05-01T00:00:00.000Z",
+        updated_at: "2026-05-04T00:00:00.000Z",
+      },
+    ]);
+
+    const res = await getSessionChatsHandler(makeReq(), "sess_1");
+    const body = (await res.json()) as {
+      chats: Array<{ id: string; hasUnread: boolean; isStreaming: boolean }>;
+    };
+    const byId = new Map(body.chats.map(c => [c.id, c]));
+    expect(byId.get("chat_unread")?.hasUnread).toBe(true);
+    expect(byId.get("chat_read")?.hasUnread).toBe(false);
+    expect(byId.get("chat_streaming")?.hasUnread).toBe(false);
+    expect(byId.get("chat_streaming")?.isStreaming).toBe(true);
+    expect(byId.get("chat_unread")?.isStreaming).toBe(false);
+  });
+});

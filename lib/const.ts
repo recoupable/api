@@ -11,6 +11,12 @@ export const PAYMASTER_URL = `https://api.developer.coinbase.com/rpc/v1/base/${p
 export const IMAGE_GENERATE_PRICE = "0.15";
 export const DEFAULT_MODEL = "openai/gpt-5-mini";
 export const LIGHTWEIGHT_MODEL = "openai/gpt-4o-mini";
+/**
+ * Default model id surfaced to open-agents clients when the user has no
+ * explicit preference. Mirrors `APP_DEFAULT_MODEL_ID` from open-agents
+ * so the wire format stays aligned during the cutover.
+ */
+export const APP_DEFAULT_MODEL_ID = "openai/gpt-5.4";
 export const PRIVY_PROJECT_SECRET = process.env.PRIVY_PROJECT_SECRET;
 /** Domain for receiving inbound emails (e.g., support@mail.recoupable.com) */
 export const INBOUND_EMAIL_DOMAIN = "@mail.recoupable.com";
