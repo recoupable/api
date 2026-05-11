@@ -3,9 +3,7 @@ import {
   type CreditsUsage,
 } from "@/lib/supabase/credits_usage/selectCreditsUsage";
 import { updateCreditsUsage } from "@/lib/supabase/credits_usage/updateCreditsUsage";
-import isActiveSubscription from "@/lib/stripe/isActiveSubscription";
-import { getActiveSubscriptionDetails } from "@/lib/stripe/getActiveSubscriptionDetails";
-import { getOrgSubscription } from "@/lib/stripe/getOrgSubscription";
+import { getAccountSubscriptionState } from "@/lib/credits/getAccountSubscriptionState";
 import { DEFAULT_CREDITS, PRO_CREDITS } from "@/lib/credits/const";
 
 export interface CheckAndResetCreditsResult {
@@ -21,15 +19,10 @@ export interface CheckAndResetCreditsResult {
  * Also returns `isPro` so callers don't need to repeat the subscription lookup.
  */
 export async function checkAndResetCredits(accountId: string): Promise<CheckAndResetCreditsResult> {
-  const [rows, accountSub, orgSub] = await Promise.all([
+  const [rows, { isPro, activeSubscription }] = await Promise.all([
     selectCreditsUsage({ account_id: accountId }),
-    getActiveSubscriptionDetails(accountId),
-    getOrgSubscription(accountId),
+    getAccountSubscriptionState(accountId),
   ]);
-
-  const hasAccountSub = isActiveSubscription(accountSub);
-  const hasOrgSub = isActiveSubscription(orgSub);
-  const isPro = hasAccountSub || hasOrgSub;
 
   if (!rows || rows.length === 0) {
     return { creditsUsage: null, isPro };
@@ -45,8 +38,8 @@ export async function checkAndResetCredits(accountId: string): Promise<CheckAndR
   const oneMonthAgo = new Date();
   oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-  const activeSub = hasAccountSub ? accountSub : hasOrgSub ? orgSub : null;
-  const subscriptionStartUnix = activeSub?.current_period_start ?? activeSub?.start_date ?? null;
+  const subscriptionStartUnix =
+    activeSubscription?.current_period_start ?? activeSubscription?.start_date ?? null;
   const subscriptionStart = subscriptionStartUnix ? new Date(subscriptionStartUnix * 1000) : null;
 
   const isMonthlyRefill = lastUpdated < oneMonthAgo;
