@@ -7,11 +7,8 @@ import { baseChatRow } from "@/lib/sessions/__tests__/baseChatRow";
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
 }));
-vi.mock("@/lib/auth/validateAuthContext", () => ({
-  validateAuthContext: vi.fn(),
-}));
-vi.mock("@/lib/supabase/sessions/selectSessions", () => ({
-  selectSessions: vi.fn(),
+vi.mock("@/lib/sessions/validateOwnedSessionRequest", () => ({
+  validateOwnedSessionRequest: vi.fn(),
 }));
 vi.mock("@/lib/supabase/chats/selectChats", () => ({
   selectChats: vi.fn(),
@@ -20,8 +17,7 @@ vi.mock("@/lib/supabase/chat_reads/selectChatReads", () => ({
   selectChatReads: vi.fn(),
 }));
 
-const { validateAuthContext } = await import("@/lib/auth/validateAuthContext");
-const { selectSessions } = await import("@/lib/supabase/sessions/selectSessions");
+const { validateOwnedSessionRequest } = await import("@/lib/sessions/validateOwnedSessionRequest");
 const { selectChats } = await import("@/lib/supabase/chats/selectChats");
 const { selectChatReads } = await import("@/lib/supabase/chat_reads/selectChatReads");
 const { getSessionChatsHandler } = await import("@/lib/sessions/getSessionChatsHandler");
@@ -36,63 +32,29 @@ function chatRow(overrides: Partial<Tables<"chats">>): Tables<"chats"> {
   return baseChatRow({ session_id: "sess_1", ...overrides });
 }
 
+function mockOwned() {
+  vi.mocked(validateOwnedSessionRequest).mockResolvedValue({
+    auth: { accountId, orgId: null, authToken: "tok" },
+    session: baseSessionRow({ id: "sess_1", account_id: accountId }),
+  });
+}
+
 describe("getSessionChatsHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns 401 when auth fails", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue(
-      NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
-    );
+  it("forwards the NextResponse from validateOwnedSessionRequest as-is", async () => {
+    const failure = NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    vi.mocked(validateOwnedSessionRequest).mockResolvedValue(failure);
 
     const res = await getSessionChatsHandler(makeReq(), "sess_1");
-    expect(res.status).toBe(401);
-    expect(selectSessions).not.toHaveBeenCalled();
-    expect(selectChats).not.toHaveBeenCalled();
-  });
-
-  it("returns 404 when session does not exist", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId,
-      orgId: null,
-      authToken: "tok",
-    });
-    vi.mocked(selectSessions).mockResolvedValue([]);
-
-    const res = await getSessionChatsHandler(makeReq(), "sess_missing");
-    expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({
-      status: "error",
-      error: "Session not found",
-    });
-    expect(selectChats).not.toHaveBeenCalled();
-  });
-
-  it("returns 403 when session is owned by a different account", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId,
-      orgId: null,
-      authToken: "tok",
-    });
-    vi.mocked(selectSessions).mockResolvedValue([
-      baseSessionRow({ id: "sess_1", account_id: "acc-uuid-OTHER" }),
-    ]);
-
-    const res = await getSessionChatsHandler(makeReq(), "sess_1");
-    expect(res.status).toBe(403);
+    expect(res).toBe(failure);
     expect(selectChats).not.toHaveBeenCalled();
   });
 
   it("returns 200 with chats sorted by created_at and APP_DEFAULT_MODEL_ID", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId,
-      orgId: null,
-      authToken: "tok",
-    });
-    vi.mocked(selectSessions).mockResolvedValue([
-      baseSessionRow({ id: "sess_1", account_id: accountId }),
-    ]);
+    mockOwned();
     vi.mocked(selectChats).mockResolvedValue([
       chatRow({
         id: "chat_late",
@@ -122,14 +84,7 @@ describe("getSessionChatsHandler", () => {
   });
 
   it("skips chat_reads lookup when the session has no chats", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId,
-      orgId: null,
-      authToken: "tok",
-    });
-    vi.mocked(selectSessions).mockResolvedValue([
-      baseSessionRow({ id: "sess_1", account_id: accountId }),
-    ]);
+    mockOwned();
     vi.mocked(selectChats).mockResolvedValue([]);
 
     const res = await getSessionChatsHandler(makeReq(), "sess_1");
@@ -144,14 +99,7 @@ describe("getSessionChatsHandler", () => {
   });
 
   it("derives hasUnread from last_assistant_message_at vs last_read_at", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId,
-      orgId: null,
-      authToken: "tok",
-    });
-    vi.mocked(selectSessions).mockResolvedValue([
-      baseSessionRow({ id: "sess_1", account_id: accountId }),
-    ]);
+    mockOwned();
     vi.mocked(selectChats).mockResolvedValue([
       chatRow({
         id: "chat_unread",

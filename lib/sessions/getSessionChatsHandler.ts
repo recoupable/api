@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { APP_DEFAULT_MODEL_ID } from "@/lib/const";
-import { requireOwnedSession } from "@/lib/sessions/requireOwnedSession";
+import { validateOwnedSessionRequest } from "@/lib/sessions/validateOwnedSessionRequest";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { selectChatReads } from "@/lib/supabase/chat_reads/selectChatReads";
 import { toChatSummaryResponse } from "@/lib/sessions/toChatSummaryResponse";
@@ -24,16 +24,17 @@ export async function getSessionChatsHandler(
   request: NextRequest,
   sessionId: string,
 ): Promise<NextResponse> {
-  const gate = await requireOwnedSession(request, sessionId);
-  if (gate instanceof NextResponse) {
-    return gate;
+  const validated = await validateOwnedSessionRequest(request, sessionId);
+  if (validated instanceof NextResponse) {
+    return validated;
   }
+  const { auth } = validated;
 
   const chats = await selectChats({ sessionId });
   const reads =
     chats.length > 0
       ? await selectChatReads({
-          accountId: gate.auth.accountId,
+          accountId: auth.accountId,
           chatIds: chats.map(row => row.id),
         })
       : [];

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { generateUUID } from "@/lib/uuid/generateUUID";
-import { safeParseJson } from "@/lib/networking/safeParseJson";
-import { requireOwnedSession } from "@/lib/sessions/requireOwnedSession";
-import { validateCreateSessionChatBody } from "@/lib/sessions/validateCreateSessionChatBody";
+import { validateCreateSessionChatRequest } from "@/lib/sessions/validateCreateSessionChatRequest";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { insertChat } from "@/lib/supabase/chats/insertChat";
 import { toChatResponse } from "@/lib/sessions/toChatResponse";
@@ -13,12 +11,11 @@ const INITIAL_CHAT_TITLE = "New chat";
 /**
  * Handles `POST /api/sessions/{sessionId}/chats`.
  *
- * Authenticates the caller, verifies session ownership, then creates a
- * new chat row. Callers may pass `{ id }` to claim a deterministic chat
- * id: if a row already exists with that id and belongs to this
- * session, it is returned as-is (idempotent retry); if it exists on a
- * different session, 409 is returned. Otherwise a new chat is
- * inserted with title "New chat".
+ * Callers may pass `{ id }` to claim a deterministic chat id: if a row
+ * already exists with that id and belongs to this session, it is
+ * returned as-is (idempotent retry); if it exists on a different
+ * session, 409 is returned. Otherwise a new chat is inserted with
+ * title "New chat".
  *
  * Response shape mirrors open-agents' `POST /api/sessions/[sessionId]/chats`
  * so the existing frontend can cut over without code changes.
@@ -31,18 +28,13 @@ export async function createSessionChatHandler(
   request: NextRequest,
   sessionId: string,
 ): Promise<NextResponse> {
-  const gate = await requireOwnedSession(request, sessionId);
-  if (gate instanceof NextResponse) {
-    return gate;
-  }
-
-  const rawBody = await safeParseJson(request);
-  const validated = validateCreateSessionChatBody(rawBody);
+  const validated = await validateCreateSessionChatRequest(request, sessionId);
   if (validated instanceof NextResponse) {
     return validated;
   }
+  const { body } = validated;
 
-  const requestedChatId = validated.id ?? null;
+  const requestedChatId = body.id ?? null;
 
   if (requestedChatId) {
     const existing = (await selectChats({ id: requestedChatId }))[0] ?? null;

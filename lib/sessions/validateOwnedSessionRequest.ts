@@ -5,25 +5,28 @@ import type { AuthContext } from "@/lib/auth/validateAuthContext";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import type { Tables } from "@/types/database.types";
 
-export interface OwnedSessionContext {
+export interface ValidatedOwnedSessionRequest {
   auth: AuthContext;
   session: Tables<"sessions">;
 }
 
 /**
- * Authenticates the caller and verifies they own the session at the
- * given id. Mirrors the `validateAuthContext` return convention so
- * callers can early-return on the `NextResponse` branch and keep
- * working with `{ auth, session }` otherwise.
+ * Validates a session-scoped request end-to-end:
+ *   1. Authenticates via Privy Bearer / x-api-key
+ *   2. Loads the session row at the given id
+ *   3. Confirms the authenticated account owns it
+ *
+ * Returns either a 401/403/404 NextResponse describing the first
+ * failure, or the resolved `{ auth, session }` for the handler.
  *
  * @param request - The incoming request.
  * @param sessionId - The id of the session to gate access on.
- * @returns A 401/403/404 NextResponse on failure, or the resolved auth + session row.
+ * @returns A NextResponse on failure, or the validated auth + session row.
  */
-export async function requireOwnedSession(
+export async function validateOwnedSessionRequest(
   request: NextRequest,
   sessionId: string,
-): Promise<NextResponse | OwnedSessionContext> {
+): Promise<NextResponse | ValidatedOwnedSessionRequest> {
   const auth = await validateAuthContext(request);
   if (auth instanceof NextResponse) {
     return auth;
