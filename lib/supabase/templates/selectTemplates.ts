@@ -24,13 +24,9 @@ export type SelectTemplatesParams = { id: string } | { accessibleTo: string };
 const NO_CALLER = "00000000-0000-0000-0000-000000000000";
 
 // Single SELECT for everything the API response needs:
-//   creator.org_membership → presence of RECOUP_ORG_ID ⇒ is_admin
-//   caller_favorite        → presence ⇒ is_favourite (filtered to caller at query level)
+//   creator.org_membership → presence ⇒ is_admin (embed filtered to RECOUP_ORG_ID)
+//   caller_favorite        → presence ⇒ is_favourite (embed filtered to caller)
 //   template_shares.sharee.account_emails → flatten ⇒ shared_emails
-//
-// The org_membership embed isn't filtered at the query level because
-// supabase-js's filter path doesn't reliably support double-nested
-// embeds; we keep the filter in JS via `.some()` instead.
 const SELECT = `
   *,
   creator:accounts!agent_templates_creator_fkey (
@@ -75,7 +71,8 @@ export async function selectTemplates(
       .from("agent_templates")
       .select(SELECT)
       .eq("id", params.id)
-      .eq("caller_favorite.user_id", callerId);
+      .eq("caller_favorite.user_id", callerId)
+      .eq("org_membership.organization_id", RECOUP_ORG_ID);
     if (error) {
       console.error("Error selecting template by id:", error);
       throw new Error(`selectTemplates(id) failed: ${error.message}`);
@@ -89,12 +86,14 @@ export async function selectTemplates(
         .select(SELECT)
         .or(`creator.eq.${accountId},is_private.eq.false`)
         .eq("caller_favorite.user_id", callerId)
+        .eq("org_membership.organization_id", RECOUP_ORG_ID)
         .order("title"),
       supabase
         .from("agent_template_shares")
         .select(`template:agent_templates!agent_template_shares_template_id_fkey (${SELECT})`)
         .eq("user_id", accountId)
-        .eq("template.caller_favorite.user_id", callerId),
+        .eq("caller_favorite.user_id", callerId)
+        .eq("org_membership.organization_id", RECOUP_ORG_ID),
     ]);
     if (owned.error) {
       console.error("Error selecting owned/public templates:", owned.error);
@@ -124,9 +123,7 @@ export async function selectTemplates(
             id: creatorRow.id,
             name: creatorRow.name ?? null,
             image: creatorRow.account_info?.[0]?.image ?? null,
-            is_admin: (creatorRow.org_membership ?? []).some(
-              m => m.organization_id === RECOUP_ORG_ID,
-            ),
+            is_admin: (creatorRow.org_membership ?? []).length > 0,
           }
         : null;
       const isOwnedPrivate = !!forAccountId && row.is_private && creator?.id === forAccountId;
