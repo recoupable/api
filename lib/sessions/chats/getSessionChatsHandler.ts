@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { APP_DEFAULT_MODEL_ID } from "@/lib/const";
+import { DEFAULT_MODEL } from "@/lib/const";
 import { validateGetSessionChatsRequest } from "@/lib/sessions/chats/validateGetSessionChatsRequest";
 import { getChatSummaries } from "@/lib/sessions/chats/getChatSummaries";
 
@@ -28,7 +28,7 @@ export async function getSessionChatsHandler(
   });
 
   return NextResponse.json(
-    { chats, defaultModelId: APP_DEFAULT_MODEL_ID },
+    { chats, defaultModelId: DEFAULT_MODEL },
     { status: 200, headers: getCorsHeaders() },
   );
 }

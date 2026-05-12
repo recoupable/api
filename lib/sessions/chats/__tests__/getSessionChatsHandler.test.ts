@@ -45,7 +45,7 @@ describe("getSessionChatsHandler", () => {
     expect(getChatSummaries).not.toHaveBeenCalled();
   });
 
-  it("returns 200 with summaries from the db and APP_DEFAULT_MODEL_ID", async () => {
+  it("returns 200 with summaries from the db and DEFAULT_MODEL", async () => {
     mockValidated();
     const summaries = [
       {
@@ -70,7 +70,7 @@ describe("getSessionChatsHandler", () => {
       defaultModelId: string;
     };
     expect(body.chats).toEqual(summaries);
-    expect(body.defaultModelId).toBe("openai/gpt-5.4");
+    expect(body.defaultModelId).toBe("openai/gpt-5-mini");
     expect(getChatSummaries).toHaveBeenCalledWith({
       sessionId: "sess_1",
       accountId,
