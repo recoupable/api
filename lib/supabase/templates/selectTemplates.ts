@@ -6,12 +6,8 @@ import { selectTemplateFavorites } from "@/lib/supabase/template_favorites/selec
 import { flattenCreator, type TemplateCreator } from "@/lib/supabase/templates/flattenCreator";
 import { resolveSharedEmails } from "@/lib/supabase/templates/resolveSharedEmails";
 
-export type { TemplateCreator } from "@/lib/supabase/templates/flattenCreator";
+export type { TemplateCreator };
 
-/**
- * The one SELECT for reading templates. Creator is always joined — there's
- * no "template without creator" path in this codebase.
- */
 const SELECT = `
   *,
   creator:accounts!agent_templates_creator_fkey (
@@ -22,7 +18,6 @@ const SELECT = `
 ` as const;
 
 const _typedQuery = supabase.from("agent_templates").select(SELECT);
-
 export type RawTemplate = QueryData<typeof _typedQuery>[number];
 
 export type Template = Omit<Tables<"agent_templates">, "creator"> & {
@@ -33,18 +28,27 @@ export type Template = Omit<Tables<"agent_templates">, "creator"> & {
 
 export type SelectTemplatesParams = { id: string } | { accessibleTo: string };
 
+const creatorIdOf = (r: RawTemplate): string | null => {
+  const c = r.creator;
+  if (!c) return null;
+  return Array.isArray(c) ? (c[0]?.id ?? null) : c.id;
+};
+
+const throwOn = (label: string, error: { message: string } | null) => {
+  if (!error) return;
+  console.error(`Error ${label}:`, error);
+  throw new Error(`selectTemplates ${label} failed: ${error.message}`);
+};
+
 /**
- * Returns agent templates fully shaped for the API:
- *  - creator block flattened to `{ id, name, image, is_admin }`
- *  - `is_admin` derived from Recoup org membership (see `getAdminAccountIds`)
- *  - `is_favourite` populated against `forAccountId` (defaults to `false`)
- *  - `shared_emails` populated only for private templates `forAccountId` owns
+ * Reads agent templates shaped for the API.
  *
- * `{ id }`           → row with that id, or empty array.
- * `{ accessibleTo }` → own + public + shared (deduped, sorted by title).
+ * - `{ id }`           → row with that id, or empty array
+ * - `{ accessibleTo }` → own + public + shared (deduped, sorted by title)
  *
- * Omit `forAccountId` for internal callers (e.g. ownership validators) that
- * only need the creator block and want to skip the per-caller enrichment.
+ * Pass `forAccountId` to enrich `is_favourite` and `shared_emails` (the
+ * latter only on private templates the account owns). Omit it for
+ * lightweight callers (e.g. ownership validators).
  *
  * Throws on database error.
  */
@@ -52,21 +56,18 @@ export async function selectTemplates(
   params: SelectTemplatesParams,
   forAccountId?: string,
 ): Promise<Template[]> {
+  // 1. Fetch
   let rows: RawTemplate[];
-
   if ("id" in params) {
     const { data, error } = await supabase
       .from("agent_templates")
       .select(SELECT)
       .eq("id", params.id);
-    if (error) {
-      console.error("Error selecting template by id:", error);
-      throw new Error(`selectTemplates(id) failed: ${error.message}`);
-    }
+    throwOn("by id", error);
     rows = data ?? [];
   } else {
     const accountId = params.accessibleTo;
-    const [ownedAndPublic, shared] = await Promise.all([
+    const [owned, shared] = await Promise.all([
       supabase
         .from("agent_templates")
         .select(SELECT)
@@ -77,66 +78,45 @@ export async function selectTemplates(
         .select(`template:agent_templates!agent_template_shares_template_id_fkey (${SELECT})`)
         .eq("user_id", accountId),
     ]);
+    throwOn("owned/public", owned.error);
+    throwOn("shared", shared.error);
 
-    if (ownedAndPublic.error) {
-      console.error("Error selecting owned/public templates:", ownedAndPublic.error);
-      throw new Error(
-        `selectTemplates(accessibleTo) owned/public failed: ${ownedAndPublic.error.message}`,
-      );
-    }
-    if (shared.error) {
-      console.error("Error selecting shared templates:", shared.error);
-      throw new Error(`selectTemplates(accessibleTo) shared failed: ${shared.error.message}`);
-    }
-
-    const byId = new Map<string, RawTemplate>();
-    (ownedAndPublic.data ?? []).forEach(row => byId.set(row.id, row));
-    (shared.data ?? []).forEach(s => {
-      const { template } = s as { template: RawTemplate | RawTemplate[] | null };
-      if (!template) return;
-      const list = Array.isArray(template) ? template : [template];
-      list.forEach(t => {
-        if (t && !byId.has(t.id)) byId.set(t.id, t);
-      });
+    const sharedRows = (shared.data ?? []).flatMap(s => {
+      const t = (s as { template: RawTemplate | RawTemplate[] | null }).template;
+      return t ? (Array.isArray(t) ? t : [t]) : [];
     });
-    rows = Array.from(byId.values());
+    const seen = new Set<string>();
+    rows = [...(owned.data ?? []), ...sharedRows].filter(r =>
+      seen.has(r.id) ? false : (seen.add(r.id), true),
+    );
   }
-
   if (rows.length === 0) return [];
 
-  const creatorIds = new Set<string>();
-  rows.forEach(row => {
-    const c = row.creator;
-    if (!c) return;
-    const single = Array.isArray(c) ? c[0] : c;
-    if (single?.id) creatorIds.add(single.id);
-  });
-  const adminAccountIds = await getAdminAccountIds(Array.from(creatorIds));
-
-  const flattened = rows.map(row => ({
-    ...row,
-    creator: flattenCreator(row.creator, adminAccountIds),
-  }));
-
-  if (!forAccountId) {
-    return flattened.map(row => ({ ...row, is_favourite: false, shared_emails: [] }));
-  }
-
-  const ownedPrivateIds = flattened
-    .filter(r => r.is_private && r.creator?.id === forAccountId)
-    .map(r => r.id);
-  const [favorites, sharedEmailsMap] = await Promise.all([
-    selectTemplateFavorites(forAccountId),
-    resolveSharedEmails(ownedPrivateIds),
+  // 2. Caller-/admin-dependent fetches in parallel
+  const creatorIds = Array.from(
+    new Set(rows.map(creatorIdOf).filter((id): id is string => id !== null)),
+  );
+  const ownedPrivateIds = forAccountId
+    ? rows.filter(r => r.is_private && creatorIdOf(r) === forAccountId).map(r => r.id)
+    : [];
+  const [adminIds, favorites, sharedEmails] = await Promise.all([
+    getAdminAccountIds(creatorIds),
+    forAccountId ? selectTemplateFavorites(forAccountId) : Promise.resolve([]),
+    forAccountId ? resolveSharedEmails(ownedPrivateIds) : Promise.resolve({}),
   ]);
   const favoriteIds = new Set(favorites.map(f => f.template_id));
 
-  return flattened
-    .map(row => ({
-      ...row,
-      is_favourite: favoriteIds.has(row.id),
-      shared_emails:
-        row.is_private && row.creator?.id === forAccountId ? (sharedEmailsMap[row.id] ?? []) : [],
-    }))
+  // 3. Shape
+  return rows
+    .map(row => {
+      const creator = flattenCreator(row.creator, adminIds);
+      const isOwnedPrivate = !!forAccountId && row.is_private && creator?.id === forAccountId;
+      return {
+        ...row,
+        creator,
+        is_favourite: favoriteIds.has(row.id),
+        shared_emails: isOwnedPrivate ? (sharedEmails[row.id] ?? []) : [],
+      };
+    })
     .sort((a, b) => a.title.localeCompare(b.title));
 }
