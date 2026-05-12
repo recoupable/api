@@ -5,18 +5,18 @@ import { baseSessionRow } from "@/lib/sessions/__tests__/baseSessionRow";
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
 }));
-vi.mock("@/lib/sessions/validateGetSessionChatsRequest", () => ({
+vi.mock("@/lib/sessions/chats/validateGetSessionChatsRequest", () => ({
   validateGetSessionChatsRequest: vi.fn(),
 }));
-vi.mock("@/lib/supabase/chats/getChatSummaries", () => ({
+vi.mock("@/lib/sessions/chats/getChatSummaries", () => ({
   getChatSummaries: vi.fn(),
 }));
 
 const { validateGetSessionChatsRequest } = await import(
-  "@/lib/sessions/validateGetSessionChatsRequest"
+  "@/lib/sessions/chats/validateGetSessionChatsRequest"
 );
-const { getChatSummaries } = await import("@/lib/supabase/chats/getChatSummaries");
-const { getSessionChatsHandler } = await import("@/lib/sessions/getSessionChatsHandler");
+const { getChatSummaries } = await import("@/lib/sessions/chats/getChatSummaries");
+const { getSessionChatsHandler } = await import("@/lib/sessions/chats/getSessionChatsHandler");
 
 const accountId = "acc-uuid-1";
 

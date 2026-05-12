@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { APP_DEFAULT_MODEL_ID } from "@/lib/const";
-import { validateGetSessionChatsRequest } from "@/lib/sessions/validateGetSessionChatsRequest";
-import { getChatSummaries } from "@/lib/supabase/chats/getChatSummaries";
+import { validateGetSessionChatsRequest } from "@/lib/sessions/chats/validateGetSessionChatsRequest";
+import { getChatSummaries } from "@/lib/sessions/chats/getChatSummaries";
 
 /**
  * Handles `GET /api/sessions/{sessionId}/chats`. Lists chats in the

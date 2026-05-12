@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getSessionChatsHandler } from "@/lib/sessions/getSessionChatsHandler";
-import { createSessionChatHandler } from "@/lib/sessions/createSessionChatHandler";
+import { getSessionChatsHandler } from "@/lib/sessions/chats/getSessionChatsHandler";
+import { createSessionChatHandler } from "@/lib/sessions/chats/createSessionChatHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.

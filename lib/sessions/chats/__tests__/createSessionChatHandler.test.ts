@@ -6,7 +6,7 @@ import { baseChatRow } from "@/lib/sessions/__tests__/baseChatRow";
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
 }));
-vi.mock("@/lib/sessions/validateCreateSessionChatRequest", () => ({
+vi.mock("@/lib/sessions/chats/validateCreateSessionChatRequest", () => ({
   validateCreateSessionChatRequest: vi.fn(),
 }));
 vi.mock("@/lib/supabase/chats/selectChats", () => ({
@@ -20,11 +20,11 @@ vi.mock("@/lib/uuid/generateUUID", () => ({
 }));
 
 const { validateCreateSessionChatRequest } = await import(
-  "@/lib/sessions/validateCreateSessionChatRequest"
+  "@/lib/sessions/chats/validateCreateSessionChatRequest"
 );
 const { selectChats } = await import("@/lib/supabase/chats/selectChats");
 const { insertChat } = await import("@/lib/supabase/chats/insertChat");
-const { createSessionChatHandler } = await import("@/lib/sessions/createSessionChatHandler");
+const { createSessionChatHandler } = await import("@/lib/sessions/chats/createSessionChatHandler");
 
 const accountId = "acc-uuid-1";
 

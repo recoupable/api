@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { generateUUID } from "@/lib/uuid/generateUUID";
-import { validateCreateSessionChatRequest } from "@/lib/sessions/validateCreateSessionChatRequest";
+import { validateCreateSessionChatRequest } from "@/lib/sessions/chats/validateCreateSessionChatRequest";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { insertChat } from "@/lib/supabase/chats/insertChat";
 import { toChatResponse } from "@/lib/sessions/toChatResponse";

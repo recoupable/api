@@ -15,7 +15,7 @@ vi.mock("@/lib/supabase/sessions/selectSessions", () => ({
 const { validateAuthContext } = await import("@/lib/auth/validateAuthContext");
 const { selectSessions } = await import("@/lib/supabase/sessions/selectSessions");
 const { validateGetSessionChatsRequest } = await import(
-  "@/lib/sessions/validateGetSessionChatsRequest"
+  "@/lib/sessions/chats/validateGetSessionChatsRequest"
 );
 
 const accountId = "acc-uuid-1";
