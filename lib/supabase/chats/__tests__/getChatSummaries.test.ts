@@ -11,9 +11,7 @@ vi.mock("@/lib/supabase/chat_reads/selectChatReads", () => ({
 
 const { selectChats } = await import("@/lib/supabase/chats/selectChats");
 const { selectChatReads } = await import("@/lib/supabase/chat_reads/selectChatReads");
-const { getChatSummariesBySessionId } = await import(
-  "@/lib/supabase/chats/getChatSummariesBySessionId"
-);
+const { getChatSummaries } = await import("@/lib/supabase/chats/getChatSummaries");
 
 const accountId = "acc-uuid-1";
 
@@ -21,7 +19,7 @@ function chatRow(overrides: Partial<Tables<"chats">>): Tables<"chats"> {
   return baseChatRow({ session_id: "sess_1", ...overrides });
 }
 
-describe("getChatSummariesBySessionId", () => {
+describe("getChatSummaries", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -29,7 +27,7 @@ describe("getChatSummariesBySessionId", () => {
   it("returns [] without hitting chat_reads when the session has no chats", async () => {
     vi.mocked(selectChats).mockResolvedValue([]);
 
-    const result = await getChatSummariesBySessionId({
+    const result = await getChatSummaries({
       sessionId: "sess_1",
       accountId,
     });
@@ -53,7 +51,7 @@ describe("getChatSummariesBySessionId", () => {
     ]);
     vi.mocked(selectChatReads).mockResolvedValue([]);
 
-    const result = await getChatSummariesBySessionId({
+    const result = await getChatSummaries({
       sessionId: "sess_1",
       accountId,
     });
@@ -111,7 +109,7 @@ describe("getChatSummariesBySessionId", () => {
       },
     ]);
 
-    const result = await getChatSummariesBySessionId({
+    const result = await getChatSummaries({
       sessionId: "sess_1",
       accountId,
     });
@@ -134,7 +132,7 @@ describe("getChatSummariesBySessionId", () => {
     ]);
     vi.mocked(selectChatReads).mockResolvedValue([]);
 
-    const result = await getChatSummariesBySessionId({
+    const result = await getChatSummaries({
       sessionId: "sess_1",
       accountId,
     });

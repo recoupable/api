@@ -23,8 +23,6 @@ export async function OPTIONS() {
  * `x-api-key`; 404s when the session is missing and 403s when it
  * exists but is owned by a different account.
  *
- * Response shape mirrors open-agents' `/api/sessions/[sessionId]/chats`.
- *
  * @param request - The incoming request.
  * @param options - Route options containing the async params.
  * @param options.params - Route params containing the session id.

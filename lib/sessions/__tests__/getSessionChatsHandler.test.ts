@@ -8,16 +8,14 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 vi.mock("@/lib/sessions/validateGetSessionChatsRequest", () => ({
   validateGetSessionChatsRequest: vi.fn(),
 }));
-vi.mock("@/lib/supabase/chats/getChatSummariesBySessionId", () => ({
-  getChatSummariesBySessionId: vi.fn(),
+vi.mock("@/lib/supabase/chats/getChatSummaries", () => ({
+  getChatSummaries: vi.fn(),
 }));
 
 const { validateGetSessionChatsRequest } = await import(
   "@/lib/sessions/validateGetSessionChatsRequest"
 );
-const { getChatSummariesBySessionId } = await import(
-  "@/lib/supabase/chats/getChatSummariesBySessionId"
-);
+const { getChatSummaries } = await import("@/lib/supabase/chats/getChatSummaries");
 const { getSessionChatsHandler } = await import("@/lib/sessions/getSessionChatsHandler");
 
 const accountId = "acc-uuid-1";
@@ -44,7 +42,7 @@ describe("getSessionChatsHandler", () => {
 
     const res = await getSessionChatsHandler(makeReq(), "sess_1");
     expect(res).toBe(failure);
-    expect(getChatSummariesBySessionId).not.toHaveBeenCalled();
+    expect(getChatSummaries).not.toHaveBeenCalled();
   });
 
   it("returns 200 with summaries from the db and APP_DEFAULT_MODEL_ID", async () => {
@@ -63,7 +61,7 @@ describe("getSessionChatsHandler", () => {
         isStreaming: false,
       },
     ];
-    vi.mocked(getChatSummariesBySessionId).mockResolvedValue(summaries);
+    vi.mocked(getChatSummaries).mockResolvedValue(summaries);
 
     const res = await getSessionChatsHandler(makeReq(), "sess_1");
     expect(res.status).toBe(200);
@@ -73,7 +71,7 @@ describe("getSessionChatsHandler", () => {
     };
     expect(body.chats).toEqual(summaries);
     expect(body.defaultModelId).toBe("openai/gpt-5.4");
-    expect(getChatSummariesBySessionId).toHaveBeenCalledWith({
+    expect(getChatSummaries).toHaveBeenCalledWith({
       sessionId: "sess_1",
       accountId,
     });

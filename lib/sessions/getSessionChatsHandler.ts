@@ -2,16 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { APP_DEFAULT_MODEL_ID } from "@/lib/const";
 import { validateGetSessionChatsRequest } from "@/lib/sessions/validateGetSessionChatsRequest";
-import { getChatSummariesBySessionId } from "@/lib/supabase/chats/getChatSummariesBySessionId";
+import { getChatSummaries } from "@/lib/supabase/chats/getChatSummaries";
 
 /**
- * Handles `GET /api/sessions/{sessionId}/chats`.
- *
- * Lists every chat in the session as a camelCase `ChatSummary`,
- * plus the caller's default model id. Per-chat unread state is
- * derived from the caller's `chat_reads` row. Response shape
- * mirrors open-agents' `/api/sessions/[sessionId]/chats` so the
- * existing frontend can cut over without code changes.
+ * Handles `GET /api/sessions/{sessionId}/chats`. Lists chats in the
+ * session as camelCase summaries with per-account unread state, plus
+ * the caller's default model id.
  *
  * @param request - The incoming request.
  * @param sessionId - The id of the parent session.
@@ -26,7 +22,7 @@ export async function getSessionChatsHandler(
     return validated;
   }
 
-  const chats = await getChatSummariesBySessionId({
+  const chats = await getChatSummaries({
     sessionId,
     accountId: validated.auth.accountId,
   });

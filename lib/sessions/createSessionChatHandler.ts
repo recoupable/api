@@ -17,9 +17,6 @@ const INITIAL_CHAT_TITLE = "New chat";
  * session, 409 is returned. Otherwise a new chat is inserted with
  * title "New chat".
  *
- * Response shape mirrors open-agents' `POST /api/sessions/[sessionId]/chats`
- * so the existing frontend can cut over without code changes.
- *
  * @param request - The incoming request.
  * @param sessionId - The id of the parent session.
  * @returns A NextResponse with `{ chat }` on 200, `{ error }` on 4xx, or an error.

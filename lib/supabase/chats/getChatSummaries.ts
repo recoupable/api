@@ -15,18 +15,14 @@ export interface ChatSummary {
 }
 
 /**
- * Returns every chat in the given session as a camelCase `ChatSummary`
- * for the open-agents `/api/sessions/[sessionId]/chats` wire format.
- * Per-account `hasUnread` is derived from the caller's `chat_reads`
- * row (if any); `isStreaming` is derived from `active_stream_id`.
- *
- * Mirrors open-agents' `getChatSummariesBySessionId` so the existing
- * frontend can cut over without code changes.
+ * Returns chats in the given session as camelCase `ChatSummary` rows.
+ * `hasUnread` is derived from the caller's `chat_reads` row (if any);
+ * `isStreaming` is derived from `active_stream_id`.
  *
  * @param params - The session id to list and the account id to scope reads to.
  * @returns Chat summaries sorted by `createdAt` ascending.
  */
-export async function getChatSummariesBySessionId({
+export async function getChatSummaries({
   sessionId,
   accountId,
 }: {

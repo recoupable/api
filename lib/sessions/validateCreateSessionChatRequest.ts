@@ -27,8 +27,8 @@ export interface ValidatedCreateSessionChatRequest {
  *   4. Parses the JSON body (malformed JSON is treated as empty)
  *   5. Validates the optional `{ id }` field
  *
- * An explicitly empty or non-string id is rejected with the same 400
- * shape open-agents used (`{ error: "Invalid chat id" }`) for parity.
+ * An explicitly empty or non-string id is rejected with a 400
+ * `{ error: "Invalid chat id" }`.
  *
  * @param request - The incoming request.
  * @param sessionId - The id of the parent session.
