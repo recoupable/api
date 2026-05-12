@@ -1,35 +1,48 @@
-import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
-import { selectTemplateShares } from "@/lib/supabase/template_shares/selectTemplateShares";
+import supabase from "@/lib/supabase/serverClient";
 
 /**
- * For each supplied template id, returns the list of emails it has been
- * shared with — by joining `template_shares` to `account_emails`. Empty
- * input returns an empty map.
+ * For each supplied template id, returns the emails it has been shared with.
+ * One round trip: embeds the share's `user_id → accounts → account_emails`
+ * chain in a single PostgREST query, then groups + dedupes the emails by
+ * template id in memory. Empty input returns an empty map.
+ *
+ * PostgREST doesn't support array aggregation in select strings, so the
+ * grouping step has to live here (or in a Postgres view/RPC, which would
+ * be a schema change).
  */
 export async function resolveSharedEmails(
   templateIds: string[],
 ): Promise<Record<string, string[]>> {
   if (templateIds.length === 0) return {};
 
-  const shares = await selectTemplateShares(templateIds);
-  if (shares.length === 0) return {};
+  const { data, error } = await supabase
+    .from("agent_template_shares")
+    .select(
+      `
+      template_id,
+      sharee:accounts!agent_template_shares_user_id_fkey (
+        account_emails ( email )
+      )
+    `,
+    )
+    .in("template_id", templateIds);
 
-  const accountIds = Array.from(new Set(shares.map(s => s.user_id)));
-  const accountEmails = await selectAccountEmails({ accountIds });
-
-  const emailsByAccount = new Map<string, string[]>();
-  accountEmails.forEach(row => {
-    if (!row.account_id || !row.email) return;
-    const list = emailsByAccount.get(row.account_id) ?? [];
-    list.push(row.email);
-    emailsByAccount.set(row.account_id, list);
-  });
+  if (error) {
+    console.error("Error selecting template shares with emails:", error);
+    throw new Error(`resolveSharedEmails failed: ${error.message}`);
+  }
 
   const result: Record<string, string[]> = {};
-  shares.forEach(share => {
-    const list = result[share.template_id] ?? [];
-    list.push(...(emailsByAccount.get(share.user_id) ?? []));
-    result[share.template_id] = list;
+  (data ?? []).forEach(row => {
+    const shareeList = Array.isArray(row.sharee) ? row.sharee : row.sharee ? [row.sharee] : [];
+    shareeList.forEach(sharee => {
+      sharee.account_emails?.forEach(ae => {
+        if (!ae?.email) return;
+        const list = result[row.template_id] ?? [];
+        list.push(ae.email);
+        result[row.template_id] = list;
+      });
+    });
   });
   Object.keys(result).forEach(id => {
     result[id] = Array.from(new Set(result[id]));
