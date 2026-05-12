@@ -72,7 +72,7 @@ export async function selectTemplates(
       .select(SELECT)
       .eq("id", params.id)
       .eq("caller_favorite.user_id", callerId)
-      .eq("org_membership.organization_id", RECOUP_ORG_ID);
+      .eq("creator.org_membership.organization_id", RECOUP_ORG_ID);
     if (error) {
       console.error("Error selecting template by id:", error);
       throw new Error(`selectTemplates(id) failed: ${error.message}`);
@@ -86,14 +86,14 @@ export async function selectTemplates(
         .select(SELECT)
         .or(`creator.eq.${accountId},is_private.eq.false`)
         .eq("caller_favorite.user_id", callerId)
-        .eq("org_membership.organization_id", RECOUP_ORG_ID)
+        .eq("creator.org_membership.organization_id", RECOUP_ORG_ID)
         .order("title"),
       supabase
         .from("agent_template_shares")
         .select(`template:agent_templates!agent_template_shares_template_id_fkey (${SELECT})`)
         .eq("user_id", accountId)
-        .eq("caller_favorite.user_id", callerId)
-        .eq("org_membership.organization_id", RECOUP_ORG_ID),
+        .eq("template.caller_favorite.user_id", callerId)
+        .eq("template.creator.org_membership.organization_id", RECOUP_ORG_ID),
     ]);
     if (owned.error) {
       console.error("Error selecting owned/public templates:", owned.error);
