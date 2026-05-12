@@ -1,8 +1,22 @@
+import type { QueryData } from "@supabase/supabase-js";
 import supabase from "@/lib/supabase/serverClient";
-import {
-  TEMPLATE_WITH_CREATOR_SELECT,
-  type RawTemplate,
-} from "@/lib/supabase/templates/templateWithCreatorSelect";
+
+/**
+ * The one SELECT for reading templates. The creator account is always
+ * joined — there's no "template without creator" path in this codebase.
+ */
+const SELECT = `
+  *,
+  creator:accounts!agent_templates_creator_fkey (
+    id,
+    name,
+    account_info ( image )
+  )
+` as const;
+
+const _typedQuery = supabase.from("agent_templates").select(SELECT);
+
+export type RawTemplate = QueryData<typeof _typedQuery>[number];
 
 export type FetchRawTemplatesParams = { id: string } | { accessibleTo: string };
 
@@ -19,7 +33,7 @@ export async function fetchRawTemplates(params: FetchRawTemplatesParams): Promis
   if ("id" in params) {
     const { data, error } = await supabase
       .from("agent_templates")
-      .select(TEMPLATE_WITH_CREATOR_SELECT)
+      .select(SELECT)
       .eq("id", params.id);
     if (error) {
       console.error("Error selecting template by id:", error);
@@ -32,14 +46,12 @@ export async function fetchRawTemplates(params: FetchRawTemplatesParams): Promis
   const [ownedAndPublic, shared] = await Promise.all([
     supabase
       .from("agent_templates")
-      .select(TEMPLATE_WITH_CREATOR_SELECT)
+      .select(SELECT)
       .or(`creator.eq.${accountId},is_private.eq.false`)
       .order("title"),
     supabase
       .from("agent_template_shares")
-      .select(
-        `template:agent_templates!agent_template_shares_template_id_fkey (${TEMPLATE_WITH_CREATOR_SELECT})`,
-      )
+      .select(`template:agent_templates!agent_template_shares_template_id_fkey (${SELECT})`)
       .eq("user_id", accountId),
   ]);
 

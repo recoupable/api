@@ -4,7 +4,7 @@ import { selectTemplateFavorites } from "@/lib/supabase/template_favorites/selec
 import { fetchRawTemplates } from "@/lib/supabase/templates/fetchRawTemplates";
 import { flattenCreator, type TemplateCreator } from "@/lib/supabase/templates/flattenCreator";
 import { resolveSharedEmails } from "@/lib/supabase/templates/resolveSharedEmails";
-import type { RawTemplate } from "@/lib/supabase/templates/templateWithCreatorSelect";
+import type { RawTemplate } from "@/lib/supabase/templates/fetchRawTemplates";
 
 export type { TemplateCreator } from "@/lib/supabase/templates/flattenCreator";
 
