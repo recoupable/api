@@ -26,7 +26,7 @@ export async function resolveStripeCustomerForAccount(accountId: string): Promis
 
   const created = await stripeClient.customers.create(
     { metadata: { accountId } },
-    { idempotencyKey: `customer-create-account-${accountId}` },
+    { idempotencyKey: accountId },
   );
   return created.id;
 }

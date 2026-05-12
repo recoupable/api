@@ -56,26 +56,20 @@ describe("resolveStripeCustomerForAccount", () => {
 
     expect(result).toBe("cus_new");
     expect(customersCreate).toHaveBeenCalledWith(
-      {
-        metadata: { accountId: ACCOUNT },
-      },
-      expect.objectContaining({
-        idempotencyKey: expect.stringContaining(ACCOUNT),
-      }),
+      { metadata: { accountId: ACCOUNT } },
+      { idempotencyKey: ACCOUNT },
     );
   });
 
-  it("uses a deterministic Stripe idempotency key derived from accountId so back-to-back creates dedupe", async () => {
+  it("uses accountId as the Stripe idempotency key so back-to-back creates dedupe", async () => {
     customersSearch.mockResolvedValue(searchResult([]));
     customersCreate.mockResolvedValue({ id: "cus_new" });
 
     await resolveStripeCustomerForAccount(ACCOUNT);
     await resolveStripeCustomerForAccount(ACCOUNT);
 
-    const firstKey = customersCreate.mock.calls[0][1]?.idempotencyKey;
-    const secondKey = customersCreate.mock.calls[1][1]?.idempotencyKey;
-    expect(firstKey).toBeTruthy();
-    expect(secondKey).toBe(firstKey);
+    expect(customersCreate.mock.calls[0][1]?.idempotencyKey).toBe(ACCOUNT);
+    expect(customersCreate.mock.calls[1][1]?.idempotencyKey).toBe(ACCOUNT);
   });
 
   it("prefers the first match when search returns multiple Customers", async () => {
