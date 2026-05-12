@@ -25,8 +25,22 @@ export async function listTemplatesHandler(request: NextRequest): Promise<NextRe
     );
   } catch (error) {
     console.error("[ERROR] listTemplatesHandler:", error);
+    // TEMP DEBUG — echo full error so curl can read the postgrest message.
+    // Remove before merge.
+    const debug = request.nextUrl.searchParams.get("debug") === "1";
     return NextResponse.json(
-      { status: "error", error: "Internal server error" },
+      {
+        status: "error",
+        error: "Internal server error",
+        ...(debug
+          ? {
+              debug: {
+                message: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined,
+              },
+            }
+          : {}),
+      },
       { status: 500, headers: getCorsHeaders() },
     );
   }

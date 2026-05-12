@@ -76,7 +76,9 @@ export async function selectTemplates(
       .eq("caller_favorite.user_id", callerId);
     if (error) {
       console.error("Error selecting template by id:", error);
-      throw new Error(`selectTemplates(id) failed: ${error.message}`);
+      throw new Error(
+        `selectTemplates(id) failed: ${error.message} | code=${error.code} | details=${error.details} | hint=${error.hint}`,
+      );
     }
     rows = data ?? [];
   } else {
@@ -98,11 +100,15 @@ export async function selectTemplates(
     ]);
     if (owned.error) {
       console.error("Error selecting owned/public templates:", owned.error);
-      throw new Error(`selectTemplates(accessibleTo) owned/public failed: ${owned.error.message}`);
+      throw new Error(
+        `selectTemplates(accessibleTo) owned/public failed: ${owned.error.message} | code=${owned.error.code} | details=${owned.error.details} | hint=${owned.error.hint}`,
+      );
     }
     if (shared.error) {
       console.error("Error selecting shared templates:", shared.error);
-      throw new Error(`selectTemplates(accessibleTo) shared failed: ${shared.error.message}`);
+      throw new Error(
+        `selectTemplates(accessibleTo) shared failed: ${shared.error.message} | code=${shared.error.code} | details=${shared.error.details} | hint=${shared.error.hint}`,
+      );
     }
     const sharedRows = (shared.data ?? []).flatMap(s => {
       const t = (s as { template: RawTemplate | RawTemplate[] | null }).template;
