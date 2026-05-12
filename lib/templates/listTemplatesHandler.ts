@@ -25,13 +25,8 @@ export async function listTemplatesHandler(request: NextRequest): Promise<NextRe
     );
   } catch (error) {
     console.error("[ERROR] listTemplatesHandler:", error);
-    const debug = request.nextUrl.searchParams.get("debug") === "1";
     return NextResponse.json(
-      {
-        status: "error",
-        error: "Internal server error",
-        ...(debug ? { debug: { message: error instanceof Error ? error.message : String(error) } } : {}),
-      },
+      { status: "error", error: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
     );
   }
