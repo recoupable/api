@@ -7,11 +7,11 @@ import stripeClient from "@/lib/stripe/client";
  * creates a new Customer with `metadata.accountId` stamped so subsequent
  * lookups for the same account succeed.
  *
- * Note: Stripe's search index is eventually consistent (~60s lag after
- * Customer creation). Two concurrent calls for a brand-new accountId may
- * both miss the search and create duplicate Customers. Acceptable for
- * top-up cadence — concurrent first-top-ups for the same account are
- * exceedingly rare.
+ * Stripe's search index is eventually consistent (~60s lag after Customer
+ * creation), so two back-to-back calls for a brand-new accountId can both
+ * miss the search. The Customer-create call uses a deterministic Stripe
+ * idempotency key derived from accountId so Stripe dedupes those races
+ * within its 24-hour idempotency window.
  */
 export async function resolveStripeCustomerForAccount(accountId: string): Promise<string> {
   const search = await stripeClient.customers.search({
@@ -24,8 +24,9 @@ export async function resolveStripeCustomerForAccount(accountId: string): Promis
     return existing.id;
   }
 
-  const created = await stripeClient.customers.create({
-    metadata: { accountId },
-  });
+  const created = await stripeClient.customers.create(
+    { metadata: { accountId } },
+    { idempotencyKey: `customer-create-account-${accountId}` },
+  );
   return created.id;
 }
