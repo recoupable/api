@@ -22,14 +22,28 @@ export async function listTemplatesHandler(request: NextRequest): Promise<NextRe
     // TEMP DEBUG
     if (request.nextUrl.searchParams.get("debug") === "raw") {
       const SIDNEY = "848cd58d-700f-4b38-ab4c-d9f526402e3c";
-      const { data: rawProbe } = await (
-        await import("@/lib/supabase/serverClient")
-      ).default
-        .from("accounts")
-        .select("id, name, account_organization_ids!account_organization_ids_account_id_fkey ( organization_id )")
-        .eq("id", SIDNEY);
+      const { RECOUP_ORG_ID } = await import("@/lib/const");
+      const supa = (await import("@/lib/supabase/serverClient")).default;
+      const [direct, all, recoupMembers] = await Promise.all([
+        supa
+          .from("account_organization_ids")
+          .select("*")
+          .eq("account_id", SIDNEY)
+          .eq("organization_id", RECOUP_ORG_ID),
+        supa.from("account_organization_ids").select("*").eq("account_id", SIDNEY),
+        supa
+          .from("account_organization_ids")
+          .select("account_id")
+          .eq("organization_id", RECOUP_ORG_ID)
+          .limit(10),
+      ]);
       return NextResponse.json(
-        { rawProbe, RECOUP_ORG_ID_const: (await import("@/lib/const")).RECOUP_ORG_ID },
+        {
+          RECOUP_ORG_ID_const: RECOUP_ORG_ID,
+          sidney_recoup_row: direct.data,
+          sidney_all_orgs: all.data,
+          recoup_members_sample: recoupMembers.data,
+        },
         { headers: getCorsHeaders() },
       );
     }
