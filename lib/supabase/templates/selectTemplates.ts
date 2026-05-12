@@ -88,7 +88,7 @@ export async function selectTemplates(
         .from("agent_templates")
         .select(SELECT)
         .or(`creator.eq.${accountId},is_private.eq.false`)
-        .eq("creator.org_membership.organization_id", RECOUP_ORG_ID)
+        // DEBUG: dropped .eq("creator.org_membership.organization_id", ...) temporarily
         .eq("caller_favorite.user_id", callerId)
         .order("title"),
       supabase
