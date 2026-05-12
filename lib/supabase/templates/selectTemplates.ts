@@ -52,10 +52,67 @@ export async function selectTemplates(
   params: SelectTemplatesParams,
   forAccountId?: string,
 ): Promise<Template[]> {
-  const rows = await fetchRaw(params);
+  let rows: RawTemplate[];
+
+  if ("id" in params) {
+    const { data, error } = await supabase
+      .from("agent_templates")
+      .select(SELECT)
+      .eq("id", params.id);
+    if (error) {
+      console.error("Error selecting template by id:", error);
+      throw new Error(`selectTemplates(id) failed: ${error.message}`);
+    }
+    rows = data ?? [];
+  } else {
+    const accountId = params.accessibleTo;
+    const [ownedAndPublic, shared] = await Promise.all([
+      supabase
+        .from("agent_templates")
+        .select(SELECT)
+        .or(`creator.eq.${accountId},is_private.eq.false`)
+        .order("title"),
+      supabase
+        .from("agent_template_shares")
+        .select(`template:agent_templates!agent_template_shares_template_id_fkey (${SELECT})`)
+        .eq("user_id", accountId),
+    ]);
+
+    if (ownedAndPublic.error) {
+      console.error("Error selecting owned/public templates:", ownedAndPublic.error);
+      throw new Error(
+        `selectTemplates(accessibleTo) owned/public failed: ${ownedAndPublic.error.message}`,
+      );
+    }
+    if (shared.error) {
+      console.error("Error selecting shared templates:", shared.error);
+      throw new Error(`selectTemplates(accessibleTo) shared failed: ${shared.error.message}`);
+    }
+
+    const byId = new Map<string, RawTemplate>();
+    (ownedAndPublic.data ?? []).forEach(row => byId.set(row.id, row));
+    (shared.data ?? []).forEach(s => {
+      const { template } = s as { template: RawTemplate | RawTemplate[] | null };
+      if (!template) return;
+      const list = Array.isArray(template) ? template : [template];
+      list.forEach(t => {
+        if (t && !byId.has(t.id)) byId.set(t.id, t);
+      });
+    });
+    rows = Array.from(byId.values());
+  }
+
   if (rows.length === 0) return [];
 
-  const adminAccountIds = await getAdminAccountIds(uniqueCreatorIds(rows));
+  const creatorIds = new Set<string>();
+  rows.forEach(row => {
+    const c = row.creator;
+    if (!c) return;
+    const single = Array.isArray(c) ? c[0] : c;
+    if (single?.id) creatorIds.add(single.id);
+  });
+  const adminAccountIds = await getAdminAccountIds(Array.from(creatorIds));
+
   const flattened = rows.map(row => ({
     ...row,
     creator: flattenCreator(row.creator, adminAccountIds),
@@ -82,65 +139,4 @@ export async function selectTemplates(
         row.is_private && row.creator?.id === forAccountId ? (sharedEmailsMap[row.id] ?? []) : [],
     }))
     .sort((a, b) => a.title.localeCompare(b.title));
-}
-
-async function fetchRaw(params: SelectTemplatesParams): Promise<RawTemplate[]> {
-  if ("id" in params) {
-    const { data, error } = await supabase
-      .from("agent_templates")
-      .select(SELECT)
-      .eq("id", params.id);
-    if (error) {
-      console.error("Error selecting template by id:", error);
-      throw new Error(`selectTemplates(id) failed: ${error.message}`);
-    }
-    return data ?? [];
-  }
-
-  const accountId = params.accessibleTo;
-  const [ownedAndPublic, shared] = await Promise.all([
-    supabase
-      .from("agent_templates")
-      .select(SELECT)
-      .or(`creator.eq.${accountId},is_private.eq.false`)
-      .order("title"),
-    supabase
-      .from("agent_template_shares")
-      .select(`template:agent_templates!agent_template_shares_template_id_fkey (${SELECT})`)
-      .eq("user_id", accountId),
-  ]);
-
-  if (ownedAndPublic.error) {
-    console.error("Error selecting owned/public templates:", ownedAndPublic.error);
-    throw new Error(
-      `selectTemplates(accessibleTo) owned/public failed: ${ownedAndPublic.error.message}`,
-    );
-  }
-  if (shared.error) {
-    console.error("Error selecting shared templates:", shared.error);
-    throw new Error(`selectTemplates(accessibleTo) shared failed: ${shared.error.message}`);
-  }
-
-  const byId = new Map<string, RawTemplate>();
-  (ownedAndPublic.data ?? []).forEach(row => byId.set(row.id, row));
-  (shared.data ?? []).forEach(s => {
-    const { template } = s as { template: RawTemplate | RawTemplate[] | null };
-    if (!template) return;
-    const list = Array.isArray(template) ? template : [template];
-    list.forEach(t => {
-      if (t && !byId.has(t.id)) byId.set(t.id, t);
-    });
-  });
-  return Array.from(byId.values());
-}
-
-function uniqueCreatorIds(rows: RawTemplate[]): string[] {
-  const ids = new Set<string>();
-  rows.forEach(row => {
-    const c = row.creator;
-    if (!c) return;
-    const single = Array.isArray(c) ? c[0] : c;
-    if (single?.id) ids.add(single.id);
-  });
-  return Array.from(ids);
 }
