@@ -19,6 +19,21 @@ export async function listTemplatesHandler(request: NextRequest): Promise<NextRe
     const accountId = authResult.accountId;
     const templates = await selectTemplates({ accessibleTo: accountId }, accountId);
 
+    // TEMP DEBUG
+    if (request.nextUrl.searchParams.get("debug") === "raw") {
+      const SIDNEY = "848cd58d-700f-4b38-ab4c-d9f526402e3c";
+      const { data: rawProbe } = await (
+        await import("@/lib/supabase/serverClient")
+      ).default
+        .from("accounts")
+        .select("id, name, account_organization_ids!account_organization_ids_account_id_fkey ( organization_id )")
+        .eq("id", SIDNEY);
+      return NextResponse.json(
+        { rawProbe, RECOUP_ORG_ID_const: (await import("@/lib/const")).RECOUP_ORG_ID },
+        { headers: getCorsHeaders() },
+      );
+    }
+
     return NextResponse.json(
       { status: "success", templates },
       { status: 200, headers: getCorsHeaders() },
