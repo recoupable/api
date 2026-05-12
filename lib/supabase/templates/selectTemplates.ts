@@ -18,15 +18,19 @@ export type Template = Omit<Tables<"agent_templates">, "creator"> & {
 
 export type SelectTemplatesParams = { id: string } | { accessibleTo: string };
 
-// Sentinel used for the favorite filter when no caller is passed (validators).
-// PostgREST filters the embed by user_id; this UUID matches nothing →
-// caller_favorite stays empty and `is_favourite` resolves to `false`.
+// Sentinel for the favorite-embed filter when no caller is passed (validators).
+// This UUID never matches a real user_id, so `caller_favorite` stays empty and
+// `is_favourite` resolves to `false`.
 const NO_CALLER = "00000000-0000-0000-0000-000000000000";
 
-// Everything the API response needs, in one shot:
-//   creator.org_membership → presence ⇒ is_admin
-//   caller_favorite        → presence ⇒ is_favourite (filtered to caller)
+// Single SELECT for everything the API response needs:
+//   creator.org_membership → presence of RECOUP_ORG_ID ⇒ is_admin
+//   caller_favorite        → presence ⇒ is_favourite (filtered to caller at query level)
 //   template_shares.sharee.account_emails → flatten ⇒ shared_emails
+//
+// The org_membership embed isn't filtered at the query level because
+// supabase-js's filter path doesn't reliably support double-nested
+// embeds; we keep the filter in JS via `.some()` instead.
 const SELECT = `
   *,
   creator:accounts!agent_templates_creator_fkey (
@@ -52,10 +56,9 @@ type RawTemplate = QueryData<typeof _typedQuery>[number];
  * - `{ id }`           → row with that id, or empty array
  * - `{ accessibleTo }` → own + public + shared (deduped, sorted by title)
  *
- * Everything the response needs — `is_admin`, `is_favourite`,
- * `shared_emails` — is embedded in the same query via PostgREST joins.
- * The JS step just unwraps the embedded arrays into booleans and dedupes
- * emails.
+ * Everything the response needs — is_admin, is_favourite, shared_emails —
+ * comes from the embedded SELECT. JS only unwraps embedded arrays into
+ * booleans and dedupes emails.
  *
  * Throws on database error.
  */
@@ -75,9 +78,7 @@ export async function selectTemplates(
       .eq("caller_favorite.user_id", callerId);
     if (error) {
       console.error("Error selecting template by id:", error);
-      throw new Error(
-        `selectTemplates(id) failed: ${error.message} | code=${error.code} | details=${error.details} | hint=${error.hint}`,
-      );
+      throw new Error(`selectTemplates(id) failed: ${error.message}`);
     }
     rows = data ?? [];
   } else {
@@ -97,15 +98,11 @@ export async function selectTemplates(
     ]);
     if (owned.error) {
       console.error("Error selecting owned/public templates:", owned.error);
-      throw new Error(
-        `selectTemplates(accessibleTo) owned/public failed: ${owned.error.message} | code=${owned.error.code} | details=${owned.error.details} | hint=${owned.error.hint}`,
-      );
+      throw new Error(`selectTemplates(accessibleTo) owned/public failed: ${owned.error.message}`);
     }
     if (shared.error) {
       console.error("Error selecting shared templates:", shared.error);
-      throw new Error(
-        `selectTemplates(accessibleTo) shared failed: ${shared.error.message} | code=${shared.error.code} | details=${shared.error.details} | hint=${shared.error.hint}`,
-      );
+      throw new Error(`selectTemplates(accessibleTo) shared failed: ${shared.error.message}`);
     }
     const sharedRows = (shared.data ?? []).flatMap(s => {
       const t = (s as { template: RawTemplate | RawTemplate[] | null }).template;
@@ -132,8 +129,7 @@ export async function selectTemplates(
             ),
           }
         : null;
-      const isOwnedPrivate =
-        !!forAccountId && row.is_private && creator?.id === forAccountId;
+      const isOwnedPrivate = !!forAccountId && row.is_private && creator?.id === forAccountId;
       const sharedEmails = isOwnedPrivate
         ? Array.from(
             new Set(
