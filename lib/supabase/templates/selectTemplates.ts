@@ -33,7 +33,7 @@ const SELECT = `
     id,
     name,
     account_info ( image ),
-    org_membership:account_organization_ids ( organization_id )
+    org_membership:account_organization_ids!account_organization_ids_account_id_fkey ( organization_id )
   ),
   caller_favorite:agent_template_favorites ( user_id ),
   template_shares:agent_template_shares (
