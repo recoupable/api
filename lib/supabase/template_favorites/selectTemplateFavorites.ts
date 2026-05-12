@@ -2,10 +2,9 @@ import supabase from "@/lib/supabase/serverClient";
 import type { Tables } from "@/types/database.types";
 
 /**
- * Selects raw `template_favorites` rows for the given account.
- *
- * Returns an empty array on database error (and logs it). Callers that need
- * a Set of template ids should compose it themselves.
+ * Selects raw `template_favorites` rows for the given account. Throws on
+ * database error so callers can distinguish a real failure from "account
+ * has no favorites".
  */
 export async function selectTemplateFavorites(
   accountId: string,
@@ -17,7 +16,7 @@ export async function selectTemplateFavorites(
 
   if (error) {
     console.error("Error selecting template_favorites:", error);
-    return [];
+    throw new Error(`selectTemplateFavorites failed: ${error.message}`);
   }
 
   return data ?? [];

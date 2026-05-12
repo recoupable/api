@@ -124,7 +124,10 @@ async function fetchRaw(params: SelectTemplatesParams): Promise<RawTemplate[]> {
       if (t && !byId.has(t.id)) byId.set(t.id, t);
     });
   });
-  return Array.from(byId.values());
+  // Re-sort: owned/public came in title order, but shared rows merged in
+  // afterward break the order. Sort the combined set so the response is
+  // consistently alphabetised regardless of dedup interleaving.
+  return Array.from(byId.values()).sort((a, b) => a.title.localeCompare(b.title));
 }
 
 /**
