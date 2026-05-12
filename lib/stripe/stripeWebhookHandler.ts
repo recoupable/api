@@ -21,7 +21,7 @@ export async function stripeWebhookHandler(request: NextRequest): Promise<NextRe
   } catch (error) {
     console.error("[stripeWebhookHandler]", { eventId: event.id, eventType: event.type, error });
     return NextResponse.json(
-      { error: "Webhook handler failed" },
+      { error: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
     );
   }

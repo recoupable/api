@@ -20,13 +20,14 @@ describe("createCreditsStripeSession", () => {
     });
   });
 
-  it("creates a one-time payment checkout with dynamic price_data at 1 cent per credit", async () => {
+  it("creates a one-time payment checkout with two line items: credits @ 1¢ + processing fee", async () => {
     await createCreditsStripeSession({
       accountId: "acc-1",
       credits: 250,
       successUrl: "https://example.com/success",
     });
 
+    // For 250 credits: gross-up math is ceil((250 + 30) / 0.971) = 289¢, so fee = 39¢
     expect(checkoutSessionsCreate).toHaveBeenCalledWith({
       line_items: [
         {
@@ -36,6 +37,14 @@ describe("createCreditsStripeSession", () => {
             product_data: { name: "Recoup credits" },
           },
           quantity: 250,
+        },
+        {
+          price_data: {
+            currency: "usd",
+            unit_amount: 39,
+            product_data: { name: "Processing fee" },
+          },
+          quantity: 1,
         },
       ],
       mode: "payment",

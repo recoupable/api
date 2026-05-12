@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import stripeClient from "@/lib/stripe/client";
-import { CREDIT_TOPUP_PURPOSE } from "@/lib/stripe/config";
+import { CREDIT_TOPUP_PURPOSE } from "@/lib/stripe/creditsTopupPurpose";
+import { computeCreditsTopupCharge } from "@/lib/stripe/computeCreditsTopupCharge";
 
 /**
  * One credit equals one US cent ($0.01). Total charge = unit_amount * credits.
@@ -24,6 +25,8 @@ export async function createCreditsStripeSession({
     purpose: CREDIT_TOPUP_PURPOSE,
   };
 
+  const { feeCents } = computeCreditsTopupCharge(credits);
+
   const sessionData: Stripe.Checkout.SessionCreateParams = {
     line_items: [
       {
@@ -33,6 +36,14 @@ export async function createCreditsStripeSession({
           product_data: { name: "Recoup credits" },
         },
         quantity: credits,
+      },
+      {
+        price_data: {
+          currency: "usd",
+          unit_amount: feeCents,
+          product_data: { name: "Processing fee" },
+        },
+        quantity: 1,
       },
     ],
     mode: "payment",

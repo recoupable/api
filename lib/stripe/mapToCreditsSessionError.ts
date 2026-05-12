@@ -22,5 +22,8 @@ export function mapToCreditsSessionError(res: NextResponse): Promise<NextRespons
         else if (typeof o.message === "string") message = o.message;
       }
       return NextResponse.json({ error: message }, { status, headers: getCorsHeaders() });
-    });
+    })
+    .catch(() =>
+      NextResponse.json({ error: "Unauthorized" }, { status, headers: getCorsHeaders() }),
+    );
 }

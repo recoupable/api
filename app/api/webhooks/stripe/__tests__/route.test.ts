@@ -1,12 +1,5 @@
-import { vi, describe, it, expect } from "vitest";
-
-vi.mock("@/lib/networking/getCorsHeaders", () => ({
-  getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
-}));
-
-vi.mock("@/lib/stripe/stripeWebhookHandler", () => ({
-  stripeWebhookHandler: vi.fn(),
-}));
+import "./routeTestMocks";
+import { describe, it, expect } from "vitest";
 
 const { POST, OPTIONS } = await import("../route");
 

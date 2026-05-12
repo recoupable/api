@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import { incrementRemainingCredits } from "@/lib/supabase/credits_usage/incrementRemainingCredits";
-import { CREDIT_TOPUP_PURPOSE } from "@/lib/stripe/config";
+import { CREDIT_TOPUP_PURPOSE } from "@/lib/stripe/creditsTopupPurpose";
 
 export async function processCreditsTopupSession(session: Stripe.Checkout.Session): Promise<void> {
   if (session.mode !== "payment") return;

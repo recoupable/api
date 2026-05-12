@@ -10,11 +10,7 @@ export async function createCreditsSessionHandler(request: NextRequest): Promise
       return validated;
     }
 
-    const session = await createCreditsStripeSession({
-      accountId: validated.accountId,
-      credits: validated.credits,
-      successUrl: validated.successUrl,
-    });
+    const session = await createCreditsStripeSession(validated);
     if (!session.url) {
       return NextResponse.json(
         { error: "Checkout session URL missing" },

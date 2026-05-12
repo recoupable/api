@@ -80,6 +80,6 @@ describe("stripeWebhookHandler", () => {
 
     const res = await stripeWebhookHandler(makeReq());
     expect(res.status).toBe(500);
-    await expect(res.json()).resolves.toEqual({ error: "Webhook handler failed" });
+    await expect(res.json()).resolves.toEqual({ error: "Internal server error" });
   });
 });
