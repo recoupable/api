@@ -1,12 +1,29 @@
+import type { QueryData } from "@supabase/supabase-js";
+import supabase from "@/lib/supabase/serverClient";
 import type { Tables } from "@/types/database.types";
 import { getAdminAccountIds } from "@/lib/admins/getAdminAccountIds";
 import { selectTemplateFavorites } from "@/lib/supabase/template_favorites/selectTemplateFavorites";
-import { fetchRawTemplates } from "@/lib/supabase/templates/fetchRawTemplates";
 import { flattenCreator, type TemplateCreator } from "@/lib/supabase/templates/flattenCreator";
 import { resolveSharedEmails } from "@/lib/supabase/templates/resolveSharedEmails";
-import type { RawTemplate } from "@/lib/supabase/templates/fetchRawTemplates";
 
 export type { TemplateCreator } from "@/lib/supabase/templates/flattenCreator";
+
+/**
+ * The one SELECT for reading templates. Creator is always joined — there's
+ * no "template without creator" path in this codebase.
+ */
+const SELECT = `
+  *,
+  creator:accounts!agent_templates_creator_fkey (
+    id,
+    name,
+    account_info ( image )
+  )
+` as const;
+
+const _typedQuery = supabase.from("agent_templates").select(SELECT);
+
+export type RawTemplate = QueryData<typeof _typedQuery>[number];
 
 export type Template = Omit<Tables<"agent_templates">, "creator"> & {
   creator: TemplateCreator | null;
@@ -35,7 +52,7 @@ export async function selectTemplates(
   params: SelectTemplatesParams,
   forAccountId?: string,
 ): Promise<Template[]> {
-  const rows = await fetchRawTemplates(params);
+  const rows = await fetchRaw(params);
   if (rows.length === 0) return [];
 
   const adminAccountIds = await getAdminAccountIds(uniqueCreatorIds(rows));
@@ -65,6 +82,56 @@ export async function selectTemplates(
         row.is_private && row.creator?.id === forAccountId ? (sharedEmailsMap[row.id] ?? []) : [],
     }))
     .sort((a, b) => a.title.localeCompare(b.title));
+}
+
+async function fetchRaw(params: SelectTemplatesParams): Promise<RawTemplate[]> {
+  if ("id" in params) {
+    const { data, error } = await supabase
+      .from("agent_templates")
+      .select(SELECT)
+      .eq("id", params.id);
+    if (error) {
+      console.error("Error selecting template by id:", error);
+      throw new Error(`selectTemplates(id) failed: ${error.message}`);
+    }
+    return data ?? [];
+  }
+
+  const accountId = params.accessibleTo;
+  const [ownedAndPublic, shared] = await Promise.all([
+    supabase
+      .from("agent_templates")
+      .select(SELECT)
+      .or(`creator.eq.${accountId},is_private.eq.false`)
+      .order("title"),
+    supabase
+      .from("agent_template_shares")
+      .select(`template:agent_templates!agent_template_shares_template_id_fkey (${SELECT})`)
+      .eq("user_id", accountId),
+  ]);
+
+  if (ownedAndPublic.error) {
+    console.error("Error selecting owned/public templates:", ownedAndPublic.error);
+    throw new Error(
+      `selectTemplates(accessibleTo) owned/public failed: ${ownedAndPublic.error.message}`,
+    );
+  }
+  if (shared.error) {
+    console.error("Error selecting shared templates:", shared.error);
+    throw new Error(`selectTemplates(accessibleTo) shared failed: ${shared.error.message}`);
+  }
+
+  const byId = new Map<string, RawTemplate>();
+  (ownedAndPublic.data ?? []).forEach(row => byId.set(row.id, row));
+  (shared.data ?? []).forEach(s => {
+    const { template } = s as { template: RawTemplate | RawTemplate[] | null };
+    if (!template) return;
+    const list = Array.isArray(template) ? template : [template];
+    list.forEach(t => {
+      if (t && !byId.has(t.id)) byId.set(t.id, t);
+    });
+  });
+  return Array.from(byId.values());
 }
 
 function uniqueCreatorIds(rows: RawTemplate[]): string[] {

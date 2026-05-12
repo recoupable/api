@@ -1,4 +1,4 @@
-import type { RawTemplate } from "@/lib/supabase/templates/fetchRawTemplates";
+import type { RawTemplate } from "@/lib/supabase/templates/selectTemplates";
 
 export interface TemplateCreator {
   id: string;
