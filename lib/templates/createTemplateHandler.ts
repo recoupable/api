@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { safeParseJson } from "@/lib/networking/safeParseJson";
-import { validateCreateTemplateBody } from "@/lib/templates/validateCreateTemplateBody";
+import { validateCreateTemplateRequest } from "@/lib/templates/validateCreateTemplateRequest";
 import { insertTemplate } from "@/lib/supabase/templates/insertTemplate";
 import { insertTemplateShares } from "@/lib/supabase/template_shares/insertTemplateShares";
 import { selectTemplates } from "@/lib/supabase/templates/selectTemplates";
@@ -10,27 +8,23 @@ import { selectTemplates } from "@/lib/supabase/templates/selectTemplates";
 /**
  * Handler for POST /api/agents/templates.
  *
- * Creates an template owned by the authenticated account. When
- * `is_private=true`, supplied `share_emails` are resolved to accounts and
- * upserted into template_shares.
+ * Creates a template owned by the authenticated account. When `is_private`
+ * is true, supplied `share_emails` are resolved to accounts and upserted
+ * into template_shares.
  */
 export async function createTemplateHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const authResult = await validateAuthContext(request);
-    if (authResult instanceof NextResponse) return authResult;
+    const validated = await validateCreateTemplateRequest(request);
+    if (validated instanceof NextResponse) return validated;
 
-    const body = await safeParseJson(request);
-    const parsedBody = validateCreateTemplateBody(body);
-    if (parsedBody instanceof NextResponse) return parsedBody;
-
-    const accountId = authResult.accountId;
+    const { accountId, body } = validated;
 
     const inserted = await insertTemplate({
-      title: parsedBody.title,
-      description: parsedBody.description,
-      prompt: parsedBody.prompt,
-      tags: parsedBody.tags,
-      is_private: parsedBody.is_private,
+      title: body.title,
+      description: body.description,
+      prompt: body.prompt,
+      tags: body.tags,
+      is_private: body.is_private,
       creator: accountId,
     });
 
@@ -41,8 +35,8 @@ export async function createTemplateHandler(request: NextRequest): Promise<NextR
       );
     }
 
-    if (parsedBody.is_private && parsedBody.share_emails.length > 0) {
-      await insertTemplateShares(inserted.id, parsedBody.share_emails);
+    if (body.is_private && body.share_emails.length > 0) {
+      await insertTemplateShares(inserted.id, body.share_emails);
     }
 
     const [template] = await selectTemplates({ id: inserted.id }, accountId);
