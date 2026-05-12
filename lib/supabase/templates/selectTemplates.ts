@@ -72,7 +72,6 @@ export async function selectTemplates(
       .from("agent_templates")
       .select(SELECT)
       .eq("id", params.id)
-      .eq("creator.org_membership.organization_id", RECOUP_ORG_ID)
       .eq("caller_favorite.user_id", callerId);
     if (error) {
       console.error("Error selecting template by id:", error);
@@ -88,14 +87,12 @@ export async function selectTemplates(
         .from("agent_templates")
         .select(SELECT)
         .or(`creator.eq.${accountId},is_private.eq.false`)
-        .eq("accounts.account_organization_ids.organization_id", RECOUP_ORG_ID)
         .eq("caller_favorite.user_id", callerId)
         .order("title"),
       supabase
         .from("agent_template_shares")
         .select(`template:agent_templates!agent_template_shares_template_id_fkey (${SELECT})`)
         .eq("user_id", accountId)
-        .eq("template.creator.org_membership.organization_id", RECOUP_ORG_ID)
         .eq("template.caller_favorite.user_id", callerId),
     ]);
     if (owned.error) {
@@ -130,7 +127,9 @@ export async function selectTemplates(
             id: creatorRow.id,
             name: creatorRow.name ?? null,
             image: creatorRow.account_info?.[0]?.image ?? null,
-            is_admin: (creatorRow.org_membership ?? []).length > 0,
+            is_admin: (creatorRow.org_membership ?? []).some(
+              m => m.organization_id === RECOUP_ORG_ID,
+            ),
           }
         : null;
       const isOwnedPrivate =
