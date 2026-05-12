@@ -5,7 +5,7 @@ import { insertTemplateFavorite } from "@/lib/supabase/template_favorites/insert
 import { deleteTemplateFavorite } from "@/lib/supabase/template_favorites/deleteTemplateFavorite";
 
 /**
- * Handler for PUT /api/templates/{id}/favorite.
+ * Handler for PUT /api/agents/templates/{id}/favorite.
  *
  * Idempotently toggles the caller's favorite status for the template:
  *   - `is_favourite=true` upserts the favorite row

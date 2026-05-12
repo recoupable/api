@@ -34,7 +34,7 @@ describe("deleteTemplateHandler", () => {
     });
     vi.mocked(deleteTemplate).mockResolvedValue(true);
 
-    const req = new NextRequest(`http://localhost/api/templates/${TEMPLATE_ID}`, {
+    const req = new NextRequest(`http://localhost/api/agents/templates/${TEMPLATE_ID}`, {
       method: "DELETE",
     });
     const res = await deleteTemplateHandler(req, Promise.resolve({ id: TEMPLATE_ID }));
@@ -46,7 +46,7 @@ describe("deleteTemplateHandler", () => {
     const failure = NextResponse.json({ status: "error", error: "Forbidden" }, { status: 403 });
     vi.mocked(validateDeleteTemplateRequest).mockResolvedValue(failure);
 
-    const req = new NextRequest(`http://localhost/api/templates/${TEMPLATE_ID}`, {
+    const req = new NextRequest(`http://localhost/api/agents/templates/${TEMPLATE_ID}`, {
       method: "DELETE",
     });
     const res = await deleteTemplateHandler(req, Promise.resolve({ id: TEMPLATE_ID }));

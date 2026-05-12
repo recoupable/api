@@ -4,7 +4,7 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectTemplates } from "@/lib/supabase/templates/selectTemplates";
 
 /**
- * Handler for GET /api/templates.
+ * Handler for GET /api/agents/templates.
  *
  * Returns every template the authenticated account can see (own,
  * public, shared) fully shaped: `creator` flat with `is_admin`,

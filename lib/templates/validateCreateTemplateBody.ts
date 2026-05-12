@@ -25,7 +25,7 @@ export const createTemplateBodySchema = z.object({
 export type CreateTemplateBody = z.infer<typeof createTemplateBodySchema>;
 
 /**
- * Validates the JSON body for POST /api/templates.
+ * Validates the JSON body for POST /api/agents/templates.
  *
  * @param body - The raw JSON body
  * @returns A NextResponse with a 400 error or the parsed body on success.

@@ -8,7 +8,7 @@ import { insertTemplateShares } from "@/lib/supabase/template_shares/insertTempl
 import { selectTemplates } from "@/lib/supabase/templates/selectTemplates";
 
 /**
- * Handler for POST /api/templates.
+ * Handler for POST /api/agents/templates.
  *
  * Creates an template owned by the authenticated account. When
  * `is_private=true`, supplied `share_emails` are resolved to accounts and

@@ -16,7 +16,7 @@ export async function OPTIONS() {
 }
 
 /**
- * GET /api/templates
+ * GET /api/agents/templates
  *
  * Returns every template visible to the authenticated account (own,
  * public, and shared) with an embedded creator block (id/name/image/is_admin),
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 /**
- * POST /api/templates
+ * POST /api/agents/templates
  *
  * Creates a new template owned by the authenticated account. When
  * `is_private=true`, `share_emails` recipients are upserted into the shares

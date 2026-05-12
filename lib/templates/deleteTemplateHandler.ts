@@ -4,7 +4,7 @@ import { validateDeleteTemplateRequest } from "@/lib/templates/validateDeleteTem
 import { deleteTemplate } from "@/lib/supabase/templates/deleteTemplate";
 
 /**
- * Handler for DELETE /api/templates/{id}.
+ * Handler for DELETE /api/agents/templates/{id}.
  *
  * Permanently removes the template. Caller must be the template's
  * creator.

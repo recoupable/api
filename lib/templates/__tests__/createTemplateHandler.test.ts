@@ -40,7 +40,7 @@ const mockAuthOk = () =>
   });
 
 const makeRequest = (body: unknown) =>
-  new NextRequest("http://localhost/api/templates", {
+  new NextRequest("http://localhost/api/agents/templates", {
     method: "POST",
     headers: { "x-api-key": "k", "content-type": "application/json" },
     body: JSON.stringify(body),

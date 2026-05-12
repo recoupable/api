@@ -51,7 +51,7 @@ export const SNAPSHOT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 /**
  * Email addresses with platform-admin privileges.
  *
- * Surfaced as `creator.is_admin` in `/api/templates` so clients can flag
+ * Surfaced as `creator.is_admin` in `/api/agents/templates` so clients can flag
  * official Recoup templates. Mirrors `chat/lib/admin.ts`.
  */
 export const ADMIN_EMAILS: readonly string[] = ["sidney+1@recoupable.com"] as const;

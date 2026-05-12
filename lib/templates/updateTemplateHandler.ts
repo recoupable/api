@@ -8,7 +8,7 @@ import { selectTemplates } from "@/lib/supabase/templates/selectTemplates";
 import type { TablesUpdate } from "@/types/database.types";
 
 /**
- * Handler for PATCH /api/templates/{id}.
+ * Handler for PATCH /api/agents/templates/{id}.
  *
  * Applies a partial update to an template the caller owns. When
  * `share_emails` is provided, existing shares are wiped and re-inserted.

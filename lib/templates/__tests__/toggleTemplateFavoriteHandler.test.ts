@@ -44,7 +44,7 @@ describe("toggleTemplateFavoriteHandler", () => {
     });
     vi.mocked(insertTemplateFavorite).mockResolvedValue(true);
 
-    const req = new NextRequest(`http://localhost/api/templates/${TEMPLATE_ID}/favorite`, {
+    const req = new NextRequest(`http://localhost/api/agents/templates/${TEMPLATE_ID}/favorite`, {
       method: "PUT",
     });
     const res = await toggleTemplateFavoriteHandler(req, Promise.resolve({ id: TEMPLATE_ID }));
@@ -62,7 +62,7 @@ describe("toggleTemplateFavoriteHandler", () => {
     });
     vi.mocked(deleteTemplateFavorite).mockResolvedValue(true);
 
-    const req = new NextRequest(`http://localhost/api/templates/${TEMPLATE_ID}/favorite`, {
+    const req = new NextRequest(`http://localhost/api/agents/templates/${TEMPLATE_ID}/favorite`, {
       method: "PUT",
     });
     const res = await toggleTemplateFavoriteHandler(req, Promise.resolve({ id: TEMPLATE_ID }));
@@ -78,7 +78,7 @@ describe("toggleTemplateFavoriteHandler", () => {
     );
     vi.mocked(validateToggleFavoriteRequest).mockResolvedValue(failure);
 
-    const req = new NextRequest(`http://localhost/api/templates/${TEMPLATE_ID}/favorite`, {
+    const req = new NextRequest(`http://localhost/api/agents/templates/${TEMPLATE_ID}/favorite`, {
       method: "PUT",
     });
     const res = await toggleTemplateFavoriteHandler(req, Promise.resolve({ id: TEMPLATE_ID }));

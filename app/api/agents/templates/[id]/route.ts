@@ -16,7 +16,7 @@ export async function OPTIONS() {
 }
 
 /**
- * PATCH /api/templates/{id}
+ * PATCH /api/agents/templates/{id}
  *
  * Updates one or more fields on an template the authenticated account
  * owns. Supplying `share_emails` replaces existing shares.
@@ -34,7 +34,7 @@ export async function PATCH(
 }
 
 /**
- * DELETE /api/templates/{id}
+ * DELETE /api/agents/templates/{id}
  *
  * Permanently removes an template the authenticated account owns.
  *

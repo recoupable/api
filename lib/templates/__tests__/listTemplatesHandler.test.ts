@@ -33,7 +33,7 @@ describe("listTemplatesHandler", () => {
     ]);
 
     const res = await listTemplatesHandler(
-      new NextRequest("http://localhost/api/templates", { headers: { "x-api-key": "k" } }),
+      new NextRequest("http://localhost/api/agents/templates", { headers: { "x-api-key": "k" } }),
     );
 
     expect(res.status).toBe(200);
@@ -45,7 +45,9 @@ describe("listTemplatesHandler", () => {
     const failure = NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 });
     vi.mocked(validateAuthContext).mockResolvedValue(failure);
 
-    const res = await listTemplatesHandler(new NextRequest("http://localhost/api/templates"));
+    const res = await listTemplatesHandler(
+      new NextRequest("http://localhost/api/agents/templates"),
+    );
 
     expect(res).toBe(failure);
     expect(selectTemplates).not.toHaveBeenCalled();

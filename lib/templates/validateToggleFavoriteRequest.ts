@@ -20,7 +20,7 @@ export interface ValidatedToggleFavoriteRequest {
 }
 
 /**
- * Validates PUT /api/templates/{id}/favorite: auth, id format, body,
+ * Validates PUT /api/agents/templates/{id}/favorite: auth, id format, body,
  * and that the caller can see the template (own, public, or shared).
  */
 export async function validateToggleFavoriteRequest(

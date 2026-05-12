@@ -10,7 +10,7 @@ export interface ValidatedDeleteTemplateRequest {
 }
 
 /**
- * Validates DELETE /api/templates/{id}: auth, id format, and that the
+ * Validates DELETE /api/agents/templates/{id}: auth, id format, and that the
  * caller is the template's creator.
  */
 export async function validateDeleteTemplateRequest(

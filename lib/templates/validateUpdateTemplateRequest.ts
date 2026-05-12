@@ -28,7 +28,7 @@ export interface ValidatedUpdateTemplateRequest {
 }
 
 /**
- * Validates PATCH /api/templates/{id}: auth, id format, body, and that
+ * Validates PATCH /api/agents/templates/{id}: auth, id format, body, and that
  * the caller is the template's creator.
  */
 export async function validateUpdateTemplateRequest(

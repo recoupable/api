@@ -15,7 +15,7 @@ export async function OPTIONS() {
 }
 
 /**
- * PUT /api/templates/{id}/favorite
+ * PUT /api/agents/templates/{id}/favorite
  *
  * Idempotently sets whether the authenticated account has favorited the
  * template: `{ is_favourite: true }` upserts a row, `false` deletes it.

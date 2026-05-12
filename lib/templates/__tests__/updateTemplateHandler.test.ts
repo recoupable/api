@@ -55,7 +55,7 @@ describe("updateTemplateHandler", () => {
     vi.mocked(insertTemplateShares).mockResolvedValue(1);
     vi.mocked(selectTemplates).mockResolvedValue([{ id: TEMPLATE_ID } as never]);
 
-    const req = new NextRequest(`http://localhost/api/templates/${TEMPLATE_ID}`, {
+    const req = new NextRequest(`http://localhost/api/agents/templates/${TEMPLATE_ID}`, {
       method: "PATCH",
     });
     const res = await updateTemplateHandler(req, Promise.resolve({ id: TEMPLATE_ID }));
@@ -71,7 +71,7 @@ describe("updateTemplateHandler", () => {
     const failure = NextResponse.json({ status: "error", error: "Forbidden" }, { status: 403 });
     vi.mocked(validateUpdateTemplateRequest).mockResolvedValue(failure);
 
-    const req = new NextRequest(`http://localhost/api/templates/${TEMPLATE_ID}`, {
+    const req = new NextRequest(`http://localhost/api/agents/templates/${TEMPLATE_ID}`, {
       method: "PATCH",
     });
     const res = await updateTemplateHandler(req, Promise.resolve({ id: TEMPLATE_ID }));
