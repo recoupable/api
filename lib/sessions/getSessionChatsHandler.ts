@@ -2,19 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { APP_DEFAULT_MODEL_ID } from "@/lib/const";
 import { validateGetSessionChatsRequest } from "@/lib/sessions/validateGetSessionChatsRequest";
-import { selectChats } from "@/lib/supabase/chats/selectChats";
-import { selectChatReads } from "@/lib/supabase/chat_reads/selectChatReads";
-import { toChatSummaryResponse } from "@/lib/sessions/toChatSummaryResponse";
+import { getChatSummariesBySessionId } from "@/lib/supabase/chats/getChatSummariesBySessionId";
 
 /**
  * Handles `GET /api/sessions/{sessionId}/chats`.
  *
- * Authenticates the caller, verifies they own the session, then
- * returns every chat in the session plus the caller's default model
- * id. Per-chat unread state is derived from the caller's `chat_reads`
- * row (if any). Response shape mirrors open-agents'
- * `/api/sessions/[sessionId]/chats` so the existing frontend can cut
- * over without code changes.
+ * Lists every chat in the session as a camelCase `ChatSummary`,
+ * plus the caller's default model id. Per-chat unread state is
+ * derived from the caller's `chat_reads` row. Response shape
+ * mirrors open-agents' `/api/sessions/[sessionId]/chats` so the
+ * existing frontend can cut over without code changes.
  *
  * @param request - The incoming request.
  * @param sessionId - The id of the parent session.
@@ -28,31 +25,14 @@ export async function getSessionChatsHandler(
   if (validated instanceof NextResponse) {
     return validated;
   }
-  const { auth } = validated;
 
-  const chats = await selectChats({ sessionId });
-  const reads =
-    chats.length > 0
-      ? await selectChatReads({
-          accountId: auth.accountId,
-          chatIds: chats.map(row => row.id),
-        })
-      : [];
-
-  const lastReadByChatId = new Map<string, string>();
-  for (const read of reads) {
-    lastReadByChatId.set(read.chat_id, read.last_read_at);
-  }
-
-  const sorted = [...chats].sort(
-    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-  );
+  const chats = await getChatSummariesBySessionId({
+    sessionId,
+    accountId: validated.auth.accountId,
+  });
 
   return NextResponse.json(
-    {
-      chats: sorted.map(row => toChatSummaryResponse(row, lastReadByChatId.get(row.id) ?? null)),
-      defaultModelId: APP_DEFAULT_MODEL_ID,
-    },
+    { chats, defaultModelId: APP_DEFAULT_MODEL_ID },
     { status: 200, headers: getCorsHeaders() },
   );
 }
