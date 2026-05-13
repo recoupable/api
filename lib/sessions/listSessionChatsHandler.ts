@@ -13,14 +13,15 @@ import { toChatSummary } from "@/lib/sessions/toChatSummary";
  * Authenticates, verifies session ownership, then returns chats with
  * per-account `hasUnread` / `isStreaming` and a `defaultModelId` for new chats.
  *
- * @param _request - The incoming request (auth headers).
- * @param sessionId - Parent session id.
+ * @param request - The incoming request.
+ * @param sessionId - The id of the parent session.
+ * @returns A NextResponse with `{ chats, defaultModelId }` on 200, or an error.
  */
 export async function listSessionChatsHandler(
-  _request: NextRequest,
+  request: NextRequest,
   sessionId: string,
 ): Promise<NextResponse> {
-  const auth = await validateAuthContext(_request);
+  const auth = await validateAuthContext(request);
   if (auth instanceof NextResponse) {
     return auth;
   }
