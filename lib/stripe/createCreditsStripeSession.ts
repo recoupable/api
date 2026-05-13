@@ -12,12 +12,30 @@ interface CreateCreditsStripeSessionParams {
   accountId: string;
   credits: number;
   successUrl: string;
+  customer: string;
 }
 
+/**
+ * Create a Checkout Session for the credits top-up fallback flow.
+ *
+ * Always passes an explicit `customer` so the Customer record stays
+ * linked to the Recoup account (via `metadata.accountId` stamped during
+ * PR 2a). The session sets `payment_intent_data.setup_future_usage:
+ * "off_session"` so the card the customer enters gets saved to that
+ * Customer — the next top-up against the same account can then auto-
+ * charge it via `chargeCustomerOffSession`.
+ *
+ * Metadata is stamped on the Session and on the PaymentIntent the
+ * Session creates. The PaymentIntent's `paymentMethod: "checkout"` flag
+ * distinguishes it from off-session credits PaymentIntents so the
+ * `payment_intent.succeeded` webhook handler can skip it (the Checkout
+ * webhook handles those).
+ */
 export async function createCreditsStripeSession({
   accountId,
   credits,
   successUrl,
+  customer,
 }: CreateCreditsStripeSessionParams): Promise<Stripe.Checkout.Session> {
   const metadata = {
     accountId,
@@ -28,6 +46,7 @@ export async function createCreditsStripeSession({
   const { feeCents } = computeCreditsTopupCharge(credits);
 
   const sessionData: Stripe.Checkout.SessionCreateParams = {
+    customer,
     line_items: [
       {
         price_data: {
@@ -49,7 +68,10 @@ export async function createCreditsStripeSession({
     mode: "payment",
     client_reference_id: accountId,
     metadata,
-    payment_intent_data: { metadata },
+    payment_intent_data: {
+      setup_future_usage: "off_session",
+      metadata: { ...metadata, paymentMethod: "checkout" },
+    },
     success_url: successUrl,
   };
 

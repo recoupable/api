@@ -25,10 +25,12 @@ describe("createCreditsStripeSession", () => {
       accountId: "acc-1",
       credits: 250,
       successUrl: "https://example.com/success",
+      customer: "cus_acc1",
     });
 
     // For 250 credits: gross-up math is ceil((250 + 30) / 0.971) = 289¢, so fee = 39¢
     expect(checkoutSessionsCreate).toHaveBeenCalledWith({
+      customer: "cus_acc1",
       line_items: [
         {
           price_data: {
@@ -55,10 +57,12 @@ describe("createCreditsStripeSession", () => {
         purpose: "credits_topup",
       },
       payment_intent_data: {
+        setup_future_usage: "off_session",
         metadata: {
           accountId: "acc-1",
           credits: "250",
           purpose: "credits_topup",
+          paymentMethod: "checkout",
         },
       },
       success_url: "https://example.com/success",
@@ -70,6 +74,7 @@ describe("createCreditsStripeSession", () => {
       accountId: "acc-1",
       credits: 100,
       successUrl: "https://example.com/success",
+      customer: "cus_acc1",
     });
     const params = checkoutSessionsCreate.mock.calls[0][0] as Record<string, unknown>;
     expect(params).not.toHaveProperty("cancel_url");
@@ -77,5 +82,16 @@ describe("createCreditsStripeSession", () => {
     expect(params).not.toHaveProperty("allow_promotion_codes");
     expect(params).not.toHaveProperty("subscription_data");
     expect(params.mode).toBe("payment");
+  });
+
+  it("saves the card on file via setup_future_usage so the next top-up can auto-charge", async () => {
+    await createCreditsStripeSession({
+      accountId: "acc-1",
+      credits: 100,
+      successUrl: "https://example.com/success",
+      customer: "cus_acc1",
+    });
+    const params = checkoutSessionsCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(params.payment_intent_data).toMatchObject({ setup_future_usage: "off_session" });
   });
 });
