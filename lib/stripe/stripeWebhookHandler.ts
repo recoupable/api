@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { verifyStripeWebhookEvent } from "@/lib/stripe/verifyStripeWebhookEvent";
+import { processCreditsTopupPaymentIntent } from "@/lib/stripe/processCreditsTopupPaymentIntent";
 import { processCreditsTopupSession } from "@/lib/stripe/processCreditsTopupSession";
+import { verifyStripeWebhookEvent } from "@/lib/stripe/verifyStripeWebhookEvent";
 
 export async function stripeWebhookHandler(request: NextRequest): Promise<NextResponse> {
   const verified = await verifyStripeWebhookEvent(request);
@@ -15,6 +16,8 @@ export async function stripeWebhookHandler(request: NextRequest): Promise<NextRe
   try {
     if (event.type === "checkout.session.completed") {
       await processCreditsTopupSession(event.data.object as Stripe.Checkout.Session);
+    } else if (event.type === "payment_intent.succeeded") {
+      await processCreditsTopupPaymentIntent(event.data.object as Stripe.PaymentIntent);
     }
 
     return NextResponse.json({ received: true }, { status: 200, headers: getCorsHeaders() });

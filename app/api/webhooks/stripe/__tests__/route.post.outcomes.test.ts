@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 import type Stripe from "stripe";
 import { verifyStripeWebhookEvent } from "@/lib/stripe/verifyStripeWebhookEvent";
 import { processCreditsTopupSession } from "@/lib/stripe/processCreditsTopupSession";
+import { processCreditsTopupPaymentIntent } from "@/lib/stripe/processCreditsTopupPaymentIntent";
 
 const { POST } = await import("../route");
 
@@ -11,6 +12,8 @@ const URL = "http://localhost/api/webhooks/stripe";
 const makeReq = () => new NextRequest(URL, { method: "POST", body: "{}" });
 const sessionEvent = (data: object = {}): Stripe.Event =>
   ({ id: "evt_1", type: "checkout.session.completed", data: { object: data } }) as Stripe.Event;
+const piEvent = (data: object = {}): Stripe.Event =>
+  ({ id: "evt_2", type: "payment_intent.succeeded", data: { object: data } }) as Stripe.Event;
 
 describe("POST /api/webhooks/stripe (handler outcomes)", () => {
   beforeEach(() => {
@@ -36,6 +39,18 @@ describe("POST /api/webhooks/stripe (handler outcomes)", () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ received: true });
     expect(processCreditsTopupSession).toHaveBeenCalledWith(session);
+  });
+
+  it("delegates payment_intent.succeeded events to processCreditsTopupPaymentIntent", async () => {
+    const pi = { id: "pi_ok", status: "succeeded" };
+    vi.mocked(verifyStripeWebhookEvent).mockResolvedValue({ event: piEvent(pi) });
+    vi.mocked(processCreditsTopupPaymentIntent).mockResolvedValue(undefined);
+
+    const res = await POST(makeReq());
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ received: true });
+    expect(processCreditsTopupPaymentIntent).toHaveBeenCalledWith(pi);
+    expect(processCreditsTopupSession).not.toHaveBeenCalled();
   });
 
   it("ignores unhandled event types", async () => {
