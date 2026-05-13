@@ -20,7 +20,6 @@ export async function createCreditsSessionHandler(request: NextRequest): Promise
 
     const charge = await chargeCustomerOffSession({
       customer,
-      credits,
       totalCents,
       metadata: {
         accountId,

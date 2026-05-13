@@ -4,7 +4,6 @@ import { findDefaultPaymentMethodForCustomer } from "@/lib/stripe/findDefaultPay
 
 interface ChargeParams {
   customer: string;
-  credits: number;
   totalCents: number;
   metadata: { accountId: string; credits: string; purpose: string };
 }
@@ -22,7 +21,6 @@ export type OffSessionChargeResult =
  */
 export async function chargeCustomerOffSession({
   customer,
-  credits,
   totalCents,
   metadata,
 }: ChargeParams): Promise<OffSessionChargeResult> {
@@ -40,10 +38,15 @@ export async function chargeCustomerOffSession({
     off_session: true,
     metadata: { ...metadata, paymentMethod: "off_session" },
   };
-  const idempotencyKey = `credits_topup:${metadata.accountId}:${credits}:${totalCents}`;
 
+  // Intentionally NO server-generated idempotency key on the charge — a user
+  // topping up the same amount twice (e.g. $1 today, $1 tomorrow) is a valid
+  // intent and should produce two distinct PaymentIntents. The Customer-level
+  // idempotency from PR 2a (resolveStripeCustomerForAccount, keyed on
+  // accountId only) is the right scope. Follow-up: accept a client-supplied
+  // Idempotency-Key header for safe network-retry dedupe per attempt.
   try {
-    const pi = await stripeClient.paymentIntents.create(params, { idempotencyKey });
+    const pi = await stripeClient.paymentIntents.create(params);
     if (pi.status === "requires_action") {
       return { kind: "requires_action" };
     }

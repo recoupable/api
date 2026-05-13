@@ -19,7 +19,6 @@ const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
 
 const params = {
   customer: "cus_x",
-  credits: 250,
   totalCents: 289,
   metadata: { accountId: ACCOUNT, credits: "250", purpose: "credits_topup" },
 };
@@ -48,23 +47,30 @@ describe("chargeCustomerOffSession", () => {
     const result = await chargeCustomerOffSession(params);
 
     expect(result).toEqual({ kind: "charged", paymentIntentId: "pi_ok" });
-    expect(paymentIntentsCreate).toHaveBeenCalledWith(
-      {
-        amount: 289,
-        currency: "usd",
-        customer: "cus_x",
-        payment_method: "pm_card",
-        confirm: true,
-        off_session: true,
-        metadata: {
-          accountId: ACCOUNT,
-          credits: "250",
-          purpose: "credits_topup",
-          paymentMethod: "off_session",
-        },
+    expect(paymentIntentsCreate).toHaveBeenCalledWith({
+      amount: 289,
+      currency: "usd",
+      customer: "cus_x",
+      payment_method: "pm_card",
+      confirm: true,
+      off_session: true,
+      metadata: {
+        accountId: ACCOUNT,
+        credits: "250",
+        purpose: "credits_topup",
+        paymentMethod: "off_session",
       },
-      { idempotencyKey: expect.any(String) },
-    );
+    });
+  });
+
+  it("does NOT set an idempotency key — same-amount top-ups must be allowed", async () => {
+    findDefaultPmMock.mockResolvedValue("pm_card");
+    paymentIntentsCreate.mockResolvedValue({ id: "pi_a", status: "succeeded" });
+    await chargeCustomerOffSession(params);
+    // Stripe SDK signature: create(params) or create(params, { idempotencyKey }).
+    // Second arg must be absent so back-to-back same-amount top-ups produce
+    // distinct PaymentIntents.
+    expect(paymentIntentsCreate.mock.calls[0]).toHaveLength(1);
   });
 
   it("returns requires_action when Stripe throws StripeCardError with authentication_required", async () => {
