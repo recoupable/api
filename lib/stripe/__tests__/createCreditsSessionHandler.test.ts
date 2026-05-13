@@ -1,106 +1,64 @@
+import { ACCOUNT, validated } from "./createCreditsSessionHandlerTestMocks";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { createCreditsSessionHandler } from "@/lib/stripe/createCreditsSessionHandler";
 import { validateCreateCreditsSessionRequest } from "@/lib/stripe/validateCreateCreditsSessionRequest";
+import { resolveStripeCustomerForAccount } from "@/lib/stripe/resolveStripeCustomerForAccount";
+import { chargeCustomerOffSession } from "@/lib/stripe/chargeCustomerOffSession";
 import { createCreditsStripeSession } from "@/lib/stripe/createCreditsStripeSession";
 
-vi.mock("@/lib/networking/getCorsHeaders", () => ({
-  getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
-}));
+const makeReq = () =>
+  new NextRequest("http://localhost/api/credits/sessions", { method: "POST", body: "{}" });
 
-vi.mock("@/lib/stripe/validateCreateCreditsSessionRequest", () => ({
-  validateCreateCreditsSessionRequest: vi.fn(),
-}));
-
-vi.mock("@/lib/stripe/createCreditsStripeSession", () => ({
-  createCreditsStripeSession: vi.fn(),
-}));
-
-const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
-
-describe("createCreditsSessionHandler", () => {
+describe("createCreditsSessionHandler — auth, auto-charge, and 5xx paths", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.mocked(validateCreateCreditsSessionRequest).mockResolvedValue(validated);
+    vi.mocked(resolveStripeCustomerForAccount).mockResolvedValue("cus_x");
   });
   afterEach(() => vi.mocked(console.error).mockRestore());
 
   it("returns validation response unchanged", async () => {
     const err = NextResponse.json({ error: "bad" }, { status: 400 });
     vi.mocked(validateCreateCreditsSessionRequest).mockResolvedValue(err);
-    const req = new NextRequest("http://localhost/api/credits/sessions", {
-      method: "POST",
-      body: "{}",
-    });
-    expect(await createCreditsSessionHandler(req)).toBe(err);
+    expect(await createCreditsSessionHandler(makeReq())).toBe(err);
+    expect(chargeCustomerOffSession).not.toHaveBeenCalled();
     expect(createCreditsStripeSession).not.toHaveBeenCalled();
   });
 
-  it("returns 200 with id and url", async () => {
-    vi.mocked(validateCreateCreditsSessionRequest).mockResolvedValue({
-      accountId: ACCOUNT,
-      successUrl: "https://chat.recoupable.com/ok",
-      credits: 500,
+  it("auto-charges and returns paymentIntentId/creditsPurchased/totalCents on success", async () => {
+    vi.mocked(chargeCustomerOffSession).mockResolvedValue({
+      kind: "charged",
+      paymentIntentId: "pi_ok",
     });
-    vi.mocked(createCreditsStripeSession).mockResolvedValue({
-      id: "cs_test_xyz",
-      url: "https://checkout.stripe.com/pay/cs_test_xyz",
-    } as Awaited<ReturnType<typeof createCreditsStripeSession>>);
-
-    const res = await createCreditsSessionHandler(
-      new NextRequest("http://localhost/api/credits/sessions", {
-        method: "POST",
-        body: "{}",
-      }),
-    );
+    const res = await createCreditsSessionHandler(makeReq());
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({
-      id: "cs_test_xyz",
-      url: "https://checkout.stripe.com/pay/cs_test_xyz",
+      paymentIntentId: "pi_ok",
+      creditsPurchased: 250,
+      totalCents: 289,
     });
-    expect(createCreditsStripeSession).toHaveBeenCalledWith({
-      accountId: ACCOUNT,
-      credits: 500,
-      successUrl: "https://chat.recoupable.com/ok",
-    });
+    expect(createCreditsStripeSession).not.toHaveBeenCalled();
   });
 
-  it("returns 400 { error } when session.url is null", async () => {
-    vi.mocked(validateCreateCreditsSessionRequest).mockResolvedValue({
-      accountId: ACCOUNT,
-      successUrl: "https://chat.recoupable.com/ok",
-      credits: 100,
-    });
-    vi.mocked(createCreditsStripeSession).mockResolvedValue({
-      id: "cs_test_xyz",
-      url: null,
-    } as Awaited<ReturnType<typeof createCreditsStripeSession>>);
-
-    const res = await createCreditsSessionHandler(
-      new NextRequest("http://localhost/api/credits/sessions", {
-        method: "POST",
-        body: "{}",
-      }),
-    );
-    expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toEqual({ error: "Checkout session URL missing" });
-  });
-
-  it("returns 500 with generic { error } when createCreditsStripeSession throws", async () => {
-    vi.mocked(validateCreateCreditsSessionRequest).mockResolvedValue({
-      accountId: ACCOUNT,
-      successUrl: "https://chat.recoupable.com/ok",
-      credits: 100,
-    });
-    vi.mocked(createCreditsStripeSession).mockRejectedValue(new Error("Stripe down"));
-
-    const res = await createCreditsSessionHandler(
-      new NextRequest("http://localhost/api/credits/sessions", {
-        method: "POST",
-        body: "{}",
-      }),
-    );
+  it("returns 500 when chargeCustomerOffSession throws", async () => {
+    vi.mocked(chargeCustomerOffSession).mockRejectedValue(new Error("Stripe down"));
+    const res = await createCreditsSessionHandler(makeReq());
     expect(res.status).toBe(500);
     await expect(res.json()).resolves.toEqual({ error: "Internal server error" });
+  });
+
+  it("returns 500 when resolveStripeCustomerForAccount throws", async () => {
+    vi.mocked(resolveStripeCustomerForAccount).mockRejectedValue(new Error("Stripe down"));
+    const res = await createCreditsSessionHandler(makeReq());
+    expect(res.status).toBe(500);
+  });
+});
+
+// Sanity guard so an accidental ACCOUNT rename in the shared mocks file is caught.
+describe("test-mock contract", () => {
+  it("validated.accountId stays in sync with ACCOUNT", () => {
+    expect(validated.accountId).toBe(ACCOUNT);
   });
 });
