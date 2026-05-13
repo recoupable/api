@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateUpdateTemplateRequest } from "@/lib/templates/validateUpdateTemplateRequest";
-import { updateTemplate } from "@/lib/supabase/templates/updateTemplate";
-import { deleteTemplateShares } from "@/lib/supabase/templates/shares/deleteTemplateShares";
-import { insertTemplateShares } from "@/lib/supabase/templates/shares/insertTemplateShares";
-import { selectTemplates } from "@/lib/supabase/templates/selectTemplates";
+import { updateAgentTemplate } from "@/lib/supabase/agent_templates/updateAgentTemplate";
+import { deleteAgentTemplateShares } from "@/lib/supabase/agent_template_shares/deleteAgentTemplateShares";
+import { insertAgentTemplateShares } from "@/lib/supabase/agent_template_shares/insertAgentTemplateShares";
+import { selectAgentTemplates } from "@/lib/supabase/agent_templates/selectAgentTemplates";
 import type { TablesUpdate } from "@/types/database.types";
 
 /**
@@ -32,7 +32,7 @@ export async function updateTemplateHandler(
     if (typeof body.is_private !== "undefined") updates.is_private = body.is_private;
 
     if (Object.keys(updates).length > 0) {
-      const updated = await updateTemplate(templateId, updates);
+      const updated = await updateAgentTemplate(templateId, updates);
       if (!updated) {
         return NextResponse.json(
           { status: "error", error: "Failed to update template" },
@@ -45,13 +45,13 @@ export async function updateTemplateHandler(
     // RPC; for now both helpers throw on DB error so the outer catch returns
     // a 500.
     if (typeof body.share_emails !== "undefined") {
-      await deleteTemplateShares(templateId);
+      await deleteAgentTemplateShares(templateId);
       if (body.share_emails.length > 0) {
-        await insertTemplateShares(templateId, body.share_emails);
+        await insertAgentTemplateShares(templateId, body.share_emails);
       }
     }
 
-    const [template] = await selectTemplates({ id: templateId }, accountId);
+    const [template] = await selectAgentTemplates({ id: templateId }, accountId);
 
     return NextResponse.json(
       { status: "success", template: template ?? null },

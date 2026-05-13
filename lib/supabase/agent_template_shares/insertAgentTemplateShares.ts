@@ -13,7 +13,10 @@ import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmai
  * @returns Number of shares inserted (pre-existing rows count as 0).
  * @throws If the Supabase upsert fails.
  */
-export async function insertTemplateShares(templateId: string, emails: string[]): Promise<number> {
+export async function insertAgentTemplateShares(
+  templateId: string,
+  emails: string[],
+): Promise<number> {
   if (!Array.isArray(emails) || emails.length === 0) return 0;
 
   const accountEmails = await selectAccountEmails({ emails });
@@ -33,7 +36,7 @@ export async function insertTemplateShares(templateId: string, emails: string[])
 
   if (error) {
     console.error("Error inserting template_shares:", error);
-    throw new Error(`insertTemplateShares failed: ${error.message}`);
+    throw new Error(`insertAgentTemplateShares failed: ${error.message}`);
   }
 
   return data?.length ?? 0;

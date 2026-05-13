@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateTemplateRequest } from "@/lib/templates/validateCreateTemplateRequest";
-import { insertTemplate } from "@/lib/supabase/templates/insertTemplate";
-import { insertTemplateShares } from "@/lib/supabase/templates/shares/insertTemplateShares";
-import { selectTemplates } from "@/lib/supabase/templates/selectTemplates";
+import { insertAgentTemplate } from "@/lib/supabase/agent_templates/insertAgentTemplate";
+import { insertAgentTemplateShares } from "@/lib/supabase/agent_template_shares/insertAgentTemplateShares";
+import { selectAgentTemplates } from "@/lib/supabase/agent_templates/selectAgentTemplates";
 
 /**
  * Handler for POST /api/agents/templates.
@@ -19,7 +19,7 @@ export async function createTemplateHandler(request: NextRequest): Promise<NextR
 
     const { accountId, body } = validated;
 
-    const inserted = await insertTemplate({
+    const inserted = await insertAgentTemplate({
       title: body.title,
       description: body.description,
       prompt: body.prompt,
@@ -36,10 +36,10 @@ export async function createTemplateHandler(request: NextRequest): Promise<NextR
     }
 
     if (body.is_private && body.share_emails.length > 0) {
-      await insertTemplateShares(inserted.id, body.share_emails);
+      await insertAgentTemplateShares(inserted.id, body.share_emails);
     }
 
-    const [template] = await selectTemplates({ id: inserted.id }, accountId);
+    const [template] = await selectAgentTemplates({ id: inserted.id }, accountId);
 
     return NextResponse.json(
       { status: "success", template: template ?? null },

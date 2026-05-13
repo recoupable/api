@@ -9,23 +9,23 @@ vi.mock("@/lib/templates/validateToggleFavoriteRequest", () => ({
   validateToggleFavoriteRequest: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/templates/favorites/insertTemplateFavorite", () => ({
-  insertTemplateFavorite: vi.fn(),
+vi.mock("@/lib/supabase/agent_template_favorites/insertAgentTemplateFavorite", () => ({
+  insertAgentTemplateFavorite: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/templates/favorites/deleteTemplateFavorite", () => ({
-  deleteTemplateFavorite: vi.fn(),
+vi.mock("@/lib/supabase/agent_template_favorites/deleteAgentTemplateFavorite", () => ({
+  deleteAgentTemplateFavorite: vi.fn(),
 }));
 
 const { toggleTemplateFavoriteHandler } = await import("../toggleTemplateFavoriteHandler");
 const { validateToggleFavoriteRequest } = await import(
   "@/lib/templates/validateToggleFavoriteRequest"
 );
-const { insertTemplateFavorite } = await import(
-  "@/lib/supabase/templates/favorites/insertTemplateFavorite"
+const { insertAgentTemplateFavorite } = await import(
+  "@/lib/supabase/agent_template_favorites/insertAgentTemplateFavorite"
 );
-const { deleteTemplateFavorite } = await import(
-  "@/lib/supabase/templates/favorites/deleteTemplateFavorite"
+const { deleteAgentTemplateFavorite } = await import(
+  "@/lib/supabase/agent_template_favorites/deleteAgentTemplateFavorite"
 );
 
 const ACCOUNT_ID = "11111111-1111-1111-1111-111111111111";
@@ -42,7 +42,7 @@ describe("toggleTemplateFavoriteHandler", () => {
       accountId: ACCOUNT_ID,
       isFavourite: true,
     });
-    vi.mocked(insertTemplateFavorite).mockResolvedValue(true);
+    vi.mocked(insertAgentTemplateFavorite).mockResolvedValue(true);
 
     const req = new NextRequest(`http://localhost/api/agents/templates/${TEMPLATE_ID}/favorite`, {
       method: "PUT",
@@ -50,8 +50,8 @@ describe("toggleTemplateFavoriteHandler", () => {
     const res = await toggleTemplateFavoriteHandler(req, Promise.resolve({ id: TEMPLATE_ID }));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: "success" });
-    expect(insertTemplateFavorite).toHaveBeenCalledWith(TEMPLATE_ID, ACCOUNT_ID);
-    expect(deleteTemplateFavorite).not.toHaveBeenCalled();
+    expect(insertAgentTemplateFavorite).toHaveBeenCalledWith(TEMPLATE_ID, ACCOUNT_ID);
+    expect(deleteAgentTemplateFavorite).not.toHaveBeenCalled();
   });
 
   it("deletes a favorite when is_favourite is false", async () => {
@@ -60,15 +60,15 @@ describe("toggleTemplateFavoriteHandler", () => {
       accountId: ACCOUNT_ID,
       isFavourite: false,
     });
-    vi.mocked(deleteTemplateFavorite).mockResolvedValue(true);
+    vi.mocked(deleteAgentTemplateFavorite).mockResolvedValue(true);
 
     const req = new NextRequest(`http://localhost/api/agents/templates/${TEMPLATE_ID}/favorite`, {
       method: "PUT",
     });
     const res = await toggleTemplateFavoriteHandler(req, Promise.resolve({ id: TEMPLATE_ID }));
     expect(res.status).toBe(200);
-    expect(deleteTemplateFavorite).toHaveBeenCalledWith(TEMPLATE_ID, ACCOUNT_ID);
-    expect(insertTemplateFavorite).not.toHaveBeenCalled();
+    expect(deleteAgentTemplateFavorite).toHaveBeenCalledWith(TEMPLATE_ID, ACCOUNT_ID);
+    expect(insertAgentTemplateFavorite).not.toHaveBeenCalled();
   });
 
   it("returns the validator error response on validation failure", async () => {

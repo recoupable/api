@@ -4,7 +4,7 @@ import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
-import { selectTemplates } from "@/lib/supabase/templates/selectTemplates";
+import { selectAgentTemplates } from "@/lib/supabase/agent_templates/selectAgentTemplates";
 
 export const updateTemplateBodySchema = z
   .object({
@@ -58,7 +58,7 @@ export async function validateUpdateTemplateRequest(
   const templateId = validatedParams.id;
   const accountId = authResult.accountId;
 
-  const [existing] = await selectTemplates({ id: templateId });
+  const [existing] = await selectAgentTemplates({ id: templateId });
   if (!existing) {
     return NextResponse.json(
       { status: "error", error: "Template not found" },

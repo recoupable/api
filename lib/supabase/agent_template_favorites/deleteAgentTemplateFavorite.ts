@@ -7,7 +7,7 @@ import supabase from "@/lib/supabase/serverClient";
  * @param accountId - The account UUID whose favorite is being removed
  * @returns True on success, false on database error.
  */
-export async function deleteTemplateFavorite(
+export async function deleteAgentTemplateFavorite(
   templateId: string,
   accountId: string,
 ): Promise<boolean> {

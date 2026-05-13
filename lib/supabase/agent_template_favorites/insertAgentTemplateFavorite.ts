@@ -8,7 +8,7 @@ import supabase from "@/lib/supabase/serverClient";
  * @param accountId - The favoriting account UUID
  * @returns True if the favorite exists after the call, false on unexpected error.
  */
-export async function insertTemplateFavorite(
+export async function insertAgentTemplateFavorite(
   templateId: string,
   accountId: string,
 ): Promise<boolean> {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { selectTemplates } from "@/lib/supabase/templates/selectTemplates";
+import { selectAgentTemplates } from "@/lib/supabase/agent_templates/selectAgentTemplates";
 
 export interface ValidatedDeleteTemplateRequest {
   templateId: string;
@@ -26,7 +26,7 @@ export async function validateDeleteTemplateRequest(
   const templateId = validatedParams.id;
   const accountId = authResult.accountId;
 
-  const [existing] = await selectTemplates({ id: templateId });
+  const [existing] = await selectAgentTemplates({ id: templateId });
   if (!existing) {
     return NextResponse.json(
       { status: "error", error: "Template not found" },

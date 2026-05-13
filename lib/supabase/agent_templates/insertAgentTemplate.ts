@@ -7,7 +7,7 @@ import type { Tables, TablesInsert } from "@/types/database.types";
  * @param row - The template insert payload (must include creator).
  * @returns The newly created templates row, or null on error.
  */
-export async function insertTemplate(
+export async function insertAgentTemplate(
   row: TablesInsert<"agent_templates">,
 ): Promise<Tables<"agent_templates"> | null> {
   const { data, error } = await supabase.from("agent_templates").insert(row).select("*").single();

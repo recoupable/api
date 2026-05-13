@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateToggleFavoriteRequest } from "@/lib/templates/validateToggleFavoriteRequest";
-import { insertTemplateFavorite } from "@/lib/supabase/templates/favorites/insertTemplateFavorite";
-import { deleteTemplateFavorite } from "@/lib/supabase/templates/favorites/deleteTemplateFavorite";
+import { insertAgentTemplateFavorite } from "@/lib/supabase/agent_template_favorites/insertAgentTemplateFavorite";
+import { deleteAgentTemplateFavorite } from "@/lib/supabase/agent_template_favorites/deleteAgentTemplateFavorite";
 
 /**
  * Handler for PUT /api/agents/templates/{id}/favorite.
@@ -27,8 +27,8 @@ export async function toggleTemplateFavoriteHandler(
     const { templateId, accountId, isFavourite } = validated;
 
     const ok = isFavourite
-      ? await insertTemplateFavorite(templateId, accountId)
-      : await deleteTemplateFavorite(templateId, accountId);
+      ? await insertAgentTemplateFavorite(templateId, accountId)
+      : await deleteAgentTemplateFavorite(templateId, accountId);
 
     if (!ok) {
       return NextResponse.json(

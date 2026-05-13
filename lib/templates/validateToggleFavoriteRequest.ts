@@ -4,8 +4,8 @@ import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
-import { selectTemplates } from "@/lib/supabase/templates/selectTemplates";
-import { isTemplateSharedWithAccount } from "@/lib/supabase/templates/shares/isTemplateSharedWithAccount";
+import { selectAgentTemplates } from "@/lib/supabase/agent_templates/selectAgentTemplates";
+import { isAgentTemplateSharedWithAccount } from "@/lib/supabase/agent_template_shares/isAgentTemplateSharedWithAccount";
 
 export const toggleFavoriteBodySchema = z.object({
   is_favourite: z.boolean({ message: "is_favourite is required" }),
@@ -50,7 +50,7 @@ export async function validateToggleFavoriteRequest(
   const templateId = validatedParams.id;
   const accountId = authResult.accountId;
 
-  const [existing] = await selectTemplates({ id: templateId });
+  const [existing] = await selectAgentTemplates({ id: templateId });
   if (!existing) {
     return NextResponse.json(
       { status: "error", error: "Template not found" },
@@ -61,7 +61,7 @@ export async function validateToggleFavoriteRequest(
   const isOwner = existing.creator?.id === accountId;
   let canAccess = isOwner || !existing.is_private;
   if (!canAccess) {
-    canAccess = await isTemplateSharedWithAccount(templateId, accountId);
+    canAccess = await isAgentTemplateSharedWithAccount(templateId, accountId);
   }
   if (!canAccess) {
     return NextResponse.json(

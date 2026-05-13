@@ -9,27 +9,29 @@ vi.mock("@/lib/templates/validateCreateTemplateRequest", () => ({
   validateCreateTemplateRequest: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/templates/insertTemplate", () => ({
-  insertTemplate: vi.fn(),
+vi.mock("@/lib/supabase/agent_templates/insertAgentTemplate", () => ({
+  insertAgentTemplate: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/templates/shares/insertTemplateShares", () => ({
-  insertTemplateShares: vi.fn(),
+vi.mock("@/lib/supabase/agent_template_shares/insertAgentTemplateShares", () => ({
+  insertAgentTemplateShares: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/templates/selectTemplates", () => ({
-  selectTemplates: vi.fn(),
+vi.mock("@/lib/supabase/agent_templates/selectAgentTemplates", () => ({
+  selectAgentTemplates: vi.fn(),
 }));
 
 const { createTemplateHandler } = await import("../createTemplateHandler");
 const { validateCreateTemplateRequest } = await import(
   "@/lib/templates/validateCreateTemplateRequest"
 );
-const { insertTemplate } = await import("@/lib/supabase/templates/insertTemplate");
-const { insertTemplateShares } = await import(
-  "@/lib/supabase/templates/shares/insertTemplateShares"
+const { insertAgentTemplate } = await import("@/lib/supabase/agent_templates/insertAgentTemplate");
+const { insertAgentTemplateShares } = await import(
+  "@/lib/supabase/agent_template_shares/insertAgentTemplateShares"
 );
-const { selectTemplates } = await import("@/lib/supabase/templates/selectTemplates");
+const { selectAgentTemplates } = await import(
+  "@/lib/supabase/agent_templates/selectAgentTemplates"
+);
 
 const ACCOUNT_ID = "11111111-1111-1111-1111-111111111111";
 const TEMPLATE_ID = "22222222-2222-2222-2222-222222222222";
@@ -58,19 +60,19 @@ describe("createTemplateHandler", () => {
       accountId: ACCOUNT_ID,
       body: { ...baseBody, is_private: true, share_emails: ["a@x.com"] },
     });
-    vi.mocked(insertTemplate).mockResolvedValue({ id: TEMPLATE_ID } as never);
-    vi.mocked(insertTemplateShares).mockResolvedValue(1);
-    vi.mocked(selectTemplates).mockResolvedValue([{ id: TEMPLATE_ID } as never]);
+    vi.mocked(insertAgentTemplate).mockResolvedValue({ id: TEMPLATE_ID } as never);
+    vi.mocked(insertAgentTemplateShares).mockResolvedValue(1);
+    vi.mocked(selectAgentTemplates).mockResolvedValue([{ id: TEMPLATE_ID } as never]);
 
     const res = await createTemplateHandler(makeRequest());
 
     expect(res.status).toBe(201);
     expect((await res.json()).template.id).toBe(TEMPLATE_ID);
-    expect(insertTemplate).toHaveBeenCalledWith(
+    expect(insertAgentTemplate).toHaveBeenCalledWith(
       expect.objectContaining({ creator: ACCOUNT_ID, is_private: true }),
     );
-    expect(insertTemplateShares).toHaveBeenCalledWith(TEMPLATE_ID, ["a@x.com"]);
-    expect(selectTemplates).toHaveBeenCalledWith({ id: TEMPLATE_ID }, ACCOUNT_ID);
+    expect(insertAgentTemplateShares).toHaveBeenCalledWith(TEMPLATE_ID, ["a@x.com"]);
+    expect(selectAgentTemplates).toHaveBeenCalledWith({ id: TEMPLATE_ID }, ACCOUNT_ID);
   });
 
   it("returns the validator error response when validation fails", async () => {
@@ -82,6 +84,6 @@ describe("createTemplateHandler", () => {
 
     const res = await createTemplateHandler(makeRequest());
     expect(res).toBe(failure);
-    expect(insertTemplate).not.toHaveBeenCalled();
+    expect(insertAgentTemplate).not.toHaveBeenCalled();
   });
 });

@@ -5,7 +5,7 @@ import supabase from "@/lib/supabase/serverClient";
  * `agent_template_shares`. Throws on database error so callers can't
  * misread a query failure as "not shared" and 403 a legitimate sharee.
  */
-export async function isTemplateSharedWithAccount(
+export async function isAgentTemplateSharedWithAccount(
   templateId: string,
   accountId: string,
 ): Promise<boolean> {
@@ -18,7 +18,7 @@ export async function isTemplateSharedWithAccount(
 
   if (error) {
     console.error("Error checking template share:", error);
-    throw new Error(`isTemplateSharedWithAccount failed: ${error.message}`);
+    throw new Error(`isAgentTemplateSharedWithAccount failed: ${error.message}`);
   }
 
   return data !== null;

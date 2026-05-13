@@ -9,7 +9,7 @@ import supabase from "@/lib/supabase/serverClient";
  * @param templateId - The template UUID
  * @throws If the Supabase delete fails.
  */
-export async function deleteTemplateShares(templateId: string): Promise<void> {
+export async function deleteAgentTemplateShares(templateId: string): Promise<void> {
   const { error } = await supabase
     .from("agent_template_shares")
     .delete()
@@ -17,6 +17,6 @@ export async function deleteTemplateShares(templateId: string): Promise<void> {
 
   if (error) {
     console.error("Error deleting template_shares:", error);
-    throw new Error(`deleteTemplateShares failed: ${error.message}`);
+    throw new Error(`deleteAgentTemplateShares failed: ${error.message}`);
   }
 }

@@ -9,15 +9,15 @@ vi.mock("@/lib/templates/validateDeleteTemplateRequest", () => ({
   validateDeleteTemplateRequest: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/templates/deleteTemplate", () => ({
-  deleteTemplate: vi.fn(),
+vi.mock("@/lib/supabase/agent_templates/deleteAgentTemplate", () => ({
+  deleteAgentTemplate: vi.fn(),
 }));
 
 const { deleteTemplateHandler } = await import("../deleteTemplateHandler");
 const { validateDeleteTemplateRequest } = await import(
   "@/lib/templates/validateDeleteTemplateRequest"
 );
-const { deleteTemplate } = await import("@/lib/supabase/templates/deleteTemplate");
+const { deleteAgentTemplate } = await import("@/lib/supabase/agent_templates/deleteAgentTemplate");
 
 const ACCOUNT_ID = "11111111-1111-1111-1111-111111111111";
 const TEMPLATE_ID = "22222222-2222-2222-2222-222222222222";
@@ -32,7 +32,7 @@ describe("deleteTemplateHandler", () => {
       templateId: TEMPLATE_ID,
       accountId: ACCOUNT_ID,
     });
-    vi.mocked(deleteTemplate).mockResolvedValue(true);
+    vi.mocked(deleteAgentTemplate).mockResolvedValue(true);
 
     const req = new NextRequest(`http://localhost/api/agents/templates/${TEMPLATE_ID}`, {
       method: "DELETE",
@@ -51,6 +51,6 @@ describe("deleteTemplateHandler", () => {
     });
     const res = await deleteTemplateHandler(req, Promise.resolve({ id: TEMPLATE_ID }));
     expect(res).toBe(failure);
-    expect(deleteTemplate).not.toHaveBeenCalled();
+    expect(deleteAgentTemplate).not.toHaveBeenCalled();
   });
 });

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateDeleteTemplateRequest } from "@/lib/templates/validateDeleteTemplateRequest";
-import { deleteTemplate } from "@/lib/supabase/templates/deleteTemplate";
+import { deleteAgentTemplate } from "@/lib/supabase/agent_templates/deleteAgentTemplate";
 
 /**
  * Handler for DELETE /api/agents/templates/{id}.
@@ -22,7 +22,7 @@ export async function deleteTemplateHandler(
     const validated = await validateDeleteTemplateRequest(request, id);
     if (validated instanceof NextResponse) return validated;
 
-    const ok = await deleteTemplate(validated.templateId);
+    const ok = await deleteAgentTemplate(validated.templateId);
     if (!ok) {
       return NextResponse.json(
         { status: "error", error: "Failed to delete template" },

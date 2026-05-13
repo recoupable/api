@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { selectTemplates } from "@/lib/supabase/templates/selectTemplates";
+import { selectAgentTemplates } from "@/lib/supabase/agent_templates/selectAgentTemplates";
 
 /**
  * Handler for GET /api/agents/templates.
@@ -17,7 +17,7 @@ export async function listTemplatesHandler(request: NextRequest): Promise<NextRe
     if (authResult instanceof NextResponse) return authResult;
 
     const accountId = authResult.accountId;
-    const templates = await selectTemplates({ accessibleTo: accountId }, accountId);
+    const templates = await selectAgentTemplates({ accessibleTo: accountId }, accountId);
 
     return NextResponse.json(
       { status: "success", templates },

@@ -9,34 +9,36 @@ vi.mock("@/lib/templates/validateUpdateTemplateRequest", () => ({
   validateUpdateTemplateRequest: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/templates/updateTemplate", () => ({
-  updateTemplate: vi.fn(),
+vi.mock("@/lib/supabase/agent_templates/updateAgentTemplate", () => ({
+  updateAgentTemplate: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/templates/shares/deleteTemplateShares", () => ({
-  deleteTemplateShares: vi.fn(),
+vi.mock("@/lib/supabase/agent_template_shares/deleteAgentTemplateShares", () => ({
+  deleteAgentTemplateShares: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/templates/shares/insertTemplateShares", () => ({
-  insertTemplateShares: vi.fn(),
+vi.mock("@/lib/supabase/agent_template_shares/insertAgentTemplateShares", () => ({
+  insertAgentTemplateShares: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/templates/selectTemplates", () => ({
-  selectTemplates: vi.fn(),
+vi.mock("@/lib/supabase/agent_templates/selectAgentTemplates", () => ({
+  selectAgentTemplates: vi.fn(),
 }));
 
 const { updateTemplateHandler } = await import("../updateTemplateHandler");
 const { validateUpdateTemplateRequest } = await import(
   "@/lib/templates/validateUpdateTemplateRequest"
 );
-const { updateTemplate } = await import("@/lib/supabase/templates/updateTemplate");
-const { deleteTemplateShares } = await import(
-  "@/lib/supabase/templates/shares/deleteTemplateShares"
+const { updateAgentTemplate } = await import("@/lib/supabase/agent_templates/updateAgentTemplate");
+const { deleteAgentTemplateShares } = await import(
+  "@/lib/supabase/agent_template_shares/deleteAgentTemplateShares"
 );
-const { insertTemplateShares } = await import(
-  "@/lib/supabase/templates/shares/insertTemplateShares"
+const { insertAgentTemplateShares } = await import(
+  "@/lib/supabase/agent_template_shares/insertAgentTemplateShares"
 );
-const { selectTemplates } = await import("@/lib/supabase/templates/selectTemplates");
+const { selectAgentTemplates } = await import(
+  "@/lib/supabase/agent_templates/selectAgentTemplates"
+);
 
 const ACCOUNT_ID = "11111111-1111-1111-1111-111111111111";
 const TEMPLATE_ID = "22222222-2222-2222-2222-222222222222";
@@ -50,10 +52,10 @@ describe("updateTemplateHandler", () => {
       accountId: ACCOUNT_ID,
       body: { title: "New Title", share_emails: ["x@y.com"] },
     });
-    vi.mocked(updateTemplate).mockResolvedValue({ id: TEMPLATE_ID } as never);
-    vi.mocked(deleteTemplateShares).mockResolvedValue(undefined);
-    vi.mocked(insertTemplateShares).mockResolvedValue(1);
-    vi.mocked(selectTemplates).mockResolvedValue([{ id: TEMPLATE_ID } as never]);
+    vi.mocked(updateAgentTemplate).mockResolvedValue({ id: TEMPLATE_ID } as never);
+    vi.mocked(deleteAgentTemplateShares).mockResolvedValue(undefined);
+    vi.mocked(insertAgentTemplateShares).mockResolvedValue(1);
+    vi.mocked(selectAgentTemplates).mockResolvedValue([{ id: TEMPLATE_ID } as never]);
 
     const req = new NextRequest(`http://localhost/api/agents/templates/${TEMPLATE_ID}`, {
       method: "PATCH",
@@ -61,10 +63,10 @@ describe("updateTemplateHandler", () => {
     const res = await updateTemplateHandler(req, Promise.resolve({ id: TEMPLATE_ID }));
 
     expect(res.status).toBe(200);
-    expect(updateTemplate).toHaveBeenCalledWith(TEMPLATE_ID, { title: "New Title" });
-    expect(deleteTemplateShares).toHaveBeenCalledWith(TEMPLATE_ID);
-    expect(insertTemplateShares).toHaveBeenCalledWith(TEMPLATE_ID, ["x@y.com"]);
-    expect(selectTemplates).toHaveBeenCalledWith({ id: TEMPLATE_ID }, ACCOUNT_ID);
+    expect(updateAgentTemplate).toHaveBeenCalledWith(TEMPLATE_ID, { title: "New Title" });
+    expect(deleteAgentTemplateShares).toHaveBeenCalledWith(TEMPLATE_ID);
+    expect(insertAgentTemplateShares).toHaveBeenCalledWith(TEMPLATE_ID, ["x@y.com"]);
+    expect(selectAgentTemplates).toHaveBeenCalledWith({ id: TEMPLATE_ID }, ACCOUNT_ID);
   });
 
   it("returns the validator error response when validation fails", async () => {
@@ -77,6 +79,6 @@ describe("updateTemplateHandler", () => {
     const res = await updateTemplateHandler(req, Promise.resolve({ id: TEMPLATE_ID }));
 
     expect(res).toBe(failure);
-    expect(updateTemplate).not.toHaveBeenCalled();
+    expect(updateAgentTemplate).not.toHaveBeenCalled();
   });
 });

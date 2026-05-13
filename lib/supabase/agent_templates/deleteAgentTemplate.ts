@@ -7,7 +7,7 @@ import supabase from "@/lib/supabase/serverClient";
  * @param id - The template UUID
  * @returns True if the delete succeeded, false otherwise.
  */
-export async function deleteTemplate(id: string): Promise<boolean> {
+export async function deleteAgentTemplate(id: string): Promise<boolean> {
   const { error } = await supabase.from("agent_templates").delete().eq("id", id);
 
   if (error) {

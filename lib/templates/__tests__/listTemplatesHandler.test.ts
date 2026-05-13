@@ -9,26 +9,28 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/templates/selectTemplates", () => ({
-  selectTemplates: vi.fn(),
+vi.mock("@/lib/supabase/agent_templates/selectAgentTemplates", () => ({
+  selectAgentTemplates: vi.fn(),
 }));
 
 const { listTemplatesHandler } = await import("../listTemplatesHandler");
 const { validateAuthContext } = await import("@/lib/auth/validateAuthContext");
-const { selectTemplates } = await import("@/lib/supabase/templates/selectTemplates");
+const { selectAgentTemplates } = await import(
+  "@/lib/supabase/agent_templates/selectAgentTemplates"
+);
 
 const ACCOUNT_ID = "11111111-1111-1111-1111-111111111111";
 
 describe("listTemplatesHandler", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns templates fetched via selectTemplates for the authenticated account", async () => {
+  it("returns templates fetched via selectAgentTemplates for the authenticated account", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: ACCOUNT_ID,
       orgId: null,
       authToken: "k",
     });
-    vi.mocked(selectTemplates).mockResolvedValue([
+    vi.mocked(selectAgentTemplates).mockResolvedValue([
       { id: "t1", is_favourite: true, shared_emails: [] } as never,
     ]);
 
@@ -38,7 +40,7 @@ describe("listTemplatesHandler", () => {
 
     expect(res.status).toBe(200);
     expect((await res.json()).templates).toHaveLength(1);
-    expect(selectTemplates).toHaveBeenCalledWith({ accessibleTo: ACCOUNT_ID }, ACCOUNT_ID);
+    expect(selectAgentTemplates).toHaveBeenCalledWith({ accessibleTo: ACCOUNT_ID }, ACCOUNT_ID);
   });
 
   it("returns the auth NextResponse when authentication fails", async () => {
@@ -50,6 +52,6 @@ describe("listTemplatesHandler", () => {
     );
 
     expect(res).toBe(failure);
-    expect(selectTemplates).not.toHaveBeenCalled();
+    expect(selectAgentTemplates).not.toHaveBeenCalled();
   });
 });

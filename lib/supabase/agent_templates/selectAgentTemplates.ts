@@ -16,7 +16,7 @@ export type Template = Omit<Tables<"agent_templates">, "creator"> & {
   shared_emails: string[];
 };
 
-export type SelectTemplatesParams = { id: string } | { accessibleTo: string };
+export type SelectAgentTemplatesParams = { id: string } | { accessibleTo: string };
 
 // Sentinel for the favorite-embed filter when no caller is passed (validators).
 // This UUID never matches a real user_id, so `caller_favorite` stays empty and
@@ -58,8 +58,8 @@ type RawTemplate = QueryData<typeof _typedQuery>[number];
  *
  * Throws on database error.
  */
-export async function selectTemplates(
-  params: SelectTemplatesParams,
+export async function selectAgentTemplates(
+  params: SelectAgentTemplatesParams,
   forAccountId?: string,
 ): Promise<Template[]> {
   const callerId = forAccountId ?? NO_CALLER;
@@ -75,7 +75,7 @@ export async function selectTemplates(
       .eq("creator.org_membership.organization_id", RECOUP_ORG_ID);
     if (error) {
       console.error("Error selecting template by id:", error);
-      throw new Error(`selectTemplates(id) failed: ${error.message}`);
+      throw new Error(`selectAgentTemplates(id) failed: ${error.message}`);
     }
     rows = data ?? [];
   } else {
@@ -97,11 +97,13 @@ export async function selectTemplates(
     ]);
     if (owned.error) {
       console.error("Error selecting owned/public templates:", owned.error);
-      throw new Error(`selectTemplates(accessibleTo) owned/public failed: ${owned.error.message}`);
+      throw new Error(
+        `selectAgentTemplates(accessibleTo) owned/public failed: ${owned.error.message}`,
+      );
     }
     if (shared.error) {
       console.error("Error selecting shared templates:", shared.error);
-      throw new Error(`selectTemplates(accessibleTo) shared failed: ${shared.error.message}`);
+      throw new Error(`selectAgentTemplates(accessibleTo) shared failed: ${shared.error.message}`);
     }
     const sharedRows = (shared.data ?? []).flatMap(s => {
       const t = (s as { template: RawTemplate | RawTemplate[] | null }).template;

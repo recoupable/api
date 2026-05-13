@@ -8,7 +8,7 @@ import type { Tables, TablesUpdate } from "@/types/database.types";
  * @param updates - Partial column updates
  * @returns The updated row, or null on error.
  */
-export async function updateTemplate(
+export async function updateAgentTemplate(
   id: string,
   updates: TablesUpdate<"agent_templates">,
 ): Promise<Tables<"agent_templates"> | null> {
