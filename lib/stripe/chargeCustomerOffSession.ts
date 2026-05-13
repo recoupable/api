@@ -49,8 +49,15 @@ export async function chargeCustomerOffSession({
     }
     return { kind: "requires_action" };
   } catch (error) {
-    const e = error as { type?: string; code?: string };
-    if (e?.type === "StripeCardError" && e.code === "authentication_required") {
+    const e = error as { type?: string; code?: string; message?: string };
+    // Any card-level failure (declined, expired, fraud, 3DS required, etc.)
+    // or Stripe-rejected request shape should fall back to Checkout so the
+    // customer can update their card / authenticate interactively. Only
+    // truly unexpected errors should bubble up as 500.
+    if (e?.type === "StripeCardError" || e?.type === "StripeInvalidRequestError") {
+      console.warn(
+        `[chargeCustomerOffSession] off-session charge failed (${e.type}/${e.code}), falling back to Checkout: ${e.message ?? ""}`,
+      );
       return { kind: "requires_action" };
     }
     console.error("[chargeCustomerOffSession]", error);

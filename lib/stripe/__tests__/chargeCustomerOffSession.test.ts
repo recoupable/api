@@ -81,6 +81,29 @@ describe("chargeCustomerOffSession", () => {
     expect(result).toEqual({ kind: "requires_action" });
   });
 
+  it("returns requires_action for any other StripeCardError code (declined, expired, fraud) so caller falls back to Checkout", async () => {
+    findDefaultPmMock.mockResolvedValue("pm_card");
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    for (const code of ["card_declined", "expired_card", "fraudulent", "insufficient_funds"]) {
+      paymentIntentsCreate.mockRejectedValue({ type: "StripeCardError", code });
+      const result = await chargeCustomerOffSession(params);
+      expect(result).toEqual({ kind: "requires_action" });
+    }
+  });
+
+  it("returns requires_action when Stripe throws StripeInvalidRequestError (e.g. customer has no payment method)", async () => {
+    findDefaultPmMock.mockResolvedValue("pm_card");
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    paymentIntentsCreate.mockRejectedValue({
+      type: "StripeInvalidRequestError",
+      message: "Customer has no attached payment source or default payment method",
+    });
+
+    const result = await chargeCustomerOffSession(params);
+    expect(result).toEqual({ kind: "requires_action" });
+  });
+
   it("returns requires_action when the PaymentIntent comes back as requires_action", async () => {
     findDefaultPmMock.mockResolvedValue("pm_card");
     paymentIntentsCreate.mockResolvedValue({
