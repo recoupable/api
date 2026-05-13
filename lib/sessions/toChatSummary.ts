@@ -13,8 +13,7 @@ import type { Tables } from "@/types/database.types";
 export function toChatSummary(row: Tables<"chats">, lastReadAt: string | null) {
   const assistantAt = row.last_assistant_message_at;
   const hasUnread =
-    assistantAt != null &&
-    (lastReadAt == null || new Date(assistantAt) > new Date(lastReadAt));
+    assistantAt != null && (lastReadAt == null || new Date(assistantAt) > new Date(lastReadAt));
 
   return {
     id: row.id,

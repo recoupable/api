@@ -47,11 +47,11 @@ export async function listSessionChatsHandler(
     orderCreatedAtAscending: true,
   });
 
-  const chatIds = chatRows.map((c) => c.id);
+  const chatIds = chatRows.map(c => c.id);
   const readRows = await selectChatReadsByAccountAndChatIds(auth.accountId, chatIds);
-  const lastReadByChatId = new Map(readRows.map((r) => [r.chat_id, r.last_read_at]));
+  const lastReadByChatId = new Map(readRows.map(r => [r.chat_id, r.last_read_at]));
 
-  const chats = chatRows.map((row) => toChatSummary(row, lastReadByChatId.get(row.id) ?? null));
+  const chats = chatRows.map(row => toChatSummary(row, lastReadByChatId.get(row.id) ?? null));
 
   return NextResponse.json(
     { chats, defaultModelId: DEFAULT_MODEL },
