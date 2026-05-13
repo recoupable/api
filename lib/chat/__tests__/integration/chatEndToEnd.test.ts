@@ -681,7 +681,7 @@ describe("Chat Integration Tests", () => {
       // 4. Handle credits
       await handleChatCredits({
         usage: { promptTokens: 100, completionTokens: 50 },
-        model: (body as any).model || "openai/gpt-5-mini",
+        model: (body as any).model || "openai/gpt-5.4-nano",
         accountId: (body as any).accountId,
       });
 
