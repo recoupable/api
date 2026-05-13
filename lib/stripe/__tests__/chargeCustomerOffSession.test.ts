@@ -63,13 +63,10 @@ describe("chargeCustomerOffSession", () => {
     });
   });
 
-  it("does NOT set an idempotency key — same-amount top-ups must be allowed", async () => {
+  it("does NOT pass an idempotency key so same-amount top-ups produce distinct PaymentIntents", async () => {
     findDefaultPmMock.mockResolvedValue("pm_card");
     paymentIntentsCreate.mockResolvedValue({ id: "pi_a", status: "succeeded" });
     await chargeCustomerOffSession(params);
-    // Stripe SDK signature: create(params) or create(params, { idempotencyKey }).
-    // Second arg must be absent so back-to-back same-amount top-ups produce
-    // distinct PaymentIntents.
     expect(paymentIntentsCreate.mock.calls[0]).toHaveLength(1);
   });
 
