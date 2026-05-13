@@ -1,4 +1,4 @@
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import stripeClient from "@/lib/stripe/client";
 import { findDefaultPaymentMethodForCustomer } from "@/lib/stripe/findDefaultPaymentMethodForCustomer";
 
@@ -58,27 +58,25 @@ export async function chargeCustomerOffSession({
     }
     return { kind: "requires_action" };
   } catch (error) {
-    const e = error as {
-      type?: string;
-      code?: string;
-      decline_code?: string;
-      message?: string;
-    };
-    // Any card-level failure (declined, expired, fraud, 3DS required, etc.)
-    // or Stripe-rejected request shape should fall back to Checkout so the
-    // customer can update their card / authenticate interactively. Capture
-    // the Stripe decline reason so the API response can surface it to the
-    // caller — programmatic integrations (and our UI) can then explain
-    // "insufficient funds" / "expired card" instead of a silent fallback.
-    if (e?.type === "StripeCardError" || e?.type === "StripeInvalidRequestError") {
+    // Card-level failures (declined, expired, fraud, 3DS required, …) and
+    // Stripe-rejected request shapes fall back to Checkout so the customer
+    // can update their card / authenticate interactively. Capture Stripe's
+    // own decline metadata so callers can surface "insufficient funds" /
+    // "expired card" instead of a silent fallback.
+    if (
+      error instanceof Stripe.errors.StripeCardError ||
+      error instanceof Stripe.errors.StripeInvalidRequestError
+    ) {
+      const declineCode =
+        error instanceof Stripe.errors.StripeCardError ? error.decline_code : undefined;
       console.warn(
-        `[chargeCustomerOffSession] off-session charge failed (${e.type}/${e.code}/${e.decline_code ?? "-"}), falling back to Checkout: ${e.message ?? ""}`,
+        `[chargeCustomerOffSession] off-session charge failed (${error.type}/${error.code}/${declineCode ?? "-"}), falling back to Checkout: ${error.message}`,
       );
-      const declineReason: DeclineReason | undefined = e.code
+      const declineReason: DeclineReason | undefined = error.code
         ? {
-            code: e.code,
-            ...(e.decline_code ? { declineCode: e.decline_code } : {}),
-            message: e.message ?? "Payment was declined",
+            code: error.code,
+            ...(declineCode ? { declineCode } : {}),
+            message: error.message,
           }
         : undefined;
       return { kind: "requires_action", declineReason };
