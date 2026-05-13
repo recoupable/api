@@ -53,6 +53,47 @@ describe("createCreditsSessionHandler — Checkout fallback paths", () => {
     });
   });
 
+  it("surfaces the Stripe declineReason in the Checkout-fallback response when an off-session charge was declined", async () => {
+    vi.mocked(chargeCustomerOffSession).mockResolvedValue({
+      kind: "requires_action",
+      declineReason: {
+        code: "card_declined",
+        declineCode: "insufficient_funds",
+        message: "Your card has insufficient funds.",
+      },
+    });
+    vi.mocked(createCreditsStripeSession).mockResolvedValue({
+      id: "cs_declined",
+      url: "https://checkout.stripe.com/pay/cs_declined",
+    } as Awaited<ReturnType<typeof createCreditsStripeSession>>);
+    const res = await createCreditsSessionHandler(makeReq());
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({
+      id: "cs_declined",
+      url: "https://checkout.stripe.com/pay/cs_declined",
+      declineReason: {
+        code: "card_declined",
+        declineCode: "insufficient_funds",
+        message: "Your card has insufficient funds.",
+      },
+    });
+  });
+
+  it("omits declineReason in the fallback response when there was no off-session attempt (no card)", async () => {
+    vi.mocked(chargeCustomerOffSession).mockResolvedValue({ kind: "no_payment_method" });
+    vi.mocked(createCreditsStripeSession).mockResolvedValue({
+      id: "cs_no_pm",
+      url: "https://checkout.stripe.com/pay/cs_no_pm",
+    } as Awaited<ReturnType<typeof createCreditsStripeSession>>);
+    const res = await createCreditsSessionHandler(makeReq());
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body).toEqual({
+      id: "cs_no_pm",
+      url: "https://checkout.stripe.com/pay/cs_no_pm",
+    });
+    expect(body.declineReason).toBeUndefined();
+  });
+
   it("returns 400 when Checkout fallback returns no url", async () => {
     vi.mocked(chargeCustomerOffSession).mockResolvedValue({ kind: "no_payment_method" });
     vi.mocked(createCreditsStripeSession).mockResolvedValue({
