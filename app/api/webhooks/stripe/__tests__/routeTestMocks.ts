@@ -11,3 +11,7 @@ vi.mock("@/lib/stripe/verifyStripeWebhookEvent", () => ({
 vi.mock("@/lib/stripe/processCreditsTopupSession", () => ({
   processCreditsTopupSession: vi.fn(),
 }));
+
+vi.mock("@/lib/stripe/processCreditsTopupPaymentIntent", () => ({
+  processCreditsTopupPaymentIntent: vi.fn(),
+}));
