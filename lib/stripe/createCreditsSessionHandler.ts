@@ -39,7 +39,10 @@ export async function createCreditsSessionHandler(request: NextRequest): Promise
       );
     }
 
-    // No card on file, or card requires 3-D Secure — fall back to Checkout.
+    // No card on file, or card requires 3-D Secure / was declined — fall back
+    // to Checkout. When we have a Stripe decline reason from the off-session
+    // attempt, surface it so callers can tell their human "insufficient funds"
+    // instead of just opening Checkout silently.
     const session = await createCreditsStripeSession({
       accountId,
       credits,
@@ -53,7 +56,13 @@ export async function createCreditsSessionHandler(request: NextRequest): Promise
       );
     }
     return NextResponse.json(
-      { id: session.id, url: session.url },
+      {
+        id: session.id,
+        url: session.url,
+        ...(charge.kind === "requires_action" && charge.declineReason
+          ? { declineReason: charge.declineReason }
+          : {}),
+      },
       { status: 200, headers: cors() },
     );
   } catch (error) {
