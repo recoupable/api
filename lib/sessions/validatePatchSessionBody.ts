@@ -7,7 +7,9 @@ import type { AuthContext } from "@/lib/auth/validateAuthContext";
 
 export const patchSessionBodySchema = z.object({
   title: z.string().optional(),
-  status: z.enum(["running", "archived"]).optional(),
+  status: z.enum(["running", "completed", "failed", "archived"]).optional(),
+  linesAdded: z.number().int().min(0).optional(),
+  linesRemoved: z.number().int().min(0).optional(),
 });
 
 export type PatchSessionBody = z.infer<typeof patchSessionBodySchema>;

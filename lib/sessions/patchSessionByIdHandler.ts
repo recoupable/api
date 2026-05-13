@@ -8,8 +8,10 @@ import { toSessionResponse } from "@/lib/sessions/toSessionResponse";
 /**
  * Handles PATCH /api/sessions/{sessionId}.
  *
- * Updates a session's `title` (rename) or `status` (archive/unarchive).
- * All fields are optional; omitted fields are left unchanged.
+ * Updates a session's `title`, `status` (see DB CHECK / public docs:
+ * `running`, `completed`, `failed`, `archived`), and optional
+ * `linesAdded` / `linesRemoved` counters. All fields are optional;
+ * omitted fields are left unchanged.
  * Authenticates via Privy Bearer token or x-api-key header.
  * Returns 404 if the session does not exist and 403 if it exists but
  * is not owned by the authenticated account.
@@ -54,10 +56,21 @@ export async function patchSessionByIdHandler(
     );
   }
 
-  const updated = await updateSession(sessionId, {
+  const updates = {
     ...(body.title !== undefined && { title: body.title }),
     ...(body.status !== undefined && { status: body.status }),
-  });
+    ...(body.linesAdded !== undefined && { lines_added: body.linesAdded }),
+    ...(body.linesRemoved !== undefined && { lines_removed: body.linesRemoved }),
+  };
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json(
+      { session: toSessionResponse(row) },
+      { status: 200, headers: getCorsHeaders() },
+    );
+  }
+
+  const updated = await updateSession(sessionId, updates);
 
   if (!updated) {
     return NextResponse.json(

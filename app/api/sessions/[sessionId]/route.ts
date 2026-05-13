@@ -41,8 +41,10 @@ export async function GET(
 /**
  * PATCH /api/sessions/{sessionId}
  *
- * Updates a session's title (rename) or status (archive/unarchive).
- * All fields are optional; omitted fields are left unchanged.
+ * Updates a session's title, lifecycle `status` (including archive /
+ * unarchive), and optional line counters. `status` matches the merged
+ * docs: `running`, `completed`, `failed`, or `archived`. All body fields
+ * are optional; omitted fields are left unchanged.
  * Authenticates via Privy Bearer token or x-api-key header.
  *
  * @param request - The request object

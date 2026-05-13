@@ -274,12 +274,29 @@ describe("PATCH /api/sessions/[sessionId]", () => {
       authToken: "tok",
     });
 
-    const res = await PATCH(makePatchReq({ status: "completed" }), {
+    const res = await PATCH(makePatchReq({ status: "not-a-status" }), {
       params: Promise.resolve({ sessionId: "sess_1" }),
     });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.status).toBe("error");
+  });
+
+  it("returns 200 without calling updateSession when body has no updates", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc-uuid-1",
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue([mockRow]);
+
+    const res = await PATCH(makePatchReq({}), {
+      params: Promise.resolve({ sessionId: "sess_1" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.session.id).toBe("sess_1");
+    expect(updateSession).not.toHaveBeenCalled();
   });
 
   it("returns 200 with updated session on happy path", async () => {
@@ -306,6 +323,33 @@ describe("PATCH /api/sessions/[sessionId]", () => {
     expect(updateSession).toHaveBeenCalledWith("sess_1", {
       title: "Renamed session",
       status: "archived",
+    });
+  });
+
+  it("accepts completed status and maps line counters to snake_case columns", async () => {
+    const updatedRow: SessionRow = {
+      ...mockRow,
+      status: "completed",
+      lines_added: 99,
+      lines_removed: 1,
+    };
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc-uuid-1",
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue([mockRow]);
+    vi.mocked(updateSession).mockResolvedValue(updatedRow);
+
+    const res = await PATCH(
+      makePatchReq({ status: "completed", linesAdded: 99, linesRemoved: 1 }),
+      { params: Promise.resolve({ sessionId: "sess_1" }) },
+    );
+    expect(res.status).toBe(200);
+    expect(updateSession).toHaveBeenCalledWith("sess_1", {
+      status: "completed",
+      lines_added: 99,
+      lines_removed: 1,
     });
   });
 });
