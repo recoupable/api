@@ -6,6 +6,8 @@ interface SelectChatsFilter {
   id?: string;
   /** Optional session filter — when set, returns every chat in the session. */
   sessionId?: string;
+  /** When set with `sessionId`, orders by `created_at` ascending (list endpoint). */
+  orderCreatedAtAscending?: boolean;
 }
 
 /**
@@ -19,7 +21,12 @@ interface SelectChatsFilter {
 export async function selectChats(filter: SelectChatsFilter = {}): Promise<Tables<"chats">[]> {
   let query = supabase.from("chats").select("*");
   if (filter.id) query = query.eq("id", filter.id);
-  if (filter.sessionId) query = query.eq("session_id", filter.sessionId);
+  if (filter.sessionId) {
+    query = query.eq("session_id", filter.sessionId);
+    if (filter.orderCreatedAtAscending) {
+      query = query.order("created_at", { ascending: true });
+    }
+  }
 
   const { data, error } = await query;
   if (error) {
