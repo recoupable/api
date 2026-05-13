@@ -8,9 +8,18 @@ interface ChargeParams {
   metadata: { accountId: string; credits: string; purpose: string };
 }
 
+export type DeclineReason = {
+  /** Stripe error code, e.g. "card_declined", "expired_card", "authentication_required". */
+  code: string;
+  /** Stripe decline_code on `card_declined` errors, e.g. "insufficient_funds", "fraudulent". */
+  declineCode?: string;
+  /** Human-readable explanation Stripe returned. */
+  message: string;
+};
+
 export type OffSessionChargeResult =
   | { kind: "charged"; paymentIntentId: string }
-  | { kind: "requires_action" }
+  | { kind: "requires_action"; declineReason?: DeclineReason }
   | { kind: "no_payment_method" };
 
 /**
@@ -49,16 +58,30 @@ export async function chargeCustomerOffSession({
     }
     return { kind: "requires_action" };
   } catch (error) {
-    const e = error as { type?: string; code?: string; message?: string };
+    const e = error as {
+      type?: string;
+      code?: string;
+      decline_code?: string;
+      message?: string;
+    };
     // Any card-level failure (declined, expired, fraud, 3DS required, etc.)
     // or Stripe-rejected request shape should fall back to Checkout so the
-    // customer can update their card / authenticate interactively. Only
-    // truly unexpected errors should bubble up as 500.
+    // customer can update their card / authenticate interactively. Capture
+    // the Stripe decline reason so the API response can surface it to the
+    // caller — programmatic integrations (and our UI) can then explain
+    // "insufficient funds" / "expired card" instead of a silent fallback.
     if (e?.type === "StripeCardError" || e?.type === "StripeInvalidRequestError") {
       console.warn(
-        `[chargeCustomerOffSession] off-session charge failed (${e.type}/${e.code}), falling back to Checkout: ${e.message ?? ""}`,
+        `[chargeCustomerOffSession] off-session charge failed (${e.type}/${e.code}/${e.decline_code ?? "-"}), falling back to Checkout: ${e.message ?? ""}`,
       );
-      return { kind: "requires_action" };
+      const declineReason: DeclineReason | undefined = e.code
+        ? {
+            code: e.code,
+            ...(e.decline_code ? { declineCode: e.decline_code } : {}),
+            message: e.message ?? "Payment was declined",
+          }
+        : undefined;
+      return { kind: "requires_action", declineReason };
     }
     console.error("[chargeCustomerOffSession]", error);
     throw error;

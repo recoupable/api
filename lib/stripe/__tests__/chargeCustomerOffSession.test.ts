@@ -75,21 +75,50 @@ describe("chargeCustomerOffSession", () => {
     paymentIntentsCreate.mockRejectedValue({
       type: "StripeCardError",
       code: "authentication_required",
+      message: "Authentication required",
     });
 
     const result = await chargeCustomerOffSession(params);
-    expect(result).toEqual({ kind: "requires_action" });
+    expect(result).toEqual({
+      kind: "requires_action",
+      declineReason: {
+        code: "authentication_required",
+        message: "Authentication required",
+      },
+    });
   });
 
-  it("returns requires_action for any other StripeCardError code (declined, expired, fraud) so caller falls back to Checkout", async () => {
+  it("returns requires_action plus declineReason for any StripeCardError code (declined, expired, fraud)", async () => {
     findDefaultPmMock.mockResolvedValue("pm_card");
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    for (const code of ["card_declined", "expired_card", "fraudulent", "insufficient_funds"]) {
-      paymentIntentsCreate.mockRejectedValue({ type: "StripeCardError", code });
-      const result = await chargeCustomerOffSession(params);
-      expect(result).toEqual({ kind: "requires_action" });
-    }
+    paymentIntentsCreate.mockRejectedValue({
+      type: "StripeCardError",
+      code: "card_declined",
+      decline_code: "insufficient_funds",
+      message: "Your card has insufficient funds.",
+    });
+    expect(await chargeCustomerOffSession(params)).toEqual({
+      kind: "requires_action",
+      declineReason: {
+        code: "card_declined",
+        declineCode: "insufficient_funds",
+        message: "Your card has insufficient funds.",
+      },
+    });
+
+    paymentIntentsCreate.mockRejectedValue({
+      type: "StripeCardError",
+      code: "expired_card",
+      message: "Your card has expired.",
+    });
+    expect(await chargeCustomerOffSession(params)).toEqual({
+      kind: "requires_action",
+      declineReason: {
+        code: "expired_card",
+        message: "Your card has expired.",
+      },
+    });
   });
 
   it("returns requires_action when Stripe throws StripeInvalidRequestError (e.g. customer has no payment method)", async () => {
