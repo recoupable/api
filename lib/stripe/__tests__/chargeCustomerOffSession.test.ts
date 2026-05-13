@@ -92,6 +92,22 @@ describe("chargeCustomerOffSession", () => {
     expect(result).toEqual({ kind: "requires_action" });
   });
 
+  it("only treats status=succeeded as charged — other non-success statuses fall through to requires_action", async () => {
+    findDefaultPmMock.mockResolvedValue("pm_card");
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    for (const status of [
+      "processing",
+      "requires_capture",
+      "canceled",
+      "requires_payment_method",
+    ]) {
+      paymentIntentsCreate.mockResolvedValue({ id: `pi_${status}`, status });
+      const result = await chargeCustomerOffSession(params);
+      expect(result).toEqual({ kind: "requires_action" });
+    }
+  });
+
   it("rethrows on unexpected hard errors", async () => {
     findDefaultPmMock.mockResolvedValue("pm_card");
     paymentIntentsCreate.mockRejectedValue(new Error("stripe-down"));

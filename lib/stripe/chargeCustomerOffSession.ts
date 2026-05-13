@@ -41,10 +41,13 @@ export async function chargeCustomerOffSession({
 
   try {
     const pi = await stripeClient.paymentIntents.create(params);
-    if (pi.status === "requires_action") {
-      return { kind: "requires_action" };
+    if (pi.status === "succeeded") {
+      return { kind: "charged", paymentIntentId: pi.id };
     }
-    return { kind: "charged", paymentIntentId: pi.id };
+    if (pi.status !== "requires_action") {
+      console.warn(`[chargeCustomerOffSession] unexpected PI status: ${pi.status}`);
+    }
+    return { kind: "requires_action" };
   } catch (error) {
     const e = error as { type?: string; code?: string };
     if (e?.type === "StripeCardError" && e.code === "authentication_required") {
