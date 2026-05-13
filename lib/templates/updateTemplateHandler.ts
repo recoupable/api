@@ -3,7 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateUpdateTemplateRequest } from "@/lib/templates/validateUpdateTemplateRequest";
 import { updateAgentTemplate } from "@/lib/supabase/agent_templates/updateAgentTemplate";
 import { deleteAgentTemplateShares } from "@/lib/supabase/agent_template_shares/deleteAgentTemplateShares";
-import { insertAgentTemplateShares } from "@/lib/supabase/agent_template_shares/insertAgentTemplateShares";
+import { upsertAgentTemplateShares } from "@/lib/supabase/agent_template_shares/upsertAgentTemplateShares";
 import { selectAgentTemplates } from "@/lib/supabase/agent_templates/selectAgentTemplates";
 import type { TablesUpdate } from "@/types/database.types";
 
@@ -47,7 +47,7 @@ export async function updateTemplateHandler(
     if (typeof body.share_emails !== "undefined") {
       await deleteAgentTemplateShares(templateId);
       if (body.share_emails.length > 0) {
-        await insertAgentTemplateShares(templateId, body.share_emails);
+        await upsertAgentTemplateShares(templateId, body.share_emails);
       }
     }
 

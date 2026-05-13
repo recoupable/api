@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateTemplateRequest } from "@/lib/templates/validateCreateTemplateRequest";
 import { insertAgentTemplate } from "@/lib/supabase/agent_templates/insertAgentTemplate";
-import { insertAgentTemplateShares } from "@/lib/supabase/agent_template_shares/insertAgentTemplateShares";
+import { upsertAgentTemplateShares } from "@/lib/supabase/agent_template_shares/upsertAgentTemplateShares";
 import { selectAgentTemplates } from "@/lib/supabase/agent_templates/selectAgentTemplates";
 
 /**
@@ -36,7 +36,7 @@ export async function createTemplateHandler(request: NextRequest): Promise<NextR
     }
 
     if (body.is_private && body.share_emails.length > 0) {
-      await insertAgentTemplateShares(inserted.id, body.share_emails);
+      await upsertAgentTemplateShares(inserted.id, body.share_emails);
     }
 
     const [template] = await selectAgentTemplates({ id: inserted.id }, accountId);

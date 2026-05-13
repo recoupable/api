@@ -17,8 +17,8 @@ vi.mock("@/lib/supabase/agent_template_shares/deleteAgentTemplateShares", () => 
   deleteAgentTemplateShares: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/agent_template_shares/insertAgentTemplateShares", () => ({
-  insertAgentTemplateShares: vi.fn(),
+vi.mock("@/lib/supabase/agent_template_shares/upsertAgentTemplateShares", () => ({
+  upsertAgentTemplateShares: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/agent_templates/selectAgentTemplates", () => ({
@@ -33,8 +33,8 @@ const { updateAgentTemplate } = await import("@/lib/supabase/agent_templates/upd
 const { deleteAgentTemplateShares } = await import(
   "@/lib/supabase/agent_template_shares/deleteAgentTemplateShares"
 );
-const { insertAgentTemplateShares } = await import(
-  "@/lib/supabase/agent_template_shares/insertAgentTemplateShares"
+const { upsertAgentTemplateShares } = await import(
+  "@/lib/supabase/agent_template_shares/upsertAgentTemplateShares"
 );
 const { selectAgentTemplates } = await import(
   "@/lib/supabase/agent_templates/selectAgentTemplates"
@@ -54,7 +54,7 @@ describe("updateTemplateHandler", () => {
     });
     vi.mocked(updateAgentTemplate).mockResolvedValue({ id: TEMPLATE_ID } as never);
     vi.mocked(deleteAgentTemplateShares).mockResolvedValue(undefined);
-    vi.mocked(insertAgentTemplateShares).mockResolvedValue(1);
+    vi.mocked(upsertAgentTemplateShares).mockResolvedValue(1);
     vi.mocked(selectAgentTemplates).mockResolvedValue([{ id: TEMPLATE_ID } as never]);
 
     const req = new NextRequest(`http://localhost/api/agents/templates/${TEMPLATE_ID}`, {
@@ -65,7 +65,7 @@ describe("updateTemplateHandler", () => {
     expect(res.status).toBe(200);
     expect(updateAgentTemplate).toHaveBeenCalledWith(TEMPLATE_ID, { title: "New Title" });
     expect(deleteAgentTemplateShares).toHaveBeenCalledWith(TEMPLATE_ID);
-    expect(insertAgentTemplateShares).toHaveBeenCalledWith(TEMPLATE_ID, ["x@y.com"]);
+    expect(upsertAgentTemplateShares).toHaveBeenCalledWith(TEMPLATE_ID, ["x@y.com"]);
     expect(selectAgentTemplates).toHaveBeenCalledWith({ id: TEMPLATE_ID }, ACCOUNT_ID);
   });
 
