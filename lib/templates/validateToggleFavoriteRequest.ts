@@ -5,7 +5,7 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { selectAgentTemplates } from "@/lib/supabase/agent_templates/selectAgentTemplates";
-import { isAgentTemplateSharedWithAccount } from "@/lib/supabase/agent_template_shares/isAgentTemplateSharedWithAccount";
+import { selectAgentTemplateShares } from "@/lib/supabase/agent_template_shares/selectAgentTemplateShares";
 
 export const toggleFavoriteBodySchema = z.object({
   is_favourite: z.boolean({ message: "is_favourite is required" }),
@@ -61,7 +61,8 @@ export async function validateToggleFavoriteRequest(
   const isOwner = existing.creator?.id === accountId;
   let canAccess = isOwner || !existing.is_private;
   if (!canAccess) {
-    canAccess = await isAgentTemplateSharedWithAccount(templateId, accountId);
+    const shares = await selectAgentTemplateShares({ templateId, accountId });
+    canAccess = shares.length > 0;
   }
   if (!canAccess) {
     return NextResponse.json(
