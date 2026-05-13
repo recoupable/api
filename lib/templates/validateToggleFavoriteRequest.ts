@@ -5,7 +5,7 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { selectTemplates } from "@/lib/supabase/templates/selectTemplates";
-import { isTemplateSharedWithAccount } from "@/lib/supabase/template_shares/isTemplateSharedWithAccount";
+import { isTemplateSharedWithAccount } from "@/lib/supabase/templates/shares/isTemplateSharedWithAccount";
 
 export const toggleFavoriteBodySchema = z.object({
   is_favourite: z.boolean({ message: "is_favourite is required" }),

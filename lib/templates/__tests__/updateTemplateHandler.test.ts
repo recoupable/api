@@ -13,11 +13,11 @@ vi.mock("@/lib/supabase/templates/updateTemplate", () => ({
   updateTemplate: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/template_shares/deleteTemplateShares", () => ({
+vi.mock("@/lib/supabase/templates/shares/deleteTemplateShares", () => ({
   deleteTemplateShares: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/template_shares/insertTemplateShares", () => ({
+vi.mock("@/lib/supabase/templates/shares/insertTemplateShares", () => ({
   insertTemplateShares: vi.fn(),
 }));
 
@@ -31,10 +31,10 @@ const { validateUpdateTemplateRequest } = await import(
 );
 const { updateTemplate } = await import("@/lib/supabase/templates/updateTemplate");
 const { deleteTemplateShares } = await import(
-  "@/lib/supabase/template_shares/deleteTemplateShares"
+  "@/lib/supabase/templates/shares/deleteTemplateShares"
 );
 const { insertTemplateShares } = await import(
-  "@/lib/supabase/template_shares/insertTemplateShares"
+  "@/lib/supabase/templates/shares/insertTemplateShares"
 );
 const { selectTemplates } = await import("@/lib/supabase/templates/selectTemplates");
 

@@ -13,7 +13,7 @@ vi.mock("@/lib/supabase/templates/insertTemplate", () => ({
   insertTemplate: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/template_shares/insertTemplateShares", () => ({
+vi.mock("@/lib/supabase/templates/shares/insertTemplateShares", () => ({
   insertTemplateShares: vi.fn(),
 }));
 
@@ -27,7 +27,7 @@ const { validateCreateTemplateRequest } = await import(
 );
 const { insertTemplate } = await import("@/lib/supabase/templates/insertTemplate");
 const { insertTemplateShares } = await import(
-  "@/lib/supabase/template_shares/insertTemplateShares"
+  "@/lib/supabase/templates/shares/insertTemplateShares"
 );
 const { selectTemplates } = await import("@/lib/supabase/templates/selectTemplates");
 

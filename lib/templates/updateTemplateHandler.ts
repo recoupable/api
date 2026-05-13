@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateUpdateTemplateRequest } from "@/lib/templates/validateUpdateTemplateRequest";
 import { updateTemplate } from "@/lib/supabase/templates/updateTemplate";
-import { deleteTemplateShares } from "@/lib/supabase/template_shares/deleteTemplateShares";
-import { insertTemplateShares } from "@/lib/supabase/template_shares/insertTemplateShares";
+import { deleteTemplateShares } from "@/lib/supabase/templates/shares/deleteTemplateShares";
+import { insertTemplateShares } from "@/lib/supabase/templates/shares/insertTemplateShares";
 import { selectTemplates } from "@/lib/supabase/templates/selectTemplates";
 import type { TablesUpdate } from "@/types/database.types";
 

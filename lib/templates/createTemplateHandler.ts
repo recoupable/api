@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateTemplateRequest } from "@/lib/templates/validateCreateTemplateRequest";
 import { insertTemplate } from "@/lib/supabase/templates/insertTemplate";
-import { insertTemplateShares } from "@/lib/supabase/template_shares/insertTemplateShares";
+import { insertTemplateShares } from "@/lib/supabase/templates/shares/insertTemplateShares";
 import { selectTemplates } from "@/lib/supabase/templates/selectTemplates";
 
 /**

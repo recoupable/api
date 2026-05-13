@@ -9,11 +9,11 @@ vi.mock("@/lib/templates/validateToggleFavoriteRequest", () => ({
   validateToggleFavoriteRequest: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/template_favorites/insertTemplateFavorite", () => ({
+vi.mock("@/lib/supabase/templates/favorites/insertTemplateFavorite", () => ({
   insertTemplateFavorite: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/template_favorites/deleteTemplateFavorite", () => ({
+vi.mock("@/lib/supabase/templates/favorites/deleteTemplateFavorite", () => ({
   deleteTemplateFavorite: vi.fn(),
 }));
 
@@ -22,10 +22,10 @@ const { validateToggleFavoriteRequest } = await import(
   "@/lib/templates/validateToggleFavoriteRequest"
 );
 const { insertTemplateFavorite } = await import(
-  "@/lib/supabase/template_favorites/insertTemplateFavorite"
+  "@/lib/supabase/templates/favorites/insertTemplateFavorite"
 );
 const { deleteTemplateFavorite } = await import(
-  "@/lib/supabase/template_favorites/deleteTemplateFavorite"
+  "@/lib/supabase/templates/favorites/deleteTemplateFavorite"
 );
 
 const ACCOUNT_ID = "11111111-1111-1111-1111-111111111111";
