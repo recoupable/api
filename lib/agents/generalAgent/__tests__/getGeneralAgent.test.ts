@@ -117,7 +117,7 @@ describe("getGeneralAgent", () => {
 
       const result = await getGeneralAgent(body);
 
-      expect(result.model).toBe("openai/gpt-5.4");
+      expect(result.model).toBe("openai/gpt-5.4-mini");
     });
 
     it("uses custom model when specified in body", async () => {

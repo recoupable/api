@@ -42,7 +42,7 @@ vi.mock("@/lib/credits/handleChatCredits", () => ({
 }));
 
 vi.mock("@/lib/const", () => ({
-  DEFAULT_MODEL: "openai/gpt-5.4",
+  DEFAULT_MODEL: "openai/gpt-5.4-mini",
 }));
 
 vi.mock("ai", () => ({
