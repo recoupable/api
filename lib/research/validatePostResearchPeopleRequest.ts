@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 const bodySchema = z.object({
@@ -29,6 +30,9 @@ export async function validatePostResearchPeopleRequest(
   if (!parsed.success) {
     return errorResponse(parsed.error.issues[0]?.message ?? "Invalid request body", 400);
   }
+
+  const short = await ensureResearchCredits(authResult.accountId);
+  if (short) return short;
 
   return { accountId: authResult.accountId, ...parsed.data };
 }

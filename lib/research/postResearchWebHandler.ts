@@ -16,7 +16,6 @@ export async function postResearchWebHandler(request: NextRequest): Promise<Next
   try {
     const validated = await validatePostResearchWebRequest(request);
     if (validated instanceof NextResponse) return validated;
-
     const searchResponse = await searchPerplexity({
       query: validated.query,
       max_results: validated.max_results ?? 10,

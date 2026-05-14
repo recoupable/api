@@ -19,6 +19,10 @@ import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import { validateChatRequest } from "../../validateChatRequest";
 import { setupChatRequest } from "../../setupChatRequest";
 
+vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
+  ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
+}));
+
 /**
  * Integration tests for chat endpoints.
  *

@@ -23,7 +23,6 @@ export async function postResearchEnrichHandler(request: NextRequest): Promise<N
 
     const creditCost =
       validated.processor === "ultra" ? 25 : validated.processor === "core" ? 10 : 5;
-
     const result = await enrichEntity(validated.input, validated.schema, validated.processor);
 
     if (result.status === "timeout") {

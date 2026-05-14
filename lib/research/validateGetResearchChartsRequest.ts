@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 const VALID_TYPES = ["regional", "viral"] as const;
@@ -49,6 +50,9 @@ export async function validateGetResearchChartsRequest(
   if (!(VALID_LATEST as readonly string[]).includes(latest)) {
     return errorResponse(`latest must be "true" or "false"`, 400);
   }
+
+  const short = await ensureResearchCredits(authResult.accountId);
+  if (short) return short;
 
   return {
     accountId: authResult.accountId,

@@ -22,7 +22,6 @@ export async function getResearchAudienceHandler(request: NextRequest): Promise<
 
     const { searchParams } = new URL(request.url);
     const platform = searchParams.get("platform") || "instagram";
-
     const result = await handleArtistResearch({
       ...validated,
       path: cmId => `/artist/${cmId}/${platform}-audience-stats`,

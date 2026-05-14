@@ -5,6 +5,10 @@ import { validateChatRequest, chatRequestSchema } from "../validateChatRequest";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { setupConversation } from "@/lib/chat/setupConversation";
 
+vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
+  ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
+}));
+
 // Mock dependencies
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),

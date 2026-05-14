@@ -12,7 +12,7 @@ import { DEFAULT_MODEL } from "@/lib/const";
  * Handles a streaming chat request.
  *
  * This function:
- * 1. Validates the request (auth, body schema)
+ * 1. Validates the request (auth, body schema, credit budget)
  * 2. Sets up the chat configuration (agent, model, tools)
  * 3. Creates a streaming response using the AI SDK
  *

@@ -19,7 +19,6 @@ export async function getResearchPlaylistHandler(request: NextRequest): Promise<
   try {
     const validated = await validateGetResearchPlaylistRequest(request);
     if (validated instanceof NextResponse) return validated;
-
     const result = await handleResearch({
       accountId: validated.accountId,
       path: `/playlist/${validated.platform}/${validated.id}`,

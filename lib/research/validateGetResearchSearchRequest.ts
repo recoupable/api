@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 export type ValidatedGetResearchSearchRequest = {
@@ -30,6 +31,9 @@ export async function validateGetResearchSearchRequest(
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q");
   if (!q) return errorResponse("q parameter is required", 400);
+
+  const short = await ensureResearchCredits(authResult.accountId);
+  if (short) return short;
 
   return {
     accountId: authResult.accountId,

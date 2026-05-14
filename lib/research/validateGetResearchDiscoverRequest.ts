@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { z } from "zod";
 
 export const discoverQuerySchema = z.object({
@@ -49,6 +50,9 @@ export async function validateGetResearchDiscoverRequest(
       { status: 400, headers: getCorsHeaders() },
     );
   }
+
+  const short = await ensureResearchCredits(authResult.accountId);
+  if (short) return short;
 
   return { accountId: authResult.accountId, ...result.data };
 }
