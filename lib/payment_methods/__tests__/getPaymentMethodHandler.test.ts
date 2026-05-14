@@ -1,0 +1,104 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest, NextResponse } from "next/server";
+
+import { getPaymentMethodHandler } from "@/lib/payment_methods/getPaymentMethodHandler";
+import { validateGetPaymentMethodParams } from "@/lib/payment_methods/validateGetPaymentMethodParams";
+import { resolveStripeCustomerForAccount } from "@/lib/stripe/resolveStripeCustomerForAccount";
+import { getDefaultPaymentMethodDetails } from "@/lib/stripe/getDefaultPaymentMethodDetails";
+
+vi.mock("@/lib/networking/getCorsHeaders", () => ({
+  getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
+}));
+
+vi.mock("@/lib/payment_methods/validateGetPaymentMethodParams", () => ({
+  validateGetPaymentMethodParams: vi.fn(),
+}));
+
+vi.mock("@/lib/stripe/resolveStripeCustomerForAccount", () => ({
+  resolveStripeCustomerForAccount: vi.fn(),
+}));
+
+vi.mock("@/lib/stripe/getDefaultPaymentMethodDetails", () => ({
+  getDefaultPaymentMethodDetails: vi.fn(),
+}));
+
+const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
+
+const buildRequest = () =>
+  new NextRequest(`http://localhost/api/accounts/${ACCOUNT}/payment-method`);
+const buildParams = () => Promise.resolve({ id: ACCOUNT });
+
+beforeEach(() => vi.clearAllMocks());
+
+describe("getPaymentMethodHandler", () => {
+  it("returns 200 with the saved card when the account has one on file", async () => {
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(resolveStripeCustomerForAccount).mockResolvedValue("cus_x");
+    vi.mocked(getDefaultPaymentMethodDetails).mockResolvedValue({
+      brand: "visa",
+      last4: "4242",
+      exp_month: 12,
+      exp_year: 2026,
+      funding: "credit",
+    });
+
+    const res = await getPaymentMethodHandler(buildRequest(), buildParams());
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({
+      account_id: ACCOUNT,
+      card: {
+        brand: "visa",
+        last4: "4242",
+        exp_month: 12,
+        exp_year: 2026,
+        funding: "credit",
+      },
+    });
+    expect(resolveStripeCustomerForAccount).toHaveBeenCalledWith(ACCOUNT);
+    expect(getDefaultPaymentMethodDetails).toHaveBeenCalledWith("cus_x");
+  });
+
+  it("returns 200 with card: null when the customer has no payment method", async () => {
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(resolveStripeCustomerForAccount).mockResolvedValue("cus_y");
+    vi.mocked(getDefaultPaymentMethodDetails).mockResolvedValue(null);
+
+    const res = await getPaymentMethodHandler(buildRequest(), buildParams());
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ account_id: ACCOUNT, card: null });
+  });
+
+  it("forwards a 401 from validation as { error } with the original status", async () => {
+    const denial = NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(denial);
+
+    const res = await getPaymentMethodHandler(buildRequest(), buildParams());
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "Unauthorized" });
+    expect(resolveStripeCustomerForAccount).not.toHaveBeenCalled();
+  });
+
+  it("forwards a 403 from validation", async () => {
+    const denial = NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(denial);
+
+    const res = await getPaymentMethodHandler(buildRequest(), buildParams());
+
+    expect(res.status).toBe(403);
+    await expect(res.json()).resolves.toEqual({ error: "Forbidden" });
+  });
+
+  it("returns 500 with masked internal-error when an upstream throws", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(resolveStripeCustomerForAccount).mockRejectedValue(new Error("stripe-down"));
+
+    const res = await getPaymentMethodHandler(buildRequest(), buildParams());
+
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({ error: "Internal server error" });
+  });
+});
