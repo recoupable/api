@@ -2,8 +2,6 @@ import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { deductCredits } from "@/lib/credits/deductCredits";
-import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
-import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
 import { searchPeople } from "@/lib/exa/searchPeople";
 import { validatePostResearchPeopleRequest } from "@/lib/research/validatePostResearchPeopleRequest";
 
@@ -21,14 +19,6 @@ export async function postResearchPeopleHandler(request: NextRequest): Promise<N
   try {
     const validated = await validatePostResearchPeopleRequest(request);
     if (validated instanceof NextResponse) return validated;
-
-    const short = await ensureCreditsOrShortCircuit({
-      accountId: validated.accountId,
-      creditsToDeduct: 5,
-      successUrl: CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
-    });
-    if (short) return short;
-
     const result = await searchPeople(validated.query, validated.num_results ?? 10);
 
     try {

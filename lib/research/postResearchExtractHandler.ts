@@ -2,8 +2,6 @@ import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { deductCredits } from "@/lib/credits/deductCredits";
-import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
-import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
 import { extractUrl } from "@/lib/parallel/extractUrl";
 import { validatePostResearchExtractRequest } from "@/lib/research/validatePostResearchExtractRequest";
 
@@ -22,13 +20,6 @@ export async function postResearchExtractHandler(request: NextRequest): Promise<
     if (validated instanceof NextResponse) return validated;
 
     const creditCost = 5 * validated.urls.length;
-    const short = await ensureCreditsOrShortCircuit({
-      accountId: validated.accountId,
-      creditsToDeduct: creditCost,
-      successUrl: CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
-    });
-    if (short) return short;
-
     const result = await extractUrl(validated.urls, validated.objective, validated.full_content);
 
     try {

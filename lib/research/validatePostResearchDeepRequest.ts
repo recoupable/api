@@ -6,25 +6,23 @@ import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 const bodySchema = z.object({
-  urls: z.array(z.string().min(1)).min(1).max(10),
-  objective: z.string().optional(),
-  full_content: z.boolean().optional(),
+  query: z.string().min(1, "query is required"),
 });
 
-export type ValidatedPostResearchExtractRequest = {
+export type ValidatedPostResearchDeepRequest = {
   accountId: string;
-  urls: string[];
-  objective?: string;
-  full_content?: boolean;
+  query: string;
 };
 
 /**
- * Validates `POST /api/research/extract` — auth + body (`urls` 1..10 required,
- * optional `objective`, `full_content`).
+ * Validates `POST /api/research/deep` — auth + body (`query` required) +
+ * 25-credit budget (deep research is expensive). Auto-recharges via a saved
+ * card if the account is short; returns a 402 NextResponse if no card or
+ * decline.
  */
-export async function validatePostResearchExtractRequest(
+export async function validatePostResearchDeepRequest(
   request: NextRequest,
-): Promise<NextResponse | ValidatedPostResearchExtractRequest> {
+): Promise<NextResponse | ValidatedPostResearchDeepRequest> {
   const authResult = await validateAuthContext(request);
   if (authResult instanceof NextResponse) return authResult;
 
@@ -36,10 +34,10 @@ export async function validatePostResearchExtractRequest(
 
   const short = await ensureCreditsOrShortCircuit({
     accountId: authResult.accountId,
-    creditsToDeduct: 5 * parsed.data.urls.length,
+    creditsToDeduct: 25,
     successUrl: CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
   });
   if (short) return short;
 
-  return { accountId: authResult.accountId, ...parsed.data };
+  return { accountId: authResult.accountId, query: parsed.data.query };
 }

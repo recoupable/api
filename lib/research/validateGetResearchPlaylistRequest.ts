@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 const VALID_PLATFORMS = ["spotify", "applemusic", "deezer", "amazon", "youtube"];
@@ -34,6 +35,9 @@ export async function validateGetResearchPlaylistRequest(
   if (!VALID_PLATFORMS.includes(platform)) {
     return errorResponse(`Invalid platform. Must be one of: ${VALID_PLATFORMS.join(", ")}`, 400);
   }
+
+  const short = await ensureResearchCredits(authResult.accountId);
+  if (short) return short;
 
   return { accountId: authResult.accountId, platform, id };
 }

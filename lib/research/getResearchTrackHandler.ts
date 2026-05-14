@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
-import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { handleResearch } from "@/lib/research/handleResearch";
 import { validateGetResearchTrackRequest } from "@/lib/research/validateGetResearchTrackRequest";
 
@@ -19,10 +18,6 @@ export async function getResearchTrackHandler(request: NextRequest): Promise<Nex
   try {
     const validated = await validateGetResearchTrackRequest(request);
     if (validated instanceof NextResponse) return validated;
-
-    const short = await ensureResearchCredits(validated.accountId);
-    if (short) return short;
-
     const result = await handleResearch({
       accountId: validated.accountId,
       path: `/track/${validated.id}`,

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 const SPOTIFY_ARTIST_REGEX = /spotify\.com\/artist\/([a-zA-Z0-9]+)/;
@@ -27,6 +28,9 @@ export async function validateGetResearchLookupRequest(
 
   const match = url.match(SPOTIFY_ARTIST_REGEX);
   if (!match) return errorResponse("url must be a valid Spotify artist URL", 400);
+
+  const short = await ensureResearchCredits(authResult.accountId);
+  if (short) return short;
 
   return { accountId: authResult.accountId, spotifyId: match[1] };
 }

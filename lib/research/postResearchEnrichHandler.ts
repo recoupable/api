@@ -3,8 +3,6 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { deductCredits } from "@/lib/credits/deductCredits";
-import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
-import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
 import { enrichEntity } from "@/lib/parallel/enrichEntity";
 import { validatePostResearchEnrichRequest } from "@/lib/research/validatePostResearchEnrichRequest";
 
@@ -25,14 +23,6 @@ export async function postResearchEnrichHandler(request: NextRequest): Promise<N
 
     const creditCost =
       validated.processor === "ultra" ? 25 : validated.processor === "core" ? 10 : 5;
-
-    const short = await ensureCreditsOrShortCircuit({
-      accountId: validated.accountId,
-      creditsToDeduct: creditCost,
-      successUrl: CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
-    });
-    if (short) return short;
-
     const result = await enrichEntity(validated.input, validated.schema, validated.processor);
 
     if (result.status === "timeout") {

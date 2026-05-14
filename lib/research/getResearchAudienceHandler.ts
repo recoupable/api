@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { validateArtistRequest } from "@/lib/research/validateArtistRequest";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { successResponse } from "@/lib/networking/successResponse";
-import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 /**
@@ -23,10 +22,6 @@ export async function getResearchAudienceHandler(request: NextRequest): Promise<
 
     const { searchParams } = new URL(request.url);
     const platform = searchParams.get("platform") || "instagram";
-
-    const short = await ensureResearchCredits(validated.accountId);
-    if (short) return short;
-
     const result = await handleArtistResearch({
       ...validated,
       path: cmId => `/artist/${cmId}/${platform}-audience-stats`,

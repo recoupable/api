@@ -1,15 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { deductCredits } from "@/lib/credits/deductCredits";
-import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
-import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
+import { validatePostResearchDeepRequest } from "@/lib/research/validatePostResearchDeepRequest";
 import { chatWithPerplexity } from "@/lib/perplexity/chatWithPerplexity";
-
-const bodySchema = z.object({
-  query: z.string().min(1, "query is required"),
-});
 
 /**
  * Deep research handler — performs comprehensive research via Perplexity sonar-deep-research with citations.
@@ -18,31 +11,13 @@ const bodySchema = z.object({
  * @returns JSON research report with citations or error
  */
 export async function postResearchDeepHandler(request: NextRequest): Promise<NextResponse> {
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) return authResult;
-  const { accountId } = authResult;
-
-  let body: z.infer<typeof bodySchema>;
-  try {
-    body = bodySchema.parse(await request.json());
-  } catch (err) {
-    const message = err instanceof z.ZodError ? err.issues[0]?.message : "Invalid request body";
-    return NextResponse.json(
-      { status: "error", error: message ?? "Invalid request body" },
-      { status: 400, headers: getCorsHeaders() },
-    );
-  }
-
-  const short = await ensureCreditsOrShortCircuit({
-    accountId,
-    creditsToDeduct: 25,
-    successUrl: CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
-  });
-  if (short) return short;
+  const validated = await validatePostResearchDeepRequest(request);
+  if (validated instanceof NextResponse) return validated;
+  const { accountId, query } = validated;
 
   try {
     const result = await chatWithPerplexity(
-      [{ role: "user", content: body.query }],
+      [{ role: "user", content: query }],
       "sonar-deep-research",
     );
 

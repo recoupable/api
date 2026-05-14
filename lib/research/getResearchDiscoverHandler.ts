@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
-import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { handleResearch } from "@/lib/research/handleResearch";
 import { validateGetResearchDiscoverRequest } from "@/lib/research/validateGetResearchDiscoverRequest";
 
@@ -34,10 +33,6 @@ export async function getResearchDiscoverHandler(request: NextRequest): Promise<
     } else if (validated.sp_monthly_listeners_max !== undefined) {
       query["sp_ml[]"] = String(validated.sp_monthly_listeners_max);
     }
-
-    const short = await ensureResearchCredits(validated.accountId);
-    if (short) return short;
-
     const result = await handleResearch({
       accountId: validated.accountId,
       path: "/artist/list/filter",
