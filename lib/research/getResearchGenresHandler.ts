@@ -22,6 +22,7 @@ export async function getResearchGenresHandler(request: NextRequest): Promise<Ne
       path: "/genres",
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     return successResponse({ genres: Array.isArray(result.data) ? result.data : [] });
   } catch (error) {

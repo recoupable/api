@@ -34,6 +34,7 @@ export async function getResearchTrackPlaylistsHandler(
       query: { ...validated.pagination, ...validated.filters },
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
 
     return successResponse({

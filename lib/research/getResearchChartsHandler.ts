@@ -29,6 +29,7 @@ export async function getResearchChartsHandler(request: NextRequest): Promise<Ne
       },
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
 
     const data = result.data;

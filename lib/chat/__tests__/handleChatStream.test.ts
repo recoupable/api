@@ -7,6 +7,10 @@ import { setupConversation } from "@/lib/chat/setupConversation";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { handleChatStream } from "../handleChatStream";
 
+vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
+  ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
+}));
+
 // Mock all dependencies before importing the module under test
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),

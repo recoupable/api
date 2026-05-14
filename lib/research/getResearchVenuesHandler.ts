@@ -23,6 +23,7 @@ export async function getResearchVenuesHandler(request: NextRequest): Promise<Ne
       path: cmId => `/artist/${cmId}/venues`,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     return successResponse({ venues: Array.isArray(result.data) ? result.data : [] });
   } catch (error) {

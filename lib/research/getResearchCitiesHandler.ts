@@ -24,6 +24,7 @@ export async function getResearchCitiesHandler(request: NextRequest): Promise<Ne
       path: cmId => `/artist/${cmId}/where-people-listen`,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
 
     const raw =

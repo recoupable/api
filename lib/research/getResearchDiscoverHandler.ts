@@ -40,6 +40,7 @@ export async function getResearchDiscoverHandler(request: NextRequest): Promise<
       query,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     return successResponse({ artists: Array.isArray(result.data) ? result.data : [] });
   } catch (error) {

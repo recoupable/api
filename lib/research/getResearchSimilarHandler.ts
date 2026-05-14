@@ -36,6 +36,7 @@ export async function getResearchSimilarHandler(request: NextRequest): Promise<N
       query,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     const data = result.data;
     return successResponse({

@@ -24,6 +24,7 @@ export async function getResearchTrackHandler(request: NextRequest): Promise<Nex
       path: `/track/${validated.id}`,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse("Failed to fetch track details", result.status);
 
     const data = result.data;

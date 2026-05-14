@@ -6,6 +6,10 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { resolveArtist } from "@/lib/research/resolveArtist";
 import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
 
+vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
+  ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));

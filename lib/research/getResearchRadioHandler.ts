@@ -22,6 +22,7 @@ export async function getResearchRadioHandler(request: NextRequest): Promise<Nex
       path: "/radio/station-list",
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     return successResponse({ stations: Array.isArray(result.data) ? result.data : [] });
   } catch (error) {

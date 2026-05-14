@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { deductCredits } from "@/lib/credits/deductCredits";
+import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
+import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
 import { searchPerplexity } from "@/lib/perplexity/searchPerplexity";
 import { formatSearchResultsAsMarkdown } from "@/lib/perplexity/formatSearchResultsAsMarkdown";
 import { validatePostResearchWebRequest } from "@/lib/research/validatePostResearchWebRequest";
@@ -16,6 +18,13 @@ export async function postResearchWebHandler(request: NextRequest): Promise<Next
   try {
     const validated = await validatePostResearchWebRequest(request);
     if (validated instanceof NextResponse) return validated;
+
+    const short = await ensureCreditsOrShortCircuit({
+      accountId: validated.accountId,
+      creditsToDeduct: 5,
+      successUrl: CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
+    });
+    if (short) return short;
 
     const searchResponse = await searchPerplexity({
       query: validated.query,

@@ -22,6 +22,7 @@ export async function getResearchLookupHandler(request: NextRequest): Promise<Ne
       path: `/artist/spotify/${validated.spotifyId}/get-ids`,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse("Lookup failed", result.status);
 
     const data = result.data;

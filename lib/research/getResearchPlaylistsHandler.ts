@@ -54,6 +54,7 @@ export async function getResearchPlaylistsHandler(request: NextRequest): Promise
       query,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     return successResponse({ placements: Array.isArray(result.data) ? result.data : [] });
   } catch (error) {

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { handleChatCompletion } from "./handleChatCompletion";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
+import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
+import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
 import { validateChatRequest } from "./validateChatRequest";
 import { setupChatRequest } from "./setupChatRequest";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
@@ -25,6 +27,19 @@ export async function handleChatStream(request: NextRequest): Promise<Response> 
     return validatedBodyOrError;
   }
   const body = validatedBodyOrError;
+
+  // Approach A preflight: require at least 1 credit before streaming. Auto-
+  // recharges silently if the account is short and has a saved card; otherwise
+  // 402s with checkoutUrl (+ declineReason when Stripe rejected the card) so
+  // open-agents can route the human to update billing.
+  if (body.accountId) {
+    const short = await ensureCreditsOrShortCircuit({
+      accountId: body.accountId,
+      creditsToDeduct: 1,
+      successUrl: CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
+    });
+    if (short) return short;
+  }
 
   try {
     const chatConfig = await setupChatRequest(body);

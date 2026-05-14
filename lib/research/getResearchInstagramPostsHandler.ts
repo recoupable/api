@@ -27,6 +27,7 @@ export async function getResearchInstagramPostsHandler(
       path: cmId => `/SNS/deepSocial/cm_artist/${cmId}/instagram`,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     const data = result.data;
     const body =

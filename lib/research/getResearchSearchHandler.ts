@@ -32,6 +32,7 @@ export async function getResearchSearchHandler(request: NextRequest): Promise<Ne
       query,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse("Search failed", result.status);
 
     const data = result.data as {

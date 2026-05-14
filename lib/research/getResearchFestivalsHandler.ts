@@ -23,6 +23,7 @@ export async function getResearchFestivalsHandler(request: NextRequest): Promise
       path: "/festival/list",
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     return successResponse({ festivals: Array.isArray(result.data) ? result.data : [] });
   } catch (error) {

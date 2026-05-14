@@ -23,6 +23,7 @@ export async function getResearchRankHandler(request: NextRequest): Promise<Next
       path: cmId => `/artist/${cmId}/artist-rank`,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     return successResponse({
       rank: (result.data as Record<string, unknown>)?.artist_rank || null,

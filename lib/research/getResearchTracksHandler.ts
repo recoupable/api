@@ -24,6 +24,7 @@ export async function getResearchTracksHandler(request: NextRequest): Promise<Ne
       path: cmId => `/artist/${cmId}/tracks`,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     return successResponse({ tracks: Array.isArray(result.data) ? result.data : [] });
   } catch (error) {

@@ -4,6 +4,10 @@ import { handleResearch } from "../handleResearch";
 import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
 import { deductCredits } from "@/lib/credits/deductCredits";
 
+vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
+  ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock("@/lib/chartmetric/fetchChartmetric", () => ({
   fetchChartmetric: vi.fn(),
 }));

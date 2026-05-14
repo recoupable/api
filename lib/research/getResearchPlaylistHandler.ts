@@ -25,6 +25,7 @@ export async function getResearchPlaylistHandler(request: NextRequest): Promise<
       path: `/playlist/${validated.platform}/${validated.id}`,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse("Playlist lookup failed", result.status);
 
     const data = result.data;

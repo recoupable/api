@@ -24,6 +24,7 @@ export async function getResearchProfileHandler(request: NextRequest): Promise<N
       path: cmId => `/artist/${cmId}`,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     const data = result.data;
     const body =

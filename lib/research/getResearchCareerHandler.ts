@@ -24,6 +24,7 @@ export async function getResearchCareerHandler(request: NextRequest): Promise<Ne
       path: cmId => `/artist/${cmId}/career`,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     return successResponse({ career: Array.isArray(result.data) ? result.data : [] });
   } catch (error) {

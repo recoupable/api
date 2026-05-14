@@ -33,6 +33,7 @@ export async function getResearchAlbumsHandler(request: NextRequest): Promise<Ne
       query,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse("Failed to fetch artist albums", result.status);
     return successResponse({ albums: Array.isArray(result.data) ? result.data : [] });
   } catch (error) {

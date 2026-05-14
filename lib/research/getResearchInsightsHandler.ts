@@ -25,6 +25,7 @@ export async function getResearchInsightsHandler(request: NextRequest): Promise<
       path: cmId => `/artist/${cmId}/noteworthy-insights`,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     return successResponse({ insights: Array.isArray(result.data) ? result.data : [] });
   } catch (error) {

@@ -28,6 +28,7 @@ export async function getResearchAudienceHandler(request: NextRequest): Promise<
       path: cmId => `/artist/${cmId}/${platform}-audience-stats`,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     const data = result.data;
     const body =

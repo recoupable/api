@@ -3,6 +3,8 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { deductCredits } from "@/lib/credits/deductCredits";
+import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
+import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
 import { chatWithPerplexity } from "@/lib/perplexity/chatWithPerplexity";
 
 const bodySchema = z.object({
@@ -30,6 +32,13 @@ export async function postResearchDeepHandler(request: NextRequest): Promise<Nex
       { status: 400, headers: getCorsHeaders() },
     );
   }
+
+  const short = await ensureCreditsOrShortCircuit({
+    accountId,
+    creditsToDeduct: 25,
+    successUrl: CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
+  });
+  if (short) return short;
 
   try {
     const result = await chatWithPerplexity(

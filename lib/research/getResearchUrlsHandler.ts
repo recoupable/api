@@ -25,6 +25,7 @@ export async function getResearchUrlsHandler(request: NextRequest): Promise<Next
       path: cmId => `/artist/${cmId}/urls`,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     const data = result.data;
     return successResponse({

@@ -24,6 +24,7 @@ export async function getResearchMilestonesHandler(request: NextRequest): Promis
       path: cmId => `/artist/${cmId}/milestones`,
     });
 
+    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     return successResponse({
       milestones: (result.data as Record<string, unknown>)?.insights || [],
