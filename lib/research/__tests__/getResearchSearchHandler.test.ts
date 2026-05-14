@@ -5,6 +5,10 @@ import { getResearchSearchHandler } from "../getResearchSearchHandler";
 import { validateGetResearchSearchRequest } from "../validateGetResearchSearchRequest";
 import { handleResearch } from "../handleResearch";
 
+vi.mock("@/lib/research/ensureResearchCredits", () => ({
+  ensureResearchCredits: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));

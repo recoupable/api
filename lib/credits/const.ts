@@ -32,4 +32,4 @@ export const CREDIT_AUTO_RECHARGE_PURPOSE = "credits_auto_recharge";
  * helpers don't, so this is the sane default.
  */
 export const CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL =
-  "https://chat.recoupable.com/credits/success";
+  "https://sandbox.recoupable.com/settings/profile";

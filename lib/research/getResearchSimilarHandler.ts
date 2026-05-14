@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { validateGetResearchSimilarRequest } from "@/lib/research/validateGetResearchSimilarRequest";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { successResponse } from "@/lib/networking/successResponse";
+import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 /**
@@ -30,13 +31,15 @@ export async function getResearchSimilarHandler(request: NextRequest): Promise<N
     };
     if (limit) query.limit = limit;
 
+    const short = await ensureResearchCredits(validated.accountId);
+    if (short) return short;
+
     const result = await handleArtistResearch({
       ...rest,
       path: cmId => `/artist/${cmId}/similar-artists/by-configurations`,
       query,
     });
 
-    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     const data = result.data;
     return successResponse({

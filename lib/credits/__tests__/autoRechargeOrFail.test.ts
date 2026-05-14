@@ -139,4 +139,34 @@ describe("autoRechargeOrFail", () => {
       checkoutUrl: "https://pay.recoupable.com/c/pay/cs_z",
     });
   });
+
+  it("credits the top-up even when the request needs MORE than 500 — paid credits must land", async () => {
+    selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 2 }]);
+    chargeOffSessionMock.mockResolvedValue({ kind: "charged", paymentIntentId: "pi_big" });
+    createCreditsSessionMock.mockResolvedValue({
+      id: "cs_big",
+      url: "https://pay.recoupable.com/c/pay/cs_big",
+    });
+
+    // Request needs 600 credits, balance is 2, top-up adds 500 → still short.
+    const result = await autoRechargeOrFail({ ...params, creditsToDeduct: 600 });
+
+    expect(incrementMock).toHaveBeenCalledWith({ accountId: "acct_123", delta: 500 });
+    expect(result).toEqual({
+      kind: "insufficient_credits",
+      remainingCredits: 502,
+      requiredCredits: 600,
+      checkoutUrl: "https://pay.recoupable.com/c/pay/cs_big",
+    });
+  });
+
+  it("throws when createCreditsStripeSession returns no url (not a usable 402)", async () => {
+    selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 0 }]);
+    chargeOffSessionMock.mockResolvedValue({ kind: "no_payment_method" });
+    createCreditsSessionMock.mockResolvedValue({ id: "cs_nourl", url: null });
+
+    await expect(autoRechargeOrFail(params)).rejects.toThrow(
+      /createCreditsStripeSession returned no url/,
+    );
+  });
 });

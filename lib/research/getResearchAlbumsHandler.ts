@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
+import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { handleResearch } from "@/lib/research/handleResearch";
 import { validateGetResearchAlbumsRequest } from "@/lib/research/validateGetResearchAlbumsRequest";
 
@@ -27,13 +28,15 @@ export async function getResearchAlbumsHandler(request: NextRequest): Promise<Ne
     if (validated.limit !== undefined) query.limit = validated.limit;
     if (validated.offset !== undefined) query.offset = validated.offset;
 
+    const short = await ensureResearchCredits(validated.accountId);
+    if (short) return short;
+
     const result = await handleResearch({
       accountId: validated.accountId,
       path: `/artist/${validated.artistId}/albums`,
       query,
     });
 
-    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse("Failed to fetch artist albums", result.status);
     return successResponse({ albums: Array.isArray(result.data) ? result.data : [] });
   } catch (error) {

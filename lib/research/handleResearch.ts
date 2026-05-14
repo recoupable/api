@@ -1,8 +1,5 @@
-import { NextResponse } from "next/server";
 import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
-import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
 import { deductCredits } from "@/lib/credits/deductCredits";
-import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
 
 export type HandleResearchParams = {
   accountId: string;
@@ -12,32 +9,21 @@ export type HandleResearchParams = {
   credits?: number;
 };
 
-export type HandleResearchResult =
-  | NextResponse
-  | { data: unknown }
-  | { error: string; status: number };
+export type HandleResearchResult = { data: unknown } | { error: string; status: number };
 
 /**
- * Proxies a non-artist-scoped research call to Chartmetric and gates on
- * credits up-front: if the account is short, an off-session auto-recharge
- * is attempted, otherwise the function returns a 402 NextResponse the route
- * can return directly. Successful gating runs the upstream call and deducts
- * credits as part of `ensureCreditsOrShortCircuit`.
+ * Proxies a non-artist-scoped research call to Chartmetric and deducts credits
+ * on success. Credit-deduction failures are non-fatal — the fetched data is
+ * still returned so transient billing failures don't block read endpoints.
  *
- * Auth is intentionally out of scope here — callers (validators) own that.
+ * Credit gating (auto-recharge + 402 short-circuit) lives in route handlers
+ * via `ensureCreditsOrShortCircuit` — keeping this helper free of NextResponse
+ * means non-route consumers (e.g. `resolveTrack`) keep working unchanged.
  *
- * @returns A 402 NextResponse on insufficient credits, `{ data }` on success,
- *   or `{ error, status }` on upstream failure.
+ * @returns `{ data }` on success, `{ error, status }` on upstream failure.
  */
 export async function handleResearch(params: HandleResearchParams): Promise<HandleResearchResult> {
   const { accountId, path, query, credits = 5 } = params;
-
-  const short = await ensureCreditsOrShortCircuit({
-    accountId,
-    creditsToDeduct: credits,
-    successUrl: CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
-  });
-  if (short) return short;
 
   const result = await fetchChartmetric(path, query);
   if (result.status !== 200) {

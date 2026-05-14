@@ -59,9 +59,14 @@ export async function autoRechargeOrFail(
     },
   });
 
-  if (charge.kind === "charged" && remaining + CREDIT_AUTO_RECHARGE_CREDITS >= creditsToDeduct) {
+  // If Stripe charged the card, credits MUST be applied — otherwise the
+  // customer paid for credits that never landed. Apply unconditionally;
+  // whether the topup *alone* covers this request is a separate question.
+  if (charge.kind === "charged") {
     await incrementRemainingCredits({ accountId, delta: CREDIT_AUTO_RECHARGE_CREDITS });
-    return { kind: "available" };
+    if (remaining + CREDIT_AUTO_RECHARGE_CREDITS >= creditsToDeduct) {
+      return { kind: "available" };
+    }
   }
 
   const session = await createCreditsStripeSession({
@@ -70,12 +75,18 @@ export async function autoRechargeOrFail(
     successUrl,
     customer,
   });
+  if (!session.url) {
+    throw new Error(
+      `[autoRechargeOrFail] createCreditsStripeSession returned no url for account ${accountId}`,
+    );
+  }
 
   return {
     kind: "insufficient_credits",
-    remainingCredits: remaining,
+    remainingCredits:
+      charge.kind === "charged" ? remaining + CREDIT_AUTO_RECHARGE_CREDITS : remaining,
     requiredCredits: creditsToDeduct,
-    checkoutUrl: session.url ?? "",
+    checkoutUrl: session.url,
     ...(charge.kind === "requires_action" && charge.declineReason
       ? { declineReason: charge.declineReason }
       : {}),

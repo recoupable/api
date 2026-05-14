@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { validateGetResearchPlaylistsRequest } from "@/lib/research/validateGetResearchPlaylistsRequest";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { successResponse } from "@/lib/networking/successResponse";
+import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 /**
@@ -48,13 +49,15 @@ export async function getResearchPlaylistsHandler(request: NextRequest): Promise
     }
 
     const { platform, status, ...rest } = validated;
+    const short = await ensureResearchCredits(validated.accountId);
+    if (short) return short;
+
     const result = await handleArtistResearch({
       ...rest,
       path: cmId => `/artist/${cmId}/${platform}/${status}/playlists`,
       query,
     });
 
-    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     return successResponse({ placements: Array.isArray(result.data) ? result.data : [] });
   } catch (error) {

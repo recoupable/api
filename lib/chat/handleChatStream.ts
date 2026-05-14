@@ -28,20 +28,18 @@ export async function handleChatStream(request: NextRequest): Promise<Response> 
   }
   const body = validatedBodyOrError;
 
-  // Approach A preflight: require at least 1 credit before streaming. Auto-
-  // recharges silently if the account is short and has a saved card; otherwise
-  // 402s with checkoutUrl (+ declineReason when Stripe rejected the card) so
-  // open-agents can route the human to update billing.
-  if (body.accountId) {
+  try {
+    // Approach A preflight: require at least 1 credit before streaming. Auto-
+    // recharges silently if the account is short and has a saved card; otherwise
+    // 402s with checkoutUrl (+ declineReason when Stripe rejected the card) so
+    // open-agents can route the human to update billing.
     const short = await ensureCreditsOrShortCircuit({
       accountId: body.accountId,
       creditsToDeduct: 1,
       successUrl: CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
     });
     if (short) return short;
-  }
 
-  try {
     const chatConfig = await setupChatRequest(body);
     const { agent } = chatConfig;
 

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { validateArtistRequest } from "@/lib/research/validateArtistRequest";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { successResponse } from "@/lib/networking/successResponse";
+import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 /**
@@ -19,12 +20,14 @@ export async function getResearchCareerHandler(request: NextRequest): Promise<Ne
     const validated = await validateArtistRequest(request);
     if (validated instanceof NextResponse) return validated;
 
+    const short = await ensureResearchCredits(validated.accountId);
+    if (short) return short;
+
     const result = await handleArtistResearch({
       ...validated,
       path: cmId => `/artist/${cmId}/career`,
     });
 
-    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     return successResponse({ career: Array.isArray(result.data) ? result.data : [] });
   } catch (error) {

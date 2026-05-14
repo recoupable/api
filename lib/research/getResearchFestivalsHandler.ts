@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
+import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { handleResearch } from "@/lib/research/handleResearch";
 import { validateGetResearchFestivalsRequest } from "@/lib/research/validateGetResearchFestivalsRequest";
 
@@ -18,12 +19,14 @@ export async function getResearchFestivalsHandler(request: NextRequest): Promise
     const validated = await validateGetResearchFestivalsRequest(request);
     if (validated instanceof NextResponse) return validated;
 
+    const short = await ensureResearchCredits(validated.accountId);
+    if (short) return short;
+
     const result = await handleResearch({
       accountId: validated.accountId,
       path: "/festival/list",
     });
 
-    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     return successResponse({ festivals: Array.isArray(result.data) ? result.data : [] });
   } catch (error) {

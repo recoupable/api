@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
+import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { handleResearch } from "@/lib/research/handleResearch";
 import { validateGetResearchChartsRequest } from "@/lib/research/validateGetResearchChartsRequest";
 
@@ -18,6 +19,9 @@ export async function getResearchChartsHandler(request: NextRequest): Promise<Ne
     const validated = await validateGetResearchChartsRequest(request);
     if (validated instanceof NextResponse) return validated;
 
+    const short = await ensureResearchCredits(validated.accountId);
+    if (short) return short;
+
     const result = await handleResearch({
       accountId: validated.accountId,
       path: `/charts/${validated.platform}`,
@@ -29,7 +33,6 @@ export async function getResearchChartsHandler(request: NextRequest): Promise<Ne
       },
     });
 
-    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
 
     const data = result.data;

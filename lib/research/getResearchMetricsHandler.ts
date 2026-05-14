@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { validateGetResearchMetricsRequest } from "@/lib/research/validateGetResearchMetricsRequest";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { successResponse } from "@/lib/networking/successResponse";
+import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 /**
@@ -21,12 +22,14 @@ export async function getResearchMetricsHandler(request: NextRequest): Promise<N
     if (validated instanceof NextResponse) return validated;
 
     const { source, ...rest } = validated;
+    const short = await ensureResearchCredits(validated.accountId);
+    if (short) return short;
+
     const result = await handleArtistResearch({
       ...rest,
       path: cmId => `/artist/${cmId}/stat/${source}`,
     });
 
-    if (result instanceof NextResponse) return result;
     if ("error" in result) return errorResponse(result.error, result.status);
     const data = result.data;
     const body =
