@@ -4,6 +4,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateGetResearchDiscoverRequest } from "../validateGetResearchDiscoverRequest";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
+vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
+  ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));

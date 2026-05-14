@@ -27,7 +27,6 @@ export async function getResearchTrackPlaylistsHandler(
       if (resolved.error) return errorResponse(resolved.error, 404);
       trackId = resolved.id;
     }
-
     const result = await handleResearch({
       accountId: validated.accountId,
       path: `/track/${trackId}/${validated.platform}/${validated.status}/playlists`,

@@ -25,7 +25,6 @@ export async function getResearchSearchHandler(request: NextRequest): Promise<Ne
     if (validated.beta !== undefined) query.beta = validated.beta;
     if (validated.platforms !== undefined) query.platforms = validated.platforms;
     if (validated.offset !== undefined) query.offset = validated.offset;
-
     const result = await handleResearch({
       accountId: validated.accountId,
       path: "/search",

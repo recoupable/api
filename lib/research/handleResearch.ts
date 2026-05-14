@@ -16,7 +16,9 @@ export type HandleResearchResult = { data: unknown } | { error: string; status: 
  * on success. Credit-deduction failures are non-fatal — the fetched data is
  * still returned so transient billing failures don't block read endpoints.
  *
- * Auth is intentionally out of scope here — callers (validators) own that.
+ * Credit gating (auto-recharge + 402 short-circuit) lives in route handlers
+ * via `ensureCreditsOrShortCircuit` — keeping this helper free of NextResponse
+ * means non-route consumers (e.g. `resolveTrack`) keep working unchanged.
  *
  * @returns `{ data }` on success, `{ error, status }` on upstream failure.
  */

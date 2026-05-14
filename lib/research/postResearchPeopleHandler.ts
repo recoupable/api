@@ -19,7 +19,6 @@ export async function postResearchPeopleHandler(request: NextRequest): Promise<N
   try {
     const validated = await validatePostResearchPeopleRequest(request);
     if (validated instanceof NextResponse) return validated;
-
     const result = await searchPeople(validated.query, validated.num_results ?? 10);
 
     try {

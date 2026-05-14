@@ -16,7 +16,6 @@ export async function getResearchRadioHandler(request: NextRequest): Promise<Nex
   try {
     const validated = await validateGetResearchRadioRequest(request);
     if (validated instanceof NextResponse) return validated;
-
     const result = await handleResearch({
       accountId: validated.accountId,
       path: "/radio/station-list",

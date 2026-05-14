@@ -19,12 +19,13 @@ export async function postResearchExtractHandler(request: NextRequest): Promise<
     const validated = await validatePostResearchExtractRequest(request);
     if (validated instanceof NextResponse) return validated;
 
+    const creditCost = 5 * validated.urls.length;
     const result = await extractUrl(validated.urls, validated.objective, validated.full_content);
 
     try {
       await deductCredits({
         accountId: validated.accountId,
-        creditsToDeduct: 5 * validated.urls.length,
+        creditsToDeduct: creditCost,
       });
     } catch {
       // Credit deduction failed but data was fetched — log but don't block

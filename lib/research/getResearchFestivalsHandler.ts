@@ -17,7 +17,6 @@ export async function getResearchFestivalsHandler(request: NextRequest): Promise
   try {
     const validated = await validateGetResearchFestivalsRequest(request);
     if (validated instanceof NextResponse) return validated;
-
     const result = await handleResearch({
       accountId: validated.accountId,
       path: "/festival/list",

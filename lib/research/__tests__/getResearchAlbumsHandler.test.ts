@@ -5,6 +5,10 @@ import { getResearchAlbumsHandler } from "../getResearchAlbumsHandler";
 import { validateGetResearchAlbumsRequest } from "../validateGetResearchAlbumsRequest";
 import { handleResearch } from "../handleResearch";
 
+vi.mock("@/lib/research/ensureResearchCredits", () => ({
+  ensureResearchCredits: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));

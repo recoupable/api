@@ -5,6 +5,10 @@ import { resolveArtist } from "@/lib/research/resolveArtist";
 import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
 import { deductCredits } from "@/lib/credits/deductCredits";
 
+vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
+  ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock("@/lib/research/resolveArtist", () => ({
   resolveArtist: vi.fn(),
 }));
