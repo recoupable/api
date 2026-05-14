@@ -40,6 +40,17 @@ function makePatchReq(
   });
 }
 
+function makePatchReqRaw(
+  body: string,
+  url = "https://example.com/api/sessions/sess_1",
+): NextRequest {
+  return new NextRequest(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
+}
+
 const mockRow: SessionRow = {
   id: "sess_1",
   account_id: "acc-uuid-1",
@@ -280,6 +291,24 @@ describe("PATCH /api/sessions/[sessionId]", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.status).toBe("error");
+  });
+
+  it("returns 400 when JSON body is malformed", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc-uuid-1",
+      orgId: null,
+      authToken: "tok",
+    });
+
+    const res = await PATCH(makePatchReqRaw("{not-json"), {
+      params: Promise.resolve({ sessionId: "sess_1" }),
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      status: "error",
+      error: "Invalid JSON body",
+    });
+    expect(selectSessions).not.toHaveBeenCalled();
   });
 
   it("returns 200 without calling updateSession when body has no updates", async () => {
