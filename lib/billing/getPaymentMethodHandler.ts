@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateGetPaymentMethodParams } from "@/lib/payment_methods/validateGetPaymentMethodParams";
-import { resolveStripeCustomerForAccount } from "@/lib/stripe/resolveStripeCustomerForAccount";
+import { validateGetPaymentMethodParams } from "@/lib/billing/validateGetPaymentMethodParams";
+import { findStripeCustomerForAccount } from "@/lib/stripe/findStripeCustomerForAccount";
 import { getDefaultPaymentMethodDetails } from "@/lib/stripe/getDefaultPaymentMethodDetails";
-import { buildPaymentMethodResponse } from "@/lib/payment_methods/buildPaymentMethodResponse";
-import { mapToPaymentMethodError } from "@/lib/payment_methods/mapToPaymentMethodError";
+import { buildPaymentMethodResponse } from "@/lib/billing/buildPaymentMethodResponse";
+import { mapToPaymentMethodError } from "@/lib/billing/mapToPaymentMethodError";
 
 /**
  * GET /api/accounts/[id]/payment-method
@@ -27,8 +27,11 @@ export async function getPaymentMethodHandler(
       return mapToPaymentMethodError(validated);
     }
 
-    const customer = await resolveStripeCustomerForAccount(validated);
-    const card = await getDefaultPaymentMethodDetails(customer);
+    // Read-only lookup: a GET should never have the side-effect of creating
+    // a Stripe Customer. If the account has never had one provisioned, it
+    // can't have a saved card either — short-circuit to card:null.
+    const customer = await findStripeCustomerForAccount(validated);
+    const card = customer ? await getDefaultPaymentMethodDetails(customer) : null;
 
     return NextResponse.json(buildPaymentMethodResponse({ accountId: validated, card }), {
       status: 200,

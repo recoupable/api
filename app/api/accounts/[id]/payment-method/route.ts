@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getPaymentMethodHandler } from "@/lib/payment_methods/getPaymentMethodHandler";
+import { getPaymentMethodHandler } from "@/lib/billing/getPaymentMethodHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.

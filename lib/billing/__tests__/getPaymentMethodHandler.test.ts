@@ -1,21 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
-import { getPaymentMethodHandler } from "@/lib/payment_methods/getPaymentMethodHandler";
-import { validateGetPaymentMethodParams } from "@/lib/payment_methods/validateGetPaymentMethodParams";
-import { resolveStripeCustomerForAccount } from "@/lib/stripe/resolveStripeCustomerForAccount";
+import { getPaymentMethodHandler } from "@/lib/billing/getPaymentMethodHandler";
+import { validateGetPaymentMethodParams } from "@/lib/billing/validateGetPaymentMethodParams";
+import { findStripeCustomerForAccount } from "@/lib/stripe/findStripeCustomerForAccount";
 import { getDefaultPaymentMethodDetails } from "@/lib/stripe/getDefaultPaymentMethodDetails";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-vi.mock("@/lib/payment_methods/validateGetPaymentMethodParams", () => ({
+vi.mock("@/lib/billing/validateGetPaymentMethodParams", () => ({
   validateGetPaymentMethodParams: vi.fn(),
 }));
 
-vi.mock("@/lib/stripe/resolveStripeCustomerForAccount", () => ({
-  resolveStripeCustomerForAccount: vi.fn(),
+vi.mock("@/lib/stripe/findStripeCustomerForAccount", () => ({
+  findStripeCustomerForAccount: vi.fn(),
 }));
 
 vi.mock("@/lib/stripe/getDefaultPaymentMethodDetails", () => ({
@@ -33,7 +33,7 @@ beforeEach(() => vi.clearAllMocks());
 describe("getPaymentMethodHandler", () => {
   it("returns 200 with the saved card when the account has one on file", async () => {
     vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
-    vi.mocked(resolveStripeCustomerForAccount).mockResolvedValue("cus_x");
+    vi.mocked(findStripeCustomerForAccount).mockResolvedValue("cus_x");
     vi.mocked(getDefaultPaymentMethodDetails).mockResolvedValue({
       brand: "visa",
       last4: "4242",
@@ -55,19 +55,31 @@ describe("getPaymentMethodHandler", () => {
         funding: "credit",
       },
     });
-    expect(resolveStripeCustomerForAccount).toHaveBeenCalledWith(ACCOUNT);
+    expect(findStripeCustomerForAccount).toHaveBeenCalledWith(ACCOUNT);
     expect(getDefaultPaymentMethodDetails).toHaveBeenCalledWith("cus_x");
   });
 
-  it("returns 200 with card: null when the customer has no payment method", async () => {
+  it("returns 200 with card: null when the customer exists but has no payment method", async () => {
     vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
-    vi.mocked(resolveStripeCustomerForAccount).mockResolvedValue("cus_y");
+    vi.mocked(findStripeCustomerForAccount).mockResolvedValue("cus_y");
     vi.mocked(getDefaultPaymentMethodDetails).mockResolvedValue(null);
 
     const res = await getPaymentMethodHandler(buildRequest(), buildParams());
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ account_id: ACCOUNT, card: null });
+  });
+
+  it("returns 200 with card: null AND skips the PM lookup when no Stripe customer exists yet", async () => {
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(findStripeCustomerForAccount).mockResolvedValue(null);
+
+    const res = await getPaymentMethodHandler(buildRequest(), buildParams());
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ account_id: ACCOUNT, card: null });
+    // Critical: a GET must not have the side-effect of creating a Stripe Customer.
+    expect(getDefaultPaymentMethodDetails).not.toHaveBeenCalled();
   });
 
   it("forwards a 401 from validation as { error } with the original status", async () => {
@@ -78,7 +90,7 @@ describe("getPaymentMethodHandler", () => {
 
     expect(res.status).toBe(401);
     await expect(res.json()).resolves.toEqual({ error: "Unauthorized" });
-    expect(resolveStripeCustomerForAccount).not.toHaveBeenCalled();
+    expect(findStripeCustomerForAccount).not.toHaveBeenCalled();
   });
 
   it("forwards a 403 from validation", async () => {
@@ -94,7 +106,7 @@ describe("getPaymentMethodHandler", () => {
   it("returns 500 with masked internal-error when an upstream throws", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
-    vi.mocked(resolveStripeCustomerForAccount).mockRejectedValue(new Error("stripe-down"));
+    vi.mocked(findStripeCustomerForAccount).mockRejectedValue(new Error("stripe-down"));
 
     const res = await getPaymentMethodHandler(buildRequest(), buildParams());
 
