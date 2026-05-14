@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { GET, OPTIONS } from "../route";
+import { GET, PATCH, OPTIONS } from "../route";
 import type { Tables } from "@/types/database.types";
 
 type SessionRow = Tables<"sessions">;
 
 vi.mock("@/lib/supabase/sessions/selectSessions", () => ({
   selectSessions: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/sessions/updateSession", () => ({
+  updateSession: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
@@ -18,10 +22,33 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 }));
 
 const { selectSessions } = await import("@/lib/supabase/sessions/selectSessions");
+const { updateSession } = await import("@/lib/supabase/sessions/updateSession");
 const { validateAuthContext } = await import("@/lib/auth/validateAuthContext");
 
 function makeReq(url = "https://example.com/api/sessions/sess_1"): NextRequest {
   return new NextRequest(url);
+}
+
+function makePatchReq(
+  body: Record<string, unknown>,
+  url = "https://example.com/api/sessions/sess_1",
+): NextRequest {
+  return new NextRequest(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+function makePatchReqRaw(
+  body: string,
+  url = "https://example.com/api/sessions/sess_1",
+): NextRequest {
+  return new NextRequest(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
 }
 
 const mockRow: SessionRow = {
@@ -76,6 +103,24 @@ describe("GET /api/sessions/[sessionId]", () => {
     });
     expect(res.status).toBe(401);
     expect(selectSessions).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when the database returns an error", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc-uuid-1",
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue(null);
+
+    const res = await GET(makeReq(), {
+      params: Promise.resolve({ sessionId: "sess_1" }),
+    });
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      status: "error",
+      error: "Internal server error",
+    });
   });
 
   it("returns 404 when session does not exist", async () => {
@@ -158,6 +203,182 @@ describe("GET /api/sessions/[sessionId]", () => {
         createdAt: "2026-05-01T00:00:00.000Z",
         updatedAt: "2026-05-04T00:00:00.000Z",
       },
+    });
+  });
+});
+
+describe("PATCH /api/sessions/[sessionId]", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns 401 when auth fails", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(
+      NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    );
+
+    const res = await PATCH(makePatchReq({ title: "New title" }), {
+      params: Promise.resolve({ sessionId: "sess_1" }),
+    });
+    expect(res.status).toBe(401);
+    expect(selectSessions).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when the database returns an error", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc-uuid-1",
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue(null);
+
+    const res = await PATCH(makePatchReq({ title: "New title" }), {
+      params: Promise.resolve({ sessionId: "sess_1" }),
+    });
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      status: "error",
+      error: "Internal server error",
+    });
+  });
+
+  it("returns 404 when session does not exist", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc-uuid-1",
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue([]);
+
+    const res = await PATCH(makePatchReq({ title: "New title" }), {
+      params: Promise.resolve({ sessionId: "sess_missing" }),
+    });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({
+      status: "error",
+      error: "Session not found",
+    });
+  });
+
+  it("returns 403 when session is owned by a different account", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc-uuid-OTHER",
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue([mockRow]);
+
+    const res = await PATCH(makePatchReq({ title: "New title" }), {
+      params: Promise.resolve({ sessionId: "sess_1" }),
+    });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({
+      status: "error",
+      error: "Forbidden",
+    });
+  });
+
+  it("returns 400 when status value is invalid", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc-uuid-1",
+      orgId: null,
+      authToken: "tok",
+    });
+
+    const res = await PATCH(makePatchReq({ status: "not-a-status" }), {
+      params: Promise.resolve({ sessionId: "sess_1" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.status).toBe("error");
+  });
+
+  it("returns 400 when JSON body is malformed", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc-uuid-1",
+      orgId: null,
+      authToken: "tok",
+    });
+
+    const res = await PATCH(makePatchReqRaw("{not-json"), {
+      params: Promise.resolve({ sessionId: "sess_1" }),
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      status: "error",
+      error: "Invalid JSON body",
+    });
+    expect(selectSessions).not.toHaveBeenCalled();
+  });
+
+  it("returns 200 without calling updateSession when body has no updates", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc-uuid-1",
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue([mockRow]);
+
+    const res = await PATCH(makePatchReq({}), {
+      params: Promise.resolve({ sessionId: "sess_1" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.session.id).toBe("sess_1");
+    expect(updateSession).not.toHaveBeenCalled();
+  });
+
+  it("returns 200 with updated session on happy path", async () => {
+    const updatedRow: SessionRow = {
+      ...mockRow,
+      title: "Renamed session",
+      status: "archived",
+    };
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc-uuid-1",
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue([mockRow]);
+    vi.mocked(updateSession).mockResolvedValue(updatedRow);
+
+    const res = await PATCH(makePatchReq({ title: "Renamed session", status: "archived" }), {
+      params: Promise.resolve({ sessionId: "sess_1" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.session.title).toBe("Renamed session");
+    expect(body.session.status).toBe("archived");
+    expect(updateSession).toHaveBeenCalledWith("sess_1", {
+      title: "Renamed session",
+      status: "archived",
+    });
+  });
+
+  it("accepts completed status and maps line counters to snake_case columns", async () => {
+    const updatedRow: SessionRow = {
+      ...mockRow,
+      status: "completed",
+      lines_added: 99,
+      lines_removed: 1,
+    };
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc-uuid-1",
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue([mockRow]);
+    vi.mocked(updateSession).mockResolvedValue(updatedRow);
+
+    const res = await PATCH(
+      makePatchReq({ status: "completed", linesAdded: 99, linesRemoved: 1 }),
+      { params: Promise.resolve({ sessionId: "sess_1" }) },
+    );
+    expect(res.status).toBe(200);
+    expect(updateSession).toHaveBeenCalledWith("sess_1", {
+      status: "completed",
+      lines_added: 99,
+      lines_removed: 1,
     });
   });
 });

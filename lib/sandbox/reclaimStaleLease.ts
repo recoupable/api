@@ -13,6 +13,6 @@ import type { Tables } from "@/types/database.types";
  */
 export async function reclaimStaleLease(sessionId: string): Promise<Tables<"sessions"> | null> {
   await updateSession(sessionId, { lifecycle_run_id: null });
-  const rows = await selectSessions({ id: sessionId });
+  const rows = (await selectSessions({ id: sessionId })) ?? [];
   return rows[0] ?? null;
 }
