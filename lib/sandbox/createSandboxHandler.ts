@@ -44,7 +44,7 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
 
   let sessionRow: Tables<"sessions"> | null = null;
   if (sessionId) {
-    const rows = await selectSessions({ id: sessionId });
+    const rows = (await selectSessions({ id: sessionId })) ?? [];
     sessionRow = rows[0] ?? null;
 
     if (!sessionRow) {

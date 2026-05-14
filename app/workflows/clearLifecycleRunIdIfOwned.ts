@@ -15,6 +15,10 @@ export async function clearLifecycleRunIdIfOwned(sessionId: string, runId: strin
   "use step";
 
   const rows = await selectSessions({ id: sessionId });
+  if (!rows) {
+    console.error("[clearLifecycleRunIdIfOwned] DB error fetching session", sessionId);
+    return;
+  }
   const session = rows[0];
   if (!session || session.lifecycle_run_id !== runId) return;
 

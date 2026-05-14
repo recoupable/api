@@ -28,6 +28,14 @@ export async function getSessionByIdHandler(
   }
 
   const rows = await selectSessions({ id: sessionId });
+
+  if (rows === null) {
+    return NextResponse.json(
+      { status: "error", error: "Internal server error" },
+      { status: 500, headers: getCorsHeaders() },
+    );
+  }
+
   const row = rows[0] ?? null;
 
   if (!row) {
