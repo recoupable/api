@@ -103,6 +103,18 @@ describe("getPaymentMethodHandler", () => {
     await expect(res.json()).resolves.toEqual({ error: "Forbidden" });
   });
 
+  it("falls back to a default error message when the validation response body isn't JSON", async () => {
+    // Upstream is always JSON in practice, but `.json()` throws on an empty/
+    // malformed body. Guard ensures we never propagate a parse error.
+    const denial = new NextResponse("", { status: 401 });
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(denial);
+
+    const res = await getPaymentMethodHandler(buildRequest(), buildParams());
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "Unauthorized" });
+  });
+
   it("returns 500 with masked internal-error when an upstream throws", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);

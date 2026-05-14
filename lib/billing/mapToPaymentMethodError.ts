@@ -18,12 +18,19 @@ export async function mapToPaymentMethodError(res: NextResponse): Promise<NextRe
     );
   }
 
-  const data: unknown = await res.clone().json();
   let message = "Unauthorized";
-  if (data && typeof data === "object") {
-    const o = data as Record<string, unknown>;
-    if (typeof o.error === "string") message = o.error;
-    else if (typeof o.message === "string") message = o.message;
+  // Upstream is always JSON in practice, but `.json()` throws on an empty
+  // or malformed body — guard so we never propagate a parse error in place
+  // of the documented `{ error }` shape.
+  try {
+    const data: unknown = await res.clone().json();
+    if (data && typeof data === "object") {
+      const o = data as Record<string, unknown>;
+      if (typeof o.error === "string") message = o.error;
+      else if (typeof o.message === "string") message = o.message;
+    }
+  } catch {
+    // Keep the default "Unauthorized" / status-derived fallback.
   }
   return NextResponse.json({ error: message }, { status, headers: getCorsHeaders() });
 }
