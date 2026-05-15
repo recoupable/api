@@ -26,8 +26,8 @@ export async function patchSessionChatHandler(
   const updated = await updateChat({
     chatId,
     patch: {
-      ...(validated.patch.title !== undefined && { title: validated.patch.title }),
-      ...(validated.patch.modelId !== undefined && { model_id: validated.patch.modelId }),
+      title: validated.patch.title,
+      model_id: validated.patch.modelId,
     },
   });
 
