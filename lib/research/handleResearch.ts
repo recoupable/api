@@ -1,5 +1,5 @@
 import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
-import { deductCredits } from "@/lib/credits/deductCredits";
+import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 
 export type HandleResearchParams = {
   accountId: string;
@@ -31,7 +31,11 @@ export async function handleResearch(params: HandleResearchParams): Promise<Hand
   }
 
   try {
-    await deductCredits({ accountId, creditsToDeduct: credits });
+    await recordCreditDeduction({
+      accountId,
+      creditsToDeduct: credits,
+      source: "api",
+    });
   } catch (error) {
     console.error("[research] credit deduction failed:", error);
   }
