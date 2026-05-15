@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validatePatchSessionChatRequest } from "@/lib/sessions/chats/validatePatchSessionChatRequest";
+import { toChatResponse } from "@/lib/sessions/toChatResponse";
 import { updateChat } from "@/lib/supabase/chats/updateChat";
 
 /**
@@ -38,5 +39,8 @@ export async function patchSessionChatHandler(
     );
   }
 
-  return NextResponse.json({ chat: updated }, { status: 200, headers: getCorsHeaders() });
+  return NextResponse.json(
+    { chat: toChatResponse(updated) },
+    { status: 200, headers: getCorsHeaders() },
+  );
 }

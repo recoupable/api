@@ -58,9 +58,9 @@ describe("patchSessionChatHandler", () => {
       chatId: "chat_1",
       patch: { title: "Renamed", model_id: "openai/gpt-5-mini" },
     });
-    const body = (await res.json()) as { chat: { title: string; model_id: string } };
+    const body = (await res.json()) as { chat: { title: string; modelId: string } };
     expect(body.chat.title).toBe("Renamed");
-    expect(body.chat.model_id).toBe("openai/gpt-5-mini");
+    expect(body.chat.modelId).toBe("openai/gpt-5-mini");
   });
 
   it("only patches the field provided", async () => {
