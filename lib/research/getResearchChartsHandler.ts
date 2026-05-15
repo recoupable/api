@@ -17,7 +17,6 @@ export async function getResearchChartsHandler(request: NextRequest): Promise<Ne
   try {
     const validated = await validateGetResearchChartsRequest(request);
     if (validated instanceof NextResponse) return validated;
-
     const result = await handleResearch({
       accountId: validated.accountId,
       path: `/charts/${validated.platform}`,

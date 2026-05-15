@@ -16,7 +16,6 @@ export async function getResearchGenresHandler(request: NextRequest): Promise<Ne
   try {
     const validated = await validateGetResearchGenresRequest(request);
     if (validated instanceof NextResponse) return validated;
-
     const result = await handleResearch({
       accountId: validated.accountId,
       path: "/genres",

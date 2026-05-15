@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
+import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 const bodySchema = z.object({
@@ -31,6 +33,13 @@ export async function validatePostResearchExtractRequest(
   if (!parsed.success) {
     return errorResponse(parsed.error.issues[0]?.message ?? "Invalid request body", 400);
   }
+
+  const short = await ensureCreditsOrShortCircuit({
+    accountId: authResult.accountId,
+    creditsToDeduct: 5 * parsed.data.urls.length,
+    successUrl: CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
+  });
+  if (short) return short;
 
   return { accountId: authResult.accountId, ...parsed.data };
 }

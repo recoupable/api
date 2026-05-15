@@ -7,6 +7,10 @@ import { saveChatCompletion } from "@/lib/chat/saveChatCompletion";
 import { setupConversation } from "@/lib/chat/setupConversation";
 import { handleChatGenerate } from "../handleChatGenerate";
 
+vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
+  ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
+}));
+
 // Mock all dependencies before importing the module under test
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),

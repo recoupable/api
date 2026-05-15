@@ -18,7 +18,6 @@ export async function getResearchTrackHandler(request: NextRequest): Promise<Nex
   try {
     const validated = await validateGetResearchTrackRequest(request);
     if (validated instanceof NextResponse) return validated;
-
     const result = await handleResearch({
       accountId: validated.accountId,
       path: `/track/${validated.id}`,

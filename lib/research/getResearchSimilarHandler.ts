@@ -29,7 +29,6 @@ export async function getResearchSimilarHandler(request: NextRequest): Promise<N
       musicality,
     };
     if (limit) query.limit = limit;
-
     const result = await handleArtistResearch({
       ...rest,
       path: cmId => `/artist/${cmId}/similar-artists/by-configurations`,

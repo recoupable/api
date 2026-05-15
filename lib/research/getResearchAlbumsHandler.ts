@@ -26,7 +26,6 @@ export async function getResearchAlbumsHandler(request: NextRequest): Promise<Ne
     const query: Record<string, string> = { isPrimary: validated.isPrimary };
     if (validated.limit !== undefined) query.limit = validated.limit;
     if (validated.offset !== undefined) query.offset = validated.offset;
-
     const result = await handleResearch({
       accountId: validated.accountId,
       path: `/artist/${validated.artistId}/albums`,

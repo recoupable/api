@@ -19,7 +19,6 @@ export async function getResearchUrlsHandler(request: NextRequest): Promise<Next
   try {
     const validated = await validateArtistRequest(request);
     if (validated instanceof NextResponse) return validated;
-
     const result = await handleArtistResearch({
       ...validated,
       path: cmId => `/artist/${cmId}/urls`,

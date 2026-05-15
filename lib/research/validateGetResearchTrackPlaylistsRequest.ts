@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 const VALID_PLATFORMS = ["spotify", "applemusic", "deezer", "amazon"];
@@ -86,6 +87,9 @@ export async function validateGetResearchTrackPlaylistsRequest(
   if (until) pagination.until = until;
   const sortColumn = searchParams.get("sort");
   if (sortColumn) pagination.sortColumn = sortColumn;
+
+  const short = await ensureResearchCredits(authResult.accountId);
+  if (short) return short;
 
   return {
     accountId: authResult.accountId,

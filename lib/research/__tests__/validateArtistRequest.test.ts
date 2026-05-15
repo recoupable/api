@@ -4,6 +4,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateArtistRequest } from "../validateArtistRequest";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
+vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
+  ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));

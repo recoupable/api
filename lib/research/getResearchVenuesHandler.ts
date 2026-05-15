@@ -17,7 +17,6 @@ export async function getResearchVenuesHandler(request: NextRequest): Promise<Ne
   try {
     const validated = await validateArtistRequest(request);
     if (validated instanceof NextResponse) return validated;
-
     const result = await handleArtistResearch({
       ...validated,
       path: cmId => `/artist/${cmId}/venues`,

@@ -27,6 +27,7 @@ export async function computeLifecycleWakeDecision(
   "use step";
 
   const rows = await selectSessions({ id: sessionId });
+  if (!rows) return { shouldContinue: false, reason: "db-error" };
   const session = rows[0];
   if (!session) return { shouldContinue: false, reason: "session-not-found" };
   if (session.status === "archived" || session.lifecycle_state === "archived") {

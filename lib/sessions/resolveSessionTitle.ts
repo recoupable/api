@@ -24,7 +24,7 @@ export async function resolveSessionTitle(input: ResolveSessionTitleInput): Prom
     return trimmed;
   }
 
-  const rows = await selectSessions({ accountId: input.accountId });
+  const rows = (await selectSessions({ accountId: input.accountId })) ?? [];
   const usedTitles = rows.map(row => row.title);
   return getRandomCityName(new Set(usedTitles));
 }
