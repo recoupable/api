@@ -159,7 +159,7 @@ describe("validatePatchSessionChatRequest", () => {
     }
   });
 
-  it("returns the validated payload with title trimmed", async () => {
+  it("returns the validated patch with title trimmed", async () => {
     happyPathMocks();
     const res = await validatePatchSessionChatRequest(
       makeReq({ title: "  Renamed  " }),
@@ -168,12 +168,11 @@ describe("validatePatchSessionChatRequest", () => {
     );
     expect(res).not.toBeInstanceOf(NextResponse);
     if (!(res instanceof NextResponse)) {
-      expect(res.patch).toEqual({ title: "Renamed" });
-      expect(res.chat.id).toBe("chat_1");
+      expect(res).toEqual({ title: "Renamed" });
     }
   });
 
-  it("returns the validated payload when modelId is provided", async () => {
+  it("returns the validated patch when modelId is provided", async () => {
     happyPathMocks();
     const res = await validatePatchSessionChatRequest(
       makeReq({ modelId: "openai/gpt-5-mini" }),
@@ -182,7 +181,7 @@ describe("validatePatchSessionChatRequest", () => {
     );
     expect(res).not.toBeInstanceOf(NextResponse);
     if (!(res instanceof NextResponse)) {
-      expect(res.patch).toEqual({ modelId: "openai/gpt-5-mini" });
+      expect(res).toEqual({ modelId: "openai/gpt-5-mini" });
     }
   });
 });

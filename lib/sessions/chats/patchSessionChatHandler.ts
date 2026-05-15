@@ -18,16 +18,16 @@ export async function patchSessionChatHandler(
   sessionId: string,
   chatId: string,
 ): Promise<NextResponse> {
-  const validated = await validatePatchSessionChatRequest(request, sessionId, chatId);
-  if (validated instanceof NextResponse) {
-    return validated;
+  const patch = await validatePatchSessionChatRequest(request, sessionId, chatId);
+  if (patch instanceof NextResponse) {
+    return patch;
   }
 
   const updated = await updateChat({
     chatId,
     patch: {
-      title: validated.patch.title,
-      model_id: validated.patch.modelId,
+      title: patch.title,
+      model_id: patch.modelId,
     },
   });
 

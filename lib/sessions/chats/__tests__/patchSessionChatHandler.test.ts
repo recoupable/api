@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { baseSessionRow } from "@/lib/sessions/__tests__/baseSessionRow";
 import { baseChatRow } from "@/lib/sessions/__tests__/baseChatRow";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -19,8 +18,6 @@ const { validatePatchSessionChatRequest } = await import(
 const { updateChat } = await import("@/lib/supabase/chats/updateChat");
 const { patchSessionChatHandler } = await import("@/lib/sessions/chats/patchSessionChatHandler");
 
-const accountId = "acc-uuid-1";
-
 function makeReq(): NextRequest {
   return new NextRequest("https://example.com/api/sessions/sess_1/chats/chat_1", {
     method: "PATCH",
@@ -28,12 +25,7 @@ function makeReq(): NextRequest {
 }
 
 function mockValidated(patch: { title?: string; modelId?: string }) {
-  vi.mocked(validatePatchSessionChatRequest).mockResolvedValue({
-    auth: { accountId, orgId: null, authToken: "tok" },
-    session: baseSessionRow({ id: "sess_1", account_id: accountId }),
-    chat: baseChatRow({ id: "chat_1", session_id: "sess_1" }),
-    patch,
-  });
+  vi.mocked(validatePatchSessionChatRequest).mockResolvedValue(patch);
 }
 
 describe("patchSessionChatHandler", () => {

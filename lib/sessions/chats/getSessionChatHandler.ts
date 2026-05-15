@@ -32,9 +32,9 @@ export async function getSessionChatHandler(
   sessionId: string,
   chatId: string,
 ): Promise<NextResponse> {
-  const validated = await validateGetSessionChatRequest(request, sessionId, chatId);
-  if (validated instanceof NextResponse) {
-    return validated;
+  const chat = await validateGetSessionChatRequest(request, sessionId, chatId);
+  if (chat instanceof NextResponse) {
+    return chat;
   }
 
   const messages = await selectChatMessages({ chatId });
@@ -42,11 +42,11 @@ export async function getSessionChatHandler(
   return NextResponse.json(
     {
       chat: {
-        id: validated.chat.id,
-        modelId: validated.chat.model_id,
-        activeStreamId: validated.chat.active_stream_id,
+        id: chat.id,
+        modelId: chat.model_id,
+        activeStreamId: chat.active_stream_id,
       },
-      isStreaming: validated.chat.active_stream_id !== null,
+      isStreaming: chat.active_stream_id !== null,
       messages: messages.map(row => row.parts),
     } satisfies SessionChatResponse,
     { status: 200, headers: getCorsHeaders() },

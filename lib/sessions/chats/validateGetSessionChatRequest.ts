@@ -1,39 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import type { AuthContext } from "@/lib/auth/validateAuthContext";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import type { Tables } from "@/types/database.types";
-
-export interface ValidatedGetSessionChatRequest {
-  auth: AuthContext;
-  session: Tables<"sessions">;
-  chat: Tables<"chats">;
-}
 
 /**
  * Validates a `GET /api/sessions/{sessionId}/chats/{chatId}` request
  * end-to-end:
  *   1. Authenticates the caller via Privy Bearer / x-api-key
- *   2. Loads the session row at the given id
- *   3. Confirms the authenticated account owns it
- *   4. Loads the chat row at the given id
- *   5. Confirms the chat belongs to the session
+ *   2. Loads the session and confirms the caller owns it
+ *   3. Loads the chat and confirms it belongs to the session
  *
  * Returns either a 401/403/404 NextResponse describing the first
- * failure, or the resolved `{ auth, session, chat }` for the handler.
+ * failure, or the resolved chat row for the handler to render.
  *
  * @param request - The incoming request.
  * @param sessionId - The id of the parent session.
  * @param chatId - The id of the chat being fetched.
- * @returns A NextResponse on failure, or the validated auth + session + chat.
+ * @returns A NextResponse on failure, or the chat row on success.
  */
 export async function validateGetSessionChatRequest(
   request: NextRequest,
   sessionId: string,
   chatId: string,
-): Promise<NextResponse | ValidatedGetSessionChatRequest> {
+): Promise<NextResponse | Tables<"chats">> {
   const auth = await validateAuthContext(request);
   if (auth instanceof NextResponse) {
     return auth;
@@ -66,5 +57,5 @@ export async function validateGetSessionChatRequest(
     );
   }
 
-  return { auth, session, chat };
+  return chat;
 }

@@ -129,7 +129,7 @@ describe("validateGetSessionChatRequest", () => {
     }
   });
 
-  it("returns { auth, session, chat } on the happy path", async () => {
+  it("returns the chat row on the happy path", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId,
       orgId: null,
@@ -143,9 +143,8 @@ describe("validateGetSessionChatRequest", () => {
     const res = await validateGetSessionChatRequest(makeReq(), "sess_1", "chat_1");
     expect(res).not.toBeInstanceOf(NextResponse);
     if (!(res instanceof NextResponse)) {
-      expect(res.auth.accountId).toBe(accountId);
-      expect(res.session.id).toBe("sess_1");
-      expect(res.chat.id).toBe("chat_1");
+      expect(res.id).toBe("chat_1");
+      expect(res.session_id).toBe("sess_1");
     }
     expect(selectSessions).toHaveBeenCalledWith({ id: "sess_1" });
     expect(selectChats).toHaveBeenCalledWith({ id: "chat_1" });

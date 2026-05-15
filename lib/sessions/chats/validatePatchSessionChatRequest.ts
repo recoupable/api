@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import type { AuthContext } from "@/lib/auth/validateAuthContext";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
-import type { Tables } from "@/types/database.types";
 
 const patchSessionChatBodySchema = z
   .object({
@@ -17,13 +15,6 @@ const patchSessionChatBodySchema = z
   });
 
 export type PatchSessionChatBody = z.infer<typeof patchSessionChatBodySchema>;
-
-export interface ValidatedPatchSessionChatRequest {
-  auth: AuthContext;
-  session: Tables<"sessions">;
-  chat: Tables<"chats">;
-  patch: PatchSessionChatBody;
-}
 
 /**
  * Validates a `PATCH /api/sessions/{sessionId}/chats/{chatId}` request
@@ -37,13 +28,13 @@ export interface ValidatedPatchSessionChatRequest {
  * @param request - The incoming request.
  * @param sessionId - The id of the parent session.
  * @param chatId - The id of the chat being updated.
- * @returns A NextResponse on failure, or the validated payload.
+ * @returns A NextResponse on failure, or the validated patch body on success.
  */
 export async function validatePatchSessionChatRequest(
   request: NextRequest,
   sessionId: string,
   chatId: string,
-): Promise<NextResponse | ValidatedPatchSessionChatRequest> {
+): Promise<NextResponse | PatchSessionChatBody> {
   const auth = await validateAuthContext(request);
   if (auth instanceof NextResponse) {
     return auth;
@@ -95,5 +86,5 @@ export async function validatePatchSessionChatRequest(
     );
   }
 
-  return { auth, session, chat, patch: parsed.data };
+  return parsed.data;
 }
