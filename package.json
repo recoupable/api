@@ -13,6 +13,7 @@
     "lint:check": "eslint . --ext .ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "update-types": "npx supabase gen types typescript --project-id godremdqwajrwazhbrue --schema public > types/database.types.ts",
     "eval": "braintrust eval --external-packages playwright playwright-core chromium-bidi @browserbasehq/stagehand @composio/core @composio/vercel"
   },
   "dependencies": {
@@ -48,6 +49,7 @@
     "mcp-handler": "^1.0.4",
     "ms": "^2.1.3",
     "multiformats": "^13.4.1",
+    "nanoid": "^5.1.11",
     "next": "16.0.10",
     "node-telegram-bot-api": "^0.66.0",
     "react": "^19.2.1",

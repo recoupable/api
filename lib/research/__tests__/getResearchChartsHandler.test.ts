@@ -21,8 +21,8 @@ vi.mock("@/lib/chartmetric/fetchChartmetric", () => ({
   fetchChartmetric: vi.fn(),
 }));
 
-vi.mock("@/lib/credits/deductCredits", () => ({
-  deductCredits: vi.fn(),
+vi.mock("@/lib/credits/recordCreditDeduction", () => ({
+  recordCreditDeduction: vi.fn(),
 }));
 
 describe("getResearchChartsHandler", () => {
