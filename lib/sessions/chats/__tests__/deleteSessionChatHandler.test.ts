@@ -1,7 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { baseSessionRow } from "@/lib/sessions/__tests__/baseSessionRow";
-import { baseChatRow } from "@/lib/sessions/__tests__/baseChatRow";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
@@ -19,23 +17,9 @@ const { validateDeleteSessionChatRequest } = await import(
 const { deleteChat } = await import("@/lib/supabase/chats/deleteChat");
 const { deleteSessionChatHandler } = await import("@/lib/sessions/chats/deleteSessionChatHandler");
 
-const accountId = "acc-uuid-1";
-
 function makeReq(): NextRequest {
   return new NextRequest("https://example.com/api/sessions/sess_1/chats/chat_1", {
     method: "DELETE",
-  });
-}
-
-function mockValidated() {
-  vi.mocked(validateDeleteSessionChatRequest).mockResolvedValue({
-    auth: { accountId, orgId: null, authToken: "tok" },
-    session: baseSessionRow({ id: "sess_1", account_id: accountId }),
-    chat: baseChatRow({ id: "chat_1", session_id: "sess_1" }),
-    siblingChats: [
-      baseChatRow({ id: "chat_1", session_id: "sess_1" }),
-      baseChatRow({ id: "chat_2", session_id: "sess_1" }),
-    ],
   });
 }
 
@@ -57,7 +41,7 @@ describe("deleteSessionChatHandler", () => {
   });
 
   it("returns { success: true } on the happy path", async () => {
-    mockValidated();
+    vi.mocked(validateDeleteSessionChatRequest).mockResolvedValue(null);
     vi.mocked(deleteChat).mockResolvedValue(true);
 
     const res = await deleteSessionChatHandler(makeReq(), "sess_1", "chat_1");
@@ -67,7 +51,7 @@ describe("deleteSessionChatHandler", () => {
   });
 
   it("returns 500 when deleteChat reports failure", async () => {
-    mockValidated();
+    vi.mocked(validateDeleteSessionChatRequest).mockResolvedValue(null);
     vi.mocked(deleteChat).mockResolvedValue(false);
 
     const res = await deleteSessionChatHandler(makeReq(), "sess_1", "chat_1");

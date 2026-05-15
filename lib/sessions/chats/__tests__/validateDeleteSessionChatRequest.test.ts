@@ -120,7 +120,7 @@ describe("validateDeleteSessionChatRequest", () => {
     }
   });
 
-  it("returns the validated payload on the happy path", async () => {
+  it("returns null on the happy path", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId,
       orgId: null,
@@ -135,11 +135,7 @@ describe("validateDeleteSessionChatRequest", () => {
     ]);
 
     const res = await validateDeleteSessionChatRequest(makeReq(), "sess_1", "chat_1");
-    expect(res).not.toBeInstanceOf(NextResponse);
-    if (!(res instanceof NextResponse)) {
-      expect(res.chat.id).toBe("chat_1");
-      expect(res.siblingChats).toHaveLength(2);
-    }
+    expect(res).toBeNull();
     expect(selectChats).toHaveBeenCalledWith({ sessionId: "sess_1" });
   });
 });

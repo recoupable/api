@@ -18,9 +18,9 @@ export async function deleteSessionChatHandler(
   sessionId: string,
   chatId: string,
 ): Promise<NextResponse> {
-  const validated = await validateDeleteSessionChatRequest(request, sessionId, chatId);
-  if (validated instanceof NextResponse) {
-    return validated;
+  const failure = await validateDeleteSessionChatRequest(request, sessionId, chatId);
+  if (failure) {
+    return failure;
   }
 
   const ok = await deleteChat(chatId);
