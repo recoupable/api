@@ -6,6 +6,13 @@ import { insertChatMessage } from "@/lib/supabase/chat_messages/insertChatMessag
 import { updateChatMessageParts } from "@/lib/supabase/chat_messages/updateChatMessageParts";
 import { updateChat } from "@/lib/supabase/chats/updateChat";
 
+function jsonInternalServerError(): NextResponse {
+  return NextResponse.json(
+    { status: "error", error: "Internal server error" },
+    { status: 500, headers: getCorsHeaders() },
+  );
+}
+
 /**
  * Handles `POST /api/sessions/{sessionId}/chats/{chatId}/messages`.
  *
@@ -42,22 +49,16 @@ export async function persistSessionChatAssistantMessageHandler(
       );
     }
 
-    const updated = await updateChatMessageParts(message.id, message.parts);
-    if (!updated) {
-      return NextResponse.json(
-        { status: "error", error: "Failed to persist message" },
-        { status: 500, headers: getCorsHeaders() },
-      );
+    if (!(await updateChatMessageParts(message.id, message.parts))) {
+      return jsonInternalServerError();
     }
 
-    const touched = await updateChat(chatId, {
-      last_assistant_message_at: new Date().toISOString(),
-    });
-    if (!touched) {
-      return NextResponse.json(
-        { status: "error", error: "Failed to persist message" },
-        { status: 500, headers: getCorsHeaders() },
-      );
+    if (
+      !(await updateChat(chatId, {
+        last_assistant_message_at: new Date().toISOString(),
+      }))
+    ) {
+      return jsonInternalServerError();
     }
 
     return NextResponse.json(
@@ -74,18 +75,11 @@ export async function persistSessionChatAssistantMessageHandler(
   });
 
   if (!inserted) {
-    return NextResponse.json(
-      { status: "error", error: "Failed to persist message" },
-      { status: 500, headers: getCorsHeaders() },
-    );
+    return jsonInternalServerError();
   }
 
-  const touched = await updateChat(chatId, { last_assistant_message_at: new Date().toISOString() });
-  if (!touched) {
-    return NextResponse.json(
-      { status: "error", error: "Failed to persist message" },
-      { status: 500, headers: getCorsHeaders() },
-    );
+  if (!(await updateChat(chatId, { last_assistant_message_at: new Date().toISOString() }))) {
+    return jsonInternalServerError();
   }
 
   return NextResponse.json(

@@ -1,32 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { persistAssistantMessageBodySchema } from "@/lib/sessions/chats/persistAssistantMessageSchemas";
+import type { ValidatedPersistSessionChatAssistantMessageRequest } from "@/lib/sessions/chats/persistAssistantMessageTypes";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import type { Json } from "@/types/database.types";
-
-const assistantUiMessageSchema = z
-  .object({
-    id: z.string().min(1),
-    role: z.literal("assistant"),
-    parts: z.array(z.unknown()),
-  })
-  .passthrough();
-
-const persistAssistantMessageBodySchema = z
-  .object({
-    message: assistantUiMessageSchema,
-  })
-  .strict();
-
-export interface ValidatedPersistSessionChatAssistantMessageRequest {
-  message: {
-    id: string;
-    role: "assistant";
-    parts: Json;
-  };
-}
 
 /**
  * Validates `POST /api/sessions/{sessionId}/chats/{chatId}/messages`:
