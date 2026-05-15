@@ -3758,6 +3758,59 @@ export type Database = {
         };
         Relationships: [];
       };
+      usage_events: {
+        Row: {
+          account_id: string;
+          agent_type: string;
+          cached_input_tokens: number;
+          created_at: string;
+          credits_deducted_cents: number;
+          id: string;
+          input_tokens: number;
+          model_id: string | null;
+          output_tokens: number;
+          provider: string | null;
+          source: string;
+          tool_call_count: number;
+        };
+        Insert: {
+          account_id: string;
+          agent_type?: string;
+          cached_input_tokens?: number;
+          created_at?: string;
+          credits_deducted_cents?: number;
+          id: string;
+          input_tokens?: number;
+          model_id?: string | null;
+          output_tokens?: number;
+          provider?: string | null;
+          source?: string;
+          tool_call_count?: number;
+        };
+        Update: {
+          account_id?: string;
+          agent_type?: string;
+          cached_input_tokens?: number;
+          created_at?: string;
+          credits_deducted_cents?: number;
+          id?: string;
+          input_tokens?: number;
+          model_id?: string | null;
+          output_tokens?: number;
+          provider?: string | null;
+          source?: string;
+          tool_call_count?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "usage_events_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       workflow_run_steps: {
         Row: {
           created_at: string;

@@ -1,5 +1,5 @@
 import { getCreditUsage } from "./getCreditUsage";
-import { deductCredits } from "./deductCredits";
+import { recordCreditDeduction } from "./recordCreditDeduction";
 import { LanguageModelUsage } from "ai";
 
 interface HandleChatCreditsParams {
@@ -29,9 +29,14 @@ export const handleChatCredits = async ({
     const usageCost = await getCreditUsage(usage, model);
     const creditsToDeduct = Math.max(1, Math.round(usageCost * 100));
 
-    await deductCredits({
+    await recordCreditDeduction({
       accountId,
       creditsToDeduct,
+      source: "web",
+      modelId: model,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      cachedInputTokens: usage.cachedInputTokens,
     });
   } catch (error) {
     console.error("Failed to handle chat credits:", error);

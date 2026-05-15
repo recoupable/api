@@ -1,19 +1,25 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { getCreditUsage } from "@/lib/credits/getCreditUsage";
-import { deductCredits } from "@/lib/credits/deductCredits";
+import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 import { handleChatCredits } from "../handleChatCredits";
 
 vi.mock("@/lib/credits/getCreditUsage", () => ({
   getCreditUsage: vi.fn(),
 }));
 
-vi.mock("@/lib/credits/deductCredits", () => ({
-  deductCredits: vi.fn(),
+vi.mock("@/lib/credits/recordCreditDeduction", () => ({
+  recordCreditDeduction: vi.fn(),
 }));
 
 const mockGetCreditUsage = vi.mocked(getCreditUsage);
-const mockDeductCredits = vi.mocked(deductCredits);
+const mockRecordCreditDeduction = vi.mocked(recordCreditDeduction);
+
+const USAGE = {
+  inputTokens: 1000,
+  outputTokens: 500,
+  cachedInputTokens: 0,
+} as never;
 
 describe("handleChatCredits", () => {
   beforeEach(() => {
@@ -26,86 +32,84 @@ describe("handleChatCredits", () => {
   });
 
   describe("credit deduction", () => {
-    it("deducts credits when accountId is provided and usage cost > 0", async () => {
+    it("deducts credits and forwards token detail to the usage_events row", async () => {
       mockGetCreditUsage.mockResolvedValue(0.05); // $0.05 = 5 credits
-      mockDeductCredits.mockResolvedValue({ success: true, newBalance: 95 });
+      mockRecordCreditDeduction.mockResolvedValue({ success: true, newBalance: 95 });
 
       await handleChatCredits({
-        usage: { promptTokens: 1000, completionTokens: 500 },
+        usage: USAGE,
         model: "gpt-4",
         accountId: "account-123",
       });
 
-      expect(mockGetCreditUsage).toHaveBeenCalledWith(
-        { promptTokens: 1000, completionTokens: 500 },
-        "gpt-4",
-      );
-      expect(mockDeductCredits).toHaveBeenCalledWith({
+      expect(mockGetCreditUsage).toHaveBeenCalledWith(USAGE, "gpt-4");
+      expect(mockRecordCreditDeduction).toHaveBeenCalledWith({
         accountId: "account-123",
-        creditsToDeduct: 5, // 0.05 * 100 = 5
+        creditsToDeduct: 5,
+        source: "web",
+        modelId: "gpt-4",
+        inputTokens: 1000,
+        outputTokens: 500,
+        cachedInputTokens: 0,
       });
     });
 
     it("rounds credits to at least 1 when cost is very small", async () => {
-      mockGetCreditUsage.mockResolvedValue(0.001); // $0.001 = 0.1 credits, rounds to 1
-      mockDeductCredits.mockResolvedValue({ success: true, newBalance: 99 });
+      mockGetCreditUsage.mockResolvedValue(0.001);
+      mockRecordCreditDeduction.mockResolvedValue({ success: true, newBalance: 99 });
 
       await handleChatCredits({
-        usage: { promptTokens: 10, completionTokens: 5 },
+        usage: USAGE,
         model: "gpt-4",
         accountId: "account-123",
       });
 
-      expect(mockDeductCredits).toHaveBeenCalledWith({
-        accountId: "account-123",
-        creditsToDeduct: 1, // Math.max(1, Math.round(0.001 * 100)) = 1
-      });
+      expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
+        expect.objectContaining({ accountId: "account-123", creditsToDeduct: 1 }),
+      );
     });
 
     it("rounds credits correctly for larger amounts", async () => {
-      mockGetCreditUsage.mockResolvedValue(1.234); // $1.234 = 123.4 credits, rounds to 123
-      mockDeductCredits.mockResolvedValue({ success: true, newBalance: 877 });
+      mockGetCreditUsage.mockResolvedValue(1.234);
+      mockRecordCreditDeduction.mockResolvedValue({ success: true, newBalance: 877 });
 
       await handleChatCredits({
-        usage: { promptTokens: 10000, completionTokens: 5000 },
+        usage: USAGE,
         model: "gpt-4",
         accountId: "account-123",
       });
 
-      expect(mockDeductCredits).toHaveBeenCalledWith({
-        accountId: "account-123",
-        creditsToDeduct: 123,
-      });
+      expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
+        expect.objectContaining({ accountId: "account-123", creditsToDeduct: 123 }),
+      );
     });
   });
 
   describe("skip conditions", () => {
     it("skips credit deduction when accountId is not provided", async () => {
       await handleChatCredits({
-        usage: { promptTokens: 1000, completionTokens: 500 },
+        usage: USAGE,
         model: "gpt-4",
         accountId: undefined,
       });
 
       expect(mockGetCreditUsage).not.toHaveBeenCalled();
-      expect(mockDeductCredits).not.toHaveBeenCalled();
+      expect(mockRecordCreditDeduction).not.toHaveBeenCalled();
     });
 
     it("deducts minimum 1 credit when usage cost is 0", async () => {
       mockGetCreditUsage.mockResolvedValue(0);
-      mockDeductCredits.mockResolvedValue({ success: true, newBalance: 332 });
+      mockRecordCreditDeduction.mockResolvedValue({ success: true, newBalance: 332 });
 
       await handleChatCredits({
-        usage: { promptTokens: 0, completionTokens: 0 },
+        usage: USAGE,
         model: "gpt-4",
         accountId: "account-123",
       });
 
-      expect(mockGetCreditUsage).toHaveBeenCalled();
-      expect(mockDeductCredits).toHaveBeenCalledWith({
-        accountId: "account-123",
-        creditsToDeduct: 1,
-      });
+      expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
+        expect.objectContaining({ accountId: "account-123", creditsToDeduct: 1 }),
+      );
     });
   });
 
@@ -115,22 +119,22 @@ describe("handleChatCredits", () => {
 
       await expect(
         handleChatCredits({
-          usage: { promptTokens: 1000, completionTokens: 500 },
+          usage: USAGE,
           model: "gpt-4",
           accountId: "account-123",
         }),
       ).resolves.not.toThrow();
 
-      expect(mockDeductCredits).not.toHaveBeenCalled();
+      expect(mockRecordCreditDeduction).not.toHaveBeenCalled();
     });
 
-    it("does not throw when deductCredits fails", async () => {
+    it("does not throw when recordCreditDeduction fails", async () => {
       mockGetCreditUsage.mockResolvedValue(0.05);
-      mockDeductCredits.mockRejectedValue(new Error("Database error"));
+      mockRecordCreditDeduction.mockRejectedValue(new Error("Database error"));
 
       await expect(
         handleChatCredits({
-          usage: { promptTokens: 1000, completionTokens: 500 },
+          usage: USAGE,
           model: "gpt-4",
           accountId: "account-123",
         }),
@@ -142,7 +146,7 @@ describe("handleChatCredits", () => {
       mockGetCreditUsage.mockRejectedValue(new Error("API error"));
 
       await handleChatCredits({
-        usage: { promptTokens: 1000, completionTokens: 500 },
+        usage: USAGE,
         model: "gpt-4",
         accountId: "account-123",
       });

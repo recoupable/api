@@ -26,8 +26,8 @@ vi.mock("@/lib/perplexity/formatSearchResultsAsMarkdown", () => ({
   formatSearchResultsAsMarkdown: vi.fn(),
 }));
 
-vi.mock("@/lib/credits/deductCredits", () => ({
-  deductCredits: vi.fn(),
+vi.mock("@/lib/credits/recordCreditDeduction", () => ({
+  recordCreditDeduction: vi.fn(),
 }));
 
 describe("postResearchWebHandler", () => {

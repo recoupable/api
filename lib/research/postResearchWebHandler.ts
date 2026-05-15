@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
-import { deductCredits } from "@/lib/credits/deductCredits";
+import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 import { searchPerplexity } from "@/lib/perplexity/searchPerplexity";
 import { formatSearchResultsAsMarkdown } from "@/lib/perplexity/formatSearchResultsAsMarkdown";
 import { validatePostResearchWebRequest } from "@/lib/research/validatePostResearchWebRequest";
@@ -26,7 +26,11 @@ export async function postResearchWebHandler(request: NextRequest): Promise<Next
     const formatted = formatSearchResultsAsMarkdown(searchResponse);
 
     try {
-      await deductCredits({ accountId: validated.accountId, creditsToDeduct: 5 });
+      await recordCreditDeduction({
+        accountId: validated.accountId,
+        creditsToDeduct: 5,
+        source: "api",
+      });
     } catch {
       // Credit deduction failed but data was fetched — log but don't block
     }
