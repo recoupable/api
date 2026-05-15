@@ -64,14 +64,28 @@ describe("getSessionChatHandler", () => {
     const res = await getSessionChatHandler(makeReq(), "sess_1", "chat_1");
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      chat: { id: string; modelId: string | null; activeStreamId: string | null };
+      chat: {
+        id: string;
+        sessionId: string;
+        title: string;
+        modelId: string | null;
+        activeStreamId: string | null;
+        lastAssistantMessageAt: string | null;
+        createdAt: string;
+        updatedAt: string;
+      };
       isStreaming: boolean;
       messages: unknown[];
     };
     expect(body.chat).toEqual({
       id: "chat_1",
+      sessionId: "sess_1",
+      title: "New chat",
       modelId: "openai/gpt-5-mini",
       activeStreamId: null,
+      lastAssistantMessageAt: null,
+      createdAt: "2026-05-04T00:00:00.000Z",
+      updatedAt: "2026-05-04T00:00:00.000Z",
     });
     expect(body.isStreaming).toBe(false);
     expect(body.messages).toEqual([
