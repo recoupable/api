@@ -1,5 +1,5 @@
 import type { AdminPeriod } from "@/lib/admins/adminPeriod";
-import { PERIOD_DAYS } from "@/lib/admins/privy/periodDays";
+import { PERIOD_DAYS } from "@/lib/admins/periodDays";
 
 /**
  * Returns the cutoff timestamp in seconds for a given period, or null for "all".
