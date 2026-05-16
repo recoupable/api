@@ -4,7 +4,7 @@ import { validateAdminAuth } from "@/lib/admins/validateAdminAuth";
 import { selectAdminCreditsRollupEvents } from "@/lib/supabase/usage_events/selectAdminCreditsRollupEvents";
 import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
-import { getCutoffMs } from "./getCutoffMs";
+import { getCutoffMs } from "@/lib/admins/getCutoffMs";
 import { validateGetAdminCreditsRollupQuery } from "./validateGetAdminCreditsRollupQuery";
 
 interface RollupRow {

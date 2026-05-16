@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAdminAuth } from "@/lib/admins/validateAdminAuth";
 import { selectAdminCreditsEvents } from "@/lib/supabase/usage_events/selectAdminCreditsEvents";
-import { getCutoffMs } from "./getCutoffMs";
+import { getCutoffMs } from "@/lib/admins/getCutoffMs";
 import { validateGetAdminCreditsEventsQuery } from "./validateGetAdminCreditsEventsQuery";
 
 /**
