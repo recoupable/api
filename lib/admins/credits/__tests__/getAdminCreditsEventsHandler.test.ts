@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
-const mockValidateAuthContext = vi.fn();
-vi.mock("@/lib/auth/validateAuthContext", () => ({
-  validateAuthContext: (...args: unknown[]) => mockValidateAuthContext(...args),
+const mockValidateAdminAuth = vi.fn();
+vi.mock("@/lib/admins/validateAdminAuth", () => ({
+  validateAdminAuth: (...args: unknown[]) => mockValidateAdminAuth(...args),
 }));
 
-const mockCheckIsAdmin = vi.fn();
-vi.mock("@/lib/admins/checkIsAdmin", () => ({
-  checkIsAdmin: (...args: unknown[]) => mockCheckIsAdmin(...args),
+const mockSelectUsageEvents = vi.fn();
+vi.mock("@/lib/supabase/usage_events/selectUsageEvents", () => ({
+  selectUsageEvents: (...args: unknown[]) => mockSelectUsageEvents(...args),
 }));
 
-const mockSelectAdminCreditsEvents = vi.fn();
-vi.mock("@/lib/supabase/usage_events/selectAdminCreditsEvents", () => ({
-  selectAdminCreditsEvents: (...args: unknown[]) => mockSelectAdminCreditsEvents(...args),
+const mockCountUsageEvents = vi.fn();
+vi.mock("@/lib/supabase/usage_events/countUsageEvents", () => ({
+  countUsageEvents: (...args: unknown[]) => mockCountUsageEvents(...args),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -27,14 +27,14 @@ const ACCT = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockValidateAuthContext.mockResolvedValue(mockAuth);
-  mockCheckIsAdmin.mockResolvedValue(true);
-  mockSelectAdminCreditsEvents.mockResolvedValue({ rows: [], totalCount: 0 });
+  mockValidateAdminAuth.mockResolvedValue(mockAuth);
+  mockSelectUsageEvents.mockResolvedValue([]);
+  mockCountUsageEvents.mockResolvedValue(0);
 });
 
 describe("getAdminCreditsEventsHandler", () => {
   it("returns 401 when auth fails", async () => {
-    mockValidateAuthContext.mockResolvedValue(
+    mockValidateAdminAuth.mockResolvedValue(
       NextResponse.json({ status: "error" }, { status: 401 }),
     );
 
@@ -47,7 +47,9 @@ describe("getAdminCreditsEventsHandler", () => {
   });
 
   it("returns 403 when caller is not an admin", async () => {
-    mockCheckIsAdmin.mockResolvedValue(false);
+    mockValidateAdminAuth.mockResolvedValue(
+      NextResponse.json({ status: "error" }, { status: 403 }),
+    );
 
     const request = new NextRequest(
       `http://localhost/api/admins/credits/events?account_id=${ACCT}`,
@@ -74,25 +76,23 @@ describe("getAdminCreditsEventsHandler", () => {
   });
 
   it("returns the supabase rows + total_count under the contract response shape", async () => {
-    mockSelectAdminCreditsEvents.mockResolvedValue({
-      rows: [
-        {
-          id: "evt_1",
-          account_id: ACCT,
-          source: "web",
-          agent_type: "main",
-          provider: "anthropic",
-          model_id: "anthropic/claude-opus-4.6",
-          input_tokens: 11062,
-          cached_input_tokens: 0,
-          output_tokens: 6,
-          tool_call_count: 0,
-          credits_deducted_cents: 7,
-          created_at: "2026-05-15T18:31:22.747Z",
-        },
-      ],
-      totalCount: 42,
-    });
+    mockSelectUsageEvents.mockResolvedValue([
+      {
+        id: "evt_1",
+        account_id: ACCT,
+        source: "web",
+        agent_type: "main",
+        provider: "anthropic",
+        model_id: "anthropic/claude-opus-4.6",
+        input_tokens: 11062,
+        cached_input_tokens: 0,
+        output_tokens: 6,
+        tool_call_count: 0,
+        credits_deducted_cents: 7,
+        created_at: "2026-05-15T18:31:22.747Z",
+      },
+    ]);
+    mockCountUsageEvents.mockResolvedValue(42);
 
     const request = new NextRequest(
       `http://localhost/api/admins/credits/events?account_id=${ACCT}&page=2&limit=25`,
@@ -116,8 +116,8 @@ describe("getAdminCreditsEventsHandler", () => {
     );
     await getAdminCreditsEventsHandler(request);
 
-    expect(mockSelectAdminCreditsEvents).toHaveBeenCalledTimes(1);
-    const call = mockSelectAdminCreditsEvents.mock.calls[0][0];
+    expect(mockSelectUsageEvents).toHaveBeenCalledTimes(1);
+    const call = mockSelectUsageEvents.mock.calls[0][0];
     expect(call.accountId).toBe(ACCT);
     expect(call.page).toBe(3);
     expect(call.limit).toBe(50);
@@ -130,7 +130,7 @@ describe("getAdminCreditsEventsHandler", () => {
     );
     await getAdminCreditsEventsHandler(request);
 
-    const call = mockSelectAdminCreditsEvents.mock.calls[0][0];
+    const call = mockSelectUsageEvents.mock.calls[0][0];
     expect(call.createdAfter).toBeUndefined();
   });
 });

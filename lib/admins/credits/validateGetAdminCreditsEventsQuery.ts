@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { adminPeriodSchema } from "@/lib/admins/adminPeriod";
+import { validateAdminAuth } from "@/lib/admins/validateAdminAuth";
 
 const getAdminCreditsEventsQuerySchema = z.object({
   account_id: z.string().uuid({ message: "account_id must be a valid UUID" }),
@@ -14,15 +15,17 @@ const getAdminCreditsEventsQuerySchema = z.object({
 export type ValidatedGetAdminCreditsEventsQuery = z.infer<typeof getAdminCreditsEventsQuerySchema>;
 
 /**
- * Validates query parameters for `GET /api/admins/credits/events`.
+ * Validates admin auth + query parameters for `GET /api/admins/credits/events`.
  *
- * Returns a `NextResponse` with a 400 error on validation failure (missing or
- * malformed `account_id`, unknown `period`, out-of-range `limit`/`page`), or
- * the parsed `{ account_id, period, limit, page }` on success.
+ * @param request - The incoming Next.js request.
+ * @returns A NextResponse (401/403/400) on failure, or the parsed query on success.
  */
-export function validateGetAdminCreditsEventsQuery(
+export async function validateGetAdminCreditsEventsQuery(
   request: NextRequest,
-): NextResponse | ValidatedGetAdminCreditsEventsQuery {
+): Promise<NextResponse | ValidatedGetAdminCreditsEventsQuery> {
+  const auth = await validateAdminAuth(request);
+  if (auth instanceof NextResponse) return auth;
+
   const params = request.nextUrl.searchParams;
   const result = getAdminCreditsEventsQuerySchema.safeParse({
     account_id: params.get("account_id") ?? undefined,

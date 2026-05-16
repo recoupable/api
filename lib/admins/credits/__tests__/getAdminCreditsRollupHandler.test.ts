@@ -1,20 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
-const mockValidateAuthContext = vi.fn();
-vi.mock("@/lib/auth/validateAuthContext", () => ({
-  validateAuthContext: (...args: unknown[]) => mockValidateAuthContext(...args),
+const mockValidateAdminAuth = vi.fn();
+vi.mock("@/lib/admins/validateAdminAuth", () => ({
+  validateAdminAuth: (...args: unknown[]) => mockValidateAdminAuth(...args),
 }));
 
-const mockCheckIsAdmin = vi.fn();
-vi.mock("@/lib/admins/checkIsAdmin", () => ({
-  checkIsAdmin: (...args: unknown[]) => mockCheckIsAdmin(...args),
-}));
-
-const mockSelectAdminCreditsRollupEvents = vi.fn();
-vi.mock("@/lib/supabase/usage_events/selectAdminCreditsRollupEvents", () => ({
-  selectAdminCreditsRollupEvents: (...args: unknown[]) =>
-    mockSelectAdminCreditsRollupEvents(...args),
+const mockSelectUsageEvents = vi.fn();
+vi.mock("@/lib/supabase/usage_events/selectUsageEvents", () => ({
+  selectUsageEvents: (...args: unknown[]) => mockSelectUsageEvents(...args),
 }));
 
 const mockSelectAccounts = vi.fn();
@@ -37,16 +31,15 @@ const mockAuth = { accountId: "admin-123", orgId: null, authToken: "token" };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockValidateAuthContext.mockResolvedValue(mockAuth);
-  mockCheckIsAdmin.mockResolvedValue(true);
-  mockSelectAdminCreditsRollupEvents.mockResolvedValue([]);
+  mockValidateAdminAuth.mockResolvedValue(mockAuth);
+  mockSelectUsageEvents.mockResolvedValue([]);
   mockSelectAccounts.mockResolvedValue([]);
   mockSelectAccountEmails.mockResolvedValue([]);
 });
 
 describe("getAdminCreditsRollupHandler", () => {
   it("returns 401 when auth fails", async () => {
-    mockValidateAuthContext.mockResolvedValue(
+    mockValidateAdminAuth.mockResolvedValue(
       NextResponse.json({ status: "error" }, { status: 401 }),
     );
 
@@ -57,7 +50,9 @@ describe("getAdminCreditsRollupHandler", () => {
   });
 
   it("returns 403 when caller is not an admin", async () => {
-    mockCheckIsAdmin.mockResolvedValue(false);
+    mockValidateAdminAuth.mockResolvedValue(
+      NextResponse.json({ status: "error" }, { status: 403 }),
+    );
 
     const request = new NextRequest("http://localhost/api/admins/credits/rollup");
     const response = await getAdminCreditsRollupHandler(request);
@@ -89,7 +84,7 @@ describe("getAdminCreditsRollupHandler", () => {
   });
 
   it("aggregates by account_id, sorts by total descending, and joins names + emails", async () => {
-    mockSelectAdminCreditsRollupEvents.mockResolvedValue([
+    mockSelectUsageEvents.mockResolvedValue([
       { account_id: "acc-1", credits_deducted_cents: 5 },
       { account_id: "acc-1", credits_deducted_cents: 7 },
       { account_id: "acc-2", credits_deducted_cents: 50 },
@@ -101,8 +96,8 @@ describe("getAdminCreditsRollupHandler", () => {
       { id: "acc-3", name: null },
     ]);
     mockSelectAccountEmails.mockResolvedValue([
-      { account_id: "acc-1", email: "alice@example.com" },
-      { account_id: "acc-2", email: "bob@example.com" },
+      { account_id: "acc-1", email: "alice@example.com", updated_at: "2026-05-01T00:00:00Z" },
+      { account_id: "acc-2", email: "bob@example.com", updated_at: "2026-05-02T00:00:00Z" },
     ]);
 
     const request = new NextRequest("http://localhost/api/admins/credits/rollup");
@@ -136,8 +131,37 @@ describe("getAdminCreditsRollupHandler", () => {
     ]);
   });
 
+  it("picks the most-recently-updated email for accounts with multiple", async () => {
+    mockSelectUsageEvents.mockResolvedValue([{ account_id: "acc-1", credits_deducted_cents: 1 }]);
+    mockSelectAccounts.mockResolvedValue([{ id: "acc-1", name: "Alice" }]);
+    mockSelectAccountEmails.mockResolvedValue([
+      { account_id: "acc-1", email: "old@example.com", updated_at: "2026-01-01T00:00:00Z" },
+      { account_id: "acc-1", email: "new@example.com", updated_at: "2026-05-01T00:00:00Z" },
+    ]);
+
+    const request = new NextRequest("http://localhost/api/admins/credits/rollup");
+    const response = await getAdminCreditsRollupHandler(request);
+    const body = await response.json();
+
+    expect(body.rows[0].account_email).toBe("new@example.com");
+  });
+
+  it("breaks ties on total_credits by sorting account_id ascending", async () => {
+    mockSelectUsageEvents.mockResolvedValue([
+      { account_id: "z", credits_deducted_cents: 10 },
+      { account_id: "a", credits_deducted_cents: 10 },
+      { account_id: "m", credits_deducted_cents: 10 },
+    ]);
+
+    const request = new NextRequest("http://localhost/api/admins/credits/rollup");
+    const response = await getAdminCreditsRollupHandler(request);
+    const body = await response.json();
+
+    expect(body.rows.map((r: { account_id: string }) => r.account_id)).toEqual(["a", "m", "z"]);
+  });
+
   it("respects limit + page (returns the requested slice and the full total_count)", async () => {
-    mockSelectAdminCreditsRollupEvents.mockResolvedValue([
+    mockSelectUsageEvents.mockResolvedValue([
       { account_id: "a", credits_deducted_cents: 100 },
       { account_id: "b", credits_deducted_cents: 50 },
       { account_id: "c", credits_deducted_cents: 25 },
@@ -158,7 +182,7 @@ describe("getAdminCreditsRollupHandler", () => {
     const request = new NextRequest("http://localhost/api/admins/credits/rollup?period=weekly");
     await getAdminCreditsRollupHandler(request);
 
-    const callArg = mockSelectAdminCreditsRollupEvents.mock.calls[0][0];
+    const callArg = mockSelectUsageEvents.mock.calls[0][0];
     expect(callArg.createdAfter).toBeTypeOf("string");
     expect(new Date(callArg.createdAfter as string).getTime()).toBeGreaterThan(0);
   });
@@ -167,8 +191,6 @@ describe("getAdminCreditsRollupHandler", () => {
     const request = new NextRequest("http://localhost/api/admins/credits/rollup?period=all");
     await getAdminCreditsRollupHandler(request);
 
-    expect(mockSelectAdminCreditsRollupEvents).toHaveBeenCalledWith({
-      createdAfter: undefined,
-    });
+    expect(mockSelectUsageEvents).toHaveBeenCalledWith({ createdAfter: undefined });
   });
 });

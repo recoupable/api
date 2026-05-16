@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { adminPeriodSchema } from "@/lib/admins/adminPeriod";
+import { validateAdminAuth } from "@/lib/admins/validateAdminAuth";
 
 const getAdminCreditsRollupQuerySchema = z.object({
   period: adminPeriodSchema.default("monthly"),
@@ -13,15 +14,17 @@ const getAdminCreditsRollupQuerySchema = z.object({
 export type ValidatedGetAdminCreditsRollupQuery = z.infer<typeof getAdminCreditsRollupQuerySchema>;
 
 /**
- * Validates query parameters for `GET /api/admins/credits/rollup`.
+ * Validates admin auth + query parameters for `GET /api/admins/credits/rollup`.
  *
- * Returns a `NextResponse` with a 400 error on validation failure, or the
- * parsed `{ period, limit, page }` on success. Auth is handled separately by
- * the route handler via `validateAdminAuth`.
+ * @param request - The incoming Next.js request.
+ * @returns A NextResponse (401/403/400) on failure, or the parsed query on success.
  */
-export function validateGetAdminCreditsRollupQuery(
+export async function validateGetAdminCreditsRollupQuery(
   request: NextRequest,
-): NextResponse | ValidatedGetAdminCreditsRollupQuery {
+): Promise<NextResponse | ValidatedGetAdminCreditsRollupQuery> {
+  const auth = await validateAdminAuth(request);
+  if (auth instanceof NextResponse) return auth;
+
   const params = request.nextUrl.searchParams;
   const result = getAdminCreditsRollupQuerySchema.safeParse({
     period: params.get("period") ?? undefined,
