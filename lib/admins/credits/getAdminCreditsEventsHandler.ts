@@ -24,9 +24,15 @@ export async function getAdminCreditsEventsHandler(request: NextRequest): Promis
 
     const cutoffMs = getCutoffMs(period);
     const createdAfter = cutoffMs === null ? undefined : new Date(cutoffMs).toISOString();
+    const offset = (page - 1) * limit;
 
     const [rows, totalCount] = await Promise.all([
-      selectUsageEvents({ accountId: account_id, createdAfter, page, limit }),
+      selectUsageEvents({
+        accountId: account_id,
+        createdAfter,
+        from: offset,
+        to: offset + limit - 1,
+      }),
       countUsageEvents({ accountId: account_id, createdAfter }),
     ]);
 

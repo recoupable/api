@@ -6,9 +6,9 @@ vi.mock("@/lib/admins/validateAdminAuth", () => ({
   validateAdminAuth: (...args: unknown[]) => mockValidateAdminAuth(...args),
 }));
 
-const mockSelectUsageEvents = vi.fn();
-vi.mock("@/lib/supabase/usage_events/selectUsageEvents", () => ({
-  selectUsageEvents: (...args: unknown[]) => mockSelectUsageEvents(...args),
+const mockSelectAllUsageEvents = vi.fn();
+vi.mock("../selectAllUsageEvents", () => ({
+  selectAllUsageEvents: (...args: unknown[]) => mockSelectAllUsageEvents(...args),
 }));
 
 const mockSelectAccounts = vi.fn();
@@ -32,7 +32,7 @@ const mockAuth = { accountId: "admin-123", orgId: null, authToken: "token" };
 beforeEach(() => {
   vi.clearAllMocks();
   mockValidateAdminAuth.mockResolvedValue(mockAuth);
-  mockSelectUsageEvents.mockResolvedValue([]);
+  mockSelectAllUsageEvents.mockResolvedValue([]);
   mockSelectAccounts.mockResolvedValue([]);
   mockSelectAccountEmails.mockResolvedValue([]);
 });
@@ -84,7 +84,7 @@ describe("getAdminCreditsRollupHandler", () => {
   });
 
   it("aggregates by account_id, sorts by total descending, and joins names + emails", async () => {
-    mockSelectUsageEvents.mockResolvedValue([
+    mockSelectAllUsageEvents.mockResolvedValue([
       { account_id: "acc-1", credits_deducted_cents: 5 },
       { account_id: "acc-1", credits_deducted_cents: 7 },
       { account_id: "acc-2", credits_deducted_cents: 50 },
@@ -132,7 +132,9 @@ describe("getAdminCreditsRollupHandler", () => {
   });
 
   it("picks the most-recently-updated email for accounts with multiple", async () => {
-    mockSelectUsageEvents.mockResolvedValue([{ account_id: "acc-1", credits_deducted_cents: 1 }]);
+    mockSelectAllUsageEvents.mockResolvedValue([
+      { account_id: "acc-1", credits_deducted_cents: 1 },
+    ]);
     mockSelectAccounts.mockResolvedValue([{ id: "acc-1", name: "Alice" }]);
     mockSelectAccountEmails.mockResolvedValue([
       { account_id: "acc-1", email: "old@example.com", updated_at: "2026-01-01T00:00:00Z" },
@@ -147,7 +149,7 @@ describe("getAdminCreditsRollupHandler", () => {
   });
 
   it("breaks ties on total_credits by sorting account_id ascending", async () => {
-    mockSelectUsageEvents.mockResolvedValue([
+    mockSelectAllUsageEvents.mockResolvedValue([
       { account_id: "z", credits_deducted_cents: 10 },
       { account_id: "a", credits_deducted_cents: 10 },
       { account_id: "m", credits_deducted_cents: 10 },
@@ -161,7 +163,7 @@ describe("getAdminCreditsRollupHandler", () => {
   });
 
   it("respects limit + page (returns the requested slice and the full total_count)", async () => {
-    mockSelectUsageEvents.mockResolvedValue([
+    mockSelectAllUsageEvents.mockResolvedValue([
       { account_id: "a", credits_deducted_cents: 100 },
       { account_id: "b", credits_deducted_cents: 50 },
       { account_id: "c", credits_deducted_cents: 25 },
@@ -182,7 +184,7 @@ describe("getAdminCreditsRollupHandler", () => {
     const request = new NextRequest("http://localhost/api/admins/credits/rollup?period=weekly");
     await getAdminCreditsRollupHandler(request);
 
-    const callArg = mockSelectUsageEvents.mock.calls[0][0];
+    const callArg = mockSelectAllUsageEvents.mock.calls[0][0];
     expect(callArg.createdAfter).toBeTypeOf("string");
     expect(new Date(callArg.createdAfter as string).getTime()).toBeGreaterThan(0);
   });
@@ -191,6 +193,6 @@ describe("getAdminCreditsRollupHandler", () => {
     const request = new NextRequest("http://localhost/api/admins/credits/rollup?period=all");
     await getAdminCreditsRollupHandler(request);
 
-    expect(mockSelectUsageEvents).toHaveBeenCalledWith({ createdAfter: undefined });
+    expect(mockSelectAllUsageEvents).toHaveBeenCalledWith({ createdAfter: undefined });
   });
 });

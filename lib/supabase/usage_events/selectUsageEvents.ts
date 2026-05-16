@@ -1,57 +1,40 @@
+import supabase from "@/lib/supabase/serverClient";
 import type { Tables } from "@/types/database.types";
-import { selectUsageEventsRange } from "./selectUsageEventsRange";
 
 interface SelectUsageEventsParams {
   accountId?: string;
   /** Lower bound on `created_at` (ISO string). Omit to fetch all-time. */
   createdAfter?: string;
-  /** 1-indexed page. Omit to fetch every matching row (paginated internally). */
-  page?: number;
-  /** Page size. Required when `page` is set; also used as internal batch size when fetching all. */
-  limit?: number;
+  /** Inclusive zero-indexed range start. */
+  from: number;
+  /** Inclusive zero-indexed range end. */
+  to: number;
 }
 
-const FETCH_ALL_BATCH_SIZE = 1000;
-
 /**
- * Selects `usage_events` rows, optionally filtered by account and/or
- * `created_at >=` cutoff. Sorted by `created_at` DESC with `id` DESC as a
- * deterministic tiebreaker.
+ * Selects a single inclusive range of `usage_events` rows ordered by
+ * `created_at` DESC with `id` DESC as a deterministic tiebreaker.
  *
- * When `page` + `limit` are provided, returns just that page. When both
- * are omitted, paginates internally until the full result set is fetched —
- * avoids Supabase's default 1000-row response cap silently truncating
- * aggregate inputs.
- *
- * @param params - Filters + pagination.
- * @returns Matching usage_events rows.
+ * @param params - Filters + range bounds.
+ * @returns Matching usage_events rows for the range.
  */
 export async function selectUsageEvents(
-  params: SelectUsageEventsParams = {},
+  params: SelectUsageEventsParams,
 ): Promise<Tables<"usage_events">[]> {
-  const { accountId, createdAfter, page, limit } = params;
+  let query = supabase
+    .from("usage_events")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(params.from, params.to);
 
-  if (page !== undefined && limit !== undefined) {
-    const offset = (page - 1) * limit;
-    return selectUsageEventsRange({
-      accountId,
-      createdAfter,
-      from: offset,
-      to: offset + limit - 1,
-    });
-  }
+  if (params.accountId) query = query.eq("account_id", params.accountId);
+  if (params.createdAfter) query = query.gte("created_at", params.createdAfter);
 
-  const all: Tables<"usage_events">[] = [];
-  let offset = 0;
-  while (true) {
-    const batch = await selectUsageEventsRange({
-      accountId,
-      createdAfter,
-      from: offset,
-      to: offset + FETCH_ALL_BATCH_SIZE - 1,
-    });
-    all.push(...batch);
-    if (batch.length < FETCH_ALL_BATCH_SIZE) return all;
-    offset += FETCH_ALL_BATCH_SIZE;
+  const { data, error } = await query;
+  if (error) {
+    console.error("Error selecting usage_events:", error);
+    throw error;
   }
+  return data ?? [];
 }

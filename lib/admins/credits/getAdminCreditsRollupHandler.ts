@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { selectUsageEvents } from "@/lib/supabase/usage_events/selectUsageEvents";
 import { getCutoffMs } from "@/lib/admins/getCutoffMs";
 import { validateGetAdminCreditsRollupQuery } from "./validateGetAdminCreditsRollupQuery";
 import { aggregateRollupByAccount } from "./aggregateRollupByAccount";
 import { enrichRollupPageWithAccountDetails } from "./enrichRollupPageWithAccountDetails";
+import { selectAllUsageEvents } from "./selectAllUsageEvents";
 
 /**
  * Handler for `GET /api/admins/credits/rollup`.
@@ -25,7 +25,7 @@ export async function getAdminCreditsRollupHandler(request: NextRequest): Promis
     const { period, limit, page } = validated;
 
     const cutoffMs = getCutoffMs(period);
-    const events = await selectUsageEvents({
+    const events = await selectAllUsageEvents({
       createdAfter: cutoffMs === null ? undefined : new Date(cutoffMs).toISOString(),
     });
 

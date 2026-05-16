@@ -110,7 +110,7 @@ describe("getAdminCreditsEventsHandler", () => {
     expect(body.events[0].credits_deducted_cents).toBe(7);
   });
 
-  it("passes page/limit + cutoff through to the supabase select", async () => {
+  it("passes range + cutoff through to the supabase select", async () => {
     const request = new NextRequest(
       `http://localhost/api/admins/credits/events?account_id=${ACCT}&period=weekly&limit=50&page=3`,
     );
@@ -119,8 +119,8 @@ describe("getAdminCreditsEventsHandler", () => {
     expect(mockSelectUsageEvents).toHaveBeenCalledTimes(1);
     const call = mockSelectUsageEvents.mock.calls[0][0];
     expect(call.accountId).toBe(ACCT);
-    expect(call.page).toBe(3);
-    expect(call.limit).toBe(50);
+    expect(call.from).toBe(100);
+    expect(call.to).toBe(149);
     expect(call.createdAfter).toBeTypeOf("string");
   });
 
