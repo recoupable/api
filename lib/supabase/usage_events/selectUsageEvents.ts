@@ -1,7 +1,5 @@
-import supabase from "@/lib/supabase/serverClient";
 import type { Tables } from "@/types/database.types";
-
-type UsageEvent = Tables<"usage_events">;
+import { selectUsageEventsRange } from "./selectUsageEventsRange";
 
 interface SelectUsageEventsParams {
   accountId?: string;
@@ -18,8 +16,7 @@ const FETCH_ALL_BATCH_SIZE = 1000;
 /**
  * Selects `usage_events` rows, optionally filtered by account and/or
  * `created_at >=` cutoff. Sorted by `created_at` DESC with `id` DESC as a
- * deterministic tiebreaker so callers can paginate without rows shuffling
- * or duplicating across pages.
+ * deterministic tiebreaker.
  *
  * When `page` + `limit` are provided, returns just that page. When both
  * are omitted, paginates internally until the full result set is fetched —
@@ -31,41 +28,30 @@ const FETCH_ALL_BATCH_SIZE = 1000;
  */
 export async function selectUsageEvents(
   params: SelectUsageEventsParams = {},
-): Promise<UsageEvent[]> {
-  if (params.page !== undefined && params.limit !== undefined) {
-    const offset = (params.page - 1) * params.limit;
-    return runQuery(params, offset, offset + params.limit - 1);
+): Promise<Tables<"usage_events">[]> {
+  const { accountId, createdAfter, page, limit } = params;
+
+  if (page !== undefined && limit !== undefined) {
+    const offset = (page - 1) * limit;
+    return selectUsageEventsRange({
+      accountId,
+      createdAfter,
+      from: offset,
+      to: offset + limit - 1,
+    });
   }
 
-  const all: UsageEvent[] = [];
+  const all: Tables<"usage_events">[] = [];
   let offset = 0;
   while (true) {
-    const batch = await runQuery(params, offset, offset + FETCH_ALL_BATCH_SIZE - 1);
+    const batch = await selectUsageEventsRange({
+      accountId,
+      createdAfter,
+      from: offset,
+      to: offset + FETCH_ALL_BATCH_SIZE - 1,
+    });
     all.push(...batch);
     if (batch.length < FETCH_ALL_BATCH_SIZE) return all;
     offset += FETCH_ALL_BATCH_SIZE;
   }
-}
-
-async function runQuery(
-  params: SelectUsageEventsParams,
-  from: number,
-  to: number,
-): Promise<UsageEvent[]> {
-  let query = supabase
-    .from("usage_events")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .order("id", { ascending: false })
-    .range(from, to);
-
-  if (params.accountId) query = query.eq("account_id", params.accountId);
-  if (params.createdAfter) query = query.gte("created_at", params.createdAfter);
-
-  const { data, error } = await query;
-  if (error) {
-    console.error("Error selecting usage_events:", error);
-    throw error;
-  }
-  return data ?? [];
 }
