@@ -22,7 +22,7 @@ export function registerGetApiKeyTool(server: McpServer): void {
     "get_api_key",
     {
       description:
-        "Return the Recoup API key for this session so the LLM can use it for direct HTTP calls to api.recoupable.com (x-api-key header). Call this once when invoking any skill that makes raw HTTPS requests to the Recoup REST API — for example the recoup-api skill. The returned value is the same credential the customer used to authenticate this MCP connection.",
+        "Return the Recoup API key for this session so the LLM can use it for direct HTTP calls to api.recoupable.com (x-api-key header, or Authorization: Bearer). Call this once when invoking any skill that makes raw HTTPS requests to the Recoup REST API — for example the recoup-api skill. The returned value is the same credential the customer used to authenticate this MCP connection. Endpoint reference: https://developers.recoupable.com (and https://developers.recoupable.com/llms.txt for the LLM-readable index).",
       inputSchema: z.object({}),
     },
     async (_args, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
