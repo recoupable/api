@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerGetApiKeyTool } from "./registerGetApiKeyTool";
 import { registerGetLocalTimeTool } from "./registerGetLocalTimeTool";
 import { registerAllTaskTools } from "./tasks";
 import { registerAllImageTools } from "./images";
@@ -46,6 +47,7 @@ export const registerAllTools = (server: McpServer): void => {
   registerAllTaskTools(server);
   registerTranscribeTools(server);
   registerContactTeamTool(server);
+  registerGetApiKeyTool(server);
   registerGetLocalTimeTool(server);
   registerWebDeepResearchTool(server);
   registerArtistDeepResearchTool(server);
