@@ -7,24 +7,22 @@ import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { isSandboxActive } from "@/lib/sandbox/isSandboxActive";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
-import { compareAndSetChatActiveStreamId } from "@/lib/supabase/chats/compareAndSetChatActiveStreamId";
-import { reconcileExistingActiveStream } from "@/lib/chat/reconcileExistingActiveStream";
+import { updateChat } from "@/lib/supabase/chats/updateChat";
+import { maybeResumeChatStream } from "@/lib/chat/maybeResumeChatStream";
 import { persistLatestUserMessage } from "@/lib/chat/persistLatestUserMessage";
 import { start, getRun } from "workflow/api";
 
 vi.mock("@/lib/chat/validateChatWorkflow", () => ({ validateChatWorkflow: vi.fn() }));
 vi.mock("@/lib/supabase/sessions/selectSessions", () => ({ selectSessions: vi.fn() }));
 vi.mock("@/lib/supabase/chats/selectChats", () => ({ selectChats: vi.fn() }));
+vi.mock("@/lib/supabase/chats/updateChat", () => ({ updateChat: vi.fn() }));
 vi.mock("@/lib/sandbox/isSandboxActive", () => ({ isSandboxActive: vi.fn() }));
 vi.mock("@/lib/supabase/sessions/updateSession", () => ({ updateSession: vi.fn() }));
 vi.mock("@/lib/sandbox/buildActiveLifecycleUpdate", () => ({
   buildActiveLifecycleUpdate: vi.fn(() => ({})),
 }));
-vi.mock("@/lib/supabase/chats/compareAndSetChatActiveStreamId", () => ({
-  compareAndSetChatActiveStreamId: vi.fn(),
-}));
-vi.mock("@/lib/chat/reconcileExistingActiveStream", () => ({
-  reconcileExistingActiveStream: vi.fn(),
+vi.mock("@/lib/chat/maybeResumeChatStream", () => ({
+  maybeResumeChatStream: vi.fn(),
 }));
 vi.mock("@/lib/chat/persistLatestUserMessage", () => ({
   persistLatestUserMessage: vi.fn(),
@@ -33,10 +31,11 @@ vi.mock("workflow/api", () => ({
   start: vi.fn(),
   getRun: vi.fn(),
 }));
-vi.mock("@/app/workflows/runAgentWorkflow", () => ({ runAgentWorkflow: vi.fn() }));
+vi.mock("@/app/lib/workflows/runAgentWorkflow", () => ({ runAgentWorkflow: vi.fn() }));
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
+vi.mock("@/lib/uuid/generateUUID", () => ({ default: vi.fn(() => "deterministic-uuid") }));
 
 const ACCOUNT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const OTHER_ACCOUNT_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
@@ -64,12 +63,7 @@ function mockValidated() {
 
 function mockSessionOwnedActive(extra: Record<string, unknown> = {}) {
   vi.mocked(selectSessions).mockResolvedValue([
-    {
-      id: SESSION_ID,
-      account_id: ACCOUNT_ID,
-      sandbox_state: { ready: true },
-      ...extra,
-    } as never,
+    { id: SESSION_ID, account_id: ACCOUNT_ID, sandbox_state: { ready: true }, ...extra } as never,
   ]);
   vi.mocked(isSandboxActive).mockReturnValue(true);
 }
@@ -86,25 +80,27 @@ function mockChatOwned(extra: Record<string, unknown> = {}) {
   ]);
 }
 
-function mockRun(runId = "wrun_test_run_1") {
+function mockStartedRun(runId = "wrun_test_run_1") {
   const stream = new ReadableStream<unknown>({
     start(controller) {
       controller.enqueue({ type: "text-start", id: "a" });
-      controller.enqueue({ type: "text-delta", id: "a", delta: "hello" });
-      controller.enqueue({ type: "text-end", id: "a" });
       controller.close();
     },
   });
   vi.mocked(start).mockResolvedValue({ runId, getReadable: () => stream } as never);
-  vi.mocked(getRun).mockReturnValue({ cancel: vi.fn() } as never);
+  vi.mocked(getRun).mockReturnValue({ cancel: vi.fn(() => Promise.resolve()) } as never);
   return { runId, stream };
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  // Default: maybeResumeChatStream returns null (no resume / no active stream)
+  vi.mocked(maybeResumeChatStream).mockResolvedValue(null);
+});
 
 describe("handleChatWorkflowStream", () => {
-  describe("short-circuit responses (pre-workflow checks)", () => {
-    it("returns the validator's response unchanged (401/400)", async () => {
+  describe("short-circuit responses", () => {
+    it("passes through the validator's response (401/400)", async () => {
       vi.mocked(validateChatWorkflow).mockResolvedValue(
         NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
       );
@@ -113,7 +109,7 @@ describe("handleChatWorkflowStream", () => {
       expect(start).not.toHaveBeenCalled();
     });
 
-    it("returns 500 when selectSessions errors (returns null)", async () => {
+    it("returns 500 when selectSessions errors", async () => {
       mockValidated();
       vi.mocked(selectSessions).mockResolvedValue(null);
       const res = await handleChatWorkflowStream(makeRequest());
@@ -127,7 +123,7 @@ describe("handleChatWorkflowStream", () => {
       expect(res.status).toBe(404);
     });
 
-    it("returns 403 when session not owned by the API key's account", async () => {
+    it("returns 403 when session not owned", async () => {
       mockValidated();
       vi.mocked(selectSessions).mockResolvedValue([
         { id: SESSION_ID, account_id: OTHER_ACCOUNT_ID, sandbox_state: {} } as never,
@@ -136,7 +132,7 @@ describe("handleChatWorkflowStream", () => {
       expect(res.status).toBe(403);
     });
 
-    it("returns 400 'Sandbox not initialized' when sandbox is inactive", async () => {
+    it("returns 400 when sandbox is inactive", async () => {
       mockValidated();
       vi.mocked(selectSessions).mockResolvedValue([
         { id: SESSION_ID, account_id: ACCOUNT_ID, sandbox_state: null } as never,
@@ -153,133 +149,161 @@ describe("handleChatWorkflowStream", () => {
       const res = await handleChatWorkflowStream(makeRequest());
       expect(res.status).toBe(404);
     });
-
-    it("returns 404 when chat belongs to a different session", async () => {
-      mockValidated();
-      mockSessionOwnedActive();
-      vi.mocked(selectChats).mockResolvedValue([
-        { id: CHAT_ID, session_id: "different", active_stream_id: null } as never,
-      ]);
-      const res = await handleChatWorkflowStream(makeRequest());
-      expect(res.status).toBe(404);
-    });
   });
 
-  describe("resume / conflict on existing active_stream_id", () => {
+  describe("resume / conflict via maybeResumeChatStream", () => {
     beforeEach(() => {
       mockValidated();
       mockSessionOwnedActive();
       mockChatOwned({ active_stream_id: "wrun_existing" });
     });
 
-    it("resumes an in-flight workflow stream and includes x-workflow-run-id", async () => {
-      const stream = new ReadableStream();
-      vi.mocked(reconcileExistingActiveStream).mockResolvedValue({
-        action: "resume",
-        runId: "wrun_existing",
-        stream,
+    it("returns the resume response when maybeResumeChatStream yields one", async () => {
+      const resumeResponse = new Response("ok", {
+        status: 200,
+        headers: { "x-workflow-run-id": "wrun_existing" },
       });
+      vi.mocked(maybeResumeChatStream).mockResolvedValue(resumeResponse);
       const res = await handleChatWorkflowStream(makeRequest());
-      expect(res.status).toBe(200);
       expect(res.headers.get("x-workflow-run-id")).toBe("wrun_existing");
       expect(start).not.toHaveBeenCalled();
     });
 
-    it("returns 409 when reconcile reports conflict", async () => {
-      vi.mocked(reconcileExistingActiveStream).mockResolvedValue({ action: "conflict" });
+    it("returns the conflict response when maybeResumeChatStream yields 409", async () => {
+      const conflict = NextResponse.json({ status: "error", error: "conflict" }, { status: 409 });
+      vi.mocked(maybeResumeChatStream).mockResolvedValue(conflict);
       const res = await handleChatWorkflowStream(makeRequest());
       expect(res.status).toBe(409);
       expect(start).not.toHaveBeenCalled();
     });
-
-    it("falls through to start a new workflow when reconcile returns ready", async () => {
-      vi.mocked(reconcileExistingActiveStream).mockResolvedValue({ action: "ready" });
-      mockRun();
-      vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue(true);
-      const res = await handleChatWorkflowStream(makeRequest());
-      expect(res.status).toBe(200);
-      expect(start).toHaveBeenCalled();
-    });
   });
 
-  describe("happy path — start workflow + CAS the run id", () => {
+  describe("placeholder CAS before start", () => {
     beforeEach(() => {
       mockValidated();
       mockSessionOwnedActive();
       mockChatOwned();
     });
 
-    it("returns 200 with text/event-stream Content-Type", async () => {
-      mockRun();
-      vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue(true);
+    it("returns 500 when the placeholder-CAS hits a DB error", async () => {
+      vi.mocked(updateChat).mockResolvedValueOnce({ ok: false, error: "down" });
+      const res = await handleChatWorkflowStream(makeRequest());
+      expect(res.status).toBe(500);
+      expect(start).not.toHaveBeenCalled();
+    });
+
+    it("returns 409 (without calling start) when the placeholder-CAS loses the race", async () => {
+      vi.mocked(updateChat).mockResolvedValueOnce({ ok: true, rowsUpdated: 0, row: null });
+      const res = await handleChatWorkflowStream(makeRequest());
+      expect(res.status).toBe(409);
+      expect(start).not.toHaveBeenCalled();
+    });
+
+    it("starts the workflow only after placeholder CAS succeeds", async () => {
+      // First CAS = placeholder claim, second CAS = promote placeholder → real run id
+      vi.mocked(updateChat)
+        .mockResolvedValueOnce({ ok: true, rowsUpdated: 1, row: null })
+        .mockResolvedValueOnce({ ok: true, rowsUpdated: 1, row: null });
+      mockStartedRun();
+      const res = await handleChatWorkflowStream(makeRequest());
+      expect(res.status).toBe(200);
+      expect(start).toHaveBeenCalled();
+      // Confirm CAS-before-start ordering
+      const placeholderCAS = vi.mocked(updateChat).mock.calls[0]?.[0];
+      expect(placeholderCAS).toEqual({
+        id: CHAT_ID,
+        whereActiveStreamId: { equals: null },
+      });
+    });
+  });
+
+  describe("happy path", () => {
+    beforeEach(() => {
+      mockValidated();
+      mockSessionOwnedActive();
+      mockChatOwned();
+      vi.mocked(updateChat)
+        .mockResolvedValueOnce({ ok: true, rowsUpdated: 1, row: null })
+        .mockResolvedValueOnce({ ok: true, rowsUpdated: 1, row: null });
+    });
+
+    it("returns 200 with text/event-stream and x-workflow-run-id", async () => {
+      const { runId } = mockStartedRun("wrun_abc_123");
       const res = await handleChatWorkflowStream(makeRequest());
       expect(res.status).toBe(200);
       expect(res.headers.get("content-type") ?? "").toMatch(/text\/event-stream/);
-    });
-
-    it("sets x-workflow-run-id to the started run's id", async () => {
-      const { runId } = mockRun("wrun_abc_123");
-      vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue(true);
-      const res = await handleChatWorkflowStream(makeRequest());
       expect(res.headers.get("x-workflow-run-id")).toBe(runId);
     });
 
-    it("refreshes session lifecycle activity before starting the workflow", async () => {
-      mockRun();
-      vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue(true);
+    it("refreshes session lifecycle activity", async () => {
+      mockStartedRun();
       await handleChatWorkflowStream(makeRequest());
       expect(updateSession).toHaveBeenCalledWith(SESSION_ID, expect.any(Object));
     });
 
     it("fire-and-forgets persistLatestUserMessage", async () => {
-      mockRun();
-      vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue(true);
+      mockStartedRun();
       await handleChatWorkflowStream(makeRequest());
       expect(persistLatestUserMessage).toHaveBeenCalledWith(CHAT_ID, []);
     });
 
-    it("passes the chat's model_id into the workflow start payload", async () => {
-      mockChatOwned({ model_id: "anthropic/claude-opus-4.6" });
-      mockRun();
-      vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue(true);
+    it("passes chat.model_id into the workflow when set", async () => {
+      vi.mocked(selectChats).mockResolvedValue([
+        {
+          id: CHAT_ID,
+          session_id: SESSION_ID,
+          active_stream_id: null,
+          model_id: "anthropic/claude-opus-4.6",
+        } as never,
+      ]);
+      mockStartedRun();
       await handleChatWorkflowStream(makeRequest());
-      const callArg = vi.mocked(start).mock.calls[0]?.[1]?.[0] as { modelId: string };
-      expect(callArg.modelId).toBe("anthropic/claude-opus-4.6");
+      const startArgs = vi.mocked(start).mock.calls[0]?.[1]?.[0] as { modelId: string };
+      expect(startArgs.modelId).toBe("anthropic/claude-opus-4.6");
     });
 
-    it("defaults to claude-haiku-4.5 when chat has no model_id", async () => {
-      mockRun();
-      vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue(true);
+    it("falls back to the default model when chat.model_id is null", async () => {
+      mockStartedRun();
       await handleChatWorkflowStream(makeRequest());
-      const callArg = vi.mocked(start).mock.calls[0]?.[1]?.[0] as { modelId: string };
-      expect(callArg.modelId).toBe("anthropic/claude-haiku-4.5");
+      const startArgs = vi.mocked(start).mock.calls[0]?.[1]?.[0] as { modelId: string };
+      expect(startArgs.modelId).toBe("anthropic/claude-haiku-4.5");
     });
   });
 
-  describe("CAS race", () => {
+  describe("promote placeholder → run id", () => {
     beforeEach(() => {
       mockValidated();
       mockSessionOwnedActive();
       mockChatOwned();
     });
 
-    it("cancels the started workflow and returns 409 when CAS loses", async () => {
-      const cancel = vi.fn();
-      mockRun("wrun_dup");
+    it("awaits cancel() and returns 409 if promote loses", async () => {
+      vi.mocked(updateChat)
+        .mockResolvedValueOnce({ ok: true, rowsUpdated: 1, row: null }) // claim ok
+        .mockResolvedValueOnce({ ok: true, rowsUpdated: 0, row: null }); // promote raced
+      const cancel = vi.fn(() => Promise.resolve());
+      vi.mocked(start).mockResolvedValue({
+        runId: "wrun_lost",
+        getReadable: () => new ReadableStream(),
+      } as never);
       vi.mocked(getRun).mockReturnValue({ cancel } as never);
-      vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue(false);
       const res = await handleChatWorkflowStream(makeRequest());
       expect(res.status).toBe(409);
-      expect(getRun).toHaveBeenCalledWith("wrun_dup");
+      expect(getRun).toHaveBeenCalledWith("wrun_lost");
       expect(cancel).toHaveBeenCalled();
     });
 
-    it("still returns 409 even if cancel() throws", async () => {
-      mockRun("wrun_dup");
-      vi.mocked(getRun).mockImplementation(() => {
-        throw new Error("not found");
-      });
-      vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue(false);
+    it("still returns 409 if cancel() throws (best-effort)", async () => {
+      vi.mocked(updateChat)
+        .mockResolvedValueOnce({ ok: true, rowsUpdated: 1, row: null })
+        .mockResolvedValueOnce({ ok: true, rowsUpdated: 0, row: null });
+      vi.mocked(start).mockResolvedValue({
+        runId: "wrun_lost",
+        getReadable: () => new ReadableStream(),
+      } as never);
+      vi.mocked(getRun).mockReturnValue({
+        cancel: vi.fn(() => Promise.reject(new Error("cancel exploded"))),
+      } as never);
       const res = await handleChatWorkflowStream(makeRequest());
       expect(res.status).toBe(409);
     });

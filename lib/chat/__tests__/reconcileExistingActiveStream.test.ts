@@ -1,25 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { reconcileExistingActiveStream } from "@/lib/chat/reconcileExistingActiveStream";
-
 import { getRun } from "workflow/api";
-import { compareAndSetChatActiveStreamId } from "@/lib/supabase/chats/compareAndSetChatActiveStreamId";
-import { selectChats } from "@/lib/supabase/chats/selectChats";
+import { updateChat } from "@/lib/supabase/chats/updateChat";
 
 vi.mock("workflow/api", () => ({
   getRun: vi.fn(),
 }));
-vi.mock("@/lib/supabase/chats/compareAndSetChatActiveStreamId", () => ({
-  compareAndSetChatActiveStreamId: vi.fn(),
-}));
-vi.mock("@/lib/supabase/chats/selectChats", () => ({
-  selectChats: vi.fn(),
+vi.mock("@/lib/supabase/chats/updateChat", () => ({
+  updateChat: vi.fn(),
 }));
 
 const CHAT_ID = "chat-1";
+const RUN_ID = "wrun_test";
 
 beforeEach(() => vi.clearAllMocks());
 
-function mockRun(status: string, getReadable = () => new ReadableStream()) {
+function mockRun(status: string, getReadable: () => ReadableStream = () => new ReadableStream()) {
   vi.mocked(getRun).mockReturnValue({
     status: Promise.resolve(status),
     getReadable,
@@ -27,67 +23,73 @@ function mockRun(status: string, getReadable = () => new ReadableStream()) {
 }
 
 describe("reconcileExistingActiveStream", () => {
-  it("returns action=resume with the stream when the workflow is still running", async () => {
-    const fakeStream = new ReadableStream();
-    mockRun("running", () => fakeStream);
-    const result = await reconcileExistingActiveStream(CHAT_ID, "run-1");
+  it("returns action=resume when status is 'running'", async () => {
+    const stream = new ReadableStream();
+    mockRun("running", () => stream);
+    const result = await reconcileExistingActiveStream(CHAT_ID, RUN_ID);
     expect(result.action).toBe("resume");
     if (result.action !== "resume") return;
-    expect(result.runId).toBe("run-1");
-    expect(result.stream).toBe(fakeStream);
+    expect(result.runId).toBe(RUN_ID);
+    expect(result.stream).toBe(stream);
   });
 
   it("returns action=resume when status is 'pending'", async () => {
     mockRun("pending");
-    const result = await reconcileExistingActiveStream(CHAT_ID, "run-1");
+    const result = await reconcileExistingActiveStream(CHAT_ID, RUN_ID);
     expect(result.action).toBe("resume");
   });
 
-  it("returns action=ready after clearing a completed run via CAS", async () => {
+  it("returns action=ready after CASing a completed run's stale id to null", async () => {
     mockRun("completed");
-    vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue(true);
-    const result = await reconcileExistingActiveStream(CHAT_ID, "run-1");
+    vi.mocked(updateChat).mockResolvedValue({ ok: true, rowsUpdated: 1, row: null });
+    const result = await reconcileExistingActiveStream(CHAT_ID, RUN_ID);
     expect(result.action).toBe("ready");
-    expect(compareAndSetChatActiveStreamId).toHaveBeenCalledWith(CHAT_ID, "run-1", null);
+    expect(updateChat).toHaveBeenCalledWith(
+      { id: CHAT_ID, whereActiveStreamId: { equals: RUN_ID } },
+      { active_stream_id: null },
+    );
   });
 
-  it("returns action=ready when getRun throws (run not found) and CAS clears the stale id", async () => {
+  it("returns action=conflict when getRun throws (transient workflow API error)", async () => {
     vi.mocked(getRun).mockImplementation(() => {
-      throw new Error("run not found");
+      throw new Error("workflow API unreachable");
     });
-    vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue(true);
-    const result = await reconcileExistingActiveStream(CHAT_ID, "stale-run");
-    expect(result.action).toBe("ready");
+    const result = await reconcileExistingActiveStream(CHAT_ID, RUN_ID);
+    expect(result.action).toBe("conflict");
+    // Critical: we do NOT clear the stream id on transient error.
+    expect(updateChat).not.toHaveBeenCalled();
   });
 
-  it("retries with the latest activeStreamId from the chat row if CAS fails", async () => {
-    mockRun("completed");
-    vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue(false);
-    vi.mocked(selectChats).mockResolvedValue([{ id: CHAT_ID, active_stream_id: "run-2" } as never]);
-    // 2nd iteration: run-2 is running → resume
-    vi.mocked(getRun)
-      .mockReturnValueOnce({
-        status: Promise.resolve("completed"),
-        getReadable: () => new ReadableStream(),
-      } as never)
-      .mockReturnValueOnce({
-        status: Promise.resolve("running"),
-        getReadable: () => new ReadableStream(),
-      } as never);
-
-    const result = await reconcileExistingActiveStream(CHAT_ID, "run-1");
-    expect(result.action).toBe("resume");
-    if (result.action !== "resume") return;
-    expect(result.runId).toBe("run-2");
+  it("returns action=conflict when status promise rejects", async () => {
+    // Wrap in a thenable that defers the rejection so Vitest's
+    // unhandled-rejection watcher doesn't flag it before the code awaits.
+    const rejection: Promise<string> = (async () => {
+      throw new Error("status fetch failed");
+    })();
+    rejection.catch(() => {
+      /* attach a handler so it's not 'unhandled' before the SUT awaits */
+    });
+    vi.mocked(getRun).mockReturnValue({
+      status: rejection,
+      getReadable: () => new ReadableStream(),
+    } as never);
+    const result = await reconcileExistingActiveStream(CHAT_ID, RUN_ID);
+    expect(result.action).toBe("conflict");
+    expect(updateChat).not.toHaveBeenCalled();
   });
 
-  it("returns action=conflict after MAX attempts without resolution", async () => {
+  it("returns action=conflict when CAS-clear loses the race (rowsUpdated=0)", async () => {
     mockRun("completed");
-    vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue(false);
-    vi.mocked(selectChats).mockResolvedValue([
-      { id: CHAT_ID, active_stream_id: "still-active" } as never,
-    ]);
-    const result = await reconcileExistingActiveStream(CHAT_ID, "run-1");
+    vi.mocked(updateChat).mockResolvedValue({ ok: true, rowsUpdated: 0, row: null });
+    const result = await reconcileExistingActiveStream(CHAT_ID, RUN_ID);
+    expect(result.action).toBe("conflict");
+  });
+
+  it("returns action=conflict when CAS-clear hits a DB error (ok:false)", async () => {
+    mockRun("completed");
+    vi.mocked(updateChat).mockResolvedValue({ ok: false, error: "down" });
+    const result = await reconcileExistingActiveStream(CHAT_ID, RUN_ID);
+    // P1 fix: a failed re-read after CAS no longer falls through to "ready".
     expect(result.action).toBe("conflict");
   });
 });

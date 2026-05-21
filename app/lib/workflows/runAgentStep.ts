@@ -38,9 +38,14 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
     messages: modelMessages,
   });
 
-  for await (const part of result.toUIMessageStream()) {
-    const writer = input.writable.getWriter();
-    await writer.write(part);
+  // Acquire the writer once and release in `finally` — re-acquiring per chunk
+  // (the previous shape) leaked the lock when any write threw.
+  const writer = input.writable.getWriter();
+  try {
+    for await (const part of result.toUIMessageStream()) {
+      await writer.write(part);
+    }
+  } finally {
     writer.releaseLock();
   }
 

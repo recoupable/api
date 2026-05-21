@@ -2,39 +2,46 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
 import { start, getRun } from "workflow/api";
 import { validateChatWorkflow } from "@/lib/chat/validateChatWorkflow";
+import { maybeResumeChatStream } from "@/lib/chat/maybeResumeChatStream";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
+import { updateChat } from "@/lib/supabase/chats/updateChat";
 import { isSandboxActive } from "@/lib/sandbox/isSandboxActive";
 import { buildActiveLifecycleUpdate } from "@/lib/sandbox/buildActiveLifecycleUpdate";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
-import { compareAndSetChatActiveStreamId } from "@/lib/supabase/chats/compareAndSetChatActiveStreamId";
-import { reconcileExistingActiveStream } from "@/lib/chat/reconcileExistingActiveStream";
 import { persistLatestUserMessage } from "@/lib/chat/persistLatestUserMessage";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { runAgentWorkflow } from "@/app/workflows/runAgentWorkflow";
+import { runAgentWorkflow } from "@/app/lib/workflows/runAgentWorkflow";
+import generateUUID from "@/lib/uuid/generateUUID";
 
 const DEFAULT_MODEL_ID = "anthropic/claude-haiku-4.5";
 
 /**
  * Handles POST /api/chat/workflow.
  *
- * Wires the chat UI to a durable Vercel Workflow agent loop:
+ * Wires the chat UI to a durable Vercel Workflow agent loop. Flow:
  *
  *   1. Validate auth + body (validateChatWorkflow).
  *   2. Verify session + chat ownership; ensure the session has an active sandbox.
- *   3. If a workflow is already running for this chat, resume its stream
- *      (or 409 on irresolvable conflict).
- *   4. Refresh the session's lifecycle-activity timestamp so the sandbox
- *      lifecycle watcher doesn't hibernate mid-stream.
- *   5. Fire-and-forget persist the latest user message so a refresh shows it.
- *   6. start(runAgentWorkflow) → CAS the run id into chats.active_stream_id.
- *      If the CAS loses to a race, cancel our run and 409.
+ *   3. If a workflow is already running for this chat, resume / 409 via
+ *      maybeResumeChatStream (extracted for OCP).
+ *   4. **Claim `chats.active_stream_id` BEFORE starting the workflow** using
+ *      a `pending-<uuid>` placeholder CAS. Closes the race window where two
+ *      concurrent requests could both call `start()` and bill the model
+ *      before one loses the CAS.
+ *   5. Refresh the session's lifecycle-activity timestamp + fire-and-forget
+ *      persist the latest user message.
+ *   6. start(runAgentWorkflow). Replace the placeholder with the real run id
+ *      (we already own the slot, no CAS needed).
  *   7. Return the workflow's UIMessage stream with x-workflow-run-id header.
  *
+ * If we lost the placeholder CAS in step 4, the slot is already held by
+ * another in-flight or pending request → 409 (no workflow was started, so
+ * nothing to cancel).
+ *
  * Tools/sandbox passing is intentionally not wired here yet — the follow-up
- * PR ports the @open-harness/agent tool surface into api and threads them
- * through runAgentStep via experimental_context.
+ * PR ports the @open-harness/agent tool surface into api.
  *
  * @param request - The incoming NextRequest.
  * @returns A streaming 200 Response or a NextResponse error.
@@ -59,28 +66,27 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   }
 
   // Resume an in-flight workflow for this chat (or 409) before starting a new one.
-  if (chat.active_stream_id) {
-    const reconciled = await reconcileExistingActiveStream(validated.chatId, chat.active_stream_id);
-    if (reconciled.action === "resume") {
-      return createUIMessageStreamResponse({
-        stream: reconciled.stream as ReadableStream<UIMessageChunk>,
-        headers: { ...getCorsHeaders(), "x-workflow-run-id": reconciled.runId },
-      });
-    }
-    if (reconciled.action === "conflict") {
-      return errorResponse("Another workflow is already running for this chat", 409);
-    }
+  const resumed = await maybeResumeChatStream(validated.chatId, chat.active_stream_id);
+  if (resumed) return resumed;
+
+  // Pre-claim the active_stream_id slot with a placeholder BEFORE starting
+  // the workflow. This closes the race where two requests both call start()
+  // and bill the model before one loses the CAS.
+  const placeholder = `pending-${generateUUID()}`;
+  const claimed = await updateChat(
+    { id: validated.chatId, whereActiveStreamId: { equals: null } },
+    { active_stream_id: placeholder },
+  );
+  if (!claimed.ok) return errorResponse("Internal server error", 500);
+  if (claimed.rowsUpdated === 0) {
+    return errorResponse("Another workflow is already running for this chat", 409);
   }
 
-  // Refresh lifecycle activity so long-running responses don't look idle.
+  // We own the slot — safe to start the workflow.
   await updateSession(validated.sessionId, buildActiveLifecycleUpdate(session.sandbox_state));
-
-  // Persist latest user message in the background — never block the stream on this.
   void persistLatestUserMessage(validated.chatId, validated.messages as never);
 
-  // Resolve the model: explicit body wins → chat row → platform default.
   const modelId = chat.model_id ?? DEFAULT_MODEL_ID;
-
   const run = await start(runAgentWorkflow, [
     {
       messages: validated.messages,
@@ -90,13 +96,19 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
     },
   ]);
 
-  // Atomically claim the activeStreamId slot. If another request raced us, cancel + 409.
-  const claimed = await compareAndSetChatActiveStreamId(validated.chatId, null, run.runId);
-  if (!claimed) {
+  // Promote placeholder → real run id. We already own the slot so no CAS needed.
+  const promoted = await updateChat(
+    { id: validated.chatId, whereActiveStreamId: { equals: placeholder } },
+    { active_stream_id: run.runId },
+  );
+  if (!promoted.ok || promoted.rowsUpdated === 0) {
+    // Something asynchronously stole our slot, or DB went down between claim
+    // and promote. Cancel the workflow we just started — losing the slot
+    // means another stream owns the client.
     try {
-      getRun(run.runId).cancel();
-    } catch {
-      // best-effort cleanup
+      await getRun(run.runId).cancel();
+    } catch (error) {
+      console.error("[handleChatWorkflowStream] cancel after slot-loss failed:", error);
     }
     return errorResponse("Another workflow is already running for this chat", 409);
   }

@@ -1,60 +1,62 @@
-import { compareAndSetChatActiveStreamId } from "@/lib/supabase/chats/compareAndSetChatActiveStreamId";
-import { selectChats } from "@/lib/supabase/chats/selectChats";
-
-const MAX_ATTEMPTS = 3;
+import { updateChat } from "@/lib/supabase/chats/updateChat";
 
 export type ReconcileResult =
   | { action: "resume"; runId: string; stream: ReadableStream<unknown> }
   | { action: "ready" }
   | { action: "conflict" };
 
+const RUNNING_STATUSES = new Set(["running", "pending"]);
+
 /**
  * Resolves what to do when `chats.active_stream_id` is already set at the
- * start of a new chat-workflow request:
+ * start of a new chat-workflow request.
  *
- *   - If the referenced workflow run is still alive (`running` | `pending`)
- *     return action=resume with its readable stream — the caller pipes it
- *     back through `createUIMessageStreamResponse`.
- *   - If the run is dead (completed/failed/cancelled or `getRun` throws)
- *     CAS the stale id back to null and return action=ready so the caller
- *     starts a fresh workflow.
- *   - If the CAS loses to a concurrent writer, re-read the chat row and
- *     repeat for up to MAX_ATTEMPTS iterations. After that, return
- *     action=conflict and let the caller surface a 409.
+ *   - If the referenced workflow run is alive (`running` | `pending`) →
+ *     `action: "resume"` with the existing readable. Caller pipes it back to
+ *     the client.
+ *   - If the run is terminally done AND we win the CAS to clear the stale id
+ *     → `action: "ready"`. Caller starts a fresh workflow.
+ *   - **Anything else** (workflow API throws, CAS-clear loses the race, CAS
+ *     reports a DB error) → `action: "conflict"`. Surfaces as 409 upstream.
  *
- * @param chatId - The chat being reconciled.
- * @param activeStreamId - Current `chats.active_stream_id` value (non-null).
+ * Safer-than-open-agents error semantics: a transient `workflow/api` failure
+ * does NOT clear the stale stream id (which previously created a window for
+ * duplicate runs). When we can't confidently say "this stream is dead", we
+ * refuse to start a new one. Eventually the real run completes, a subsequent
+ * request observes that, clears the slot, and unblocks.
  */
 export async function reconcileExistingActiveStream(
   chatId: string,
   activeStreamId: string,
 ): Promise<ReconcileResult> {
   const { getRun } = await import("workflow/api");
-  let currentStreamId: string | null = activeStreamId;
 
-  for (let attempt = 1; currentStreamId && attempt <= MAX_ATTEMPTS; attempt++) {
-    try {
-      const existingRun = getRun(currentStreamId);
-      const status = await existingRun.status;
-      if (status === "running" || status === "pending") {
-        return {
-          action: "resume",
-          runId: currentStreamId,
-          stream: existingRun.getReadable(),
-        };
-      }
-    } catch {
-      // Run not found / inaccessible — fall through to clear the stale id.
+  // Probe the workflow status. Any thrown error here is treated as transient —
+  // we keep the slot held rather than risk starting a duplicate run.
+  let status: string;
+  try {
+    const existingRun = getRun(activeStreamId);
+    status = await existingRun.status;
+    if (RUNNING_STATUSES.has(status)) {
+      return { action: "resume", runId: activeStreamId, stream: existingRun.getReadable() };
     }
-
-    const cleared = await compareAndSetChatActiveStreamId(chatId, currentStreamId, null);
-    if (cleared) {
-      return { action: "ready" };
-    }
-
-    const rows = await selectChats({ id: chatId });
-    currentStreamId = rows[0]?.active_stream_id ?? null;
+  } catch (error) {
+    console.error("[reconcileExistingActiveStream] getRun failed; treating as conflict:", error);
+    return { action: "conflict" };
   }
 
-  return currentStreamId ? { action: "conflict" } : { action: "ready" };
+  // Run is terminally done. Attempt to claim the slot for the new request by
+  // CASing the stale id back to null. If we win → ready. Anything else
+  // (race lost OR DB error) → conflict, so we never accidentally start a
+  // duplicate workflow on the back of a failed read.
+  const cleared = await updateChat(
+    { id: chatId, whereActiveStreamId: { equals: activeStreamId } },
+    { active_stream_id: null },
+  );
+
+  if (cleared.ok && cleared.rowsUpdated > 0) {
+    return { action: "ready" };
+  }
+
+  return { action: "conflict" };
 }
