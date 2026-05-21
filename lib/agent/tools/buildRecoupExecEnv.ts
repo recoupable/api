@@ -1,11 +1,15 @@
-import { isAgentContext } from "@/lib/agent/tools/utils";
+import { isAgentContext } from "@/lib/agent/tools/isAgentContext";
 
 /**
- * Build a per-invocation env override carrying Recoupable sandbox context —
- * access token and (when the sandbox was opened against an org repo) the
- * org UUID — so outbound shell commands (curl, scripts, the `recoup-api`
- * skill) can authenticate and scope requests without any credential or
- * org state persisting on the sandbox.
+ * Build a per-invocation env override carrying Recoupable sandbox context
+ * so outbound shell commands (curl, scripts, the `recoup-api` skill) can
+ * scope requests correctly without any state persisting on the sandbox.
+ *
+ * Currently injects only `RECOUP_ORG_ID` — a public identifier. Auth-token
+ * injection is deliberately NOT included here; a long-lived api key in the
+ * sandbox env would be readable by any model-issued bash command. Proper
+ * short-lived token minting will land alongside the `skill` tool port
+ * (when there's an actual consumer for it).
  *
  * Returns `undefined` when nothing is available to inject so callers can
  * cleanly spread a conditional `...(env ? { env } : {})` into exec opts.
@@ -15,15 +19,11 @@ import { isAgentContext } from "@/lib/agent/tools/utils";
 export function buildRecoupExecEnv(
   experimental_context: unknown,
 ): Record<string, string> | undefined {
-  const context = isAgentContext(experimental_context) ? experimental_context : undefined;
-  if (!context) return undefined;
+  if (!isAgentContext(experimental_context)) return undefined;
 
   const env: Record<string, string> = {};
-  if (context.recoupAccessToken) {
-    env.RECOUP_ACCESS_TOKEN = context.recoupAccessToken;
-  }
-  if (context.recoupOrgId) {
-    env.RECOUP_ORG_ID = context.recoupOrgId;
+  if (experimental_context.recoupOrgId) {
+    env.RECOUP_ORG_ID = experimental_context.recoupOrgId;
   }
 
   return Object.keys(env).length > 0 ? env : undefined;

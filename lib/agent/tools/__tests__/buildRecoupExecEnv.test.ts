@@ -1,45 +1,31 @@
 import { describe, it, expect } from "vitest";
 import { buildRecoupExecEnv } from "@/lib/agent/tools/buildRecoupExecEnv";
 
+const baseSandbox = { state: { sandboxName: "x" }, workingDirectory: "/sandbox/mono" };
+
 describe("buildRecoupExecEnv", () => {
-  it("returns undefined when neither token nor orgId is in context", () => {
+  it("returns undefined when no context", () => {
     expect(buildRecoupExecEnv(undefined)).toBeUndefined();
-    expect(buildRecoupExecEnv({ sandbox: { state: {}, workingDirectory: "/x" } })).toBeUndefined();
+    expect(buildRecoupExecEnv(null)).toBeUndefined();
+    expect(buildRecoupExecEnv("not-a-context")).toBeUndefined();
   });
 
-  it("injects RECOUP_ACCESS_TOKEN when present", () => {
-    const env = buildRecoupExecEnv({
-      sandbox: { state: {}, workingDirectory: "/x" },
-      recoupAccessToken: "rk_abc",
-    });
-    expect(env).toEqual({ RECOUP_ACCESS_TOKEN: "rk_abc" });
+  it("returns undefined when context has no recoupOrgId", () => {
+    expect(buildRecoupExecEnv({ sandbox: baseSandbox })).toBeUndefined();
   });
 
-  it("injects RECOUP_ORG_ID when present", () => {
-    const env = buildRecoupExecEnv({
-      sandbox: { state: {}, workingDirectory: "/x" },
-      recoupOrgId: "org-uuid",
-    });
+  it("injects RECOUP_ORG_ID when present in context", () => {
+    const env = buildRecoupExecEnv({ sandbox: baseSandbox, recoupOrgId: "org-uuid" });
     expect(env).toEqual({ RECOUP_ORG_ID: "org-uuid" });
   });
 
-  it("injects both when both present", () => {
-    const env = buildRecoupExecEnv({
-      sandbox: { state: {}, workingDirectory: "/x" },
-      recoupAccessToken: "rk_abc",
-      recoupOrgId: "org-uuid",
-    });
-    expect(env).toEqual({
-      RECOUP_ACCESS_TOKEN: "rk_abc",
-      RECOUP_ORG_ID: "org-uuid",
-    });
+  it("ignores empty-string recoupOrgId", () => {
+    const env = buildRecoupExecEnv({ sandbox: baseSandbox, recoupOrgId: "" });
+    expect(env).toBeUndefined();
   });
 
-  it("ignores empty-string token (avoids injecting `RECOUP_ACCESS_TOKEN=`)", () => {
-    const env = buildRecoupExecEnv({
-      sandbox: { state: {}, workingDirectory: "/x" },
-      recoupAccessToken: "",
-    });
-    expect(env).toBeUndefined();
+  it("returns undefined when the input is not a valid AgentContext shape", () => {
+    expect(buildRecoupExecEnv({ recoupOrgId: "org-uuid" })).toBeUndefined();
+    expect(buildRecoupExecEnv({ sandbox: null, recoupOrgId: "org-uuid" })).toBeUndefined();
   });
 });

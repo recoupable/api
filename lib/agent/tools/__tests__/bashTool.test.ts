@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { bashTool, commandNeedsApproval } from "@/lib/agent/tools/bashTool";
-
+import { bashTool } from "@/lib/agent/tools/bashTool";
 import { connectVercel } from "@/lib/sandbox/vercel/connect/connectVercel";
 
 vi.mock("@/lib/sandbox/vercel/connect/connectVercel", () => ({
@@ -21,23 +20,6 @@ function makeSandbox(overrides: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => vi.clearAllMocks());
-
-describe("commandNeedsApproval", () => {
-  it("flags `rm -rf` as needing approval", () => {
-    expect(commandNeedsApproval("rm -rf /")).toBe(true);
-    expect(commandNeedsApproval("rm -rf node_modules")).toBe(true);
-  });
-
-  it("does not flag safe commands", () => {
-    expect(commandNeedsApproval("ls -la")).toBe(false);
-    expect(commandNeedsApproval("git status")).toBe(false);
-    expect(commandNeedsApproval("npm install")).toBe(false);
-  });
-
-  it("trims whitespace before matching", () => {
-    expect(commandNeedsApproval("   rm -rf foo  ")).toBe(true);
-  });
-});
 
 describe("bashTool.execute", () => {
   it("executes a command via sandbox.exec in the sandbox's working directory", async () => {
@@ -113,7 +95,7 @@ describe("bashTool.execute", () => {
     );
   });
 
-  it("injects RECOUP_ACCESS_TOKEN + RECOUP_ORG_ID into the exec env when present in context", async () => {
+  it("injects RECOUP_ORG_ID into the exec env when present in context", async () => {
     const sandbox = makeSandbox({
       exec: vi.fn().mockResolvedValue({
         success: true,
@@ -127,17 +109,10 @@ describe("bashTool.execute", () => {
 
     const tool = bashTool();
     await tool.execute!({ command: "curl example.com" }, {
-      experimental_context: {
-        ...baseContext,
-        recoupAccessToken: "rk_abc",
-        recoupOrgId: "org-uuid",
-      },
+      experimental_context: { ...baseContext, recoupOrgId: "org-uuid" },
     } as never);
     const opts = sandbox.exec.mock.calls[0]?.[3] as { env?: Record<string, string> };
-    expect(opts.env).toEqual({
-      RECOUP_ACCESS_TOKEN: "rk_abc",
-      RECOUP_ORG_ID: "org-uuid",
-    });
+    expect(opts.env).toEqual({ RECOUP_ORG_ID: "org-uuid" });
   });
 
   it("returns the detached commandId when called with detached:true", async () => {
@@ -167,7 +142,7 @@ describe("bashTool.execute", () => {
     expect(result.stderr).toMatch(/detached mode is not supported/i);
   });
 
-  it("does NOT inject RECOUP env vars on detached execs (token is per-prompt only)", async () => {
+  it("does NOT inject env vars on detached execs", async () => {
     const sandbox = makeSandbox({
       execDetached: vi.fn().mockResolvedValue({ commandId: "cmd-1" }),
     });
@@ -175,10 +150,7 @@ describe("bashTool.execute", () => {
 
     const tool = bashTool();
     await tool.execute!({ command: "npm run dev", detached: true }, {
-      experimental_context: {
-        ...baseContext,
-        recoupAccessToken: "rk_abc",
-      },
+      experimental_context: { ...baseContext, recoupOrgId: "org-uuid" },
     } as never);
     // execDetached signature is (command, cwd) — no env arg.
     expect(sandbox.execDetached.mock.calls[0]).toHaveLength(2);

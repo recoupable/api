@@ -1,14 +1,8 @@
-import {
-  streamText,
-  convertToModelMessages,
-  stepCountIs,
-  type UIMessage,
-  type UIMessageChunk,
-} from "ai";
+import { streamText, convertToModelMessages, type UIMessage, type UIMessageChunk } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { agentCustomInstructions } from "@/lib/chat/agentCustomInstructions";
 import { buildAgentTools } from "@/lib/agent/buildAgentTools";
-import type { AgentContext } from "@/lib/agent/tools/utils";
+import type { AgentContext } from "@/lib/agent/tools/AgentContext";
 
 export type RunAgentStepInput = {
   messages: UIMessage[];
@@ -16,12 +10,10 @@ export type RunAgentStepInput = {
   writable: WritableStream<UIMessageChunk>;
   /**
    * Threaded into `streamText`'s `experimental_context` so each tool's
-   * `execute` callback can read the sandbox state + per-prompt Recoup creds.
+   * `execute` callback can read the sandbox state + per-prompt context.
    */
   agentContext: AgentContext;
 };
-
-const MAX_TOOL_STEPS = 25;
 
 /**
  * One LLM turn (with internal tool-call iteration) in the chat workflow.
@@ -32,7 +24,7 @@ const MAX_TOOL_STEPS = 25;
  *     do not re-bill the model or re-execute tools.
  *
  * `streamText` drives the tool-call → tool-result → next-LLM-call loop
- * internally (up to `MAX_TOOL_STEPS` iterations). Our outer workflow stays
+ * internally using its default stop condition. Our outer workflow stays
  * single-turn for now — multi-turn message threading lands when the rest
  * of the tool surface ports in a follow-up PR.
  *
@@ -55,7 +47,6 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
     system: agentCustomInstructions,
     messages: modelMessages,
     tools,
-    stopWhen: stepCountIs(MAX_TOOL_STEPS),
     experimental_context: input.agentContext,
   });
 

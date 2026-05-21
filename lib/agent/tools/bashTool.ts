@@ -2,7 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import * as path from "path";
 import { buildRecoupExecEnv } from "@/lib/agent/tools/buildRecoupExecEnv";
-import { getSandbox } from "@/lib/agent/tools/utils";
+import { getSandbox } from "@/lib/agent/tools/getSandbox";
 
 const TIMEOUT_MS = 120_000;
 
@@ -20,45 +20,21 @@ const bashInputSchema = z.object({
     ),
 });
 
-type BashInput = z.infer<typeof bashInputSchema>;
-type ApprovalFn = (args: BashInput) => boolean | Promise<boolean>;
-
-export interface BashToolOptions {
-  /**
-   * Override the default "approve only dangerous commands" gate. Pass `true`
-   * to require approval for every bash call, `false` to suppress approval
-   * entirely, or a predicate that receives the resolved args.
-   */
-  needsApproval?: boolean | ApprovalFn;
-}
-
-const DANGEROUS_COMMAND_PATTERNS = [/\brm\s+-rf\b/];
-
-/**
- * Returns true when a command matches the built-in dangerous-pattern list
- * and should always trigger the approval gate.
- *
- * @param command - The raw command string from the model.
- */
-export function commandNeedsApproval(command: string): boolean {
-  const trimmed = command.trim();
-  return DANGEROUS_COMMAND_PATTERNS.some(pattern => pattern.test(trimmed));
-}
-
 /**
  * Factory for the `bash` sandbox tool. Runs `bash -c "<command>"` inside
  * the agent's sandbox via `sandbox.exec`, defaulting cwd to the sandbox's
  * working directory.
  *
- * Foreground execs inject `RECOUP_ACCESS_TOKEN` + `RECOUP_ORG_ID` env vars
- * from agent context so outbound HTTP from the sandbox can authenticate as
- * the calling user for the prompt's lifetime. Detached execs (`detached: true`)
- * deliberately skip those injections — the process outlives the prompt and
- * must authenticate via its own mechanism.
+ * Approval gating is intentionally absent — model-issued commands are
+ * trusted in this PR. Add a host-side gate at the route/UI layer if that
+ * changes.
  *
- * @param options - Optional approval-gate override.
+ * Foreground execs receive `RECOUP_ORG_ID` from agent context (when the
+ * sandbox is org-scoped) so future `recoup-api` skill calls can scope to
+ * the right org. Detached execs deliberately skip env injection — those
+ * processes outlive the prompt.
  */
-export const bashTool = (options?: BashToolOptions) =>
+export const bashTool = () =>
   tool({
     description: `Execute a bash command in the user's shell (non-interactive).
 
@@ -86,15 +62,6 @@ IMPORTANT:
 - Always quote file paths that may contain spaces
 - Use detached: true to start dev servers / long-running processes in the background`,
     inputSchema: bashInputSchema,
-    needsApproval: async args => {
-      if (commandNeedsApproval(args.command)) {
-        if (typeof options?.needsApproval === "function") {
-          return options.needsApproval(args);
-        }
-        return options?.needsApproval ?? true;
-      }
-      return false;
-    },
     execute: async ({ command, cwd, detached }, { experimental_context, abortSignal }) => {
       const sandbox = await getSandbox(experimental_context, "bash");
       const workingDirectory = sandbox.workingDirectory;
@@ -115,9 +82,6 @@ IMPORTANT:
           };
         }
         try {
-          // Detached processes outlive the prompt; deliberately do NOT inject
-          // RECOUP_ACCESS_TOKEN since the token is scoped to foreground execs
-          // whose lifetime matches the prompt.
           const { commandId } = await sandbox.execDetached(command, workingDir);
           return {
             success: true,

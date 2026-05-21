@@ -104,8 +104,11 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
           // the rest of the tool surface.
           workingDirectory: DEFAULT_WORKING_DIRECTORY,
         },
-        recoupAccessToken: validated.authToken,
         recoupOrgId,
+        // No `recoupAccessToken`: handing the long-lived api key to bash
+        // would let any model-issued command exfiltrate it via env. Proper
+        // short-lived token minting lands alongside the `skill` tool port
+        // (when there's an actual consumer for it).
       },
     },
   ]);

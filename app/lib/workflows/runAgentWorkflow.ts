@@ -1,7 +1,7 @@
 import { getWritable } from "workflow";
 import type { UIMessage, UIMessageChunk } from "ai";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
-import type { AgentContext } from "@/lib/agent/tools/utils";
+import type { AgentContext } from "@/lib/agent/tools/AgentContext";
 
 export type RunAgentWorkflowInput = {
   messages: UIMessage[];

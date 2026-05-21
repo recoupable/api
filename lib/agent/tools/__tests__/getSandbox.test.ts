@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { isAgentContext, getSandbox } from "@/lib/agent/tools/utils";
-
+import { getSandbox } from "@/lib/agent/tools/getSandbox";
 import { connectVercel } from "@/lib/sandbox/vercel/connect/connectVercel";
 
 vi.mock("@/lib/sandbox/vercel/connect/connectVercel", () => ({
@@ -8,27 +7,6 @@ vi.mock("@/lib/sandbox/vercel/connect/connectVercel", () => ({
 }));
 
 beforeEach(() => vi.clearAllMocks());
-
-describe("isAgentContext", () => {
-  it("returns true for a well-formed agent context", () => {
-    expect(
-      isAgentContext({
-        sandbox: { state: {}, workingDirectory: "/sandbox/mono" },
-      }),
-    ).toBe(true);
-  });
-
-  it("returns false for non-object inputs", () => {
-    expect(isAgentContext(undefined)).toBe(false);
-    expect(isAgentContext(null)).toBe(false);
-    expect(isAgentContext("nope")).toBe(false);
-    expect(isAgentContext(42)).toBe(false);
-  });
-
-  it("returns false when `sandbox` is missing", () => {
-    expect(isAgentContext({ model: {} })).toBe(false);
-  });
-});
 
 describe("getSandbox", () => {
   it("reconnects via connectVercel(state) and returns the sandbox", async () => {
@@ -43,13 +21,19 @@ describe("getSandbox", () => {
     expect(connectVercel).toHaveBeenCalledWith(state);
   });
 
-  it("throws a descriptive error when context is missing", async () => {
+  it("throws a descriptive error when context is missing entirely", async () => {
     await expect(getSandbox(undefined, "bash")).rejects.toThrow(/Sandbox state missing/);
   });
 
-  it("throws when context.sandbox.state is missing", async () => {
+  it("throws when sandbox.state is missing", async () => {
     await expect(
       getSandbox({ sandbox: { workingDirectory: "/x" } } as never, "bash"),
+    ).rejects.toThrow(/Sandbox state missing/);
+  });
+
+  it("throws when sandbox.workingDirectory is empty (tightened guard)", async () => {
+    await expect(
+      getSandbox({ sandbox: { state: {}, workingDirectory: "" } } as never, "bash"),
     ).rejects.toThrow(/Sandbox state missing/);
   });
 });
