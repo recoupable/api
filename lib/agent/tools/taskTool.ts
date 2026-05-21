@@ -1,0 +1,156 @@
+import { streamText, stepCountIs, tool } from "ai";
+import { gateway } from "@ai-sdk/gateway";
+import { z } from "zod";
+import { bashTool } from "@/lib/agent/tools/bashTool";
+import { readFileTool } from "@/lib/agent/tools/readFileTool";
+import { writeFileTool } from "@/lib/agent/tools/writeFileTool";
+import { editFileTool } from "@/lib/agent/tools/editFileTool";
+import { grepTool } from "@/lib/agent/tools/grepTool";
+import { globTool } from "@/lib/agent/tools/globTool";
+import { isAgentContext } from "@/lib/agent/tools/isAgentContext";
+
+const SUBAGENT_STEP_LIMIT = 30;
+
+const taskInputSchema = z.object({
+  task: z.string().describe("Short description of the task (displayed to user)"),
+  instructions: z
+    .string()
+    .describe(
+      [
+        "Detailed instructions for the subagent. Include:",
+        "- Goal and deliverables",
+        "- Step-by-step procedure",
+        "- Constraints and patterns to follow",
+        "- How to verify the work",
+      ].join("\n"),
+    ),
+});
+
+const SUBAGENT_SYSTEM_PROMPT = `You are a focused subagent invoked by a parent agent. Run autonomously — do not ask the user clarifying questions. Complete the delegated task using the tools you have, then return a concise summary of what you did.
+
+Constraints:
+- Up to ${SUBAGENT_STEP_LIMIT} tool steps total
+- No follow-up questions to the user
+- Stay within the scope described in the task; do not pursue tangents
+- End with a brief plain-text summary (no markdown headings, no bulleted action list — just what you accomplished)`;
+
+/**
+ * Subagent tool set — mirrors open-agents' `executor` subagent
+ * (read/write/edit/grep/glob/bash). Explicitly EXCLUDES the parent
+ * agent's composite + client-side tools:
+ *   - `task` — recursion guard. Subagents are leaves of the agent
+ *     tree; nesting them would bloat traces, double cost per spawn,
+ *     and risk infinite loops.
+ *   - `ask_user_question` — subagents run autonomously without human
+ *     input.
+ *   - `skill` — subagents execute concrete work; skill loading is the
+ *     parent's job.
+ *   - `todo_write` — the parent does the planning.
+ *   - `web_fetch` — parity with open-agents' executor / explorer /
+ *     design subagents, which all omit it.
+ */
+function buildSubagentTools() {
+  return {
+    bash: bashTool,
+    read: readFileTool,
+    write: writeFileTool,
+    edit: editFileTool,
+    grep: grepTool,
+    glob: globTool,
+  };
+}
+
+/**
+ * `task` — delegate focused, autonomous work to a subagent. The
+ * subagent runs its own `streamText` loop with a curated tool set,
+ * isolated from the parent's conversation history, and returns a
+ * concise summary that the parent can incorporate.
+ *
+ * Slim port of open-agents' multi-type SUBAGENT_REGISTRY → single
+ * generic subagent. Streaming progress isn't piped to the UI (the
+ * parent sees one long-running tool call until completion); add an
+ * async-generator execute later if live progress matters.
+ */
+export const taskTool = tool({
+  description: `Launch a subagent to handle complex tasks autonomously.
+
+WHEN TO USE:
+- Clearly-scoped work that can be delegated with explicit instructions
+- Work where focused execution would clutter the main conversation
+- Multi-step exploration / refactoring that you'd otherwise interleave with other turns
+
+WHEN NOT TO USE (do it yourself):
+- Simple, single-file or single-change edits
+- Tasks where you already have all the context you need
+- Ambiguous work that requires back-and-forth clarification
+
+BEHAVIOR:
+- The subagent works AUTONOMOUSLY without asking follow-up questions
+- It runs up to ${SUBAGENT_STEP_LIMIT} tool steps and then returns
+- It returns ONLY a concise summary — internal steps are isolated from the parent
+
+HOW TO USE:
+- Provide a short \`task\` string summarizing the goal (for display)
+- Provide detailed \`instructions\` including goals, steps, constraints, and verification criteria
+
+IMPORTANT:
+- Be explicit and concrete — the subagent cannot ask clarifying questions
+- Include critical context (APIs, function names, file paths) in the instructions
+- The parent agent does not see the subagent's internal tool calls, only its final summary`,
+  inputSchema: taskInputSchema,
+  execute: async ({ task, instructions }, { experimental_context, abortSignal }) => {
+    if (!isAgentContext(experimental_context)) {
+      throw new Error(
+        "task tool: invalid agent context. Ensure the workflow start payload passes sandbox + modelId.",
+      );
+    }
+    const ctx = experimental_context as { modelId?: string };
+    if (!ctx.modelId) {
+      throw new Error("task tool: modelId missing from agent context.");
+    }
+
+    try {
+      const result = streamText({
+        model: gateway(ctx.modelId),
+        system: `${SUBAGENT_SYSTEM_PROMPT}\n\n## Your Task\n${task}\n\n## Instructions\n${instructions}`,
+        messages: [],
+        tools: buildSubagentTools(),
+        stopWhen: stepCountIs(SUBAGENT_STEP_LIMIT),
+        experimental_context,
+        abortSignal,
+      });
+
+      // Drain fullStream so the subagent actually runs to completion.
+      // Streaming progress back to the parent UI is not wired in this slim
+      // port — the parent sees one long-running tool call until the
+      // subagent finishes.
+      for await (const _part of result.fullStream) {
+        void _part;
+      }
+
+      const response = await result.response;
+      const lastAssistant = response.messages.findLast(m => m.role === "assistant");
+      const content = lastAssistant?.content;
+
+      let summary = "";
+      if (typeof content === "string") {
+        summary = content;
+      } else if (Array.isArray(content)) {
+        const lastText = content.findLast(p => p.type === "text");
+        if (lastText && "text" in lastText) summary = lastText.text;
+      }
+
+      if (!summary) {
+        return {
+          success: false,
+          summary: "Subagent finished with no assistant text. The task may be incomplete.",
+        };
+      }
+
+      return { success: true, summary };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: `Subagent failed: ${message}` };
+    }
+  },
+});
