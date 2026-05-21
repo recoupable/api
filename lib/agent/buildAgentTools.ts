@@ -6,24 +6,27 @@ import { grepTool } from "@/lib/agent/tools/grepTool";
 import { globTool } from "@/lib/agent/tools/globTool";
 import { todoWriteTool } from "@/lib/agent/tools/todoWriteTool";
 import { webFetchTool } from "@/lib/agent/tools/webFetchTool";
+import { skillTool } from "@/lib/agent/tools/skillTool";
+import type { SkillMetadata } from "@/lib/skills/skillTypes";
 
 /**
  * Factory for the full agent tool set passed into `streamText({ tools })`.
- * Each tool reads its sandbox handle + recoup creds from `experimental_context`
- * at execute time — the factory takes no arguments because the tools are
- * stateless modulo that context.
+ * Each tool reads its sandbox handle + per-prompt context from
+ * `experimental_context` at execute time — the factory is otherwise stateless.
  *
- * Currently ships 8 leaf tools:
- *   - bash, read, write, edit, grep, glob (sandbox / file ops)
+ * Currently ships 9 tools:
+ *   - 6 file/shell: bash, read, write, edit, grep, glob
  *   - todo_write (planning surface; stateless, echoes the list back)
  *   - web_fetch (HTTP via curl inside the sandbox)
+ *   - skill (load a project-level skill's SKILL.md; only registered when the
+ *     sandbox has skills available, so models without any skill catalog
+ *     don't see the tool at all and never call it speculatively)
  *
- * Composite tools (`task` subagent, `ask_user_question` UI part,
- * `skill` skill discovery) port in a follow-up PR — they require
- * subagent context plumbing / UI rendering / skill discovery infra
- * that isn't in api today.
+ * @param options.skills - Discovered skill catalog. When empty / undefined,
+ *   `skill` is omitted from the tool record so the model doesn't see it.
  */
-export function buildAgentTools() {
+export function buildAgentTools(options: { skills?: SkillMetadata[] } = {}) {
+  const hasSkills = (options.skills?.length ?? 0) > 0;
   return {
     bash: bashTool,
     read: readFileTool,
@@ -33,6 +36,7 @@ export function buildAgentTools() {
     glob: globTool,
     todo_write: todoWriteTool,
     web_fetch: webFetchTool,
+    ...(hasSkills ? { skill: skillTool } : {}),
   };
 }
 

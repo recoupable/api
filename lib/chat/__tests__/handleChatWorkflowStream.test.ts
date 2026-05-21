@@ -39,6 +39,19 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 }));
 vi.mock("@/lib/uuid/generateUUID", () => ({ default: vi.fn(() => "deterministic-uuid") }));
 
+// Stub sandbox connection + skill discovery so handler tests don't actually
+// try to talk to Vercel Sandbox / parse SKILL.md files. The handler treats
+// discovery failures as non-fatal (empty catalog), but we mock to keep tests fast.
+vi.mock("@/lib/sandbox/vercel/connect/connectVercel", () => ({
+  connectVercel: vi.fn(async () => ({ workingDirectory: "/sandbox/mono" })),
+}));
+vi.mock("@/lib/skills/discoverSkills", () => ({
+  discoverSkills: vi.fn(async () => []),
+}));
+vi.mock("@/lib/skills/getSandboxSkillDirectories", () => ({
+  getSandboxSkillDirectories: vi.fn(() => ["/sandbox/mono/skills"]),
+}));
+
 const ACCOUNT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const OTHER_ACCOUNT_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 const SESSION_ID = "22222222-2222-2222-2222-222222222222";
