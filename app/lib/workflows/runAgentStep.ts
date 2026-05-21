@@ -1,27 +1,43 @@
-import { streamText, convertToModelMessages, type UIMessage, type UIMessageChunk } from "ai";
+import {
+  streamText,
+  convertToModelMessages,
+  stepCountIs,
+  type UIMessage,
+  type UIMessageChunk,
+} from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { agentCustomInstructions } from "@/lib/chat/agentCustomInstructions";
+import { buildAgentTools } from "@/lib/agent/buildAgentTools";
+import type { AgentContext } from "@/lib/agent/tools/utils";
 
 export type RunAgentStepInput = {
   messages: UIMessage[];
   modelId: string;
   writable: WritableStream<UIMessageChunk>;
+  /**
+   * Threaded into `streamText`'s `experimental_context` so each tool's
+   * `execute` callback can read the sandbox state + per-prompt Recoup creds.
+   */
+  agentContext: AgentContext;
 };
 
+const MAX_TOOL_STEPS = 25;
+
 /**
- * One LLM turn in the chat workflow agent loop. Runs as a Vercel Workflow
- * `"use step"` so that:
+ * One LLM turn (with internal tool-call iteration) in the chat workflow.
+ * Runs as a Vercel Workflow `"use step"` so:
  *
  *   - Sandbox-banned APIs (`fetch`, `setTimeout`, `crypto`) are legal inside.
  *   - The result is cached as a single durable event — replays after a crash
- *     do not re-bill the model.
+ *     do not re-bill the model or re-execute tools.
  *
- * Currently emits a plain text response with no tools. Sandbox tools land in
- * the follow-up PR (port `@open-harness/agent` tools + wire via
- * `experimental_context`).
+ * `streamText` drives the tool-call → tool-result → next-LLM-call loop
+ * internally (up to `MAX_TOOL_STEPS` iterations). Our outer workflow stays
+ * single-turn for now — multi-turn message threading lands when the rest
+ * of the tool surface ports in a follow-up PR.
  *
- * @param input - Messages + selected model + the workflow's writable stream.
- * @returns finishReason from the model run (for the workflow loop's break condition).
+ * @param input - Messages + selected model + writable stream + agent context.
+ * @returns finishReason from the model run.
  */
 export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishReason: string }> {
   "use step";
@@ -29,17 +45,22 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
   console.log("[runAgentStep] start", {
     modelId: input.modelId,
     messageCount: input.messages.length,
+    hasSandboxState: Boolean(input.agentContext.sandbox?.state),
   });
 
   const modelMessages = convertToModelMessages(input.messages);
+  const tools = buildAgentTools();
   const result = streamText({
     model: gateway(input.modelId),
     system: agentCustomInstructions,
     messages: modelMessages,
+    tools,
+    stopWhen: stepCountIs(MAX_TOOL_STEPS),
+    experimental_context: input.agentContext,
   });
 
-  // Acquire the writer once and release in `finally` — re-acquiring per chunk
-  // (the previous shape) leaked the lock when any write threw.
+  // Acquire the writer once and release in `finally` so a thrown chunk
+  // doesn't leak the lock.
   const writer = input.writable.getWriter();
   try {
     for await (const part of result.toUIMessageStream()) {
