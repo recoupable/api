@@ -1,6 +1,7 @@
 import { connectSandbox, type SandboxState } from "@/lib/sandbox/factory";
 import { clearSandboxState } from "@/lib/sandbox/clearSandboxState";
 import { hasRuntimeSandboxState } from "@/lib/sandbox/hasRuntimeSandboxState";
+import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import type { Tables } from "@/types/database.types";
 import type { Json } from "@/types/database.types";
@@ -29,6 +30,9 @@ export async function stopSandboxOnArchive(session: Tables<"sessions">): Promise
   }
 
   try {
+    const rows = await selectSessions({ id: session.id });
+    if (rows?.[0]?.status !== "archived") return;
+
     const cleared = clearSandboxState(session.sandbox_state);
     await updateSession(session.id, {
       sandbox_state: cleared as unknown as Json,
