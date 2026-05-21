@@ -15,7 +15,10 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { runAgentWorkflow } from "@/app/lib/workflows/runAgentWorkflow";
 import { extractOrgId } from "@/lib/recoupable/extractOrgId";
 import { DEFAULT_WORKING_DIRECTORY } from "@/lib/sandbox/vercel/sandbox/constants";
+import { connectVercel } from "@/lib/sandbox/vercel/connect/connectVercel";
 import type { VercelState } from "@/lib/sandbox/vercel/state";
+import { discoverSkills } from "@/lib/skills/discoverSkills";
+import { getSandboxSkillDirectories } from "@/lib/skills/getSandboxSkillDirectories";
 import generateUUID from "@/lib/uuid/generateUUID";
 
 const DEFAULT_MODEL_ID = "anthropic/claude-haiku-4.5";
@@ -90,6 +93,22 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   const recoupOrgId = session.clone_url
     ? (extractOrgId(session.clone_url) ?? undefined)
     : undefined;
+
+  // Connect the sandbox up-front so we can discover project-level skills
+  // before starting the workflow. The connected handle isn't passed into
+  // the workflow (it's not durably serializable) — only `sandbox.state`
+  // is. Tools reconnect via `connectVercel(state)` inside `"use step"`.
+  let skills: Awaited<ReturnType<typeof discoverSkills>> = [];
+  try {
+    const sandbox = await connectVercel(session.sandbox_state as VercelState);
+    skills = await discoverSkills(sandbox, getSandboxSkillDirectories(sandbox));
+  } catch (error) {
+    console.error(
+      "[handleChatWorkflowStream] skill discovery failed; continuing with empty catalog:",
+      error,
+    );
+  }
+
   const run = await start(runAgentWorkflow, [
     {
       messages: validated.messages,
@@ -105,6 +124,7 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
           workingDirectory: DEFAULT_WORKING_DIRECTORY,
         },
         recoupOrgId,
+        skills,
         // No `recoupAccessToken`: handing the long-lived api key to bash
         // would let any model-issued command exfiltrate it via env. Proper
         // short-lived token minting lands alongside the `skill` tool port
