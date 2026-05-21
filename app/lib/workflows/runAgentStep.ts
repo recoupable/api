@@ -1,6 +1,7 @@
 import { streamText, convertToModelMessages, type UIMessage, type UIMessageChunk } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { agentCustomInstructions } from "@/lib/chat/agentCustomInstructions";
+import { CHAT_AGENT_STOP_WHEN } from "@/lib/chat/const";
 import { buildAgentTools } from "@/lib/agent/buildAgentTools";
 import type { AgentContext } from "@/lib/agent/tools/AgentContext";
 
@@ -47,6 +48,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
     system: agentCustomInstructions,
     messages: modelMessages,
     tools,
+    stopWhen: CHAT_AGENT_STOP_WHEN,
     experimental_context: input.agentContext,
   });
 
