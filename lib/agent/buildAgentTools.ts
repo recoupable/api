@@ -1,3 +1,4 @@
+import { askUserQuestionTool } from "@/lib/agent/tools/askUserQuestionTool";
 import { bashTool } from "@/lib/agent/tools/bashTool";
 import { readFileTool } from "@/lib/agent/tools/readFileTool";
 import { writeFileTool } from "@/lib/agent/tools/writeFileTool";
@@ -7,6 +8,7 @@ import { globTool } from "@/lib/agent/tools/globTool";
 import { todoWriteTool } from "@/lib/agent/tools/todoWriteTool";
 import { webFetchTool } from "@/lib/agent/tools/webFetchTool";
 import { skillTool } from "@/lib/agent/tools/skillTool";
+import { taskTool } from "@/lib/agent/tools/taskTool";
 import type { SkillMetadata } from "@/lib/skills/skillTypes";
 
 /**
@@ -14,13 +16,24 @@ import type { SkillMetadata } from "@/lib/skills/skillTypes";
  * Each tool reads its sandbox handle + per-prompt context from
  * `experimental_context` at execute time — the factory is otherwise stateless.
  *
- * Currently ships 9 tools:
- *   - 6 file/shell: bash, read, write, edit, grep, glob
- *   - todo_write (planning surface; stateless, echoes the list back)
+ * Currently ships 11 tools:
+ *
+ * Sandbox / file ops (6):
+ *   - bash, read, write, edit, grep, glob
+ *
+ * Composite (2):
+ *   - task — delegate focused work to a subagent (sub-streamText loop;
+ *     subagent has only read/write/edit/grep/glob/bash to prevent
+ *     recursion via task itself, matching open-agents' subagent
+ *     curation)
+ *   - skill — load a project-level skill's SKILL.md (only registered
+ *     when the sandbox has skills available)
+ *
+ * Client-side / planning (3):
+ *   - todo_write (stateless planning surface)
  *   - web_fetch (HTTP via curl inside the sandbox)
- *   - skill (load a project-level skill's SKILL.md; only registered when the
- *     sandbox has skills available, so models without any skill catalog
- *     don't see the tool at all and never call it speculatively)
+ *   - ask_user_question (no server execute; chat UI fulfills it and
+ *     the next workflow turn sees the answer in messages)
  *
  * @param options.skills - Discovered skill catalog. When empty / undefined,
  *   `skill` is omitted from the tool record so the model doesn't see it.
@@ -36,6 +49,8 @@ export function buildAgentTools(options: { skills?: SkillMetadata[] } = {}) {
     glob: globTool,
     todo_write: todoWriteTool,
     web_fetch: webFetchTool,
+    task: taskTool,
+    ask_user_question: askUserQuestionTool,
     ...(hasSkills ? { skill: skillTool } : {}),
   };
 }
