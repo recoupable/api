@@ -25,6 +25,7 @@ export async function stopSandboxOnArchive(session: Tables<"sessions">): Promise
     await sandbox.stop();
   } catch (error) {
     console.error(`[stopSandboxOnArchive] stop failed for session ${session.id}:`, error);
+    return;
   }
 
   try {
