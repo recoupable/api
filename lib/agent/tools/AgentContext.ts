@@ -1,4 +1,5 @@
 import type { VercelState } from "@/lib/sandbox/vercel/state";
+import type { SkillMetadata } from "@/lib/skills/skillTypes";
 
 /**
  * Per-tool-call context threaded into the agent via `streamText`'s
@@ -31,4 +32,14 @@ export type AgentContext = {
    * Public information — no security risk in exposing.
    */
   recoupOrgId?: string;
+  /**
+   * Skills discovered in the sandbox before workflow start (handler
+   * calls `discoverSkills(sandbox, getSandboxSkillDirectories(sandbox))`).
+   * The `skillTool` reads this list to:
+   *   - resolve names → SKILL.md paths
+   *   - filter out skills with `disable-model-invocation`
+   *   - surface "Available skills" hints when a model picks an unknown name
+   * Empty / undefined when the sandbox has no `skills/` directory.
+   */
+  skills?: SkillMetadata[];
 };

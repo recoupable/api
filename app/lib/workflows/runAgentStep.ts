@@ -42,7 +42,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
   });
 
   const modelMessages = convertToModelMessages(input.messages);
-  const tools = buildAgentTools();
+  const tools = buildAgentTools({ skills: input.agentContext.skills });
   const result = streamText({
     model: gateway(input.modelId),
     system: agentCustomInstructions,
