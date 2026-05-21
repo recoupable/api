@@ -23,6 +23,11 @@ export async function stopSandboxOnArchive(session: Tables<"sessions">): Promise
   try {
     const sandbox = await connectSandbox(session.sandbox_state as unknown as SandboxState);
     await sandbox.stop();
+  } catch (error) {
+    console.error(`[stopSandboxOnArchive] stop failed for session ${session.id}:`, error);
+  }
+
+  try {
     const cleared = clearSandboxState(session.sandbox_state);
     await updateSession(session.id, {
       sandbox_state: cleared as unknown as Json,
@@ -30,6 +35,6 @@ export async function stopSandboxOnArchive(session: Tables<"sessions">): Promise
       lifecycle_run_id: null,
     });
   } catch (error) {
-    console.error(`[stopSandboxOnArchive] failed for session ${session.id}:`, error);
+    console.error(`[stopSandboxOnArchive] state clear failed for session ${session.id}:`, error);
   }
 }
