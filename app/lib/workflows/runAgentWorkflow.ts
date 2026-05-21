@@ -1,12 +1,18 @@
 import { getWritable } from "workflow";
 import type { UIMessage, UIMessageChunk } from "ai";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
+import type { AgentContext } from "@/lib/agent/tools/AgentContext";
 
 export type RunAgentWorkflowInput = {
   messages: UIMessage[];
   chatId: string;
   sessionId: string;
   modelId: string;
+  /**
+   * Threaded into `streamText`'s `experimental_context` so tools (bash et al.)
+   * can read sandbox state + per-prompt Recoup creds.
+   */
+  agentContext: AgentContext;
 };
 
 /**
@@ -15,18 +21,14 @@ export type RunAgentWorkflowInput = {
  * client; this function writes UIMessage chunks into the workflow's writable
  * via `runAgentStep`.
  *
- * Currently runs a SINGLE `runAgentStep` turn. A multi-turn agent loop is
- * unsafe today: each iteration would re-send the original prompt without
- * the assistant's tool-call response in scope, so a `tool-calls` finish
- * reason would loop forever on the same input. The proper multi-turn
- * shape (where the step appends its response to `messages` before the
- * next iteration) lands with the sandbox-tool port in PR 4.
- *
- * Until then, if the model returns `tool-calls` we log a warning and exit
- * — the client receives the partial tool-call chunks but no follow-up turn.
+ * Currently runs a SINGLE `runAgentStep` turn. Tool-call iteration (up to
+ * MAX_TOOL_STEPS) happens INSIDE `streamText` via `stopWhen` — so the
+ * single workflow turn covers the full "user → assistant → tool → tool
+ * result → assistant" cycle without our outer loop having to thread
+ * messages between iterations.
  *
  * WDK constraints honored:
- *   - All I/O (streamText, fetches) lives in `"use step"` functions.
+ *   - All I/O (streamText, sandbox.exec, fetches) lives in `"use step"` functions.
  *   - The workflow body only orchestrates — no fetch / setTimeout / fs / crypto.
  */
 export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<void> {
@@ -43,14 +45,8 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
     messages: input.messages,
     modelId: input.modelId,
     writable,
+    agentContext: input.agentContext,
   });
 
-  if (result.finishReason === "tool-calls") {
-    console.warn(
-      "[runAgentWorkflow] model returned tool-calls but tool execution is not wired yet; exiting after 1 turn",
-      { chatId: input.chatId },
-    );
-  } else {
-    console.log("[runAgentWorkflow] finish", { finishReason: result.finishReason });
-  }
+  console.log("[runAgentWorkflow] finish", { finishReason: result.finishReason });
 }

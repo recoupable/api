@@ -13,6 +13,9 @@ import { persistLatestUserMessage } from "@/lib/chat/persistLatestUserMessage";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { runAgentWorkflow } from "@/app/lib/workflows/runAgentWorkflow";
+import { extractOrgId } from "@/lib/recoupable/extractOrgId";
+import { DEFAULT_WORKING_DIRECTORY } from "@/lib/sandbox/vercel/sandbox/constants";
+import type { VercelState } from "@/lib/sandbox/vercel/state";
 import generateUUID from "@/lib/uuid/generateUUID";
 
 const DEFAULT_MODEL_ID = "anthropic/claude-haiku-4.5";
@@ -84,12 +87,29 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   void persistLatestUserMessage(validated.chatId, validated.messages as never);
 
   const modelId = chat.model_id ?? DEFAULT_MODEL_ID;
+  const recoupOrgId = session.clone_url
+    ? (extractOrgId(session.clone_url) ?? undefined)
+    : undefined;
   const run = await start(runAgentWorkflow, [
     {
       messages: validated.messages,
       chatId: validated.chatId,
       sessionId: validated.sessionId,
       modelId,
+      agentContext: {
+        sandbox: {
+          state: session.sandbox_state as VercelState,
+          // Slim PR 4 ships the default working directory. Per-session
+          // overrides land when createChatRuntime is ported alongside
+          // the rest of the tool surface.
+          workingDirectory: DEFAULT_WORKING_DIRECTORY,
+        },
+        recoupOrgId,
+        // No `recoupAccessToken`: handing the long-lived api key to bash
+        // would let any model-issued command exfiltrate it via env. Proper
+        // short-lived token minting lands alongside the `skill` tool port
+        // (when there's an actual consumer for it).
+      },
     },
   ]);
 

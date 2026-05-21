@@ -1,4 +1,17 @@
+import { stepCountIs } from "ai";
+
 export const MAX_MESSAGES = 55;
+
+/**
+ * Stop condition for multi-step chat agent loops (model → tool → model → …).
+ * Used by /api/chat (via getGeneralAgent) and /api/chat/workflow (via
+ * runAgentStep). 111 is high enough that normal flows never hit the cap
+ * but bounds runaway loops for cost / replay safety.
+ *
+ * Single-shot agents (compact, content, email-reply) use `stepCountIs(1)`
+ * directly — they're not in the multi-step family.
+ */
+export const CHAT_AGENT_STOP_WHEN = stepCountIs(111);
 
 export const SYSTEM_PROMPT = `You are Recoup, a friendly, sharp, and strategic AI assistant for the music industry. You help music executives, artist teams, and self-starting artists analyze fan data, optimize marketing, and grow artist careers.
 
