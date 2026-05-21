@@ -41,7 +41,7 @@ export async function compareAndSetChatActiveStreamId(
     { active_stream_id: next },
   );
 
-  if (!result.ok) {
+  if ("error" in result) {
     return { ok: false, error: result.error };
   }
 

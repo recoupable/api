@@ -3,6 +3,7 @@ import { updateChat } from "@/lib/supabase/chats/updateChat";
 
 const updateChain = vi.fn();
 const eqChain = vi.fn();
+const matchChain = vi.fn();
 const isChain = vi.fn();
 const selectChain = vi.fn();
 
@@ -14,10 +15,12 @@ vi.mock("@/lib/supabase/serverClient", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Any number of chained .eq() / .is() calls return the same fluent builder.
-  const builder = { eq: eqChain, is: isChain, select: selectChain };
+  // Fluent builder mock — every method returns the same builder so we can
+  // chain .eq / .match / .is / .select in any order without per-step setup.
+  const builder = { eq: eqChain, match: matchChain, is: isChain, select: selectChain };
   updateChain.mockReturnValue(builder);
   eqChain.mockReturnValue(builder);
+  matchChain.mockReturnValue(builder);
   isChain.mockReturnValue(builder);
 });
 
@@ -33,6 +36,8 @@ describe("updateChat", () => {
       expect(result.row).toEqual(row);
       expect(updateChain).toHaveBeenCalledWith({ title: "renamed" });
       expect(eqChain).toHaveBeenCalledWith("id", "chat-1");
+      // With no where filter, match is called with an empty object.
+      expect(matchChain).toHaveBeenCalledWith({});
     });
 
     it("returns ok:false with error on Supabase failure", async () => {
@@ -52,25 +57,29 @@ describe("updateChat", () => {
         { active_stream_id: "wrun_x" },
       );
       expect(isChain).toHaveBeenCalledWith("active_stream_id", null);
+      // No non-null fields → match called with empty {}
+      expect(matchChain).toHaveBeenCalledWith({});
     });
 
-    it("emits `eq` for non-null values (e.g. CAS expecting a specific run id)", async () => {
+    it("emits `match()` for non-null values (e.g. CAS expecting a specific run id)", async () => {
       selectChain.mockResolvedValue({ data: [{ id: "c-1" }], error: null });
       await updateChat(
         { id: "c-1", where: { active_stream_id: "wrun_old" } },
         { active_stream_id: "wrun_new" },
       );
-      expect(eqChain).toHaveBeenCalledWith("active_stream_id", "wrun_old");
+      expect(matchChain).toHaveBeenCalledWith({ active_stream_id: "wrun_old" });
+      // No null fields → is() not called
+      expect(isChain).not.toHaveBeenCalled();
     });
 
-    it("AND-s multiple where columns together", async () => {
+    it("AND-s nullable + equality where columns together", async () => {
       selectChain.mockResolvedValue({ data: [{ id: "c-1" }], error: null });
       await updateChat(
         { id: "c-1", where: { active_stream_id: null, model_id: "anthropic/claude-haiku-4.5" } },
         { title: "x" },
       );
       expect(isChain).toHaveBeenCalledWith("active_stream_id", null);
-      expect(eqChain).toHaveBeenCalledWith("model_id", "anthropic/claude-haiku-4.5");
+      expect(matchChain).toHaveBeenCalledWith({ model_id: "anthropic/claude-haiku-4.5" });
     });
 
     it("returns ok:true rowsUpdated:0 when the predicate matches no row (race lost)", async () => {

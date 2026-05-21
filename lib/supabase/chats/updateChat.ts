@@ -46,12 +46,33 @@ export async function updateChat(
   filter: UpdateChatFilter,
   updates: ChatMutableFields,
 ): Promise<UpdateChatResult> {
-  let query = supabase.from("chats").update(updates).eq("id", filter.id);
-  for (const [column, value] of Object.entries(filter.where ?? {})) {
-    query = value === null ? query.is(column, null) : query.eq(column, value);
+  // Split the optional `where` map into nullable vs equality predicates so we
+  // can apply each as a single chained call (`.match()` for equalities,
+  // `.is(col, null)` per nullable). Iterating with `let query = ...` and
+  // reassigning in a for-loop confuses Supabase's deeply generic builder
+  // types ("type instantiation is excessively deep") in the Next.js build.
+  const entries = Object.entries(filter.where ?? {});
+  const equalityMatches: Record<string, unknown> = {};
+  const nullColumns: string[] = [];
+  for (const [column, value] of entries) {
+    if (value === null) {
+      nullColumns.push(column);
+    } else {
+      equalityMatches[column] = value;
+    }
   }
 
-  const { data, error } = await query.select();
+  const baseQuery = supabase
+    .from("chats")
+    .update(updates)
+    .eq("id", filter.id)
+    .match(equalityMatches);
+  const finalQuery = nullColumns.reduce<typeof baseQuery>(
+    (q, column) => q.is(column, null) as typeof baseQuery,
+    baseQuery,
+  );
+
+  const { data, error } = await finalQuery.select();
   if (error) {
     console.error("[updateChat] error:", error);
     return { ok: false, error: error.message };
