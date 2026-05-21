@@ -28,9 +28,8 @@ const MAX_LINE_LENGTH = 200;
  * `grep -rn`. Caps results to 100 total / 10 per file / 200 chars per
  * match line so long stdouts don't blow the model context.
  */
-export const grepTool = () =>
-  tool({
-    description: `Search for patterns in files using POSIX Extended Regular Expressions (ERE).
+export const grepTool = tool({
+  description: `Search for patterns in files using POSIX Extended Regular Expressions (ERE).
 
 WHEN TO USE:
 - Finding where a function, variable, or string literal is used
@@ -54,91 +53,91 @@ IMPORTANT:
 - ALWAYS use this tool for code/content searches instead of running grep/rg via bashTool
 - Use caseSensitive: false for case-insensitive searches
 - Hidden files and node_modules are skipped when searching directories`,
-    inputSchema: grepInputSchema,
-    execute: async (
-      { pattern, path: searchPath, glob, caseSensitive = true },
-      { experimental_context, abortSignal },
-    ) => {
-      const sandbox = await getSandbox(experimental_context, "grep");
-      const workingDirectory = sandbox.workingDirectory;
+  inputSchema: grepInputSchema,
+  execute: async (
+    { pattern, path: searchPath, glob, caseSensitive = true },
+    { experimental_context, abortSignal },
+  ) => {
+    const sandbox = await getSandbox(experimental_context, "grep");
+    const workingDirectory = sandbox.workingDirectory;
 
-      try {
-        const absolutePath = path.isAbsolute(searchPath)
-          ? searchPath
-          : path.resolve(workingDirectory, searchPath);
+    try {
+      const absolutePath = path.isAbsolute(searchPath)
+        ? searchPath
+        : path.resolve(workingDirectory, searchPath);
 
-        const args: string[] = ["grep", "-rn"];
-        if (!caseSensitive) args.push("-i");
-        args.push(
-          `--exclude-dir=${shellEscape(".*")}`,
-          `--exclude-dir=${shellEscape("node_modules")}`,
-        );
-        if (glob) args.push(`--include=${shellEscape(glob)}`);
-        args.push(
-          "-m",
-          String(MAX_PER_FILE_MATCHES),
-          "-E",
-          shellEscape(pattern),
-          shellEscape(absolutePath),
-        );
-        const command = args.join(" ");
+      const args: string[] = ["grep", "-rn"];
+      if (!caseSensitive) args.push("-i");
+      args.push(
+        `--exclude-dir=${shellEscape(".*")}`,
+        `--exclude-dir=${shellEscape("node_modules")}`,
+      );
+      if (glob) args.push(`--include=${shellEscape(glob)}`);
+      args.push(
+        "-m",
+        String(MAX_PER_FILE_MATCHES),
+        "-E",
+        shellEscape(pattern),
+        shellEscape(absolutePath),
+      );
+      const command = args.join(" ");
 
-        const result = await sandbox.exec(command, workingDirectory, GREP_TIMEOUT_MS, {
-          signal: abortSignal,
-        });
+      const result = await sandbox.exec(command, workingDirectory, GREP_TIMEOUT_MS, {
+        signal: abortSignal,
+      });
 
-        // grep exits with 1 when no matches found — that's not an error.
-        if (!result.success && result.exitCode !== 1) {
-          const errorOutput = (result.stderr || result.stdout).slice(0, 500);
-          return {
-            success: false,
-            error: `Grep failed (exit ${result.exitCode}): ${errorOutput}`,
-          };
-        }
-
-        const matches: GrepMatch[] = [];
-        const filesSet = new Set<string>();
-        const fileMatchCounts = new Map<string, number>();
-
-        const lines = result.stdout.split("\n").filter(Boolean);
-        for (const line of lines) {
-          if (matches.length >= MAX_TOTAL_MATCHES) break;
-
-          // grep -rn output: file:line:content. Find the `:digits:` separator.
-          const match = line.match(/:(\d+):/);
-          if (!match || match.index === undefined) continue;
-          const file = line.slice(0, match.index);
-          const rest = line.slice(match.index + 1);
-          const colonIndex = rest.indexOf(":");
-          if (colonIndex === -1) continue;
-
-          const lineNum = parseInt(rest.slice(0, colonIndex), 10);
-          const content = rest.slice(colonIndex + 1);
-          if (isNaN(lineNum)) continue;
-
-          const displayFile = toDisplayPath(file, workingDirectory);
-          filesSet.add(displayFile);
-          const currentFileCount = fileMatchCounts.get(displayFile) ?? 0;
-          if (currentFileCount >= MAX_PER_FILE_MATCHES) continue;
-
-          fileMatchCounts.set(displayFile, currentFileCount + 1);
-          matches.push({
-            file: displayFile,
-            line: lineNum,
-            content: content.slice(0, MAX_LINE_LENGTH),
-          });
-        }
-
+      // grep exits with 1 when no matches found — that's not an error.
+      if (!result.success && result.exitCode !== 1) {
+        const errorOutput = (result.stderr || result.stdout).slice(0, 500);
         return {
-          success: true,
-          pattern,
-          matchCount: matches.length,
-          filesWithMatches: filesSet.size,
-          matches,
+          success: false,
+          error: `Grep failed (exit ${result.exitCode}): ${errorOutput}`,
         };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return { success: false, error: `Grep failed: ${message}` };
       }
-    },
-  });
+
+      const matches: GrepMatch[] = [];
+      const filesSet = new Set<string>();
+      const fileMatchCounts = new Map<string, number>();
+
+      const lines = result.stdout.split("\n").filter(Boolean);
+      for (const line of lines) {
+        if (matches.length >= MAX_TOTAL_MATCHES) break;
+
+        // grep -rn output: file:line:content. Find the `:digits:` separator.
+        const match = line.match(/:(\d+):/);
+        if (!match || match.index === undefined) continue;
+        const file = line.slice(0, match.index);
+        const rest = line.slice(match.index + 1);
+        const colonIndex = rest.indexOf(":");
+        if (colonIndex === -1) continue;
+
+        const lineNum = parseInt(rest.slice(0, colonIndex), 10);
+        const content = rest.slice(colonIndex + 1);
+        if (isNaN(lineNum)) continue;
+
+        const displayFile = toDisplayPath(file, workingDirectory);
+        filesSet.add(displayFile);
+        const currentFileCount = fileMatchCounts.get(displayFile) ?? 0;
+        if (currentFileCount >= MAX_PER_FILE_MATCHES) continue;
+
+        fileMatchCounts.set(displayFile, currentFileCount + 1);
+        matches.push({
+          file: displayFile,
+          line: lineNum,
+          content: content.slice(0, MAX_LINE_LENGTH),
+        });
+      }
+
+      return {
+        success: true,
+        pattern,
+        matchCount: matches.length,
+        filesWithMatches: filesSet.size,
+        matches,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: `Grep failed: ${message}` };
+    }
+  },
+});

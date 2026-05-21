@@ -30,7 +30,7 @@ describe("readFileTool", () => {
       readFile: vi.fn().mockResolvedValue("line one\nline two\nline three"),
     });
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
-    const tool = readFileTool();
+    const tool = readFileTool;
     const result = (await tool.execute!({ filePath: "README.md" }, {
       experimental_context: ctx,
     } as never)) as { success: boolean; content: string; totalLines: number; path: string };
@@ -48,7 +48,7 @@ describe("readFileTool", () => {
       readFile: vi.fn().mockResolvedValue("a\nb\nc\nd\ne"),
     });
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
-    const tool = readFileTool();
+    const tool = readFileTool;
     const result = (await tool.execute!({ filePath: "x.txt", offset: 2, limit: 2 }, {
       experimental_context: ctx,
     } as never)) as { content: string; startLine: number; endLine: number };
@@ -66,7 +66,7 @@ describe("readFileTool", () => {
         .mockResolvedValue({ isDirectory: () => true, isFile: () => false, size: 0, mtimeMs: 0 }),
     });
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
-    const tool = readFileTool();
+    const tool = readFileTool;
     const result = (await tool.execute!({ filePath: "src" }, {
       experimental_context: ctx,
     } as never)) as { success: boolean; error: string };
@@ -79,7 +79,7 @@ describe("readFileTool", () => {
       stat: vi.fn().mockRejectedValue(new Error("not found")),
     });
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
-    const tool = readFileTool();
+    const tool = readFileTool;
     const result = (await tool.execute!({ filePath: "missing.ts" }, {
       experimental_context: ctx,
     } as never)) as { success: boolean; error: string };

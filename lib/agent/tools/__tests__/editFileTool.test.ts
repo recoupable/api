@@ -26,7 +26,7 @@ describe("editFileTool", () => {
   it("replaces a unique oldString once and reports the startLine", async () => {
     const sb = makeSandbox("line one\nold value\nline three");
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
-    const tool = editFileTool();
+    const tool = editFileTool;
     const result = (await tool.execute!(
       { filePath: "a.txt", oldString: "old value", newString: "new value" },
       { experimental_context: ctx } as never,
@@ -40,7 +40,7 @@ describe("editFileTool", () => {
   it("rejects when oldString === newString (no-op)", async () => {
     const sb = makeSandbox("anything");
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
-    const tool = editFileTool();
+    const tool = editFileTool;
     const result = (await tool.execute!({ filePath: "a.txt", oldString: "x", newString: "x" }, {
       experimental_context: ctx,
     } as never)) as { success: boolean; error: string };
@@ -51,7 +51,7 @@ describe("editFileTool", () => {
   it("rejects when oldString is not in the file", async () => {
     const sb = makeSandbox("hello world");
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
-    const tool = editFileTool();
+    const tool = editFileTool;
     const result = (await tool.execute!(
       { filePath: "a.txt", oldString: "missing", newString: "other" },
       { experimental_context: ctx } as never,
@@ -63,7 +63,7 @@ describe("editFileTool", () => {
   it("rejects ambiguous edits (multiple matches without replaceAll)", async () => {
     const sb = makeSandbox("foo\nfoo\nbar");
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
-    const tool = editFileTool();
+    const tool = editFileTool;
     const result = (await tool.execute!({ filePath: "a.txt", oldString: "foo", newString: "baz" }, {
       experimental_context: ctx,
     } as never)) as { success: boolean; error: string };
@@ -74,7 +74,7 @@ describe("editFileTool", () => {
   it("replaces all occurrences when replaceAll:true", async () => {
     const sb = makeSandbox("foo bar foo baz foo");
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
-    const tool = editFileTool();
+    const tool = editFileTool;
     const result = (await tool.execute!(
       { filePath: "a.txt", oldString: "foo", newString: "qux", replaceAll: true },
       { experimental_context: ctx } as never,

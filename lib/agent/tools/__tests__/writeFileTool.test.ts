@@ -26,7 +26,7 @@ describe("writeFileTool", () => {
   it("creates parent dirs and writes content via sandbox.writeFile", async () => {
     const sb = makeSandbox();
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
-    const tool = writeFileTool();
+    const tool = writeFileTool;
     const result = (await tool.execute!({ filePath: "src/index.ts", content: "export {}" }, {
       experimental_context: ctx,
     } as never)) as { success: boolean; path: string; bytesWritten: number };
@@ -42,7 +42,7 @@ describe("writeFileTool", () => {
       writeFile: vi.fn().mockRejectedValue(new Error("EACCES")),
     });
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
-    const tool = writeFileTool();
+    const tool = writeFileTool;
     const result = (await tool.execute!({ filePath: "a.ts", content: "x" }, {
       experimental_context: ctx,
     } as never)) as { success: boolean; error: string };

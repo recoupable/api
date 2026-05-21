@@ -28,9 +28,8 @@ const DEFAULT_LIMIT = 100;
  * first). Skips hidden files and `node_modules`. Uses `find -printf` on
  * GNU find (Linux sandboxes), falling back to `xargs stat` on BSD find.
  */
-export const globTool = () =>
-  tool({
-    description: `Find files matching a glob pattern.
+export const globTool = tool({
+  description: `Find files matching a glob pattern.
 
 WHEN TO USE:
 - Locating files by extension or naming pattern (e.g., all *.test.ts files)
@@ -52,117 +51,115 @@ USAGE:
 IMPORTANT:
 - Patterns are matched primarily on the final path segment (file name), with basic "*" and "**" support
 - Use this to narrow down candidate files before calling readFileTool or grepTool`,
-    inputSchema: globInputSchema,
-    execute: async (
-      { pattern, path: basePath, limit = DEFAULT_LIMIT },
-      { experimental_context, abortSignal },
-    ) => {
-      const sandbox = await getSandbox(experimental_context, "glob");
-      const workingDirectory = sandbox.workingDirectory;
+  inputSchema: globInputSchema,
+  execute: async (
+    { pattern, path: basePath, limit = DEFAULT_LIMIT },
+    { experimental_context, abortSignal },
+  ) => {
+    const sandbox = await getSandbox(experimental_context, "glob");
+    const workingDirectory = sandbox.workingDirectory;
 
-      try {
-        let searchDir: string;
-        if (basePath) {
-          searchDir = path.isAbsolute(basePath)
-            ? basePath
-            : path.resolve(workingDirectory, basePath);
-        } else {
-          searchDir = workingDirectory;
-        }
-
-        // Extract file-name pattern (last segment) + literal directory prefix
-        // (segments before any wildcards) so we can constrain `find -maxdepth`.
-        const patternParts = pattern.split("/").filter(Boolean);
-        const namePattern = patternParts[patternParts.length - 1] ?? "*";
-        const literalPrefix: string[] = [];
-        for (let i = 0; i < patternParts.length - 1; i++) {
-          const part = patternParts[i]!;
-          if (part.includes("*") || part.includes("?") || part.includes("[")) break;
-          literalPrefix.push(part);
-        }
-        if (literalPrefix.length > 0) {
-          searchDir = path.join(searchDir, ...literalPrefix);
-        }
-
-        const remainingDirSegments = patternParts.slice(
-          literalPrefix.length,
-          patternParts.length - 1,
-        );
-        const hasRecursiveWildcard =
-          remainingDirSegments.some(s => s === "**") || namePattern === "**";
-
-        let maxDepth: number | undefined;
-        if (!hasRecursiveWildcard) {
-          maxDepth = remainingDirSegments.length + 1;
-        }
-
-        const findArgs: string[] = ["find", shellEscape(searchDir)];
-        if (maxDepth !== undefined) findArgs.push("-maxdepth", String(maxDepth));
-        findArgs.push(
-          "-not",
-          "-path",
-          "'*/.*'",
-          "-not",
-          "-path",
-          "'*/node_modules/*'",
-          "-type",
-          "f",
-          "-name",
-          shellEscape(namePattern),
-        );
-
-        // GNU `find -printf` (Linux) vs BSD `find` (macOS) compatibility.
-        const findBase = findArgs.join(" ");
-        const command = [
-          `{ ${findBase} -printf '%T@\\t%s\\t%p\\n' 2>/dev/null`,
-          `|| ${findBase} -print0 | xargs -0 stat -f '%m%t%z%t%N' ; }`,
-          `| sort -t$'\\t' -k1 -rn | head -n ${limit}`,
-        ].join(" ");
-
-        const result = await sandbox.exec(command, workingDirectory, GLOB_TIMEOUT_MS, {
-          signal: abortSignal,
-        });
-
-        // find may exit 1 on permission errors but still produce valid output.
-        if (!result.success && result.exitCode !== 1) {
-          return {
-            success: false,
-            error: `Glob failed (exit ${result.exitCode}): ${result.stdout.slice(0, 500)}`,
-          };
-        }
-
-        const files: FileInfo[] = [];
-        const lines = result.stdout.split("\n").filter(Boolean);
-        for (const line of lines) {
-          const firstTab = line.indexOf("\t");
-          if (firstTab === -1) continue;
-          const secondTab = line.indexOf("\t", firstTab + 1);
-          if (secondTab === -1) continue;
-          const mtimeSeconds = parseFloat(line.slice(0, firstTab));
-          const size = parseInt(line.slice(firstTab + 1, secondTab), 10);
-          const filePath = line.slice(secondTab + 1);
-          if (isNaN(mtimeSeconds) || isNaN(size) || !filePath) continue;
-          files.push({
-            path: toDisplayPath(filePath, workingDirectory),
-            size,
-            modifiedAt: mtimeSeconds * 1000,
-          });
-        }
-
-        return {
-          success: true,
-          pattern,
-          baseDir: toDisplayPath(searchDir, workingDirectory),
-          count: files.length,
-          files: files.map(f => ({
-            path: f.path,
-            size: f.size,
-            modifiedAt: new Date(f.modifiedAt).toISOString(),
-          })),
-        };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return { success: false, error: `Glob failed: ${message}` };
+    try {
+      let searchDir: string;
+      if (basePath) {
+        searchDir = path.isAbsolute(basePath) ? basePath : path.resolve(workingDirectory, basePath);
+      } else {
+        searchDir = workingDirectory;
       }
-    },
-  });
+
+      // Extract file-name pattern (last segment) + literal directory prefix
+      // (segments before any wildcards) so we can constrain `find -maxdepth`.
+      const patternParts = pattern.split("/").filter(Boolean);
+      const namePattern = patternParts[patternParts.length - 1] ?? "*";
+      const literalPrefix: string[] = [];
+      for (let i = 0; i < patternParts.length - 1; i++) {
+        const part = patternParts[i]!;
+        if (part.includes("*") || part.includes("?") || part.includes("[")) break;
+        literalPrefix.push(part);
+      }
+      if (literalPrefix.length > 0) {
+        searchDir = path.join(searchDir, ...literalPrefix);
+      }
+
+      const remainingDirSegments = patternParts.slice(
+        literalPrefix.length,
+        patternParts.length - 1,
+      );
+      const hasRecursiveWildcard =
+        remainingDirSegments.some(s => s === "**") || namePattern === "**";
+
+      let maxDepth: number | undefined;
+      if (!hasRecursiveWildcard) {
+        maxDepth = remainingDirSegments.length + 1;
+      }
+
+      const findArgs: string[] = ["find", shellEscape(searchDir)];
+      if (maxDepth !== undefined) findArgs.push("-maxdepth", String(maxDepth));
+      findArgs.push(
+        "-not",
+        "-path",
+        "'*/.*'",
+        "-not",
+        "-path",
+        "'*/node_modules/*'",
+        "-type",
+        "f",
+        "-name",
+        shellEscape(namePattern),
+      );
+
+      // GNU `find -printf` (Linux) vs BSD `find` (macOS) compatibility.
+      const findBase = findArgs.join(" ");
+      const command = [
+        `{ ${findBase} -printf '%T@\\t%s\\t%p\\n' 2>/dev/null`,
+        `|| ${findBase} -print0 | xargs -0 stat -f '%m%t%z%t%N' ; }`,
+        `| sort -t$'\\t' -k1 -rn | head -n ${limit}`,
+      ].join(" ");
+
+      const result = await sandbox.exec(command, workingDirectory, GLOB_TIMEOUT_MS, {
+        signal: abortSignal,
+      });
+
+      // find may exit 1 on permission errors but still produce valid output.
+      if (!result.success && result.exitCode !== 1) {
+        return {
+          success: false,
+          error: `Glob failed (exit ${result.exitCode}): ${result.stdout.slice(0, 500)}`,
+        };
+      }
+
+      const files: FileInfo[] = [];
+      const lines = result.stdout.split("\n").filter(Boolean);
+      for (const line of lines) {
+        const firstTab = line.indexOf("\t");
+        if (firstTab === -1) continue;
+        const secondTab = line.indexOf("\t", firstTab + 1);
+        if (secondTab === -1) continue;
+        const mtimeSeconds = parseFloat(line.slice(0, firstTab));
+        const size = parseInt(line.slice(firstTab + 1, secondTab), 10);
+        const filePath = line.slice(secondTab + 1);
+        if (isNaN(mtimeSeconds) || isNaN(size) || !filePath) continue;
+        files.push({
+          path: toDisplayPath(filePath, workingDirectory),
+          size,
+          modifiedAt: mtimeSeconds * 1000,
+        });
+      }
+
+      return {
+        success: true,
+        pattern,
+        baseDir: toDisplayPath(searchDir, workingDirectory),
+        count: files.length,
+        files: files.map(f => ({
+          path: f.path,
+          size: f.size,
+          modifiedAt: new Date(f.modifiedAt).toISOString(),
+        })),
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: `Glob failed: ${message}` };
+    }
+  },
+});

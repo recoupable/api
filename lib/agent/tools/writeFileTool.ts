@@ -16,9 +16,8 @@ const writeInputSchema = z.object({
  * directories are created as needed. For small targeted edits prefer
  * `editFileTool`.
  */
-export const writeFileTool = () =>
-  tool({
-    description: `Write content to a file on the filesystem.
+export const writeFileTool = tool({
+  description: `Write content to a file on the filesystem.
 
 WHEN TO USE:
 - Creating a new file that does not yet exist
@@ -39,28 +38,28 @@ IMPORTANT:
 - Prefer editing existing files over creating new ones unless a new file is explicitly needed
 - NEVER proactively create documentation files (e.g., *.md) unless the user explicitly requests them
 - Do not write files that contain secrets or credentials (API keys, passwords, .env, etc.)`,
-    inputSchema: writeInputSchema,
-    execute: async ({ filePath, content }, { experimental_context }) => {
-      const sandbox = await getSandbox(experimental_context, "write");
-      const workingDirectory = sandbox.workingDirectory;
+  inputSchema: writeInputSchema,
+  execute: async ({ filePath, content }, { experimental_context }) => {
+    const sandbox = await getSandbox(experimental_context, "write");
+    const workingDirectory = sandbox.workingDirectory;
 
-      try {
-        const absolutePath = path.isAbsolute(filePath)
-          ? filePath
-          : path.resolve(workingDirectory, filePath);
-        const dir = path.dirname(absolutePath);
-        await sandbox.mkdir(dir, { recursive: true });
-        await sandbox.writeFile(absolutePath, content, "utf-8");
-        const stats = await sandbox.stat(absolutePath);
+    try {
+      const absolutePath = path.isAbsolute(filePath)
+        ? filePath
+        : path.resolve(workingDirectory, filePath);
+      const dir = path.dirname(absolutePath);
+      await sandbox.mkdir(dir, { recursive: true });
+      await sandbox.writeFile(absolutePath, content, "utf-8");
+      const stats = await sandbox.stat(absolutePath);
 
-        return {
-          success: true,
-          path: toDisplayPath(absolutePath, workingDirectory),
-          bytesWritten: stats.size,
-        };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return { success: false, error: `Failed to write file: ${message}` };
-      }
-    },
-  });
+      return {
+        success: true,
+        path: toDisplayPath(absolutePath, workingDirectory),
+        bytesWritten: stats.size,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: `Failed to write file: ${message}` };
+    }
+  },
+});

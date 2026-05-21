@@ -25,12 +25,12 @@ import { webFetchTool } from "@/lib/agent/tools/webFetchTool";
  */
 export function buildAgentTools() {
   return {
-    bash: bashTool(),
-    read: readFileTool(),
-    write: writeFileTool(),
-    edit: editFileTool(),
-    grep: grepTool(),
-    glob: globTool(),
+    bash: bashTool,
+    read: readFileTool,
+    write: writeFileTool,
+    edit: editFileTool,
+    grep: grepTool,
+    glob: globTool,
     todo_write: todoWriteTool,
     web_fetch: webFetchTool,
   };

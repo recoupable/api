@@ -34,7 +34,7 @@ describe("bashTool.execute", () => {
     });
     vi.mocked(connectVercel).mockResolvedValue(sandbox as never);
 
-    const tool = bashTool();
+    const tool = bashTool;
     const result = await tool.execute!({ command: "ls" }, {
       experimental_context: baseContext,
     } as never);
@@ -64,7 +64,7 @@ describe("bashTool.execute", () => {
     });
     vi.mocked(connectVercel).mockResolvedValue(sandbox as never);
 
-    const tool = bashTool();
+    const tool = bashTool;
     const result = (await tool.execute!({ command: "find ." }, {
       experimental_context: baseContext,
     } as never)) as { truncated?: boolean };
@@ -83,7 +83,7 @@ describe("bashTool.execute", () => {
     });
     vi.mocked(connectVercel).mockResolvedValue(sandbox as never);
 
-    const tool = bashTool();
+    const tool = bashTool;
     await tool.execute!({ command: "ls", cwd: "apps/web" }, {
       experimental_context: baseContext,
     } as never);
@@ -107,7 +107,7 @@ describe("bashTool.execute", () => {
     });
     vi.mocked(connectVercel).mockResolvedValue(sandbox as never);
 
-    const tool = bashTool();
+    const tool = bashTool;
     await tool.execute!({ command: "curl example.com" }, {
       experimental_context: { ...baseContext, recoupOrgId: "org-uuid" },
     } as never);
@@ -121,7 +121,7 @@ describe("bashTool.execute", () => {
     });
     vi.mocked(connectVercel).mockResolvedValue(sandbox as never);
 
-    const tool = bashTool();
+    const tool = bashTool;
     const result = (await tool.execute!({ command: "npm run dev", detached: true }, {
       experimental_context: baseContext,
     } as never)) as { success: boolean; stdout: string };
@@ -134,7 +134,7 @@ describe("bashTool.execute", () => {
     const sandbox = makeSandbox({ execDetached: undefined });
     vi.mocked(connectVercel).mockResolvedValue(sandbox as never);
 
-    const tool = bashTool();
+    const tool = bashTool;
     const result = (await tool.execute!({ command: "npm run dev", detached: true }, {
       experimental_context: baseContext,
     } as never)) as { success: boolean; stderr: string };
@@ -148,7 +148,7 @@ describe("bashTool.execute", () => {
     });
     vi.mocked(connectVercel).mockResolvedValue(sandbox as never);
 
-    const tool = bashTool();
+    const tool = bashTool;
     await tool.execute!({ command: "npm run dev", detached: true }, {
       experimental_context: { ...baseContext, recoupOrgId: "org-uuid" },
     } as never);

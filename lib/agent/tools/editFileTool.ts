@@ -20,9 +20,8 @@ const editInputSchema = z.object({
  * model to have already read the file so it can produce a unique
  * `oldString`. Rejects ambiguous matches unless `replaceAll` is set.
  */
-export const editFileTool = () =>
-  tool({
-    description: `Perform exact string replacement in a file.
+export const editFileTool = tool({
+  description: `Perform exact string replacement in a file.
 
 WHEN TO USE:
 - Making small, precise edits to an existing file you have already read
@@ -45,57 +44,57 @@ IMPORTANT:
 - Preserve exact indentation and spacing from the file's content as returned by readFileTool
 - Never include line numbers or the "N: " line prefixes from the read output in oldString or newString
 - If oldString appears multiple times and replaceAll is false, the tool FAILS with an error and occurrence count`,
-    inputSchema: editInputSchema,
-    execute: async (
-      { filePath, oldString, newString, replaceAll = false },
-      { experimental_context },
-    ) => {
-      const sandbox = await getSandbox(experimental_context, "edit");
-      const workingDirectory = sandbox.workingDirectory;
+  inputSchema: editInputSchema,
+  execute: async (
+    { filePath, oldString, newString, replaceAll = false },
+    { experimental_context },
+  ) => {
+    const sandbox = await getSandbox(experimental_context, "edit");
+    const workingDirectory = sandbox.workingDirectory;
 
-      try {
-        if (oldString === newString) {
-          return { success: false, error: "oldString and newString must be different" };
-        }
-
-        const absolutePath = path.isAbsolute(filePath)
-          ? filePath
-          : path.resolve(workingDirectory, filePath);
-        const content = await sandbox.readFile(absolutePath, "utf-8");
-
-        if (!content.includes(oldString)) {
-          return {
-            success: false,
-            error: "oldString not found in file",
-            hint: "Make sure to match exact whitespace and indentation",
-          };
-        }
-
-        const occurrences = content.split(oldString).length - 1;
-        if (occurrences > 1 && !replaceAll) {
-          return {
-            success: false,
-            error: `oldString found ${occurrences} times. Use replaceAll=true or provide more context to make it unique.`,
-          };
-        }
-
-        const matchIndex = content.indexOf(oldString);
-        const startLine = content.slice(0, matchIndex).split("\n").length;
-        const newContent = replaceAll
-          ? content.replaceAll(oldString, newString)
-          : content.replace(oldString, newString);
-
-        await sandbox.writeFile(absolutePath, newContent, "utf-8");
-
-        return {
-          success: true,
-          path: toDisplayPath(absolutePath, workingDirectory),
-          replacements: replaceAll ? occurrences : 1,
-          startLine,
-        };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return { success: false, error: `Failed to edit file: ${message}` };
+    try {
+      if (oldString === newString) {
+        return { success: false, error: "oldString and newString must be different" };
       }
-    },
-  });
+
+      const absolutePath = path.isAbsolute(filePath)
+        ? filePath
+        : path.resolve(workingDirectory, filePath);
+      const content = await sandbox.readFile(absolutePath, "utf-8");
+
+      if (!content.includes(oldString)) {
+        return {
+          success: false,
+          error: "oldString not found in file",
+          hint: "Make sure to match exact whitespace and indentation",
+        };
+      }
+
+      const occurrences = content.split(oldString).length - 1;
+      if (occurrences > 1 && !replaceAll) {
+        return {
+          success: false,
+          error: `oldString found ${occurrences} times. Use replaceAll=true or provide more context to make it unique.`,
+        };
+      }
+
+      const matchIndex = content.indexOf(oldString);
+      const startLine = content.slice(0, matchIndex).split("\n").length;
+      const newContent = replaceAll
+        ? content.replaceAll(oldString, newString)
+        : content.replace(oldString, newString);
+
+      await sandbox.writeFile(absolutePath, newContent, "utf-8");
+
+      return {
+        success: true,
+        path: toDisplayPath(absolutePath, workingDirectory),
+        replacements: replaceAll ? occurrences : 1,
+        startLine,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: `Failed to edit file: ${message}` };
+    }
+  },
+});

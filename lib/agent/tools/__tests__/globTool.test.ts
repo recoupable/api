@@ -28,7 +28,7 @@ describe("globTool", () => {
       }),
     );
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
-    const tool = globTool();
+    const tool = globTool;
     const result = (await tool.execute!({ pattern: "**/*.ts" }, {
       experimental_context: ctx,
     } as never)) as {
@@ -54,7 +54,7 @@ describe("globTool", () => {
       }),
     );
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
-    const tool = globTool();
+    const tool = globTool;
     await tool.execute!({ pattern: "**/*.ts" }, { experimental_context: ctx } as never);
     const cmd = sb.exec.mock.calls[0]?.[0] as string;
     expect(cmd).not.toContain("-maxdepth");
@@ -71,7 +71,7 @@ describe("globTool", () => {
       }),
     );
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
-    const tool = globTool();
+    const tool = globTool;
     await tool.execute!({ pattern: "*.json" }, { experimental_context: ctx } as never);
     expect(sb.exec.mock.calls[0]?.[0]).toMatch(/-maxdepth\s+1/);
   });
@@ -87,7 +87,7 @@ describe("globTool", () => {
       }),
     );
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
-    const tool = globTool();
+    const tool = globTool;
     const result = (await tool.execute!({ pattern: "**/*.ts" }, {
       experimental_context: ctx,
     } as never)) as { success: boolean; error: string };

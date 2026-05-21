@@ -15,9 +15,8 @@ const readInputSchema = z.object({
  * format `N: <content>` so the model can refer to specific lines when
  * later editing.
  */
-export const readFileTool = () =>
-  tool({
-    description: `Read a file from the filesystem.
+export const readFileTool = tool({
+  description: `Read a file from the filesystem.
 
 USAGE:
 - Use workspace-relative paths (e.g., "src/index.ts")
@@ -30,42 +29,42 @@ IMPORTANT:
 - Always read a file at least once before editing it with the edit/write tools
 - This tool can only read files, not directories — attempting to read a directory returns an error
 - You can call multiple reads in parallel to speculatively load several files`,
-    inputSchema: readInputSchema,
-    execute: async ({ filePath, offset = 1, limit = 2000 }, { experimental_context }) => {
-      const sandbox = await getSandbox(experimental_context, "read");
-      const workingDirectory = sandbox.workingDirectory;
+  inputSchema: readInputSchema,
+  execute: async ({ filePath, offset = 1, limit = 2000 }, { experimental_context }) => {
+    const sandbox = await getSandbox(experimental_context, "read");
+    const workingDirectory = sandbox.workingDirectory;
 
-      try {
-        const absolutePath = path.isAbsolute(filePath)
-          ? filePath
-          : path.resolve(workingDirectory, filePath);
+    try {
+      const absolutePath = path.isAbsolute(filePath)
+        ? filePath
+        : path.resolve(workingDirectory, filePath);
 
-        const stats = await sandbox.stat(absolutePath);
-        if (stats.isDirectory()) {
-          return {
-            success: false,
-            error: "Cannot read a directory. Use glob or ls command instead.",
-          };
-        }
-
-        const content = await sandbox.readFile(absolutePath, "utf-8");
-        const lines = content.split("\n");
-        const startLine = Math.max(1, offset) - 1;
-        const endLine = Math.min(lines.length, startLine + limit);
-        const selectedLines = lines.slice(startLine, endLine);
-        const numberedLines = selectedLines.map((line, i) => `${startLine + i + 1}: ${line}`);
-
+      const stats = await sandbox.stat(absolutePath);
+      if (stats.isDirectory()) {
         return {
-          success: true,
-          path: toDisplayPath(absolutePath, workingDirectory),
-          totalLines: lines.length,
-          startLine: startLine + 1,
-          endLine,
-          content: numberedLines.join("\n"),
+          success: false,
+          error: "Cannot read a directory. Use glob or ls command instead.",
         };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return { success: false, error: `Failed to read file: ${message}` };
       }
-    },
-  });
+
+      const content = await sandbox.readFile(absolutePath, "utf-8");
+      const lines = content.split("\n");
+      const startLine = Math.max(1, offset) - 1;
+      const endLine = Math.min(lines.length, startLine + limit);
+      const selectedLines = lines.slice(startLine, endLine);
+      const numberedLines = selectedLines.map((line, i) => `${startLine + i + 1}: ${line}`);
+
+      return {
+        success: true,
+        path: toDisplayPath(absolutePath, workingDirectory),
+        totalLines: lines.length,
+        startLine: startLine + 1,
+        endLine,
+        content: numberedLines.join("\n"),
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: `Failed to read file: ${message}` };
+    }
+  },
+});
