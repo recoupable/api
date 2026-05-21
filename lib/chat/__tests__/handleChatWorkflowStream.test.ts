@@ -2,14 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
 import { handleChatWorkflowStream } from "@/lib/chat/handleChatWorkflowStream";
-
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { validateChatWorkflow } from "@/lib/chat/validateChatWorkflow";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { isSandboxActive } from "@/lib/sandbox/isSandboxActive";
 
-vi.mock("@/lib/auth/validateAuthContext", () => ({
-  validateAuthContext: vi.fn(),
+vi.mock("@/lib/chat/validateChatWorkflow", () => ({
+  validateChatWorkflow: vi.fn(),
 }));
 vi.mock("@/lib/supabase/sessions/selectSessions", () => ({
   selectSessions: vi.fn(),
@@ -29,26 +28,27 @@ const OTHER_ACCOUNT_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 const SESSION_ID = "22222222-2222-2222-2222-222222222222";
 const CHAT_ID = "11111111-1111-1111-1111-111111111111";
 
-const validBody = {
-  messages: [{ id: "m-1", role: "user", parts: [{ type: "text", text: "hi" }] }],
-  chatId: CHAT_ID,
-  sessionId: SESSION_ID,
-};
-
-function makeRequest(body: unknown = validBody): NextRequest {
+function makeRequest(): NextRequest {
   return new NextRequest("http://localhost/api/chat/workflow", {
     method: "POST",
     headers: { "x-api-key": "test-key", "content-type": "application/json" },
-    body: typeof body === "string" ? body : JSON.stringify(body),
+    body: JSON.stringify({ messages: [], chatId: CHAT_ID, sessionId: SESSION_ID }),
+  });
+}
+
+function mockValidatedRequest(overrides: Partial<{ accountId: string }> = {}) {
+  vi.mocked(validateChatWorkflow).mockResolvedValue({
+    messages: [],
+    chatId: CHAT_ID,
+    sessionId: SESSION_ID,
+    accountId: overrides.accountId ?? ACCOUNT_ID,
+    orgId: null,
+    authToken: "test-key",
   });
 }
 
 function mockOwnedSessionWithActiveSandbox() {
-  vi.mocked(validateAuthContext).mockResolvedValue({
-    accountId: ACCOUNT_ID,
-    orgId: null,
-    authToken: "test-key",
-  });
+  mockValidatedRequest();
   vi.mocked(selectSessions).mockResolvedValue([
     { id: SESSION_ID, account_id: ACCOUNT_ID, sandbox_state: { ready: true } } as never,
   ]);
@@ -61,54 +61,30 @@ describe("handleChatWorkflowStream (stub)", () => {
     vi.clearAllMocks();
   });
 
-  describe("auth", () => {
-    it("returns 401 short-circuit from validateAuthContext", async () => {
+  describe("validation short-circuits", () => {
+    it("returns the validator's short-circuit response unchanged (e.g. 401)", async () => {
       const authError = NextResponse.json(
         { status: "error", error: "Unauthorized" },
         { status: 401 },
       );
-      vi.mocked(validateAuthContext).mockResolvedValue(authError);
+      vi.mocked(validateChatWorkflow).mockResolvedValue(authError);
       const res = await handleChatWorkflowStream(makeRequest());
       expect(res.status).toBe(401);
     });
-  });
 
-  describe("body validation", () => {
-    it("returns 400 on invalid JSON body", async () => {
-      vi.mocked(validateAuthContext).mockResolvedValue({
-        accountId: ACCOUNT_ID,
-        orgId: null,
-        authToken: "k",
-      });
-      const req = new NextRequest("http://localhost/api/chat/workflow", {
-        method: "POST",
-        headers: { "x-api-key": "test-key", "content-type": "application/json" },
-        body: "{not-json",
-      });
-      const res = await handleChatWorkflowStream(req);
-      expect(res.status).toBe(400);
-    });
-
-    it("returns 400 when chatId is missing", async () => {
-      vi.mocked(validateAuthContext).mockResolvedValue({
-        accountId: ACCOUNT_ID,
-        orgId: null,
-        authToken: "k",
-      });
-      const { chatId: _omit, ...rest } = validBody;
-      const res = await handleChatWorkflowStream(makeRequest(rest));
+    it("returns the validator's 400 unchanged (e.g. invalid body)", async () => {
+      const badBody = NextResponse.json(
+        { status: "error", error: "Invalid JSON body" },
+        { status: 400 },
+      );
+      vi.mocked(validateChatWorkflow).mockResolvedValue(badBody);
+      const res = await handleChatWorkflowStream(makeRequest());
       expect(res.status).toBe(400);
     });
   });
 
   describe("session / chat ownership", () => {
-    beforeEach(() => {
-      vi.mocked(validateAuthContext).mockResolvedValue({
-        accountId: ACCOUNT_ID,
-        orgId: null,
-        authToken: "k",
-      });
-    });
+    beforeEach(() => mockValidatedRequest());
 
     it("returns 404 when the session does not exist", async () => {
       vi.mocked(selectSessions).mockResolvedValue([]);
