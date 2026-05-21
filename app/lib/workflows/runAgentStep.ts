@@ -46,7 +46,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
     hasSandboxState: Boolean(input.agentContext.sandbox?.state),
   });
 
-  const modelMessages = convertToModelMessages(input.messages);
+  const modelMessages = await convertToModelMessages(input.messages);
   const tools = buildAgentTools({ skills: input.agentContext.skills });
   // Construct the model here (not in the workflow input) — LanguageModel
   // instances aren't JSON-serializable and can't ride durable inputs.

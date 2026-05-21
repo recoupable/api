@@ -3,18 +3,32 @@ import { buildMessageMetadataCallback } from "@/lib/agent/messageMetadata/buildM
 
 const MODEL_ID = "anthropic/claude-haiku-4.5";
 
+// `ai@^6.0.190` uses the flat LanguageModelUsage shape — same as the
+// open-agents UI consumes — so the callback passes usage through
+// without any shape conversion.
 function finishStepPart(opts: {
   inputTokens?: number;
   outputTokens?: number;
   cost?: string;
   finishReason?: string;
 }) {
+  const inputTokens = opts.inputTokens ?? 100;
+  const outputTokens = opts.outputTokens ?? 50;
   return {
     type: "finish-step",
     usage: {
-      inputTokens: opts.inputTokens ?? 100,
-      outputTokens: opts.outputTokens ?? 50,
-      totalTokens: (opts.inputTokens ?? 100) + (opts.outputTokens ?? 50),
+      inputTokens,
+      outputTokens,
+      totalTokens: inputTokens + outputTokens,
+      inputTokenDetails: {
+        noCacheTokens: inputTokens,
+        cacheReadTokens: undefined,
+        cacheWriteTokens: undefined,
+      },
+      outputTokenDetails: {
+        textTokens: outputTokens,
+        reasoningTokens: undefined,
+      },
     },
     providerMetadata: opts.cost ? { gateway: { cost: opts.cost } } : undefined,
     finishReason: opts.finishReason ?? "tool-calls",

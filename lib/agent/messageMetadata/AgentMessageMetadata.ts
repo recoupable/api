@@ -1,20 +1,14 @@
 import type { FinishReason, LanguageModelUsage } from "ai";
-
-/**
- * Per-finish-step record kept on the assistant message so the UI can
- * render a finish-reason history (open-agents shape).
- */
-export type AgentStepFinishMetadata = {
-  finishReason: FinishReason;
-  rawFinishReason?: string;
-};
+import type { AgentStepFinishMetadata } from "@/lib/agent/messageMetadata/AgentStepFinishMetadata";
 
 /**
  * Metadata emitted on each assistant turn via the `messageMetadata`
  * callback in `runAgentStep`. Mirrors open-agents'
  * `apps/web/app/types.ts:WebAgentMessageMetadata` byte-for-byte so the
  * sandbox.recoupable.com UI can render model/cost/usage badges when
- * cut over to api's `/api/chat/workflow`.
+ * cut over to api's `/api/chat/workflow`. Now that api ships
+ * `ai@^6.0.190`, `LanguageModelUsage` is the same flat-shape type
+ * open-agents has been using — no shape conversion needed.
  */
 export type AgentMessageMetadata = {
   /** Model the client requested (e.g. user selection in the UI). */

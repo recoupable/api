@@ -1,10 +1,8 @@
 import type { LanguageModelUsage, TextStreamPart, ToolSet } from "ai";
 import { addLanguageModelUsage } from "@/lib/agent/messageMetadata/addLanguageModelUsage";
 import { extractGatewayCost } from "@/lib/agent/messageMetadata/extractGatewayCost";
-import type {
-  AgentMessageMetadata,
-  AgentStepFinishMetadata,
-} from "@/lib/agent/messageMetadata/AgentMessageMetadata";
+import type { AgentMessageMetadata } from "@/lib/agent/messageMetadata/AgentMessageMetadata";
+import type { AgentStepFinishMetadata } from "@/lib/agent/messageMetadata/AgentStepFinishMetadata";
 
 /**
  * Build a stateful `messageMetadata` callback for `toUIMessageStream`.
@@ -14,7 +12,9 @@ import type {
  *
  * Mirrors open-agents' `apps/web/app/workflows/chat.ts` callback shape
  * so sandbox.recoupable.com's UI can render model/cost/usage badges
- * when cut over to api's `/api/chat/workflow`.
+ * when cut over to api's `/api/chat/workflow`. api and open-agents now
+ * share the same `ai@^6.0.190` shape for `LanguageModelUsage`, so no
+ * shape conversion happens here.
  *
  * Each call to `buildMessageMetadataCallback` returns a FRESH closure —
  * one per assistant turn — so totals reset between turns.

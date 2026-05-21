@@ -1,15 +1,11 @@
 import type { LanguageModelUsage } from "ai";
-
-function addTokenCounts(a: number | undefined, b: number | undefined): number | undefined {
-  if (a == null && b == null) return undefined;
-  return (a ?? 0) + (b ?? 0);
-}
+import { addTokenCounts } from "@/lib/agent/messageMetadata/addTokenCounts";
 
 /**
- * Pointwise-sum two `LanguageModelUsage` records. Mirrors open-agents'
- * `packages/agent/usage.ts:addLanguageModelUsage`. Used to accumulate
- * per-step usage into a per-message total inside the `messageMetadata`
- * callback.
+ * Pointwise-sum two `LanguageModelUsage` records (the flat shape used by
+ * `ai@^6.0.190`). Mirrors `packages/agent/usage.ts:addLanguageModelUsage`
+ * in the open-agents source. Used to accumulate per-step usage into a
+ * per-message total inside the `messageMetadata` callback.
  *
  * Returns `undefined` for fields that are missing on BOTH inputs, so
  * the resulting usage object stays sparse rather than introducing
@@ -49,5 +45,5 @@ export function addLanguageModelUsage(
     totalTokens: addTokenCounts(a.totalTokens, b.totalTokens),
     reasoningTokens: addTokenCounts(a.reasoningTokens, b.reasoningTokens),
     cachedInputTokens: addTokenCounts(a.cachedInputTokens, b.cachedInputTokens),
-  } as LanguageModelUsage;
+  };
 }
