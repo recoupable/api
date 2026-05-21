@@ -31,13 +31,12 @@ export async function stopSandboxOnArchive(session: Tables<"sessions">): Promise
 
   try {
     const rows = await selectSessions({ id: session.id });
-    if (rows?.[0]?.status !== "archived") return;
-
+    const isStillArchived = rows?.[0]?.status === "archived";
     const cleared = clearSandboxState(session.sandbox_state);
+
     await updateSession(session.id, {
       sandbox_state: cleared as unknown as Json,
-      lifecycle_state: "archived",
-      lifecycle_run_id: null,
+      ...(isStillArchived && { lifecycle_state: "archived", lifecycle_run_id: null }),
     });
   } catch (error) {
     console.error(`[stopSandboxOnArchive] state clear failed for session ${session.id}:`, error);
