@@ -7,30 +7,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 
 const PENDING_STREAM_PREFIX = "pending-";
 
-/**
- * Handles POST /api/chat/{chatId}/stop.
- *
- * Stops the workflow currently streaming for a chat. Flow:
- *   1. Validate auth + chat ownership (validateStopChatWorkflowRequest).
- *   2. Read `chats.active_stream_id`:
- *        - unset            → nothing to stop (200, `stopped: false`).
- *        - real run id      → cancel the Vercel Workflow run, then release
- *                             the slot via CAS.
- *        - `pending-<uuid>` → a `start()` is mid-flight and hasn't promoted
- *                             to a real run id yet. There's no run to cancel,
- *                             but clearing the slot makes the in-flight
- *                             handler's promote-CAS fail — it cancels its own
- *                             run and 409s. So we just release the slot.
- *
- * Releasing is a CAS against the exact id we observed. If the run finished or
- * another request moved the slot between read and release, we still report
- * success — the goal ("no active workflow for this chat") holds either way.
- * A cancel that throws (run already terminal / unknown) is non-fatal.
- *
- * @param request - The incoming NextRequest.
- * @param chatId - The chat id from the route path.
- * @returns A NextResponse: 200 `{ success, stopped }`, or an error.
- */
+/** Cancels the workflow streaming for a chat and releases chats.active_stream_id. */
 export async function handleStopChatWorkflow(
   request: NextRequest,
   chatId: string,
@@ -46,11 +23,15 @@ export async function handleStopChatWorkflow(
     );
   }
 
+  // Only release the slot after the run is confirmed cancelled. A failed cancel
+  // means the run may still be live, so keep the slot held and surface the error
+  // rather than reporting a false "stopped" and freeing it for a new run.
   if (!activeStreamId.startsWith(PENDING_STREAM_PREFIX)) {
     try {
       await getRun(activeStreamId).cancel();
     } catch (error) {
-      console.error("[handleStopChatWorkflow] run cancel failed; releasing slot anyway:", error);
+      console.error("[handleStopChatWorkflow] run cancel failed:", error);
+      return errorResponse("Failed to stop the workflow", 502);
     }
   }
 

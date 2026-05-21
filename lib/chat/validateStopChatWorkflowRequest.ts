@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import type { AuthContext } from "@/lib/auth/validateAuthContext";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { errorResponse } from "@/lib/networking/errorResponse";
+import { validationErrorResponse } from "@/lib/zod/validationErrorResponse";
 import type { Tables } from "@/types/database.types";
 
 export interface ValidatedStopChatWorkflowRequest {
@@ -11,21 +13,9 @@ export interface ValidatedStopChatWorkflowRequest {
   chat: Tables<"chats">;
 }
 
-/**
- * Validates a `POST /api/chat/{chatId}/stop` request end-to-end:
- *   1. Authenticates the caller (Privy Bearer / x-api-key).
- *   2. Loads the chat at the given id (404 when missing).
- *   3. Loads the chat's parent session and confirms the authenticated
- *      account owns it: 403 on mismatch, 404 when the session is gone,
- *      500 on a DB error.
- *
- * Ownership is enforced through the session because `chats` carries no
- * account column — the session is the row that belongs to an account.
- *
- * @param request - The incoming request.
- * @param chatId - The chat id from the route path.
- * @returns A NextResponse on failure, or the validated auth + chat row.
- */
+const chatIdSchema = z.string().uuid("chatId must be a valid UUID");
+
+/** Validates POST /api/chat/{chatId}/stop: auth, chatId format, and chat + session-ownership lookup. */
 export async function validateStopChatWorkflowRequest(
   request: NextRequest,
   chatId: string,
@@ -33,7 +23,13 @@ export async function validateStopChatWorkflowRequest(
   const auth = await validateAuthContext(request);
   if (auth instanceof NextResponse) return auth;
 
-  const chats = await selectChats({ id: chatId });
+  const parsed = chatIdSchema.safeParse(chatId);
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0];
+    return validationErrorResponse(firstError.message, firstError.path);
+  }
+
+  const chats = await selectChats({ id: parsed.data });
   const chat = chats[0];
   if (!chat) return errorResponse("Chat not found", 404);
 

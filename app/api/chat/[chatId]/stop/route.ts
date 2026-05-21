@@ -16,12 +16,7 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/chat/{chatId}/stop
- *
- * Stops the workflow currently streaming for the chat by cancelling its
- * Vercel Workflow run and releasing `chats.active_stream_id`. Authenticates
- * via Privy Bearer token or `x-api-key`; 403s when the chat is owned by a
- * different account and 404s when it does not exist.
+ * POST /api/chat/{chatId}/stop — stop the in-progress response for a chat.
  *
  * @param request - The incoming NextRequest.
  * @param options - Route options containing the async params.

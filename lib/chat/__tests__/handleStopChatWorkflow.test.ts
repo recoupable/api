@@ -102,19 +102,14 @@ describe("handleStopChatWorkflow", () => {
     expect(await result.json()).toEqual({ success: true, stopped: true });
   });
 
-  it("still releases the slot when run cancellation throws", async () => {
+  it("returns 502 and does NOT release the slot when run cancellation throws", async () => {
     mockValidated("wrun_abc");
-    cancel.mockRejectedValue(new Error("run already terminal"));
+    cancel.mockRejectedValue(new Error("cancel failed"));
 
     const result = await handleStopChatWorkflow(makeRequest(), CHAT_ID);
 
-    expect(vi.mocked(compareAndSetChatActiveStreamId)).toHaveBeenCalledWith(
-      CHAT_ID,
-      "wrun_abc",
-      null,
-    );
-    expect(result.status).toBe(200);
-    expect(await result.json()).toEqual({ success: true, stopped: true });
+    expect(result.status).toBe(502);
+    expect(vi.mocked(compareAndSetChatActiveStreamId)).not.toHaveBeenCalled();
   });
 
   it("reports success even when the release CAS loses the race", async () => {

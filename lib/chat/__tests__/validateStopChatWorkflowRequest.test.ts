@@ -16,7 +16,7 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 const ACCOUNT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const OTHER_ACCOUNT_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 const SESSION_ID = "22222222-2222-2222-2222-222222222222";
-const CHAT_ID = "11111111-1111-1111-1111-111111111111";
+const CHAT_ID = "11111111-1111-4111-8111-111111111111";
 
 function makeRequest(): NextRequest {
   return new NextRequest("http://localhost/api/chat/" + CHAT_ID + "/stop", {
@@ -69,6 +69,16 @@ describe("validateStopChatWorkflowRequest", () => {
     const result = await validateStopChatWorkflowRequest(makeRequest(), CHAT_ID);
 
     expect(result).toBe(unauthorized);
+    expect(vi.mocked(selectChats)).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when chatId is not a valid UUID", async () => {
+    mockAuth();
+
+    const result = await validateStopChatWorkflowRequest(makeRequest(), "not-a-uuid");
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(400);
     expect(vi.mocked(selectChats)).not.toHaveBeenCalled();
   });
 
