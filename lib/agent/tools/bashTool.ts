@@ -21,9 +21,9 @@ const bashInputSchema = z.object({
 });
 
 /**
- * Factory for the `bash` sandbox tool. Runs `bash -c "<command>"` inside
- * the agent's sandbox via `sandbox.exec`, defaulting cwd to the sandbox's
- * working directory.
+ * `bash` sandbox tool. Runs `bash -c "<command>"` inside the agent's
+ * sandbox via `sandbox.exec`, defaulting cwd to the sandbox's working
+ * directory.
  *
  * Approval gating is intentionally absent — model-issued commands are
  * trusted in this PR. Add a host-side gate at the route/UI layer if that
@@ -34,9 +34,8 @@ const bashInputSchema = z.object({
  * the right org. Detached execs deliberately skip env injection — those
  * processes outlive the prompt.
  */
-export const bashTool = () =>
-  tool({
-    description: `Execute a bash command in the user's shell (non-interactive).
+export const bashTool = tool({
+  description: `Execute a bash command in the user's shell (non-interactive).
 
 WHEN TO USE:
 - Running existing project commands (build, test, lint, typecheck)
@@ -61,56 +60,56 @@ IMPORTANT:
 - Never use interactive commands (vim, nano, top, bash, ssh, etc.)
 - Always quote file paths that may contain spaces
 - Use detached: true to start dev servers / long-running processes in the background`,
-    inputSchema: bashInputSchema,
-    execute: async ({ command, cwd, detached }, { experimental_context, abortSignal }) => {
-      const sandbox = await getSandbox(experimental_context, "bash");
-      const workingDirectory = sandbox.workingDirectory;
-      const workingDir = cwd
-        ? path.isAbsolute(cwd)
-          ? cwd
-          : path.resolve(workingDirectory, cwd)
-        : workingDirectory;
+  inputSchema: bashInputSchema,
+  execute: async ({ command, cwd, detached }, { experimental_context, abortSignal }) => {
+    const sandbox = await getSandbox(experimental_context, "bash");
+    const workingDirectory = sandbox.workingDirectory;
+    const workingDir = cwd
+      ? path.isAbsolute(cwd)
+        ? cwd
+        : path.resolve(workingDirectory, cwd)
+      : workingDirectory;
 
-      if (detached) {
-        if (!sandbox.execDetached) {
-          return {
-            success: false,
-            exitCode: null,
-            stdout: "",
-            stderr:
-              "Detached mode is not supported in this sandbox environment. Only cloud sandboxes support background processes.",
-          };
-        }
-        try {
-          const { commandId } = await sandbox.execDetached(command, workingDir);
-          return {
-            success: true,
-            exitCode: null,
-            stdout: `Process started in background (command ID: ${commandId}). The server is now running.`,
-            stderr: "",
-          };
-        } catch (error) {
-          return {
-            success: false,
-            exitCode: null,
-            stdout: "",
-            stderr: error instanceof Error ? error.message : String(error),
-          };
-        }
+    if (detached) {
+      if (!sandbox.execDetached) {
+        return {
+          success: false,
+          exitCode: null,
+          stdout: "",
+          stderr:
+            "Detached mode is not supported in this sandbox environment. Only cloud sandboxes support background processes.",
+        };
       }
+      try {
+        const { commandId } = await sandbox.execDetached(command, workingDir);
+        return {
+          success: true,
+          exitCode: null,
+          stdout: `Process started in background (command ID: ${commandId}). The server is now running.`,
+          stderr: "",
+        };
+      } catch (error) {
+        return {
+          success: false,
+          exitCode: null,
+          stdout: "",
+          stderr: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }
 
-      const recoupEnv = buildRecoupExecEnv(experimental_context);
-      const result = await sandbox.exec(command, workingDir, TIMEOUT_MS, {
-        signal: abortSignal,
-        ...(recoupEnv ? { env: recoupEnv } : {}),
-      });
+    const recoupEnv = buildRecoupExecEnv(experimental_context);
+    const result = await sandbox.exec(command, workingDir, TIMEOUT_MS, {
+      signal: abortSignal,
+      ...(recoupEnv ? { env: recoupEnv } : {}),
+    });
 
-      return {
-        success: result.success,
-        exitCode: result.exitCode,
-        stdout: result.stdout,
-        stderr: result.stderr,
-        ...(result.truncated && { truncated: true }),
-      };
-    },
-  });
+    return {
+      success: result.success,
+      exitCode: result.exitCode,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      ...(result.truncated && { truncated: true }),
+    };
+  },
+});
