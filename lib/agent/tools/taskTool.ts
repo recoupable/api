@@ -1,20 +1,9 @@
 import { streamText, stepCountIs, tool } from "ai";
-import { gateway } from "@ai-sdk/gateway";
 import { z } from "zod";
 import { buildSubagentTools } from "@/lib/agent/tools/buildSubagentTools";
-import { isAgentContext } from "@/lib/agent/tools/isAgentContext";
+import { getSubagentModel } from "@/lib/agent/tools/getSubagentModel";
 
 const SUBAGENT_STEP_LIMIT = 30;
-
-/**
- * Hardcoded subagent model id. Open-agents resolves the subagent model
- * via `context.subagentModel ?? context.model` (LanguageModel objects).
- * api can't follow that pattern because `agentContext` is part of a
- * durable Vercel Workflow input — `LanguageModel` instances aren't
- * JSON-serializable. KISS: pin a cheap, fast default; a `subagentModelId`
- * override can be added if/when a real consumer needs it.
- */
-const SUBAGENT_MODEL_ID = "anthropic/claude-haiku-4.5";
 
 const taskInputSchema = z.object({
   task: z.string().describe("Short description of the task (displayed to user)"),
@@ -78,18 +67,17 @@ IMPORTANT:
 - The parent agent does not see the subagent's internal tool calls, only its final summary`,
   inputSchema: taskInputSchema,
   execute: async ({ task, instructions }, { experimental_context, abortSignal }) => {
-    if (!isAgentContext(experimental_context)) {
-      throw new Error(
-        "task tool: invalid agent context. Ensure the workflow start payload passes sandbox state.",
-      );
-    }
+    // Resolves to ctx.subagentModel ?? ctx.model, throwing if context
+    // wasn't populated by runAgentStep. Mirrors open-agents' task tool
+    // (`getSubagentModel(experimental_context, "task")`).
+    const subagentModel = getSubagentModel(experimental_context, "task");
 
     try {
       // `prompt` (not `messages: []`) is required — the AI SDK records zero
       // steps and throws NoOutputGeneratedError if the model has only a
       // system prompt with no user turn. Mirrors open-agents' task tool.
       const result = streamText({
-        model: gateway(SUBAGENT_MODEL_ID),
+        model: subagentModel,
         system: `${SUBAGENT_SYSTEM_PROMPT}\n\n## Your Task\n${task}\n\n## Instructions\n${instructions}`,
         prompt: "Complete this task and provide a summary of what you accomplished.",
         tools: buildSubagentTools(),

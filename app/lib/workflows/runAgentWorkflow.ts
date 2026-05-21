@@ -1,7 +1,7 @@
 import { getWritable } from "workflow";
 import type { UIMessage, UIMessageChunk } from "ai";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
-import type { AgentContext } from "@/lib/agent/tools/AgentContext";
+import type { DurableAgentContext } from "@/lib/agent/tools/AgentContext";
 
 export type RunAgentWorkflowInput = {
   messages: UIMessage[];
@@ -9,10 +9,11 @@ export type RunAgentWorkflowInput = {
   sessionId: string;
   modelId: string;
   /**
-   * Threaded into `streamText`'s `experimental_context` so tools (bash et al.)
-   * can read sandbox state + per-prompt Recoup creds.
+   * JSON-serializable subset of AgentContext that survives the durable
+   * workflow input. `runAgentStep` attaches the constructed `model`
+   * before threading into `streamText`'s `experimental_context`.
    */
-  agentContext: AgentContext;
+  agentContext: DurableAgentContext;
 };
 
 /**

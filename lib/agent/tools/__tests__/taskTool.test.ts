@@ -12,8 +12,15 @@ vi.mock("@/lib/sandbox/vercel/connect/connectVercel", () => ({
   connectVercel: vi.fn(),
 }));
 
+// `model` is normally attached by `runAgentStep` before the subagent
+// sees the context. The opaque sentinel below is enough for taskTool
+// to pass it into `streamText` — we assert the same instance flows
+// through.
+const mainModel = { __sentinel: "main-model" } as never;
+const subagentModelOverride = { __sentinel: "subagent-model" } as never;
 const ctx = {
   sandbox: { state: { sandboxName: "x" }, workingDirectory: "/sandbox/mono" },
+  model: mainModel,
 };
 
 function makeStreamTextResult(finalText: string) {
@@ -87,15 +94,22 @@ describe("taskTool.execute", () => {
     expect(hasPrompt || hasMessages).toBe(true);
   });
 
-  it("uses the hardcoded subagent model id", async () => {
+  it("inherits the parent's `model` from agent context when no subagentModel override is set", async () => {
     vi.mocked(streamText).mockReturnValue(makeStreamTextResult("done") as never);
     await taskTool.execute!({ task: "x", instructions: "y" }, {
       experimental_context: ctx,
     } as never);
-    const args = vi.mocked(streamText).mock.calls[0]?.[0] as { model: { modelId?: string } };
-    const id =
-      typeof args.model === "string" ? args.model : (args.model as { modelId?: string }).modelId;
-    expect(id).toBe("anthropic/claude-haiku-4.5");
+    const args = vi.mocked(streamText).mock.calls[0]?.[0] as { model: unknown };
+    expect(args.model).toBe(mainModel);
+  });
+
+  it("prefers `subagentModel` over `model` when both are set on the context", async () => {
+    vi.mocked(streamText).mockReturnValue(makeStreamTextResult("done") as never);
+    await taskTool.execute!({ task: "x", instructions: "y" }, {
+      experimental_context: { ...ctx, subagentModel: subagentModelOverride },
+    } as never);
+    const args = vi.mocked(streamText).mock.calls[0]?.[0] as { model: unknown };
+    expect(args.model).toBe(subagentModelOverride);
   });
 
   it("returns success:false when no assistant text is in the response", async () => {
@@ -122,11 +136,11 @@ describe("taskTool.execute", () => {
     expect(result.error).toMatch(/gateway down/);
   });
 
-  it("throws when agent context is missing or malformed", async () => {
+  it("throws when agent context is missing the `model` field", async () => {
     await expect(
       taskTool.execute!({ task: "x", instructions: "y" }, {
-        experimental_context: { not: "valid" },
+        experimental_context: { sandbox: ctx.sandbox /* no model */ },
       } as never),
-    ).rejects.toThrow(/agent context/i);
+    ).rejects.toThrow(/model not initialized/i);
   });
 });
