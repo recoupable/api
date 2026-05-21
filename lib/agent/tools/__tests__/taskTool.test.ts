@@ -70,6 +70,24 @@ describe("taskTool.execute", () => {
     expect(args.tools).not.toHaveProperty("web_fetch");
   });
 
+  it("passes a non-empty prompt so the model has something to act on", async () => {
+    // Regression: a previous version called streamText with `messages: []`,
+    // which caused the AI SDK to throw NoOutputGeneratedError because zero
+    // steps were recorded — the model had a system prompt but no user turn
+    // to respond to. The subagent must receive an explicit user-side trigger.
+    vi.mocked(streamText).mockReturnValue(makeStreamTextResult("done") as never);
+    await taskTool.execute!({ task: "x", instructions: "y" }, {
+      experimental_context: ctx,
+    } as never);
+    const args = vi.mocked(streamText).mock.calls[0]?.[0] as {
+      prompt?: string;
+      messages?: unknown[];
+    };
+    const hasPrompt = typeof args.prompt === "string" && args.prompt.length > 0;
+    const hasMessages = Array.isArray(args.messages) && args.messages.length > 0;
+    expect(hasPrompt || hasMessages).toBe(true);
+  });
+
   it("uses the modelId from agent context", async () => {
     vi.mocked(streamText).mockReturnValue(makeStreamTextResult("done") as never);
     await taskTool.execute!({ task: "x", instructions: "y" }, {

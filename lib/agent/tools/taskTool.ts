@@ -110,10 +110,13 @@ IMPORTANT:
     }
 
     try {
+      // `prompt` (not `messages: []`) is required — the AI SDK records zero
+      // steps and throws NoOutputGeneratedError if the model has only a
+      // system prompt with no user turn. Mirrors open-agents' task tool.
       const result = streamText({
         model: gateway(ctx.modelId),
         system: `${SUBAGENT_SYSTEM_PROMPT}\n\n## Your Task\n${task}\n\n## Instructions\n${instructions}`,
-        messages: [],
+        prompt: "Complete this task and provide a summary of what you accomplished.",
         tools: buildSubagentTools(),
         stopWhen: stepCountIs(SUBAGENT_STEP_LIMIT),
         experimental_context,
