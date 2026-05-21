@@ -2,22 +2,15 @@ import * as path from "path";
 import { tool } from "ai";
 import { z } from "zod";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
-import { isAgentContext } from "@/lib/agent/tools/isAgentContext";
 import { extractSkillBody } from "@/lib/skills/extractSkillBody";
+import { getSkills } from "@/lib/skills/getSkills";
 import { injectSkillDirectory } from "@/lib/skills/injectSkillDirectory";
 import { substituteArguments } from "@/lib/skills/substituteArguments";
-import type { SkillMetadata } from "@/lib/skills/skillTypes";
 
 const skillInputSchema = z.object({
   skill: z.string().describe("The skill name to invoke"),
   args: z.string().optional().describe("Optional arguments for the skill"),
 });
-
-function getSkills(experimental_context: unknown): SkillMetadata[] {
-  if (!isAgentContext(experimental_context)) return [];
-  const ctx = experimental_context as { skills?: SkillMetadata[] };
-  return ctx.skills ?? [];
-}
 
 /**
  * `skill` — load a project-level skill's SKILL.md body and return it
