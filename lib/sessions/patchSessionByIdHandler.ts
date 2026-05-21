@@ -62,7 +62,10 @@ export async function patchSessionByIdHandler(
   const shouldArchive = body.status === "archived" && row.status !== "archived";
   const shouldUnarchive = body.status === "running" && row.status === "archived";
 
-  if (shouldUnarchive && !row.snapshot_url && hasRuntimeSandboxState(row.sandbox_state)) {
+  const isSandboxPausing =
+    hasRuntimeSandboxState(row.sandbox_state) && row.lifecycle_state !== "hibernated";
+
+  if (shouldUnarchive && !row.snapshot_url && isSandboxPausing) {
     return NextResponse.json(
       { status: "error", error: "Sandbox is still being paused, try again in a few seconds." },
       { status: 409, headers: getCorsHeaders() },
