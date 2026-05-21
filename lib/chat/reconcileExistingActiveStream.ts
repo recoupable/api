@@ -1,3 +1,4 @@
+import { getRun } from "workflow/api";
 import { updateChat } from "@/lib/supabase/chats/updateChat";
 
 export type ReconcileResult =
@@ -29,8 +30,6 @@ export async function reconcileExistingActiveStream(
   chatId: string,
   activeStreamId: string,
 ): Promise<ReconcileResult> {
-  const { getRun } = await import("workflow/api");
-
   // Probe the workflow status. Any thrown error here is treated as transient —
   // we keep the slot held rather than risk starting a duplicate run.
   let status: string;

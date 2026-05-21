@@ -301,8 +301,16 @@ describe("handleChatWorkflowStream", () => {
         runId: "wrun_lost",
         getReadable: () => new ReadableStream(),
       } as never);
+      // Wrap rejection in an async IIFE + attach a noop handler so Vitest's
+      // unhandled-rejection watcher doesn't fire before the SUT awaits.
+      const cancelRejection = (async () => {
+        throw new Error("cancel exploded");
+      })();
+      cancelRejection.catch(() => {
+        /* SUT will await this and convert to logged catch */
+      });
       vi.mocked(getRun).mockReturnValue({
-        cancel: vi.fn(() => Promise.reject(new Error("cancel exploded"))),
+        cancel: vi.fn(() => cancelRejection),
       } as never);
       const res = await handleChatWorkflowStream(makeRequest());
       expect(res.status).toBe(409);
