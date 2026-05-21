@@ -101,7 +101,8 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   let skills: Awaited<ReturnType<typeof discoverSkills>> = [];
   try {
     const sandbox = await connectVercel(session.sandbox_state as VercelState);
-    skills = await discoverSkills(sandbox, getSandboxSkillDirectories(sandbox));
+    const dirs = await getSandboxSkillDirectories(sandbox);
+    skills = await discoverSkills(sandbox, dirs);
   } catch (error) {
     console.error(
       "[handleChatWorkflowStream] skill discovery failed; continuing with empty catalog:",
