@@ -1,5 +1,6 @@
 import * as path from "path";
 import type { Sandbox } from "@/lib/sandbox/interface";
+import { findSkillFile } from "@/lib/skills/findSkillFile";
 import { parseSkillFrontmatter } from "@/lib/skills/parseSkillFrontmatter";
 import { frontmatterToOptions, type SkillMetadata } from "@/lib/skills/skillTypes";
 
@@ -8,29 +9,6 @@ import { frontmatterToOptions, type SkillMetadata } from "@/lib/skills/skillType
  * would be unreachable via slash command, so we drop them at discovery.
  */
 const BUILTIN_COMMANDS = ["model", "resume", "new"];
-
-/**
- * Locate the SKILL.md file inside a candidate skill directory. Prefers
- * uppercase `SKILL.md`, falls back to lowercase `skill.md`, returns null
- * when neither exists.
- */
-async function findSkillFile(sandbox: Sandbox, skillDir: string): Promise<string | null> {
-  const uppercase = path.join(skillDir, "SKILL.md");
-  const lowercase = path.join(skillDir, "skill.md");
-
-  try {
-    await sandbox.access(uppercase);
-    return uppercase;
-  } catch {
-    // try lowercase
-  }
-  try {
-    await sandbox.access(lowercase);
-    return lowercase;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Scan a list of directories for skills. Each directory is expected to
