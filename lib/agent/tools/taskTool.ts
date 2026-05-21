@@ -1,15 +1,20 @@
 import { streamText, stepCountIs, tool } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { z } from "zod";
-import { bashTool } from "@/lib/agent/tools/bashTool";
-import { readFileTool } from "@/lib/agent/tools/readFileTool";
-import { writeFileTool } from "@/lib/agent/tools/writeFileTool";
-import { editFileTool } from "@/lib/agent/tools/editFileTool";
-import { grepTool } from "@/lib/agent/tools/grepTool";
-import { globTool } from "@/lib/agent/tools/globTool";
+import { buildSubagentTools } from "@/lib/agent/tools/buildSubagentTools";
 import { isAgentContext } from "@/lib/agent/tools/isAgentContext";
 
 const SUBAGENT_STEP_LIMIT = 30;
+
+/**
+ * Hardcoded subagent model id. Open-agents resolves the subagent model
+ * via `context.subagentModel ?? context.model` (LanguageModel objects).
+ * api can't follow that pattern because `agentContext` is part of a
+ * durable Vercel Workflow input — `LanguageModel` instances aren't
+ * JSON-serializable. KISS: pin a cheap, fast default; a `subagentModelId`
+ * override can be added if/when a real consumer needs it.
+ */
+const SUBAGENT_MODEL_ID = "anthropic/claude-haiku-4.5";
 
 const taskInputSchema = z.object({
   task: z.string().describe("Short description of the task (displayed to user)"),
@@ -33,32 +38,6 @@ Constraints:
 - No follow-up questions to the user
 - Stay within the scope described in the task; do not pursue tangents
 - End with a brief plain-text summary (no markdown headings, no bulleted action list — just what you accomplished)`;
-
-/**
- * Subagent tool set — mirrors open-agents' `executor` subagent
- * (read/write/edit/grep/glob/bash). Explicitly EXCLUDES the parent
- * agent's composite + client-side tools:
- *   - `task` — recursion guard. Subagents are leaves of the agent
- *     tree; nesting them would bloat traces, double cost per spawn,
- *     and risk infinite loops.
- *   - `ask_user_question` — subagents run autonomously without human
- *     input.
- *   - `skill` — subagents execute concrete work; skill loading is the
- *     parent's job.
- *   - `todo_write` — the parent does the planning.
- *   - `web_fetch` — parity with open-agents' executor / explorer /
- *     design subagents, which all omit it.
- */
-function buildSubagentTools() {
-  return {
-    bash: bashTool,
-    read: readFileTool,
-    write: writeFileTool,
-    edit: editFileTool,
-    grep: grepTool,
-    glob: globTool,
-  };
-}
 
 /**
  * `task` — delegate focused, autonomous work to a subagent. The
@@ -101,12 +80,8 @@ IMPORTANT:
   execute: async ({ task, instructions }, { experimental_context, abortSignal }) => {
     if (!isAgentContext(experimental_context)) {
       throw new Error(
-        "task tool: invalid agent context. Ensure the workflow start payload passes sandbox + modelId.",
+        "task tool: invalid agent context. Ensure the workflow start payload passes sandbox state.",
       );
-    }
-    const ctx = experimental_context as { modelId?: string };
-    if (!ctx.modelId) {
-      throw new Error("task tool: modelId missing from agent context.");
     }
 
     try {
@@ -114,7 +89,7 @@ IMPORTANT:
       // steps and throws NoOutputGeneratedError if the model has only a
       // system prompt with no user turn. Mirrors open-agents' task tool.
       const result = streamText({
-        model: gateway(ctx.modelId),
+        model: gateway(SUBAGENT_MODEL_ID),
         system: `${SUBAGENT_SYSTEM_PROMPT}\n\n## Your Task\n${task}\n\n## Instructions\n${instructions}`,
         prompt: "Complete this task and provide a summary of what you accomplished.",
         tools: buildSubagentTools(),

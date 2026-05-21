@@ -14,7 +14,6 @@ vi.mock("@/lib/sandbox/vercel/connect/connectVercel", () => ({
 
 const ctx = {
   sandbox: { state: { sandboxName: "x" }, workingDirectory: "/sandbox/mono" },
-  modelId: "anthropic/claude-haiku-4.5",
 };
 
 function makeStreamTextResult(finalText: string) {
@@ -88,16 +87,15 @@ describe("taskTool.execute", () => {
     expect(hasPrompt || hasMessages).toBe(true);
   });
 
-  it("uses the modelId from agent context", async () => {
+  it("uses the hardcoded subagent model id", async () => {
     vi.mocked(streamText).mockReturnValue(makeStreamTextResult("done") as never);
     await taskTool.execute!({ task: "x", instructions: "y" }, {
-      experimental_context: { ...ctx, modelId: "anthropic/claude-opus-4.6" },
+      experimental_context: ctx,
     } as never);
     const args = vi.mocked(streamText).mock.calls[0]?.[0] as { model: { modelId?: string } };
-    // Gateway model objects expose `.modelId`; fall back to the raw model arg.
     const id =
       typeof args.model === "string" ? args.model : (args.model as { modelId?: string }).modelId;
-    expect(id).toBe("anthropic/claude-opus-4.6");
+    expect(id).toBe("anthropic/claude-haiku-4.5");
   });
 
   it("returns success:false when no assistant text is in the response", async () => {
@@ -124,13 +122,11 @@ describe("taskTool.execute", () => {
     expect(result.error).toMatch(/gateway down/);
   });
 
-  it("requires modelId in context (throws when missing)", async () => {
+  it("throws when agent context is missing or malformed", async () => {
     await expect(
       taskTool.execute!({ task: "x", instructions: "y" }, {
-        experimental_context: {
-          sandbox: ctx.sandbox /* no modelId */,
-        },
+        experimental_context: { not: "valid" },
       } as never),
-    ).rejects.toThrow(/modelId/i);
+    ).rejects.toThrow(/agent context/i);
   });
 });

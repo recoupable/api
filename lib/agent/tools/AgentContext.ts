@@ -42,12 +42,4 @@ export type AgentContext = {
    * Empty / undefined when the sandbox has no `skills/` directory.
    */
   skills?: SkillMetadata[];
-  /**
-   * Model id (e.g. `anthropic/claude-haiku-4.5`) currently driving the
-   * main agent loop. Threaded into context so the `task` tool's
-   * subagent loop can run against the same model. A separate
-   * `subagentModelId` may be added later if/when subagents want to
-   * default to a cheaper model than the main agent.
-   */
-  modelId?: string;
 };
