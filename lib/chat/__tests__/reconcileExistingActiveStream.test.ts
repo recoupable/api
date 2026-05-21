@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { reconcileExistingActiveStream } from "@/lib/chat/reconcileExistingActiveStream";
 import { getRun } from "workflow/api";
-import { updateChat } from "@/lib/supabase/chats/updateChat";
+import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
 
 vi.mock("workflow/api", () => ({
   getRun: vi.fn(),
 }));
-vi.mock("@/lib/supabase/chats/updateChat", () => ({
-  updateChat: vi.fn(),
+vi.mock("@/lib/chat/compareAndSetChatActiveStreamId", () => ({
+  compareAndSetChatActiveStreamId: vi.fn(),
 }));
 
 const CHAT_ID = "chat-1";
@@ -41,13 +41,10 @@ describe("reconcileExistingActiveStream", () => {
 
   it("returns action=ready after CASing a completed run's stale id to null", async () => {
     mockRun("completed");
-    vi.mocked(updateChat).mockResolvedValue({ ok: true, rowsUpdated: 1, row: null });
+    vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue({ ok: true, claimed: true });
     const result = await reconcileExistingActiveStream(CHAT_ID, RUN_ID);
     expect(result.action).toBe("ready");
-    expect(updateChat).toHaveBeenCalledWith(
-      { id: CHAT_ID, whereActiveStreamId: { equals: RUN_ID } },
-      { active_stream_id: null },
-    );
+    expect(compareAndSetChatActiveStreamId).toHaveBeenCalledWith(CHAT_ID, RUN_ID, null);
   });
 
   it("returns action=conflict when getRun throws (transient workflow API error)", async () => {
@@ -57,7 +54,7 @@ describe("reconcileExistingActiveStream", () => {
     const result = await reconcileExistingActiveStream(CHAT_ID, RUN_ID);
     expect(result.action).toBe("conflict");
     // Critical: we do NOT clear the stream id on transient error.
-    expect(updateChat).not.toHaveBeenCalled();
+    expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
   });
 
   it("returns action=conflict when status promise rejects", async () => {
@@ -75,19 +72,19 @@ describe("reconcileExistingActiveStream", () => {
     } as never);
     const result = await reconcileExistingActiveStream(CHAT_ID, RUN_ID);
     expect(result.action).toBe("conflict");
-    expect(updateChat).not.toHaveBeenCalled();
+    expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
   });
 
-  it("returns action=conflict when CAS-clear loses the race (rowsUpdated=0)", async () => {
+  it("returns action=conflict when CAS-clear loses the race (claimed=false)", async () => {
     mockRun("completed");
-    vi.mocked(updateChat).mockResolvedValue({ ok: true, rowsUpdated: 0, row: null });
+    vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue({ ok: true, claimed: false });
     const result = await reconcileExistingActiveStream(CHAT_ID, RUN_ID);
     expect(result.action).toBe("conflict");
   });
 
   it("returns action=conflict when CAS-clear hits a DB error (ok:false)", async () => {
     mockRun("completed");
-    vi.mocked(updateChat).mockResolvedValue({ ok: false, error: "down" });
+    vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue({ ok: false, error: "down" });
     const result = await reconcileExistingActiveStream(CHAT_ID, RUN_ID);
     // P1 fix: a failed re-read after CAS no longer falls through to "ready".
     expect(result.action).toBe("conflict");

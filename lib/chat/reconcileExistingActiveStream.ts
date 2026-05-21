@@ -1,5 +1,5 @@
 import { getRun } from "workflow/api";
-import { updateChat } from "@/lib/supabase/chats/updateChat";
+import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
 
 export type ReconcileResult =
   | { action: "resume"; runId: string; stream: ReadableStream<unknown> }
@@ -44,18 +44,13 @@ export async function reconcileExistingActiveStream(
     return { action: "conflict" };
   }
 
-  // Run is terminally done. Attempt to claim the slot for the new request by
-  // CASing the stale id back to null. If we win → ready. Anything else
-  // (race lost OR DB error) → conflict, so we never accidentally start a
-  // duplicate workflow on the back of a failed read.
-  const cleared = await updateChat(
-    { id: chatId, whereActiveStreamId: { equals: activeStreamId } },
-    { active_stream_id: null },
-  );
-
-  if (cleared.ok && cleared.rowsUpdated > 0) {
+  // Run is terminally done. Attempt to clear the stale id via CAS. If we
+  // win → ready. Anything else (race lost OR DB error) → conflict, so we
+  // never accidentally start a duplicate workflow on the back of a failed
+  // read.
+  const cleared = await compareAndSetChatActiveStreamId(chatId, activeStreamId, null);
+  if (cleared.ok && cleared.claimed) {
     return { action: "ready" };
   }
-
   return { action: "conflict" };
 }

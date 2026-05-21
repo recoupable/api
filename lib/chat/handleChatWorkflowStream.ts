@@ -5,7 +5,7 @@ import { validateChatWorkflow } from "@/lib/chat/validateChatWorkflow";
 import { maybeResumeChatStream } from "@/lib/chat/maybeResumeChatStream";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
-import { updateChat } from "@/lib/supabase/chats/updateChat";
+import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
 import { isSandboxActive } from "@/lib/sandbox/isSandboxActive";
 import { buildActiveLifecycleUpdate } from "@/lib/sandbox/buildActiveLifecycleUpdate";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
@@ -73,12 +73,9 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   // the workflow. This closes the race where two requests both call start()
   // and bill the model before one loses the CAS.
   const placeholder = `pending-${generateUUID()}`;
-  const claimed = await updateChat(
-    { id: validated.chatId, whereActiveStreamId: { equals: null } },
-    { active_stream_id: placeholder },
-  );
+  const claimed = await compareAndSetChatActiveStreamId(validated.chatId, null, placeholder);
   if (!claimed.ok) return errorResponse("Internal server error", 500);
-  if (claimed.rowsUpdated === 0) {
+  if (!claimed.claimed) {
     return errorResponse("Another workflow is already running for this chat", 409);
   }
 
@@ -96,15 +93,11 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
     },
   ]);
 
-  // Promote placeholder → real run id. We already own the slot so no CAS needed.
-  const promoted = await updateChat(
-    { id: validated.chatId, whereActiveStreamId: { equals: placeholder } },
-    { active_stream_id: run.runId },
-  );
-  if (!promoted.ok || promoted.rowsUpdated === 0) {
-    // Something asynchronously stole our slot, or DB went down between claim
-    // and promote. Cancel the workflow we just started — losing the slot
-    // means another stream owns the client.
+  // Promote placeholder → real run id via CAS. If something asynchronously
+  // stole the slot (or the DB went down) we cancel the workflow we just
+  // started since another stream now owns the client.
+  const promoted = await compareAndSetChatActiveStreamId(validated.chatId, placeholder, run.runId);
+  if (!promoted.ok || !promoted.claimed) {
     try {
       await getRun(run.runId).cancel();
     } catch (error) {

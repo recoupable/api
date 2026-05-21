@@ -4,7 +4,7 @@ import type { Tables, TablesUpdate } from "@/types/database.types";
 /**
  * Subset of `chats` columns that callers are permitted to mutate via this
  * helper. Explicitly excludes structural fields (`id`, `session_id`,
- * `created_at`) so the generic update path cannot bypass chat invariants.
+ * `created_at`) so generic updates cannot bypass chat invariants.
  */
 export type ChatMutableFields = Pick<
   TablesUpdate<"chats">,
@@ -12,58 +12,46 @@ export type ChatMutableFields = Pick<
 >;
 
 /**
- * Filter accepted by {@link updateChat}. Always matches by `id`. Optionally
- * adds a compare-and-set predicate on `active_stream_id` so callers can claim
- * the stream slot atomically without a bespoke helper.
+ * Filter accepted by {@link updateChat}. Always matches by `id`. Optional
+ * `where` adds AND-ed predicates per column — generic across columns so
+ * domain-specific concerns (e.g. CAS on `active_stream_id`) stay in their
+ * own wrapper helpers rather than baking into the Supabase plumbing.
+ *
+ * Each `where` entry maps to `column = value` (or `column IS NULL` when
+ * `value === null`).
  */
 export type UpdateChatFilter = {
   id: string;
-  /**
-   * Compare-and-set predicate on `active_stream_id`:
-   *
-   *   - `{ equals: null }` — only update when the column is currently NULL.
-   *   - `{ equals: "wrun_..." }` — only update when it matches that run id.
-   *   - omitted — no predicate (plain update by id).
-   */
-  whereActiveStreamId?: { equals: string | null };
+  where?: Partial<Tables<"chats">>;
 };
 
 /**
  * Discriminated result so callers can distinguish:
- *   - `{ ok: true, rowsUpdated: 1 }` — claimed / updated as intended
- *   - `{ ok: true, rowsUpdated: 0 }` — predicate matched zero rows (a CAS race lost, or `id` not found)
- *   - `{ ok: false, error }` — Supabase / network failure
- *
- * Returning `false` for both "race lost" and "DB error" was a P1 issue in the
- * earlier `compareAndSetChatActiveStreamId` helper — this shape forces the
- * caller to handle the two cases distinctly.
+ *   - `{ ok: true, rowsUpdated: 1 }` — updated as intended.
+ *   - `{ ok: true, rowsUpdated: 0 }` — the predicate matched zero rows (a CAS
+ *     race lost, or `id` not found).
+ *   - `{ ok: false, error }` — Supabase / network failure.
  */
 export type UpdateChatResult =
   | { ok: true; rowsUpdated: number; row: Tables<"chats"> | null }
   | { ok: false; error: string };
 
 /**
- * Updates a `chats` row with an optional CAS-style predicate. Returns a
- * discriminated result so callers can distinguish "predicate didn't match"
- * (a race) from "Supabase failure" (operational issue).
- *
- * @param filter - `{ id }` plus an optional `whereActiveStreamId` predicate.
- * @param updates - Partial chat row (only safe-to-mutate columns).
+ * Updates a `chats` row by id, optionally constrained by a generic `where`
+ * predicate. Returns a discriminated result so callers can tell
+ * "predicate didn't match" (a race lost) from "Supabase failure" (operational
+ * issue) — the previous behavior of returning `false` for both was a CAS bug.
  */
 export async function updateChat(
   filter: UpdateChatFilter,
   updates: ChatMutableFields,
 ): Promise<UpdateChatResult> {
-  const base = supabase.from("chats").update(updates).eq("id", filter.id);
+  let query = supabase.from("chats").update(updates).eq("id", filter.id);
+  for (const [column, value] of Object.entries(filter.where ?? {})) {
+    query = value === null ? query.is(column, null) : query.eq(column, value);
+  }
 
-  const predicated =
-    filter.whereActiveStreamId === undefined
-      ? base
-      : filter.whereActiveStreamId.equals === null
-        ? base.is("active_stream_id", null)
-        : base.eq("active_stream_id", filter.whereActiveStreamId.equals);
-
-  const { data, error } = await predicated.select();
+  const { data, error } = await query.select();
   if (error) {
     console.error("[updateChat] error:", error);
     return { ok: false, error: error.message };
