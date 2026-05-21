@@ -1,11 +1,20 @@
+import type { LanguageModel } from "ai";
 import type { VercelState } from "@/lib/sandbox/vercel/state";
 import type { SkillMetadata } from "@/lib/skills/skillTypes";
 
 /**
  * Per-tool-call context threaded into the agent via `streamText`'s
- * `experimental_context`. Mirrors the open-agents `AgentContext` shape
- * (subset — slim PR 4 ports only the `bash` tool, so context only needs
- * what `bash` reads).
+ * `experimental_context`. Mirrors the open-agents `AgentContext`
+ * interface (`packages/agent/types.ts`) one-for-one. The only
+ * deviation is structural: `model` / `subagentModel` are
+ * `LanguageModel` instances that cannot ride through a durable
+ * Vercel Workflow input, so `runAgentStep` constructs them per-step
+ * (via `gateway(input.modelId)`) right before calling `streamText`.
+ *
+ * The durable workflow-input shape is `DurableAgentContext` below —
+ * `runAgentStep` widens that into a full `AgentContext` by attaching
+ * the constructed model(s) before `experimental_context` is observed
+ * by any tool.
  *
  * Why no `recoupAccessToken` field? A short-lived per-prompt credential
  * would let sandbox tools (`skill`, the eventual `recoup-api` skill) call
@@ -42,4 +51,24 @@ export type AgentContext = {
    * Empty / undefined when the sandbox has no `skills/` directory.
    */
   skills?: SkillMetadata[];
+  /**
+   * Main agent's language model. Tools read this via `getMainModel`.
+   * Set per-step by `runAgentStep` (not part of the durable input).
+   * Mirrors open-agents' `AgentContext.model: LanguageModel`.
+   */
+  model: LanguageModel;
+  /**
+   * Optional subagent override. If unset, `getSubagentModel` falls
+   * back to `model`. Mirrors open-agents'
+   * `AgentContext.subagentModel?: LanguageModel`.
+   */
+  subagentModel?: LanguageModel;
 };
+
+/**
+ * The JSON-serializable subset of `AgentContext` that survives a
+ * Vercel Workflow durable input (`start(runAgentWorkflow, [...])`).
+ * `LanguageModel` instances aren't serializable, so they're stripped
+ * here and re-attached inside the step.
+ */
+export type DurableAgentContext = Omit<AgentContext, "model" | "subagentModel">;
