@@ -4,6 +4,7 @@ import { agentCustomInstructions } from "@/lib/chat/agentCustomInstructions";
 import { CHAT_AGENT_STOP_WHEN } from "@/lib/chat/const";
 import { buildAgentTools } from "@/lib/agent/buildAgentTools";
 import type { AgentContext, DurableAgentContext } from "@/lib/agent/tools/AgentContext";
+import { buildMessageMetadataCallback } from "@/lib/agent/messageMetadata/buildMessageMetadataCallback";
 
 export type RunAgentStepInput = {
   messages: UIMessage[];
@@ -69,7 +70,12 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
   // doesn't leak the lock.
   const writer = input.writable.getWriter();
   try {
-    for await (const part of result.toUIMessageStream()) {
+    // `messageMetadata` emits {modelId, usage, cost} chunks the UI
+    // renders as model/cost badges. Mirrors open-agents' chat workflow
+    // shape so sandbox.recoupable.com sees the same metadata when cut
+    // over to api's /api/chat/workflow.
+    const messageMetadata = buildMessageMetadataCallback({ modelId: input.modelId });
+    for await (const part of result.toUIMessageStream({ messageMetadata })) {
       await writer.write(part);
     }
   } finally {
