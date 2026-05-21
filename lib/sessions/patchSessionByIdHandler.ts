@@ -63,7 +63,9 @@ export async function patchSessionByIdHandler(
   const shouldUnarchive = body.status === "running" && row.status === "archived";
 
   const isSandboxPausing =
-    hasRuntimeSandboxState(row.sandbox_state) && row.lifecycle_state !== "hibernated";
+    hasRuntimeSandboxState(row.sandbox_state) &&
+    row.lifecycle_state !== "hibernated" &&
+    row.lifecycle_state !== "archived";
 
   if (shouldUnarchive && !row.snapshot_url && isSandboxPausing) {
     return NextResponse.json(
