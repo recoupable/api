@@ -1,6 +1,7 @@
 import { streamText, convertToModelMessages, type UIMessage, type UIMessageChunk } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { agentCustomInstructions } from "@/lib/chat/agentCustomInstructions";
+import { buildAgentSystemPrompt } from "@/lib/chat/buildAgentSystemPrompt";
 import { CHAT_AGENT_STOP_WHEN } from "@/lib/chat/const";
 import { buildAgentTools } from "@/lib/agent/buildAgentTools";
 import type { AgentContext, DurableAgentContext } from "@/lib/agent/tools/AgentContext";
@@ -57,9 +58,19 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
     ...input.agentContext,
     model: callModel,
   };
+  // Build the system prompt with the sandbox's real cwd + currentBranch
+  // baked in (rather than a static `agentCustomInstructions` string).
+  // Without this the agent has to `pwd` / `git branch` on every turn
+  // because its prompt doesn't tell it where it is. Mirrors open-agents'
+  // `buildSystemPrompt`.
+  const systemPrompt = buildAgentSystemPrompt({
+    cwd: input.agentContext.sandbox.workingDirectory,
+    currentBranch: input.agentContext.sandbox.currentBranch,
+    customInstructions: agentCustomInstructions,
+  });
   const result = streamText({
     model: callModel,
-    system: agentCustomInstructions,
+    system: systemPrompt,
     messages: modelMessages,
     tools,
     stopWhen: CHAT_AGENT_STOP_WHEN,
