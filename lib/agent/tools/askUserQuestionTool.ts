@@ -57,7 +57,7 @@ Usage notes:
   outputSchema: askUserQuestionOutputSchema,
   // NO execute: this is a client-side tool. streamText halts the run after
   // emitting the tool-call; the chat UI fulfills it asynchronously.
-  toModelOutput: output => {
+  toModelOutput: ({ output }) => {
     if (!output) {
       return { type: "text", value: "User did not respond to questions." };
     }
