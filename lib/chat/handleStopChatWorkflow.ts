@@ -35,8 +35,16 @@ export async function handleStopChatWorkflow(
     }
   }
 
+  // Best-effort slot release: the run is already cancelled, so a failed clear is
+  // just stale bookkeeping that reconcileExistingActiveStream heals on the next
+  // request — don't fail a successful stop over it.
   const released = await compareAndSetChatActiveStreamId(chatId, activeStreamId, null);
-  if (!released.ok) return errorResponse("Internal server error", 500);
+  if (!released.ok) {
+    console.error(
+      "[handleStopChatWorkflow] failed to clear active_stream_id after cancel:",
+      released.error,
+    );
+  }
 
   return NextResponse.json(
     { success: true, stopped: true },

@@ -122,12 +122,13 @@ describe("handleStopChatWorkflow", () => {
     expect(await result.json()).toEqual({ success: true, stopped: true });
   });
 
-  it("returns 500 when the release CAS hits a DB error", async () => {
+  it("still returns success when the release CAS hits a DB error (best-effort)", async () => {
     mockValidated("wrun_abc");
     vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue({ ok: false, error: "db down" });
 
     const result = await handleStopChatWorkflow(makeRequest(), CHAT_ID);
 
-    expect(result.status).toBe(500);
+    expect(result.status).toBe(200);
+    expect(await result.json()).toEqual({ success: true, stopped: true });
   });
 });
