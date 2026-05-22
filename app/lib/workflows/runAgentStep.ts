@@ -58,14 +58,13 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
     ...input.agentContext,
     model: callModel,
   };
-  // Build the system prompt with the sandbox's real cwd + currentBranch
-  // baked in (rather than a static `agentCustomInstructions` string).
-  // Without this the agent has to `pwd` / `git branch` on every turn
-  // because its prompt doesn't tell it where it is. Mirrors open-agents'
+  // Build the system prompt with the sandbox's real cwd baked in
+  // (rather than a static `agentCustomInstructions` string). Without
+  // this the agent has to `pwd` on every turn because its prompt
+  // doesn't tell it where it is. Mirrors open-agents'
   // `buildSystemPrompt`.
   const systemPrompt = buildAgentSystemPrompt({
     cwd: input.agentContext.sandbox.workingDirectory,
-    currentBranch: input.agentContext.sandbox.currentBranch,
     customInstructions: agentCustomInstructions,
   });
   const result = streamText({
