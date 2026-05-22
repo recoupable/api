@@ -130,10 +130,14 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
         },
         recoupOrgId,
         skills,
-        // No `recoupAccessToken`: handing the long-lived api key to bash
-        // would let any model-issued command exfiltrate it via env. Proper
-        // short-lived token minting lands alongside the `skill` tool port
-        // (when there's an actual consumer for it).
+        // Forward the short-lived Privy JWT from the chat UI when
+        // present. The `recoup-api` skill's curl examples authenticate
+        // against recoup-api with this as a Bearer header (via the
+        // `$RECOUP_ACCESS_TOKEN` env var injected by buildRecoupExecEnv).
+        // x-api-key auth callers don't send this field — the long-lived
+        // recoup_sk_ key is deliberately NOT forwarded (exfiltration
+        // risk from model-issued bash).
+        ...(validated.recoupAccessToken ? { recoupAccessToken: validated.recoupAccessToken } : {}),
       },
     },
   ]);
