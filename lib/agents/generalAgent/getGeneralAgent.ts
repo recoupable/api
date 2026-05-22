@@ -1,4 +1,5 @@
-import { stepCountIs, ToolLoopAgent } from "ai";
+import { ToolLoopAgent } from "ai";
+import { CHAT_AGENT_STOP_WHEN } from "@/lib/chat/const";
 import { AnthropicProviderOptions } from "@ai-sdk/anthropic";
 import { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
@@ -52,7 +53,7 @@ export default async function getGeneralAgent(body: ChatRequestBody): Promise<Ro
 
   const tools = await setupToolsForRequest(body);
   const model = bodyModel || DEFAULT_MODEL;
-  const stopWhen = stepCountIs(111);
+  const stopWhen = CHAT_AGENT_STOP_WHEN;
 
   const agent = new ToolLoopAgent({
     model,
