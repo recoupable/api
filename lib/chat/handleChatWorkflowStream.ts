@@ -94,18 +94,25 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
     ? (extractOrgId(session.clone_url) ?? undefined)
     : undefined;
 
-  // Connect the sandbox up-front so we can discover project-level skills
-  // before starting the workflow. The connected handle isn't passed into
-  // the workflow (it's not durably serializable) — only `sandbox.state`
-  // is. Tools reconnect via `connectVercel(state)` inside `"use step"`.
+  // Connect the sandbox up-front so we can (a) read the real working
+  // directory and (b) discover project-level skills. The connected
+  // handle isn't passed into the workflow (it's not durably
+  // serializable) — only `sandbox.state` is. Tools reconnect via
+  // `connectVercel(state)` inside `"use step"`.
+  //
+  // If connection fails we fall back to the default working directory
+  // so the workflow can still start — tools will surface the
+  // underlying failure when they try to reconnect.
   let skills: Awaited<ReturnType<typeof discoverSkills>> = [];
+  let workingDirectory: string = DEFAULT_WORKING_DIRECTORY;
   try {
     const sandbox = await connectVercel(session.sandbox_state as VercelState);
+    workingDirectory = sandbox.workingDirectory;
     const dirs = await getSandboxSkillDirectories(sandbox);
     skills = await discoverSkills(sandbox, dirs);
   } catch (error) {
     console.error(
-      "[handleChatWorkflowStream] skill discovery failed; continuing with empty catalog:",
+      "[handleChatWorkflowStream] sandbox connect / skill discovery failed; continuing with defaults:",
       error,
     );
   }
@@ -119,10 +126,7 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
       agentContext: {
         sandbox: {
           state: session.sandbox_state as VercelState,
-          // Slim PR 4 ships the default working directory. Per-session
-          // overrides land when createChatRuntime is ported alongside
-          // the rest of the tool surface.
-          workingDirectory: DEFAULT_WORKING_DIRECTORY,
+          workingDirectory,
         },
         recoupOrgId,
         skills,
