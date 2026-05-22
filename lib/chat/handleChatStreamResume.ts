@@ -25,6 +25,10 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
  * @param chatId - Chat identifier from the route params.
  * @returns A streaming 200 Response, a 204 Response, or a NextResponse error.
  */
+/** 204 response signalling "no active stream to resume". */
+const noResumeResponse = (): Response =>
+  new Response(null, { status: 204, headers: getCorsHeaders() });
+
 export async function handleChatStreamResume(
   request: NextRequest,
   chatId: string,
@@ -33,14 +37,10 @@ export async function handleChatStreamResume(
   if (validated instanceof NextResponse) return validated;
 
   const { chat } = validated;
-  if (!chat.active_stream_id) {
-    return new Response(null, { status: 204, headers: getCorsHeaders() });
-  }
+  if (!chat.active_stream_id) return noResumeResponse();
 
   const reconciled = await reconcileExistingActiveStream(chatId, chat.active_stream_id);
-  if (reconciled.action !== "resume") {
-    return new Response(null, { status: 204, headers: getCorsHeaders() });
-  }
+  if (reconciled.action !== "resume") return noResumeResponse();
 
   return createUIMessageStreamResponse({
     stream: reconciled.stream as ReadableStream<UIMessageChunk>,

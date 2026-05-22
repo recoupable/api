@@ -30,6 +30,10 @@ export async function getChatSummaries({
   accountId: string;
 }): Promise<ChatSummary[]> {
   const chats = await selectChats({ sessionId });
+  // Surface DB failures rather than masking them as an empty chat list.
+  if (chats === null) {
+    throw new Error("[getChatSummaries] failed to load chats");
+  }
   if (chats.length === 0) {
     return [];
   }

@@ -1,12 +1,15 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
+const chatIdSchema = z.string().uuid("chatId must be a valid UUID");
+
 export type GetChatStreamRequest = {
-  chat: Awaited<ReturnType<typeof selectChats>>[number];
+  chat: NonNullable<Awaited<ReturnType<typeof selectChats>>>[number];
   accountId: string;
 };
 
@@ -27,12 +30,16 @@ export async function validateGetChatStreamRequest(
   request: NextRequest,
   chatId: string,
 ): Promise<NextResponse | GetChatStreamRequest> {
-  if (!chatId) return errorResponse("chatId is required", 400);
+  const parsedChatId = chatIdSchema.safeParse(chatId);
+  if (!parsedChatId.success) {
+    return errorResponse(parsedChatId.error.issues[0]?.message ?? "Invalid chatId", 400);
+  }
 
   const auth = await validateAuthContext(request);
   if (auth instanceof NextResponse) return auth;
 
-  const chats = await selectChats({ id: chatId });
+  const chats = await selectChats({ id: parsedChatId.data });
+  if (chats === null) return errorResponse("Internal server error", 500);
   const chat = chats[0];
   if (!chat) return errorResponse("Chat not found", 404);
 

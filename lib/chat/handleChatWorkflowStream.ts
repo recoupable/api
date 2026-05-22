@@ -30,10 +30,10 @@ const DEFAULT_MODEL_ID = "anthropic/claude-haiku-4.5";
  *
  *   1. Validate auth + body (validateChatWorkflow).
  *   2. Verify session + chat ownership; ensure the session has an active sandbox.
- *   3. If a workflow is already running for this chat, reject with 409 —
- *      resume is GET-only (GET /api/chat/[chatId]/stream), never on POST.
- *      A terminally-done run's stale id is cleared here so the next POST can
- *      start fresh.
+ *   3. Gate on any existing run — resume is GET-only (GET /api/chat/[chatId]/stream),
+ *      never on POST. A genuinely live run → 409 (reconnect via GET); an
+ *      indeterminate probe → 503 (retry the POST shortly); a terminally-done
+ *      run's stale id is cleared here so the next POST can start fresh.
  *   4. **Claim `chats.active_stream_id` BEFORE starting the workflow** using
  *      a `pending-<uuid>` placeholder CAS. Closes the race window where two
  *      concurrent requests could both call `start()` and bill the model
@@ -68,21 +68,32 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
 
   // Chat + ownership
   const chats = await selectChats({ id: validated.chatId });
+  if (chats === null) return errorResponse("Internal server error", 500);
   const chat = chats[0];
   if (!chat || chat.session_id !== validated.sessionId) {
     return errorResponse("Chat not found", 404);
   }
 
-  // Reject if a workflow is already running for this chat — resume is handled
-  // by GET /api/chat/[chatId]/stream, never by POST. A terminally-done run's
-  // stale id is cleared here (action "ready") so the next POST can start fresh;
-  // a live run or an indeterminate probe yields 409.
+  // Resume is GET-only (GET /api/chat/[chatId]/stream); POST never resumes.
+  // Branch on the reconciled action so the client gets the right recovery path:
+  //   - "resume":   a run is genuinely live → 409, tell the client to reconnect.
+  //   - "conflict": stream state is indeterminate (probe failed / stale id not
+  //                 cleared) → 503, tell the client to retry the POST shortly.
+  //                 (A 409 here would be a dead-end: GET returns 204 for this
+  //                 state, so the message would be lost with no retry path.)
+  //   - "ready":    a terminal stale id was cleared → fall through and start.
   if (chat.active_stream_id) {
     const reconciled = await reconcileExistingActiveStream(validated.chatId, chat.active_stream_id);
-    if (reconciled.action !== "ready") {
+    if (reconciled.action === "resume") {
       return errorResponse(
         "A response is already streaming for this chat; reconnect via GET /api/chat/{chatId}/stream",
         409,
+      );
+    }
+    if (reconciled.action === "conflict") {
+      return errorResponse(
+        "Stream state is temporarily unresolved for this chat; retry shortly",
+        503,
       );
     }
   }

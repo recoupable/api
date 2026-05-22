@@ -185,10 +185,10 @@ describe("handleChatWorkflowStream", () => {
       expect(start).not.toHaveBeenCalled();
     });
 
-    it("returns 409 without starting when reconcile is indeterminate (conflict)", async () => {
+    it("returns 503 (retryable) without starting when reconcile is indeterminate (conflict)", async () => {
       vi.mocked(reconcileExistingActiveStream).mockResolvedValue({ action: "conflict" });
       const res = await handleChatWorkflowStream(makeRequest());
-      expect(res.status).toBe(409);
+      expect(res.status).toBe(503);
       expect(start).not.toHaveBeenCalled();
     });
 

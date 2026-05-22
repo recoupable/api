@@ -15,8 +15,8 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 
 const ACCOUNT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const OTHER_ACCOUNT_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
-const SESSION_ID = "22222222-2222-2222-2222-222222222222";
-const CHAT_ID = "11111111-1111-1111-1111-111111111111";
+const SESSION_ID = "22222222-2222-4222-8222-222222222222";
+const CHAT_ID = "11111111-1111-4111-8111-111111111111";
 
 function makeRequest(): NextRequest {
   return new NextRequest(`http://localhost/api/chat/${CHAT_ID}/stream`, {
@@ -42,6 +42,11 @@ describe("validateGetChatStreamRequest", () => {
     expect((res as NextResponse).status).toBe(400);
   });
 
+  it("returns 400 when chatId is not a valid UUID", async () => {
+    const res = await validateGetChatStreamRequest(makeRequest(), "not-a-uuid");
+    expect((res as NextResponse).status).toBe(400);
+  });
+
   it("passes through the auth error response", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(
       NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
@@ -55,6 +60,13 @@ describe("validateGetChatStreamRequest", () => {
     vi.mocked(selectChats).mockResolvedValue([]);
     const res = await validateGetChatStreamRequest(makeRequest(), CHAT_ID);
     expect((res as NextResponse).status).toBe(404);
+  });
+
+  it("returns 500 when the chat lookup errors (selectChats null)", async () => {
+    mockAuthed();
+    vi.mocked(selectChats).mockResolvedValue(null);
+    const res = await validateGetChatStreamRequest(makeRequest(), CHAT_ID);
+    expect((res as NextResponse).status).toBe(500);
   });
 
   it("returns 500 when the session lookup errors", async () => {
