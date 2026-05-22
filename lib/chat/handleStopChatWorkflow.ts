@@ -39,7 +39,7 @@ export async function handleStopChatWorkflow(
   // just stale bookkeeping that reconcileExistingActiveStream heals on the next
   // request — don't fail a successful stop over it.
   const released = await compareAndSetChatActiveStreamId(chatId, activeStreamId, null);
-  if (!released.ok) {
+  if ("error" in released) {
     console.error(
       "[handleStopChatWorkflow] failed to clear active_stream_id after cancel:",
       released.error,
