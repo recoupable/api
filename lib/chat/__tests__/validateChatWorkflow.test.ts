@@ -65,6 +65,19 @@ describe("validateChatWorkflow", () => {
       const result = await validateChatWorkflow(makeRequest({ ...validBody, messages: [] }));
       expect(result).not.toBeInstanceOf(NextResponse);
     });
+
+    // Bundle A.4 — open-agents' chat UI sends `recoupAccessToken`
+    // (the user's Privy JWT) in the request body. Today api silently
+    // strips it via Zod's default `.strip()` mode. After A.4 the
+    // schema must accept the field so the handler can forward it.
+    it("accepts and surfaces an optional recoupAccessToken from the body", async () => {
+      const result = await validateChatWorkflow(
+        makeRequest({ ...validBody, recoupAccessToken: "eyJ.test.jwt" }),
+      );
+      expect(result).not.toBeInstanceOf(NextResponse);
+      if (result instanceof NextResponse) return;
+      expect(result.recoupAccessToken).toBe("eyJ.test.jwt");
+    });
   });
 
   describe("invalid body", () => {
