@@ -88,7 +88,7 @@ describe("runAgentStep", () => {
     expect(meta?.modelId).toBe("anthropic/claude-haiku-4.5");
   });
 
-  it("includes cwd + currentBranch from agentContext.sandbox in the system prompt", async () => {
+  it("includes cwd from agentContext.sandbox in the system prompt", async () => {
     const captured: unknown[] = [];
     vi.mocked(streamText).mockReturnValue(makeStreamResult({ metadataCalls: captured }) as never);
     const { stream } = makeWritable();
@@ -99,7 +99,6 @@ describe("runAgentStep", () => {
         sandbox: {
           state: { type: "vercel" },
           workingDirectory: "/sandbox/mono",
-          currentBranch: "feat/xyz",
         },
       },
       writable: stream,
@@ -108,9 +107,7 @@ describe("runAgentStep", () => {
     const args = vi.mocked(streamText).mock.calls[0]?.[0] as { system?: string };
     expect(args.system).toMatch(/# Environment/);
     expect(args.system).toMatch(/Working directory: \. \(workspace root\)/);
-    expect(args.system).toMatch(/Current branch: feat\/xyz/);
-    expect(args.system).toMatch(/# Cloud Sandbox/);
-    expect(args.system).toMatch(/git push -u origin feat\/xyz/);
+    expect(args.system).toMatch(/workspace-relative paths/);
   });
 
   it("the wired callback returns undefined for non-finish-step parts", async () => {

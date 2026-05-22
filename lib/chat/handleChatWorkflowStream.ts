@@ -95,21 +95,19 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
     : undefined;
 
   // Connect the sandbox up-front so we can (a) read the real working
-  // directory + current branch and (b) discover project-level skills.
-  // The connected handle isn't passed into the workflow (it's not
-  // durably serializable) — only `sandbox.state` is. Tools reconnect
-  // via `connectVercel(state)` inside `"use step"`.
+  // directory and (b) discover project-level skills. The connected
+  // handle isn't passed into the workflow (it's not durably
+  // serializable) — only `sandbox.state` is. Tools reconnect via
+  // `connectVercel(state)` inside `"use step"`.
   //
   // If connection fails we fall back to the default working directory
-  // (no branch info) so the workflow can still start — tools will
-  // surface the underlying failure when they try to reconnect.
+  // so the workflow can still start — tools will surface the
+  // underlying failure when they try to reconnect.
   let skills: Awaited<ReturnType<typeof discoverSkills>> = [];
   let workingDirectory: string = DEFAULT_WORKING_DIRECTORY;
-  let currentBranch: string | undefined;
   try {
     const sandbox = await connectVercel(session.sandbox_state as VercelState);
     workingDirectory = sandbox.workingDirectory;
-    currentBranch = sandbox.currentBranch;
     const dirs = await getSandboxSkillDirectories(sandbox);
     skills = await discoverSkills(sandbox, dirs);
   } catch (error) {
@@ -129,7 +127,6 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
         sandbox: {
           state: session.sandbox_state as VercelState,
           workingDirectory,
-          currentBranch,
         },
         recoupOrgId,
         skills,
