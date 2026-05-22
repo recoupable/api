@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
 import { start, getRun } from "workflow/api";
 import { validateChatWorkflow } from "@/lib/chat/validateChatWorkflow";
-import { maybeResumeChatStream } from "@/lib/chat/maybeResumeChatStream";
+import { reconcileExistingActiveStream } from "@/lib/chat/reconcileExistingActiveStream";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
@@ -30,8 +30,10 @@ const DEFAULT_MODEL_ID = "anthropic/claude-haiku-4.5";
  *
  *   1. Validate auth + body (validateChatWorkflow).
  *   2. Verify session + chat ownership; ensure the session has an active sandbox.
- *   3. If a workflow is already running for this chat, resume / 409 via
- *      maybeResumeChatStream (extracted for OCP).
+ *   3. If a workflow is already running for this chat, reject with 409 —
+ *      resume is GET-only (GET /api/chat/[chatId]/stream), never on POST.
+ *      A terminally-done run's stale id is cleared here so the next POST can
+ *      start fresh.
  *   4. **Claim `chats.active_stream_id` BEFORE starting the workflow** using
  *      a `pending-<uuid>` placeholder CAS. Closes the race window where two
  *      concurrent requests could both call `start()` and bill the model
@@ -71,9 +73,19 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
     return errorResponse("Chat not found", 404);
   }
 
-  // Resume an in-flight workflow for this chat (or 409) before starting a new one.
-  const resumed = await maybeResumeChatStream(validated.chatId, chat.active_stream_id);
-  if (resumed) return resumed;
+  // Reject if a workflow is already running for this chat — resume is handled
+  // by GET /api/chat/[chatId]/stream, never by POST. A terminally-done run's
+  // stale id is cleared here (action "ready") so the next POST can start fresh;
+  // a live run or an indeterminate probe yields 409.
+  if (chat.active_stream_id) {
+    const reconciled = await reconcileExistingActiveStream(validated.chatId, chat.active_stream_id);
+    if (reconciled.action !== "ready") {
+      return errorResponse(
+        "A response is already streaming for this chat; reconnect via GET /api/chat/{chatId}/stream",
+        409,
+      );
+    }
+  }
 
   // Pre-claim the active_stream_id slot with a placeholder BEFORE starting
   // the workflow. This closes the race where two requests both call start()

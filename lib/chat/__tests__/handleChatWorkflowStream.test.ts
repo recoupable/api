@@ -8,7 +8,7 @@ import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { isSandboxActive } from "@/lib/sandbox/isSandboxActive";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
-import { maybeResumeChatStream } from "@/lib/chat/maybeResumeChatStream";
+import { reconcileExistingActiveStream } from "@/lib/chat/reconcileExistingActiveStream";
 import { persistLatestUserMessage } from "@/lib/chat/persistLatestUserMessage";
 import { start, getRun } from "workflow/api";
 
@@ -23,8 +23,8 @@ vi.mock("@/lib/supabase/sessions/updateSession", () => ({ updateSession: vi.fn()
 vi.mock("@/lib/sandbox/buildActiveLifecycleUpdate", () => ({
   buildActiveLifecycleUpdate: vi.fn(() => ({})),
 }));
-vi.mock("@/lib/chat/maybeResumeChatStream", () => ({
-  maybeResumeChatStream: vi.fn(),
+vi.mock("@/lib/chat/reconcileExistingActiveStream", () => ({
+  reconcileExistingActiveStream: vi.fn(),
 }));
 vi.mock("@/lib/chat/persistLatestUserMessage", () => ({
   persistLatestUserMessage: vi.fn(),
@@ -109,8 +109,9 @@ function mockStartedRun(runId = "wrun_test_run_1") {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Default: maybeResumeChatStream returns null (no resume / no active stream)
-  vi.mocked(maybeResumeChatStream).mockResolvedValue(null);
+  // Default: a stale/terminal active stream that self-heals to "ready" so the
+  // POST proceeds. Only invoked when the chat has an active_stream_id.
+  vi.mocked(reconcileExistingActiveStream).mockResolvedValue({ action: "ready" });
 });
 
 describe("handleChatWorkflowStream", () => {
@@ -166,30 +167,40 @@ describe("handleChatWorkflowStream", () => {
     });
   });
 
-  describe("resume / conflict via maybeResumeChatStream", () => {
+  describe("active stream handling (start-only; never resumes)", () => {
     beforeEach(() => {
       mockValidated();
       mockSessionOwnedActive();
       mockChatOwned({ active_stream_id: "wrun_existing" });
     });
 
-    it("returns the resume response when maybeResumeChatStream yields one", async () => {
-      const resumeResponse = new Response("ok", {
-        status: 200,
-        headers: { "x-workflow-run-id": "wrun_existing" },
+    it("returns 409 without starting when a run is live (reconcile=resume)", async () => {
+      vi.mocked(reconcileExistingActiveStream).mockResolvedValue({
+        action: "resume",
+        runId: "wrun_existing",
+        stream: new ReadableStream(),
       });
-      vi.mocked(maybeResumeChatStream).mockResolvedValue(resumeResponse);
-      const res = await handleChatWorkflowStream(makeRequest());
-      expect(res.headers.get("x-workflow-run-id")).toBe("wrun_existing");
-      expect(start).not.toHaveBeenCalled();
-    });
-
-    it("returns the conflict response when maybeResumeChatStream yields 409", async () => {
-      const conflict = NextResponse.json({ status: "error", error: "conflict" }, { status: 409 });
-      vi.mocked(maybeResumeChatStream).mockResolvedValue(conflict);
       const res = await handleChatWorkflowStream(makeRequest());
       expect(res.status).toBe(409);
       expect(start).not.toHaveBeenCalled();
+    });
+
+    it("returns 409 without starting when reconcile is indeterminate (conflict)", async () => {
+      vi.mocked(reconcileExistingActiveStream).mockResolvedValue({ action: "conflict" });
+      const res = await handleChatWorkflowStream(makeRequest());
+      expect(res.status).toBe(409);
+      expect(start).not.toHaveBeenCalled();
+    });
+
+    it("starts a fresh run when a terminal stale id self-heals (reconcile=ready)", async () => {
+      vi.mocked(reconcileExistingActiveStream).mockResolvedValue({ action: "ready" });
+      vi.mocked(compareAndSetChatActiveStreamId)
+        .mockResolvedValueOnce({ ok: true, claimed: true })
+        .mockResolvedValueOnce({ ok: true, claimed: true });
+      mockStartedRun();
+      const res = await handleChatWorkflowStream(makeRequest());
+      expect(res.status).toBe(200);
+      expect(start).toHaveBeenCalled();
     });
   });
 
