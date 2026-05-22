@@ -88,6 +88,81 @@ describe("runAgentStep", () => {
     expect(meta?.modelId).toBe("anthropic/claude-haiku-4.5");
   });
 
+  it("includes cwd from agentContext.sandbox in the system prompt", async () => {
+    const captured: unknown[] = [];
+    vi.mocked(streamText).mockReturnValue(makeStreamResult({ metadataCalls: captured }) as never);
+    const { stream } = makeWritable();
+
+    await runAgentStep({
+      ...baseInput,
+      agentContext: {
+        sandbox: {
+          state: { type: "vercel" },
+          workingDirectory: "/sandbox/mono",
+        },
+      },
+      writable: stream,
+    } as never);
+
+    const args = vi.mocked(streamText).mock.calls[0]?.[0] as { system?: string };
+    expect(args.system).toMatch(/# Environment/);
+    expect(args.system).toMatch(/Working directory: \. \(workspace root\)/);
+    expect(args.system).toMatch(/workspace-relative paths/);
+  });
+
+  it("wraps tools with anthropic cacheControl on the last tool before passing to streamText", async () => {
+    const captured: unknown[] = [];
+    vi.mocked(streamText).mockReturnValue(makeStreamResult({ metadataCalls: captured }) as never);
+    const { stream } = makeWritable();
+
+    await runAgentStep({ ...baseInput, writable: stream } as never);
+
+    const args = vi.mocked(streamText).mock.calls[0]?.[0] as {
+      tools: Record<
+        string,
+        { providerOptions?: { anthropic?: { cacheControl?: { type: string } } } }
+      >;
+    };
+    const toolNames = Object.keys(args.tools);
+    expect(toolNames.length).toBeGreaterThan(0);
+    const lastTool = args.tools[toolNames[toolNames.length - 1]!]!;
+    expect(lastTool.providerOptions?.anthropic?.cacheControl).toEqual({ type: "ephemeral" });
+    // Earlier tools should NOT carry the cache-control marker (Anthropic 4-breakpoint limit).
+    if (toolNames.length > 1) {
+      expect(args.tools[toolNames[0]!]?.providerOptions).toBeUndefined();
+    }
+  });
+
+  it("wires a prepareStep callback that marks the last message with cacheControl", async () => {
+    const captured: unknown[] = [];
+    vi.mocked(streamText).mockReturnValue(makeStreamResult({ metadataCalls: captured }) as never);
+    const { stream } = makeWritable();
+
+    await runAgentStep({ ...baseInput, writable: stream } as never);
+
+    const args = vi.mocked(streamText).mock.calls[0]?.[0] as {
+      prepareStep?: (opts: {
+        messages: Array<{ role: string; providerOptions?: Record<string, unknown> }>;
+        model: unknown;
+        steps?: unknown[];
+      }) => { messages?: unknown[] } | undefined;
+    };
+    expect(typeof args.prepareStep).toBe("function");
+    const anthropicModel = { provider: "anthropic", modelId: "claude-haiku-4.5" } as never;
+    const result = args.prepareStep!({
+      messages: [
+        { role: "user", content: "first" } as never,
+        { role: "user", content: "second" } as never,
+      ],
+      model: anthropicModel,
+      steps: [],
+    });
+    const out = result?.messages as Array<{ providerOptions?: Record<string, unknown> }>;
+    expect(out).toBeDefined();
+    expect(out[0]?.providerOptions).toBeUndefined();
+    expect(out[1]?.providerOptions).toEqual({ anthropic: { cacheControl: { type: "ephemeral" } } });
+  });
+
   it("the wired callback returns undefined for non-finish-step parts", async () => {
     const captured: unknown[] = [];
     vi.mocked(streamText).mockReturnValue(makeStreamResult({ metadataCalls: captured }) as never);

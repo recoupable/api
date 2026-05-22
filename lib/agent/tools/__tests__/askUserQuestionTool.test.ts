@@ -81,14 +81,16 @@ describe("askUserQuestionTool — server-side wiring", () => {
 
 describe("askUserQuestionTool.toModelOutput", () => {
   it("returns a generic message when no output is present", () => {
-    expect(askUserQuestionTool.toModelOutput!(undefined as never)).toEqual({
+    expect(askUserQuestionTool.toModelOutput!({ output: undefined } as never)).toEqual({
       type: "text",
       value: "User did not respond to questions.",
     });
   });
 
   it("formats `declined: true` as a clear decline message", () => {
-    const result = askUserQuestionTool.toModelOutput!({ declined: true } as never);
+    const result = askUserQuestionTool.toModelOutput!({
+      output: { declined: true },
+    } as never);
     expect(result).toMatchObject({
       type: "text",
       value: expect.stringMatching(/declined to answer/i),
@@ -97,9 +99,11 @@ describe("askUserQuestionTool.toModelOutput", () => {
 
   it("formats answered questions as a parseable Q=A summary", () => {
     const result = askUserQuestionTool.toModelOutput!({
-      answers: {
-        "Which model do you want?": "Haiku",
-        "Which features?": ["Streaming", "Tools"],
+      output: {
+        answers: {
+          "Which model do you want?": "Haiku",
+          "Which features?": ["Streaming", "Tools"],
+        },
       },
     } as never);
     expect(result).toMatchObject({

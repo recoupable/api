@@ -1,10 +1,13 @@
 import { streamText, convertToModelMessages, type UIMessage, type UIMessageChunk } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { agentCustomInstructions } from "@/lib/chat/agentCustomInstructions";
+import { buildAgentSystemPrompt } from "@/lib/chat/buildAgentSystemPrompt";
 import { CHAT_AGENT_STOP_WHEN } from "@/lib/chat/const";
 import { buildAgentTools } from "@/lib/agent/buildAgentTools";
 import type { AgentContext, DurableAgentContext } from "@/lib/agent/tools/AgentContext";
 import { buildMessageMetadataCallback } from "@/lib/agent/messageMetadata/buildMessageMetadataCallback";
+import { addCacheControlToTools } from "@/lib/agent/contextManagement/addCacheControlToTools";
+import { addCacheControlToMessages } from "@/lib/agent/contextManagement/addCacheControlToMessages";
 
 export type RunAgentStepInput = {
   messages: UIMessage[];
@@ -47,7 +50,14 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
   });
 
   const modelMessages = await convertToModelMessages(input.messages);
-  const tools = buildAgentTools({ skills: input.agentContext.skills });
+  // Mark the last tool with `cacheControl: { type: "ephemeral" }` so
+  // Anthropic caches the tool-definitions block across the
+  // conversation. Per-step message caching is wired via `prepareStep`
+  // below. Mirrors open-agents' `prepareCall` + `prepareStep` split.
+  const tools = addCacheControlToTools({
+    tools: buildAgentTools({ skills: input.agentContext.skills }),
+    model: input.modelId,
+  });
   // Construct the model here (not in the workflow input) — LanguageModel
   // instances aren't JSON-serializable and can't ride durable inputs.
   // Then attach to AgentContext so tools see the same model the parent
@@ -57,13 +67,28 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
     ...input.agentContext,
     model: callModel,
   };
+  // Build the system prompt with the sandbox's real cwd baked in
+  // (rather than a static `agentCustomInstructions` string). Without
+  // this the agent has to `pwd` on every turn because its prompt
+  // doesn't tell it where it is. Mirrors open-agents'
+  // `buildSystemPrompt`.
+  const systemPrompt = buildAgentSystemPrompt({
+    cwd: input.agentContext.sandbox.workingDirectory,
+    customInstructions: agentCustomInstructions,
+  });
   const result = streamText({
     model: callModel,
-    system: agentCustomInstructions,
+    system: systemPrompt,
     messages: modelMessages,
     tools,
     stopWhen: CHAT_AGENT_STOP_WHEN,
     experimental_context: agentContext,
+    // Mark the LAST message with cacheControl on every step so Anthropic
+    // incrementally caches the conversation prefix. Mirrors open-agents'
+    // `prepareStep` in `open-harness-agent.ts:100`.
+    prepareStep: ({ messages, model }) => ({
+      messages: addCacheControlToMessages({ messages, model }),
+    }),
   });
 
   // Acquire the writer once and release in `finally` so a thrown chunk

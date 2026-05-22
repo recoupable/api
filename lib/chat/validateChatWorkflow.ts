@@ -14,6 +14,14 @@ export const chatWorkflowBodySchema = z.object({
       contextLimit: z.number().int("contextLimit must be an integer"),
     })
     .optional(),
+  /**
+   * Short-lived Privy JWT from the chat UI. Forwarded by the handler
+   * into `AgentContext.recoupAccessToken` (Bundle A.4) so the
+   * `recoup-api` skill's curl examples can authenticate as the user.
+   * Open-agents-shape compatible — their chat UI sends this same
+   * field shape.
+   */
+  recoupAccessToken: z.string().min(1).max(8192).optional(),
 });
 
 export type ChatWorkflowBody = z.infer<typeof chatWorkflowBodySchema>;
