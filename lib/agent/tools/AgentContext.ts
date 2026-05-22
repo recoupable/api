@@ -16,12 +16,12 @@ import type { SkillMetadata } from "@/lib/skills/skillTypes";
  * the constructed model(s) before `experimental_context` is observed
  * by any tool.
  *
- * Why no `recoupAccessToken` field? A short-lived per-prompt credential
- * would let sandbox tools (`skill`, the eventual `recoup-api` skill) call
- * back to recoup-api as the caller. We deliberately omit it here — the
- * legacy api-key path is too long-lived to expose inside a sandbox where
- * model-issued bash commands can read env. Proper short-lived token
- * minting lands alongside the `skill` tool port.
+ * `recoupAccessToken` carries a short-lived Privy JWT (~1h TTL) so
+ * the `recoup-api` skill can authenticate curl-style calls back to
+ * recoup-api as the user. Set by `handleChatWorkflowStream` only when
+ * the caller authenticates via `Authorization: Bearer <privy-jwt>` —
+ * a long-lived `recoup_sk_…` api key is deliberately NOT forwarded
+ * (model-issued bash commands could exfiltrate it via env).
  */
 export type AgentContext = {
   /**
@@ -41,6 +41,20 @@ export type AgentContext = {
    * Public information — no security risk in exposing.
    */
   recoupOrgId?: string;
+  /**
+   * Short-lived Privy JWT (the user's session token from the chat
+   * UI's Privy login). Forwarded into the sandbox env as
+   * `RECOUP_ACCESS_TOKEN` so the `recoup-api` skill's curl examples
+   * can authenticate as the user. Mirrors open-agents'
+   * `AgentContext.recoupAccessToken` (`packages/agent/types.ts:29`).
+   *
+   * Only set when the chat-workflow caller authenticated via
+   * `Authorization: Bearer <jwt>` (or sent `recoupAccessToken` in the
+   * request body). x-api-key callers do NOT get the token forwarded —
+   * the long-lived `recoup_sk_…` key would be exfiltratable from the
+   * sandbox env by any model-issued bash command.
+   */
+  recoupAccessToken?: string;
   /**
    * Skills discovered in the sandbox before workflow start (handler
    * calls `discoverSkills(sandbox, getSandboxSkillDirectories(sandbox))`).

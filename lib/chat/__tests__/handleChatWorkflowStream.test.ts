@@ -288,6 +288,36 @@ describe("handleChatWorkflowStream", () => {
       const startArgs = vi.mocked(start).mock.calls[0]?.[1]?.[0] as { modelId: string };
       expect(startArgs.modelId).toBe("anthropic/claude-haiku-4.5");
     });
+
+    // Bundle A.4 — forward the Privy JWT from the validated body into
+    // AgentContext.recoupAccessToken so the sandbox env-builder can
+    // surface it as `RECOUP_ACCESS_TOKEN`.
+    it("forwards validated.recoupAccessToken into AgentContext.recoupAccessToken", async () => {
+      vi.mocked(validateChatWorkflow).mockResolvedValue({
+        messages: [],
+        chatId: CHAT_ID,
+        sessionId: SESSION_ID,
+        accountId: ACCOUNT_ID,
+        orgId: null,
+        authToken: "test-key",
+        recoupAccessToken: "eyJ.privy.jwt",
+      });
+      mockStartedRun();
+      await handleChatWorkflowStream(makeRequest());
+      const startArgs = vi.mocked(start).mock.calls[0]?.[1]?.[0] as {
+        agentContext: { recoupAccessToken?: string };
+      };
+      expect(startArgs.agentContext.recoupAccessToken).toBe("eyJ.privy.jwt");
+    });
+
+    it("omits AgentContext.recoupAccessToken when validated body has no token", async () => {
+      mockStartedRun();
+      await handleChatWorkflowStream(makeRequest());
+      const startArgs = vi.mocked(start).mock.calls[0]?.[1]?.[0] as {
+        agentContext: { recoupAccessToken?: string };
+      };
+      expect(startArgs.agentContext.recoupAccessToken).toBeUndefined();
+    });
   });
 
   describe("promote placeholder → run id", () => {
