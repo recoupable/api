@@ -1,4 +1,5 @@
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
+import { delay } from "@/lib/time/delay";
 
 const MAX_ATTEMPTS = 3;
 // 50ms picked to match open-agents' `ACTIVE_STREAM_CLEAR_RETRY_DELAY_MS`
@@ -6,12 +7,6 @@ const MAX_ATTEMPTS = 3;
 // third attempt, keeping the cleanup tail well under the human-
 // perceptible ~250ms threshold.
 const RETRY_DELAY_MS = 50;
-
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => {
-    setTimeout(resolve, ms);
-  });
-}
 
 /**
  * Vercel Workflow `"use step"` that CAS-clears `chats.active_stream_id`
