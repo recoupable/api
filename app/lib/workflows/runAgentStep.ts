@@ -1,9 +1,4 @@
-import {
-  streamText,
-  convertToModelMessages,
-  type UIMessage,
-  type UIMessageChunk,
-} from "ai";
+import { streamText, convertToModelMessages, type UIMessage, type UIMessageChunk } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { agentCustomInstructions } from "@/lib/chat/agentCustomInstructions";
 import { buildAgentSystemPrompt } from "@/lib/chat/buildAgentSystemPrompt";

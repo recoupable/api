@@ -231,16 +231,12 @@ describe("runAgentStep", () => {
     const streamResult = makeStreamResult();
     // Spy on the options passed to toUIMessageStream to grab the generateMessageId fn.
     const originalToUIMessageStream = streamResult.toUIMessageStream;
-    streamResult.toUIMessageStream = vi.fn(
-      (streamOpts: { generateMessageId?: unknown }) => {
-        generateMessageIdCalls.push(streamOpts.generateMessageId);
-        return (
-          originalToUIMessageStream as unknown as (
-            o: unknown,
-          ) => AsyncGenerator<unknown>
-        )(streamOpts);
-      },
-    ) as never;
+    streamResult.toUIMessageStream = vi.fn((streamOpts: { generateMessageId?: unknown }) => {
+      generateMessageIdCalls.push(streamOpts.generateMessageId);
+      return (originalToUIMessageStream as unknown as (o: unknown) => AsyncGenerator<unknown>)(
+        streamOpts,
+      );
+    }) as never;
     vi.mocked(streamText).mockReturnValue(streamResult as never);
     const { stream } = makeWritable();
 

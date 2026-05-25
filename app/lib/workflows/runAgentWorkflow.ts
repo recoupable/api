@@ -61,9 +61,7 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
   // `runAgentStep` call.
   const latestMessage = input.messages.at(-1);
   const assistantMessageId =
-    latestMessage?.role === "assistant"
-      ? latestMessage.id
-      : await generateAssistantMessageId();
+    latestMessage?.role === "assistant" ? latestMessage.id : await generateAssistantMessageId();
 
   try {
     const result = await runAgentStep({
