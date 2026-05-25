@@ -6,7 +6,14 @@ import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
+import type { AgentMessageMetadata } from "@/lib/agent/messageMetadata/AgentMessageMetadata";
 import type { DurableAgentContext } from "@/lib/agent/tools/AgentContext";
+
+const ZERO_USAGE: LanguageModelUsage = {
+  inputTokens: 0,
+  cachedInputTokens: 0,
+  outputTokens: 0,
+} as LanguageModelUsage;
 
 export type RunAgentWorkflowInput = {
   messages: UIMessage[];
@@ -100,32 +107,13 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
       // (apps/web/app/workflows/chat-post-finish.ts) and reuses the
       // same `handleChatCredits` orchestrator that `handleChatStream`
       // already uses for the non-workflow chat path.
-      const metadata = (
-        result.responseMessage as {
-          metadata?: {
-            totalMessageCost?: number;
-            totalMessageUsage?: {
-              inputTokens?: number;
-              cachedInputTokens?: number;
-              outputTokens?: number;
-            };
-          };
-        }
-      ).metadata;
+      const metadata = result.responseMessage.metadata as AgentMessageMetadata | undefined;
       await handleChatCredits({
         accountId: input.accountId,
         model: input.modelId,
         source: "api",
         gatewayCostUsd: metadata?.totalMessageCost,
-        // Cast at the boundary: AI SDK's LanguageModelUsage type
-        // requires additional optional fields (inputTokenDetails,
-        // outputTokenDetails, totalTokens). `handleChatCredits` only
-        // reads the three core fields, so the cast is safe.
-        usage: {
-          inputTokens: metadata?.totalMessageUsage?.inputTokens ?? 0,
-          cachedInputTokens: metadata?.totalMessageUsage?.cachedInputTokens ?? 0,
-          outputTokens: metadata?.totalMessageUsage?.outputTokens ?? 0,
-        } as LanguageModelUsage,
+        usage: metadata?.totalMessageUsage ?? ZERO_USAGE,
       });
     }
   } finally {
