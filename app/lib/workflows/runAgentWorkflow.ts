@@ -1,5 +1,6 @@
 import { getWorkflowMetadata, getWritable } from "workflow";
 import type { UIMessage, UIMessageChunk } from "ai";
+import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import type { DurableAgentContext } from "@/lib/agent/tools/AgentContext";
@@ -56,12 +57,22 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
     });
     console.log("[runAgentWorkflow] finish", { finishReason: result.finishReason });
   } finally {
-    // Clear `chats.active_stream_id` (CAS-gated on this run's id) so the
-    // client's "is this chat still streaming?" probe flips back to false
-    // and the AI SDK can release `chat.status` from `submitted`. Runs
-    // inside the workflow body (vs. an after() callback in the request
-    // handler) so it fires immediately on the same workflow tick — no
-    // polling lag. Mirrors open-agents' chat workflow.
-    await clearChatActiveStream(input.chatId, workflowRunId);
+    // Run two cleanup steps in parallel:
+    //   1) `clearChatActiveStream` — CAS-gated DB clear of the chat's
+    //      `active_stream_id` so the recovery probe flips to false.
+    //   2) `closeChatStream` — explicitly close the workflow writable
+    //      so the client's SSE response ends NOW. Without this, the
+    //      writable stays open until Vercel Workflow's runtime
+    //      garbage-collects the run (observed ~2m), and the AI SDK
+    //      chat hook keeps `chat.status` in `submitted` waiting for
+    //      stream-end. Mirrors open-agents'
+    //      `Promise.all([clearActiveStream, sendFinish.then(closeStream)])`.
+    //
+    // `Promise.all` is safe because both helpers swallow their own
+    // errors — a failure in one doesn't cancel the other.
+    await Promise.all([
+      clearChatActiveStream(input.chatId, workflowRunId),
+      closeChatStream(writable),
+    ]);
   }
 }
