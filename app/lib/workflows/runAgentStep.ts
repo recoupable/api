@@ -1,4 +1,10 @@
-import { streamText, convertToModelMessages, type UIMessage, type UIMessageChunk } from "ai";
+import {
+  generateId,
+  streamText,
+  convertToModelMessages,
+  type UIMessage,
+  type UIMessageChunk,
+} from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { agentCustomInstructions } from "@/lib/chat/agentCustomInstructions";
 import { buildAgentSystemPrompt } from "@/lib/chat/buildAgentSystemPrompt";
@@ -111,6 +117,16 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   // for the outer workflow body to forward into `persistAssistantMessage`.
   let responseMessage: UIMessage | undefined;
 
+  // Generate a stable id for the assistant message ONCE per step
+  // invocation. Without this, `toUIMessageStream` defaults the
+  // responseMessage `id` to `""` and every workflow run would collide
+  // on the `chat_messages.id` PK — `upsertChatMessage({onConflict:"id",
+  // ignoreDuplicates})` would report every assistant message after the
+  // first as a duplicate and skip the write. Open-agents mirrors this
+  // by passing `generateMessageId: () => messageId` to its
+  // `toUIMessageStream`.
+  const assistantMessageId = generateId();
+
   // Acquire the writer once and release in `finally` so a thrown chunk
   // doesn't leak the lock.
   const writer = input.writable.getWriter();
@@ -122,6 +138,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     const messageMetadata = buildMessageMetadataCallback({ modelId: input.modelId });
     for await (const part of result.toUIMessageStream({
       messageMetadata,
+      generateMessageId: () => assistantMessageId,
       onFinish: ({ responseMessage: finishedResponseMessage }) => {
         responseMessage = finishedResponseMessage;
       },
