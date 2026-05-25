@@ -5,7 +5,7 @@ import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
-import { recordChatUsage } from "@/app/lib/workflows/recordChatUsage";
+import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 
 vi.mock("@/app/lib/workflows/runAgentStep", () => ({
   runAgentStep: vi.fn(),
@@ -22,8 +22,8 @@ vi.mock("@/app/lib/workflows/generateAssistantMessageId", () => ({
 vi.mock("@/lib/chat/persistAssistantMessage", () => ({
   persistAssistantMessage: vi.fn(),
 }));
-vi.mock("@/app/lib/workflows/recordChatUsage", () => ({
-  recordChatUsage: vi.fn(),
+vi.mock("@/lib/credits/handleChatCredits", () => ({
+  handleChatCredits: vi.fn(),
 }));
 // Captured writable stub so tests can assert closeChatStream got the
 // same instance the workflow body holds.
@@ -176,7 +176,7 @@ describe("runAgentWorkflow", () => {
     );
   });
 
-  it("calls recordChatUsage with accountId/modelId/responseMessage when runAgentStep returns a message", async () => {
+  it("calls handleChatCredits with the gateway cost + token usage from responseMessage.metadata", async () => {
     const responseMessage = {
       id: "assistant-msg-xyz",
       role: "assistant",
@@ -197,15 +197,45 @@ describe("runAgentWorkflow", () => {
 
     await runAgentWorkflow(baseInput);
 
-    expect(recordChatUsage).toHaveBeenCalledTimes(1);
-    expect(recordChatUsage).toHaveBeenCalledWith({
+    expect(handleChatCredits).toHaveBeenCalledTimes(1);
+    expect(handleChatCredits).toHaveBeenCalledWith({
       accountId: "acc-1",
-      modelId: "anthropic/claude-haiku-4.5",
-      responseMessage,
+      model: "anthropic/claude-haiku-4.5",
+      source: "api",
+      gatewayCostUsd: 0.07,
+      usage: {
+        inputTokens: 100,
+        cachedInputTokens: 10,
+        outputTokens: 20,
+      },
     });
   });
 
-  it("does NOT call recordChatUsage when runAgentStep returns no responseMessage", async () => {
+  it("calls handleChatCredits with zero usage when metadata is missing (lets the 1c floor apply)", async () => {
+    const responseMessage = {
+      id: "assistant-msg-xyz",
+      role: "assistant",
+      parts: [{ type: "text", text: "Hello!" }],
+      // no metadata
+    };
+    vi.mocked(runAgentStep).mockResolvedValue({
+      finishReason: "stop",
+      responseMessage: responseMessage as never,
+    });
+
+    await runAgentWorkflow(baseInput);
+
+    expect(handleChatCredits).toHaveBeenCalledTimes(1);
+    expect(handleChatCredits).toHaveBeenCalledWith({
+      accountId: "acc-1",
+      model: "anthropic/claude-haiku-4.5",
+      source: "api",
+      gatewayCostUsd: undefined,
+      usage: { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 },
+    });
+  });
+
+  it("does NOT call handleChatCredits when runAgentStep returns no responseMessage", async () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
       responseMessage: undefined,
@@ -213,14 +243,14 @@ describe("runAgentWorkflow", () => {
 
     await runAgentWorkflow(baseInput);
 
-    expect(recordChatUsage).not.toHaveBeenCalled();
+    expect(handleChatCredits).not.toHaveBeenCalled();
   });
 
-  it("does NOT call recordChatUsage when runAgentStep throws (no message to bill)", async () => {
+  it("does NOT call handleChatCredits when runAgentStep throws (no message to bill)", async () => {
     vi.mocked(runAgentStep).mockRejectedValue(new Error("model exploded"));
 
     await expect(runAgentWorkflow(baseInput)).rejects.toThrow("model exploded");
 
-    expect(recordChatUsage).not.toHaveBeenCalled();
+    expect(handleChatCredits).not.toHaveBeenCalled();
   });
 });

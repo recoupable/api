@@ -1,11 +1,11 @@
 import { getWorkflowMetadata, getWritable } from "workflow";
-import type { UIMessage, UIMessageChunk } from "ai";
+import type { LanguageModelUsage, UIMessage, UIMessageChunk } from "ai";
 import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
-import { recordChatUsage } from "@/app/lib/workflows/recordChatUsage";
+import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import type { DurableAgentContext } from "@/lib/agent/tools/AgentContext";
 
 export type RunAgentWorkflowInput = {
@@ -93,14 +93,39 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
 
       // Charge the account for this turn. Atomic wallet debit + audit
       // row insert via the `deduct_credits_with_audit` Postgres function
-      // — see `recordChatUsage`. Fire-and-forget by contract; transient
-      // credits-table failures must not abort the chat workflow.
-      // Mirrors open-agents' `recordWorkflowUsage` main-agent path
-      // (apps/web/app/workflows/chat-post-finish.ts).
-      await recordChatUsage({
+      // (wired into `handleChatCredits` → `recordCreditDeduction`).
+      // Fire-and-forget by contract; transient credits-table failures
+      // must not abort the chat workflow. Mirrors open-agents'
+      // `recordWorkflowUsage` main-agent path
+      // (apps/web/app/workflows/chat-post-finish.ts) and reuses the
+      // same `handleChatCredits` orchestrator that `handleChatStream`
+      // already uses for the non-workflow chat path.
+      const metadata = (
+        result.responseMessage as {
+          metadata?: {
+            totalMessageCost?: number;
+            totalMessageUsage?: {
+              inputTokens?: number;
+              cachedInputTokens?: number;
+              outputTokens?: number;
+            };
+          };
+        }
+      ).metadata;
+      await handleChatCredits({
         accountId: input.accountId,
-        modelId: input.modelId,
-        responseMessage: result.responseMessage,
+        model: input.modelId,
+        source: "api",
+        gatewayCostUsd: metadata?.totalMessageCost,
+        // Cast at the boundary: AI SDK's LanguageModelUsage type
+        // requires additional optional fields (inputTokenDetails,
+        // outputTokenDetails, totalTokens). `handleChatCredits` only
+        // reads the three core fields, so the cast is safe.
+        usage: {
+          inputTokens: metadata?.totalMessageUsage?.inputTokens ?? 0,
+          cachedInputTokens: metadata?.totalMessageUsage?.cachedInputTokens ?? 0,
+          outputTokens: metadata?.totalMessageUsage?.outputTokens ?? 0,
+        } as LanguageModelUsage,
       });
     }
   } finally {
