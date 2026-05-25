@@ -1,4 +1,5 @@
 import supabase from "@/lib/supabase/serverClient";
+import type { Json } from "@/types/database.types";
 
 /**
  * JSON payload populating the `usage_events` audit row. Optional
@@ -54,7 +55,10 @@ export async function deductCreditsWithAudit(params: {
       p_account_id: params.accountId,
       p_amount: params.cents,
       p_event_id: params.eventId,
-      p_event: params.event,
+      // DeductCreditsAuditEvent is structurally JSON-safe, but TS can't
+      // infer an interface → index-signature assignment automatically.
+      // Cast once at this boundary; the runtime payload is unchanged.
+      p_event: params.event as unknown as Json,
     });
     if (error) {
       return { ok: false, error: error.message };
