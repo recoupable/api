@@ -146,6 +146,19 @@ describe("validatePatchSessionChatRequest", () => {
     }
   });
 
+  it("returns 400 when the body contains unknown fields", async () => {
+    happyPathMocks();
+    const res = await validatePatchSessionChatRequest(
+      makeReq({ title: "Renamed", foo: "bar" }),
+      "sess_1",
+      "chat_1",
+    );
+    expect(res).toBeInstanceOf(NextResponse);
+    if (res instanceof NextResponse) {
+      expect(res.status).toBe(400);
+    }
+  });
+
   it("returns 400 when title is whitespace-only", async () => {
     happyPathMocks();
     const res = await validatePatchSessionChatRequest(
