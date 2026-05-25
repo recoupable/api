@@ -6,6 +6,9 @@ import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
+import { hasAutoCommitChanges } from "@/lib/chat/auto-commit/hasAutoCommitChanges";
+import { runAutoCommit } from "@/lib/chat/auto-commit/runAutoCommit";
+import { sendCommitChunk } from "@/lib/chat/auto-commit/sendCommitChunk";
 
 vi.mock("@/app/lib/workflows/runAgentStep", () => ({
   runAgentStep: vi.fn(),
@@ -24,6 +27,15 @@ vi.mock("@/lib/chat/persistAssistantMessage", () => ({
 }));
 vi.mock("@/lib/credits/handleChatCredits", () => ({
   handleChatCredits: vi.fn(),
+}));
+vi.mock("@/lib/chat/auto-commit/hasAutoCommitChanges", () => ({
+  hasAutoCommitChanges: vi.fn(),
+}));
+vi.mock("@/lib/chat/auto-commit/runAutoCommit", () => ({
+  runAutoCommit: vi.fn(),
+}));
+vi.mock("@/lib/chat/auto-commit/sendCommitChunk", () => ({
+  sendCommitChunk: vi.fn(),
 }));
 // Captured writable stub so tests can assert closeChatStream got the
 // same instance the workflow body holds.
@@ -49,10 +61,23 @@ const baseInput = {
   sessionId: "session-1",
   accountId: "acc-1",
   modelId: "anthropic/claude-haiku-4.5",
+  sessionTitle: "test session",
+  repoOwner: "recoupable",
+  repoName: "api",
   agentContext: {
     sandbox: { state: { type: "vercel" }, workingDirectory: "/sandbox/mono" },
   } as never,
 };
+
+const responseMessageWithMetadata = {
+  id: "asst-msg-1",
+  role: "assistant",
+  parts: [{ type: "text", text: "Hello!" }],
+  metadata: {
+    totalMessageCost: 0.07,
+    totalMessageUsage: { inputTokens: 100, cachedInputTokens: 10, outputTokens: 20 },
+  },
+} as never;
 
 describe("runAgentWorkflow", () => {
   it("clears active_stream_id after a successful run, using the workflow's own runId", async () => {
@@ -252,5 +277,110 @@ describe("runAgentWorkflow", () => {
     await expect(runAgentWorkflow(baseInput)).rejects.toThrow("model exploded");
 
     expect(handleChatCredits).not.toHaveBeenCalled();
+  });
+
+  describe("auto-commit", () => {
+    it("runs auto-commit when finish was natural AND repo identifiers + sandbox are present AND sandbox has changes", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        responseMessage: responseMessageWithMetadata,
+      });
+      vi.mocked(hasAutoCommitChanges).mockResolvedValue(true);
+      vi.mocked(runAutoCommit).mockResolvedValue({
+        committed: true,
+        pushed: true,
+        commitSha: "abc123",
+        commitMessage: "feat: thing",
+      });
+
+      await runAgentWorkflow(baseInput);
+
+      expect(hasAutoCommitChanges).toHaveBeenCalledTimes(1);
+      expect(runAutoCommit).toHaveBeenCalledWith({
+        sessionId: "session-1",
+        sessionTitle: "test session",
+        repoOwner: "recoupable",
+        repoName: "api",
+        sandboxState: baseInput.agentContext.sandbox.state,
+      });
+      // Pending chunk + resolved chunk
+      expect(sendCommitChunk).toHaveBeenCalledTimes(2);
+      expect(sendCommitChunk).toHaveBeenNthCalledWith(
+        1,
+        writableStub,
+        "asst-msg-1:commit",
+        expect.objectContaining({ status: "pending" }),
+      );
+      expect(sendCommitChunk).toHaveBeenNthCalledWith(
+        2,
+        writableStub,
+        "asst-msg-1:commit",
+        expect.objectContaining({
+          status: "success",
+          commitSha: "abc123",
+          url: "https://github.com/recoupable/api/commit/abc123",
+        }),
+      );
+    });
+
+    it("skips auto-commit (no chunks) when the sandbox reports no changes", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        responseMessage: responseMessageWithMetadata,
+      });
+      vi.mocked(hasAutoCommitChanges).mockResolvedValue(false);
+
+      await runAgentWorkflow(baseInput);
+
+      expect(hasAutoCommitChanges).toHaveBeenCalledTimes(1);
+      expect(runAutoCommit).not.toHaveBeenCalled();
+      expect(sendCommitChunk).not.toHaveBeenCalled();
+    });
+
+    it("skips auto-commit entirely when repoOwner is missing", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        responseMessage: responseMessageWithMetadata,
+      });
+
+      await runAgentWorkflow({ ...baseInput, repoOwner: undefined });
+
+      expect(hasAutoCommitChanges).not.toHaveBeenCalled();
+      expect(runAutoCommit).not.toHaveBeenCalled();
+    });
+
+    it("skips auto-commit when finish reason is 'tool-calls' (intermediate, not natural)", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "tool-calls",
+        responseMessage: responseMessageWithMetadata,
+      });
+
+      await runAgentWorkflow(baseInput);
+
+      expect(hasAutoCommitChanges).not.toHaveBeenCalled();
+      expect(runAutoCommit).not.toHaveBeenCalled();
+    });
+
+    it("emits the resolved chunk with status='error' when auto-commit returns an error", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        responseMessage: responseMessageWithMetadata,
+      });
+      vi.mocked(hasAutoCommitChanges).mockResolvedValue(true);
+      vi.mocked(runAutoCommit).mockResolvedValue({
+        committed: false,
+        pushed: false,
+        error: "Failed to stage changes",
+      });
+
+      await runAgentWorkflow(baseInput);
+
+      expect(sendCommitChunk).toHaveBeenNthCalledWith(
+        2,
+        writableStub,
+        "asst-msg-1:commit",
+        expect.objectContaining({ status: "error", error: "Failed to stage changes" }),
+      );
+    });
   });
 });

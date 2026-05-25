@@ -124,6 +124,9 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
       sessionId: validated.sessionId,
       accountId: validated.accountId,
       modelId,
+      sessionTitle: session.title ?? undefined,
+      repoOwner: session.repo_owner ?? undefined,
+      repoName: session.repo_name ?? undefined,
       agentContext: {
         sandbox: {
           state: session.sandbox_state as VercelState,

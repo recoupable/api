@@ -6,6 +6,10 @@ import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
+import { hasAutoCommitChanges } from "@/lib/chat/auto-commit/hasAutoCommitChanges";
+import { runAutoCommit } from "@/lib/chat/auto-commit/runAutoCommit";
+import { buildCommitData } from "@/lib/chat/auto-commit/buildCommitData";
+import { sendCommitChunk } from "@/lib/chat/auto-commit/sendCommitChunk";
 import type { AgentMessageMetadata } from "@/lib/agent/messageMetadata/AgentMessageMetadata";
 import type { DurableAgentContext } from "@/lib/agent/tools/AgentContext";
 
@@ -27,6 +31,20 @@ export type RunAgentWorkflowInput = {
    */
   accountId: string;
   modelId: string;
+  /**
+   * Optional chat title — used as context for the auto-commit
+   * message-generation LLM call.
+   */
+  sessionTitle?: string;
+  /**
+   * Repo identifiers from `sessions.repo_owner` / `sessions.repo_name`.
+   * When BOTH are present and the sandbox is reachable, the workflow
+   * runs auto-commit after a successful turn (git add → LLM-generated
+   * commit message → git commit → git push). Either being absent
+   * skips auto-commit silently.
+   */
+  repoOwner?: string;
+  repoName?: string;
   /**
    * JSON-serializable subset of AgentContext that survives the durable
    * workflow input. `runAgentStep` attaches the constructed `model`
@@ -115,6 +133,58 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
         gatewayCostUsd: metadata?.totalMessageCost,
         usage: metadata?.totalMessageUsage ?? ZERO_USAGE,
       });
+
+      // Auto-commit + push after a natural finish. Skipped silently
+      // when the session lacks repo identifiers or the sandbox is
+      // missing. The data-commit chunks (pending → resolved) are
+      // emitted to the live SSE stream so the chat UI can render a
+      // "Committing..." → "Committed at <sha>" affordance during the
+      // turn. Mirrors open-agents'
+      // `apps/web/app/workflows/chat.ts` canAutoCommit block.
+      //
+      // NOTE: the data-commit chunks are NOT re-persisted onto the
+      // assistant message after this runs, so the UI affordance
+      // disappears on page refresh. The commit itself is permanent
+      // on GitHub. Re-persistence is tracked as a separate follow-up
+      // (see recoupable/api#605).
+      // DurableAgentContext carries the raw VercelState; the auto-commit
+      // helpers operate on the discriminated SandboxState union so they
+      // can fan out to other sandbox backends in the future. Wrap with
+      // the `type: "vercel"` tag here.
+      const sandboxState = input.agentContext.sandbox?.state
+        ? ({ type: "vercel", ...input.agentContext.sandbox.state } as const)
+        : undefined;
+      const canAutoCommit =
+        result.finishReason !== "tool-calls" &&
+        input.repoOwner !== undefined &&
+        input.repoName !== undefined &&
+        sandboxState !== undefined;
+
+      if (canAutoCommit) {
+        const hasChanges = await hasAutoCommitChanges({ sandboxState });
+        if (hasChanges) {
+          const commitPartId = `${result.responseMessage.id}:commit`;
+          // Emit the pending chunk BEFORE the commit step so the UI
+          // can show a spinner while git add/commit/push run.
+          await sendCommitChunk(writable, commitPartId, {
+            status: "pending",
+            committed: false,
+            pushed: false,
+          });
+          const commitResult = await runAutoCommit({
+            sessionId: input.sessionId,
+            sessionTitle: input.sessionTitle ?? "",
+            repoOwner: input.repoOwner!,
+            repoName: input.repoName!,
+            sandboxState,
+          });
+          await sendCommitChunk(
+            writable,
+            commitPartId,
+            buildCommitData(commitResult, input.repoOwner!, input.repoName!),
+          );
+        }
+      }
     }
   } finally {
     // Run two cleanup steps in parallel:
