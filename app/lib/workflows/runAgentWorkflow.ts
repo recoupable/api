@@ -1,8 +1,10 @@
 import { getWorkflowMetadata, getWritable } from "workflow";
 import type { UIMessage, UIMessageChunk } from "ai";
 import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
+import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
+import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import type { DurableAgentContext } from "@/lib/agent/tools/AgentContext";
 
 export type RunAgentWorkflowInput = {
@@ -48,14 +50,39 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
 
   const writable = getWritable<UIMessageChunk>();
 
+  // Pick or generate a stable id for the assistant message. If the
+  // last message in the conversation is already an assistant message
+  // (we're resuming an in-progress turn after a tool-call interaction)
+  // reuse its id so chunks append to the same `chat_messages` row.
+  // Otherwise generate a fresh id once via a `"use step"` so the
+  // value is durable across workflow replays. Mirrors open-agents'
+  // pattern in `apps/web/app/workflows/chat.ts` where the id is
+  // generated in the workflow body and threaded into every
+  // `runAgentStep` call.
+  const latestMessage = input.messages.at(-1);
+  const assistantMessageId =
+    latestMessage?.role === "assistant" ? latestMessage.id : await generateAssistantMessageId();
+
   try {
     const result = await runAgentStep({
       messages: input.messages,
       modelId: input.modelId,
       writable,
       agentContext: input.agentContext,
+      assistantMessageId,
     });
     console.log("[runAgentWorkflow] finish", { finishReason: result.finishReason });
+
+    // Persist the final assistant message to `chat_messages` so a page
+    // refresh after the stream completes still shows the reply. Without
+    // this, the recoup-api cutover silently drops assistant responses —
+    // they stream to the client over SSE but never land in the DB.
+    // `persistAssistantMessage` is fire-and-forget by contract; it
+    // swallows its own errors so a transient DB failure here doesn't
+    // mark the workflow run failed.
+    if (result.responseMessage) {
+      await persistAssistantMessage(input.chatId, result.responseMessage);
+    }
   } finally {
     // Run two cleanup steps in parallel:
     //   1) `clearChatActiveStream` — CAS-gated DB clear of the chat's
