@@ -46,17 +46,8 @@ export async function persistAssistantMessage(
   message: AssistantMessage,
 ): Promise<void> {
   "use step";
-  console.log("[persistAssistantMessage] enter", {
-    chatId,
-    messageId: message?.id,
-    role: message?.role,
-    partCount: message?.parts?.length,
-  });
   try {
-    if (!message || message.role !== "assistant") {
-      console.log("[persistAssistantMessage] skip: not assistant role");
-      return;
-    }
+    if (!message || message.role !== "assistant") return;
 
     const inserted = await upsertChatMessage({
       id: message.id,
@@ -64,17 +55,11 @@ export async function persistAssistantMessage(
       role: "assistant",
       parts: message as never,
     });
-    console.log("[persistAssistantMessage] upsert result", {
-      ok: inserted.ok,
-      isDuplicate: "isDuplicate" in inserted ? inserted.isDuplicate : undefined,
-      rowPresent: "row" in inserted ? inserted.row !== null : false,
-    });
 
     if (!inserted.ok) return;
     if (inserted.isDuplicate || inserted.row === null) return;
 
     await updateChat({ id: chatId }, { updated_at: new Date().toISOString() });
-    console.log("[persistAssistantMessage] persisted + touched chat");
   } catch (error) {
     console.error("[persistAssistantMessage] error:", error);
   }
