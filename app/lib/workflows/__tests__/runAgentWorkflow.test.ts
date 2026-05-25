@@ -6,10 +6,7 @@ import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
-import { hasAutoCommitChanges } from "@/lib/chat/auto-commit/hasAutoCommitChanges";
-import { runAutoCommit } from "@/lib/chat/auto-commit/runAutoCommit";
-import { sendCommitChunk } from "@/lib/chat/auto-commit/sendCommitChunk";
-import { updateChatMessageParts } from "@/lib/supabase/chat_messages/updateChatMessageParts";
+import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
 
 vi.mock("@/app/lib/workflows/runAgentStep", () => ({
   runAgentStep: vi.fn(),
@@ -29,17 +26,8 @@ vi.mock("@/lib/chat/persistAssistantMessage", () => ({
 vi.mock("@/lib/credits/handleChatCredits", () => ({
   handleChatCredits: vi.fn(),
 }));
-vi.mock("@/lib/chat/auto-commit/hasAutoCommitChanges", () => ({
-  hasAutoCommitChanges: vi.fn(),
-}));
-vi.mock("@/lib/chat/auto-commit/runAutoCommit", () => ({
-  runAutoCommit: vi.fn(),
-}));
-vi.mock("@/lib/chat/auto-commit/sendCommitChunk", () => ({
-  sendCommitChunk: vi.fn(),
-}));
-vi.mock("@/lib/supabase/chat_messages/updateChatMessageParts", () => ({
-  updateChatMessageParts: vi.fn(),
+vi.mock("@/lib/chat/auto-commit/autoCommitChatTurn", () => ({
+  autoCommitChatTurn: vi.fn(),
 }));
 // Captured writable stub so tests can assert closeChatStream got the
 // same instance the workflow body holds.
@@ -284,139 +272,68 @@ describe("runAgentWorkflow", () => {
   });
 
   describe("auto-commit", () => {
-    it("runs auto-commit when finish was natural AND repo identifiers + sandbox are present AND sandbox has changes", async () => {
+    // The auto-commit flow itself is exhaustively covered in
+    // `lib/chat/auto-commit/__tests__/autoCommitChatTurn.test.ts`.
+    // These tests only verify the workflow body wires the orchestrator
+    // up with the right inputs.
+
+    it("calls autoCommitChatTurn with workflow context after persistAssistantMessage", async () => {
       vi.mocked(runAgentStep).mockResolvedValue({
         finishReason: "stop",
         responseMessage: responseMessageWithMetadata,
       });
-      vi.mocked(hasAutoCommitChanges).mockResolvedValue(true);
-      vi.mocked(runAutoCommit).mockResolvedValue({
-        committed: true,
-        pushed: true,
-        commitSha: "abc123",
-        commitMessage: "feat: thing",
-      });
 
       await runAgentWorkflow(baseInput);
 
-      expect(hasAutoCommitChanges).toHaveBeenCalledTimes(1);
-      expect(runAutoCommit).toHaveBeenCalledWith({
+      expect(autoCommitChatTurn).toHaveBeenCalledTimes(1);
+      expect(autoCommitChatTurn).toHaveBeenCalledWith({
+        writable: writableStub,
+        responseMessage: responseMessageWithMetadata,
+        finishReason: "stop",
         sessionId: "session-1",
         sessionTitle: "test session",
         repoOwner: "recoupable",
         repoName: "api",
-        sandboxState: baseInput.agentContext.sandbox.state,
-      });
-      // Pending chunk + resolved chunk
-      expect(sendCommitChunk).toHaveBeenCalledTimes(2);
-      expect(sendCommitChunk).toHaveBeenNthCalledWith(
-        1,
-        writableStub,
-        "asst-msg-1:commit",
-        expect.objectContaining({ status: "pending" }),
-      );
-      expect(sendCommitChunk).toHaveBeenNthCalledWith(
-        2,
-        writableStub,
-        "asst-msg-1:commit",
-        expect.objectContaining({
-          status: "success",
-          commitSha: "abc123",
-          url: "https://github.com/recoupable/api/commit/abc123",
-        }),
-      );
-      // The resolved chunk is persisted onto the assistant message
-      // so the GitDataPartCard renders on page refresh. We persist
-      // the WHOLE message object (matching persistAssistantMessage's
-      // `parts: message as never` storage convention), with the
-      // data-commit chunk merged into its inner parts array.
-      expect(updateChatMessageParts).toHaveBeenCalledTimes(1);
-      const [persistedId, persistedMessage] = vi.mocked(updateChatMessageParts).mock.calls[0]!;
-      expect(persistedId).toBe("asst-msg-1");
-      const message = persistedMessage as {
-        id: string;
-        role: string;
-        parts: Array<{ type: string; id?: string; data?: unknown }>;
-      };
-      expect(message.id).toBe("asst-msg-1");
-      expect(message.role).toBe("assistant");
-      const commitPart = message.parts.find(p => p.type === "data-commit");
-      expect(commitPart?.id).toBe("asst-msg-1:commit");
-      expect(commitPart?.data).toMatchObject({
-        status: "success",
-        commitSha: "abc123",
-        url: "https://github.com/recoupable/api/commit/abc123",
+        sandboxState: { type: "vercel", ...baseInput.agentContext.sandbox.state },
       });
     });
 
-    it("does NOT call updateChatMessageParts when there are no changes (no chunk to persist)", async () => {
-      vi.mocked(runAgentStep).mockResolvedValue({
-        finishReason: "stop",
-        responseMessage: responseMessageWithMetadata,
-      });
-      vi.mocked(hasAutoCommitChanges).mockResolvedValue(false);
-      await runAgentWorkflow(baseInput);
-      expect(updateChatMessageParts).not.toHaveBeenCalled();
-    });
-
-    it("skips auto-commit (no chunks) when the sandbox reports no changes", async () => {
-      vi.mocked(runAgentStep).mockResolvedValue({
-        finishReason: "stop",
-        responseMessage: responseMessageWithMetadata,
-      });
-      vi.mocked(hasAutoCommitChanges).mockResolvedValue(false);
-
-      await runAgentWorkflow(baseInput);
-
-      expect(hasAutoCommitChanges).toHaveBeenCalledTimes(1);
-      expect(runAutoCommit).not.toHaveBeenCalled();
-      expect(sendCommitChunk).not.toHaveBeenCalled();
-    });
-
-    it("skips auto-commit entirely when repoOwner is missing", async () => {
+    it("wraps the raw VercelState with `type: 'vercel'` before forwarding", async () => {
       vi.mocked(runAgentStep).mockResolvedValue({
         finishReason: "stop",
         responseMessage: responseMessageWithMetadata,
       });
 
-      await runAgentWorkflow({ ...baseInput, repoOwner: undefined });
-
-      expect(hasAutoCommitChanges).not.toHaveBeenCalled();
-      expect(runAutoCommit).not.toHaveBeenCalled();
-    });
-
-    it("skips auto-commit when finish reason is 'tool-calls' (intermediate, not natural)", async () => {
-      vi.mocked(runAgentStep).mockResolvedValue({
-        finishReason: "tool-calls",
-        responseMessage: responseMessageWithMetadata,
-      });
-
       await runAgentWorkflow(baseInput);
 
-      expect(hasAutoCommitChanges).not.toHaveBeenCalled();
-      expect(runAutoCommit).not.toHaveBeenCalled();
+      const call = vi.mocked(autoCommitChatTurn).mock.calls[0]?.[0];
+      expect(call?.sandboxState).toMatchObject({ type: "vercel" });
     });
 
-    it("emits the resolved chunk with status='error' when auto-commit returns an error", async () => {
+    it("forwards undefined sandboxState when agentContext.sandbox is missing", async () => {
       vi.mocked(runAgentStep).mockResolvedValue({
         finishReason: "stop",
         responseMessage: responseMessageWithMetadata,
       });
-      vi.mocked(hasAutoCommitChanges).mockResolvedValue(true);
-      vi.mocked(runAutoCommit).mockResolvedValue({
-        committed: false,
-        pushed: false,
-        error: "Failed to stage changes",
+
+      await runAgentWorkflow({
+        ...baseInput,
+        agentContext: {} as never,
+      });
+
+      const call = vi.mocked(autoCommitChatTurn).mock.calls[0]?.[0];
+      expect(call?.sandboxState).toBeUndefined();
+    });
+
+    it("does NOT call autoCommitChatTurn when runAgentStep returns no responseMessage", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        responseMessage: undefined,
       });
 
       await runAgentWorkflow(baseInput);
 
-      expect(sendCommitChunk).toHaveBeenNthCalledWith(
-        2,
-        writableStub,
-        "asst-msg-1:commit",
-        expect.objectContaining({ status: "error", error: "Failed to stage changes" }),
-      );
+      expect(autoCommitChatTurn).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,13 +1,30 @@
 import supabase from "@/lib/supabase/serverClient";
 import type { Json } from "@/types/database.types";
 
-export type UpdateChatMessagePartsResult = { ok: true } | { ok: false; error: string };
+export interface UpdateChatMessageResult {
+  ok: boolean;
+  /**
+   * Present only when `ok === false`. Kept optional rather than as a
+   * discriminated union so callers can read `result.error` without
+   * tripping a narrowing edge case in the Next.js 16 type checker
+   * (same pattern as `DeductCreditsWithAuditResult`).
+   */
+  error?: string;
+}
 
 /**
  * Replaces the `parts` jsonb column on an existing `chat_messages`
  * row. UPDATE-only — does NOT insert if the row is missing, so the
  * caller must have already persisted the message via
  * `upsertChatMessage` first.
+ *
+ * Pure supabase wrapper — kept free of any workflow concerns
+ * (no `"use step"` directive here). Callers that need durable step
+ * semantics wrap this in a `"use step"` function in `lib/chat/`
+ * (e.g. `persistAssistantDataPart`). Keeping the step boundary out
+ * of the supabase layer matches the rest of the codebase
+ * (`upsertChatMessage`, `updateChat`, etc.) — only domain wrappers
+ * are step-bound, supabase wrappers stay pure.
  *
  * Use this when a chunk lands AFTER the initial assistant message
  * was already persisted (auto-commit's `data-commit`, future PR data
@@ -21,11 +38,10 @@ export type UpdateChatMessagePartsResult = { ok: true } | { ok: false; error: st
  * a single INSERT-then-UPDATE atomic helper; api keeps the two paths
  * separate so the first-insert path remains replay-idempotent).
  */
-export async function updateChatMessageParts(
+export async function updateChatMessage(
   id: string,
   parts: unknown,
-): Promise<UpdateChatMessagePartsResult> {
-  "use step";
+): Promise<UpdateChatMessageResult> {
   try {
     const { error } = await supabase
       .from("chat_messages")

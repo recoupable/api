@@ -1,5 +1,5 @@
 import type { Sandbox } from "@/lib/sandbox/abstraction";
-import generateText from "@/lib/ai/generateText";
+import { generateCommitMessage } from "@/lib/chat/auto-commit/generateCommitMessage";
 import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
 
 export interface AutoCommitParams {
@@ -18,11 +18,7 @@ export interface AutoCommitResult {
   error?: string;
 }
 
-const FALLBACK_COMMIT_MESSAGE = "chore: update repository changes";
-const COMMIT_MESSAGE_MAX_LENGTH = 72;
-
 const TIMEOUT_QUICK_MS = 10_000;
-const TIMEOUT_DIFF_MS = 30_000;
 const TIMEOUT_PUSH_MS = 60_000;
 const TIMEOUT_RESOLVE_MS = 5_000;
 
@@ -129,40 +125,4 @@ export async function performAutoCommit(params: AutoCommitParams): Promise<AutoC
     commitMessage,
     commitSha,
   };
-}
-
-async function generateCommitMessage(
-  sandbox: Sandbox,
-  cwd: string,
-  sessionTitle: string,
-): Promise<string> {
-  try {
-    const stagedDiffResult = await sandbox.exec("git diff --cached", cwd, TIMEOUT_DIFF_MS);
-    const diffForCommit = stagedDiffResult.stdout;
-
-    if (!diffForCommit.trim()) {
-      return FALLBACK_COMMIT_MESSAGE;
-    }
-
-    const result = await generateText({
-      model: "anthropic/claude-haiku-4.5",
-      prompt: `Generate a concise git commit message for these changes. Use conventional commit format (e.g., "feat:", "fix:", "refactor:"). One line only, max ${COMMIT_MESSAGE_MAX_LENGTH} characters.
-
-Session context: ${sessionTitle}
-
-Diff:
-${diffForCommit.slice(0, 8000)}
-
-Respond with ONLY the commit message, nothing else.`,
-    });
-
-    const generated = result.text.trim().split("\n")[0]?.trim();
-    if (generated && generated.length > 0) {
-      return generated.slice(0, COMMIT_MESSAGE_MAX_LENGTH);
-    }
-  } catch (error) {
-    console.warn("[auto-commit] Failed to generate commit message:", error);
-  }
-
-  return FALLBACK_COMMIT_MESSAGE;
 }

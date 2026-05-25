@@ -6,12 +6,7 @@ import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
-import { hasAutoCommitChanges } from "@/lib/chat/auto-commit/hasAutoCommitChanges";
-import { runAutoCommit } from "@/lib/chat/auto-commit/runAutoCommit";
-import { buildCommitData } from "@/lib/chat/auto-commit/buildCommitData";
-import { sendCommitChunk } from "@/lib/chat/auto-commit/sendCommitChunk";
-import { upsertAssistantDataPart } from "@/lib/chat/upsertAssistantDataPart";
-import { updateChatMessageParts } from "@/lib/supabase/chat_messages/updateChatMessageParts";
+import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
 import type { AgentMessageMetadata } from "@/lib/agent/messageMetadata/AgentMessageMetadata";
 import type { DurableAgentContext } from "@/lib/agent/tools/AgentContext";
 
@@ -136,66 +131,26 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
         usage: metadata?.totalMessageUsage ?? ZERO_USAGE,
       });
 
-      // Auto-commit + push after a natural finish. Skipped silently
-      // when the session lacks repo identifiers or the sandbox is
-      // missing. Mirrors open-agents'
-      // `apps/web/app/workflows/chat.ts` canAutoCommit block.
-      //
-      // The data-commit chunks are emitted live to the SSE stream
-      // (pending → resolved) AND the resolved chunk is merged into
-      // the assistant message's `parts` + re-persisted via
-      // `updateChatMessageParts`, so the `GitDataPartCard` UI
-      // renders on page refresh — not just during the live stream.
-      //
-      // DurableAgentContext carries the raw VercelState; the auto-commit
-      // helpers operate on the discriminated SandboxState union so they
-      // can fan out to other sandbox backends in the future. Wrap with
-      // the `type: "vercel"` tag here.
+      // Auto-commit + push after a natural finish. DurableAgentContext
+      // carries the raw VercelState; the auto-commit helpers operate on
+      // the discriminated SandboxState union so they can fan out to
+      // other sandbox backends in the future. Wrap with the
+      // `type: "vercel"` tag here. All gating + chunk emission +
+      // persistence lives in `autoCommitChatTurn` so the workflow body
+      // stays a thin orchestrator.
       const sandboxState = input.agentContext.sandbox?.state
         ? ({ type: "vercel", ...input.agentContext.sandbox.state } as const)
         : undefined;
-      const canAutoCommit =
-        result.finishReason !== "tool-calls" &&
-        input.repoOwner !== undefined &&
-        input.repoName !== undefined &&
-        sandboxState !== undefined;
-
-      if (canAutoCommit) {
-        const hasChanges = await hasAutoCommitChanges({ sandboxState });
-        if (hasChanges) {
-          const commitPartId = `${result.responseMessage.id}:commit`;
-          // Emit the pending chunk BEFORE the commit step so the UI
-          // can show a spinner while git add/commit/push run.
-          await sendCommitChunk(writable, commitPartId, {
-            status: "pending",
-            committed: false,
-            pushed: false,
-          });
-          const commitResult = await runAutoCommit({
-            sessionId: input.sessionId,
-            sessionTitle: input.sessionTitle ?? "",
-            repoOwner: input.repoOwner!,
-            repoName: input.repoName!,
-            sandboxState,
-          });
-          const resolvedData = buildCommitData(commitResult, input.repoOwner!, input.repoName!);
-          await sendCommitChunk(writable, commitPartId, resolvedData);
-
-          // Persist the resolved data-commit part onto the assistant
-          // message so the `GitDataPartCard` UI renders on page
-          // refresh (chat_messages.parts is read on hydration).
-          const messageWithCommit = upsertAssistantDataPart(result.responseMessage, {
-            type: "data-commit",
-            id: commitPartId,
-            data: resolvedData,
-          });
-          // chat_messages.parts stores the WHOLE message object
-          // (matching persistAssistantMessage's `parts: message as
-          // never` convention) — pass the merged message, not just
-          // the inner `.parts` array.
-          await updateChatMessageParts(messageWithCommit.id, messageWithCommit);
-        }
-      }
+      await autoCommitChatTurn({
+        writable,
+        responseMessage: result.responseMessage,
+        finishReason: result.finishReason,
+        sessionId: input.sessionId,
+        sessionTitle: input.sessionTitle,
+        repoOwner: input.repoOwner,
+        repoName: input.repoName,
+        sandboxState,
+      });
     }
   } finally {
     // Run two cleanup steps in parallel:
