@@ -44,20 +44,22 @@ describe("patchSessionChatHandler", () => {
 
   it("maps modelId to model_id and stores title verbatim", async () => {
     mockValidated({ title: "Renamed", modelId: "openai/gpt-5-mini" });
-    vi.mocked(updateChat).mockResolvedValue(
-      baseChatRow({
+    vi.mocked(updateChat).mockResolvedValue({
+      ok: true,
+      rowsUpdated: 1,
+      row: baseChatRow({
         id: "chat_1",
         title: "Renamed",
         model_id: "openai/gpt-5-mini",
       }),
-    );
+    });
 
     const res = await patchSessionChatHandler(makeReq(), "sess_1", "chat_1");
     expect(res.status).toBe(200);
-    expect(updateChat).toHaveBeenCalledWith({
-      chatId: "chat_1",
-      patch: { title: "Renamed", model_id: "openai/gpt-5-mini" },
-    });
+    expect(updateChat).toHaveBeenCalledWith(
+      { id: "chat_1" },
+      { title: "Renamed", model_id: "openai/gpt-5-mini" },
+    );
     const body = (await res.json()) as { chat: { title: string; modelId: string } };
     expect(body.chat.title).toBe("Renamed");
     expect(body.chat.modelId).toBe("openai/gpt-5-mini");
@@ -65,18 +67,34 @@ describe("patchSessionChatHandler", () => {
 
   it("only patches the field provided", async () => {
     mockValidated({ title: "Just a title" });
-    vi.mocked(updateChat).mockResolvedValue(baseChatRow({ id: "chat_1", title: "Just a title" }));
+    vi.mocked(updateChat).mockResolvedValue({
+      ok: true,
+      rowsUpdated: 1,
+      row: baseChatRow({ id: "chat_1", title: "Just a title" }),
+    });
 
     await patchSessionChatHandler(makeReq(), "sess_1", "chat_1");
-    expect(updateChat).toHaveBeenCalledWith({
-      chatId: "chat_1",
-      patch: { title: "Just a title" },
-    });
+    expect(updateChat).toHaveBeenCalledWith(
+      { id: "chat_1" },
+      { title: "Just a title", model_id: undefined },
+    );
   });
 
-  it("returns 500 when updateChat returns null", async () => {
+  it("returns 500 when updateChat fails", async () => {
     mockValidated({ title: "Renamed" });
-    vi.mocked(updateChat).mockResolvedValue(null);
+    vi.mocked(updateChat).mockResolvedValue({ ok: false, error: "db down" });
+
+    const res = await patchSessionChatHandler(makeReq(), "sess_1", "chat_1");
+    expect(res.status).toBe(500);
+  });
+
+  it("returns 500 when updateChat matches no row", async () => {
+    mockValidated({ title: "Renamed" });
+    vi.mocked(updateChat).mockResolvedValue({
+      ok: true,
+      rowsUpdated: 0,
+      row: null,
+    });
 
     const res = await patchSessionChatHandler(makeReq(), "sess_1", "chat_1");
     expect(res.status).toBe(500);

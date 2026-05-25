@@ -24,15 +24,9 @@ export async function patchSessionChatHandler(
     return patch;
   }
 
-  const updated = await updateChat({
-    chatId,
-    patch: {
-      title: patch.title,
-      model_id: patch.modelId,
-    },
-  });
+  const result = await updateChat({ id: chatId }, { title: patch.title, model_id: patch.modelId });
 
-  if (!updated) {
+  if (!result.ok || !result.row) {
     return NextResponse.json(
       { status: "error", error: "Failed to update chat" },
       { status: 500, headers: getCorsHeaders() },
@@ -40,7 +34,7 @@ export async function patchSessionChatHandler(
   }
 
   return NextResponse.json(
-    { chat: toChatResponse(updated) },
+    { chat: toChatResponse(result.row) },
     { status: 200, headers: getCorsHeaders() },
   );
 }

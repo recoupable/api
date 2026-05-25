@@ -35,7 +35,7 @@ export async function getSessionChatHandler(
     return chat;
   }
 
-  const messages = await selectChatMessages({ chatId });
+  const messages = (await selectChatMessages({ chatId, orderBy: { createdAt: "asc" } })) ?? [];
 
   return NextResponse.json(
     {

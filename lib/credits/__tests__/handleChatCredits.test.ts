@@ -42,7 +42,7 @@ describe("handleChatCredits", () => {
         accountId: "account-123",
       });
 
-      expect(mockGetCreditUsage).toHaveBeenCalledWith(USAGE, "gpt-4");
+      expect(mockGetCreditUsage).toHaveBeenCalledWith(USAGE, "gpt-4", undefined);
       expect(mockRecordCreditDeduction).toHaveBeenCalledWith({
         accountId: "account-123",
         creditsToDeduct: 5,
@@ -152,6 +152,53 @@ describe("handleChatCredits", () => {
       });
 
       expect(consoleSpy).toHaveBeenCalledWith("Failed to handle chat credits:", expect.any(Error));
+    });
+  });
+
+  describe("gateway cost + source extensions", () => {
+    it("forwards gatewayCostUsd to getCreditUsage when provided", async () => {
+      mockGetCreditUsage.mockResolvedValue(0.07);
+      mockRecordCreditDeduction.mockResolvedValue({ success: true, newBalance: 93 });
+
+      await handleChatCredits({
+        usage: USAGE,
+        model: "anthropic/claude-haiku-4.5",
+        accountId: "account-123",
+        gatewayCostUsd: 0.07,
+      });
+
+      expect(mockGetCreditUsage).toHaveBeenCalledWith(USAGE, "anthropic/claude-haiku-4.5", 0.07);
+    });
+
+    it("defaults source to 'web' when not provided (backwards compatible)", async () => {
+      mockGetCreditUsage.mockResolvedValue(0.05);
+      mockRecordCreditDeduction.mockResolvedValue({ success: true, newBalance: 95 });
+
+      await handleChatCredits({
+        usage: USAGE,
+        model: "gpt-4",
+        accountId: "account-123",
+      });
+
+      expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
+        expect.objectContaining({ source: "web" }),
+      );
+    });
+
+    it("propagates source='api' when caller is the chat workflow", async () => {
+      mockGetCreditUsage.mockResolvedValue(0.05);
+      mockRecordCreditDeduction.mockResolvedValue({ success: true, newBalance: 95 });
+
+      await handleChatCredits({
+        usage: USAGE,
+        model: "anthropic/claude-haiku-4.5",
+        accountId: "account-123",
+        source: "api",
+      });
+
+      expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
+        expect.objectContaining({ source: "api" }),
+      );
     });
   });
 });

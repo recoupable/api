@@ -535,6 +535,7 @@ describe("Chat Integration Tests", () => {
       expect(mockGetCreditUsage).toHaveBeenCalledWith(
         { promptTokens: 1000, completionTokens: 500 },
         "gpt-4",
+        undefined,
       );
       expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
         expect.objectContaining({

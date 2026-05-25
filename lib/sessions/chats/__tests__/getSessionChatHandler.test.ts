@@ -92,7 +92,10 @@ describe("getSessionChatHandler", () => {
       [{ type: "text", text: "hi" }],
       [{ type: "text", text: "hello" }],
     ]);
-    expect(selectChatMessages).toHaveBeenCalledWith({ chatId: "chat_1" });
+    expect(selectChatMessages).toHaveBeenCalledWith({
+      chatId: "chat_1",
+      orderBy: { createdAt: "asc" },
+    });
   });
 
   it("derives isStreaming=true from active_stream_id", async () => {
