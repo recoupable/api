@@ -10,6 +10,8 @@ import { hasAutoCommitChanges } from "@/lib/chat/auto-commit/hasAutoCommitChange
 import { runAutoCommit } from "@/lib/chat/auto-commit/runAutoCommit";
 import { buildCommitData } from "@/lib/chat/auto-commit/buildCommitData";
 import { sendCommitChunk } from "@/lib/chat/auto-commit/sendCommitChunk";
+import { upsertAssistantDataPart } from "@/lib/chat/upsertAssistantDataPart";
+import { updateChatMessageParts } from "@/lib/supabase/chat_messages/updateChatMessageParts";
 import type { AgentMessageMetadata } from "@/lib/agent/messageMetadata/AgentMessageMetadata";
 import type { DurableAgentContext } from "@/lib/agent/tools/AgentContext";
 
@@ -136,17 +138,15 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
 
       // Auto-commit + push after a natural finish. Skipped silently
       // when the session lacks repo identifiers or the sandbox is
-      // missing. The data-commit chunks (pending → resolved) are
-      // emitted to the live SSE stream so the chat UI can render a
-      // "Committing..." → "Committed at <sha>" affordance during the
-      // turn. Mirrors open-agents'
+      // missing. Mirrors open-agents'
       // `apps/web/app/workflows/chat.ts` canAutoCommit block.
       //
-      // NOTE: the data-commit chunks are NOT re-persisted onto the
-      // assistant message after this runs, so the UI affordance
-      // disappears on page refresh. The commit itself is permanent
-      // on GitHub. Re-persistence is tracked as a separate follow-up
-      // (see recoupable/api#605).
+      // The data-commit chunks are emitted live to the SSE stream
+      // (pending → resolved) AND the resolved chunk is merged into
+      // the assistant message's `parts` + re-persisted via
+      // `updateChatMessageParts`, so the `GitDataPartCard` UI
+      // renders on page refresh — not just during the live stream.
+      //
       // DurableAgentContext carries the raw VercelState; the auto-commit
       // helpers operate on the discriminated SandboxState union so they
       // can fan out to other sandbox backends in the future. Wrap with
@@ -178,11 +178,18 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
             repoName: input.repoName!,
             sandboxState,
           });
-          await sendCommitChunk(
-            writable,
-            commitPartId,
-            buildCommitData(commitResult, input.repoOwner!, input.repoName!),
-          );
+          const resolvedData = buildCommitData(commitResult, input.repoOwner!, input.repoName!);
+          await sendCommitChunk(writable, commitPartId, resolvedData);
+
+          // Persist the resolved data-commit part onto the assistant
+          // message so the `GitDataPartCard` UI renders on page
+          // refresh (chat_messages.parts is read on hydration).
+          const messageWithCommit = upsertAssistantDataPart(result.responseMessage, {
+            type: "data-commit",
+            id: commitPartId,
+            data: resolvedData,
+          });
+          await updateChatMessageParts(messageWithCommit.id, messageWithCommit.parts);
         }
       }
     }

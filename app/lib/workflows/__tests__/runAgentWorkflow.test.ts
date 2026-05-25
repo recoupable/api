@@ -9,6 +9,7 @@ import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import { hasAutoCommitChanges } from "@/lib/chat/auto-commit/hasAutoCommitChanges";
 import { runAutoCommit } from "@/lib/chat/auto-commit/runAutoCommit";
 import { sendCommitChunk } from "@/lib/chat/auto-commit/sendCommitChunk";
+import { updateChatMessageParts } from "@/lib/supabase/chat_messages/updateChatMessageParts";
 
 vi.mock("@/app/lib/workflows/runAgentStep", () => ({
   runAgentStep: vi.fn(),
@@ -36,6 +37,9 @@ vi.mock("@/lib/chat/auto-commit/runAutoCommit", () => ({
 }));
 vi.mock("@/lib/chat/auto-commit/sendCommitChunk", () => ({
   sendCommitChunk: vi.fn(),
+}));
+vi.mock("@/lib/supabase/chat_messages/updateChatMessageParts", () => ({
+  updateChatMessageParts: vi.fn(),
 }));
 // Captured writable stub so tests can assert closeChatStream got the
 // same instance the workflow body holds.
@@ -321,6 +325,29 @@ describe("runAgentWorkflow", () => {
           url: "https://github.com/recoupable/api/commit/abc123",
         }),
       );
+      // The resolved chunk is persisted onto the assistant message
+      // so the GitDataPartCard renders on page refresh.
+      expect(updateChatMessageParts).toHaveBeenCalledTimes(1);
+      const [persistedId, persistedParts] = vi.mocked(updateChatMessageParts).mock.calls[0]!;
+      expect(persistedId).toBe("asst-msg-1");
+      const persisted = persistedParts as Array<{ type: string; id?: string; data?: unknown }>;
+      const commitPart = persisted.find(p => p.type === "data-commit");
+      expect(commitPart?.id).toBe("asst-msg-1:commit");
+      expect(commitPart?.data).toMatchObject({
+        status: "success",
+        commitSha: "abc123",
+        url: "https://github.com/recoupable/api/commit/abc123",
+      });
+    });
+
+    it("does NOT call updateChatMessageParts when there are no changes (no chunk to persist)", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        responseMessage: responseMessageWithMetadata,
+      });
+      vi.mocked(hasAutoCommitChanges).mockResolvedValue(false);
+      await runAgentWorkflow(baseInput);
+      expect(updateChatMessageParts).not.toHaveBeenCalled();
     });
 
     it("skips auto-commit (no chunks) when the sandbox reports no changes", async () => {
