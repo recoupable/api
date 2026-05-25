@@ -62,6 +62,7 @@ const baseInput = {
   agentContext: {
     sandbox: { state: { type: "vercel" }, workingDirectory: "/sandbox/mono" },
   },
+  assistantMessageId: "asst-test-id",
 };
 
 describe("runAgentStep", () => {
@@ -223,5 +224,35 @@ describe("runAgentStep", () => {
 
     expect(result.responseMessage).toBeUndefined();
     expect(result.finishReason).toBe("stop");
+  });
+
+  it("forwards input.assistantMessageId into toUIMessageStream's generateMessageId", async () => {
+    const generateMessageIdCalls: unknown[] = [];
+    const streamResult = makeStreamResult();
+    // Spy on the options passed to toUIMessageStream to grab the generateMessageId fn.
+    const originalToUIMessageStream = streamResult.toUIMessageStream;
+    streamResult.toUIMessageStream = vi.fn(
+      (streamOpts: { generateMessageId?: unknown }) => {
+        generateMessageIdCalls.push(streamOpts.generateMessageId);
+        return (
+          originalToUIMessageStream as unknown as (
+            o: unknown,
+          ) => AsyncGenerator<unknown>
+        )(streamOpts);
+      },
+    ) as never;
+    vi.mocked(streamText).mockReturnValue(streamResult as never);
+    const { stream } = makeWritable();
+
+    await runAgentStep({
+      ...baseInput,
+      writable: stream,
+      assistantMessageId: "asst-from-workflow-xyz",
+    } as never);
+
+    expect(generateMessageIdCalls).toHaveLength(1);
+    const gen = generateMessageIdCalls[0] as () => string;
+    expect(typeof gen).toBe("function");
+    expect(gen()).toBe("asst-from-workflow-xyz");
   });
 });

@@ -1,5 +1,4 @@
 import {
-  generateId,
   streamText,
   convertToModelMessages,
   type UIMessage,
@@ -28,6 +27,23 @@ export type RunAgentStepInput = {
    * is added to `experimental_context` right before each model call.
    */
   agentContext: DurableAgentContext;
+  /**
+   * Stable id to assign to the assistant message produced by this
+   * step. Generated once in `runAgentWorkflow` so:
+   *
+   *   - Every chunk in this step's `toUIMessageStream` carries the
+   *     same id (the AI SDK threads it through).
+   *   - Future multi-step iterations of the agent loop reuse the
+   *     same id so a single conversational reply is one row in
+   *     `chat_messages` rather than fragmenting per tool-call cycle.
+   *   - Resume after tool-call interaction reattaches to the in-
+   *     progress assistant message rather than spawning a new one.
+   *
+   * Mirrors open-agents' `runAgentStep(messages, originalMessages,
+   * messageId, ...)` signature in
+   * `apps/web/app/workflows/chat.ts`.
+   */
+  assistantMessageId: string;
 };
 
 export type RunAgentStepResult = {
@@ -117,16 +133,6 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   // for the outer workflow body to forward into `persistAssistantMessage`.
   let responseMessage: UIMessage | undefined;
 
-  // Generate a stable id for the assistant message ONCE per step
-  // invocation. Without this, `toUIMessageStream` defaults the
-  // responseMessage `id` to `""` and every workflow run would collide
-  // on the `chat_messages.id` PK — `upsertChatMessage({onConflict:"id",
-  // ignoreDuplicates})` would report every assistant message after the
-  // first as a duplicate and skip the write. Open-agents mirrors this
-  // by passing `generateMessageId: () => messageId` to its
-  // `toUIMessageStream`.
-  const assistantMessageId = generateId();
-
   // Acquire the writer once and release in `finally` so a thrown chunk
   // doesn't leak the lock.
   const writer = input.writable.getWriter();
@@ -138,7 +144,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     const messageMetadata = buildMessageMetadataCallback({ modelId: input.modelId });
     for await (const part of result.toUIMessageStream({
       messageMetadata,
-      generateMessageId: () => assistantMessageId,
+      generateMessageId: () => input.assistantMessageId,
       onFinish: ({ responseMessage: finishedResponseMessage }) => {
         responseMessage = finishedResponseMessage;
       },

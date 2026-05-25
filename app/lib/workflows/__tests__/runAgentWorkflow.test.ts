@@ -3,6 +3,7 @@ import { runAgentWorkflow } from "@/app/lib/workflows/runAgentWorkflow";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
+import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 
 vi.mock("@/app/lib/workflows/runAgentStep", () => ({
@@ -13,6 +14,9 @@ vi.mock("@/lib/chat/clearChatActiveStream", () => ({
 }));
 vi.mock("@/app/lib/workflows/closeChatStream", () => ({
   closeChatStream: vi.fn(),
+}));
+vi.mock("@/app/lib/workflows/generateAssistantMessageId", () => ({
+  generateAssistantMessageId: vi.fn(),
 }));
 vi.mock("@/lib/chat/persistAssistantMessage", () => ({
   persistAssistantMessage: vi.fn(),
@@ -30,7 +34,10 @@ vi.mock("workflow", () => ({
   })),
 }));
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(generateAssistantMessageId).mockResolvedValue("asst-fresh-id");
+});
 
 const baseInput = {
   messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }] } as never],
@@ -122,5 +129,45 @@ describe("runAgentWorkflow", () => {
     // But cleanup steps still run via the try/finally
     expect(clearChatActiveStream).toHaveBeenCalledTimes(1);
     expect(closeChatStream).toHaveBeenCalledTimes(1);
+  });
+
+  it("generates a fresh assistantMessageId via the step and forwards it to runAgentStep", async () => {
+    vi.mocked(runAgentStep).mockResolvedValue({
+      finishReason: "stop",
+      responseMessage: undefined,
+    });
+
+    await runAgentWorkflow(baseInput);
+
+    expect(generateAssistantMessageId).toHaveBeenCalledTimes(1);
+    expect(runAgentStep).toHaveBeenCalledWith(
+      expect.objectContaining({ assistantMessageId: "asst-fresh-id" }),
+    );
+  });
+
+  it("reuses the latest assistant message id when resuming a tool-call turn (no fresh generation)", async () => {
+    vi.mocked(runAgentStep).mockResolvedValue({
+      finishReason: "stop",
+      responseMessage: undefined,
+    });
+
+    const resumingInput = {
+      ...baseInput,
+      messages: [
+        { id: "m1", role: "user", parts: [{ type: "text", text: "go" }] },
+        {
+          id: "asst-in-progress",
+          role: "assistant",
+          parts: [{ type: "text", text: "thinking..." }],
+        },
+      ] as never,
+    };
+
+    await runAgentWorkflow(resumingInput);
+
+    expect(generateAssistantMessageId).not.toHaveBeenCalled();
+    expect(runAgentStep).toHaveBeenCalledWith(
+      expect.objectContaining({ assistantMessageId: "asst-in-progress" }),
+    );
   });
 });
