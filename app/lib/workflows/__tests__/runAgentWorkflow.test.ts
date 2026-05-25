@@ -286,16 +286,22 @@ describe("runAgentWorkflow", () => {
       await runAgentWorkflow(baseInput);
 
       expect(autoCommitChatTurn).toHaveBeenCalledTimes(1);
-      expect(autoCommitChatTurn).toHaveBeenCalledWith({
-        writable: writableStub,
-        responseMessage: responseMessageWithMetadata,
-        finishReason: "stop",
-        sessionId: "session-1",
-        sessionTitle: "test session",
-        repoOwner: "recoupable",
-        repoName: "api",
-        sandboxState: { type: "vercel", ...baseInput.agentContext.sandbox.state },
-      });
+      // Workflow spreads `...input, ...result` into the call so any
+      // future fields are forwarded automatically. Only assert on the
+      // fields autoCommitChatTurn actually consumes — extra fields
+      // from input/result are fine to pass through.
+      expect(autoCommitChatTurn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          writable: writableStub,
+          responseMessage: responseMessageWithMetadata,
+          finishReason: "stop",
+          sessionId: "session-1",
+          sessionTitle: "test session",
+          repoOwner: "recoupable",
+          repoName: "api",
+          sandboxState: { type: "vercel", ...baseInput.agentContext.sandbox.state },
+        }),
+      );
     });
 
     it("wraps the raw VercelState with `type: 'vercel'` before forwarding", async () => {

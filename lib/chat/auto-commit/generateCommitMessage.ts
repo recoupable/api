@@ -39,7 +39,7 @@ export async function generateCommitMessage(
     }
 
     const result = await generateText({
-      model: "anthropic/claude-haiku-4.5",
+      model: "openai/gpt-5.4-nano",
       prompt: `Generate a concise git commit message for these changes. Use conventional commit format (e.g., "feat:", "fix:", "refactor:"). One line only, max ${COMMIT_MESSAGE_MAX_LENGTH} characters.
 
 Session context: ${sessionTitle}

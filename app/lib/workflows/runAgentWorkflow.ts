@@ -142,13 +142,9 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
         ? ({ type: "vercel", ...input.agentContext.sandbox.state } as const)
         : undefined;
       await autoCommitChatTurn({
+        ...input,
+        ...result,
         writable,
-        responseMessage: result.responseMessage,
-        finishReason: result.finishReason,
-        sessionId: input.sessionId,
-        sessionTitle: input.sessionTitle,
-        repoOwner: input.repoOwner,
-        repoName: input.repoName,
         sandboxState,
       });
     }
