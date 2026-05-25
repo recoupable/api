@@ -22,6 +22,35 @@ export type RunAgentStepInput = {
    * is added to `experimental_context` right before each model call.
    */
   agentContext: DurableAgentContext;
+  /**
+   * Stable id to assign to the assistant message produced by this
+   * step. Generated once in `runAgentWorkflow` so:
+   *
+   *   - Every chunk in this step's `toUIMessageStream` carries the
+   *     same id (the AI SDK threads it through).
+   *   - Future multi-step iterations of the agent loop reuse the
+   *     same id so a single conversational reply is one row in
+   *     `chat_messages` rather than fragmenting per tool-call cycle.
+   *   - Resume after tool-call interaction reattaches to the in-
+   *     progress assistant message rather than spawning a new one.
+   *
+   * Mirrors open-agents' `runAgentStep(messages, originalMessages,
+   * messageId, ...)` signature in
+   * `apps/web/app/workflows/chat.ts`.
+   */
+  assistantMessageId: string;
+};
+
+export type RunAgentStepResult = {
+  finishReason: string;
+  /**
+   * The assembled assistant message captured from
+   * `toUIMessageStream`'s `onFinish` callback. `undefined` if the
+   * stream finished without emitting one (e.g. an error path that
+   * short-circuits before any chunks land). Used by `runAgentWorkflow`
+   * to persist the final message to `chat_messages`.
+   */
+  responseMessage: UIMessage | undefined;
 };
 
 /**
@@ -38,9 +67,11 @@ export type RunAgentStepInput = {
  * of the tool surface ports in a follow-up PR.
  *
  * @param input - Messages + selected model + writable stream + agent context.
- * @returns finishReason from the model run.
+ * @returns `finishReason` from the model run plus the assembled
+ *   `responseMessage` (when one was emitted) so the caller can
+ *   persist it.
  */
-export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishReason: string }> {
+export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentStepResult> {
   "use step";
 
   console.log("[runAgentStep] start", {
@@ -91,6 +122,12 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
     }),
   });
 
+  // Capture the assembled assistant message via `onFinish` so the
+  // caller can persist it. Mirrors open-agents' `runAgentStep` which
+  // stashes `finishedResponseMessage` into a closure-scoped variable
+  // for the outer workflow body to forward into `persistAssistantMessage`.
+  let responseMessage: UIMessage | undefined;
+
   // Acquire the writer once and release in `finally` so a thrown chunk
   // doesn't leak the lock.
   const writer = input.writable.getWriter();
@@ -100,7 +137,13 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
     // shape so sandbox.recoupable.com sees the same metadata when cut
     // over to api's /api/chat/workflow.
     const messageMetadata = buildMessageMetadataCallback({ modelId: input.modelId });
-    for await (const part of result.toUIMessageStream({ messageMetadata })) {
+    for await (const part of result.toUIMessageStream({
+      messageMetadata,
+      generateMessageId: () => input.assistantMessageId,
+      onFinish: ({ responseMessage: finishedResponseMessage }) => {
+        responseMessage = finishedResponseMessage;
+      },
+    })) {
       await writer.write(part);
     }
   } finally {
@@ -108,6 +151,6 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
   }
 
   const finishReason = await result.finishReason;
-  console.log("[runAgentStep] finish", { finishReason });
-  return { finishReason };
+  console.log("[runAgentStep] finish", { finishReason, hasResponseMessage: !!responseMessage });
+  return { finishReason, responseMessage };
 }

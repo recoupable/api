@@ -12,15 +12,28 @@ vi.mock("@ai-sdk/gateway", () => ({
   gateway: vi.fn((modelId: string) => ({ modelId, __mock: "gateway" })),
 }));
 
-function makeStreamResult(opts?: { metadataCalls?: Array<unknown> }) {
+function makeStreamResult(opts?: {
+  metadataCalls?: Array<unknown>;
+  onFinishCalls?: Array<unknown>;
+  emittedResponseMessage?: unknown;
+}) {
   const calls = opts?.metadataCalls ?? [];
+  const onFinishCalls = opts?.onFinishCalls ?? [];
   return {
-    toUIMessageStream: vi.fn((streamOpts: { messageMetadata?: unknown }) => {
-      // Capture the callback so tests can inspect it
+    toUIMessageStream: vi.fn((streamOpts: { messageMetadata?: unknown; onFinish?: unknown }) => {
+      // Capture the callbacks so tests can inspect (and invoke) them
       calls.push(streamOpts.messageMetadata);
+      onFinishCalls.push(streamOpts.onFinish);
       return (async function* () {
         yield { type: "start" };
         yield { type: "finish" };
+        // Mirror the AI SDK contract: onFinish fires after the
+        // generator yields its last chunk with the assembled message.
+        if (typeof streamOpts.onFinish === "function" && opts?.emittedResponseMessage) {
+          (streamOpts.onFinish as (a: { responseMessage: unknown }) => void)({
+            responseMessage: opts.emittedResponseMessage,
+          });
+        }
       })();
     }),
     finishReason: Promise.resolve("stop"),
@@ -49,6 +62,7 @@ const baseInput = {
   agentContext: {
     sandbox: { state: { type: "vercel" }, workingDirectory: "/sandbox/mono" },
   },
+  assistantMessageId: "asst-test-id",
 };
 
 describe("runAgentStep", () => {
@@ -173,5 +187,68 @@ describe("runAgentStep", () => {
     const cb = captured[0] as (args: { part: { type: string } }) => unknown;
     expect(cb({ part: { type: "text-delta" } })).toBeUndefined();
     expect(cb({ part: { type: "start" } })).toBeUndefined();
+  });
+
+  it("wires an onFinish callback into toUIMessageStream", async () => {
+    const onFinishCalls: unknown[] = [];
+    vi.mocked(streamText).mockReturnValue(makeStreamResult({ onFinishCalls }) as never);
+    const { stream } = makeWritable();
+
+    await runAgentStep({ ...baseInput, writable: stream } as never);
+
+    expect(onFinishCalls).toHaveLength(1);
+    expect(typeof onFinishCalls[0]).toBe("function");
+  });
+
+  it("returns the responseMessage captured from onFinish", async () => {
+    const emittedResponseMessage = {
+      id: "assistant-msg-1",
+      role: "assistant",
+      parts: [{ type: "text", text: "Hello" }],
+    };
+    vi.mocked(streamText).mockReturnValue(makeStreamResult({ emittedResponseMessage }) as never);
+    const { stream } = makeWritable();
+
+    const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+
+    expect(result.responseMessage).toEqual(emittedResponseMessage);
+    expect(result.finishReason).toBe("stop");
+  });
+
+  it("returns responseMessage: undefined when onFinish never fires", async () => {
+    // Default makeStreamResult — no emittedResponseMessage, so onFinish is wired but never invoked
+    vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+    const { stream } = makeWritable();
+
+    const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+
+    expect(result.responseMessage).toBeUndefined();
+    expect(result.finishReason).toBe("stop");
+  });
+
+  it("forwards input.assistantMessageId into toUIMessageStream's generateMessageId", async () => {
+    const generateMessageIdCalls: unknown[] = [];
+    const streamResult = makeStreamResult();
+    // Spy on the options passed to toUIMessageStream to grab the generateMessageId fn.
+    const originalToUIMessageStream = streamResult.toUIMessageStream;
+    streamResult.toUIMessageStream = vi.fn((streamOpts: { generateMessageId?: unknown }) => {
+      generateMessageIdCalls.push(streamOpts.generateMessageId);
+      return (originalToUIMessageStream as unknown as (o: unknown) => AsyncGenerator<unknown>)(
+        streamOpts,
+      );
+    }) as never;
+    vi.mocked(streamText).mockReturnValue(streamResult as never);
+    const { stream } = makeWritable();
+
+    await runAgentStep({
+      ...baseInput,
+      writable: stream,
+      assistantMessageId: "asst-from-workflow-xyz",
+    } as never);
+
+    expect(generateMessageIdCalls).toHaveLength(1);
+    const gen = generateMessageIdCalls[0] as () => string;
+    expect(typeof gen).toBe("function");
+    expect(gen()).toBe("asst-from-workflow-xyz");
   });
 });
