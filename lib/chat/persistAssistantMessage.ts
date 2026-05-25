@@ -1,0 +1,58 @@
+import { upsertChatMessage } from "@/lib/supabase/chat_messages/upsertChatMessage";
+import { updateChat } from "@/lib/supabase/chats/updateChat";
+
+type AssistantMessage = {
+  id: string;
+  role: string;
+  parts: Array<{ type: string } & Record<string, unknown>>;
+} & Record<string, unknown>;
+
+/**
+ * Fire-and-forget persistence of the final assistant message at the
+ * end of a chat-workflow run. Mirrors open-agents'
+ * `persistAssistantMessage` step in
+ * `apps/web/app/workflows/chat-post-finish.ts` and closes the
+ * silent-data-loss gap the recoup-api cutover introduced — without
+ * this call the assistant response is streamed to the client but
+ * never written to `chat_messages`, so a page refresh after the
+ * stream completes wipes the message.
+ *
+ * Uses `upsertChatMessage(... { onConflict: "id", ignoreDuplicates })`
+ * so a workflow that's restarted (replay, recovery) doesn't
+ * double-insert. On a fresh insert we also touch the chat's
+ * `updated_at` so the sidebar sort + "last active" badges reflect
+ * the new activity.
+ *
+ * Title generation lives in `persistLatestUserMessage` (the first
+ * user message is canonical for chat titles) — this function
+ * deliberately does NOT update the chat title.
+ *
+ * Errors are caught and logged. Contract is "schedule it and forget"
+ * — never block the workflow or surface failures to the UI.
+ *
+ * @param chatId - Target chat row.
+ * @param message - The assembled assistant message (typically from
+ *   `toUIMessageStream`'s `onFinish.responseMessage`).
+ */
+export async function persistAssistantMessage(
+  chatId: string,
+  message: AssistantMessage,
+): Promise<void> {
+  try {
+    if (!message || message.role !== "assistant") return;
+
+    const inserted = await upsertChatMessage({
+      id: message.id,
+      chat_id: chatId,
+      role: "assistant",
+      parts: message as never,
+    });
+
+    if (!inserted.ok) return;
+    if (inserted.isDuplicate || inserted.row === null) return;
+
+    await updateChat({ id: chatId }, { updated_at: new Date().toISOString() });
+  } catch (error) {
+    console.error("[persistAssistantMessage] error:", error);
+  }
+}

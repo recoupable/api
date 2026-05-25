@@ -24,6 +24,18 @@ export type RunAgentStepInput = {
   agentContext: DurableAgentContext;
 };
 
+export type RunAgentStepResult = {
+  finishReason: string;
+  /**
+   * The assembled assistant message captured from
+   * `toUIMessageStream`'s `onFinish` callback. `undefined` if the
+   * stream finished without emitting one (e.g. an error path that
+   * short-circuits before any chunks land). Used by `runAgentWorkflow`
+   * to persist the final message to `chat_messages`.
+   */
+  responseMessage: UIMessage | undefined;
+};
+
 /**
  * One LLM turn (with internal tool-call iteration) in the chat workflow.
  * Runs as a Vercel Workflow `"use step"` so:
@@ -38,9 +50,11 @@ export type RunAgentStepInput = {
  * of the tool surface ports in a follow-up PR.
  *
  * @param input - Messages + selected model + writable stream + agent context.
- * @returns finishReason from the model run.
+ * @returns `finishReason` from the model run plus the assembled
+ *   `responseMessage` (when one was emitted) so the caller can
+ *   persist it.
  */
-export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishReason: string }> {
+export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentStepResult> {
   "use step";
 
   console.log("[runAgentStep] start", {
@@ -91,6 +105,12 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
     }),
   });
 
+  // Capture the assembled assistant message via `onFinish` so the
+  // caller can persist it. Mirrors open-agents' `runAgentStep` which
+  // stashes `finishedResponseMessage` into a closure-scoped variable
+  // for the outer workflow body to forward into `persistAssistantMessage`.
+  let responseMessage: UIMessage | undefined;
+
   // Acquire the writer once and release in `finally` so a thrown chunk
   // doesn't leak the lock.
   const writer = input.writable.getWriter();
@@ -100,7 +120,12 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
     // shape so sandbox.recoupable.com sees the same metadata when cut
     // over to api's /api/chat/workflow.
     const messageMetadata = buildMessageMetadataCallback({ modelId: input.modelId });
-    for await (const part of result.toUIMessageStream({ messageMetadata })) {
+    for await (const part of result.toUIMessageStream({
+      messageMetadata,
+      onFinish: ({ responseMessage: finishedResponseMessage }) => {
+        responseMessage = finishedResponseMessage;
+      },
+    })) {
       await writer.write(part);
     }
   } finally {
@@ -108,6 +133,6 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<{ finishRe
   }
 
   const finishReason = await result.finishReason;
-  console.log("[runAgentStep] finish", { finishReason });
-  return { finishReason };
+  console.log("[runAgentStep] finish", { finishReason, hasResponseMessage: !!responseMessage });
+  return { finishReason, responseMessage };
 }

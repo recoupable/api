@@ -3,6 +3,7 @@ import type { UIMessage, UIMessageChunk } from "ai";
 import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
+import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import type { DurableAgentContext } from "@/lib/agent/tools/AgentContext";
 
 export type RunAgentWorkflowInput = {
@@ -56,6 +57,17 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
       agentContext: input.agentContext,
     });
     console.log("[runAgentWorkflow] finish", { finishReason: result.finishReason });
+
+    // Persist the final assistant message to `chat_messages` so a page
+    // refresh after the stream completes still shows the reply. Without
+    // this, the recoup-api cutover silently drops assistant responses —
+    // they stream to the client over SSE but never land in the DB.
+    // `persistAssistantMessage` is fire-and-forget by contract; it
+    // swallows its own errors so a transient DB failure here doesn't
+    // mark the workflow run failed.
+    if (result.responseMessage) {
+      await persistAssistantMessage(input.chatId, result.responseMessage);
+    }
   } finally {
     // Run two cleanup steps in parallel:
     //   1) `clearChatActiveStream` — CAS-gated DB clear of the chat's
