@@ -39,6 +39,22 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 }));
 vi.mock("@/lib/uuid/generateUUID", () => ({ default: vi.fn(() => "deterministic-uuid") }));
 
+// `after()` only runs inside a real Next.js request scope, but these tests
+// drive the handler directly with a mock NextRequest — no async-storage
+// context is set up. Stub it as a noop so the handler's post-stream
+// scheduling doesn't throw the "outside a request scope" error. The
+// scheduled cleanup itself is covered by
+// clearChatActiveStreamWhenWorkflowFinishes.test.ts.
+vi.mock("next/server", async () => {
+  const actual =
+    await vi.importActual<typeof import("next/server")>("next/server");
+  return { ...actual, after: vi.fn() };
+});
+
+vi.mock("@/lib/chat/clearChatActiveStreamWhenWorkflowFinishes", () => ({
+  clearChatActiveStreamWhenWorkflowFinishes: vi.fn(),
+}));
+
 // Stub sandbox connection + skill discovery so handler tests don't actually
 // try to talk to Vercel Sandbox / parse SKILL.md files. The handler treats
 // discovery failures as non-fatal (empty catalog), but we mock to keep tests fast.
