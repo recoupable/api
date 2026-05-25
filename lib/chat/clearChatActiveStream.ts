@@ -1,7 +1,11 @@
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
 
 const MAX_ATTEMPTS = 3;
-const RETRY_DELAY_MS = 500;
+// 50ms picked to match open-agents' `ACTIVE_STREAM_CLEAR_RETRY_DELAY_MS`
+// — a transient Supabase blip costs at most ~150ms total before the
+// third attempt, keeping the cleanup tail well under the human-
+// perceptible ~250ms threshold.
+const RETRY_DELAY_MS = 50;
 
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => {
