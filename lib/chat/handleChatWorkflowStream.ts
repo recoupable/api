@@ -122,6 +122,7 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
       messages: validated.messages,
       chatId: validated.chatId,
       sessionId: validated.sessionId,
+      accountId: validated.accountId,
       modelId,
       agentContext: {
         sandbox: {

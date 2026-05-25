@@ -1,16 +1,31 @@
 import { getWorkflowMetadata, getWritable } from "workflow";
-import type { UIMessage, UIMessageChunk } from "ai";
+import type { LanguageModelUsage, UIMessage, UIMessageChunk } from "ai";
 import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
+import { handleChatCredits } from "@/lib/credits/handleChatCredits";
+import type { AgentMessageMetadata } from "@/lib/agent/messageMetadata/AgentMessageMetadata";
 import type { DurableAgentContext } from "@/lib/agent/tools/AgentContext";
+
+const ZERO_USAGE: LanguageModelUsage = {
+  inputTokens: 0,
+  cachedInputTokens: 0,
+  outputTokens: 0,
+} as LanguageModelUsage;
 
 export type RunAgentWorkflowInput = {
   messages: UIMessage[];
   chatId: string;
   sessionId: string;
+  /**
+   * Authenticated account whose wallet absorbs the turn's cost. Resolved by
+   * the route handler via `validateChatWorkflow` so we never trust a
+   * caller-supplied id. Threaded into `recordChatUsage` after the assistant
+   * message is persisted.
+   */
+  accountId: string;
   modelId: string;
   /**
    * JSON-serializable subset of AgentContext that survives the durable
@@ -82,6 +97,24 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
     // mark the workflow run failed.
     if (result.responseMessage) {
       await persistAssistantMessage(input.chatId, result.responseMessage);
+
+      // Charge the account for this turn. Atomic wallet debit + audit
+      // row insert via the `deduct_credits_with_audit` Postgres function
+      // (wired into `handleChatCredits` → `recordCreditDeduction`).
+      // Fire-and-forget by contract; transient credits-table failures
+      // must not abort the chat workflow. Mirrors open-agents'
+      // `recordWorkflowUsage` main-agent path
+      // (apps/web/app/workflows/chat-post-finish.ts) and reuses the
+      // same `handleChatCredits` orchestrator that `handleChatStream`
+      // already uses for the non-workflow chat path.
+      const metadata = result.responseMessage.metadata as AgentMessageMetadata | undefined;
+      await handleChatCredits({
+        accountId: input.accountId,
+        model: input.modelId,
+        source: "api",
+        gatewayCostUsd: metadata?.totalMessageCost,
+        usage: metadata?.totalMessageUsage ?? ZERO_USAGE,
+      });
     }
   } finally {
     // Run two cleanup steps in parallel:
