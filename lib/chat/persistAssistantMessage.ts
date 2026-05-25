@@ -1,11 +1,18 @@
 import { upsertChatMessage } from "@/lib/supabase/chat_messages/upsertChatMessage";
 import { updateChat } from "@/lib/supabase/chats/updateChat";
 
+/**
+ * Minimal duck-type shape we read off the assistant message. Both AI
+ * SDK's `UIMessage` and the in-test fixtures structurally satisfy it.
+ * Kept intentionally loose because the row we write to
+ * `chat_messages.parts` is `jsonb` — Supabase persists whatever the
+ * message looks like.
+ */
 type AssistantMessage = {
   id: string;
   role: string;
-  parts: Array<{ type: string } & Record<string, unknown>>;
-} & Record<string, unknown>;
+  parts: ReadonlyArray<unknown>;
+};
 
 /**
  * Fire-and-forget persistence of the final assistant message at the
