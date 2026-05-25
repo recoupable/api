@@ -17,7 +17,15 @@ export interface DeductCreditsAuditEvent {
   tool_call_count?: number;
 }
 
-export type DeductCreditsWithAuditResult = { ok: true } | { ok: false; error: string };
+export interface DeductCreditsWithAuditResult {
+  ok: boolean;
+  /**
+   * Present only when `ok === false`. Kept optional rather than as a
+   * discriminated union so callers can read `result.error` without
+   * tripping a narrowing edge case in the Next.js 16 type checker.
+   */
+  error?: string;
+}
 
 /**
  * Atomically debits `credits_usage.remaining_credits` and inserts the
