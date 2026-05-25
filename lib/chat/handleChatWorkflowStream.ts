@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
 import { start, getRun } from "workflow/api";
+import { clearChatActiveStreamWhenWorkflowFinishes } from "@/lib/chat/clearChatActiveStreamWhenWorkflowFinishes";
 import { validateChatWorkflow } from "@/lib/chat/validateChatWorkflow";
 import { maybeResumeChatStream } from "@/lib/chat/maybeResumeChatStream";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
@@ -154,6 +155,13 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
     }
     return errorResponse("Another workflow is already running for this chat", 409);
   }
+
+  // Schedule a post-stream cleanup that clears `chats.active_stream_id`
+  // once the workflow finishes (success, failure, or cancel). The chat
+  // UI uses that field as its "still streaming" probe; without this
+  // clear, the client keeps auto-resuming the stream and `chat.status`
+  // stays in `submitted` so the send button never returns.
+  after(() => clearChatActiveStreamWhenWorkflowFinishes({ chatId: validated.chatId, run }));
 
   return createUIMessageStreamResponse({
     stream: run.getReadable<UIMessageChunk>(),
