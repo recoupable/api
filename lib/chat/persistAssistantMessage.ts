@@ -26,9 +26,12 @@ type AssistantMessage = {
  *
  * Uses `upsertChatMessage(... { onConflict: "id", ignoreDuplicates })`
  * so a workflow that's restarted (replay, recovery) doesn't
- * double-insert. On a fresh insert we also touch the chat's
- * `updated_at` so the sidebar sort + "last active" badges reflect
- * the new activity.
+ * double-insert. On a fresh insert we also bump
+ * `last_assistant_message_at` (drives the sidebar `hasUnread` badge
+ * in `getChatSummaries` — `lastAssistantMessageAt > lastReadAt`) and
+ * touch `updated_at` so the sidebar sort surfaces the chat. Matches
+ * open-agents' `updateChatAssistantActivity` which sets both columns
+ * to the same timestamp.
  *
  * Title generation lives in `persistLatestUserMessage` (the first
  * user message is canonical for chat titles) — this function
@@ -59,7 +62,11 @@ export async function persistAssistantMessage(
     if (!inserted.ok) return;
     if (inserted.isDuplicate || inserted.row === null) return;
 
-    await updateChat({ id: chatId }, { updated_at: new Date().toISOString() });
+    const activityAt = new Date().toISOString();
+    await updateChat(
+      { id: chatId },
+      { updated_at: activityAt, last_assistant_message_at: activityAt },
+    );
   } catch (error) {
     console.error("[persistAssistantMessage] error:", error);
   }

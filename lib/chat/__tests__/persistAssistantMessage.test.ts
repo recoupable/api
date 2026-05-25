@@ -65,6 +65,40 @@ describe("persistAssistantMessage", () => {
     );
   });
 
+  it("bumps last_assistant_message_at on a fresh insert (drives sidebar unread badge)", async () => {
+    vi.mocked(upsertChatMessage).mockResolvedValue({
+      ok: true,
+      row: { id: ASSISTANT_ID } as never,
+      isDuplicate: false,
+    });
+
+    await persistAssistantMessage(CHAT_ID, buildAssistantMessage());
+
+    expect(updateChat).toHaveBeenCalledWith(
+      { id: CHAT_ID },
+      expect.objectContaining({
+        last_assistant_message_at: expect.any(String),
+      }),
+    );
+  });
+
+  it("uses the same timestamp for updated_at and last_assistant_message_at (matches open-agents)", async () => {
+    vi.mocked(upsertChatMessage).mockResolvedValue({
+      ok: true,
+      row: { id: ASSISTANT_ID } as never,
+      isDuplicate: false,
+    });
+
+    await persistAssistantMessage(CHAT_ID, buildAssistantMessage());
+
+    const updateArgs = vi.mocked(updateChat).mock.calls[0]?.[1] as {
+      updated_at?: string;
+      last_assistant_message_at?: string;
+    };
+    expect(updateArgs.updated_at).toBeDefined();
+    expect(updateArgs.last_assistant_message_at).toBe(updateArgs.updated_at);
+  });
+
   it("does NOT touch updated_at on duplicate (workflow replay)", async () => {
     vi.mocked(upsertChatMessage).mockResolvedValue({
       ok: true,
