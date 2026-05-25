@@ -25,6 +25,7 @@ export async function updateChatMessageParts(
   id: string,
   parts: unknown,
 ): Promise<UpdateChatMessagePartsResult> {
+  "use step";
   try {
     const { error } = await supabase
       .from("chat_messages")

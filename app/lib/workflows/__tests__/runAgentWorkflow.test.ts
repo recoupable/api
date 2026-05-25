@@ -326,12 +326,21 @@ describe("runAgentWorkflow", () => {
         }),
       );
       // The resolved chunk is persisted onto the assistant message
-      // so the GitDataPartCard renders on page refresh.
+      // so the GitDataPartCard renders on page refresh. We persist
+      // the WHOLE message object (matching persistAssistantMessage's
+      // `parts: message as never` storage convention), with the
+      // data-commit chunk merged into its inner parts array.
       expect(updateChatMessageParts).toHaveBeenCalledTimes(1);
-      const [persistedId, persistedParts] = vi.mocked(updateChatMessageParts).mock.calls[0]!;
+      const [persistedId, persistedMessage] = vi.mocked(updateChatMessageParts).mock.calls[0]!;
       expect(persistedId).toBe("asst-msg-1");
-      const persisted = persistedParts as Array<{ type: string; id?: string; data?: unknown }>;
-      const commitPart = persisted.find(p => p.type === "data-commit");
+      const message = persistedMessage as {
+        id: string;
+        role: string;
+        parts: Array<{ type: string; id?: string; data?: unknown }>;
+      };
+      expect(message.id).toBe("asst-msg-1");
+      expect(message.role).toBe("assistant");
+      const commitPart = message.parts.find(p => p.type === "data-commit");
       expect(commitPart?.id).toBe("asst-msg-1:commit");
       expect(commitPart?.data).toMatchObject({
         status: "success",

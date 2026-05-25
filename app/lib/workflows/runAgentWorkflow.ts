@@ -189,7 +189,11 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
             id: commitPartId,
             data: resolvedData,
           });
-          await updateChatMessageParts(messageWithCommit.id, messageWithCommit.parts);
+          // chat_messages.parts stores the WHOLE message object
+          // (matching persistAssistantMessage's `parts: message as
+          // never` convention) — pass the merged message, not just
+          // the inner `.parts` array.
+          await updateChatMessageParts(messageWithCommit.id, messageWithCommit);
         }
       }
     }
