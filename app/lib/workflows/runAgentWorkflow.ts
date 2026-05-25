@@ -5,12 +5,20 @@ import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistan
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
+import { recordChatUsage } from "@/app/lib/workflows/recordChatUsage";
 import type { DurableAgentContext } from "@/lib/agent/tools/AgentContext";
 
 export type RunAgentWorkflowInput = {
   messages: UIMessage[];
   chatId: string;
   sessionId: string;
+  /**
+   * Authenticated account whose wallet absorbs the turn's cost. Resolved by
+   * the route handler via `validateChatWorkflow` so we never trust a
+   * caller-supplied id. Threaded into `recordChatUsage` after the assistant
+   * message is persisted.
+   */
+  accountId: string;
   modelId: string;
   /**
    * JSON-serializable subset of AgentContext that survives the durable
@@ -82,6 +90,18 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
     // mark the workflow run failed.
     if (result.responseMessage) {
       await persistAssistantMessage(input.chatId, result.responseMessage);
+
+      // Charge the account for this turn. Atomic wallet debit + audit
+      // row insert via the `deduct_credits_with_audit` Postgres function
+      // — see `recordChatUsage`. Fire-and-forget by contract; transient
+      // credits-table failures must not abort the chat workflow.
+      // Mirrors open-agents' `recordWorkflowUsage` main-agent path
+      // (apps/web/app/workflows/chat-post-finish.ts).
+      await recordChatUsage({
+        accountId: input.accountId,
+        modelId: input.modelId,
+        responseMessage: result.responseMessage,
+      });
     }
   } finally {
     // Run two cleanup steps in parallel:

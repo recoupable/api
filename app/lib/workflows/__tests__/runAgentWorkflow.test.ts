@@ -5,6 +5,7 @@ import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
+import { recordChatUsage } from "@/app/lib/workflows/recordChatUsage";
 
 vi.mock("@/app/lib/workflows/runAgentStep", () => ({
   runAgentStep: vi.fn(),
@@ -20,6 +21,9 @@ vi.mock("@/app/lib/workflows/generateAssistantMessageId", () => ({
 }));
 vi.mock("@/lib/chat/persistAssistantMessage", () => ({
   persistAssistantMessage: vi.fn(),
+}));
+vi.mock("@/app/lib/workflows/recordChatUsage", () => ({
+  recordChatUsage: vi.fn(),
 }));
 // Captured writable stub so tests can assert closeChatStream got the
 // same instance the workflow body holds.
@@ -43,6 +47,7 @@ const baseInput = {
   messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }] } as never],
   chatId: "chat-1",
   sessionId: "session-1",
+  accountId: "acc-1",
   modelId: "anthropic/claude-haiku-4.5",
   agentContext: {
     sandbox: { state: { type: "vercel" }, workingDirectory: "/sandbox/mono" },
@@ -169,5 +174,53 @@ describe("runAgentWorkflow", () => {
     expect(runAgentStep).toHaveBeenCalledWith(
       expect.objectContaining({ assistantMessageId: "asst-in-progress" }),
     );
+  });
+
+  it("calls recordChatUsage with accountId/modelId/responseMessage when runAgentStep returns a message", async () => {
+    const responseMessage = {
+      id: "assistant-msg-xyz",
+      role: "assistant",
+      parts: [{ type: "text", text: "Hello!" }],
+      metadata: {
+        totalMessageCost: 0.07,
+        totalMessageUsage: {
+          inputTokens: 100,
+          cachedInputTokens: 10,
+          outputTokens: 20,
+        },
+      },
+    };
+    vi.mocked(runAgentStep).mockResolvedValue({
+      finishReason: "stop",
+      responseMessage: responseMessage as never,
+    });
+
+    await runAgentWorkflow(baseInput);
+
+    expect(recordChatUsage).toHaveBeenCalledTimes(1);
+    expect(recordChatUsage).toHaveBeenCalledWith({
+      accountId: "acc-1",
+      modelId: "anthropic/claude-haiku-4.5",
+      responseMessage,
+    });
+  });
+
+  it("does NOT call recordChatUsage when runAgentStep returns no responseMessage", async () => {
+    vi.mocked(runAgentStep).mockResolvedValue({
+      finishReason: "stop",
+      responseMessage: undefined,
+    });
+
+    await runAgentWorkflow(baseInput);
+
+    expect(recordChatUsage).not.toHaveBeenCalled();
+  });
+
+  it("does NOT call recordChatUsage when runAgentStep throws (no message to bill)", async () => {
+    vi.mocked(runAgentStep).mockRejectedValue(new Error("model exploded"));
+
+    await expect(runAgentWorkflow(baseInput)).rejects.toThrow("model exploded");
+
+    expect(recordChatUsage).not.toHaveBeenCalled();
   });
 });
