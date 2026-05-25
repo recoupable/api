@@ -45,6 +45,7 @@ export async function persistAssistantMessage(
   chatId: string,
   message: AssistantMessage,
 ): Promise<void> {
+  "use step";
   try {
     if (!message || message.role !== "assistant") return;
 
