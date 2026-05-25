@@ -35,6 +35,7 @@ interface RecordCreditDeductionResult {
 export const recordCreditDeduction = async (
   params: RecordCreditDeductionParams,
 ): Promise<RecordCreditDeductionResult> => {
+  "use step";
   try {
     const result = await deductCreditsWithAudit({
       accountId: params.accountId,
