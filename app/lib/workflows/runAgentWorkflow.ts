@@ -4,7 +4,6 @@ import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
-import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
 import type { AgentMessageMetadata } from "@/lib/agent/messageMetadata/AgentMessageMetadata";
@@ -95,33 +94,19 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
 
   try {
     const result = await runAgentStep({
-      messages: input.messages,
-      modelId: input.modelId,
+      ...input,
       writable,
-      agentContext: input.agentContext,
       assistantMessageId,
     });
     console.log("[runAgentWorkflow] finish", { finishReason: result.finishReason });
 
-    // Persist the final assistant message to `chat_messages` so a page
-    // refresh after the stream completes still shows the reply. Without
-    // this, the recoup-api cutover silently drops assistant responses —
-    // they stream to the client over SSE but never land in the DB.
-    // `persistAssistantMessage` is fire-and-forget by contract; it
-    // swallows its own errors so a transient DB failure here doesn't
-    // mark the workflow run failed.
+    // The assistant message is persisted per step inside `runAgentStep`, so
+    // it's not written here. We still use the final `responseMessage` to
+    // charge the account for this turn: atomic wallet debit + audit row via
+    // the `deduct_credits_with_audit` Postgres function (`handleChatCredits`
+    // → `recordCreditDeduction`). Fire-and-forget — transient credits-table
+    // failures must not abort the chat workflow.
     if (result.responseMessage) {
-      await persistAssistantMessage(input.chatId, result.responseMessage);
-
-      // Charge the account for this turn. Atomic wallet debit + audit
-      // row insert via the `deduct_credits_with_audit` Postgres function
-      // (wired into `handleChatCredits` → `recordCreditDeduction`).
-      // Fire-and-forget by contract; transient credits-table failures
-      // must not abort the chat workflow. Mirrors open-agents'
-      // `recordWorkflowUsage` main-agent path
-      // (apps/web/app/workflows/chat-post-finish.ts) and reuses the
-      // same `handleChatCredits` orchestrator that `handleChatStream`
-      // already uses for the non-workflow chat path.
       const metadata = result.responseMessage.metadata as AgentMessageMetadata | undefined;
       await handleChatCredits({
         accountId: input.accountId,

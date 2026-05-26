@@ -1,4 +1,10 @@
-import { streamText, convertToModelMessages, type UIMessage, type UIMessageChunk } from "ai";
+import {
+  streamText,
+  convertToModelMessages,
+  createUIMessageStream,
+  type UIMessage,
+  type UIMessageChunk,
+} from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { agentCustomInstructions } from "@/lib/chat/agentCustomInstructions";
 import { buildAgentSystemPrompt } from "@/lib/chat/buildAgentSystemPrompt";
@@ -8,11 +14,14 @@ import type { AgentContext, DurableAgentContext } from "@/lib/agent/tools/AgentC
 import { buildMessageMetadataCallback } from "@/lib/agent/messageMetadata/buildMessageMetadataCallback";
 import { addCacheControlToTools } from "@/lib/agent/contextManagement/addCacheControlToTools";
 import { addCacheControlToMessages } from "@/lib/agent/contextManagement/addCacheControlToMessages";
+import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 
 export type RunAgentStepInput = {
   messages: UIMessage[];
   modelId: string;
   writable: WritableStream<UIMessageChunk>;
+  /** Target chat for persisting the assistant message as it streams. */
+  chatId: string;
   /**
    * The JSON-serializable agent context that survives the durable
    * workflow input. `runAgentStep` widens it into a full `AgentContext`
@@ -44,11 +53,10 @@ export type RunAgentStepInput = {
 export type RunAgentStepResult = {
   finishReason: string;
   /**
-   * The assembled assistant message captured from
-   * `toUIMessageStream`'s `onFinish` callback. `undefined` if the
-   * stream finished without emitting one (e.g. an error path that
-   * short-circuits before any chunks land). Used by `runAgentWorkflow`
-   * to persist the final message to `chat_messages`.
+   * The assembled assistant message captured from the stream's `onFinish`.
+   * `undefined` if the stream finished without emitting one. Per-step
+   * persistence happens inside this function; this is returned so
+   * `runAgentWorkflow` can charge credits from `responseMessage.metadata`.
    */
   responseMessage: UIMessage | undefined;
 };
@@ -67,9 +75,7 @@ export type RunAgentStepResult = {
  * of the tool surface ports in a follow-up PR.
  *
  * @param input - Messages + selected model + writable stream + agent context.
- * @returns `finishReason` from the model run plus the assembled
- *   `responseMessage` (when one was emitted) so the caller can
- *   persist it.
+ * @returns finishReason plus the assembled assistant message.
  */
 export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentStepResult> {
   "use step";
@@ -122,33 +128,38 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     }),
   });
 
-  // Capture the assembled assistant message via `onFinish` so the
-  // caller can persist it. Mirrors open-agents' `runAgentStep` which
-  // stashes `finishedResponseMessage` into a closure-scoped variable
-  // for the outer workflow body to forward into `persistAssistantMessage`.
-  let responseMessage: UIMessage | undefined;
+  // `messageMetadata` emits {modelId, usage, cost} chunks the UI renders as
+  // model/cost badges.
+  const messageMetadata = buildMessageMetadataCallback({ modelId: input.modelId });
 
-  // Acquire the writer once and release in `finally` so a thrown chunk
-  // doesn't leak the lock.
-  const writer = input.writable.getWriter();
-  try {
-    // `messageMetadata` emits {modelId, usage, cost} chunks the UI
-    // renders as model/cost badges. Mirrors open-agents' chat workflow
-    // shape so sandbox.recoupable.com sees the same metadata when cut
-    // over to api's /api/chat/workflow.
-    const messageMetadata = buildMessageMetadataCallback({ modelId: input.modelId });
-    for await (const part of result.toUIMessageStream({
-      messageMetadata,
-      generateMessageId: () => input.assistantMessageId,
-      onFinish: ({ responseMessage: finishedResponseMessage }) => {
-        responseMessage = finishedResponseMessage;
-      },
-    })) {
-      await writer.write(part);
-    }
-  } finally {
-    writer.releaseLock();
-  }
+  // createUIMessageStream exposes onStepFinish/onFinish (toUIMessageStream
+  // only has onFinish), so the assistant message is persisted after every
+  // step — a stopped or crashed turn keeps the partial reply rather than
+  // dropping it. The stable assistantMessageId makes each upsert overwrite
+  // the same row. The final message is also captured so runAgentWorkflow can
+  // charge credits from its metadata.
+  let responseMessage: UIMessage | undefined;
+  const uiStream = createUIMessageStream<UIMessage>({
+    generateId: () => input.assistantMessageId,
+    onStepFinish: ({ responseMessage: stepMessage }) =>
+      persistAssistantMessage(input.chatId, stepMessage),
+    onFinish: ({ responseMessage: finalMessage }) => {
+      responseMessage = finalMessage;
+      return persistAssistantMessage(input.chatId, finalMessage);
+    },
+    execute: ({ writer }) => {
+      writer.merge(
+        result.toUIMessageStream({
+          messageMetadata,
+          generateMessageId: () => input.assistantMessageId,
+        }),
+      );
+    },
+  });
+
+  // preventClose/preventAbort: runAgentWorkflow's finally owns the writable's
+  // lifecycle (closeChatStream), so don't close or abort it here.
+  await uiStream.pipeTo(input.writable, { preventClose: true, preventAbort: true });
 
   const finishReason = await result.finishReason;
   console.log("[runAgentStep] finish", { finishReason, hasResponseMessage: !!responseMessage });
