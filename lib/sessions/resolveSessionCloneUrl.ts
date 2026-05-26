@@ -2,9 +2,17 @@ import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDet
 import { ensurePersonalRepo } from "@/lib/recoupable/ensurePersonalRepo";
 import type { AuthContext } from "@/lib/auth/validateAuthContext";
 
-export type ResolveSessionCloneUrlResult =
-  | { ok: true; cloneUrl: string | null }
-  | { ok: false; error: string };
+/**
+ * Flat shape (not a discriminated union) — Next.js 16's `next build`
+ * doesn't narrow `{ ok: true; cloneUrl } | { ok: false; error }`
+ * through `if (!result.ok)` cleanly, so we make `error` optional and
+ * the caller checks `ok` plus reads `error` directly.
+ */
+export interface ResolveSessionCloneUrlResult {
+  ok: boolean;
+  cloneUrl: string | null;
+  error?: string;
+}
 
 /**
  * Determines the final `clone_url` for a new session row.
@@ -43,6 +51,7 @@ export async function resolveSessionCloneUrl(params: {
   if (!account) {
     return {
       ok: false,
+      cloneUrl: null,
       error: "Account not found for personal-session provisioning",
     };
   }
@@ -51,6 +60,7 @@ export async function resolveSessionCloneUrl(params: {
   if (!accountName) {
     return {
       ok: false,
+      cloneUrl: null,
       error: "Account has no name or email to derive a personal repo identifier from",
     };
   }
@@ -61,7 +71,11 @@ export async function resolveSessionCloneUrl(params: {
   });
 
   if (!ensured) {
-    return { ok: false, error: "Failed to provision personal repository" };
+    return {
+      ok: false,
+      cloneUrl: null,
+      error: "Failed to provision personal repository",
+    };
   }
 
   return { ok: true, cloneUrl: ensured.cloneUrl };
