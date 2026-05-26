@@ -20,10 +20,13 @@
  *
  * Requires `GITHUB_TOKEN` with `admin:repo` scope on the `recoupable`
  * org in the environment (or `.env.local`).
+ *
+ * The PATCH-rename request lives inline (rather than as a `lib/github/*`
+ * helper) because this script is its only caller — once it runs every
+ * legacy repo is renamed and there is no runtime caller to reuse.
  */
 
 import { RECOUPABLE_GITHUB_OWNER } from "@/lib/recoupable/githubOwner";
-import { renameRepository } from "@/lib/github/renameRepository";
 
 const LEGACY_PATTERN =
   /^(?<slug>.+)-(?<uuid>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
@@ -60,6 +63,33 @@ async function listAllOrgRepos(token: string): Promise<OrgRepo[]> {
     page += 1;
   }
   return repos;
+}
+
+async function renameRepo(
+  from: string,
+  to: string,
+  token: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${RECOUPABLE_GITHUB_OWNER}/${from}`,
+      {
+        method: "PATCH",
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+        body: JSON.stringify({ name: to }),
+      },
+    );
+    if (response.status === 200) return { ok: true };
+    const body = await response.text().catch(() => "");
+    return { ok: false, error: `${response.status} ${body}` };
+  } catch (error) {
+    return { ok: false, error: (error as Error).message };
+  }
 }
 
 async function main(): Promise<void> {
@@ -119,8 +149,8 @@ async function main(): Promise<void> {
   let succeeded = 0;
   let failed = 0;
   for (const a of toRename) {
-    const result = await renameRepository({ repo: a.from, newName: a.to });
-    if (result.success) {
+    const result = await renameRepo(a.from, a.to, token);
+    if (result.ok) {
       succeeded += 1;
       console.log(`  ok: ${a.from} -> ${a.to}`);
     } else {
