@@ -1,8 +1,8 @@
 import { tool } from "ai";
 import { z } from "zod";
-import * as path from "path";
 import { buildRecoupExecEnv } from "@/lib/agent/tools/buildRecoupExecEnv";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
+import { resolveSandboxPath } from "@/lib/sandbox/sandboxPaths";
 
 const TIMEOUT_MS = 120_000;
 
@@ -64,11 +64,7 @@ IMPORTANT:
   execute: async ({ command, cwd, detached }, { experimental_context, abortSignal }) => {
     const sandbox = await getSandbox(experimental_context, "bash");
     const workingDirectory = sandbox.workingDirectory;
-    const workingDir = cwd
-      ? path.isAbsolute(cwd)
-        ? cwd
-        : path.resolve(workingDirectory, cwd)
-      : workingDirectory;
+    const workingDir = cwd ? resolveSandboxPath(workingDirectory, cwd) : workingDirectory;
 
     if (detached) {
       if (!sandbox.execDetached) {

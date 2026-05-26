@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
-import * as path from "path";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
+import { resolveSandboxPath } from "@/lib/sandbox/sandboxPaths";
 import { shellEscape } from "@/lib/agent/tools/shellEscape";
 import { toDisplayPath } from "@/lib/agent/tools/toDisplayPath";
 
@@ -62,9 +62,7 @@ IMPORTANT:
     const workingDirectory = sandbox.workingDirectory;
 
     try {
-      const absolutePath = path.isAbsolute(searchPath)
-        ? searchPath
-        : path.resolve(workingDirectory, searchPath);
+      const absolutePath = resolveSandboxPath(workingDirectory, searchPath);
 
       const args: string[] = ["grep", "-rn"];
       if (!caseSensitive) args.push("-i");

@@ -1,8 +1,8 @@
 import { tool } from "ai";
 import { z } from "zod";
-import * as path from "path";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
 import { toDisplayPath } from "@/lib/agent/tools/toDisplayPath";
+import { resolveSandboxPath } from "@/lib/sandbox/sandboxPaths";
 
 const readInputSchema = z.object({
   filePath: z.string().describe("Workspace-relative path to the file to read (e.g., src/index.ts)"),
@@ -35,9 +35,7 @@ IMPORTANT:
     const workingDirectory = sandbox.workingDirectory;
 
     try {
-      const absolutePath = path.isAbsolute(filePath)
-        ? filePath
-        : path.resolve(workingDirectory, filePath);
+      const absolutePath = resolveSandboxPath(workingDirectory, filePath);
 
       const stats = await sandbox.stat(absolutePath);
       if (stats.isDirectory()) {

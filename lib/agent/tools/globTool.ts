@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
-import * as path from "path";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
+import { joinSandboxPath, resolveSandboxPath } from "@/lib/sandbox/sandboxPaths";
 import { shellEscape } from "@/lib/agent/tools/shellEscape";
 import { toDisplayPath } from "@/lib/agent/tools/toDisplayPath";
 
@@ -62,7 +62,7 @@ IMPORTANT:
     try {
       let searchDir: string;
       if (basePath) {
-        searchDir = path.isAbsolute(basePath) ? basePath : path.resolve(workingDirectory, basePath);
+        searchDir = resolveSandboxPath(workingDirectory, basePath);
       } else {
         searchDir = workingDirectory;
       }
@@ -78,7 +78,7 @@ IMPORTANT:
         literalPrefix.push(part);
       }
       if (literalPrefix.length > 0) {
-        searchDir = path.join(searchDir, ...literalPrefix);
+        searchDir = joinSandboxPath(searchDir, ...literalPrefix);
       }
 
       const remainingDirSegments = patternParts.slice(

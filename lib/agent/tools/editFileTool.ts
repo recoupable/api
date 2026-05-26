@@ -1,8 +1,8 @@
 import { tool } from "ai";
 import { z } from "zod";
-import * as path from "path";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
 import { toDisplayPath } from "@/lib/agent/tools/toDisplayPath";
+import { resolveSandboxPath } from "@/lib/sandbox/sandboxPaths";
 
 const editInputSchema = z.object({
   filePath: z.string().describe("Workspace-relative path to the file to edit (e.g., src/auth.ts)"),
@@ -57,9 +57,7 @@ IMPORTANT:
         return { success: false, error: "oldString and newString must be different" };
       }
 
-      const absolutePath = path.isAbsolute(filePath)
-        ? filePath
-        : path.resolve(workingDirectory, filePath);
+      const absolutePath = resolveSandboxPath(workingDirectory, filePath);
       const content = await sandbox.readFile(absolutePath, "utf-8");
 
       if (!content.includes(oldString)) {

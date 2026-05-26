@@ -1,5 +1,6 @@
-import * as path from "path";
+import path from "path";
 import type { Sandbox } from "@/lib/sandbox/interface";
+import { joinSandboxPath } from "@/lib/sandbox/sandboxPaths";
 import { findSkillFile } from "@/lib/skills/findSkillFile";
 import { parseSkillFrontmatter } from "@/lib/skills/parseSkillFrontmatter";
 import { frontmatterToOptions, type SkillMetadata } from "@/lib/skills/skillTypes";
@@ -49,7 +50,7 @@ export async function discoverSkills(
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
 
-      const skillDir = path.join(dir, entry.name);
+      const skillDir = joinSandboxPath(dir, entry.name);
       const skillFile = await findSkillFile(sandbox, skillDir);
       if (!skillFile) continue;
 
@@ -79,7 +80,7 @@ export async function discoverSkills(
         name: frontmatter.name,
         description: frontmatter.description,
         path: skillDir,
-        filename: path.basename(skillFile),
+        filename: path.posix.basename(skillFile),
         options: frontmatterToOptions(frontmatter),
       });
     }

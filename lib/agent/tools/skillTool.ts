@@ -1,7 +1,7 @@
-import * as path from "path";
 import { tool } from "ai";
 import { z } from "zod";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
+import { joinSandboxPath } from "@/lib/sandbox/sandboxPaths";
 import { extractSkillBody } from "@/lib/skills/extractSkillBody";
 import { getSkills } from "@/lib/skills/getSkills";
 import { injectSkillDirectory } from "@/lib/skills/injectSkillDirectory";
@@ -64,7 +64,7 @@ Important:
       };
     }
 
-    const skillFilePath = path.join(found.path, found.filename);
+    const skillFilePath = joinSandboxPath(found.path, found.filename);
     let fileContent: string;
     try {
       fileContent = await sandbox.readFile(skillFilePath, "utf-8");

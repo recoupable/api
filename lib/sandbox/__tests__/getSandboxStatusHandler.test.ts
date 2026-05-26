@@ -5,6 +5,7 @@ import { getSandboxStatusHandler } from "@/lib/sandbox/getSandboxStatusHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
+import { runtimeSandboxState } from "@/lib/sandbox/__tests__/fixtures/runtimeSandboxState";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
@@ -91,7 +92,7 @@ describe("getSandboxStatusHandler", () => {
     vi.mocked(selectSessions).mockResolvedValue([
       {
         ...baseRow,
-        sandbox_state: { type: "vercel", sandboxName: "session-sess-1" },
+        sandbox_state: runtimeSandboxState(),
         lifecycle_state: "active",
         lifecycle_version: 3,
         sandbox_expires_at: FAR_FUTURE,
@@ -166,11 +167,11 @@ describe("getSandboxStatusHandler", () => {
     expect(body.status).toBe("no_sandbox");
   });
 
-  it("returns status='active' once sandboxName is set on the state, even without explicit expiry", async () => {
+  it("returns status='active' once runtime metadata is on the state, even when sandbox_expires_at is null", async () => {
     vi.mocked(selectSessions).mockResolvedValue([
       {
         ...baseRow,
-        sandbox_state: { type: "vercel", sandboxName: "session-sess-1" },
+        sandbox_state: runtimeSandboxState(),
         sandbox_expires_at: null,
       } as any,
     ]);
@@ -202,7 +203,7 @@ describe("getSandboxStatusHandler", () => {
     ]);
     vi.mocked(updateSession).mockResolvedValueOnce({
       ...baseRow,
-      sandbox_state: { type: "vercel", sandboxName: "session-sess-1" },
+      sandbox_state: runtimeSandboxState(),
       lifecycle_state: "active",
       lifecycle_error: null,
       sandbox_expires_at: FAR_FUTURE,
@@ -247,7 +248,7 @@ describe("getSandboxStatusHandler", () => {
     vi.mocked(selectSessions).mockResolvedValue([
       {
         ...baseRow,
-        sandbox_state: { type: "vercel", sandboxName: "session-sess-1" },
+        sandbox_state: runtimeSandboxState(),
         lifecycle_state: "hibernated",
         snapshot_url: null,
       } as any,
@@ -263,7 +264,7 @@ describe("getSandboxStatusHandler", () => {
     vi.mocked(selectSessions).mockResolvedValue([
       {
         ...baseRow,
-        sandbox_state: { type: "vercel", sandboxName: "session-sess-1" },
+        sandbox_state: runtimeSandboxState(),
         lifecycle_state: "active",
         sandbox_expires_at: FAR_FUTURE,
         snapshot_url: null,

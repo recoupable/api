@@ -27,7 +27,9 @@ describe("hasRuntimeSandboxState", () => {
   });
 
   it("returns false when sandboxName is the empty string", () => {
-    expect(hasRuntimeSandboxState({ type: "vercel", sandboxName: "", expiresAt: EXPIRES_AT })).toBe(false);
+    expect(hasRuntimeSandboxState({ type: "vercel", sandboxName: "", expiresAt: EXPIRES_AT })).toBe(
+      false,
+    );
   });
 
   it("returns true when sandboxName and expiresAt are both present", () => {
