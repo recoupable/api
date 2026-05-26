@@ -28,8 +28,16 @@
 
 import { RECOUPABLE_GITHUB_OWNER } from "@/lib/recoupable/githubOwner";
 
+/**
+ * Matches `<slug>-<uuid>` workspace repo names where `<slug>` may be
+ * empty — accounts that had no display name at the time the repo was
+ * created produced `-<uuid>` (literal leading dash, empty kebab) and
+ * must be migrated alongside the populated-slug repos. Bare `<uuid>`
+ * names (post-migration) deliberately do NOT match: the required `-`
+ * separator before the UUID is absent.
+ */
 const LEGACY_PATTERN =
-  /^(?<slug>.+)-(?<uuid>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+  /^(?<slug>.*)-(?<uuid>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
 interface OrgRepo {
   name: string;
