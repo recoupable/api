@@ -38,6 +38,18 @@ describe("extractOrgId", () => {
     );
   });
 
+  it("extracts the UUID from a bare new-naming repo (recoupable/<uuid>)", () => {
+    expect(extractOrgId("https://github.com/recoupable/fb678396-a68f-4294-ae50-b8cacf9ce77b")).toBe(
+      "fb678396-a68f-4294-ae50-b8cacf9ce77b",
+    );
+  });
+
+  it("accepts a bare new-naming repo name", () => {
+    expect(extractOrgId("fb678396-a68f-4294-ae50-b8cacf9ce77b")).toBe(
+      "fb678396-a68f-4294-ae50-b8cacf9ce77b",
+    );
+  });
+
   it("returns null for non-Recoupable clone URLs", () => {
     expect(
       extractOrgId(

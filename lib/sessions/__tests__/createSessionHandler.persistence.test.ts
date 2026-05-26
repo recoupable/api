@@ -5,6 +5,7 @@ import { insertSession } from "@/lib/supabase/sessions/insertSession";
 import { deleteSessionById } from "@/lib/supabase/sessions/deleteSessionById";
 import { insertChat } from "@/lib/supabase/chats/insertChat";
 import { resolveSessionTitle } from "@/lib/sessions/resolveSessionTitle";
+import { resolveSessionCloneUrl } from "@/lib/sessions/resolveSessionCloneUrl";
 import { createSessionHandler } from "@/lib/sessions/createSessionHandler";
 import { baseSessionRow } from "@/lib/sessions/__tests__/baseSessionRow";
 import { baseChatRow } from "@/lib/sessions/__tests__/baseChatRow";
@@ -21,6 +22,9 @@ vi.mock("@/lib/supabase/sessions/deleteSessionById", () => ({ deleteSessionById:
 vi.mock("@/lib/supabase/chats/insertChat", () => ({ insertChat: vi.fn() }));
 vi.mock("@/lib/sessions/resolveSessionTitle", () => ({
   resolveSessionTitle: vi.fn(async () => "Anchorage"),
+}));
+vi.mock("@/lib/sessions/resolveSessionCloneUrl", () => ({
+  resolveSessionCloneUrl: vi.fn(async () => ({ ok: true, cloneUrl: null })),
 }));
 
 const okValidated = (overrides: { body?: object; accountId?: string } = {}) => ({
@@ -93,6 +97,34 @@ describe("createSessionHandler — persistence", () => {
     const res = await createSessionHandler(makeCreateSessionReq({}));
     expect(res.status).toBe(500);
     expect(deleteSessionById).toHaveBeenCalledWith("sess_rollback");
+  });
+
+  it("returns 502 when resolveSessionCloneUrl fails (e.g. personal repo provisioning blew up)", async () => {
+    vi.mocked(validateCreateSessionBody).mockResolvedValue(okValidated());
+    vi.mocked(resolveSessionCloneUrl).mockResolvedValueOnce({
+      ok: false,
+      error: "Failed to provision personal repository",
+    });
+
+    const res = await createSessionHandler(makeCreateSessionReq({}));
+    expect(res.status).toBe(502);
+    expect(insertSession).not.toHaveBeenCalled();
+  });
+
+  it("forwards the resolved cloneUrl onto the inserted session row", async () => {
+    vi.mocked(validateCreateSessionBody).mockResolvedValue(okValidated());
+    vi.mocked(resolveSessionCloneUrl).mockResolvedValueOnce({
+      ok: true,
+      cloneUrl: "https://github.com/recoupable/sweetman-acc-uuid-1",
+    });
+    vi.mocked(insertSession).mockResolvedValue(baseSessionRow());
+    vi.mocked(insertChat).mockResolvedValue(baseChatRow());
+
+    await createSessionHandler(makeCreateSessionReq({}));
+
+    expect(vi.mocked(insertSession).mock.calls[0][0].clone_url).toBe(
+      "https://github.com/recoupable/sweetman-acc-uuid-1",
+    );
   });
 
   it("logs an orphan-session error when rollback also fails", async () => {

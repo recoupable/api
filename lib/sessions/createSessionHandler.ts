@@ -3,6 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import { validateCreateSessionBody } from "@/lib/sessions/validateCreateSessionBody";
 import { resolveSessionTitle } from "@/lib/sessions/resolveSessionTitle";
+import { resolveSessionCloneUrl } from "@/lib/sessions/resolveSessionCloneUrl";
 import { buildSessionInsertRow } from "@/lib/sessions/buildSessionInsertRow";
 import { failedToCreateSession } from "@/lib/sessions/failedToCreateSession";
 import { insertSession } from "@/lib/supabase/sessions/insertSession";
@@ -37,8 +38,24 @@ export async function createSessionHandler(request: NextRequest): Promise<NextRe
     accountId: auth.accountId,
   });
 
+  const cloneUrlResult = await resolveSessionCloneUrl({
+    bodyCloneUrl: body.cloneUrl,
+    auth,
+  });
+  if (!cloneUrlResult.ok) {
+    return NextResponse.json(
+      { status: "error", error: cloneUrlResult.error },
+      { status: 502, headers: getCorsHeaders() },
+    );
+  }
+
   const sessionRow = await insertSession(
-    buildSessionInsertRow({ body, accountId: auth.accountId, title }),
+    buildSessionInsertRow({
+      body,
+      accountId: auth.accountId,
+      title,
+      cloneUrl: cloneUrlResult.cloneUrl,
+    }),
   );
 
   if (!sessionRow) {
