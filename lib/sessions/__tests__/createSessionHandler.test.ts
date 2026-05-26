@@ -18,6 +18,9 @@ vi.mock("@/lib/supabase/chats/insertChat", () => ({ insertChat: vi.fn() }));
 vi.mock("@/lib/sessions/resolveSessionTitle", () => ({
   resolveSessionTitle: vi.fn(async () => "Anchorage"),
 }));
+vi.mock("@/lib/sessions/resolveSessionCloneUrl", () => ({
+  resolveSessionCloneUrl: vi.fn(async () => ({ ok: true, cloneUrl: null })),
+}));
 
 describe("createSessionHandler — short-circuits on validation failure", () => {
   beforeEach(() => vi.clearAllMocks());

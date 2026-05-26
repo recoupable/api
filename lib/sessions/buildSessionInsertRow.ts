@@ -6,6 +6,13 @@ interface BuildSessionInsertRowInput {
   body: CreateSessionBody;
   accountId: string;
   title: string;
+  /**
+   * Final clone URL resolved by `resolveSessionCloneUrl`. When `null`,
+   * the session row stores no `clone_url` — matches the prior
+   * `body.cloneUrl ?? null` behavior for callers that don't (yet)
+   * trigger personal-repo provisioning.
+   */
+  cloneUrl: string | null;
 }
 
 /**
@@ -21,14 +28,14 @@ interface BuildSessionInsertRowInput {
  * @returns A row ready to pass to `insertSession`.
  */
 export function buildSessionInsertRow(input: BuildSessionInsertRowInput): TablesInsert<"sessions"> {
-  const { body, accountId, title } = input;
+  const { body, accountId, title, cloneUrl } = input;
   return {
     id: generateUUID(),
     account_id: accountId,
     title,
     status: "running",
     branch: body.branch ?? null,
-    clone_url: body.cloneUrl ?? null,
+    clone_url: cloneUrl,
     global_skill_refs: [],
     sandbox_state: { type: body.sandboxType ?? "vercel" },
     lifecycle_state: "provisioning",

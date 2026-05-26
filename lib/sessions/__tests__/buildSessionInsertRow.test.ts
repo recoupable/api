@@ -3,7 +3,12 @@ import { buildSessionInsertRow } from "@/lib/sessions/buildSessionInsertRow";
 
 describe("buildSessionInsertRow", () => {
   it("returns sane defaults for an empty body", () => {
-    const row = buildSessionInsertRow({ body: {}, accountId: "acc-1", title: "Berlin" });
+    const row = buildSessionInsertRow({
+      body: {},
+      accountId: "acc-1",
+      title: "Berlin",
+      cloneUrl: null,
+    });
     expect(row.account_id).toBe("acc-1");
     expect(row.title).toBe("Berlin");
     expect(row.status).toBe("running");
@@ -15,14 +20,12 @@ describe("buildSessionInsertRow", () => {
     expect(row.id).toMatch(/^[0-9a-f-]{36}$/i);
   });
 
-  it("forwards branch + clone fields verbatim", () => {
+  it("writes the resolved cloneUrl onto clone_url", () => {
     const row = buildSessionInsertRow({
-      body: {
-        branch: "main",
-        cloneUrl: "https://github.com/recoupable/ai.git",
-      },
+      body: { branch: "main" },
       accountId: "acc-1",
       title: "Berlin",
+      cloneUrl: "https://github.com/recoupable/ai.git",
     });
     expect(row.branch).toBe("main");
     expect(row.clone_url).toBe("https://github.com/recoupable/ai.git");
@@ -33,6 +36,7 @@ describe("buildSessionInsertRow", () => {
       body: { sandboxType: "vercel" },
       accountId: "acc-1",
       title: "Berlin",
+      cloneUrl: null,
     });
     expect(row.sandbox_state).toEqual({ type: "vercel" });
   });
