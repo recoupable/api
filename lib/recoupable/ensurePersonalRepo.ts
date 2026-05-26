@@ -1,7 +1,5 @@
 import { createRepository } from "@/lib/github/createRepository";
 import { repositoryExists } from "@/lib/github/repositoryExists";
-import { buildPersonalRepoIdentifier } from "./buildPersonalRepoIdentifier";
-import { buildPersonalRepoUrl } from "./buildPersonalRepoUrl";
 import { RECOUPABLE_GITHUB_OWNER } from "./githubOwner";
 
 export interface EnsurePersonalRepoResult {
@@ -31,7 +29,8 @@ export interface EnsurePersonalRepoResult {
 export async function ensurePersonalRepo(params: {
   accountId: string;
 }): Promise<EnsurePersonalRepoResult | null> {
-  const { repo: repoName } = buildPersonalRepoIdentifier(params);
+  const repoName = params.accountId;
+  const repoUrl = `https://github.com/${RECOUPABLE_GITHUB_OWNER}/${repoName}`;
 
   const existing = await repositoryExists({ repo: repoName });
 
@@ -42,8 +41,8 @@ export async function ensurePersonalRepo(params: {
 
   if (existing) {
     return {
-      cloneUrl: buildPersonalRepoUrl(params),
-      repoUrl: `https://github.com/${RECOUPABLE_GITHUB_OWNER}/${repoName}`,
+      cloneUrl: repoUrl,
+      repoUrl,
       owner: RECOUPABLE_GITHUB_OWNER,
       repoName,
     };
