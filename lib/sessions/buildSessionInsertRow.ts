@@ -7,24 +7,20 @@ interface BuildSessionInsertRowInput {
   accountId: string;
   title: string;
   /**
-   * Final clone URL resolved by `resolveSessionCloneUrl`. When `null`,
-   * the session row stores no `clone_url` — matches the prior
-   * `body.cloneUrl ?? null` behavior for callers that don't (yet)
-   * trigger personal-repo provisioning.
+   * Final clone URL resolved by the handler via `ensurePersonalRepo` —
+   * always set on session create now that the body no longer carries
+   * `cloneUrl`.
    */
-  cloneUrl: string | null;
+  cloneUrl: string;
 }
 
 /**
  * Normalizes a validated `POST /api/sessions` body plus a resolved
- * title into a `sessions` insert row. Centralizes the default /
- * null-coalescing rules so the handler can stay focused on HTTP and
- * persistence flow.
+ * title + ensured clone URL into a `sessions` insert row. Centralizes
+ * the default / null-coalescing rules so the handler can stay focused
+ * on HTTP and persistence flow.
  *
- * Title resolution is intentionally not done here — that lives in
- * `resolveSessionTitle` so this function stays synchronous and pure.
- *
- * @param input - The validated body, owning account id, and resolved title.
+ * @param input - The validated body, owning account id, resolved title, and resolved clone URL.
  * @returns A row ready to pass to `insertSession`.
  */
 export function buildSessionInsertRow(input: BuildSessionInsertRowInput): TablesInsert<"sessions"> {
@@ -34,7 +30,7 @@ export function buildSessionInsertRow(input: BuildSessionInsertRowInput): Tables
     account_id: accountId,
     title,
     status: "running",
-    branch: body.branch ?? null,
+    branch: null,
     clone_url: cloneUrl,
     global_skill_refs: [],
     sandbox_state: { type: body.sandboxType ?? "vercel" },

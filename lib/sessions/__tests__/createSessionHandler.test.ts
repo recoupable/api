@@ -18,8 +18,8 @@ vi.mock("@/lib/supabase/chats/insertChat", () => ({ insertChat: vi.fn() }));
 vi.mock("@/lib/sessions/resolveSessionTitle", () => ({
   resolveSessionTitle: vi.fn(async () => "Anchorage"),
 }));
-vi.mock("@/lib/sessions/resolveSessionCloneUrl", () => ({
-  resolveSessionCloneUrl: vi.fn(async () => ({ ok: true, cloneUrl: null })),
+vi.mock("@/lib/recoupable/ensurePersonalRepo", () => ({
+  ensurePersonalRepo: vi.fn(async () => "https://github.com/recoupable/acc-uuid-1"),
 }));
 
 describe("createSessionHandler — short-circuits on validation failure", () => {

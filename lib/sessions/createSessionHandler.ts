@@ -3,7 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import { validateCreateSessionBody } from "@/lib/sessions/validateCreateSessionBody";
 import { resolveSessionTitle } from "@/lib/sessions/resolveSessionTitle";
-import { resolveSessionCloneUrl } from "@/lib/sessions/resolveSessionCloneUrl";
+import { ensurePersonalRepo } from "@/lib/recoupable/ensurePersonalRepo";
 import { buildSessionInsertRow } from "@/lib/sessions/buildSessionInsertRow";
 import { failedToCreateSession } from "@/lib/sessions/failedToCreateSession";
 import { insertSession } from "@/lib/supabase/sessions/insertSession";
@@ -18,10 +18,16 @@ const INITIAL_CHAT_TITLE = "New chat";
  * Handles `POST /api/sessions`.
  *
  * Authenticates, validates the request, resolves a final session
- * title (provided > random city fallback), then creates a session
- * row and an initial chat row. If the chat insert fails after the
- * session row is persisted, the session is rolled back so callers
- * never observe an orphaned session.
+ * title (provided > random city fallback), ensures the workspace repo
+ * exists at `recoupable/<auth.orgId ?? auth.accountId>`, then creates
+ * a session row and an initial chat row. If the chat insert fails
+ * after the session row is persisted, the session is rolled back so
+ * callers never observe an orphaned session.
+ *
+ * The clone URL is derived server-side — callers never construct
+ * GitHub URLs. Personal sessions (no `organizationId` in body) use
+ * `auth.accountId`; org sessions (with `organizationId`) use
+ * `auth.orgId` after `validateAuthContext` confirms org access.
  *
  * @param request - The incoming request.
  * @returns A NextResponse with `{ session, chat }` on 200, or an error.
@@ -38,13 +44,11 @@ export async function createSessionHandler(request: NextRequest): Promise<NextRe
     accountId: auth.accountId,
   });
 
-  const cloneUrlResult = await resolveSessionCloneUrl({
-    bodyCloneUrl: body.cloneUrl,
-    auth,
-  });
-  if (!cloneUrlResult.ok) {
+  const workspaceAccountId = auth.orgId ?? auth.accountId;
+  const cloneUrl = await ensurePersonalRepo({ accountId: workspaceAccountId });
+  if (!cloneUrl) {
     return NextResponse.json(
-      { status: "error", error: cloneUrlResult.error },
+      { status: "error", error: "Failed to provision workspace repository" },
       { status: 502, headers: getCorsHeaders() },
     );
   }
@@ -54,7 +58,7 @@ export async function createSessionHandler(request: NextRequest): Promise<NextRe
       body,
       accountId: auth.accountId,
       title,
-      cloneUrl: cloneUrlResult.cloneUrl,
+      cloneUrl,
     }),
   );
 
