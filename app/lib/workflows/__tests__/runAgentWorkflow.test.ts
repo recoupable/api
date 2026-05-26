@@ -4,7 +4,6 @@ import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
-import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
 
@@ -19,9 +18,6 @@ vi.mock("@/app/lib/workflows/closeChatStream", () => ({
 }));
 vi.mock("@/app/lib/workflows/generateAssistantMessageId", () => ({
   generateAssistantMessageId: vi.fn(),
-}));
-vi.mock("@/lib/chat/persistAssistantMessage", () => ({
-  persistAssistantMessage: vi.fn(),
 }));
 vi.mock("@/lib/credits/handleChatCredits", () => ({
   handleChatCredits: vi.fn(),
@@ -114,24 +110,7 @@ describe("runAgentWorkflow", () => {
     expect(closeChatStream).toHaveBeenCalledWith(writableStub);
   });
 
-  it("persists the assistant message when runAgentStep returns one", async () => {
-    const responseMessage = {
-      id: "assistant-msg-xyz",
-      role: "assistant",
-      parts: [{ type: "text", text: "Hello!" }],
-    };
-    vi.mocked(runAgentStep).mockResolvedValue({
-      finishReason: "stop",
-      responseMessage: responseMessage as never,
-    });
-
-    await runAgentWorkflow(baseInput);
-
-    expect(persistAssistantMessage).toHaveBeenCalledTimes(1);
-    expect(persistAssistantMessage).toHaveBeenCalledWith("chat-1", responseMessage);
-  });
-
-  it("does NOT call persistAssistantMessage when runAgentStep returns no responseMessage", async () => {
+  it("forwards chatId to runAgentStep so it can persist the assistant message per step", async () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
       responseMessage: undefined,
@@ -139,18 +118,7 @@ describe("runAgentWorkflow", () => {
 
     await runAgentWorkflow(baseInput);
 
-    expect(persistAssistantMessage).not.toHaveBeenCalled();
-  });
-
-  it("does NOT call persistAssistantMessage when runAgentStep throws (no message to persist)", async () => {
-    vi.mocked(runAgentStep).mockRejectedValue(new Error("model exploded"));
-
-    await expect(runAgentWorkflow(baseInput)).rejects.toThrow("model exploded");
-
-    expect(persistAssistantMessage).not.toHaveBeenCalled();
-    // But cleanup steps still run via the try/finally
-    expect(clearChatActiveStream).toHaveBeenCalledTimes(1);
-    expect(closeChatStream).toHaveBeenCalledTimes(1);
+    expect(runAgentStep).toHaveBeenCalledWith(expect.objectContaining({ chatId: "chat-1" }));
   });
 
   it("generates a fresh assistantMessageId via the step and forwards it to runAgentStep", async () => {
