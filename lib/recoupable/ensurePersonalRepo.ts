@@ -1,6 +1,8 @@
 import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
 import { createRepository } from "@/lib/github/createRepository";
 import { repositoryExists } from "@/lib/github/repositoryExists";
+import { findLegacyAccountRepo } from "@/lib/github/findLegacyAccountRepo";
+import { renameRepository } from "@/lib/github/renameRepository";
 import { buildPersonalRepoIdentifier } from "./buildPersonalRepoIdentifier";
 import { buildPersonalRepoUrl } from "./buildPersonalRepoUrl";
 import { RECOUPABLE_GITHUB_OWNER } from "./githubOwner";
@@ -13,27 +15,30 @@ export interface EnsurePersonalRepoResult {
 }
 
 /**
- * Idempotently ensures a personal repo exists for the given account.
+ * Idempotently ensure an account has a workspace repo at the
+ * canonical `recoupable/<accountId>` location.
  *
- * Naming follows `recoupable/<kebab(name)>-<account_id>` (see
- * `buildPersonalRepoUrl`). We check existence with `GET /repos/...`
- * first so a pre-existing repo is a clean no-op; only when the repo
- * is genuinely absent (404) do we attempt creation. Avoids the 422
- * ambiguity where the GitHub API returns the same status for "name
- * taken" and "name invalid".
+ * Resolution order:
+ *   1. If `recoupable/<accountId>` already exists → return its URL
+ *      (clean idempotent case — most calls).
+ *   2. Look for a legacy `recoupable/<*>-<accountId>` repo via
+ *      GitHub search. If found, rename it to `<accountId>` so the
+ *      account's git history follows them onto the new convention.
+ *      GitHub auto-redirects the old URL for clones + REST, so any
+ *      `sessions.clone_url` rows that still reference the old name
+ *      keep working.
+ *   3. Otherwise, create a fresh `recoupable/<accountId>` with
+ *      `auto_init: true` so the sandbox has a `main` branch to clone.
  *
- * Returns `null` when the service token is missing, the existence
- * check fails for non-404 reasons, or creation fails — all treated
- * as fatal by callers. The caller is responsible for surfacing a
- * user-visible error (`createSessionHandler` returns a 502).
+ * Returns `null` only when the service token is missing or repo
+ * creation outright fails — the caller surfaces that as a 502.
  *
- * Ported from open-agents
- * `apps/web/lib/recoupable/ensure-personal-repo.ts` — keep behavior
- * in lockstep so chat.recoupable.com and sandbox.recoupable.com
- * converge on the same repo for the same account.
+ * The legacy-rename branch never blocks provisioning: if the search
+ * API throws or returns ambiguous results, we fall through to step 3
+ * and create a fresh repo. Losing history for an edge-case account is
+ * preferable to blocking their session on a flaky GitHub search.
  */
 export async function ensurePersonalRepo(params: {
-  accountName: string;
   accountId: string;
 }): Promise<EnsurePersonalRepoResult | null> {
   const token = getServiceGithubToken();
@@ -42,10 +47,7 @@ export async function ensurePersonalRepo(params: {
     return null;
   }
 
-  const { repo: repoName } = buildPersonalRepoIdentifier({
-    accountName: params.accountName,
-    accountId: params.accountId,
-  });
+  const { repo: repoName } = buildPersonalRepoIdentifier(params);
 
   const existing = await repositoryExists({
     owner: RECOUPABLE_GITHUB_OWNER,
@@ -67,10 +69,42 @@ export async function ensurePersonalRepo(params: {
     };
   }
 
+  // Try to find and rename a legacy `<slug>-<accountId>` repo so the
+  // account's existing code follows them onto the new naming
+  // convention without a manual migration step.
+  const legacyName = await findLegacyAccountRepo({
+    owner: RECOUPABLE_GITHUB_OWNER,
+    accountId: params.accountId,
+    token,
+  });
+
+  if (legacyName) {
+    const renamed = await renameRepository({
+      owner: RECOUPABLE_GITHUB_OWNER,
+      repo: legacyName,
+      newName: repoName,
+      token,
+    });
+    if (renamed.success) {
+      console.log(
+        `[ensurePersonalRepo] renamed legacy ${RECOUPABLE_GITHUB_OWNER}/${legacyName} → ${repoName}`,
+      );
+      return {
+        cloneUrl: buildPersonalRepoUrl(params),
+        repoUrl: `https://github.com/${RECOUPABLE_GITHUB_OWNER}/${repoName}`,
+        owner: RECOUPABLE_GITHUB_OWNER,
+        repoName,
+      };
+    }
+    console.error(
+      `[ensurePersonalRepo] legacy rename failed (${renamed.error ?? "unknown"}); falling through to create`,
+    );
+  }
+
   const created = await createRepository({
     owner: RECOUPABLE_GITHUB_OWNER,
     name: repoName,
-    description: `Personal Recoupable workspace for account ${params.accountId}`,
+    description: `Recoupable workspace for account ${params.accountId}`,
     isPrivate: true,
     token,
   });

@@ -1,6 +1,15 @@
 import { extractOrgRepoName } from "@/lib/recoupable/extractOrgRepoName";
 
-const UUID_TAIL_PATTERN = /-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+const UUID_RAW = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+/**
+ * Match the trailing UUID either bare (new naming: `<uuid>`) or after
+ * a slug + dash (legacy: `<slug>-<uuid>` / `org-<slug>-<uuid>`). Both
+ * shapes coexist until the migration script renames every legacy repo
+ * — and even after, `sessions.clone_url` rows from before the rename
+ * still resolve via GitHub's redirect, so this parser keeps working
+ * for old rows forever.
+ */
+const UUID_TAIL_PATTERN = new RegExp(`(?:^|-)(${UUID_RAW})$`, "i");
 
 /**
  * Extracts the organization UUID from a Recoupable org clone URL or

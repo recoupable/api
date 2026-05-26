@@ -1,24 +1,22 @@
-import { toKebabCase } from "@/lib/string/toKebabCase";
 import { RECOUPABLE_GITHUB_OWNER } from "./githubOwner";
 
 /**
- * Returns the `<owner, repo>` pair for an account's personal Recoupable
- * workspace, mirroring `buildPersonalRepoUrl` for callers that talk to
- * the GitHub API directly without re-parsing the URL.
+ * Returns the `<owner, repo>` pair for an account's Recoupable
+ * workspace repo. The repo name is the account UUID with no slug
+ * prefix — keeps the lookup stable across account renames and unifies
+ * the personal vs. org repo naming so every workspace repo is keyed
+ * the same way.
  *
- * Convention: owner = `recoupable`, repo = `<kebab(account_name)>-<account_id>`.
+ * Convention: `recoupable/<accountId>`.
  *
- * Ported from open-agents
- * `apps/web/lib/recoupable/build-personal-repo-identifier.ts` — keep in
- * lockstep with `buildPersonalRepoUrl` and the chat-side helper.
+ * Account names are mutable (`account_info.name` can be edited at any
+ * time), so any naming scheme that embeds the name eventually drifts
+ * — see [[feedback_unified_workspace_repo_naming]] for the design call
+ * to drop the slug entirely.
  */
-export function buildPersonalRepoIdentifier(params: { accountName: string; accountId: string }): {
+export function buildPersonalRepoIdentifier(params: { accountId: string }): {
   owner: string;
   repo: string;
 } {
-  const slug = toKebabCase(params.accountName);
-  return {
-    owner: RECOUPABLE_GITHUB_OWNER,
-    repo: `${slug}-${params.accountId}`,
-  };
+  return { owner: RECOUPABLE_GITHUB_OWNER, repo: params.accountId };
 }

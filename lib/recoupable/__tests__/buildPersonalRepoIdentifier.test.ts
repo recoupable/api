@@ -3,35 +3,29 @@ import { buildPersonalRepoIdentifier } from "@/lib/recoupable/buildPersonalRepoI
 import { buildPersonalRepoUrl } from "@/lib/recoupable/buildPersonalRepoUrl";
 
 describe("buildPersonalRepoIdentifier", () => {
-  it("produces recoupable owner + <kebab(name)>-<account_id> repo", () => {
+  it("returns recoupable owner + bare accountId repo", () => {
     expect(
       buildPersonalRepoIdentifier({
-        accountName: "Sweetman",
         accountId: "fb678396-a68f-4294-ae50-b8cacf9ce77b",
       }),
     ).toEqual({
       owner: "recoupable",
-      repo: "sweetman-fb678396-a68f-4294-ae50-b8cacf9ce77b",
+      repo: "fb678396-a68f-4294-ae50-b8cacf9ce77b",
     });
   });
 
-  it("kebabs dotted display names", () => {
-    expect(
-      buildPersonalRepoIdentifier({
-        accountName: "sweetman.eth",
-        accountId: "id-1",
-      }),
-    ).toEqual({ owner: "recoupable", repo: "sweetman-eth-id-1" });
+  it("does not embed any name — naming stays stable across renames", () => {
+    const { repo } = buildPersonalRepoIdentifier({ accountId: "id-1" });
+    expect(repo).toBe("id-1");
   });
 });
 
 describe("buildPersonalRepoUrl", () => {
-  it("composes the GitHub URL from the identifier", () => {
+  it("composes the GitHub URL as recoupable/<accountId>", () => {
     expect(
       buildPersonalRepoUrl({
-        accountName: "Sweetman",
         accountId: "fb678396-a68f-4294-ae50-b8cacf9ce77b",
       }),
-    ).toBe("https://github.com/recoupable/sweetman-fb678396-a68f-4294-ae50-b8cacf9ce77b");
+    ).toBe("https://github.com/recoupable/fb678396-a68f-4294-ae50-b8cacf9ce77b");
   });
 });
