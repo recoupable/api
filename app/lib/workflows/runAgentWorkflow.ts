@@ -79,11 +79,8 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
 
   try {
     const result = await runAgentStep({
-      messages: input.messages,
-      modelId: input.modelId,
+      ...input,
       writable,
-      chatId: input.chatId,
-      agentContext: input.agentContext,
       assistantMessageId,
     });
     console.log("[runAgentWorkflow] finish", { finishReason: result.finishReason });
