@@ -16,20 +16,15 @@ export interface ResolveSessionCloneUrlResult {
 /**
  * Determine the final `clone_url` for a new session row.
  *
- *   1. If the body explicitly provided `cloneUrl`, use it. Both chat
- *      (active-org case) and sandbox.recoupable.com construct the org
- *      URL client-side and send it through.
- *   2. If the body omitted `cloneUrl` AND the caller has no `orgId`
- *      bound to their auth context, treat this as a personal session
- *      and call `ensurePersonalRepo` so the account's
- *      `recoupable/<accountId>` repo exists (with a legacy-rename
- *      step for accounts that had `<slug>-<accountId>` workspaces
- *      under the old naming convention) before `POST /api/sandbox`
- *      tries to clone it.
- *   3. Otherwise (no `cloneUrl`, but an org is bound), return `null`
- *      so the session row stores no `clone_url`. Org-repo URL
- *      derivation stays a client-side concern for now to keep this PR
- *      focused on personal-repo provisioning.
+ *   1. If the body explicitly provided `cloneUrl`, use it verbatim
+ *      (the caller already decided which repo this session targets).
+ *   2. Otherwise, ensure a `recoupable/<accountId>` workspace exists
+ *      and use that URL. The provisioning is the same for personal
+ *      sessions and org-bound sessions because organizations are
+ *      themselves accounts (`auth.orgId` IS an account_id — see
+ *      `account_organization_ids.organization` joining `accounts`).
+ *      When an org is bound, the workspace is keyed on `auth.orgId`;
+ *      otherwise on the user's own `auth.accountId`.
  */
 export async function resolveSessionCloneUrl(params: {
   bodyCloneUrl: string | undefined;
@@ -41,17 +36,16 @@ export async function resolveSessionCloneUrl(params: {
     return { ok: true, cloneUrl: bodyCloneUrl };
   }
 
-  if (auth.orgId) {
-    return { ok: true, cloneUrl: null };
-  }
-
-  const cloneUrl = await ensurePersonalRepo({ accountId: auth.accountId });
+  const workspaceAccountId = auth.orgId ?? auth.accountId;
+  const cloneUrl = await ensurePersonalRepo({
+    accountId: workspaceAccountId,
+  });
 
   if (!cloneUrl) {
     return {
       ok: false,
       cloneUrl: null,
-      error: "Failed to provision personal repository",
+      error: "Failed to provision workspace repository",
     };
   }
 
