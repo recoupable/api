@@ -10,7 +10,7 @@ const patchSessionChatBodySchema = z
     title: z.string().trim().min(1, "title cannot be empty").optional(),
     modelId: z.string().trim().min(1, "modelId cannot be empty").optional(),
   })
-  .strict("Unexpected field in request body")
+  .strict()
   .refine(value => value.title !== undefined || value.modelId !== undefined, {
     message: "At least one field is required",
   });
