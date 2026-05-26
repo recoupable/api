@@ -1,9 +1,13 @@
+import { RECOUPABLE_GITHUB_OWNER } from "@/lib/recoupable/githubOwner";
+import { getServiceGithubToken } from "./getServiceGithubToken";
+
 export interface CreateRepositoryResult {
   success: boolean;
-  /** GitHub UI URL (`html_url`) — `https://github.com/<owner>/<repo>`. */
+  /** GitHub UI URL (`html_url`). */
   repoUrl?: string;
-  /** Git clone URL (`clone_url`) — same shape, used by sandboxes to `git clone`. */
+  /** Git clone URL (`clone_url`). */
   cloneUrl?: string;
+  /** Owner login (always `recoupable`). */
   owner?: string;
   repoName?: string;
   /** Human-readable error message; only set when `success` is false. */
@@ -11,30 +15,33 @@ export interface CreateRepositoryResult {
 }
 
 /**
- * Create a GitHub repository under a Recoupable-owned organization.
+ * Create a workspace repository under the Recoupable GitHub org.
  *
- * Ported from open-agents `apps/web/lib/github/client.ts#createRepository`
- * with two intentional reductions:
- *   - Plain `fetch` (no Octokit) to match recoup-api's existing
- *     `lib/github/*` style.
- *   - Org-only creation: open-agents allowed a `User` `accountType`
- *     fallback, but Recoupable workspace repos are always created
- *     under the `recoupable` org (see `RECOUPABLE_GITHUB_OWNER`), so
- *     the `createForAuthenticatedUser` branch is unreachable in this
- *     codebase and has been dropped.
+ * Hard-coded conventions (per PR #618 review — KISS / YAGNI):
+ *   - owner = `recoupable` (no other owner makes sense; see
+ *     `RECOUPABLE_GITHUB_OWNER`).
+ *   - private = false (workspace repos are public so future surfaces
+ *     can clone without per-caller auth).
+ *   - description = none (GitHub doesn't render anything meaningful
+ *     for these per-account repos).
+ *   - token = read once from `GITHUB_TOKEN` via
+ *     `getServiceGithubToken` (single source of truth — callers no
+ *     longer thread the token through).
  *
  * `auto_init: true` so the repo has an initial `main` branch the
- * sandbox can `git clone`. Without it, a clone of a 0-commit repo
- * fails.
+ * sandbox can `git clone`. Without it, cloning a 0-commit repo fails.
+ *
+ * Uses plain `fetch` to match recoup-api's existing `lib/github/*`
+ * style (no Octokit dependency).
  */
-export async function createRepository(params: {
-  owner: string;
-  name: string;
-  description?: string;
-  isPrivate?: boolean;
-  token: string;
-}): Promise<CreateRepositoryResult> {
-  const { owner, name, description = "", isPrivate = true, token } = params;
+export async function createRepository(params: { name: string }): Promise<CreateRepositoryResult> {
+  const { name } = params;
+
+  const token = getServiceGithubToken();
+  if (!token) {
+    console.error("[createRepository] GITHUB_TOKEN missing");
+    return { success: false, error: "GITHUB_TOKEN missing" };
+  }
 
   if (!/^[\w.-]+$/.test(name)) {
     return {
@@ -45,7 +52,7 @@ export async function createRepository(params: {
   }
 
   try {
-    const response = await fetch(`https://api.github.com/orgs/${owner}/repos`, {
+    const response = await fetch(`https://api.github.com/orgs/${RECOUPABLE_GITHUB_OWNER}/repos`, {
       method: "POST",
       headers: {
         Accept: "application/vnd.github+json",
@@ -55,8 +62,7 @@ export async function createRepository(params: {
       },
       body: JSON.stringify({
         name,
-        description,
-        private: isPrivate,
+        private: false,
         auto_init: true,
       }),
     });
@@ -94,7 +100,7 @@ export async function createRepository(params: {
       body = "";
     }
     console.error(
-      `[createRepository] unexpected status ${response.status} for ${owner}/${name}: ${body}`,
+      `[createRepository] unexpected status ${response.status} for ${RECOUPABLE_GITHUB_OWNER}/${name}: ${body}`,
     );
     return { success: false, error: `GitHub returned ${response.status}` };
   } catch (error) {

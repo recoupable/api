@@ -1,4 +1,3 @@
-import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
 import { createRepository } from "@/lib/github/createRepository";
 import { repositoryExists } from "@/lib/github/repositoryExists";
 import { findLegacyAccountRepo } from "@/lib/github/findLegacyAccountRepo";
@@ -30,8 +29,9 @@ export interface EnsurePersonalRepoResult {
  *   3. Otherwise, create a fresh `recoupable/<accountId>` with
  *      `auto_init: true` so the sandbox has a `main` branch to clone.
  *
- * Returns `null` only when the service token is missing or repo
- * creation outright fails — the caller surfaces that as a 502.
+ * Returns `null` only when the underlying GitHub helpers can't get
+ * a service token or repo creation outright fails — the caller
+ * surfaces that as a 502.
  *
  * The legacy-rename branch never blocks provisioning: if the search
  * API throws or returns ambiguous results, we fall through to step 3
@@ -41,19 +41,9 @@ export interface EnsurePersonalRepoResult {
 export async function ensurePersonalRepo(params: {
   accountId: string;
 }): Promise<EnsurePersonalRepoResult | null> {
-  const token = getServiceGithubToken();
-  if (!token) {
-    console.error("[ensurePersonalRepo] GITHUB_TOKEN missing; cannot ensure repo");
-    return null;
-  }
-
   const { repo: repoName } = buildPersonalRepoIdentifier(params);
 
-  const existing = await repositoryExists({
-    owner: RECOUPABLE_GITHUB_OWNER,
-    repo: repoName,
-    token,
-  });
+  const existing = await repositoryExists({ repo: repoName });
 
   if (existing === null) {
     console.error(`[ensurePersonalRepo] failed to check ${RECOUPABLE_GITHUB_OWNER}/${repoName}`);
@@ -73,17 +63,13 @@ export async function ensurePersonalRepo(params: {
   // account's existing code follows them onto the new naming
   // convention without a manual migration step.
   const legacyName = await findLegacyAccountRepo({
-    owner: RECOUPABLE_GITHUB_OWNER,
     accountId: params.accountId,
-    token,
   });
 
   if (legacyName) {
     const renamed = await renameRepository({
-      owner: RECOUPABLE_GITHUB_OWNER,
       repo: legacyName,
       newName: repoName,
-      token,
     });
     if (renamed.success) {
       console.log(
@@ -101,13 +87,7 @@ export async function ensurePersonalRepo(params: {
     );
   }
 
-  const created = await createRepository({
-    owner: RECOUPABLE_GITHUB_OWNER,
-    name: repoName,
-    description: `Recoupable workspace for account ${params.accountId}`,
-    isPrivate: true,
-    token,
-  });
+  const created = await createRepository({ name: repoName });
 
   if (!created.success || !created.cloneUrl || !created.repoUrl) {
     console.error(`[ensurePersonalRepo] createRepository failed: ${created.error ?? "unknown"}`);

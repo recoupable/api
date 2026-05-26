@@ -119,12 +119,7 @@ async function main(): Promise<void> {
   let succeeded = 0;
   let failed = 0;
   for (const a of toRename) {
-    const result = await renameRepository({
-      owner: RECOUPABLE_GITHUB_OWNER,
-      repo: a.from,
-      newName: a.to,
-      token,
-    });
+    const result = await renameRepository({ repo: a.from, newName: a.to });
     if (result.success) {
       succeeded += 1;
       console.log(`  ok: ${a.from} -> ${a.to}`);

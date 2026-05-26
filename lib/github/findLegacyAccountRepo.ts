@@ -1,12 +1,14 @@
+import { RECOUPABLE_GITHUB_OWNER } from "@/lib/recoupable/githubOwner";
+import { getServiceGithubToken } from "./getServiceGithubToken";
+
 const LEGACY_SUFFIX_PATTERN = /^.+-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Search the `recoupable` org for a legacy-named workspace repo whose
  * name ends with `-<accountId>` — the old `<kebab(name)>-<accountId>`
- * convention. Returns the legacy repo name (the one before the
- * trailing `-<accountId>` suffix is what made the name unique) so
- * `ensurePersonalRepo` can rename it to the new bare-`<accountId>`
- * convention without losing the user's git history.
+ * convention. Returns the legacy repo name so `ensurePersonalRepo`
+ * can rename it to the new bare-`<accountId>` convention without
+ * losing the user's git history.
  *
  * Returns:
  *   - the legacy repo name (e.g. `sweetman-fb678396-...`) on hit
@@ -18,16 +20,23 @@ const LEGACY_SUFFIX_PATTERN = /^.+-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  * Uses GitHub's `GET /search/repositories` endpoint with
  * `<accountId>+in:name+org:recoupable` so we don't have to paginate
  * the entire org.
+ *
+ * Owner is hard-coded to `recoupable` and the GitHub token is read
+ * from the environment (per PR #618 review — single source of truth).
  */
 export async function findLegacyAccountRepo(params: {
-  owner: string;
   accountId: string;
-  token: string;
 }): Promise<string | null | undefined> {
-  const { owner, accountId, token } = params;
+  const { accountId } = params;
+
+  const token = getServiceGithubToken();
+  if (!token) {
+    console.error("[findLegacyAccountRepo] GITHUB_TOKEN missing");
+    return undefined;
+  }
 
   try {
-    const query = encodeURIComponent(`${accountId} in:name org:${owner}`);
+    const query = encodeURIComponent(`${accountId} in:name org:${RECOUPABLE_GITHUB_OWNER}`);
     const response = await fetch(
       `https://api.github.com/search/repositories?q=${query}&per_page=10`,
       {

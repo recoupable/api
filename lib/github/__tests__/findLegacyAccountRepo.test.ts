@@ -1,11 +1,27 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { findLegacyAccountRepo } from "@/lib/github/findLegacyAccountRepo";
+import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
+
+vi.mock("@/lib/github/getServiceGithubToken", () => ({
+  getServiceGithubToken: vi.fn(() => "tok"),
+}));
 
 const accountId = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
 
 describe("findLegacyAccountRepo", () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
+    vi.mocked(getServiceGithubToken).mockReturnValue("tok");
+  });
+
+  it("returns undefined when GITHUB_TOKEN is missing", async () => {
+    vi.mocked(getServiceGithubToken).mockReturnValue(undefined);
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const result = await findLegacyAccountRepo({ accountId });
+
+    expect(result).toBeUndefined();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("returns the legacy name when a *-<accountId> match exists", async () => {
@@ -18,11 +34,7 @@ describe("findLegacyAccountRepo", () => {
       ),
     );
 
-    const result = await findLegacyAccountRepo({
-      owner: "recoupable",
-      accountId,
-      token: "tok",
-    });
+    const result = await findLegacyAccountRepo({ accountId });
 
     expect(result).toBe(`sweetman-${accountId}`);
   });
@@ -35,11 +47,7 @@ describe("findLegacyAccountRepo", () => {
       }),
     );
 
-    const result = await findLegacyAccountRepo({
-      owner: "recoupable",
-      accountId,
-      token: "tok",
-    });
+    const result = await findLegacyAccountRepo({ accountId });
 
     expect(result).toBeNull();
   });
@@ -52,11 +60,7 @@ describe("findLegacyAccountRepo", () => {
       }),
     );
 
-    const result = await findLegacyAccountRepo({
-      owner: "recoupable",
-      accountId,
-      token: "tok",
-    });
+    const result = await findLegacyAccountRepo({ accountId });
 
     expect(result).toBeNull();
   });
@@ -64,16 +68,12 @@ describe("findLegacyAccountRepo", () => {
   it("returns undefined on non-OK response (caller treats as miss)", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 503 }));
 
-    const result = await findLegacyAccountRepo({
-      owner: "recoupable",
-      accountId,
-      token: "tok",
-    });
+    const result = await findLegacyAccountRepo({ accountId });
 
     expect(result).toBeUndefined();
   });
 
-  it("encodes the search query as <accountId>+in:name+org:<owner>", async () => {
+  it("encodes the search query as <accountId>+in:name+org:recoupable", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ items: [] }), {
         status: 200,
@@ -81,11 +81,7 @@ describe("findLegacyAccountRepo", () => {
       }),
     );
 
-    await findLegacyAccountRepo({
-      owner: "recoupable",
-      accountId: "id-1",
-      token: "tok",
-    });
+    await findLegacyAccountRepo({ accountId: "id-1" });
 
     const [url] = fetchSpy.mock.calls[0] as [string];
     expect(url).toContain("/search/repositories?q=");

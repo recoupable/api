@@ -1,26 +1,44 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renameRepository } from "@/lib/github/renameRepository";
+import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
+
+vi.mock("@/lib/github/getServiceGithubToken", () => ({
+  getServiceGithubToken: vi.fn(() => "tok"),
+}));
 
 describe("renameRepository", () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
+    vi.mocked(getServiceGithubToken).mockReturnValue("tok");
+  });
+
+  it("returns failure when GITHUB_TOKEN is missing", async () => {
+    vi.mocked(getServiceGithubToken).mockReturnValue(undefined);
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const result = await renameRepository({
+      repo: "sweetman-id-1",
+      newName: "id-1",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/GITHUB_TOKEN/i);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("rejects invalid newName without hitting the network", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
     const result = await renameRepository({
-      owner: "recoupable",
       repo: "sweetman-id-1",
       newName: "bad name",
-      token: "tok",
     });
 
     expect(result.success).toBe(false);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("PATCHes /repos/{owner}/{repo} with {name} and returns the new URLs on 200", async () => {
+  it("PATCHes /repos/recoupable/<repo> with {name} and returns the new URLs on 200", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -32,10 +50,8 @@ describe("renameRepository", () => {
     );
 
     const result = await renameRepository({
-      owner: "recoupable",
       repo: "sweetman-id-1",
       newName: "id-1",
-      token: "tok",
     });
 
     expect(result).toEqual({
@@ -53,10 +69,8 @@ describe("renameRepository", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 422 }));
 
     const result = await renameRepository({
-      owner: "recoupable",
       repo: "sweetman-id-1",
       newName: "id-1",
-      token: "tok",
     });
 
     expect(result.success).toBe(false);
@@ -67,10 +81,8 @@ describe("renameRepository", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 404 }));
 
     const result = await renameRepository({
-      owner: "recoupable",
       repo: "sweetman-id-1",
       newName: "id-1",
-      token: "tok",
     });
 
     expect(result.success).toBe(false);
@@ -81,10 +93,8 @@ describe("renameRepository", () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("ECONNRESET"));
 
     const result = await renameRepository({
-      owner: "recoupable",
       repo: "sweetman-id-1",
       newName: "id-1",
-      token: "tok",
     });
 
     expect(result.success).toBe(false);
