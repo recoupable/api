@@ -55,7 +55,6 @@ export async function createSessionHandler(request: NextRequest): Promise<NextRe
 
   const sessionRow = await insertSession(
     buildSessionInsertRow({
-      body,
       accountId: auth.accountId,
       title,
       cloneUrl,

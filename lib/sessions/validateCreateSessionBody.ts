@@ -12,15 +12,15 @@ import type { AuthContext } from "@/lib/auth/validateAuthContext";
  * org session against `recoupable/<organizationId>` (and validates org
  * access via `validateAuthContext`).
  *
- * `cloneUrl` and `branch` were removed (the api derives the URL itself
- * via `ensurePersonalRepo`); `repoOwner`/`repoName`/`isNewBranch` were
- * never accepted — they used to appear in the OpenAPI docs but Zod
- * silently dropped them. Cleaned up in recoupable/docs#226.
+ * `cloneUrl` / `branch` / `sandboxType` were removed — the api derives
+ * the URL itself via `ensurePersonalRepo` and only `vercel` sandboxes
+ * are supported (hard-coded in `SandboxState`).
+ * `repoOwner`/`repoName`/`isNewBranch` were never accepted (Zod
+ * silently dropped them); cleaned up alongside in recoupable/docs#226.
  */
 export const createSessionBodySchema = z.object({
   title: z.string().optional(),
   organizationId: z.string().uuid("organizationId must be a valid UUID").optional(),
-  sandboxType: z.literal("vercel", { error: "Invalid sandbox type" }).optional(),
 });
 
 export type CreateSessionBody = z.infer<typeof createSessionBodySchema>;

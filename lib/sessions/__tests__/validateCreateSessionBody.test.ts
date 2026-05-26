@@ -30,25 +30,13 @@ describe("validateCreateSessionBody", () => {
     expect(result).toBe(failure);
   });
 
-  it("returns 400 when sandboxType is not 'vercel'", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
-
-    const result = await validateCreateSessionBody(req({ sandboxType: "wrong" }));
-    expect(result).toBeInstanceOf(NextResponse);
-    if (result instanceof NextResponse) {
-      expect(result.status).toBe(400);
-      const body = (await result.json()) as { status: string; error: string };
-      expect(body.error).toBe("Invalid sandbox type");
-    }
-  });
-
   it("returns body + auth on success", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
 
-    const result = await validateCreateSessionBody(req({ title: "Hello", sandboxType: "vercel" }));
+    const result = await validateCreateSessionBody(req({ title: "Hello" }));
     expect(result).not.toBeInstanceOf(NextResponse);
     if (!(result instanceof NextResponse)) {
-      expect(result.body).toEqual({ title: "Hello", sandboxType: "vercel" });
+      expect(result.body).toEqual({ title: "Hello" });
       expect(result.auth).toBe(okAuth);
     }
   });

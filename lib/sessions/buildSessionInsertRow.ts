@@ -1,9 +1,7 @@
 import type { TablesInsert } from "@/types/database.types";
-import type { CreateSessionBody } from "@/lib/sessions/validateCreateSessionBody";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 
 interface BuildSessionInsertRowInput {
-  body: CreateSessionBody;
   accountId: string;
   title: string;
   /**
@@ -24,7 +22,7 @@ interface BuildSessionInsertRowInput {
  * @returns A row ready to pass to `insertSession`.
  */
 export function buildSessionInsertRow(input: BuildSessionInsertRowInput): TablesInsert<"sessions"> {
-  const { body, accountId, title, cloneUrl } = input;
+  const { accountId, title, cloneUrl } = input;
   return {
     id: generateUUID(),
     account_id: accountId,
@@ -33,7 +31,7 @@ export function buildSessionInsertRow(input: BuildSessionInsertRowInput): Tables
     branch: null,
     clone_url: cloneUrl,
     global_skill_refs: [],
-    sandbox_state: { type: body.sandboxType ?? "vercel" },
+    sandbox_state: { type: "vercel" },
     lifecycle_state: "provisioning",
     lifecycle_version: 0,
   };

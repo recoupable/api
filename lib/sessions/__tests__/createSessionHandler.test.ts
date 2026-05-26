@@ -36,10 +36,13 @@ describe("createSessionHandler — short-circuits on validation failure", () => 
 
   it("returns 400 when validateCreateSessionBody rejects with 400", async () => {
     vi.mocked(validateCreateSessionBody).mockResolvedValue(
-      NextResponse.json({ status: "error", error: "Invalid sandbox type" }, { status: 400 }),
+      NextResponse.json(
+        { status: "error", error: "organizationId must be a valid UUID" },
+        { status: 400 },
+      ),
     );
 
-    const res = await createSessionHandler(makeCreateSessionReq({ sandboxType: "wrong" }));
+    const res = await createSessionHandler(makeCreateSessionReq({ organizationId: "not-a-uuid" }));
     expect(res.status).toBe(400);
     expect(insertSession).not.toHaveBeenCalled();
   });
