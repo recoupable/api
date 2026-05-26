@@ -33,20 +33,17 @@ describe("ensurePersonalRepo", () => {
     expect(createRepository).not.toHaveBeenCalled();
   });
 
-  it("creates a fresh repo when none exists and returns its clone URL", async () => {
+  it("creates a fresh repo when none exists and returns its URL", async () => {
     vi.mocked(repositoryExists).mockResolvedValue(false);
     vi.mocked(createRepository).mockResolvedValue({
       success: true,
-      cloneUrl: `https://github.com/recoupable/${accountId}.git`,
       repoUrl: `https://github.com/recoupable/${accountId}`,
-      owner: "recoupable",
-      repoName: accountId,
     });
 
     const result = await ensurePersonalRepo({ accountId });
 
     expect(createRepository).toHaveBeenCalledWith({ name: accountId });
-    expect(result).toBe(`https://github.com/recoupable/${accountId}.git`);
+    expect(result).toBe(`https://github.com/recoupable/${accountId}`);
   });
 
   it("returns null when creation outright fails", async () => {

@@ -5,11 +5,6 @@ export interface CreateRepositoryResult {
   success: boolean;
   /** GitHub UI URL (`html_url`). */
   repoUrl?: string;
-  /** Git clone URL (`clone_url`). */
-  cloneUrl?: string;
-  /** Owner login (always `recoupable`). */
-  owner?: string;
-  repoName?: string;
   /** Human-readable error message; only set when `success` is false. */
   error?: string;
 }
@@ -69,19 +64,8 @@ export async function createRepository(params: { name: string }): Promise<Create
     });
 
     if (response.status === 201) {
-      const data = (await response.json()) as {
-        html_url: string;
-        clone_url: string;
-        owner: { login: string };
-        name: string;
-      };
-      return {
-        success: true,
-        repoUrl: data.html_url,
-        cloneUrl: data.clone_url,
-        owner: data.owner.login,
-        repoName: data.name,
-      };
+      const data = (await response.json()) as { html_url: string };
+      return { success: true, repoUrl: data.html_url };
     }
 
     if (response.status === 422) {

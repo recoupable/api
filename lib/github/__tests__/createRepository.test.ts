@@ -38,9 +38,6 @@ describe("createRepository", () => {
       new Response(
         JSON.stringify({
           html_url: "https://github.com/recoupable/id-1",
-          clone_url: "https://github.com/recoupable/id-1.git",
-          owner: { login: "recoupable" },
-          name: "id-1",
         }),
         { status: 201, headers: { "content-type": "application/json" } },
       ),
@@ -51,9 +48,6 @@ describe("createRepository", () => {
     expect(result).toEqual({
       success: true,
       repoUrl: "https://github.com/recoupable/id-1",
-      cloneUrl: "https://github.com/recoupable/id-1.git",
-      owner: "recoupable",
-      repoName: "id-1",
     });
     const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("https://api.github.com/orgs/recoupable/repos");

@@ -39,10 +39,10 @@ export async function ensurePersonalRepo(params: { accountId: string }): Promise
 
   const created = await createRepository({ name: repoName });
 
-  if (!created.success || !created.cloneUrl) {
+  if (!created.success || !created.repoUrl) {
     console.error(`[ensurePersonalRepo] createRepository failed: ${created.error ?? "unknown"}`);
     return null;
   }
 
-  return created.cloneUrl;
+  return created.repoUrl;
 }
