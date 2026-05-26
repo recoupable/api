@@ -33,7 +33,7 @@ describe("createRepository", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("POSTs to /orgs/recoupable/repos with hard-coded private=false + auto_init=true", async () => {
+  it("POSTs to /orgs/recoupable/repos with hard-coded private=true + auto_init=true", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -60,7 +60,7 @@ describe("createRepository", () => {
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body as string)).toEqual({
       name: "id-1",
-      private: false,
+      private: true,
       auto_init: true,
     });
   });

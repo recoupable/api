@@ -20,8 +20,9 @@ export interface CreateRepositoryResult {
  * Hard-coded conventions (per PR #618 review — KISS / YAGNI):
  *   - owner = `recoupable` (no other owner makes sense; see
  *     `RECOUPABLE_GITHUB_OWNER`).
- *   - private = false (workspace repos are public so future surfaces
- *     can clone without per-caller auth).
+ *   - private = true (matches the 153 legacy workspace repos that
+ *     pre-date this code path — keeps the fleet uniform; clones from
+ *     sandboxes auth via the GITHUB_TOKEN service token).
  *   - description = none (GitHub doesn't render anything meaningful
  *     for these per-account repos).
  *   - token = read once from `GITHUB_TOKEN` via
@@ -62,7 +63,7 @@ export async function createRepository(params: { name: string }): Promise<Create
       },
       body: JSON.stringify({
         name,
-        private: false,
+        private: true,
         auto_init: true,
       }),
     });
