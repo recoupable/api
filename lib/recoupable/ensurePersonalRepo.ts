@@ -16,10 +16,11 @@ import { RECOUPABLE_GITHUB_OWNER } from "./githubOwner";
  * consume (the clone URL); owner / repo name are trivially
  * recoverable from the URL if ever needed.
  *
- * Legacy `<slug>-<accountId>` repos are renamed once, ahead of time,
- * by `scripts/migrate-workspace-repo-names.ts`. After that one-shot
- * migration there's no legacy repo to find at runtime, so no
- * rename-on-demand branch lives here.
+ * Legacy `<slug>-<accountId>` repos were renamed to the canonical
+ * `<accountId>` shape in a one-time backfill (see PR #618), so the
+ * runtime never needs to look for a legacy name — every workspace
+ * either already lives at `recoupable/<accountId>` or doesn't exist
+ * yet.
  */
 export async function ensurePersonalRepo(params: { accountId: string }): Promise<string | null> {
   const repoName = params.accountId;
