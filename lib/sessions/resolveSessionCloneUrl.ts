@@ -45,9 +45,9 @@ export async function resolveSessionCloneUrl(params: {
     return { ok: true, cloneUrl: null };
   }
 
-  const ensured = await ensurePersonalRepo({ accountId: auth.accountId });
+  const cloneUrl = await ensurePersonalRepo({ accountId: auth.accountId });
 
-  if (!ensured) {
+  if (!cloneUrl) {
     return {
       ok: false,
       cloneUrl: null,
@@ -55,5 +55,5 @@ export async function resolveSessionCloneUrl(params: {
     };
   }
 
-  return { ok: true, cloneUrl: ensured.cloneUrl };
+  return { ok: true, cloneUrl };
 }

@@ -43,12 +43,7 @@ describe("resolveSessionCloneUrl", () => {
   });
 
   it("provisions a personal repo when no body cloneUrl and no org", async () => {
-    vi.mocked(ensurePersonalRepo).mockResolvedValue({
-      cloneUrl: `https://github.com/recoupable/${accountId}`,
-      repoUrl: `https://github.com/recoupable/${accountId}`,
-      owner: "recoupable",
-      repoName: accountId,
-    });
+    vi.mocked(ensurePersonalRepo).mockResolvedValue(`https://github.com/recoupable/${accountId}`);
 
     const result = await resolveSessionCloneUrl({
       bodyCloneUrl: undefined,
