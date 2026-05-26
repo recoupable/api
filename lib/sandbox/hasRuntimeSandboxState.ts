@@ -1,24 +1,27 @@
+import { getResumableSandboxName } from "@/lib/sandbox/getResumableSandboxName";
+import { getStateExpiresAt } from "@/lib/sandbox/getStateExpiresAt";
+
 /**
- * Returns true when `sandbox_state` carries actual runtime metadata
- * (i.e. a sandbox has been provisioned and bound to the session) rather
- * than the type-only stub written at session creation.
+ * Returns true when `sandbox_state` carries live runtime metadata —
+ * i.e. a sandbox has been provisioned, is not yet expired, and has a
+ * resumable name. This mirrors open-agents semantics exactly:
  *
- * `POST /api/sessions` (api PR #515) inserts `sandbox_state` as
- * `{ type: "vercel" }` — a type discriminator with no runtime data.
- * Callers must NOT treat this stub as evidence of a live sandbox; doing
- * so causes `GET /api/sandbox/status` to report `"active"` immediately
- * after session creation, which defeats the chat loading-state UX.
+ *   expiresAt defined  →  sandbox was started (not a type-only stub or expired entry)
+ *   resumable name     →  sandbox can be operated on
  *
- * Runtime presence is currently keyed off a non-empty `sandboxName` —
- * `POST /api/sandbox` writes this via `getSessionSandboxName(sessionId)`
- * and the abstraction's `connectSandbox(...).getState()` preserves it.
+ * `POST /api/sessions` inserts `{ type: "vercel" }` (no expiresAt), so
+ * the creation stub correctly returns false.
+ *
+ * Expired state (sandboxName present but expiresAt absent/stripped) also
+ * returns false, preventing the 409 unarchive guard from firing on inert
+ * rows and stopping `stopSandboxOnArchive` from attempting to stop an
+ * already-gone sandbox.
  *
  * @param state - The persisted `sandbox_state` JSON column value.
- * @returns true when the state has real runtime metadata; false for
- *   null/undefined, scalars, the empty type stub, or empty sandboxName.
+ * @returns true when the state describes a live, operable sandbox.
  */
 export function hasRuntimeSandboxState(state: unknown): boolean {
   if (!state || typeof state !== "object") return false;
-  const candidate = state as { sandboxName?: unknown };
-  return typeof candidate.sandboxName === "string" && candidate.sandboxName.length > 0;
+  if (getStateExpiresAt(state) === undefined) return false;
+  return getResumableSandboxName(state) !== null;
 }

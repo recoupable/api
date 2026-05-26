@@ -361,6 +361,12 @@ describe("PATCH /api/sessions/[sessionId]", () => {
     expect(updateSession).toHaveBeenCalledWith("sess_1", {
       title: "Renamed session",
       status: "archived",
+      lifecycle_state: "archived",
+      lifecycle_run_id: null,
+      snapshot_url: null,
+      snapshot_created_at: null,
+      sandbox_expires_at: null,
+      hibernate_after: null,
     });
   });
 
