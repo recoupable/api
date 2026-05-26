@@ -5,6 +5,7 @@ import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
+import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
 
 vi.mock("@/app/lib/workflows/runAgentStep", () => ({
   runAgentStep: vi.fn(),
@@ -20,6 +21,9 @@ vi.mock("@/app/lib/workflows/generateAssistantMessageId", () => ({
 }));
 vi.mock("@/lib/credits/handleChatCredits", () => ({
   handleChatCredits: vi.fn(),
+}));
+vi.mock("@/lib/chat/auto-commit/autoCommitChatTurn", () => ({
+  autoCommitChatTurn: vi.fn(),
 }));
 // Captured writable stub so tests can assert closeChatStream got the
 // same instance the workflow body holds.
@@ -45,10 +49,23 @@ const baseInput = {
   sessionId: "session-1",
   accountId: "acc-1",
   modelId: "anthropic/claude-haiku-4.5",
+  sessionTitle: "test session",
+  repoOwner: "recoupable",
+  repoName: "api",
   agentContext: {
     sandbox: { state: { type: "vercel" }, workingDirectory: "/sandbox/mono" },
   } as never,
 };
+
+const responseMessageWithMetadata = {
+  id: "asst-msg-1",
+  role: "assistant",
+  parts: [{ type: "text", text: "Hello!" }],
+  metadata: {
+    totalMessageCost: 0.07,
+    totalMessageUsage: { inputTokens: 100, cachedInputTokens: 10, outputTokens: 20 },
+  },
+} as never;
 
 describe("runAgentWorkflow", () => {
   it("clears active_stream_id after a successful run, using the workflow's own runId", async () => {
@@ -220,5 +237,77 @@ describe("runAgentWorkflow", () => {
     await expect(runAgentWorkflow(baseInput)).rejects.toThrow("model exploded");
 
     expect(handleChatCredits).not.toHaveBeenCalled();
+  });
+
+  describe("auto-commit", () => {
+    // The auto-commit flow itself is exhaustively covered in
+    // `lib/chat/auto-commit/__tests__/autoCommitChatTurn.test.ts`.
+    // These tests only verify the workflow body wires the orchestrator
+    // up with the right inputs.
+
+    it("calls autoCommitChatTurn with workflow context after persistAssistantMessage", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        responseMessage: responseMessageWithMetadata,
+      });
+
+      await runAgentWorkflow(baseInput);
+
+      expect(autoCommitChatTurn).toHaveBeenCalledTimes(1);
+      // Workflow spreads `...input, ...result` into the call so any
+      // future fields are forwarded automatically. Only assert on the
+      // fields autoCommitChatTurn actually consumes — extra fields
+      // from input/result are fine to pass through.
+      expect(autoCommitChatTurn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          writable: writableStub,
+          responseMessage: responseMessageWithMetadata,
+          finishReason: "stop",
+          sessionId: "session-1",
+          sessionTitle: "test session",
+          repoOwner: "recoupable",
+          repoName: "api",
+          sandboxState: { type: "vercel", ...baseInput.agentContext.sandbox.state },
+        }),
+      );
+    });
+
+    it("wraps the raw VercelState with `type: 'vercel'` before forwarding", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        responseMessage: responseMessageWithMetadata,
+      });
+
+      await runAgentWorkflow(baseInput);
+
+      const call = vi.mocked(autoCommitChatTurn).mock.calls[0]?.[0];
+      expect(call?.sandboxState).toMatchObject({ type: "vercel" });
+    });
+
+    it("forwards undefined sandboxState when agentContext.sandbox is missing", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        responseMessage: responseMessageWithMetadata,
+      });
+
+      await runAgentWorkflow({
+        ...baseInput,
+        agentContext: {} as never,
+      });
+
+      const call = vi.mocked(autoCommitChatTurn).mock.calls[0]?.[0];
+      expect(call?.sandboxState).toBeUndefined();
+    });
+
+    it("does NOT call autoCommitChatTurn when runAgentStep returns no responseMessage", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        responseMessage: undefined,
+      });
+
+      await runAgentWorkflow(baseInput);
+
+      expect(autoCommitChatTurn).not.toHaveBeenCalled();
+    });
   });
 });

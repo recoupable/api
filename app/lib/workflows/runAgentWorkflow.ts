@@ -5,6 +5,7 @@ import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistan
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
+import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
 import type { AgentMessageMetadata } from "@/lib/agent/messageMetadata/AgentMessageMetadata";
 import type { DurableAgentContext } from "@/lib/agent/tools/AgentContext";
 
@@ -26,6 +27,20 @@ export type RunAgentWorkflowInput = {
    */
   accountId: string;
   modelId: string;
+  /**
+   * Optional chat title — used as context for the auto-commit
+   * message-generation LLM call.
+   */
+  sessionTitle?: string;
+  /**
+   * Repo identifiers from `sessions.repo_owner` / `sessions.repo_name`.
+   * When BOTH are present and the sandbox is reachable, the workflow
+   * runs auto-commit after a successful turn (git add → LLM-generated
+   * commit message → git commit → git push). Either being absent
+   * skips auto-commit silently.
+   */
+  repoOwner?: string;
+  repoName?: string;
   /**
    * JSON-serializable subset of AgentContext that survives the durable
    * workflow input. `runAgentStep` attaches the constructed `model`
@@ -99,6 +114,23 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
         source: "api",
         gatewayCostUsd: metadata?.totalMessageCost,
         usage: metadata?.totalMessageUsage ?? ZERO_USAGE,
+      });
+
+      // Auto-commit + push after a natural finish. DurableAgentContext
+      // carries the raw VercelState; the auto-commit helpers operate on
+      // the discriminated SandboxState union so they can fan out to
+      // other sandbox backends in the future. Wrap with the
+      // `type: "vercel"` tag here. All gating + chunk emission +
+      // persistence lives in `autoCommitChatTurn` so the workflow body
+      // stays a thin orchestrator.
+      const sandboxState = input.agentContext.sandbox?.state
+        ? ({ type: "vercel", ...input.agentContext.sandbox.state } as const)
+        : undefined;
+      await autoCommitChatTurn({
+        ...input,
+        ...result,
+        writable,
+        sandboxState,
       });
     }
   } finally {
