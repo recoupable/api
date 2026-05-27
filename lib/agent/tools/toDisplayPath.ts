@@ -1,6 +1,10 @@
-import { isPathWithinSandboxDirectory } from "@/lib/sandbox/isPathWithinSandboxDirectory";
-import { relativeSandboxPath } from "@/lib/sandbox/relativeSandboxPath";
-import { resolveSandboxPath } from "@/lib/sandbox/resolveSandboxPath";
+import * as path from "path";
+
+function isPathWithinDirectory(filePath: string, directory: string): boolean {
+  const resolvedPath = path.resolve(filePath);
+  const resolvedDir = path.resolve(directory);
+  return resolvedPath.startsWith(resolvedDir + path.sep) || resolvedPath === resolvedDir;
+}
 
 /**
  * Convert an absolute (or relative-to-workingDirectory) path into a compact
@@ -15,13 +19,15 @@ import { resolveSandboxPath } from "@/lib/sandbox/resolveSandboxPath";
  * @param workingDirectory - The sandbox's working directory (always absolute).
  */
 export function toDisplayPath(filePath: string, workingDirectory: string): string {
-  const absolutePath = resolveSandboxPath(workingDirectory, filePath);
+  const absolutePath = path.isAbsolute(filePath)
+    ? path.resolve(filePath)
+    : path.resolve(workingDirectory, filePath);
 
-  if (!isPathWithinSandboxDirectory(absolutePath, workingDirectory)) {
+  if (!isPathWithinDirectory(absolutePath, workingDirectory)) {
     return absolutePath.replace(/\\/g, "/");
   }
 
-  const relativePath = relativeSandboxPath(workingDirectory, absolutePath);
+  const relativePath = path.relative(workingDirectory, absolutePath);
   if (relativePath === "") return ".";
 
   return relativePath.replace(/\\/g, "/");

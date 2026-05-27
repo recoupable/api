@@ -1,9 +1,8 @@
 import { tool } from "ai";
 import { z } from "zod";
+import * as path from "path";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
 import { toDisplayPath } from "@/lib/agent/tools/toDisplayPath";
-import { dirnameSandboxPath } from "@/lib/sandbox/dirnameSandboxPath";
-import { resolveSandboxPath } from "@/lib/sandbox/resolveSandboxPath";
 
 const writeInputSchema = z.object({
   filePath: z
@@ -45,8 +44,10 @@ IMPORTANT:
     const workingDirectory = sandbox.workingDirectory;
 
     try {
-      const absolutePath = resolveSandboxPath(workingDirectory, filePath);
-      const dir = dirnameSandboxPath(absolutePath, workingDirectory);
+      const absolutePath = path.isAbsolute(filePath)
+        ? filePath
+        : path.resolve(workingDirectory, filePath);
+      const dir = path.dirname(absolutePath);
       await sandbox.mkdir(dir, { recursive: true });
       await sandbox.writeFile(absolutePath, content, "utf-8");
       const stats = await sandbox.stat(absolutePath);
