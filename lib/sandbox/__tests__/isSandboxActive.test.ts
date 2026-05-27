@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { isSandboxActive } from "@/lib/sandbox/isSandboxActive";
-import { runtimeSandboxState } from "@/lib/sandbox/__tests__/fixtures/runtimeSandboxState";
 
 const FAR_FUTURE = "2099-01-01T00:00:00.000Z";
 const FAR_PAST = "2000-01-01T00:00:00.000Z";
@@ -23,7 +22,7 @@ describe("isSandboxActive", () => {
     expect(
       isSandboxActive({
         ...baseRow,
-        sandbox_state: runtimeSandboxState("session-x"),
+        sandbox_state: { type: "vercel", sandboxName: "session-x" },
         sandbox_expires_at: FAR_FUTURE,
       } as any),
     ).toBe(true);
@@ -33,17 +32,17 @@ describe("isSandboxActive", () => {
     expect(
       isSandboxActive({
         ...baseRow,
-        sandbox_state: runtimeSandboxState("session-x"),
+        sandbox_state: { type: "vercel", sandboxName: "session-x" },
         sandbox_expires_at: FAR_PAST,
       } as any),
     ).toBe(false);
   });
 
-  it("returns true when runtime state is live but sandbox_expires_at column is null", () => {
+  it("returns true when sandboxName is set but expiry is null (no expiry to compare against)", () => {
     expect(
       isSandboxActive({
         ...baseRow,
-        sandbox_state: runtimeSandboxState("session-x"),
+        sandbox_state: { type: "vercel", sandboxName: "session-x" },
         sandbox_expires_at: null,
       } as any),
     ).toBe(true);

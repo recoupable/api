@@ -6,7 +6,6 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { connectSandbox } from "@/lib/sandbox/factory";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
-import { runtimeSandboxState } from "@/lib/sandbox/__tests__/fixtures/runtimeSandboxState";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
@@ -25,7 +24,7 @@ vi.mock("@/lib/supabase/sessions/updateSession", () => ({
 }));
 
 const ACCOUNT_ID = "acc-1";
-const RUNTIME_STATE = runtimeSandboxState();
+const RUNTIME_STATE = { type: "vercel", sandboxName: "session-sess-1" };
 
 const baseRow = {
   id: "sess-1",

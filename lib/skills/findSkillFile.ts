@@ -1,5 +1,5 @@
+import * as path from "path";
 import type { Sandbox } from "@/lib/sandbox/interface";
-import { joinSandboxPath } from "@/lib/sandbox/joinSandboxPath";
 
 /**
  * Locate the SKILL.md file inside a candidate skill directory. Prefers
@@ -15,8 +15,8 @@ import { joinSandboxPath } from "@/lib/sandbox/joinSandboxPath";
  * @param skillDir - Absolute path to the candidate skill directory.
  */
 export async function findSkillFile(sandbox: Sandbox, skillDir: string): Promise<string | null> {
-  const uppercase = joinSandboxPath(skillDir, "SKILL.md");
-  const lowercase = joinSandboxPath(skillDir, "skill.md");
+  const uppercase = path.join(skillDir, "SKILL.md");
+  const lowercase = path.join(skillDir, "skill.md");
 
   try {
     await sandbox.access(uppercase);
