@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
-import { joinSandboxPath } from "@/lib/sandbox/sandboxPaths";
+import { joinSandboxPath } from "@/lib/sandbox/joinSandboxPath";
 import { extractSkillBody } from "@/lib/skills/extractSkillBody";
 import { getSkills } from "@/lib/skills/getSkills";
 import { injectSkillDirectory } from "@/lib/skills/injectSkillDirectory";

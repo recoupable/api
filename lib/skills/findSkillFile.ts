@@ -1,5 +1,5 @@
 import type { Sandbox } from "@/lib/sandbox/interface";
-import { joinSandboxPath } from "@/lib/sandbox/sandboxPaths";
+import { joinSandboxPath } from "@/lib/sandbox/joinSandboxPath";
 
 /**
  * Locate the SKILL.md file inside a candidate skill directory. Prefers

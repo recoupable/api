@@ -2,7 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
 import { toDisplayPath } from "@/lib/agent/tools/toDisplayPath";
-import { resolveSandboxPath } from "@/lib/sandbox/sandboxPaths";
+import { resolveSandboxPath } from "@/lib/sandbox/resolveSandboxPath";
 
 const readInputSchema = z.object({
   filePath: z.string().describe("Workspace-relative path to the file to read (e.g., src/index.ts)"),

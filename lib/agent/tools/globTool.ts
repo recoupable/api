@@ -1,7 +1,8 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
-import { joinSandboxPath, resolveSandboxPath } from "@/lib/sandbox/sandboxPaths";
+import { joinSandboxPath } from "@/lib/sandbox/joinSandboxPath";
+import { resolveSandboxPath } from "@/lib/sandbox/resolveSandboxPath";
 import { shellEscape } from "@/lib/agent/tools/shellEscape";
 import { toDisplayPath } from "@/lib/agent/tools/toDisplayPath";
 

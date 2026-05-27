@@ -2,7 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { buildRecoupExecEnv } from "@/lib/agent/tools/buildRecoupExecEnv";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
-import { resolveSandboxPath } from "@/lib/sandbox/sandboxPaths";
+import { resolveSandboxPath } from "@/lib/sandbox/resolveSandboxPath";
 
 const TIMEOUT_MS = 120_000;
 

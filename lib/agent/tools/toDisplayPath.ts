@@ -1,8 +1,6 @@
-import {
-  isPathWithinSandboxDirectory,
-  relativeSandboxPath,
-  resolveSandboxPath,
-} from "@/lib/sandbox/sandboxPaths";
+import { isPathWithinSandboxDirectory } from "@/lib/sandbox/isPathWithinSandboxDirectory";
+import { relativeSandboxPath } from "@/lib/sandbox/relativeSandboxPath";
+import { resolveSandboxPath } from "@/lib/sandbox/resolveSandboxPath";
 
 /**
  * Convert an absolute (or relative-to-workingDirectory) path into a compact

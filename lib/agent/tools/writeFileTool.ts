@@ -2,7 +2,8 @@ import { tool } from "ai";
 import { z } from "zod";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
 import { toDisplayPath } from "@/lib/agent/tools/toDisplayPath";
-import { dirnameSandboxPath, resolveSandboxPath } from "@/lib/sandbox/sandboxPaths";
+import { dirnameSandboxPath } from "@/lib/sandbox/dirnameSandboxPath";
+import { resolveSandboxPath } from "@/lib/sandbox/resolveSandboxPath";
 
 const writeInputSchema = z.object({
   filePath: z

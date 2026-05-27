@@ -1,6 +1,6 @@
 import path from "path";
 import type { Sandbox } from "@/lib/sandbox/interface";
-import { joinSandboxPath } from "@/lib/sandbox/sandboxPaths";
+import { joinSandboxPath } from "@/lib/sandbox/joinSandboxPath";
 import { findSkillFile } from "@/lib/skills/findSkillFile";
 import { parseSkillFrontmatter } from "@/lib/skills/parseSkillFrontmatter";
 import { frontmatterToOptions, type SkillMetadata } from "@/lib/skills/skillTypes";
