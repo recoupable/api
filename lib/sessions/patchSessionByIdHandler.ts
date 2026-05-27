@@ -76,9 +76,8 @@ export async function patchSessionByIdHandler(
     ...(body.linesRemoved !== undefined && { lines_removed: body.linesRemoved }),
     ...(shouldArchive && {
       lifecycle_state: "archived",
+      lifecycle_error: null,
       lifecycle_run_id: null,
-      snapshot_url: null,
-      snapshot_created_at: null,
       sandbox_expires_at: null,
       hibernate_after: null,
     }),

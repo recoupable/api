@@ -58,6 +58,8 @@ export async function stopSandboxOnArchive(session: Tables<"sessions">): Promise
     }
 
     await updateSession(session.id, {
+      snapshot_url: null,
+      snapshot_created_at: null,
       sandbox_state: clearSandboxState(session.sandbox_state) as unknown as Json,
     });
   } catch (error) {

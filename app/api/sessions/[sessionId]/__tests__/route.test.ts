@@ -362,9 +362,8 @@ describe("PATCH /api/sessions/[sessionId]", () => {
       title: "Renamed session",
       status: "archived",
       lifecycle_state: "archived",
+      lifecycle_error: null,
       lifecycle_run_id: null,
-      snapshot_url: null,
-      snapshot_created_at: null,
       sandbox_expires_at: null,
       hibernate_after: null,
     });
