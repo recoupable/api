@@ -5,6 +5,15 @@ import type { Tables } from "@/types/database.types";
 
 type SessionRow = Tables<"sessions">;
 
+vi.mock("next/server", async importOriginal => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return { ...actual, after: vi.fn() };
+});
+
+vi.mock("@/lib/sessions/stopSandboxOnArchive", () => ({
+  stopSandboxOnArchive: vi.fn(),
+}));
+
 vi.mock("@/lib/supabase/sessions/selectSessions", () => ({
   selectSessions: vi.fn(),
 }));
@@ -352,6 +361,11 @@ describe("PATCH /api/sessions/[sessionId]", () => {
     expect(updateSession).toHaveBeenCalledWith("sess_1", {
       title: "Renamed session",
       status: "archived",
+      lifecycle_state: "archived",
+      lifecycle_error: null,
+      lifecycle_run_id: null,
+      sandbox_expires_at: null,
+      hibernate_after: null,
     });
   });
 
