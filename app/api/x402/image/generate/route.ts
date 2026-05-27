@@ -3,6 +3,7 @@ import generateImage from "@/lib/ai/generateImage";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { uploadPublicAsset } from "@/lib/files/uploadPublicAsset";
 import { createImageMoment } from "@/lib/inprocess/createImageMoment";
+import type { CreateMomentResponse } from "@/lib/inprocess/createMoment";
 import { getBuyerAccount } from "@/lib/x402/getBuyerAccount";
 import { parseFilesFromQuery } from "@/lib/files/parseFilesFromQuery";
 
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
     }
 
     let imageUrl: string | null = null;
-    let momentResult: unknown | null = null;
+    let momentResult: CreateMomentResponse | null = null;
     let uploadError: string | null = null;
     try {
       const { url } = await uploadPublicAsset({

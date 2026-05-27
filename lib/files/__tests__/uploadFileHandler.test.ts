@@ -51,14 +51,15 @@ describe("uploadFileHandler", () => {
     });
   });
 
-  it("returns the auth response when validateAuthContext rejects", async () => {
+  it("re-emits auth errors in the upload endpoint's { success, error } shape", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(
       NextResponse.json({ error: "unauthorized" }, { status: 401 }),
     );
-    const { res } = await uploadWith(
+    const { res, body } = await uploadWith(
       new File([new Uint8Array([1])], "x.png", { type: "image/png" }),
     );
     expect(res.status).toBe(401);
+    expect(body).toEqual({ success: false, error: "unauthorized" });
     expect(uploadPublicAsset).not.toHaveBeenCalled();
   });
 

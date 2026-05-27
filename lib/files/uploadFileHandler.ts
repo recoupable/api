@@ -19,7 +19,15 @@ import { SUPPORTED_UPLOAD_MIME } from "@/lib/const";
  */
 export async function uploadFileHandler(request: NextRequest): Promise<NextResponse> {
   const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) return authResult;
+  if (authResult instanceof NextResponse) {
+    // Re-emit auth error in this endpoint's `{ success: false, error }` shape
+    // rather than passing through validateAuthContext's `{ status, error }`.
+    const payload = (await authResult.json().catch(() => null)) as {
+      error?: string;
+      message?: string;
+    } | null;
+    return errorResponse(authResult.status, payload?.error || payload?.message || "Unauthorized");
+  }
   const { accountId } = authResult;
 
   let formData: FormData;
