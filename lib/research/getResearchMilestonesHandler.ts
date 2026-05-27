@@ -18,7 +18,6 @@ export async function getResearchMilestonesHandler(request: NextRequest): Promis
   try {
     const validated = await validateArtistRequest(request);
     if (validated instanceof NextResponse) return validated;
-
     const result = await handleArtistResearch({
       ...validated,
       path: cmId => `/artist/${cmId}/milestones`,

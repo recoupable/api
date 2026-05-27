@@ -18,10 +18,12 @@ import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
 export async function setupChatRequest(body: ChatRequestBody): Promise<ChatConfig> {
   const decision = await getGeneralAgent(body);
 
-  const convertedMessages = convertToModelMessages(body.messages, {
-    tools: decision.agent.tools,
-    ignoreIncompleteToolCalls: true,
-  }).slice(-MAX_MESSAGES);
+  const convertedMessages = (
+    await convertToModelMessages(body.messages, {
+      tools: decision.agent.tools,
+      ignoreIncompleteToolCalls: true,
+    })
+  ).slice(-MAX_MESSAGES);
 
   return {
     agent: decision.agent,

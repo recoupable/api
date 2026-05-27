@@ -5,6 +5,10 @@ import { getResearchDiscoverHandler } from "../getResearchDiscoverHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
 
+vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
+  ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
@@ -17,8 +21,8 @@ vi.mock("@/lib/chartmetric/fetchChartmetric", () => ({
   fetchChartmetric: vi.fn(),
 }));
 
-vi.mock("@/lib/credits/deductCredits", () => ({
-  deductCredits: vi.fn(),
+vi.mock("@/lib/credits/recordCreditDeduction", () => ({
+  recordCreditDeduction: vi.fn(),
 }));
 
 describe("getResearchDiscoverHandler", () => {

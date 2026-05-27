@@ -1,5 +1,5 @@
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
-import { getAccountIdByAuthToken } from "@/lib/privy/getAccountIdByAuthToken";
+import { getOrCreateAccountIdByAuthToken } from "@/lib/privy/getOrCreateAccountIdByAuthToken";
 import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
 
 export interface McpAuthInfoExtra extends Record<string, unknown> {
@@ -29,7 +29,7 @@ export async function verifyBearerToken(
 
   // Try Privy JWT first
   try {
-    const accountId = await getAccountIdByAuthToken(bearerToken);
+    const accountId = await getOrCreateAccountIdByAuthToken(bearerToken);
 
     return {
       token: bearerToken,

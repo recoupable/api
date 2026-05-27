@@ -1,7 +1,7 @@
 import { toMs } from "./toMs";
 import { fetchPrivyUsersPage } from "./fetchPrivyUsersPage";
 import { getLatestVerifiedAt } from "./getLatestVerifiedAt";
-import { getCutoffMs } from "./getCutoffMs";
+import { getCutoffMs } from "@/lib/admins/getCutoffMs";
 import type { User } from "@privy-io/node";
 import type { PrivyLoginsPeriod } from "./privyLoginsPeriod";
 
@@ -21,7 +21,6 @@ export type FetchPrivyLoginsResult = {
 };
 
 export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<FetchPrivyLoginsResult> {
-  const isAll = period === "all";
   const cutoffMs = getCutoffMs(period);
 
   const users: User[] = [];
@@ -41,7 +40,7 @@ export async function fetchPrivyLogins(period: PrivyLoginsPeriod): Promise<Fetch
       const createdAt = user.created_at;
       if (typeof createdAt !== "number" || !Number.isFinite(createdAt)) continue;
 
-      if (isAll) {
+      if (cutoffMs === null) {
         users.push(user);
         continue;
       }

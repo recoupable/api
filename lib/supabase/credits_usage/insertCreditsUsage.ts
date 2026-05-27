@@ -1,20 +1,20 @@
 import supabase from "../serverClient";
 import type { Tables } from "@/types/database.types";
 
-/** Default credits for free tier accounts */
-const DEFAULT_CREDITS = 25;
-
 /**
- * Inserts a new credits_usage record for an account.
- * Initializes with default credits.
+ * Inserts a new credits_usage record for an account at the supplied balance.
+ *
+ * This is the low-level DB op. Callers should not invoke it directly with a
+ * hard-coded number — go through `lib/credits/initializeAccountCredits` so the
+ * plan-aware DEFAULT_CREDITS / PRO_CREDITS choice stays in one place.
  *
  * @param accountId - The account ID to initialize credits for
- * @param remainingCredits - Optional override for initial credits (defaults to 25)
+ * @param remainingCredits - Initial balance (caller decides — no default)
  * @returns The inserted credits_usage record, or null if failed
  */
 export async function insertCreditsUsage(
   accountId: string,
-  remainingCredits: number = DEFAULT_CREDITS,
+  remainingCredits: number,
 ): Promise<Tables<"credits_usage"> | null> {
   const { data, error } = await supabase
     .from("credits_usage")

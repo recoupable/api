@@ -6,7 +6,7 @@ import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDet
 import { insertAccount } from "@/lib/supabase/accounts/insertAccount";
 import { insertAccountEmail } from "@/lib/supabase/account_emails/insertAccountEmail";
 import { insertAccountWallet } from "@/lib/supabase/account_wallets/insertAccountWallet";
-import { insertCreditsUsage } from "@/lib/supabase/credits_usage/insertCreditsUsage";
+import { initializeAccountCredits } from "@/lib/credits/initializeAccountCredits";
 import { assignAccountToOrg } from "@/lib/organizations/assignAccountToOrg";
 import type { CreateAccountBody } from "./validateCreateAccountBody";
 
@@ -91,7 +91,7 @@ export async function createAccountHandler(body: CreateAccountBody): Promise<Nex
       await insertAccountWallet(newAccount.id, wallet);
     }
 
-    await insertCreditsUsage(newAccount.id);
+    await initializeAccountCredits(newAccount.id);
 
     const newAccountData: AccountDataResponse = {
       id: newAccount.id,

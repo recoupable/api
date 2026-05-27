@@ -1,5 +1,5 @@
 import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
-import { deductCredits } from "@/lib/credits/deductCredits";
+import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 
 export type HandleResearchParams = {
   accountId: string;
@@ -16,7 +16,9 @@ export type HandleResearchResult = { data: unknown } | { error: string; status: 
  * on success. Credit-deduction failures are non-fatal — the fetched data is
  * still returned so transient billing failures don't block read endpoints.
  *
- * Auth is intentionally out of scope here — callers (validators) own that.
+ * Credit gating (auto-recharge + 402 short-circuit) lives in route handlers
+ * via `ensureCreditsOrShortCircuit` — keeping this helper free of NextResponse
+ * means non-route consumers (e.g. `resolveTrack`) keep working unchanged.
  *
  * @returns `{ data }` on success, `{ error, status }` on upstream failure.
  */
@@ -29,7 +31,11 @@ export async function handleResearch(params: HandleResearchParams): Promise<Hand
   }
 
   try {
-    await deductCredits({ accountId, creditsToDeduct: credits });
+    await recordCreditDeduction({
+      accountId,
+      creditsToDeduct: credits,
+      source: "api",
+    });
   } catch (error) {
     console.error("[research] credit deduction failed:", error);
   }

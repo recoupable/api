@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 const VALID_PLATFORMS = ["spotify", "applemusic", "deezer"] as const;
@@ -37,6 +38,9 @@ export async function validateGetResearchCuratorRequest(
   if (!/^\d+$/.test(id)) {
     return errorResponse("id must be a numeric Chartmetric curator ID (e.g. 2 for Spotify)", 400);
   }
+
+  const short = await ensureResearchCredits(authResult.accountId);
+  if (short) return short;
 
   return { accountId: authResult.accountId, platform: platform as Platform, id };
 }

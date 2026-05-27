@@ -16,7 +16,6 @@ export async function getResearchLookupHandler(request: NextRequest): Promise<Ne
   try {
     const validated = await validateGetResearchLookupRequest(request);
     if (validated instanceof NextResponse) return validated;
-
     const result = await handleResearch({
       accountId: validated.accountId,
       path: `/artist/spotify/${validated.spotifyId}/get-ids`,

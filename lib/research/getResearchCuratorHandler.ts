@@ -17,7 +17,6 @@ export async function getResearchCuratorHandler(request: NextRequest): Promise<N
   try {
     const validated = await validateGetResearchCuratorRequest(request);
     if (validated instanceof NextResponse) return validated;
-
     const result = await handleResearch({
       accountId: validated.accountId,
       path: `/curator/${validated.platform}/${validated.id}`,

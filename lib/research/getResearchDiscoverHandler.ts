@@ -33,7 +33,6 @@ export async function getResearchDiscoverHandler(request: NextRequest): Promise<
     } else if (validated.sp_monthly_listeners_max !== undefined) {
       query["sp_ml[]"] = String(validated.sp_monthly_listeners_max);
     }
-
     const result = await handleResearch({
       accountId: validated.accountId,
       path: "/artist/list/filter",

@@ -12,12 +12,16 @@ import upsertMemory from "@/lib/supabase/memories/upsertMemory";
 import { sendNewConversationNotification } from "@/lib/telegram/sendNewConversationNotification";
 import { handleSendEmailToolOutputs } from "@/lib/emails/handleSendEmailToolOutputs";
 import { getCreditUsage } from "@/lib/credits/getCreditUsage";
-import { deductCredits } from "@/lib/credits/deductCredits";
+import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 import { generateChatTitle } from "../../generateChatTitle";
 import { handleChatCompletion } from "../../handleChatCompletion";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import { validateChatRequest } from "../../validateChatRequest";
 import { setupChatRequest } from "../../setupChatRequest";
+
+vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
+  ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
+}));
 
 /**
  * Integration tests for chat endpoints.
@@ -85,8 +89,8 @@ vi.mock("@/lib/credits/getCreditUsage", () => ({
   getCreditUsage: vi.fn().mockResolvedValue(0.1),
 }));
 
-vi.mock("@/lib/credits/deductCredits", () => ({
-  deductCredits: vi.fn(),
+vi.mock("@/lib/credits/recordCreditDeduction", () => ({
+  recordCreditDeduction: vi.fn(),
 }));
 
 // Mock tools setup
@@ -150,7 +154,7 @@ const mockUpsertMemory = vi.mocked(upsertMemory);
 const mockSendNewConversationNotification = vi.mocked(sendNewConversationNotification);
 const mockHandleSendEmailToolOutputs = vi.mocked(handleSendEmailToolOutputs);
 const mockGetCreditUsage = vi.mocked(getCreditUsage);
-const mockDeductCredits = vi.mocked(deductCredits);
+const mockRecordCreditDeduction = vi.mocked(recordCreditDeduction);
 const mockGenerateChatTitle = vi.mocked(generateChatTitle);
 
 // Helper to create mock NextRequest
@@ -179,7 +183,7 @@ describe("Chat Integration Tests", () => {
     mockSendNewConversationNotification.mockResolvedValue(undefined);
     mockHandleSendEmailToolOutputs.mockResolvedValue(undefined);
     mockGetCreditUsage.mockResolvedValue(0.1);
-    mockDeductCredits.mockResolvedValue(undefined);
+    mockRecordCreditDeduction.mockResolvedValue(undefined);
     mockGenerateChatTitle.mockResolvedValue("Test Chat");
   });
 
@@ -531,11 +535,15 @@ describe("Chat Integration Tests", () => {
       expect(mockGetCreditUsage).toHaveBeenCalledWith(
         { promptTokens: 1000, completionTokens: 500 },
         "gpt-4",
+        undefined,
       );
-      expect(mockDeductCredits).toHaveBeenCalledWith({
-        accountId: "account-123",
-        creditsToDeduct: 50, // 0.5 * 100
-      });
+      expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accountId: "account-123",
+          creditsToDeduct: 50, // 0.5 * 100
+          source: "web",
+        }),
+      );
     });
 
     it("skips deduction when no accountId is provided", async () => {
@@ -546,12 +554,12 @@ describe("Chat Integration Tests", () => {
       });
 
       expect(mockGetCreditUsage).not.toHaveBeenCalled();
-      expect(mockDeductCredits).not.toHaveBeenCalled();
+      expect(mockRecordCreditDeduction).not.toHaveBeenCalled();
     });
 
     it("deducts minimum 1 credit when cost is zero", async () => {
       mockGetCreditUsage.mockResolvedValue(0);
-      mockDeductCredits.mockResolvedValue({ success: true, newBalance: 332 });
+      mockRecordCreditDeduction.mockResolvedValue({ success: true, newBalance: 332 });
 
       await handleChatCredits({
         usage: { promptTokens: 10, completionTokens: 5 },
@@ -560,10 +568,9 @@ describe("Chat Integration Tests", () => {
       });
 
       expect(mockGetCreditUsage).toHaveBeenCalled();
-      expect(mockDeductCredits).toHaveBeenCalledWith({
-        accountId: "account-123",
-        creditsToDeduct: 1,
-      });
+      expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
+        expect.objectContaining({ accountId: "account-123", creditsToDeduct: 1, source: "web" }),
+      );
     });
 
     it("catches credit deduction errors without breaking chat flow", async () => {
@@ -588,10 +595,13 @@ describe("Chat Integration Tests", () => {
         accountId: "account-123",
       });
 
-      expect(mockDeductCredits).toHaveBeenCalledWith({
-        accountId: "account-123",
-        creditsToDeduct: 1, // Math.max(1, Math.round(0.001 * 100))
-      });
+      expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accountId: "account-123",
+          creditsToDeduct: 1, // Math.max(1, Math.round(0.001 * 100))
+          source: "web",
+        }),
+      );
     });
   });
 
@@ -681,12 +691,12 @@ describe("Chat Integration Tests", () => {
       // 4. Handle credits
       await handleChatCredits({
         usage: { promptTokens: 100, completionTokens: 50 },
-        model: (body as any).model || "openai/gpt-5-mini",
+        model: (body as any).model || "openai/gpt-5.4-nano",
         accountId: (body as any).accountId,
       });
 
       expect(mockGetCreditUsage).toHaveBeenCalled();
-      expect(mockDeductCredits).toHaveBeenCalled();
+      expect(mockRecordCreditDeduction).toHaveBeenCalled();
     });
   });
 });

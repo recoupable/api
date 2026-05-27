@@ -18,7 +18,7 @@ export async function wasLifecycleTimingExtended(
   sessionId: string,
   prior: Tables<"sessions">,
 ): Promise<boolean> {
-  const refreshed = (await selectSessions({ id: sessionId }))[0];
+  const refreshed = ((await selectSessions({ id: sessionId })) ?? [])[0];
   if (!refreshed?.sandbox_state || !hasRuntimeSandboxState(refreshed.sandbox_state)) return false;
 
   const timingChanged =

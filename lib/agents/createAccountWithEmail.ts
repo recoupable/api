@@ -1,6 +1,6 @@
 import { insertAccount } from "@/lib/supabase/accounts/insertAccount";
 import { insertAccountEmail } from "@/lib/supabase/account_emails/insertAccountEmail";
-import { insertCreditsUsage } from "@/lib/supabase/credits_usage/insertCreditsUsage";
+import { initializeAccountCredits } from "@/lib/credits/initializeAccountCredits";
 
 /**
  * Creates a new account row and wires up its email link and credits usage
@@ -27,9 +27,9 @@ export async function createAccountWithEmail(email: string): Promise<string> {
     throw new Error("createAccountWithEmail: insertAccountEmail returned null");
   }
 
-  const credits = await insertCreditsUsage(account.id);
+  const credits = await initializeAccountCredits(account.id);
   if (!credits) {
-    throw new Error("createAccountWithEmail: insertCreditsUsage returned null");
+    throw new Error("createAccountWithEmail: initializeAccountCredits returned null");
   }
 
   return account.id;
