@@ -36,10 +36,16 @@ export async function fetchRemoteImageBuffer(
     if (!res.ok || !res.body) return null;
 
     const contentType = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
-    if (!contentType.startsWith("image/")) return null;
+    if (!contentType.startsWith("image/")) {
+      await res.body.cancel();
+      return null;
+    }
 
     const contentLength = Number(res.headers.get("content-length") ?? 0);
-    if (contentLength > MAX_IMAGE_BYTES) return null;
+    if (contentLength > MAX_IMAGE_BYTES) {
+      await res.body.cancel();
+      return null;
+    }
 
     const reader = res.body.getReader();
     const chunks: Uint8Array[] = [];

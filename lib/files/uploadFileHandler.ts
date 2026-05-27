@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { uploadPublicAsset } from "@/lib/files/uploadPublicAsset";
 import { SUPPORTED_UPLOAD_MIME } from "@/lib/const";
 
@@ -8,19 +9,24 @@ import { SUPPORTED_UPLOAD_MIME } from "@/lib/const";
  * bucket and returns a permanent CDN URL.
  *
  * Mirrors the chat-side `/api/upload` response shape exactly so callers can
- * migrate with a base-URL swap. Phase-1 of the arweave→supabase migration:
- * no auth, public bucket, opaque-UUID keys.
+ * migrate with a base-URL swap. Requires authentication (x-api-key or
+ * Authorization: Bearer); the caller's accountId is stamped onto the
+ * storage object's metadata for later audit / takedown.
  *
  * @param request - The incoming request carrying multipart/form-data with a `file` field.
  * @returns A NextResponse with `{ success, fileName, fileType, fileSize, url }` on 200,
- *   `{ success: false, error }` on 400/500.
+ *   `{ success: false, error }` on 400/401/415/500.
  */
 export async function uploadFileHandler(request: NextRequest): Promise<NextResponse> {
+  const authResult = await validateAuthContext(request);
+  if (authResult instanceof NextResponse) return authResult;
+  const { accountId } = authResult;
+
   let formData: FormData;
   try {
     formData = await request.formData();
-  } catch (error) {
-    return errorResponse(400, error instanceof Error ? error.message : "Invalid multipart body");
+  } catch {
+    return errorResponse(400, "Invalid multipart body");
   }
 
   const file = formData.get("file");
@@ -28,24 +34,24 @@ export async function uploadFileHandler(request: NextRequest): Promise<NextRespo
     return errorResponse(400, "No file provided");
   }
 
+  // Reject octet-stream and any other type not in the allowlist. The bucket
+  // itself enforces the same allowlist server-side, so an unknown type would
+  // 500 there anyway — catching it here gives a clean 415 instead.
+  const fileType = file.type;
+  if (!fileType || !SUPPORTED_UPLOAD_MIME.has(fileType)) {
+    return errorResponse(415, "Unsupported file type");
+  }
+
   // Note: per-request size cap is enforced by the Vercel platform (returns
   // 413 FUNCTION_PAYLOAD_TOO_LARGE before the handler runs) and again by the
   // bucket's `file_size_limit` server-side. We don't duplicate it here.
-
-  const fileType = file.type || "application/octet-stream";
-  const isOctet = fileType === "application/octet-stream";
-
-  // Allow application/octet-stream as a fallback when the client did not
-  // declare a content type — matches the chat-side handler's behavior.
-  if (!isOctet && !SUPPORTED_UPLOAD_MIME.has(fileType)) {
-    return errorResponse(400, "Unsupported file type");
-  }
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     const { url } = await uploadPublicAsset({
       data: buffer,
       contentType: fileType,
+      metadata: { uploaded_by: accountId },
     });
 
     return NextResponse.json(
@@ -60,13 +66,7 @@ export async function uploadFileHandler(request: NextRequest): Promise<NextRespo
     );
   } catch (error) {
     console.error("/api/upload error", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500, headers: getCorsHeaders() },
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 

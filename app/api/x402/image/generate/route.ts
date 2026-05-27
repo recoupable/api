@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
       }
     } catch (e) {
       console.error("Error uploading image:", e);
-      uploadError = e instanceof Error ? e.message : "Unknown upload error";
+      uploadError = "Failed to upload generated image";
     }
 
     return NextResponse.json(
@@ -113,12 +113,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error generating image:", error);
 
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-
     return NextResponse.json(
-      {
-        error: errorMessage,
-      },
+      { error: "Internal server error" },
       {
         status: 500,
         headers: getCorsHeaders(),

@@ -9,6 +9,7 @@ import { SUPABASE_STORAGE_BUCKET } from "@/lib/const";
  * @param options - Optional bucket override and standard upload options.
  *   - `bucket` defaults to `SUPABASE_STORAGE_BUCKET` (the private `user-files` bucket).
  *   - `cacheControl` is the seconds value passed to Supabase Storage (e.g. "31536000").
+ *   - `metadata` is custom key/value data stored on `storage.objects.user_metadata`.
  */
 export async function uploadFileByKey(
   key: string,
@@ -18,6 +19,7 @@ export async function uploadFileByKey(
     contentType?: string;
     cacheControl?: string;
     upsert?: boolean;
+    metadata?: Record<string, string>;
   } = {},
 ): Promise<void> {
   const bucket = options.bucket ?? SUPABASE_STORAGE_BUCKET;
@@ -25,6 +27,7 @@ export async function uploadFileByKey(
     contentType: options.contentType || "application/octet-stream",
     cacheControl: options.cacheControl,
     upsert: options.upsert ?? false,
+    metadata: options.metadata,
   });
 
   if (error) {

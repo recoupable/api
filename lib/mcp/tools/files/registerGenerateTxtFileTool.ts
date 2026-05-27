@@ -39,19 +39,7 @@ export function registerGenerateTxtFileTool(server: McpServer): void {
         });
       } catch (error) {
         console.error("Error generating TXT file:", error);
-
-        // Format helpful error messages based on common issues
-        let errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
-
-        if (errorMessage.includes("API key")) {
-          errorMessage = "API key is missing or invalid. Please check your environment variables.";
-        } else if (errorMessage.includes("content policy")) {
-          errorMessage = "Your contents may violate content policy. Please try different contents.";
-        } else if (errorMessage.includes("rate limit")) {
-          errorMessage = "Rate limit exceeded. Please try again later.";
-        }
-
-        return getToolResultError(`Failed to generate TXT file. ${errorMessage}`);
+        return getToolResultError("Failed to generate TXT file");
       }
     },
   );

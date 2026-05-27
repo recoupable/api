@@ -19,8 +19,14 @@ import { SUPABASE_PUBLIC_UPLOADS_BUCKET } from "@/lib/const";
 export async function uploadPublicAsset(input: {
   data: Buffer | Uint8Array | string;
   contentType: string;
+  /**
+   * Custom user metadata to attach to the storage object. Stored on the
+   * `storage.objects.user_metadata` jsonb column and queryable later
+   * (e.g. `{ uploaded_by: accountId }` for audit / takedown).
+   */
+  metadata?: Record<string, string>;
 }): Promise<{ url: string; id: string }> {
-  const { data, contentType } = input;
+  const { data, contentType, metadata } = input;
 
   const id = randomUUID();
 
@@ -34,6 +40,7 @@ export async function uploadPublicAsset(input: {
     contentType,
     cacheControl: "31536000",
     upsert: false,
+    metadata,
   });
 
   const url = getPublicUrlByKey(id, SUPABASE_PUBLIC_UPLOADS_BUCKET);
