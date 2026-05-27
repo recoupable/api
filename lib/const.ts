@@ -36,9 +36,12 @@ export const SUPABASE_STORAGE_BUCKET = "user-files";
 export const SUPABASE_PUBLIC_UPLOADS_BUCKET = "public-uploads";
 
 /**
- * MIME types accepted by POST /api/upload. Mirrors chat's CHAT_INPUT_SUPPORTED_FILE.
- * Server-internal callers (knowledge files, generated text, contract metadata)
- * use uploadPublicAsset directly and are not gated by this set.
+ * MIME types accepted by POST /api/upload. Mirrors the `public-uploads`
+ * bucket's `allowed_mime_types` so the handler rejects with 415 instead of
+ * letting the bucket return an opaque 500. Includes `text/plain` and
+ * `application/json` for chat's knowledge-edit save flow, which builds
+ * Files from `editedText` with mime resolved via `getMimeFromPath` (e.g.
+ * `.txt` → `text/plain`, `.json` → `application/json`).
  */
 export const SUPPORTED_UPLOAD_MIME = new Set<string>([
   "image/jpeg",
@@ -49,6 +52,8 @@ export const SUPPORTED_UPLOAD_MIME = new Set<string>([
   "text/csv",
   "text/markdown",
   "text/x-markdown",
+  "text/plain",
+  "application/json",
   "audio/mpeg",
   "audio/wav",
   "audio/x-m4a",
