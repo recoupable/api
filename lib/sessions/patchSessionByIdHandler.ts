@@ -1,7 +1,7 @@
 import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { hasRuntimeSandboxState } from "@/lib/sandbox/hasRuntimeSandboxState";
+import { isSandboxPausing } from "@/lib/sandbox/isSandboxPausing";
 import { validatePatchSessionBody } from "@/lib/sessions/validatePatchSessionBody";
 import { stopSandboxOnArchive } from "@/lib/sessions/stopSandboxOnArchive";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
@@ -62,12 +62,7 @@ export async function patchSessionByIdHandler(
   const shouldArchive = body.status === "archived" && row.status !== "archived";
   const shouldUnarchive = body.status === "running" && row.status === "archived";
 
-  const isSandboxPausing =
-    hasRuntimeSandboxState(row.sandbox_state) &&
-    row.lifecycle_state !== "hibernated" &&
-    row.lifecycle_state !== "archived";
-
-  if (shouldUnarchive && !row.snapshot_url && isSandboxPausing) {
+  if (shouldUnarchive && !row.snapshot_url && isSandboxPausing(row)) {
     return NextResponse.json(
       { status: "error", error: "Sandbox is still being paused, try again in a few seconds." },
       { status: 409, headers: getCorsHeaders() },
