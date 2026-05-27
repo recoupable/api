@@ -80,7 +80,7 @@ export async function discoverSkills(
         name: frontmatter.name,
         description: frontmatter.description,
         path: skillDir,
-        filename: path.posix.basename(skillFile),
+        filename: path.basename(skillFile.replace(/\\/g, "/")),
         options: frontmatterToOptions(frontmatter),
       });
     }

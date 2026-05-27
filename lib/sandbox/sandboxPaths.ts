@@ -45,7 +45,9 @@ export function isPathWithinSandboxDirectory(filePath: string, directory: string
   if (isPosixSandboxPath(directory)) {
     const resolvedPath = path.posix.normalize(toPosixSegment(filePath));
     const resolvedDir = path.posix.normalize(directory);
-    return resolvedPath === resolvedDir || resolvedPath.startsWith(`${resolvedDir}/`);
+    // Avoid the "//child" false-negative when resolvedDir is the root "/".
+    const dirPrefix = resolvedDir.endsWith("/") ? resolvedDir : `${resolvedDir}/`;
+    return resolvedPath === resolvedDir || resolvedPath.startsWith(dirPrefix);
   }
 
   const resolvedPath = path.resolve(filePath);

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { nanoid } from "nanoid";
 import { deductCreditsWithAudit } from "@/lib/supabase/credits_usage/deductCreditsWithAudit";
 
 interface RecordCreditDeductionParams {
@@ -40,7 +40,7 @@ export const recordCreditDeduction = async (
     const result = await deductCreditsWithAudit({
       accountId: params.accountId,
       cents: params.creditsToDeduct,
-      eventId: randomUUID(),
+      eventId: nanoid(),
       event: {
         source: params.source,
         agent_type: params.agentType ?? "main",
