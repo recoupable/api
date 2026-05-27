@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { isUnarchiveConflict } from "@/lib/sessions/isUnarchiveConflict";
+import { ARCHIVE_LIFECYCLE_PATCH, UNARCHIVE_LIFECYCLE_PATCH } from "@/lib/sessions/lifecycleStatePatches";
 import { validatePatchSessionBody } from "@/lib/sessions/validatePatchSessionBody";
 import { stopSandboxOnArchive } from "@/lib/sessions/stopSandboxOnArchive";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
@@ -74,14 +75,8 @@ export async function patchSessionByIdHandler(
     ...(body.status !== undefined && { status: body.status }),
     ...(body.linesAdded !== undefined && { lines_added: body.linesAdded }),
     ...(body.linesRemoved !== undefined && { lines_removed: body.linesRemoved }),
-    ...(shouldArchive && {
-      lifecycle_state: "archived",
-      lifecycle_error: null,
-      lifecycle_run_id: null,
-      sandbox_expires_at: null,
-      hibernate_after: null,
-    }),
-    ...(shouldUnarchive && { lifecycle_state: null, lifecycle_error: null }),
+    ...(shouldArchive && ARCHIVE_LIFECYCLE_PATCH),
+    ...(shouldUnarchive && UNARCHIVE_LIFECYCLE_PATCH),
   };
 
   if (Object.keys(updates).length === 0) {
