@@ -11,7 +11,8 @@ export function isPathWithinSandboxDirectory(filePath: string, directory: string
     return resolvedPath === resolvedDir || resolvedPath.startsWith(dirPrefix);
   }
 
-  const resolvedPath = path.resolve(filePath);
-  const resolvedDir = path.resolve(directory);
+  // Windows paths are case-insensitive; lowercase both before comparing.
+  const resolvedPath = path.resolve(filePath).toLowerCase();
+  const resolvedDir = path.resolve(directory).toLowerCase();
   return resolvedPath.startsWith(resolvedDir + path.sep) || resolvedPath === resolvedDir;
 }
