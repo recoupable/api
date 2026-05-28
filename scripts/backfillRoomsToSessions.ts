@@ -13,17 +13,37 @@
  */
 
 import { selectAllRooms } from "@/lib/supabase/rooms/selectAllRooms";
+import selectRoom from "@/lib/supabase/rooms/selectRoom";
 import { migrateRoom, OVERSIZED_THRESHOLD } from "./backfill/migrateRoom";
+import type { Tables } from "@/types/database.types";
 
 const dryRun = process.argv.includes("--dry-run") || process.env.DRY_RUN === "1";
 
+// `--limit=N` processes only the first N rooms; `--room=<id>` processes a
+// single room. Both are for validating the script's code path (or
+// re-migrating one room) before/without an unbounded run.
+const limitFlag = process.argv.find(a => a.startsWith("--limit="));
+const limit = limitFlag ? Number.parseInt(limitFlag.split("=")[1], 10) : undefined;
+const roomFlag = process.argv.find(a => a.startsWith("--room="));
+const roomId = roomFlag ? roomFlag.split("=")[1] : undefined;
+
 async function main() {
   console.log(
-    `🚀 Phase 2 backfill: rooms → sessions/chats/chat_messages${dryRun ? " [DRY RUN — no writes]" : ""}\n`,
+    `🚀 Phase 2 backfill: rooms → sessions/chats/chat_messages${dryRun ? " [DRY RUN — no writes]" : ""}${roomId ? ` [room ${roomId}]` : limit ? ` [limit ${limit}]` : ""}\n`,
   );
 
-  const rooms = await selectAllRooms();
-  console.log(`Found ${rooms.length} rooms to process\n`);
+  let rooms: Tables<"rooms">[];
+  if (roomId) {
+    const room = await selectRoom(roomId);
+    rooms = room ? [room] : [];
+    console.log(room ? `Targeting room ${roomId}\n` : `Room ${roomId} not found\n`);
+  } else {
+    const allRooms = await selectAllRooms();
+    rooms = limit ? allRooms.slice(0, limit) : allRooms;
+    console.log(
+      `Found ${allRooms.length} rooms${limit ? `, processing first ${rooms.length}` : ""}\n`,
+    );
+  }
 
   let migrated = 0;
   let skipped = 0;
