@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateDeleteApiKeyBody } from "@/lib/keys/validateDeleteApiKeyBody";
 import { deleteApiKey } from "@/lib/supabase/account_api_keys/deleteApiKey";
-import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getApiKeys } from "@/lib/supabase/account_api_keys/getApiKeys";
 
 /**
  * Handler for deleting an API key.
- * Requires authentication via Bearer token in Authorization header.
+ * Supports both x-api-key header and Authorization Bearer token.
  * Only allows deleting keys that belong to the authenticated account.
  *
  * Body parameters:
@@ -18,11 +18,11 @@ import { getApiKeys } from "@/lib/supabase/account_api_keys/getApiKeys";
  */
 export async function deleteApiKeyHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const accountIdOrError = await getAuthenticatedAccountId(request);
-    if (accountIdOrError instanceof NextResponse) {
-      return accountIdOrError;
+    const authResult = await validateAuthContext(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
-    const accountId = accountIdOrError;
+    const { accountId } = authResult;
 
     const body = await request.json();
 
