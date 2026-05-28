@@ -7,8 +7,8 @@ vi.mock("@/lib/supabase/chats/insertChat", () => ({ insertChat: vi.fn() }));
 vi.mock("@/lib/supabase/memories/selectMemoriesByRoomId", () => ({
   selectMemoriesByRoomId: vi.fn(),
 }));
-vi.mock("@/lib/supabase/chat_messages/upsertChatMessage", () => ({
-  upsertChatMessage: vi.fn(),
+vi.mock("@/lib/supabase/chat_messages/upsertChatMessages", () => ({
+  upsertChatMessages: vi.fn(),
 }));
 
 import { migrateRoom } from "@/scripts/backfill/migrateRoom";
@@ -17,7 +17,7 @@ import { insertSession } from "@/lib/supabase/sessions/insertSession";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { insertChat } from "@/lib/supabase/chats/insertChat";
 import { selectMemoriesByRoomId } from "@/lib/supabase/memories/selectMemoriesByRoomId";
-import { upsertChatMessage } from "@/lib/supabase/chat_messages/upsertChatMessage";
+import { upsertChatMessages } from "@/lib/supabase/chat_messages/upsertChatMessages";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const room: any = {
@@ -52,11 +52,7 @@ beforeEach(() => {
   vi.mocked(insertSession).mockResolvedValue({ id: "s1" } as any);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vi.mocked(insertChat).mockResolvedValue({ id: "room-1" } as any);
-  vi.mocked(upsertChatMessage).mockResolvedValue({
-    ok: true,
-    row: null,
-    isDuplicate: false,
-  });
+  vi.mocked(upsertChatMessages).mockResolvedValue(1);
 });
 
 describe("migrateRoom", () => {
@@ -65,7 +61,7 @@ describe("migrateRoom", () => {
 
     expect(insertSession).not.toHaveBeenCalled();
     expect(insertChat).not.toHaveBeenCalled();
-    expect(upsertChatMessage).not.toHaveBeenCalled();
+    expect(upsertChatMessages).not.toHaveBeenCalled();
 
     expect(selectSessions).toHaveBeenCalled();
     expect(selectChats).toHaveBeenCalled();
@@ -84,7 +80,11 @@ describe("migrateRoom", () => {
 
     expect(insertSession).toHaveBeenCalledTimes(1);
     expect(insertChat).toHaveBeenCalledTimes(1);
-    expect(upsertChatMessage).toHaveBeenCalledTimes(1); // malformed one skipped
+    // one batch call containing only the well-formed message
+    expect(upsertChatMessages).toHaveBeenCalledTimes(1);
+    expect(upsertChatMessages).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "m1", chat_id: "room-1", role: "user" }),
+    ]);
     expect(stats.messagesWritten).toBe(1);
     expect(stats.messagesMalformed).toBe(1);
   });

@@ -4,8 +4,8 @@ import { insertSession } from "@/lib/supabase/sessions/insertSession";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { insertChat } from "@/lib/supabase/chats/insertChat";
 import { selectMemoriesByRoomId } from "@/lib/supabase/memories/selectMemoriesByRoomId";
-import { upsertChatMessage } from "@/lib/supabase/chat_messages/upsertChatMessage";
-import type { Json, Tables } from "@/types/database.types";
+import { upsertChatMessages } from "@/lib/supabase/chat_messages/upsertChatMessages";
+import type { Json, Tables, TablesInsert } from "@/types/database.types";
 
 // Fixed namespace so uuidv5(room.id) yields the same sessionId every run.
 // A re-run after partial failure then finds the existing session via the
@@ -45,7 +45,7 @@ async function migrateMessages(
   dryRun: boolean,
 ): Promise<{ written: number; malformed: number; memoryCount: number }> {
   const memories = await selectMemoriesByRoomId(roomId);
-  let written = 0;
+  const rows: TablesInsert<"chat_messages">[] = [];
   let malformed = 0;
 
   for (const memory of memories) {
@@ -54,29 +54,18 @@ async function migrateMessages(
       malformed++;
       continue;
     }
-
-    if (dryRun) {
-      written++;
-      continue;
-    }
-
-    // `update: false` → write-once (DO NOTHING on conflict), so re-runs
-    // never overwrite already-migrated messages.
-    const result = await upsertChatMessage(
-      {
-        id: memory.id,
-        chat_id: roomId,
-        role: content.role,
-        parts: content.parts,
-        created_at: memory.updated_at,
-      },
-      { update: false },
-    );
-    if ("error" in result) {
-      throw new Error(`chat_messages upsert failed for ${memory.id}: ${result.error}`);
-    }
-    written++;
+    rows.push({
+      id: memory.id,
+      chat_id: roomId,
+      role: content.role,
+      parts: content.parts,
+      created_at: memory.updated_at,
+    });
   }
+
+  // One batch round-trip per room (vs one per message). Write-once, so
+  // re-runs never overwrite already-migrated messages.
+  const written = dryRun ? rows.length : await upsertChatMessages(rows);
 
   return { written, malformed, memoryCount: memories.length };
 }

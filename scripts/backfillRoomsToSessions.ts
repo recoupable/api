@@ -14,7 +14,7 @@
 
 import { selectAllRooms } from "@/lib/supabase/rooms/selectAllRooms";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
-import { migrateRoom, OVERSIZED_THRESHOLD } from "./backfill/migrateRoom";
+import { migrateRoom, OVERSIZED_THRESHOLD, type RoomStats } from "./backfill/migrateRoom";
 import type { Tables } from "@/types/database.types";
 
 const dryRun = process.argv.includes("--dry-run") || process.env.DRY_RUN === "1";
@@ -26,6 +26,14 @@ const limitFlag = process.argv.find(a => a.startsWith("--limit="));
 const limit = limitFlag ? Number.parseInt(limitFlag.split("=")[1], 10) : undefined;
 const roomFlag = process.argv.find(a => a.startsWith("--room="));
 const roomId = roomFlag ? roomFlag.split("=")[1] : undefined;
+
+// Rooms are processed in concurrent batches of this size. Each room's
+// session/chat/message ids are independent (distinct rooms never touch the
+// same row), so cross-room concurrency is safe and idempotency holds.
+const concurrencyFlag = process.argv.find(a => a.startsWith("--concurrency="));
+const CONCURRENCY = concurrencyFlag
+  ? Math.max(1, Number.parseInt(concurrencyFlag.split("=")[1], 10))
+  : 20;
 
 async function main() {
   console.log(
@@ -56,25 +64,34 @@ async function main() {
   let malformed = 0;
   let oversized = 0;
 
-  for (const room of rooms) {
-    try {
-      const stats = await migrateRoom(room, { dryRun });
-      if (stats.status === "skipped") {
-        skipped++;
-        continue;
-      }
-      migrated++;
-      if (stats.sessionExisted) sessionsExisting++;
-      else sessionsNew++;
-      if (stats.chatExisted) chatsExisting++;
-      else chatsNew++;
-      messages += stats.messagesWritten;
-      malformed += stats.messagesMalformed;
-      if (stats.memoryCount >= OVERSIZED_THRESHOLD) oversized++;
-    } catch (err) {
-      console.error(`❌ Failed to migrate room ${room.id}:`, err);
-      failed++;
+  const tally = (stats: RoomStats) => {
+    if (stats.status === "skipped") {
+      skipped++;
+      return;
     }
+    migrated++;
+    if (stats.sessionExisted) sessionsExisting++;
+    else sessionsNew++;
+    if (stats.chatExisted) chatsExisting++;
+    else chatsNew++;
+    messages += stats.messagesWritten;
+    malformed += stats.messagesMalformed;
+    if (stats.memoryCount >= OVERSIZED_THRESHOLD) oversized++;
+  };
+
+  // Process rooms in concurrent batches. `allSettled` isolates failures so
+  // one bad room doesn't sink the rest of its batch.
+  for (let i = 0; i < rooms.length; i += CONCURRENCY) {
+    const batch = rooms.slice(i, i + CONCURRENCY);
+    const results = await Promise.allSettled(batch.map(room => migrateRoom(room, { dryRun })));
+    results.forEach((result, j) => {
+      if (result.status === "fulfilled") {
+        tally(result.value);
+      } else {
+        console.error(`❌ Failed to migrate room ${batch[j].id}:`, result.reason);
+        failed++;
+      }
+    });
   }
 
   console.log(`\n📊 ${dryRun ? "DRY RUN — no writes performed" : "Done"}`);
