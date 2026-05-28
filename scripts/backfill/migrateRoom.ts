@@ -3,27 +3,65 @@ import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { insertSession } from "@/lib/supabase/sessions/insertSession";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { insertChat } from "@/lib/supabase/chats/insertChat";
-import selectMemories from "@/lib/supabase/memories/selectMemories";
+import { selectMemoriesByRoomId } from "@/lib/supabase/memories/selectMemoriesByRoomId";
 import { upsertChatMessage } from "@/lib/supabase/chat_messages/upsertChatMessage";
 import type { Json, Tables } from "@/types/database.types";
-
-export type MigrationResult = "migrated" | "skipped" | "failed";
 
 // Fixed namespace so uuidv5(room.id) yields the same sessionId every run.
 // A re-run after partial failure then finds the existing session via the
 // guard below instead of minting an orphan.
 const SESSION_NAMESPACE = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
 
-async function migrateMessages(roomId: string): Promise<number> {
-  const memories = await selectMemories(roomId, { ascending: true });
-  if (!memories?.length) return 0;
+/** Rooms at/above this many memories are flagged in the run summary. */
+export const OVERSIZED_THRESHOLD = 1000;
 
-  let count = 0;
+export interface RoomStats {
+  /** "skipped" = no account_id; "migrated" = processed (real or dry). */
+  status: "migrated" | "skipped";
+  /** Session/chat already existed → insert was a no-op (idempotent re-run). */
+  sessionExisted: boolean;
+  chatExisted: boolean;
+  /** Messages written (real run) or that would be written (dry run). */
+  messagesWritten: number;
+  /** Memories whose content lacks a usable { role, parts } shape. */
+  messagesMalformed: number;
+  /** Total memories read for the room. */
+  memoryCount: number;
+}
+
+interface MigrateOptions {
+  dryRun?: boolean;
+}
+
+/** Legacy memories store content as { role, parts, content }. */
+function isWellFormedContent(content: unknown): content is { role: string; parts: Json } {
+  if (!content || typeof content !== "object") return false;
+  const candidate = content as { role?: unknown; parts?: unknown };
+  return typeof candidate.role === "string" && candidate.parts != null;
+}
+
+async function migrateMessages(
+  roomId: string,
+  dryRun: boolean,
+): Promise<{ written: number; malformed: number; memoryCount: number }> {
+  const memories = await selectMemoriesByRoomId(roomId);
+  let written = 0;
+  let malformed = 0;
+
   for (const memory of memories) {
-    // Legacy memories store content as { role, parts, content } (see
-    // lib/messages/filterMessageContentForMemories); chat_messages wants
-    // role + parts. `update: false` makes the upsert write-once/idempotent.
-    const content = memory.content as { role: string; parts: Json };
+    const content = memory.content;
+    if (!isWellFormedContent(content)) {
+      malformed++;
+      continue;
+    }
+
+    if (dryRun) {
+      written++;
+      continue;
+    }
+
+    // `update: false` → write-once (DO NOTHING on conflict), so re-runs
+    // never overwrite already-migrated messages.
     const result = await upsertChatMessage(
       {
         id: memory.id,
@@ -37,16 +75,26 @@ async function migrateMessages(roomId: string): Promise<number> {
     if ("error" in result) {
       throw new Error(`chat_messages upsert failed for ${memory.id}: ${result.error}`);
     }
-    count++;
+    written++;
   }
 
-  return count;
+  return { written, malformed, memoryCount: memories.length };
 }
 
-export async function migrateRoom(room: Tables<"rooms">): Promise<MigrationResult> {
+export async function migrateRoom(
+  room: Tables<"rooms">,
+  { dryRun = false }: MigrateOptions = {},
+): Promise<RoomStats> {
   if (!room.account_id) {
     console.warn(`⚠️  Skipping room ${room.id} — no account_id`);
-    return "skipped";
+    return {
+      status: "skipped",
+      sessionExisted: false,
+      chatExisted: false,
+      messagesWritten: 0,
+      messagesMalformed: 0,
+      memoryCount: 0,
+    };
   }
 
   const sessionId = uuidv5(room.id, SESSION_NAMESPACE);
@@ -55,7 +103,8 @@ export async function migrateRoom(room: Tables<"rooms">): Promise<MigrationResul
   // insertSession / insertChat are plain inserts; guard with a select so
   // re-runs are idempotent and don't error on the existing primary key.
   const existingSession = await selectSessions({ id: sessionId });
-  if (!existingSession?.length) {
+  const sessionExisted = Boolean(existingSession?.length);
+  if (!sessionExisted && !dryRun) {
     const session = await insertSession({
       id: sessionId,
       account_id: room.account_id,
@@ -68,7 +117,8 @@ export async function migrateRoom(room: Tables<"rooms">): Promise<MigrationResul
 
   // Preserve room.id as chat.id so /chat/[roomId] URLs keep working.
   const existingChat = await selectChats({ id: room.id });
-  if (!existingChat.length) {
+  const chatExisted = existingChat.length > 0;
+  if (!chatExisted && !dryRun) {
     const chat = await insertChat({
       id: room.id,
       session_id: sessionId,
@@ -79,7 +129,20 @@ export async function migrateRoom(room: Tables<"rooms">): Promise<MigrationResul
     if (!chat) throw new Error(`Failed to insert chat for room ${room.id}`);
   }
 
-  const count = await migrateMessages(room.id);
-  console.log(`✅ Migrated room ${room.id} → session ${sessionId} (${count} messages)`);
-  return "migrated";
+  const { written, malformed, memoryCount } = await migrateMessages(room.id, dryRun);
+
+  const verb = dryRun ? "Would migrate" : "Migrated";
+  const malformedNote = malformed ? `, ${malformed} malformed skipped` : "";
+  console.log(
+    `✅ ${verb} room ${room.id} → session ${sessionId} (${written} messages${malformedNote})`,
+  );
+
+  return {
+    status: "migrated",
+    sessionExisted,
+    chatExisted,
+    messagesWritten: written,
+    messagesMalformed: malformed,
+    memoryCount,
+  };
 }
