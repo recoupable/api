@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { migrateRoom } from "@/scripts/backfill/migrateRoom";
+import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
+import { insertSession } from "@/lib/supabase/sessions/insertSession";
+import { selectChats } from "@/lib/supabase/chats/selectChats";
+import { insertChat } from "@/lib/supabase/chats/insertChat";
+import { selectMemoriesByRoomId } from "@/lib/supabase/memories/selectMemoriesByRoomId";
+import { upsertChatMessages } from "@/lib/supabase/chat_messages/upsertChatMessages";
+
 vi.mock("@/lib/supabase/sessions/selectSessions", () => ({ selectSessions: vi.fn() }));
 vi.mock("@/lib/supabase/sessions/insertSession", () => ({ insertSession: vi.fn() }));
 vi.mock("@/lib/supabase/chats/selectChats", () => ({ selectChats: vi.fn() }));
@@ -11,15 +19,6 @@ vi.mock("@/lib/supabase/chat_messages/upsertChatMessages", () => ({
   upsertChatMessages: vi.fn(),
 }));
 
-import { migrateRoom } from "@/scripts/backfill/migrateRoom";
-import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
-import { insertSession } from "@/lib/supabase/sessions/insertSession";
-import { selectChats } from "@/lib/supabase/chats/selectChats";
-import { insertChat } from "@/lib/supabase/chats/insertChat";
-import { selectMemoriesByRoomId } from "@/lib/supabase/memories/selectMemoriesByRoomId";
-import { upsertChatMessages } from "@/lib/supabase/chat_messages/upsertChatMessages";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const room: any = {
   id: "room-1",
   account_id: "acc-1",
@@ -38,19 +37,17 @@ beforeEach(() => {
       room_id: "room-1",
       content: { role: "user", parts: [{ type: "text", text: "hi" }] },
       updated_at: "2026-01-01T00:00:00Z",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
     {
       id: "m2",
       room_id: "room-1",
       content: { role: "assistant", parts: null }, // malformed — null parts
       updated_at: "2026-01-01T00:00:01Z",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
   ]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   vi.mocked(insertSession).mockResolvedValue({ id: "s1" } as any);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   vi.mocked(insertChat).mockResolvedValue({ id: "room-1" } as any);
   vi.mocked(upsertChatMessages).mockResolvedValue(1);
 });
@@ -98,9 +95,8 @@ describe("migrateRoom", () => {
   });
 
   it("skips session/chat inserts when they already exist (idempotent re-run)", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(selectSessions).mockResolvedValue([{ id: "s1" } as any]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     vi.mocked(selectChats).mockResolvedValue([{ id: "room-1" } as any]);
 
     const stats = await migrateRoom(room, { dryRun: false });

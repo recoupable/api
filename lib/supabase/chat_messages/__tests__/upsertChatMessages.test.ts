@@ -9,7 +9,6 @@ vi.mock("@/lib/supabase/serverClient", () => ({
   },
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const rows: any[] = [
   { id: "m1", chat_id: "c1", role: "user", parts: [], created_at: "t" },
   { id: "m2", chat_id: "c1", role: "assistant", parts: [], created_at: "t" },
