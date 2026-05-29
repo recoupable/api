@@ -50,7 +50,7 @@ describe("markChatReadHandler", () => {
     expect(upsertChatRead).not.toHaveBeenCalled();
   });
 
-  it("returns { status: ok } when upsert succeeds", async () => {
+  it("returns { success: true } when upsert succeeds", async () => {
     mockValidated();
     vi.mocked(upsertChatRead).mockResolvedValue({
       account_id: accountId,
@@ -62,7 +62,7 @@ describe("markChatReadHandler", () => {
 
     const res = await markChatReadHandler(makeReq(), "sess_1", "chat_1");
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ status: "ok" });
+    expect(await res.json()).toEqual({ success: true });
     expect(upsertChatRead).toHaveBeenCalledWith(accountId, "chat_1");
   });
 

@@ -23,7 +23,7 @@ export async function OPTIONS() {
  * @param request - The incoming request.
  * @param options - Route options containing the async params.
  * @param options.params - Route params containing sessionId and chatId.
- * @returns A NextResponse with `{ status: "ok" }` on 200, or an error.
+ * @returns A NextResponse with `{ success: true }` on 200, or an error.
  */
 export async function POST(
   request: NextRequest,

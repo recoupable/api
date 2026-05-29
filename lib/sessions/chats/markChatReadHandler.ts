@@ -11,7 +11,7 @@ import { upsertChatRead } from "@/lib/supabase/chat_reads/upsertChatRead";
  * @param request - The incoming request.
  * @param sessionId - The parent session id.
  * @param chatId - The chat id to mark as read.
- * @returns A NextResponse with `{ status: "ok" }` on 200, or an error.
+ * @returns A NextResponse with `{ success: true }` on 200, or an error.
  */
 export async function markChatReadHandler(
   request: NextRequest,
@@ -31,5 +31,5 @@ export async function markChatReadHandler(
     );
   }
 
-  return NextResponse.json({ status: "ok" }, { status: 200, headers: getCorsHeaders() });
+  return NextResponse.json({ success: true }, { status: 200, headers: getCorsHeaders() });
 }
