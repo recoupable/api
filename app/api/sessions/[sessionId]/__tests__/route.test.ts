@@ -63,6 +63,7 @@ function makePatchReqRaw(
 const mockRow: SessionRow = {
   id: "sess_1",
   account_id: "acc-uuid-1",
+  artist_id: null,
   title: "Test session",
   status: "running",
   repo_owner: "acme",
