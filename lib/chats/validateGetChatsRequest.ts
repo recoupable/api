@@ -8,10 +8,10 @@ import { RECOUP_ORG_ID } from "@/lib/const";
 
 const getChatsQuerySchema = z.object({
   account_id: z.string().uuid("account_id must be a valid UUID").optional(),
-  // `artist_account_id` is parsed for backward-compat with existing clients
-  // (so we don't 400) but intentionally not used as a filter — the chat
-  // listing surface no longer threads artist scope. Reserved for the
-  // artist-surface migration once `sessions.artist_id` lands.
+  // `artist_account_id` is parsed and validated, but does not yet filter
+  // — `sessions.artist_id` isn't populated, so the filter has nothing to
+  // match. The schema stays so the filter starts working transparently
+  // once the artist column lands.
   artist_account_id: z.string().uuid("artist_account_id must be a valid UUID").optional(),
 });
 

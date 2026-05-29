@@ -15,8 +15,8 @@ const getChatsSchema = z.object({
     .string()
     .optional()
     .describe(
-      "Deprecated: accepted for backward compatibility but no longer filters results. " +
-        "Reserved for the upcoming artist-surface migration.",
+      "Filter chats to those for the specified artist. Currently has no effect — " +
+        "the filter starts matching rows once the artist column is populated on sessions.",
     ),
 });
 

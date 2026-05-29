@@ -20,8 +20,9 @@ import { selectChatsWithSessions } from "@/lib/supabase/chats/selectChatsWithSes
  *
  * Optional query parameters:
  * - `account_id`: target account override (validated against access).
- * - `artist_account_id`: accepted for backward-compat, but not used as a
- *   filter (reserved for the artist-surface migration).
+ * - `artist_account_id`: filter chats to a specific artist. Currently
+ *   a no-op — the filter starts matching rows once the artist column
+ *   is populated on sessions.
  *
  * @param request - The request object containing query parameters
  * @returns A NextResponse with chats data
