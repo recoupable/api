@@ -80,8 +80,15 @@ describe("migrateRoom", () => {
     expect(insertChat).toHaveBeenCalledTimes(1);
     // one batch call containing only the well-formed message
     expect(upsertChatMessages).toHaveBeenCalledTimes(1);
+    // `parts` stores the full UIMessage (matching the workflow's native
+    // persist path), not the bare parts array.
     expect(upsertChatMessages).toHaveBeenCalledWith([
-      expect.objectContaining({ id: "m1", chat_id: "room-1", role: "user" }),
+      expect.objectContaining({
+        id: "m1",
+        chat_id: "room-1",
+        role: "user",
+        parts: { id: "m1", role: "user", parts: [{ type: "text", text: "hi" }] },
+      }),
     ]);
     expect(stats.messagesWritten).toBe(1);
     expect(stats.messagesMalformed).toBe(1);
