@@ -187,6 +187,7 @@ describe("GET /api/sessions/[sessionId]", () => {
       session: {
         id: "sess_1",
         userId: "acc-uuid-1",
+        artistId: null,
         title: "Test session",
         status: "running",
         repoOwner: "acme",
