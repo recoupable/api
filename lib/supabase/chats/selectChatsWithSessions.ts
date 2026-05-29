@@ -1,13 +1,4 @@
 import supabase from "@/lib/supabase/serverClient";
-import type { Tables } from "@/types/database.types";
-
-/**
- * Chat row joined with its owning session. The embedded `session` carries the
- * owning `account_id`, which callers project to `accountId` on the wire.
- */
-export type ChatWithSession = Tables<"chats"> & {
-  session: Pick<Tables<"sessions">, "id" | "account_id"> | null;
-};
 
 export interface SelectChatsWithSessionsParams {
   /**
@@ -29,14 +20,13 @@ const SELECT = `
  * descending so newest activity surfaces first.
  *
  * Returns `null` when Supabase reports an error so callers can distinguish a
- * transient failure from an empty result.
- *
- * @param params - Optional filter parameters
- * @returns Matching rows, `[]` when no rows match, or `null` on DB error.
+ * transient failure from an empty result. Row shape is inferred from the
+ * typed supabase-js client — both `chats.*` and the embedded `session`
+ * projection surface to callers without an explicit type alias.
  */
 export async function selectChatsWithSessions(
   params: SelectChatsWithSessionsParams = {},
-): Promise<ChatWithSession[] | null> {
+) {
   const { accountIds } = params;
 
   if (accountIds !== undefined && accountIds.length === 0) {
@@ -54,5 +44,5 @@ export async function selectChatsWithSessions(
     return null;
   }
 
-  return (data ?? []) as ChatWithSession[];
+  return data ?? [];
 }
