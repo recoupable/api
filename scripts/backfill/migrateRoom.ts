@@ -66,8 +66,7 @@ async function migrateMessages(
     });
   }
 
-  // One batch round-trip per room (vs one per message). Write-once, so
-  // re-runs never overwrite already-migrated messages.
+  // Write-once per message, so re-runs never overwrite already-migrated rows.
   const written = dryRun ? rows.length : await upsertChatMessages(rows);
 
   return { written, malformed, memoryCount: memories.length };
