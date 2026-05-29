@@ -57,11 +57,16 @@ async function migrateMessages(
       malformed++;
       continue;
     }
+    // The workflow persists the FULL UIMessage in the `parts` column
+    // (see lib/chat/persistLatestUserMessage / persistAssistantMessage),
+    // and the read path (getSessionChatHandler) returns `parts` verbatim
+    // expecting a UIMessage. Store the same shape so migrated history
+    // deserializes identically to natively-written chats.
     rows.push({
       id: memory.id,
       chat_id: roomId,
       role: content.role,
-      parts: content.parts,
+      parts: { id: memory.id, role: content.role, parts: content.parts },
       created_at: memory.updated_at,
     });
   }
