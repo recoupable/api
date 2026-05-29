@@ -3961,6 +3961,15 @@ export type Database = {
         Args: { account_id: string; amount: number };
         Returns: undefined;
       };
+      deduct_credits_with_audit: {
+        Args: {
+          p_account_id: string;
+          p_amount: number;
+          p_event: Json;
+          p_event_id: string;
+        };
+        Returns: undefined;
+      };
       extract_domain: { Args: { email: string }; Returns: string };
       get_account_invitations: {
         Args: { account_slug: string };

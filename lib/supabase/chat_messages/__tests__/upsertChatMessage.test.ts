@@ -38,6 +38,13 @@ describe("upsertChatMessage", () => {
     expect(result).toEqual({ ok: true, row: null, isDuplicate: true });
   });
 
+  it("passes ignoreDuplicates:false when update:true (DO UPDATE — overwrite as it grows)", async () => {
+    maybeSingleChain.mockResolvedValue({ data, error: null });
+    const result = await upsertChatMessage(data, { update: true });
+    expect(result).toEqual({ ok: true, row: data, isDuplicate: false });
+    expect(upsertChain).toHaveBeenCalledWith(data, { onConflict: "id", ignoreDuplicates: false });
+  });
+
   it("returns ok:false with error on Supabase failure (distinct from duplicate)", async () => {
     maybeSingleChain.mockResolvedValue({ data: null, error: { message: "down" } });
     const result = await upsertChatMessage(data);

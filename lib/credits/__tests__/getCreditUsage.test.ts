@@ -139,4 +139,80 @@ describe("getCreditUsage", () => {
       expect(cost).toBe(0);
     });
   });
+
+  describe("gateway cost short-circuit", () => {
+    it("returns gatewayCostUsd directly when it is a positive number (skips catalog lookup)", async () => {
+      const cost = await getCreditUsage(
+        { inputTokens: 1000, outputTokens: 500 },
+        "anthropic/claude-haiku-4.5",
+        0.07,
+      );
+      expect(cost).toBe(0.07);
+      expect(mockGetModel).not.toHaveBeenCalled();
+    });
+
+    it("falls through to token math when gatewayCostUsd is undefined", async () => {
+      mockGetModel.mockResolvedValue({
+        id: "gpt-4",
+        pricing: { input: "0.00003", output: "0.00006" },
+      } as any);
+
+      const cost = await getCreditUsage(
+        { inputTokens: 1000, outputTokens: 500 },
+        "gpt-4",
+        undefined,
+      );
+      // 1000 * 0.00003 + 500 * 0.00006 = 0.06
+      expect(cost).toBeCloseTo(0.06);
+      expect(mockGetModel).toHaveBeenCalledWith("gpt-4");
+    });
+
+    it("falls through to token math when gatewayCostUsd is 0", async () => {
+      mockGetModel.mockResolvedValue({
+        id: "gpt-4",
+        pricing: { input: "0.00003", output: "0.00006" },
+      } as any);
+
+      const cost = await getCreditUsage({ inputTokens: 1000, outputTokens: 500 }, "gpt-4", 0);
+      expect(cost).toBeCloseTo(0.06);
+    });
+
+    it("falls through to token math when gatewayCostUsd is negative", async () => {
+      mockGetModel.mockResolvedValue({
+        id: "gpt-4",
+        pricing: { input: "0.00003", output: "0.00006" },
+      } as any);
+
+      const cost = await getCreditUsage({ inputTokens: 1000, outputTokens: 500 }, "gpt-4", -1);
+      expect(cost).toBeCloseTo(0.06);
+    });
+
+    it("falls through to token math when gatewayCostUsd is NaN", async () => {
+      mockGetModel.mockResolvedValue({
+        id: "gpt-4",
+        pricing: { input: "0.00003", output: "0.00006" },
+      } as any);
+
+      const cost = await getCreditUsage(
+        { inputTokens: 1000, outputTokens: 500 },
+        "gpt-4",
+        Number.NaN,
+      );
+      expect(cost).toBeCloseTo(0.06);
+    });
+
+    it("falls through to token math when gatewayCostUsd is Infinity", async () => {
+      mockGetModel.mockResolvedValue({
+        id: "gpt-4",
+        pricing: { input: "0.00003", output: "0.00006" },
+      } as any);
+
+      const cost = await getCreditUsage(
+        { inputTokens: 1000, outputTokens: 500 },
+        "gpt-4",
+        Number.POSITIVE_INFINITY,
+      );
+      expect(cost).toBeCloseTo(0.06);
+    });
+  });
 });
