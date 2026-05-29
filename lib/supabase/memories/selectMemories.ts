@@ -17,11 +17,16 @@ export default async function selectMemories(
     ascending?: boolean;
     limit?: number;
     memoryId?: string;
+    /** Zero-based inclusive row range for a single page (PostgREST `.range`).
+     *  When set, also adds `id` as a stable secondary sort so paginated reads
+     *  don't skip/duplicate rows at page boundaries. */
+    range?: { from: number; to: number };
   },
 ): Promise<Tables<"memories">[] | null> {
   const ascending = options?.ascending ?? false;
   const limit = options?.limit;
   const memoryId = options?.memoryId;
+  const range = options?.range;
 
   let query = supabase
     .from("memories")
@@ -35,6 +40,10 @@ export default async function selectMemories(
 
   if (limit) {
     query = query.limit(limit);
+  }
+
+  if (range) {
+    query = query.order("id", { ascending }).range(range.from, range.to);
   }
 
   const { data, error } = await query;

@@ -3,9 +3,10 @@ import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { insertSession } from "@/lib/supabase/sessions/insertSession";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { insertChat } from "@/lib/supabase/chats/insertChat";
-import { selectMemoriesByRoomId } from "@/lib/supabase/memories/selectMemoriesByRoomId";
+import selectMemories from "@/lib/supabase/memories/selectMemories";
 import { upsertChatMessages } from "@/lib/supabase/chat_messages/upsertChatMessages";
 import type { Json, Tables, TablesInsert } from "@/types/database.types";
+import { paginate } from "./paginate";
 
 // Fixed namespace so uuidv5(room.id) yields the same sessionId every run.
 // A re-run after partial failure then finds the existing session via the
@@ -44,7 +45,9 @@ async function migrateMessages(
   roomId: string,
   dryRun: boolean,
 ): Promise<{ written: number; malformed: number; memoryCount: number }> {
-  const memories = await selectMemoriesByRoomId(roomId);
+  const memories = await paginate((from, to) =>
+    selectMemories(roomId, { ascending: true, range: { from, to } }).then(m => m ?? []),
+  );
   const rows: TablesInsert<"chat_messages">[] = [];
   let malformed = 0;
 

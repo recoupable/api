@@ -1,5 +1,6 @@
 import supabase from "@/lib/supabase/serverClient";
 import type { TablesInsert } from "@/types/database.types";
+import { upsertChatMessage } from "./upsertChatMessage";
 
 /**
  * Batch-upserts chat messages on the `id` primary key, write-once
@@ -24,11 +25,10 @@ export async function upsertChatMessages(rows: TablesInsert<"chat_messages">[]):
 
   let succeeded = 0;
   for (const row of rows) {
-    const { error: rowError } = await supabase
-      .from("chat_messages")
-      .upsert(row, { onConflict: "id", ignoreDuplicates: true });
-    if (rowError) {
-      console.error(`  ❌ Skipping message ${row.id}:`, rowError.message);
+    // Reuse the single-row helper (write-once) rather than re-defining the query.
+    const result = await upsertChatMessage(row, { update: false });
+    if ("error" in result) {
+      console.error(`  ❌ Skipping message ${row.id}:`, result.error);
     } else {
       succeeded++;
     }

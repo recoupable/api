@@ -5,16 +5,14 @@ import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { insertSession } from "@/lib/supabase/sessions/insertSession";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { insertChat } from "@/lib/supabase/chats/insertChat";
-import { selectMemoriesByRoomId } from "@/lib/supabase/memories/selectMemoriesByRoomId";
+import selectMemories from "@/lib/supabase/memories/selectMemories";
 import { upsertChatMessages } from "@/lib/supabase/chat_messages/upsertChatMessages";
 
 vi.mock("@/lib/supabase/sessions/selectSessions", () => ({ selectSessions: vi.fn() }));
 vi.mock("@/lib/supabase/sessions/insertSession", () => ({ insertSession: vi.fn() }));
 vi.mock("@/lib/supabase/chats/selectChats", () => ({ selectChats: vi.fn() }));
 vi.mock("@/lib/supabase/chats/insertChat", () => ({ insertChat: vi.fn() }));
-vi.mock("@/lib/supabase/memories/selectMemoriesByRoomId", () => ({
-  selectMemoriesByRoomId: vi.fn(),
-}));
+vi.mock("@/lib/supabase/memories/selectMemories", () => ({ default: vi.fn() }));
 vi.mock("@/lib/supabase/chat_messages/upsertChatMessages", () => ({
   upsertChatMessages: vi.fn(),
 }));
@@ -31,7 +29,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(selectSessions).mockResolvedValue([]);
   vi.mocked(selectChats).mockResolvedValue([]);
-  vi.mocked(selectMemoriesByRoomId).mockResolvedValue([
+  vi.mocked(selectMemories).mockResolvedValue([
     {
       id: "m1",
       room_id: "room-1",
@@ -62,7 +60,10 @@ describe("migrateRoom", () => {
 
     expect(selectSessions).toHaveBeenCalled();
     expect(selectChats).toHaveBeenCalled();
-    expect(selectMemoriesByRoomId).toHaveBeenCalledWith("room-1");
+    expect(selectMemories).toHaveBeenCalledWith(
+      "room-1",
+      expect.objectContaining({ range: { from: 0, to: 999 } }),
+    );
 
     expect(stats).toMatchObject({
       status: "migrated",

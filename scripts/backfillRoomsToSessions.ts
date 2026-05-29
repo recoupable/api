@@ -12,9 +12,9 @@
  * message upserts make re-runs safe after a partial failure.
  */
 
-import { selectAllRooms } from "@/lib/supabase/rooms/selectAllRooms";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
 import { migrateRoom, OVERSIZED_THRESHOLD, type RoomStats } from "./backfill/migrateRoom";
+import { selectAllRooms } from "./backfill/selectAllRooms";
 import type { Tables } from "@/types/database.types";
 
 const dryRun = process.argv.includes("--dry-run") || process.env.DRY_RUN === "1";
