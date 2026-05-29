@@ -22,10 +22,9 @@ const { markChatReadHandler } = await import("@/lib/sessions/chats/markChatReadH
 const accountId = "acc-uuid-1";
 
 function makeReq(): NextRequest {
-  return new NextRequest(
-    "https://example.com/api/sessions/sess_1/chats/chat_1/read",
-    { method: "POST" },
-  );
+  return new NextRequest("https://example.com/api/sessions/sess_1/chats/chat_1/read", {
+    method: "POST",
+  });
 }
 
 function mockValidated() {

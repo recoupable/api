@@ -26,10 +26,9 @@ const { validateMarkChatReadRequest } = await import(
 const accountId = "acc-uuid-1";
 
 function makeReq(): NextRequest {
-  return new NextRequest(
-    "https://example.com/api/sessions/sess_1/chats/chat_1/read",
-    { method: "POST" },
-  );
+  return new NextRequest("https://example.com/api/sessions/sess_1/chats/chat_1/read", {
+    method: "POST",
+  });
 }
 
 describe("validateMarkChatReadRequest", () => {
@@ -75,9 +74,7 @@ describe("validateMarkChatReadRequest", () => {
     vi.mocked(selectSessions).mockResolvedValue([
       baseSessionRow({ id: "sess_1", account_id: "acc-OTHER" }),
     ]);
-    vi.mocked(selectChats).mockResolvedValue([
-      baseChatRow({ id: "chat_1", session_id: "sess_1" }),
-    ]);
+    vi.mocked(selectChats).mockResolvedValue([baseChatRow({ id: "chat_1", session_id: "sess_1" })]);
 
     const res = await validateMarkChatReadRequest(makeReq(), "sess_1", "chat_1");
     expect(res).toBeInstanceOf(NextResponse);
@@ -142,9 +139,7 @@ describe("validateMarkChatReadRequest", () => {
     vi.mocked(selectSessions).mockResolvedValue([
       baseSessionRow({ id: "sess_1", account_id: accountId }),
     ]);
-    vi.mocked(selectChats).mockResolvedValue([
-      baseChatRow({ id: "chat_1", session_id: "sess_1" }),
-    ]);
+    vi.mocked(selectChats).mockResolvedValue([baseChatRow({ id: "chat_1", session_id: "sess_1" })]);
 
     const res = await validateMarkChatReadRequest(makeReq(), "sess_1", "chat_1");
     expect(res).not.toBeInstanceOf(NextResponse);
