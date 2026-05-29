@@ -24,9 +24,7 @@ const SELECT = `
  * typed supabase-js client — both `chats.*` and the embedded `session`
  * projection surface to callers without an explicit type alias.
  */
-export async function selectChatsWithSessions(
-  params: SelectChatsWithSessionsParams = {},
-) {
+export async function selectChatsWithSessions(params: SelectChatsWithSessionsParams = {}) {
   const { accountIds } = params;
 
   if (accountIds !== undefined && accountIds.length === 0) {
