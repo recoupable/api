@@ -5,27 +5,30 @@ import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sd
 
 import { registerGetChatsTool } from "../registerGetChatsTool";
 
-const mockSelectRooms = vi.fn();
+const mockSelectChatsWithSessions = vi.fn();
 const mockCanAccessAccount = vi.fn();
 
-vi.mock("@/lib/supabase/rooms/selectRooms", () => ({
-  selectRooms: (...args: unknown[]) => mockSelectRooms(...args),
+vi.mock("@/lib/supabase/chats/selectChatsWithSessions", () => ({
+  selectChatsWithSessions: (...args: unknown[]) => mockSelectChatsWithSessions(...args),
 }));
 
 vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: (...args: unknown[]) => mockCanAccessAccount(...args),
 }));
 
+vi.mock("@/lib/const", () => ({
+  RECOUP_ORG_ID: "recoup-org-id",
+}));
+
 type ServerRequestHandlerExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
 
 /**
  * Creates a mock extra object with optional authInfo.
- *
- * @param authInfo - Optional auth info object containing account ID.
- * @param authInfo.accountId - The account ID for authentication.
- * @returns A mock ServerRequestHandlerExtra object.
  */
-function createMockExtra(authInfo?: { accountId?: string }): ServerRequestHandlerExtra {
+function createMockExtra(authInfo?: {
+  accountId?: string;
+  orgId?: string | null;
+}): ServerRequestHandlerExtra {
   return {
     authInfo: authInfo
       ? {
@@ -34,6 +37,7 @@ function createMockExtra(authInfo?: { accountId?: string }): ServerRequestHandle
           clientId: authInfo.accountId,
           extra: {
             accountId: authInfo.accountId,
+            orgId: authInfo.orgId ?? null,
           },
         }
       : undefined,
@@ -48,7 +52,7 @@ describe("registerGetChatsTool", () => {
     vi.clearAllMocks();
 
     mockServer = {
-      registerTool: vi.fn((name, config, handler) => {
+      registerTool: vi.fn((_name, _config, handler) => {
         registeredHandler = handler;
       }),
     } as unknown as McpServer;
@@ -60,21 +64,18 @@ describe("registerGetChatsTool", () => {
     expect(mockServer.registerTool).toHaveBeenCalledWith(
       "get_chats",
       expect.objectContaining({
-        description: "Get chat conversations for accounts.",
+        description: expect.stringContaining("chat"),
       }),
       expect.any(Function),
     );
   });
 
   it("returns empty chats array when no records exist", async () => {
-    mockSelectRooms.mockResolvedValue([]);
+    mockSelectChatsWithSessions.mockResolvedValue([]);
 
     const result = await registeredHandler({}, createMockExtra({ accountId: "account-123" }));
 
-    expect(mockSelectRooms).toHaveBeenCalledWith({
-      account_ids: ["account-123"],
-      artist_id: undefined,
-    });
+    expect(mockSelectChatsWithSessions).toHaveBeenCalledWith({ accountIds: ["account-123"] });
     expect(result).toEqual({
       content: [
         {
@@ -85,14 +86,18 @@ describe("registerGetChatsTool", () => {
     });
   });
 
-  it("returns chats array with records when they exist", async () => {
-    mockSelectRooms.mockResolvedValue([
+  it("returns chats projected to the new wire shape", async () => {
+    mockSelectChatsWithSessions.mockResolvedValue([
       {
         id: "chat-456",
-        account_id: "account-123",
-        artist_id: null,
-        topic: "Test Chat",
+        title: "Test Chat",
+        session_id: "sess-1",
         updated_at: "2024-01-01T00:00:00Z",
+        created_at: "2024-01-01T00:00:00Z",
+        active_stream_id: null,
+        last_assistant_message_at: null,
+        model_id: null,
+        session: { id: "sess-1", account_id: "account-123" },
       },
     ]);
 
@@ -102,7 +107,7 @@ describe("registerGetChatsTool", () => {
       content: [
         {
           type: "text",
-          text: expect.stringContaining('"chats":['),
+          text: expect.stringContaining('"sessionId":"sess-1"'),
         },
       ],
     });
@@ -110,7 +115,7 @@ describe("registerGetChatsTool", () => {
       content: [
         {
           type: "text",
-          text: expect.stringContaining('"id":"chat-456"'),
+          text: expect.stringContaining('"accountId":"account-123"'),
         },
       ],
     });
@@ -118,15 +123,7 @@ describe("registerGetChatsTool", () => {
 
   it("allows account_id override with access", async () => {
     mockCanAccessAccount.mockResolvedValue(true);
-    mockSelectRooms.mockResolvedValue([
-      {
-        id: "chat-456",
-        account_id: "target-account-789",
-        artist_id: null,
-        topic: "Test Chat",
-        updated_at: "2024-01-01T00:00:00Z",
-      },
-    ]);
+    mockSelectChatsWithSessions.mockResolvedValue([]);
 
     await registeredHandler(
       { account_id: "target-account-789" },
@@ -137,9 +134,8 @@ describe("registerGetChatsTool", () => {
       targetAccountId: "target-account-789",
       currentAccountId: "org-account-id",
     });
-    expect(mockSelectRooms).toHaveBeenCalledWith({
-      account_ids: ["target-account-789"],
-      artist_id: undefined,
+    expect(mockSelectChatsWithSessions).toHaveBeenCalledWith({
+      accountIds: ["target-account-789"],
     });
   });
 
@@ -174,25 +170,30 @@ describe("registerGetChatsTool", () => {
     });
   });
 
-  it("filters by artist_account_id when provided", async () => {
-    const artistChats = [
-      { id: "chat-1", account_id: "account-123", artist_id: "artist-456", topic: "Artist Chat" },
-    ];
-    mockSelectRooms.mockResolvedValue(artistChats);
+  it("accepts artist_account_id but does not filter by it", async () => {
+    mockSelectChatsWithSessions.mockResolvedValue([]);
 
     await registeredHandler(
       { artist_account_id: "artist-456" },
       createMockExtra({ accountId: "account-123" }),
     );
 
-    expect(mockSelectRooms).toHaveBeenCalledWith({
-      account_ids: ["account-123"],
-      artist_id: "artist-456",
-    });
+    expect(mockSelectChatsWithSessions).toHaveBeenCalledWith({ accountIds: ["account-123"] });
   });
 
-  it("returns error when selectRooms fails", async () => {
-    mockSelectRooms.mockResolvedValue(null);
+  it("passes undefined accountIds for Recoup admin (all chats)", async () => {
+    mockSelectChatsWithSessions.mockResolvedValue([]);
+
+    await registeredHandler(
+      {},
+      createMockExtra({ accountId: "recoup-org-id", orgId: "recoup-org-id" }),
+    );
+
+    expect(mockSelectChatsWithSessions).toHaveBeenCalledWith({ accountIds: undefined });
+  });
+
+  it("returns error when selectChatsWithSessions fails", async () => {
+    mockSelectChatsWithSessions.mockResolvedValue(null);
 
     const result = await registeredHandler({}, createMockExtra({ accountId: "account-123" }));
 

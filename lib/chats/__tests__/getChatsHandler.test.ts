@@ -4,7 +4,7 @@ import { getChatsHandler } from "../getChatsHandler";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
-import { selectRooms } from "@/lib/supabase/rooms/selectRooms";
+import { selectChatsWithSessions } from "@/lib/supabase/chats/selectChatsWithSessions";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
@@ -14,12 +14,8 @@ vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
-  getAccountOrganizations: vi.fn(),
-}));
-
-vi.mock("@/lib/supabase/rooms/selectRooms", () => ({
-  selectRooms: vi.fn(),
+vi.mock("@/lib/supabase/chats/selectChatsWithSessions", () => ({
+  selectChatsWithSessions: vi.fn(),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -32,10 +28,6 @@ vi.mock("@/lib/const", () => ({
 
 /**
  * Creates a mock NextRequest with the given URL and headers.
- *
- * @param url - The URL for the request
- * @param apiKey - The API key header value
- * @returns A mock NextRequest
  */
 function createMockRequest(url: string, apiKey = "test-api-key"): NextRequest {
   return {
@@ -63,29 +55,31 @@ describe("getChatsHandler", () => {
 
       expect(response.status).toBe(401);
       expect(json.status).toBe("error");
-      expect(selectRooms).not.toHaveBeenCalled();
+      expect(selectChatsWithSessions).not.toHaveBeenCalled();
     });
   });
 
   describe("personal key behavior", () => {
-    it("returns chats for personal key owner without account_id param", async () => {
+    it("returns chats projected to the new shape for personal key", async () => {
       const accountId = "123e4567-e89b-12d3-a456-426614174000";
-      const mockChats = [
-        {
-          id: "chat-1",
-          account_id: accountId,
-          artist_id: null,
-          topic: "Chat 1",
-          updated_at: "2024-01-01T00:00:00Z",
-        },
-      ];
-
       vi.mocked(validateAuthContext).mockResolvedValue({
         accountId,
-        orgId: null, // Personal key
+        orgId: null,
         authToken: "test-token",
       });
-      vi.mocked(selectRooms).mockResolvedValue(mockChats);
+      vi.mocked(selectChatsWithSessions).mockResolvedValue([
+        {
+          id: "chat-1",
+          title: "Hello",
+          session_id: "sess-1",
+          updated_at: "2024-01-02T00:00:00Z",
+          created_at: "2024-01-01T00:00:00Z",
+          active_stream_id: null,
+          last_assistant_message_at: null,
+          model_id: null,
+          session: { id: "sess-1", account_id: accountId },
+        },
+      ]);
 
       const request = createMockRequest("http://localhost/api/chats");
       const response = await getChatsHandler(request);
@@ -93,11 +87,16 @@ describe("getChatsHandler", () => {
 
       expect(response.status).toBe(200);
       expect(json.status).toBe("success");
-      expect(json.chats).toEqual(mockChats);
-      expect(selectRooms).toHaveBeenCalledWith({
-        account_ids: [accountId],
-        artist_id: undefined,
-      });
+      expect(json.chats).toEqual([
+        {
+          id: "chat-1",
+          title: "Hello",
+          accountId,
+          sessionId: "sess-1",
+          updatedAt: "2024-01-02T00:00:00Z",
+        },
+      ]);
+      expect(selectChatsWithSessions).toHaveBeenCalledWith({ accountIds: [accountId] });
     });
 
     it("returns 403 when personal key tries to filter by account_id", async () => {
@@ -106,7 +105,7 @@ describe("getChatsHandler", () => {
 
       vi.mocked(validateAuthContext).mockResolvedValue({
         accountId,
-        orgId: null, // Personal key
+        orgId: null,
         authToken: "test-token",
       });
       vi.mocked(canAccessAccount).mockResolvedValue(false);
@@ -117,129 +116,65 @@ describe("getChatsHandler", () => {
 
       expect(response.status).toBe(403);
       expect(json.status).toBe("error");
-      expect(json.error).toBe("Access denied to specified account_id");
-      expect(selectRooms).not.toHaveBeenCalled();
+      expect(selectChatsWithSessions).not.toHaveBeenCalled();
     });
   });
 
-  describe("org key behavior", () => {
-    it("returns chats for org key owner without account_id param", async () => {
-      const orgId = "123e4567-e89b-12d3-a456-426614174000";
-      const mockChats = [
-        {
-          id: "chat-1",
-          account_id: orgId,
-          artist_id: null,
-          topic: "Chat 1",
-          updated_at: "2024-01-01T00:00:00Z",
-        },
-      ];
+  describe("backwards compat", () => {
+    it("accepts artist_account_id but does not filter on it", async () => {
+      const accountId = "123e4567-e89b-12d3-a456-426614174000";
+      const artistId = "223e4567-e89b-12d3-a456-426614174001";
 
       vi.mocked(validateAuthContext).mockResolvedValue({
-        accountId: orgId,
-        orgId,
+        accountId,
+        orgId: null,
         authToken: "test-token",
       });
-      vi.mocked(selectRooms).mockResolvedValue(mockChats);
+      vi.mocked(selectChatsWithSessions).mockResolvedValue([]);
 
-      const request = createMockRequest("http://localhost/api/chats");
+      const request = createMockRequest(`http://localhost/api/chats?artist_account_id=${artistId}`);
       const response = await getChatsHandler(request);
       const json = await response.json();
 
       expect(response.status).toBe(200);
       expect(json.status).toBe("success");
-      expect(json.chats).toEqual(mockChats);
-      expect(selectRooms).toHaveBeenCalledWith({
-        account_ids: [orgId],
-        artist_id: undefined,
-      });
-    });
-
-    it("allows org key to filter by account_id for org member", async () => {
-      const orgId = "123e4567-e89b-12d3-a456-426614174000";
-      const memberId = "223e4567-e89b-12d3-a456-426614174000";
-      const mockChats = [
-        {
-          id: "chat-1",
-          account_id: memberId,
-          artist_id: null,
-          topic: "Chat 1",
-          updated_at: "2024-01-01T00:00:00Z",
-        },
-      ];
-
-      vi.mocked(validateAuthContext).mockResolvedValue({
-        accountId: orgId,
-        orgId,
-        authToken: "test-token",
-      });
-      vi.mocked(canAccessAccount).mockResolvedValue(true);
-      vi.mocked(selectRooms).mockResolvedValue(mockChats);
-
-      const request = createMockRequest(`http://localhost/api/chats?account_id=${memberId}`);
-      const response = await getChatsHandler(request);
-      const json = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(json.status).toBe("success");
-      expect(selectRooms).toHaveBeenCalledWith({
-        account_ids: [memberId],
-        artist_id: undefined,
-      });
-    });
-
-    it("returns 403 when org key tries to access non-member account", async () => {
-      const orgId = "123e4567-e89b-12d3-a456-426614174000";
-      const nonMemberId = "323e4567-e89b-12d3-a456-426614174000";
-
-      vi.mocked(validateAuthContext).mockResolvedValue({
-        accountId: orgId,
-        orgId,
-        authToken: "test-token",
-      });
-      vi.mocked(canAccessAccount).mockResolvedValue(false);
-
-      const request = createMockRequest(`http://localhost/api/chats?account_id=${nonMemberId}`);
-      const response = await getChatsHandler(request);
-      const json = await response.json();
-
-      expect(response.status).toBe(403);
-      expect(json.status).toBe("error");
-      expect(json.error).toBe("Access denied to specified account_id");
-      expect(selectRooms).not.toHaveBeenCalled();
+      expect(selectChatsWithSessions).toHaveBeenCalledWith({ accountIds: [accountId] });
     });
   });
 
-  describe("Recoup admin key behavior", () => {
-    it("returns chats for admin account without account_id param", async () => {
+  describe("admin behavior", () => {
+    it("passes undefined accountIds for Recoup admin (no target filter)", async () => {
       const recoupOrgId = "recoup-org-id";
-      const mockChats = [
-        {
-          id: "chat-1",
-          account_id: recoupOrgId,
-          artist_id: null,
-          topic: "Chat 1",
-          updated_at: "2024-01-01T00:00:00Z",
-        },
-      ];
-
       vi.mocked(validateAuthContext).mockResolvedValue({
         accountId: recoupOrgId,
         orgId: recoupOrgId,
         authToken: "test-token",
       });
-      vi.mocked(selectRooms).mockResolvedValue(mockChats);
+      vi.mocked(selectChatsWithSessions).mockResolvedValue([]);
 
       const request = createMockRequest("http://localhost/api/chats");
       const response = await getChatsHandler(request);
-      const json = await response.json();
 
       expect(response.status).toBe(200);
-      expect(json.status).toBe("success");
-      expect(selectRooms).toHaveBeenCalledWith({
-        account_ids: [recoupOrgId],
-        artist_id: undefined,
+      expect(selectChatsWithSessions).toHaveBeenCalledWith({ accountIds: undefined });
+    });
+
+    it("scopes admin to the target account when account_id is provided", async () => {
+      const recoupOrgId = "recoup-org-id";
+      const target = "323e4567-e89b-12d3-a456-426614174000";
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId: recoupOrgId,
+        orgId: recoupOrgId,
+        authToken: "test-token",
       });
+      vi.mocked(canAccessAccount).mockResolvedValue(true);
+      vi.mocked(selectChatsWithSessions).mockResolvedValue([]);
+
+      const request = createMockRequest(`http://localhost/api/chats?account_id=${target}`);
+      const response = await getChatsHandler(request);
+
+      expect(response.status).toBe(200);
+      expect(selectChatsWithSessions).toHaveBeenCalledWith({ accountIds: [target] });
     });
   });
 
@@ -257,7 +192,7 @@ describe("getChatsHandler", () => {
 
       expect(response.status).toBe(400);
       expect(json.status).toBe("error");
-      expect(selectRooms).not.toHaveBeenCalled();
+      expect(selectChatsWithSessions).not.toHaveBeenCalled();
     });
 
     it("returns 400 when artist_account_id is invalid UUID", async () => {
@@ -273,66 +208,12 @@ describe("getChatsHandler", () => {
 
       expect(response.status).toBe(400);
       expect(json.status).toBe("error");
-      expect(selectRooms).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("successful responses", () => {
-    it("returns filtered chats when artist_account_id is provided", async () => {
-      const accountId = "123e4567-e89b-12d3-a456-426614174000";
-      const artistId = "223e4567-e89b-12d3-a456-426614174001";
-      const mockChats = [
-        {
-          id: "chat-1",
-          account_id: accountId,
-          artist_id: artistId,
-          topic: "Artist Chat",
-          updated_at: "2024-01-01T00:00:00Z",
-        },
-      ];
-
-      vi.mocked(validateAuthContext).mockResolvedValue({
-        accountId,
-        orgId: null, // Personal key
-        authToken: "test-token",
-      });
-      vi.mocked(selectRooms).mockResolvedValue(mockChats);
-
-      const request = createMockRequest(`http://localhost/api/chats?artist_account_id=${artistId}`);
-      const response = await getChatsHandler(request);
-      const json = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(json.status).toBe("success");
-      expect(json.chats).toEqual(mockChats);
-      expect(selectRooms).toHaveBeenCalledWith({
-        account_ids: [accountId],
-        artist_id: artistId,
-      });
-    });
-
-    it("returns empty array when no chats found", async () => {
-      const accountId = "123e4567-e89b-12d3-a456-426614174000";
-
-      vi.mocked(validateAuthContext).mockResolvedValue({
-        accountId,
-        orgId: null,
-        authToken: "test-token",
-      });
-      vi.mocked(selectRooms).mockResolvedValue([]);
-
-      const request = createMockRequest("http://localhost/api/chats");
-      const response = await getChatsHandler(request);
-      const json = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(json.status).toBe("success");
-      expect(json.chats).toEqual([]);
+      expect(selectChatsWithSessions).not.toHaveBeenCalled();
     });
   });
 
   describe("error handling", () => {
-    it("returns 500 when selectRooms returns null", async () => {
+    it("returns 500 when selectChatsWithSessions returns null", async () => {
       const accountId = "123e4567-e89b-12d3-a456-426614174000";
 
       vi.mocked(validateAuthContext).mockResolvedValue({
@@ -340,7 +221,7 @@ describe("getChatsHandler", () => {
         orgId: null,
         authToken: "test-token",
       });
-      vi.mocked(selectRooms).mockResolvedValue(null);
+      vi.mocked(selectChatsWithSessions).mockResolvedValue(null);
 
       const request = createMockRequest("http://localhost/api/chats");
       const response = await getChatsHandler(request);
@@ -359,7 +240,7 @@ describe("getChatsHandler", () => {
         orgId: null,
         authToken: "test-token",
       });
-      vi.mocked(selectRooms).mockRejectedValue(new Error("Database error"));
+      vi.mocked(selectChatsWithSessions).mockRejectedValue(new Error("Database error"));
 
       const request = createMockRequest("http://localhost/api/chats");
       const response = await getChatsHandler(request);
@@ -368,6 +249,55 @@ describe("getChatsHandler", () => {
       expect(response.status).toBe(500);
       expect(json.status).toBe("error");
       expect(json.error).toBe("Database error");
+    });
+  });
+
+  describe("response projection", () => {
+    it("skips rows whose session embed is missing", async () => {
+      const accountId = "123e4567-e89b-12d3-a456-426614174000";
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId,
+        orgId: null,
+        authToken: "test-token",
+      });
+      vi.mocked(selectChatsWithSessions).mockResolvedValue([
+        {
+          id: "chat-keep",
+          title: "Keep",
+          session_id: "sess-1",
+          updated_at: "2024-01-02T00:00:00Z",
+          created_at: "2024-01-01T00:00:00Z",
+          active_stream_id: null,
+          last_assistant_message_at: null,
+          model_id: null,
+          session: { id: "sess-1", account_id: accountId },
+        },
+        {
+          id: "chat-orphan",
+          title: "Orphan",
+          session_id: "sess-2",
+          updated_at: "2024-01-03T00:00:00Z",
+          created_at: "2024-01-01T00:00:00Z",
+          active_stream_id: null,
+          last_assistant_message_at: null,
+          model_id: null,
+          session: null,
+        },
+      ]);
+
+      const request = createMockRequest("http://localhost/api/chats");
+      const response = await getChatsHandler(request);
+      const json = await response.json();
+
+      expect(json.chats).toEqual([
+        {
+          id: "chat-keep",
+          title: "Keep",
+          accountId,
+          sessionId: "sess-1",
+          updatedAt: "2024-01-02T00:00:00Z",
+        },
+      ]);
     });
   });
 });

@@ -3,25 +3,32 @@ import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/proto
 import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
-import { selectRooms } from "@/lib/supabase/rooms/selectRooms";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
-import { buildGetChatsParams } from "@/lib/chats/buildGetChatsParams";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+import { selectChatsWithSessions } from "@/lib/supabase/chats/selectChatsWithSessions";
+import { RECOUP_ORG_ID } from "@/lib/const";
 
 const getChatsSchema = z.object({
   account_id: z.string().optional().describe("The account ID to filter chats for."),
-  artist_account_id: z.string().optional().describe("The artist account ID to filter chats for."),
+  artist_account_id: z
+    .string()
+    .optional()
+    .describe(
+      "Deprecated: accepted for backward compatibility but no longer filters results. " +
+        "Reserved for the upcoming artist-surface migration.",
+    ),
 });
 
 export type GetChatsArgs = z.infer<typeof getChatsSchema>;
 
 /**
  * Registers the "get_chats" tool on the MCP server.
- * Retrieves chat conversations (rooms) for accounts.
  *
- * For personal keys: Returns chats for the key owner's account.
- * For org keys: Returns chats for all accounts in the organization.
- * For Recoup admin key: Returns ALL chat records.
+ * Returns chats joined with their owning session so each row carries
+ * `sessionId` and the owning `accountId`. Scope mirrors GET /api/chats:
+ * personal/org → caller's account; Recoup admin → all; or a specific
+ * account when `account_id` is supplied and the caller can access it.
  *
  * @param server - The MCP server instance to register the tool on.
  */
@@ -33,10 +40,11 @@ export function registerGetChatsTool(server: McpServer): void {
       inputSchema: getChatsSchema,
     },
     async (args: GetChatsArgs, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
-      const { account_id, artist_account_id } = args;
+      const { account_id: targetAccountId } = args;
 
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
       const accountId = authInfo?.extra?.accountId;
+      const orgId = authInfo?.extra?.orgId ?? null;
 
       if (!accountId) {
         return getToolResultError(
@@ -44,21 +52,39 @@ export function registerGetChatsTool(server: McpServer): void {
         );
       }
 
-      const { params, error } = await buildGetChatsParams({
-        account_id: accountId,
-        target_account_id: account_id,
-        artist_id: artist_account_id,
-      });
-
-      if (error) {
-        return getToolResultError(error);
+      let accountIds: string[] | undefined;
+      if (targetAccountId) {
+        const hasAccess = await canAccessAccount({
+          targetAccountId,
+          currentAccountId: accountId,
+        });
+        if (!hasAccess) {
+          return getToolResultError("Access denied to specified account_id");
+        }
+        accountIds = [targetAccountId];
+      } else if (orgId === RECOUP_ORG_ID) {
+        accountIds = undefined;
+      } else {
+        accountIds = [accountId];
       }
 
-      const chats = await selectRooms(params);
-
-      if (chats === null) {
+      const rows = await selectChatsWithSessions({ accountIds });
+      if (rows === null) {
         return getToolResultError("Failed to retrieve chats");
       }
+
+      const chats = rows.flatMap(row => {
+        if (!row.session) return [];
+        return [
+          {
+            id: row.id,
+            title: row.title,
+            accountId: row.session.account_id,
+            sessionId: row.session_id,
+            updatedAt: row.updated_at,
+          },
+        ];
+      });
 
       return getToolResultSuccess({ chats });
     },
