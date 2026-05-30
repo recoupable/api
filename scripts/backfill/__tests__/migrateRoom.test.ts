@@ -111,9 +111,7 @@ describe("migrateRoom", () => {
   it("passes room.artist_id into insertSession for straggler rooms", async () => {
     await migrateRoom({ ...room, artist_id: "artist-1" }, { dryRun: false });
 
-    expect(insertSession).toHaveBeenCalledWith(
-      expect.objectContaining({ artist_id: "artist-1" }),
-    );
+    expect(insertSession).toHaveBeenCalledWith(expect.objectContaining({ artist_id: "artist-1" }));
   });
 
   it("skips session/chat inserts when they already exist (idempotent re-run)", async () => {
