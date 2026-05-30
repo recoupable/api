@@ -10,6 +10,12 @@ interface BuildSessionInsertRowInput {
    * `cloneUrl`.
    */
   cloneUrl: string;
+  /**
+   * Optional artist account this session belongs to. Backs the chat
+   * sidebar's artist filter; omitted for sessions not tied to an
+   * artist context.
+   */
+  artistId?: string;
 }
 
 /**
@@ -18,14 +24,15 @@ interface BuildSessionInsertRowInput {
  * the default / null-coalescing rules so the handler can stay focused
  * on HTTP and persistence flow.
  *
- * @param input - The validated body, owning account id, resolved title, and resolved clone URL.
+ * @param input - The validated body, owning account id, resolved title, resolved clone URL, and optional artist id.
  * @returns A row ready to pass to `insertSession`.
  */
 export function buildSessionInsertRow(input: BuildSessionInsertRowInput): TablesInsert<"sessions"> {
-  const { accountId, title, cloneUrl } = input;
+  const { accountId, title, cloneUrl, artistId } = input;
   return {
     id: generateUUID(),
     account_id: accountId,
+    artist_id: artistId ?? null,
     title,
     status: "running",
     branch: null,

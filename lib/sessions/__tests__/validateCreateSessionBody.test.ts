@@ -74,4 +74,27 @@ describe("validateCreateSessionBody", () => {
       expect.objectContaining({ organizationId: orgId }),
     );
   });
+
+  it("accepts a valid artistId and surfaces it on the validated body", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+
+    const artistId = "a25c5dc5-3eb2-4fff-9a5e-39e90c9d4f02";
+    const result = await validateCreateSessionBody(req({ artistId }));
+    expect(result).not.toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) {
+      expect(result.body.artistId).toBe(artistId);
+    }
+  });
+
+  it("rejects a non-UUID artistId with 400", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+
+    const result = await validateCreateSessionBody(req({ artistId: "not-a-uuid" }));
+    expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(400);
+      const body = (await result.json()) as { status: string; error: string };
+      expect(body.error).toMatch(/UUID/i);
+    }
+  });
 });
