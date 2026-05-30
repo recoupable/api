@@ -77,6 +77,12 @@ describe("migrateRoom", () => {
     const stats = await migrateRoom(room, { dryRun: false });
 
     expect(insertSession).toHaveBeenCalledTimes(1);
+    expect(insertSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account_id: "acc-1",
+        artist_id: null,
+      }),
+    );
     expect(insertChat).toHaveBeenCalledTimes(1);
     // one batch call containing only the well-formed message
     expect(upsertChatMessages).toHaveBeenCalledTimes(1);
@@ -100,6 +106,14 @@ describe("migrateRoom", () => {
     expect(stats.status).toBe("skipped");
     expect(insertSession).not.toHaveBeenCalled();
     expect(insertChat).not.toHaveBeenCalled();
+  });
+
+  it("passes room.artist_id into insertSession for straggler rooms", async () => {
+    await migrateRoom({ ...room, artist_id: "artist-1" }, { dryRun: false });
+
+    expect(insertSession).toHaveBeenCalledWith(
+      expect.objectContaining({ artist_id: "artist-1" }),
+    );
   });
 
   it("skips session/chat inserts when they already exist (idempotent re-run)", async () => {
