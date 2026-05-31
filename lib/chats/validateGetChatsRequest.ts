@@ -4,8 +4,7 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
-import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
-import { RECOUP_ORG_ID } from "@/lib/const";
+import { isRecoupAdmin } from "@/lib/organizations/isRecoupAdmin";
 
 const getChatsQuerySchema = z.object({
   account_id: z.string().uuid("account_id must be a valid UUID").optional(),
@@ -77,12 +76,10 @@ export async function validateGetChatsRequest(
     return { accountIds: [targetAccountId], artistAccountId };
   }
 
-  // Recoup admin → all chats. Check membership directly so Bearer-authed
-  // admins get the same scope as x-api-key admins (auth.orgId is null for
+  // Recoup admin → all chats. Membership-based so Bearer-authed admins
+  // get the same scope as x-api-key admins (auth.orgId is null for
   // Bearer regardless of the caller's org memberships).
-  const callerOrgs = await getAccountOrganizations({ accountId });
-  const isRecoupAdmin = callerOrgs.some(m => m.organization_id === RECOUP_ORG_ID);
-  if (isRecoupAdmin) {
+  if (await isRecoupAdmin(accountId)) {
     return { accountIds: undefined, artistAccountId };
   }
 

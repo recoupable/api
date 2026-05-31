@@ -4,7 +4,7 @@ import { validateGetChatsRequest } from "../validateGetChatsRequest";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
-import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
+import { isRecoupAdmin } from "@/lib/organizations/isRecoupAdmin";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
@@ -14,23 +14,19 @@ vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
-  getAccountOrganizations: vi.fn(),
+vi.mock("@/lib/organizations/isRecoupAdmin", () => ({
+  isRecoupAdmin: vi.fn(),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => new Headers()),
 }));
 
-vi.mock("@/lib/const", () => ({
-  RECOUP_ORG_ID: "recoup-org-id",
-}));
-
 describe("validateGetChatsRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: caller is NOT in the Recoup org. Admin tests override.
-    vi.mocked(getAccountOrganizations).mockResolvedValue([]);
+    // Default: caller is NOT a Recoup admin. Admin tests override.
+    vi.mocked(isRecoupAdmin).mockResolvedValue(false);
   });
 
   it("returns auth error if validateAuthContext fails", async () => {
@@ -74,26 +70,22 @@ describe("validateGetChatsRequest", () => {
     expect(result).toEqual({ accountIds: [orgId], artistAccountId: undefined });
   });
 
-  it("returns undefined accountIds for Recoup admin (membership via account_organization_ids)", async () => {
+  it("returns undefined accountIds for Recoup admin (membership-based check)", async () => {
     // Bearer-authed caller whose accountId is a member of RECOUP_ORG.
-    // orgId stays null (Bearer never sets it) — the check goes through
-    // account_organization_ids instead.
+    // orgId stays null (Bearer never sets it) — the admin check goes
+    // through isRecoupAdmin → account_organization_ids instead.
     const adminAccountId = "admin-account-123";
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: adminAccountId,
       orgId: null,
       authToken: "test-token",
     });
-    vi.mocked(getAccountOrganizations).mockResolvedValue([
-      // Only the organization_id field is read by the validator
-      // — other AccountOrganization columns aren't accessed.
-      { organization_id: "recoup-org-id" } as never,
-    ]);
+    vi.mocked(isRecoupAdmin).mockResolvedValue(true);
 
     const request = new NextRequest("http://localhost/api/chats");
     const result = await validateGetChatsRequest(request);
 
-    expect(getAccountOrganizations).toHaveBeenCalledWith({ accountId: adminAccountId });
+    expect(isRecoupAdmin).toHaveBeenCalledWith(adminAccountId);
     expect(result).toEqual({ accountIds: undefined, artistAccountId: undefined });
   });
 

@@ -6,9 +6,8 @@ import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
-import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
+import { isRecoupAdmin } from "@/lib/organizations/isRecoupAdmin";
 import { selectChatsWithSessions } from "@/lib/supabase/chats/selectChatsWithSessions";
-import { RECOUP_ORG_ID } from "@/lib/const";
 
 const getChatsSchema = z.object({
   account_id: z.string().optional().describe("The account ID to filter chats for."),
@@ -68,9 +67,7 @@ export function registerGetChatsTool(server: McpServer): void {
         }
         accountIds = [targetAccountId];
       } else {
-        const callerOrgs = await getAccountOrganizations({ accountId });
-        const isRecoupAdmin = callerOrgs.some(m => m.organization_id === RECOUP_ORG_ID);
-        accountIds = isRecoupAdmin ? undefined : [accountId];
+        accountIds = (await isRecoupAdmin(accountId)) ? undefined : [accountId];
       }
 
       const rows = await selectChatsWithSessions({ accountIds, artistAccountId });

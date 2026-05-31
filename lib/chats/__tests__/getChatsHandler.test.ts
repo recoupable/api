@@ -4,7 +4,7 @@ import { getChatsHandler } from "../getChatsHandler";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
-import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
+import { isRecoupAdmin } from "@/lib/organizations/isRecoupAdmin";
 import { selectChatsWithSessions } from "@/lib/supabase/chats/selectChatsWithSessions";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
@@ -15,8 +15,8 @@ vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
-  getAccountOrganizations: vi.fn(),
+vi.mock("@/lib/organizations/isRecoupAdmin", () => ({
+  isRecoupAdmin: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/chats/selectChatsWithSessions", () => ({
@@ -25,10 +25,6 @@ vi.mock("@/lib/supabase/chats/selectChatsWithSessions", () => ({
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
-}));
-
-vi.mock("@/lib/const", () => ({
-  RECOUP_ORG_ID: "recoup-org-id",
 }));
 
 /**
@@ -51,8 +47,8 @@ function sessionEmbed(accountId: string, artistId: string | null = null) {
 describe("getChatsHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: caller is NOT in Recoup org — admin tests override.
-    vi.mocked(getAccountOrganizations).mockResolvedValue([]);
+    // Default: caller is NOT a Recoup admin — admin tests override.
+    vi.mocked(isRecoupAdmin).mockResolvedValue(false);
   });
 
   describe("authentication", () => {
@@ -198,9 +194,7 @@ describe("getChatsHandler", () => {
         orgId: null,
         authToken: "test-token",
       });
-      vi.mocked(getAccountOrganizations).mockResolvedValue([
-        { organization_id: "recoup-org-id" } as never,
-      ]);
+      vi.mocked(isRecoupAdmin).mockResolvedValue(true);
       vi.mocked(selectChatsWithSessions).mockResolvedValue([]);
 
       const request = createMockRequest("http://localhost/api/chats");

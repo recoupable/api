@@ -7,7 +7,7 @@ import { registerGetChatsTool } from "../registerGetChatsTool";
 
 const mockSelectChatsWithSessions = vi.fn();
 const mockCanAccessAccount = vi.fn();
-const mockGetAccountOrganizations = vi.fn();
+const mockIsRecoupAdmin = vi.fn();
 
 vi.mock("@/lib/supabase/chats/selectChatsWithSessions", () => ({
   selectChatsWithSessions: (...args: unknown[]) => mockSelectChatsWithSessions(...args),
@@ -17,12 +17,8 @@ vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: (...args: unknown[]) => mockCanAccessAccount(...args),
 }));
 
-vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
-  getAccountOrganizations: (...args: unknown[]) => mockGetAccountOrganizations(...args),
-}));
-
-vi.mock("@/lib/const", () => ({
-  RECOUP_ORG_ID: "recoup-org-id",
+vi.mock("@/lib/organizations/isRecoupAdmin", () => ({
+  isRecoupAdmin: (...args: unknown[]) => mockIsRecoupAdmin(...args),
 }));
 
 type ServerRequestHandlerExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
@@ -55,8 +51,8 @@ describe("registerGetChatsTool", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: caller is NOT in Recoup org. Admin tests override.
-    mockGetAccountOrganizations.mockResolvedValue([]);
+    // Default: caller is NOT a Recoup admin. Admin tests override.
+    mockIsRecoupAdmin.mockResolvedValue(false);
 
     mockServer = {
       registerTool: vi.fn((_name, _config, handler) => {
@@ -204,12 +200,12 @@ describe("registerGetChatsTool", () => {
   });
 
   it("passes undefined accountIds for Recoup admin (membership-based)", async () => {
-    mockGetAccountOrganizations.mockResolvedValue([{ organization_id: "recoup-org-id" }]);
+    mockIsRecoupAdmin.mockResolvedValue(true);
     mockSelectChatsWithSessions.mockResolvedValue([]);
 
     await registeredHandler({}, createMockExtra({ accountId: "admin-account-123" }));
 
-    expect(mockGetAccountOrganizations).toHaveBeenCalledWith({ accountId: "admin-account-123" });
+    expect(mockIsRecoupAdmin).toHaveBeenCalledWith("admin-account-123");
     expect(mockSelectChatsWithSessions).toHaveBeenCalledWith({
       accountIds: undefined,
       artistAccountId: undefined,
