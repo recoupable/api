@@ -4,6 +4,7 @@ import { selectChatsWithSessions } from "@/lib/supabase/chats/selectChatsWithSes
 const fromMock = vi.fn();
 const selectMock = vi.fn();
 const inMock = vi.fn();
+const eqMock = vi.fn();
 const orderMock = vi.fn();
 
 vi.mock("@/lib/supabase/serverClient", () => ({
@@ -14,15 +15,17 @@ vi.mock("@/lib/supabase/serverClient", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Default chain: from().select().in().order() -> resolves to { data, error }
+  // Default chain: from().select().in().eq().order() -> resolves to { data, error }
   const builder = {
     select: selectMock,
     in: inMock,
+    eq: eqMock,
     order: orderMock,
   };
   fromMock.mockReturnValue(builder);
   selectMock.mockReturnValue(builder);
   inMock.mockReturnValue(builder);
+  eqMock.mockReturnValue(builder);
   orderMock.mockResolvedValue({ data: [], error: null });
 });
 
@@ -47,10 +50,33 @@ describe("selectChatsWithSessions", () => {
     expect(typeof selectArg).toBe("string");
     expect(String(selectArg)).toContain("session:sessions!inner");
     expect(String(selectArg)).toContain("account_id");
+    expect(String(selectArg)).toContain("artist_id");
 
     expect(inMock).toHaveBeenCalledWith("session.account_id", ["acc-1", "acc-2"]);
+    expect(eqMock).not.toHaveBeenCalled();
     expect(orderMock).toHaveBeenCalledWith("updated_at", { ascending: false });
     expect(result).toEqual(rows);
+  });
+
+  it("composes accountIds + artistAccountId — both filters applied", async () => {
+    orderMock.mockResolvedValueOnce({ data: [], error: null });
+
+    await selectChatsWithSessions({
+      accountIds: ["acc-1"],
+      artistAccountId: "artist-9",
+    });
+
+    expect(inMock).toHaveBeenCalledWith("session.account_id", ["acc-1"]);
+    expect(eqMock).toHaveBeenCalledWith("session.artist_id", "artist-9");
+  });
+
+  it("applies the artist filter alone (admin scope + artist)", async () => {
+    orderMock.mockResolvedValueOnce({ data: [], error: null });
+
+    await selectChatsWithSessions({ artistAccountId: "artist-9" });
+
+    expect(inMock).not.toHaveBeenCalled();
+    expect(eqMock).toHaveBeenCalledWith("session.artist_id", "artist-9");
   });
 
   it("returns [] without calling .in() when accountIds is undefined (admin: all)", async () => {

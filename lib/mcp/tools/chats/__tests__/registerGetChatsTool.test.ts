@@ -7,6 +7,7 @@ import { registerGetChatsTool } from "../registerGetChatsTool";
 
 const mockSelectChatsWithSessions = vi.fn();
 const mockCanAccessAccount = vi.fn();
+const mockGetAccountOrganizations = vi.fn();
 
 vi.mock("@/lib/supabase/chats/selectChatsWithSessions", () => ({
   selectChatsWithSessions: (...args: unknown[]) => mockSelectChatsWithSessions(...args),
@@ -14,6 +15,10 @@ vi.mock("@/lib/supabase/chats/selectChatsWithSessions", () => ({
 
 vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: (...args: unknown[]) => mockCanAccessAccount(...args),
+}));
+
+vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
+  getAccountOrganizations: (...args: unknown[]) => mockGetAccountOrganizations(...args),
 }));
 
 vi.mock("@/lib/const", () => ({
@@ -50,6 +55,8 @@ describe("registerGetChatsTool", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: caller is NOT in Recoup org. Admin tests override.
+    mockGetAccountOrganizations.mockResolvedValue([]);
 
     mockServer = {
       registerTool: vi.fn((_name, _config, handler) => {
@@ -75,7 +82,10 @@ describe("registerGetChatsTool", () => {
 
     const result = await registeredHandler({}, createMockExtra({ accountId: "account-123" }));
 
-    expect(mockSelectChatsWithSessions).toHaveBeenCalledWith({ accountIds: ["account-123"] });
+    expect(mockSelectChatsWithSessions).toHaveBeenCalledWith({
+      accountIds: ["account-123"],
+      artistAccountId: undefined,
+    });
     expect(result).toEqual({
       content: [
         {
@@ -86,7 +96,7 @@ describe("registerGetChatsTool", () => {
     });
   });
 
-  it("returns chats projected to the new wire shape", async () => {
+  it("returns chats projected to the new wire shape including artistId", async () => {
     mockSelectChatsWithSessions.mockResolvedValue([
       {
         id: "chat-456",
@@ -97,28 +107,36 @@ describe("registerGetChatsTool", () => {
         active_stream_id: null,
         last_assistant_message_at: null,
         model_id: null,
-        session: { id: "sess-1", account_id: "account-123" },
+        session: { id: "sess-1", account_id: "account-123", artist_id: "artist-789" },
       },
     ]);
 
     const result = await registeredHandler({}, createMockExtra({ accountId: "account-123" }));
 
-    expect(result).toEqual({
-      content: [
-        {
-          type: "text",
-          text: expect.stringContaining('"sessionId":"sess-1"'),
-        },
-      ],
-    });
-    expect(result).toEqual({
-      content: [
-        {
-          type: "text",
-          text: expect.stringContaining('"accountId":"account-123"'),
-        },
-      ],
-    });
+    const textNode = (result as { content: { type: string; text: string }[] }).content[0];
+    expect(textNode.text).toContain('"sessionId":"sess-1"');
+    expect(textNode.text).toContain('"accountId":"account-123"');
+    expect(textNode.text).toContain('"artistId":"artist-789"');
+  });
+
+  it("surfaces artistId as null when session has no artist", async () => {
+    mockSelectChatsWithSessions.mockResolvedValue([
+      {
+        id: "chat-456",
+        title: "Test Chat",
+        session_id: "sess-1",
+        updated_at: "2024-01-01T00:00:00Z",
+        created_at: "2024-01-01T00:00:00Z",
+        active_stream_id: null,
+        last_assistant_message_at: null,
+        model_id: null,
+        session: { id: "sess-1", account_id: "account-123", artist_id: null },
+      },
+    ]);
+
+    const result = await registeredHandler({}, createMockExtra({ accountId: "account-123" }));
+    const textNode = (result as { content: { type: string; text: string }[] }).content[0];
+    expect(textNode.text).toContain('"artistId":null');
   });
 
   it("allows account_id override with access", async () => {
@@ -136,6 +154,7 @@ describe("registerGetChatsTool", () => {
     });
     expect(mockSelectChatsWithSessions).toHaveBeenCalledWith({
       accountIds: ["target-account-789"],
+      artistAccountId: undefined,
     });
   });
 
@@ -170,7 +189,7 @@ describe("registerGetChatsTool", () => {
     });
   });
 
-  it("accepts artist_account_id but does not filter by it", async () => {
+  it("passes artist_account_id through to the select", async () => {
     mockSelectChatsWithSessions.mockResolvedValue([]);
 
     await registeredHandler(
@@ -178,18 +197,23 @@ describe("registerGetChatsTool", () => {
       createMockExtra({ accountId: "account-123" }),
     );
 
-    expect(mockSelectChatsWithSessions).toHaveBeenCalledWith({ accountIds: ["account-123"] });
+    expect(mockSelectChatsWithSessions).toHaveBeenCalledWith({
+      accountIds: ["account-123"],
+      artistAccountId: "artist-456",
+    });
   });
 
-  it("passes undefined accountIds for Recoup admin (all chats)", async () => {
+  it("passes undefined accountIds for Recoup admin (membership-based)", async () => {
+    mockGetAccountOrganizations.mockResolvedValue([{ organization_id: "recoup-org-id" }]);
     mockSelectChatsWithSessions.mockResolvedValue([]);
 
-    await registeredHandler(
-      {},
-      createMockExtra({ accountId: "recoup-org-id", orgId: "recoup-org-id" }),
-    );
+    await registeredHandler({}, createMockExtra({ accountId: "admin-account-123" }));
 
-    expect(mockSelectChatsWithSessions).toHaveBeenCalledWith({ accountIds: undefined });
+    expect(mockGetAccountOrganizations).toHaveBeenCalledWith({ accountId: "admin-account-123" });
+    expect(mockSelectChatsWithSessions).toHaveBeenCalledWith({
+      accountIds: undefined,
+      artistAccountId: undefined,
+    });
   });
 
   it("returns error when selectChatsWithSessions fails", async () => {

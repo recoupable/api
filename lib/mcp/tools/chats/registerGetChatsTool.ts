@@ -6,6 +6,7 @@ import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 import { selectChatsWithSessions } from "@/lib/supabase/chats/selectChatsWithSessions";
 import { RECOUP_ORG_ID } from "@/lib/const";
 
@@ -15,8 +16,8 @@ const getChatsSchema = z.object({
     .string()
     .optional()
     .describe(
-      "Filter chats to those for the specified artist. Currently has no effect — " +
-        "the filter starts matching rows once the artist column is populated on sessions.",
+      "Filter chats to those whose owning session is in the specified artist context " +
+        "(matches `sessions.artist_id`). Composes with `account_id`.",
     ),
 });
 
@@ -26,9 +27,14 @@ export type GetChatsArgs = z.infer<typeof getChatsSchema>;
  * Registers the "get_chats" tool on the MCP server.
  *
  * Returns chats joined with their owning session so each row carries
- * `sessionId` and the owning `accountId`. Scope mirrors GET /api/chats:
- * personal/org → caller's account; Recoup admin → all; or a specific
- * account when `account_id` is supplied and the caller can access it.
+ * `sessionId`, owning `accountId`, and `artistId`. Scope mirrors
+ * GET /api/chats: personal/org → caller's account; Recoup admin → all;
+ * or a specific account when `account_id` is supplied and the caller
+ * can access it. `artist_account_id` further scopes by artist context.
+ *
+ * Admin status is derived from `account_organization_ids` membership so
+ * that Bearer-authed callers get the same admin scope as x-api-key
+ * callers with an org-bound key.
  *
  * @param server - The MCP server instance to register the tool on.
  */
@@ -40,11 +46,10 @@ export function registerGetChatsTool(server: McpServer): void {
       inputSchema: getChatsSchema,
     },
     async (args: GetChatsArgs, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
-      const { account_id: targetAccountId } = args;
+      const { account_id: targetAccountId, artist_account_id: artistAccountId } = args;
 
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
       const accountId = authInfo?.extra?.accountId;
-      const orgId = authInfo?.extra?.orgId ?? null;
 
       if (!accountId) {
         return getToolResultError(
@@ -62,13 +67,13 @@ export function registerGetChatsTool(server: McpServer): void {
           return getToolResultError("Access denied to specified account_id");
         }
         accountIds = [targetAccountId];
-      } else if (orgId === RECOUP_ORG_ID) {
-        accountIds = undefined;
       } else {
-        accountIds = [accountId];
+        const callerOrgs = await getAccountOrganizations({ accountId });
+        const isRecoupAdmin = callerOrgs.some(m => m.organization_id === RECOUP_ORG_ID);
+        accountIds = isRecoupAdmin ? undefined : [accountId];
       }
 
-      const rows = await selectChatsWithSessions({ accountIds });
+      const rows = await selectChatsWithSessions({ accountIds, artistAccountId });
       if (rows === null) {
         return getToolResultError("Failed to retrieve chats");
       }
@@ -82,6 +87,7 @@ export function registerGetChatsTool(server: McpServer): void {
             accountId: row.session.account_id,
             sessionId: row.session_id,
             updatedAt: row.updated_at,
+            artistId: row.session.artist_id,
           },
         ];
       });

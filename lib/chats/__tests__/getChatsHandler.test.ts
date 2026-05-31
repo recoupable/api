@@ -4,6 +4,7 @@ import { getChatsHandler } from "../getChatsHandler";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 import { selectChatsWithSessions } from "@/lib/supabase/chats/selectChatsWithSessions";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
@@ -12,6 +13,10 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 
 vi.mock("@/lib/organizations/canAccessAccount", () => ({
   canAccessAccount: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
+  getAccountOrganizations: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/chats/selectChatsWithSessions", () => ({
@@ -38,9 +43,16 @@ function createMockRequest(url: string, apiKey = "test-api-key"): NextRequest {
   } as unknown as NextRequest;
 }
 
+/** Fixture helper — a session embed with optional artist id. */
+function sessionEmbed(accountId: string, artistId: string | null = null) {
+  return { id: "sess-1", account_id: accountId, artist_id: artistId };
+}
+
 describe("getChatsHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: caller is NOT in Recoup org — admin tests override.
+    vi.mocked(getAccountOrganizations).mockResolvedValue([]);
   });
 
   describe("authentication", () => {
@@ -62,6 +74,7 @@ describe("getChatsHandler", () => {
   describe("personal key behavior", () => {
     it("returns chats projected to the new shape for personal key", async () => {
       const accountId = "123e4567-e89b-12d3-a456-426614174000";
+      const artistId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
       vi.mocked(validateAuthContext).mockResolvedValue({
         accountId,
         orgId: null,
@@ -77,7 +90,7 @@ describe("getChatsHandler", () => {
           active_stream_id: null,
           last_assistant_message_at: null,
           model_id: null,
-          session: { id: "sess-1", account_id: accountId },
+          session: sessionEmbed(accountId, artistId),
         },
       ]);
 
@@ -94,9 +107,41 @@ describe("getChatsHandler", () => {
           accountId,
           sessionId: "sess-1",
           updatedAt: "2024-01-02T00:00:00Z",
+          artistId,
         },
       ]);
-      expect(selectChatsWithSessions).toHaveBeenCalledWith({ accountIds: [accountId] });
+      expect(selectChatsWithSessions).toHaveBeenCalledWith({
+        accountIds: [accountId],
+        artistAccountId: undefined,
+      });
+    });
+
+    it("surfaces artistId as null when session has no artist", async () => {
+      const accountId = "123e4567-e89b-12d3-a456-426614174000";
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId,
+        orgId: null,
+        authToken: "test-token",
+      });
+      vi.mocked(selectChatsWithSessions).mockResolvedValue([
+        {
+          id: "chat-1",
+          title: "Hello",
+          session_id: "sess-1",
+          updated_at: "2024-01-02T00:00:00Z",
+          created_at: "2024-01-01T00:00:00Z",
+          active_stream_id: null,
+          last_assistant_message_at: null,
+          model_id: null,
+          session: sessionEmbed(accountId, null),
+        },
+      ]);
+
+      const request = createMockRequest("http://localhost/api/chats");
+      const response = await getChatsHandler(request);
+      const json = await response.json();
+
+      expect(json.chats[0].artistId).toBeNull();
     });
 
     it("returns 403 when personal key tries to filter by account_id", async () => {
@@ -120,10 +165,10 @@ describe("getChatsHandler", () => {
     });
   });
 
-  describe("backwards compat", () => {
-    it("accepts artist_account_id but does not filter on it", async () => {
+  describe("artist filter", () => {
+    it("passes artist_account_id through to the select", async () => {
       const accountId = "123e4567-e89b-12d3-a456-426614174000";
-      const artistId = "223e4567-e89b-12d3-a456-426614174001";
+      const artistAccountId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
       vi.mocked(validateAuthContext).mockResolvedValue({
         accountId,
@@ -132,39 +177,48 @@ describe("getChatsHandler", () => {
       });
       vi.mocked(selectChatsWithSessions).mockResolvedValue([]);
 
-      const request = createMockRequest(`http://localhost/api/chats?artist_account_id=${artistId}`);
+      const request = createMockRequest(
+        `http://localhost/api/chats?artist_account_id=${artistAccountId}`,
+      );
       const response = await getChatsHandler(request);
-      const json = await response.json();
 
       expect(response.status).toBe(200);
-      expect(json.status).toBe("success");
-      expect(selectChatsWithSessions).toHaveBeenCalledWith({ accountIds: [accountId] });
+      expect(selectChatsWithSessions).toHaveBeenCalledWith({
+        accountIds: [accountId],
+        artistAccountId,
+      });
     });
   });
 
   describe("admin behavior", () => {
-    it("passes undefined accountIds for Recoup admin (no target filter)", async () => {
-      const recoupOrgId = "recoup-org-id";
+    it("passes undefined accountIds when caller is in Recoup org (membership-based)", async () => {
+      const adminAccountId = "admin-account-123";
       vi.mocked(validateAuthContext).mockResolvedValue({
-        accountId: recoupOrgId,
-        orgId: recoupOrgId,
+        accountId: adminAccountId,
+        orgId: null,
         authToken: "test-token",
       });
+      vi.mocked(getAccountOrganizations).mockResolvedValue([
+        { organization_id: "recoup-org-id" } as never,
+      ]);
       vi.mocked(selectChatsWithSessions).mockResolvedValue([]);
 
       const request = createMockRequest("http://localhost/api/chats");
       const response = await getChatsHandler(request);
 
       expect(response.status).toBe(200);
-      expect(selectChatsWithSessions).toHaveBeenCalledWith({ accountIds: undefined });
+      expect(selectChatsWithSessions).toHaveBeenCalledWith({
+        accountIds: undefined,
+        artistAccountId: undefined,
+      });
     });
 
     it("scopes admin to the target account when account_id is provided", async () => {
-      const recoupOrgId = "recoup-org-id";
+      const adminAccountId = "admin-account-123";
       const target = "323e4567-e89b-12d3-a456-426614174000";
       vi.mocked(validateAuthContext).mockResolvedValue({
-        accountId: recoupOrgId,
-        orgId: recoupOrgId,
+        accountId: adminAccountId,
+        orgId: null,
         authToken: "test-token",
       });
       vi.mocked(canAccessAccount).mockResolvedValue(true);
@@ -174,7 +228,10 @@ describe("getChatsHandler", () => {
       const response = await getChatsHandler(request);
 
       expect(response.status).toBe(200);
-      expect(selectChatsWithSessions).toHaveBeenCalledWith({ accountIds: [target] });
+      expect(selectChatsWithSessions).toHaveBeenCalledWith({
+        accountIds: [target],
+        artistAccountId: undefined,
+      });
     });
   });
 
@@ -232,7 +289,7 @@ describe("getChatsHandler", () => {
       expect(json.error).toBe("Failed to retrieve chats");
     });
 
-    it("returns 500 when an exception is thrown", async () => {
+    it("returns 500 with a generic message when an exception is thrown (no leak of raw message)", async () => {
       const accountId = "123e4567-e89b-12d3-a456-426614174000";
 
       vi.mocked(validateAuthContext).mockResolvedValue({
@@ -248,13 +305,16 @@ describe("getChatsHandler", () => {
 
       expect(response.status).toBe(500);
       expect(json.status).toBe("error");
-      expect(json.error).toBe("Database error");
+      expect(json.error).toBe("Internal server error");
+      // Raw exception message must not leak into the response body.
+      expect(json.error).not.toContain("Database");
     });
   });
 
   describe("response projection", () => {
     it("skips rows whose session embed is missing", async () => {
       const accountId = "123e4567-e89b-12d3-a456-426614174000";
+      const artistId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
       vi.mocked(validateAuthContext).mockResolvedValue({
         accountId,
         orgId: null,
@@ -270,7 +330,7 @@ describe("getChatsHandler", () => {
           active_stream_id: null,
           last_assistant_message_at: null,
           model_id: null,
-          session: { id: "sess-1", account_id: accountId },
+          session: sessionEmbed(accountId, artistId),
         },
         {
           id: "chat-orphan",
@@ -296,6 +356,7 @@ describe("getChatsHandler", () => {
           accountId,
           sessionId: "sess-1",
           updatedAt: "2024-01-02T00:00:00Z",
+          artistId,
         },
       ]);
     });

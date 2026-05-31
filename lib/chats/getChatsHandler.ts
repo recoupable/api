@@ -9,8 +9,9 @@ import { selectChatsWithSessions } from "@/lib/supabase/chats/selectChatsWithSes
  * Requires authentication via x-api-key header or Authorization bearer token.
  *
  * Returns chats joined with their owning session so the response carries the
- * `sessionId` and the owning `accountId` per row, enabling clients to render
- * canonical `/sessions/{sid}/chats/{cid}` URLs.
+ * `sessionId`, owning `accountId`, and `artistId` per row, enabling clients
+ * to render canonical `/sessions/{sid}/chats/{cid}` URLs and filter by
+ * artist context.
  *
  * Scope:
  * - Personal/org key: chats belonging to the caller's account.
@@ -20,9 +21,8 @@ import { selectChatsWithSessions } from "@/lib/supabase/chats/selectChatsWithSes
  *
  * Optional query parameters:
  * - `account_id`: target account override (validated against access).
- * - `artist_account_id`: filter chats to a specific artist. Currently
- *   a no-op — the filter starts matching rows once the artist column
- *   is populated on sessions.
+ * - `artist_account_id`: scope chats to those whose owning session has the
+ *   given artist context (`sessions.artist_id`). Composes with `account_id`.
  *
  * @param request - The request object containing query parameters
  * @returns A NextResponse with chats data
@@ -34,7 +34,10 @@ export async function getChatsHandler(request: NextRequest): Promise<NextRespons
       return validated;
     }
 
-    const rows = await selectChatsWithSessions({ accountIds: validated.accountIds });
+    const rows = await selectChatsWithSessions({
+      accountIds: validated.accountIds,
+      artistAccountId: validated.artistAccountId,
+    });
 
     if (rows === null) {
       return NextResponse.json(
@@ -52,6 +55,7 @@ export async function getChatsHandler(request: NextRequest): Promise<NextRespons
           accountId: row.session.account_id,
           sessionId: row.session_id,
           updatedAt: row.updated_at,
+          artistId: row.session.artist_id,
         },
       ];
     });
@@ -61,12 +65,12 @@ export async function getChatsHandler(request: NextRequest): Promise<NextRespons
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {
+    // Never leak raw exception messages on 500 — they can expose internal
+    // structure or DB errors. Caller gets a fixed string; the real cause
+    // stays in server logs.
     console.error("[ERROR] getChatsHandler:", error);
     return NextResponse.json(
-      {
-        status: "error",
-        error: error instanceof Error ? error.message : "Internal server error",
-      },
+      { status: "error", error: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
     );
   }
