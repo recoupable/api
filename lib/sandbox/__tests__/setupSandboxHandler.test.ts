@@ -4,6 +4,7 @@ import { setupSandboxHandler } from "@/lib/sandbox/setupSandboxHandler";
 
 import { validateSetupSandboxBody } from "@/lib/sandbox/validateSetupSandboxBody";
 import { triggerSetupSandbox } from "@/lib/trigger/triggerSetupSandbox";
+import { isSandboxProvisioned } from "@/lib/sandbox/isSandboxProvisioned";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -17,9 +18,14 @@ vi.mock("@/lib/trigger/triggerSetupSandbox", () => ({
   triggerSetupSandbox: vi.fn(),
 }));
 
+vi.mock("@/lib/sandbox/isSandboxProvisioned", () => ({
+  isSandboxProvisioned: vi.fn(),
+}));
+
 describe("setupSandboxHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(isSandboxProvisioned).mockResolvedValue(false);
   });
 
   it("returns validation error when validation fails", async () => {
@@ -36,6 +42,24 @@ describe("setupSandboxHandler", () => {
     const result = await setupSandboxHandler(request);
 
     expect(result).toBe(errorResponse);
+  });
+
+  it("returns early when sandbox is already provisioned", async () => {
+    vi.mocked(validateSetupSandboxBody).mockResolvedValue({
+      accountId: "test-account-id",
+    });
+    vi.mocked(isSandboxProvisioned).mockResolvedValue(true);
+
+    const request = new NextRequest("http://localhost/api/sandboxes/setup", {
+      method: "POST",
+    });
+
+    const result = await setupSandboxHandler(request);
+    const body = await result.json();
+
+    expect(result.status).toBe(200);
+    expect(body).toEqual({ status: "success", message: "already provisioned" });
+    expect(triggerSetupSandbox).not.toHaveBeenCalled();
   });
 
   it("returns success with runId when trigger succeeds", async () => {
