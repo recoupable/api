@@ -47,4 +47,23 @@ describe("buildSessionInsertRow", () => {
     });
     expect(row.sandbox_state).toEqual({ type: "vercel" });
   });
+
+  it("writes artist_id when artistId is provided", () => {
+    const row = buildSessionInsertRow({
+      accountId: "acc-1",
+      title: "Berlin",
+      cloneUrl: DEFAULT_CLONE,
+      artistId: "artist-uuid-1",
+    });
+    expect(row.artist_id).toBe("artist-uuid-1");
+  });
+
+  it("sets artist_id to null when artistId is omitted", () => {
+    const row = buildSessionInsertRow({
+      accountId: "acc-1",
+      title: "Berlin",
+      cloneUrl: DEFAULT_CLONE,
+    });
+    expect(row.artist_id).toBeNull();
+  });
 });

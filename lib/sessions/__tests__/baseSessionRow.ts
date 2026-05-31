@@ -9,6 +9,7 @@ export function baseSessionRow(overrides: Partial<Tables<"sessions">> = {}): Tab
   return {
     id: "sess_1",
     account_id: "acc-uuid-1",
+    artist_id: null,
     title: "Test session",
     status: "running",
     repo_owner: null,
