@@ -11,7 +11,9 @@ import { selectChatsWithSessions } from "@/lib/supabase/chats/selectChatsWithSes
  * Returns chats joined with their owning session so the response carries the
  * `sessionId`, owning `accountId`, and `artistId` per row, enabling clients
  * to render canonical `/sessions/{sid}/chats/{cid}` URLs and filter by
- * artist context.
+ * artist context. Chats whose owning session is archived
+ * (`sessions.status === "archived"`) are excluded — archive is the
+ * soft-delete path for sessions.
  *
  * Scope:
  * - Personal/org key: chats belonging to the caller's account.

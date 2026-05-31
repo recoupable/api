@@ -18,13 +18,16 @@ export interface SelectChatsWithSessionsParams {
 
 const SELECT = `
   *,
-  session:sessions!inner ( id, account_id, artist_id )
+  session:sessions!inner ( id, account_id, artist_id, status )
 ` as const;
 
 /**
  * Reads chats joined to their owning session, optionally scoped to a set of
  * account IDs through `sessions.account_id` and/or an artist context through
- * `sessions.artist_id`. Ordered by `chats.updated_at` descending so newest
+ * `sessions.artist_id`. Chats whose session is archived
+ * (`sessions.status === "archived"`) are excluded — archive is the
+ * soft-delete path, and archived sessions should not surface in chat
+ * listings. Results are ordered by `chats.updated_at` descending so newest
  * activity surfaces first.
  *
  * Returns `null` when Supabase reports an error so callers can distinguish a
@@ -39,7 +42,7 @@ export async function selectChatsWithSessions(params: SelectChatsWithSessionsPar
     return [];
   }
 
-  let query = supabase.from("chats").select(SELECT);
+  let query = supabase.from("chats").select(SELECT).neq("session.status", "archived");
   if (accountIds !== undefined) {
     query = query.in("session.account_id", accountIds);
   }
