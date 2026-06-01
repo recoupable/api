@@ -1,10 +1,10 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import type { SelectRoomsParams } from "@/lib/supabase/rooms/selectRooms";
-import { buildGetChatsParams } from "./buildGetChatsParams";
-import { z } from "zod";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+import { isRecoupAdmin } from "@/lib/organizations/isRecoupAdmin";
 
 const getChatsQuerySchema = z.object({
   account_id: z.string().uuid("account_id must be a valid UUID").optional(),
@@ -12,68 +12,76 @@ const getChatsQuerySchema = z.object({
 });
 
 /**
+ * Validated scope params for the chats listing.
+ * `accountIds === undefined` signals admin scope (no account filter).
+ * `artistAccountId` is a separate, composable filter on `sessions.artist_id`.
+ */
+export interface GetChatsScope {
+  accountIds?: string[];
+  artistAccountId?: string;
+}
+
+/**
  * Validates GET /api/chats request.
- * Handles authentication via x-api-key or Authorization bearer token.
  *
- * For personal keys: Returns accountIds with the key owner's account
- * For org keys: Returns orgId for filtering by org membership in database
- * For Recoup admin key: Returns empty params to indicate ALL chat records
+ * Auth via x-api-key or Authorization Bearer token. Returns the account scope:
+ * - Recoup admin (no target) → `{ accountIds: undefined }` (all chats).
+ * - Recoup admin with `account_id` → `{ accountIds: [target] }`.
+ * - Org/personal key with `account_id` → `{ accountIds: [target] }` if
+ *   `canAccessAccount` allows, else 403.
+ * - Personal/org key without target → `{ accountIds: [callerAccountId] }`.
  *
- * Query parameters:
- * - account_id: Filter to a specific account (validated against org membership)
- * - artist_account_id: Filter by artist ID
+ * Recoup-admin status is derived from `account_organization_ids` membership
+ * (not `auth.orgId`) because Bearer-authed callers never set `auth.orgId` —
+ * the previous `orgId === RECOUP_ORG_ID` branch was unreachable for them.
  *
- * @param request - The NextRequest object
- * @returns A NextResponse with an error if validation fails, or SelectRoomsParams
+ * `artistAccountId` (from `?artist_account_id=`) passes through verbatim
+ * and composes with the account scope at the SQL layer.
  */
 export async function validateGetChatsRequest(
   request: NextRequest,
-): Promise<NextResponse | SelectRoomsParams> {
-  // Parse query parameters first
+): Promise<NextResponse | GetChatsScope> {
   const { searchParams } = new URL(request.url);
-  const queryParams = {
+  const queryResult = getChatsQuerySchema.safeParse({
     account_id: searchParams.get("account_id") ?? undefined,
     artist_account_id: searchParams.get("artist_account_id") ?? undefined,
-  };
-
-  const queryResult = getChatsQuerySchema.safeParse(queryParams);
+  });
   if (!queryResult.success) {
     const firstError = queryResult.error.issues[0];
     return NextResponse.json(
-      {
-        status: "error",
-        error: firstError.message,
-      },
+      { status: "error", error: firstError.message },
       { status: 400, headers: getCorsHeaders() },
     );
   }
 
-  const { account_id: target_account_id, artist_account_id: artist_id } = queryResult.data;
+  const { account_id: targetAccountId, artist_account_id: artistAccountId } = queryResult.data;
 
-  // Use validateAuthContext for authentication
   const authResult = await validateAuthContext(request);
   if (authResult instanceof NextResponse) {
     return authResult;
   }
+  const { accountId } = authResult;
 
-  const { accountId: account_id } = authResult;
-
-  // Use shared function to build params
-  const { params, error } = await buildGetChatsParams({
-    account_id,
-    target_account_id,
-    artist_id,
-  });
-
-  if (error) {
-    return NextResponse.json(
-      {
-        status: "error",
-        error,
-      },
-      { status: 403, headers: getCorsHeaders() },
-    );
+  if (targetAccountId) {
+    const hasAccess = await canAccessAccount({
+      targetAccountId,
+      currentAccountId: accountId,
+    });
+    if (!hasAccess) {
+      return NextResponse.json(
+        { status: "error", error: "Access denied to specified account_id" },
+        { status: 403, headers: getCorsHeaders() },
+      );
+    }
+    return { accountIds: [targetAccountId], artistAccountId };
   }
 
-  return params;
+  // Recoup admin → all chats. Membership-based so Bearer-authed admins
+  // get the same scope as x-api-key admins (auth.orgId is null for
+  // Bearer regardless of the caller's org memberships).
+  if (await isRecoupAdmin(accountId)) {
+    return { accountIds: undefined, artistAccountId };
+  }
+
+  return { accountIds: [accountId], artistAccountId };
 }
