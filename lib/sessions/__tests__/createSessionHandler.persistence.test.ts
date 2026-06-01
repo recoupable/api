@@ -107,6 +107,31 @@ describe("createSessionHandler — persistence", () => {
     expect(vi.mocked(insertSession).mock.calls[0][0].title).toBe("Hello world");
   });
 
+  it("writes artist_id when body carries artistId, and exposes it on the response", async () => {
+    const artistId = "a25c5dc5-3eb2-4fff-9a5e-39e90c9d4f02";
+    vi.mocked(validateCreateSessionBody).mockResolvedValue(okValidated({ body: { artistId } }));
+    vi.mocked(insertSession).mockResolvedValue(baseSessionRow({ artist_id: artistId }));
+    vi.mocked(insertChat).mockResolvedValue(baseChatRow());
+
+    const res = await createSessionHandler(makeCreateSessionReq({ artistId }));
+    expect(res.status).toBe(200);
+
+    expect(vi.mocked(insertSession).mock.calls[0][0].artist_id).toBe(artistId);
+
+    const body = (await res.json()) as { session: { artistId: string | null } };
+    expect(body.session.artistId).toBe(artistId);
+  });
+
+  it("writes artist_id as null when artistId is omitted", async () => {
+    vi.mocked(validateCreateSessionBody).mockResolvedValue(okValidated());
+    vi.mocked(insertSession).mockResolvedValue(baseSessionRow());
+    vi.mocked(insertChat).mockResolvedValue(baseChatRow());
+
+    await createSessionHandler(makeCreateSessionReq({}));
+
+    expect(vi.mocked(insertSession).mock.calls[0][0].artist_id).toBeNull();
+  });
+
   it("returns 500 when insertSession fails", async () => {
     vi.mocked(validateCreateSessionBody).mockResolvedValue(okValidated());
     vi.mocked(insertSession).mockResolvedValue(null);

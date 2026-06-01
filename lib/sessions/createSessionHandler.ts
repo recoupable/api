@@ -58,6 +58,7 @@ export async function createSessionHandler(request: NextRequest): Promise<NextRe
       accountId: auth.accountId,
       title,
       cloneUrl,
+      artistId: body.artistId,
     }),
   );
 

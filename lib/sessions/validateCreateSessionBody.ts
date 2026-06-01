@@ -21,6 +21,7 @@ import type { AuthContext } from "@/lib/auth/validateAuthContext";
 export const createSessionBodySchema = z.object({
   title: z.string().optional(),
   organizationId: z.string().uuid("organizationId must be a valid UUID").optional(),
+  artistId: z.string().uuid("artistId must be a valid UUID").optional(),
 });
 
 export type CreateSessionBody = z.infer<typeof createSessionBodySchema>;

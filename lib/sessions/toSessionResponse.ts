@@ -14,6 +14,7 @@ export function toSessionResponse(row: Tables<"sessions">) {
   return {
     id: row.id,
     userId: row.account_id,
+    artistId: row.artist_id,
     title: row.title,
     status: row.status,
     repoOwner: row.repo_owner,
