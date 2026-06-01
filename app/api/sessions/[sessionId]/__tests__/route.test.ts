@@ -5,6 +5,15 @@ import type { Tables } from "@/types/database.types";
 
 type SessionRow = Tables<"sessions">;
 
+vi.mock("next/server", async importOriginal => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return { ...actual, after: vi.fn() };
+});
+
+vi.mock("@/lib/sessions/stopSandboxOnArchive", () => ({
+  stopSandboxOnArchive: vi.fn(),
+}));
+
 vi.mock("@/lib/supabase/sessions/selectSessions", () => ({
   selectSessions: vi.fn(),
 }));
@@ -54,6 +63,7 @@ function makePatchReqRaw(
 const mockRow: SessionRow = {
   id: "sess_1",
   account_id: "acc-uuid-1",
+  artist_id: null,
   title: "Test session",
   status: "running",
   repo_owner: "acme",
@@ -177,6 +187,7 @@ describe("GET /api/sessions/[sessionId]", () => {
       session: {
         id: "sess_1",
         userId: "acc-uuid-1",
+        artistId: null,
         title: "Test session",
         status: "running",
         repoOwner: "acme",
@@ -352,6 +363,11 @@ describe("PATCH /api/sessions/[sessionId]", () => {
     expect(updateSession).toHaveBeenCalledWith("sess_1", {
       title: "Renamed session",
       status: "archived",
+      lifecycle_state: "archived",
+      lifecycle_error: null,
+      lifecycle_run_id: null,
+      sandbox_expires_at: null,
+      hibernate_after: null,
     });
   });
 

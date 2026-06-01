@@ -3,25 +3,38 @@ import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/proto
 import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
-import { selectRooms } from "@/lib/supabase/rooms/selectRooms";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
-import { buildGetChatsParams } from "@/lib/chats/buildGetChatsParams";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+import { isRecoupAdmin } from "@/lib/organizations/isRecoupAdmin";
+import { selectChatsWithSessions } from "@/lib/supabase/chats/selectChatsWithSessions";
 
 const getChatsSchema = z.object({
   account_id: z.string().optional().describe("The account ID to filter chats for."),
-  artist_account_id: z.string().optional().describe("The artist account ID to filter chats for."),
+  artist_account_id: z
+    .string()
+    .optional()
+    .describe(
+      "Filter chats to those whose owning session is in the specified artist context " +
+        "(matches `sessions.artist_id`). Composes with `account_id`.",
+    ),
 });
 
 export type GetChatsArgs = z.infer<typeof getChatsSchema>;
 
 /**
  * Registers the "get_chats" tool on the MCP server.
- * Retrieves chat conversations (rooms) for accounts.
  *
- * For personal keys: Returns chats for the key owner's account.
- * For org keys: Returns chats for all accounts in the organization.
- * For Recoup admin key: Returns ALL chat records.
+ * Returns chats joined with their owning session so each row carries
+ * `sessionId`, owning `accountId`, and `artistId`. Scope mirrors
+ * GET /api/chats: personal/org → caller's account; Recoup admin → all;
+ * or a specific account when `account_id` is supplied and the caller
+ * can access it. `artist_account_id` further scopes by artist context.
+ * Chats whose owning session is archived are excluded.
+ *
+ * Admin status is derived from `account_organization_ids` membership so
+ * that Bearer-authed callers get the same admin scope as x-api-key
+ * callers with an org-bound key.
  *
  * @param server - The MCP server instance to register the tool on.
  */
@@ -33,7 +46,7 @@ export function registerGetChatsTool(server: McpServer): void {
       inputSchema: getChatsSchema,
     },
     async (args: GetChatsArgs, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
-      const { account_id, artist_account_id } = args;
+      const { account_id: targetAccountId, artist_account_id: artistAccountId } = args;
 
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
       const accountId = authInfo?.extra?.accountId;
@@ -44,21 +57,38 @@ export function registerGetChatsTool(server: McpServer): void {
         );
       }
 
-      const { params, error } = await buildGetChatsParams({
-        account_id: accountId,
-        target_account_id: account_id,
-        artist_id: artist_account_id,
-      });
-
-      if (error) {
-        return getToolResultError(error);
+      let accountIds: string[] | undefined;
+      if (targetAccountId) {
+        const hasAccess = await canAccessAccount({
+          targetAccountId,
+          currentAccountId: accountId,
+        });
+        if (!hasAccess) {
+          return getToolResultError("Access denied to specified account_id");
+        }
+        accountIds = [targetAccountId];
+      } else {
+        accountIds = (await isRecoupAdmin(accountId)) ? undefined : [accountId];
       }
 
-      const chats = await selectRooms(params);
-
-      if (chats === null) {
+      const rows = await selectChatsWithSessions({ accountIds, artistAccountId });
+      if (rows === null) {
         return getToolResultError("Failed to retrieve chats");
       }
+
+      const chats = rows.flatMap(row => {
+        if (!row.session) return [];
+        return [
+          {
+            id: row.id,
+            title: row.title,
+            accountId: row.session.account_id,
+            sessionId: row.session_id,
+            updatedAt: row.updated_at,
+            artistId: row.session.artist_id,
+          },
+        ];
+      });
 
       return getToolResultSuccess({ chats });
     },

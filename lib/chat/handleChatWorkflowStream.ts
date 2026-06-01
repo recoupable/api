@@ -14,6 +14,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { runAgentWorkflow } from "@/app/lib/workflows/runAgentWorkflow";
 import { extractOrgId } from "@/lib/recoupable/extractOrgId";
+import { parseGitHubRepoIdentifiers } from "@/lib/github/parseGitHubRepoIdentifiers";
 import { DEFAULT_WORKING_DIRECTORY } from "@/lib/sandbox/vercel/sandbox/constants";
 import { connectVercel } from "@/lib/sandbox/vercel/connect/connectVercel";
 import type { VercelState } from "@/lib/sandbox/vercel/state";
@@ -117,12 +118,23 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
     );
   }
 
+  // Derive repo identifiers from `session.clone_url` so we have a
+  // single source of truth. The `sessions.repo_owner/repo_name`
+  // columns exist in the schema but were never populated; treating
+  // `clone_url` as canonical avoids a denormalization where the
+  // columns could drift from the URL.
+  const repoIds = parseGitHubRepoIdentifiers(session.clone_url);
+
   const run = await start(runAgentWorkflow, [
     {
       messages: validated.messages,
       chatId: validated.chatId,
       sessionId: validated.sessionId,
+      accountId: validated.accountId,
       modelId,
+      sessionTitle: session.title ?? undefined,
+      repoOwner: repoIds?.owner,
+      repoName: repoIds?.repo,
       agentContext: {
         sandbox: {
           state: session.sandbox_state as VercelState,

@@ -21,13 +21,16 @@ export async function OPTIONS() {
 /**
  * GET /api/chats
  *
- * Retrieves chat rooms for an account.
+ * Retrieves chats joined with their owning session. Each row carries
+ * `sessionId` and the owning `accountId` so clients can render canonical
+ * `/sessions/{sessionId}/chats/{chatId}` URLs.
  *
  * Authentication: x-api-key header or Authorization Bearer token required.
  *
  * Query parameters:
- * - account_id (required): UUID of the account whose chats to retrieve
- * - artist_account_id (optional): Filter to chats for a specific artist (UUID)
+ * - account_id (optional): UUID of the target account (validated for access).
+ * - artist_account_id (optional): Accepted for backward compatibility but
+ *   ignored — reserved for the artist-surface migration.
  *
  * @param request - The request object containing query parameters
  * @returns A NextResponse with chats data or an error
