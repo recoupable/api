@@ -2878,6 +2878,7 @@ export type Database = {
       sessions: {
         Row: {
           account_id: string;
+          artist_id: string | null;
           branch: string | null;
           cached_diff: Json | null;
           cached_diff_updated_at: string | null;
@@ -2907,6 +2908,7 @@ export type Database = {
         };
         Insert: {
           account_id: string;
+          artist_id?: string | null;
           branch?: string | null;
           cached_diff?: Json | null;
           cached_diff_updated_at?: string | null;
@@ -2936,6 +2938,7 @@ export type Database = {
         };
         Update: {
           account_id?: string;
+          artist_id?: string | null;
           branch?: string | null;
           cached_diff?: Json | null;
           cached_diff_updated_at?: string | null;
@@ -2967,6 +2970,13 @@ export type Database = {
           {
             foreignKeyName: "sessions_account_id_fkey";
             columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "sessions_artist_id_fkey";
+            columns: ["artist_id"];
             isOneToOne: false;
             referencedRelation: "accounts";
             referencedColumns: ["id"];
@@ -3959,6 +3969,15 @@ export type Database = {
       };
       deduct_credits: {
         Args: { account_id: string; amount: number };
+        Returns: undefined;
+      };
+      deduct_credits_with_audit: {
+        Args: {
+          p_account_id: string;
+          p_amount: number;
+          p_event: Json;
+          p_event_id: string;
+        };
         Returns: undefined;
       };
       extract_domain: { Args: { email: string }; Returns: string };

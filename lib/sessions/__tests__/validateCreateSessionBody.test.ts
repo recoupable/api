@@ -30,25 +30,13 @@ describe("validateCreateSessionBody", () => {
     expect(result).toBe(failure);
   });
 
-  it("returns 400 when sandboxType is not 'vercel'", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
-
-    const result = await validateCreateSessionBody(req({ sandboxType: "wrong" }));
-    expect(result).toBeInstanceOf(NextResponse);
-    if (result instanceof NextResponse) {
-      expect(result.status).toBe(400);
-      const body = (await result.json()) as { status: string; error: string };
-      expect(body.error).toBe("Invalid sandbox type");
-    }
-  });
-
   it("returns body + auth on success", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
 
-    const result = await validateCreateSessionBody(req({ title: "Hello", sandboxType: "vercel" }));
+    const result = await validateCreateSessionBody(req({ title: "Hello" }));
     expect(result).not.toBeInstanceOf(NextResponse);
     if (!(result instanceof NextResponse)) {
-      expect(result.body).toEqual({ title: "Hello", sandboxType: "vercel" });
+      expect(result.body).toEqual({ title: "Hello" });
       expect(result.auth).toBe(okAuth);
     }
   });
@@ -60,6 +48,53 @@ describe("validateCreateSessionBody", () => {
     expect(result).not.toBeInstanceOf(NextResponse);
     if (!(result instanceof NextResponse)) {
       expect(result.body).toEqual({});
+    }
+  });
+
+  it("rejects a non-UUID organizationId with 400", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+
+    const result = await validateCreateSessionBody(req({ organizationId: "not-a-uuid" }));
+    expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(400);
+      const body = (await result.json()) as { status: string; error: string };
+      expect(body.error).toMatch(/UUID/i);
+    }
+  });
+
+  it("forwards organizationId to validateAuthContext for org-access validation", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+
+    const orgId = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
+    await validateCreateSessionBody(req({ organizationId: orgId }));
+
+    expect(validateAuthContext).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ organizationId: orgId }),
+    );
+  });
+
+  it("accepts a valid artistId and surfaces it on the validated body", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+
+    const artistId = "a25c5dc5-3eb2-4fff-9a5e-39e90c9d4f02";
+    const result = await validateCreateSessionBody(req({ artistId }));
+    expect(result).not.toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) {
+      expect(result.body.artistId).toBe(artistId);
+    }
+  });
+
+  it("rejects a non-UUID artistId with 400", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+
+    const result = await validateCreateSessionBody(req({ artistId: "not-a-uuid" }));
+    expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(400);
+      const body = (await result.json()) as { status: string; error: string };
+      expect(body.error).toMatch(/UUID/i);
     }
   });
 });

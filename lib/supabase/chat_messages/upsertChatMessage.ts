@@ -13,18 +13,20 @@ export type UpsertChatMessageResult =
   | { ok: false; error: string };
 
 /**
- * Insert-or-skip a single chat message row. Wraps Supabase upsert with
- * `ignoreDuplicates: true` on the `id` primary key, but returns a
- * discriminated result so callers can tell "duplicate skipped" apart from
- * "DB error" — the previous helper returned `null` for both, which made
- * callers silently swallow operational failures.
+ * Upsert a single chat message on the `id` primary key. `update: false`
+ * (default) → DO NOTHING (write-once, e.g. the user message); `update: true`
+ * → DO UPDATE (overwrite, e.g. the assistant message as it grows per step).
+ * Returns a discriminated result so callers can tell "duplicate skipped"
+ * apart from "DB error" — the previous helper returned `null` for both,
+ * which made callers silently swallow operational failures.
  */
 export async function upsertChatMessage(
   data: TablesInsert<"chat_messages">,
+  { update = false }: { update?: boolean } = {},
 ): Promise<UpsertChatMessageResult> {
   const { data: row, error } = await supabase
     .from("chat_messages")
-    .upsert(data, { onConflict: "id", ignoreDuplicates: true })
+    .upsert(data, { onConflict: "id", ignoreDuplicates: !update })
     .select()
     .maybeSingle();
 

@@ -1,6 +1,13 @@
+import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { isUnarchiveConflict } from "@/lib/sessions/isUnarchiveConflict";
+import {
+  ARCHIVE_LIFECYCLE_PATCH,
+  UNARCHIVE_LIFECYCLE_PATCH,
+} from "@/lib/sessions/lifecycleStatePatches";
 import { validatePatchSessionBody } from "@/lib/sessions/validatePatchSessionBody";
+import { stopSandboxOnArchive } from "@/lib/sessions/stopSandboxOnArchive";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import { toSessionResponse } from "@/lib/sessions/toSessionResponse";
@@ -56,11 +63,23 @@ export async function patchSessionByIdHandler(
     );
   }
 
+  const shouldArchive = body.status === "archived" && row.status !== "archived";
+  const shouldUnarchive = body.status === "running" && row.status === "archived";
+
+  if (shouldUnarchive && isUnarchiveConflict(row)) {
+    return NextResponse.json(
+      { status: "error", error: "Sandbox is still being paused, try again in a few seconds." },
+      { status: 409, headers: getCorsHeaders() },
+    );
+  }
+
   const updates = {
     ...(body.title !== undefined && { title: body.title }),
     ...(body.status !== undefined && { status: body.status }),
     ...(body.linesAdded !== undefined && { lines_added: body.linesAdded }),
     ...(body.linesRemoved !== undefined && { lines_removed: body.linesRemoved }),
+    ...(shouldArchive && ARCHIVE_LIFECYCLE_PATCH),
+    ...(shouldUnarchive && UNARCHIVE_LIFECYCLE_PATCH),
   };
 
   if (Object.keys(updates).length === 0) {
@@ -77,6 +96,10 @@ export async function patchSessionByIdHandler(
       { status: "error", error: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
     );
+  }
+
+  if (shouldArchive) {
+    after(() => stopSandboxOnArchive(row));
   }
 
   return NextResponse.json(
