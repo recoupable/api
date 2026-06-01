@@ -40,7 +40,10 @@ export async function getResearchDiscoverHandler(request: NextRequest): Promise<
     });
 
     if ("error" in result) return errorResponse(result.error, result.status);
-    return successResponse({ artists: Array.isArray(result.data) ? result.data : [] });
+    const data = result.data;
+    return successResponse({
+      artists: Array.isArray(data) ? data : (data as Record<string, unknown>)?.data || [],
+    });
   } catch (error) {
     console.error("[ERROR] getResearchDiscoverHandler:", error);
     return errorResponse("Internal error", 500);

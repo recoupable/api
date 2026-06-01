@@ -121,6 +121,37 @@ describe("getResearchDiscoverHandler", () => {
     );
   });
 
+  it("unwraps nested data when Chartmetric returns { data: [...] } object", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "test-id",
+      orgId: null,
+      authToken: "tok",
+    } as ReturnType<typeof validateAuthContext> extends Promise<infer T>
+      ? Exclude<T, NextResponse>
+      : never);
+
+    // Chartmetric /artist/list/filter wraps artists in { data: [...], count: N }
+    // fetchChartmetric strips the outer `obj` but the inner `data` wrapper remains
+    vi.mocked(fetchChartmetric).mockResolvedValue({
+      data: {
+        data: [
+          { name: "Artist A", sp_monthly_listeners: 100000 },
+          { name: "Artist B", sp_monthly_listeners: 150000 },
+        ],
+        count: 2,
+      },
+      status: 200,
+    });
+
+    const req = new NextRequest("http://localhost/api/research/discover?country=US&limit=10");
+    const res = await getResearchDiscoverHandler(req);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("success");
+    expect(body.artists).toHaveLength(2);
+    expect(body.artists[0].name).toBe("Artist A");
+  });
+
   it("returns empty array when proxy fails", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "test-id",
