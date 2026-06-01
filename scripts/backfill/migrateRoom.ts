@@ -104,6 +104,7 @@ export async function migrateRoom(
     const session = await insertSession({
       id: sessionId,
       account_id: room.account_id,
+      artist_id: room.artist_id,
       title,
       created_at: room.updated_at,
       updated_at: room.updated_at,
