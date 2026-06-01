@@ -6,15 +6,10 @@ import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sd
 import { registerCreateNewArtistTool } from "../registerCreateNewArtistTool";
 
 const mockCreateArtistInDb = vi.fn();
-const mockCopyRoom = vi.fn();
 const mockCanAccessAccount = vi.fn();
 
 vi.mock("@/lib/artists/createArtistInDb", () => ({
   createArtistInDb: (...args: unknown[]) => mockCreateArtistInDb(...args),
-}));
-
-vi.mock("@/lib/rooms/copyRoom", () => ({
-  copyRoom: (...args: unknown[]) => mockCopyRoom(...args),
 }));
 
 vi.mock("@/lib/organizations/canAccessAccount", () => ({
@@ -132,7 +127,7 @@ describe("registerCreateNewArtistTool", () => {
     });
   });
 
-  it("copies room when active_conversation_id is provided", async () => {
+  it("does not create a room when active_conversation_id is provided", async () => {
     const mockArtist = {
       id: "artist-123",
       account_id: "artist-123",
@@ -141,7 +136,6 @@ describe("registerCreateNewArtistTool", () => {
       account_socials: [],
     };
     mockCreateArtistInDb.mockResolvedValue(mockArtist);
-    mockCopyRoom.mockResolvedValue("new-room-789");
 
     const result = await registeredHandler(
       {
@@ -152,12 +146,19 @@ describe("registerCreateNewArtistTool", () => {
       createMockExtra(),
     );
 
-    expect(mockCopyRoom).toHaveBeenCalledWith("source-room-111", "artist-123");
     expect(result).toEqual({
       content: [
         {
           type: "text",
-          text: expect.stringContaining("new-room-789"),
+          text: expect.stringContaining('"artistAccountId":"artist-123"'),
+        },
+      ],
+    });
+    expect(result).toEqual({
+      content: [
+        {
+          type: "text",
+          text: expect.not.stringContaining("newRoomId"),
         },
       ],
     });

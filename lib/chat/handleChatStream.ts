@@ -7,6 +7,16 @@ import { setupChatRequest } from "./setupChatRequest";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import generateUUID from "@/lib/uuid/generateUUID";
 import { DEFAULT_MODEL } from "@/lib/const";
+import type { ChatRequestBody } from "./validateChatRequest";
+import type { UIMessage } from "ai";
+
+type ChatStreamFinishHandler = (params: {
+  body: ChatRequestBody;
+  responseMessages: UIMessage[];
+  writer: {
+    write: (chunk: unknown) => void;
+  };
+}) => Promise<void>;
 
 /**
  * Handles a streaming chat request.
@@ -19,7 +29,10 @@ import { DEFAULT_MODEL } from "@/lib/const";
  * @param request - The incoming NextRequest
  * @returns A streaming response or error NextResponse
  */
-export async function handleChatStream(request: NextRequest): Promise<Response> {
+export async function handleChatStream(
+  request: NextRequest,
+  onFinish?: ChatStreamFinishHandler,
+): Promise<Response> {
   const validatedBodyOrError = await validateChatRequest(request);
   if (validatedBodyOrError instanceof NextResponse) {
     return validatedBodyOrError;
@@ -38,23 +51,35 @@ export async function handleChatStream(request: NextRequest): Promise<Response> 
       execute: async options => {
         const { writer } = options;
         streamResult = await agent.stream(chatConfig);
-        writer.merge(streamResult.toUIMessageStream());
-      },
-      onFinish: async event => {
-        if (event.isAborted) {
-          return;
-        }
-        const assistantMessages = event.messages.filter(message => message.role === "assistant");
-        const responseMessages =
-          assistantMessages.length > 0 ? assistantMessages : [event.responseMessage];
-        await handleChatCompletion(body, responseMessages);
-        if (streamResult) {
-          await handleChatCredits({
-            usage: await streamResult.usage,
-            model: body.model ?? DEFAULT_MODEL,
-            accountId: body.accountId,
-          });
-        }
+        writer.merge(
+          streamResult.toUIMessageStream({
+            sendFinish: false,
+            onFinish: async event => {
+              if (event.isAborted) {
+                return;
+              }
+
+              const assistantMessages = event.messages.filter(
+                message => message.role === "assistant",
+              );
+              const responseMessages =
+                assistantMessages.length > 0 ? assistantMessages : [event.responseMessage];
+              await handleChatCompletion(body, responseMessages);
+              await onFinish?.({ body, responseMessages, writer });
+
+              writer.write({
+                type: "finish",
+                finishReason: event.finishReason,
+              });
+
+              await handleChatCredits({
+                usage: await streamResult!.usage,
+                model: body.model ?? DEFAULT_MODEL,
+                accountId: body.accountId,
+              });
+            },
+          }),
+        );
       },
       onError: e => {
         console.error("/api/chat onError:", e);

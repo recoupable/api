@@ -1,12 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { generateUUID } from "@/lib/uuid/generateUUID";
-import selectMemories from "@/lib/supabase/memories/selectMemories";
-import insertMemories from "@/lib/supabase/memories/insertMemories";
-import deleteMemories from "@/lib/supabase/memories/deleteMemories";
 import { validateCopyChatMessagesBody } from "@/lib/chats/validateCopyChatMessagesBody";
 import { validateChatAccess } from "@/lib/chats/validateChatAccess";
+import { copyChatMessages } from "@/lib/chats/copyChatMessages";
 
 /**
  * Handles POST /api/chats/[id]/messages/copy.
@@ -37,42 +34,26 @@ export async function copyChatMessagesHandler(
     const accessibleSourceChatId = sourceAccess.roomId;
     const accessibleTargetChatId = targetAccess.roomId;
 
-    const { clearExisting } = validated;
+    const copyResult = await copyChatMessages({
+      sourceChatId: accessibleSourceChatId,
+      targetChatId: accessibleTargetChatId,
+      clearExisting: validated.clearExisting,
+    });
 
-    const sourceMemories = await selectMemories(accessibleSourceChatId, { ascending: true });
-    if (!sourceMemories) {
+    if (copyResult.status === "error") {
       return NextResponse.json(
-        { status: "error", error: "Failed to load source chat messages" },
+        { status: "error", error: copyResult.error },
         { status: 500, headers: getCorsHeaders() },
       );
     }
-
-    if (clearExisting) {
-      const deleted = await deleteMemories(accessibleTargetChatId);
-      if (!deleted) {
-        return NextResponse.json(
-          { status: "error", error: "Failed to clear target chat messages" },
-          { status: 500, headers: getCorsHeaders() },
-        );
-      }
-    }
-
-    const copiedCount = await insertMemories(
-      sourceMemories.map(memory => ({
-        id: generateUUID(),
-        room_id: accessibleTargetChatId,
-        content: memory.content,
-        updated_at: memory.updated_at,
-      })),
-    );
 
     return NextResponse.json(
       {
         status: "success",
         source_chat_id: accessibleSourceChatId,
         target_chat_id: accessibleTargetChatId,
-        copied_count: copiedCount,
-        cleared_existing: clearExisting,
+        copied_count: copyResult.copiedCount,
+        cleared_existing: copyResult.clearedExisting,
       },
       { status: 200, headers: getCorsHeaders() },
     );
