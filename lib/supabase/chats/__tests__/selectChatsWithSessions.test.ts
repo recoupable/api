@@ -3,6 +3,7 @@ import { selectChatsWithSessions } from "@/lib/supabase/chats/selectChatsWithSes
 
 const fromMock = vi.fn();
 const selectMock = vi.fn();
+const neqMock = vi.fn();
 const inMock = vi.fn();
 const eqMock = vi.fn();
 const orderMock = vi.fn();
@@ -15,15 +16,17 @@ vi.mock("@/lib/supabase/serverClient", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Default chain: from().select().in().eq().order() -> resolves to { data, error }
+  // Default chain: from().select().neq().in().eq().order() -> resolves to { data, error }
   const builder = {
     select: selectMock,
+    neq: neqMock,
     in: inMock,
     eq: eqMock,
     order: orderMock,
   };
   fromMock.mockReturnValue(builder);
   selectMock.mockReturnValue(builder);
+  neqMock.mockReturnValue(builder);
   inMock.mockReturnValue(builder);
   eqMock.mockReturnValue(builder);
   orderMock.mockResolvedValue({ data: [], error: null });
@@ -51,11 +54,19 @@ describe("selectChatsWithSessions", () => {
     expect(String(selectArg)).toContain("session:sessions!inner");
     expect(String(selectArg)).toContain("account_id");
     expect(String(selectArg)).toContain("artist_id");
+    expect(String(selectArg)).toContain("status");
 
+    expect(neqMock).toHaveBeenCalledWith("session.status", "archived");
     expect(inMock).toHaveBeenCalledWith("session.account_id", ["acc-1", "acc-2"]);
     expect(eqMock).not.toHaveBeenCalled();
     expect(orderMock).toHaveBeenCalledWith("updated_at", { ascending: false });
     expect(result).toEqual(rows);
+  });
+
+  it("always excludes archived sessions, even with no other filters", async () => {
+    await selectChatsWithSessions({});
+
+    expect(neqMock).toHaveBeenCalledWith("session.status", "archived");
   });
 
   it("composes accountIds + artistAccountId — both filters applied", async () => {

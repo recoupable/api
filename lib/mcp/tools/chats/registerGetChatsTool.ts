@@ -30,6 +30,7 @@ export type GetChatsArgs = z.infer<typeof getChatsSchema>;
  * GET /api/chats: personal/org → caller's account; Recoup admin → all;
  * or a specific account when `account_id` is supplied and the caller
  * can access it. `artist_account_id` further scopes by artist context.
+ * Chats whose owning session is archived are excluded.
  *
  * Admin status is derived from `account_organization_ids` membership so
  * that Bearer-authed callers get the same admin scope as x-api-key
