@@ -14,6 +14,7 @@ import type { AgentContext, DurableAgentContext } from "@/lib/agent/tools/AgentC
 import { buildMessageMetadataCallback } from "@/lib/agent/messageMetadata/buildMessageMetadataCallback";
 import { addCacheControlToTools } from "@/lib/agent/contextManagement/addCacheControlToTools";
 import { addCacheControlToMessages } from "@/lib/agent/contextManagement/addCacheControlToMessages";
+import { wrapToolsWithAbort } from "@/lib/agent/contextManagement/wrapToolsWithAbort";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
 import { getWorkflowMetadata } from "workflow";
@@ -101,10 +102,20 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   // Anthropic caches the tool-definitions block across the
   // conversation. Per-step message caching is wired via `prepareStep`
   // below. Mirrors open-agents' `prepareCall` + `prepareStep` split.
-  const tools = addCacheControlToTools({
-    tools: buildAgentTools({ skills: input.agentContext.skills }),
-    model: input.modelId,
-  });
+  // wrapToolsWithAbort is the load-bearing piece for stop UX: even if a tool
+  // ignores its own abortSignal (e.g. web_fetch wrapping a fetch without
+  // signal), our wrapper races the tool's promise against cancelController so
+  // streamText sees the rejection on stop, the agent loop unblocks, and the
+  // workflow body returns — otherwise the SSE never closes and the chat UI
+  // hangs in "streaming". The tool's underlying work may still finish in the
+  // background; we just don't wait for it.
+  const tools = wrapToolsWithAbort(
+    addCacheControlToTools({
+      tools: buildAgentTools({ skills: input.agentContext.skills }),
+      model: input.modelId,
+    }),
+    cancelController.signal,
+  );
   // Construct the model here (not in the workflow input) — LanguageModel
   // instances aren't JSON-serializable and can't ride durable inputs.
   // Then attach to AgentContext so tools see the same model the parent
