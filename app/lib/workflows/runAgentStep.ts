@@ -164,6 +164,10 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
       return persistAssistantMessage(input.chatId, finalMessage);
     },
     onError: error => {
+      console.log("[runAgentStep] uiStream onError", {
+        aborted: cancelController.signal.aborted,
+        message: error instanceof Error ? error.message : String(error),
+      });
       // Expected on user-stop: swallow without surfacing a stream-level error.
       if (cancelController.signal.aborted) return "";
       // Bubble unexpected errors through the SDK's default formatter.
