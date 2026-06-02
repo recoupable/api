@@ -46,7 +46,14 @@ describe("handleStopChatWorkflow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     cancel.mockResolvedValue(undefined);
-    vi.mocked(getRun).mockReturnValue({ cancel } as never);
+    // Default: status is already terminal so waitForTerminalRunStatus returns
+    // immediately. Individual tests can override to exercise the wait loop.
+    vi.mocked(getRun).mockReturnValue({
+      cancel,
+      get status() {
+        return Promise.resolve("cancelled");
+      },
+    } as never);
     vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue({ ok: true, claimed: true });
   });
 
@@ -130,5 +137,29 @@ describe("handleStopChatWorkflow", () => {
 
     expect(result.status).toBe(200);
     expect(await result.json()).toEqual({ success: true, stopped: true });
+  });
+
+  it("holds the response until run.status becomes terminal", async () => {
+    mockValidated("wrun_abc");
+    let callCount = 0;
+    const statusValues = ["running", "running", "cancelled"];
+    vi.mocked(getRun).mockReturnValue({
+      cancel,
+      get status() {
+        const value = statusValues[Math.min(callCount, statusValues.length - 1)];
+        callCount += 1;
+        return Promise.resolve(value);
+      },
+    } as never);
+
+    const result = await handleStopChatWorkflow(makeRequest(), CHAT_ID);
+
+    expect(callCount).toBeGreaterThanOrEqual(3);
+    expect(result.status).toBe(200);
+    expect(vi.mocked(compareAndSetChatActiveStreamId)).toHaveBeenCalledWith(
+      CHAT_ID,
+      "wrun_abc",
+      null,
+    );
   });
 });

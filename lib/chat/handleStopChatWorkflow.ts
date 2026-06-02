@@ -6,6 +6,32 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 
 const PENDING_STREAM_PREFIX = "pending-";
+/** Cap on how long /stop waits for the workflow to fully tear down before returning. */
+const TERMINAL_WAIT_TIMEOUT_MS = 8000;
+/** Poll interval while waiting for terminal status. */
+const TERMINAL_WAIT_INTERVAL_MS = 100;
+
+const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["cancelled", "completed", "failed"]);
+
+/**
+ * Block until the workflow run reaches a terminal status (or we time out).
+ *
+ * The client awaits this POST and only then transitions out of "streaming",
+ * so by the time we return, runAgentWorkflow's finally has closed the writable
+ * and the SSE has drained — frontend and DB end up with the same content.
+ */
+async function waitForTerminalRunStatus(runId: string): Promise<void> {
+  const deadline = Date.now() + TERMINAL_WAIT_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    try {
+      const status = await getRun(runId).status;
+      if (TERMINAL_STATUSES.has(status)) return;
+    } catch {
+      // Transient errors: swallow and retry until the deadline.
+    }
+    await new Promise<void>(resolve => setTimeout(resolve, TERMINAL_WAIT_INTERVAL_MS));
+  }
+}
 
 /** Cancels the workflow streaming for a chat and releases chats.active_stream_id. */
 export async function handleStopChatWorkflow(
@@ -33,6 +59,14 @@ export async function handleStopChatWorkflow(
       console.error("[handleStopChatWorkflow] run cancel failed:", error);
       return errorResponse("Failed to stop the workflow", 502);
     }
+
+    // Producer-level sync: hold the response until the workflow body has
+    // actually finished (terminal status). That guarantees runAgentWorkflow's
+    // finally has run closeChatStream(writable), so SSE drains to the client
+    // before the client's stop button transitions out of streaming. Without
+    // this, the client torn down SSE while the server kept emitting
+    // (and persisting) chunks — reload showed more than the user saw.
+    await waitForTerminalRunStatus(activeStreamId);
   }
 
   // Best-effort slot release: the run is already cancelled, so a failed clear is
