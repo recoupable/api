@@ -17,6 +17,25 @@ vi.mock("@/lib/chat/persistAssistantMessage", () => ({
   persistAssistantMessage: vi.fn(),
 }));
 
+// runAgentStep now reads workflowRunId via getWorkflowMetadata() and polls
+// getRun(runId).status to source its abort signal. Stub both so the tests
+// don't pull in the workflow runtime.
+vi.mock("workflow", () => ({
+  getWorkflowMetadata: vi.fn(() => ({
+    workflowRunId: "test-run-id",
+    workflowName: "test",
+    workflowStartedAt: new Date(0),
+    url: "https://example.test",
+  })),
+}));
+
+vi.mock("@/lib/chat/pollWorkflowCancellation", () => ({
+  pollWorkflowCancellation: vi.fn(() => ({
+    stop: vi.fn(),
+    done: Promise.resolve(),
+  })),
+}));
+
 // Captures the options runAgentStep passes to createUIMessageStream so
 // tests can drive its onStepFinish / onFinish callbacks directly.
 type CreateOpts = {

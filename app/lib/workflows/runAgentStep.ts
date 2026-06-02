@@ -15,6 +15,8 @@ import { buildMessageMetadataCallback } from "@/lib/agent/messageMetadata/buildM
 import { addCacheControlToTools } from "@/lib/agent/contextManagement/addCacheControlToTools";
 import { addCacheControlToMessages } from "@/lib/agent/contextManagement/addCacheControlToMessages";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
+import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
+import { getWorkflowMetadata } from "workflow";
 
 export type RunAgentStepInput = {
   messages: UIMessage[];
@@ -86,6 +88,14 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     hasSandboxState: Boolean(input.agentContext.sandbox?.state),
   });
 
+  // @workflow/core@4.2.4 doesn't expose a step-scoped AbortSignal. Source one
+  // ourselves by polling our own run's status: when POST /api/chat/{chatId}/stop
+  // calls run.cancel() on us, status flips to "cancelled" and we abort the
+  // local controller — which preempts streamText's LLM fetch + in-flight tools.
+  const { workflowRunId } = getWorkflowMetadata();
+  const cancelController = new AbortController();
+  const poller = pollWorkflowCancellation(workflowRunId, cancelController);
+
   const modelMessages = await convertToModelMessages(input.messages);
   // Mark the last tool with `cacheControl: { type: "ephemeral" }` so
   // Anthropic caches the tool-definitions block across the
@@ -119,6 +129,9 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     messages: modelMessages,
     tools,
     stopWhen: CHAT_AGENT_STOP_WHEN,
+    // Plumbs the cancellation signal end-to-end: aborts the LLM fetch and is
+    // re-exposed to tools via `execute(input, { abortSignal })`.
+    abortSignal: cancelController.signal,
     experimental_context: agentContext,
     // Mark the LAST message with cacheControl on every step so Anthropic
     // incrementally caches the conversation prefix. Mirrors open-agents'
@@ -141,11 +154,20 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   let responseMessage: UIMessage | undefined;
   const uiStream = createUIMessageStream<UIMessage>({
     generateId: () => input.assistantMessageId,
-    onStepFinish: ({ responseMessage: stepMessage }) =>
-      persistAssistantMessage(input.chatId, stepMessage),
+    onStepFinish: ({ responseMessage: stepMessage }) => {
+      // Track the latest step's content so we can persist it on user-abort.
+      responseMessage = stepMessage;
+      return persistAssistantMessage(input.chatId, stepMessage);
+    },
     onFinish: ({ responseMessage: finalMessage }) => {
       responseMessage = finalMessage;
       return persistAssistantMessage(input.chatId, finalMessage);
+    },
+    onError: error => {
+      // Expected on user-stop: swallow without surfacing a stream-level error.
+      if (cancelController.signal.aborted) return "";
+      // Bubble unexpected errors through the SDK's default formatter.
+      return error instanceof Error ? error.message : String(error);
     },
     execute: ({ writer }) => {
       writer.merge(
@@ -157,11 +179,22 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     },
   });
 
-  // preventClose/preventAbort: runAgentWorkflow's finally owns the writable's
-  // lifecycle (closeChatStream), so don't close or abort it here.
-  await uiStream.pipeTo(input.writable, { preventClose: true, preventAbort: true });
+  try {
+    // preventClose/preventAbort: runAgentWorkflow's finally owns the writable's
+    // lifecycle (closeChatStream), so don't close or abort it here.
+    await uiStream.pipeTo(input.writable, { preventClose: true, preventAbort: true });
+  } finally {
+    // Whether the stream finished naturally or the user aborted, stop the
+    // status poller so it doesn't keep hitting the workflow API.
+    poller.stop();
+    cancelController.abort();
+    await poller.done.catch(() => {});
+  }
 
-  const finishReason = await result.finishReason;
+  // `result.finishReason` rejects when streamText aborts; short-circuit on
+  // user-stop so the step returns a clean { finishReason: "stop", responseMessage }
+  // with whatever onStepFinish captured before the abort.
+  const finishReason = cancelController.signal.aborted ? "stop" : await result.finishReason;
   console.log("[runAgentStep] finish", { finishReason, hasResponseMessage: !!responseMessage });
   return { finishReason, responseMessage };
 }
