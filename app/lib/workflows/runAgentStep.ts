@@ -241,36 +241,26 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   try {
     // preventClose/preventAbort: runAgentWorkflow's finally owns the writable's
     // lifecycle (closeChatStream), so don't close or abort it here.
-    const pipeDone = uiStream.pipeTo(input.writable, {
+    // signal: when the user stops, abort the pipe itself so the SOURCE is
+    // torn down — without this, streamText keeps pumping chunks into the
+    // workflow writable in the background even after runAgentStep returns,
+    // and the workflow's later writable.close() blocks on those in-flight
+    // writes (chat UI stuck "streaming" while the buffer drains).
+    await uiStream.pipeTo(input.writable, {
       preventClose: true,
       preventAbort: true,
+      signal: cancelController.signal,
     });
-    // Race pipeTo against the cancel signal. streamText doesn't reliably emit
-    // an end-of-stream chunk on abort (it just stops sending new ones), which
-    // leaves pipeTo waiting forever — and the chat UI hung in "streaming"
-    // until the writable times out. On user-stop, return as soon as abort
-    // fires; runAgentWorkflow's finally then closes the writable and SSE ends.
-    const abortFired = new Promise<"aborted">(resolve => {
-      if (cancelController.signal.aborted) {
-        resolve("aborted");
-        return;
-      }
-      cancelController.signal.addEventListener("abort", () => resolve("aborted"), { once: true });
-    });
-    // Surface unhandled pipeTo errors so the `unhandledRejection` log doesn't
-    // panic — we don't care about its result once abort wins the race.
-    pipeDone.catch(() => {});
-    const winner = await Promise.race([pipeDone.then(() => "settled" as const), abortFired]);
-    diagLog(diagKey, "[diag][step] pipeTo race winner", {
-      sinceStartMs: sinceStart(),
-      winner,
-    });
+    diagLog(diagKey, "[diag][step] pipeTo settled", { sinceStartMs: sinceStart() });
   } catch (err) {
+    // Expected on user-stop: signal aborted the pipe. Don't propagate.
+    const aborted = cancelController.signal.aborted;
     diagLog(diagKey, "[diag][step] pipeTo threw", {
       sinceStartMs: sinceStart(),
+      aborted,
       message: err instanceof Error ? err.message : String(err),
     });
-    throw err;
+    if (!aborted) throw err;
   } finally {
     // Whether the stream finished naturally or the user aborted, stop the
     // status poller so it doesn't keep hitting the workflow API.
