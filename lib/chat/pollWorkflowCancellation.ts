@@ -31,21 +31,49 @@ export function pollWorkflowCancellation(
   intervalMs: number = DEFAULT_CANCELLATION_POLL_INTERVAL_MS,
 ): CancellationPoller {
   let stopped = false;
+  let pollCount = 0;
+  const startedAt = Date.now();
+  console.log("[diag][poll] start", { workflowRunId, intervalMs, ts: startedAt });
   const done = (async () => {
     while (!stopped && !controller.signal.aborted) {
+      const pollStart = Date.now();
+      let status: string | undefined;
+      let err: string | undefined;
       try {
-        const status = await getRun(workflowRunId).status;
-        if (status === "cancelled") {
-          controller.abort();
-          return;
-        }
-      } catch {
-        // Transient errors keep us polling — the user-initiated stop must
-        // not be silently dropped because one read failed.
+        status = await getRun(workflowRunId).status;
+      } catch (e) {
+        err = e instanceof Error ? e.message : String(e);
+      }
+      pollCount += 1;
+      const elapsedMs = Date.now() - startedAt;
+      const rttMs = Date.now() - pollStart;
+      console.log("[diag][poll] tick", {
+        workflowRunId,
+        pollCount,
+        elapsedMs,
+        rttMs,
+        status,
+        err,
+      });
+      if (status === "cancelled") {
+        console.log("[diag][poll] CANCEL DETECTED → controller.abort()", {
+          workflowRunId,
+          pollCount,
+          elapsedMs,
+        });
+        controller.abort();
+        return;
       }
       if (stopped || controller.signal.aborted) return;
       await new Promise<void>(resolve => setTimeout(resolve, intervalMs));
     }
+    console.log("[diag][poll] exit", {
+      workflowRunId,
+      pollCount,
+      elapsedMs: Date.now() - startedAt,
+      stopped,
+      aborted: controller.signal.aborted,
+    });
   })();
   return {
     stop: () => {

@@ -21,16 +21,37 @@ const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["cancelled", "completed"
  * and the SSE has drained — frontend and DB end up with the same content.
  */
 async function waitForTerminalRunStatus(runId: string): Promise<void> {
-  const deadline = Date.now() + TERMINAL_WAIT_TIMEOUT_MS;
+  const startedAt = Date.now();
+  const deadline = startedAt + TERMINAL_WAIT_TIMEOUT_MS;
+  let pollCount = 0;
   while (Date.now() < deadline) {
+    let status: string | undefined;
+    let err: string | undefined;
     try {
-      const status = await getRun(runId).status;
-      if (TERMINAL_STATUSES.has(status)) return;
-    } catch {
-      // Transient errors: swallow and retry until the deadline.
+      status = await getRun(runId).status;
+    } catch (e) {
+      err = e instanceof Error ? e.message : String(e);
+    }
+    pollCount += 1;
+    const elapsedMs = Date.now() - startedAt;
+    console.log("[diag][stop] waitForTerminalRunStatus tick", {
+      runId,
+      pollCount,
+      elapsedMs,
+      status,
+      err,
+    });
+    if (status && TERMINAL_STATUSES.has(status)) {
+      console.log("[diag][stop] terminal status reached", { runId, pollCount, elapsedMs, status });
+      return;
     }
     await new Promise<void>(resolve => setTimeout(resolve, TERMINAL_WAIT_INTERVAL_MS));
   }
+  console.log("[diag][stop] waitForTerminalRunStatus TIMEOUT", {
+    runId,
+    pollCount,
+    elapsedMs: Date.now() - startedAt,
+  });
 }
 
 /** Cancels the workflow streaming for a chat and releases chats.active_stream_id. */
@@ -53,8 +74,14 @@ export async function handleStopChatWorkflow(
   // means the run may still be live, so keep the slot held and surface the error
   // rather than reporting a false "stopped" and freeing it for a new run.
   if (!activeStreamId.startsWith(PENDING_STREAM_PREFIX)) {
+    const cancelStart = Date.now();
+    console.log("[diag][stop] cancel() start", { activeStreamId, ts: cancelStart });
     try {
       await getRun(activeStreamId).cancel();
+      console.log("[diag][stop] cancel() returned", {
+        activeStreamId,
+        cancelMs: Date.now() - cancelStart,
+      });
     } catch (error) {
       console.error("[handleStopChatWorkflow] run cancel failed:", error);
       return errorResponse("Failed to stop the workflow", 502);

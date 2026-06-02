@@ -162,19 +162,42 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   // dropping it. The stable assistantMessageId makes each upsert overwrite
   // the same row. The final message is also captured so runAgentWorkflow can
   // charge credits from its metadata.
+  const stepStartedAt = Date.now();
+  const sinceStart = () => Date.now() - stepStartedAt;
+  console.log("[diag][step] start", { chatId: input.chatId, ts: stepStartedAt });
+
   let responseMessage: UIMessage | undefined;
+  let stepCount = 0;
   const uiStream = createUIMessageStream<UIMessage>({
     generateId: () => input.assistantMessageId,
     onStepFinish: ({ responseMessage: stepMessage }) => {
+      stepCount += 1;
+      console.log("[diag][step] onStepFinish", {
+        sinceStartMs: sinceStart(),
+        stepCount,
+        partsLen: stepMessage?.parts?.length ?? 0,
+        aborted: cancelController.signal.aborted,
+      });
       // Track the latest step's content so we can persist it on user-abort.
       responseMessage = stepMessage;
       return persistAssistantMessage(input.chatId, stepMessage);
     },
     onFinish: ({ responseMessage: finalMessage }) => {
+      console.log("[diag][step] onFinish", {
+        sinceStartMs: sinceStart(),
+        stepCount,
+        partsLen: finalMessage?.parts?.length ?? 0,
+        aborted: cancelController.signal.aborted,
+      });
       responseMessage = finalMessage;
       return persistAssistantMessage(input.chatId, finalMessage);
     },
     onError: error => {
+      console.log("[diag][step] uiStream onError", {
+        sinceStartMs: sinceStart(),
+        aborted: cancelController.signal.aborted,
+        message: error instanceof Error ? error.message : String(error),
+      });
       // Expected on user-stop: swallow without surfacing a stream-level error.
       if (cancelController.signal.aborted) return "";
       // Bubble unexpected errors through the SDK's default formatter.
@@ -194,6 +217,13 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     // preventClose/preventAbort: runAgentWorkflow's finally owns the writable's
     // lifecycle (closeChatStream), so don't close or abort it here.
     await uiStream.pipeTo(input.writable, { preventClose: true, preventAbort: true });
+    console.log("[diag][step] pipeTo settled", { sinceStartMs: sinceStart() });
+  } catch (err) {
+    console.log("[diag][step] pipeTo threw", {
+      sinceStartMs: sinceStart(),
+      message: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
   } finally {
     // Whether the stream finished naturally or the user aborted, stop the
     // status poller so it doesn't keep hitting the workflow API.
@@ -205,7 +235,17 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   // `result.finishReason` rejects when streamText aborts; short-circuit on
   // user-stop so the step returns a clean { finishReason: "stop", responseMessage }
   // with whatever onStepFinish captured before the abort.
-  const finishReason = cancelController.signal.aborted ? "stop" : await result.finishReason;
-  console.log("[runAgentStep] finish", { finishReason, hasResponseMessage: !!responseMessage });
+  let finishReason: string;
+  if (cancelController.signal.aborted) {
+    finishReason = "stop";
+  } else {
+    finishReason = await result.finishReason;
+  }
+  console.log("[diag][step] return", {
+    sinceStartMs: sinceStart(),
+    finishReason,
+    hasResponseMessage: !!responseMessage,
+    aborted: cancelController.signal.aborted,
+  });
   return { finishReason, responseMessage };
 }

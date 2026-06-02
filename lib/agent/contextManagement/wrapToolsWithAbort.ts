@@ -43,14 +43,30 @@ export function wrapToolsWithAbort<T extends ToolSet>(tools: T, signal: AbortSig
     wrapped[name] = {
       ...tool,
       execute: async (input: unknown, options: unknown) => {
-        if (signal.aborted) throw new ToolAbortedError(name);
+        const callStart = Date.now();
+        console.log("[diag][tool] start", { tool: name, ts: callStart });
+        if (signal.aborted) {
+          console.log("[diag][tool] aborted at entry", { tool: name });
+          throw new ToolAbortedError(name);
+        }
         let onAbort: (() => void) | undefined;
         const abortPromise = new Promise<never>((_, reject) => {
-          onAbort = () => reject(new ToolAbortedError(name));
+          onAbort = () => {
+            console.log("[diag][tool] ABORT fired mid-execute", {
+              tool: name,
+              durationMs: Date.now() - callStart,
+            });
+            reject(new ToolAbortedError(name));
+          };
           signal.addEventListener("abort", onAbort, { once: true });
         });
         try {
-          return await Promise.race([originalExecute(input, options), abortPromise]);
+          const result = await Promise.race([originalExecute(input, options), abortPromise]);
+          console.log("[diag][tool] resolved", {
+            tool: name,
+            durationMs: Date.now() - callStart,
+          });
+          return result;
         } finally {
           if (onAbort) signal.removeEventListener("abort", onAbort);
         }
