@@ -18,14 +18,6 @@ import { wrapToolsWithAbort } from "@/lib/agent/contextManagement/wrapToolsWithA
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
 import { getWorkflowMetadata } from "workflow";
-import { diagLog, setDiagIngestUrl } from "@/lib/diag/inMemoryLog";
-
-/**
- * Where workflow-side diag entries get shipped so a single GET on the api
- * can read both sides. Honors a preview override via `DIAG_INGEST_BASE_URL`
- * env so each preview deploy can target itself.
- */
-const DIAG_INGEST_BASE_URL = process.env.DIAG_INGEST_BASE_URL ?? "";
 
 export type RunAgentStepInput = {
   messages: UIMessage[];
@@ -109,25 +101,9 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   // ourselves by polling our own run's status: when POST /api/chat/{chatId}/stop
   // calls run.cancel() on us, status flips to "cancelled" and we abort the
   // local controller — which preempts streamText's LLM fetch + in-flight tools.
-  const { workflowRunId, url: workflowUrl } = getWorkflowMetadata();
-  const diagKey = input.chatId;
-  // Workflow-side diagLog calls fire-and-forget POST to the api so a single
-  // GET can collect both sides' entries. Prefer the explicit env override;
-  // otherwise derive from the workflow's own url (same host).
-  const ingestBase =
-    DIAG_INGEST_BASE_URL ||
-    (() => {
-      try {
-        const u = new URL(workflowUrl);
-        return `${u.protocol}//${u.host}`;
-      } catch {
-        return "";
-      }
-    })();
-  if (ingestBase) setDiagIngestUrl(`${ingestBase}/api/debug/diag-logs`);
-  diagLog(diagKey, "[diag][step] enter", { workflowRunId, chatId: input.chatId, ingestBase });
+  const { workflowRunId } = getWorkflowMetadata();
   const cancelController = new AbortController();
-  const poller = pollWorkflowCancellation(workflowRunId, cancelController, undefined, diagKey);
+  const poller = pollWorkflowCancellation(workflowRunId, cancelController);
 
   const modelMessages = await convertToModelMessages(input.messages);
   // Mark the last tool with `cacheControl: { type: "ephemeral" }` so
@@ -147,7 +123,6 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
       model: input.modelId,
     }),
     cancelController.signal,
-    diagKey,
   );
   // Construct the model here (not in the workflow input) — LanguageModel
   // instances aren't JSON-serializable and can't ride durable inputs.
@@ -195,42 +170,19 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   // dropping it. The stable assistantMessageId makes each upsert overwrite
   // the same row. The final message is also captured so runAgentWorkflow can
   // charge credits from its metadata.
-  const stepStartedAt = Date.now();
-  const sinceStart = () => Date.now() - stepStartedAt;
-  diagLog(diagKey, "[diag][step] streamText created", { chatId: input.chatId });
-
   let responseMessage: UIMessage | undefined;
-  let stepCount = 0;
   const uiStream = createUIMessageStream<UIMessage>({
     generateId: () => input.assistantMessageId,
     onStepFinish: ({ responseMessage: stepMessage }) => {
-      stepCount += 1;
-      diagLog(diagKey, "[diag][step] onStepFinish", {
-        sinceStartMs: sinceStart(),
-        stepCount,
-        partsLen: stepMessage?.parts?.length ?? 0,
-        aborted: cancelController.signal.aborted,
-      });
       // Track the latest step's content so we can persist it on user-abort.
       responseMessage = stepMessage;
       return persistAssistantMessage(input.chatId, stepMessage);
     },
     onFinish: ({ responseMessage: finalMessage }) => {
-      diagLog(diagKey, "[diag][step] onFinish", {
-        sinceStartMs: sinceStart(),
-        stepCount,
-        partsLen: finalMessage?.parts?.length ?? 0,
-        aborted: cancelController.signal.aborted,
-      });
       responseMessage = finalMessage;
       return persistAssistantMessage(input.chatId, finalMessage);
     },
     onError: error => {
-      diagLog(diagKey, "[diag][step] uiStream onError", {
-        sinceStartMs: sinceStart(),
-        aborted: cancelController.signal.aborted,
-        message: error instanceof Error ? error.message : String(error),
-      });
       // Expected on user-stop: swallow without surfacing a stream-level error.
       if (cancelController.signal.aborted) return "";
       // Bubble unexpected errors through the SDK's default formatter.
@@ -259,16 +211,9 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
       preventAbort: true,
       signal: cancelController.signal,
     });
-    diagLog(diagKey, "[diag][step] pipeTo settled", { sinceStartMs: sinceStart() });
   } catch (err) {
     // Expected on user-stop: signal aborted the pipe. Don't propagate.
-    const aborted = cancelController.signal.aborted;
-    diagLog(diagKey, "[diag][step] pipeTo threw", {
-      sinceStartMs: sinceStart(),
-      aborted,
-      message: err instanceof Error ? err.message : String(err),
-    });
-    if (!aborted) throw err;
+    if (!cancelController.signal.aborted) throw err;
   } finally {
     // Whether the stream finished naturally or the user aborted, stop the
     // status poller so it doesn't keep hitting the workflow API.
@@ -280,15 +225,9 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   // `result.finishReason` rejects when streamText aborts; short-circuit on
   // user-stop so the step returns a clean { finishReason: "stop", responseMessage }
   // with whatever onStepFinish captured before the abort.
-  let finishReason: string;
-  if (cancelController.signal.aborted) {
-    finishReason = "stop";
-  } else {
-    finishReason = await result.finishReason;
-  }
   const aborted = cancelController.signal.aborted;
-  diagLog(diagKey, "[diag][step] return", {
-    sinceStartMs: sinceStart(),
+  const finishReason = aborted ? "stop" : await result.finishReason;
+  console.log("[runAgentStep] finish", {
     finishReason,
     hasResponseMessage: !!responseMessage,
     aborted,

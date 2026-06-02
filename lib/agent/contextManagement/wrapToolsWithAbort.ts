@@ -1,5 +1,4 @@
 import type { ToolSet } from "ai";
-import { diagLog } from "@/lib/diag/inMemoryLog";
 
 /** Marker error thrown when a tool is forcibly unblocked by the cancel signal. */
 export class ToolAbortedError extends Error {
@@ -29,11 +28,7 @@ export class ToolAbortedError extends Error {
  * Tools without an `execute` (e.g. client-fulfilled ones like ask_user_question)
  * pass through untouched.
  */
-export function wrapToolsWithAbort<T extends ToolSet>(
-  tools: T,
-  signal: AbortSignal,
-  diagKey?: string,
-): T {
+export function wrapToolsWithAbort<T extends ToolSet>(tools: T, signal: AbortSignal): T {
   const wrapped: Record<string, T[keyof T]> = {};
   for (const [name, tool] of Object.entries(tools) as Array<[string, T[keyof T]]>) {
     const execute = (tool as { execute?: unknown }).execute;
@@ -48,30 +43,14 @@ export function wrapToolsWithAbort<T extends ToolSet>(
     wrapped[name] = {
       ...tool,
       execute: async (input: unknown, options: unknown) => {
-        const callStart = Date.now();
-        diagLog(diagKey, "[diag][tool] start", { tool: name });
-        if (signal.aborted) {
-          diagLog(diagKey, "[diag][tool] aborted at entry", { tool: name });
-          throw new ToolAbortedError(name);
-        }
+        if (signal.aborted) throw new ToolAbortedError(name);
         let onAbort: (() => void) | undefined;
         const abortPromise = new Promise<never>((_, reject) => {
-          onAbort = () => {
-            diagLog(diagKey, "[diag][tool] ABORT fired mid-execute", {
-              tool: name,
-              durationMs: Date.now() - callStart,
-            });
-            reject(new ToolAbortedError(name));
-          };
+          onAbort = () => reject(new ToolAbortedError(name));
           signal.addEventListener("abort", onAbort, { once: true });
         });
         try {
-          const result = await Promise.race([originalExecute(input, options), abortPromise]);
-          diagLog(diagKey, "[diag][tool] resolved", {
-            tool: name,
-            durationMs: Date.now() - callStart,
-          });
-          return result;
+          return await Promise.race([originalExecute(input, options), abortPromise]);
         } finally {
           if (onAbort) signal.removeEventListener("abort", onAbort);
         }

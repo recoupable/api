@@ -1,5 +1,4 @@
 import { getRun } from "workflow/api";
-import { diagLog } from "@/lib/diag/inMemoryLog";
 
 /** Default cadence for cancellation polling — balances responsiveness vs. workflow-API call volume. */
 export const DEFAULT_CANCELLATION_POLL_INTERVAL_MS = 750;
@@ -30,52 +29,23 @@ export function pollWorkflowCancellation(
   workflowRunId: string,
   controller: AbortController,
   intervalMs: number = DEFAULT_CANCELLATION_POLL_INTERVAL_MS,
-  diagKey?: string,
 ): CancellationPoller {
   let stopped = false;
-  let pollCount = 0;
-  const startedAt = Date.now();
-  diagLog(diagKey, "[diag][poll] start", { workflowRunId, intervalMs });
   const done = (async () => {
     while (!stopped && !controller.signal.aborted) {
-      const pollStart = Date.now();
-      let status: string | undefined;
-      let err: string | undefined;
       try {
-        status = await getRun(workflowRunId).status;
-      } catch (e) {
-        err = e instanceof Error ? e.message : String(e);
-      }
-      pollCount += 1;
-      const elapsedMs = Date.now() - startedAt;
-      const rttMs = Date.now() - pollStart;
-      diagLog(diagKey, "[diag][poll] tick", {
-        workflowRunId,
-        pollCount,
-        elapsedMs,
-        rttMs,
-        status,
-        err,
-      });
-      if (status === "cancelled") {
-        diagLog(diagKey, "[diag][poll] CANCEL DETECTED → controller.abort()", {
-          workflowRunId,
-          pollCount,
-          elapsedMs,
-        });
-        controller.abort();
-        return;
+        const status = await getRun(workflowRunId).status;
+        if (status === "cancelled") {
+          controller.abort();
+          return;
+        }
+      } catch {
+        // Transient errors keep us polling — the user-initiated stop must
+        // not be silently dropped because one read failed.
       }
       if (stopped || controller.signal.aborted) return;
       await new Promise<void>(resolve => setTimeout(resolve, intervalMs));
     }
-    diagLog(diagKey, "[diag][poll] exit", {
-      workflowRunId,
-      pollCount,
-      elapsedMs: Date.now() - startedAt,
-      stopped,
-      aborted: controller.signal.aborted,
-    });
   })();
   return {
     stop: () => {
