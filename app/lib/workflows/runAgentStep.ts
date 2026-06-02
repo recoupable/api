@@ -70,6 +70,14 @@ export type RunAgentStepResult = {
    * `runAgentWorkflow` can charge credits from `responseMessage.metadata`.
    */
   responseMessage: UIMessage | undefined;
+  /**
+   * True when the run was aborted by the user via POST /stop. Used by
+   * `runAgentWorkflow` to skip post-step billing + auto-commit so the SSE
+   * closes promptly. Note: `finishReason: "stop"` is ambiguous (it also
+   * means a natural model-emitted stop), so this flag is the canonical
+   * user-abort signal.
+   */
+  aborted: boolean;
 };
 
 /**
@@ -278,11 +286,12 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   } else {
     finishReason = await result.finishReason;
   }
+  const aborted = cancelController.signal.aborted;
   diagLog(diagKey, "[diag][step] return", {
     sinceStartMs: sinceStart(),
     finishReason,
     hasResponseMessage: !!responseMessage,
-    aborted: cancelController.signal.aborted,
+    aborted,
   });
-  return { finishReason, responseMessage };
+  return { finishReason, responseMessage, aborted };
 }

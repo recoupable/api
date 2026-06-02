@@ -106,7 +106,15 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
     // the `deduct_credits_with_audit` Postgres function (`handleChatCredits`
     // → `recordCreditDeduction`). Fire-and-forget — transient credits-table
     // failures must not abort the chat workflow.
-    if (result.responseMessage) {
+    // Skip post-step billing + auto-commit on user-stop: the user expects
+    // the SSE to close NOW, and auto-commit (sandbox git add/commit/push)
+    // can easily run 30+ seconds, holding the writable open the whole time.
+    // The partial assistant message was already persisted per-step inside
+    // runAgentStep, so the only thing we'd lose is the credit charge —
+    // worth it to keep stop snappy. Natural completions still bill + commit.
+    // Note: `finishReason: "stop"` overlaps a natural model-stop, so we use
+    // the explicit `aborted` flag from runAgentStep as the user-stop signal.
+    if (result.responseMessage && !result.aborted) {
       const metadata = result.responseMessage.metadata as AgentMessageMetadata | undefined;
       await handleChatCredits({
         accountId: input.accountId,
