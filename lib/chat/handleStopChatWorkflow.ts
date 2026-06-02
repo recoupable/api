@@ -4,6 +4,7 @@ import { validateStopChatWorkflowRequest } from "@/lib/chat/validateStopChatWork
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { diagLog } from "@/lib/diag/inMemoryLog";
 
 const PENDING_STREAM_PREFIX = "pending-";
 /** Cap on how long /stop waits for the workflow to fully tear down before returning. */
@@ -20,7 +21,7 @@ const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["cancelled", "completed"
  * so by the time we return, runAgentWorkflow's finally has closed the writable
  * and the SSE has drained — frontend and DB end up with the same content.
  */
-async function waitForTerminalRunStatus(runId: string): Promise<void> {
+async function waitForTerminalRunStatus(runId: string, diagKey?: string): Promise<void> {
   const startedAt = Date.now();
   const deadline = startedAt + TERMINAL_WAIT_TIMEOUT_MS;
   let pollCount = 0;
@@ -34,7 +35,7 @@ async function waitForTerminalRunStatus(runId: string): Promise<void> {
     }
     pollCount += 1;
     const elapsedMs = Date.now() - startedAt;
-    console.log("[diag][stop] waitForTerminalRunStatus tick", {
+    diagLog(diagKey, "[diag][stop] waitForTerminalRunStatus tick", {
       runId,
       pollCount,
       elapsedMs,
@@ -42,12 +43,17 @@ async function waitForTerminalRunStatus(runId: string): Promise<void> {
       err,
     });
     if (status && TERMINAL_STATUSES.has(status)) {
-      console.log("[diag][stop] terminal status reached", { runId, pollCount, elapsedMs, status });
+      diagLog(diagKey, "[diag][stop] terminal status reached", {
+        runId,
+        pollCount,
+        elapsedMs,
+        status,
+      });
       return;
     }
     await new Promise<void>(resolve => setTimeout(resolve, TERMINAL_WAIT_INTERVAL_MS));
   }
-  console.log("[diag][stop] waitForTerminalRunStatus TIMEOUT", {
+  diagLog(diagKey, "[diag][stop] waitForTerminalRunStatus TIMEOUT", {
     runId,
     pollCount,
     elapsedMs: Date.now() - startedAt,
@@ -75,10 +81,11 @@ export async function handleStopChatWorkflow(
   // rather than reporting a false "stopped" and freeing it for a new run.
   if (!activeStreamId.startsWith(PENDING_STREAM_PREFIX)) {
     const cancelStart = Date.now();
-    console.log("[diag][stop] cancel() start", { activeStreamId, ts: cancelStart });
+    diagLog(chatId, "[diag][stop] handler entered", { activeStreamId });
+    diagLog(chatId, "[diag][stop] cancel() start", { activeStreamId });
     try {
       await getRun(activeStreamId).cancel();
-      console.log("[diag][stop] cancel() returned", {
+      diagLog(chatId, "[diag][stop] cancel() returned", {
         activeStreamId,
         cancelMs: Date.now() - cancelStart,
       });
@@ -93,7 +100,7 @@ export async function handleStopChatWorkflow(
     // before the client's stop button transitions out of streaming. Without
     // this, the client torn down SSE while the server kept emitting
     // (and persisting) chunks — reload showed more than the user saw.
-    await waitForTerminalRunStatus(activeStreamId);
+    await waitForTerminalRunStatus(activeStreamId, chatId);
   }
 
   // Best-effort slot release: the run is already cancelled, so a failed clear is

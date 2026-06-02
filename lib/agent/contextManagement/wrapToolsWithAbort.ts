@@ -1,4 +1,5 @@
 import type { ToolSet } from "ai";
+import { diagLog } from "@/lib/diag/inMemoryLog";
 
 /** Marker error thrown when a tool is forcibly unblocked by the cancel signal. */
 export class ToolAbortedError extends Error {
@@ -28,7 +29,11 @@ export class ToolAbortedError extends Error {
  * Tools without an `execute` (e.g. client-fulfilled ones like ask_user_question)
  * pass through untouched.
  */
-export function wrapToolsWithAbort<T extends ToolSet>(tools: T, signal: AbortSignal): T {
+export function wrapToolsWithAbort<T extends ToolSet>(
+  tools: T,
+  signal: AbortSignal,
+  diagKey?: string,
+): T {
   const wrapped: Record<string, T[keyof T]> = {};
   for (const [name, tool] of Object.entries(tools) as Array<[string, T[keyof T]]>) {
     const execute = (tool as { execute?: unknown }).execute;
@@ -44,15 +49,15 @@ export function wrapToolsWithAbort<T extends ToolSet>(tools: T, signal: AbortSig
       ...tool,
       execute: async (input: unknown, options: unknown) => {
         const callStart = Date.now();
-        console.log("[diag][tool] start", { tool: name, ts: callStart });
+        diagLog(diagKey, "[diag][tool] start", { tool: name });
         if (signal.aborted) {
-          console.log("[diag][tool] aborted at entry", { tool: name });
+          diagLog(diagKey, "[diag][tool] aborted at entry", { tool: name });
           throw new ToolAbortedError(name);
         }
         let onAbort: (() => void) | undefined;
         const abortPromise = new Promise<never>((_, reject) => {
           onAbort = () => {
-            console.log("[diag][tool] ABORT fired mid-execute", {
+            diagLog(diagKey, "[diag][tool] ABORT fired mid-execute", {
               tool: name,
               durationMs: Date.now() - callStart,
             });
@@ -62,7 +67,7 @@ export function wrapToolsWithAbort<T extends ToolSet>(tools: T, signal: AbortSig
         });
         try {
           const result = await Promise.race([originalExecute(input, options), abortPromise]);
-          console.log("[diag][tool] resolved", {
+          diagLog(diagKey, "[diag][tool] resolved", {
             tool: name,
             durationMs: Date.now() - callStart,
           });

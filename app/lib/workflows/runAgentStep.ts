@@ -18,6 +18,7 @@ import { wrapToolsWithAbort } from "@/lib/agent/contextManagement/wrapToolsWithA
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
 import { getWorkflowMetadata } from "workflow";
+import { diagLog } from "@/lib/diag/inMemoryLog";
 
 export type RunAgentStepInput = {
   messages: UIMessage[];
@@ -94,8 +95,10 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   // calls run.cancel() on us, status flips to "cancelled" and we abort the
   // local controller — which preempts streamText's LLM fetch + in-flight tools.
   const { workflowRunId } = getWorkflowMetadata();
+  const diagKey = input.chatId;
+  diagLog(diagKey, "[diag][step] enter", { workflowRunId, chatId: input.chatId });
   const cancelController = new AbortController();
-  const poller = pollWorkflowCancellation(workflowRunId, cancelController);
+  const poller = pollWorkflowCancellation(workflowRunId, cancelController, undefined, diagKey);
 
   const modelMessages = await convertToModelMessages(input.messages);
   // Mark the last tool with `cacheControl: { type: "ephemeral" }` so
@@ -115,6 +118,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
       model: input.modelId,
     }),
     cancelController.signal,
+    diagKey,
   );
   // Construct the model here (not in the workflow input) — LanguageModel
   // instances aren't JSON-serializable and can't ride durable inputs.
@@ -164,7 +168,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   // charge credits from its metadata.
   const stepStartedAt = Date.now();
   const sinceStart = () => Date.now() - stepStartedAt;
-  console.log("[diag][step] start", { chatId: input.chatId, ts: stepStartedAt });
+  diagLog(diagKey, "[diag][step] streamText created", { chatId: input.chatId });
 
   let responseMessage: UIMessage | undefined;
   let stepCount = 0;
@@ -172,7 +176,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     generateId: () => input.assistantMessageId,
     onStepFinish: ({ responseMessage: stepMessage }) => {
       stepCount += 1;
-      console.log("[diag][step] onStepFinish", {
+      diagLog(diagKey, "[diag][step] onStepFinish", {
         sinceStartMs: sinceStart(),
         stepCount,
         partsLen: stepMessage?.parts?.length ?? 0,
@@ -183,7 +187,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
       return persistAssistantMessage(input.chatId, stepMessage);
     },
     onFinish: ({ responseMessage: finalMessage }) => {
-      console.log("[diag][step] onFinish", {
+      diagLog(diagKey, "[diag][step] onFinish", {
         sinceStartMs: sinceStart(),
         stepCount,
         partsLen: finalMessage?.parts?.length ?? 0,
@@ -193,7 +197,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
       return persistAssistantMessage(input.chatId, finalMessage);
     },
     onError: error => {
-      console.log("[diag][step] uiStream onError", {
+      diagLog(diagKey, "[diag][step] uiStream onError", {
         sinceStartMs: sinceStart(),
         aborted: cancelController.signal.aborted,
         message: error instanceof Error ? error.message : String(error),
@@ -217,9 +221,9 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     // preventClose/preventAbort: runAgentWorkflow's finally owns the writable's
     // lifecycle (closeChatStream), so don't close or abort it here.
     await uiStream.pipeTo(input.writable, { preventClose: true, preventAbort: true });
-    console.log("[diag][step] pipeTo settled", { sinceStartMs: sinceStart() });
+    diagLog(diagKey, "[diag][step] pipeTo settled", { sinceStartMs: sinceStart() });
   } catch (err) {
-    console.log("[diag][step] pipeTo threw", {
+    diagLog(diagKey, "[diag][step] pipeTo threw", {
       sinceStartMs: sinceStart(),
       message: err instanceof Error ? err.message : String(err),
     });
@@ -241,7 +245,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   } else {
     finishReason = await result.finishReason;
   }
-  console.log("[diag][step] return", {
+  diagLog(diagKey, "[diag][step] return", {
     sinceStartMs: sinceStart(),
     finishReason,
     hasResponseMessage: !!responseMessage,

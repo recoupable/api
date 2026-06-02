@@ -1,4 +1,5 @@
 import { getRun } from "workflow/api";
+import { diagLog } from "@/lib/diag/inMemoryLog";
 
 /** Default cadence for cancellation polling — balances responsiveness vs. workflow-API call volume. */
 export const DEFAULT_CANCELLATION_POLL_INTERVAL_MS = 750;
@@ -29,11 +30,12 @@ export function pollWorkflowCancellation(
   workflowRunId: string,
   controller: AbortController,
   intervalMs: number = DEFAULT_CANCELLATION_POLL_INTERVAL_MS,
+  diagKey?: string,
 ): CancellationPoller {
   let stopped = false;
   let pollCount = 0;
   const startedAt = Date.now();
-  console.log("[diag][poll] start", { workflowRunId, intervalMs, ts: startedAt });
+  diagLog(diagKey, "[diag][poll] start", { workflowRunId, intervalMs });
   const done = (async () => {
     while (!stopped && !controller.signal.aborted) {
       const pollStart = Date.now();
@@ -47,7 +49,7 @@ export function pollWorkflowCancellation(
       pollCount += 1;
       const elapsedMs = Date.now() - startedAt;
       const rttMs = Date.now() - pollStart;
-      console.log("[diag][poll] tick", {
+      diagLog(diagKey, "[diag][poll] tick", {
         workflowRunId,
         pollCount,
         elapsedMs,
@@ -56,7 +58,7 @@ export function pollWorkflowCancellation(
         err,
       });
       if (status === "cancelled") {
-        console.log("[diag][poll] CANCEL DETECTED → controller.abort()", {
+        diagLog(diagKey, "[diag][poll] CANCEL DETECTED → controller.abort()", {
           workflowRunId,
           pollCount,
           elapsedMs,
@@ -67,7 +69,7 @@ export function pollWorkflowCancellation(
       if (stopped || controller.signal.aborted) return;
       await new Promise<void>(resolve => setTimeout(resolve, intervalMs));
     }
-    console.log("[diag][poll] exit", {
+    diagLog(diagKey, "[diag][poll] exit", {
       workflowRunId,
       pollCount,
       elapsedMs: Date.now() - startedAt,
