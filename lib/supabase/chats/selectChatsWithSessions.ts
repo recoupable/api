@@ -18,7 +18,8 @@ export interface SelectChatsWithSessionsParams {
 
 const SELECT = `
   *,
-  session:sessions!inner ( id, account_id, artist_id, status )
+  session:sessions!inner ( id, account_id, artist_id, status ),
+  messages:chat_messages!inner ( count )
 ` as const;
 
 /**
@@ -27,8 +28,11 @@ const SELECT = `
  * `sessions.artist_id`. Chats whose session is archived
  * (`sessions.status === "archived"`) are excluded — archive is the
  * soft-delete path, and archived sessions should not surface in chat
- * listings. Results are ordered by `chats.updated_at` descending so newest
- * activity surfaces first.
+ * listings. Chats with no messages are also excluded: the
+ * `chat_messages!inner` embed inner-joins messages, so a chat only surfaces
+ * once it has at least one message (the embedded `count` keeps the payload to
+ * a single aggregate row rather than every message). Results are ordered by
+ * `chats.updated_at` descending so newest activity surfaces first.
  *
  * Returns `null` when Supabase reports an error so callers can distinguish a
  * transient failure from an empty result. Row shape is inferred from the
