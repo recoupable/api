@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { diagGet, diagListKeys } from "@/lib/diag/inMemoryLog";
+import { diagAppendEntries, diagGet, diagListKeys, type DiagEntry } from "@/lib/diag/inMemoryLog";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 
 /**
@@ -41,4 +41,36 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     { chatId, count: entries.length, entries },
     { headers: getCorsHeaders() },
   );
+}
+
+/**
+ * POST /api/debug/diag-logs — append entries to the in-memory buffer.
+ *
+ * Used by workflow-side diagLog() callers to ship their entries to the api
+ * instance so a subsequent GET on the same instance can read everything.
+ *
+ * @param request - JSON body `{ key: string, entries: DiagEntry[] }`.
+ * @returns `{ ok: true, appended: number }` or `{ error }` 400 on bad shape.
+ */
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "invalid JSON" }, { status: 400, headers: getCorsHeaders() });
+  }
+  if (
+    !body ||
+    typeof body !== "object" ||
+    typeof (body as { key?: unknown }).key !== "string" ||
+    !Array.isArray((body as { entries?: unknown }).entries)
+  ) {
+    return NextResponse.json(
+      { error: "expected { key: string, entries: DiagEntry[] }" },
+      { status: 400, headers: getCorsHeaders() },
+    );
+  }
+  const { key, entries } = body as { key: string; entries: DiagEntry[] };
+  diagAppendEntries(key, entries);
+  return NextResponse.json({ ok: true, appended: entries.length }, { headers: getCorsHeaders() });
 }

@@ -18,7 +18,14 @@ import { wrapToolsWithAbort } from "@/lib/agent/contextManagement/wrapToolsWithA
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
 import { getWorkflowMetadata } from "workflow";
-import { diagLog } from "@/lib/diag/inMemoryLog";
+import { diagLog, setDiagIngestUrl } from "@/lib/diag/inMemoryLog";
+
+/**
+ * Where workflow-side diag entries get shipped so a single GET on the api
+ * can read both sides. Honors a preview override via `DIAG_INGEST_BASE_URL`
+ * env so each preview deploy can target itself.
+ */
+const DIAG_INGEST_BASE_URL = process.env.DIAG_INGEST_BASE_URL ?? "";
 
 export type RunAgentStepInput = {
   messages: UIMessage[];
@@ -94,9 +101,23 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   // ourselves by polling our own run's status: when POST /api/chat/{chatId}/stop
   // calls run.cancel() on us, status flips to "cancelled" and we abort the
   // local controller — which preempts streamText's LLM fetch + in-flight tools.
-  const { workflowRunId } = getWorkflowMetadata();
+  const { workflowRunId, url: workflowUrl } = getWorkflowMetadata();
   const diagKey = input.chatId;
-  diagLog(diagKey, "[diag][step] enter", { workflowRunId, chatId: input.chatId });
+  // Workflow-side diagLog calls fire-and-forget POST to the api so a single
+  // GET can collect both sides' entries. Prefer the explicit env override;
+  // otherwise derive from the workflow's own url (same host).
+  const ingestBase =
+    DIAG_INGEST_BASE_URL ||
+    (() => {
+      try {
+        const u = new URL(workflowUrl);
+        return `${u.protocol}//${u.host}`;
+      } catch {
+        return "";
+      }
+    })();
+  if (ingestBase) setDiagIngestUrl(`${ingestBase}/api/debug/diag-logs`);
+  diagLog(diagKey, "[diag][step] enter", { workflowRunId, chatId: input.chatId, ingestBase });
   const cancelController = new AbortController();
   const poller = pollWorkflowCancellation(workflowRunId, cancelController, undefined, diagKey);
 
