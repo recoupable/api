@@ -1,6 +1,5 @@
 import type { ToolSet } from "ai";
 
-/** Marker error thrown when a tool is forcibly unblocked by the cancel signal. */
 export class ToolAbortedError extends Error {
   readonly name = "ToolAbortedError" as const;
   constructor(toolName: string) {
@@ -9,24 +8,9 @@ export class ToolAbortedError extends Error {
 }
 
 /**
- * Universal tool-kill wrapper for AI SDK tools.
- *
- * The AI SDK already passes `abortSignal` into `tool.execute(input, { abortSignal })`,
- * but a tool implementation that ignores it (or wraps `fetch` without `{ signal }`)
- * will keep running until it returns naturally. `streamText` awaits the tool's
- * promise, so a hung tool hangs the entire agent loop after stop — the
- * workflow body never returns, its writable never closes, and the SSE never
- * ends. The chat UI is stuck in "streaming".
- *
- * This wrapper races every tool's `execute` promise against the signal's
- * `abort` event. When the user cancels, even a non-cooperating tool's
- * promise rejects with {@link ToolAbortedError}, `streamText` moves on, and
- * the workflow returns cleanly. The original tool's work may continue
- * running in the background (we can't kill JS), but the agent loop is
- * unblocked and the SSE closes immediately.
- *
- * Tools without an `execute` (e.g. client-fulfilled ones like ask_user_question)
- * pass through untouched.
+ * Races every tool's `execute` promise against `signal`. On abort, even tools
+ * that ignore their own abortSignal reject with {@link ToolAbortedError} so
+ * `streamText` can move on instead of hanging the agent loop.
  */
 export function wrapToolsWithAbort<T extends ToolSet>(tools: T, signal: AbortSignal): T {
   const wrapped: Record<string, T[keyof T]> = {};
