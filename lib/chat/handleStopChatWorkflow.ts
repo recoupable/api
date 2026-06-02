@@ -13,18 +13,19 @@ const TERMINAL_WAIT_INTERVAL_MS = 100;
 
 const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["cancelled", "completed", "failed"]);
 
-/** Block until the run reaches a terminal status (cancelled/completed/failed) or we time out. */
-async function waitForTerminalRunStatus(runId: string): Promise<void> {
+/** Block until the run reaches a terminal status. Returns true on terminal, false on timeout. */
+async function waitForTerminalRunStatus(runId: string): Promise<boolean> {
   const deadline = Date.now() + TERMINAL_WAIT_TIMEOUT_MS;
   while (Date.now() < deadline) {
     try {
       const status = await getRun(runId).status;
-      if (TERMINAL_STATUSES.has(status)) return;
+      if (TERMINAL_STATUSES.has(status)) return true;
     } catch {
       // Transient errors: swallow and retry until the deadline.
     }
     await new Promise<void>(resolve => setTimeout(resolve, TERMINAL_WAIT_INTERVAL_MS));
   }
+  return false;
 }
 
 /** Cancels the workflow streaming for a chat and releases chats.active_stream_id. */
@@ -56,7 +57,13 @@ export async function handleStopChatWorkflow(
 
     // Hold the response until the workflow tears down so the client's await
     // resolves after SSE drains — keeps frontend and DB in sync on stop.
-    await waitForTerminalRunStatus(activeStreamId);
+    const reachedTerminal = await waitForTerminalRunStatus(activeStreamId);
+    if (!reachedTerminal) {
+      // Run still appears live after the wait deadline — refuse to release
+      // the slot so a follow-up POST can retry cancellation rather than
+      // having a slot-clearing race against a still-streaming workflow.
+      return errorResponse("Workflow did not terminate in time", 504);
+    }
   }
 
   // Best-effort slot release: the run is already cancelled, so a failed clear is

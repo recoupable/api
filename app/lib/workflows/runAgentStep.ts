@@ -197,7 +197,14 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
 
   // Short-circuit on abort — `result.finishReason` rejects when streamText aborts.
   const aborted = cancelController.signal.aborted;
-  const finishReason = aborted ? "stop" : await result.finishReason;
+  let finishReason: string;
+  if (aborted) {
+    finishReason = "stop";
+    // Prevent the late-rejecting promise from becoming an unhandled rejection.
+    void Promise.resolve(result.finishReason).catch(() => {});
+  } else {
+    finishReason = await result.finishReason;
+  }
   console.log("[runAgentStep] finish", {
     finishReason,
     hasResponseMessage: !!responseMessage,

@@ -323,4 +323,57 @@ describe("runAgentWorkflow", () => {
       expect(autoCommitChatTurn).not.toHaveBeenCalled();
     });
   });
+
+  describe("user-abort path", () => {
+    const abortedResponseMessage = {
+      id: "assistant-msg-xyz",
+      role: "assistant",
+      parts: [{ type: "text", text: "Partial..." }],
+      metadata: {
+        totalMessageCost: 0.05,
+        totalMessageUsage: {
+          inputTokens: 50,
+          cachedInputTokens: 0,
+          outputTokens: 10,
+        },
+      },
+    };
+
+    it("skips handleChatCredits when the step returns aborted: true", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        aborted: true,
+        responseMessage: abortedResponseMessage as never,
+      });
+
+      await runAgentWorkflow(baseInput);
+
+      expect(handleChatCredits).not.toHaveBeenCalled();
+    });
+
+    it("skips autoCommitChatTurn when the step returns aborted: true", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        aborted: true,
+        responseMessage: abortedResponseMessage as never,
+      });
+
+      await runAgentWorkflow(baseInput);
+
+      expect(autoCommitChatTurn).not.toHaveBeenCalled();
+    });
+
+    it("still runs the cleanup steps on aborted: true (clearActiveStream + closeChatStream)", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        aborted: true,
+        responseMessage: abortedResponseMessage as never,
+      });
+
+      await runAgentWorkflow(baseInput);
+
+      expect(clearChatActiveStream).toHaveBeenCalledTimes(1);
+      expect(closeChatStream).toHaveBeenCalledTimes(1);
+    });
+  });
 });

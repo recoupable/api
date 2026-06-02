@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { streamText, createUIMessageStream } from "ai";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
+import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
 
 vi.mock("ai", async () => {
   const actual = await vi.importActual<typeof import("ai")>("ai");
@@ -327,5 +328,87 @@ describe("runAgentStep", () => {
     const result = await runAgentStep({ ...baseInput, writable: stream } as never);
 
     expect(result.responseMessage).toBeUndefined();
+  });
+
+  describe("user-abort path", () => {
+    it("returns { aborted: true, finishReason: 'stop' } when the poller fires", async () => {
+      // Poller fires synchronously — controller is aborted by the time pipeTo runs.
+      vi.mocked(pollWorkflowCancellation).mockImplementation(
+        (_runId: string, controller: AbortController) => {
+          controller.abort();
+          return { stop: vi.fn(), done: Promise.resolve() };
+        },
+      );
+      vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+      const { stream } = makeWritable();
+
+      const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+
+      expect(result.aborted).toBe(true);
+      expect(result.finishReason).toBe("stop");
+    });
+
+    it("does not await result.finishReason on abort (would deadlock if unresolved)", async () => {
+      vi.mocked(pollWorkflowCancellation).mockImplementation(
+        (_runId: string, controller: AbortController) => {
+          controller.abort();
+          return { stop: vi.fn(), done: Promise.resolve() };
+        },
+      );
+      // finishReason here is a forever-pending Promise — if runAgentStep awaited it
+      // on the abort path, the test would hang.
+      const neverResolves = new Promise<string>(() => {});
+      vi.mocked(streamText).mockReturnValue({
+        toUIMessageStream: vi.fn(() =>
+          (async function* () {
+            yield { type: "start" };
+            yield { type: "finish" };
+          })(),
+        ),
+        finishReason: neverResolves,
+      } as never);
+      const { stream } = makeWritable();
+
+      const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+
+      expect(result.finishReason).toBe("stop");
+      expect(result.aborted).toBe(true);
+    });
+
+    it("attaches .catch to result.finishReason so a late rejection is not unhandled", async () => {
+      vi.mocked(pollWorkflowCancellation).mockImplementation(
+        (_runId: string, controller: AbortController) => {
+          controller.abort();
+          return { stop: vi.fn(), done: Promise.resolve() };
+        },
+      );
+      const rejection = new Error("finishReason late reject");
+      vi.mocked(streamText).mockReturnValue({
+        toUIMessageStream: vi.fn(() =>
+          (async function* () {
+            yield { type: "start" };
+            yield { type: "finish" };
+          })(),
+        ),
+        finishReason: Promise.reject(rejection),
+      } as never);
+
+      // Catch unhandled rejections globally for the duration of this test.
+      const unhandled: unknown[] = [];
+      const onUnhandled = (e: Event) => {
+        unhandled.push((e as PromiseRejectionEvent).reason);
+      };
+      process.on("unhandledRejection", onUnhandled);
+      try {
+        const { stream } = makeWritable();
+        await runAgentStep({ ...baseInput, writable: stream } as never);
+        // Give microtasks a chance to flush.
+        await new Promise(r => setTimeout(r, 10));
+      } finally {
+        process.off("unhandledRejection", onUnhandled);
+      }
+
+      expect(unhandled).not.toContain(rejection);
+    });
   });
 });

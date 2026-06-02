@@ -88,4 +88,20 @@ describe("wrapToolsWithAbort", () => {
     expect(wrapped.t.description).toBe(t.description);
     expect(wrapped.t.inputSchema).toBe(t.inputSchema);
   });
+
+  it("forwards input and options (including AI SDK's abortSignal) unchanged to the original execute", async () => {
+    const seen: Array<{ input: unknown; options: unknown }> = [];
+    const t = makeTool(async (input: unknown, options: unknown) => {
+      seen.push({ input, options });
+      return { ok: true };
+    });
+    const wrapped = wrapToolsWithAbort({ t }, new AbortController().signal);
+
+    const innerSignal = new AbortController().signal;
+    await wrapped.t.execute!({ x: 42 }, { abortSignal: innerSignal } as never);
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0].input).toEqual({ x: 42 });
+    expect((seen[0].options as { abortSignal: AbortSignal }).abortSignal).toBe(innerSignal);
+  });
 });

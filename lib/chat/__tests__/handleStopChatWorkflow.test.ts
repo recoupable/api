@@ -162,4 +162,29 @@ describe("handleStopChatWorkflow", () => {
       null,
     );
   });
+
+  it("returns 504 and does NOT release the slot when waitForTerminal times out", async () => {
+    vi.useFakeTimers();
+    mockValidated("wrun_abc");
+    vi.mocked(getRun).mockReturnValue({
+      cancel,
+      get status() {
+        return Promise.resolve("running");
+      },
+    } as never);
+
+    try {
+      const handlerPromise = handleStopChatWorkflow(makeRequest(), CHAT_ID);
+      // Drain the wait loop without real wall-clock delay.
+      await vi.advanceTimersByTimeAsync(8000);
+      const result = await handlerPromise;
+
+      expect(result.status).toBe(504);
+      // Critical: a still-live run must NOT have its slot cleared, otherwise a
+      // follow-up POST would race against a workflow that's still streaming.
+      expect(vi.mocked(compareAndSetChatActiveStreamId)).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
