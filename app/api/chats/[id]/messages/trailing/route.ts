@@ -23,13 +23,12 @@ export async function OPTIONS() {
  * have organization-level access; authentication uses `x-api-key` or
  * `Authorization: Bearer`.
  *
- * @param request - The incoming request. `from_message_id` is read from the JSON body
+ * @param request - The incoming request. `from_message_id` is read from the query string
  *   and identifies the oldest message to delete (that message and all newer ones go).
  * @param context - Route context from Next.js.
- * @param context.params - Promise resolving to `{ id }`, the chat UUID from the URL path.
- * @returns A 200 NextResponse with the count of deleted messages, 400 on a missing
- *   `from_message_id`, 401/403 when the caller cannot access the chat, or 404 when the
- *   chat or message does not exist.
+ * @param context.params - Promise resolving to `{ id }`, the workflow chat UUID from the URL path.
+ * @returns A 200 NextResponse on success, 400 on a missing or invalid `from_message_id`,
+ *   401/403 when the caller cannot access the chat, or 404 when the chat or message does not exist.
  */
 export async function DELETE(
   request: NextRequest,

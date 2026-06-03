@@ -2,8 +2,8 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateChatAccess } from "@/lib/chats/validateChatAccess";
-import selectMemories from "@/lib/supabase/memories/selectMemories";
+import { validateWorkflowChatAccess } from "@/lib/chats/validateWorkflowChatAccess";
+import { selectChatMessages } from "@/lib/supabase/chat_messages/selectChatMessages";
 
 const deleteTrailingQuerySchema = z.object({
   from_message_id: z.string().uuid("from_message_id must be a valid UUID"),
@@ -12,23 +12,22 @@ const deleteTrailingQuerySchema = z.object({
 export interface ValidatedDeleteTrailingMessagesQuery {
   chatId: string;
   fromMessageId: string;
-  fromTimestamp: string;
 }
 
 /**
  * Validates DELETE /api/chats/[id]/messages/trailing query and chat/message ownership.
  *
  * @param request - Incoming request containing query parameters.
- * @param chatId - Chat UUID from route params.
+ * @param chatId - Workflow chat UUID from route params.
  * @returns Either an error response or a validated payload for deletion.
  */
 export async function validateDeleteTrailingMessagesQuery(
   request: NextRequest,
   chatId: string,
 ): Promise<NextResponse | ValidatedDeleteTrailingMessagesQuery> {
-  const roomResult = await validateChatAccess(request, chatId);
-  if (roomResult instanceof NextResponse) {
-    return roomResult;
+  const accessResult = await validateWorkflowChatAccess(request, chatId);
+  if (accessResult instanceof NextResponse) {
+    return accessResult;
   }
 
   const parsedQuery = deleteTrailingQuerySchema.safeParse({
@@ -47,12 +46,20 @@ export async function validateDeleteTrailingMessagesQuery(
     );
   }
 
-  const [memory] =
-    (await selectMemories(roomResult.room.id, {
-      memoryId: parsedQuery.data.from_message_id,
-      limit: 1,
-    })) ?? [];
-  if (!memory) {
+  const messages = await selectChatMessages({
+    chatId: accessResult.chatId,
+    id: parsedQuery.data.from_message_id,
+    limit: 1,
+  });
+
+  if (messages === null) {
+    return NextResponse.json(
+      { status: "error", error: "Failed to load message" },
+      { status: 500, headers: getCorsHeaders() },
+    );
+  }
+
+  if (messages.length === 0) {
     return NextResponse.json(
       { status: "error", error: "Message not found" },
       { status: 404, headers: getCorsHeaders() },
@@ -60,8 +67,7 @@ export async function validateDeleteTrailingMessagesQuery(
   }
 
   return {
-    chatId: roomResult.room.id,
+    chatId: accessResult.chatId,
     fromMessageId: parsedQuery.data.from_message_id,
-    fromTimestamp: memory.updated_at,
   };
 }
