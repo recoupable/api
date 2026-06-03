@@ -21,7 +21,6 @@ import type { VercelState } from "@/lib/sandbox/vercel/state";
 import { discoverSkills } from "@/lib/skills/discoverSkills";
 import { getSandboxSkillDirectories } from "@/lib/skills/getSandboxSkillDirectories";
 import generateUUID from "@/lib/uuid/generateUUID";
-import { diagLog, setDiagIngestUrl } from "@/lib/diag/inMemoryLog";
 
 const DEFAULT_MODEL_ID = "anthropic/claude-haiku-4.5";
 
@@ -168,33 +167,35 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
     return errorResponse("Another workflow is already running for this chat", 409);
   }
 
-  const chatId = validated.chatId;
-  // Forward to ourselves so /api/debug/diag-logs reads land on the same
-  // logical project even if the GET hits a different serverless instance.
-  setDiagIngestUrl(`${request.nextUrl.origin}/api/debug/diag-logs`);
-  const startedAt = Date.now();
-  let firstChunkAtMs: number | undefined;
-  let lastChunkAtMs: number | undefined;
-  let chunkCount = 0;
-  diagLog(chatId, "[diag][sse] start", { runId: run.runId });
+  return createUIMessageStreamResponse({
+    stream: wrapReadableWithStatusWatcher(run.runId, run.getReadable<UIMessageChunk>()),
+    headers: { ...getCorsHeaders(), "x-workflow-run-id": run.runId },
+  });
+}
 
-  const TERMINAL: ReadonlySet<string> = new Set(["cancelled", "completed", "failed"]);
-  const STATUS_POLL_MS = 500;
-  const sourceReadable = run.getReadable<UIMessageChunk>();
-  const runId = run.runId;
-  const instrumented = new ReadableStream<UIMessageChunk>({
+const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set(["cancelled", "completed", "failed"]);
+const STATUS_POLL_MS = 500;
+
+/**
+ * Wrap the workflow's readable so the SSE response closes promptly when the
+ * run reaches a terminal status. Vercel Workflow's readable does not always
+ * propagate `writable.close()` from the workflow body — without this watcher,
+ * the client connection idles until its fetch timeout (observed ~100s) and
+ * surfaces as an error on the chat UI.
+ */
+function wrapReadableWithStatusWatcher(
+  runId: string,
+  source: ReadableStream<UIMessageChunk>,
+): ReadableStream<UIMessageChunk> {
+  return new ReadableStream<UIMessageChunk>({
     async start(controller) {
-      const reader = sourceReadable.getReader();
+      const reader = source.getReader();
       let closedByStatus = false;
-      const statusWatcher = (async () => {
+      const watcher = (async () => {
         while (!closedByStatus) {
           try {
             const status = await getRun(runId).status;
-            if (TERMINAL.has(status)) {
-              diagLog(chatId, "[diag][sse] status terminal, closing", {
-                status,
-                totalMs: Date.now() - startedAt,
-              });
+            if (TERMINAL_RUN_STATUSES.has(status)) {
               closedByStatus = true;
               try {
                 controller.close();
@@ -220,30 +221,13 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
           const { done, value } = await reader.read();
           if (closedByStatus) return;
           if (done) {
-            diagLog(chatId, "[diag][sse] source done (graceful)", {
-              chunkCount,
-              firstChunkAtMs,
-              lastChunkAtMs,
-              totalMs: Date.now() - startedAt,
-            });
             controller.close();
             return;
           }
-          chunkCount += 1;
-          const now = Date.now();
-          if (firstChunkAtMs === undefined) firstChunkAtMs = now - startedAt;
-          lastChunkAtMs = now - startedAt;
           controller.enqueue(value);
         }
       } catch (err) {
         if (closedByStatus) return;
-        diagLog(chatId, "[diag][sse] source threw", {
-          chunkCount,
-          firstChunkAtMs,
-          lastChunkAtMs,
-          totalMs: Date.now() - startedAt,
-          message: err instanceof Error ? err.message : String(err),
-        });
         controller.error(err);
       } finally {
         closedByStatus = true;
@@ -252,13 +236,8 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
         } catch {
           /* ignore */
         }
-        await statusWatcher.catch(() => {});
+        await watcher.catch(() => {});
       }
     },
-  });
-
-  return createUIMessageStreamResponse({
-    stream: instrumented,
-    headers: { ...getCorsHeaders(), "x-workflow-run-id": run.runId },
   });
 }
