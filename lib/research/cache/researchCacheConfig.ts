@@ -1,0 +1,2 @@
+export const RESEARCH_METRICS_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+export const RESEARCH_CACHE_REFRESH_DEDUPE_MS = 5 * 60 * 1000;
