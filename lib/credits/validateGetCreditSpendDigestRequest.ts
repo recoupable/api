@@ -16,7 +16,10 @@ export function validateGetCreditSpendDigestRequest(request: NextRequest): NextR
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     console.error("[credit-spend-digest] CRON_SECRET is not configured");
-    return NextResponse.json({ status: "error", message: "Server misconfigured" }, { status: 500 });
+    return NextResponse.json(
+      { status: "error", message: "Internal server error" },
+      { status: 500 },
+    );
   }
 
   if (request.headers.get("authorization") !== `Bearer ${secret}`) {

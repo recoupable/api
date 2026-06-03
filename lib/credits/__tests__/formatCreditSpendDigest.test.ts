@@ -39,6 +39,17 @@ describe("formatCreditSpendDigest", () => {
     expect(out).toContain("claude-opus: $3.00, claude-haiku: $1.12");
   });
 
+  it("shows cached tokens as an informational parenthetical (not added to the total)", () => {
+    const out = formatCreditSpendDigest([row({ cached_input_tokens: 300_000 })], 10);
+    // total stays input + output = 1.24M, cached shown separately
+    expect(out).toContain("1.2M tokens (300.0K cached)");
+  });
+
+  it("omits the cached parenthetical when there are no cached tokens", () => {
+    const out = formatCreditSpendDigest([row({ cached_input_tokens: 0 })], 10);
+    expect(out).not.toContain("cached");
+  });
+
   it("omits the main/subagent split when there is no subagent spend", () => {
     const out = formatCreditSpendDigest([row({ subagent_cents: 0 })], 10);
     expect(out).not.toContain("subagent");

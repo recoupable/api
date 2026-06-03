@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCreditSpendDigestHandler } from "@/lib/internal/credit-spend-digest/getCreditSpendDigestHandler";
+import { getCreditSpendDigestHandler } from "@/lib/credits/getCreditSpendDigestHandler";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
