@@ -30,15 +30,18 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
 }
 
+function getSongstatsApiKey(): string | undefined {
+  return process.env.SONGSTATS_API_KEY || process.env.SongStats_API;
+}
+
 export async function fetchSongstats(
   path: string,
   queryParams?: Record<string, string>,
 ): Promise<ProxyResult> {
-  // Product setup uses this exact mixed-case environment variable name.
-  const apiKey = process.env.SongStats_API;
+  const apiKey = getSongstatsApiKey();
   if (!apiKey) {
     return {
-      data: { error: "SongStats_API environment variable is not set" },
+      data: { error: "SONGSTATS_API_KEY or SongStats_API environment variable is not set" },
       status: 500,
     };
   }
