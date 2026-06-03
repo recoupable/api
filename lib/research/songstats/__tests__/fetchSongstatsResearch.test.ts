@@ -82,4 +82,42 @@ describe("fetchSongstatsResearch", () => {
     });
     expect(fetchSongstats).not.toHaveBeenCalled();
   });
+
+  it("maps public platform metric sources to SongStats metric source IDs", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: { stats: [] },
+    });
+
+    await fetchSongstatsResearch("/artist/artist_1/stat/spotify");
+
+    expect(fetchSongstats).toHaveBeenCalledWith("/artists/stats", {
+      songstats_artist_id: "artist_1",
+      source: "spotify_streams",
+    });
+  });
+
+  it("maps public audience platforms to SongStats metric source IDs", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: { audience: [] },
+    });
+
+    await fetchSongstatsResearch("/artist/artist_1/instagram-audience-stats");
+
+    expect(fetchSongstats).toHaveBeenCalledWith("/artists/audience", {
+      songstats_artist_id: "artist_1",
+      source: "instagram_followers",
+    });
+  });
+
+  it("treats artist rank as unsupported for SongStats instead of querying broad stats", async () => {
+    const result = await fetchSongstatsResearch("/artist/artist_1/artist-rank");
+
+    expect(result).toEqual({
+      status: 501,
+      data: { error: "Research data source does not support this endpoint" },
+    });
+    expect(fetchSongstats).not.toHaveBeenCalled();
+  });
 });
