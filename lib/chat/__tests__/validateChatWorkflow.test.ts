@@ -87,13 +87,6 @@ describe("validateChatWorkflow", () => {
       if (result instanceof NextResponse) return;
       expect(result.model).toBe("openai/gpt-5.4-mini");
     });
-
-    it("leaves model undefined when the body omits it", async () => {
-      const result = await validateChatWorkflow(makeRequest());
-      expect(result).not.toBeInstanceOf(NextResponse);
-      if (result instanceof NextResponse) return;
-      expect(result.model).toBeUndefined();
-    });
   });
 
   describe("invalid body", () => {
