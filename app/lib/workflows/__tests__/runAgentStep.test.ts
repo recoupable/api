@@ -330,6 +330,40 @@ describe("runAgentStep", () => {
     expect(result.responseMessage).toBeUndefined();
   });
 
+  describe("natural-completion path", () => {
+    it("returns aborted: false on natural finish (poller never fires)", async () => {
+      // Default poller mock: never aborts.
+      vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+      const { stream } = makeWritable();
+
+      const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+
+      // The crucial check: even though runAgentStep's finally calls
+      // cancelController.abort() unconditionally to stop the poller, that
+      // must NOT make natural completions look like user-stops — otherwise
+      // runAgentWorkflow would skip billing + auto-commit on every turn.
+      expect(result.aborted).toBe(false);
+    });
+
+    it("uses the real finishReason from streamText on natural completion", async () => {
+      vi.mocked(streamText).mockReturnValue({
+        toUIMessageStream: vi.fn(() =>
+          (async function* () {
+            yield { type: "start" };
+            yield { type: "finish" };
+          })(),
+        ),
+        finishReason: Promise.resolve("length"),
+      } as never);
+      const { stream } = makeWritable();
+
+      const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+
+      expect(result.aborted).toBe(false);
+      expect(result.finishReason).toBe("length");
+    });
+  });
+
   describe("user-abort path", () => {
     it("returns { aborted: true, finishReason: 'stop' } when the poller fires", async () => {
       // Poller fires synchronously — controller is aborted by the time pipeTo runs.

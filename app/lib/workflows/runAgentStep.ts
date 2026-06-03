@@ -179,26 +179,34 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     },
   });
 
+  // Distinguish user-stop from natural completion: only the poller aborts the
+  // controller before our own finally runs, so a pipeTo rejection with the
+  // signal already aborted is the user-stop path. Captured here, not from
+  // cancelController.signal.aborted after finally — the finally aborts the
+  // controller unconditionally to stop the poller, which would otherwise
+  // make every natural completion look like a user-stop.
+  let userAborted = false;
   try {
-    // signal tears down the source on user-stop so closeChatStream isn't
-    // blocked waiting for in-flight writes from streamText.
     await uiStream.pipeTo(input.writable, {
       preventClose: true,
       preventAbort: true,
       signal: cancelController.signal,
     });
   } catch (err) {
-    if (!cancelController.signal.aborted) throw err;
+    if (cancelController.signal.aborted) {
+      userAborted = true;
+    } else {
+      throw err;
+    }
   } finally {
     poller.stop();
     cancelController.abort();
     await poller.done.catch(() => {});
   }
 
-  // Short-circuit on abort — `result.finishReason` rejects when streamText aborts.
-  const aborted = cancelController.signal.aborted;
+  // Short-circuit on user-stop — `result.finishReason` rejects when streamText aborts.
   let finishReason: string;
-  if (aborted) {
+  if (userAborted) {
     finishReason = "stop";
     // Prevent the late-rejecting promise from becoming an unhandled rejection.
     void Promise.resolve(result.finishReason).catch(() => {});
@@ -208,7 +216,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   console.log("[runAgentStep] finish", {
     finishReason,
     hasResponseMessage: !!responseMessage,
-    aborted,
+    aborted: userAborted,
   });
-  return { finishReason, responseMessage, aborted };
+  return { finishReason, responseMessage, aborted: userAborted };
 }
