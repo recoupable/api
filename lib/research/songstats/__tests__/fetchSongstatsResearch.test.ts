@@ -120,4 +120,37 @@ describe("fetchSongstatsResearch", () => {
     });
     expect(fetchSongstats).not.toHaveBeenCalled();
   });
+
+  it("maps similar artists to SongStats related artists without forwarding unsupported weights", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: {
+        artist_info: {
+          related_artists: [
+            { songstats_artist_id: "artist_2", name: "Kendrick Lamar" },
+            { songstats_artist_id: "artist_3", name: "J. Cole" },
+          ],
+        },
+      },
+    });
+
+    const result = await fetchSongstatsResearch(
+      "/artist/artist_1/similar-artists/by-configurations",
+      {
+        audience: "high",
+        genre: "medium",
+        mood: "low",
+        musicality: "medium",
+        limit: "1",
+      },
+    );
+
+    expect(fetchSongstats).toHaveBeenCalledWith("/artists/info", {
+      songstats_artist_id: "artist_1",
+    });
+    expect(result).toEqual({
+      status: 200,
+      data: [{ id: "artist_2", songstats_artist_id: "artist_2", name: "Kendrick Lamar" }],
+    });
+  });
 });

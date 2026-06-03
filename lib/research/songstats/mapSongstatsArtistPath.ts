@@ -3,6 +3,7 @@ import {
   extractList,
   mapSongstatsResult,
   normalizeArtistObject,
+  normalizeArtistRecord,
   normalizeUrlMap,
   UNSUPPORTED_RESULT,
 } from "@/lib/research/songstats/songstatsResearchMapping";
@@ -26,6 +27,13 @@ const SONGSTATS_ARTIST_METRIC_SOURCE_BY_PLATFORM: Record<string, string> = {
 
 function mapArtistMetricSource(source: string): string {
   return SONGSTATS_ARTIST_METRIC_SOURCE_BY_PLATFORM[source] || source;
+}
+
+function parsePositiveLimit(value?: string): number | undefined {
+  if (!value) return undefined;
+
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 export function mapSongstatsArtistPath(
@@ -103,6 +111,18 @@ export function mapSongstatsArtistPath(
   if (match) {
     return Promise.resolve(UNSUPPORTED_RESULT);
   }
+
+  match = path.match(/^\/artist\/([^/]+)\/similar-artists\/by-configurations$/);
+  if (match) {
+    const limit = parsePositiveLimit(query?.limit);
+    return mapSongstatsResult("/artists/info", { songstats_artist_id: match[1] }, data => {
+      const relatedArtists = extractList(data, ["artist_info", "related_artists"]).map(
+        normalizeArtistRecord,
+      );
+      return limit ? relatedArtists.slice(0, limit) : relatedArtists;
+    });
+  }
+
   match = path.match(/^\/artist\/([^/]+)\/([^/]+)\/(current|past)\/playlists$/);
   if (match) {
     return mapSongstatsResult(
