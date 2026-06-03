@@ -178,13 +178,47 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   let chunkCount = 0;
   diagLog(chatId, "[diag][sse] start", { runId: run.runId });
 
+  const TERMINAL: ReadonlySet<string> = new Set(["cancelled", "completed", "failed"]);
+  const STATUS_POLL_MS = 500;
   const sourceReadable = run.getReadable<UIMessageChunk>();
+  const runId = run.runId;
   const instrumented = new ReadableStream<UIMessageChunk>({
     async start(controller) {
       const reader = sourceReadable.getReader();
+      let closedByStatus = false;
+      const statusWatcher = (async () => {
+        while (!closedByStatus) {
+          try {
+            const status = await getRun(runId).status;
+            if (TERMINAL.has(status)) {
+              diagLog(chatId, "[diag][sse] status terminal, closing", {
+                status,
+                totalMs: Date.now() - startedAt,
+              });
+              closedByStatus = true;
+              try {
+                controller.close();
+              } catch {
+                /* already closed */
+              }
+              try {
+                await reader.cancel();
+              } catch {
+                /* ignore */
+              }
+              return;
+            }
+          } catch {
+            // Transient errors — keep watching.
+          }
+          await new Promise(r => setTimeout(r, STATUS_POLL_MS));
+        }
+      })();
+
       try {
         while (true) {
           const { done, value } = await reader.read();
+          if (closedByStatus) return;
           if (done) {
             diagLog(chatId, "[diag][sse] source done (graceful)", {
               chunkCount,
@@ -202,6 +236,7 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
           controller.enqueue(value);
         }
       } catch (err) {
+        if (closedByStatus) return;
         diagLog(chatId, "[diag][sse] source threw", {
           chunkCount,
           firstChunkAtMs,
@@ -211,7 +246,13 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
         });
         controller.error(err);
       } finally {
-        reader.releaseLock();
+        closedByStatus = true;
+        try {
+          reader.releaseLock();
+        } catch {
+          /* ignore */
+        }
+        await statusWatcher.catch(() => {});
       }
     },
   });
