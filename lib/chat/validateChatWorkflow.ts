@@ -22,6 +22,13 @@ export const chatWorkflowBodySchema = z.object({
    * field shape.
    */
   recoupAccessToken: z.string().min(1).max(8192).optional(),
+  /**
+   * Gateway-format model id selected in the chat UI (e.g.
+   * `"anthropic/claude-haiku-4.5"`). When present it takes priority over
+   * the chat's persisted `model_id`; the handler passes it straight to
+   * the AI Gateway. Omitted by callers that don't pick a model.
+   */
+  model: z.string().min(1).max(256).optional(),
 });
 
 export type ChatWorkflowBody = z.infer<typeof chatWorkflowBodySchema>;

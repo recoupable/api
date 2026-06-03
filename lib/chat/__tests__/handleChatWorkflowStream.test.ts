@@ -289,6 +289,46 @@ describe("handleChatWorkflowStream", () => {
       expect(startArgs.modelId).toBe("anthropic/claude-haiku-4.5");
     });
 
+    it("passes the UI-selected validated.model into the workflow", async () => {
+      vi.mocked(validateChatWorkflow).mockResolvedValue({
+        messages: [],
+        chatId: CHAT_ID,
+        sessionId: SESSION_ID,
+        accountId: ACCOUNT_ID,
+        orgId: null,
+        authToken: "test-key",
+        model: "openai/gpt-5.4-mini",
+      });
+      mockStartedRun();
+      await handleChatWorkflowStream(makeRequest());
+      const startArgs = vi.mocked(start).mock.calls[0]?.[1]?.[0] as { modelId: string };
+      expect(startArgs.modelId).toBe("openai/gpt-5.4-mini");
+    });
+
+    it("prefers validated.model over a persisted chat.model_id", async () => {
+      vi.mocked(validateChatWorkflow).mockResolvedValue({
+        messages: [],
+        chatId: CHAT_ID,
+        sessionId: SESSION_ID,
+        accountId: ACCOUNT_ID,
+        orgId: null,
+        authToken: "test-key",
+        model: "openai/gpt-5.4-mini",
+      });
+      vi.mocked(selectChats).mockResolvedValue([
+        {
+          id: CHAT_ID,
+          session_id: SESSION_ID,
+          active_stream_id: null,
+          model_id: "anthropic/claude-opus-4.6",
+        } as never,
+      ]);
+      mockStartedRun();
+      await handleChatWorkflowStream(makeRequest());
+      const startArgs = vi.mocked(start).mock.calls[0]?.[1]?.[0] as { modelId: string };
+      expect(startArgs.modelId).toBe("openai/gpt-5.4-mini");
+    });
+
     // Bundle A.4 — forward the Privy JWT from the validated body into
     // AgentContext.recoupAccessToken so the sandbox env-builder can
     // surface it as `RECOUP_ACCESS_TOKEN`.

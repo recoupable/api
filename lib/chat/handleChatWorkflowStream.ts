@@ -90,7 +90,11 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   await updateSession(validated.sessionId, buildActiveLifecycleUpdate(session.sandbox_state));
   void persistLatestUserMessage(validated.chatId, validated.messages as never);
 
-  const modelId = chat.model_id ?? DEFAULT_MODEL_ID;
+  // Real-time UI selection (validated.model) wins, then the chat's
+  // persisted model_id, then the default. Without this the workflow
+  // always billed DEFAULT_MODEL_ID since model_id is null until a
+  // chat is explicitly PATCHed.
+  const modelId = validated.model ?? chat.model_id ?? DEFAULT_MODEL_ID;
   const recoupOrgId = session.clone_url
     ? (extractOrgId(session.clone_url) ?? undefined)
     : undefined;
