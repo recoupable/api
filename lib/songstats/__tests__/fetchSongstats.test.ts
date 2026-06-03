@@ -30,7 +30,7 @@ describe("fetchSongstats", () => {
 
     expect(result).toEqual({ status: 200, data: { results: [{ id: "artist_1" }] } });
     expect(fetch).toHaveBeenCalledWith(
-      "https://data.songstats.com/enterprise/v1/artists/search?q=Drake&limit=1",
+      "https://api.songstats.com/enterprise/v1/artists/search?q=Drake&limit=1",
       expect.objectContaining({
         method: "GET",
         signal: expect.any(AbortSignal),
@@ -55,7 +55,7 @@ describe("fetchSongstats", () => {
     await fetchSongstats("/artists/search", { q: "Drake" });
 
     expect(fetch).toHaveBeenCalledWith(
-      "https://data.songstats.com/enterprise/v1/artists/search?q=Drake",
+      "https://api.songstats.com/enterprise/v1/artists/search?q=Drake",
       expect.objectContaining({
         headers: expect.objectContaining({
           apikey: "legacy-songstats-key",
