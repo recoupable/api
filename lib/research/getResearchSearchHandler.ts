@@ -37,9 +37,11 @@ export async function getResearchSearchHandler(request: NextRequest): Promise<Ne
       artists?: unknown[];
       tracks?: unknown[];
       albums?: unknown[];
+      labels?: unknown[];
       suggestions?: unknown[];
     };
-    const results = data?.artists || data?.tracks || data?.albums || data?.suggestions || [];
+    const results =
+      data?.artists || data?.tracks || data?.albums || data?.labels || data?.suggestions || [];
     return successResponse({ results });
   } catch (error) {
     console.error("[ERROR] getResearchSearchHandler:", error);

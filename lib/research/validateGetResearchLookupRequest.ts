@@ -3,8 +3,8 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
-const SPOTIFY_ARTIST_REGEX = /spotify\.com\/artist\/([a-zA-Z0-9]+)/;
-const SPOTIFY_ID_REGEX = /^[A-Za-z0-9]{10,}$/;
+const SPOTIFY_ID_REGEX = /^[A-Za-z0-9]{22}$/;
+const SPOTIFY_ARTIST_REGEX = /spotify\.com\/artist\/([A-Za-z0-9]{22})(?:[/?#]|$)/;
 
 export type ValidatedGetResearchLookupRequest = {
   accountId: string;

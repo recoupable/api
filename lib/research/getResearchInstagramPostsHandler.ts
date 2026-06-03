@@ -8,8 +8,8 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 /**
  * GET /api/research/instagram-posts
  *
- * Returns recent Instagram posts for the given artist when the configured
- * provider supports that dataset.
+ * Returns recent Instagram posts for the given artist through the legacy
+ * DeepSocial/Chartmetric dataset when the configured provider supports it.
  * Requires `artist` query param.
  *
  * @param request - The incoming HTTP request.

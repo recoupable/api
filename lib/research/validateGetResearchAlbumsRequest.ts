@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
+import { PROVIDER_ID_REGEX } from "@/lib/research/providerId";
 
 export type ValidatedGetResearchAlbumsRequest = {
   accountId: string;
@@ -12,7 +13,6 @@ export type ValidatedGetResearchAlbumsRequest = {
 };
 
 const VALID_BOOLEAN = ["true", "false"] as const;
-const PROVIDER_ID_REGEX = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;
 
 /**
  * Validates `GET /api/research/albums` — auth + required provider `artist_id`.

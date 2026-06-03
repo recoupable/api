@@ -7,8 +7,9 @@ import { validateGetResearchCuratorRequest } from "@/lib/research/validateGetRes
 /**
  * GET /api/research/curator
  *
- * Returns details for a specific playlist curator. Not artist-scoped — keyed by
- * `platform` and `id` query params, proxied to `/curator/{platform}/{id}`.
+ * Returns details for a specific playlist curator when the configured research
+ * provider supports legacy numeric curator identifiers. Not artist-scoped —
+ * keyed by `platform` and `id` query params, proxied to `/curator/{platform}/{id}`.
  *
  * @param request - The incoming HTTP request.
  * @returns The JSON response.

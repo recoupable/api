@@ -1,11 +1,7 @@
 import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
 import { getResearchProvider } from "@/lib/research/providers/getResearchProvider";
 import { fetchSongstatsResearch } from "@/lib/research/songstats/fetchSongstatsResearch";
-
-interface ProxyResult {
-  data: unknown;
-  status: number;
-}
+import type { ProxyResult } from "@/lib/research/providers/ProxyResult";
 
 export async function fetchResearchProvider(
   path: string,

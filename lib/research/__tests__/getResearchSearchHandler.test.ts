@@ -119,4 +119,16 @@ describe("getResearchSearchHandler", () => {
     expect(res.status).toBe(200);
     expect(body.results[0]).toMatchObject({ name: "Drake", target: "artists" });
   });
+
+  it("returns labels when the provider returns a labels array", async () => {
+    vi.mocked(handleResearch).mockResolvedValue({
+      data: { labels: [{ name: "OVO Sound", id: "label_1" }] },
+    });
+    const req = new NextRequest("http://localhost/api/research/search?q=OVO&type=labels");
+    const res = await getResearchSearchHandler(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.results).toEqual([{ name: "OVO Sound", id: "label_1" }]);
+  });
 });

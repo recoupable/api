@@ -8,10 +8,13 @@ describe("fetchSongstats", () => {
   beforeEach(() => {
     process.env = { ...ORIGINAL_ENV, SongStats_API: "songstats-key" };
     vi.stubGlobal("fetch", vi.fn());
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     process.env = ORIGINAL_ENV;
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -28,13 +31,14 @@ describe("fetchSongstats", () => {
     expect(result).toEqual({ status: 200, data: { results: [{ id: "artist_1" }] } });
     expect(fetch).toHaveBeenCalledWith(
       "https://data.songstats.com/enterprise/v1/artists/search?q=Drake&limit=1",
-      {
+      expect.objectContaining({
         method: "GET",
+        signal: expect.any(AbortSignal),
         headers: {
           accept: "application/json",
           apikey: "songstats-key",
         },
-      },
+      }),
     );
   });
 
@@ -59,5 +63,39 @@ describe("fetchSongstats", () => {
     const result = await fetchSongstats("/artists/info", { songstats_artist_id: "artist_1" });
 
     expect(result).toEqual({ status: 403, data: { error: "forbidden" } });
+  });
+
+  it("aborts SongStats requests after the configured timeout", async () => {
+    vi.useFakeTimers();
+    process.env.SONGSTATS_TIMEOUT_MS = "25";
+    vi.mocked(fetch).mockImplementation((_input, init) => {
+      const signal = (init as RequestInit).signal as AbortSignal;
+      return new Promise<Response>((_, reject) => {
+        signal.addEventListener("abort", () => {
+          const error = new Error("aborted");
+          error.name = "AbortError";
+          reject(error);
+        });
+      });
+    });
+
+    const resultPromise = fetchSongstats("/artists/search", { q: "Drake" });
+    await vi.advanceTimersByTimeAsync(25);
+
+    await expect(resultPromise).resolves.toEqual({
+      status: 504,
+      data: { error: "SongStats request timed out" },
+    });
+  });
+
+  it("returns a sanitized 500-compatible result when fetch fails", async () => {
+    vi.mocked(fetch).mockRejectedValue(new Error("network down"));
+
+    const result = await fetchSongstats("/artists/search", { q: "Drake" });
+
+    expect(result).toEqual({
+      status: 500,
+      data: { error: "SongStats request failed" },
+    });
   });
 });

@@ -2,13 +2,12 @@ import { type NextRequest, NextResponse } from "next/server";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
+import { PROVIDER_ID_REGEX } from "@/lib/research/providerId";
 
 export type ValidatedGetResearchTrackRequest = {
   accountId: string;
   id: string;
 };
-
-const PROVIDER_ID_REGEX = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;
 
 /**
  * Validates `GET /api/research/track` — auth + required provider track `id`.

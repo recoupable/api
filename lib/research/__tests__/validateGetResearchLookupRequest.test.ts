@@ -59,10 +59,32 @@ describe("validateGetResearchLookupRequest", () => {
     expect(res).toEqual({ accountId: "acc_1", spotifyId: "3TVXtAsR1Inumwj472S9r4" });
   });
 
+  it("returns 400 when direct spotifyId is not a 22-character Spotify artist ID", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest("http://localhost/api/research/lookup?spotifyId=abc");
+    const res = await validateGetResearchLookupRequest(req);
+
+    expect((res as NextResponse).status).toBe(400);
+    const body = await (res as NextResponse).json();
+    expect(body.error).toBe("spotifyId must be a valid Spotify artist ID");
+  });
+
   it("returns 400 when url is not a Spotify artist URL", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
     const req = new NextRequest("http://localhost/api/research/lookup?url=https://google.com");
     const res = await validateGetResearchLookupRequest(req);
+    expect((res as NextResponse).status).toBe(400);
+    const body = await (res as NextResponse).json();
+    expect(body.error).toContain("Spotify artist URL");
+  });
+
+  it("returns 400 when Spotify URL contains a malformed artist ID", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest(
+      "http://localhost/api/research/lookup?url=https://open.spotify.com/artist/abc",
+    );
+    const res = await validateGetResearchLookupRequest(req);
+
     expect((res as NextResponse).status).toBe(400);
     const body = await (res as NextResponse).json();
     expect(body.error).toContain("Spotify artist URL");

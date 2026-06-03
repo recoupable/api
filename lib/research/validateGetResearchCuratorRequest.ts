@@ -14,7 +14,7 @@ export type ValidatedGetResearchCuratorRequest = {
 
 /**
  * Validates `GET /api/research/curator` — auth + required `platform` (enum)
- * and `id` (numeric curator ID).
+ * and `id` (legacy provider numeric curator ID).
  *
  * @param request - The incoming HTTP request.
  */

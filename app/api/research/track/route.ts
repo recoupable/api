@@ -15,7 +15,7 @@ export async function OPTIONS() {
  * GET /api/research/track — Full provider track details by `id`.
  * Discovery (search by name) is the caller's job via `GET /api/research`.
  *
- * @param request - must include numeric `id` query param
+ * @param request - must include provider `id` query param
  * @returns JSON track details or error
  */
 export async function GET(request: NextRequest) {

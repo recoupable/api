@@ -1,10 +1,6 @@
 import { getChartmetricToken } from "@/lib/chartmetric/getChartmetricToken";
 import { CHARTMETRIC_BASE } from "@/lib/chartmetric/chartmetricBase";
-
-interface ProxyResult {
-  data: unknown;
-  status: number;
-}
+import type { ProxyResult } from "@/lib/research/providers/ProxyResult";
 
 /**
  * Proxies a request to the Chartmetric API with authentication.
