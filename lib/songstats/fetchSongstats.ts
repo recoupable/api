@@ -2,6 +2,13 @@ import { SONGSTATS_BASE } from "@/lib/songstats/songstatsBase";
 import type { ProxyResult } from "@/lib/research/providers/ProxyResult";
 
 const DEFAULT_SONGSTATS_TIMEOUT_MS = 10_000;
+const SLOW_SONGSTATS_TIMEOUT_MS = 35_000;
+const SLOW_SONGSTATS_PATHS = new Set([
+  "artists/historic_stats",
+  "artists/stats",
+  "tracks/historic_stats",
+  "tracks/stats",
+]);
 
 function appendQueryParams(url: URL, queryParams?: Record<string, string>): void {
   if (!queryParams) return;
@@ -21,9 +28,17 @@ async function parseSongstatsResponse(response: Response): Promise<unknown> {
   return text ? { raw: text } : null;
 }
 
-function getSongstatsTimeoutMs(): number {
+function getDefaultSongstatsTimeoutMs(path: string): number {
+  return SLOW_SONGSTATS_PATHS.has(path.replace(/^\/+/, ""))
+    ? SLOW_SONGSTATS_TIMEOUT_MS
+    : DEFAULT_SONGSTATS_TIMEOUT_MS;
+}
+
+function getSongstatsTimeoutMs(path: string): number {
   const configured = Number.parseInt(process.env.SONGSTATS_TIMEOUT_MS ?? "", 10);
-  return Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_SONGSTATS_TIMEOUT_MS;
+  return Number.isFinite(configured) && configured > 0
+    ? configured
+    : getDefaultSongstatsTimeoutMs(path);
 }
 
 function isAbortError(error: unknown): boolean {
@@ -51,7 +66,7 @@ export async function fetchSongstats(
     appendQueryParams(url, queryParams);
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), getSongstatsTimeoutMs());
+    const timeout = setTimeout(() => controller.abort(), getSongstatsTimeoutMs(path));
 
     try {
       const response = await fetch(url.toString(), {

@@ -113,6 +113,38 @@ describe("fetchSongstats", () => {
     });
   });
 
+  it("allows slower SongStats stats requests before aborting", async () => {
+    vi.useFakeTimers();
+    let abortCount = 0;
+    vi.mocked(fetch).mockImplementation((_input, init) => {
+      const signal = (init as RequestInit).signal as AbortSignal;
+      return new Promise<Response>((_, reject) => {
+        signal.addEventListener("abort", () => {
+          abortCount += 1;
+          const error = new Error("aborted");
+          error.name = "AbortError";
+          reject(error);
+        });
+      });
+    });
+
+    const resultPromise = fetchSongstats("/artists/stats", {
+      songstats_artist_id: "artist_1",
+      source: "spotify",
+    });
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(abortCount).toBe(0);
+
+    await vi.advanceTimersByTimeAsync(25_000);
+
+    expect(abortCount).toBe(1);
+    await expect(resultPromise).resolves.toEqual({
+      status: 504,
+      data: { error: "SongStats request timed out" },
+    });
+  });
+
   it("returns a sanitized 500-compatible result when fetch fails", async () => {
     vi.mocked(fetch).mockRejectedValue(new Error("network down"));
 
