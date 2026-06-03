@@ -19,6 +19,7 @@ import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
 import { closeOpenToolCalls } from "@/lib/chat/closeOpenToolCalls";
 import { getWorkflowMetadata } from "workflow";
+import { getRun } from "workflow/api";
 
 export type RunAgentStepInput = {
   messages: UIMessage[];
@@ -193,6 +194,18 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
       preventAbort: true,
       signal: cancelController.signal,
     });
+    // pipeTo can resolve cleanly even when the user cancelled — the
+    // workflow runtime closes the destination writable on `run.cancel()`,
+    // which surfaces here as a natural finish. Confirm by checking the
+    // run's status before treating this as a success.
+    try {
+      const status = await getRun(workflowRunId).status;
+      if (status === "cancelled") {
+        userAborted = true;
+      }
+    } catch {
+      /* transient status read — treat as success */
+    }
   } catch (err) {
     if (cancelController.signal.aborted) {
       userAborted = true;

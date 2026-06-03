@@ -128,6 +128,62 @@ describe("wrapWorkflowStreamWatcher", () => {
     expect((synthetic[0] as { toolCallId: string }).toolCallId).toBe("tool-2");
   }, 10_000);
 
+  it("synthesizes tool-output-error on natural source close when tool-calls are still open", async () => {
+    // Runtime closes the workflow readable on cancel — the main loop sees
+    // done:true before the status watcher's poll tick fires. The synthesis
+    // path must run on this close too.
+    mockRun({ status: () => "running" });
+
+    const source = new ReadableStream<UIMessageChunk>({
+      start(controller) {
+        controller.enqueue({
+          type: "tool-input-start",
+          toolCallId: "tool-1",
+          toolName: "bash",
+        } as UIMessageChunk);
+        // Close immediately — emulates runtime-close-on-cancel where the
+        // tool was mid-execution and never got a tool-output-* chunk.
+        controller.close();
+      },
+    });
+
+    const out = await collect(wrapWorkflowStreamWatcher(RUN_ID, source));
+    const synthetic = out.find(c => c.type === "tool-output-error");
+    expect(synthetic).toBeDefined();
+    expect((synthetic as { toolCallId: string }).toolCallId).toBe("tool-1");
+  });
+
+  it("does not synthesize errors when the source closes cleanly with all tools resolved", async () => {
+    mockRun({ status: () => "running" });
+    const source = chunkSource([
+      { type: "tool-input-start", toolCallId: "t1", toolName: "bash" } as UIMessageChunk,
+      { type: "tool-output-available", toolCallId: "t1", output: {} } as UIMessageChunk,
+      { type: "text-start", id: "a" } as UIMessageChunk,
+    ]);
+    const out = await collect(wrapWorkflowStreamWatcher(RUN_ID, source));
+    expect(out.find(c => c.type === "tool-output-error")).toBeUndefined();
+  });
+
+  it("tracks tool-input-available as an open tool-call too (non-streaming tools)", async () => {
+    mockRun({ status: () => "running" });
+    const source = new ReadableStream<UIMessageChunk>({
+      start(controller) {
+        // Some tools skip tool-input-start and emit tool-input-available directly.
+        controller.enqueue({
+          type: "tool-input-available",
+          toolCallId: "tool-x",
+          toolName: "bash",
+          input: { cmd: "ls" },
+        } as UIMessageChunk);
+        controller.close();
+      },
+    });
+    const out = await collect(wrapWorkflowStreamWatcher(RUN_ID, source));
+    const synthetic = out.find(c => c.type === "tool-output-error");
+    expect(synthetic).toBeDefined();
+    expect((synthetic as { toolCallId: string }).toolCallId).toBe("tool-x");
+  });
+
   it("propagates consumer cancel to getRun(runId).cancel()", async () => {
     const cancelSpy = vi.fn(() => Promise.resolve());
     mockRun({ status: () => "running", cancel: cancelSpy });

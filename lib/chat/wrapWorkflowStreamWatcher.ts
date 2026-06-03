@@ -83,7 +83,14 @@ export function wrapWorkflowStreamWatcher(
           const { done, value } = await localReader.read();
           if (closedByStatus || consumerCancelled) return;
           if (done) {
-            controller.close();
+            // Source closed — could be natural finish OR runtime-cancel
+            // closing the readable when status flipped terminal. Synthesize
+            // tool-output-error for any still-open tool-call ids before
+            // closing; on natural finish the set is empty (every tool
+            // emitted its terminal chunk before the workflow body returned)
+            // so this is a no-op.
+            closedByStatus = true;
+            closeWithSyntheticErrors();
             return;
           }
           trackToolCallChunk(value, openToolCallIds);
@@ -123,6 +130,7 @@ export function wrapWorkflowStreamWatcher(
 function trackToolCallChunk(chunk: UIMessageChunk, open: Set<string>): void {
   switch (chunk.type) {
     case "tool-input-start":
+    case "tool-input-available":
       open.add(chunk.toolCallId);
       return;
     case "tool-output-available":

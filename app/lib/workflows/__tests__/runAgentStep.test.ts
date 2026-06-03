@@ -3,6 +3,7 @@ import { streamText, createUIMessageStream } from "ai";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
+import { getRun } from "workflow/api";
 
 vi.mock("ai", async () => {
   const actual = await vi.importActual<typeof import("ai")>("ai");
@@ -34,6 +35,17 @@ vi.mock("@/lib/chat/pollWorkflowCancellation", () => ({
   pollWorkflowCancellation: vi.fn(() => ({
     stop: vi.fn(),
     done: Promise.resolve(),
+  })),
+}));
+
+// Default: getRun(...).status resolves to "running" — natural-completion
+// tests pass; user-abort tests override per-case.
+vi.mock("workflow/api", () => ({
+  getRun: vi.fn(() => ({
+    get status() {
+      return Promise.resolve("running");
+    },
+    cancel: vi.fn(() => Promise.resolve()),
   })),
 }));
 
@@ -501,6 +513,26 @@ describe("runAgentStep", () => {
 
       // Just the onStepFinish persist — no re-persist needed.
       expect(persistAssistantMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it("detects runtime-cancel even when pipeTo resolves cleanly (writable closed by runtime)", async () => {
+      // The poller never fires — pipeTo completes naturally because the
+      // runtime closed the destination writable when run.cancel() landed.
+      // runAgentStep must still detect this via getRun().status and mark
+      // the result as aborted so the abort-path re-persist runs.
+      vi.mocked(getRun).mockReturnValueOnce({
+        get status() {
+          return Promise.resolve("cancelled");
+        },
+        cancel: vi.fn(() => Promise.resolve()),
+      } as never);
+
+      vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+      const { stream } = makeWritable();
+
+      const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+
+      expect(result.aborted).toBe(true);
     });
 
     it("attaches .catch to result.finishReason so a late rejection is not unhandled", async () => {
