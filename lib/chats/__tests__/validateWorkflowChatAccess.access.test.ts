@@ -26,29 +26,24 @@ const sessionId = "123e4567-e89b-42d3-a456-426614174010";
 const accountId = "11111111-1111-1111-1111-111111111111";
 const request = new NextRequest(`http://localhost/api/chats/${chatId}/messages/trailing`);
 
-describe("validateWorkflowChatAccess", () => {
+const baseChat = {
+  id: chatId,
+  session_id: sessionId,
+  title: "Chat",
+  created_at: "2026-01-01T00:00:00.000Z",
+  updated_at: "2026-01-01T00:00:00.000Z",
+  active_stream_id: null,
+  last_assistant_message_at: null,
+  model_id: null,
+};
+
+describe("validateWorkflowChatAccess access", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it("returns 400 for invalid chat id", async () => {
-    const result = await validateWorkflowChatAccess(request, "not-a-uuid");
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(400);
-  });
-
-  it("passes through auth errors", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue(
-      NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
-    );
-
-    const result = await validateWorkflowChatAccess(request, chatId);
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(401);
+    vi.mocked(validateAuthContext).mockResolvedValue({ accountId });
   });
 
   it("returns 404 when chat does not exist", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({ accountId });
     vi.mocked(selectChats).mockResolvedValue([]);
 
     const result = await validateWorkflowChatAccess(request, chatId);
@@ -56,20 +51,21 @@ describe("validateWorkflowChatAccess", () => {
     expect((result as NextResponse).status).toBe(404);
   });
 
+  it("returns 500 when session lookup fails", async () => {
+    vi.mocked(selectChats).mockResolvedValue([baseChat]);
+    vi.mocked(selectSessions).mockResolvedValue(null);
+
+    const result = await validateWorkflowChatAccess(request, chatId);
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(500);
+    expect(await (result as NextResponse).json()).toEqual({
+      status: "error",
+      error: "Internal server error",
+    });
+  });
+
   it("returns 403 when session belongs to another account", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({ accountId });
-    vi.mocked(selectChats).mockResolvedValue([
-      {
-        id: chatId,
-        session_id: sessionId,
-        title: "Chat",
-        created_at: "2026-01-01T00:00:00.000Z",
-        updated_at: "2026-01-01T00:00:00.000Z",
-        active_stream_id: null,
-        last_assistant_message_at: null,
-        model_id: null,
-      },
-    ]);
+    vi.mocked(selectChats).mockResolvedValue([baseChat]);
     vi.mocked(selectSessions).mockResolvedValue([
       {
         id: sessionId,
@@ -83,19 +79,7 @@ describe("validateWorkflowChatAccess", () => {
   });
 
   it("returns validated access when chat and session belong to caller", async () => {
-    const chat = {
-      id: chatId,
-      session_id: sessionId,
-      title: "Chat",
-      created_at: "2026-01-01T00:00:00.000Z",
-      updated_at: "2026-01-01T00:00:00.000Z",
-      active_stream_id: null,
-      last_assistant_message_at: null,
-      model_id: null,
-    };
-
-    vi.mocked(validateAuthContext).mockResolvedValue({ accountId });
-    vi.mocked(selectChats).mockResolvedValue([chat]);
+    vi.mocked(selectChats).mockResolvedValue([baseChat]);
     vi.mocked(selectSessions).mockResolvedValue([
       {
         id: sessionId,
@@ -104,6 +88,6 @@ describe("validateWorkflowChatAccess", () => {
     ]);
 
     const result = await validateWorkflowChatAccess(request, chatId);
-    expect(result).toEqual({ chatId, chat, accountId });
+    expect(result).toEqual({ chatId, chat: baseChat, accountId });
   });
 });

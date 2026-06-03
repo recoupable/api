@@ -54,7 +54,7 @@ export async function validateDeleteTrailingMessagesQuery(
 
   if (messages === null) {
     return NextResponse.json(
-      { status: "error", error: "Failed to load message" },
+      { status: "error", error: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
     );
   }

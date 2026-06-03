@@ -49,6 +49,13 @@ export async function validateWorkflowChatAccess(
   }
 
   const sessionRows = await selectSessions({ id: chat.session_id });
+  if (sessionRows === null) {
+    return NextResponse.json(
+      { status: "error", error: "Internal server error" },
+      { status: 500, headers: getCorsHeaders() },
+    );
+  }
+
   const session = sessionRows[0] ?? null;
   if (!session) {
     return NextResponse.json(
