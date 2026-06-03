@@ -21,7 +21,7 @@ import type { VercelState } from "@/lib/sandbox/vercel/state";
 import { discoverSkills } from "@/lib/skills/discoverSkills";
 import { getSandboxSkillDirectories } from "@/lib/skills/getSandboxSkillDirectories";
 import generateUUID from "@/lib/uuid/generateUUID";
-import { diagLog } from "@/lib/diag/inMemoryLog";
+import { diagLog, setDiagIngestUrl } from "@/lib/diag/inMemoryLog";
 
 const DEFAULT_MODEL_ID = "anthropic/claude-haiku-4.5";
 
@@ -169,6 +169,9 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   }
 
   const chatId = validated.chatId;
+  // Forward to ourselves so /api/debug/diag-logs reads land on the same
+  // logical project even if the GET hits a different serverless instance.
+  setDiagIngestUrl(`${request.nextUrl.origin}/api/debug/diag-logs`);
   const startedAt = Date.now();
   let firstChunkAtMs: number | undefined;
   let lastChunkAtMs: number | undefined;
