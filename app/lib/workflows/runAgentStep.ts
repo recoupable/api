@@ -17,6 +17,7 @@ import { addCacheControlToMessages } from "@/lib/agent/contextManagement/addCach
 import { wrapToolsWithAbort } from "@/lib/agent/contextManagement/wrapToolsWithAbort";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
+import { closeOpenToolCalls } from "@/lib/chat/closeOpenToolCalls";
 import { getWorkflowMetadata } from "workflow";
 
 export type RunAgentStepInput = {
@@ -213,6 +214,19 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   } else {
     finishReason = await result.finishReason;
   }
+
+  // On user-stop, close any tool-call parts that the step boundary persisted
+  // without a terminal result and re-persist. Without this, reload renders
+  // those parts as spinning forever — the AI SDK only transitions a tool
+  // part when it sees a terminal `output-*` chunk for it.
+  if (userAborted && responseMessage) {
+    const closed = closeOpenToolCalls(responseMessage);
+    if (closed !== responseMessage) {
+      await persistAssistantMessage(input.chatId, closed);
+      responseMessage = closed;
+    }
+  }
+
   console.log("[runAgentStep] finish", {
     finishReason,
     hasResponseMessage: !!responseMessage,

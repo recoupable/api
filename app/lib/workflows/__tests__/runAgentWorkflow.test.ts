@@ -339,7 +339,7 @@ describe("runAgentWorkflow", () => {
       },
     };
 
-    it("skips handleChatCredits when the step returns aborted: true", async () => {
+    it("still calls handleChatCredits when the step returns aborted: true (tokens were consumed)", async () => {
       vi.mocked(runAgentStep).mockResolvedValue({
         finishReason: "stop",
         aborted: true,
@@ -348,7 +348,15 @@ describe("runAgentWorkflow", () => {
 
       await runAgentWorkflow(baseInput);
 
-      expect(handleChatCredits).not.toHaveBeenCalled();
+      expect(handleChatCredits).toHaveBeenCalledTimes(1);
+      const call = vi.mocked(handleChatCredits).mock.calls[0]?.[0];
+      expect(call?.accountId).toBe("acc-1");
+      expect(call?.gatewayCostUsd).toBe(0.05);
+      expect(call?.usage).toEqual({
+        inputTokens: 50,
+        cachedInputTokens: 0,
+        outputTokens: 10,
+      });
     });
 
     it("skips autoCommitChatTurn when the step returns aborted: true", async () => {

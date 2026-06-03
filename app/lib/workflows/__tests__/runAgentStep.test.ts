@@ -409,6 +409,100 @@ describe("runAgentStep", () => {
       expect(result.aborted).toBe(true);
     });
 
+    it("re-persists with closed tool-error parts when aborting mid-tool-call", async () => {
+      // onStepFinish runs while the step is still emitting (a tool-call was
+      // streamed in this step). The step's captured responseMessage has the
+      // tool-call in input-available, with no terminal output chunk yet.
+      const openMessage = {
+        id: "asst-test-id",
+        role: "assistant",
+        parts: [
+          { type: "text", text: "running a tool..." },
+          {
+            type: "tool-bash",
+            toolCallId: "t-open",
+            state: "input-available",
+            input: { cmd: "sleep 30" },
+          },
+        ],
+      };
+
+      vi.mocked(createUIMessageStream).mockImplementationOnce((opts: never) => {
+        capturedCreateOpts = opts as CreateOpts;
+        capturedCreateOpts.execute?.({
+          writer: { write: () => {}, merge: () => {}, onError: undefined },
+        });
+        // Drive onStepFinish synchronously so responseMessage is populated
+        // before the abort path runs in runAgentStep.
+        capturedCreateOpts.onStepFinish?.({ responseMessage: openMessage });
+        return new ReadableStream({
+          start(controller) {
+            controller.close();
+          },
+        }) as never;
+      });
+
+      vi.mocked(pollWorkflowCancellation).mockImplementation(
+        (_runId: string, controller: AbortController) => {
+          controller.abort();
+          return { stop: vi.fn(), done: Promise.resolve() };
+        },
+      );
+      vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+      const { stream } = makeWritable();
+
+      const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+
+      expect(result.aborted).toBe(true);
+
+      // Two persists: the step's onStepFinish, then the abort-path re-persist
+      // with closed tool parts.
+      expect(persistAssistantMessage).toHaveBeenCalledTimes(2);
+      const second = vi.mocked(persistAssistantMessage).mock.calls[1]?.[1] as {
+        parts: Array<{ type: string; state?: string; errorText?: string }>;
+      };
+      const toolPart = second.parts.find(p => p.type === "tool-bash")!;
+      expect(toolPart.state).toBe("output-error");
+      expect(toolPart.errorText).toBe("Cancelled");
+      // responseMessage on the returned result should be the closed version.
+      expect(result.responseMessage).toBe(second);
+    });
+
+    it("does NOT re-persist when there are no open tool-call parts at abort", async () => {
+      const closedMessage = {
+        id: "asst-test-id",
+        role: "assistant",
+        parts: [{ type: "text", text: "done text" }],
+      };
+
+      vi.mocked(createUIMessageStream).mockImplementationOnce((opts: never) => {
+        capturedCreateOpts = opts as CreateOpts;
+        capturedCreateOpts.execute?.({
+          writer: { write: () => {}, merge: () => {}, onError: undefined },
+        });
+        capturedCreateOpts.onStepFinish?.({ responseMessage: closedMessage });
+        return new ReadableStream({
+          start(controller) {
+            controller.close();
+          },
+        }) as never;
+      });
+
+      vi.mocked(pollWorkflowCancellation).mockImplementation(
+        (_runId: string, controller: AbortController) => {
+          controller.abort();
+          return { stop: vi.fn(), done: Promise.resolve() };
+        },
+      );
+      vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+      const { stream } = makeWritable();
+
+      await runAgentStep({ ...baseInput, writable: stream } as never);
+
+      // Just the onStepFinish persist — no re-persist needed.
+      expect(persistAssistantMessage).toHaveBeenCalledTimes(1);
+    });
+
     it("attaches .catch to result.finishReason so a late rejection is not unhandled", async () => {
       vi.mocked(pollWorkflowCancellation).mockImplementation(
         (_runId: string, controller: AbortController) => {

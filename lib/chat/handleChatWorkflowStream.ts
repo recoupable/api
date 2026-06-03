@@ -3,6 +3,7 @@ import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
 import { start, getRun } from "workflow/api";
 import { validateChatWorkflow } from "@/lib/chat/validateChatWorkflow";
 import { maybeResumeChatStream } from "@/lib/chat/maybeResumeChatStream";
+import { wrapWorkflowStreamWatcher } from "@/lib/chat/wrapWorkflowStreamWatcher";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
@@ -168,76 +169,7 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   }
 
   return createUIMessageStreamResponse({
-    stream: wrapReadableWithStatusWatcher(run.runId, run.getReadable<UIMessageChunk>()),
+    stream: wrapWorkflowStreamWatcher(run.runId, run.getReadable<UIMessageChunk>()),
     headers: { ...getCorsHeaders(), "x-workflow-run-id": run.runId },
-  });
-}
-
-const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set(["cancelled", "completed", "failed"]);
-const STATUS_POLL_MS = 500;
-
-/**
- * Wrap the workflow's readable so the SSE response closes promptly when the
- * run reaches a terminal status. Vercel Workflow's readable does not always
- * propagate `writable.close()` from the workflow body — without this watcher,
- * the client connection idles until its fetch timeout (observed ~100s) and
- * surfaces as an error on the chat UI.
- */
-function wrapReadableWithStatusWatcher(
-  runId: string,
-  source: ReadableStream<UIMessageChunk>,
-): ReadableStream<UIMessageChunk> {
-  return new ReadableStream<UIMessageChunk>({
-    async start(controller) {
-      const reader = source.getReader();
-      let closedByStatus = false;
-      const watcher = (async () => {
-        while (!closedByStatus) {
-          try {
-            const status = await getRun(runId).status;
-            if (TERMINAL_RUN_STATUSES.has(status)) {
-              closedByStatus = true;
-              try {
-                controller.close();
-              } catch {
-                /* already closed */
-              }
-              try {
-                await reader.cancel();
-              } catch {
-                /* ignore */
-              }
-              return;
-            }
-          } catch {
-            // Transient errors — keep watching.
-          }
-          await new Promise(r => setTimeout(r, STATUS_POLL_MS));
-        }
-      })();
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (closedByStatus) return;
-          if (done) {
-            controller.close();
-            return;
-          }
-          controller.enqueue(value);
-        }
-      } catch (err) {
-        if (closedByStatus) return;
-        controller.error(err);
-      } finally {
-        closedByStatus = true;
-        try {
-          reader.releaseLock();
-        } catch {
-          /* ignore */
-        }
-        await watcher.catch(() => {});
-      }
-    },
   });
 }
