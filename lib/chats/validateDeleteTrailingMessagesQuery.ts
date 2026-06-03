@@ -5,6 +5,7 @@ import { internalServerErrorResponse } from "@/lib/networking/internalServerErro
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateWorkflowChatAccess } from "@/lib/chats/validateWorkflowChatAccess";
 import { selectChatMessages } from "@/lib/supabase/chat_messages/selectChatMessages";
+import type { TrailingDeleteBoundary } from "@/lib/supabase/chat_messages/trailingDeleteBoundary";
 
 const deleteTrailingQuerySchema = z.object({
   from_message_id: z.string().uuid("from_message_id must be a valid UUID"),
@@ -13,10 +14,7 @@ const deleteTrailingQuerySchema = z.object({
 export interface ValidatedDeleteTrailingMessagesQuery {
   chatId: string;
   fromMessageId: string;
-  boundary: {
-    createdAt: string;
-    id: string;
-  };
+  boundary: TrailingDeleteBoundary;
 }
 
 /**

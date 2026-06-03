@@ -1,10 +1,8 @@
 import supabase from "@/lib/supabase/serverClient";
 import { buildChatMessageTrailingDeleteFilter } from "@/lib/supabase/chat_messages/buildChatMessageTrailingDeleteFilter";
+import type { TrailingDeleteBoundary } from "@/lib/supabase/chat_messages/trailingDeleteBoundary";
 
-export interface TrailingDeleteBoundary {
-  createdAt: string;
-  id: string;
-}
+export type { TrailingDeleteBoundary };
 
 /**
  * Deletes the boundary message and every newer message in a workflow chat.

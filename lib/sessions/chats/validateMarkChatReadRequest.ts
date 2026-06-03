@@ -39,10 +39,14 @@ export async function validateMarkChatReadRequest(
     selectChats({ id: chatId }),
   ]);
 
-  const session = sessionRows?.[0] ?? null;
+  if (sessionRows === null) {
+    return internalServerErrorResponse();
+  }
   if (chatRows === null) {
     return internalServerErrorResponse();
   }
+
+  const session = sessionRows[0] ?? null;
   const chat = chatRows[0] ?? null;
 
   if (!session) {

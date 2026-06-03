@@ -13,10 +13,10 @@ describe("hasActiveStreamForSession", () => {
     vi.clearAllMocks();
   });
 
-  it("returns true when chat lookup fails", async () => {
+  it("returns null when chat lookup fails", async () => {
     vi.mocked(selectChats).mockResolvedValue(null);
 
-    await expect(hasActiveStreamForSession(sessionId)).resolves.toBe(true);
+    await expect(hasActiveStreamForSession(sessionId)).resolves.toBeNull();
   });
 
   it("returns true when any chat has an active stream", async () => {

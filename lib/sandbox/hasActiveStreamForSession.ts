@@ -1,21 +1,18 @@
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 
 /**
- * True when any chat in the session has an `active_stream_id` set,
- * indicating an in-flight assistant stream. The lifecycle workflow
- * uses this to defer hibernation while a chat is actively being
- * served — pausing the sandbox mid-stream would 500 the response.
- *
- * Returns true when chat lookup fails so lifecycle skips hibernation
- * rather than shutting down a potentially active sandbox.
+ * Checks whether any chat in the session has an `active_stream_id` set,
+ * indicating an in-flight assistant stream.
  *
  * @param sessionId - The session to check.
- * @returns true when at least one chat has an active stream id, or lookup failed.
+ * @returns `true` when a stream is active, `false` when none are, `null` on DB failure.
  */
-export async function hasActiveStreamForSession(sessionId: string): Promise<boolean> {
+export async function hasActiveStreamForSession(
+  sessionId: string,
+): Promise<boolean | null> {
   const chats = await selectChats({ sessionId });
   if (chats === null) {
-    return true;
+    return null;
   }
 
   return chats.some(chat => chat.active_stream_id !== null);
