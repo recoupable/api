@@ -83,7 +83,7 @@ describe("fetchSongstatsResearch", () => {
     expect(fetchSongstats).not.toHaveBeenCalled();
   });
 
-  it("maps public platform metric sources to SongStats metric source IDs", async () => {
+  it("maps public platform metric sources to SongStats stats source IDs", async () => {
     vi.mocked(fetchSongstats).mockResolvedValue({
       status: 200,
       data: { stats: [] },
@@ -93,7 +93,7 @@ describe("fetchSongstatsResearch", () => {
 
     expect(fetchSongstats).toHaveBeenCalledWith("/artists/stats", {
       songstats_artist_id: "artist_1",
-      source: "spotify_streams",
+      source: "spotify",
     });
   });
 

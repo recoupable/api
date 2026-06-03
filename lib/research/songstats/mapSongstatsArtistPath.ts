@@ -25,8 +25,28 @@ const SONGSTATS_ARTIST_METRIC_SOURCE_BY_PLATFORM: Record<string, string> = {
   youtube_channel: "youtube_channel_subscribers",
 };
 
-function mapArtistMetricSource(source: string): string {
+const SONGSTATS_ARTIST_STATS_SOURCE_BY_PLATFORM: Record<string, string> = {
+  amazon: "amazon",
+  bandsintown: "bandsintown",
+  deezer: "deezer",
+  facebook: "facebook",
+  instagram: "instagram",
+  radio: "radio",
+  soundcloud: "soundcloud",
+  spotify: "spotify",
+  sxm: "sxm",
+  tiktok: "tiktok",
+  twitter: "twitter",
+  youtube_artist: "youtube",
+  youtube_channel: "youtube",
+};
+
+function mapArtistAudienceSource(source: string): string {
   return SONGSTATS_ARTIST_METRIC_SOURCE_BY_PLATFORM[source] || source;
+}
+
+function mapArtistStatsSource(source: string): string {
+  return SONGSTATS_ARTIST_STATS_SOURCE_BY_PLATFORM[source] || source;
 }
 
 function parsePositiveLimit(value?: string): number | undefined {
@@ -80,7 +100,7 @@ export function mapSongstatsArtistPath(
   if (match) {
     return mapSongstatsResult("/artists/stats", {
       songstats_artist_id: match[1],
-      source: mapArtistMetricSource(match[2]),
+      source: mapArtistStatsSource(match[2]),
       ...query,
     });
   }
@@ -89,7 +109,7 @@ export function mapSongstatsArtistPath(
   if (match) {
     return mapSongstatsResult("/artists/audience", {
       songstats_artist_id: match[1],
-      source: mapArtistMetricSource(match[2]),
+      source: mapArtistAudienceSource(match[2]),
       ...query,
     });
   }
