@@ -21,6 +21,7 @@ import type { VercelState } from "@/lib/sandbox/vercel/state";
 import { discoverSkills } from "@/lib/skills/discoverSkills";
 import { getSandboxSkillDirectories } from "@/lib/skills/getSandboxSkillDirectories";
 import generateUUID from "@/lib/uuid/generateUUID";
+import { diagLog } from "@/lib/diag/inMemoryLog";
 
 const DEFAULT_MODEL_ID = "anthropic/claude-haiku-4.5";
 
@@ -167,8 +168,53 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
     return errorResponse("Another workflow is already running for this chat", 409);
   }
 
+  const chatId = validated.chatId;
+  const startedAt = Date.now();
+  let firstChunkAtMs: number | undefined;
+  let lastChunkAtMs: number | undefined;
+  let chunkCount = 0;
+  diagLog(chatId, "[diag][sse] start", { runId: run.runId });
+
+  const sourceReadable = run.getReadable<UIMessageChunk>();
+  const instrumented = new ReadableStream<UIMessageChunk>({
+    async start(controller) {
+      const reader = sourceReadable.getReader();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            diagLog(chatId, "[diag][sse] source done (graceful)", {
+              chunkCount,
+              firstChunkAtMs,
+              lastChunkAtMs,
+              totalMs: Date.now() - startedAt,
+            });
+            controller.close();
+            return;
+          }
+          chunkCount += 1;
+          const now = Date.now();
+          if (firstChunkAtMs === undefined) firstChunkAtMs = now - startedAt;
+          lastChunkAtMs = now - startedAt;
+          controller.enqueue(value);
+        }
+      } catch (err) {
+        diagLog(chatId, "[diag][sse] source threw", {
+          chunkCount,
+          firstChunkAtMs,
+          lastChunkAtMs,
+          totalMs: Date.now() - startedAt,
+          message: err instanceof Error ? err.message : String(err),
+        });
+        controller.error(err);
+      } finally {
+        reader.releaseLock();
+      }
+    },
+  });
+
   return createUIMessageStreamResponse({
-    stream: run.getReadable<UIMessageChunk>(),
+    stream: instrumented,
     headers: { ...getCorsHeaders(), "x-workflow-run-id": run.runId },
   });
 }
