@@ -23,6 +23,11 @@ const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set(["cancelled", "comple
 const STATUS_POLL_MS = 500;
 const CANCEL_ERROR_TEXT = "Cancelled";
 
+type OpenTool = {
+  toolName: string;
+  sawInputAvailable: boolean;
+};
+
 export function wrapWorkflowStreamWatcher(
   runId: string,
   source: ReadableStream<UIMessageChunk>,
@@ -34,12 +39,27 @@ export function wrapWorkflowStreamWatcher(
     async start(controller) {
       reader = source.getReader();
       const localReader = reader;
-      const openToolCallIds = new Set<string>();
+      const openTools = new Map<string, OpenTool>();
       let closedByStatus = false;
 
       const closeWithSyntheticErrors = () => {
-        for (const toolCallId of openToolCallIds) {
+        for (const [toolCallId, tool] of openTools) {
           try {
+            // If we never saw `tool-input-available`, the AI SDK is still
+            // in `input-streaming` state for this tool-call. Emitting
+            // `tool-output-error` from that state is a no-op on most SDK
+            // versions — the part stays spinning. Drive the state machine
+            // forward by emitting `tool-input-available` (with `{}` as a
+            // placeholder input) first so the SDK transitions to
+            // `input-available`, then `tool-output-error` lands.
+            if (!tool.sawInputAvailable) {
+              controller.enqueue({
+                type: "tool-input-available",
+                toolCallId,
+                toolName: tool.toolName,
+                input: {},
+              } as UIMessageChunk);
+            }
             controller.enqueue({
               type: "tool-output-error",
               toolCallId,
@@ -49,7 +69,7 @@ export function wrapWorkflowStreamWatcher(
             /* controller already closed */
           }
         }
-        openToolCallIds.clear();
+        openTools.clear();
         try {
           controller.close();
         } catch {
@@ -93,7 +113,7 @@ export function wrapWorkflowStreamWatcher(
             closeWithSyntheticErrors();
             return;
           }
-          trackToolCallChunk(value, openToolCallIds);
+          trackToolCallChunk(value, openTools);
           controller.enqueue(value);
         }
       } catch (err) {
@@ -127,11 +147,15 @@ export function wrapWorkflowStreamWatcher(
   });
 }
 
-function trackToolCallChunk(chunk: UIMessageChunk, open: Set<string>): void {
+function trackToolCallChunk(chunk: UIMessageChunk, open: Map<string, OpenTool>): void {
   switch (chunk.type) {
     case "tool-input-start":
+      open.set(chunk.toolCallId, { toolName: chunk.toolName, sawInputAvailable: false });
+      return;
     case "tool-input-available":
-      open.add(chunk.toolCallId);
+      // Both records the open tool (if we skipped tool-input-start) and
+      // marks the input phase as complete so synthesis won't re-emit it.
+      open.set(chunk.toolCallId, { toolName: chunk.toolName, sawInputAvailable: true });
       return;
     case "tool-output-available":
     case "tool-output-error":

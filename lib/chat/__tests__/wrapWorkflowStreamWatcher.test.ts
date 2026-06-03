@@ -128,6 +128,62 @@ describe("wrapWorkflowStreamWatcher", () => {
     expect((synthetic[0] as { toolCallId: string }).toolCallId).toBe("tool-2");
   }, 10_000);
 
+  it("emits tool-input-available before tool-output-error when only tool-input-start was seen", async () => {
+    // A tool that was mid-streaming input when cancel hit. The AI SDK part
+    // is in input-streaming state — emitting tool-output-error directly is
+    // a no-op there. We must close the input phase first.
+    mockRun({ status: () => "running" });
+    const source = new ReadableStream<UIMessageChunk>({
+      start(controller) {
+        controller.enqueue({
+          type: "tool-input-start",
+          toolCallId: "tool-mid",
+          toolName: "bash",
+        } as UIMessageChunk);
+        controller.close();
+      },
+    });
+    const out = await collect(wrapWorkflowStreamWatcher(RUN_ID, source));
+    const idxAvail = out.findIndex(
+      c =>
+        c.type === "tool-input-available" &&
+        (c as { toolCallId: string }).toolCallId === "tool-mid",
+    );
+    const idxErr = out.findIndex(
+      c =>
+        c.type === "tool-output-error" && (c as { toolCallId: string }).toolCallId === "tool-mid",
+    );
+    expect(idxAvail).toBeGreaterThanOrEqual(0);
+    expect(idxErr).toBeGreaterThan(idxAvail);
+  });
+
+  it("does NOT emit a synthetic tool-input-available when one was already seen on the wire", async () => {
+    mockRun({ status: () => "running" });
+    const source = new ReadableStream<UIMessageChunk>({
+      start(controller) {
+        controller.enqueue({
+          type: "tool-input-start",
+          toolCallId: "tool-x",
+          toolName: "bash",
+        } as UIMessageChunk);
+        controller.enqueue({
+          type: "tool-input-available",
+          toolCallId: "tool-x",
+          toolName: "bash",
+          input: { cmd: "ls" },
+        } as UIMessageChunk);
+        controller.close();
+      },
+    });
+    const out = await collect(wrapWorkflowStreamWatcher(RUN_ID, source));
+    const availableChunks = out.filter(
+      c =>
+        c.type === "tool-input-available" && (c as { toolCallId: string }).toolCallId === "tool-x",
+    );
+    // Just the one from the source — no synthetic preamble.
+    expect(availableChunks).toHaveLength(1);
+  });
+
   it("synthesizes tool-output-error on natural source close when tool-calls are still open", async () => {
     // Runtime closes the workflow readable on cancel — the main loop sees
     // done:true before the status watcher's poll tick fires. The synthesis
