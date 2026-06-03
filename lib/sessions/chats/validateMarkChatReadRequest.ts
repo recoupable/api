@@ -38,8 +38,8 @@ export async function validateMarkChatReadRequest(
     selectChats({ id: chatId }),
   ]);
 
-  const session = sessionRows[0] ?? null;
-  const chat = chatRows[0] ?? null;
+  const session = sessionRows?.[0] ?? null;
+  const chat = (chatRows ?? [])[0] ?? null;
 
   if (!session) {
     return NextResponse.json(

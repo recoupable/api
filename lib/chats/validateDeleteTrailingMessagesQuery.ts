@@ -12,6 +12,10 @@ const deleteTrailingQuerySchema = z.object({
 export interface ValidatedDeleteTrailingMessagesQuery {
   chatId: string;
   fromMessageId: string;
+  boundary: {
+    createdAt: string;
+    id: string;
+  };
 }
 
 /**
@@ -66,8 +70,14 @@ export async function validateDeleteTrailingMessagesQuery(
     );
   }
 
+  const boundaryMessage = messages[0];
+
   return {
     chatId: accessResult.chatId,
     fromMessageId: parsedQuery.data.from_message_id,
+    boundary: {
+      createdAt: boundaryMessage.created_at,
+      id: boundaryMessage.id,
+    },
   };
 }

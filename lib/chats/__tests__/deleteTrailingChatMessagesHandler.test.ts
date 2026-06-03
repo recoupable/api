@@ -18,6 +18,8 @@ vi.mock("@/lib/supabase/chat_messages/deleteTrailingChatMessages", () => ({
 
 const chatId = "123e4567-e89b-42d3-a456-426614174000";
 const fromMessageId = "123e4567-e89b-42d3-a456-426614174001";
+const boundaryCreatedAt = "2026-03-31T00:00:00.000Z";
+const boundary = { id: fromMessageId, createdAt: boundaryCreatedAt };
 const request = new NextRequest(
   `http://localhost/api/chats/${chatId}/messages/trailing?from_message_id=${fromMessageId}`,
   { method: "DELETE" },
@@ -41,6 +43,7 @@ describe("deleteTrailingChatMessagesHandler", () => {
     vi.mocked(validateDeleteTrailingMessagesQuery).mockResolvedValue({
       chatId,
       fromMessageId,
+      boundary,
     });
     vi.mocked(deleteTrailingChatMessages).mockResolvedValue(false);
 
@@ -58,6 +61,7 @@ describe("deleteTrailingChatMessagesHandler", () => {
     vi.mocked(validateDeleteTrailingMessagesQuery).mockResolvedValue({
       chatId,
       fromMessageId,
+      boundary,
     });
     vi.mocked(deleteTrailingChatMessages).mockResolvedValue(true);
 
@@ -70,7 +74,7 @@ describe("deleteTrailingChatMessagesHandler", () => {
       chat_id: chatId,
       from_message_id: fromMessageId,
     });
-    expect(deleteTrailingChatMessages).toHaveBeenCalledWith(chatId, fromMessageId);
+    expect(deleteTrailingChatMessages).toHaveBeenCalledWith(chatId, boundary);
   });
 
   it("returns 500 when validation throws unexpectedly", async () => {

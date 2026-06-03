@@ -51,6 +51,18 @@ describe("validateWorkflowChatAccess access", () => {
     expect((result as NextResponse).status).toBe(404);
   });
 
+  it("returns 500 when chat lookup fails", async () => {
+    vi.mocked(selectChats).mockResolvedValue(null);
+
+    const result = await validateWorkflowChatAccess(request, chatId);
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(500);
+    expect(await (result as NextResponse).json()).toEqual({
+      status: "error",
+      error: "Internal server error",
+    });
+  });
+
   it("returns 500 when session lookup fails", async () => {
     vi.mocked(selectChats).mockResolvedValue([baseChat]);
     vi.mocked(selectSessions).mockResolvedValue(null);

@@ -10,6 +10,6 @@ import { selectChats } from "@/lib/supabase/chats/selectChats";
  * @returns true when at least one chat has an active stream id.
  */
 export async function hasActiveStreamForSession(sessionId: string): Promise<boolean> {
-  const chats = await selectChats({ sessionId });
+  const chats = (await selectChats({ sessionId })) ?? [];
   return chats.some(chat => chat.active_stream_id !== null);
 }

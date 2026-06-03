@@ -34,7 +34,7 @@ export async function createSessionChatHandler(
   const requestedChatId = body.id ?? null;
 
   if (requestedChatId) {
-    const existing = (await selectChats({ id: requestedChatId }))[0] ?? null;
+    const existing = ((await selectChats({ id: requestedChatId })) ?? [])[0] ?? null;
     if (existing) {
       if (existing.session_id !== sessionId) {
         return NextResponse.json(

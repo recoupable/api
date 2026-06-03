@@ -66,7 +66,7 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   if (!isSandboxActive(session)) return errorResponse("Sandbox not initialized", 400);
 
   // Chat + ownership
-  const chats = await selectChats({ id: validated.chatId });
+  const chats = (await selectChats({ id: validated.chatId })) ?? [];
   const chat = chats[0];
   if (!chat || chat.session_id !== validated.sessionId) {
     return errorResponse("Chat not found", 404);

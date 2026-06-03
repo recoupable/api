@@ -29,7 +29,7 @@ export async function getChatSummaries({
   sessionId: string;
   accountId: string;
 }): Promise<ChatSummary[]> {
-  const chats = await selectChats({ sessionId });
+  const chats = (await selectChats({ sessionId })) ?? [];
   if (chats.length === 0) {
     return [];
   }

@@ -14,6 +14,7 @@ vi.mock("@/lib/supabase/chat_messages/selectChatMessages", () => ({
 
 const chatId = "123e4567-e89b-42d3-a456-426614174000";
 const fromMessageId = "123e4567-e89b-42d3-a456-426614174001";
+const boundaryCreatedAt = "2026-03-31T00:00:00.000Z";
 
 describe("validateDeleteTrailingMessagesQuery success", () => {
   beforeEach(() => {
@@ -55,6 +56,10 @@ describe("validateDeleteTrailingMessagesQuery success", () => {
     expect(result).toEqual({
       chatId,
       fromMessageId,
+      boundary: {
+        createdAt: boundaryCreatedAt,
+        id: fromMessageId,
+      },
     });
   });
 });

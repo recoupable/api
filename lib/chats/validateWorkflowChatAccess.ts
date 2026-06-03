@@ -40,6 +40,13 @@ export async function validateWorkflowChatAccess(
   }
 
   const chatRows = await selectChats({ id: chatIdResult.data });
+  if (chatRows === null) {
+    return NextResponse.json(
+      { status: "error", error: "Internal server error" },
+      { status: 500, headers: getCorsHeaders() },
+    );
+  }
+
   const chat = chatRows[0] ?? null;
   if (!chat) {
     return NextResponse.json(

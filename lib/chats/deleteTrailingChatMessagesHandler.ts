@@ -21,7 +21,7 @@ export async function deleteTrailingChatMessagesHandler(
       return validated;
     }
 
-    const deleted = await deleteTrailingChatMessages(validated.chatId, validated.fromMessageId);
+    const deleted = await deleteTrailingChatMessages(validated.chatId, validated.boundary);
 
     if (!deleted) {
       return NextResponse.json(

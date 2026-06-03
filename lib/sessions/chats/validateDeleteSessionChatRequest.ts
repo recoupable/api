@@ -45,7 +45,7 @@ export async function validateDeleteSessionChatRequest(
     );
   }
 
-  const siblingChats = await selectChats({ sessionId });
+  const siblingChats = (await selectChats({ sessionId })) ?? [];
   const chat = siblingChats.find(row => row.id === chatId) ?? null;
 
   if (!chat) {

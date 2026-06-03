@@ -47,7 +47,7 @@ export async function validateGetSessionChatRequest(
     );
   }
 
-  const chatRows = await selectChats({ id: chatId });
+  const chatRows = (await selectChats({ id: chatId })) ?? [];
   const chat = chatRows[0] ?? null;
 
   if (!chat || chat.session_id !== sessionId) {
