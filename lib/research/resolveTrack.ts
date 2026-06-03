@@ -4,16 +4,30 @@ import { handleResearch } from "@/lib/research/handleResearch";
 
 interface GetIdsResponse {
   chartmetric_ids?: number[];
+  songstats_track_ids?: string[];
+  songstats_track_id?: string;
+  id?: string | number;
+}
+
+function extractProviderTrackId(data: unknown): string | undefined {
+  const ids = (Array.isArray(data) ? data[0] : data) as GetIdsResponse | undefined;
+  const id =
+    ids?.songstats_track_ids?.[0] ??
+    ids?.songstats_track_id ??
+    ids?.chartmetric_ids?.[0] ??
+    ids?.id;
+
+  return id === undefined || id === null || id === "" ? undefined : String(id);
 }
 
 /**
- * Resolves a track name (+ optional artist) to a Chartmetric track ID.
+ * Resolves a track name (+ optional artist) to a provider track ID.
  *
  * Uses Spotify search for accurate matching, gets the ISRC, then maps
- * to a Chartmetric ID via /track/isrc/{isrc}/get-ids.
+ * to a provider ID via /track/isrc/{isrc}/get-ids.
  * Works across all platforms since ISRC is a universal identifier.
  *
- * Chartmetric calls are routed through {@link handleResearch} so each
+ * Provider calls are routed through {@link handleResearch} so each
  * lookup properly deducts credits from the caller's account.
  */
 export async function resolveTrack(
@@ -59,9 +73,8 @@ export async function resolveTrack(
       path: `/track/isrc/${isrc}/get-ids`,
     });
     if ("data" in result) {
-      const ids = (Array.isArray(result.data) ? result.data[0] : result.data) as GetIdsResponse;
-      const cmId = ids?.chartmetric_ids?.[0];
-      if (cmId) return { id: String(cmId) };
+      const providerId = extractProviderTrackId(result.data);
+      if (providerId) return { id: providerId };
     }
   }
 
@@ -71,10 +84,9 @@ export async function resolveTrack(
     path: `/track/spotify/${spotifyId}/get-ids`,
   });
   if ("data" in result) {
-    const ids = (Array.isArray(result.data) ? result.data[0] : result.data) as GetIdsResponse;
-    const cmId = ids?.chartmetric_ids?.[0];
-    if (cmId) return { id: String(cmId) };
+    const providerId = extractProviderTrackId(result.data);
+    if (providerId) return { id: providerId };
   }
 
-  return { error: `Could not resolve Chartmetric ID for "${spotifyTrack.name}"` };
+  return { error: `Could not resolve provider track ID for "${spotifyTrack.name}"` };
 }

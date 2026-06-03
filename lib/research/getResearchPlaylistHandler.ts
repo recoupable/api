@@ -7,10 +7,7 @@ import { validateGetResearchPlaylistRequest } from "@/lib/research/validateGetRe
 /**
  * GET /api/research/playlist
  *
- * Returns full Chartmetric playlist details for the supplied `platform` and
- * `id`. This endpoint is a thin proxy over Chartmetric's
- * `/playlist/:platform/:id`; discovery (search by name) is the caller's job
- * via `GET /api/research?type=playlists&beta=true`.
+ * Returns provider playlist details for the supplied `platform` and `id`.
  *
  * @param request - query params: platform, id
  * @returns JSON playlist details or error

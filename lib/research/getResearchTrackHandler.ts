@@ -7,11 +7,10 @@ import { validateGetResearchTrackRequest } from "@/lib/research/validateGetResea
 /**
  * GET /api/research/track
  *
- * Returns full Chartmetric track details for the supplied `id`. This endpoint
- * is a thin proxy over Chartmetric's `/track/:id`; discovery (search by name,
- * filter by artist) is the caller's job via `GET /api/research?type=tracks&beta=true`.
+ * Returns provider track details for the supplied `id`. Discovery (search by
+ * name, filter by artist) is the caller's job via `GET /api/research?type=tracks`.
  *
- * @param request - must include numeric `id` query param
+ * @param request - must include `id` query param
  * @returns JSON track details or error
  */
 export async function getResearchTrackHandler(request: NextRequest): Promise<NextResponse> {

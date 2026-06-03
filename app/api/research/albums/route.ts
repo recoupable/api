@@ -12,7 +12,7 @@ export async function OPTIONS() {
 }
 
 /**
- * GET /api/research/albums — Album discography for a Chartmetric artist id.
+ * GET /api/research/albums — Album discography for a provider artist id.
  * Discovery by name is the caller's job via `GET /api/research`.
  *
  * @param request - must include numeric `artist_id` query param

@@ -7,7 +7,7 @@ import { validateGetResearchSearchRequest } from "@/lib/research/validateGetRese
 /**
  * GET /api/research/search
  *
- * Searches Chartmetric for artists, tracks, or albums by name.
+ * Searches the configured research provider for artists, tracks, or labels by name.
  *
  * @param request - must include `q` query param
  * @returns JSON search results or error

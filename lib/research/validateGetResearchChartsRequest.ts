@@ -21,7 +21,7 @@ export type ValidatedGetResearchChartsRequest = {
  * alpha) + defaults for `country` ("US"), `interval` ("daily"), `type`
  * ("regional"), and `latest` ("true"). `interval`, `type`, and `latest` are
  * rejected at this layer if they aren't in the documented enum — this turns
- * an opaque upstream Chartmetric 400 into a specific 400 from us.
+ * an opaque upstream provider 400 into a specific 400 from us.
  *
  * @param request - The incoming HTTP request.
  */

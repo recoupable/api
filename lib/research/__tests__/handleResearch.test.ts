@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { handleResearch } from "../handleResearch";
-import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
+import { fetchResearchProvider } from "@/lib/research/providers/fetchResearchProvider";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 
 vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
   ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock("@/lib/chartmetric/fetchChartmetric", () => ({
-  fetchChartmetric: vi.fn(),
+vi.mock("@/lib/research/providers/fetchResearchProvider", () => ({
+  fetchResearchProvider: vi.fn(),
 }));
 vi.mock("@/lib/credits/recordCreditDeduction", () => ({
   recordCreditDeduction: vi.fn(),
@@ -21,7 +21,7 @@ describe("handleResearch", () => {
   });
 
   it("returns { data } on 200 and deducts the default 5 credits", async () => {
-    vi.mocked(fetchChartmetric).mockResolvedValue({
+    vi.mocked(fetchResearchProvider).mockResolvedValue({
       status: 200,
       data: [{ id: 1 }],
     } as never);
@@ -33,7 +33,7 @@ describe("handleResearch", () => {
       query: { country_code: "US" },
     });
 
-    expect(fetchChartmetric).toHaveBeenCalledWith("/charts/spotify", { country_code: "US" });
+    expect(fetchResearchProvider).toHaveBeenCalledWith("/charts/spotify", { country_code: "US" });
     expect(recordCreditDeduction).toHaveBeenCalledWith({
       accountId: "acc_1",
       creditsToDeduct: 5,
@@ -43,7 +43,7 @@ describe("handleResearch", () => {
   });
 
   it("returns { error, status } when proxy is non-200 and skips deduction", async () => {
-    vi.mocked(fetchChartmetric).mockResolvedValue({ status: 502, data: null } as never);
+    vi.mocked(fetchResearchProvider).mockResolvedValue({ status: 502, data: null } as never);
 
     const result = await handleResearch({
       accountId: "acc_1",
@@ -55,7 +55,7 @@ describe("handleResearch", () => {
   });
 
   it("still returns { data } when credit deduction throws", async () => {
-    vi.mocked(fetchChartmetric).mockResolvedValue({ status: 200, data: "ok" } as never);
+    vi.mocked(fetchResearchProvider).mockResolvedValue({ status: 200, data: "ok" } as never);
     vi.mocked(recordCreditDeduction).mockRejectedValue(new Error("DB down"));
 
     const result = await handleResearch({
@@ -67,7 +67,7 @@ describe("handleResearch", () => {
   });
 
   it("respects the credits override", async () => {
-    vi.mocked(fetchChartmetric).mockResolvedValue({ status: 200, data: {} } as never);
+    vi.mocked(fetchResearchProvider).mockResolvedValue({ status: 200, data: {} } as never);
     vi.mocked(recordCreditDeduction).mockResolvedValue(undefined as never);
 
     await handleResearch({

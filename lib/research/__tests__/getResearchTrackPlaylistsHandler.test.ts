@@ -109,7 +109,7 @@ describe("getResearchTrackPlaylistsHandler", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns empty placements when Chartmetric returns non-array", async () => {
+  it("returns empty placements when the provider returns non-array data", async () => {
     vi.mocked(handleResearch).mockResolvedValue({ data: null });
     const req = new NextRequest("http://localhost/api/research/track/playlists?id=123");
     const res = await getResearchTrackPlaylistsHandler(req);

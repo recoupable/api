@@ -16,9 +16,8 @@ export type ValidatedGetResearchSearchRequest = {
 /**
  * Validates `GET /api/research/search` — auth + required `q` query param, with
  * defaults for `type` ("artists") and `limit` ("10"). Also accepts the optional
- * Chartmetric pass-throughs: `beta` (enables the improved search engine),
- * `platforms` (comma-separated string, beta-only per Chartmetric docs), and
- * `offset` (numeric string for paging).
+ * legacy provider pass-throughs: `beta`, `platforms` (comma-separated string),
+ * and `offset` (numeric string for paging).
  *
  * @param request - The incoming HTTP request.
  */

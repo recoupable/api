@@ -8,7 +8,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 /**
  * GET /api/research/rank
  *
- * Returns the artist's global Chartmetric ranking.
+ * Returns the artist's global ranking when the configured provider supplies one.
  *
  * @param request - The incoming HTTP request.
  * @returns The JSON response.

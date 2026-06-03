@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 
 import { getResearchChartsHandler } from "../getResearchChartsHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
+import { fetchResearchProvider } from "@/lib/research/providers/fetchResearchProvider";
 
 vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
   ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
@@ -17,8 +17,8 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/chartmetric/fetchChartmetric", () => ({
-  fetchChartmetric: vi.fn(),
+vi.mock("@/lib/research/providers/fetchResearchProvider", () => ({
+  fetchResearchProvider: vi.fn(),
 }));
 
 vi.mock("@/lib/credits/recordCreditDeduction", () => ({
@@ -56,7 +56,7 @@ describe("getResearchChartsHandler", () => {
   });
 
   it("defaults type to 'regional' and interval to 'daily'", async () => {
-    vi.mocked(fetchChartmetric).mockResolvedValue({
+    vi.mocked(fetchResearchProvider).mockResolvedValue({
       data: { chart: [] },
       status: 200,
     });
@@ -64,14 +64,14 @@ describe("getResearchChartsHandler", () => {
     const req = new NextRequest("http://localhost/api/research/charts?platform=spotify&country=US");
     await getResearchChartsHandler(req);
 
-    const calledParams = vi.mocked(fetchChartmetric).mock.calls[0][1];
+    const calledParams = vi.mocked(fetchResearchProvider).mock.calls[0][1];
     expect(calledParams).toHaveProperty("type", "regional");
     expect(calledParams).toHaveProperty("interval", "daily");
     expect(calledParams).toHaveProperty("country_code", "US");
   });
 
   it("preserves user-provided type and interval", async () => {
-    vi.mocked(fetchChartmetric).mockResolvedValue({
+    vi.mocked(fetchResearchProvider).mockResolvedValue({
       data: { chart: [] },
       status: 200,
     });
@@ -81,7 +81,7 @@ describe("getResearchChartsHandler", () => {
     );
     await getResearchChartsHandler(req);
 
-    const calledParams = vi.mocked(fetchChartmetric).mock.calls[0][1];
+    const calledParams = vi.mocked(fetchResearchProvider).mock.calls[0][1];
     expect(calledParams).toMatchObject({ type: "viral", interval: "weekly" });
   });
 });

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getResearchDiscoverHandler } from "../getResearchDiscoverHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
+import { fetchResearchProvider } from "@/lib/research/providers/fetchResearchProvider";
 
 vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
   ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
@@ -17,8 +17,8 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/chartmetric/fetchChartmetric", () => ({
-  fetchChartmetric: vi.fn(),
+vi.mock("@/lib/research/providers/fetchResearchProvider", () => ({
+  fetchResearchProvider: vi.fn(),
 }));
 
 vi.mock("@/lib/credits/recordCreditDeduction", () => ({
@@ -79,7 +79,7 @@ describe("getResearchDiscoverHandler", () => {
       ? Exclude<T, NextResponse>
       : never);
 
-    vi.mocked(fetchChartmetric).mockResolvedValue({
+    vi.mocked(fetchResearchProvider).mockResolvedValue({
       data: [
         { name: "Artist A", sp_monthly_listeners: 100000 },
         { name: "Artist B", sp_monthly_listeners: 200000 },
@@ -105,7 +105,7 @@ describe("getResearchDiscoverHandler", () => {
       ? Exclude<T, NextResponse>
       : never);
 
-    vi.mocked(fetchChartmetric).mockResolvedValue({
+    vi.mocked(fetchResearchProvider).mockResolvedValue({
       data: [],
       status: 200,
     });
@@ -115,7 +115,7 @@ describe("getResearchDiscoverHandler", () => {
     );
     await getResearchDiscoverHandler(req);
 
-    expect(fetchChartmetric).toHaveBeenCalledWith(
+    expect(fetchResearchProvider).toHaveBeenCalledWith(
       "/artist/list/filter",
       expect.objectContaining({ "sp_ml[]": "50000,200000" }),
     );
@@ -130,7 +130,7 @@ describe("getResearchDiscoverHandler", () => {
       ? Exclude<T, NextResponse>
       : never);
 
-    vi.mocked(fetchChartmetric).mockResolvedValue({
+    vi.mocked(fetchResearchProvider).mockResolvedValue({
       data: null,
       status: 500,
     });

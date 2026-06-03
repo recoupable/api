@@ -12,7 +12,7 @@ export async function OPTIONS() {
 }
 
 /**
- * GET /api/research/track — Full Chartmetric track details by numeric `id`.
+ * GET /api/research/track — Full provider track details by `id`.
  * Discovery (search by name) is the caller's job via `GET /api/research`.
  *
  * @param request - must include numeric `id` query param

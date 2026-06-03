@@ -14,7 +14,7 @@ export type ValidatedGetResearchCuratorRequest = {
 
 /**
  * Validates `GET /api/research/curator` — auth + required `platform` (enum)
- * and `id` (numeric Chartmetric curator ID).
+ * and `id` (numeric curator ID).
  *
  * @param request - The incoming HTTP request.
  */
@@ -36,7 +36,7 @@ export async function validateGetResearchCuratorRequest(
   }
 
   if (!/^\d+$/.test(id)) {
-    return errorResponse("id must be a numeric Chartmetric curator ID (e.g. 2 for Spotify)", 400);
+    return errorResponse("id must be a numeric curator ID (e.g. 2 for Spotify)", 400);
   }
 
   const short = await ensureResearchCredits(authResult.accountId);

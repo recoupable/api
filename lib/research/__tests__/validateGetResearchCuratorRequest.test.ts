@@ -78,7 +78,7 @@ describe("validateGetResearchCuratorRequest", () => {
     if (result instanceof NextResponse) {
       expect(result.status).toBe(400);
       const body = await result.json();
-      expect(body.error).toBe("id must be a numeric Chartmetric curator ID (e.g. 2 for Spotify)");
+      expect(body.error).toBe("id must be a numeric curator ID (e.g. 2 for Spotify)");
     }
   });
 

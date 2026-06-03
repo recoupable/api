@@ -108,6 +108,23 @@ describe("resolveTrack", () => {
     vi.mocked(handleResearch).mockResolvedValue({ data: {} });
 
     const result = await resolveTrack("q", undefined, accountId);
-    expect("error" in result && result.error).toContain("Could not resolve Chartmetric ID");
+    expect("error" in result && result.error).toContain("Could not resolve provider track ID");
+  });
+
+  it("returns SongStats track IDs when the provider lookup supplies them", async () => {
+    vi.mocked(getSearch).mockResolvedValue({
+      data: {
+        tracks: {
+          items: [{ id: "sp1", name: "T", external_ids: { isrc: "ISRC123" } }],
+        },
+      },
+    } as never);
+    vi.mocked(handleResearch).mockResolvedValue({
+      data: { songstats_track_id: "track_123" },
+    });
+
+    const result = await resolveTrack("q", undefined, accountId);
+
+    expect("id" in result && result.id).toBe("track_123");
   });
 });

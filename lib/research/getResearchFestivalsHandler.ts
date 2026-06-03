@@ -8,7 +8,7 @@ import { validateGetResearchFestivalsRequest } from "@/lib/research/validateGetR
  * GET /api/research/festivals
  *
  * Returns a list of music festivals. Not artist-scoped — `/festival/list` is a
- * global Chartmetric endpoint, so this uses `handleResearch`.
+ * global provider endpoint, so this uses `handleResearch`.
  *
  * @param request - The incoming HTTP request.
  * @returns The JSON response.

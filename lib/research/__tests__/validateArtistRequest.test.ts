@@ -46,4 +46,16 @@ describe("validateArtistRequest", () => {
 
     expect(result).toEqual({ accountId: "acc_1", artist: "Drake" });
   });
+
+  it("accepts id as a provider-neutral artist identifier", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({ accountId: "acc_1" } as never);
+
+    const result = await validateArtistRequest(new NextRequest("http://x/?id=artist_123"));
+
+    expect(result).toEqual({
+      accountId: "acc_1",
+      artist: "artist_123",
+      artistId: "artist_123",
+    });
+  });
 });

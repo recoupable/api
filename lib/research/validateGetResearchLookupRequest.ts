@@ -4,6 +4,7 @@ import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 const SPOTIFY_ARTIST_REGEX = /spotify\.com\/artist\/([a-zA-Z0-9]+)/;
+const SPOTIFY_ID_REGEX = /^[A-Za-z0-9]{10,}$/;
 
 export type ValidatedGetResearchLookupRequest = {
   accountId: string;
@@ -11,8 +12,8 @@ export type ValidatedGetResearchLookupRequest = {
 };
 
 /**
- * Validates `GET /api/research/lookup` — auth + `url` (required Spotify artist
- * URL). Extracts the Spotify artist ID from the URL.
+ * Validates `GET /api/research/lookup` — auth plus a Spotify artist URL or ID.
+ * Extracts or passes through the Spotify artist ID.
  *
  * @param request - The incoming HTTP request.
  */
@@ -23,6 +24,18 @@ export async function validateGetResearchLookupRequest(
   if (authResult instanceof NextResponse) return authResult;
 
   const { searchParams } = new URL(request.url);
+  const directSpotifyId = searchParams.get("spotifyId");
+  if (directSpotifyId) {
+    if (!SPOTIFY_ID_REGEX.test(directSpotifyId)) {
+      return errorResponse("spotifyId must be a valid Spotify artist ID", 400);
+    }
+
+    const short = await ensureResearchCredits(authResult.accountId);
+    if (short) return short;
+
+    return { accountId: authResult.accountId, spotifyId: directSpotifyId };
+  }
+
   const url = searchParams.get("url");
   if (!url) return errorResponse("url parameter is required", 400);
 

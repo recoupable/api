@@ -67,7 +67,7 @@ describe("getResearchSearchHandler", () => {
     expect(body.results).toEqual([{ name: "Drake", id: 3380 }]);
   });
 
-  it("forwards only the defaulted params to Chartmetric when no optional params are provided", async () => {
+  it("forwards only the defaulted params to the provider when no optional params are provided", async () => {
     vi.mocked(handleResearch).mockResolvedValue({ data: { artists: [] } });
     const req = new NextRequest("http://localhost/api/research/search?q=Drake");
     await getResearchSearchHandler(req);
@@ -79,7 +79,7 @@ describe("getResearchSearchHandler", () => {
     });
   });
 
-  it("forwards beta, platforms, and offset to Chartmetric when provided", async () => {
+  it("forwards beta, platforms, and offset to the provider when provided", async () => {
     vi.mocked(validateGetResearchSearchRequest).mockResolvedValue({
       accountId: "test-id",
       q: "Hotline Bling",

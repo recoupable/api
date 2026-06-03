@@ -8,8 +8,8 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 /**
  * GET /api/research/instagram-posts
  *
- * Returns recent Instagram posts for the given artist via Chartmetric's
- * DeepSocial integration.
+ * Returns recent Instagram posts for the given artist when the configured
+ * provider supports that dataset.
  * Requires `artist` query param.
  *
  * @param request - The incoming HTTP request.

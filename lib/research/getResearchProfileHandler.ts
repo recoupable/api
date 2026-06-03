@@ -8,7 +8,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 /**
  * GET /api/research/profile
  *
- * Returns the full Chartmetric artist profile for the given artist.
+ * Returns the provider artist profile for the given artist.
  * Requires `artist` query param (name, numeric ID, or UUID).
  *
  * @param request - The incoming HTTP request.

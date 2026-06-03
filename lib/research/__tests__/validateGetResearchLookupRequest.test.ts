@@ -49,6 +49,16 @@ describe("validateGetResearchLookupRequest", () => {
     expect(body.error).toBe("url parameter is required");
   });
 
+  it("accepts spotifyId directly", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest(
+      "http://localhost/api/research/lookup?spotifyId=3TVXtAsR1Inumwj472S9r4",
+    );
+    const res = await validateGetResearchLookupRequest(req);
+
+    expect(res).toEqual({ accountId: "acc_1", spotifyId: "3TVXtAsR1Inumwj472S9r4" });
+  });
+
   it("returns 400 when url is not a Spotify artist URL", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
     const req = new NextRequest("http://localhost/api/research/lookup?url=https://google.com");
