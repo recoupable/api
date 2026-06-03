@@ -7,9 +7,7 @@ import { selectChats } from "@/lib/supabase/chats/selectChats";
  * @param sessionId - The session to check.
  * @returns `true` when a stream is active, `false` when none are, `null` on DB failure.
  */
-export async function hasActiveStreamForSession(
-  sessionId: string,
-): Promise<boolean | null> {
+export async function hasActiveStreamForSession(sessionId: string): Promise<boolean | null> {
   const chats = await selectChats({ sessionId });
   if (chats === null) {
     return null;
