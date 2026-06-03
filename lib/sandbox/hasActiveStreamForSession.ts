@@ -6,10 +6,17 @@ import { selectChats } from "@/lib/supabase/chats/selectChats";
  * uses this to defer hibernation while a chat is actively being
  * served — pausing the sandbox mid-stream would 500 the response.
  *
+ * Returns true when chat lookup fails so lifecycle skips hibernation
+ * rather than shutting down a potentially active sandbox.
+ *
  * @param sessionId - The session to check.
- * @returns true when at least one chat has an active stream id.
+ * @returns true when at least one chat has an active stream id, or lookup failed.
  */
 export async function hasActiveStreamForSession(sessionId: string): Promise<boolean> {
-  const chats = (await selectChats({ sessionId })) ?? [];
+  const chats = await selectChats({ sessionId });
+  if (chats === null) {
+    return true;
+  }
+
   return chats.some(chat => chat.active_stream_id !== null);
 }

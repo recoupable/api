@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { internalServerErrorResponse } from "@/lib/networking/internalServerErrorResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
@@ -45,7 +46,11 @@ export async function validateDeleteSessionChatRequest(
     );
   }
 
-  const siblingChats = (await selectChats({ sessionId })) ?? [];
+  const siblingChats = await selectChats({ sessionId });
+  if (siblingChats === null) {
+    return internalServerErrorResponse();
+  }
+
   const chat = siblingChats.find(row => row.id === chatId) ?? null;
 
   if (!chat) {

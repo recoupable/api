@@ -77,6 +77,28 @@ describe("validateDeleteSessionChatRequest", () => {
     }
   });
 
+  it("returns 500 when chat lookup fails", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId,
+      orgId: null,
+      authToken: "tok",
+    });
+    vi.mocked(selectSessions).mockResolvedValue([
+      baseSessionRow({ id: "sess_1", account_id: accountId }),
+    ]);
+    vi.mocked(selectChats).mockResolvedValue(null);
+
+    const res = await validateDeleteSessionChatRequest(makeReq(), "sess_1", "chat_1");
+    expect(res).toBeInstanceOf(NextResponse);
+    if (res instanceof NextResponse) {
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({
+        status: "error",
+        error: "Internal server error",
+      });
+    }
+  });
+
   it("returns 404 when the chat is not in this session", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId,

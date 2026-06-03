@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { internalServerErrorResponse } from "@/lib/networking/internalServerErrorResponse";
 import { DEFAULT_MODEL } from "@/lib/const";
 import { validateGetSessionChatsRequest } from "@/lib/sessions/chats/validateGetSessionChatsRequest";
 import { getChatSummaries } from "@/lib/sessions/chats/getChatSummaries";
@@ -26,6 +27,9 @@ export async function getSessionChatsHandler(
     sessionId,
     accountId: validated.auth.accountId,
   });
+  if (chats === null) {
+    return internalServerErrorResponse();
+  }
 
   return NextResponse.json(
     { chats, defaultModelId: DEFAULT_MODEL },

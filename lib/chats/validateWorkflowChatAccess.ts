@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { internalServerErrorResponse } from "@/lib/networking/internalServerErrorResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
@@ -41,10 +42,7 @@ export async function validateWorkflowChatAccess(
 
   const chatRows = await selectChats({ id: chatIdResult.data });
   if (chatRows === null) {
-    return NextResponse.json(
-      { status: "error", error: "Internal server error" },
-      { status: 500, headers: getCorsHeaders() },
-    );
+    return internalServerErrorResponse();
   }
 
   const chat = chatRows[0] ?? null;
@@ -57,10 +55,7 @@ export async function validateWorkflowChatAccess(
 
   const sessionRows = await selectSessions({ id: chat.session_id });
   if (sessionRows === null) {
-    return NextResponse.json(
-      { status: "error", error: "Internal server error" },
-      { status: 500, headers: getCorsHeaders() },
-    );
+    return internalServerErrorResponse();
   }
 
   const session = sessionRows[0] ?? null;

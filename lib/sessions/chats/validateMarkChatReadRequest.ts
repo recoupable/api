@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { internalServerErrorResponse } from "@/lib/networking/internalServerErrorResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import type { AuthContext } from "@/lib/auth/validateAuthContext";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
@@ -39,7 +40,10 @@ export async function validateMarkChatReadRequest(
   ]);
 
   const session = sessionRows?.[0] ?? null;
-  const chat = (chatRows ?? [])[0] ?? null;
+  if (chatRows === null) {
+    return internalServerErrorResponse();
+  }
+  const chat = chatRows[0] ?? null;
 
   if (!session) {
     return NextResponse.json(

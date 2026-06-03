@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { internalServerErrorResponse } from "@/lib/networking/internalServerErrorResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
@@ -58,7 +59,11 @@ export async function validatePatchSessionChatRequest(
     );
   }
 
-  const chatRows = (await selectChats({ id: chatId })) ?? [];
+  const chatRows = await selectChats({ id: chatId });
+  if (chatRows === null) {
+    return internalServerErrorResponse();
+  }
+
   const chat = chatRows[0] ?? null;
 
   if (!chat || chat.session_id !== sessionId) {

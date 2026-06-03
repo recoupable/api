@@ -82,6 +82,19 @@ describe("createSessionChatHandler", () => {
     expect(insertChat).not.toHaveBeenCalled();
   });
 
+  it("returns 500 when chat lookup fails for requested id", async () => {
+    mockValidated({ id: "chat_requested" });
+    vi.mocked(selectChats).mockResolvedValue(null);
+
+    const res = await createSessionChatHandler(makeReq(), "sess_1");
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      status: "error",
+      error: "Internal server error",
+    });
+    expect(insertChat).not.toHaveBeenCalled();
+  });
+
   it("creates a chat with the requested id when none exists yet", async () => {
     mockValidated({ id: "chat_requested" });
     vi.mocked(selectChats).mockResolvedValue([]);
