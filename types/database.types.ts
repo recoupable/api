@@ -2434,69 +2434,6 @@ export type Database = {
           },
         ];
       };
-      research_cache_entries: {
-        Row: {
-          cache_key: string;
-          created_at: string;
-          data: Json | null;
-          endpoint: string;
-          entity_id: string;
-          entity_type: string;
-          error: string | null;
-          expires_at: string | null;
-          fetched_at: string | null;
-          provider: string;
-          query: Json;
-          raw_data: Json | null;
-          refresh_run_id: string | null;
-          refresh_started_at: string | null;
-          source: string | null;
-          status: string;
-          status_code: number | null;
-          updated_at: string;
-        };
-        Insert: {
-          cache_key: string;
-          created_at?: string;
-          data?: Json | null;
-          endpoint: string;
-          entity_id: string;
-          entity_type: string;
-          error?: string | null;
-          expires_at?: string | null;
-          fetched_at?: string | null;
-          provider: string;
-          query?: Json;
-          raw_data?: Json | null;
-          refresh_run_id?: string | null;
-          refresh_started_at?: string | null;
-          source?: string | null;
-          status?: string;
-          status_code?: number | null;
-          updated_at?: string;
-        };
-        Update: {
-          cache_key?: string;
-          created_at?: string;
-          data?: Json | null;
-          endpoint?: string;
-          entity_id?: string;
-          entity_type?: string;
-          error?: string | null;
-          expires_at?: string | null;
-          fetched_at?: string | null;
-          provider?: string;
-          query?: Json;
-          raw_data?: Json | null;
-          refresh_run_id?: string | null;
-          refresh_started_at?: string | null;
-          source?: string | null;
-          status?: string;
-          status_code?: number | null;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
       role_permissions: {
         Row: {
           id: number;

@@ -24,8 +24,8 @@ vi.mock("@/lib/chartmetric/fetchChartmetric", () => ({
   fetchChartmetric: vi.fn(),
 }));
 
-vi.mock("@/lib/research/cache/getResearchMetricsWithCache", () => ({
-  getResearchMetricsWithCache: vi.fn(),
+vi.mock("@/lib/research/getResearchMetrics", () => ({
+  getResearchMetrics: vi.fn(),
 }));
 
 vi.mock("@/lib/credits/recordCreditDeduction", () => ({

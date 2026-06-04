@@ -3,8 +3,7 @@ import { NextResponse } from "next/server";
 import { validateGetResearchMetricsRequest } from "@/lib/research/validateGetResearchMetricsRequest";
 import { successResponse } from "@/lib/networking/successResponse";
 import { errorResponse } from "@/lib/networking/errorResponse";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getResearchMetricsWithCache } from "@/lib/research/cache/getResearchMetricsWithCache";
+import { getResearchMetrics } from "@/lib/research/getResearchMetrics";
 
 /**
  * GET /api/research/metrics
@@ -21,19 +20,8 @@ export async function getResearchMetricsHandler(request: NextRequest): Promise<N
     const validated = await validateGetResearchMetricsRequest(request);
     if (validated instanceof NextResponse) return validated;
 
-    const result = await getResearchMetricsWithCache(validated);
-
+    const result = await getResearchMetrics(validated);
     if ("error" in result) return errorResponse(result.error, result.status);
-    if ("pending" in result) {
-      return NextResponse.json(
-        {
-          status: "pending",
-          state: "refresh_pending",
-          message: "Research metrics refresh is pending. Retry this endpoint shortly.",
-        },
-        { status: 202, headers: getCorsHeaders() },
-      );
-    }
 
     const data = result.data;
     const body =
