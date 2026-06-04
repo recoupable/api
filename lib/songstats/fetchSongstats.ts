@@ -6,8 +6,10 @@ const SLOW_SONGSTATS_TIMEOUT_MS = 35_000;
 const SLOW_SONGSTATS_PATHS = new Set([
   "artists/historic_stats",
   "artists/stats",
+  "artists/top_playlists",
   "tracks/historic_stats",
   "tracks/stats",
+  "tracks/top_playlists",
 ]);
 
 function appendQueryParams(url: URL, queryParams?: Record<string, string>): void {

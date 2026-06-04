@@ -4,6 +4,7 @@ import {
   mapSongstatsResult,
   normalizeArtistObject,
   normalizeArtistRecord,
+  normalizeTopPlaylists,
   normalizeUrlMap,
 } from "@/lib/research/songstats/songstatsResearchMapping";
 
@@ -139,15 +140,17 @@ export function mapSongstatsArtistPath(
 
   match = path.match(/^\/artist\/([^/]+)\/([^/]+)\/(current|past)\/playlists$/);
   if (match) {
+    // SongStats top_playlists is scoped by a time window, not the legacy
+    // current/past status: map current -> current placements, past -> all-time.
     return mapSongstatsResult(
       "/artists/top_playlists",
       {
         songstats_artist_id: match[1],
         source: match[2],
-        status: match[3],
+        scope: match[3] === "past" ? "total" : "current",
         ...query,
       },
-      data => extractList(data, ["playlists", "results", "data", "items"]),
+      normalizeTopPlaylists,
     );
   }
 

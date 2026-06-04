@@ -152,4 +152,54 @@ describe("fetchSongstatsResearch", () => {
       data: [{ id: "artist_2", songstats_artist_id: "artist_2", name: "Kendrick Lamar" }],
     });
   });
+
+  it("maps current artist playlists to top_playlists with scope=current and flattens placements", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: {
+        result: "success",
+        data: [
+          {
+            source: "spotify",
+            metric: "top_playlists",
+            scope: "current",
+            top_playlists: [
+              { playlist_id: "p1", playlist_name: "Today's Top Hits" },
+              { playlist_id: "p2", playlist_name: "RapCaviar" },
+            ],
+          },
+        ],
+      },
+    });
+
+    const result = await fetchSongstatsResearch("/artist/artist_1/spotify/current/playlists");
+
+    expect(fetchSongstats).toHaveBeenCalledWith("/artists/top_playlists", {
+      songstats_artist_id: "artist_1",
+      source: "spotify",
+      scope: "current",
+    });
+    expect(result).toEqual({
+      status: 200,
+      data: [
+        { playlist_id: "p1", playlist_name: "Today's Top Hits" },
+        { playlist_id: "p2", playlist_name: "RapCaviar" },
+      ],
+    });
+  });
+
+  it("maps past artist playlists to top_playlists with scope=total", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: { result: "success", data: [{ source: "spotify", top_playlists: [] }] },
+    });
+
+    await fetchSongstatsResearch("/artist/artist_1/spotify/past/playlists");
+
+    expect(fetchSongstats).toHaveBeenCalledWith("/artists/top_playlists", {
+      songstats_artist_id: "artist_1",
+      source: "spotify",
+      scope: "total",
+    });
+  });
 });

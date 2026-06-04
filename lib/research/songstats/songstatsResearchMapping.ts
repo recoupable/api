@@ -33,6 +33,17 @@ export function extractList(value: unknown, keys: string[]): unknown[] {
   return [];
 }
 
+/**
+ * Flattens SongStats `/artists/top_playlists` (and `/tracks/top_playlists`)
+ * into a single placement list. The provider nests the rows one level deep:
+ * `{ data: [{ source, scope, top_playlists: [...] }] }` — one entry per source.
+ */
+export function normalizeTopPlaylists(value: unknown): unknown[] {
+  return extractList(value, ["data"]).flatMap(entry =>
+    isRecord(entry) && Array.isArray(entry.top_playlists) ? entry.top_playlists : [],
+  );
+}
+
 function pickString(record: JsonRecord, keys: string[]): string | undefined {
   for (const key of keys) {
     const value = record[key];
