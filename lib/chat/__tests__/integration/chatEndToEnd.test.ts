@@ -60,10 +60,6 @@ vi.mock("@/lib/supabase/rooms/upsertRoom", () => ({
   upsertRoom: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/memories/upsertMemory", () => ({
-  default: vi.fn(),
-}));
-
 vi.mock("@/lib/supabase/memories/insertMemories", () => ({
   default: vi.fn(),
 }));
