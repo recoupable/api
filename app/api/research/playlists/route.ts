@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getResearchPlaylistsHandler } from "@/lib/research/getResearchPlaylistsHandler";
 
+// SongStats top_playlists (scope=current) is a slow stat call; allow up to 60s.
+export const maxDuration = 60;
+
 /**
  * OPTIONS /api/research/playlists — CORS preflight.
  *
