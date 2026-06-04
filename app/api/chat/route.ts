@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { handleChatStream } from "@/lib/chat/handleChatStream";
+import { withMPP } from "@/lib/mpp/withMPP"
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -36,6 +37,8 @@ export async function OPTIONS() {
  * @param request - The request object
  * @returns A streaming response or error
  */
-export async function POST(request: NextRequest): Promise<Response> {
+async function handler(request: NextRequest): Promise<Response> {
   return handleChatStream(request);
 }
+
+export const POST = withMPP(handler);

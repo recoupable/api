@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { x402GenerateImage } from "@/lib/x402/recoup/x402GenerateImage";
 import { validateGenerateImageQuery } from "@/lib/image/validateGenerateImageQuery";
+import { withMPP } from "@/lib/mpp/withMPP"
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -22,7 +23,7 @@ export async function OPTIONS() {
  * @param request - The request object containing query parameters.
  * @returns {Promise<NextResponse>} JSON response matching the Recoup API format.
  */
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   try {
     const validatedQuery = validateGenerateImageQuery(request);
     if (validatedQuery instanceof NextResponse) {
@@ -54,3 +55,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export const GET = withMPP(handler);
