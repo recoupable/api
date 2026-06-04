@@ -15,9 +15,8 @@ interface HandleChatCreditsParams {
   gatewayCostUsd?: number;
   /**
    * Which surface generated the turn — used to label the
-   * `usage_events` audit row. Defaults to `"web"` to preserve the
-   * existing `handleChatStream` contract; the chat-workflow path
-   * (`/api/chat/workflow`) passes `"api"` so admin dashboards can
+   * `usage_events` audit row. Defaults to `"web"`; the chat-workflow
+   * path (`/api/chat/workflow`) passes `"api"` so admin dashboards can
    * distinguish surface in spend rollups.
    */
   source?: "web" | "api";
