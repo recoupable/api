@@ -1,11 +1,12 @@
 import { resolveArtist } from "@/lib/research/resolveArtist";
-import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
+import { fetchSongstatsResearch } from "@/lib/research/songstats/fetchSongstatsResearch";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 
 export type HandleArtistResearchParams = {
   artist: string;
+  artistId?: string;
   accountId: string;
-  path: (cmId: number) => string;
+  path: (providerArtistId: string) => string;
   query?: Record<string, string>;
   /** Credits to charge on success. Defaults to 5. */
   credits?: number;
@@ -14,8 +15,8 @@ export type HandleArtistResearchParams = {
 export type HandleArtistResearchResult = { data: unknown } | { error: string; status: number };
 
 /**
- * Resolves an artist to a Chartmetric ID, proxies to the built upstream path,
- * and deducts credits on success. Credit-deduction failures are non-fatal.
+ * Resolves an artist to a provider artist ID, proxies to the built upstream
+ * path, and deducts credits on success. Credit-deduction failures are non-fatal.
  *
  * Credit gating (auto-recharge + 402 short-circuit) lives in route handlers
  * via `ensureCreditsOrShortCircuit` — see `handleResearch` for the rationale.
@@ -25,12 +26,12 @@ export type HandleArtistResearchResult = { data: unknown } | { error: string; st
 export async function handleArtistResearch(
   params: HandleArtistResearchParams,
 ): Promise<HandleArtistResearchResult> {
-  const { artist, accountId, path, query, credits = 5 } = params;
+  const { artist, artistId, accountId, path, query, credits = 5 } = params;
 
-  const resolved = await resolveArtist(artist);
-  if (resolved.error) return { error: resolved.error, status: 404 };
+  const resolved = artistId ? { id: artistId } : await resolveArtist(artist);
+  if ("error" in resolved) return { error: resolved.error, status: 404 };
 
-  const result = await fetchChartmetric(path(resolved.id), query);
+  const result = await fetchSongstatsResearch(path(resolved.id), query);
   if (result.status !== 200) {
     return { error: `Request failed with status ${result.status}`, status: result.status };
   }

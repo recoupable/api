@@ -7,9 +7,9 @@ import { validateGetResearchLookupRequest } from "@/lib/research/validateGetRese
 /**
  * GET /api/research/lookup
  *
- * Resolves a Spotify artist URL to Chartmetric IDs via the get-ids endpoint.
+ * Resolves a Spotify artist URL or ID to provider artist identifiers.
  *
- * @param request - Requires `url` query param containing a Spotify artist URL
+ * @param request - Requires a Spotify artist URL or `spotifyId` query param.
  * @returns The JSON response.
  */
 export async function getResearchLookupHandler(request: NextRequest): Promise<NextResponse> {

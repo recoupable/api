@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
+import { PROVIDER_ID_REGEX } from "@/lib/research/providerId";
 
 export type ValidatedGetResearchAlbumsRequest = {
   accountId: string;
@@ -14,11 +15,9 @@ export type ValidatedGetResearchAlbumsRequest = {
 const VALID_BOOLEAN = ["true", "false"] as const;
 
 /**
- * Validates `GET /api/research/albums` — auth + required numeric `artist_id`
- * (Chartmetric artist ID). Optional `is_primary` (defaults to `"true"`) maps
- * to Chartmetric's `isPrimary` filter, which when true returns only albums
- * where the artist is a main artist — excluding DJ compilations, soundtracks,
- * and feature appearances. Optional `limit` and `offset` for pagination.
+ * Validates `GET /api/research/albums` — auth + required provider `artist_id`.
+ * Optional `is_primary` (defaults to `"true"`) maps to provider support for
+ * primary releases when available. Optional `limit` and `offset` paginate.
  *
  * @param request - The incoming HTTP request.
  */
@@ -31,8 +30,8 @@ export async function validateGetResearchAlbumsRequest(
   const { searchParams } = new URL(request.url);
   const artistId = searchParams.get("artist_id");
   if (!artistId) return errorResponse("artist_id parameter is required", 400);
-  if (!/^[1-9]\d*$/.test(artistId))
-    return errorResponse("artist_id must be a positive integer", 400);
+  if (!PROVIDER_ID_REGEX.test(artistId))
+    return errorResponse("artist_id must be a provider artist ID", 400);
 
   const isPrimary = searchParams.get("is_primary") ?? "true";
   if (!(VALID_BOOLEAN as readonly string[]).includes(isPrimary)) {

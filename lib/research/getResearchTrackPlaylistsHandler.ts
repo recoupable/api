@@ -8,7 +8,7 @@ import { validateGetResearchTrackPlaylistsRequest } from "@/lib/research/validat
 /**
  * GET /api/research/track/playlists
  *
- * Returns playlists featuring a specific track. Accepts a Chartmetric track ID
+ * Returns playlists featuring a specific track. Accepts a provider track ID
  * directly, or resolves via track name + optional artist.
  *
  * @param request - query params: id or q (+artist), platform, status, filter flags, pagination
