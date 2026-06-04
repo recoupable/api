@@ -1,10 +1,8 @@
 import type { ProxyResult } from "@/lib/research/ProxyResult";
-import {
-  extractList,
-  mapSongstatsResult,
-  normalizeTrackLookupObject,
-  normalizeTrackObject,
-} from "@/lib/research/songstats/songstatsResearchMapping";
+import { extractList } from "@/lib/research/songstats/extractList";
+import { mapSongstatsResult } from "@/lib/research/songstats/mapSongstatsResult";
+import { normalizeTrackLookupObject } from "@/lib/research/songstats/normalizeTrackLookupObject";
+import { normalizeTrackObject } from "@/lib/research/songstats/normalizeTrackObject";
 
 export function mapSongstatsTrackPath(
   path: string,

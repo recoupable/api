@@ -42,38 +42,15 @@ describe("fetchSongstats", () => {
     );
   });
 
-  it("uses the legacy SongStats_API env var when SONGSTATS_API_KEY is not configured", async () => {
-    delete process.env.SONGSTATS_API_KEY;
-    process.env.SongStats_API = "legacy-songstats-key";
-    vi.mocked(fetch).mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ results: [] }),
-      headers: new Headers({ "content-type": "application/json" }),
-    } as Response);
-
-    await fetchSongstats("/artists/search", { q: "Drake" });
-
-    expect(fetch).toHaveBeenCalledWith(
-      "https://api.songstats.com/enterprise/v1/artists/search?q=Drake",
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          apikey: "legacy-songstats-key",
-        }),
-      }),
-    );
-  });
-
   it("returns a sanitized 500-compatible result when no SongStats API key is configured", async () => {
     delete process.env.SONGSTATS_API_KEY;
-    delete process.env.SongStats_API;
 
     const result = await fetchSongstats("/artists/search", { q: "Drake" });
 
     expect(result.status).toBe(500);
     expect(result.data).toEqual({ error: "Internal server error" });
     expect(console.error).toHaveBeenCalledWith(
-      "[ERROR] fetchSongstats: SONGSTATS_API_KEY or SongStats_API environment variable is not set",
+      "[ERROR] fetchSongstats: SONGSTATS_API_KEY environment variable is not set",
     );
     expect(fetch).not.toHaveBeenCalled();
   });

@@ -1,12 +1,10 @@
 import type { ProxyResult } from "@/lib/research/ProxyResult";
-import {
-  extractList,
-  mapSongstatsResult,
-  normalizeArtistRecord,
-  normalizeTrackRecord,
-  UNSUPPORTED_RESULT,
-  withoutLegacySearchParams,
-} from "@/lib/research/songstats/songstatsResearchMapping";
+import { extractList } from "@/lib/research/songstats/extractList";
+import { mapSongstatsResult } from "@/lib/research/songstats/mapSongstatsResult";
+import { normalizeArtistRecord } from "@/lib/research/songstats/normalizeArtistRecord";
+import { normalizeTrackRecord } from "@/lib/research/songstats/normalizeTrackRecord";
+import { UNSUPPORTED_RESULT } from "@/lib/research/songstats/unsupportedResult";
+import { withoutLegacySearchParams } from "@/lib/research/songstats/withoutLegacySearchParams";
 
 /**
  * Maps `/search` to the matching SongStats search endpoint by `type`

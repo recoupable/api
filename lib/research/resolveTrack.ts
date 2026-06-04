@@ -1,19 +1,7 @@
 import generateAccessToken from "@/lib/spotify/generateAccessToken";
 import getSearch from "@/lib/spotify/getSearch";
 import { handleResearch } from "@/lib/research/handleResearch";
-
-interface GetIdsResponse {
-  songstats_track_ids?: string[];
-  songstats_track_id?: string;
-  id?: string | number;
-}
-
-function extractProviderTrackId(data: unknown): string | undefined {
-  const ids = (Array.isArray(data) ? data[0] : data) as GetIdsResponse | undefined;
-  const id = ids?.songstats_track_ids?.[0] ?? ids?.songstats_track_id ?? ids?.id;
-
-  return id === undefined || id === null || id === "" ? undefined : String(id);
-}
+import { extractProviderTrackId } from "@/lib/research/extractProviderTrackId";
 
 /**
  * Resolves a track name (+ optional artist) to a provider track ID.

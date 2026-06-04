@@ -1,60 +1,13 @@
 import type { ProxyResult } from "@/lib/research/ProxyResult";
-import {
-  extractList,
-  mapSongstatsResult,
-  normalizeArtistObject,
-  normalizeArtistRecord,
-  normalizeTopPlaylists,
-  normalizeUrlMap,
-} from "@/lib/research/songstats/songstatsResearchMapping";
-
-const SONGSTATS_ARTIST_METRIC_SOURCE_BY_PLATFORM: Record<string, string> = {
-  bandsintown: "bandsintown_followers",
-  deezer: "deezer_fans",
-  facebook: "facebook_likes",
-  instagram: "instagram_followers",
-  line: "line_followers",
-  melon: "melon_followers",
-  soundcloud: "soundcloud_followers",
-  spotify: "spotify_streams",
-  tiktok: "tiktok_followers",
-  twitch: "twitch_followers",
-  twitter: "twitter_followers",
-  wikipedia: "wikipedia_views",
-  youtube_artist: "youtube_artist_subscribers",
-  youtube_channel: "youtube_channel_subscribers",
-};
-
-const SONGSTATS_ARTIST_STATS_SOURCE_BY_PLATFORM: Record<string, string> = {
-  amazon: "amazon",
-  bandsintown: "bandsintown",
-  deezer: "deezer",
-  facebook: "facebook",
-  instagram: "instagram",
-  radio: "radio",
-  soundcloud: "soundcloud",
-  spotify: "spotify",
-  sxm: "sxm",
-  tiktok: "tiktok",
-  twitter: "twitter",
-  youtube_artist: "youtube",
-  youtube_channel: "youtube",
-};
-
-function mapArtistAudienceSource(source: string): string {
-  return SONGSTATS_ARTIST_METRIC_SOURCE_BY_PLATFORM[source] || source;
-}
-
-function mapArtistStatsSource(source: string): string {
-  return SONGSTATS_ARTIST_STATS_SOURCE_BY_PLATFORM[source] || source;
-}
-
-function parsePositiveLimit(value?: string): number | undefined {
-  if (!value) return undefined;
-
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
-}
+import { extractList } from "@/lib/research/songstats/extractList";
+import { mapSongstatsResult } from "@/lib/research/songstats/mapSongstatsResult";
+import { normalizeArtistObject } from "@/lib/research/songstats/normalizeArtistObject";
+import { normalizeArtistRecord } from "@/lib/research/songstats/normalizeArtistRecord";
+import { normalizeTopPlaylists } from "@/lib/research/songstats/normalizeTopPlaylists";
+import { normalizeUrlMap } from "@/lib/research/songstats/normalizeUrlMap";
+import { mapArtistAudienceSource } from "@/lib/research/songstats/mapArtistAudienceSource";
+import { mapArtistStatsSource } from "@/lib/research/songstats/mapArtistStatsSource";
+import { parsePositiveLimit } from "@/lib/research/songstats/parsePositiveLimit";
 
 export function mapSongstatsArtistPath(
   path: string,

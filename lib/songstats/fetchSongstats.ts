@@ -1,56 +1,10 @@
 import { SONGSTATS_BASE } from "@/lib/songstats/songstatsBase";
 import type { ProxyResult } from "@/lib/research/ProxyResult";
-
-const DEFAULT_SONGSTATS_TIMEOUT_MS = 10_000;
-// Slow SongStats stat calls run on routes with maxDuration=60; allow most of
-// that budget upstream before aborting so they don't 504 prematurely.
-const SLOW_SONGSTATS_TIMEOUT_MS = 50_000;
-const SLOW_SONGSTATS_PATHS = new Set([
-  "artists/historic_stats",
-  "artists/stats",
-  "artists/top_playlists",
-  "tracks/historic_stats",
-  "tracks/stats",
-]);
-
-function appendQueryParams(url: URL, queryParams?: Record<string, string>): void {
-  if (!queryParams) return;
-
-  for (const [key, value] of Object.entries(queryParams)) {
-    if (value !== undefined && value !== "") {
-      url.searchParams.set(key, value);
-    }
-  }
-}
-
-async function parseSongstatsResponse(response: Response): Promise<unknown> {
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) return response.json();
-
-  const text = await response.text();
-  return text ? { raw: text } : null;
-}
-
-function getDefaultSongstatsTimeoutMs(path: string): number {
-  return SLOW_SONGSTATS_PATHS.has(path.replace(/^\/+/, ""))
-    ? SLOW_SONGSTATS_TIMEOUT_MS
-    : DEFAULT_SONGSTATS_TIMEOUT_MS;
-}
-
-function getSongstatsTimeoutMs(path: string): number {
-  const configured = Number.parseInt(process.env.SONGSTATS_TIMEOUT_MS ?? "", 10);
-  return Number.isFinite(configured) && configured > 0
-    ? configured
-    : getDefaultSongstatsTimeoutMs(path);
-}
-
-function isAbortError(error: unknown): boolean {
-  return error instanceof Error && error.name === "AbortError";
-}
-
-function getSongstatsApiKey(): string | undefined {
-  return process.env.SONGSTATS_API_KEY || process.env.SongStats_API;
-}
+import { appendQueryParams } from "@/lib/songstats/appendQueryParams";
+import { parseSongstatsResponse } from "@/lib/songstats/parseSongstatsResponse";
+import { getSongstatsTimeoutMs } from "@/lib/songstats/getSongstatsTimeoutMs";
+import { isAbortError } from "@/lib/songstats/isAbortError";
+import { getSongstatsApiKey } from "@/lib/songstats/getSongstatsApiKey";
 
 export async function fetchSongstats(
   path: string,
@@ -58,9 +12,7 @@ export async function fetchSongstats(
 ): Promise<ProxyResult> {
   const apiKey = getSongstatsApiKey();
   if (!apiKey) {
-    console.error(
-      "[ERROR] fetchSongstats: SONGSTATS_API_KEY or SongStats_API environment variable is not set",
-    );
+    console.error("[ERROR] fetchSongstats: SONGSTATS_API_KEY environment variable is not set");
     return {
       data: { error: "Internal server error" },
       status: 500,
