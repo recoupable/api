@@ -2,14 +2,15 @@ import { SONGSTATS_BASE } from "@/lib/songstats/songstatsBase";
 import type { ProxyResult } from "@/lib/research/ProxyResult";
 
 const DEFAULT_SONGSTATS_TIMEOUT_MS = 10_000;
-const SLOW_SONGSTATS_TIMEOUT_MS = 35_000;
+// Slow SongStats stat calls run on routes with maxDuration=60; allow most of
+// that budget upstream before aborting so they don't 504 prematurely.
+const SLOW_SONGSTATS_TIMEOUT_MS = 50_000;
 const SLOW_SONGSTATS_PATHS = new Set([
   "artists/historic_stats",
   "artists/stats",
   "artists/top_playlists",
   "tracks/historic_stats",
   "tracks/stats",
-  "tracks/top_playlists",
 ]);
 
 function appendQueryParams(url: URL, queryParams?: Record<string, string>): void {

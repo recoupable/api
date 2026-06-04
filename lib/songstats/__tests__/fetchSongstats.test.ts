@@ -137,7 +137,7 @@ describe("fetchSongstats", () => {
 
     expect(abortCount).toBe(0);
 
-    await vi.advanceTimersByTimeAsync(25_000);
+    await vi.advanceTimersByTimeAsync(40_000);
 
     expect(abortCount).toBe(1);
     await expect(resultPromise).resolves.toEqual({
