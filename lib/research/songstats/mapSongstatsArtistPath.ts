@@ -5,7 +5,6 @@ import {
   normalizeArtistObject,
   normalizeArtistRecord,
   normalizeUrlMap,
-  UNSUPPORTED_RESULT,
 } from "@/lib/research/songstats/songstatsResearchMapping";
 
 const SONGSTATS_ARTIST_METRIC_SOURCE_BY_PLATFORM: Record<string, string> = {
@@ -127,11 +126,6 @@ export function mapSongstatsArtistPath(
   if (match) {
     return mapSongstatsResult("/artists/info", { songstats_artist_id: match[1] }, normalizeUrlMap);
   }
-  match = path.match(/^\/artist\/([^/]+)\/artist-rank$/);
-  if (match) {
-    return Promise.resolve(UNSUPPORTED_RESULT);
-  }
-
   match = path.match(/^\/artist\/([^/]+)\/similar-artists\/by-configurations$/);
   if (match) {
     const limit = parsePositiveLimit(query?.limit);
