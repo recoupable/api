@@ -53,8 +53,6 @@ describe("validateGetResearchSearchRequest", () => {
       q: "Drake",
       type: "artists",
       limit: "10",
-      beta: undefined,
-      platforms: undefined,
       offset: undefined,
     });
   });
@@ -68,12 +66,12 @@ describe("validateGetResearchSearchRequest", () => {
     expect(res).toMatchObject({ type: "tracks", limit: "25" });
   });
 
-  it("passes through beta, platforms, and offset when provided", async () => {
+  it("passes through offset when provided", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
     const req = new NextRequest(
-      "http://localhost/api/research/search?q=Drake&beta=true&platforms=cm,spotify&offset=5",
+      "http://localhost/api/research/search?q=Drake&type=tracks&limit=25&offset=5",
     );
     const res = await validateGetResearchSearchRequest(req);
-    expect(res).toMatchObject({ beta: "true", platforms: "cm,spotify", offset: "5" });
+    expect(res).toMatchObject({ offset: "5" });
   });
 });
