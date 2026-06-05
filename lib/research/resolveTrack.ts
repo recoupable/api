@@ -3,7 +3,6 @@ import getSearch from "@/lib/spotify/getSearch";
 import { handleResearch } from "@/lib/research/handleResearch";
 
 interface GetIdsResponse {
-  chartmetric_ids?: number[];
   songstats_track_ids?: string[];
   songstats_track_id?: string;
   id?: string | number;
@@ -12,10 +11,7 @@ interface GetIdsResponse {
 function extractProviderTrackId(data: unknown): string | undefined {
   const ids = (Array.isArray(data) ? data[0] : data) as GetIdsResponse | undefined;
   const id =
-    ids?.songstats_track_ids?.[0] ??
-    ids?.songstats_track_id ??
-    ids?.chartmetric_ids?.[0] ??
-    ids?.id;
+    ids?.songstats_track_ids?.[0] ?? ids?.songstats_track_id ?? ids?.id;
 
   return id === undefined || id === null || id === "" ? undefined : String(id);
 }
