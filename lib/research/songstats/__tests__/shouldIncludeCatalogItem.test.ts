@@ -15,10 +15,7 @@ describe("shouldIncludeCatalogItem", () => {
 
   it("excludes platform shells without title or track id", () => {
     expect(
-      shouldIncludeCatalogItem(
-        { source: "spotify", metric_options: ["popularity"] },
-        false,
-      ),
+      shouldIncludeCatalogItem({ source: "spotify", metric_options: ["popularity"] }, false),
     ).toBe(false);
   });
 
