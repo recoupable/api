@@ -1,9 +1,9 @@
 import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { validateGetResearchMetricsRequest } from "@/lib/research/validateGetResearchMetricsRequest";
-import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { successResponse } from "@/lib/networking/successResponse";
 import { errorResponse } from "@/lib/networking/errorResponse";
+import { getResearchMetrics } from "@/lib/research/getResearchMetrics";
 
 /**
  * GET /api/research/metrics
@@ -20,13 +20,9 @@ export async function getResearchMetricsHandler(request: NextRequest): Promise<N
     const validated = await validateGetResearchMetricsRequest(request);
     if (validated instanceof NextResponse) return validated;
 
-    const { source, ...rest } = validated;
-    const result = await handleArtistResearch({
-      ...rest,
-      path: cmId => `/artist/${cmId}/stat/${source}`,
-    });
-
+    const result = await getResearchMetrics(validated);
     if ("error" in result) return errorResponse(result.error, result.status);
+
     const data = result.data;
     const body =
       typeof data === "object" && data !== null && !Array.isArray(data)

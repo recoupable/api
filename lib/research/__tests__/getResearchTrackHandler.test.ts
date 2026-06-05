@@ -38,7 +38,7 @@ describe("getResearchTrackHandler", () => {
     expect(res).toBe(err);
   });
 
-  it("fetches /track/:id from Chartmetric and returns 200 with the data", async () => {
+  it("fetches /track/:id from the provider and returns 200 with the data", async () => {
     vi.mocked(handleResearch).mockResolvedValueOnce({
       data: { id: 15194376, name: "Hotline Bling", artists: [{ id: 1, name: "Drake" }] },
     });

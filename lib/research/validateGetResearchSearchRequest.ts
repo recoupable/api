@@ -8,17 +8,12 @@ export type ValidatedGetResearchSearchRequest = {
   q: string;
   type: string;
   limit: string;
-  beta: string | undefined;
-  platforms: string | undefined;
   offset: string | undefined;
 };
 
 /**
  * Validates `GET /api/research/search` — auth + required `q` query param, with
- * defaults for `type` ("artists") and `limit` ("10"). Also accepts the optional
- * Chartmetric pass-throughs: `beta` (enables the improved search engine),
- * `platforms` (comma-separated string, beta-only per Chartmetric docs), and
- * `offset` (numeric string for paging).
+ * defaults for `type` ("artists") and `limit` ("10"). Optional `offset` for paging.
  *
  * @param request - The incoming HTTP request.
  */
@@ -40,8 +35,6 @@ export async function validateGetResearchSearchRequest(
     q,
     type: searchParams.get("type") || "artists",
     limit: searchParams.get("limit") || "10",
-    beta: searchParams.get("beta") ?? undefined,
-    platforms: searchParams.get("platforms") ?? undefined,
     offset: searchParams.get("offset") ?? undefined,
   };
 }

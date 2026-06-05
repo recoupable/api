@@ -9,7 +9,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
  * GET /api/research/milestones
  *
  * Returns an artist's activity feed — playlist adds, chart entries, and other
- * notable events tracked by Chartmetric.
+ * notable events tracked by the configured research provider.
  *
  * @param request - The incoming HTTP request.
  * @returns The JSON response.

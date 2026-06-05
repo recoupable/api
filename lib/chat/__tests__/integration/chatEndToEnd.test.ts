@@ -6,15 +6,8 @@ import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmai
 import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
 import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
 import { getKnowledgeBaseText } from "@/lib/files/getKnowledgeBaseText";
-import selectRoom from "@/lib/supabase/rooms/selectRoom";
-import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
-import upsertMemory from "@/lib/supabase/memories/upsertMemory";
-import { sendNewConversationNotification } from "@/lib/telegram/sendNewConversationNotification";
-import { handleSendEmailToolOutputs } from "@/lib/emails/handleSendEmailToolOutputs";
 import { getCreditUsage } from "@/lib/credits/getCreditUsage";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
-import { generateChatTitle } from "../../generateChatTitle";
-import { handleChatCompletion } from "../../handleChatCompletion";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import { validateChatRequest } from "../../validateChatRequest";
 import { setupChatRequest } from "../../setupChatRequest";
@@ -29,8 +22,7 @@ vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
  * These tests verify the end-to-end chat flow including:
  * 1. Request validation through the validation + auth flow
  * 2. Setup chat request with agent, tools, and system prompt
- * 3. Post-completion handling (handleChatCompletion, handleChatCredits)
- * 4. Tool chains preparation
+ * 3. Credit deduction handling (handleChatCredits)
  *
  * External dependencies (database, AI providers) are mocked to test
  * the integration of internal components.
@@ -58,6 +50,8 @@ vi.mock("@/lib/files/getKnowledgeBaseText", () => ({
   getKnowledgeBaseText: vi.fn(),
 }));
 
+// Mock room/memory dependencies (transitively reached via setupConversation
+// → createNewRoom; mocked here so the real Supabase client never loads).
 vi.mock("@/lib/supabase/rooms/selectRoom", () => ({
   default: vi.fn(),
 }));
@@ -66,8 +60,12 @@ vi.mock("@/lib/supabase/rooms/upsertRoom", () => ({
   upsertRoom: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/memories/upsertMemory", () => ({
+vi.mock("@/lib/supabase/memories/insertMemories", () => ({
   default: vi.fn(),
+}));
+
+vi.mock("@/lib/messages/filterMessageContentForMemories", () => ({
+  default: vi.fn((msg: unknown) => msg),
 }));
 
 // Mock notification dependencies
@@ -77,30 +75,6 @@ vi.mock("@/lib/telegram/sendNewConversationNotification", () => ({
 
 vi.mock("@/lib/telegram/sendErrorNotification", () => ({
   sendErrorNotification: vi.fn(),
-}));
-
-// Mock email dependencies
-vi.mock("@/lib/emails/handleSendEmailToolOutputs", () => ({
-  handleSendEmailToolOutputs: vi.fn(),
-}));
-
-// Mock credit dependencies
-vi.mock("@/lib/credits/getCreditUsage", () => ({
-  getCreditUsage: vi.fn().mockResolvedValue(0.1),
-}));
-
-vi.mock("@/lib/credits/recordCreditDeduction", () => ({
-  recordCreditDeduction: vi.fn(),
-}));
-
-// Mock tools setup
-vi.mock("@/lib/chat/setupToolsForRequest", () => ({
-  setupToolsForRequest: vi.fn().mockResolvedValue({}),
-}));
-
-// Mock internal AI text generation
-vi.mock("@/lib/ai/generateText", () => ({
-  default: vi.fn().mockResolvedValue({ text: "Generated Title" }),
 }));
 
 // Mock chat title generation
@@ -125,12 +99,23 @@ vi.mock("@/lib/chat/saveChatCompletion", () => ({
   saveChatCompletion: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/memories/insertMemories", () => ({
-  default: vi.fn(),
+// Mock credit dependencies
+vi.mock("@/lib/credits/getCreditUsage", () => ({
+  getCreditUsage: vi.fn().mockResolvedValue(0.1),
 }));
 
-vi.mock("@/lib/messages/filterMessageContentForMemories", () => ({
-  default: vi.fn((msg: unknown) => msg),
+vi.mock("@/lib/credits/recordCreditDeduction", () => ({
+  recordCreditDeduction: vi.fn(),
+}));
+
+// Mock tools setup
+vi.mock("@/lib/chat/setupToolsForRequest", () => ({
+  setupToolsForRequest: vi.fn().mockResolvedValue({}),
+}));
+
+// Mock internal AI text generation
+vi.mock("@/lib/ai/generateText", () => ({
+  default: vi.fn().mockResolvedValue({ text: "Generated Title" }),
 }));
 
 // Mock AI SDK
@@ -148,14 +133,8 @@ const mockSelectAccountEmails = vi.mocked(selectAccountEmails);
 const mockSelectAccountInfo = vi.mocked(selectAccountInfo);
 const mockGetAccountWithDetails = vi.mocked(getAccountWithDetails);
 const mockGetKnowledgeBaseText = vi.mocked(getKnowledgeBaseText);
-const mockSelectRoom = vi.mocked(selectRoom);
-const mockUpsertRoom = vi.mocked(upsertRoom);
-const mockUpsertMemory = vi.mocked(upsertMemory);
-const mockSendNewConversationNotification = vi.mocked(sendNewConversationNotification);
-const mockHandleSendEmailToolOutputs = vi.mocked(handleSendEmailToolOutputs);
 const mockGetCreditUsage = vi.mocked(getCreditUsage);
 const mockRecordCreditDeduction = vi.mocked(recordCreditDeduction);
-const mockGenerateChatTitle = vi.mocked(generateChatTitle);
 
 // Helper to create mock NextRequest
 function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
@@ -177,14 +156,8 @@ describe("Chat Integration Tests", () => {
     mockSelectAccountInfo.mockResolvedValue(null);
     mockGetAccountWithDetails.mockResolvedValue(null);
     mockGetKnowledgeBaseText.mockResolvedValue("");
-    mockSelectRoom.mockResolvedValue(null);
-    mockUpsertRoom.mockResolvedValue(undefined);
-    mockUpsertMemory.mockResolvedValue(undefined);
-    mockSendNewConversationNotification.mockResolvedValue(undefined);
-    mockHandleSendEmailToolOutputs.mockResolvedValue(undefined);
     mockGetCreditUsage.mockResolvedValue(0.1);
     mockRecordCreditDeduction.mockResolvedValue(undefined);
-    mockGenerateChatTitle.mockResolvedValue("Test Chat");
   });
 
   afterEach(() => {
@@ -382,146 +355,6 @@ describe("Chat Integration Tests", () => {
     });
   });
 
-  describe("handleChatCompletion integration", () => {
-    it("creates room for new conversations", async () => {
-      mockSelectRoom.mockResolvedValue(null);
-      mockGenerateChatTitle.mockResolvedValue("New Chat Title");
-
-      const body = {
-        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
-        roomId: "new-room-123",
-        accountId: "account-123",
-      };
-
-      const responseMessages = [
-        { id: "response-1", role: "assistant", parts: [{ type: "text", text: "Hi there!" }] },
-      ];
-
-      await handleChatCompletion(body as any, responseMessages as any);
-
-      expect(mockUpsertRoom).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: "new-room-123",
-          account_id: "account-123",
-          topic: "New Chat Title",
-        }),
-      );
-      expect(mockSendNewConversationNotification).toHaveBeenCalled();
-    });
-
-    it("skips room creation for existing rooms", async () => {
-      mockSelectRoom.mockResolvedValue({ id: "existing-room" } as any);
-
-      const body = {
-        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
-        roomId: "existing-room",
-        accountId: "account-123",
-      };
-
-      const responseMessages = [
-        { id: "response-1", role: "assistant", parts: [{ type: "text", text: "Hi!" }] },
-      ];
-
-      await handleChatCompletion(body as any, responseMessages as any);
-
-      expect(mockUpsertRoom).not.toHaveBeenCalled();
-      expect(mockSendNewConversationNotification).not.toHaveBeenCalled();
-    });
-
-    it("stores both user and assistant messages to memories", async () => {
-      mockSelectRoom.mockResolvedValue({ id: "room-123" } as any);
-
-      const body = {
-        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
-        roomId: "room-123",
-        accountId: "account-123",
-      };
-
-      const responseMessages = [
-        { id: "response-1", role: "assistant", parts: [{ type: "text", text: "Hi!" }] },
-      ];
-
-      await handleChatCompletion(body as any, responseMessages as any);
-
-      expect(mockUpsertMemory).toHaveBeenCalledTimes(2);
-      expect(mockUpsertMemory).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: "msg-1",
-          room_id: "room-123",
-        }),
-      );
-      expect(mockUpsertMemory).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: "response-1",
-          room_id: "room-123",
-        }),
-      );
-    });
-
-    it("processes email tool outputs", async () => {
-      mockSelectRoom.mockResolvedValue({ id: "room-123" } as any);
-
-      const body = {
-        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Send an email" }] }],
-        roomId: "room-123",
-        accountId: "account-123",
-      };
-
-      const responseMessages = [
-        {
-          id: "response-1",
-          role: "assistant",
-          parts: [
-            {
-              type: "tool-invocation",
-              toolName: "send_email",
-              result: { success: true },
-            },
-          ],
-        },
-      ];
-
-      await handleChatCompletion(body as any, responseMessages as any);
-
-      expect(mockHandleSendEmailToolOutputs).toHaveBeenCalledWith(responseMessages);
-    });
-
-    it("catches errors without breaking chat response", async () => {
-      mockSelectRoom.mockRejectedValue(new Error("Database error"));
-
-      const body = {
-        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
-        roomId: "room-123",
-        accountId: "account-123",
-      };
-
-      const responseMessages = [
-        { id: "response-1", role: "assistant", parts: [{ type: "text", text: "Hi!" }] },
-      ];
-
-      // Should not throw
-      await expect(
-        handleChatCompletion(body as any, responseMessages as any),
-      ).resolves.toBeUndefined();
-    });
-
-    it("handles empty roomId by defaulting to empty string", async () => {
-      const body = {
-        messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }],
-        accountId: "account-123",
-        // roomId not provided
-      };
-
-      const responseMessages = [
-        { id: "response-1", role: "assistant", parts: [{ type: "text", text: "Hi!" }] },
-      ];
-
-      await handleChatCompletion(body as any, responseMessages as any);
-
-      expect(mockSelectRoom).toHaveBeenCalledWith("");
-    });
-  });
-
   describe("handleChatCredits integration", () => {
     it("calculates and deducts credits based on usage", async () => {
       mockGetCreditUsage.mockResolvedValue(0.5);
@@ -647,56 +480,6 @@ describe("Chat Integration Tests", () => {
       const chatConfig = await setupChatRequest(validationResult as any);
       expect(chatConfig.agent).toBeDefined();
       expect(chatConfig.messages.length).toBeLessThanOrEqual(100); // MAX_MESSAGES
-    });
-
-    it("handles complete chat flow with post-completion", async () => {
-      mockValidateAuthContext.mockResolvedValue({
-        accountId: "account-123",
-        orgId: null,
-        authToken: "token",
-      });
-      mockSelectRoom.mockResolvedValue(null);
-      mockGenerateChatTitle.mockResolvedValue("Math Question");
-
-      // 1. Validate request
-      const request = createMockRequest(
-        {
-          prompt: "What is 2+2?",
-          roomId: "new-room-123",
-        },
-        { "x-api-key": "valid-key" },
-      );
-
-      const body = await validateChatRequest(request as any);
-      expect(body).not.toBeInstanceOf(NextResponse);
-
-      // 2. Setup chat request
-      const chatConfig = await setupChatRequest(body as any);
-      expect(chatConfig.agent).toBeDefined();
-
-      // 3. Handle post-completion (simulating what would happen after agent response)
-      const responseMessages = [
-        {
-          id: "response-1",
-          role: "assistant",
-          parts: [{ type: "text", text: "2 + 2 = 4" }],
-        },
-      ];
-
-      await handleChatCompletion(body as any, responseMessages as any);
-
-      expect(mockUpsertRoom).toHaveBeenCalled();
-      expect(mockUpsertMemory).toHaveBeenCalledTimes(2);
-
-      // 4. Handle credits
-      await handleChatCredits({
-        usage: { promptTokens: 100, completionTokens: 50 },
-        model: (body as any).model || "openai/gpt-5.4-nano",
-        accountId: (body as any).accountId,
-      });
-
-      expect(mockGetCreditUsage).toHaveBeenCalled();
-      expect(mockRecordCreditDeduction).toHaveBeenCalled();
     });
   });
 });
