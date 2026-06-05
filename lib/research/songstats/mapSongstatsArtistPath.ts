@@ -12,7 +12,7 @@ import { buildArtistTopTracksQuery } from "@/lib/research/songstats/buildArtistT
 import { normalizeArtistAlbums } from "@/lib/research/songstats/normalizeArtistAlbums";
 import { normalizeArtistTopTracks } from "@/lib/research/songstats/normalizeArtistTopTracks";
 import { parsePositiveLimit } from "@/lib/research/songstats/parsePositiveLimit";
-import { resolveIsPrimary } from "@/lib/research/songstats/resolveCatalogPrimary";
+import { resolveCatalogPrimary } from "@/lib/research/songstats/resolveCatalogPrimary";
 
 export function mapSongstatsArtistPath(
   path: string,
@@ -38,7 +38,7 @@ export function mapSongstatsArtistPath(
 
   match = path.match(/^\/artist\/([^/]+)\/albums$/);
   if (match) {
-    const albumQuery = { ...query, isPrimary: resolveIsPrimary(query) };
+    const albumQuery = { ...query, isPrimary: resolveCatalogPrimary(query) };
     return mapSongstatsResult(
       "/artists/catalog",
       buildArtistCatalogQuery(match[1], albumQuery),

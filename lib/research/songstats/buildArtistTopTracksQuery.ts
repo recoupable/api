@@ -1,4 +1,4 @@
-import { appendPassthroughQueryParams } from "@/lib/research/songstats/resolveCatalogPrimary";
+import { appendPassthroughQueryParams } from "@/lib/research/songstats/appendPassthroughQueryParams";
 
 /**
  * Builds SongStats `/artists/top_tracks` query params.

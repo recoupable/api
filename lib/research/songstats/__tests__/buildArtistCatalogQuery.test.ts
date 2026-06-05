@@ -18,6 +18,13 @@ describe("buildArtistCatalogQuery", () => {
     });
   });
 
+  it("treats empty is_primary as default true", () => {
+    expect(buildArtistCatalogQuery("artist_1", { is_primary: "" })).toMatchObject({
+      is_primary: "true",
+      isPrimary: "true",
+    });
+  });
+
   it("does not allow query params to override the route artist id", () => {
     const params = buildArtistCatalogQuery("artist_1", {
       songstats_artist_id: "other_artist",

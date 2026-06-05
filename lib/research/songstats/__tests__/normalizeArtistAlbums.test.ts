@@ -17,6 +17,21 @@ describe("normalizeArtistAlbums", () => {
     expect(albums[0]).toMatchObject({ title: "Views", id: "a1" });
   });
 
+  it("drops non-object catalog entries", () => {
+    const data = {
+      catalog: [
+        { title: "Views", songstats_track_id: "a1" },
+        null,
+        "bad",
+        { title: "Take Care", songstats_track_id: "a2" },
+      ],
+    };
+
+    const albums = normalizeArtistAlbums(data);
+
+    expect(albums).toHaveLength(2);
+  });
+
   it("does not re-slice when limit is present (paging stays on SongStats)", () => {
     const data = {
       catalog: [

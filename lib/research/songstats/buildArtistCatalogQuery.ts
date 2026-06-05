@@ -1,7 +1,5 @@
-import {
-  appendPassthroughQueryParams,
-  resolveIsPrimary,
-} from "@/lib/research/songstats/resolveCatalogPrimary";
+import { appendPassthroughQueryParams } from "@/lib/research/songstats/appendPassthroughQueryParams";
+import { resolveCatalogPrimary } from "@/lib/research/songstats/resolveCatalogPrimary";
 
 /**
  * Builds SongStats `/artists/catalog` query params from the public research query.
@@ -10,7 +8,7 @@ export function buildArtistCatalogQuery(
   artistId: string,
   query?: Record<string, string>,
 ): Record<string, string> {
-  const isPrimary = resolveIsPrimary(query);
+  const isPrimary = resolveCatalogPrimary(query);
   const params: Record<string, string> = {
     songstats_artist_id: artistId,
     is_primary: isPrimary,
