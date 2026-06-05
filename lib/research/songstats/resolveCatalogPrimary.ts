@@ -1,8 +1,5 @@
 /** Query keys that must not override route-resolved SongStats artist IDs. */
-export const BLOCKED_SONGSTATS_QUERY_KEYS = new Set([
-  "songstats_artist_id",
-  "spotify_artist_id",
-]);
+export const BLOCKED_SONGSTATS_QUERY_KEYS = new Set(["songstats_artist_id", "spotify_artist_id"]);
 
 /**
  * Resolves primary-catalog mode from camelCase or snake_case query params.
