@@ -13,9 +13,14 @@ export function normalizeArtistTracksCatalogFallback(
   data: unknown,
   query?: Record<string, string>,
 ): unknown[] {
-  const items = extractList(data, ["tracks", "catalog", "albums", "results", "data", "items"]).filter(
-    isRecord,
-  );
+  const items = extractList(data, [
+    "tracks",
+    "catalog",
+    "albums",
+    "results",
+    "data",
+    "items",
+  ]).filter(isRecord);
   const filtered = filterCatalogItems(items, false).map(normalizeTrackRecord);
   const limit = parsePositiveLimit(query?.limit) ?? DEFAULT_FALLBACK_LIMIT;
   return filtered.slice(0, limit);

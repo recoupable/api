@@ -9,7 +9,9 @@ import { resolveCatalogPrimary } from "@/lib/research/songstats/resolveCatalogPr
  * title/role noise is stripped client-side when primary mode is on.
  */
 export function normalizeArtistAlbums(data: unknown, query?: Record<string, string>): unknown[] {
-  const items = extractList(data, ["albums", "catalog", "results", "data", "items"]).filter(isRecord);
+  const items = extractList(data, ["albums", "catalog", "results", "data", "items"]).filter(
+    isRecord,
+  );
   const includeAll = resolveCatalogPrimary(query) === "false";
   const list = includeAll ? items : filterCatalogItems(items, false);
   return list.map(normalizeTrackRecord);

@@ -37,7 +37,10 @@ describe("fetchArtistTracksFromSongstats", () => {
 
   it("falls back to filtered catalog when top_tracks is empty", async () => {
     vi.mocked(fetchSongstats)
-      .mockResolvedValueOnce({ status: 200, data: { data: [{ source: "spotify", top_tracks: [] }] } })
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { data: [{ source: "spotify", top_tracks: [] }] },
+      })
       .mockResolvedValueOnce({
         status: 200,
         data: {
