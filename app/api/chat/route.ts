@@ -18,11 +18,12 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/chat/workflow
+ * POST /api/chat
  *
- * Streams a sandbox-driven agent loop (Vercel Workflow) for an existing
- * session + chat. Currently returns a hardcoded UIMessage stream stub —
- * the workflow is wired up in a follow-up PR.
+ * Canonical path for the sandbox-driven agent loop (Vercel Workflow).
+ * Delegates to the same handler as `POST /api/chat/workflow`, which is
+ * retained as a backward-compatible alias while consumers (chat,
+ * open-agents, API-key callers) migrate to `/api/chat`.
  *
  * Contract: https://developers.recoupable.com/api-reference/chat/workflow
  *
