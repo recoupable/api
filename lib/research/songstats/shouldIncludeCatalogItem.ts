@@ -18,8 +18,13 @@ function isSecondaryRole(role: unknown): boolean {
  * When `includeNonPrimary` is false, drops remix/feature appearances and other noisy catalog rows.
  */
 export function shouldIncludeCatalogItem(value: unknown, includeNonPrimary: boolean): boolean {
-  if (includeNonPrimary) return isRecord(value);
   if (!isRecord(value)) return false;
+
+  const title = pickString(value, ["title", "name", "track_title", "track_name"]);
+  const trackId = pickString(value, ["songstats_track_id", "track_id"]);
+  if (!title && !trackId) return false;
+
+  if (includeNonPrimary) return true;
 
   if (
     isTruthyFlag(value.is_remix) ||
@@ -29,9 +34,6 @@ export function shouldIncludeCatalogItem(value: unknown, includeNonPrimary: bool
     return false;
   }
 
-  const title = pickString(value, ["title", "name", "track_title", "track_name"]);
-  const trackId = pickString(value, ["songstats_track_id", "track_id"]);
-  if (!title && !trackId) return false;
   if (title && isNoisyCatalogTitle(title)) return false;
 
   const role = value.role ?? value.artist_role ?? value.credit_role;

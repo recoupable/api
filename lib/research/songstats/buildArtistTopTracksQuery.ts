@@ -16,9 +16,7 @@ export function buildArtistTopTracksQuery(
 
   if (!query) return params;
 
-  const { limit, offset, source, metric, ...rest } = query;
-  if (source) params.source = source;
-  if (metric) params.metric = metric;
+  const { limit, offset, ...rest } = query;
   if (limit) params.limit = limit;
   if (offset) params.offset = offset;
   appendPassthroughQueryParams(params, rest, ["isPrimary", "is_primary"]);

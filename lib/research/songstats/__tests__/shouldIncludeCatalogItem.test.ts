@@ -14,9 +14,9 @@ describe("shouldIncludeCatalogItem", () => {
   });
 
   it("excludes platform shells without title or track id", () => {
-    expect(
-      shouldIncludeCatalogItem({ source: "spotify", metric_options: ["popularity"] }, false),
-    ).toBe(false);
+    const shell = { source: "spotify", metric_options: ["popularity"] };
+    expect(shouldIncludeCatalogItem(shell, false)).toBe(false);
+    expect(shouldIncludeCatalogItem(shell, true)).toBe(false);
   });
 
   it("excludes secondary roles with feat or ft abbreviations", () => {
