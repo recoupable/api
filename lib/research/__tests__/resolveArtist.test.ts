@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { resolveArtist } from "../resolveArtist";
 
-import { fetchResearchProvider } from "@/lib/research/providers/fetchResearchProvider";
+import { fetchSongstatsResearch } from "@/lib/research/songstats/fetchSongstatsResearch";
 
-vi.mock("@/lib/research/providers/fetchResearchProvider", () => ({
-  fetchResearchProvider: vi.fn(),
+vi.mock("@/lib/research/songstats/fetchSongstatsResearch", () => ({
+  fetchSongstatsResearch: vi.fn(),
 }));
 
 describe("resolveArtist", () => {
@@ -16,7 +16,7 @@ describe("resolveArtist", () => {
     const result = await resolveArtist("3380");
 
     expect(result).toEqual({ id: "3380" });
-    expect(fetchResearchProvider).not.toHaveBeenCalled();
+    expect(fetchSongstatsResearch).not.toHaveBeenCalled();
   });
 
   it("returns error for UUID (not yet implemented)", async () => {
@@ -27,7 +27,7 @@ describe("resolveArtist", () => {
   });
 
   it("searches the configured provider by name and returns top match", async () => {
-    vi.mocked(fetchResearchProvider).mockResolvedValue({
+    vi.mocked(fetchSongstatsResearch).mockResolvedValue({
       data: { artists: [{ id: 3380, name: "Drake" }] },
       status: 200,
     });
@@ -35,7 +35,7 @@ describe("resolveArtist", () => {
     const result = await resolveArtist("Drake");
 
     expect(result).toEqual({ id: "3380" });
-    expect(fetchResearchProvider).toHaveBeenCalledWith("/search", {
+    expect(fetchSongstatsResearch).toHaveBeenCalledWith("/search", {
       q: "Drake",
       type: "artists",
       limit: "1",
@@ -43,7 +43,7 @@ describe("resolveArtist", () => {
   });
 
   it("returns error when no artist found", async () => {
-    vi.mocked(fetchResearchProvider).mockResolvedValue({
+    vi.mocked(fetchSongstatsResearch).mockResolvedValue({
       data: { artists: [] },
       status: 200,
     });
@@ -55,7 +55,7 @@ describe("resolveArtist", () => {
   });
 
   it("returns error when search fails", async () => {
-    vi.mocked(fetchResearchProvider).mockResolvedValue({
+    vi.mocked(fetchSongstatsResearch).mockResolvedValue({
       data: { error: "failed" },
       status: 500,
     });
@@ -80,7 +80,7 @@ describe("resolveArtist", () => {
   });
 
   it("returns SongStats string IDs from provider-backed search results", async () => {
-    vi.mocked(fetchResearchProvider).mockResolvedValue({
+    vi.mocked(fetchSongstatsResearch).mockResolvedValue({
       data: { artists: [{ id: "artist_123", name: "Test Artist" }] },
       status: 200,
     });

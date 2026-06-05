@@ -1,4 +1,4 @@
-import { fetchResearchProvider } from "@/lib/research/providers/fetchResearchProvider";
+import { fetchSongstatsResearch } from "@/lib/research/songstats/fetchSongstatsResearch";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -33,7 +33,7 @@ export async function resolveArtist(
     };
   }
 
-  const result = await fetchResearchProvider("/search", {
+  const result = await fetchSongstatsResearch("/search", {
     q: trimmed,
     type: "artists",
     limit: "1",

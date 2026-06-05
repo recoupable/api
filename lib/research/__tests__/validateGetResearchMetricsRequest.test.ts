@@ -67,4 +67,11 @@ describe("validateGetResearchMetricsRequest", () => {
     );
     expect(result).toEqual({ accountId: "acc_1", artist: "Drake", source: "radio" });
   });
+
+  it("accepts SongStats sxm metric sources", async () => {
+    const result = await validateGetResearchMetricsRequest(
+      new NextRequest("http://x/?artist=Drake&source=sxm"),
+    );
+    expect(result).toEqual({ accountId: "acc_1", artist: "Drake", source: "sxm" });
+  });
 });

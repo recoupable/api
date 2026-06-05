@@ -1,4 +1,4 @@
-import { fetchResearchProvider } from "@/lib/research/providers/fetchResearchProvider";
+import { fetchSongstatsResearch } from "@/lib/research/songstats/fetchSongstatsResearch";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 
 export type HandleResearchParams = {
@@ -25,7 +25,7 @@ export type HandleResearchResult = { data: unknown } | { error: string; status: 
 export async function handleResearch(params: HandleResearchParams): Promise<HandleResearchResult> {
   const { accountId, path, query, credits = 5 } = params;
 
-  const result = await fetchResearchProvider(path, query);
+  const result = await fetchSongstatsResearch(path, query);
   if (result.status !== 200) {
     return { error: `Request failed with status ${result.status}`, status: result.status };
   }

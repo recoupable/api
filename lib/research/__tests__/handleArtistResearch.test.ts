@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { handleArtistResearch } from "../handleArtistResearch";
 import { resolveArtist } from "@/lib/research/resolveArtist";
-import { fetchResearchProvider } from "@/lib/research/providers/fetchResearchProvider";
+import { fetchSongstatsResearch } from "@/lib/research/songstats/fetchSongstatsResearch";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 
 vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
@@ -12,8 +12,8 @@ vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
 vi.mock("@/lib/research/resolveArtist", () => ({
   resolveArtist: vi.fn(),
 }));
-vi.mock("@/lib/research/providers/fetchResearchProvider", () => ({
-  fetchResearchProvider: vi.fn(),
+vi.mock("@/lib/research/songstats/fetchSongstatsResearch", () => ({
+  fetchSongstatsResearch: vi.fn(),
 }));
 vi.mock("@/lib/credits/recordCreditDeduction", () => ({
   recordCreditDeduction: vi.fn(),
@@ -34,13 +34,13 @@ describe("handleArtistResearch", () => {
     });
 
     expect(result).toEqual({ error: "Artist not found", status: 404 });
-    expect(fetchResearchProvider).not.toHaveBeenCalled();
+    expect(fetchSongstatsResearch).not.toHaveBeenCalled();
     expect(recordCreditDeduction).not.toHaveBeenCalled();
   });
 
   it("proxies to the built path and returns { data } on success", async () => {
     vi.mocked(resolveArtist).mockResolvedValue({ id: "42" } as never);
-    vi.mocked(fetchResearchProvider).mockResolvedValue({
+    vi.mocked(fetchSongstatsResearch).mockResolvedValue({
       status: 200,
       data: [{ name: "a" }],
     } as never);
@@ -52,7 +52,7 @@ describe("handleArtistResearch", () => {
       path: id => `/artist/${id}/albums`,
     });
 
-    expect(fetchResearchProvider).toHaveBeenCalledWith("/artist/42/albums", undefined);
+    expect(fetchSongstatsResearch).toHaveBeenCalledWith("/artist/42/albums", undefined);
     expect(recordCreditDeduction).toHaveBeenCalledWith({
       accountId: "acc_1",
       creditsToDeduct: 5,
@@ -63,7 +63,7 @@ describe("handleArtistResearch", () => {
 
   it("forwards query params to the provider fetcher", async () => {
     vi.mocked(resolveArtist).mockResolvedValue({ id: "7" } as never);
-    vi.mocked(fetchResearchProvider).mockResolvedValue({ status: 200, data: {} } as never);
+    vi.mocked(fetchSongstatsResearch).mockResolvedValue({ status: 200, data: {} } as never);
 
     await handleArtistResearch({
       artist: "X",
@@ -72,7 +72,7 @@ describe("handleArtistResearch", () => {
       query: { limit: "10", platform: "spotify" },
     });
 
-    expect(fetchResearchProvider).toHaveBeenCalledWith("/artist/7/playlists", {
+    expect(fetchSongstatsResearch).toHaveBeenCalledWith("/artist/7/playlists", {
       limit: "10",
       platform: "spotify",
     });
@@ -80,7 +80,7 @@ describe("handleArtistResearch", () => {
 
   it("returns the upstream status as an error when proxy is non-200", async () => {
     vi.mocked(resolveArtist).mockResolvedValue({ id: "1" } as never);
-    vi.mocked(fetchResearchProvider).mockResolvedValue({ status: 502, data: null } as never);
+    vi.mocked(fetchSongstatsResearch).mockResolvedValue({ status: 502, data: null } as never);
 
     const result = await handleArtistResearch({
       artist: "X",
@@ -94,7 +94,7 @@ describe("handleArtistResearch", () => {
 
   it("swallows credit-deduction failures and still returns data", async () => {
     vi.mocked(resolveArtist).mockResolvedValue({ id: "1" } as never);
-    vi.mocked(fetchResearchProvider).mockResolvedValue({ status: 200, data: "ok" } as never);
+    vi.mocked(fetchSongstatsResearch).mockResolvedValue({ status: 200, data: "ok" } as never);
     vi.mocked(recordCreditDeduction).mockRejectedValue(new Error("DB down"));
 
     const result = await handleArtistResearch({
@@ -107,7 +107,7 @@ describe("handleArtistResearch", () => {
   });
 
   it("uses an explicit provider artist id without resolving by name", async () => {
-    vi.mocked(fetchResearchProvider).mockResolvedValue({ status: 200, data: "ok" } as never);
+    vi.mocked(fetchSongstatsResearch).mockResolvedValue({ status: 200, data: "ok" } as never);
     vi.mocked(recordCreditDeduction).mockResolvedValue(undefined as never);
 
     const result = await handleArtistResearch({
@@ -118,7 +118,7 @@ describe("handleArtistResearch", () => {
     });
 
     expect(resolveArtist).not.toHaveBeenCalled();
-    expect(fetchResearchProvider).toHaveBeenCalledWith("/artist/artist_123", undefined);
+    expect(fetchSongstatsResearch).toHaveBeenCalledWith("/artist/artist_123", undefined);
     expect(result).toEqual({ data: "ok" });
   });
 });

@@ -1,5 +1,5 @@
 import { SONGSTATS_BASE } from "@/lib/songstats/songstatsBase";
-import type { ProxyResult } from "@/lib/research/providers/ProxyResult";
+import type { ProxyResult } from "@/lib/research/ProxyResult";
 
 const DEFAULT_SONGSTATS_TIMEOUT_MS = 10_000;
 const SLOW_SONGSTATS_TIMEOUT_MS = 35_000;
@@ -55,8 +55,11 @@ export async function fetchSongstats(
 ): Promise<ProxyResult> {
   const apiKey = getSongstatsApiKey();
   if (!apiKey) {
+    console.error(
+      "[ERROR] fetchSongstats: SONGSTATS_API_KEY or SongStats_API environment variable is not set",
+    );
     return {
-      data: { error: "SONGSTATS_API_KEY or SongStats_API environment variable is not set" },
+      data: { error: "Internal server error" },
       status: 500,
     };
   }

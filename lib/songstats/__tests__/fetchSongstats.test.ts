@@ -64,16 +64,17 @@ describe("fetchSongstats", () => {
     );
   });
 
-  it("returns a 500-compatible result when no SongStats API key is configured", async () => {
+  it("returns a sanitized 500-compatible result when no SongStats API key is configured", async () => {
     delete process.env.SONGSTATS_API_KEY;
     delete process.env.SongStats_API;
 
     const result = await fetchSongstats("/artists/search", { q: "Drake" });
 
     expect(result.status).toBe(500);
-    expect(result.data).toEqual({
-      error: "SONGSTATS_API_KEY or SongStats_API environment variable is not set",
-    });
+    expect(result.data).toEqual({ error: "Internal server error" });
+    expect(console.error).toHaveBeenCalledWith(
+      "[ERROR] fetchSongstats: SONGSTATS_API_KEY or SongStats_API environment variable is not set",
+    );
     expect(fetch).not.toHaveBeenCalled();
   });
 

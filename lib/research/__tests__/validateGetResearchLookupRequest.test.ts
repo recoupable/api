@@ -78,6 +78,18 @@ describe("validateGetResearchLookupRequest", () => {
     expect(body.error).toContain("Spotify artist URL");
   });
 
+  it("returns 400 when url only contains a Spotify artist path as a substring", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest(
+      "http://localhost/api/research/lookup?url=https://evil.com/redirect?to=https://open.spotify.com/artist/3TVXtAsR1Inumwj472S9r4",
+    );
+    const res = await validateGetResearchLookupRequest(req);
+
+    expect((res as NextResponse).status).toBe(400);
+    const body = await (res as NextResponse).json();
+    expect(body.error).toContain("Spotify artist URL");
+  });
+
   it("returns 400 when Spotify URL contains a malformed artist ID", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
     const req = new NextRequest(

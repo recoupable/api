@@ -1,4 +1,4 @@
-import { fetchResearchProvider } from "@/lib/research/providers/fetchResearchProvider";
+import { fetchSongstatsResearch } from "@/lib/research/songstats/fetchSongstatsResearch";
 import { resolveArtist } from "@/lib/research/resolveArtist";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 
@@ -25,7 +25,7 @@ export async function getResearchMetrics(
   if ("error" in resolved) return { error: resolved.error, status: 404 };
 
   const path = `/artist/${resolved.id}/stat/${params.source}`;
-  const result = await fetchResearchProvider(path, undefined);
+  const result = await fetchSongstatsResearch(path, undefined);
   if (result.status !== 200) {
     return { error: `Request failed with status ${result.status}`, status: result.status };
   }

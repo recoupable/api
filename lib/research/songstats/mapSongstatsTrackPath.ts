@@ -1,4 +1,4 @@
-import type { ProxyResult } from "@/lib/research/providers/ProxyResult";
+import type { ProxyResult } from "@/lib/research/ProxyResult";
 import {
   extractList,
   mapSongstatsResult,

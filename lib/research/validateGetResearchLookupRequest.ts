@@ -4,7 +4,8 @@ import { ensureResearchCredits } from "@/lib/research/ensureResearchCredits";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 const SPOTIFY_ID_REGEX = /^[A-Za-z0-9]{22}$/;
-const SPOTIFY_ARTIST_REGEX = /spotify\.com\/artist\/([A-Za-z0-9]{22})(?:[/?#]|$)/;
+const SPOTIFY_ARTIST_REGEX =
+  /^https?:\/\/(?:open\.)?spotify\.com\/artist\/([A-Za-z0-9]{22})(?:[/?#]|$)/i;
 
 export type ValidatedGetResearchLookupRequest = {
   accountId: string;

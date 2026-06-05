@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { handleResearch } from "../handleResearch";
-import { fetchResearchProvider } from "@/lib/research/providers/fetchResearchProvider";
+import { fetchSongstatsResearch } from "@/lib/research/songstats/fetchSongstatsResearch";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 
 vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
   ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock("@/lib/research/providers/fetchResearchProvider", () => ({
-  fetchResearchProvider: vi.fn(),
+vi.mock("@/lib/research/songstats/fetchSongstatsResearch", () => ({
+  fetchSongstatsResearch: vi.fn(),
 }));
 vi.mock("@/lib/credits/recordCreditDeduction", () => ({
   recordCreditDeduction: vi.fn(),
@@ -21,7 +21,7 @@ describe("handleResearch", () => {
   });
 
   it("returns { data } on 200 and deducts the default 5 credits", async () => {
-    vi.mocked(fetchResearchProvider).mockResolvedValue({
+    vi.mocked(fetchSongstatsResearch).mockResolvedValue({
       status: 200,
       data: [{ id: 1 }],
     } as never);
@@ -33,7 +33,7 @@ describe("handleResearch", () => {
       query: { q: "Drake", type: "artists" },
     });
 
-    expect(fetchResearchProvider).toHaveBeenCalledWith("/search", {
+    expect(fetchSongstatsResearch).toHaveBeenCalledWith("/search", {
       q: "Drake",
       type: "artists",
     });
@@ -46,7 +46,7 @@ describe("handleResearch", () => {
   });
 
   it("returns { error, status } when proxy is non-200 and skips deduction", async () => {
-    vi.mocked(fetchResearchProvider).mockResolvedValue({ status: 502, data: null } as never);
+    vi.mocked(fetchSongstatsResearch).mockResolvedValue({ status: 502, data: null } as never);
 
     const result = await handleResearch({
       accountId: "acc_1",
@@ -59,7 +59,7 @@ describe("handleResearch", () => {
   });
 
   it("still returns { data } when credit deduction throws", async () => {
-    vi.mocked(fetchResearchProvider).mockResolvedValue({ status: 200, data: "ok" } as never);
+    vi.mocked(fetchSongstatsResearch).mockResolvedValue({ status: 200, data: "ok" } as never);
     vi.mocked(recordCreditDeduction).mockRejectedValue(new Error("DB down"));
 
     const result = await handleResearch({
@@ -71,7 +71,7 @@ describe("handleResearch", () => {
   });
 
   it("respects the credits override", async () => {
-    vi.mocked(fetchResearchProvider).mockResolvedValue({ status: 200, data: {} } as never);
+    vi.mocked(fetchSongstatsResearch).mockResolvedValue({ status: 200, data: {} } as never);
     vi.mocked(recordCreditDeduction).mockResolvedValue(undefined as never);
 
     await handleResearch({

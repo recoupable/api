@@ -1,4 +1,4 @@
-import type { ProxyResult } from "@/lib/research/providers/ProxyResult";
+import type { ProxyResult } from "@/lib/research/ProxyResult";
 import { fetchSongstats } from "@/lib/songstats/fetchSongstats";
 
 export type JsonRecord = Record<string, unknown>;

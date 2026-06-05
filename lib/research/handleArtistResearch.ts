@@ -1,5 +1,5 @@
 import { resolveArtist } from "@/lib/research/resolveArtist";
-import { fetchResearchProvider } from "@/lib/research/providers/fetchResearchProvider";
+import { fetchSongstatsResearch } from "@/lib/research/songstats/fetchSongstatsResearch";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 
 export type HandleArtistResearchParams = {
@@ -31,7 +31,7 @@ export async function handleArtistResearch(
   const resolved = artistId ? { id: artistId } : await resolveArtist(artist);
   if ("error" in resolved) return { error: resolved.error, status: 404 };
 
-  const result = await fetchResearchProvider(path(resolved.id), query);
+  const result = await fetchSongstatsResearch(path(resolved.id), query);
   if (result.status !== 200) {
     return { error: `Request failed with status ${result.status}`, status: result.status };
   }
