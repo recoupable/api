@@ -17,6 +17,8 @@ const VALID_SOURCES = [
   "melon",
   "wikipedia",
   "bandsintown",
+  "radio",
+  "sxm",
 ] as const;
 
 export type ValidatedGetResearchMetricsRequest = {

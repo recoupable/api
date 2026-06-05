@@ -44,13 +44,13 @@ describe("validateGetResearchAlbumsRequest", () => {
     expect(body.error).toBe("artist_id parameter is required");
   });
 
-  it("returns 400 when artist_id is not a positive integer", async () => {
+  it("returns 400 when artist_id contains unsupported characters", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
-    const req = new NextRequest("http://localhost/api/research/albums?artist_id=Drake");
+    const req = new NextRequest("http://localhost/api/research/albums?artist_id=bad/id");
     const res = await validateGetResearchAlbumsRequest(req);
     expect((res as NextResponse).status).toBe(400);
     const body = await (res as NextResponse).json();
-    expect(body.error).toBe("artist_id must be a positive integer");
+    expect(body.error).toBe("artist_id must be a provider artist ID");
   });
 
   it("defaults to is_primary=true and omits pagination when not supplied", async () => {
@@ -63,6 +63,18 @@ describe("validateGetResearchAlbumsRequest", () => {
       isPrimary: "true",
       limit: undefined,
       offset: undefined,
+    });
+  });
+
+  it("accepts provider-neutral artist IDs", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest("http://localhost/api/research/albums?artist_id=artist_123");
+    const res = await validateGetResearchAlbumsRequest(req);
+
+    expect(res).toMatchObject({
+      accountId: "acc_1",
+      artistId: "artist_123",
+      isPrimary: "true",
     });
   });
 

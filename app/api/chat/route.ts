@@ -1,7 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { handleChatStream } from "@/lib/chat/handleChatStream";
+import { handleChatWorkflowStream } from "@/lib/chat/handleChatWorkflowStream";
+
+export const maxDuration = 800;
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -18,24 +20,16 @@ export async function OPTIONS() {
 /**
  * POST /api/chat
  *
- * Streaming chat endpoint that processes messages and returns a streaming response.
+ * Canonical path for the sandbox-driven agent loop (Vercel Workflow).
+ * Delegates to the same handler as `POST /api/chat/workflow`, which is
+ * retained as a backward-compatible alias while consumers (chat,
+ * open-agents, API-key callers) migrate to `/api/chat`.
  *
- * Authentication: x-api-key header required.
- * The account ID is inferred from the API key.
+ * Contract: https://developers.recoupable.com/api-reference/chat/workflow
  *
- * Request body:
- * - messages: Array of chat messages (mutually exclusive with prompt)
- * - prompt: String prompt (mutually exclusive with messages)
- * - roomId: Optional UUID of the chat room
- * - topic: Optional topic for new chat room (ignored if room already exists)
- * - artistId: Optional UUID of the artist account
- * - model: Optional model ID override
- * - excludeTools: Optional array of tool names to exclude
- * - accountId: Optional accountId override (requires org API key)
- *
- * @param request - The request object
- * @returns A streaming response or error
+ * @param request - The incoming NextRequest.
+ * @returns A streaming Response (200) or a NextResponse error.
  */
 export async function POST(request: NextRequest): Promise<Response> {
-  return handleChatStream(request);
+  return handleChatWorkflowStream(request);
 }
