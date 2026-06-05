@@ -1,4 +1,4 @@
-import { fetchChartmetric } from "@/lib/chartmetric/fetchChartmetric";
+import { fetchSongstatsResearch } from "@/lib/research/songstats/fetchSongstatsResearch";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 
 export type HandleResearchParams = {
@@ -12,9 +12,9 @@ export type HandleResearchParams = {
 export type HandleResearchResult = { data: unknown } | { error: string; status: number };
 
 /**
- * Proxies a non-artist-scoped research call to Chartmetric and deducts credits
- * on success. Credit-deduction failures are non-fatal — the fetched data is
- * still returned so transient billing failures don't block read endpoints.
+ * Proxies a non-artist-scoped research call to the configured research data
+ * provider and deducts credits on success. Credit-deduction failures are
+ * non-fatal so transient billing failures don't block read endpoints.
  *
  * Credit gating (auto-recharge + 402 short-circuit) lives in route handlers
  * via `ensureCreditsOrShortCircuit` — keeping this helper free of NextResponse
@@ -25,7 +25,7 @@ export type HandleResearchResult = { data: unknown } | { error: string; status: 
 export async function handleResearch(params: HandleResearchParams): Promise<HandleResearchResult> {
   const { accountId, path, query, credits = 5 } = params;
 
-  const result = await fetchChartmetric(path, query);
+  const result = await fetchSongstatsResearch(path, query);
   if (result.status !== 200) {
     return { error: `Request failed with status ${result.status}`, status: result.status };
   }

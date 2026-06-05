@@ -14,7 +14,7 @@ export async function OPTIONS() {
 /**
  * GET /api/research/track/playlists — Playlists featuring a specific track. Requires `?id=` or `?q=` query param.
  *
- * @param request - must include `id` (Chartmetric track ID) or `q` (track name) query param
+ * @param request - must include `id` (provider track ID) or `q` (track name) query param
  * @returns JSON playlist placements for the track or error
  */
 export async function GET(request: NextRequest) {

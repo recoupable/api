@@ -122,7 +122,7 @@ export async function validateChatRequest(
   const { lastMessage } = validateMessages(uiMessages);
 
   // Setup conversation: auto-create room if needed and persist user message
-  // Use the message's original ID to prevent duplicates with handleChatCompletion's upsert
+  // Use the message's original ID to prevent duplicate memory rows on upsert
   const { roomId: finalRoomId } = await setupConversation({
     accountId,
     roomId: validatedBody.roomId,

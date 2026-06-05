@@ -35,7 +35,7 @@ describe("validateArtistRequest", () => {
     if (result instanceof NextResponse) {
       expect(result.status).toBe(400);
       const body = await result.json();
-      expect(body.error).toBe("artist parameter is required");
+      expect(body.error).toBe("artist or id parameter is required");
     }
   });
 
@@ -45,5 +45,30 @@ describe("validateArtistRequest", () => {
     const result = await validateArtistRequest(new NextRequest("http://x/?artist=Drake"));
 
     expect(result).toEqual({ accountId: "acc_1", artist: "Drake" });
+  });
+
+  it("accepts id as a provider-neutral artist identifier", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({ accountId: "acc_1" } as never);
+
+    const result = await validateArtistRequest(new NextRequest("http://x/?id=artist_123"));
+
+    expect(result).toEqual({
+      accountId: "acc_1",
+      artist: "artist_123",
+      artistId: "artist_123",
+    });
+  });
+
+  it("returns a 400 response when id is not a provider artist identifier", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({ accountId: "acc_1" } as never);
+
+    const result = await validateArtistRequest(new NextRequest("http://x/?id=../artist"));
+
+    expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(400);
+      const body = await result.json();
+      expect(body.error).toBe("id must be a provider artist ID");
+    }
   });
 });

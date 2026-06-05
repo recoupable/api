@@ -44,13 +44,13 @@ describe("validateGetResearchTrackRequest", () => {
     expect(body.error).toBe("id parameter is required");
   });
 
-  it("returns 400 when id is not a positive integer", async () => {
+  it("returns 400 when id contains unsupported characters", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
-    const req = new NextRequest("http://localhost/api/research/track?id=abc");
+    const req = new NextRequest("http://localhost/api/research/track?id=bad/id");
     const res = await validateGetResearchTrackRequest(req);
     expect((res as NextResponse).status).toBe(400);
     const body = await (res as NextResponse).json();
-    expect(body.error).toBe("id must be a positive integer");
+    expect(body.error).toBe("id must be a provider track ID");
   });
 
   it("returns the validated request for a numeric id", async () => {
@@ -58,5 +58,13 @@ describe("validateGetResearchTrackRequest", () => {
     const req = new NextRequest("http://localhost/api/research/track?id=15194376");
     const res = await validateGetResearchTrackRequest(req);
     expect(res).toEqual({ accountId: "acc_1", id: "15194376" });
+  });
+
+  it("accepts provider-neutral track IDs", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest("http://localhost/api/research/track?id=track_123");
+    const res = await validateGetResearchTrackRequest(req);
+
+    expect(res).toMatchObject({ accountId: "acc_1", id: "track_123" });
   });
 });

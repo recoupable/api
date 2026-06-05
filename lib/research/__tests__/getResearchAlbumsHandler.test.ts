@@ -65,7 +65,7 @@ describe("getResearchAlbumsHandler", () => {
     });
   });
 
-  it("forwards is_primary=false, limit, and offset to Chartmetric when provided", async () => {
+  it("forwards is_primary=false, limit, and offset to the provider when provided", async () => {
     vi.mocked(validateGetResearchAlbumsRequest).mockResolvedValue({
       accountId: "test-id",
       artistId: "3380",

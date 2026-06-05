@@ -8,7 +8,7 @@ const RESEARCH_CREDIT_COST = 5;
  * Per-route credit gate for the read-only research family. Each successful
  * research call deducts {@link RESEARCH_CREDIT_COST} credits, so we make sure
  * the account has them (auto-recharging via a saved card if needed) before the
- * caller bothers hitting Chartmetric. Returns a 402 NextResponse the route can
+ * caller bothers hitting the external provider. Returns a 402 NextResponse the route can
  * `return` directly, or `null` to signal "you're good, proceed."
  */
 export const ensureResearchCredits = (accountId: string) =>
