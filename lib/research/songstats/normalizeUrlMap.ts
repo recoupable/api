@@ -1,8 +1,5 @@
 import { isTrustedResearchUrl } from "@/lib/research/isTrustedResearchUrl";
-import {
-  pickTrustedResearchUrl,
-  RESEARCH_LINK_KEYS,
-} from "@/lib/research/pickTrustedResearchUrl";
+import { pickTrustedResearchUrl, RESEARCH_LINK_KEYS } from "@/lib/research/pickTrustedResearchUrl";
 import { isRecord, type JsonRecord } from "@/lib/research/songstats/isRecord";
 import { pickString } from "@/lib/research/songstats/pickString";
 
