@@ -22,7 +22,6 @@ describe("fetchSongstatsResearch", () => {
       q: "Drake",
       type: "artists",
       limit: "1",
-      beta: "true",
     });
 
     expect(fetchSongstats).toHaveBeenCalledWith("/artists/search", {

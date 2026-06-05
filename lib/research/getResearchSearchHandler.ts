@@ -7,7 +7,7 @@ import { validateGetResearchSearchRequest } from "@/lib/research/validateGetRese
 /**
  * GET /api/research/search
  *
- * Searches the configured research provider for artists, tracks, or labels by name.
+ * Searches SongStats for artists, tracks, or labels by name.
  *
  * @param request - must include `q` query param
  * @returns JSON search results or error
@@ -22,9 +22,8 @@ export async function getResearchSearchHandler(request: NextRequest): Promise<Ne
       type: validated.type,
       limit: validated.limit,
     };
-    if (validated.beta !== undefined) query.beta = validated.beta;
-    if (validated.platforms !== undefined) query.platforms = validated.platforms;
     if (validated.offset !== undefined) query.offset = validated.offset;
+
     const result = await handleResearch({
       accountId: validated.accountId,
       path: "/search",

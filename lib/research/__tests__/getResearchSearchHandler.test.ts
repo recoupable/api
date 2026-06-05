@@ -29,8 +29,6 @@ describe("getResearchSearchHandler", () => {
       q: "Drake",
       type: "artists",
       limit: "10",
-      beta: undefined,
-      platforms: undefined,
       offset: undefined,
     });
   });
@@ -79,19 +77,17 @@ describe("getResearchSearchHandler", () => {
     });
   });
 
-  it("forwards beta, platforms, and offset to the provider when provided", async () => {
+  it("forwards offset to the provider when provided", async () => {
     vi.mocked(validateGetResearchSearchRequest).mockResolvedValue({
       accountId: "test-id",
       q: "Hotline Bling",
       type: "tracks",
       limit: "25",
-      beta: "true",
-      platforms: "cm,spotify",
       offset: "5",
     });
     vi.mocked(handleResearch).mockResolvedValue({ data: { tracks: [] } });
     const req = new NextRequest(
-      "http://localhost/api/research/search?q=Hotline+Bling&type=tracks&beta=true&platforms=cm,spotify&offset=5&limit=25",
+      "http://localhost/api/research/search?q=Hotline+Bling&type=tracks&offset=5&limit=25",
     );
     await getResearchSearchHandler(req);
 
@@ -102,18 +98,16 @@ describe("getResearchSearchHandler", () => {
         q: "Hotline Bling",
         type: "tracks",
         limit: "25",
-        beta: "true",
-        platforms: "cm,spotify",
         offset: "5",
       },
     });
   });
 
-  it("returns suggestions when the beta engine returns a suggestions array", async () => {
+  it("returns suggestions when the provider returns a suggestions array", async () => {
     vi.mocked(handleResearch).mockResolvedValue({
       data: { suggestions: [{ name: "Drake", target: "artists", match_strength: 0.99 }] },
     });
-    const req = new NextRequest("http://localhost/api/research/search?q=Drake&beta=true");
+    const req = new NextRequest("http://localhost/api/research/search?q=Drake");
     const res = await getResearchSearchHandler(req);
     const body = await res.json();
     expect(res.status).toBe(200);
