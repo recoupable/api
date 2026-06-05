@@ -10,9 +10,7 @@ describe("shouldIncludeCatalogItem", () => {
   it("excludes remix and feature titles for primary-only catalog", () => {
     expect(shouldIncludeCatalogItem({ title: "God's Plan" }, false)).toBe(true);
     expect(shouldIncludeCatalogItem({ title: "Hotline Bling (Remix)" }, false)).toBe(false);
-    expect(shouldIncludeCatalogItem({ title: "Nice For What feat. Lil Wayne" }, false)).toBe(
-      false,
-    );
+    expect(shouldIncludeCatalogItem({ title: "Nice For What feat. Lil Wayne" }, false)).toBe(false);
   });
 
   it("excludes rows flagged as remix or feature by the provider", () => {

@@ -37,10 +37,8 @@ export function mapSongstatsArtistPath(
 
   match = path.match(/^\/artist\/([^/]+)\/albums$/);
   if (match) {
-    return mapSongstatsResult(
-      "/artists/catalog",
-      buildArtistCatalogQuery(match[1], query),
-      data => normalizeArtistAlbums(data, query),
+    return mapSongstatsResult("/artists/catalog", buildArtistCatalogQuery(match[1], query), data =>
+      normalizeArtistAlbums(data, query),
     );
   }
 

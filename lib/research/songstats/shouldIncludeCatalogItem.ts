@@ -24,7 +24,11 @@ export function shouldIncludeCatalogItem(value: unknown, includeNonPrimary: bool
   if (includeNonPrimary) return isRecord(value);
   if (!isRecord(value)) return false;
 
-  if (isTruthyFlag(value.is_remix) || isTruthyFlag(value.is_feature) || isTruthyFlag(value.is_secondary)) {
+  if (
+    isTruthyFlag(value.is_remix) ||
+    isTruthyFlag(value.is_feature) ||
+    isTruthyFlag(value.is_secondary)
+  ) {
     return false;
   }
 

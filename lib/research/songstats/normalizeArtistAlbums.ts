@@ -6,10 +6,7 @@ import { parsePositiveLimit } from "@/lib/research/songstats/parsePositiveLimit"
 /**
  * Maps SongStats catalog payload to a filtered album list (primary releases by default).
  */
-export function normalizeArtistAlbums(
-  data: unknown,
-  query?: Record<string, string>,
-): unknown[] {
+export function normalizeArtistAlbums(data: unknown, query?: Record<string, string>): unknown[] {
   const includeNonPrimary = query?.isPrimary === "false";
   const items = extractList(data, ["albums", "catalog", "results", "data", "items"]);
   const filtered = filterCatalogItems(items, includeNonPrimary).map(normalizeTrackRecord);

@@ -16,10 +16,7 @@ function flattenTopTracks(value: unknown): unknown[] {
 /**
  * Maps SongStats `/artists/top_tracks` to a curated track list (not full catalog).
  */
-export function normalizeArtistTopTracks(
-  data: unknown,
-  query?: Record<string, string>,
-): unknown[] {
+export function normalizeArtistTopTracks(data: unknown, query?: Record<string, string>): unknown[] {
   const items = flattenTopTracks(data);
   const filtered = filterCatalogItems(items, false).map(normalizeTrackRecord);
 
