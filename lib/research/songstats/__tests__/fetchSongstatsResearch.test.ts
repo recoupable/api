@@ -235,6 +235,7 @@ describe("fetchSongstatsResearch", () => {
     expect(fetchSongstats).toHaveBeenCalledWith("/artists/top_tracks", {
       songstats_artist_id: "artist_1",
       source: "spotify",
+      metric: "popularity",
     });
     expect(result).toEqual({
       status: 200,

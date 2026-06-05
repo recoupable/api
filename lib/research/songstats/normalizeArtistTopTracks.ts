@@ -10,7 +10,7 @@ function flattenTopTracks(value: unknown): unknown[] {
   );
   if (fromData.length) return fromData;
 
-  return extractList(value, ["top_tracks", "tracks", "results", "data", "items"]);
+  return extractList(value, ["top_tracks", "tracks", "results", "items"]);
 }
 
 /**

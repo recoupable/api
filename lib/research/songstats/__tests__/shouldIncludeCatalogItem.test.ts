@@ -13,6 +13,15 @@ describe("shouldIncludeCatalogItem", () => {
     expect(shouldIncludeCatalogItem({ title: "Nice For What feat. Lil Wayne" }, false)).toBe(false);
   });
 
+  it("excludes platform shells without title or track id", () => {
+    expect(
+      shouldIncludeCatalogItem(
+        { source: "spotify", metric_options: ["popularity"] },
+        false,
+      ),
+    ).toBe(false);
+  });
+
   it("excludes rows flagged as remix or feature by the provider", () => {
     expect(shouldIncludeCatalogItem({ title: "Track", is_remix: true }, false)).toBe(false);
     expect(shouldIncludeCatalogItem({ title: "Track", is_feature: "true" }, false)).toBe(false);
