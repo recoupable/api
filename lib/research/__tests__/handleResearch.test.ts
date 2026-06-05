@@ -29,11 +29,14 @@ describe("handleResearch", () => {
 
     const result = await handleResearch({
       accountId: "acc_1",
-      path: "/charts/spotify",
-      query: { country_code: "US" },
+      path: "/search",
+      query: { q: "Drake", type: "artists" },
     });
 
-    expect(fetchResearchProvider).toHaveBeenCalledWith("/charts/spotify", { country_code: "US" });
+    expect(fetchResearchProvider).toHaveBeenCalledWith("/search", {
+      q: "Drake",
+      type: "artists",
+    });
     expect(recordCreditDeduction).toHaveBeenCalledWith({
       accountId: "acc_1",
       creditsToDeduct: 5,
@@ -47,7 +50,8 @@ describe("handleResearch", () => {
 
     const result = await handleResearch({
       accountId: "acc_1",
-      path: "/charts/spotify",
+      path: "/search",
+      query: { q: "Drake" },
     });
 
     expect(result).toEqual({ error: "Request failed with status 502", status: 502 });
