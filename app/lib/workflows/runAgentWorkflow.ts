@@ -5,6 +5,7 @@ import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistan
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
+import { handleSubagentChatCredits } from "@/lib/credits/handleSubagentChatCredits";
 import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
 import type { AgentMessageMetadata } from "@/lib/agent/messageMetadata/AgentMessageMetadata";
 import type { DurableAgentContext } from "@/lib/agent/tools/AgentContext";
@@ -114,6 +115,16 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
         source: "api",
         gatewayCostUsd: metadata?.totalMessageCost,
         usage: metadata?.totalMessageUsage ?? ZERO_USAGE,
+      });
+
+      const previousResponseMessage =
+        latestMessage?.role === "assistant" ? latestMessage : undefined;
+      await handleSubagentChatCredits({
+        accountId: input.accountId,
+        responseMessage: result.responseMessage,
+        previousResponseMessage,
+        fallbackModelId: input.modelId,
+        source: "api",
       });
 
       // Auto-commit + push after a natural finish. DurableAgentContext

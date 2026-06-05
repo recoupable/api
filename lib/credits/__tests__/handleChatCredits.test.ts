@@ -47,10 +47,12 @@ describe("handleChatCredits", () => {
         accountId: "account-123",
         creditsToDeduct: 5,
         source: "web",
+        agentType: "main",
         modelId: "gpt-4",
         inputTokens: 1000,
         outputTokens: 500,
         cachedInputTokens: 0,
+        toolCallCount: undefined,
       });
     });
 
@@ -198,6 +200,28 @@ describe("handleChatCredits", () => {
 
       expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
         expect.objectContaining({ source: "api" }),
+      );
+    });
+
+    it("forwards agentType and toolCallCount for subagent rows", async () => {
+      mockGetCreditUsage.mockResolvedValue(0.02);
+      mockRecordCreditDeduction.mockResolvedValue({ success: true, newBalance: 90 });
+
+      await handleChatCredits({
+        usage: USAGE,
+        model: "anthropic/claude-sonnet-4.6",
+        accountId: "account-123",
+        source: "api",
+        agentType: "subagent",
+        toolCallCount: 2,
+      });
+
+      expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          agentType: "subagent",
+          toolCallCount: 2,
+          source: "api",
+        }),
       );
     });
   });
