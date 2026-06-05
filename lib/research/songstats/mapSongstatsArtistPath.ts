@@ -8,9 +8,8 @@ import { normalizeUrlMap } from "@/lib/research/songstats/normalizeUrlMap";
 import { mapArtistAudienceSource } from "@/lib/research/songstats/mapArtistAudienceSource";
 import { mapArtistStatsSource } from "@/lib/research/songstats/mapArtistStatsSource";
 import { buildArtistCatalogQuery } from "@/lib/research/songstats/buildArtistCatalogQuery";
-import { buildArtistTopTracksQuery } from "@/lib/research/songstats/buildArtistTopTracksQuery";
+import { fetchArtistTracksFromSongstats } from "@/lib/research/songstats/fetchArtistTracksFromSongstats";
 import { normalizeArtistAlbums } from "@/lib/research/songstats/normalizeArtistAlbums";
-import { normalizeArtistTopTracks } from "@/lib/research/songstats/normalizeArtistTopTracks";
 import { parsePositiveLimit } from "@/lib/research/songstats/parsePositiveLimit";
 import { resolveCatalogPrimary } from "@/lib/research/songstats/resolveCatalogPrimary";
 
@@ -48,11 +47,7 @@ export function mapSongstatsArtistPath(
 
   match = path.match(/^\/artist\/([^/]+)\/tracks$/);
   if (match) {
-    return mapSongstatsResult(
-      "/artists/top_tracks",
-      buildArtistTopTracksQuery(match[1], query),
-      data => normalizeArtistTopTracks(data, query),
-    );
+    return fetchArtistTracksFromSongstats(match[1], query);
   }
 
   match = path.match(/^\/artist\/([^/]+)\/stat\/([^/]+)$/);

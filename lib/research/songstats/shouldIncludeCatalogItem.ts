@@ -29,7 +29,7 @@ export function shouldIncludeCatalogItem(value: unknown, includeNonPrimary: bool
     return false;
   }
 
-  const title = pickString(value, ["title", "name", "track_title"]);
+  const title = pickString(value, ["title", "name", "track_title", "track_name"]);
   const trackId = pickString(value, ["songstats_track_id", "track_id"]);
   if (!title && !trackId) return false;
   if (title && isNoisyCatalogTitle(title)) return false;

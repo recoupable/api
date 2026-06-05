@@ -4,10 +4,15 @@ import { isRecord } from "@/lib/research/songstats/isRecord";
 import { normalizeTrackRecord } from "@/lib/research/songstats/normalizeTrackRecord";
 import { parsePositiveLimit } from "@/lib/research/songstats/parsePositiveLimit";
 
+function tracksFromSourceEntry(entry: unknown): unknown[] {
+  if (!isRecord(entry)) return [];
+  if (Array.isArray(entry.top_tracks) && entry.top_tracks.length) return entry.top_tracks;
+  if (Array.isArray(entry.tracks) && entry.tracks.length) return entry.tracks;
+  return [];
+}
+
 function flattenTopTracks(value: unknown): unknown[] {
-  const fromData = extractList(value, ["data"]).flatMap(entry =>
-    isRecord(entry) && Array.isArray(entry.top_tracks) ? entry.top_tracks : [],
-  );
+  const fromData = extractList(value, ["data"]).flatMap(tracksFromSourceEntry);
   if (fromData.length) return fromData;
 
   return extractList(value, ["top_tracks", "tracks", "results", "items"]);
