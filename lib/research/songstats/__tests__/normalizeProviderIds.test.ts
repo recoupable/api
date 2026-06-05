@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { normalizeArtistRecord } from "@/lib/research/songstats/normalizeArtistRecord";
-import { normalizeEntityRecord } from "@/lib/research/songstats/normalizeEntityRecord";
 import { normalizeTrackLookupObject } from "@/lib/research/songstats/normalizeTrackLookupObject";
 import { normalizeTrackRecord } from "@/lib/research/songstats/normalizeTrackRecord";
 
@@ -27,6 +26,13 @@ describe("normalizeTrackRecord", () => {
       }),
     ).toEqual({ id: "track_1", title: "Hotline Bling" });
   });
+
+  it("normalizes id-only track rows without misclassifying as artist", () => {
+    expect(normalizeTrackRecord({ id: "t1", title: "Song" })).toEqual({
+      id: "t1",
+      title: "Song",
+    });
+  });
 });
 
 describe("normalizeTrackLookupObject", () => {
@@ -37,21 +43,5 @@ describe("normalizeTrackLookupObject", () => {
         songstats_track_ids: ["track_7"],
       }),
     ).toEqual({ id: "track_7" });
-  });
-});
-
-describe("normalizeEntityRecord", () => {
-  it("normalizes track-shaped catalog rows", () => {
-    expect(normalizeEntityRecord({ songstats_track_id: "t1", title: "Song" })).toEqual({
-      id: "t1",
-      title: "Song",
-    });
-  });
-
-  it("normalizes artist-shaped catalog rows", () => {
-    expect(normalizeEntityRecord({ songstats_artist_id: "a1", name: "Drake" })).toEqual({
-      id: "a1",
-      name: "Drake",
-    });
   });
 });
