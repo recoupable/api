@@ -1,4 +1,8 @@
 import { isTrustedResearchUrl } from "@/lib/research/isTrustedResearchUrl";
+import {
+  pickTrustedResearchUrl,
+  RESEARCH_LINK_KEYS,
+} from "@/lib/research/pickTrustedResearchUrl";
 import { isRecord, type JsonRecord } from "@/lib/research/songstats/isRecord";
 import { pickString } from "@/lib/research/songstats/pickString";
 
@@ -22,13 +26,13 @@ export function normalizeUrlMap(value: unknown): JsonRecord {
     if (!isRecord(current)) return;
 
     const platform = pickString(current, ["platform", "source", "type", "name", "domain"]);
-    const url = pickString(current, ["url", "link", "href"]);
-    if (url && isTrustedResearchUrl(url)) {
+    const url = pickTrustedResearchUrl(current);
+    if (url) {
       urls[platform || url] = url;
     }
 
     for (const [key, child] of Object.entries(current)) {
-      if (url && (key === "url" || key === "link" || key === "href")) continue;
+      if (url && (RESEARCH_LINK_KEYS as readonly string[]).includes(key)) continue;
       visit(child, key);
     }
   };

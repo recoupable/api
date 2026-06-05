@@ -16,6 +16,18 @@ describe("normalizeUrlMap", () => {
     });
   });
 
+  it("uses a trusted href when url is only http", () => {
+    expect(
+      normalizeUrlMap({
+        platform: "spotify",
+        url: "http://open.spotify.com/artist/legacy",
+        href: "https://open.spotify.com/artist/abc",
+      }),
+    ).toEqual({
+      spotify: "https://open.spotify.com/artist/abc",
+    });
+  });
+
   it("skips bare strings that are not trusted https URLs", () => {
     expect(normalizeUrlMap(["http://example.com", "https://example.com/page"])).toEqual({
       "https://example.com/page": "https://example.com/page",
