@@ -7,7 +7,7 @@ import {
  * Maps a legacy audience platform to its SongStats audience metric source.
  */
 export function mapArtistAudienceSource(source: string): string {
-  if (source in RESEARCH_AUDIENCE_PLATFORM_SOURCES) {
+  if (Object.hasOwn(RESEARCH_AUDIENCE_PLATFORM_SOURCES, source)) {
     return RESEARCH_AUDIENCE_PLATFORM_SOURCES[source as ResearchAudiencePlatform];
   }
 
