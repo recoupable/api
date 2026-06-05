@@ -3,6 +3,7 @@ import { extractList } from "@/lib/research/songstats/extractList";
 import { mapSongstatsResult } from "@/lib/research/songstats/mapSongstatsResult";
 import { normalizeArtistObject } from "@/lib/research/songstats/normalizeArtistObject";
 import { normalizeArtistRecord } from "@/lib/research/songstats/normalizeArtistRecord";
+import { normalizeAlbumsCatalogItem } from "@/lib/research/songstats/normalizeAlbumsCatalogItem";
 import { normalizeTrackRecord } from "@/lib/research/songstats/normalizeTrackRecord";
 import { normalizeTopPlaylists } from "@/lib/research/songstats/normalizeTopPlaylists";
 import { normalizeUrlMap } from "@/lib/research/songstats/normalizeUrlMap";
@@ -37,7 +38,10 @@ export function mapSongstatsArtistPath(
     return mapSongstatsResult(
       "/artists/catalog",
       { songstats_artist_id: match[1], ...query },
-      data => extractList(data, ["albums", "catalog", "tracks", "results", "data", "items"]),
+      data =>
+        extractList(data, ["albums", "catalog", "tracks", "results", "data", "items"]).map(
+          normalizeAlbumsCatalogItem,
+        ),
     );
   }
 

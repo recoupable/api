@@ -9,6 +9,8 @@ export const PROVIDER_TRACK_ID_ALIASES = [
   "songstats_track_ids",
 ] as const;
 
+export const PROVIDER_ALBUM_ID_ALIASES = ["songstats_album_id", "album_id"] as const;
+
 /**
  * Returns a shallow copy of `record` without the given keys.
  */
