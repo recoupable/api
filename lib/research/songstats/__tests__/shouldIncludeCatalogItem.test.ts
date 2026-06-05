@@ -19,6 +19,12 @@ describe("shouldIncludeCatalogItem", () => {
     ).toBe(false);
   });
 
+  it("excludes secondary roles with feat or ft abbreviations", () => {
+    expect(shouldIncludeCatalogItem({ title: "Track", role: "feat" }, false)).toBe(false);
+    expect(shouldIncludeCatalogItem({ title: "Track", artist_role: "ft" }, false)).toBe(false);
+    expect(shouldIncludeCatalogItem({ title: "Track", role: "main" }, false)).toBe(true);
+  });
+
   it("excludes rows flagged as remix or feature by the provider", () => {
     expect(shouldIncludeCatalogItem({ title: "Track", is_remix: true }, false)).toBe(false);
     expect(shouldIncludeCatalogItem({ title: "Track", is_feature: "true" }, false)).toBe(false);

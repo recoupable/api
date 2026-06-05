@@ -1,3 +1,5 @@
+import { appendPassthroughQueryParams } from "@/lib/research/songstats/resolveCatalogPrimary";
+
 /**
  * Builds SongStats `/artists/top_tracks` query params.
  */
@@ -19,12 +21,7 @@ export function buildArtistTopTracksQuery(
   if (metric) params.metric = metric;
   if (limit) params.limit = limit;
   if (offset) params.offset = offset;
-
-  for (const [key, value] of Object.entries(rest)) {
-    if (value !== undefined && value !== "" && key !== "isPrimary") {
-      params[key] = value;
-    }
-  }
+  appendPassthroughQueryParams(params, rest, ["isPrimary", "is_primary"]);
 
   return params;
 }

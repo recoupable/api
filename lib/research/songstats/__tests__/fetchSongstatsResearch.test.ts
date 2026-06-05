@@ -210,7 +210,25 @@ describe("fetchSongstatsResearch", () => {
     });
     expect(result).toEqual({
       status: 200,
-      data: [{ title: "Take Care", songstats_track_id: "alb_1", id: "alb_1" }],
+      data: [
+        { title: "Take Care", songstats_track_id: "alb_1", id: "alb_1" },
+        { title: "Headlines (Remix)", songstats_track_id: "alb_2", id: "alb_2" },
+      ],
+    });
+  });
+
+  it("defaults is_primary=true on album routes when query is omitted", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: { catalog: [] },
+    });
+
+    await fetchSongstatsResearch("/artist/artist_1/albums");
+
+    expect(fetchSongstats).toHaveBeenCalledWith("/artists/catalog", {
+      songstats_artist_id: "artist_1",
+      is_primary: "true",
+      isPrimary: "true",
     });
   });
 

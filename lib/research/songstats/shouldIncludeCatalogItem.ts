@@ -6,15 +6,12 @@ function isTruthyFlag(value: unknown): boolean {
   return value === true || value === 1 || value === "true" || value === "1";
 }
 
+const SECONDARY_ROLE_PATTERN = /\b(feat|ft|featuring|feature|remix|guest)\b/i;
+
 function isSecondaryRole(role: unknown): boolean {
   if (typeof role !== "string") return false;
   const normalized = role.toLowerCase();
-  return (
-    normalized.includes("feature") ||
-    normalized.includes("remix") ||
-    normalized.includes("guest") ||
-    normalized === "secondary"
-  );
+  return SECONDARY_ROLE_PATTERN.test(normalized) || normalized === "secondary";
 }
 
 /**

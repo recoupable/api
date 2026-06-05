@@ -1,4 +1,4 @@
-const FEAT_PATTERN = /\b(feat\.?|featuring|ft\.?|with)\b/i;
+const FEAT_PATTERN = /\b(feat\.?|featuring|ft\.?)\b/i;
 const REMIX_PATTERN = /\b(remix|rmx|rework|demo|instrumental|live at)\b/i;
 
 /**
