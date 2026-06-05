@@ -30,7 +30,7 @@ describe("fetchSongstatsResearch", () => {
     });
     expect(result).toEqual({
       status: 200,
-      data: { artists: [{ id: "artist_1", songstats_artist_id: "artist_1", name: "Drake" }] },
+      data: { artists: [{ id: "artist_1", name: "Drake" }] },
     });
   });
 
@@ -47,7 +47,7 @@ describe("fetchSongstatsResearch", () => {
     });
     expect(result).toEqual({
       status: 200,
-      data: { id: "track_1", songstats_track_id: "track_1", title: "Hotline Bling" },
+      data: { id: "track_1", title: "Hotline Bling" },
     });
   });
 
@@ -66,7 +66,6 @@ describe("fetchSongstatsResearch", () => {
       status: 200,
       data: {
         id: "artist_1",
-        songstats_artist_id: "artist_1",
         spotify_artist_id: "spotify_1",
       },
     });
@@ -149,7 +148,7 @@ describe("fetchSongstatsResearch", () => {
     });
     expect(result).toEqual({
       status: 200,
-      data: [{ id: "artist_2", songstats_artist_id: "artist_2", name: "Kendrick Lamar" }],
+      data: [{ id: "artist_2", name: "Kendrick Lamar" }],
     });
   });
 

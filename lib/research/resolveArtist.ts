@@ -44,7 +44,7 @@ export async function resolveArtist(
   }
 
   const data = result.data as {
-    artists?: Array<{ id?: string | number; songstats_artist_id?: string | number; name: string }>;
+    artists?: Array<{ id?: string | number; name: string }>;
   };
   const artists = data?.artists;
 
@@ -52,7 +52,7 @@ export async function resolveArtist(
     return { error: `No artist found matching "${trimmed}"` };
   }
 
-  const id = artists[0].id ?? artists[0].songstats_artist_id;
+  const id = artists[0].id;
   if (id === undefined || id === null || id === "") {
     return { error: `No provider artist ID found for "${trimmed}"` };
   }
