@@ -42,14 +42,16 @@ describe("normalizeTrackLookupObject", () => {
 
 describe("normalizeEntityRecord", () => {
   it("normalizes track-shaped catalog rows", () => {
-    expect(
-      normalizeEntityRecord({ songstats_track_id: "t1", title: "Song" }),
-    ).toEqual({ id: "t1", title: "Song" });
+    expect(normalizeEntityRecord({ songstats_track_id: "t1", title: "Song" })).toEqual({
+      id: "t1",
+      title: "Song",
+    });
   });
 
   it("normalizes artist-shaped catalog rows", () => {
-    expect(
-      normalizeEntityRecord({ songstats_artist_id: "a1", name: "Drake" }),
-    ).toEqual({ id: "a1", name: "Drake" });
+    expect(normalizeEntityRecord({ songstats_artist_id: "a1", name: "Drake" })).toEqual({
+      id: "a1",
+      name: "Drake",
+    });
   });
 });
