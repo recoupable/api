@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
 import { start, getRun } from "workflow/api";
 import { validateChatWorkflow } from "@/lib/chat/validateChatWorkflow";
-import { reconcileExistingActiveStream } from "@/lib/chat/reconcileExistingActiveStream";
+import { gateChatStreamStart } from "@/lib/chat/gateChatStreamStart";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
@@ -76,28 +76,10 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   }
 
   // Resume is GET-only (GET /api/chat/[chatId]/stream); POST never resumes.
-  // Branch on the reconciled action so the client gets the right recovery path:
-  //   - "resume":   a run is genuinely live → 409, tell the client to reconnect.
-  //   - "conflict": stream state is indeterminate (probe failed / stale id not
-  //                 cleared) → 503, tell the client to retry the POST shortly.
-  //                 (A 409 here would be a dead-end: GET returns 204 for this
-  //                 state, so the message would be lost with no retry path.)
-  //   - "ready":    a terminal stale id was cleared → fall through and start.
-  if (chat.active_stream_id) {
-    const reconciled = await reconcileExistingActiveStream(validated.chatId, chat.active_stream_id);
-    if (reconciled.action === "resume") {
-      return errorResponse(
-        "A response is already streaming for this chat; reconnect via GET /api/chat/{chatId}/stream",
-        409,
-      );
-    }
-    if (reconciled.action === "conflict") {
-      return errorResponse(
-        "Stream state is temporarily unresolved for this chat; retry shortly",
-        503,
-      );
-    }
-  }
+  // Gate the start against any existing active stream — resume→409, indeterminate→503,
+  // terminal-stale→proceed. See gateChatStreamStart for the full decision table.
+  const gate = await gateChatStreamStart(validated.chatId, chat.active_stream_id);
+  if (gate) return gate;
 
   // Pre-claim the active_stream_id slot with a placeholder BEFORE starting
   // the workflow. This closes the race where two requests both call start()
