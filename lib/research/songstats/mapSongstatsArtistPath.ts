@@ -7,6 +7,10 @@ import { normalizeTopPlaylists } from "@/lib/research/songstats/normalizeTopPlay
 import { normalizeUrlMap } from "@/lib/research/songstats/normalizeUrlMap";
 import { mapArtistAudienceSource } from "@/lib/research/songstats/mapArtistAudienceSource";
 import { mapArtistStatsSource } from "@/lib/research/songstats/mapArtistStatsSource";
+import { buildArtistCatalogQuery } from "@/lib/research/songstats/buildArtistCatalogQuery";
+import { buildArtistTopTracksQuery } from "@/lib/research/songstats/buildArtistTopTracksQuery";
+import { normalizeArtistAlbums } from "@/lib/research/songstats/normalizeArtistAlbums";
+import { normalizeArtistTopTracks } from "@/lib/research/songstats/normalizeArtistTopTracks";
 import { parsePositiveLimit } from "@/lib/research/songstats/parsePositiveLimit";
 
 export function mapSongstatsArtistPath(
@@ -35,17 +39,17 @@ export function mapSongstatsArtistPath(
   if (match) {
     return mapSongstatsResult(
       "/artists/catalog",
-      { songstats_artist_id: match[1], ...query },
-      data => extractList(data, ["albums", "catalog", "tracks", "results", "data", "items"]),
+      buildArtistCatalogQuery(match[1], query),
+      data => normalizeArtistAlbums(data, query),
     );
   }
 
   match = path.match(/^\/artist\/([^/]+)\/tracks$/);
   if (match) {
     return mapSongstatsResult(
-      "/artists/catalog",
-      { songstats_artist_id: match[1], ...query },
-      data => extractList(data, ["tracks", "catalog", "results", "data", "items"]),
+      "/artists/top_tracks",
+      buildArtistTopTracksQuery(match[1], query),
+      data => normalizeArtistTopTracks(data, query),
     );
   }
 
