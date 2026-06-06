@@ -1,6 +1,9 @@
 import { getRun } from "workflow/api";
 
-export const DEFAULT_CANCELLATION_POLL_INTERVAL_MS = 750;
+// 150ms bounds how quickly the in-flight model call is aborted after the run
+// is cancelled (matches open-agents' stop monitor). Lower = snappier Stop and
+// fewer wasted tokens, at the cost of more `getRun().status` polls per turn.
+export const DEFAULT_CANCELLATION_POLL_INTERVAL_MS = 150;
 
 export type CancellationPoller = {
   stop: () => void;
