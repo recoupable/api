@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { streamText, createUIMessageStream } from "ai";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
+import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
+import { getRun } from "workflow/api";
 
 vi.mock("ai", async () => {
   const actual = await vi.importActual<typeof import("ai")>("ai");
@@ -15,6 +17,36 @@ vi.mock("@ai-sdk/gateway", () => ({
 
 vi.mock("@/lib/chat/persistAssistantMessage", () => ({
   persistAssistantMessage: vi.fn(),
+}));
+
+// runAgentStep now reads workflowRunId via getWorkflowMetadata() and polls
+// getRun(runId).status to source its abort signal. Stub both so the tests
+// don't pull in the workflow runtime.
+vi.mock("workflow", () => ({
+  getWorkflowMetadata: vi.fn(() => ({
+    workflowRunId: "test-run-id",
+    workflowName: "test",
+    workflowStartedAt: new Date(0),
+    url: "https://example.test",
+  })),
+}));
+
+vi.mock("@/lib/chat/pollWorkflowCancellation", () => ({
+  pollWorkflowCancellation: vi.fn(() => ({
+    stop: vi.fn(),
+    done: Promise.resolve(),
+  })),
+}));
+
+// Default: getRun(...).status resolves to "running" — natural-completion
+// tests pass; user-abort tests override per-case.
+vi.mock("workflow/api", () => ({
+  getRun: vi.fn(() => ({
+    get status() {
+      return Promise.resolve("running");
+    },
+    cancel: vi.fn(() => Promise.resolve()),
+  })),
 }));
 
 // Captures the options runAgentStep passes to createUIMessageStream so
@@ -308,5 +340,235 @@ describe("runAgentStep", () => {
     const result = await runAgentStep({ ...baseInput, writable: stream } as never);
 
     expect(result.responseMessage).toBeUndefined();
+  });
+
+  describe("natural-completion path", () => {
+    it("returns aborted: false on natural finish (poller never fires)", async () => {
+      // Default poller mock: never aborts.
+      vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+      const { stream } = makeWritable();
+
+      const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+
+      // The crucial check: even though runAgentStep's finally calls
+      // cancelController.abort() unconditionally to stop the poller, that
+      // must NOT make natural completions look like user-stops — otherwise
+      // runAgentWorkflow would skip billing + auto-commit on every turn.
+      expect(result.aborted).toBe(false);
+    });
+
+    it("uses the real finishReason from streamText on natural completion", async () => {
+      vi.mocked(streamText).mockReturnValue({
+        toUIMessageStream: vi.fn(() =>
+          (async function* () {
+            yield { type: "start" };
+            yield { type: "finish" };
+          })(),
+        ),
+        finishReason: Promise.resolve("length"),
+      } as never);
+      const { stream } = makeWritable();
+
+      const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+
+      expect(result.aborted).toBe(false);
+      expect(result.finishReason).toBe("length");
+    });
+  });
+
+  describe("user-abort path", () => {
+    it("returns { aborted: true, finishReason: 'stop' } when the poller fires", async () => {
+      // Poller fires synchronously — controller is aborted by the time pipeTo runs.
+      vi.mocked(pollWorkflowCancellation).mockImplementation(
+        (_runId: string, controller: AbortController) => {
+          controller.abort();
+          return { stop: vi.fn(), done: Promise.resolve() };
+        },
+      );
+      vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+      const { stream } = makeWritable();
+
+      const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+
+      expect(result.aborted).toBe(true);
+      expect(result.finishReason).toBe("stop");
+    });
+
+    it("does not await result.finishReason on abort (would deadlock if unresolved)", async () => {
+      vi.mocked(pollWorkflowCancellation).mockImplementation(
+        (_runId: string, controller: AbortController) => {
+          controller.abort();
+          return { stop: vi.fn(), done: Promise.resolve() };
+        },
+      );
+      // finishReason here is a forever-pending Promise — if runAgentStep awaited it
+      // on the abort path, the test would hang.
+      const neverResolves = new Promise<string>(() => {});
+      vi.mocked(streamText).mockReturnValue({
+        toUIMessageStream: vi.fn(() =>
+          (async function* () {
+            yield { type: "start" };
+            yield { type: "finish" };
+          })(),
+        ),
+        finishReason: neverResolves,
+      } as never);
+      const { stream } = makeWritable();
+
+      const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+
+      expect(result.finishReason).toBe("stop");
+      expect(result.aborted).toBe(true);
+    });
+
+    it("re-persists with closed tool-error parts when aborting mid-tool-call", async () => {
+      // onStepFinish runs while the step is still emitting (a tool-call was
+      // streamed in this step). The step's captured responseMessage has the
+      // tool-call in input-available, with no terminal output chunk yet.
+      const openMessage = {
+        id: "asst-test-id",
+        role: "assistant",
+        parts: [
+          { type: "text", text: "running a tool..." },
+          {
+            type: "tool-bash",
+            toolCallId: "t-open",
+            state: "input-available",
+            input: { cmd: "sleep 30" },
+          },
+        ],
+      };
+
+      vi.mocked(createUIMessageStream).mockImplementationOnce((opts: never) => {
+        capturedCreateOpts = opts as CreateOpts;
+        capturedCreateOpts.execute?.({
+          writer: { write: () => {}, merge: () => {}, onError: undefined },
+        });
+        // Drive onStepFinish synchronously so responseMessage is populated
+        // before the abort path runs in runAgentStep.
+        capturedCreateOpts.onStepFinish?.({ responseMessage: openMessage });
+        return new ReadableStream({
+          start(controller) {
+            controller.close();
+          },
+        }) as never;
+      });
+
+      vi.mocked(pollWorkflowCancellation).mockImplementation(
+        (_runId: string, controller: AbortController) => {
+          controller.abort();
+          return { stop: vi.fn(), done: Promise.resolve() };
+        },
+      );
+      vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+      const { stream } = makeWritable();
+
+      const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+
+      expect(result.aborted).toBe(true);
+
+      // Two persists: the step's onStepFinish, then the abort-path re-persist
+      // with closed tool parts.
+      expect(persistAssistantMessage).toHaveBeenCalledTimes(2);
+      const second = vi.mocked(persistAssistantMessage).mock.calls[1]?.[1] as {
+        parts: Array<{ type: string; state?: string; errorText?: string }>;
+      };
+      const toolPart = second.parts.find(p => p.type === "tool-bash")!;
+      expect(toolPart.state).toBe("output-error");
+      expect(toolPart.errorText).toBe("Cancelled");
+      // responseMessage on the returned result should be the closed version.
+      expect(result.responseMessage).toBe(second);
+    });
+
+    it("does NOT re-persist when there are no open tool-call parts at abort", async () => {
+      const closedMessage = {
+        id: "asst-test-id",
+        role: "assistant",
+        parts: [{ type: "text", text: "done text" }],
+      };
+
+      vi.mocked(createUIMessageStream).mockImplementationOnce((opts: never) => {
+        capturedCreateOpts = opts as CreateOpts;
+        capturedCreateOpts.execute?.({
+          writer: { write: () => {}, merge: () => {}, onError: undefined },
+        });
+        capturedCreateOpts.onStepFinish?.({ responseMessage: closedMessage });
+        return new ReadableStream({
+          start(controller) {
+            controller.close();
+          },
+        }) as never;
+      });
+
+      vi.mocked(pollWorkflowCancellation).mockImplementation(
+        (_runId: string, controller: AbortController) => {
+          controller.abort();
+          return { stop: vi.fn(), done: Promise.resolve() };
+        },
+      );
+      vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+      const { stream } = makeWritable();
+
+      await runAgentStep({ ...baseInput, writable: stream } as never);
+
+      // Just the onStepFinish persist — no re-persist needed.
+      expect(persistAssistantMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it("detects runtime-cancel even when pipeTo resolves cleanly (writable closed by runtime)", async () => {
+      // The poller never fires — pipeTo completes naturally because the
+      // runtime closed the destination writable when run.cancel() landed.
+      // runAgentStep must still detect this via getRun().status and mark
+      // the result as aborted so the abort-path re-persist runs.
+      vi.mocked(getRun).mockReturnValueOnce({
+        get status() {
+          return Promise.resolve("cancelled");
+        },
+        cancel: vi.fn(() => Promise.resolve()),
+      } as never);
+
+      vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+      const { stream } = makeWritable();
+
+      const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+
+      expect(result.aborted).toBe(true);
+    });
+
+    it("attaches .catch to result.finishReason so a late rejection is not unhandled", async () => {
+      vi.mocked(pollWorkflowCancellation).mockImplementation(
+        (_runId: string, controller: AbortController) => {
+          controller.abort();
+          return { stop: vi.fn(), done: Promise.resolve() };
+        },
+      );
+      const rejection = new Error("finishReason late reject");
+      vi.mocked(streamText).mockReturnValue({
+        toUIMessageStream: vi.fn(() =>
+          (async function* () {
+            yield { type: "start" };
+            yield { type: "finish" };
+          })(),
+        ),
+        finishReason: Promise.reject(rejection),
+      } as never);
+
+      // Catch unhandled rejections globally for the duration of this test.
+      const unhandled: unknown[] = [];
+      const onUnhandled = (e: Event) => {
+        unhandled.push((e as PromiseRejectionEvent).reason);
+      };
+      process.on("unhandledRejection", onUnhandled);
+      try {
+        const { stream } = makeWritable();
+        await runAgentStep({ ...baseInput, writable: stream } as never);
+        // Give microtasks a chance to flush.
+        await new Promise(r => setTimeout(r, 10));
+      } finally {
+        process.off("unhandledRejection", onUnhandled);
+      }
+
+      expect(unhandled).not.toContain(rejection);
+    });
   });
 });
