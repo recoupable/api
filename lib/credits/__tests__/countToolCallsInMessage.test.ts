@@ -19,8 +19,20 @@ describe("countToolCallsInMessage", () => {
         role: "assistant",
         parts: [
           { type: "text", text: "Running tools" },
-          { type: "tool-bash", toolCallId: "tc-1", state: "output-available", input: {}, output: {} },
-          { type: "tool-read", toolCallId: "tc-2", state: "output-available", input: {}, output: {} },
+          {
+            type: "tool-bash",
+            toolCallId: "tc-1",
+            state: "output-available",
+            input: {},
+            output: {},
+          },
+          {
+            type: "tool-read",
+            toolCallId: "tc-2",
+            state: "output-available",
+            input: {},
+            output: {},
+          },
         ] as never,
       }),
     ).toBe(2);

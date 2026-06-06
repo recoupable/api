@@ -222,9 +222,7 @@ describe("runAgentWorkflow", () => {
 
     await runAgentWorkflow(baseInput);
 
-    expect(handleChatCredits).toHaveBeenCalledWith(
-      expect.objectContaining({ toolCallCount: 1 }),
-    );
+    expect(handleChatCredits).toHaveBeenCalledWith(expect.objectContaining({ toolCallCount: 1 }));
   });
 
   it("calls handleChatCredits with zero usage when metadata is missing (lets the 1c floor apply)", async () => {
