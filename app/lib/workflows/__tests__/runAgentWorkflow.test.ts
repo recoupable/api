@@ -71,6 +71,7 @@ describe("runAgentWorkflow", () => {
   it("clears active_stream_id after a successful run, using the workflow's own runId", async () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
+      aborted: false,
       responseMessage: undefined,
     });
 
@@ -92,6 +93,7 @@ describe("runAgentWorkflow", () => {
   it("explicitly closes the chat writable after a successful run so SSE ends promptly", async () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
+      aborted: false,
       responseMessage: undefined,
     });
 
@@ -113,6 +115,7 @@ describe("runAgentWorkflow", () => {
   it("forwards chatId to runAgentStep so it can persist the assistant message per step", async () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
+      aborted: false,
       responseMessage: undefined,
     });
 
@@ -124,6 +127,7 @@ describe("runAgentWorkflow", () => {
   it("generates a fresh assistantMessageId via the step and forwards it to runAgentStep", async () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
+      aborted: false,
       responseMessage: undefined,
     });
 
@@ -138,6 +142,7 @@ describe("runAgentWorkflow", () => {
   it("reuses the latest assistant message id when resuming a tool-call turn (no fresh generation)", async () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
+      aborted: false,
       responseMessage: undefined,
     });
 
@@ -177,6 +182,7 @@ describe("runAgentWorkflow", () => {
     };
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
+      aborted: false,
       responseMessage: responseMessage as never,
     });
 
@@ -205,6 +211,7 @@ describe("runAgentWorkflow", () => {
     };
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
+      aborted: false,
       responseMessage: responseMessage as never,
     });
 
@@ -223,6 +230,7 @@ describe("runAgentWorkflow", () => {
   it("does NOT call handleChatCredits when runAgentStep returns no responseMessage", async () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
+      aborted: false,
       responseMessage: undefined,
     });
 
@@ -248,6 +256,7 @@ describe("runAgentWorkflow", () => {
     it("calls autoCommitChatTurn with workflow context after persistAssistantMessage", async () => {
       vi.mocked(runAgentStep).mockResolvedValue({
         finishReason: "stop",
+        aborted: false,
         responseMessage: responseMessageWithMetadata,
       });
 
@@ -263,6 +272,7 @@ describe("runAgentWorkflow", () => {
           writable: writableStub,
           responseMessage: responseMessageWithMetadata,
           finishReason: "stop",
+          aborted: false,
           sessionId: "session-1",
           sessionTitle: "test session",
           repoOwner: "recoupable",
@@ -275,6 +285,7 @@ describe("runAgentWorkflow", () => {
     it("wraps the raw VercelState with `type: 'vercel'` before forwarding", async () => {
       vi.mocked(runAgentStep).mockResolvedValue({
         finishReason: "stop",
+        aborted: false,
         responseMessage: responseMessageWithMetadata,
       });
 
@@ -287,6 +298,7 @@ describe("runAgentWorkflow", () => {
     it("forwards undefined sandboxState when agentContext.sandbox is missing", async () => {
       vi.mocked(runAgentStep).mockResolvedValue({
         finishReason: "stop",
+        aborted: false,
         responseMessage: responseMessageWithMetadata,
       });
 
@@ -302,12 +314,74 @@ describe("runAgentWorkflow", () => {
     it("does NOT call autoCommitChatTurn when runAgentStep returns no responseMessage", async () => {
       vi.mocked(runAgentStep).mockResolvedValue({
         finishReason: "stop",
+        aborted: false,
         responseMessage: undefined,
       });
 
       await runAgentWorkflow(baseInput);
 
       expect(autoCommitChatTurn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("user-abort path", () => {
+    const abortedResponseMessage = {
+      id: "assistant-msg-xyz",
+      role: "assistant",
+      parts: [{ type: "text", text: "Partial..." }],
+      metadata: {
+        totalMessageCost: 0.05,
+        totalMessageUsage: {
+          inputTokens: 50,
+          cachedInputTokens: 0,
+          outputTokens: 10,
+        },
+      },
+    };
+
+    it("still calls handleChatCredits when the step returns aborted: true (tokens were consumed)", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        aborted: true,
+        responseMessage: abortedResponseMessage as never,
+      });
+
+      await runAgentWorkflow(baseInput);
+
+      expect(handleChatCredits).toHaveBeenCalledTimes(1);
+      const call = vi.mocked(handleChatCredits).mock.calls[0]?.[0];
+      expect(call?.accountId).toBe("acc-1");
+      expect(call?.gatewayCostUsd).toBe(0.05);
+      expect(call?.usage).toEqual({
+        inputTokens: 50,
+        cachedInputTokens: 0,
+        outputTokens: 10,
+      });
+    });
+
+    it("skips autoCommitChatTurn when the step returns aborted: true", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        aborted: true,
+        responseMessage: abortedResponseMessage as never,
+      });
+
+      await runAgentWorkflow(baseInput);
+
+      expect(autoCommitChatTurn).not.toHaveBeenCalled();
+    });
+
+    it("still runs the cleanup steps on aborted: true (clearActiveStream + closeChatStream)", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        aborted: true,
+        responseMessage: abortedResponseMessage as never,
+      });
+
+      await runAgentWorkflow(baseInput);
+
+      expect(clearChatActiveStream).toHaveBeenCalledTimes(1);
+      expect(closeChatStream).toHaveBeenCalledTimes(1);
     });
   });
 });

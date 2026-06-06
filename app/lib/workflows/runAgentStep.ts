@@ -14,7 +14,12 @@ import type { AgentContext, DurableAgentContext } from "@/lib/agent/tools/AgentC
 import { buildMessageMetadataCallback } from "@/lib/agent/messageMetadata/buildMessageMetadataCallback";
 import { addCacheControlToTools } from "@/lib/agent/contextManagement/addCacheControlToTools";
 import { addCacheControlToMessages } from "@/lib/agent/contextManagement/addCacheControlToMessages";
+import { wrapToolsWithAbort } from "@/lib/agent/contextManagement/wrapToolsWithAbort";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
+import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
+import { finalizeAbortedAssistantMessage } from "@/lib/chat/finalizeAbortedAssistantMessage";
+import { getWorkflowMetadata } from "workflow";
+import { pipeWorkflowStreamWithStopDetection } from "@/lib/chat/pipeWorkflowStreamWithStopDetection";
 
 export type RunAgentStepInput = {
   messages: UIMessage[];
@@ -59,6 +64,8 @@ export type RunAgentStepResult = {
    * `runAgentWorkflow` can charge credits from `responseMessage.metadata`.
    */
   responseMessage: UIMessage | undefined;
+  /** True when the user stopped the run; `runAgentWorkflow` skips billing + auto-commit on abort. */
+  aborted: boolean;
 };
 
 /**
@@ -86,15 +93,25 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     hasSandboxState: Boolean(input.agentContext.sandbox?.state),
   });
 
+  // Source an abort signal for streamText by polling our own run.status.
+  const { workflowRunId } = getWorkflowMetadata();
+  const cancelController = new AbortController();
+  const poller = pollWorkflowCancellation(workflowRunId, cancelController);
+
   const modelMessages = await convertToModelMessages(input.messages);
   // Mark the last tool with `cacheControl: { type: "ephemeral" }` so
   // Anthropic caches the tool-definitions block across the
   // conversation. Per-step message caching is wired via `prepareStep`
   // below. Mirrors open-agents' `prepareCall` + `prepareStep` split.
-  const tools = addCacheControlToTools({
-    tools: buildAgentTools({ skills: input.agentContext.skills }),
-    model: input.modelId,
-  });
+  // wrapToolsWithAbort backstops tools that ignore their own abortSignal —
+  // without it, a hung tool keeps streamText awaiting forever on stop.
+  const tools = wrapToolsWithAbort(
+    addCacheControlToTools({
+      tools: buildAgentTools({ skills: input.agentContext.skills }),
+      model: input.modelId,
+    }),
+    cancelController.signal,
+  );
   // Construct the model here (not in the workflow input) — LanguageModel
   // instances aren't JSON-serializable and can't ride durable inputs.
   // Then attach to AgentContext so tools see the same model the parent
@@ -119,6 +136,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     messages: modelMessages,
     tools,
     stopWhen: CHAT_AGENT_STOP_WHEN,
+    abortSignal: cancelController.signal,
     experimental_context: agentContext,
     // Mark the LAST message with cacheControl on every step so Anthropic
     // incrementally caches the conversation prefix. Mirrors open-agents'
@@ -141,11 +159,17 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   let responseMessage: UIMessage | undefined;
   const uiStream = createUIMessageStream<UIMessage>({
     generateId: () => input.assistantMessageId,
-    onStepFinish: ({ responseMessage: stepMessage }) =>
-      persistAssistantMessage(input.chatId, stepMessage),
+    onStepFinish: ({ responseMessage: stepMessage }) => {
+      responseMessage = stepMessage;
+      return persistAssistantMessage(input.chatId, stepMessage);
+    },
     onFinish: ({ responseMessage: finalMessage }) => {
       responseMessage = finalMessage;
       return persistAssistantMessage(input.chatId, finalMessage);
+    },
+    onError: error => {
+      if (cancelController.signal.aborted) return "";
+      return error instanceof Error ? error.message : String(error);
     },
     execute: ({ writer }) => {
       writer.merge(
@@ -157,11 +181,36 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     },
   });
 
-  // preventClose/preventAbort: runAgentWorkflow's finally owns the writable's
-  // lifecycle (closeChatStream), so don't close or abort it here.
-  await uiStream.pipeTo(input.writable, { preventClose: true, preventAbort: true });
+  // Pipe the stream to the workflow writable and detect user-stop vs natural
+  // finish (see pipeWorkflowStreamWithStopDetection for the why).
+  const userAborted = await pipeWorkflowStreamWithStopDetection({
+    uiStream,
+    writable: input.writable,
+    cancelController,
+    workflowRunId,
+    poller,
+  });
 
-  const finishReason = await result.finishReason;
-  console.log("[runAgentStep] finish", { finishReason, hasResponseMessage: !!responseMessage });
-  return { finishReason, responseMessage };
+  // Short-circuit on user-stop — `result.finishReason` rejects when streamText aborts.
+  let finishReason: string;
+  if (userAborted) {
+    finishReason = "stop";
+    // Prevent the late-rejecting promise from becoming an unhandled rejection.
+    void Promise.resolve(result.finishReason).catch(() => {});
+  } else {
+    finishReason = await result.finishReason;
+  }
+
+  // On user-stop, close any tool-call parts the step boundary left open and
+  // re-persist (see finalizeAbortedAssistantMessage for the why).
+  if (userAborted && responseMessage) {
+    responseMessage = await finalizeAbortedAssistantMessage(input.chatId, responseMessage);
+  }
+
+  console.log("[runAgentStep] finish", {
+    finishReason,
+    hasResponseMessage: !!responseMessage,
+    aborted: userAborted,
+  });
+  return { finishReason, responseMessage, aborted: userAborted };
 }
