@@ -5,6 +5,7 @@ import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
+import { handleSubagentChatCredits } from "@/lib/credits/handleSubagentChatCredits";
 import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
 
 vi.mock("@/app/lib/workflows/runAgentStep", () => ({
@@ -21,6 +22,9 @@ vi.mock("@/app/lib/workflows/generateAssistantMessageId", () => ({
 }));
 vi.mock("@/lib/credits/handleChatCredits", () => ({
   handleChatCredits: vi.fn(),
+}));
+vi.mock("@/lib/credits/handleSubagentChatCredits", () => ({
+  handleSubagentChatCredits: vi.fn(),
 }));
 vi.mock("@/lib/chat/auto-commit/autoCommitChatTurn", () => ({
   autoCommitChatTurn: vi.fn(),
@@ -194,6 +198,36 @@ describe("runAgentWorkflow", () => {
         outputTokens: 20,
       },
     });
+    expect(handleSubagentChatCredits).toHaveBeenCalledWith({
+      accountId: "acc-1",
+      responseMessage,
+      previousResponseMessage: undefined,
+      fallbackModelId: "anthropic/claude-haiku-4.5",
+      source: "api",
+    });
+  });
+
+  it("passes the in-progress assistant message as subagent baseline when resuming a turn", async () => {
+    const resumedAssistant = {
+      id: "asst-resume",
+      role: "assistant",
+      parts: [{ type: "text", text: "working..." }],
+    };
+    vi.mocked(runAgentStep).mockResolvedValue({
+      finishReason: "stop",
+      responseMessage: responseMessageWithMetadata,
+    });
+
+    await runAgentWorkflow({
+      ...baseInput,
+      messages: [resumedAssistant as never],
+    });
+
+    expect(handleSubagentChatCredits).toHaveBeenCalledWith(
+      expect.objectContaining({
+        previousResponseMessage: resumedAssistant,
+      }),
+    );
   });
 
   it("calls handleChatCredits with zero usage when metadata is missing (lets the 1c floor apply)", async () => {
@@ -229,6 +263,7 @@ describe("runAgentWorkflow", () => {
     await runAgentWorkflow(baseInput);
 
     expect(handleChatCredits).not.toHaveBeenCalled();
+    expect(handleSubagentChatCredits).not.toHaveBeenCalled();
   });
 
   it("does NOT call handleChatCredits when runAgentStep throws (no message to bill)", async () => {
@@ -237,6 +272,7 @@ describe("runAgentWorkflow", () => {
     await expect(runAgentWorkflow(baseInput)).rejects.toThrow("model exploded");
 
     expect(handleChatCredits).not.toHaveBeenCalled();
+    expect(handleSubagentChatCredits).not.toHaveBeenCalled();
   });
 
   describe("auto-commit", () => {
