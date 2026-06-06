@@ -193,7 +193,38 @@ describe("runAgentWorkflow", () => {
         cachedInputTokens: 10,
         outputTokens: 20,
       },
+      toolCallCount: 0,
     });
+  });
+
+  it("passes toolCallCount from tool parts on the response message", async () => {
+    const responseMessage = {
+      id: "assistant-msg-tools",
+      role: "assistant",
+      parts: [
+        { type: "text", text: "Done" },
+        {
+          type: "tool-bash",
+          toolCallId: "tc-1",
+          state: "output-available",
+          input: {},
+          output: {},
+        },
+      ],
+      metadata: {
+        totalMessageUsage: { inputTokens: 50, cachedInputTokens: 0, outputTokens: 10 },
+      },
+    };
+    vi.mocked(runAgentStep).mockResolvedValue({
+      finishReason: "stop",
+      responseMessage: responseMessage as never,
+    });
+
+    await runAgentWorkflow(baseInput);
+
+    expect(handleChatCredits).toHaveBeenCalledWith(
+      expect.objectContaining({ toolCallCount: 1 }),
+    );
   });
 
   it("calls handleChatCredits with zero usage when metadata is missing (lets the 1c floor apply)", async () => {
@@ -217,6 +248,7 @@ describe("runAgentWorkflow", () => {
       source: "api",
       gatewayCostUsd: undefined,
       usage: { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 },
+      toolCallCount: 0,
     });
   });
 

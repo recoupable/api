@@ -4,6 +4,7 @@ import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
+import { countToolCallsInMessage } from "@/lib/credits/countToolCallsInMessage";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
 import type { AgentMessageMetadata } from "@/lib/agent/messageMetadata/AgentMessageMetadata";
@@ -114,6 +115,7 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
         source: "api",
         gatewayCostUsd: metadata?.totalMessageCost,
         usage: metadata?.totalMessageUsage ?? ZERO_USAGE,
+        toolCallCount: countToolCallsInMessage(result.responseMessage),
       });
 
       // Auto-commit + push after a natural finish. DurableAgentContext
