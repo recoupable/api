@@ -19,7 +19,7 @@ import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
 import { finalizeAbortedAssistantMessage } from "@/lib/chat/finalizeAbortedAssistantMessage";
 import { getWorkflowMetadata } from "workflow";
-import { getRun } from "workflow/api";
+import { pipeWorkflowStreamWithStopDetection } from "@/lib/chat/pipeWorkflowStreamWithStopDetection";
 
 export type RunAgentStepInput = {
   messages: UIMessage[];
@@ -181,42 +181,15 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     },
   });
 
-  // Distinguish user-stop from natural completion: only the poller aborts the
-  // controller before our own finally runs, so a pipeTo rejection with the
-  // signal already aborted is the user-stop path. Captured here, not from
-  // cancelController.signal.aborted after finally — the finally aborts the
-  // controller unconditionally to stop the poller, which would otherwise
-  // make every natural completion look like a user-stop.
-  let userAborted = false;
-  try {
-    await uiStream.pipeTo(input.writable, {
-      preventClose: true,
-      preventAbort: true,
-      signal: cancelController.signal,
-    });
-    // pipeTo can resolve cleanly even when the user cancelled — the
-    // workflow runtime closes the destination writable on `run.cancel()`,
-    // which surfaces here as a natural finish. Confirm by checking the
-    // run's status before treating this as a success.
-    try {
-      const status = await getRun(workflowRunId).status;
-      if (status === "cancelled") {
-        userAborted = true;
-      }
-    } catch {
-      /* transient status read — treat as success */
-    }
-  } catch (err) {
-    if (cancelController.signal.aborted) {
-      userAborted = true;
-    } else {
-      throw err;
-    }
-  } finally {
-    poller.stop();
-    cancelController.abort();
-    await poller.done.catch(() => {});
-  }
+  // Pipe the stream to the workflow writable and detect user-stop vs natural
+  // finish (see pipeWorkflowStreamWithStopDetection for the why).
+  const userAborted = await pipeWorkflowStreamWithStopDetection({
+    uiStream,
+    writable: input.writable,
+    cancelController,
+    workflowRunId,
+    poller,
+  });
 
   // Short-circuit on user-stop — `result.finishReason` rejects when streamText aborts.
   let finishReason: string;
