@@ -50,7 +50,7 @@ describe("validateGetResearchMetricsRequest", () => {
     if (result instanceof NextResponse) {
       expect(result.status).toBe(400);
       const body = await result.json();
-      expect(body.error).toBe("artist parameter is required");
+      expect(body.error).toBe("artist or id parameter is required");
     }
   });
 
@@ -59,5 +59,19 @@ describe("validateGetResearchMetricsRequest", () => {
       new NextRequest("http://x/?artist=Drake&source=spotify"),
     );
     expect(result).toEqual({ accountId: "acc_1", artist: "Drake", source: "spotify" });
+  });
+
+  it("accepts SongStats radio metric sources", async () => {
+    const result = await validateGetResearchMetricsRequest(
+      new NextRequest("http://x/?artist=Drake&source=radio"),
+    );
+    expect(result).toEqual({ accountId: "acc_1", artist: "Drake", source: "radio" });
+  });
+
+  it("accepts SongStats sxm metric sources", async () => {
+    const result = await validateGetResearchMetricsRequest(
+      new NextRequest("http://x/?artist=Drake&source=sxm"),
+    );
+    expect(result).toEqual({ accountId: "acc_1", artist: "Drake", source: "sxm" });
   });
 });

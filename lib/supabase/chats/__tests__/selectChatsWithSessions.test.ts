@@ -55,6 +55,8 @@ describe("selectChatsWithSessions", () => {
     expect(String(selectArg)).toContain("account_id");
     expect(String(selectArg)).toContain("artist_id");
     expect(String(selectArg)).toContain("status");
+    // Inner-join on chat_messages excludes chats with zero messages.
+    expect(String(selectArg)).toContain("chat_messages!inner");
 
     expect(neqMock).toHaveBeenCalledWith("session.status", "archived");
     expect(inMock).toHaveBeenCalledWith("session.account_id", ["acc-1", "acc-2"]);
@@ -67,6 +69,13 @@ describe("selectChatsWithSessions", () => {
     await selectChatsWithSessions({});
 
     expect(neqMock).toHaveBeenCalledWith("session.status", "archived");
+  });
+
+  it("inner-joins chat_messages so chats with zero messages are excluded", async () => {
+    await selectChatsWithSessions({});
+
+    const selectArg = String(selectMock.mock.calls[0]?.[0]);
+    expect(selectArg).toContain("chat_messages!inner");
   });
 
   it("composes accountIds + artistAccountId — both filters applied", async () => {

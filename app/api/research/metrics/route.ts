@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getResearchMetricsHandler } from "@/lib/research/getResearchMetricsHandler";
 
+export const maxDuration = 60;
+
 /**
  * OPTIONS /api/research/metrics — CORS preflight.
  *

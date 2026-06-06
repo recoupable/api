@@ -7,15 +7,9 @@ import { validateGetResearchAlbumsRequest } from "@/lib/research/validateGetRese
 /**
  * GET /api/research/albums
  *
- * Returns the album discography for the given Chartmetric `artist_id`. Thin
- * proxy over Chartmetric's `/artist/:id/albums`. By default `isPrimary=true`
- * is sent upstream so only albums where the artist is a main artist are
- * returned — callers can opt into feature appearances and DJ compilations
- * with `is_primary=false`. Discovery by name is the caller's job via
- * `GET /api/research?type=artists&beta=true`.
+ * Returns the album discography for the given provider `artist_id`.
  *
- * @param request - must include numeric `artist_id`; optional `is_primary`,
- *   `limit`, `offset`
+ * @param request - must include `artist_id`; optional `is_primary`, `limit`, `offset`
  * @returns JSON album list or error
  */
 export async function getResearchAlbumsHandler(request: NextRequest): Promise<NextResponse> {
