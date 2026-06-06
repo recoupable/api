@@ -2,31 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRun } from "workflow/api";
 import { validateStopChatWorkflowRequest } from "@/lib/chat/validateStopChatWorkflowRequest";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
+import { waitForTerminalRunStatus } from "@/lib/chat/waitForTerminalRunStatus";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 
 const PENDING_STREAM_PREFIX = "pending-";
-/** Cap on how long /stop waits for the workflow to fully tear down before returning. */
-const TERMINAL_WAIT_TIMEOUT_MS = 8000;
-/** Poll interval while waiting for terminal status. */
-const TERMINAL_WAIT_INTERVAL_MS = 100;
-
-const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["cancelled", "completed", "failed"]);
-
-/** Block until the run reaches a terminal status. Returns true on terminal, false on timeout. */
-async function waitForTerminalRunStatus(runId: string): Promise<boolean> {
-  const deadline = Date.now() + TERMINAL_WAIT_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    try {
-      const status = await getRun(runId).status;
-      if (TERMINAL_STATUSES.has(status)) return true;
-    } catch {
-      // Transient errors: swallow and retry until the deadline.
-    }
-    await new Promise<void>(resolve => setTimeout(resolve, TERMINAL_WAIT_INTERVAL_MS));
-  }
-  return false;
-}
 
 /** Cancels the workflow streaming for a chat and releases chats.active_stream_id. */
 export async function handleStopChatWorkflow(

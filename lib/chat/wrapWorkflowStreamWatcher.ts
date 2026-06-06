@@ -1,5 +1,6 @@
 import type { UIMessageChunk } from "ai";
 import { getRun } from "workflow/api";
+import { trackToolCallChunk, type OpenTool } from "@/lib/chat/trackToolCallChunk";
 
 /**
  * Watcher around a Vercel Workflow's UIMessage readable that:
@@ -22,11 +23,6 @@ import { getRun } from "workflow/api";
 const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set(["cancelled", "completed", "failed"]);
 const STATUS_POLL_MS = 500;
 const CANCEL_ERROR_TEXT = "Cancelled";
-
-type OpenTool = {
-  toolName: string;
-  sawInputAvailable: boolean;
-};
 
 export function wrapWorkflowStreamWatcher(
   runId: string,
@@ -145,25 +141,4 @@ export function wrapWorkflowStreamWatcher(
       }
     },
   });
-}
-
-function trackToolCallChunk(chunk: UIMessageChunk, open: Map<string, OpenTool>): void {
-  switch (chunk.type) {
-    case "tool-input-start":
-      open.set(chunk.toolCallId, { toolName: chunk.toolName, sawInputAvailable: false });
-      return;
-    case "tool-input-available":
-      // Both records the open tool (if we skipped tool-input-start) and
-      // marks the input phase as complete so synthesis won't re-emit it.
-      open.set(chunk.toolCallId, { toolName: chunk.toolName, sawInputAvailable: true });
-      return;
-    case "tool-output-available":
-    case "tool-output-error":
-    case "tool-output-denied":
-    case "tool-input-error":
-      open.delete(chunk.toolCallId);
-      return;
-    default:
-      return;
-  }
 }
