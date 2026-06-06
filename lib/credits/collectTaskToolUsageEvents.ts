@@ -1,9 +1,4 @@
-import {
-  getToolName,
-  isToolUIPart,
-  type LanguageModelUsage,
-  type UIMessage,
-} from "ai";
+import { getToolName, isToolUIPart, type LanguageModelUsage, type UIMessage } from "ai";
 
 export type TaskToolUsageEvent = {
   usage: LanguageModelUsage;
