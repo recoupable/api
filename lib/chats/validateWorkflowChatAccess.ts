@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
@@ -48,7 +49,10 @@ export async function validateWorkflowChatAccess(
     );
   }
 
-  const sessionRows = (await selectSessions({ id: chat.session_id })) ?? [];
+  const sessionRows = await selectSessions({ id: chat.session_id });
+  if (sessionRows === null) {
+    return errorResponse("Internal server error", 500);
+  }
   const session = sessionRows[0] ?? null;
   if (!session) {
     return NextResponse.json(

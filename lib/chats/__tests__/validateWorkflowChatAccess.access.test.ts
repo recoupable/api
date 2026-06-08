@@ -59,9 +59,22 @@ describe("validateWorkflowChatAccess access", () => {
     expect((result as NextResponse).status).toBe(404);
   });
 
-  it("returns 404 when session lookup fails", async () => {
+  it("returns 500 when session lookup fails", async () => {
     vi.mocked(selectChats).mockResolvedValue([baseChat]);
     vi.mocked(selectSessions).mockResolvedValue(null);
+
+    const result = await validateWorkflowChatAccess(request, chatId);
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(500);
+    expect(await (result as NextResponse).json()).toEqual({
+      status: "error",
+      error: "Internal server error",
+    });
+  });
+
+  it("returns 404 when session does not exist", async () => {
+    vi.mocked(selectChats).mockResolvedValue([baseChat]);
+    vi.mocked(selectSessions).mockResolvedValue([]);
 
     const result = await validateWorkflowChatAccess(request, chatId);
     expect(result).toBeInstanceOf(NextResponse);
