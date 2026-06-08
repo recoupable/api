@@ -4,12 +4,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { handleChatStreamResume } from "@/lib/chat/handleChatStreamResume";
 import { validateGetChatStreamRequest } from "@/lib/chat/validateGetChatStreamRequest";
 import { reconcileExistingActiveStream } from "@/lib/chat/reconcileExistingActiveStream";
+import { wrapWorkflowStreamWatcher } from "@/lib/chat/wrapWorkflowStreamWatcher";
 
 vi.mock("@/lib/chat/validateGetChatStreamRequest", () => ({
   validateGetChatStreamRequest: vi.fn(),
 }));
 vi.mock("@/lib/chat/reconcileExistingActiveStream", () => ({
   reconcileExistingActiveStream: vi.fn(),
+}));
+vi.mock("@/lib/chat/wrapWorkflowStreamWatcher", () => ({
+  wrapWorkflowStreamWatcher: vi.fn((_runId: string, source: ReadableStream) => source),
 }));
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -62,6 +66,19 @@ describe("handleChatStreamResume", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type") ?? "").toMatch(/text\/event-stream/);
     expect(res.headers.get("x-workflow-run-id")).toBe("wrun_live");
+  });
+
+  it("wraps the resume stream in wrapWorkflowStreamWatcher", async () => {
+    mockValidatedChat("wrun_live");
+    const innerStream = new ReadableStream();
+    vi.mocked(reconcileExistingActiveStream).mockResolvedValue({
+      action: "resume",
+      runId: "wrun_live",
+      stream: innerStream,
+    });
+    await handleChatStreamResume(makeRequest(), CHAT_ID);
+    expect(wrapWorkflowStreamWatcher).toHaveBeenCalledTimes(1);
+    expect(wrapWorkflowStreamWatcher).toHaveBeenCalledWith("wrun_live", innerStream);
   });
 
   it("returns 204 when the run is terminal (reconcile=ready, stale id cleared)", async () => {

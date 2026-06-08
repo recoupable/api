@@ -104,8 +104,13 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
     // it's not written here. We still use the final `responseMessage` to
     // charge the account for this turn: atomic wallet debit + audit row via
     // the `deduct_credits_with_audit` Postgres function (`handleChatCredits`
-    // → `recordCreditDeduction`). Fire-and-forget — transient credits-table
-    // failures must not abort the chat workflow.
+    // → `recordCreditDeduction`).
+    //
+    // Charge on user-stop too — the provider already billed us for the
+    // tokens consumed, and the assistant message (including partial tool
+    // runs) is persisted, so the user owes the charge regardless of how
+    // the turn ended. `result.responseMessage.metadata` carries the
+    // usage actually consumed up to the abort point.
     if (result.responseMessage) {
       const metadata = result.responseMessage.metadata as AgentMessageMetadata | undefined;
       await handleChatCredits({
@@ -115,14 +120,15 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
         gatewayCostUsd: metadata?.totalMessageCost,
         usage: metadata?.totalMessageUsage ?? ZERO_USAGE,
       });
+    }
 
-      // Auto-commit + push after a natural finish. DurableAgentContext
-      // carries the raw VercelState; the auto-commit helpers operate on
-      // the discriminated SandboxState union so they can fan out to
-      // other sandbox backends in the future. Wrap with the
-      // `type: "vercel"` tag here. All gating + chunk emission +
-      // persistence lives in `autoCommitChatTurn` so the workflow body
-      // stays a thin orchestrator.
+    // Auto-commit + push only after a natural finish. Skip on user-stop —
+    // don't push half-done work, and `autoCommitChatTurn` can run 30+
+    // seconds, holding the writable open. DurableAgentContext carries
+    // the raw VercelState; the auto-commit helpers operate on the
+    // discriminated SandboxState union so they can fan out to other
+    // sandbox backends in the future.
+    if (result.responseMessage && !result.aborted) {
       const sandboxState = input.agentContext.sandbox?.state
         ? ({ type: "vercel", ...input.agentContext.sandbox.state } as const)
         : undefined;

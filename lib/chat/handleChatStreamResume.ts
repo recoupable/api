@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
 import { validateGetChatStreamRequest } from "@/lib/chat/validateGetChatStreamRequest";
 import { reconcileExistingActiveStream } from "@/lib/chat/reconcileExistingActiveStream";
+import { wrapWorkflowStreamWatcher } from "@/lib/chat/wrapWorkflowStreamWatcher";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 
 /**
@@ -42,8 +43,16 @@ export async function handleChatStreamResume(
   const reconciled = await reconcileExistingActiveStream(chatId, chat.active_stream_id);
   if (reconciled.action !== "resume") return noResumeResponse();
 
+  // Wrap the resume stream so consumer disconnect releases the inner
+  // reader (without cancelling the durable run), terminal status closes
+  // the SSE cleanly with synthesized tool-output-error chunks for any
+  // open tool-calls, and AbortError / late-404 from racing reads is
+  // treated as a clean close instead of bubbling a mid-stream error.
   return createUIMessageStreamResponse({
-    stream: reconciled.stream as ReadableStream<UIMessageChunk>,
+    stream: wrapWorkflowStreamWatcher(
+      reconciled.runId,
+      reconciled.stream as ReadableStream<UIMessageChunk>,
+    ),
     headers: { ...getCorsHeaders(), "x-workflow-run-id": reconciled.runId },
   });
 }
