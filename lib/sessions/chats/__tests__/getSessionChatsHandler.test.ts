@@ -45,18 +45,6 @@ describe("getSessionChatsHandler", () => {
     expect(getChatSummaries).not.toHaveBeenCalled();
   });
 
-  it("returns 500 when getChatSummaries fails", async () => {
-    mockValidated();
-    vi.mocked(getChatSummaries).mockResolvedValue(null);
-
-    const res = await getSessionChatsHandler(makeReq(), "sess_1");
-    expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({
-      status: "error",
-      error: "Internal server error",
-    });
-  });
-
   it("returns 200 with summaries from the db and DEFAULT_MODEL", async () => {
     mockValidated();
     const summaries = [

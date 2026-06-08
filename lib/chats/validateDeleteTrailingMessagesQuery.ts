@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { internalServerErrorResponse } from "@/lib/networking/internalServerErrorResponse";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateWorkflowChatAccess } from "@/lib/chats/validateWorkflowChatAccess";
 import { selectChatMessages } from "@/lib/supabase/chat_messages/selectChatMessages";
@@ -56,7 +56,7 @@ export async function validateDeleteTrailingMessagesQuery(
   });
 
   if (messages === null) {
-    return internalServerErrorResponse();
+    return errorResponse("Internal server error", 500);
   }
 
   if (messages.length === 0) {

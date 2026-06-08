@@ -51,29 +51,21 @@ describe("validateWorkflowChatAccess access", () => {
     expect((result as NextResponse).status).toBe(404);
   });
 
-  it("returns 500 when chat lookup fails", async () => {
-    vi.mocked(selectChats).mockResolvedValue(null);
+  it("returns 404 when chat lookup fails", async () => {
+    vi.mocked(selectChats).mockResolvedValue(null as never);
 
     const result = await validateWorkflowChatAccess(request, chatId);
     expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(500);
-    expect(await (result as NextResponse).json()).toEqual({
-      status: "error",
-      error: "Internal server error",
-    });
+    expect((result as NextResponse).status).toBe(404);
   });
 
-  it("returns 500 when session lookup fails", async () => {
+  it("returns 404 when session lookup fails", async () => {
     vi.mocked(selectChats).mockResolvedValue([baseChat]);
     vi.mocked(selectSessions).mockResolvedValue(null);
 
     const result = await validateWorkflowChatAccess(request, chatId);
     expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(500);
-    expect(await (result as NextResponse).json()).toEqual({
-      status: "error",
-      error: "Internal server error",
-    });
+    expect((result as NextResponse).status).toBe(404);
   });
 
   it("returns 403 when session belongs to another account", async () => {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { internalServerErrorResponse } from "@/lib/networking/internalServerErrorResponse";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import { validateCreateSessionChatRequest } from "@/lib/sessions/chats/validateCreateSessionChatRequest";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
@@ -35,12 +34,7 @@ export async function createSessionChatHandler(
   const requestedChatId = body.id ?? null;
 
   if (requestedChatId) {
-    const existingRows = await selectChats({ id: requestedChatId });
-    if (existingRows === null) {
-      return internalServerErrorResponse();
-    }
-
-    const existing = existingRows[0] ?? null;
+    const existing = (await selectChats({ id: requestedChatId }))[0] ?? null;
     if (existing) {
       if (existing.session_id !== sessionId) {
         return NextResponse.json(

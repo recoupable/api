@@ -3,6 +3,7 @@ import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
 import { start, getRun } from "workflow/api";
 import { validateChatWorkflow } from "@/lib/chat/validateChatWorkflow";
 import { maybeResumeChatStream } from "@/lib/chat/maybeResumeChatStream";
+import { wrapWorkflowStreamWatcher } from "@/lib/chat/wrapWorkflowStreamWatcher";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
@@ -67,10 +68,6 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
 
   // Chat + ownership
   const chats = await selectChats({ id: validated.chatId });
-  if (chats === null) {
-    return errorResponse("Internal server error", 500);
-  }
-
   const chat = chats[0];
   if (!chat || chat.session_id !== validated.sessionId) {
     return errorResponse("Chat not found", 404);
@@ -172,7 +169,7 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   }
 
   return createUIMessageStreamResponse({
-    stream: run.getReadable<UIMessageChunk>(),
+    stream: wrapWorkflowStreamWatcher(run.runId, run.getReadable<UIMessageChunk>()),
     headers: { ...getCorsHeaders(), "x-workflow-run-id": run.runId },
   });
 }

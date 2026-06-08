@@ -56,11 +56,7 @@ export async function evaluateSandboxLifecycle(
     return { action: "skipped", reason: "not-due-yet" };
   }
 
-  const activeStreamBeforeHibernate = await hasActiveStreamForSession(sessionId);
-  if (activeStreamBeforeHibernate === null) {
-    return { action: "failed", reason: "chat-query-failed" };
-  }
-  if (activeStreamBeforeHibernate) {
+  if (await hasActiveStreamForSession(sessionId)) {
     return { action: "skipped", reason: "active-workflow" };
   }
 
@@ -69,12 +65,7 @@ export async function evaluateSandboxLifecycle(
 
     const sandbox = await connectSandbox(sandboxState as unknown as SandboxState);
 
-    const activeStreamBeforeStop = await hasActiveStreamForSession(sessionId);
-    if (activeStreamBeforeStop === null) {
-      await restoreActiveLifecycleState(sessionId, sandboxState);
-      return { action: "failed", reason: "chat-query-failed" };
-    }
-    if (activeStreamBeforeStop) {
+    if (await hasActiveStreamForSession(sessionId)) {
       await restoreActiveLifecycleState(sessionId, sandboxState);
       return { action: "skipped", reason: "active-workflow" };
     }
