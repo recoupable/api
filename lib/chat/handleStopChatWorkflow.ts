@@ -24,10 +24,12 @@ export async function handleStopChatWorkflow(
     );
   }
 
+  const isPendingPlaceholder = activeStreamId.startsWith(PENDING_STREAM_PREFIX);
+
   // Only release the slot after the run is confirmed cancelled. A failed cancel
   // means the run may still be live, so keep the slot held and surface the error
   // rather than reporting a false "stopped" and freeing it for a new run.
-  if (!activeStreamId.startsWith(PENDING_STREAM_PREFIX)) {
+  if (!isPendingPlaceholder) {
     try {
       await getRun(activeStreamId).cancel();
     } catch (error) {
@@ -57,8 +59,7 @@ export async function handleStopChatWorkflow(
     );
   }
 
-  return NextResponse.json(
-    { success: true, stopped: true },
-    { status: 200, headers: getCorsHeaders() },
-  );
+  const stopped = isPendingPlaceholder ? released.ok && released.claimed : true;
+
+  return NextResponse.json({ success: true, stopped }, { status: 200, headers: getCorsHeaders() });
 }
