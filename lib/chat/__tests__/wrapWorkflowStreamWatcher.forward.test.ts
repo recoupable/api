@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { UIMessageChunk } from "ai";
-import { getRun } from "workflow/api";
 import { wrapWorkflowStreamWatcher } from "@/lib/chat/wrapWorkflowStreamWatcher";
 import {
   RUN_ID,
