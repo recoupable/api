@@ -64,7 +64,7 @@ export type RunAgentStepResult = {
    * `runAgentWorkflow` can charge credits from `responseMessage.metadata`.
    */
   responseMessage: UIMessage | undefined;
-  /** True when the user stopped the run; `runAgentWorkflow` skips billing + auto-commit on abort. */
+  /** True when the user stopped the run; `runAgentWorkflow` still bills consumed tokens and skips auto-commit on abort. */
   aborted: boolean;
 };
 
@@ -98,6 +98,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   const cancelController = new AbortController();
   const poller = pollWorkflowCancellation(workflowRunId, cancelController);
 
+  try {
   const modelMessages = await convertToModelMessages(input.messages);
   // Mark the last tool with `cacheControl: { type: "ephemeral" }` so
   // Anthropic caches the tool-definitions block across the
@@ -169,7 +170,8 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     },
     onError: error => {
       if (cancelController.signal.aborted) return "";
-      return error instanceof Error ? error.message : String(error);
+      console.error("[runAgentStep] stream error", error);
+      return "Internal server error";
     },
     execute: ({ writer }) => {
       writer.merge(
@@ -213,4 +215,8 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     aborted: userAborted,
   });
   return { finishReason, responseMessage, aborted: userAborted };
+  } finally {
+    poller.stop();
+    await poller.done.catch(() => {});
+  }
 }

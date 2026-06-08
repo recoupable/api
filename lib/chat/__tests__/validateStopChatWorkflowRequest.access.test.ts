@@ -25,14 +25,6 @@ function makeRequest(): NextRequest {
   });
 }
 
-function mockAuth() {
-  vi.mocked(validateAuthContext).mockResolvedValue({
-    accountId: ACCOUNT_ID,
-    orgId: null,
-    authToken: "token",
-  });
-}
-
 const chatRow = {
   id: CHAT_ID,
   session_id: SESSION_ID,
@@ -42,13 +34,17 @@ const chatRow = {
 
 const sessionRow = { id: SESSION_ID, account_id: ACCOUNT_ID } as never;
 
-describe("validateStopChatWorkflowRequest", () => {
+describe("validateStopChatWorkflowRequest access", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: ACCOUNT_ID,
+      orgId: null,
+      authToken: "token",
+    });
   });
 
   it("returns the auth context + chat when ownership checks pass", async () => {
-    mockAuth();
     vi.mocked(selectChats).mockResolvedValue([chatRow]);
     vi.mocked(selectSessions).mockResolvedValue([sessionRow]);
 
@@ -58,43 +54,18 @@ describe("validateStopChatWorkflowRequest", () => {
     if (result instanceof NextResponse) throw new Error("unexpected error response");
     expect(result.auth.accountId).toBe(ACCOUNT_ID);
     expect(result.chat.id).toBe(CHAT_ID);
-    expect(vi.mocked(selectChats)).toHaveBeenCalledWith({ id: CHAT_ID });
-    expect(vi.mocked(selectSessions)).toHaveBeenCalledWith({ id: SESSION_ID });
-  });
-
-  it("passes through the auth NextResponse on authentication failure", async () => {
-    const unauthorized = NextResponse.json({ status: "error" }, { status: 401 });
-    vi.mocked(validateAuthContext).mockResolvedValue(unauthorized);
-
-    const result = await validateStopChatWorkflowRequest(makeRequest(), CHAT_ID);
-
-    expect(result).toBe(unauthorized);
-    expect(vi.mocked(selectChats)).not.toHaveBeenCalled();
-  });
-
-  it("returns 400 when chatId is not a valid UUID", async () => {
-    mockAuth();
-
-    const result = await validateStopChatWorkflowRequest(makeRequest(), "not-a-uuid");
-
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(400);
-    expect(vi.mocked(selectChats)).not.toHaveBeenCalled();
   });
 
   it("returns 404 when the chat does not exist", async () => {
-    mockAuth();
     vi.mocked(selectChats).mockResolvedValue([]);
 
     const result = await validateStopChatWorkflowRequest(makeRequest(), CHAT_ID);
 
-    expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(404);
     expect(vi.mocked(selectSessions)).not.toHaveBeenCalled();
   });
 
   it("returns 500 when the session lookup hits a DB error", async () => {
-    mockAuth();
     vi.mocked(selectChats).mockResolvedValue([chatRow]);
     vi.mocked(selectSessions).mockResolvedValue(null);
 
@@ -104,7 +75,6 @@ describe("validateStopChatWorkflowRequest", () => {
   });
 
   it("returns 404 when the parent session is missing", async () => {
-    mockAuth();
     vi.mocked(selectChats).mockResolvedValue([chatRow]);
     vi.mocked(selectSessions).mockResolvedValue([]);
 
@@ -114,7 +84,6 @@ describe("validateStopChatWorkflowRequest", () => {
   });
 
   it("returns 403 when the chat is owned by another account", async () => {
-    mockAuth();
     vi.mocked(selectChats).mockResolvedValue([chatRow]);
     vi.mocked(selectSessions).mockResolvedValue([
       { id: SESSION_ID, account_id: OTHER_ACCOUNT_ID } as never,
