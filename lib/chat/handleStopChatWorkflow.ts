@@ -61,8 +61,5 @@ export async function handleStopChatWorkflow(
 
   const stopped = isPendingPlaceholder ? released.ok && released.claimed : true;
 
-  return NextResponse.json(
-    { success: true, stopped },
-    { status: 200, headers: getCorsHeaders() },
-  );
+  return NextResponse.json({ success: true, stopped }, { status: 200, headers: getCorsHeaders() });
 }
