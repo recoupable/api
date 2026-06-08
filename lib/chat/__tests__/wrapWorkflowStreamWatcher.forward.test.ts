@@ -6,6 +6,7 @@ import {
   RUN_ID,
   chunkSource,
   collect,
+  delayedChunkSource,
   mockRun,
 } from "@/lib/chat/__tests__/wrapWorkflowStreamWatcher.testHelpers";
 
@@ -26,6 +27,23 @@ describe("wrapWorkflowStreamWatcher forwarding", () => {
     const out = await collect(wrapWorkflowStreamWatcher(RUN_ID, source));
     expect(out).toHaveLength(3);
     expect(out[0]?.type).toBe("text-start");
+  });
+
+  it("drains the source fully before closing when run is already terminal", async () => {
+    mockRun({ status: () => "cancelled" });
+    const source = delayedChunkSource(
+      [
+        { type: "text-start", id: "a" } as UIMessageChunk,
+        { type: "text-delta", id: "a", delta: "late" } as UIMessageChunk,
+        { type: "text-end", id: "a" } as UIMessageChunk,
+      ],
+      20,
+    );
+
+    const out = await collect(wrapWorkflowStreamWatcher(RUN_ID, source));
+
+    expect(out).toHaveLength(3);
+    expect(out.map(c => c.type)).toEqual(["text-start", "text-delta", "text-end"]);
   });
 
   it("propagates consumer cancel to getRun(runId).cancel()", async () => {

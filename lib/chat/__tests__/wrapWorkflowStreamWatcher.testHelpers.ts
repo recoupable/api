@@ -33,3 +33,19 @@ export function chunkSource(chunks: UIMessageChunk[]): ReadableStream<UIMessageC
     },
   });
 }
+
+/** Source that closes after a delay — simulates buffered workflow chunks after terminal status. */
+export function delayedChunkSource(
+  chunks: UIMessageChunk[],
+  delayMs: number,
+): ReadableStream<UIMessageChunk> {
+  return new ReadableStream<UIMessageChunk>({
+    async start(controller) {
+      for (const chunk of chunks) {
+        await new Promise(r => setTimeout(r, delayMs));
+        controller.enqueue(chunk);
+      }
+      controller.close();
+    },
+  });
+}
