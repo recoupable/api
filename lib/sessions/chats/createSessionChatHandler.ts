@@ -34,7 +34,14 @@ export async function createSessionChatHandler(
   const requestedChatId = body.id ?? null;
 
   if (requestedChatId) {
-    const existing = (await selectChats({ id: requestedChatId }))[0] ?? null;
+    const existingRows = await selectChats({ id: requestedChatId });
+    if (existingRows === null) {
+      return NextResponse.json(
+        { status: "error", error: "Internal server error" },
+        { status: 500, headers: getCorsHeaders() },
+      );
+    }
+    const existing = existingRows[0] ?? null;
     if (existing) {
       if (existing.session_id !== sessionId) {
         return NextResponse.json(

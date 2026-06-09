@@ -11,14 +11,21 @@ import { trackToolCallChunk, type OpenTool } from "@/lib/chat/trackToolCallChunk
  *      then closes the consumer stream. Without this the AI SDK leaves
  *      those parts in their "executing" state on the live UI.
  *
- *   2. On consumer cancel (client disconnect / aiStop), propagates the
- *      cancel to the workflow run via `getRun(runId).cancel()`. Without
- *      this the run keeps producing chunks until the status poller
- *      detects cancellation independently — a ~750ms window where
- *      tools keep executing after the user has navigated away.
+ *   2. On consumer cancel (client disconnect), releases the inner reader
+ *      so the function invocation is not held open by an orphan reader.
+ *      The underlying workflow run is intentionally NOT cancelled — runs
+ *      are durable and a closed tab must be resumable via GET
+ *      `/api/chat/{chatId}/stream`. The only place a workflow is
+ *      explicitly cancelled is the POST `/stop` handler.
  *
- * Extracted from `handleChatWorkflowStream` so it can be unit-tested
- * in isolation.
+ *   3. Treats `AbortError` / `ResponseAborted` / late workflow run-not-found
+ *      (status-code-404) read failures as a clean close so reconnect races
+ *      and platform-initiated aborts settle gracefully instead of bubbling
+ *      a hard error to the SSE consumer.
+ *
+ * Shared by the POST start path (`handleChatWorkflowStream`) and the GET
+ * resume path (`handleChatStreamResume`) so both inherit the same
+ * cancellation, abort, and terminator semantics.
  */
 const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set(["cancelled", "completed", "failed"]);
 const STATUS_POLL_MS = 500;
@@ -114,6 +121,16 @@ export function wrapWorkflowStreamWatcher(
         }
       } catch (err) {
         if (closedByStatus || consumerCancelled) return;
+        // Aborts and late workflow-not-found surface as read rejections.
+        // Treat them as clean shutdown — the consumer has already gone
+        // away (or the workflow has — in which case the status watcher
+        // will close us in the next tick). Surfacing them as errors
+        // would crash the SSE consumer mid-stream.
+        if (isAbortLikeError(err)) {
+          closedByStatus = true;
+          closeWithSyntheticErrors();
+          return;
+        }
         controller.error(err);
       } finally {
         closedByStatus = true;
@@ -126,12 +143,12 @@ export function wrapWorkflowStreamWatcher(
       }
     },
     async cancel() {
+      // Consumer (HTTP client / SSE) went away. Release the inner reader
+      // so the workflow runtime can stop streaming into us; do NOT cancel
+      // the underlying run — it is durable and the client is expected to
+      // be able to reconnect via GET /api/chat/{chatId}/stream. Only
+      // POST /api/chat/{chatId}/stop should ever cancel a run.
       consumerCancelled = true;
-      try {
-        await getRun(runId).cancel();
-      } catch (error) {
-        console.error("[wrapWorkflowStreamWatcher] cancel propagation failed:", error);
-      }
       if (reader) {
         try {
           await reader.cancel();
@@ -141,4 +158,18 @@ export function wrapWorkflowStreamWatcher(
       }
     },
   });
+}
+
+/**
+ * Recognises the failure modes that should be treated as a clean shutdown
+ * instead of a hard mid-stream error: client/platform AbortError, internal
+ * ResponseAborted, and late workflow-not-found 404s that race with terminal
+ * status detection.
+ */
+function isAbortLikeError(error: unknown): boolean {
+  if (error === undefined) return true;
+  if (!(error instanceof Error)) return false;
+  if (error.name === "AbortError" || error.name === "ResponseAborted") return true;
+  const message = error.message.toLowerCase();
+  return message.includes("status code 404") && message.includes("not ok");
 }

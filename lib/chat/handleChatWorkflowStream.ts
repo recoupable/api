@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
 import { start, getRun } from "workflow/api";
 import { validateChatWorkflow } from "@/lib/chat/validateChatWorkflow";
-import { maybeResumeChatStream } from "@/lib/chat/maybeResumeChatStream";
+import { gateChatStreamStart } from "@/lib/chat/gateChatStreamStart";
 import { wrapWorkflowStreamWatcher } from "@/lib/chat/wrapWorkflowStreamWatcher";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
@@ -32,8 +32,10 @@ const DEFAULT_MODEL_ID = "anthropic/claude-haiku-4.5";
  *
  *   1. Validate auth + body (validateChatWorkflow).
  *   2. Verify session + chat ownership; ensure the session has an active sandbox.
- *   3. If a workflow is already running for this chat, resume / 409 via
- *      maybeResumeChatStream (extracted for OCP).
+ *   3. Gate on any existing run — resume is GET-only (GET /api/chat/[chatId]/stream),
+ *      never on POST. A genuinely live run → 409 (reconnect via GET); an
+ *      indeterminate probe → 503 (retry the POST shortly); a terminally-done
+ *      run's stale id is cleared here so the next POST can start fresh.
  *   4. **Claim `chats.active_stream_id` BEFORE starting the workflow** using
  *      a `pending-<uuid>` placeholder CAS. Closes the race window where two
  *      concurrent requests could both call `start()` and bill the model
@@ -68,14 +70,17 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
 
   // Chat + ownership
   const chats = await selectChats({ id: validated.chatId });
+  if (chats === null) return errorResponse("Internal server error", 500);
   const chat = chats[0];
   if (!chat || chat.session_id !== validated.sessionId) {
     return errorResponse("Chat not found", 404);
   }
 
-  // Resume an in-flight workflow for this chat (or 409) before starting a new one.
-  const resumed = await maybeResumeChatStream(validated.chatId, chat.active_stream_id);
-  if (resumed) return resumed;
+  // Resume is GET-only (GET /api/chat/[chatId]/stream); POST never resumes.
+  // Gate the start against any existing active stream — resume→409, indeterminate→503,
+  // terminal-stale→proceed. See gateChatStreamStart for the full decision table.
+  const gate = await gateChatStreamStart(validated.chatId, chat.active_stream_id);
+  if (gate) return gate;
 
   // Pre-claim the active_stream_id slot with a placeholder BEFORE starting
   // the workflow. This closes the race where two requests both call start()
