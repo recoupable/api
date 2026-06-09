@@ -20,6 +20,8 @@ interface HandleChatCreditsParams {
    * distinguish surface in spend rollups.
    */
   source?: "web" | "api";
+  /** Tool invocations on this turn — stored as `usage_events.tool_call_count`. */
+  toolCallCount?: number;
 }
 
 /**
@@ -41,6 +43,7 @@ export const handleChatCredits = async ({
   accountId,
   gatewayCostUsd,
   source = "web",
+  toolCallCount,
 }: HandleChatCreditsParams): Promise<void> => {
   if (!accountId) {
     console.error("No account ID provided, skipping credit deduction");
@@ -59,6 +62,7 @@ export const handleChatCredits = async ({
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
       cachedInputTokens: usage.cachedInputTokens,
+      toolCallCount,
     });
   } catch (error) {
     console.error("Failed to handle chat credits:", error);
