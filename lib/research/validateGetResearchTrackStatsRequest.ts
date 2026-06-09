@@ -46,9 +46,9 @@ export async function validateGetResearchTrackStatsRequest(
   const { searchParams } = new URL(request.url);
 
   const identifiers = IDENTIFIER_PARAMS.filter(name => searchParams.get(name));
-  if (identifiers.length === 0) {
+  if (identifiers.length !== 1) {
     return errorResponse(
-      `A track identifier is required (one of: ${IDENTIFIER_PARAMS.join(", ")})`,
+      `Provide exactly one track identifier (one of: ${IDENTIFIER_PARAMS.join(", ")})`,
       400,
     );
   }

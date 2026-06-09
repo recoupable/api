@@ -38,6 +38,16 @@ describe("validateGetResearchTrackStatsRequest", () => {
     expect(body.error).toContain("identifier");
   });
 
+  it("returns 400 when more than one track identifier is provided (exactly one required)", async () => {
+    const result = await validateGetResearchTrackStatsRequest(
+      new NextRequest("http://x/?isrc=USQY51771120&spotify_track_id=abc&source=spotify"),
+    );
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(400);
+    const body = await (result as NextResponse).json();
+    expect(body.error).toContain("exactly one");
+  });
+
   it("returns 400 when source is missing", async () => {
     const result = await validateGetResearchTrackStatsRequest(
       new NextRequest("http://x/?isrc=USQY51771120"),
