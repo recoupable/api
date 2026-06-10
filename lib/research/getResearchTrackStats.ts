@@ -1,8 +1,5 @@
 import { fetchSongstats } from "@/lib/songstats/fetchSongstats";
-import { deductCredits } from "@/lib/research/deductCredits";
-import { labelSongstatsProvenance } from "@/lib/research/labelSongstatsProvenance";
-import { getSpotifyStatFromStore } from "@/lib/research/playcounts/getSpotifyStatFromStore";
-import { appendStatToPayload } from "@/lib/research/playcounts/appendStatToPayload";
+import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 
 export type GetResearchTrackStatsParams = {
   accountId: string;
@@ -13,41 +10,24 @@ export type GetResearchTrackStatsParams = {
 export type GetResearchTrackStatsResult = { data: unknown } | { error: string; status: number };
 
 /**
- * Per-track, per-source current stats. Apify-first for Spotify: when the
- * request carries an `isrc` and asks for `spotify`, the entry is served from
- * the measurement store (refreshing via the play-count actor on staleness);
- * Songstats covers the remaining sources and is the automatic fallback when
- * the store can't answer. Every stat entry carries `data_source` provenance.
- * Deducts research credits only on a successful read.
+ * Thin passthrough to Songstats **Get Track Current Stats**
+ * (`GET enterprise/v1/tracks/stats`) — returns per-track, per-source current
+ * stats (including `streams_total`). Sibling of {@link getResearchMetrics};
+ * no caching layer. Deducts research credits only on a successful (200) read.
  */
 export async function getResearchTrackStats(
   params: GetResearchTrackStatsParams,
 ): Promise<GetResearchTrackStatsResult> {
-  const { isrc, source = "" } = params.params;
-  const sources = source.split(",").map(s => s.trim());
-
-  const storeStat =
-    isrc && sources.includes("spotify") ? await getSpotifyStatFromStore(isrc) : null;
-
-  const remainingSources = storeStat ? sources.filter(s => s !== "spotify") : sources;
-
-  if (storeStat && remainingSources.length === 0) {
-    await deductCredits(params.accountId);
-    return { data: { result: "success", stats: [storeStat] } };
-  }
-
-  const result = await fetchSongstats("tracks/stats", {
-    ...params.params,
-    source: remainingSources.join(","),
-  });
+  const result = await fetchSongstats("tracks/stats", params.params);
   if (result.status !== 200) {
     return { error: `Request failed with status ${result.status}`, status: result.status };
   }
 
-  await deductCredits(params.accountId);
+  try {
+    await recordCreditDeduction({ accountId: params.accountId, creditsToDeduct: 5, source: "api" });
+  } catch (error) {
+    console.error("[research] credit deduction failed:", error);
+  }
 
-  const labeled = labelSongstatsProvenance(result.data);
-  if (!storeStat) return { data: labeled };
-
-  return { data: appendStatToPayload(labeled, storeStat) };
+  return { data: result.data };
 }

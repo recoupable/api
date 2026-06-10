@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getResearchTrackStatsHandler } from "../getResearchTrackStatsHandler";
 import { validateGetResearchTrackStatsRequest } from "../validateGetResearchTrackStatsRequest";
-import { getResearchTrackStats } from "../getResearchTrackStats";
+import { getTrackStatsApifyFirst } from "../playcounts/getTrackStatsApifyFirst";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -10,7 +10,7 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 vi.mock("../validateGetResearchTrackStatsRequest", () => ({
   validateGetResearchTrackStatsRequest: vi.fn(),
 }));
-vi.mock("../getResearchTrackStats", () => ({ getResearchTrackStats: vi.fn() }));
+vi.mock("../playcounts/getTrackStatsApifyFirst", () => ({ getTrackStatsApifyFirst: vi.fn() }));
 
 const req = () =>
   new NextRequest("http://x/api/research/track/stats?isrc=USQY51771120&source=spotify");
@@ -27,7 +27,7 @@ describe("getResearchTrackStatsHandler", () => {
     );
     const res = await getResearchTrackStatsHandler(req());
     expect(res.status).toBe(400);
-    expect(getResearchTrackStats).not.toHaveBeenCalled();
+    expect(getTrackStatsApifyFirst).not.toHaveBeenCalled();
   });
 
   it("returns 200 with the Songstats stats envelope on success", async () => {
@@ -35,7 +35,7 @@ describe("getResearchTrackStatsHandler", () => {
       accountId: "acc_1",
       params: { isrc: "USQY51771120", source: "spotify" },
     });
-    vi.mocked(getResearchTrackStats).mockResolvedValue({
+    vi.mocked(getTrackStatsApifyFirst).mockResolvedValue({
       data: {
         result: "success",
         message: "Data Retrieved.",
@@ -56,7 +56,7 @@ describe("getResearchTrackStatsHandler", () => {
       accountId: "acc_1",
       params: { isrc: "BADISRC", source: "spotify" },
     });
-    vi.mocked(getResearchTrackStats).mockResolvedValue({
+    vi.mocked(getTrackStatsApifyFirst).mockResolvedValue({
       error: "Request failed with status 404",
       status: 404,
     });
