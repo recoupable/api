@@ -4,7 +4,6 @@ import {
   GetResearchTrackStatsResult,
 } from "@/lib/research/getResearchTrackStats";
 import { getSpotifyStatFromStore } from "@/lib/research/playcounts/getSpotifyStatFromStore";
-import { appendStatToPayload } from "@/lib/research/playcounts/appendStatToPayload";
 import { trackStatsPayloadSchema } from "@/lib/research/playcounts/trackStatsPayloadSchema";
 import { labelSongstatsProvenance } from "@/lib/research/labelSongstatsProvenance";
 import { deductCredits } from "@/lib/research/deductCredits";
@@ -49,5 +48,6 @@ export async function getTrackStatsApifyFirst(
   }
 
   const labeled = labelSongstatsProvenance(parsed.data);
-  return { data: storeStat ? appendStatToPayload(labeled, storeStat) : labeled };
+  if (!storeStat) return { data: labeled };
+  return { data: { ...labeled, stats: [...(labeled.stats ?? []), storeStat] } };
 }

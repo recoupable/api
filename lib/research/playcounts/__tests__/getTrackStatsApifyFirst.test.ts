@@ -38,7 +38,11 @@ describe("getTrackStatsApifyFirst", () => {
   it("delegates remaining sources to the passthrough and appends the store stat, labeling provenance", async () => {
     vi.mocked(getSpotifyStatFromStore).mockResolvedValue(STORE_STAT);
     vi.mocked(getResearchTrackStats).mockResolvedValue({
-      data: { result: "success", stats: [{ source: "deezer", data: { streams_total: 1000 } }] },
+      data: {
+        result: "success",
+        track_info: { name: "The Spins" },
+        stats: [{ source: "deezer", data: { streams_total: 1000 } }],
+      },
     });
 
     const result = await getTrackStatsApifyFirst({
@@ -50,7 +54,8 @@ describe("getTrackStatsApifyFirst", () => {
       accountId: "acc_1",
       params: { isrc: "USA2P2015959", source: "deezer" },
     });
-    const data = (result as { data: { stats: unknown[] } }).data;
+    const data = (result as { data: { track_info: unknown; stats: unknown[] } }).data;
+    expect(data.track_info).toEqual({ name: "The Spins" });
     expect(data.stats).toEqual([
       { source: "deezer", data: { streams_total: 1000 }, data_source: "songstats" },
       STORE_STAT,
