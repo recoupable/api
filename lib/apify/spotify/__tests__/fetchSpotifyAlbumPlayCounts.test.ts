@@ -42,6 +42,24 @@ describe("fetchSpotifyAlbumPlayCounts", () => {
     expect(result).toEqual({ runId: "run_1", albums: ITEMS });
   });
 
+  it("deduplicates album ids before building actor urls", async () => {
+    const call = vi
+      .fn()
+      .mockResolvedValue({ id: "run_3", defaultDatasetId: "ds_3", status: "SUCCEEDED" });
+    vi.mocked(apifyClient.actor).mockReturnValue({ call } as never);
+    const listItems = vi.fn().mockResolvedValue({ items: ITEMS });
+    vi.mocked(apifyClient.dataset).mockReturnValue({ listItems } as never);
+
+    await fetchSpotifyAlbumPlayCounts(["album_a", "album_a", "album_b"]);
+
+    expect(call).toHaveBeenCalledWith({
+      urls: [
+        { url: "https://open.spotify.com/album/album_a" },
+        { url: "https://open.spotify.com/album/album_b" },
+      ],
+    });
+  });
+
   it("throws when the run fails", async () => {
     const call = vi
       .fn()
