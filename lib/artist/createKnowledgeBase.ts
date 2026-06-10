@@ -1,17 +1,17 @@
-import { uploadTextToArweave } from "@/lib/arweave/uploadTextToArweave";
-import { arweaveGatewayUrl } from "@/lib/arweave/arweaveGatewayUrl";
+import { uploadPublicAsset } from "@/lib/files/uploadPublicAsset";
 import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo";
 import { updateAccountInfo } from "@/lib/supabase/account_info/updateAccountInfo";
 import { insertAccountInfo } from "@/lib/supabase/account_info/insertAccountInfo";
 import type { Knowledge } from "./knowledge";
 
 /**
- * Creates a knowledge base entry for an artist by uploading text to Arweave
- * and appending it to the artist's knowledges array.
+ * Creates a knowledge base entry for an artist by uploading text to the
+ * public-uploads Supabase bucket and appending it to the artist's knowledges
+ * array.
  *
  * @param artistId - The artist account ID
  * @param knowledgeBaseText - The text content to add to the knowledge base
- * @returns The created knowledge entry with Arweave URL
+ * @returns The created knowledge entry with a permanent CDN URL
  */
 export async function createKnowledgeBase(
   artistId: string,
@@ -21,9 +21,10 @@ export async function createKnowledgeBase(
     throw new Error("Knowledge base text is required");
   }
 
-  // Upload text to Arweave
-  const arweaveUrl = await uploadTextToArweave(knowledgeBaseText);
-  const fetchableUrl = arweaveGatewayUrl(arweaveUrl);
+  const { url } = await uploadPublicAsset({
+    data: knowledgeBaseText,
+    contentType: "text/plain",
+  });
 
   // Generate a name from the first line or a default name
   const firstLine = knowledgeBaseText.split("\n")[0].trim();
@@ -31,7 +32,7 @@ export async function createKnowledgeBase(
 
   // Create the knowledge entry
   const newKnowledge: Knowledge = {
-    url: fetchableUrl || arweaveUrl,
+    url,
     name,
     type: "text/plain",
   };

@@ -40,7 +40,6 @@
     "@vercel/sandbox": "2.0.0-beta.11",
     "ai": "6.0.190",
     "apify-client": "^2.20.0",
-    "arweave": "^1.15.7",
     "autoevals": "^0.0.129",
     "braintrust": "^0.4.9",
     "bullmq": "^5.65.1",

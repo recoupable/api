@@ -1,30 +1,33 @@
-import { uploadToArweave } from "./uploadToArweave";
-import { isSafeHttpUrl } from "./isSafeHttpUrl";
+import { isSafeHttpUrl } from "@/lib/networking/isSafeHttpUrl";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 10_000;
 
+export interface FetchedImage {
+  buffer: Buffer;
+  contentType: string;
+}
+
 /**
- * Fetches the image at `imageUrl` and uploads its bytes to Arweave.
- * Returns the Arweave transaction id (without the `ar://` prefix) on
- * success, or `null` if fetch / upload fails — callers should fall
- * back to the original URL in that case.
+ * Fetches a remote image URL and returns its bytes + Content-Type.
  *
- * Rejects non-http(s) URLs and private/loopback hosts to avoid SSRF,
- * caps the download at MAX_IMAGE_BYTES so a malicious server cannot
- * exhaust memory, and bounds the fetch with a timeout so a slow server
- * cannot stall the webhook.
+ * Rejects non-http(s) and private/loopback hosts to avoid SSRF, requires
+ * an `image/*` Content-Type on the response, caps the download at 10 MiB,
+ * and bounds the fetch with a 10s timeout so a slow server cannot stall
+ * callers. Returns `null` on any failure — callers decide what to do
+ * (typically: fall back to the original URL).
  *
  * @param imageUrl - Remote image URL.
  */
-export async function uploadLinkToArweave(
+export async function fetchRemoteImageBuffer(
   imageUrl: string | null | undefined,
-): Promise<string | null> {
+): Promise<FetchedImage | null> {
   if (!imageUrl) return null;
   if (!isSafeHttpUrl(imageUrl)) {
-    console.error("[ERROR] uploadLinkToArweave: rejected unsafe url");
+    console.error("[ERROR] fetchRemoteImageBuffer: rejected unsafe url");
     return null;
   }
+
   try {
     const res = await fetch(imageUrl, {
       redirect: "error",
@@ -33,10 +36,16 @@ export async function uploadLinkToArweave(
     if (!res.ok || !res.body) return null;
 
     const contentType = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
-    if (!contentType.startsWith("image/")) return null;
+    if (!contentType.startsWith("image/")) {
+      await res.body.cancel();
+      return null;
+    }
 
     const contentLength = Number(res.headers.get("content-length") ?? 0);
-    if (contentLength > MAX_IMAGE_BYTES) return null;
+    if (contentLength > MAX_IMAGE_BYTES) {
+      await res.body.cancel();
+      return null;
+    }
 
     const reader = res.body.getReader();
     const chunks: Uint8Array[] = [];
@@ -54,11 +63,9 @@ export async function uploadLinkToArweave(
     }
 
     const buffer = Buffer.concat(chunks.map(c => Buffer.from(c)));
-
-    const transaction = await uploadToArweave(buffer, contentType);
-    return transaction?.id ?? null;
+    return { buffer, contentType };
   } catch (err) {
-    console.error("[ERROR] uploadLinkToArweave:", err);
+    console.error("[ERROR] fetchRemoteImageBuffer:", err);
     return null;
   }
 }
