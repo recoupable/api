@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { insertSongMeasurements } from "../insertSongMeasurements";
+import { upsertSongMeasurements } from "../upsertSongMeasurements";
 
 import supabase from "../../serverClient";
 
@@ -29,7 +29,7 @@ const ROWS = [
   },
 ];
 
-describe("insertSongMeasurements", () => {
+describe("upsertSongMeasurements", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -39,7 +39,7 @@ describe("insertSongMeasurements", () => {
     const upsert = vi.fn().mockReturnValue({ select });
     vi.mocked(supabase.from).mockReturnValue({ upsert } as never);
 
-    const result = await insertSongMeasurements(ROWS);
+    const result = await upsertSongMeasurements(ROWS);
 
     expect(supabase.from).toHaveBeenCalledWith("song_measurements");
     expect(upsert).toHaveBeenCalledWith(ROWS, {
@@ -54,13 +54,13 @@ describe("insertSongMeasurements", () => {
     const upsert = vi.fn().mockReturnValue({ select });
     vi.mocked(supabase.from).mockReturnValue({ upsert } as never);
 
-    await expect(insertSongMeasurements(ROWS)).rejects.toThrow(
-      "Failed to insert song measurements: boom",
+    await expect(upsertSongMeasurements(ROWS)).rejects.toThrow(
+      "Failed to upsert song measurements: boom",
     );
   });
 
   it("returns [] without querying when given no rows", async () => {
-    const result = await insertSongMeasurements([]);
+    const result = await upsertSongMeasurements([]);
 
     expect(supabase.from).not.toHaveBeenCalled();
     expect(result).toEqual([]);

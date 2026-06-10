@@ -1,34 +1,12 @@
-import { selectLatestSongMeasurement } from "@/lib/supabase/song_measurements/selectLatestSongMeasurement";
-import { insertSongMeasurements } from "@/lib/supabase/song_measurements/insertSongMeasurements";
+import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
+import { upsertSongMeasurements } from "@/lib/supabase/song_measurements/upsertSongMeasurements";
 import { selectSongIdentifiers } from "@/lib/supabase/song_identifiers/selectSongIdentifiers";
-import { selectSongsByIdentifierValues } from "@/lib/supabase/song_identifiers/selectSongsByIdentifierValues";
 import { fetchSpotifyAlbumPlayCounts } from "@/lib/apify/spotify/fetchSpotifyAlbumPlayCounts";
-import { Tables } from "@/types/database.types";
+import { toStat, SpotifyStoreStat } from "@/lib/research/playcounts/toStat";
+import { isFresh } from "@/lib/research/playcounts/isFresh";
 
 const METRIC = "platform_displayed_play_count";
 const DATA_SOURCE = "apify_spotify_playcount";
-const DEFAULT_TTL_HOURS = 24;
-
-export type SpotifyStoreStat = {
-  source: "spotify";
-  data: { streams_total: number };
-  data_source: string;
-  captured_at: string;
-};
-
-function toStat(row: Pick<Tables<"song_measurements">, "value" | "captured_at" | "data_source">) {
-  return {
-    source: "spotify" as const,
-    data: { streams_total: row.value },
-    data_source: row.data_source,
-    captured_at: row.captured_at,
-  };
-}
-
-function isFresh(capturedAt: string): boolean {
-  const ttlHours = Number(process.env.SPOTIFY_PLAYCOUNT_TTL_HOURS) || DEFAULT_TTL_HOURS;
-  return Date.now() - new Date(capturedAt).getTime() < ttlHours * 60 * 60 * 1000;
-}
 
 /**
  * Apify-first Spotify stat for one recording, served from the measurement
@@ -41,20 +19,27 @@ function isFresh(capturedAt: string): boolean {
  * @returns A labeled stat entry, or null when the store can't answer
  */
 export async function getSpotifyStatFromStore(isrc: string): Promise<SpotifyStoreStat | null> {
-  const latest = await selectLatestSongMeasurement(isrc, "spotify", METRIC);
+  const [latest] = await selectSongMeasurements({
+    song: isrc,
+    platform: "spotify",
+    metric: METRIC,
+    limit: 1,
+  });
   if (latest && isFresh(latest.captured_at)) return toStat(latest);
 
-  const albumIds = (await selectSongIdentifiers(isrc, "spotify", "album_id")).map(r => r.value);
+  const albumIds = (
+    await selectSongIdentifiers({ song: isrc, platform: "spotify", identifierType: "album_id" })
+  ).map(r => r.value);
   if (albumIds.length === 0) return latest ? toStat(latest) : null;
 
   try {
     const { runId, albums } = await fetchSpotifyAlbumPlayCounts(albumIds);
     const tracks = albums.flatMap(album => album.tracks ?? []);
-    const mappings = await selectSongsByIdentifierValues(
-      "spotify",
-      "track_id",
-      tracks.map(t => t.id),
-    );
+    const mappings = await selectSongIdentifiers({
+      platform: "spotify",
+      identifierType: "track_id",
+      values: tracks.map(t => t.id),
+    });
     const songByTrackId = new Map(mappings.map(m => [m.value, m.song]));
     const capturedAt = new Date().toISOString();
 
@@ -73,7 +58,7 @@ export async function getSpotifyStatFromStore(isrc: string): Promise<SpotifyStor
         },
       ];
     });
-    await insertSongMeasurements(rows);
+    await upsertSongMeasurements(rows);
 
     const own = rows.find(r => r.song === isrc);
     if (own) return toStat(own);

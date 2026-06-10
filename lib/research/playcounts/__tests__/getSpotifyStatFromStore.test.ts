@@ -1,23 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getSpotifyStatFromStore } from "../getSpotifyStatFromStore";
 
-import { selectLatestSongMeasurement } from "@/lib/supabase/song_measurements/selectLatestSongMeasurement";
-import { insertSongMeasurements } from "@/lib/supabase/song_measurements/insertSongMeasurements";
+import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
+import { upsertSongMeasurements } from "@/lib/supabase/song_measurements/upsertSongMeasurements";
 import { selectSongIdentifiers } from "@/lib/supabase/song_identifiers/selectSongIdentifiers";
-import { selectSongsByIdentifierValues } from "@/lib/supabase/song_identifiers/selectSongsByIdentifierValues";
 import { fetchSpotifyAlbumPlayCounts } from "@/lib/apify/spotify/fetchSpotifyAlbumPlayCounts";
 
-vi.mock("@/lib/supabase/song_measurements/selectLatestSongMeasurement", () => ({
-  selectLatestSongMeasurement: vi.fn(),
+vi.mock("@/lib/supabase/song_measurements/selectSongMeasurements", () => ({
+  selectSongMeasurements: vi.fn(),
 }));
-vi.mock("@/lib/supabase/song_measurements/insertSongMeasurements", () => ({
-  insertSongMeasurements: vi.fn(),
+vi.mock("@/lib/supabase/song_measurements/upsertSongMeasurements", () => ({
+  upsertSongMeasurements: vi.fn(),
 }));
 vi.mock("@/lib/supabase/song_identifiers/selectSongIdentifiers", () => ({
   selectSongIdentifiers: vi.fn(),
-}));
-vi.mock("@/lib/supabase/song_identifiers/selectSongsByIdentifierValues", () => ({
-  selectSongsByIdentifierValues: vi.fn(),
 }));
 vi.mock("@/lib/apify/spotify/fetchSpotifyAlbumPlayCounts", () => ({
   fetchSpotifyAlbumPlayCounts: vi.fn(),
@@ -45,7 +41,7 @@ describe("getSpotifyStatFromStore", () => {
   });
 
   it("serves a fresh measurement from the store without calling the actor", async () => {
-    vi.mocked(selectLatestSongMeasurement).mockResolvedValue(freshRow as never);
+    vi.mocked(selectSongMeasurements).mockResolvedValue([freshRow] as never);
 
     const result = await getSpotifyStatFromStore(ISRC);
 
@@ -59,10 +55,20 @@ describe("getSpotifyStatFromStore", () => {
   });
 
   it("refreshes a stale measurement via the actor, writing all mapped sibling tracks", async () => {
-    vi.mocked(selectLatestSongMeasurement).mockResolvedValue(staleRow as never);
-    vi.mocked(selectSongIdentifiers).mockResolvedValue([
-      { song: ISRC, platform: "spotify", identifier_type: "album_id", value: "album_1" },
-    ] as never);
+    vi.mocked(selectSongMeasurements).mockResolvedValue([staleRow] as never);
+    vi.mocked(selectSongIdentifiers).mockImplementation(async ({ identifierType }) =>
+      identifierType === "album_id"
+        ? [{ song: ISRC, platform: "spotify", identifier_type: "album_id", value: "album_1" }]
+        : [
+            { song: ISRC, platform: "spotify", identifier_type: "track_id", value: "track_self" },
+            {
+              song: "USUYG1069897",
+              platform: "spotify",
+              identifier_type: "track_id",
+              value: "track_sib",
+            },
+          ],
+    );
     vi.mocked(fetchSpotifyAlbumPlayCounts).mockResolvedValue({
       runId: "run_9",
       albums: [
@@ -76,16 +82,12 @@ describe("getSpotifyStatFromStore", () => {
         },
       ],
     });
-    vi.mocked(selectSongsByIdentifierValues).mockResolvedValue([
-      { song: ISRC, value: "track_self" },
-      { song: "USUYG1069897", value: "track_sib" },
-    ]);
-    vi.mocked(insertSongMeasurements).mockResolvedValue([] as never);
+    vi.mocked(upsertSongMeasurements).mockResolvedValue([] as never);
 
     const result = await getSpotifyStatFromStore(ISRC);
 
     expect(fetchSpotifyAlbumPlayCounts).toHaveBeenCalledWith(["album_1"]);
-    expect(insertSongMeasurements).toHaveBeenCalledWith([
+    expect(upsertSongMeasurements).toHaveBeenCalledWith([
       expect.objectContaining({
         song: ISRC,
         platform: "spotify",
@@ -106,7 +108,7 @@ describe("getSpotifyStatFromStore", () => {
   });
 
   it("returns null when the song has no spotify album mapping (fallback signal)", async () => {
-    vi.mocked(selectLatestSongMeasurement).mockResolvedValue(null);
+    vi.mocked(selectSongMeasurements).mockResolvedValue([]);
     vi.mocked(selectSongIdentifiers).mockResolvedValue([]);
 
     const result = await getSpotifyStatFromStore(ISRC);
@@ -116,10 +118,10 @@ describe("getSpotifyStatFromStore", () => {
   });
 
   it("returns the stale measurement when the actor fails (degrade, not error)", async () => {
-    vi.mocked(selectLatestSongMeasurement).mockResolvedValue(staleRow as never);
+    vi.mocked(selectSongMeasurements).mockResolvedValue([staleRow] as never);
     vi.mocked(selectSongIdentifiers).mockResolvedValue([
       { song: ISRC, platform: "spotify", identifier_type: "album_id", value: "album_1" },
-    ] as never);
+    ]);
     vi.mocked(fetchSpotifyAlbumPlayCounts).mockRejectedValue(new Error("actor down"));
 
     const result = await getSpotifyStatFromStore(ISRC);
@@ -133,10 +135,10 @@ describe("getSpotifyStatFromStore", () => {
   });
 
   it("returns null when there is no measurement and the actor fails (full fallback)", async () => {
-    vi.mocked(selectLatestSongMeasurement).mockResolvedValue(null);
+    vi.mocked(selectSongMeasurements).mockResolvedValue([]);
     vi.mocked(selectSongIdentifiers).mockResolvedValue([
       { song: ISRC, platform: "spotify", identifier_type: "album_id", value: "album_1" },
-    ] as never);
+    ]);
     vi.mocked(fetchSpotifyAlbumPlayCounts).mockRejectedValue(new Error("actor down"));
 
     const result = await getSpotifyStatFromStore(ISRC);

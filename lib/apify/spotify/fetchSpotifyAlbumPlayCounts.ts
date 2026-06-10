@@ -30,8 +30,9 @@ export async function fetchSpotifyAlbumPlayCounts(
     throw new Error("At least one Spotify album id is required");
   }
 
+  const uniqueAlbumIds = [...new Set(spotifyAlbumIds)];
   const input = {
-    urls: spotifyAlbumIds.map(id => ({ url: `https://open.spotify.com/album/${id}` })),
+    urls: uniqueAlbumIds.map(id => ({ url: `https://open.spotify.com/album/${id}` })),
   };
 
   const run = await apifyClient.actor(PLAY_COUNT_ACTOR).call(input);
