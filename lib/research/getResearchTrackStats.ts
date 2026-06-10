@@ -2,6 +2,7 @@ import { fetchSongstats } from "@/lib/songstats/fetchSongstats";
 import { deductCredits } from "@/lib/research/deductCredits";
 import { labelSongstatsProvenance } from "@/lib/research/labelSongstatsProvenance";
 import { getSpotifyStatFromStore } from "@/lib/research/playcounts/getSpotifyStatFromStore";
+import { appendStatToPayload } from "@/lib/research/playcounts/appendStatToPayload";
 
 export type GetResearchTrackStatsParams = {
   accountId: string;
@@ -48,10 +49,5 @@ export async function getResearchTrackStats(
   const labeled = labelSongstatsProvenance(result.data);
   if (!storeStat) return { data: labeled };
 
-  const payload =
-    typeof labeled === "object" && labeled !== null
-      ? (labeled as Record<string, unknown>)
-      : { data: labeled };
-  const stats = Array.isArray(payload.stats) ? payload.stats : [];
-  return { data: { ...payload, stats: [...stats, storeStat] } };
+  return { data: appendStatToPayload(labeled, storeStat) };
 }
