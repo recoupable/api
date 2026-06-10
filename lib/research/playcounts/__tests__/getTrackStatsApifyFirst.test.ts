@@ -93,6 +93,21 @@ describe("getTrackStatsApifyFirst", () => {
     expect(getResearchTrackStats).toHaveBeenCalledTimes(2);
   });
 
+  it("passes a non-conforming Songstats payload through unlabeled (shape drift)", async () => {
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(getSpotifyStatFromStore).mockResolvedValue(null);
+    vi.mocked(getResearchTrackStats).mockResolvedValue({ data: "raw-html-error-page" });
+
+    const result = await getTrackStatsApifyFirst({
+      accountId: "acc_1",
+      params: { isrc: "USQY51771120", source: "spotify" },
+    });
+
+    expect(result).toEqual({ data: "raw-html-error-page" });
+    expect(consoleWarn).toHaveBeenCalled();
+    consoleWarn.mockRestore();
+  });
+
   it("passes through upstream error results untouched", async () => {
     vi.mocked(getSpotifyStatFromStore).mockResolvedValue(null);
     vi.mocked(getResearchTrackStats).mockResolvedValue({

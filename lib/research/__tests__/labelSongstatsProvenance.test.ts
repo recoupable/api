@@ -11,15 +11,13 @@ describe("labelSongstatsProvenance", () => {
       ],
     });
 
-    expect((result as { stats: Array<{ data_source: string }> }).stats).toEqual([
+    expect(result.stats).toEqual([
       { source: "spotify", data: { streams_total: 1 }, data_source: "songstats" },
       { source: "deezer", data: { streams_total: 2 }, data_source: "songstats" },
     ]);
   });
 
-  it("passes through payloads without a stats array", () => {
+  it("passes envelope-only payloads through unchanged", () => {
     expect(labelSongstatsProvenance({ result: "success" })).toEqual({ result: "success" });
-    expect(labelSongstatsProvenance(null)).toBeNull();
-    expect(labelSongstatsProvenance("x")).toBe("x");
   });
 });

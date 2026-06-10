@@ -5,6 +5,7 @@ import {
 } from "@/lib/research/getResearchTrackStats";
 import { getSpotifyStatFromStore } from "@/lib/research/playcounts/getSpotifyStatFromStore";
 import { appendStatToPayload } from "@/lib/research/playcounts/appendStatToPayload";
+import { trackStatsPayloadSchema } from "@/lib/research/playcounts/trackStatsPayloadSchema";
 import { labelSongstatsProvenance } from "@/lib/research/labelSongstatsProvenance";
 import { deductCredits } from "@/lib/research/deductCredits";
 
@@ -13,8 +14,11 @@ import { deductCredits } from "@/lib/research/deductCredits";
  * layered over the untouched Songstats passthrough. When the request carries
  * an `isrc` and asks for `spotify`, that entry is served from the measurement
  * store; {@link getResearchTrackStats} covers the remaining sources and is
- * the automatic fallback when the store can't answer. Every stat entry
- * carries `data_source` provenance per the contract (docs#238).
+ * the automatic fallback when the store can't answer. The Songstats payload
+ * is zod-validated once here — downstream transforms are fully typed — and a
+ * non-conforming payload (shape drift) passes through unlabeled rather than
+ * failing the response. Every stat entry carries `data_source` provenance per
+ * the contract (docs#238).
  */
 export async function getTrackStatsApifyFirst(
   params: GetResearchTrackStatsParams,
@@ -38,6 +42,12 @@ export async function getTrackStatsApifyFirst(
   });
   if ("error" in result) return result;
 
-  const labeled = labelSongstatsProvenance(result.data);
+  const parsed = trackStatsPayloadSchema.safeParse(result.data);
+  if (!parsed.success) {
+    console.warn("[research] unexpected Songstats stats payload shape:", parsed.error.message);
+    return result;
+  }
+
+  const labeled = labelSongstatsProvenance(parsed.data);
   return { data: storeStat ? appendStatToPayload(labeled, storeStat) : labeled };
 }

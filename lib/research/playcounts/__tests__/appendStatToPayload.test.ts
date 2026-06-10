@@ -26,14 +26,9 @@ describe("appendStatToPayload", () => {
   });
 
   it("creates the stats array when the payload has none", () => {
-    const result = appendStatToPayload({ result: "success" }, STAT);
-
-    expect(result).toEqual({ result: "success", stats: [STAT] });
-  });
-
-  it("wraps non-object payloads without losing them", () => {
-    const result = appendStatToPayload("raw", STAT);
-
-    expect(result).toEqual({ data: "raw", stats: [STAT] });
+    expect(appendStatToPayload({ result: "success" }, STAT)).toEqual({
+      result: "success",
+      stats: [STAT],
+    });
   });
 });
