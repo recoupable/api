@@ -4,6 +4,10 @@
     {
       "path": "/api/internal/credit-spend-digest",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/internal/playcount-maintenance",
+      "schedule": "0 7 * * *"
     }
   ]
 }
