@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getResearchTrackHistoricStatsHandler } from "../getResearchTrackHistoricStatsHandler";
 import { validateGetResearchTrackHistoricStatsRequest } from "../validateGetResearchTrackHistoricStatsRequest";
-import { getResearchTrackHistoricStats } from "../getResearchTrackHistoricStats";
+import { getTrackHistoricStatsApifyFirst } from "../playcounts/getTrackHistoricStatsApifyFirst";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -10,7 +10,9 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 vi.mock("../validateGetResearchTrackHistoricStatsRequest", () => ({
   validateGetResearchTrackHistoricStatsRequest: vi.fn(),
 }));
-vi.mock("../getResearchTrackHistoricStats", () => ({ getResearchTrackHistoricStats: vi.fn() }));
+vi.mock("../playcounts/getTrackHistoricStatsApifyFirst", () => ({
+  getTrackHistoricStatsApifyFirst: vi.fn(),
+}));
 
 const req = () =>
   new NextRequest("http://x/api/research/track/historic-stats?isrc=USQY51771120&source=spotify");
@@ -27,7 +29,7 @@ describe("getResearchTrackHistoricStatsHandler", () => {
     );
     const res = await getResearchTrackHistoricStatsHandler(req());
     expect(res.status).toBe(400);
-    expect(getResearchTrackHistoricStats).not.toHaveBeenCalled();
+    expect(getTrackHistoricStatsApifyFirst).not.toHaveBeenCalled();
   });
 
   it("returns 200 with the historic stats envelope on success", async () => {
@@ -35,7 +37,7 @@ describe("getResearchTrackHistoricStatsHandler", () => {
       accountId: "acc_1",
       params: { isrc: "USQY51771120", source: "spotify" },
     });
-    vi.mocked(getResearchTrackHistoricStats).mockResolvedValue({
+    vi.mocked(getTrackHistoricStatsApifyFirst).mockResolvedValue({
       data: {
         result: "success",
         stats: [
@@ -59,7 +61,7 @@ describe("getResearchTrackHistoricStatsHandler", () => {
       accountId: "acc_1",
       params: { isrc: "BADISRC", source: "spotify" },
     });
-    vi.mocked(getResearchTrackHistoricStats).mockResolvedValue({
+    vi.mocked(getTrackHistoricStatsApifyFirst).mockResolvedValue({
       error: "Request failed with status 404",
       status: 404,
     });

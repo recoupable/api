@@ -71,6 +71,22 @@ describe("selectSongIdentifiers", () => {
     expect(result).toEqual(rows);
   });
 
+  it("filters by a songs[] batch (all identifier rows for an album's tracks)", async () => {
+    const rows = [
+      { song: "USA2P2015959", platform: "spotify", identifier_type: "track_id", value: "t1" },
+    ];
+    const builder = mockBuilder({ data: rows, error: null });
+
+    const result = await selectSongIdentifiers({
+      platform: "spotify",
+      identifierType: "track_id",
+      songs: ["USA2P2015959", "USUYG1069897"],
+    });
+
+    expect(builder.in).toHaveBeenCalledWith("song", ["USA2P2015959", "USUYG1069897"]);
+    expect(result).toEqual(rows);
+  });
+
   it("returns [] for an empty values array without querying", async () => {
     const result = await selectSongIdentifiers({
       platform: "spotify",

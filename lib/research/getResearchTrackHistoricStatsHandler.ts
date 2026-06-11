@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
-import { getResearchTrackHistoricStats } from "@/lib/research/getResearchTrackHistoricStats";
+import { getTrackHistoricStatsApifyFirst } from "@/lib/research/playcounts/getTrackHistoricStatsApifyFirst";
 import { validateGetResearchTrackHistoricStatsRequest } from "@/lib/research/validateGetResearchTrackHistoricStatsRequest";
 
 /**
@@ -9,7 +9,7 @@ import { validateGetResearchTrackHistoricStatsRequest } from "@/lib/research/val
  *
  * Historic per-track, per-source stats (a daily time-series of cumulative
  * counters incl. `streams_total`) by `isrc` / `songstats_track_id` /
- * `spotify_track_id` / `apple_music_track_id`. Thin passthrough to Songstats;
+ * `spotify_track_id` / `apple_music_track_id`. Spotify history is served from the measurement store (stitched snapshot + backfill points); other sources via Songstats.
  * sibling of `GET /api/research/track/stats`.
  *
  * @param request - The incoming HTTP request.
@@ -22,7 +22,7 @@ export async function getResearchTrackHistoricStatsHandler(
     const validated = await validateGetResearchTrackHistoricStatsRequest(request);
     if (validated instanceof NextResponse) return validated;
 
-    const result = await getResearchTrackHistoricStats(validated);
+    const result = await getTrackHistoricStatsApifyFirst(validated);
     if ("error" in result) return errorResponse(result.error, result.status);
 
     const data = result.data;
