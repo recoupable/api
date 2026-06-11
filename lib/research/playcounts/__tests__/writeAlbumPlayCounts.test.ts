@@ -3,6 +3,7 @@ import { writeAlbumPlayCounts } from "../writeAlbumPlayCounts";
 
 import { selectSongIdentifiers } from "@/lib/supabase/song_identifiers/selectSongIdentifiers";
 import { upsertSongMeasurements } from "@/lib/supabase/song_measurements/upsertSongMeasurements";
+import { mapUnmappedAlbumTracks } from "../mapUnmappedAlbumTracks";
 
 vi.mock("@/lib/supabase/song_identifiers/selectSongIdentifiers", () => ({
   selectSongIdentifiers: vi.fn(),
@@ -10,6 +11,7 @@ vi.mock("@/lib/supabase/song_identifiers/selectSongIdentifiers", () => ({
 vi.mock("@/lib/supabase/song_measurements/upsertSongMeasurements", () => ({
   upsertSongMeasurements: vi.fn(),
 }));
+vi.mock("../mapUnmappedAlbumTracks", () => ({ mapUnmappedAlbumTracks: vi.fn() }));
 
 const ALBUMS = [
   {
@@ -27,6 +29,21 @@ describe("writeAlbumPlayCounts", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-11T12:00:00Z"));
     vi.mocked(upsertSongMeasurements).mockResolvedValue([] as never);
+    vi.mocked(mapUnmappedAlbumTracks).mockResolvedValue(new Map());
+  });
+
+  it("self-maps unmapped tracks and writes their measurements too (chat#1794)", async () => {
+    vi.mocked(selectSongIdentifiers).mockResolvedValue([
+      { song: "ISRC1", platform: "spotify", identifier_type: "track_id", value: "t1" },
+    ]);
+    vi.mocked(mapUnmappedAlbumTracks).mockResolvedValue(new Map([["t_unmapped", "ISRC_NEW"]]));
+
+    const written = await writeAlbumPlayCounts(ALBUMS, "run_3", {});
+
+    expect(mapUnmappedAlbumTracks).toHaveBeenCalledWith(ALBUMS, new Set(["t1"]));
+    const rows = vi.mocked(upsertSongMeasurements).mock.calls[0][0];
+    expect(rows.map((r: { song: string }) => r.song).sort()).toEqual(["ISRC1", "ISRC_NEW"]);
+    expect(written).toBe(2);
   });
 
   it("writes one measurement per mapped track with run + snapshot lineage", async () => {
