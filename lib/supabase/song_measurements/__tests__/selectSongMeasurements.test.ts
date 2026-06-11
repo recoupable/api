@@ -68,6 +68,24 @@ describe("selectSongMeasurements", () => {
     expect(result).toHaveLength(2);
   });
 
+  it("batches by songs[] via .in and skips absent platform/metric filters", async () => {
+    const builder = mockBuilder({ data: [ROW], error: null });
+
+    const result = await selectSongMeasurements({ songs: ["USA2P2015959", "USUYG1069897"] });
+
+    expect(builder.in).toHaveBeenCalledWith("song", ["USA2P2015959", "USUYG1069897"]);
+    expect(builder.eq).not.toHaveBeenCalled();
+    expect(builder.order).toHaveBeenCalledWith("captured_at", { ascending: false });
+    expect(result).toEqual([ROW]);
+  });
+
+  it("returns [] without querying when no song filter is given", async () => {
+    const result = await selectSongMeasurements({ songs: [] });
+
+    expect(supabase.from).not.toHaveBeenCalled();
+    expect(result).toEqual([]);
+  });
+
   it("returns [] on query error", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     mockBuilder({ data: null, error: { message: "boom" } });
