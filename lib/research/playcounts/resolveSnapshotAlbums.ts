@@ -20,8 +20,8 @@ export async function resolveSnapshotAlbums(input: SnapshotInput): Promise<strin
 
   let isrcs = input.isrcs ?? [];
   if (input.catalog_id) {
-    const catalogSongs = await selectCatalogSongsWithArtists(input.catalog_id);
-    isrcs = catalogSongs.map(row => row.song.isrc);
+    const { songs } = await selectCatalogSongsWithArtists({ catalogId: input.catalog_id });
+    isrcs = songs.map(row => row.isrc);
   }
 
   const identifiers = await selectSongIdentifiers({

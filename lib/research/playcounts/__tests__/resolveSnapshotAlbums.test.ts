@@ -38,17 +38,17 @@ describe("resolveSnapshotAlbums", () => {
   });
 
   it("resolves a catalog to album ids via its songs", async () => {
-    vi.mocked(selectCatalogSongsWithArtists).mockResolvedValue([
-      { song: { isrc: "I1" } },
-      { song: { isrc: "I2" } },
-    ] as never);
+    vi.mocked(selectCatalogSongsWithArtists).mockResolvedValue({
+      songs: [{ isrc: "I1" }, { isrc: "I2" }],
+      total_count: 2,
+    } as never);
     vi.mocked(selectSongIdentifiers).mockResolvedValue([
       { song: "I1", platform: "spotify", identifier_type: "album_id", value: "a9" },
     ]);
 
     const result = await resolveSnapshotAlbums({ catalog_id: "cat_1" });
 
-    expect(selectCatalogSongsWithArtists).toHaveBeenCalledWith("cat_1");
+    expect(selectCatalogSongsWithArtists).toHaveBeenCalledWith({ catalogId: "cat_1" });
     expect(result).toEqual(["a9"]);
   });
 });
