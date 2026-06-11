@@ -1,13 +1,16 @@
 import { getSnapshotStep } from "@/app/workflows/getSnapshotStep";
 import { markSnapshotStep } from "@/app/workflows/markSnapshotStep";
-import { captureSnapshotChunkStep } from "@/app/workflows/captureSnapshotChunkStep";
+import { fetchChunkStep } from "@/app/workflows/fetchChunkStep";
+import { mapAndWriteChunkStep } from "@/app/workflows/mapAndWriteChunkStep";
 
 const CHUNK_SIZE = 100;
 
 /**
  * Durable snapshot capture (recoupable/chat#1791 write path): mark the job
- * running, capture albums in retryable chunks (one actor call per chunk,
- * measurements written with run + snapshot lineage), mark done/failed.
+ * running, then per chunk: a fetch step (actor call — result memoized, so
+ * mapping retries never re-spend) and a map+write step (identifier bootstrap
+ * + measurements; sustained Spotify rate limits escalate to RetryableError
+ * for durable rescheduling), then mark done/failed.
  * Started fire-and-forget from `createSnapshot`; observable in the Vercel
  * dashboard like the sibling workflows.
  */
@@ -21,7 +24,8 @@ export async function playcountSnapshotWorkflow(snapshotId: string) {
     const albumIds = snapshot.album_ids ?? [];
     let written = 0;
     for (let i = 0; i < albumIds.length; i += CHUNK_SIZE) {
-      written += await captureSnapshotChunkStep(snapshotId, albumIds.slice(i, i + CHUNK_SIZE));
+      const payload = await fetchChunkStep(albumIds.slice(i, i + CHUNK_SIZE));
+      written += await mapAndWriteChunkStep(snapshotId, payload);
     }
 
     await markSnapshotStep(snapshotId, { state: "done" });

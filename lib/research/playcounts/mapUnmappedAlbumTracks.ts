@@ -3,6 +3,7 @@ import getTracks from "@/lib/spotify/getTracks";
 import { upsertSongs } from "@/lib/supabase/songs/upsertSongs";
 import { upsertSongIdentifiers } from "@/lib/supabase/song_identifiers/upsertSongIdentifiers";
 import { SpotifyAlbumPlayCounts } from "@/lib/apify/spotify/fetchSpotifyAlbumPlayCounts";
+import { SpotifyRateLimitError } from "@/lib/spotify/SpotifyRateLimitError";
 
 /**
  * Self-mapping bootstrap (chat#1794): resolve ISRCs for actor tracks that have
@@ -67,6 +68,7 @@ export async function mapUnmappedAlbumTracks(
 
     return new Map(resolved.map(r => [r.trackId, r.isrc]));
   } catch (error) {
+    if (error instanceof SpotifyRateLimitError) throw error;
     console.error("[playcounts] identifier bootstrap failed:", error);
     return new Map();
   }

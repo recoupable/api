@@ -1,4 +1,5 @@
 import { SpotifyTrack } from "@/types/spotify.types";
+import { SpotifyRateLimitError } from "@/lib/spotify/SpotifyRateLimitError";
 
 const BATCH_SIZE = 50;
 const MAX_429_RETRIES = 3;
@@ -47,6 +48,9 @@ const getTracks = async ({
         }
       }
 
+      if (response?.status === 429) {
+        throw new SpotifyRateLimitError();
+      }
       if (!response || !response.ok) {
         return {
           tracks: null,
@@ -59,6 +63,7 @@ const getTracks = async ({
     }
     return { tracks, error: null };
   } catch (error) {
+    if (error instanceof SpotifyRateLimitError) throw error;
     console.error(error);
     return {
       tracks: null,

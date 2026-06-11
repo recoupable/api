@@ -5,6 +5,7 @@ import generateAccessToken from "@/lib/spotify/generateAccessToken";
 import getTracks from "@/lib/spotify/getTracks";
 import { upsertSongs } from "@/lib/supabase/songs/upsertSongs";
 import { upsertSongIdentifiers } from "@/lib/supabase/song_identifiers/upsertSongIdentifiers";
+import { SpotifyRateLimitError } from "@/lib/spotify/SpotifyRateLimitError";
 
 vi.mock("@/lib/spotify/generateAccessToken", () => ({ default: vi.fn() }));
 vi.mock("@/lib/spotify/getTracks", () => ({ default: vi.fn() }));
@@ -59,6 +60,14 @@ describe("mapUnmappedAlbumTracks", () => {
 
     expect(generateAccessToken).not.toHaveBeenCalled();
     expect(mapped.size).toBe(0);
+  });
+
+  it("rethrows sustained rate limiting so workflow steps can escalate durably", async () => {
+    vi.mocked(getTracks).mockRejectedValue(new SpotifyRateLimitError());
+
+    await expect(mapUnmappedAlbumTracks(ALBUMS, new Set())).rejects.toBeInstanceOf(
+      SpotifyRateLimitError,
+    );
   });
 
   it("degrades to an empty map (no throw) when Spotify auth fails — capture proceeds for already-mapped tracks", async () => {

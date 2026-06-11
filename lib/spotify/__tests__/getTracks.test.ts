@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import getTracks from "../getTracks";
+import { SpotifyRateLimitError } from "../SpotifyRateLimitError";
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch as never;
@@ -43,18 +44,17 @@ describe("getTracks", () => {
     expect(tracks).toHaveLength(1);
   });
 
-  it("gives up after exhausting 429 retries", async () => {
+  it("throws SpotifyRateLimitError after exhausting 429 retries (callers escalate durably)", async () => {
     mockFetch.mockResolvedValue({
       ok: false,
       status: 429,
       headers: { get: (h: string) => (h === "Retry-After" ? "0" : null) },
     } as never);
 
-    const { tracks, error } = await getTracks({ ids: ["t1"], accessToken: "tok" });
-
+    await expect(getTracks({ ids: ["t1"], accessToken: "tok" })).rejects.toBeInstanceOf(
+      SpotifyRateLimitError,
+    );
     expect(mockFetch).toHaveBeenCalledTimes(4); // 1 + 3 retries
-    expect(tracks).toBeNull();
-    expect(error?.message).toContain("429");
   });
 
   it("returns an error on a non-429 failed response without retrying", async () => {
