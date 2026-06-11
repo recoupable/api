@@ -5,6 +5,7 @@ import generateAccessToken from "@/lib/spotify/generateAccessToken";
 import getTracks from "@/lib/spotify/getTracks";
 import { upsertSongs } from "@/lib/supabase/songs/upsertSongs";
 import { upsertSongIdentifiers } from "@/lib/supabase/song_identifiers/upsertSongIdentifiers";
+import { SpotifyRateLimitError } from "@/lib/spotify/SpotifyRateLimitError";
 
 vi.mock("@/lib/spotify/generateAccessToken", () => ({ default: vi.fn() }));
 vi.mock("@/lib/spotify/getTracks", () => ({ default: vi.fn() }));
@@ -59,6 +60,42 @@ describe("mapUnmappedAlbumTracks", () => {
 
     expect(generateAccessToken).not.toHaveBeenCalled();
     expect(mapped.size).toBe(0);
+  });
+
+  it("dedupes songs by ISRC across albums (reissues share recordings) before upserting", async () => {
+    const twoAlbums = [
+      { id: "album_std", name: "Album", tracks: [{ id: "t_std", name: "Song", streamCount: 1 }] },
+      {
+        id: "album_dlx",
+        name: "Album (Deluxe)",
+        tracks: [{ id: "t_dlx", name: "Song", streamCount: 1 }],
+      },
+    ];
+    vi.mocked(getTracks).mockResolvedValue({
+      tracks: [
+        { id: "t_std", name: "Song", external_ids: { isrc: "SAME_ISRC" } },
+        { id: "t_dlx", name: "Song", external_ids: { isrc: "SAME_ISRC" } },
+      ],
+      error: null,
+    } as never);
+
+    const mapped = await mapUnmappedAlbumTracks(twoAlbums, new Set());
+
+    // one songs row (DO UPDATE chokes on in-batch duplicates), both track mappings
+    expect(vi.mocked(upsertSongs).mock.calls[0][0]).toHaveLength(1);
+    const idRows = vi.mocked(upsertSongIdentifiers).mock.calls[0][0];
+    expect(
+      idRows.filter((r: { identifier_type: string }) => r.identifier_type === "track_id"),
+    ).toHaveLength(2);
+    expect(mapped.size).toBe(2);
+  });
+
+  it("rethrows sustained rate limiting so workflow steps can escalate durably", async () => {
+    vi.mocked(getTracks).mockRejectedValue(new SpotifyRateLimitError());
+
+    await expect(mapUnmappedAlbumTracks(ALBUMS, new Set())).rejects.toBeInstanceOf(
+      SpotifyRateLimitError,
+    );
   });
 
   it("degrades to an empty map (no throw) when Spotify auth fails — capture proceeds for already-mapped tracks", async () => {

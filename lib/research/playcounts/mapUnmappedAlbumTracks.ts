@@ -3,6 +3,7 @@ import getTracks from "@/lib/spotify/getTracks";
 import { upsertSongs } from "@/lib/supabase/songs/upsertSongs";
 import { upsertSongIdentifiers } from "@/lib/supabase/song_identifiers/upsertSongIdentifiers";
 import { SpotifyAlbumPlayCounts } from "@/lib/apify/spotify/fetchSpotifyAlbumPlayCounts";
+import { SpotifyRateLimitError } from "@/lib/spotify/SpotifyRateLimitError";
 
 /**
  * Self-mapping bootstrap (chat#1794): resolve ISRCs for actor tracks that have
@@ -53,9 +54,15 @@ export async function mapUnmappedAlbumTracks(
     });
     if (resolved.length === 0) return new Map();
 
-    await upsertSongs(
-      resolved.map(r => ({ isrc: r.isrc, name: r.name ?? null, album: r.albumName ?? null })),
+    // Dedupe by ISRC: reissues put the same recording on several albums in one
+    // batch, and upsertSongs' DO UPDATE cannot affect the same row twice.
+    const songsByIsrc = new Map(
+      resolved.map(r => [
+        r.isrc,
+        { isrc: r.isrc, name: r.name ?? null, album: r.albumName ?? null },
+      ]),
     );
+    await upsertSongs([...songsByIsrc.values()]);
     await upsertSongIdentifiers(
       resolved.flatMap(r => [
         { song: r.isrc, platform: "spotify", identifier_type: "track_id", value: r.trackId },
@@ -67,6 +74,7 @@ export async function mapUnmappedAlbumTracks(
 
     return new Map(resolved.map(r => [r.trackId, r.isrc]));
   } catch (error) {
+    if (error instanceof SpotifyRateLimitError) throw error;
     console.error("[playcounts] identifier bootstrap failed:", error);
     return new Map();
   }
