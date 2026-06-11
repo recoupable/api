@@ -752,41 +752,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      apple_login_button_clicked: {
-        Row: {
-          campaignId: string | null;
-          clientId: string | null;
-          fanId: string | null;
-          game: string | null;
-          id: string | null;
-          timestamp: number | null;
-        };
-        Insert: {
-          campaignId?: string | null;
-          clientId?: string | null;
-          fanId?: string | null;
-          game?: string | null;
-          id?: string | null;
-          timestamp?: number | null;
-        };
-        Update: {
-          campaignId?: string | null;
-          clientId?: string | null;
-          fanId?: string | null;
-          game?: string | null;
-          id?: string | null;
-          timestamp?: number | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "apple_login_button_clicked_campaignId_fkey";
-            columns: ["campaignId"];
-            isOneToOne: false;
-            referencedRelation: "campaigns";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       apple_music: {
         Row: {
           fanId: string | null;
@@ -848,45 +813,6 @@ export type Database = {
             columns: ["campaignId"];
             isOneToOne: false;
             referencedRelation: "campaigns";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      artist_fan_segment: {
-        Row: {
-          artist_social_id: string | null;
-          fan_social_id: string | null;
-          id: string;
-          segment_name: string | null;
-          updated_at: string;
-        };
-        Insert: {
-          artist_social_id?: string | null;
-          fan_social_id?: string | null;
-          id?: string;
-          segment_name?: string | null;
-          updated_at?: string;
-        };
-        Update: {
-          artist_social_id?: string | null;
-          fan_social_id?: string | null;
-          id?: string;
-          segment_name?: string | null;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "artist_fan_segment_artist_social_id_fkey";
-            columns: ["artist_social_id"];
-            isOneToOne: false;
-            referencedRelation: "socials";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "artist_fan_segment_fan_social_id_fkey";
-            columns: ["fan_social_id"];
-            isOneToOne: false;
-            referencedRelation: "socials";
             referencedColumns: ["id"];
           },
         ];
@@ -1838,33 +1764,6 @@ export type Database = {
           },
         ];
       };
-      funnel_reports: {
-        Row: {
-          id: string;
-          next_steps: string | null;
-          report: string | null;
-          stack_unique_id: string | null;
-          timestamp: string;
-          type: Database["public"]["Enums"]["social_type"] | null;
-        };
-        Insert: {
-          id?: string;
-          next_steps?: string | null;
-          report?: string | null;
-          stack_unique_id?: string | null;
-          timestamp?: string;
-          type?: Database["public"]["Enums"]["social_type"] | null;
-        };
-        Update: {
-          id?: string;
-          next_steps?: string | null;
-          report?: string | null;
-          stack_unique_id?: string | null;
-          timestamp?: string;
-          type?: Database["public"]["Enums"]["social_type"] | null;
-        };
-        Relationships: [];
-      };
       game_start: {
         Row: {
           clientId: string | null;
@@ -2288,32 +2187,65 @@ export type Database = {
         };
         Relationships: [];
       };
-      popup_open: {
+      playcount_snapshots: {
         Row: {
-          campaignId: string | null;
-          clientId: string | null;
-          fanId: string | null;
-          game: string | null;
-          id: string | null;
-          timestamp: string | null;
+          account: string;
+          album_count: number | null;
+          album_ids: string[] | null;
+          catalog: string | null;
+          created_at: string;
+          estimated_cost_usd: number | null;
+          id: string;
+          isrcs: string[] | null;
+          platforms: string[];
+          schedule: string;
+          state: string;
+          updated_at: string;
         };
         Insert: {
-          campaignId?: string | null;
-          clientId?: string | null;
-          fanId?: string | null;
-          game?: string | null;
-          id?: string | null;
-          timestamp?: string | null;
+          account: string;
+          album_count?: number | null;
+          album_ids?: string[] | null;
+          catalog?: string | null;
+          created_at?: string;
+          estimated_cost_usd?: number | null;
+          id?: string;
+          isrcs?: string[] | null;
+          platforms: string[];
+          schedule?: string;
+          state?: string;
+          updated_at?: string;
         };
         Update: {
-          campaignId?: string | null;
-          clientId?: string | null;
-          fanId?: string | null;
-          game?: string | null;
-          id?: string | null;
-          timestamp?: string | null;
+          account?: string;
+          album_count?: number | null;
+          album_ids?: string[] | null;
+          catalog?: string | null;
+          created_at?: string;
+          estimated_cost_usd?: number | null;
+          id?: string;
+          isrcs?: string[] | null;
+          platforms?: string[];
+          schedule?: string;
+          state?: string;
+          updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "playcount_snapshots_account_fkey";
+            columns: ["account"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "playcount_snapshots_catalog_fkey";
+            columns: ["catalog"];
+            isOneToOne: false;
+            referencedRelation: "catalogs";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       post_comments: {
         Row: {
@@ -2474,39 +2406,6 @@ export type Database = {
           name?: string;
         };
         Relationships: [];
-      };
-      room_reports: {
-        Row: {
-          id: string;
-          report_id: string;
-          room_id: string | null;
-        };
-        Insert: {
-          id?: string;
-          report_id?: string;
-          room_id?: string | null;
-        };
-        Update: {
-          id?: string;
-          report_id?: string;
-          room_id?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "room_reports_report_id_fkey";
-            columns: ["report_id"];
-            isOneToOne: false;
-            referencedRelation: "segment_reports";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "room_reports_room_id_fkey";
-            columns: ["room_id"];
-            isOneToOne: false;
-            referencedRelation: "rooms";
-            referencedColumns: ["id"];
-          },
-        ];
       };
       rooms: {
         Row: {
@@ -2789,38 +2688,6 @@ export type Database = {
           },
         ];
       };
-      segment_reports: {
-        Row: {
-          artist_id: string | null;
-          id: string;
-          next_steps: string | null;
-          report: string | null;
-          updated_at: string | null;
-        };
-        Insert: {
-          artist_id?: string | null;
-          id?: string;
-          next_steps?: string | null;
-          report?: string | null;
-          updated_at?: string | null;
-        };
-        Update: {
-          artist_id?: string | null;
-          id?: string;
-          next_steps?: string | null;
-          report?: string | null;
-          updated_at?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "segment_reports_artist_id_fkey";
-            columns: ["artist_id"];
-            isOneToOne: false;
-            referencedRelation: "accounts";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       segment_rooms: {
         Row: {
           id: string;
@@ -3071,78 +2938,6 @@ export type Database = {
           },
         ];
       };
-      social_spotify_albums: {
-        Row: {
-          album_id: string | null;
-          id: string;
-          social_id: string | null;
-          updated_at: string;
-        };
-        Insert: {
-          album_id?: string | null;
-          id?: string;
-          social_id?: string | null;
-          updated_at?: string;
-        };
-        Update: {
-          album_id?: string | null;
-          id?: string;
-          social_id?: string | null;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "social_spotify_albums_album_id_fkey";
-            columns: ["album_id"];
-            isOneToOne: false;
-            referencedRelation: "spotify_albums";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "social_spotify_albums_social_id_fkey";
-            columns: ["social_id"];
-            isOneToOne: false;
-            referencedRelation: "socials";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      social_spotify_tracks: {
-        Row: {
-          id: string;
-          social_id: string;
-          track_id: string | null;
-          updated_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          social_id?: string;
-          track_id?: string | null;
-          updated_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          social_id?: string;
-          track_id?: string | null;
-          updated_at?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "social_spotify_tracks_social_id_fkey";
-            columns: ["social_id"];
-            isOneToOne: false;
-            referencedRelation: "socials";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "social_spotify_tracks_track_id_fkey";
-            columns: ["track_id"];
-            isOneToOne: false;
-            referencedRelation: "spotify_tracks";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       socials: {
         Row: {
           avatar: string | null;
@@ -3218,6 +3013,98 @@ export type Database = {
           },
         ];
       };
+      song_identifiers: {
+        Row: {
+          created_at: string;
+          id: string;
+          identifier_type: string;
+          platform: string;
+          song: string;
+          updated_at: string;
+          value: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          identifier_type: string;
+          platform: string;
+          song: string;
+          updated_at?: string;
+          value: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          identifier_type?: string;
+          platform?: string;
+          song?: string;
+          updated_at?: string;
+          value?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "song_identifiers_song_fkey";
+            columns: ["song"];
+            isOneToOne: false;
+            referencedRelation: "songs";
+            referencedColumns: ["isrc"];
+          },
+        ];
+      };
+      song_measurements: {
+        Row: {
+          captured_at: string;
+          created_at: string;
+          data_source: string;
+          id: string;
+          metric: string;
+          platform: string;
+          raw_ref: string | null;
+          snapshot: string | null;
+          song: string;
+          value: number;
+        };
+        Insert: {
+          captured_at: string;
+          created_at?: string;
+          data_source: string;
+          id?: string;
+          metric: string;
+          platform: string;
+          raw_ref?: string | null;
+          snapshot?: string | null;
+          song: string;
+          value: number;
+        };
+        Update: {
+          captured_at?: string;
+          created_at?: string;
+          data_source?: string;
+          id?: string;
+          metric?: string;
+          platform?: string;
+          raw_ref?: string | null;
+          snapshot?: string | null;
+          song?: string;
+          value?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "song_measurements_snapshot_fkey";
+            columns: ["snapshot"];
+            isOneToOne: false;
+            referencedRelation: "playcount_snapshots";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "song_measurements_song_fkey";
+            columns: ["song"];
+            isOneToOne: false;
+            referencedRelation: "songs";
+            referencedColumns: ["isrc"];
+          },
+        ];
+      };
       songs: {
         Row: {
           album: string | null;
@@ -3241,6 +3128,73 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [];
+      };
+      songstats_backfill_queue: {
+        Row: {
+          created_at: string;
+          id: string;
+          rank_score: number;
+          song: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          rank_score?: number;
+          song: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          rank_score?: number;
+          song?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "songstats_backfill_queue_song_fkey";
+            columns: ["song"];
+            isOneToOne: true;
+            referencedRelation: "songs";
+            referencedColumns: ["isrc"];
+          },
+        ];
+      };
+      songstats_quota_ledger: {
+        Row: {
+          account: string | null;
+          hits: number;
+          id: string;
+          purpose: string | null;
+          spent_at: string;
+        };
+        Insert: {
+          account?: string | null;
+          hits: number;
+          id?: string;
+          purpose?: string | null;
+          spent_at?: string;
+        };
+        Update: {
+          account?: string | null;
+          hits?: number;
+          id?: string;
+          purpose?: string | null;
+          spent_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "songstats_quota_ledger_account_fkey";
+            columns: ["account"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       spotify: {
         Row: {
@@ -3407,106 +3361,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      spotify_albums: {
-        Row: {
-          id: string;
-          name: string | null;
-          release_date: string | null;
-          updated_at: string;
-          uri: string;
-        };
-        Insert: {
-          id?: string;
-          name?: string | null;
-          release_date?: string | null;
-          updated_at?: string;
-          uri: string;
-        };
-        Update: {
-          id?: string;
-          name?: string | null;
-          release_date?: string | null;
-          updated_at?: string;
-          uri?: string;
-        };
-        Relationships: [];
-      };
-      spotify_analytics_albums: {
-        Row: {
-          analysis_id: string | null;
-          artist_name: string | null;
-          created_at: string;
-          id: string;
-          name: string | null;
-          release_date: number | null;
-          uri: string | null;
-        };
-        Insert: {
-          analysis_id?: string | null;
-          artist_name?: string | null;
-          created_at?: string;
-          id?: string;
-          name?: string | null;
-          release_date?: number | null;
-          uri?: string | null;
-        };
-        Update: {
-          analysis_id?: string | null;
-          artist_name?: string | null;
-          created_at?: string;
-          id?: string;
-          name?: string | null;
-          release_date?: number | null;
-          uri?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "spotify_analytics_albums_analysis_id_fkey";
-            columns: ["analysis_id"];
-            isOneToOne: false;
-            referencedRelation: "funnel_analytics";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      spotify_analytics_tracks: {
-        Row: {
-          analysis_id: string | null;
-          artist_name: string | null;
-          created_at: string;
-          id: string;
-          name: string | null;
-          popularity: number | null;
-          uri: string | null;
-        };
-        Insert: {
-          analysis_id?: string | null;
-          artist_name?: string | null;
-          created_at?: string;
-          id?: string;
-          name?: string | null;
-          popularity?: number | null;
-          uri?: string | null;
-        };
-        Update: {
-          analysis_id?: string | null;
-          artist_name?: string | null;
-          created_at?: string;
-          id?: string;
-          name?: string | null;
-          popularity?: number | null;
-          uri?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "spotify_analytics_tracks_analysis_id_fkey";
-            columns: ["analysis_id"];
-            isOneToOne: false;
-            referencedRelation: "funnel_analytics";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       spotify_login_button_clicked: {
         Row: {
           campaignId: string | null;
@@ -3586,30 +3440,6 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
-      };
-      spotify_tracks: {
-        Row: {
-          id: string;
-          name: string | null;
-          popularity: number | null;
-          updated_at: string;
-          uri: string;
-        };
-        Insert: {
-          id?: string;
-          name?: string | null;
-          popularity?: number | null;
-          updated_at?: string;
-          uri: string;
-        };
-        Update: {
-          id?: string;
-          name?: string | null;
-          popularity?: number | null;
-          updated_at?: string;
-          uri?: string;
-        };
-        Relationships: [];
       };
       subscription_items: {
         Row: {
@@ -4023,6 +3853,10 @@ export type Database = {
         Returns: Json;
       };
       get_config: { Args: never; Returns: Json };
+      get_credit_spend_digest: {
+        Args: { p_limit?: number; p_since: string };
+        Returns: Json;
+      };
       get_fans_listening_top_songs: {
         Args: { artistid: string; email: string };
         Returns: Json;
