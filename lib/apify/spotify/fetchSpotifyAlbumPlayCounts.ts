@@ -3,6 +3,7 @@ import apifyClient from "@/lib/apify/client";
 const PLAY_COUNT_ACTOR = "beatanalytics~spotify-play-count-scraper";
 
 export type SpotifyAlbumPlayCounts = {
+  id?: string;
   name?: string;
   label?: string;
   copyright?: string;

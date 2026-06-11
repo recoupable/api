@@ -1,15 +1,20 @@
 import { selectSongIdentifiers } from "@/lib/supabase/song_identifiers/selectSongIdentifiers";
 import { upsertSongMeasurements } from "@/lib/supabase/song_measurements/upsertSongMeasurements";
+import { mapUnmappedAlbumTracks } from "@/lib/research/playcounts/mapUnmappedAlbumTracks";
+import { upsertSongIdentifiers } from "@/lib/supabase/song_identifiers/upsertSongIdentifiers";
 import { SpotifyAlbumPlayCounts } from "@/lib/apify/spotify/fetchSpotifyAlbumPlayCounts";
 
 const METRIC = "platform_displayed_play_count";
 const DATA_SOURCE = "apify_spotify_playcount";
 
 /**
- * Write actor album results into the measurement store: one row per track
- * with an identifier mapping, stamped with the actor run id (and snapshot id
- * when capturing for a snapshot job). Shared by the on-demand stats refresh
- * and the snapshot workflow.
+ * Write actor album results into the measurement store, self-mapping as it
+ * goes (chat#1794): tracks without an identifier mapping get their ISRCs
+ * resolved via the Spotify API and their songs/identifier rows created, so a
+ * capture measures every track it touches. One measurement row per resolved
+ * track, stamped with the actor run id (and snapshot id when capturing for a
+ * snapshot job). Shared by the on-demand stats refresh and the snapshot
+ * workflow.
  *
  * @param albums - Parsed actor album items
  * @param runId - The actor run id (raw_ref lineage)
@@ -28,6 +33,22 @@ export async function writeAlbumPlayCounts(
     values: tracks.map(t => t.id),
   });
   const songByTrackId = new Map(mappings.map(m => [m.value, m.song]));
+  const newlyMapped = await mapUnmappedAlbumTracks(albums, new Set(songByTrackId.keys()));
+  for (const [trackId, isrc] of newlyMapped) songByTrackId.set(trackId, isrc);
+
+  // Album mappings for every captured track (idempotent): albums map to many
+  // songs, and pre-mapped tracks would otherwise never get their album row.
+  const albumRows = albums.flatMap(album =>
+    !album.id
+      ? []
+      : (album.tracks ?? []).flatMap(track => {
+          const song = songByTrackId.get(track.id);
+          if (!song) return [];
+          return [{ song, platform: "spotify", identifier_type: "album_id", value: album.id }];
+        }),
+  );
+  await upsertSongIdentifiers(albumRows);
+
   const capturedAt = new Date().toISOString();
 
   const rows = tracks.flatMap(track => {
