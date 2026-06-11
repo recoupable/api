@@ -3756,6 +3756,23 @@ export type Database = {
         Args: { target_team_account_id: string; target_user_id: string };
         Returns: boolean;
       };
+      claim_songstats_backfill_rows: {
+        Args: { batch_size: number };
+        Returns: {
+          created_at: string;
+          id: string;
+          rank_score: number;
+          song: string;
+          status: string;
+          updated_at: string;
+        }[];
+        SetofOptions: {
+          from: "*";
+          to: "songstats_backfill_queue";
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       count_reports_by_day: {
         Args: { end_date: string; start_date: string };
         Returns: {

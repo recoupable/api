@@ -1,0 +1,64 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { writeAlbumPlayCounts } from "../writeAlbumPlayCounts";
+
+import { selectSongIdentifiers } from "@/lib/supabase/song_identifiers/selectSongIdentifiers";
+import { upsertSongMeasurements } from "@/lib/supabase/song_measurements/upsertSongMeasurements";
+
+vi.mock("@/lib/supabase/song_identifiers/selectSongIdentifiers", () => ({
+  selectSongIdentifiers: vi.fn(),
+}));
+vi.mock("@/lib/supabase/song_measurements/upsertSongMeasurements", () => ({
+  upsertSongMeasurements: vi.fn(),
+}));
+
+const ALBUMS = [
+  {
+    name: "K.I.D.S. (Deluxe)",
+    tracks: [
+      { id: "t1", name: "The Spins", streamCount: 100 },
+      { id: "t_unmapped", name: "Outro", streamCount: 5 },
+    ],
+  },
+];
+
+describe("writeAlbumPlayCounts", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-11T12:00:00Z"));
+    vi.mocked(upsertSongMeasurements).mockResolvedValue([] as never);
+  });
+
+  it("writes one measurement per mapped track with run + snapshot lineage", async () => {
+    vi.mocked(selectSongIdentifiers).mockResolvedValue([
+      { song: "ISRC1", platform: "spotify", identifier_type: "track_id", value: "t1" },
+    ]);
+
+    const written = await writeAlbumPlayCounts(ALBUMS, "run_1", { snapshotId: "snap_1" });
+
+    expect(upsertSongMeasurements).toHaveBeenCalledWith([
+      {
+        song: "ISRC1",
+        platform: "spotify",
+        metric: "platform_displayed_play_count",
+        value: 100,
+        captured_at: "2026-06-11T12:00:00.000Z",
+        data_source: "apify_spotify_playcount",
+        raw_ref: "run_1",
+        snapshot: "snap_1",
+      },
+    ]);
+    expect(written).toBe(1);
+  });
+
+  it("omits snapshot lineage when not given", async () => {
+    vi.mocked(selectSongIdentifiers).mockResolvedValue([
+      { song: "ISRC1", platform: "spotify", identifier_type: "track_id", value: "t1" },
+    ]);
+
+    await writeAlbumPlayCounts(ALBUMS, "run_2", {});
+
+    const rows = vi.mocked(upsertSongMeasurements).mock.calls[0][0];
+    expect(rows[0]).not.toHaveProperty("snapshot");
+  });
+});
