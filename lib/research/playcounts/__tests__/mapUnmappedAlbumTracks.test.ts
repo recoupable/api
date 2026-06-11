@@ -62,6 +62,34 @@ describe("mapUnmappedAlbumTracks", () => {
     expect(mapped.size).toBe(0);
   });
 
+  it("dedupes songs by ISRC across albums (reissues share recordings) before upserting", async () => {
+    const twoAlbums = [
+      { id: "album_std", name: "Album", tracks: [{ id: "t_std", name: "Song", streamCount: 1 }] },
+      {
+        id: "album_dlx",
+        name: "Album (Deluxe)",
+        tracks: [{ id: "t_dlx", name: "Song", streamCount: 1 }],
+      },
+    ];
+    vi.mocked(getTracks).mockResolvedValue({
+      tracks: [
+        { id: "t_std", name: "Song", external_ids: { isrc: "SAME_ISRC" } },
+        { id: "t_dlx", name: "Song", external_ids: { isrc: "SAME_ISRC" } },
+      ],
+      error: null,
+    } as never);
+
+    const mapped = await mapUnmappedAlbumTracks(twoAlbums, new Set());
+
+    // one songs row (DO UPDATE chokes on in-batch duplicates), both track mappings
+    expect(vi.mocked(upsertSongs).mock.calls[0][0]).toHaveLength(1);
+    const idRows = vi.mocked(upsertSongIdentifiers).mock.calls[0][0];
+    expect(
+      idRows.filter((r: { identifier_type: string }) => r.identifier_type === "track_id"),
+    ).toHaveLength(2);
+    expect(mapped.size).toBe(2);
+  });
+
   it("rethrows sustained rate limiting so workflow steps can escalate durably", async () => {
     vi.mocked(getTracks).mockRejectedValue(new SpotifyRateLimitError());
 

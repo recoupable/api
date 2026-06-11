@@ -54,9 +54,15 @@ export async function mapUnmappedAlbumTracks(
     });
     if (resolved.length === 0) return new Map();
 
-    await upsertSongs(
-      resolved.map(r => ({ isrc: r.isrc, name: r.name ?? null, album: r.albumName ?? null })),
+    // Dedupe by ISRC: reissues put the same recording on several albums in one
+    // batch, and upsertSongs' DO UPDATE cannot affect the same row twice.
+    const songsByIsrc = new Map(
+      resolved.map(r => [
+        r.isrc,
+        { isrc: r.isrc, name: r.name ?? null, album: r.albumName ?? null },
+      ]),
     );
+    await upsertSongs([...songsByIsrc.values()]);
     await upsertSongIdentifiers(
       resolved.flatMap(r => [
         { song: r.isrc, platform: "spotify", identifier_type: "track_id", value: r.trackId },
