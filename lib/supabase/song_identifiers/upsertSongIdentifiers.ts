@@ -3,7 +3,7 @@ import { TablesInsert } from "@/types/database.types";
 
 /**
  * Upsert identifier mappings, ignoring rows whose (platform, identifier_type,
- * value) already exists — an external identifier maps to exactly one song.
+ * value) already exists — one mapping per (song, platform, identifier_type, value).
  *
  * @param rows - Mapping rows to upsert
  * @throws Error if the upsert fails (mappings are load-bearing for capture)
@@ -14,7 +14,7 @@ export async function upsertSongIdentifiers(
   if (rows.length === 0) return;
 
   const { error } = await supabase.from("song_identifiers").upsert(rows, {
-    onConflict: "platform,identifier_type,value",
+    onConflict: "song,platform,identifier_type,value",
     ignoreDuplicates: true,
   });
 

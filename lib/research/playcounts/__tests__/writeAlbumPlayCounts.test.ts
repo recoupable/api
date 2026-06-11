@@ -4,6 +4,7 @@ import { writeAlbumPlayCounts } from "../writeAlbumPlayCounts";
 import { selectSongIdentifiers } from "@/lib/supabase/song_identifiers/selectSongIdentifiers";
 import { upsertSongMeasurements } from "@/lib/supabase/song_measurements/upsertSongMeasurements";
 import { mapUnmappedAlbumTracks } from "../mapUnmappedAlbumTracks";
+import { upsertSongIdentifiers } from "@/lib/supabase/song_identifiers/upsertSongIdentifiers";
 
 vi.mock("@/lib/supabase/song_identifiers/selectSongIdentifiers", () => ({
   selectSongIdentifiers: vi.fn(),
@@ -12,9 +13,13 @@ vi.mock("@/lib/supabase/song_measurements/upsertSongMeasurements", () => ({
   upsertSongMeasurements: vi.fn(),
 }));
 vi.mock("../mapUnmappedAlbumTracks", () => ({ mapUnmappedAlbumTracks: vi.fn() }));
+vi.mock("@/lib/supabase/song_identifiers/upsertSongIdentifiers", () => ({
+  upsertSongIdentifiers: vi.fn(),
+}));
 
 const ALBUMS = [
   {
+    id: "album_1",
     name: "K.I.D.S. (Deluxe)",
     tracks: [
       { id: "t1", name: "The Spins", streamCount: 100 },
@@ -66,6 +71,18 @@ describe("writeAlbumPlayCounts", () => {
       },
     ]);
     expect(written).toBe(1);
+  });
+
+  it("upserts album_id mappings for every captured track (heals pre-mapped tracks, chat#1794)", async () => {
+    vi.mocked(selectSongIdentifiers).mockResolvedValue([
+      { song: "ISRC1", platform: "spotify", identifier_type: "track_id", value: "t1" },
+    ]);
+
+    await writeAlbumPlayCounts(ALBUMS, "run_4", {});
+
+    expect(upsertSongIdentifiers).toHaveBeenCalledWith([
+      { song: "ISRC1", platform: "spotify", identifier_type: "album_id", value: "album_1" },
+    ]);
   });
 
   it("omits snapshot lineage when not given", async () => {

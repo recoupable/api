@@ -16,7 +16,7 @@ const ROWS = [
 describe("upsertSongIdentifiers", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("upserts mappings, ignoring existing (an external id maps once)", async () => {
+  it("upserts mappings, ignoring existing (one mapping per song per identifier)", async () => {
     const upsert = vi.fn().mockResolvedValue({ error: null });
     vi.mocked(supabase.from).mockReturnValue({ upsert } as never);
 
@@ -24,7 +24,7 @@ describe("upsertSongIdentifiers", () => {
 
     expect(supabase.from).toHaveBeenCalledWith("song_identifiers");
     expect(upsert).toHaveBeenCalledWith(ROWS, {
-      onConflict: "platform,identifier_type,value",
+      onConflict: "song,platform,identifier_type,value",
       ignoreDuplicates: true,
     });
   });

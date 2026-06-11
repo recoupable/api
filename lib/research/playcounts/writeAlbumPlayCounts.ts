@@ -1,6 +1,7 @@
 import { selectSongIdentifiers } from "@/lib/supabase/song_identifiers/selectSongIdentifiers";
 import { upsertSongMeasurements } from "@/lib/supabase/song_measurements/upsertSongMeasurements";
 import { mapUnmappedAlbumTracks } from "@/lib/research/playcounts/mapUnmappedAlbumTracks";
+import { upsertSongIdentifiers } from "@/lib/supabase/song_identifiers/upsertSongIdentifiers";
 import { SpotifyAlbumPlayCounts } from "@/lib/apify/spotify/fetchSpotifyAlbumPlayCounts";
 
 const METRIC = "platform_displayed_play_count";
@@ -34,6 +35,20 @@ export async function writeAlbumPlayCounts(
   const songByTrackId = new Map(mappings.map(m => [m.value, m.song]));
   const newlyMapped = await mapUnmappedAlbumTracks(albums, new Set(songByTrackId.keys()));
   for (const [trackId, isrc] of newlyMapped) songByTrackId.set(trackId, isrc);
+
+  // Album mappings for every captured track (idempotent): albums map to many
+  // songs, and pre-mapped tracks would otherwise never get their album row.
+  const albumRows = albums.flatMap(album =>
+    !album.id
+      ? []
+      : (album.tracks ?? []).flatMap(track => {
+          const song = songByTrackId.get(track.id);
+          if (!song) return [];
+          return [{ song, platform: "spotify", identifier_type: "album_id", value: album.id }];
+        }),
+  );
+  await upsertSongIdentifiers(albumRows);
+
   const capturedAt = new Date().toISOString();
 
   const rows = tracks.flatMap(track => {
