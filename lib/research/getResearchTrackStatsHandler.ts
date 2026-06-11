@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
-import { getResearchTrackStats } from "@/lib/research/getResearchTrackStats";
+import { getTrackStatsApifyFirst } from "@/lib/research/playcounts/getTrackStatsApifyFirst";
 import { validateGetResearchTrackStatsRequest } from "@/lib/research/validateGetResearchTrackStatsRequest";
 
 /**
@@ -9,7 +9,8 @@ import { validateGetResearchTrackStatsRequest } from "@/lib/research/validateGet
  *
  * Per-track, per-source current stats (including absolute `streams_total`) by
  * `isrc` / `songstats_track_id` / `spotify_track_id` / `apple_music_track_id`.
- * Thin passthrough to Songstats; mirrors the `stats[].data` envelope of
+ * Apify-first for Spotify via the measurement store, Songstats for the
+ * remaining sources; mirrors the `stats[].data` envelope of
  * `GET /api/research/metrics`, scoped to a single recording.
  *
  * @param request - The incoming HTTP request.
@@ -20,7 +21,7 @@ export async function getResearchTrackStatsHandler(request: NextRequest): Promis
     const validated = await validateGetResearchTrackStatsRequest(request);
     if (validated instanceof NextResponse) return validated;
 
-    const result = await getResearchTrackStats(validated);
+    const result = await getTrackStatsApifyFirst(validated);
     if ("error" in result) return errorResponse(result.error, result.status);
 
     const data = result.data;
