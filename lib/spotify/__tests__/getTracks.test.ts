@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import getTracks from "../getTracks";
+import { SpotifyRateLimitError } from "../SpotifyRateLimitError";
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch as never;
@@ -24,11 +25,44 @@ describe("getTracks", () => {
     expect(tracks).toHaveLength(2);
   });
 
-  it("returns an error on a failed response", async () => {
-    mockFetch.mockResolvedValue({ ok: false, status: 429 } as never);
+  it("retries a 429 after Retry-After and succeeds (rate-limit backoff)", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        headers: { get: (h: string) => (h === "Retry-After" ? "0" : null) },
+      } as never)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ tracks: [{ id: "t1", external_ids: { isrc: "I1" } }] }),
+      } as never);
 
     const { tracks, error } = await getTracks({ ids: ["t1"], accessToken: "tok" });
 
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(error).toBeNull();
+    expect(tracks).toHaveLength(1);
+  });
+
+  it("throws SpotifyRateLimitError after exhausting 429 retries (callers escalate durably)", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 429,
+      headers: { get: (h: string) => (h === "Retry-After" ? "0" : null) },
+    } as never);
+
+    await expect(getTracks({ ids: ["t1"], accessToken: "tok" })).rejects.toBeInstanceOf(
+      SpotifyRateLimitError,
+    );
+    expect(mockFetch).toHaveBeenCalledTimes(4); // 1 + 3 retries
+  });
+
+  it("returns an error on a non-429 failed response without retrying", async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 500 } as never);
+
+    const { tracks, error } = await getTracks({ ids: ["t1"], accessToken: "tok" });
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(tracks).toBeNull();
     expect(error).toBeInstanceOf(Error);
   });
