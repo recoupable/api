@@ -26,11 +26,22 @@ export async function backfillTrackStep(
   });
 
   if (result.status !== 200) {
-    await insertSongstatsQuotaLedger({
-      hits: 1,
-      purpose: `backfill ${row.song} (failed ${result.status})`,
-    });
-    await updateSongstatsBackfillQueue(row.id, { status: "failed" });
+    const status = result.status;
+    const isNoData = status === 404;
+    // Only transient errors are retryable: 408 (timeout), 429 (quota), any 5xx.
+    const isRetryable = status === 408 || status === 429 || status >= 500;
+
+    // `failed` is reclaimable (the daily sweep returns it to `pending`, bounded
+    // by the rolling-window budget). 404 no-data and other permanent 4xx are
+    // terminal → `done`, so reclaim never recycles a track that can't succeed.
+    const nextStatus = isRetryable ? "failed" : "done";
+
+    let outcome = `terminal ${status}`;
+    if (isNoData) outcome = "no data 404";
+    else if (isRetryable) outcome = `failed ${status}`;
+
+    await insertSongstatsQuotaLedger({ hits: 1, purpose: `backfill ${row.song} (${outcome})` });
+    await updateSongstatsBackfillQueue(row.id, { status: nextStatus });
     return { ok: false, hitsSpent: 1 };
   }
 

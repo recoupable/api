@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { updateSongstatsBackfillQueue } from "../updateSongstatsBackfillQueue";
+import {
+  updateSongstatsBackfillQueue,
+  reclaimStaleSongstatsBackfillRows,
+} from "../updateSongstatsBackfillQueue";
 import supabase from "../../serverClient";
 
 vi.mock("../../serverClient", () => {
@@ -30,6 +33,37 @@ describe("updateSongstatsBackfillQueue", () => {
 
     await expect(updateSongstatsBackfillQueue("q1", { status: "failed" })).rejects.toThrow(
       "Failed to update songstats backfill queue: boom",
+    );
+  });
+});
+
+describe("reclaimStaleSongstatsBackfillRows", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("resets failed + AND-grouped stale in_progress rows to pending and returns the count", async () => {
+    const select = vi.fn().mockResolvedValue({ data: [{ id: "a" }, { id: "b" }], error: null });
+    const or = vi.fn().mockReturnValue({ select });
+    const update = vi.fn().mockReturnValue({ or });
+    vi.mocked(supabase.from).mockReturnValue({ update } as never);
+
+    const count = await reclaimStaleSongstatsBackfillRows();
+
+    expect(update).toHaveBeenCalledWith({ status: "pending" });
+    // The and() grouping around in_progress + updated_at is load-bearing — it is
+    // what prevents reclaiming `done`/`pending` rows. Assert the exact structure,
+    // not just substrings.
+    const orArg = or.mock.calls[0][0] as string;
+    expect(orArg).toMatch(/^status\.eq\.failed,and\(status\.eq\.in_progress,updated_at\.lt\..+\)$/);
+    expect(count).toBe(2);
+  });
+
+  it("throws on a reclaim DB error instead of masking it as 0", async () => {
+    const select = vi.fn().mockResolvedValue({ data: null, error: { message: "boom" } });
+    const or = vi.fn().mockReturnValue({ select });
+    vi.mocked(supabase.from).mockReturnValue({ update: vi.fn().mockReturnValue({ or }) } as never);
+
+    await expect(reclaimStaleSongstatsBackfillRows()).rejects.toThrow(
+      "Failed to reclaim stale songstats backfill rows: boom",
     );
   });
 });
