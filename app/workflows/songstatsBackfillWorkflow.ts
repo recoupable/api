@@ -1,4 +1,3 @@
-import { getBackfillBudgetStep } from "@/app/workflows/getBackfillBudgetStep";
 import { claimBackfillRowsStep } from "@/app/workflows/claimBackfillRowsStep";
 import { backfillTrackStep } from "@/app/workflows/backfillTrackStep";
 
@@ -7,22 +6,22 @@ const BATCH_SIZE = 25;
 /**
  * Durable Songstats backfill drain (recoupable/chat#1791 write path): claim
  * value-ranked rows via the SKIP LOCKED RPC and backfill each track's historic
- * series, with per-track exponential backoff handling Songstats' rate limit
- * (chat#1797). **Stops as soon as a track defers** — Songstats still
- * rate-limiting it past the backoff bound — leaving the rest `pending` for the
- * next drain instead of hammering a saturated API. Every successful hit converts
- * into permanent owned data (fetch-once: captured history is never refetched).
+ * series. There is **no local quota ledger or budget gate** (chat#1797) —
+ * Songstats is the rate authority: per-track exponential backoff absorbs the
+ * rate limit, and the run **stops as soon as a track defers** (still
+ * rate-limited past the backoff bound), leaving the rest `pending` for the next
+ * drain. Otherwise it drains until the queue has no claimable `pending` rows.
+ * Every backfill converts into permanent owned data (fetch-once).
  */
 export async function songstatsBackfillWorkflow() {
   "use workflow";
 
-  let budget = await getBackfillBudgetStep();
   let backfilled = 0;
-  let failed = 0;
+  let terminal = 0;
   let deferred = false;
 
-  drain: while (budget > 0) {
-    const rows = await claimBackfillRowsStep(Math.min(budget, BATCH_SIZE));
+  drain: while (true) {
+    const rows = await claimBackfillRowsStep(BATCH_SIZE);
     if (rows.length === 0) break;
     console.log(`[songstats-backfill] claimed ${rows.length} rows`);
 
@@ -33,16 +32,14 @@ export async function songstatsBackfillWorkflow() {
         deferred = true;
         break drain;
       }
-      budget -= result.hitsSpent;
       if (result.ok) backfilled += 1;
-      else failed += 1;
-      if (budget <= 0) break;
+      else terminal += 1;
     }
   }
 
   console.log(
-    `[songstats-backfill] done: ${backfilled} backfilled, ${failed} terminal` +
+    `[songstats-backfill] done: ${backfilled} backfilled, ${terminal} terminal` +
       (deferred ? ", deferred (rate-limited)" : ""),
   );
-  return { backfilled, failed, deferred };
+  return { backfilled, terminal, deferred };
 }
