@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { findStripeCustomerForAccount } from "@/lib/stripe/findStripeCustomerForAccount";
 import { findDefaultPaymentMethodForCustomer } from "@/lib/stripe/findDefaultPaymentMethodForCustomer";
-import { createStripeSession } from "@/lib/stripe/createStripeSession";
+import { createCardOnFileSession } from "@/lib/stripe/createCardOnFileSession";
 import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
 
 /**
@@ -22,7 +22,10 @@ export async function ensureSongstatsPaymentMethod(
   const paymentMethod = customerId ? await findDefaultPaymentMethodForCustomer(customerId) : null;
   if (paymentMethod) return null;
 
-  const session = await createStripeSession(accountId, CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL);
+  const session = await createCardOnFileSession(
+    accountId,
+    CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
+  );
   return NextResponse.json(
     {
       status: "error",

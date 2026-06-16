@@ -1,6 +1,8 @@
+import { start } from "workflow/api";
 import { resolveScopeSongs } from "./resolveScopeSongs";
 import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
 import { upsertSongstatsBackfillQueue } from "@/lib/supabase/songstats_backfill_queue/upsertSongstatsBackfillQueue";
+import { songstatsBackfillWorkflow } from "@/app/workflows/songstatsBackfillWorkflow";
 import type { CreateMeasurementJobBody } from "./validateCreateMeasurementJobRequest";
 
 const METRIC = "platform_displayed_play_count";
@@ -59,6 +61,19 @@ export async function enqueueHistoricalBackfill(
       ),
     );
     enqueued += batch.length;
+  }
+
+  // Kick the drain now instead of waiting for the daily cron. The workflow's own
+  // budget gate (limit − reserve − rolling-30d ledger) means it only drains what
+  // the Songstats quota allows and then stops; SKIP LOCKED claims keep it from
+  // double-processing alongside the cron, which stays as the backstop. Fire-and-
+  // forget — a scheduling hiccup must not fail the (already-enqueued) job.
+  if (enqueued > 0) {
+    try {
+      await start(songstatsBackfillWorkflow);
+    } catch (error) {
+      console.error("[measurement-jobs] failed to kick backfill drain:", error);
+    }
   }
 
   return { data: { status: "success", source: "historical", id: null, enqueued, skipped } };
