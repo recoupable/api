@@ -1,17 +1,15 @@
 import { fetchSongstats } from "@/lib/songstats/fetchSongstats";
+import { isRetryableStatus } from "@/lib/songstats/isRetryableStatus";
+import { delay } from "@/lib/time/delay";
 import type { ProxyResult } from "@/lib/research/ProxyResult";
 
-// Short, in-step backoff for Songstats' per-second rate limit (total ~15s, well
-// within a workflow step's duration). Persistent rejection defers the row to the
-// next drain run rather than sleeping for minutes inside one invocation.
-const DEFAULT_MAX_RETRIES = 5;
+// Short, in-step backoff for Songstats' per-second rate limit. The default
+// budget is 1+2+4+8 = 15s of waits (base 1s, doubling, capped at 8s, 4 retries),
+// well within a workflow step's duration. Persistent rejection defers the row to
+// the next drain run rather than sleeping for minutes inside one invocation.
+const DEFAULT_MAX_RETRIES = 4;
 const DEFAULT_BASE_MS = 1000;
 const DEFAULT_MAX_MS = 8_000;
-
-/** Transient statuses worth retrying: 408 timeout, 429 rate limit, any 5xx. */
-const isRetryable = (status: number) => status === 408 || status === 429 || status >= 500;
-
-const realSleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
 export type FetchSongstatsBackoffOptions = {
   maxRetries?: number;
@@ -49,15 +47,15 @@ export async function fetchSongstatsWithBackoff(
   const maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES;
   const baseMs = options.baseMs ?? DEFAULT_BASE_MS;
   const maxMs = options.maxMs ?? DEFAULT_MAX_MS;
-  const sleep = options.sleep ?? realSleep;
+  const sleep = options.sleep ?? delay;
 
   let result = await fetchSongstats(path, queryParams);
   let retries = 0;
-  while (isRetryable(result.status) && retries < maxRetries) {
+  while (isRetryableStatus(result.status) && retries < maxRetries) {
     await sleep(Math.min(maxMs, baseMs * 2 ** retries));
     result = await fetchSongstats(path, queryParams);
     retries += 1;
   }
 
-  return { ...result, attempts: retries + 1, retriesExhausted: isRetryable(result.status) };
+  return { ...result, attempts: retries + 1, retriesExhausted: isRetryableStatus(result.status) };
 }

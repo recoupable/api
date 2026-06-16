@@ -58,13 +58,23 @@ describe("fetchSongstatsWithBackoff", () => {
     expect(r).toMatchObject({ status: 429, retriesExhausted: true });
   });
 
-  it("treats 5xx and 408 as retryable too", async () => {
+  it("treats transient gateway 5xx (503) and 408 as retryable", async () => {
     vi.mocked(fetchSongstats)
       .mockResolvedValueOnce({ status: 503, data: {} })
       .mockResolvedValueOnce({ status: 200, data: {} });
     const r = await fetchSongstatsWithBackoff("p", undefined, { sleep: noSleep, maxRetries: 2 });
     expect(fetchSongstats).toHaveBeenCalledTimes(2);
     expect(r).toMatchObject({ status: 200, retriesExhausted: false });
+  });
+
+  it("does NOT retry a 500 (fetchSongstats maps missing key / fetch failure to 500)", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({ status: 500, data: {} });
+
+    const r = await fetchSongstatsWithBackoff("p", undefined, { sleep: noSleep });
+
+    expect(fetchSongstats).toHaveBeenCalledTimes(1);
+    expect(noSleep).not.toHaveBeenCalled();
+    expect(r).toMatchObject({ status: 500, retriesExhausted: false });
   });
 
   it("caps the backoff at maxMs", async () => {
