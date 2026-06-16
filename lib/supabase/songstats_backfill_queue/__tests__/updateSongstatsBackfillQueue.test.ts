@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   updateSongstatsBackfillQueue,
   reclaimStaleSongstatsBackfillRows,
-  releaseSongstatsBackfillRows,
 } from "../updateSongstatsBackfillQueue";
 import supabase from "../../serverClient";
 
@@ -15,24 +14,40 @@ vi.mock("../../serverClient", () => {
 describe("updateSongstatsBackfillQueue", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("updates a queue row's status by id", async () => {
-    const eq = vi.fn().mockResolvedValue({ error: null });
-    const update = vi.fn().mockReturnValue({ eq });
+  it("updates a single row by id (one-element array)", async () => {
+    const inFn = vi.fn().mockResolvedValue({ error: null });
+    const update = vi.fn().mockReturnValue({ in: inFn });
     vi.mocked(supabase.from).mockReturnValue({ update } as never);
 
-    await updateSongstatsBackfillQueue("q1", { status: "done" });
+    await updateSongstatsBackfillQueue(["q1"], { status: "done" });
 
     expect(supabase.from).toHaveBeenCalledWith("songstats_backfill_queue");
     expect(update).toHaveBeenCalledWith({ status: "done" });
-    expect(eq).toHaveBeenCalledWith("id", "q1");
+    expect(inFn).toHaveBeenCalledWith("id", ["q1"]);
+  });
+
+  it("bulk-updates many rows in one call (e.g. releasing a claimed batch)", async () => {
+    const inFn = vi.fn().mockResolvedValue({ error: null });
+    const update = vi.fn().mockReturnValue({ in: inFn });
+    vi.mocked(supabase.from).mockReturnValue({ update } as never);
+
+    await updateSongstatsBackfillQueue(["q1", "q2"], { status: "pending" });
+
+    expect(update).toHaveBeenCalledWith({ status: "pending" });
+    expect(inFn).toHaveBeenCalledWith("id", ["q1", "q2"]);
+  });
+
+  it("is a no-op on an empty id list (no DB call)", async () => {
+    await updateSongstatsBackfillQueue([], { status: "pending" });
+    expect(supabase.from).not.toHaveBeenCalled();
   });
 
   it("throws on update error", async () => {
-    const eq = vi.fn().mockResolvedValue({ error: { message: "boom" } });
-    const update = vi.fn().mockReturnValue({ eq });
+    const inFn = vi.fn().mockResolvedValue({ error: { message: "boom" } });
+    const update = vi.fn().mockReturnValue({ in: inFn });
     vi.mocked(supabase.from).mockReturnValue({ update } as never);
 
-    await expect(updateSongstatsBackfillQueue("q1", { status: "failed" })).rejects.toThrow(
+    await expect(updateSongstatsBackfillQueue(["q1"], { status: "failed" })).rejects.toThrow(
       "Failed to update songstats backfill queue: boom",
     );
   });
@@ -65,37 +80,6 @@ describe("reclaimStaleSongstatsBackfillRows", () => {
 
     await expect(reclaimStaleSongstatsBackfillRows()).rejects.toThrow(
       "Failed to reclaim stale songstats backfill rows: boom",
-    );
-  });
-});
-
-describe("releaseSongstatsBackfillRows", () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it("resets the given ids to pending in one update", async () => {
-    const inFn = vi.fn().mockResolvedValue({ error: null });
-    const update = vi.fn().mockReturnValue({ in: inFn });
-    vi.mocked(supabase.from).mockReturnValue({ update } as never);
-
-    await releaseSongstatsBackfillRows(["q1", "q2"]);
-
-    expect(supabase.from).toHaveBeenCalledWith("songstats_backfill_queue");
-    expect(update).toHaveBeenCalledWith({ status: "pending" });
-    expect(inFn).toHaveBeenCalledWith("id", ["q1", "q2"]);
-  });
-
-  it("is a no-op on an empty list (no DB call)", async () => {
-    await releaseSongstatsBackfillRows([]);
-    expect(supabase.from).not.toHaveBeenCalled();
-  });
-
-  it("throws on update error", async () => {
-    const inFn = vi.fn().mockResolvedValue({ error: { message: "boom" } });
-    const update = vi.fn().mockReturnValue({ in: inFn });
-    vi.mocked(supabase.from).mockReturnValue({ update } as never);
-
-    await expect(releaseSongstatsBackfillRows(["q1"])).rejects.toThrow(
-      "Failed to release songstats backfill rows: boom",
     );
   });
 });

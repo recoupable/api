@@ -36,7 +36,7 @@ export async function backfillTrackStep(
     console.log(
       `[backfill] ${row.song} deferred (retryable ${result.status} after ${result.attempts} tries)`,
     );
-    await updateSongstatsBackfillQueue(row.id, { status: "pending" });
+    await updateSongstatsBackfillQueue([row.id], { status: "pending" });
     return { ok: false, hitsSpent: 0, deferred: true };
   }
 
@@ -49,7 +49,7 @@ export async function backfillTrackStep(
       hits: 1,
       purpose: `backfill ${row.song} (${noData ? "no data 404" : `terminal ${result.status}`})`,
     });
-    await updateSongstatsBackfillQueue(row.id, { status: "done" });
+    await updateSongstatsBackfillQueue([row.id], { status: "done" });
     return { ok: false, hitsSpent: 1 };
   }
 
@@ -77,6 +77,6 @@ export async function backfillTrackStep(
 
   console.log(`[backfill] ${row.song} done (${rows.length} points written)`);
   await insertSongstatsQuotaLedger({ hits: 1, purpose: `backfill ${row.song}` });
-  await updateSongstatsBackfillQueue(row.id, { status: "done" });
+  await updateSongstatsBackfillQueue([row.id], { status: "done" });
   return { ok: true, hitsSpent: 1 };
 }

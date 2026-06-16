@@ -2,17 +2,22 @@ import supabase from "../serverClient";
 import { TablesUpdate } from "@/types/database.types";
 
 /**
- * Update a backfill queue row (mark done/failed after a claim).
+ * Update one or more backfill queue rows by id in a single round trip. Handles
+ * both the per-row status flip after a claim (`[row.id]`) and the bulk release
+ * of a claimed batch back to `pending` when the drain stops early (`.in` works
+ * for one id or many). No-op on an empty id list.
  *
- * @param id - The queue row id
- * @param fields - Fields to update
+ * @param ids - Queue row ids to update
+ * @param fields - Fields to set (e.g. `{ status: "done" }`)
  * @throws Error if the update fails
  */
 export async function updateSongstatsBackfillQueue(
-  id: string,
+  ids: string[],
   fields: TablesUpdate<"songstats_backfill_queue">,
 ): Promise<void> {
-  const { error } = await supabase.from("songstats_backfill_queue").update(fields).eq("id", id);
+  if (ids.length === 0) return;
+
+  const { error } = await supabase.from("songstats_backfill_queue").update(fields).in("id", ids);
 
   if (error) {
     throw new Error(`Failed to update songstats backfill queue: ${error.message}`);
@@ -47,27 +52,4 @@ export async function reclaimStaleSongstatsBackfillRows(): Promise<number> {
   }
 
   return data?.length ?? 0;
-}
-
-/**
- * Return a set of claimed (`in_progress`) rows to `pending` in one round trip.
- * Used when the drain stops early (a track deferred under sustained
- * rate-limiting): the rest of the already-claimed batch goes back to `pending`
- * so the next drain retries them immediately, instead of sitting `in_progress`
- * until the 1-hour stale-reclaim sweep. No-op on an empty list.
- *
- * @param ids - Queue row ids to release back to `pending`.
- * @throws Error if the update fails
- */
-export async function releaseSongstatsBackfillRows(ids: string[]): Promise<void> {
-  if (ids.length === 0) return;
-
-  const { error } = await supabase
-    .from("songstats_backfill_queue")
-    .update({ status: "pending" })
-    .in("id", ids);
-
-  if (error) {
-    throw new Error(`Failed to release songstats backfill rows: ${error.message}`);
-  }
 }

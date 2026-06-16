@@ -65,7 +65,7 @@ describe("backfillTrackStep", () => {
       hits: 1,
       purpose: "backfill USA2P2015959",
     });
-    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith("q1", { status: "done" });
+    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith(["q1"], { status: "done" });
     expect(result).toEqual({ ok: true, hitsSpent: 1 });
   });
 
@@ -80,7 +80,7 @@ describe("backfillTrackStep", () => {
     const result = await backfillTrackStep(ROW);
 
     // left pending for the next drain; NO ledger hit (Songstats consumed nothing)
-    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith("q1", { status: "pending" });
+    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith(["q1"], { status: "pending" });
     expect(insertSongstatsQuotaLedger).not.toHaveBeenCalled();
     expect(upsertSongMeasurements).not.toHaveBeenCalled();
     expect(result).toEqual({ ok: false, hitsSpent: 0, deferred: true });
@@ -96,7 +96,7 @@ describe("backfillTrackStep", () => {
 
     const result = await backfillTrackStep(ROW);
 
-    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith("q1", { status: "done" });
+    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith(["q1"], { status: "done" });
     expect(insertSongstatsQuotaLedger).toHaveBeenCalledWith({
       hits: 1,
       purpose: "backfill USA2P2015959 (no data 404)",
@@ -114,7 +114,7 @@ describe("backfillTrackStep", () => {
 
     const result = await backfillTrackStep(ROW);
 
-    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith("q1", { status: "done" });
+    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith(["q1"], { status: "done" });
     expect(insertSongstatsQuotaLedger).toHaveBeenCalledWith({
       hits: 1,
       purpose: "backfill USA2P2015959 (terminal 403)",
