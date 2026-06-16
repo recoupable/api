@@ -1,0 +1,35 @@
+import { NextResponse } from "next/server";
+import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { findStripeCustomerForAccount } from "@/lib/stripe/findStripeCustomerForAccount";
+import { findDefaultPaymentMethodForCustomer } from "@/lib/stripe/findDefaultPaymentMethodForCustomer";
+import { createStripeSession } from "@/lib/stripe/createStripeSession";
+import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
+
+/**
+ * Payment-method gate for Songstats-backed work (the heavily quota-capped
+ * provider). The authenticated account must have a card on file before it can
+ * spend Songstats quota. Returns `null` to proceed; otherwise a **402** carrying
+ * a Stripe Checkout URL for the free tier (subscription + trial) so the caller
+ * can add a card. Mirrors the credit gate's short-circuit shape.
+ *
+ * @param accountId - The authenticated account.
+ * @returns `null` when a card exists, else a 402 NextResponse with `checkoutUrl`.
+ */
+export async function ensureSongstatsPaymentMethod(
+  accountId: string,
+): Promise<NextResponse | null> {
+  const customerId = await findStripeCustomerForAccount(accountId);
+  const paymentMethod = customerId ? await findDefaultPaymentMethodForCustomer(customerId) : null;
+  if (paymentMethod) return null;
+
+  const session = await createStripeSession(accountId, CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL);
+  return NextResponse.json(
+    {
+      status: "error",
+      error:
+        "A payment method is required to use Songstats-backed endpoints. Add a card to continue.",
+      checkoutUrl: session.url,
+    },
+    { status: 402, headers: getCorsHeaders() },
+  );
+}
