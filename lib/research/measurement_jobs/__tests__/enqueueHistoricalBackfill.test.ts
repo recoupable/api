@@ -3,6 +3,7 @@ import { enqueueHistoricalBackfill } from "../enqueueHistoricalBackfill";
 import { resolveScopeSongs } from "../resolveScopeSongs";
 import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
 import { upsertSongstatsBackfillQueue } from "@/lib/supabase/songstats_backfill_queue/upsertSongstatsBackfillQueue";
+import { start } from "workflow/api";
 
 vi.mock("../resolveScopeSongs", () => ({ resolveScopeSongs: vi.fn() }));
 vi.mock("@/lib/supabase/song_measurements/selectSongMeasurements", () => ({
@@ -10,6 +11,10 @@ vi.mock("@/lib/supabase/song_measurements/selectSongMeasurements", () => ({
 }));
 vi.mock("@/lib/supabase/songstats_backfill_queue/upsertSongstatsBackfillQueue", () => ({
   upsertSongstatsBackfillQueue: vi.fn(),
+}));
+vi.mock("workflow/api", () => ({ start: vi.fn() }));
+vi.mock("@/app/workflows/songstatsBackfillWorkflow", () => ({
+  songstatsBackfillWorkflow: vi.fn(),
 }));
 
 describe("enqueueHistoricalBackfill", () => {
@@ -47,6 +52,8 @@ describe("enqueueHistoricalBackfill", () => {
     expect(r).toEqual({
       data: { status: "success", source: "historical", id: null, enqueued: 2, skipped: 1 },
     });
+    // kick the drain immediately so the user doesn't wait for the daily cron
+    expect(start).toHaveBeenCalledTimes(1);
   });
 
   it("ranks a song with no prior measurement at 0", async () => {
@@ -56,5 +63,17 @@ describe("enqueueHistoricalBackfill", () => {
     await enqueueHistoricalBackfill({ isrcs: ["I9"] });
 
     expect(upsertSongstatsBackfillQueue).toHaveBeenCalledWith({ song: "I9", rank_score: 0 });
+  });
+
+  it("does NOT kick the drain when everything was already backfilled (nothing enqueued)", async () => {
+    vi.mocked(resolveScopeSongs).mockResolvedValue(["I1"]);
+    vi.mocked(selectSongMeasurements).mockResolvedValue([
+      { song: "I1", value: 500, data_source: "songstats" },
+    ] as never);
+
+    const r = await enqueueHistoricalBackfill({ isrcs: ["I1"] });
+
+    expect((r as { data: { enqueued: number } }).data.enqueued).toBe(0);
+    expect(start).not.toHaveBeenCalled();
   });
 });
