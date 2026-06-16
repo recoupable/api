@@ -9,7 +9,9 @@ import { reclaimStaleBackfillRows } from "@/lib/supabase/songstats_backfill_queu
 vi.mock("@/lib/networking/getCorsHeaders", () => ({ getCorsHeaders: vi.fn(() => ({})) }));
 vi.mock("@/lib/internal/validateCronRequest", () => ({ validateCronRequest: vi.fn() }));
 vi.mock("workflow/api", () => ({ start: vi.fn() }));
-vi.mock("@/app/workflows/songstatsBackfillWorkflow", () => ({ songstatsBackfillWorkflow: vi.fn() }));
+vi.mock("@/app/workflows/songstatsBackfillWorkflow", () => ({
+  songstatsBackfillWorkflow: vi.fn(),
+}));
 vi.mock("../startDueMonthlySnapshots", () => ({ startDueMonthlySnapshots: vi.fn() }));
 vi.mock("@/lib/supabase/songstats_backfill_queue/reclaimStaleBackfillRows", () => ({
   reclaimStaleBackfillRows: vi.fn(),
