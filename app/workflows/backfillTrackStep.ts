@@ -26,17 +26,21 @@ export async function backfillTrackStep(
   });
 
   if (result.status !== 200) {
-    // A 404 means Songstats has no history for this track — terminal, so mark it
-    // `done` and never retry (retrying just burns quota on a track with no data).
-    // Everything else (429 quota, 5xx, timeout) is transient: mark `failed`, which
-    // the daily reclaim sweep returns to `pending` for the next drain (bounded by
-    // the rolling-window budget, so a persistently-failing row can't run away).
-    const noData = result.status === 404;
-    await insertSongstatsQuotaLedger({
-      hits: 1,
-      purpose: `backfill ${row.song} (${noData ? "no data 404" : `failed ${result.status}`})`,
-    });
-    await updateSongstatsBackfillQueue(row.id, { status: noData ? "done" : "failed" });
+    // Only transient errors are retryable: 408 (timeout), 429 (quota), and any
+    // 5xx. Mark those `failed` so the daily reclaim sweep returns them to
+    // `pending` for the next drain (bounded by the rolling-window budget, so a
+    // persistently-failing row can't run away). Everything else — 404 no-data
+    // and other permanent 4xx (400/401/403) — is terminal: mark `done` so it is
+    // never recycled (retrying just burns quota on a track that can't succeed).
+    const retryable = result.status === 408 || result.status === 429 || result.status >= 500;
+    const reason =
+      result.status === 404
+        ? "no data 404"
+        : retryable
+          ? `failed ${result.status}`
+          : `terminal ${result.status}`;
+    await insertSongstatsQuotaLedger({ hits: 1, purpose: `backfill ${row.song} (${reason})` });
+    await updateSongstatsBackfillQueue(row.id, { status: retryable ? "failed" : "done" });
     return { ok: false, hitsSpent: 1 };
   }
 

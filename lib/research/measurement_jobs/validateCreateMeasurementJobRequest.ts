@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { errorResponse } from "@/lib/networking/errorResponse";
+import { ensureSongstatsPaymentMethod } from "@/lib/research/measurement_jobs/ensureSongstatsPaymentMethod";
 
 const scopeSchema = z
   .object({
@@ -43,6 +44,13 @@ export async function validateCreateMeasurementJobRequest(
   const result = createMeasurementJobBodySchema.safeParse(raw);
   if (!result.success) {
     return errorResponse(result.error.issues[0].message, 400);
+  }
+
+  // `historical` spends Songstats quota → require a card on file (402 + free-tier
+  // checkout link if absent). `current` is Apify-only, so it's exempt.
+  if (result.data.source === "historical") {
+    const short = await ensureSongstatsPaymentMethod(authResult.accountId);
+    if (short) return short;
   }
 
   return { accountId: authResult.accountId, body: result.data };

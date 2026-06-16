@@ -4,6 +4,8 @@ import { upsertSongstatsBackfillQueue } from "@/lib/supabase/songstats_backfill_
 import type { CreateMeasurementJobBody } from "./validateCreateMeasurementJobRequest";
 
 const METRIC = "platform_displayed_play_count";
+/** Max concurrent queue upserts per batch (bounds round trips on large catalogs). */
+const ENQUEUE_CONCURRENCY = 25;
 
 export type EnqueueHistoricalBackfillResult = { data: unknown } | { error: string; status: number };
 
@@ -43,15 +45,20 @@ export async function enqueueHistoricalBackfill(
     if (row.data_source === "songstats") alreadyBackfilled.add(row.song);
   }
 
+  const candidates = isrcs.filter(isrc => !alreadyBackfilled.has(isrc));
+  const skipped = isrcs.length - candidates.length;
+
+  // Enqueue in bounded-concurrency batches so a large catalog doesn't fan out
+  // into N serial round trips (which would blow the route's duration budget).
   let enqueued = 0;
-  let skipped = 0;
-  for (const isrc of isrcs) {
-    if (alreadyBackfilled.has(isrc)) {
-      skipped += 1;
-      continue;
-    }
-    await upsertSongstatsBackfillQueue({ song: isrc, rank_score: latestValue.get(isrc) ?? 0 });
-    enqueued += 1;
+  for (let i = 0; i < candidates.length; i += ENQUEUE_CONCURRENCY) {
+    const batch = candidates.slice(i, i + ENQUEUE_CONCURRENCY);
+    await Promise.all(
+      batch.map(isrc =>
+        upsertSongstatsBackfillQueue({ song: isrc, rank_score: latestValue.get(isrc) ?? 0 }),
+      ),
+    );
+    enqueued += batch.length;
   }
 
   return { data: { status: "success", source: "historical", id: null, enqueued, skipped } };

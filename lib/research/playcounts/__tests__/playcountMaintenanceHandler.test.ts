@@ -4,7 +4,7 @@ import { playcountMaintenanceHandler } from "../playcountMaintenanceHandler";
 import { validateCronRequest } from "@/lib/internal/validateCronRequest";
 import { start } from "workflow/api";
 import { startDueMonthlySnapshots } from "../startDueMonthlySnapshots";
-import { reclaimStaleBackfillRows } from "@/lib/supabase/songstats_backfill_queue/reclaimStaleBackfillRows";
+import { reclaimStaleSongstatsBackfillRows } from "@/lib/supabase/songstats_backfill_queue/updateSongstatsBackfillQueue";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({ getCorsHeaders: vi.fn(() => ({})) }));
 vi.mock("@/lib/internal/validateCronRequest", () => ({ validateCronRequest: vi.fn() }));
@@ -13,8 +13,8 @@ vi.mock("@/app/workflows/songstatsBackfillWorkflow", () => ({
   songstatsBackfillWorkflow: vi.fn(),
 }));
 vi.mock("../startDueMonthlySnapshots", () => ({ startDueMonthlySnapshots: vi.fn() }));
-vi.mock("@/lib/supabase/songstats_backfill_queue/reclaimStaleBackfillRows", () => ({
-  reclaimStaleBackfillRows: vi.fn(),
+vi.mock("@/lib/supabase/songstats_backfill_queue/updateSongstatsBackfillQueue", () => ({
+  reclaimStaleSongstatsBackfillRows: vi.fn(),
 }));
 
 const req = () => new NextRequest("http://x/api/internal/playcount-maintenance");
@@ -25,12 +25,12 @@ describe("playcountMaintenanceHandler", () => {
     vi.mocked(validateCronRequest).mockReturnValue(null as never);
     vi.mocked(start).mockResolvedValue({ runId: "run_1" } as never);
     vi.mocked(startDueMonthlySnapshots).mockResolvedValue(2 as never);
-    vi.mocked(reclaimStaleBackfillRows).mockResolvedValue(5);
+    vi.mocked(reclaimStaleSongstatsBackfillRows).mockResolvedValue(5);
   });
 
   it("reclaims stale rows BEFORE starting the drain, and reports the count", async () => {
     const order: string[] = [];
-    vi.mocked(reclaimStaleBackfillRows).mockImplementation(async () => {
+    vi.mocked(reclaimStaleSongstatsBackfillRows).mockImplementation(async () => {
       order.push("reclaim");
       return 5;
     });
@@ -57,6 +57,6 @@ describe("playcountMaintenanceHandler", () => {
     );
     const res = await playcountMaintenanceHandler(req());
     expect(res.status).toBe(401);
-    expect(reclaimStaleBackfillRows).not.toHaveBeenCalled();
+    expect(reclaimStaleSongstatsBackfillRows).not.toHaveBeenCalled();
   });
 });

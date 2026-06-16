@@ -3,7 +3,7 @@ import { start } from "workflow/api";
 import { validateCronRequest } from "@/lib/internal/validateCronRequest";
 import { songstatsBackfillWorkflow } from "@/app/workflows/songstatsBackfillWorkflow";
 import { startDueMonthlySnapshots } from "@/lib/research/playcounts/startDueMonthlySnapshots";
-import { reclaimStaleBackfillRows } from "@/lib/supabase/songstats_backfill_queue/reclaimStaleBackfillRows";
+import { reclaimStaleSongstatsBackfillRows } from "@/lib/supabase/songstats_backfill_queue/updateSongstatsBackfillQueue";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 
 /**
@@ -21,7 +21,7 @@ export async function playcountMaintenanceHandler(request: NextRequest): Promise
   try {
     // Return transiently-failed / orphaned rows to `pending` before draining, so
     // tracks that 429'd in a prior run get retried instead of being stranded.
-    const reclaimed = await reclaimStaleBackfillRows();
+    const reclaimed = await reclaimStaleSongstatsBackfillRows();
     const run = await start(songstatsBackfillWorkflow);
     const monthlyStarted = await startDueMonthlySnapshots();
 

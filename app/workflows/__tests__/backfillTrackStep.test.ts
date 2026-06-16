@@ -101,6 +101,20 @@ describe("backfillTrackStep", () => {
     expect(result).toEqual({ ok: false, hitsSpent: 1 });
   });
 
+  it("marks a permanent client error (403) as done so reclaim never recycles it", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({ status: 403, data: {} });
+
+    const result = await backfillTrackStep(ROW);
+
+    // non-retryable 4xx (not 408/429) is terminal -> 'done', not 'failed'
+    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith("q1", { status: "done" });
+    expect(insertSongstatsQuotaLedger).toHaveBeenCalledWith({
+      hits: 1,
+      purpose: "backfill USA2P2015959 (terminal 403)",
+    });
+    expect(result).toEqual({ ok: false, hitsSpent: 1 });
+  });
+
   it("marks a definitive 404 (no history exists) as done so it is never retried", async () => {
     vi.mocked(fetchSongstats).mockResolvedValue({ status: 404, data: {} });
 

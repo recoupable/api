@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateCreateMeasurementJobRequest } from "../validateCreateMeasurementJobRequest";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { ensureSongstatsPaymentMethod } from "../ensureSongstatsPaymentMethod";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
+vi.mock("../ensureSongstatsPaymentMethod", () => ({ ensureSongstatsPaymentMethod: vi.fn() }));
 
 const post = (body: unknown) =>
   new NextRequest("http://x/api/research/measurement-jobs", {
@@ -16,6 +18,7 @@ describe("validateCreateMeasurementJobRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(validateAuthContext).mockResolvedValue({ accountId: "acc_1" } as never);
+    vi.mocked(ensureSongstatsPaymentMethod).mockResolvedValue(null); // card on file by default
   });
 
   it("returns the auth response (401) when auth fails", async () => {
@@ -60,5 +63,26 @@ describe("validateCreateMeasurementJobRequest", () => {
       accountId: "acc_1",
       body: { scope: { album_ids: ["A1"] }, source: "historical", platforms: ["spotify"] },
     });
+  });
+
+  it("historical: short-circuits with the 402 when no card is on file", async () => {
+    vi.mocked(ensureSongstatsPaymentMethod).mockResolvedValue(
+      NextResponse.json(
+        { status: "error", checkoutUrl: "https://checkout" },
+        { status: 402 },
+      ) as never,
+    );
+    const r = await validateCreateMeasurementJobRequest(
+      post({ scope: { isrcs: ["X"] }, source: "historical" }),
+    );
+    expect((r as NextResponse).status).toBe(402);
+  });
+
+  it("current: does NOT require a card (Apify-only, exempt from the Songstats gate)", async () => {
+    const r = await validateCreateMeasurementJobRequest(
+      post({ scope: { album_ids: ["A1"] }, source: "current" }),
+    );
+    expect(ensureSongstatsPaymentMethod).not.toHaveBeenCalled();
+    expect(r).toMatchObject({ accountId: "acc_1", body: { source: "current" } });
   });
 });
