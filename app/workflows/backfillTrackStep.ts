@@ -26,11 +26,17 @@ export async function backfillTrackStep(
   });
 
   if (result.status !== 200) {
+    // A 404 means Songstats has no history for this track — terminal, so mark it
+    // `done` and never retry (retrying just burns quota on a track with no data).
+    // Everything else (429 quota, 5xx, timeout) is transient: mark `failed`, which
+    // the daily reclaim sweep returns to `pending` for the next drain (bounded by
+    // the rolling-window budget, so a persistently-failing row can't run away).
+    const noData = result.status === 404;
     await insertSongstatsQuotaLedger({
       hits: 1,
-      purpose: `backfill ${row.song} (failed ${result.status})`,
+      purpose: `backfill ${row.song} (${noData ? "no data 404" : `failed ${result.status}`})`,
     });
-    await updateSongstatsBackfillQueue(row.id, { status: "failed" });
+    await updateSongstatsBackfillQueue(row.id, { status: noData ? "done" : "failed" });
     return { ok: false, hitsSpent: 1 };
   }
 
