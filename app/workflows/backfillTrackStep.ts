@@ -31,9 +31,10 @@ export async function backfillTrackStep(
   });
 
   if (result.retriesExhausted) {
-    // Rate-limited past the backoff bound — leave it for the next run, spend nothing.
+    // Still retryable (429 throttle / 408 / gateway 5xx) past the backoff bound —
+    // leave it for the next run, spend nothing.
     console.log(
-      `[backfill] ${row.song} deferred (rate-limited ${result.status} after ${result.attempts} tries)`,
+      `[backfill] ${row.song} deferred (retryable ${result.status} after ${result.attempts} tries)`,
     );
     await updateSongstatsBackfillQueue(row.id, { status: "pending" });
     return { ok: false, hitsSpent: 0, deferred: true };

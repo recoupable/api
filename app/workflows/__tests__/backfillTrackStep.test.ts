@@ -49,7 +49,18 @@ describe("backfillTrackStep", () => {
       isrc: "USA2P2015959",
       source: "spotify",
     });
-    expect(upsertSongMeasurements).toHaveBeenCalled();
+    // exact transformation: each history point → a permanent songstats measurement
+    expect(upsertSongMeasurements).toHaveBeenCalledWith([
+      {
+        song: "USA2P2015959",
+        platform: "spotify",
+        metric: "platform_displayed_play_count",
+        value: 1008736324,
+        captured_at: "2025-01-01T00:00:00.000Z",
+        data_source: "songstats",
+        raw_ref: "songstats-backfill",
+      },
+    ]);
     expect(insertSongstatsQuotaLedger).toHaveBeenCalledWith({
       hits: 1,
       purpose: "backfill USA2P2015959",
