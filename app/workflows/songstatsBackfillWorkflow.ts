@@ -7,13 +7,12 @@ const BATCH_SIZE = 25;
 /**
  * Durable Songstats backfill drain (recoupable/chat#1791 write path): claim
  * value-ranked rows via the SKIP LOCKED RPC and backfill each track's historic
- * series. There is **no local quota ledger or budget gate** (chat#1797) —
- * Songstats is the rate authority: per-track exponential backoff absorbs the
- * rate limit, and the run **stops as soon as a track defers** (still retryable
- * past the backoff bound), releasing the rest of the claimed batch back to
- * `pending` so the next drain retries them immediately rather than waiting on
- * stale-reclaim. Otherwise it drains until the queue has no claimable `pending`
- * rows. Every backfill converts into permanent owned data (fetch-once).
+ * series. Per-track exponential backoff absorbs Songstats' rate limit; the run
+ * **stops as soon as a track defers** (still retryable past the backoff bound),
+ * releasing the rest of the claimed batch back to `pending` so the next drain
+ * retries them immediately rather than waiting on stale-reclaim. Otherwise it
+ * drains until the queue has no claimable `pending` rows. Every backfill
+ * converts into permanent owned data (fetch-once).
  */
 export async function songstatsBackfillWorkflow() {
   "use workflow";
