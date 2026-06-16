@@ -1,4 +1,4 @@
-import { releaseSongstatsBackfillRows } from "@/lib/supabase/songstats_backfill_queue/releaseSongstatsBackfillRows";
+import { releaseSongstatsBackfillRows } from "@/lib/supabase/songstats_backfill_queue/updateSongstatsBackfillQueue";
 
 /**
  * Durable step: return unprocessed claimed rows to `pending` when the drain
