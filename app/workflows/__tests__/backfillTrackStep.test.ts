@@ -57,7 +57,7 @@ describe("backfillTrackStep", () => {
         raw_ref: "songstats-backfill",
       },
     ]);
-    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith("q1", { status: "done" });
+    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith(["q1"], { status: "done" });
     expect(result).toEqual({ ok: true });
   });
 
@@ -71,7 +71,7 @@ describe("backfillTrackStep", () => {
 
     const result = await backfillTrackStep(ROW);
 
-    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith("q1", { status: "pending" });
+    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith(["q1"], { status: "pending" });
     expect(upsertSongMeasurements).not.toHaveBeenCalled();
     expect(result).toEqual({ ok: false, deferred: true });
   });
@@ -86,7 +86,7 @@ describe("backfillTrackStep", () => {
 
     const result = await backfillTrackStep(ROW);
 
-    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith("q1", { status: "done" });
+    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith(["q1"], { status: "done" });
     expect(result).toEqual({ ok: false });
   });
 
@@ -100,7 +100,7 @@ describe("backfillTrackStep", () => {
 
     const result = await backfillTrackStep(ROW);
 
-    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith("q1", { status: "done" });
+    expect(updateSongstatsBackfillQueue).toHaveBeenCalledWith(["q1"], { status: "done" });
     expect(result).toEqual({ ok: false });
   });
 });
