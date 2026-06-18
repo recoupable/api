@@ -5,6 +5,8 @@ import generateAccessToken from "@/lib/spotify/generateAccessToken";
 import getTracks from "@/lib/spotify/getTracks";
 import { upsertSongs } from "@/lib/supabase/songs/upsertSongs";
 import { upsertSongIdentifiers } from "@/lib/supabase/song_identifiers/upsertSongIdentifiers";
+import { linkSongsToArtists } from "@/lib/songs/linkSongsToArtists";
+import { queueRedisSongs } from "@/lib/songs/queueRedisSongs";
 import { SpotifyRateLimitError } from "@/lib/spotify/SpotifyRateLimitError";
 
 vi.mock("@/lib/spotify/generateAccessToken", () => ({ default: vi.fn() }));
@@ -13,6 +15,8 @@ vi.mock("@/lib/supabase/songs/upsertSongs", () => ({ upsertSongs: vi.fn() }));
 vi.mock("@/lib/supabase/song_identifiers/upsertSongIdentifiers", () => ({
   upsertSongIdentifiers: vi.fn(),
 }));
+vi.mock("@/lib/songs/linkSongsToArtists", () => ({ linkSongsToArtists: vi.fn() }));
+vi.mock("@/lib/songs/queueRedisSongs", () => ({ queueRedisSongs: vi.fn() }));
 
 const ALBUMS = [
   {
@@ -53,6 +57,34 @@ describe("mapUnmappedAlbumTracks", () => {
       { song: "ISRC_NIKES", platform: "spotify", identifier_type: "album_id", value: "album_1" },
     ]);
     expect([...mapped.entries()]).toEqual([["t_new", "ISRC_NIKES"]]);
+  });
+
+  it("links captured songs to their Spotify artists and queues them for note enrichment", async () => {
+    vi.mocked(getTracks).mockResolvedValue({
+      tracks: [
+        {
+          id: "t_new",
+          name: "Nikes on My Feet",
+          external_ids: { isrc: "ISRC_NIKES" },
+          artists: [{ id: "a1", name: "Mac Miller" }],
+        },
+      ],
+      error: null,
+    } as never);
+
+    await mapUnmappedAlbumTracks(ALBUMS, new Set(["t_mapped", "t_noisrc"]));
+
+    // Root-cause fix: captured songs get the same enrichment as the manual flow —
+    // artists linked + queued for notes — so they aren't "missing info" in the catalog.
+    expect(linkSongsToArtists).toHaveBeenCalledWith([
+      expect.objectContaining({
+        isrc: "ISRC_NIKES",
+        spotifyArtists: [{ id: "a1", name: "Mac Miller" }],
+      }),
+    ]);
+    expect(queueRedisSongs).toHaveBeenCalledWith([
+      expect.objectContaining({ isrc: "ISRC_NIKES" }),
+    ]);
   });
 
   it("returns an empty map without Spotify calls when everything is mapped", async () => {
