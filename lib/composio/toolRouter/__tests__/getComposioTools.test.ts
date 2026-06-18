@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { getComposioTools } from "../getComposioTools";
+import { getComposioTools, ENABLED_TOOLKITS } from "../getComposioTools";
 
 import { getComposioClient } from "../../client";
 import { getCallbackUrl } from "../../getCallbackUrl";
@@ -233,5 +233,12 @@ describe("getComposioTools", () => {
 
     expect(result).toHaveProperty("COMPOSIO_SEARCH_TOOLS");
     expect(result).toHaveProperty("COMPOSIO_MULTI_EXECUTE_TOOL");
+  });
+});
+
+describe("ENABLED_TOOLKITS", () => {
+  it("includes twitter and linkedin", () => {
+    expect(ENABLED_TOOLKITS).toContain("twitter");
+    expect(ENABLED_TOOLKITS).toContain("linkedin");
   });
 });
