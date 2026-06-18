@@ -102,15 +102,15 @@ describe("getConnectors", () => {
 
       expect(mockComposio.create).toHaveBeenCalledWith("account-123", {
         toolkits: [
-        "googlesheets",
-        "googledrive",
-        "googledocs",
-        "tiktok",
-        "instagram",
-        "youtube",
-        "twitter",
-        "linkedin",
-      ],
+          "googlesheets",
+          "googledrive",
+          "googledocs",
+          "tiktok",
+          "instagram",
+          "youtube",
+          "twitter",
+          "linkedin",
+        ],
         authConfigs: {
           tiktok: "ac_tiktok_123",
           instagram: "ac_instagram_456",
