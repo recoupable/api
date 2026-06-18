@@ -18,8 +18,8 @@ describe("isAllowedArtistConnector", () => {
     expect(isAllowedArtistConnector("twitter")).toBe(true);
   });
 
-  it("should return false for 'linkedin' (label/owner-only)", () => {
-    expect(isAllowedArtistConnector("linkedin")).toBe(false);
+  it("should return true for 'linkedin'", () => {
+    expect(isAllowedArtistConnector("linkedin")).toBe(true);
   });
 
   it("should return false for connectors not in ALLOWED_ARTIST_CONNECTORS", () => {
@@ -39,15 +39,12 @@ describe("isAllowedArtistConnector", () => {
 });
 
 describe("ALLOWED_ARTIST_CONNECTORS", () => {
-  it("should include tiktok, instagram, youtube, and twitter", () => {
+  it("should include tiktok, instagram, youtube, twitter, and linkedin", () => {
     expect(ALLOWED_ARTIST_CONNECTORS).toContain("tiktok");
     expect(ALLOWED_ARTIST_CONNECTORS).toContain("instagram");
     expect(ALLOWED_ARTIST_CONNECTORS).toContain("youtube");
     expect(ALLOWED_ARTIST_CONNECTORS).toContain("twitter");
-  });
-
-  it("should not include linkedin (label/owner-only)", () => {
-    expect(ALLOWED_ARTIST_CONNECTORS).not.toContain("linkedin");
+    expect(ALLOWED_ARTIST_CONNECTORS).toContain("linkedin");
   });
 
   it("should be a readonly array", () => {
