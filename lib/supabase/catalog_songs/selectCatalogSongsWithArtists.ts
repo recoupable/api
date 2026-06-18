@@ -44,10 +44,6 @@ export async function selectCatalogSongsWithArtists(
 ): Promise<CatalogSongsWithPagination> {
   const { catalogId, isrcs, artistName, page, limit } = params;
 
-  // `song_artists`/`accounts` are LEFT-joined (no `!inner`): valuation-captured
-  // tracks have `songs` + `song_measurements` but no `song_artists` yet, and an
-  // inner join would hide every materialized catalog song. `songs!inner` stays —
-  // the catalog_songs.song FK guarantees the song row.
   let query = supabase
     .from("catalog_songs")
     .select(
