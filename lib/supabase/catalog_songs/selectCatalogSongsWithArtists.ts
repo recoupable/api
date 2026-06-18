@@ -55,9 +55,9 @@ export async function selectCatalogSongsWithArtists(
         album,
         notes,
         updated_at,
-        song_artists!inner (
+        song_artists (
           artist,
-          accounts!inner (
+          accounts (
             id,
             name,
             timestamp
