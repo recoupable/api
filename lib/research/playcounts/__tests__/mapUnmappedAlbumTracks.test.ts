@@ -82,9 +82,7 @@ describe("mapUnmappedAlbumTracks", () => {
         spotifyArtists: [{ id: "a1", name: "Mac Miller" }],
       }),
     ]);
-    expect(queueRedisSongs).toHaveBeenCalledWith([
-      expect.objectContaining({ isrc: "ISRC_NIKES" }),
-    ]);
+    expect(queueRedisSongs).toHaveBeenCalledWith([expect.objectContaining({ isrc: "ISRC_NIKES" })]);
   });
 
   it("returns an empty map without Spotify calls when everything is mapped", async () => {
