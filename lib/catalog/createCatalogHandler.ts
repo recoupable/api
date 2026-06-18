@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { errorResponse } from "@/lib/networking/errorResponse";
+import { successResponse } from "@/lib/networking/successResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { Tables } from "@/types/database.types";
 import { validateCreateCatalogBody } from "./validateCreateCatalogBody";
-import { materializeSnapshotCatalog } from "./materializeSnapshotCatalog";
+import { createSnapshotCatalog } from "./createSnapshotCatalog";
 import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots";
 import { selectCatalogById } from "@/lib/supabase/catalogs/selectCatalogById";
 import { insertCatalog } from "@/lib/supabase/catalogs/insertCatalog";
@@ -12,22 +11,15 @@ import { insertAccountCatalog } from "@/lib/supabase/account_catalogs/insertAcco
 
 const DEFAULT_CATALOG_NAME = "Valuation Catalog";
 
-function success(catalog: Tables<"catalogs">, songsAdded: number): NextResponse {
-  return NextResponse.json(
-    { status: "success", catalog, songs_added: songsAdded },
-    { status: 200, headers: getCorsHeaders() },
-  );
-}
-
 /**
  * POST /api/catalogs
  *
  * Creates a catalog owned by the authenticated account. The owning account is
  * resolved from credentials (Privy bearer or x-api-key), never from the body.
  *
- * With `from.snapshot_id`, materializes the catalog from a completed valuation
- * snapshot: the snapshot must be owned by the caller, and re-claiming the same
- * snapshot is idempotent (returns the catalog already created for that run).
+ * With `snapshot`, materializes the catalog from a completed valuation snapshot:
+ * the snapshot must be owned by the caller, and re-claiming the same snapshot is
+ * idempotent (returns the catalog already created for that run).
  *
  * @param request - The request object
  * @returns A NextResponse with `{ status, catalog, songs_added }`
@@ -47,14 +39,13 @@ export async function createCatalogHandler(request: NextRequest): Promise<NextRe
     }
     const { accountId } = authResult;
 
-    if (!validated.from) {
+    if (!validated.snapshot) {
       const catalog = await insertCatalog(validated.name ?? DEFAULT_CATALOG_NAME);
       await insertAccountCatalog({ account: accountId, catalog: catalog.id });
-      return success(catalog, 0);
+      return successResponse({ catalog, songs_added: 0 });
     }
 
-    const snapshotId = validated.from.snapshot_id;
-    const [snapshot] = await selectPlaycountSnapshots({ id: snapshotId });
+    const [snapshot] = await selectPlaycountSnapshots({ id: validated.snapshot });
     if (!snapshot) {
       return errorResponse("Snapshot not found", 404);
     }
@@ -66,16 +57,16 @@ export async function createCatalogHandler(request: NextRequest): Promise<NextRe
     if (snapshot.catalog) {
       const existing = await selectCatalogById(snapshot.catalog);
       if (existing) {
-        return success(existing, 0);
+        return successResponse({ catalog: existing, songs_added: 0 });
       }
     }
 
-    const { catalog, songsAdded } = await materializeSnapshotCatalog({
+    const { catalog, songsAdded } = await createSnapshotCatalog({
       accountId,
       snapshot,
       name: validated.name,
     });
-    return success(catalog, songsAdded);
+    return successResponse({ catalog, songs_added: songsAdded });
   } catch (error) {
     console.error("Error creating catalog:", error);
     return errorResponse("Internal server error", 500);

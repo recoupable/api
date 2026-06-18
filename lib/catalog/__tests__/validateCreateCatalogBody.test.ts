@@ -11,23 +11,23 @@ describe("validateCreateCatalogBody", () => {
     expect(result).toEqual({ name: "My Catalog" });
   });
 
-  it("accepts a from-only body and parses snapshot_id", () => {
-    const result = validateCreateCatalogBody({ from: { snapshot_id: snapshotId } });
-    expect(result).toEqual({ from: { snapshot_id: snapshotId } });
+  it("accepts a snapshot-only body", () => {
+    const result = validateCreateCatalogBody({ snapshot: snapshotId });
+    expect(result).toEqual({ snapshot: snapshotId });
   });
 
-  it("accepts name and from together", () => {
+  it("accepts name and snapshot together", () => {
     const result = validateCreateCatalogBody({
       name: "Bad Bunny — Catalog",
-      from: { snapshot_id: snapshotId },
+      snapshot: snapshotId,
     });
     expect(result).toEqual({
       name: "Bad Bunny — Catalog",
-      from: { snapshot_id: snapshotId },
+      snapshot: snapshotId,
     });
   });
 
-  it("rejects an empty body (neither name nor from) with 400", async () => {
+  it("rejects an empty body (neither name nor snapshot) with 400", async () => {
     const result = validateCreateCatalogBody({});
     expect(result).toBeInstanceOf(NextResponse);
     const res = result as NextResponse;
@@ -36,8 +36,8 @@ describe("validateCreateCatalogBody", () => {
     expect(body.status).toBe("error");
   });
 
-  it("rejects a non-uuid snapshot_id with 400", async () => {
-    const result = validateCreateCatalogBody({ from: { snapshot_id: "not-a-uuid" } });
+  it("rejects a non-uuid snapshot with 400", async () => {
+    const result = validateCreateCatalogBody({ snapshot: "not-a-uuid" });
     expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(400);
   });

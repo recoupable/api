@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createCatalogHandler } from "../createCatalogHandler";
 import { validateCreateCatalogBody } from "../validateCreateCatalogBody";
-import { materializeSnapshotCatalog } from "../materializeSnapshotCatalog";
+import { createSnapshotCatalog } from "../createSnapshotCatalog";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots";
 import { selectCatalogById } from "@/lib/supabase/catalogs/selectCatalogById";
@@ -14,7 +14,7 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 vi.mock("../validateCreateCatalogBody", () => ({ validateCreateCatalogBody: vi.fn() }));
-vi.mock("../materializeSnapshotCatalog", () => ({ materializeSnapshotCatalog: vi.fn() }));
+vi.mock("../createSnapshotCatalog", () => ({ createSnapshotCatalog: vi.fn() }));
 vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
 vi.mock("@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots", () => ({
   selectPlaycountSnapshots: vi.fn(),
@@ -84,19 +84,19 @@ describe("createCatalogHandler", () => {
   it("materializes a catalog from an owned, not-yet-claimed snapshot", async () => {
     vi.mocked(validateCreateCatalogBody).mockReturnValue({
       name: "Bad Bunny — Catalog",
-      from: { snapshot_id: snapshotId },
+      snapshot: snapshotId,
     });
     okAuth();
     vi.mocked(selectPlaycountSnapshots).mockResolvedValue([
       { id: snapshotId, account: accountId, catalog: null, isrcs: ["A", "B"] } as never,
     ]);
-    vi.mocked(materializeSnapshotCatalog).mockResolvedValue({ catalog, songsAdded: 2 });
+    vi.mocked(createSnapshotCatalog).mockResolvedValue({ catalog, songsAdded: 2 });
 
     const res = await createCatalogHandler(makeRequest());
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(materializeSnapshotCatalog).toHaveBeenCalledWith({
+    expect(createSnapshotCatalog).toHaveBeenCalledWith({
       accountId,
       snapshot: expect.objectContaining({ id: snapshotId }),
       name: "Bad Bunny — Catalog",
@@ -105,18 +105,18 @@ describe("createCatalogHandler", () => {
   });
 
   it("returns 404 when the snapshot does not exist", async () => {
-    vi.mocked(validateCreateCatalogBody).mockReturnValue({ from: { snapshot_id: snapshotId } });
+    vi.mocked(validateCreateCatalogBody).mockReturnValue({ snapshot: snapshotId });
     okAuth();
     vi.mocked(selectPlaycountSnapshots).mockResolvedValue([]);
 
     const res = await createCatalogHandler(makeRequest());
 
     expect(res.status).toBe(404);
-    expect(materializeSnapshotCatalog).not.toHaveBeenCalled();
+    expect(createSnapshotCatalog).not.toHaveBeenCalled();
   });
 
   it("returns 403 when the snapshot belongs to a different account", async () => {
-    vi.mocked(validateCreateCatalogBody).mockReturnValue({ from: { snapshot_id: snapshotId } });
+    vi.mocked(validateCreateCatalogBody).mockReturnValue({ snapshot: snapshotId });
     okAuth();
     vi.mocked(selectPlaycountSnapshots).mockResolvedValue([
       { id: snapshotId, account: otherAccountId, catalog: null, isrcs: ["A"] } as never,
@@ -125,11 +125,11 @@ describe("createCatalogHandler", () => {
     const res = await createCatalogHandler(makeRequest());
 
     expect(res.status).toBe(403);
-    expect(materializeSnapshotCatalog).not.toHaveBeenCalled();
+    expect(createSnapshotCatalog).not.toHaveBeenCalled();
   });
 
   it("is idempotent: returns the existing catalog when the snapshot is already claimed", async () => {
-    vi.mocked(validateCreateCatalogBody).mockReturnValue({ from: { snapshot_id: snapshotId } });
+    vi.mocked(validateCreateCatalogBody).mockReturnValue({ snapshot: snapshotId });
     okAuth();
     vi.mocked(selectPlaycountSnapshots).mockResolvedValue([
       { id: snapshotId, account: accountId, catalog: catalogId, isrcs: ["A", "B"] } as never,
@@ -141,7 +141,7 @@ describe("createCatalogHandler", () => {
 
     expect(res.status).toBe(200);
     expect(selectCatalogById).toHaveBeenCalledWith(catalogId);
-    expect(materializeSnapshotCatalog).not.toHaveBeenCalled();
+    expect(createSnapshotCatalog).not.toHaveBeenCalled();
     expect(body).toEqual({ status: "success", catalog, songs_added: 0 });
   });
 
