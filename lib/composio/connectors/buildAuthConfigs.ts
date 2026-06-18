@@ -23,5 +23,11 @@ export function buildAuthConfigs(): Record<string, string> | undefined {
   if (process.env.COMPOSIO_YOUTUBE_AUTH_CONFIG_ID) {
     configs.youtube = process.env.COMPOSIO_YOUTUBE_AUTH_CONFIG_ID;
   }
+  if (process.env.COMPOSIO_TWITTER_AUTH_CONFIG_ID) {
+    configs.twitter = process.env.COMPOSIO_TWITTER_AUTH_CONFIG_ID;
+  }
+  if (process.env.COMPOSIO_LINKEDIN_AUTH_CONFIG_ID) {
+    configs.linkedin = process.env.COMPOSIO_LINKEDIN_AUTH_CONFIG_ID;
+  }
   return Object.keys(configs).length > 0 ? configs : undefined;
 }

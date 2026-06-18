@@ -23,6 +23,8 @@ const SUPPORTED_TOOLKITS = [
   "tiktok",
   "instagram",
   "youtube",
+  "twitter",
+  "linkedin",
 ];
 
 /**
