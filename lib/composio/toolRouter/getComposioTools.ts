@@ -16,6 +16,8 @@ export const ENABLED_TOOLKITS = [
   "tiktok",
   "instagram",
   "youtube",
+  "twitter",
+  "linkedin",
 ];
 
 const SHARED_ACCOUNT_ID = "recoup-shared-767f498e-e1e9-43c6-a152-a96ae3bd8d07";

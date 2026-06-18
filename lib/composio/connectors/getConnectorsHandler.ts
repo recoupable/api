@@ -12,6 +12,8 @@ const CONNECTOR_DISPLAY_NAMES: Record<string, string> = {
   googlesheets: "Google Sheets",
   googledrive: "Google Drive",
   googledocs: "Google Docs",
+  twitter: "X (Twitter)",
+  linkedin: "LinkedIn",
 };
 
 /**
