@@ -37,7 +37,16 @@ describe("getConnectors", () => {
 
     expect(getComposioClient).toHaveBeenCalled();
     expect(mockComposio.create).toHaveBeenCalledWith("account-123", {
-      toolkits: ["googlesheets", "googledrive", "googledocs", "tiktok", "instagram", "youtube"],
+      toolkits: [
+        "googlesheets",
+        "googledrive",
+        "googledocs",
+        "tiktok",
+        "instagram",
+        "youtube",
+        "twitter",
+        "linkedin",
+      ],
     });
     expect(result).toEqual([
       {
@@ -92,7 +101,16 @@ describe("getConnectors", () => {
       await getConnectors("account-123");
 
       expect(mockComposio.create).toHaveBeenCalledWith("account-123", {
-        toolkits: ["googlesheets", "googledrive", "googledocs", "tiktok", "instagram", "youtube"],
+        toolkits: [
+        "googlesheets",
+        "googledrive",
+        "googledocs",
+        "tiktok",
+        "instagram",
+        "youtube",
+        "twitter",
+        "linkedin",
+      ],
         authConfigs: {
           tiktok: "ac_tiktok_123",
           instagram: "ac_instagram_456",
