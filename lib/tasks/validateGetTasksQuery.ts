@@ -19,7 +19,9 @@ export const getTasksQuerySchema = z.object({
 });
 
 export type GetTasksQuery = z.infer<typeof getTasksQuerySchema>;
-export type ValidatedGetTasksQuery = Omit<GetTasksQuery, "account_id"> & { account_id: string };
+// account_id is optional: admin callers fetching a single task by `id` are not
+// scoped to their own account, so the resolved query may omit account_id entirely.
+export type ValidatedGetTasksQuery = Omit<GetTasksQuery, "account_id"> & { account_id?: string };
 
 /**
  * Validates get tasks query parameters from a NextRequest.
@@ -55,7 +57,7 @@ export async function validateGetTasksQuery(
     );
   }
 
-  let targetAccountId = authResult.accountId;
+  let targetAccountId: string | undefined = authResult.accountId;
 
   if (
     validationResult.data.account_id &&
@@ -76,10 +78,18 @@ export async function validateGetTasksQuery(
 
       targetAccountId = overrideResult.accountId;
     }
+  } else if (validationResult.data.id && !validationResult.data.account_id) {
+    // Single-task lookup by id: admins may read any task regardless of owner
+    // (e.g. the background worker fetching a customer's scheduled task config).
+    // Non-admins stay scoped to their own account.
+    const isAdmin = await checkIsAdmin(authResult.accountId);
+    if (isAdmin) {
+      targetAccountId = undefined;
+    }
   }
 
   return {
     ...validationResult.data,
-    account_id: targetAccountId,
+    ...(targetAccountId ? { account_id: targetAccountId } : {}),
   };
 }

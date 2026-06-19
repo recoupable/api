@@ -119,6 +119,41 @@ describe("validateGetTasksQuery", () => {
     });
   });
 
+  it("lets an admin fetch any task by id alone, dropping account scope", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "worker_admin_acc",
+      orgId: null,
+      authToken: "token",
+    });
+    vi.mocked(checkIsAdmin).mockResolvedValue(true);
+
+    const result = await validateGetTasksQuery(
+      createMockRequest("http://localhost:3000/api/tasks?id=task_owned_by_someone_else"),
+    );
+
+    expect(checkIsAdmin).toHaveBeenCalledWith("worker_admin_acc");
+    expect(validateAccountIdOverride).not.toHaveBeenCalled();
+    // No account_id key -> selectScheduledActions filters by id only (cross-account read).
+    expect(result).toEqual({ id: "task_owned_by_someone_else" });
+  });
+
+  it("keeps a non-admin id lookup scoped to the authenticated account", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "regular_acc",
+      orgId: null,
+      authToken: "token",
+    });
+    vi.mocked(checkIsAdmin).mockResolvedValue(false);
+
+    const result = await validateGetTasksQuery(
+      createMockRequest("http://localhost:3000/api/tasks?id=task_1"),
+    );
+
+    expect(checkIsAdmin).toHaveBeenCalledWith("regular_acc");
+    expect(validateAccountIdOverride).not.toHaveBeenCalled();
+    expect(result).toEqual({ id: "task_1", account_id: "regular_acc" });
+  });
+
   it("returns 403 when non-admin override is denied", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "org_owner_acc",
