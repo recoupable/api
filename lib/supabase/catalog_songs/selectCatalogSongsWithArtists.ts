@@ -111,8 +111,7 @@ export async function selectCatalogSongsWithArtists(
       catalog_id: catalog,
       ...songData,
       // filter(Boolean): a LEFT-joined account can be null; never emit `[null]`.
-      artists:
-        song_artists?.map((sa: SongArtistWithAccount) => sa.accounts).filter(Boolean) || [],
+      artists: song_artists?.map((sa: SongArtistWithAccount) => sa.accounts).filter(Boolean) || [],
     };
   });
 
