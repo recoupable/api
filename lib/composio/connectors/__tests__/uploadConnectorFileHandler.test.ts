@@ -19,7 +19,10 @@ vi.mock("../uploadConnectorFile", () => ({
 const buildRequest = () =>
   new NextRequest("http://localhost/api/connectors/files", {
     method: "POST",
-    body: JSON.stringify({ url: "https://cdn.example.com/a.png", toolSlug: "LINKEDIN_CREATE_LINKED_IN_POST" }),
+    body: JSON.stringify({
+      url: "https://cdn.example.com/a.png",
+      toolSlug: "LINKEDIN_CREATE_LINKED_IN_POST",
+    }),
   });
 
 describe("uploadConnectorFileHandler", () => {

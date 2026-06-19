@@ -28,7 +28,10 @@ describe("validateUploadConnectorFileRequest", () => {
     );
 
     const result = await validateUploadConnectorFileRequest(
-      buildRequest({ url: "https://cdn.example.com/a.png", toolSlug: "LINKEDIN_CREATE_LINKED_IN_POST" }),
+      buildRequest({
+        url: "https://cdn.example.com/a.png",
+        toolSlug: "LINKEDIN_CREATE_LINKED_IN_POST",
+      }),
     );
 
     expect(result).toBeInstanceOf(NextResponse);
@@ -56,7 +59,10 @@ describe("validateUploadConnectorFileRequest", () => {
     });
 
     const result = await validateUploadConnectorFileRequest(
-      buildRequest({ url: "https://cdn.example.com/a.png", toolSlug: "LINKEDIN_CREATE_LINKED_IN_POST" }),
+      buildRequest({
+        url: "https://cdn.example.com/a.png",
+        toolSlug: "LINKEDIN_CREATE_LINKED_IN_POST",
+      }),
     );
 
     expect(result).toEqual({
