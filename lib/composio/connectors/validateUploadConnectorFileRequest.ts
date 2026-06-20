@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateUploadConnectorFileBody } from "./validateUploadConnectorFileBody";
 
 /**
@@ -32,7 +33,7 @@ export async function validateUploadConnectorFileRequest(
     return authResult;
   }
 
-  const body = await request.json();
+  const body = await safeParseJson(request);
   const validated = validateUploadConnectorFileBody(body);
   if (validated instanceof NextResponse) {
     return validated;

@@ -51,6 +51,24 @@ describe("validateUploadConnectorFileRequest", () => {
     if (result instanceof NextResponse) expect(result.status).toBe(400);
   });
 
+  it("returns 400 (not a throw) when the body is malformed JSON", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acc_1",
+      orgId: null,
+      authToken: "t",
+    });
+
+    const malformed = new NextRequest("http://localhost/api/connectors/files", {
+      method: "POST",
+      body: "{not json",
+    });
+
+    const result = await validateUploadConnectorFileRequest(malformed);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) expect(result.status).toBe(400);
+  });
+
   it("returns the validated { url, toolSlug } on success", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "acc_1",
