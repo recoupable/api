@@ -21,6 +21,10 @@ vi.mock("@/lib/supabase/account_snapshots/selectAccountSnapshots", () => ({
   selectAccountSnapshots: vi.fn(),
 }));
 
+vi.mock("@/lib/supabase/accounts/selectAccountByNameInOrg", () => ({
+  selectAccountByNameInOrg: vi.fn(),
+}));
+
 vi.mock("@/lib/content/contentTemplates", () => ({
   DEFAULT_CONTENT_TEMPLATE: "artist-caption-bedroom",
 }));
@@ -34,7 +38,7 @@ vi.mock("../extractMessageAttachments", () => ({
 }));
 
 vi.mock("@/lib/agents/buildTaskCard", () => ({
-  buildTaskCard: vi.fn((_title: string, _message: string, _runId: string) => ({
+  buildTaskCard: vi.fn((_: string, __: string, ___: string) => ({
     mockCard: true,
   })),
 }));
@@ -46,6 +50,9 @@ const { resolveArtistSlug } = await import("@/lib/content/resolveArtistSlug");
 const { getArtistContentReadiness } = await import("@/lib/content/getArtistContentReadiness");
 const { parseContentPrompt } = await import("../parseContentPrompt");
 const { extractMessageAttachments } = await import("../extractMessageAttachments");
+const { selectAccountByNameInOrg } = await import(
+  "@/lib/supabase/accounts/selectAccountByNameInOrg"
+);
 
 /**
  * Creates a mock content agent bot for testing.
@@ -85,6 +92,22 @@ function createMockMessage(text: string) {
   return { text };
 }
 
+/**
+ * Sets up common mocks for tests that expect successful content creation.
+ * Includes artistName in parsed flags and mocks artist lookup.
+ */
+function setupSuccessfulArtistLookup() {
+  vi.mocked(selectAccountByNameInOrg).mockResolvedValue([
+    { id: "artist-account-1", name: "Test Artist" },
+  ]);
+  vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
+  vi.mocked(getArtistContentReadiness).mockResolvedValue({
+    githubRepo: "https://github.com/test/repo",
+  } as never);
+  vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+  vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+}
+
 describe("registerOnNewMention", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -110,13 +133,9 @@ describe("registerOnNewMention", () => {
       captionLength: "short",
       upscale: false,
       template: "artist-caption-bedroom",
+      artistName: "Test Artist",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+    setupSuccessfulArtistLookup();
 
     const thread = createMockThread();
     const message = createMockMessage("make me a lipsync video");
@@ -135,13 +154,9 @@ describe("registerOnNewMention", () => {
       captionLength: "short",
       upscale: false,
       template: "artist-caption-bedroom",
+      artistName: "Test Artist",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+    setupSuccessfulArtistLookup();
 
     const thread = createMockThread();
     const message = createMockMessage("make me a lipsync video");
@@ -160,13 +175,9 @@ describe("registerOnNewMention", () => {
       captionLength: "short",
       upscale: false,
       template: "artist-caption-bedroom",
+      artistName: "Test Artist",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+    setupSuccessfulArtistLookup();
 
     const thread = createMockThread();
     const message = createMockMessage("make me 3 videos");
@@ -185,13 +196,9 @@ describe("registerOnNewMention", () => {
       captionLength: "long",
       upscale: true,
       template: "artist-caption-stage",
+      artistName: "Test Artist",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+    setupSuccessfulArtistLookup();
 
     const thread = createMockThread();
     const message = createMockMessage("high quality stage video with long caption");
@@ -217,13 +224,9 @@ describe("registerOnNewMention", () => {
       upscale: false,
       template: "artist-caption-bedroom",
       songs: ["hiccups"],
+      artistName: "Test Artist",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+    setupSuccessfulArtistLookup();
 
     const thread = createMockThread();
     const message = createMockMessage("make a lipsync video for the hiccups song");
@@ -244,13 +247,9 @@ describe("registerOnNewMention", () => {
       captionLength: "short",
       upscale: false,
       template: "artist-caption-bedroom",
+      artistName: "Test Artist",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+    setupSuccessfulArtistLookup();
 
     const thread = createMockThread();
     const message = createMockMessage("make me a video");
@@ -270,13 +269,9 @@ describe("registerOnNewMention", () => {
       captionLength: "short",
       upscale: false,
       template: "artist-caption-bedroom",
+      artistName: "Test Artist",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+    setupSuccessfulArtistLookup();
 
     const thread = createMockThread();
     const message = createMockMessage("make 2 lipsync videos");
@@ -299,13 +294,9 @@ describe("registerOnNewMention", () => {
       captionLength: "short",
       upscale: false,
       template: "artist-caption-bedroom",
+      artistName: "Test Artist",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+    setupSuccessfulArtistLookup();
 
     const thread = createMockThread();
     const message = createMockMessage("make a video");
@@ -325,17 +316,13 @@ describe("registerOnNewMention", () => {
       captionLength: "short",
       upscale: false,
       template: "artist-caption-bedroom",
+      artistName: "Test Artist",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
+    setupSuccessfulArtistLookup();
     vi.mocked(extractMessageAttachments).mockResolvedValue({
       songUrl: "https://blob.vercel-storage.com/song.mp3",
       imageUrls: [],
     });
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
     const message = createMockMessage("make a video");
@@ -355,17 +342,13 @@ describe("registerOnNewMention", () => {
       captionLength: "short",
       upscale: false,
       template: "artist-caption-bedroom",
+      artistName: "Test Artist",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
+    setupSuccessfulArtistLookup();
     vi.mocked(extractMessageAttachments).mockResolvedValue({
       songUrl: null,
       imageUrls: ["https://blob.vercel-storage.com/face.png"],
     });
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
     const message = createMockMessage("make a video");
@@ -388,11 +371,9 @@ describe("registerOnNewMention", () => {
       captionLength: "short",
       upscale: false,
       template: "artist-release-editorial",
+      artistName: "Test Artist",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
+    setupSuccessfulArtistLookup();
     vi.mocked(extractMessageAttachments).mockResolvedValue({
       songUrl: null,
       imageUrls: [
@@ -401,8 +382,6 @@ describe("registerOnNewMention", () => {
         "https://blob.vercel-storage.com/cover2.png",
       ],
     });
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
     const message = createMockMessage("make an editorial video");
@@ -429,13 +408,9 @@ describe("registerOnNewMention", () => {
       captionLength: "short",
       upscale: false,
       template: "artist-caption-bedroom",
+      artistName: "Test Artist",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+    setupSuccessfulArtistLookup();
 
     const thread = createMockThread();
     const message = createMockMessage("make a video");
@@ -455,17 +430,13 @@ describe("registerOnNewMention", () => {
       captionLength: "short",
       upscale: false,
       template: "artist-caption-bedroom",
+      artistName: "Test Artist",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
+    setupSuccessfulArtistLookup();
     vi.mocked(extractMessageAttachments).mockResolvedValue({
       songUrl: "https://blob.vercel-storage.com/song.mp3",
       imageUrls: ["https://blob.vercel-storage.com/face.png"],
     });
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
     const message = createMockMessage("make a video");
@@ -487,13 +458,9 @@ describe("registerOnNewMention", () => {
       upscale: false,
       template: "artist-caption-bedroom",
       songs: ["hiccups"],
+      artistName: "Test Artist",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+    setupSuccessfulArtistLookup();
 
     const thread = createMockThread();
     const message = createMockMessage("make a video for hiccups");
@@ -514,13 +481,10 @@ describe("registerOnNewMention", () => {
       captionLength: "short",
       upscale: false,
       template: "artist-caption-bedroom",
+      artistName: "Test Artist",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
+    setupSuccessfulArtistLookup();
     vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-abc-123" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
     const message = createMockMessage("make a video");
@@ -531,7 +495,6 @@ describe("registerOnNewMention", () => {
       expect.stringContaining("test-artist"),
       "run-abc-123",
     );
-    // Second post call is the card
     expect(thread.post).toHaveBeenCalledWith({ card: { mockCard: true } });
   });
 
@@ -545,16 +508,13 @@ describe("registerOnNewMention", () => {
       captionLength: "short",
       upscale: false,
       template: "artist-caption-bedroom",
+      artistName: "Test Artist",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
+    setupSuccessfulArtistLookup();
     vi.mocked(triggerCreateContent)
       .mockResolvedValueOnce({ id: "run-first" })
       .mockResolvedValueOnce({ id: "run-second" })
       .mockResolvedValueOnce({ id: "run-third" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
     const message = createMockMessage("make 3 videos");
@@ -564,6 +524,83 @@ describe("registerOnNewMention", () => {
       "Content Generation Started",
       expect.any(String),
       "run-first",
+    );
+  });
+
+  it("prompts user to specify an artist when no artistName is provided", async () => {
+    const bot = createMockBot();
+    registerOnNewMention(bot as never);
+
+    vi.mocked(parseContentPrompt).mockResolvedValue({
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+    });
+
+    const thread = createMockThread();
+    const message = createMockMessage("make a video");
+    await bot.getHandler()!(thread, message);
+
+    expect(thread.post).toHaveBeenCalledTimes(1);
+    expect(thread.post).toHaveBeenCalledWith(expect.stringContaining("specify an artist"));
+    expect(triggerCreateContent).not.toHaveBeenCalled();
+  });
+
+  it("posts error when artist name is not found in organization", async () => {
+    const bot = createMockBot();
+    registerOnNewMention(bot as never);
+
+    vi.mocked(parseContentPrompt).mockResolvedValue({
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+      artistName: "Unknown Artist",
+    });
+    vi.mocked(selectAccountByNameInOrg).mockResolvedValue([]);
+
+    const thread = createMockThread();
+    const message = createMockMessage("make a video for Unknown Artist");
+    await bot.getHandler()!(thread, message);
+
+    expect(thread.post).toHaveBeenCalledTimes(1);
+    expect(thread.post).toHaveBeenCalledWith(expect.stringContaining("Unknown Artist"));
+    expect(triggerCreateContent).not.toHaveBeenCalled();
+  });
+
+  it("looks up artist by name using selectAccountByNameInOrg", async () => {
+    const bot = createMockBot();
+    registerOnNewMention(bot as never);
+
+    vi.mocked(parseContentPrompt).mockResolvedValue({
+      lipsync: false,
+      batch: 1,
+      captionLength: "short",
+      upscale: false,
+      template: "artist-caption-bedroom",
+      artistName: "Mac Miller",
+    });
+    vi.mocked(selectAccountByNameInOrg).mockResolvedValue([
+      { id: "mac-account-id", name: "Mac Miller" },
+    ]);
+    vi.mocked(resolveArtistSlug).mockResolvedValue("mac-miller");
+    vi.mocked(getArtistContentReadiness).mockResolvedValue({
+      githubRepo: "https://github.com/test/repo",
+    } as never);
+    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
+
+    const thread = createMockThread();
+    const message = createMockMessage("make a video for Mac Miller");
+    await bot.getHandler()!(thread, message);
+
+    expect(selectAccountByNameInOrg).toHaveBeenCalledWith(expect.any(String), "Mac Miller");
+    expect(resolveArtistSlug).toHaveBeenCalledWith("mac-account-id");
+    expect(triggerCreateContent).toHaveBeenCalledWith(
+      expect.objectContaining({ artistSlug: "mac-miller" }),
     );
   });
 });
