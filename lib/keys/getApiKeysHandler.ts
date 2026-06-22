@@ -1,22 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getApiKeys } from "@/lib/supabase/account_api_keys/getApiKeys";
-import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 /**
  * Handler for retrieving API keys for the authenticated account.
- * Requires authentication via Bearer token in Authorization header.
+ * Supports both x-api-key header and Authorization Bearer token.
  *
  * @param request - The request object.
  * @returns A NextResponse with the API keys.
  */
 export async function getApiKeysHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const accountIdOrError = await getAuthenticatedAccountId(request);
-    if (accountIdOrError instanceof NextResponse) {
-      return accountIdOrError;
+    const authResult = await validateAuthContext(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
-    const accountId = accountIdOrError;
+    const { accountId } = authResult;
 
     const { data, error } = await getApiKeys({ accountId });
 
