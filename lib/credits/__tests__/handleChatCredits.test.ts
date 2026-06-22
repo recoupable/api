@@ -200,5 +200,21 @@ describe("handleChatCredits", () => {
         expect.objectContaining({ source: "api" }),
       );
     });
+
+    it("forwards toolCallCount to the usage_events row when provided", async () => {
+      mockGetCreditUsage.mockResolvedValue(0.05);
+      mockRecordCreditDeduction.mockResolvedValue({ success: true, newBalance: 95 });
+
+      await handleChatCredits({
+        usage: USAGE,
+        model: "gpt-4",
+        accountId: "account-123",
+        toolCallCount: 3,
+      });
+
+      expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
+        expect.objectContaining({ toolCallCount: 3 }),
+      );
+    });
   });
 });
