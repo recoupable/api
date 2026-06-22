@@ -100,7 +100,7 @@ describe("validateGetTaskRunQuery", () => {
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ mode: "retrieve", runId: "run_abc123" });
+      expect(result).toEqual({ mode: "retrieve", runId: "run_abc123", accountId: "acc_123" });
     });
 
     it("trims whitespace from runId", async () => {
@@ -111,7 +111,7 @@ describe("validateGetTaskRunQuery", () => {
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ mode: "retrieve", runId: "run_abc123" });
+      expect(result).toEqual({ mode: "retrieve", runId: "run_abc123", accountId: "acc_123" });
     });
 
     it("returns list mode with custom limit", async () => {
@@ -209,6 +209,25 @@ describe("validateGetTaskRunQuery", () => {
 
       expect(result).not.toBeInstanceOf(NextResponse);
       expect(result).toEqual({ mode: "list", accountId: "acc_123", limit: 20 });
+    });
+
+    it("applies account_id override in retrieve mode for admin", async () => {
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId: "admin_acc",
+        orgId: null,
+        authToken: "bearer-token",
+      });
+      vi.mocked(checkIsAdmin).mockResolvedValue(true);
+
+      const request = createMockRequest(
+        "http://localhost:3000/api/tasks/runs?runId=run_123&account_id=other_acc",
+      );
+
+      const result = await validateGetTaskRunQuery(request);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      expect(result).toEqual({ mode: "retrieve", runId: "run_123", accountId: "other_acc" });
+      expect(validateAccountIdOverride).not.toHaveBeenCalled();
     });
   });
 });
