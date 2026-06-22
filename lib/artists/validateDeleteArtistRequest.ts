@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { validateAccountParams } from "@/lib/accounts/validateAccountParams";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 
@@ -10,8 +12,16 @@ export interface DeleteArtistRequest {
   requesterAccountId: string;
 }
 
+const deleteArtistBodySchema = z.object({
+  account_id: z.string().uuid("account_id must be a valid UUID").optional(),
+});
+
 /**
  * Validates DELETE /api/artists/{id} path params and authentication.
+ *
+ * Accepts an optional `account_id` in the request body so a caller with access
+ * to multiple accounts (org members or Recoup admins) can delete an artist in
+ * another account's context. The override is authorized by `validateAuthContext`.
  *
  * @param request - The incoming request
  * @param id - The artist account ID from the route
@@ -26,7 +36,22 @@ export async function validateDeleteArtistRequest(
     return validatedParams;
   }
 
-  const authResult = await validateAuthContext(request);
+  const body = await safeParseJson(request);
+  const bodyResult = deleteArtistBodySchema.safeParse(body);
+  if (!bodyResult.success) {
+    const firstError = bodyResult.error.issues[0];
+    return NextResponse.json(
+      {
+        status: "error",
+        error: firstError.message,
+      },
+      { status: 400, headers: getCorsHeaders() },
+    );
+  }
+
+  const authResult = await validateAuthContext(request, {
+    accountId: bodyResult.data.account_id,
+  });
   if (authResult instanceof NextResponse) {
     return authResult;
   }
