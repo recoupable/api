@@ -159,4 +159,32 @@ describe("validateChatAccess", () => {
     const result = await validateChatAccess(request, roomId);
     expect(result).toEqual({ roomId, room, accountId });
   });
+
+  it("passes the accountId override to validateAuthContext and resolves against it", async () => {
+    const overrideAccountId = "123e4567-e89b-12d3-a456-426614174999";
+    const room = {
+      id: roomId,
+      account_id: overrideAccountId,
+      artist_id: null,
+      topic: "Topic",
+      updated_at: "2026-03-30T00:00:00Z",
+    };
+
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: overrideAccountId,
+      orgId: null,
+      authToken: "test-key",
+    });
+    vi.mocked(selectRoom).mockResolvedValue(room);
+    vi.mocked(buildGetChatsParams).mockResolvedValue({
+      params: { account_ids: [overrideAccountId] },
+      error: null,
+    });
+
+    const result = await validateChatAccess(request, roomId, { accountId: overrideAccountId });
+
+    expect(validateAuthContext).toHaveBeenCalledWith(request, { accountId: overrideAccountId });
+    expect(buildGetChatsParams).toHaveBeenCalledWith({ account_id: overrideAccountId });
+    expect(result).toEqual({ roomId, room, accountId: overrideAccountId });
+  });
 });

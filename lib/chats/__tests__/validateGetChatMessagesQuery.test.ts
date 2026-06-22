@@ -49,4 +49,60 @@ describe("validateGetChatMessagesQuery", () => {
     expect(result).not.toBeInstanceOf(NextResponse);
     expect((result as { roomId: string }).roomId).toBe(roomId);
   });
+
+  describe("account_id query override", () => {
+    const roomId = "123e4567-e89b-42d3-a456-426614174000";
+    const overrideAccountId = "223e4567-e89b-42d3-a456-426614174999";
+
+    const successMock = () =>
+      vi.mocked(validateChatAccess).mockResolvedValue({
+        roomId,
+        room: {
+          id: roomId,
+          account_id: overrideAccountId,
+          artist_id: null,
+          topic: null,
+          updated_at: null,
+        },
+        accountId: overrideAccountId,
+      });
+
+    it("passes the account_id query override to validateChatAccess", async () => {
+      successMock();
+      const request = new NextRequest(
+        `http://localhost/api/chats/${roomId}/messages?account_id=${overrideAccountId}`,
+      );
+
+      await validateGetChatMessagesQuery(request, roomId);
+
+      expect(validateChatAccess).toHaveBeenCalledWith(request, roomId, {
+        accountId: overrideAccountId,
+      });
+    });
+
+    it("accepts the camelCase accountId query alias", async () => {
+      successMock();
+      const request = new NextRequest(
+        `http://localhost/api/chats/${roomId}/messages?accountId=${overrideAccountId}`,
+      );
+
+      await validateGetChatMessagesQuery(request, roomId);
+
+      expect(validateChatAccess).toHaveBeenCalledWith(request, roomId, {
+        accountId: overrideAccountId,
+      });
+    });
+
+    it("returns 400 when the account_id query is not a valid UUID", async () => {
+      const request = new NextRequest(
+        `http://localhost/api/chats/${roomId}/messages?account_id=not-a-uuid`,
+      );
+
+      const result = await validateGetChatMessagesQuery(request, roomId);
+
+      expect(result).toBeInstanceOf(NextResponse);
+      expect((result as NextResponse).status).toBe(400);
+      expect(validateChatAccess).not.toHaveBeenCalled();
+    });
+  });
 });

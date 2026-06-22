@@ -13,18 +13,29 @@ export interface ValidatedChatAccess {
   accountId: string;
 }
 
+export interface ValidateChatAccessOptions {
+  /** Optional account_id override; authorized via validateAuthContext. */
+  accountId?: string;
+}
+
 const chatIdSchema = z.string().uuid("id must be a valid UUID");
 
 /**
  * Validates that the authenticated caller can access a chat room.
  *
+ * When `options.accountId` is provided, access is resolved against that account
+ * instead of the caller's own. The override is authorized by `validateAuthContext`
+ * (org members / Recoup admins), so a caller without access still gets a 403.
+ *
  * @param request - The incoming request (used for auth context)
  * @param roomId - The room/chat UUID to validate access for
+ * @param options - Optional account_id override
  * @returns NextResponse on auth/access failure, or validated access data
  */
 export async function validateChatAccess(
   request: NextRequest,
   roomId: string,
+  options: ValidateChatAccessOptions = {},
 ): Promise<NextResponse | ValidatedChatAccess> {
   const roomIdResult = chatIdSchema.safeParse(roomId);
   if (!roomIdResult.success) {
@@ -34,7 +45,7 @@ export async function validateChatAccess(
     );
   }
 
-  const authResult = await validateAuthContext(request);
+  const authResult = await validateAuthContext(request, { accountId: options.accountId });
   if (authResult instanceof NextResponse) {
     return authResult;
   }
