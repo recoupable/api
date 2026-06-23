@@ -17,6 +17,10 @@ vi.mock("@/lib/chats/buildGetChatsParams", () => ({
   buildGetChatsParams: vi.fn(),
 }));
 
+vi.mock("@/lib/admins/checkIsAdmin", () => ({
+  checkIsAdmin: vi.fn(() => Promise.resolve(false)),
+}));
+
 const createRequest = () => new NextRequest("http://localhost/api/chats/chat-id/artist");
 
 describe("getChatArtistHandler", () => {
