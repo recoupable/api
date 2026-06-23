@@ -166,7 +166,7 @@ describe("validateChatAccess", () => {
     expect(result).toEqual({ roomId, room, accountId });
   });
 
-  it("grants a Recoup admin access to any room when allowAdmin is set (bypasses ownership)", async () => {
+  it("grants a Recoup admin access to a room they don't own (admin checked after ownership fails)", async () => {
     const room = {
       id: roomId,
       account_id: "another-account",
@@ -181,42 +181,20 @@ describe("validateChatAccess", () => {
       authToken: "test-key",
     });
     vi.mocked(selectRoom).mockResolvedValue(room);
-    vi.mocked(checkIsAdmin).mockResolvedValue(true);
-
-    const result = await validateChatAccess(request, roomId, { allowAdmin: true });
-
-    expect(validateAuthContext).toHaveBeenCalledWith(request);
-    expect(checkIsAdmin).toHaveBeenCalledWith(accountId);
-    expect(buildGetChatsParams).not.toHaveBeenCalled();
-    expect(result).toEqual({ roomId, room, accountId: "another-account" });
-  });
-
-  it("still 403s a non-admin caller even when allowAdmin is set", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId,
-      orgId: null,
-      authToken: "test-key",
-    });
-    vi.mocked(selectRoom).mockResolvedValue({
-      id: roomId,
-      account_id: "another-account",
-      artist_id: null,
-      topic: "Topic",
-      updated_at: "2026-03-30T00:00:00Z",
-    });
-    vi.mocked(checkIsAdmin).mockResolvedValue(false);
     vi.mocked(buildGetChatsParams).mockResolvedValue({
       params: { account_ids: [accountId] },
       error: null,
     });
+    vi.mocked(checkIsAdmin).mockResolvedValue(true);
 
-    const result = await validateChatAccess(request, roomId, { allowAdmin: true });
+    const result = await validateChatAccess(request, roomId);
 
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(403);
+    expect(buildGetChatsParams).toHaveBeenCalled();
+    expect(checkIsAdmin).toHaveBeenCalledWith(accountId);
+    expect(result).toEqual({ roomId, room, accountId: "another-account" });
   });
 
-  it("does not consult admin status when allowAdmin is not set (mutation paths stay ownership-gated)", async () => {
+  it("does not consult admin status when the caller owns the room", async () => {
     const room = {
       id: roomId,
       account_id: accountId,

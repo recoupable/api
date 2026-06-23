@@ -50,7 +50,7 @@ describe("validateGetChatMessagesQuery", () => {
     expect((result as { roomId: string }).roomId).toBe(roomId);
   });
 
-  it("opts into the admin bypass (allowAdmin: true) when delegating to validateChatAccess", async () => {
+  it("delegates to validateChatAccess with the parsed chat id", async () => {
     const roomId = "123e4567-e89b-42d3-a456-426614174000";
     vi.mocked(validateChatAccess).mockResolvedValue({
       roomId,
@@ -61,6 +61,6 @@ describe("validateGetChatMessagesQuery", () => {
 
     await validateGetChatMessagesQuery(request, roomId);
 
-    expect(validateChatAccess).toHaveBeenCalledWith(request, roomId, { allowAdmin: true });
+    expect(validateChatAccess).toHaveBeenCalledWith(request, roomId);
   });
 });

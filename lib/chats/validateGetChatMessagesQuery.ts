@@ -11,7 +11,7 @@ const chatIdSchema = z.string().uuid("id must be a valid UUID");
  *
  * Reading is a resource-scoped operation: the chat is identified by the path id
  * and the owner is resolved server-side, so no `account_id` input is accepted.
- * Recoup admins are granted read access to any chat via the admin bypass.
+ * Recoup admins are granted access to any chat via `validateChatAccess`.
  *
  * @param request - Incoming request used to validate chat access.
  * @param id - Chat identifier from route params.
@@ -32,5 +32,5 @@ export async function validateGetChatMessagesQuery(
     );
   }
 
-  return validateChatAccess(request, parsedId.data, { allowAdmin: true });
+  return validateChatAccess(request, parsedId.data);
 }
