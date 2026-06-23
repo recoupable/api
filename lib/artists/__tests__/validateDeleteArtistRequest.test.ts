@@ -55,7 +55,7 @@ describe("validateDeleteArtistRequest", () => {
     const result = await validateDeleteArtistRequest(request, validArtistId);
 
     expect(result).toBe(authError);
-    expect(validateAuthContext).toHaveBeenCalledWith(request);
+    expect(validateAuthContext).toHaveBeenCalledWith(request, { accountId: undefined });
   });
 
   it("returns 404 when the artist does not exist", async () => {
@@ -123,6 +123,57 @@ describe("validateDeleteArtistRequest", () => {
     expect(result).toEqual({
       artistId: validArtistId,
       requesterAccountId: authenticatedAccountId,
+    });
+  });
+
+  describe("account_id override", () => {
+    const overrideAccountId = "770e8400-e29b-41d4-a716-446655440000";
+
+    it("passes the account_id override to validateAuthContext and resolves against it", async () => {
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId: overrideAccountId,
+        authToken: "test-token",
+        orgId: null,
+      });
+      vi.mocked(selectAccounts).mockResolvedValue([{ id: validArtistId }] as never);
+      vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+
+      const request = new NextRequest(`http://localhost/api/artists/${validArtistId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: "Bearer test-token",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ account_id: overrideAccountId }),
+      });
+
+      const result = await validateDeleteArtistRequest(request, validArtistId);
+
+      expect(validateAuthContext).toHaveBeenCalledWith(request, {
+        accountId: overrideAccountId,
+      });
+      expect(checkAccountArtistAccess).toHaveBeenCalledWith(overrideAccountId, validArtistId);
+      expect(result).toEqual({
+        artistId: validArtistId,
+        requesterAccountId: overrideAccountId,
+      });
+    });
+
+    it("returns 400 when account_id is not a valid UUID", async () => {
+      const request = new NextRequest(`http://localhost/api/artists/${validArtistId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: "Bearer test-token",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ account_id: "not-a-uuid" }),
+      });
+
+      const result = await validateDeleteArtistRequest(request, validArtistId);
+
+      expect(result).toBeInstanceOf(NextResponse);
+      expect((result as NextResponse).status).toBe(400);
+      expect(validateAuthContext).not.toHaveBeenCalled();
     });
   });
 });
