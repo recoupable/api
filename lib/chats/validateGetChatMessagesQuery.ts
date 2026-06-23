@@ -5,13 +5,13 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateChatAccess, type ValidatedChatAccess } from "@/lib/chats/validateChatAccess";
 
 const chatIdSchema = z.string().uuid("id must be a valid UUID");
-const accountIdSchema = z.string().uuid("account_id must be a valid UUID");
 
 /**
  * Validates auth and params for GET /api/chats/[id]/messages.
  *
- * Accepts an optional `account_id` (or camelCase `accountId`) query override so a
- * caller with access to multiple accounts can read another account's messages.
+ * Reading is a resource-scoped operation: the chat is identified by the path id
+ * and the owner is resolved server-side, so no `account_id` input is accepted.
+ * Recoup admins are granted read access to any chat via the admin bypass.
  *
  * @param request - Incoming request used to validate chat access.
  * @param id - Chat identifier from route params.
@@ -32,22 +32,5 @@ export async function validateGetChatMessagesQuery(
     );
   }
 
-  const { searchParams } = new URL(request.url);
-  const accountIdParam =
-    searchParams.get("account_id") ?? searchParams.get("accountId") ?? undefined;
-
-  if (accountIdParam !== undefined) {
-    const parsedAccountId = accountIdSchema.safeParse(accountIdParam);
-    if (!parsedAccountId.success) {
-      return NextResponse.json(
-        {
-          status: "error",
-          error: parsedAccountId.error.issues[0]?.message || "Invalid account_id",
-        },
-        { status: 400, headers: getCorsHeaders() },
-      );
-    }
-  }
-
-  return validateChatAccess(request, parsedId.data, { accountId: accountIdParam });
+  return validateChatAccess(request, parsedId.data, { allowAdmin: true });
 }

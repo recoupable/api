@@ -4,6 +4,7 @@ import { validateChatAccess } from "../validateChatAccess";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
 import { buildGetChatsParams } from "@/lib/chats/buildGetChatsParams";
+import { checkIsAdmin } from "@/lib/admins/checkIsAdmin";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -21,6 +22,10 @@ vi.mock("@/lib/chats/buildGetChatsParams", () => ({
   buildGetChatsParams: vi.fn(),
 }));
 
+vi.mock("@/lib/admins/checkIsAdmin", () => ({
+  checkIsAdmin: vi.fn(),
+}));
+
 describe("validateChatAccess", () => {
   const roomId = "123e4567-e89b-12d3-a456-426614174000";
   const accountId = "123e4567-e89b-12d3-a456-426614174001";
@@ -30,6 +35,7 @@ describe("validateChatAccess", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(checkIsAdmin).mockResolvedValue(false);
   });
 
   it("returns 400 when roomId is invalid uuid", async () => {
@@ -160,31 +166,79 @@ describe("validateChatAccess", () => {
     expect(result).toEqual({ roomId, room, accountId });
   });
 
-  it("passes the accountId override to validateAuthContext and resolves against it", async () => {
-    const overrideAccountId = "123e4567-e89b-12d3-a456-426614174999";
+  it("grants a Recoup admin access to any room when allowAdmin is set (bypasses ownership)", async () => {
     const room = {
       id: roomId,
-      account_id: overrideAccountId,
+      account_id: "another-account",
       artist_id: null,
       topic: "Topic",
       updated_at: "2026-03-30T00:00:00Z",
     };
 
     vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: overrideAccountId,
+      accountId,
+      orgId: null,
+      authToken: "test-key",
+    });
+    vi.mocked(selectRoom).mockResolvedValue(room);
+    vi.mocked(checkIsAdmin).mockResolvedValue(true);
+
+    const result = await validateChatAccess(request, roomId, { allowAdmin: true });
+
+    expect(validateAuthContext).toHaveBeenCalledWith(request);
+    expect(checkIsAdmin).toHaveBeenCalledWith(accountId);
+    expect(buildGetChatsParams).not.toHaveBeenCalled();
+    expect(result).toEqual({ roomId, room, accountId: "another-account" });
+  });
+
+  it("still 403s a non-admin caller even when allowAdmin is set", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId,
+      orgId: null,
+      authToken: "test-key",
+    });
+    vi.mocked(selectRoom).mockResolvedValue({
+      id: roomId,
+      account_id: "another-account",
+      artist_id: null,
+      topic: "Topic",
+      updated_at: "2026-03-30T00:00:00Z",
+    });
+    vi.mocked(checkIsAdmin).mockResolvedValue(false);
+    vi.mocked(buildGetChatsParams).mockResolvedValue({
+      params: { account_ids: [accountId] },
+      error: null,
+    });
+
+    const result = await validateChatAccess(request, roomId, { allowAdmin: true });
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(403);
+  });
+
+  it("does not consult admin status when allowAdmin is not set (mutation paths stay ownership-gated)", async () => {
+    const room = {
+      id: roomId,
+      account_id: accountId,
+      artist_id: null,
+      topic: "Topic",
+      updated_at: "2026-03-30T00:00:00Z",
+    };
+
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId,
       orgId: null,
       authToken: "test-key",
     });
     vi.mocked(selectRoom).mockResolvedValue(room);
     vi.mocked(buildGetChatsParams).mockResolvedValue({
-      params: { account_ids: [overrideAccountId] },
+      params: { account_ids: [accountId] },
       error: null,
     });
 
-    const result = await validateChatAccess(request, roomId, { accountId: overrideAccountId });
+    const result = await validateChatAccess(request, roomId);
 
-    expect(validateAuthContext).toHaveBeenCalledWith(request, { accountId: overrideAccountId });
-    expect(buildGetChatsParams).toHaveBeenCalledWith({ account_id: overrideAccountId });
-    expect(result).toEqual({ roomId, room, accountId: overrideAccountId });
+    expect(checkIsAdmin).not.toHaveBeenCalled();
+    expect(result).toEqual({ roomId, room, accountId });
   });
 });

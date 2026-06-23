@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { checkIsAdmin } from "@/lib/admins/checkIsAdmin";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
 import { buildGetChatsParams } from "@/lib/chats/buildGetChatsParams";
 import type { Tables } from "@/types/database.types";
@@ -14,8 +15,13 @@ export interface ValidatedChatAccess {
 }
 
 export interface ValidateChatAccessOptions {
-  /** Optional account_id override; authorized via validateAuthContext. */
-  accountId?: string;
+  /**
+   * Opt-in admin bypass. When true, a Recoup admin (member of `RECOUP_ORG_ID`)
+   * is granted access to any room without the ownership check — so an admin can
+   * read a customer's chat by id. Only read endpoints set this; chat mutations
+   * leave it off so admin write access stays gated by ownership.
+   */
+  allowAdmin?: boolean;
 }
 
 const chatIdSchema = z.string().uuid("id must be a valid UUID");
@@ -23,13 +29,13 @@ const chatIdSchema = z.string().uuid("id must be a valid UUID");
 /**
  * Validates that the authenticated caller can access a chat room.
  *
- * When `options.accountId` is provided, access is resolved against that account
- * instead of the caller's own. The override is authorized by `validateAuthContext`
- * (org members / Recoup admins), so a caller without access still gets a 403.
+ * The room is fully identified by `roomId`, so no account override is accepted.
+ * When `options.allowAdmin` is set, a Recoup admin bypasses the ownership check
+ * (the room's owner is resolved server-side); everyone else must own the room.
  *
  * @param request - The incoming request (used for auth context)
  * @param roomId - The room/chat UUID to validate access for
- * @param options - Optional account_id override
+ * @param options - Optional admin-bypass opt-in (read endpoints only)
  * @returns NextResponse on auth/access failure, or validated access data
  */
 export async function validateChatAccess(
@@ -45,7 +51,7 @@ export async function validateChatAccess(
     );
   }
 
-  const authResult = await validateAuthContext(request, { accountId: options.accountId });
+  const authResult = await validateAuthContext(request);
   if (authResult instanceof NextResponse) {
     return authResult;
   }
@@ -58,6 +64,12 @@ export async function validateChatAccess(
       { status: "error", error: "Chat room not found" },
       { status: 404, headers: getCorsHeaders() },
     );
+  }
+
+  // Admin bypass (read endpoints only): a Recoup admin may access any room.
+  // The owner is resolved server-side, so no account_id input is needed.
+  if (options.allowAdmin && (await checkIsAdmin(accountId))) {
+    return { roomId: room.id, room, accountId: room.account_id ?? accountId };
   }
 
   const { params, error } = await buildGetChatsParams({
