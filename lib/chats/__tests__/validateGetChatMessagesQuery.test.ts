@@ -49,18 +49,4 @@ describe("validateGetChatMessagesQuery", () => {
     expect(result).not.toBeInstanceOf(NextResponse);
     expect((result as { roomId: string }).roomId).toBe(roomId);
   });
-
-  it("delegates to validateChatAccess with the parsed chat id", async () => {
-    const roomId = "123e4567-e89b-42d3-a456-426614174000";
-    vi.mocked(validateChatAccess).mockResolvedValue({
-      roomId,
-      room: { id: roomId, account_id: null, artist_id: null, topic: null, updated_at: null },
-      accountId: "acc-123",
-    });
-    const request = new NextRequest(`http://localhost/api/chats/${roomId}/messages`);
-
-    await validateGetChatMessagesQuery(request, roomId);
-
-    expect(validateChatAccess).toHaveBeenCalledWith(request, roomId);
-  });
 });

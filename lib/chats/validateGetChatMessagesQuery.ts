@@ -9,10 +9,6 @@ const chatIdSchema = z.string().uuid("id must be a valid UUID");
 /**
  * Validates auth and params for GET /api/chats/[id]/messages.
  *
- * Reading is a resource-scoped operation: the chat is identified by the path id
- * and the owner is resolved server-side, so no `account_id` input is accepted.
- * Recoup admins are granted access to any chat via `validateChatAccess`.
- *
  * @param request - Incoming request used to validate chat access.
  * @param id - Chat identifier from route params.
  * @returns NextResponse on failure, or validated chat access data.
