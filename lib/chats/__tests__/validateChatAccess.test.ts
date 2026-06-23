@@ -4,6 +4,7 @@ import { validateChatAccess } from "../validateChatAccess";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import selectRoom from "@/lib/supabase/rooms/selectRoom";
 import { buildGetChatsParams } from "@/lib/chats/buildGetChatsParams";
+import { checkIsAdmin } from "@/lib/admins/checkIsAdmin";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -21,6 +22,10 @@ vi.mock("@/lib/chats/buildGetChatsParams", () => ({
   buildGetChatsParams: vi.fn(),
 }));
 
+vi.mock("@/lib/admins/checkIsAdmin", () => ({
+  checkIsAdmin: vi.fn(),
+}));
+
 describe("validateChatAccess", () => {
   const roomId = "123e4567-e89b-12d3-a456-426614174000";
   const accountId = "123e4567-e89b-12d3-a456-426614174001";
@@ -30,6 +35,7 @@ describe("validateChatAccess", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(checkIsAdmin).mockResolvedValue(false);
   });
 
   it("returns 400 when roomId is invalid uuid", async () => {
@@ -157,6 +163,60 @@ describe("validateChatAccess", () => {
     });
 
     const result = await validateChatAccess(request, roomId);
+    expect(result).toEqual({ roomId, room, accountId });
+  });
+
+  it("grants a Recoup admin access to a room they don't own (admin checked after ownership fails)", async () => {
+    const room = {
+      id: roomId,
+      account_id: "another-account",
+      artist_id: null,
+      topic: "Topic",
+      updated_at: "2026-03-30T00:00:00Z",
+    };
+
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId,
+      orgId: null,
+      authToken: "test-key",
+    });
+    vi.mocked(selectRoom).mockResolvedValue(room);
+    vi.mocked(buildGetChatsParams).mockResolvedValue({
+      params: { account_ids: [accountId] },
+      error: null,
+    });
+    vi.mocked(checkIsAdmin).mockResolvedValue(true);
+
+    const result = await validateChatAccess(request, roomId);
+
+    expect(buildGetChatsParams).toHaveBeenCalled();
+    expect(checkIsAdmin).toHaveBeenCalledWith(accountId);
+    expect(result).toEqual({ roomId, room, accountId: "another-account" });
+  });
+
+  it("does not consult admin status when the caller owns the room", async () => {
+    const room = {
+      id: roomId,
+      account_id: accountId,
+      artist_id: null,
+      topic: "Topic",
+      updated_at: "2026-03-30T00:00:00Z",
+    };
+
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId,
+      orgId: null,
+      authToken: "test-key",
+    });
+    vi.mocked(selectRoom).mockResolvedValue(room);
+    vi.mocked(buildGetChatsParams).mockResolvedValue({
+      params: { account_ids: [accountId] },
+      error: null,
+    });
+
+    const result = await validateChatAccess(request, roomId);
+
+    expect(checkIsAdmin).not.toHaveBeenCalled();
     expect(result).toEqual({ roomId, room, accountId });
   });
 });
