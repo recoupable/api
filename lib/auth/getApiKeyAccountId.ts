@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { hashApiKey } from "@/lib/keys/hashApiKey";
+import { isApiKeyExpired } from "@/lib/keys/isApiKeyExpired";
 import { PRIVY_PROJECT_SECRET } from "@/lib/const";
 import { selectAccountApiKeys } from "@/lib/supabase/account_api_keys/selectAccountApiKeys";
 
@@ -45,9 +46,11 @@ export async function getApiKeyAccountId(request: NextRequest): Promise<string |
       );
     }
 
-    const accountId = apiKeys[0]?.account ?? null;
+    const matched = apiKeys[0];
+    const accountId = matched?.account ?? null;
 
-    if (!accountId) {
+    // Reject an unknown key, or an ephemeral key past its TTL (chat#1813).
+    if (!accountId || isApiKeyExpired(matched?.expires_at)) {
       return NextResponse.json(
         {
           status: "error",
