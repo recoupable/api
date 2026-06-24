@@ -41,8 +41,8 @@ describe("registerCreateKnowledgeBaseTool", () => {
       expect(registeredDescription).toContain("NOT for releases, tracks, marketing plans");
     });
 
-    it("redirects structured data to prompt_sandbox", () => {
-      expect(registeredDescription).toContain("use prompt_sandbox for those");
+    it("no longer references the retired prompt_sandbox tool (chat#1813)", () => {
+      expect(registeredDescription).not.toContain("prompt_sandbox");
     });
 
     it("does not mention adding knowledge base files", () => {

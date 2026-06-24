@@ -41,7 +41,7 @@ describe("createSandboxPostHandler", () => {
     expect(response.status).toBe(401);
   });
 
-  it("returns 200 with sandbox result when no prompt", async () => {
+  it("returns 200 with the sandbox result", async () => {
     vi.mocked(validateSandboxBody).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
@@ -72,35 +72,11 @@ describe("createSandboxPostHandler", () => {
     });
   });
 
-  it("returns runId when prompt is provided", async () => {
-    vi.mocked(validateSandboxBody).mockResolvedValue({
-      accountId: "acc_123",
-      orgId: null,
-      authToken: "token",
-      prompt: "create a hello world page",
-    });
-    vi.mocked(processCreateSandbox).mockResolvedValue({
-      sandboxId: "sbx_123",
-      sandboxStatus: "running",
-      timeout: 600000,
-      createdAt: "2024-01-01T00:00:00.000Z",
-      runId: "run_abc123",
-    });
-
-    const request = createMockRequest();
-    const response = await createSandboxPostHandler(request);
-
-    expect(response.status).toBe(200);
-    const json = await response.json();
-    expect(json.sandboxes[0].runId).toBe("run_abc123");
-  });
-
   it("passes validated input to processCreateSandbox", async () => {
     vi.mocked(validateSandboxBody).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
       authToken: "token",
-      prompt: "say hello",
     });
     vi.mocked(processCreateSandbox).mockResolvedValue({
       sandboxId: "sbx_123",
@@ -116,7 +92,6 @@ describe("createSandboxPostHandler", () => {
       accountId: "acc_123",
       orgId: null,
       authToken: "token",
-      prompt: "say hello",
     });
   });
 
