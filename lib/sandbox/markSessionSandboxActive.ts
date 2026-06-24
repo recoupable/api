@@ -5,7 +5,7 @@ import type { Json, Tables } from "@/types/database.types";
 /**
  * Write a freshly-connected sandbox's state back onto its session row and mark
  * it active — shared by `createSandboxHandler` (`POST /api/sandbox`) and the
- * headless `provisionGenerateSession` (`POST /api/chat/runs`) so both bind a
+ * headless `provisionRunSession` (`POST /api/chat/runs`) so both bind a
  * sandbox to a session identically (recoupable/chat#1813).
  *
  * Bumps `lifecycle_version`, derives the active lifecycle fields + expiry from

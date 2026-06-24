@@ -8,7 +8,7 @@ import { validationErrorResponse } from "@/lib/zod/validationErrorResponse";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 
 /** Default model for headless generation when the caller omits `model`. */
-export const DEFAULT_GENERATE_MODEL_ID = "anthropic/claude-haiku-4.5";
+export const DEFAULT_RUN_MODEL_ID = "anthropic/claude-haiku-4.5";
 
 /**
  * Body schema for `POST /api/chat/runs` (the durable-workflow re-point,
@@ -17,7 +17,7 @@ export const DEFAULT_GENERATE_MODEL_ID = "anthropic/claude-haiku-4.5";
  * path mints its own session + chat (with a default title) and runs native
  * sandbox tools. The legacy `topic` / `roomId` / `excludeTools` fields are gone.
  */
-export const generateBodySchema = z.object({
+export const chatRunBodySchema = z.object({
   prompt: z.string().optional(),
   messages: z.array(z.any()).optional(),
   artistId: z.string().uuid("artistId must be a valid UUID").optional(),
@@ -26,7 +26,7 @@ export const generateBodySchema = z.object({
   model: z.string().optional(),
 });
 
-export type GenerateRequest = {
+export type ChatRunRequest = {
   accountId: string;
   orgId: string | null;
   messages: UIMessage[];
@@ -43,9 +43,9 @@ export type GenerateRequest = {
  * @returns A NextResponse error short-circuit (400/401/403) or the validated,
  *   auth-augmented request ready to provision + start a workflow run.
  */
-export async function validateGenerateRequest(
+export async function validateChatRunRequest(
   request: NextRequest,
-): Promise<NextResponse | GenerateRequest> {
+): Promise<NextResponse | ChatRunRequest> {
   let rawBody: unknown;
   try {
     rawBody = await request.json();
@@ -53,7 +53,7 @@ export async function validateGenerateRequest(
     return errorResponse("Invalid JSON body", 400);
   }
 
-  const parsed = generateBodySchema.safeParse(rawBody);
+  const parsed = chatRunBodySchema.safeParse(rawBody);
   if (!parsed.success) {
     const firstError = parsed.error.issues[0];
     return validationErrorResponse(firstError.message, firstError.path);
@@ -83,6 +83,6 @@ export async function validateGenerateRequest(
     orgId: auth.orgId,
     messages: uiMessages,
     artistId,
-    modelId: model ?? DEFAULT_GENERATE_MODEL_ID,
+    modelId: model ?? DEFAULT_RUN_MODEL_ID,
   };
 }

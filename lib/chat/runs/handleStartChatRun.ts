@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { start } from "workflow/api";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { errorResponse } from "@/lib/networking/errorResponse";
-import { validateGenerateRequest } from "@/lib/chat/generate/validateGenerateRequest";
-import { provisionGenerateSession } from "@/lib/chat/generate/provisionGenerateSession";
+import { validateChatRunRequest } from "@/lib/chat/runs/validateChatRunRequest";
+import { provisionRunSession } from "@/lib/chat/runs/provisionRunSession";
 import { mintEphemeralAccountKey } from "@/lib/keys/mintEphemeralAccountKey";
 import { deleteApiKey } from "@/lib/supabase/account_api_keys/deleteApiKey";
 import { buildRunAgentInput } from "@/lib/chat/buildRunAgentInput";
@@ -34,14 +34,14 @@ const DEFAULT_RUN_SESSION_TITLE = "Scheduled generation";
  * @returns 202 `{ runId, chatId, sessionId }`, or a 4xx/5xx error.
  */
 export async function handleStartChatRun(request: NextRequest): Promise<Response> {
-  const validated = await validateGenerateRequest(request);
+  const validated = await validateChatRunRequest(request);
   if (validated instanceof NextResponse) return validated;
 
   const { accountId, messages, artistId, modelId } = validated;
 
   let ephemeralKeyId: string | undefined;
   try {
-    const provisioned = await provisionGenerateSession({
+    const provisioned = await provisionRunSession({
       accountId,
       title: DEFAULT_RUN_SESSION_TITLE,
       artistId,

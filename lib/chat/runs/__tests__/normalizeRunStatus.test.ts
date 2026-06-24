@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeRunStatus } from "@/lib/chat/generate/normalizeRunStatus";
+import { normalizeRunStatus } from "@/lib/chat/runs/normalizeRunStatus";
 
 describe("normalizeRunStatus", () => {
   it("maps known states to the documented enum", () => {

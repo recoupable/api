@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
-import { validateGenerateRequest } from "@/lib/chat/generate/validateGenerateRequest";
+import { validateChatRunRequest } from "@/lib/chat/runs/validateChatRunRequest";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -22,14 +22,14 @@ function req(body: unknown): NextRequest {
 
 const okAuth = { accountId: "acc-1", orgId: null, authToken: "recoup_sk_test" };
 
-describe("validateGenerateRequest", () => {
+describe("validateChatRunRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
   });
 
   it("converts a prompt into a single user UIMessage", async () => {
-    const result = await validateGenerateRequest(req({ prompt: "weekly report please" }));
+    const result = await validateChatRunRequest(req({ prompt: "weekly report please" }));
     expect(result).not.toBeInstanceOf(NextResponse);
     if (result instanceof NextResponse) return;
     expect(result.accountId).toBe("acc-1");
@@ -39,7 +39,7 @@ describe("validateGenerateRequest", () => {
   });
 
   it("passes messages through and applies the model override + default", async () => {
-    const withModel = await validateGenerateRequest(
+    const withModel = await validateChatRunRequest(
       req({
         messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }] }],
         model: "anthropic/claude-opus-4-8",
@@ -48,20 +48,20 @@ describe("validateGenerateRequest", () => {
     if (withModel instanceof NextResponse) throw new Error("unexpected error");
     expect(withModel.modelId).toBe("anthropic/claude-opus-4-8");
 
-    const noModel = await validateGenerateRequest(req({ prompt: "hi" }));
+    const noModel = await validateChatRunRequest(req({ prompt: "hi" }));
     if (noModel instanceof NextResponse) throw new Error("unexpected error");
     expect(noModel.modelId).toBe("anthropic/claude-haiku-4.5");
   });
 
   it("rejects when neither prompt nor messages is provided (400)", async () => {
-    const result = await validateGenerateRequest(req({ model: "anthropic/claude-haiku-4.5" }));
+    const result = await validateChatRunRequest(req({ model: "anthropic/claude-haiku-4.5" }));
     expect(result).toBeInstanceOf(NextResponse);
     if (!(result instanceof NextResponse)) return;
     expect(result.status).toBe(400);
   });
 
   it("rejects a whitespace-only prompt (400)", async () => {
-    const result = await validateGenerateRequest(req({ prompt: "   \n\t  " }));
+    const result = await validateChatRunRequest(req({ prompt: "   \n\t  " }));
     expect(result).toBeInstanceOf(NextResponse);
     if (!(result instanceof NextResponse)) return;
     expect(result.status).toBe(400);
@@ -71,14 +71,14 @@ describe("validateGenerateRequest", () => {
     vi.mocked(validateAuthContext).mockResolvedValue(
       NextResponse.json({ status: "error" }, { status: 401 }),
     );
-    const result = await validateGenerateRequest(req({ prompt: "hi" }));
+    const result = await validateChatRunRequest(req({ prompt: "hi" }));
     expect(result).toBeInstanceOf(NextResponse);
     if (!(result instanceof NextResponse)) return;
     expect(result.status).toBe(401);
   });
 
   it("forwards body accountId override to validateAuthContext", async () => {
-    await validateGenerateRequest(req({ prompt: "hi", accountId: "member-acc" }));
+    await validateChatRunRequest(req({ prompt: "hi", accountId: "member-acc" }));
     expect(validateAuthContext).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ accountId: "member-acc" }),

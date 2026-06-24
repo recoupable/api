@@ -124,7 +124,7 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
 
   if (sessionRow && sandbox.getState) {
     // Bind the sandbox to the session + mark it active via the shared helper
-    // (also used by the headless `provisionGenerateSession`). It derives the
+    // (also used by the headless `provisionRunSession`). It derives the
     // lifecycle fields from the state object's `expiresAt` — always populated by
     // the SDK, even on prebuilt-snapshot paths — rather than `sandbox.expiresAt`,
     // which is only set on some creation paths.

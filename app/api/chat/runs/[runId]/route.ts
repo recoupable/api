@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { handleChatRunStatus } from "@/lib/chat/generate/handleChatRunStatus";
+import { handleChatRunStatus } from "@/lib/chat/runs/handleChatRunStatus";
 
 /**
  * OPTIONS handler for CORS preflight requests.

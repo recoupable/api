@@ -13,7 +13,7 @@ export type CreateSessionWithChatResult =
 /**
  * Shared core for provisioning a session + its initial chat — used by both the
  * interactive `POST /api/sessions` (`createSessionHandler`) and the headless
- * `POST /api/chat/runs` path (`provisionGenerateSession`), so the two stay in
+ * `POST /api/chat/runs` path (`provisionRunSession`), so the two stay in
  * lockstep (recoupable/chat#1813).
  *
  * Ensures the workspace repo exists (`recoupable/<workspaceAccountId>`), inserts

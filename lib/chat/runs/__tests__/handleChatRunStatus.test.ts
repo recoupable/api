@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
-import { handleChatRunStatus } from "@/lib/chat/generate/handleChatRunStatus";
+import { handleChatRunStatus } from "@/lib/chat/runs/handleChatRunStatus";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getRun } from "workflow/api";
 

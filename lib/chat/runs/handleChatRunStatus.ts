@@ -3,7 +3,7 @@ import { getRun } from "workflow/api";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { errorResponse } from "@/lib/networking/errorResponse";
-import { normalizeRunStatus } from "@/lib/chat/generate/normalizeRunStatus";
+import { normalizeRunStatus } from "@/lib/chat/runs/normalizeRunStatus";
 
 /**
  * Handles `GET /api/chat/runs/{runId}` — a point-in-time status snapshot for an

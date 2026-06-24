@@ -14,7 +14,7 @@ import type { SkillMetadata } from "@/lib/skills/skillTypes";
 
 const SANDBOX_TIMEOUT_MS = ms("30m");
 
-export type ProvisionedGenerateSession = {
+export type ProvisionedRunSession = {
   session: Tables<"sessions">;
   chat: Tables<"chats">;
   sandboxState: VercelState;
@@ -32,7 +32,7 @@ export type ProvisionedGenerateSession = {
  * @throws if repo/session/chat/sandbox provisioning fails — the caller maps it
  *   to a 5xx and revokes any minted ephemeral key.
  */
-export async function provisionGenerateSession({
+export async function provisionRunSession({
   accountId,
   title,
   artistId,
@@ -40,7 +40,7 @@ export async function provisionGenerateSession({
   accountId: string;
   title: string;
   artistId?: string;
-}): Promise<ProvisionedGenerateSession> {
+}): Promise<ProvisionedRunSession> {
   const created = await createSessionWithInitialChat({
     accountId,
     title,
@@ -85,7 +85,7 @@ export async function provisionGenerateSession({
     workingDirectory = sandbox.workingDirectory;
     skills = await discoverSkills(sandbox, await getSandboxSkillDirectories(sandbox));
   } catch (error) {
-    console.error("[provisionGenerateSession] skill discovery failed; using defaults:", error);
+    console.error("[provisionRunSession] skill discovery failed; using defaults:", error);
   }
 
   return {

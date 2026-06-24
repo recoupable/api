@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
-import { handleStartChatRun } from "@/lib/chat/handleStartChatRun";
-import { validateGenerateRequest } from "@/lib/chat/generate/validateGenerateRequest";
-import { provisionGenerateSession } from "@/lib/chat/generate/provisionGenerateSession";
+import { handleStartChatRun } from "@/lib/chat/runs/handleStartChatRun";
+import { validateChatRunRequest } from "@/lib/chat/runs/validateChatRunRequest";
+import { provisionRunSession } from "@/lib/chat/runs/provisionRunSession";
 import { mintEphemeralAccountKey } from "@/lib/keys/mintEphemeralAccountKey";
 import { deleteApiKey } from "@/lib/supabase/account_api_keys/deleteApiKey";
 import { buildRunAgentInput } from "@/lib/chat/buildRunAgentInput";
@@ -12,11 +12,11 @@ import { start } from "workflow/api";
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
-vi.mock("@/lib/chat/generate/validateGenerateRequest", () => ({
-  validateGenerateRequest: vi.fn(),
+vi.mock("@/lib/chat/runs/validateChatRunRequest", () => ({
+  validateChatRunRequest: vi.fn(),
 }));
-vi.mock("@/lib/chat/generate/provisionGenerateSession", () => ({
-  provisionGenerateSession: vi.fn(),
+vi.mock("@/lib/chat/runs/provisionRunSession", () => ({
+  provisionRunSession: vi.fn(),
 }));
 vi.mock("@/lib/keys/mintEphemeralAccountKey", () => ({
   mintEphemeralAccountKey: vi.fn(),
@@ -62,8 +62,8 @@ const provisioned = {
 describe("handleStartChatRun", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(validateGenerateRequest).mockResolvedValue(validated as never);
-    vi.mocked(provisionGenerateSession).mockResolvedValue(provisioned as never);
+    vi.mocked(validateChatRunRequest).mockResolvedValue(validated as never);
+    vi.mocked(provisionRunSession).mockResolvedValue(provisioned as never);
     vi.mocked(mintEphemeralAccountKey).mockResolvedValue({
       rawKey: "recoup_sk_raw",
       keyId: "key-1",
@@ -81,7 +81,7 @@ describe("handleStartChatRun", () => {
       sessionId: "sess-1",
     });
 
-    expect(provisionGenerateSession).toHaveBeenCalledWith(
+    expect(provisionRunSession).toHaveBeenCalledWith(
       expect.objectContaining({ accountId: "acc-1", title: "Scheduled generation" }),
     );
     // the minted key is injected as recoupAccessToken AND threaded as ephemeralKeyId
@@ -99,12 +99,12 @@ describe("handleStartChatRun", () => {
   });
 
   it("returns the validation error short-circuit", async () => {
-    vi.mocked(validateGenerateRequest).mockResolvedValue(
+    vi.mocked(validateChatRunRequest).mockResolvedValue(
       NextResponse.json({ status: "error" }, { status: 401 }),
     );
     const res = await handleStartChatRun(req());
     expect(res.status).toBe(401);
-    expect(provisionGenerateSession).not.toHaveBeenCalled();
+    expect(provisionRunSession).not.toHaveBeenCalled();
   });
 
   it("revokes the minted key and 500s when start() fails", async () => {
@@ -115,7 +115,7 @@ describe("handleStartChatRun", () => {
   });
 
   it("does not mint or delete a key when provisioning fails", async () => {
-    vi.mocked(provisionGenerateSession).mockRejectedValue(new Error("repo boom"));
+    vi.mocked(provisionRunSession).mockRejectedValue(new Error("repo boom"));
     const res = await handleStartChatRun(req());
     expect(res.status).toBe(500);
     expect(mintEphemeralAccountKey).not.toHaveBeenCalled();
