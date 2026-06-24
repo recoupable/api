@@ -29,7 +29,7 @@ export type ProvisionedGenerateSession = {
 
 /**
  * Headlessly provision a session + chat with an ACTIVE sandbox for a scheduled
- * `/api/chat/generate` run (recoupable/chat#1813) — the same building blocks the
+ * `/api/chat/runs` run (recoupable/chat#1813) — the same building blocks the
  * interactive path uses (`POST /api/sessions` + `POST /api/sandbox`), composed
  * server-side since there is no client session. Mirrors `createSandboxHandler`'s
  * connect → `buildActiveLifecycleUpdate` → `updateSession` binding so the

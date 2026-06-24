@@ -2,7 +2,7 @@ import { deleteApiKey } from "@/lib/supabase/account_api_keys/deleteApiKey";
 
 /**
  * Vercel Workflow `"use step"` that deletes the ephemeral, account-scoped
- * `recoup_sk_…` key minted for a headless `/api/chat/generate` run
+ * `recoup_sk_…` key minted for a headless `/api/chat/runs` run
  * (recoupable/chat#1813). Called from `runAgentWorkflow`'s `finally` so the
  * credential is revoked the moment the run ends — the key's ~15m `expires_at`
  * TTL (enforced in `getApiKeyAccountId`) is only the backstop if this is missed.

@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { handleChatGenerate } from "@/lib/chat/handleChatGenerate";
+import { handleStartChatRun } from "@/lib/chat/handleStartChatRun";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -16,12 +16,14 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/chat/generate
+ * POST /api/chat/runs
  *
- * Asynchronous, headless chat generation on the durable `runAgentWorkflow`
- * (recoupable/chat#1813). Provisions a session + sandbox, starts a workflow run,
- * and returns `{ runId }` with **202** immediately — generation, assistant-
- * message persistence, and side effects happen server-side after the response.
+ * Start an asynchronous, headless chat-generation run on the durable
+ * `runAgentWorkflow` (recoupable/chat#1813). Provisions a session + sandbox,
+ * starts a workflow run, and returns `{ runId, chatId, sessionId }` with **202**
+ * immediately (plus a `Location` header at the run-status resource) — generation,
+ * assistant-message persistence, and side effects happen server-side after the
+ * response.
  *
  * Authentication: x-api-key header required (account inferred from the key;
  * org keys may override via body `accountId`).
@@ -34,15 +36,16 @@ export async function OPTIONS() {
  * - topic: Optional session title
  * - accountId: Optional accountId override (requires org API key)
  *
- * Response body (202): `{ runId, chatId, sessionId }` — the durable workflow run
- * id plus the persisted-output identifiers. Read the result later via
- * `GET /api/chat/{chatId}/stream` (resume) or the chat's persisted messages.
+ * Response body (202): `{ runId, chatId, sessionId }`. Read the result later via
+ * `GET /api/chat/{chatId}/stream` (watch the stream) or the chat's persisted
+ * messages; poll `GET /api/chat/runs/{runId}` for status (status route lands in
+ * a follow-up).
  *
  * @param request - The request object
  * @returns 202 `{ runId, chatId, sessionId }`, or a 4xx/5xx error
  */
 export async function POST(request: NextRequest): Promise<Response> {
-  return handleChatGenerate(request);
+  return handleStartChatRun(request);
 }
 
 // Provisioning (repo + session + sandbox) runs before the 202 returns, so give

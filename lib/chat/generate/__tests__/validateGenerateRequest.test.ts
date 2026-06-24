@@ -13,7 +13,7 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 }));
 
 function req(body: unknown): NextRequest {
-  return new NextRequest("https://x.test/api/chat/generate", {
+  return new NextRequest("https://x.test/api/chat/runs", {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": "recoup_sk_test" },
     body: JSON.stringify(body),
@@ -54,7 +54,14 @@ describe("validateGenerateRequest", () => {
   });
 
   it("rejects when neither prompt nor messages is provided (400)", async () => {
-    const result = await validateGenerateRequest(req({ artistId: "a1" }));
+    const result = await validateGenerateRequest(req({ topic: "test" }));
+    expect(result).toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) return;
+    expect(result.status).toBe(400);
+  });
+
+  it("rejects a whitespace-only prompt (400)", async () => {
+    const result = await validateGenerateRequest(req({ prompt: "   \n\t  " }));
     expect(result).toBeInstanceOf(NextResponse);
     if (!(result instanceof NextResponse)) return;
     expect(result.status).toBe(400);

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
-import { handleChatGenerate } from "@/lib/chat/handleChatGenerate";
+import { handleStartChatRun } from "@/lib/chat/handleStartChatRun";
 import { validateGenerateRequest } from "@/lib/chat/generate/validateGenerateRequest";
 import { provisionGenerateSession } from "@/lib/chat/generate/provisionGenerateSession";
 import { mintEphemeralAccountKey } from "@/lib/keys/mintEphemeralAccountKey";
@@ -60,7 +60,7 @@ const provisioned = {
   skills: [],
 };
 
-describe("handleChatGenerate", () => {
+describe("handleStartChatRun", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(validateGenerateRequest).mockResolvedValue(validated as never);
@@ -73,8 +73,9 @@ describe("handleChatGenerate", () => {
   });
 
   it("provisions, mints, starts the workflow, and returns 202 { runId }", async () => {
-    const res = await handleChatGenerate(req());
+    const res = await handleStartChatRun(req());
     expect(res.status).toBe(202);
+    expect(res.headers.get("Location")).toBe("/api/chat/runs/wrun_abc");
     expect(await res.json()).toEqual({
       runId: "wrun_abc",
       chatId: "chat-1",
@@ -102,21 +103,21 @@ describe("handleChatGenerate", () => {
     vi.mocked(validateGenerateRequest).mockResolvedValue(
       NextResponse.json({ status: "error" }, { status: 401 }),
     );
-    const res = await handleChatGenerate(req());
+    const res = await handleStartChatRun(req());
     expect(res.status).toBe(401);
     expect(provisionGenerateSession).not.toHaveBeenCalled();
   });
 
   it("revokes the minted key and 500s when start() fails", async () => {
     vi.mocked(start).mockRejectedValue(new Error("workflow start boom"));
-    const res = await handleChatGenerate(req());
+    const res = await handleStartChatRun(req());
     expect(res.status).toBe(500);
     expect(deleteApiKey).toHaveBeenCalledWith("key-1");
   });
 
   it("does not mint or delete a key when provisioning fails", async () => {
     vi.mocked(provisionGenerateSession).mockRejectedValue(new Error("repo boom"));
-    const res = await handleChatGenerate(req());
+    const res = await handleStartChatRun(req());
     expect(res.status).toBe(500);
     expect(mintEphemeralAccountKey).not.toHaveBeenCalled();
     expect(deleteApiKey).not.toHaveBeenCalled();

@@ -152,7 +152,7 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
     //      stream-end. Mirrors open-agents'
     //      `Promise.all([clearActiveStream, sendFinish.then(closeStream)])`.
     //
-    // A third cleanup step runs only for headless `/api/chat/generate` runs:
+    // A third cleanup step runs only for headless `/api/chat/runs` runs:
     //   3) `deleteEphemeralKeyStep` — revoke the per-run, account-scoped
     //      `recoup_sk_…` key minted for the sandbox the moment the run ends.
     //      The key's ~15m TTL is only the backstop if this delete is missed.

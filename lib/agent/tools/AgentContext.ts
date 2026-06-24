@@ -67,7 +67,7 @@ export type AgentContext = {
   skills?: SkillMetadata[];
   /**
    * Row id of an ephemeral, account-scoped `recoup_sk_…` key minted for a
-   * headless run (`/api/chat/generate`, recoupable/chat#1813). When set, the
+   * headless run (`/api/chat/runs`, recoupable/chat#1813). When set, the
    * workflow deletes the key in its `finally` cleanup so the credential is
    * revoked the moment the run ends (the key's ~15m `expires_at` TTL is the
    * defense-in-depth backstop if that delete is missed). The interactive

@@ -11,7 +11,7 @@ import { generateUUID } from "@/lib/uuid/generateUUID";
 export const DEFAULT_GENERATE_MODEL_ID = "anthropic/claude-haiku-4.5";
 
 /**
- * Body schema for `POST /api/chat/generate` (the durable-workflow re-point,
+ * Body schema for `POST /api/chat/runs` (the durable-workflow re-point,
  * recoupable/chat#1813). Exactly one of `prompt` / `messages` must be present.
  * `roomId` / `topic` are accepted-but-ignored for back-compat with the
  * scheduled caller — the new path mints its own session + chat per run.
@@ -37,7 +37,7 @@ export type GenerateRequest = {
 };
 
 /**
- * Validates a `POST /api/chat/generate` request end-to-end: parses + validates
+ * Validates a `POST /api/chat/runs` request end-to-end: parses + validates
  * the body, runs auth via `validateAuthContext` (x-api-key, with org-key
  * account override), and normalizes `prompt`/`messages` into a `UIMessage[]`.
  *
@@ -63,7 +63,8 @@ export async function validateGenerateRequest(
 
   const { prompt, messages, artistId, accountId, organizationId, model, topic } = parsed.data;
 
-  const hasPrompt = typeof prompt === "string" && prompt.length > 0;
+  const trimmedPrompt = typeof prompt === "string" ? prompt.trim() : "";
+  const hasPrompt = trimmedPrompt.length > 0;
   const hasMessages = Array.isArray(messages) && messages.length > 0;
   if (hasPrompt === hasMessages) {
     return errorResponse("Exactly one of prompt or messages must be provided", 400);
@@ -76,7 +77,7 @@ export async function validateGenerateRequest(
   if (auth instanceof NextResponse) return auth;
 
   const uiMessages: UIMessage[] = hasPrompt
-    ? [{ id: generateUUID(), role: "user", parts: [{ type: "text", text: prompt! }] }]
+    ? [{ id: generateUUID(), role: "user", parts: [{ type: "text", text: trimmedPrompt }] }]
     : (messages as UIMessage[]);
 
   return {

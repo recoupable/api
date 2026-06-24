@@ -20,7 +20,7 @@ export type BuildRunAgentInputParams = {
   /**
    * Short-lived bearer for in-sandbox recoup-api calls: the user's Privy JWT
    * (interactive `/api/chat/workflow`) or an ephemeral account key (headless
-   * `/api/chat/generate`). Omitted when absent so the service key never leaks.
+   * `/api/chat/runs`). Omitted when absent so the service key never leaks.
    */
   recoupAccessToken?: string;
   /**

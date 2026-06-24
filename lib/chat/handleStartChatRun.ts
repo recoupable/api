@@ -10,12 +10,13 @@ import { buildRunAgentInput } from "@/lib/chat/buildRunAgentInput";
 import { runAgentWorkflow } from "@/app/lib/workflows/runAgentWorkflow";
 
 /**
- * Handles `POST /api/chat/generate` — the headless, asynchronous counterpart of
- * interactive `/api/chat`. Re-pointed onto the durable `runAgentWorkflow`
+ * Handles `POST /api/chat/runs` — the headless, asynchronous counterpart of
+ * interactive `/api/chat`. Runs on the durable `runAgentWorkflow`
  * (recoupable/chat#1813): it provisions a session + active sandbox, mints a
  * short-lived account-scoped `recoup_sk_…` key for in-sandbox `recoup-api`
  * calls, builds the shared workflow input via `buildRunAgentInput`, and
- * `start()`s the run — returning `{ runId }` with **202** immediately.
+ * `start()`s the run — returning `{ runId, chatId, sessionId }` with **202**
+ * (plus a `Location` header pointing at the run-status resource) immediately.
  *
  * Generation, assistant-message persistence, the credit charge, and the
  * ephemeral-key revocation all happen server-side inside the workflow after
@@ -27,9 +28,9 @@ import { runAgentWorkflow } from "@/app/lib/workflows/runAgentWorkflow";
  * fails to start, we revoke the key here since the workflow never ran.
  *
  * @param request - The incoming request (x-api-key auth).
- * @returns 202 `{ runId }`, or a 4xx/5xx error.
+ * @returns 202 `{ runId, chatId, sessionId }`, or a 4xx/5xx error.
  */
-export async function handleChatGenerate(request: NextRequest): Promise<Response> {
+export async function handleStartChatRun(request: NextRequest): Promise<Response> {
   const validated = await validateGenerateRequest(request);
   if (validated instanceof NextResponse) return validated;
 
@@ -66,11 +67,14 @@ export async function handleChatGenerate(request: NextRequest): Promise<Response
     // Return the run handle plus the persisted-output identifiers so the caller
     // can read the result later (the workflow runId alone can't be resolved back
     // to the chat): GET /api/chat/{chatId}/stream resumes the stream, and the
-    // assistant messages persist under chatId. Mirrors the async-job shape of
-    // POST /api/content/create.
+    // assistant messages persist under chatId. The Location header points at the
+    // run-status resource. Mirrors the async-job shape of POST /api/content/create.
     return NextResponse.json(
       { runId: run.runId, chatId: provisioned.chat.id, sessionId: provisioned.session.id },
-      { status: 202, headers: getCorsHeaders() },
+      {
+        status: 202,
+        headers: { ...getCorsHeaders(), Location: `/api/chat/runs/${run.runId}` },
+      },
     );
   } catch (error) {
     // The workflow's `finally` revokes the key on run end — but if we never got
@@ -80,10 +84,10 @@ export async function handleChatGenerate(request: NextRequest): Promise<Response
       try {
         await deleteApiKey(ephemeralKeyId);
       } catch (cleanupError) {
-        console.error("[handleChatGenerate] failed to revoke ephemeral key:", cleanupError);
+        console.error("[handleStartChatRun] failed to revoke ephemeral key:", cleanupError);
       }
     }
-    console.error("[handleChatGenerate] failed to start generation run:", error);
-    return errorResponse("Failed to start chat generation", 500);
+    console.error("[handleStartChatRun] failed to start generation run:", error);
+    return errorResponse("Internal server error", 500);
   }
 }
