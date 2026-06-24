@@ -14,8 +14,7 @@ import { persistLatestUserMessage } from "@/lib/chat/persistLatestUserMessage";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { runAgentWorkflow } from "@/app/lib/workflows/runAgentWorkflow";
-import { extractOrgId } from "@/lib/recoupable/extractOrgId";
-import { parseGitHubRepoIdentifiers } from "@/lib/github/parseGitHubRepoIdentifiers";
+import { buildRunAgentInput } from "@/lib/chat/buildRunAgentInput";
 import { DEFAULT_WORKING_DIRECTORY } from "@/lib/sandbox/vercel/sandbox/constants";
 import { connectVercel } from "@/lib/sandbox/vercel/connect/connectVercel";
 import type { VercelState } from "@/lib/sandbox/vercel/state";
@@ -92,9 +91,6 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   void persistLatestUserMessage(validated.chatId, validated.messages as never);
 
   const modelId = chat.model_id ?? DEFAULT_MODEL_ID;
-  const recoupOrgId = session.clone_url
-    ? (extractOrgId(session.clone_url) ?? undefined)
-    : undefined;
 
   // Connect the sandbox up-front so we can (a) read the real working
   // directory and (b) discover project-level skills. The connected
@@ -119,40 +115,26 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
     );
   }
 
-  // Derive repo identifiers from `session.clone_url` so we have a
-  // single source of truth. The `sessions.repo_owner/repo_name`
-  // columns exist in the schema but were never populated; treating
-  // `clone_url` as canonical avoids a denormalization where the
-  // columns could drift from the URL.
-  const repoIds = parseGitHubRepoIdentifiers(session.clone_url);
-
+  // Build the durable workflow input via the shared builder so the
+  // interactive and headless (/api/chat/generate) callers stay in lockstep
+  // (chat#1813). Repo ids + recoup org id are derived from `clone_url` inside
+  // the builder — the single source of truth. The short-lived Privy JWT from
+  // the chat UI is forwarded as `recoupAccessToken`; x-api-key callers don't
+  // send it, so the long-lived service key never enters model-issued bash.
   const run = await start(runAgentWorkflow, [
-    {
+    buildRunAgentInput({
       messages: validated.messages,
       chatId: validated.chatId,
       sessionId: validated.sessionId,
       accountId: validated.accountId,
       modelId,
       sessionTitle: session.title ?? undefined,
-      repoOwner: repoIds?.owner,
-      repoName: repoIds?.repo,
-      agentContext: {
-        sandbox: {
-          state: session.sandbox_state as VercelState,
-          workingDirectory,
-        },
-        recoupOrgId,
-        skills,
-        // Forward the short-lived Privy JWT from the chat UI when
-        // present. The `recoup-api` skill's curl examples authenticate
-        // against recoup-api with this as a Bearer header (via the
-        // `$RECOUP_ACCESS_TOKEN` env var injected by buildRecoupExecEnv).
-        // x-api-key auth callers don't send this field — the long-lived
-        // recoup_sk_ key is deliberately NOT forwarded (exfiltration
-        // risk from model-issued bash).
-        ...(validated.recoupAccessToken ? { recoupAccessToken: validated.recoupAccessToken } : {}),
-      },
-    },
+      cloneUrl: session.clone_url,
+      sandboxState: session.sandbox_state as VercelState,
+      workingDirectory,
+      skills,
+      recoupAccessToken: validated.recoupAccessToken,
+    }),
   ]);
 
   // Promote placeholder → real run id via CAS. If something asynchronously
