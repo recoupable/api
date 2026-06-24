@@ -29,7 +29,7 @@ export function registerCreateKnowledgeBaseTool(server: McpServer): void {
   server.registerTool(
     "create_knowledge_base",
     {
-      description: `Saves a plain-text knowledge base entry to the artist's permanent storage on Arweave. Use ONLY for general reference notes, bios, or background context — NOT for releases, tracks, marketing plans, or any structured data (use prompt_sandbox for those).`,
+      description: `Saves a plain-text knowledge base entry to the artist's permanent storage on Arweave. Use ONLY for general reference notes, bios, or background context — NOT for releases, tracks, marketing plans, or any structured data.`,
       inputSchema: createKnowledgeBaseSchema,
     },
     async (args: CreateKnowledgeBaseArgs) => {
