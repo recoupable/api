@@ -7,7 +7,6 @@ import { z } from "zod";
 
 export const sandboxBodySchema = z.object({
   account_id: z.string().uuid("account_id must be a valid UUID").optional(),
-  prompt: z.string().min(1, "prompt cannot be empty").optional(),
 });
 
 export type SandboxBody = z.infer<typeof sandboxBodySchema> & AuthContext;
