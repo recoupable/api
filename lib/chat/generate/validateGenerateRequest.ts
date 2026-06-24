@@ -13,8 +13,9 @@ export const DEFAULT_GENERATE_MODEL_ID = "anthropic/claude-haiku-4.5";
 /**
  * Body schema for `POST /api/chat/runs` (the durable-workflow re-point,
  * recoupable/chat#1813). Exactly one of `prompt` / `messages` must be present.
- * `roomId` / `topic` are accepted-but-ignored for back-compat with the
- * scheduled caller — the new path mints its own session + chat per run.
+ * `topic` sets the provisioned session's title. (The legacy `roomId` /
+ * `excludeTools` fields are gone — this path mints its own session + chat and
+ * runs native sandbox tools, so neither applies.)
  */
 export const generateBodySchema = z.object({
   prompt: z.string().optional(),
@@ -24,7 +25,6 @@ export const generateBodySchema = z.object({
   organizationId: z.string().optional(),
   model: z.string().optional(),
   topic: z.string().optional(),
-  roomId: z.string().optional(),
 });
 
 export type GenerateRequest = {
