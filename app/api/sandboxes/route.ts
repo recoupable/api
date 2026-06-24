@@ -27,7 +27,7 @@ export async function OPTIONS() {
  *
  * The OpenClaw `prompt` mode (which offloaded to the `run-sandbox-command`
  * task) was retired (recoupable/chat#1813) — async agent work now runs on the
- * durable `runAgentWorkflow` via `POST /api/chat/generate`.
+ * durable `runAgentWorkflow` via `POST /api/chat/runs`.
  *
  * Authentication: x-api-key header or Authorization Bearer token required.
  *

@@ -12,7 +12,7 @@ type ProcessCreateSandboxInput = {
  * The OpenClaw `prompt` mode — which offloaded to the `run-sandbox-command`
  * Trigger.dev task via `triggerPromptSandbox` — has been retired
  * (recoupable/chat#1813). Async agent work now runs on the durable
- * `runAgentWorkflow` via `POST /api/chat/generate`; this endpoint only
+ * `runAgentWorkflow` via `POST /api/chat/runs`; this endpoint only
  * provisions a bare sandbox.
  *
  * @param input - The sandbox creation parameters.

@@ -12,7 +12,7 @@ import { processCreateSandbox } from "@/lib/sandbox/processCreateSandbox";
  * Saves sandbox info to the account_sandboxes table.
  *
  * The OpenClaw `prompt` mode was retired (recoupable/chat#1813) — async agent
- * work now runs on the durable `runAgentWorkflow` via `POST /api/chat/generate`.
+ * work now runs on the durable `runAgentWorkflow` via `POST /api/chat/runs`.
  *
  * @param request - The request object
  * @returns A NextResponse with the sandbox creation result
