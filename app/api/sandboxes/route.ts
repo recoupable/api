@@ -21,22 +21,22 @@ export async function OPTIONS() {
 /**
  * POST /api/sandboxes
  *
- * Creates a new ephemeral sandbox environment. Optionally executes a command.
- * Sandboxes are isolated Linux microVMs that can be used to evaluate
- * account-generated code, run AI agent output safely, or execute reproducible tasks.
- * The sandbox will automatically stop after the timeout period.
+ * Creates a new ephemeral sandbox environment. Sandboxes are isolated Linux
+ * microVMs used to evaluate account-generated code or run AI agent output
+ * safely. The sandbox automatically stops after the timeout period.
+ *
+ * The OpenClaw `prompt` mode (which offloaded to the `run-sandbox-command`
+ * task) was retired (recoupable/chat#1813) — async agent work now runs on the
+ * durable `runAgentWorkflow` via `POST /api/chat/generate`.
  *
  * Authentication: x-api-key header or Authorization Bearer token required.
  *
  * Request body:
- * - command: string (optional) - The command to execute in the sandbox. If omitted, sandbox is created without running any command.
- * - args: string[] (optional) - Arguments to pass to the command
- * - cwd: string (optional) - Working directory for command execution
+ * - account_id: string (optional, org keys only) - UUID of the account to create for
  *
  * Response (200):
  * - status: "success"
- * - sandboxes: [{ sandboxId, sandboxStatus, timeout, createdAt, runId? }]
- *   - runId is only included when a command was provided
+ * - sandboxes: [{ sandboxId, sandboxStatus, timeout, createdAt }]
  *
  * Error (400/401):
  * - status: "error"

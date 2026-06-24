@@ -42,13 +42,13 @@ describe("validateSandboxBody", () => {
     expect((result as NextResponse).status).toBe(401);
   });
 
-  it("returns validated body with auth context when prompt is provided", async () => {
+  it("returns the validated body with auth context", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "acc_123",
       orgId: "org_456",
       authToken: "token",
     });
-    vi.mocked(safeParseJson).mockResolvedValue({ prompt: "say hello" });
+    vi.mocked(safeParseJson).mockResolvedValue({});
 
     const request = createMockRequest();
     const result = await validateSandboxBody(request);
@@ -57,11 +57,10 @@ describe("validateSandboxBody", () => {
       accountId: "acc_123",
       orgId: "org_456",
       authToken: "token",
-      prompt: "say hello",
     });
   });
 
-  it("strips unknown fields from body", async () => {
+  it("strips unknown fields from body (including the retired prompt)", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "acc_123",
       orgId: "org_456",
@@ -81,11 +80,10 @@ describe("validateSandboxBody", () => {
       accountId: "acc_123",
       orgId: "org_456",
       authToken: "token",
-      prompt: "say hello",
     });
   });
 
-  it("returns validated body when command is omitted (optional)", async () => {
+  it("returns validated body when body is empty", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: "acc_123",
       orgId: null,
@@ -103,37 +101,6 @@ describe("validateSandboxBody", () => {
     });
   });
 
-  it("returns validated body when prompt is provided", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "acc_123",
-      orgId: "org_456",
-      authToken: "token",
-    });
-    vi.mocked(safeParseJson).mockResolvedValue({
-      prompt: "create a hello world index.html",
-    });
-
-    const request = createMockRequest();
-    const result = await validateSandboxBody(request);
-
-    expect(result).toEqual({
-      accountId: "acc_123",
-      orgId: "org_456",
-      authToken: "token",
-      prompt: "create a hello world index.html",
-    });
-  });
-
-  it("returns error response when prompt is empty string", async () => {
-    vi.mocked(safeParseJson).mockResolvedValue({ prompt: "" });
-
-    const request = createMockRequest();
-    const result = await validateSandboxBody(request);
-
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(400);
-  });
-
   it("passes body account_id to validateAuthContext for override", async () => {
     const targetAccountId = "10000000-1000-4000-8000-100000000001";
     vi.mocked(validateAuthContext).mockResolvedValue({
@@ -141,10 +108,7 @@ describe("validateSandboxBody", () => {
       orgId: "org_456",
       authToken: "token",
     });
-    vi.mocked(safeParseJson).mockResolvedValue({
-      account_id: targetAccountId,
-      prompt: "hello",
-    });
+    vi.mocked(safeParseJson).mockResolvedValue({ account_id: targetAccountId });
 
     const request = createMockRequest();
     const result = await validateSandboxBody(request);
@@ -163,10 +127,7 @@ describe("validateSandboxBody", () => {
       orgId: "org_456",
       authToken: "token",
     });
-    vi.mocked(safeParseJson).mockResolvedValue({
-      account_id: targetAccountId,
-      prompt: "hello",
-    });
+    vi.mocked(safeParseJson).mockResolvedValue({ account_id: targetAccountId });
 
     const request = createMockRequest();
     const result = await validateSandboxBody(request);
@@ -176,7 +137,6 @@ describe("validateSandboxBody", () => {
       accountId: targetAccountId,
       orgId: "org_456",
       authToken: "token",
-      prompt: "hello",
     });
   });
 
@@ -199,10 +159,7 @@ describe("validateSandboxBody", () => {
 
   it("returns 403 when validateAuthContext rejects account_id override", async () => {
     const targetAccountId = "20000000-2000-4000-8000-200000000002";
-    vi.mocked(safeParseJson).mockResolvedValue({
-      account_id: targetAccountId,
-      prompt: "hello",
-    });
+    vi.mocked(safeParseJson).mockResolvedValue({ account_id: targetAccountId });
     vi.mocked(validateAuthContext).mockResolvedValue(
       NextResponse.json({ status: "error", error: "Access denied" }, { status: 403 }),
     );
