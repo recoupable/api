@@ -3,7 +3,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateSandboxBody } from "@/lib/sandbox/validateCreateSandboxBody";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
-import { buildActiveLifecycleUpdate } from "@/lib/sandbox/buildActiveLifecycleUpdate";
+import { markSessionSandboxActive } from "@/lib/sandbox/markSessionSandboxActive";
 import { connectSandbox } from "@/lib/sandbox/factory";
 import { findOrgSnapshot } from "@/lib/sandbox/findOrgSnapshot";
 import { getSessionSandboxName } from "@/lib/sandbox/getSessionSandboxName";
@@ -12,7 +12,6 @@ import { kickBuildOrgSnapshotWorkflow } from "@/lib/sandbox/kickBuildOrgSnapshot
 import { kickSandboxLifecycleWorkflow } from "@/lib/sandbox/kickSandboxLifecycleWorkflow";
 import { resolveGitUser } from "@/lib/sandbox/resolveGitUser";
 import { extractOrgRepoName } from "@/lib/recoupable/extractOrgRepoName";
-import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
 import type { Json, Tables } from "@/types/database.types";
 
@@ -124,21 +123,12 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
   }
 
   if (sessionRow && sandbox.getState) {
-    const nextState = sandbox.getState() as Json;
-    // Match open-agents' contract: derive lifecycle fields from the
-    // state object's `expiresAt` (always populated by the SDK, even on
-    // prebuilt-snapshot paths) rather than `sandbox.expiresAt`, which
-    // is only set on some creation paths and was leaving
-    // `sandbox_expires_at: null` for org-snapshot-restored provisions —
-    // which the lifecycle workflow then interpreted as "no live runtime"
-    // and immediately wrote `lifecycle_state: "hibernated"`.
-    await updateSession(sessionRow.id, {
-      sandbox_state: nextState,
-      lifecycle_version: sessionRow.lifecycle_version + 1,
-      ...buildActiveLifecycleUpdate(nextState),
-      snapshot_url: null,
-      snapshot_created_at: null,
-    });
+    // Bind the sandbox to the session + mark it active via the shared helper
+    // (also used by the headless `provisionRunSession`). It derives the
+    // lifecycle fields from the state object's `expiresAt` — always populated by
+    // the SDK, even on prebuilt-snapshot paths — rather than `sandbox.expiresAt`,
+    // which is only set on some creation paths.
+    await markSessionSandboxActive(sessionRow, sandbox.getState() as Json);
   }
 
   // Best-effort skill installation — a failure here does not fail the

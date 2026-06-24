@@ -66,6 +66,15 @@ export type AgentContext = {
    */
   skills?: SkillMetadata[];
   /**
+   * Row id of an ephemeral, account-scoped `recoup_sk_…` key minted for a
+   * headless run (`/api/chat/runs`, recoupable/chat#1813). When set, the
+   * workflow deletes the key in its `finally` cleanup so the credential is
+   * revoked the moment the run ends (the key's ~15m `expires_at` TTL is the
+   * defense-in-depth backstop if that delete is missed). The interactive
+   * caller forwards a Privy JWT and never sets this.
+   */
+  ephemeralKeyId?: string;
+  /**
    * Main agent's language model. Tools read this via `getMainModel`.
    * Set per-step by `runAgentStep` (not part of the durable input).
    * Mirrors open-agents' `AgentContext.model: LanguageModel`.
