@@ -6,7 +6,11 @@ import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
+import { deleteEphemeralKeyStep } from "@/app/lib/workflows/deleteEphemeralKeyStep";
 
+vi.mock("@/app/lib/workflows/deleteEphemeralKeyStep", () => ({
+  deleteEphemeralKeyStep: vi.fn(),
+}));
 vi.mock("@/app/lib/workflows/runAgentStep", () => ({
   runAgentStep: vi.fn(),
 }));
@@ -88,6 +92,37 @@ describe("runAgentWorkflow", () => {
 
     expect(clearChatActiveStream).toHaveBeenCalledTimes(1);
     expect(clearChatActiveStream).toHaveBeenCalledWith("chat-1", "wrun_from_metadata");
+  });
+
+  it("deletes the ephemeral key on run end when agentContext.ephemeralKeyId is set (headless)", async () => {
+    vi.mocked(runAgentStep).mockResolvedValue({
+      finishReason: "stop",
+      aborted: false,
+      responseMessage: undefined,
+    });
+
+    await runAgentWorkflow({
+      ...baseInput,
+      agentContext: {
+        sandbox: { state: { type: "vercel" }, workingDirectory: "/sandbox/mono" },
+        ephemeralKeyId: "ephem-key-1",
+      } as never,
+    });
+
+    expect(deleteEphemeralKeyStep).toHaveBeenCalledTimes(1);
+    expect(deleteEphemeralKeyStep).toHaveBeenCalledWith("ephem-key-1");
+  });
+
+  it("does NOT delete a key for the interactive path (no ephemeralKeyId)", async () => {
+    vi.mocked(runAgentStep).mockResolvedValue({
+      finishReason: "stop",
+      aborted: false,
+      responseMessage: undefined,
+    });
+
+    await runAgentWorkflow(baseInput);
+
+    expect(deleteEphemeralKeyStep).not.toHaveBeenCalled();
   });
 
   it("explicitly closes the chat writable after a successful run so SSE ends promptly", async () => {
