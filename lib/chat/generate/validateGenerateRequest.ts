@@ -13,9 +13,9 @@ export const DEFAULT_GENERATE_MODEL_ID = "anthropic/claude-haiku-4.5";
 /**
  * Body schema for `POST /api/chat/runs` (the durable-workflow re-point,
  * recoupable/chat#1813). Exactly one of `prompt` / `messages` must be present.
- * `topic` sets the provisioned session's title. (The legacy `roomId` /
- * `excludeTools` fields are gone — this path mints its own session + chat and
- * runs native sandbox tools, so neither applies.)
+ * Mirrors `/api/chat`: no session-title / room / tool-exclusion params — this
+ * path mints its own session + chat (with a default title) and runs native
+ * sandbox tools. The legacy `topic` / `roomId` / `excludeTools` fields are gone.
  */
 export const generateBodySchema = z.object({
   prompt: z.string().optional(),
@@ -24,7 +24,6 @@ export const generateBodySchema = z.object({
   accountId: z.string().optional(),
   organizationId: z.string().optional(),
   model: z.string().optional(),
-  topic: z.string().optional(),
 });
 
 export type GenerateRequest = {
@@ -33,7 +32,6 @@ export type GenerateRequest = {
   messages: UIMessage[];
   artistId?: string;
   modelId: string;
-  sessionTitle?: string;
 };
 
 /**
@@ -61,7 +59,7 @@ export async function validateGenerateRequest(
     return validationErrorResponse(firstError.message, firstError.path);
   }
 
-  const { prompt, messages, artistId, accountId, organizationId, model, topic } = parsed.data;
+  const { prompt, messages, artistId, accountId, organizationId, model } = parsed.data;
 
   const trimmedPrompt = typeof prompt === "string" ? prompt.trim() : "";
   const hasPrompt = trimmedPrompt.length > 0;
@@ -86,6 +84,5 @@ export async function validateGenerateRequest(
     messages: uiMessages,
     artistId,
     modelId: model ?? DEFAULT_GENERATE_MODEL_ID,
-    sessionTitle: topic,
   };
 }

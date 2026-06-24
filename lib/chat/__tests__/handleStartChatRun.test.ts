@@ -45,7 +45,6 @@ const validated = {
   messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "go" }] }],
   artistId: undefined,
   modelId: "anthropic/claude-haiku-4.5",
-  sessionTitle: undefined,
 };
 
 const provisioned = {

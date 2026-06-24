@@ -54,7 +54,7 @@ describe("validateGenerateRequest", () => {
   });
 
   it("rejects when neither prompt nor messages is provided (400)", async () => {
-    const result = await validateGenerateRequest(req({ topic: "test" }));
+    const result = await validateGenerateRequest(req({ model: "anthropic/claude-haiku-4.5" }));
     expect(result).toBeInstanceOf(NextResponse);
     if (!(result instanceof NextResponse)) return;
     expect(result.status).toBe(400);

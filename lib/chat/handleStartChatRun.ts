@@ -9,6 +9,9 @@ import { deleteApiKey } from "@/lib/supabase/account_api_keys/deleteApiKey";
 import { buildRunAgentInput } from "@/lib/chat/buildRunAgentInput";
 import { runAgentWorkflow } from "@/app/lib/workflows/runAgentWorkflow";
 
+/** Default title for the session a headless run provisions (no caller-supplied title). */
+const DEFAULT_RUN_SESSION_TITLE = "Scheduled generation";
+
 /**
  * Handles `POST /api/chat/runs` — the headless, asynchronous counterpart of
  * interactive `/api/chat`. Runs on the durable `runAgentWorkflow`
@@ -34,13 +37,13 @@ export async function handleStartChatRun(request: NextRequest): Promise<Response
   const validated = await validateGenerateRequest(request);
   if (validated instanceof NextResponse) return validated;
 
-  const { accountId, messages, artistId, modelId, sessionTitle } = validated;
+  const { accountId, messages, artistId, modelId } = validated;
 
   let ephemeralKeyId: string | undefined;
   try {
     const provisioned = await provisionGenerateSession({
       accountId,
-      title: sessionTitle ?? "Scheduled generation",
+      title: DEFAULT_RUN_SESSION_TITLE,
       artistId,
     });
 
@@ -54,7 +57,7 @@ export async function handleStartChatRun(request: NextRequest): Promise<Response
         sessionId: provisioned.session.id,
         accountId,
         modelId,
-        sessionTitle: provisioned.session.title ?? sessionTitle,
+        sessionTitle: provisioned.session.title ?? undefined,
         cloneUrl: provisioned.session.clone_url,
         sandboxState: provisioned.sandboxState,
         workingDirectory: provisioned.workingDirectory,
