@@ -8,12 +8,14 @@ import type { Database } from "@/types/database.types";
  * @param input.name - The input object containing the name, account, and key_hash
  * @param input.account - The account ID
  * @param input.key_hash - The hash of the API key
+ * @param input.expires_at - Optional ISO expiry for ephemeral keys (NULL = never)
  * @returns The inserted API key
  */
 export async function insertApiKey({
   name,
   account,
   key_hash,
+  expires_at,
 }: Database["public"]["Tables"]["account_api_keys"]["Insert"]) {
   const { data, error } = await supabase
     .from("account_api_keys")
@@ -21,6 +23,7 @@ export async function insertApiKey({
       name,
       account,
       key_hash,
+      expires_at,
     })
     .select()
     .single();
