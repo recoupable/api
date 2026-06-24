@@ -34,10 +34,12 @@ export async function OPTIONS() {
  * - topic: Optional session title
  * - accountId: Optional accountId override (requires org API key)
  *
- * Response body (202): `{ runId }` — the durable workflow run id.
+ * Response body (202): `{ runId, chatId, sessionId }` — the durable workflow run
+ * id plus the persisted-output identifiers. Read the result later via
+ * `GET /api/chat/{chatId}/stream` (resume) or the chat's persisted messages.
  *
  * @param request - The request object
- * @returns 202 `{ runId }`, or a 4xx/5xx error
+ * @returns 202 `{ runId, chatId, sessionId }`, or a 4xx/5xx error
  */
 export async function POST(request: NextRequest): Promise<Response> {
   return handleChatGenerate(request);

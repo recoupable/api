@@ -75,7 +75,11 @@ describe("handleChatGenerate", () => {
   it("provisions, mints, starts the workflow, and returns 202 { runId }", async () => {
     const res = await handleChatGenerate(req());
     expect(res.status).toBe(202);
-    expect(await res.json()).toEqual({ runId: "wrun_abc" });
+    expect(await res.json()).toEqual({
+      runId: "wrun_abc",
+      chatId: "chat-1",
+      sessionId: "sess-1",
+    });
 
     expect(provisionGenerateSession).toHaveBeenCalledWith(
       expect.objectContaining({ accountId: "acc-1", title: "Scheduled generation" }),

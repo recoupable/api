@@ -63,7 +63,15 @@ export async function handleChatGenerate(request: NextRequest): Promise<Response
       }),
     ]);
 
-    return NextResponse.json({ runId: run.runId }, { status: 202, headers: getCorsHeaders() });
+    // Return the run handle plus the persisted-output identifiers so the caller
+    // can read the result later (the workflow runId alone can't be resolved back
+    // to the chat): GET /api/chat/{chatId}/stream resumes the stream, and the
+    // assistant messages persist under chatId. Mirrors the async-job shape of
+    // POST /api/content/create.
+    return NextResponse.json(
+      { runId: run.runId, chatId: provisioned.chat.id, sessionId: provisioned.session.id },
+      { status: 202, headers: getCorsHeaders() },
+    );
   } catch (error) {
     // The workflow's `finally` revokes the key on run end — but if we never got
     // there (provisioning ok, then mint ok, then start threw), the key would
