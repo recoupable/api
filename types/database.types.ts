@@ -12,6 +12,7 @@ export type Database = {
         Row: {
           account: string | null;
           created_at: string;
+          expires_at: string | null;
           id: string;
           key_hash: string | null;
           last_used: string | null;
@@ -20,6 +21,7 @@ export type Database = {
         Insert: {
           account?: string | null;
           created_at?: string;
+          expires_at?: string | null;
           id?: string;
           key_hash?: string | null;
           last_used?: string | null;
@@ -28,6 +30,7 @@ export type Database = {
         Update: {
           account?: string | null;
           created_at?: string;
+          expires_at?: string | null;
           id?: string;
           key_hash?: string | null;
           last_used?: string | null;
