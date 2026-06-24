@@ -1,582 +1,120 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { NextResponse } from "next/server";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest, NextResponse } from "next/server";
 
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { setupChatRequest } from "@/lib/chat/setupChatRequest";
-import { saveChatCompletion } from "@/lib/chat/saveChatCompletion";
-import { setupConversation } from "@/lib/chat/setupConversation";
-import { handleChatGenerate } from "../handleChatGenerate";
+import { handleChatGenerate } from "@/lib/chat/handleChatGenerate";
+import { validateGenerateRequest } from "@/lib/chat/generate/validateGenerateRequest";
+import { provisionGenerateSession } from "@/lib/chat/generate/provisionGenerateSession";
+import { mintEphemeralAccountKey } from "@/lib/keys/mintEphemeralAccountKey";
+import { deleteApiKey } from "@/lib/supabase/account_api_keys/deleteApiKey";
+import { buildRunAgentInput } from "@/lib/chat/buildRunAgentInput";
+import { start } from "workflow/api";
 
-vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
-  ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
+vi.mock("@/lib/networking/getCorsHeaders", () => ({
+  getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
-
-// Mock all dependencies before importing the module under test
-vi.mock("@/lib/auth/validateAuthContext", () => ({
-  validateAuthContext: vi.fn(),
+vi.mock("@/lib/chat/generate/validateGenerateRequest", () => ({
+  validateGenerateRequest: vi.fn(),
 }));
-
-vi.mock("@/lib/chat/setupChatRequest", () => ({
-  setupChatRequest: vi.fn(),
+vi.mock("@/lib/chat/generate/provisionGenerateSession", () => ({
+  provisionGenerateSession: vi.fn(),
 }));
-
-vi.mock("@/lib/chat/saveChatCompletion", () => ({
-  saveChatCompletion: vi.fn(),
+vi.mock("@/lib/keys/mintEphemeralAccountKey", () => ({
+  mintEphemeralAccountKey: vi.fn(),
 }));
-
-vi.mock("@/lib/uuid/generateUUID", () => {
-  const mockFn = vi.fn(() => "auto-generated-room-id");
-  return {
-    generateUUID: mockFn,
-    default: mockFn,
-  };
-});
-
-vi.mock("@/lib/chat/createNewRoom", () => ({
-  createNewRoom: vi.fn(),
+vi.mock("@/lib/supabase/account_api_keys/deleteApiKey", () => ({
+  deleteApiKey: vi.fn(async () => ({ error: null })),
 }));
-
-vi.mock("@/lib/supabase/memories/insertMemories", () => ({
-  default: vi.fn(),
+vi.mock("@/lib/chat/buildRunAgentInput", () => ({
+  buildRunAgentInput: vi.fn(x => ({ built: true, ...x })),
 }));
-
-vi.mock("@/lib/messages/filterMessageContentForMemories", () => ({
-  default: vi.fn((msg: unknown) => msg),
+vi.mock("workflow/api", () => ({
+  start: vi.fn(),
 }));
+vi.mock("@/app/lib/workflows/runAgentWorkflow", () => ({ runAgentWorkflow: vi.fn() }));
 
-vi.mock("@/lib/chat/setupConversation", () => ({
-  setupConversation: vi.fn(),
-}));
+const req = () =>
+  new NextRequest("https://x.test/api/chat/generate", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": "recoup_sk_test" },
+    body: JSON.stringify({ prompt: "go" }),
+  });
 
-const mockValidateAuthContext = vi.mocked(validateAuthContext);
-const mockSetupChatRequest = vi.mocked(setupChatRequest);
-const mockSaveChatCompletion = vi.mocked(saveChatCompletion);
-const mockSetupConversation = vi.mocked(setupConversation);
+const validated = {
+  accountId: "acc-1",
+  orgId: null,
+  messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "go" }] }],
+  artistId: undefined,
+  modelId: "anthropic/claude-haiku-4.5",
+  sessionTitle: undefined,
+};
 
-// Helper to create a mock agent with .generate()
-/**
- *
- * @param generateResult
- */
-function createMockAgent(generateResult: Record<string, unknown>) {
-  return {
-    generate: vi.fn().mockResolvedValue(generateResult),
-    stream: vi.fn(),
-    tools: {},
-  };
-}
-
-// Helper to create mock NextRequest
-/**
- *
- * @param body
- * @param headers
- */
-function createMockRequest(body: unknown, headers: Record<string, string> = {}): Request {
-  return {
-    json: () => Promise.resolve(body),
-    headers: {
-      get: (key: string) => headers[key.toLowerCase()] || null,
-      has: (key: string) => key.toLowerCase() in headers,
-    },
-  } as unknown as Request;
-}
+const provisioned = {
+  session: {
+    id: "sess-1",
+    clone_url: "https://github.com/recoupable/acc-1",
+    title: "Scheduled generation",
+  },
+  chat: { id: "chat-1" },
+  sandboxState: { type: "vercel", sandboxName: "session-sess-1" },
+  workingDirectory: "/vercel/sandbox",
+  skills: [],
+};
 
 describe("handleChatGenerate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default mock for setupConversation
-    mockSetupConversation.mockResolvedValue({
-      roomId: "auto-generated-room-id",
-      memoryId: "auto-generated-memory-id",
+    vi.mocked(validateGenerateRequest).mockResolvedValue(validated as never);
+    vi.mocked(provisionGenerateSession).mockResolvedValue(provisioned as never);
+    vi.mocked(mintEphemeralAccountKey).mockResolvedValue({
+      rawKey: "recoup_sk_raw",
+      keyId: "key-1",
     });
+    vi.mocked(start).mockResolvedValue({ runId: "wrun_abc" } as never);
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it("provisions, mints, starts the workflow, and returns 202 { runId }", async () => {
+    const res = await handleChatGenerate(req());
+    expect(res.status).toBe(202);
+    expect(await res.json()).toEqual({ runId: "wrun_abc" });
+
+    expect(provisionGenerateSession).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: "acc-1", title: "Scheduled generation" }),
+    );
+    // the minted key is injected as recoupAccessToken AND threaded as ephemeralKeyId
+    expect(buildRunAgentInput).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chatId: "chat-1",
+        sessionId: "sess-1",
+        recoupAccessToken: "recoup_sk_raw",
+        ephemeralKeyId: "key-1",
+      }),
+    );
+    expect(start).toHaveBeenCalledOnce();
+    // key is NOT deleted here — the workflow's finally owns that on run end
+    expect(deleteApiKey).not.toHaveBeenCalled();
   });
 
-  describe("validation", () => {
-    it("returns 400 error when neither messages nor prompt is provided", async () => {
-      mockValidateAuthContext.mockResolvedValue({
-        accountId: "account-123",
-        orgId: null,
-        authToken: "token",
-      });
-
-      const request = createMockRequest({ roomId: "room-123" }, { "x-api-key": "test-key" });
-
-      const result = await handleChatGenerate(request as any);
-
-      expect(result).toBeInstanceOf(NextResponse);
-      expect(result.status).toBe(400);
-      const json = await result.json();
-      expect(json.status).toBe("error");
-    });
-
-    it("returns 401 error when no auth header is provided", async () => {
-      mockValidateAuthContext.mockResolvedValue(
-        NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
-      );
-      const request = createMockRequest({ prompt: "Hello" }, {});
-
-      const result = await handleChatGenerate(request as any);
-
-      expect(result).toBeInstanceOf(NextResponse);
-      expect(result.status).toBe(401);
-    });
+  it("returns the validation error short-circuit", async () => {
+    vi.mocked(validateGenerateRequest).mockResolvedValue(
+      NextResponse.json({ status: "error" }, { status: 401 }),
+    );
+    const res = await handleChatGenerate(req());
+    expect(res.status).toBe(401);
+    expect(provisionGenerateSession).not.toHaveBeenCalled();
   });
 
-  describe("text generation", () => {
-    it("returns generated text using agent.generate() for valid requests", async () => {
-      mockValidateAuthContext.mockResolvedValue({
-        accountId: "account-123",
-        orgId: null,
-        authToken: "token",
-      });
-
-      const mockAgent = createMockAgent({
-        text: "Hello! How can I help you?",
-        reasoningText: undefined,
-        sources: [],
-        finishReason: "stop",
-        usage: { promptTokens: 10, completionTokens: 20 },
-        response: {
-          messages: [],
-          headers: {},
-          body: null,
-        },
-      });
-
-      mockSetupChatRequest.mockResolvedValue({
-        agent: mockAgent,
-        messages: [],
-      } as any);
-
-      const request = createMockRequest({ prompt: "Hello, world!" }, { "x-api-key": "valid-key" });
-
-      const result = await handleChatGenerate(request as any);
-
-      expect(mockAgent.generate).toHaveBeenCalled();
-      expect(result.status).toBe(200);
-      const json = await result.json();
-      expect(json.text).toBe("Hello! How can I help you?");
-      expect(json.finishReason).toBe("stop");
-      expect(json.usage).toEqual({ promptTokens: 10, completionTokens: 20 });
-    });
-
-    it("uses messages array when provided", async () => {
-      mockValidateAuthContext.mockResolvedValue({
-        accountId: "account-123",
-        orgId: null,
-        authToken: "token",
-      });
-
-      const mockAgent = createMockAgent({
-        text: "Response",
-        finishReason: "stop",
-        usage: { promptTokens: 10, completionTokens: 20 },
-        response: { messages: [], headers: {}, body: null },
-      });
-
-      mockSetupChatRequest.mockResolvedValue({
-        agent: mockAgent,
-        messages: [],
-      } as any);
-
-      const messages = [{ role: "user", content: "Hello" }];
-      const request = createMockRequest({ messages }, { "x-api-key": "valid-key" });
-
-      await handleChatGenerate(request as any);
-
-      expect(mockSetupChatRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          messages,
-          accountId: "account-123",
-        }),
-      );
-    });
-
-    it("passes through optional parameters", async () => {
-      mockValidateAuthContext.mockResolvedValue({
-        accountId: "account-123",
-        orgId: null,
-        authToken: "token",
-      });
-      mockSetupConversation.mockResolvedValue({
-        roomId: "room-xyz",
-        memoryId: "memory-id",
-      });
-
-      const mockAgent = createMockAgent({
-        text: "Response",
-        finishReason: "stop",
-        usage: { promptTokens: 10, completionTokens: 20 },
-        response: { messages: [], headers: {}, body: null },
-      });
-
-      mockSetupChatRequest.mockResolvedValue({
-        agent: mockAgent,
-        messages: [],
-      } as any);
-
-      const request = createMockRequest(
-        {
-          prompt: "Hello",
-          roomId: "room-xyz",
-          artistId: "artist-abc",
-          model: "claude-3-opus",
-          excludeTools: ["tool1"],
-        },
-        { "x-api-key": "valid-key" },
-      );
-
-      await handleChatGenerate(request as any);
-
-      expect(mockSetupChatRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          roomId: "room-xyz",
-          artistId: "artist-abc",
-          model: "claude-3-opus",
-          excludeTools: ["tool1"],
-        }),
-      );
-    });
-
-    it("includes reasoningText when present", async () => {
-      mockValidateAuthContext.mockResolvedValue({
-        accountId: "account-123",
-        orgId: null,
-        authToken: "token",
-      });
-
-      const mockAgent = createMockAgent({
-        text: "Response",
-        reasoningText: "Let me think about this...",
-        sources: [{ url: "https://example.com" }],
-        finishReason: "stop",
-        usage: { promptTokens: 10, completionTokens: 20 },
-        response: { messages: [], headers: {}, body: null },
-      });
-
-      mockSetupChatRequest.mockResolvedValue({
-        agent: mockAgent,
-        messages: [],
-      } as any);
-
-      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
-
-      const result = await handleChatGenerate(request as any);
-
-      expect(result.status).toBe(200);
-      const json = await result.json();
-      expect(json.reasoningText).toBe("Let me think about this...");
-      expect(json.sources).toEqual([{ url: "https://example.com" }]);
-    });
+  it("revokes the minted key and 500s when start() fails", async () => {
+    vi.mocked(start).mockRejectedValue(new Error("workflow start boom"));
+    const res = await handleChatGenerate(req());
+    expect(res.status).toBe(500);
+    expect(deleteApiKey).toHaveBeenCalledWith("key-1");
   });
 
-  describe("error handling", () => {
-    it("returns 500 error when setupChatRequest fails", async () => {
-      mockValidateAuthContext.mockResolvedValue({
-        accountId: "account-123",
-        orgId: null,
-        authToken: "token",
-      });
-      mockSetupChatRequest.mockRejectedValue(new Error("Setup failed"));
-
-      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
-
-      const result = await handleChatGenerate(request as any);
-
-      expect(result).toBeInstanceOf(NextResponse);
-      expect(result.status).toBe(500);
-      const json = await result.json();
-      expect(json.status).toBe("error");
-    });
-
-    it("returns 500 error when agent.generate() fails", async () => {
-      mockValidateAuthContext.mockResolvedValue({
-        accountId: "account-123",
-        orgId: null,
-        authToken: "token",
-      });
-
-      const mockAgent = {
-        generate: vi.fn().mockRejectedValue(new Error("Generation failed")),
-        stream: vi.fn(),
-        tools: {},
-      };
-
-      mockSetupChatRequest.mockResolvedValue({
-        agent: mockAgent,
-        messages: [],
-      } as any);
-
-      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
-
-      const result = await handleChatGenerate(request as any);
-
-      expect(result).toBeInstanceOf(NextResponse);
-      expect(result.status).toBe(500);
-      const json = await result.json();
-      expect(json.status).toBe("error");
-    });
-  });
-
-  describe("accountId override", () => {
-    it("allows accountId override", async () => {
-      mockValidateAuthContext.mockResolvedValue({
-        accountId: "target-account-456",
-        orgId: null,
-        authToken: "token",
-      });
-
-      const mockAgent = createMockAgent({
-        text: "Response",
-        finishReason: "stop",
-        usage: { promptTokens: 10, completionTokens: 20 },
-        response: { messages: [], headers: {}, body: null },
-      });
-
-      mockSetupChatRequest.mockResolvedValue({
-        agent: mockAgent,
-        messages: [],
-      } as any);
-
-      const request = createMockRequest(
-        { prompt: "Hello", accountId: "target-account-456" },
-        { "x-api-key": "org-api-key" },
-      );
-
-      await handleChatGenerate(request as any);
-
-      expect(mockSetupChatRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          accountId: "target-account-456",
-        }),
-      );
-    });
-  });
-
-  describe("message persistence", () => {
-    it("saves assistant message to database when roomId is provided", async () => {
-      mockValidateAuthContext.mockResolvedValue({
-        accountId: "account-123",
-        orgId: null,
-        authToken: "token",
-      });
-      mockSetupConversation.mockResolvedValue({
-        roomId: "room-abc-123",
-        memoryId: "memory-id",
-      });
-
-      const mockAgent = createMockAgent({
-        text: "Hello! How can I help you?",
-        finishReason: "stop",
-        usage: { promptTokens: 10, completionTokens: 20 },
-        response: { messages: [], headers: {}, body: null },
-      });
-
-      mockSetupChatRequest.mockResolvedValue({
-        agent: mockAgent,
-        messages: [],
-      } as any);
-
-      mockSaveChatCompletion.mockResolvedValue(null);
-
-      const request = createMockRequest(
-        { prompt: "Hello", roomId: "room-abc-123" },
-        { "x-api-key": "valid-key" },
-      );
-
-      await handleChatGenerate(request as any);
-
-      expect(mockSaveChatCompletion).toHaveBeenCalledWith({
-        text: "Hello! How can I help you?",
-        roomId: "room-abc-123",
-      });
-    });
-
-    it("saves message with auto-generated roomId when roomId is not provided", async () => {
-      mockValidateAuthContext.mockResolvedValue({
-        accountId: "account-123",
-        orgId: null,
-        authToken: "token",
-      });
-      mockSetupConversation.mockResolvedValue({
-        roomId: "auto-generated-room-id",
-        memoryId: "memory-id",
-      });
-
-      const mockAgent = createMockAgent({
-        text: "Response",
-        finishReason: "stop",
-        usage: { promptTokens: 10, completionTokens: 20 },
-        response: { messages: [], headers: {}, body: null },
-      });
-
-      mockSetupChatRequest.mockResolvedValue({
-        agent: mockAgent,
-        messages: [],
-      } as any);
-
-      mockSaveChatCompletion.mockResolvedValue(null);
-
-      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
-
-      await handleChatGenerate(request as any);
-
-      // Since roomId is auto-created, saveChatCompletion should be called
-      expect(mockSaveChatCompletion).toHaveBeenCalledWith({
-        text: "Response",
-        roomId: "auto-generated-room-id",
-      });
-    });
-
-    it("includes roomId in HTTP response when provided by client", async () => {
-      mockValidateAuthContext.mockResolvedValue({
-        accountId: "account-123",
-        orgId: null,
-        authToken: "token",
-      });
-      mockSetupConversation.mockResolvedValue({
-        roomId: "client-provided-room-id",
-        memoryId: "memory-id",
-      });
-
-      const mockAgent = createMockAgent({
-        text: "Response",
-        finishReason: "stop",
-        usage: { promptTokens: 10, completionTokens: 20 },
-        response: { messages: [], headers: {}, body: null },
-      });
-
-      mockSetupChatRequest.mockResolvedValue({
-        agent: mockAgent,
-        messages: [],
-      } as any);
-
-      mockSaveChatCompletion.mockResolvedValue(null);
-
-      const request = createMockRequest(
-        { prompt: "Hello", roomId: "client-provided-room-id" },
-        { "x-api-key": "valid-key" },
-      );
-
-      const result = await handleChatGenerate(request as any);
-
-      expect(result.status).toBe(200);
-      const json = await result.json();
-      expect(json.roomId).toBe("client-provided-room-id");
-    });
-
-    it("includes auto-generated roomId in HTTP response when not provided", async () => {
-      mockValidateAuthContext.mockResolvedValue({
-        accountId: "account-123",
-        orgId: null,
-        authToken: "token",
-      });
-      mockSetupConversation.mockResolvedValue({
-        roomId: "auto-generated-room-456",
-        memoryId: "memory-id",
-      });
-
-      const mockAgent = createMockAgent({
-        text: "Response",
-        finishReason: "stop",
-        usage: { promptTokens: 10, completionTokens: 20 },
-        response: { messages: [], headers: {}, body: null },
-      });
-
-      mockSetupChatRequest.mockResolvedValue({
-        agent: mockAgent,
-        messages: [],
-      } as any);
-
-      mockSaveChatCompletion.mockResolvedValue(null);
-
-      const request = createMockRequest({ prompt: "Hello" }, { "x-api-key": "valid-key" });
-
-      const result = await handleChatGenerate(request as any);
-
-      expect(result.status).toBe(200);
-      const json = await result.json();
-      expect(json.roomId).toBe("auto-generated-room-456");
-    });
-
-    it("passes correct text to saveChatCompletion", async () => {
-      mockValidateAuthContext.mockResolvedValue({
-        accountId: "account-123",
-        orgId: null,
-        authToken: "token",
-      });
-      mockSetupConversation.mockResolvedValue({
-        roomId: "room-xyz",
-        memoryId: "memory-id",
-      });
-
-      const mockAgent = createMockAgent({
-        text: "This is the assistant response text",
-        finishReason: "stop",
-        usage: { promptTokens: 10, completionTokens: 20 },
-        response: { messages: [], headers: {}, body: null },
-      });
-
-      mockSetupChatRequest.mockResolvedValue({
-        agent: mockAgent,
-        messages: [],
-      } as any);
-
-      mockSaveChatCompletion.mockResolvedValue(null);
-
-      const request = createMockRequest(
-        { prompt: "Hello", roomId: "room-xyz" },
-        { "x-api-key": "valid-key" },
-      );
-
-      await handleChatGenerate(request as any);
-
-      expect(mockSaveChatCompletion).toHaveBeenCalledWith({
-        text: "This is the assistant response text",
-        roomId: "room-xyz",
-      });
-    });
-
-    it("still returns success response even if saveChatCompletion fails", async () => {
-      mockValidateAuthContext.mockResolvedValue({
-        accountId: "account-123",
-        orgId: null,
-        authToken: "token",
-      });
-      mockSetupConversation.mockResolvedValue({
-        roomId: "room-abc",
-        memoryId: "memory-id",
-      });
-
-      const mockAgent = createMockAgent({
-        text: "Response",
-        finishReason: "stop",
-        usage: { promptTokens: 10, completionTokens: 20 },
-        response: { messages: [], headers: {}, body: null },
-      });
-
-      mockSetupChatRequest.mockResolvedValue({
-        agent: mockAgent,
-        messages: [],
-      } as any);
-
-      mockSaveChatCompletion.mockRejectedValue(new Error("Database error"));
-
-      const request = createMockRequest(
-        { prompt: "Hello", roomId: "room-abc" },
-        { "x-api-key": "valid-key" },
-      );
-
-      const result = await handleChatGenerate(request as any);
-
-      expect(result.status).toBe(200);
-      const json = await result.json();
-      expect(json.text).toBe("Response");
-    });
+  it("does not mint or delete a key when provisioning fails", async () => {
+    vi.mocked(provisionGenerateSession).mockRejectedValue(new Error("repo boom"));
+    const res = await handleChatGenerate(req());
+    expect(res.status).toBe(500);
+    expect(mintEphemeralAccountKey).not.toHaveBeenCalled();
+    expect(deleteApiKey).not.toHaveBeenCalled();
   });
 });

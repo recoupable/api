@@ -4,6 +4,7 @@ import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
+import { deleteEphemeralKeyStep } from "@/app/lib/workflows/deleteEphemeralKeyStep";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
 import type { AgentMessageMetadata } from "@/lib/agent/messageMetadata/AgentMessageMetadata";
@@ -151,11 +152,19 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
     //      stream-end. Mirrors open-agents'
     //      `Promise.all([clearActiveStream, sendFinish.then(closeStream)])`.
     //
-    // `Promise.all` is safe because both helpers swallow their own
-    // errors — a failure in one doesn't cancel the other.
+    // A third cleanup step runs only for headless `/api/chat/generate` runs:
+    //   3) `deleteEphemeralKeyStep` — revoke the per-run, account-scoped
+    //      `recoup_sk_…` key minted for the sandbox the moment the run ends.
+    //      The key's ~15m TTL is only the backstop if this delete is missed.
+    //
+    // `Promise.all` is safe because all helpers swallow their own errors —
+    // a failure in one doesn't cancel the others.
     await Promise.all([
       clearChatActiveStream(input.chatId, workflowRunId),
       closeChatStream(writable),
+      ...(input.agentContext.ephemeralKeyId
+        ? [deleteEphemeralKeyStep(input.agentContext.ephemeralKeyId)]
+        : []),
     ]);
   }
 }

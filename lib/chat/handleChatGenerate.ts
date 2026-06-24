@@ -1,77 +1,81 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateChatRequest } from "./validateChatRequest";
-import { setupChatRequest } from "./setupChatRequest";
+import { start } from "workflow/api";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { saveChatCompletion } from "./saveChatCompletion";
+import { errorResponse } from "@/lib/networking/errorResponse";
+import { validateGenerateRequest } from "@/lib/chat/generate/validateGenerateRequest";
+import { provisionGenerateSession } from "@/lib/chat/generate/provisionGenerateSession";
+import { mintEphemeralAccountKey } from "@/lib/keys/mintEphemeralAccountKey";
+import { deleteApiKey } from "@/lib/supabase/account_api_keys/deleteApiKey";
+import { buildRunAgentInput } from "@/lib/chat/buildRunAgentInput";
+import { runAgentWorkflow } from "@/app/lib/workflows/runAgentWorkflow";
 
 /**
- * Handles a non-streaming chat generate request.
+ * Handles `POST /api/chat/generate` — the headless, asynchronous counterpart of
+ * interactive `/api/chat`. Re-pointed onto the durable `runAgentWorkflow`
+ * (recoupable/chat#1813): it provisions a session + active sandbox, mints a
+ * short-lived account-scoped `recoup_sk_…` key for in-sandbox `recoup-api`
+ * calls, builds the shared workflow input via `buildRunAgentInput`, and
+ * `start()`s the run — returning `{ runId }` with **202** immediately.
  *
- * This function:
- * 1. Validates the request (auth, body schema)
- * 2. Sets up the chat configuration (agent, model, tools)
- * 3. Generates text using the AI SDK's generateText
- * 4. Persists the assistant message to the database (if roomId is provided)
- * 5. Returns a JSON response with text, reasoning, sources, etc.
+ * Generation, assistant-message persistence, the credit charge, and the
+ * ephemeral-key revocation all happen server-side inside the workflow after
+ * this response. The legacy synchronous `ToolLoopAgent` path is gone.
  *
- * @param request - The incoming NextRequest
- * @returns A JSON response or error NextResponse
+ * The minted key is injected as the agent's `recoupAccessToken` (so the service
+ * key never enters model-issued bash) and threaded as `ephemeralKeyId` so the
+ * workflow deletes it on run end; its ~15m TTL is the backstop. If the run
+ * fails to start, we revoke the key here since the workflow never ran.
+ *
+ * @param request - The incoming request (x-api-key auth).
+ * @returns 202 `{ runId }`, or a 4xx/5xx error.
  */
 export async function handleChatGenerate(request: NextRequest): Promise<Response> {
-  const validatedBodyOrError = await validateChatRequest(request);
-  if (validatedBodyOrError instanceof NextResponse) {
-    return validatedBodyOrError;
-  }
-  const body = validatedBodyOrError;
+  const validated = await validateGenerateRequest(request);
+  if (validated instanceof NextResponse) return validated;
 
+  const { accountId, messages, artistId, modelId, sessionTitle } = validated;
+
+  let ephemeralKeyId: string | undefined;
   try {
-    const chatConfig = await setupChatRequest(body);
-    const { agent } = chatConfig;
+    const provisioned = await provisionGenerateSession({
+      accountId,
+      title: sessionTitle ?? "Scheduled generation",
+      artistId,
+    });
 
-    const result = await agent.generate(chatConfig);
+    const { rawKey, keyId } = await mintEphemeralAccountKey(accountId);
+    ephemeralKeyId = keyId;
 
-    // Save assistant message to database
-    // Note: roomId is always defined after validateChatRequest (auto-created if not provided)
-    try {
-      await saveChatCompletion({
-        text: result.text,
-        roomId: body.roomId,
-      });
-    } catch (error) {
-      // Log error but don't fail the request - message persistence is non-critical
-      console.error("Failed to persist assistant message:", error);
+    const run = await start(runAgentWorkflow, [
+      buildRunAgentInput({
+        messages,
+        chatId: provisioned.chat.id,
+        sessionId: provisioned.session.id,
+        accountId,
+        modelId,
+        sessionTitle: provisioned.session.title ?? sessionTitle,
+        cloneUrl: provisioned.session.clone_url,
+        sandboxState: provisioned.sandboxState,
+        workingDirectory: provisioned.workingDirectory,
+        skills: provisioned.skills,
+        recoupAccessToken: rawKey,
+        ephemeralKeyId: keyId,
+      }),
+    ]);
+
+    return NextResponse.json({ runId: run.runId }, { status: 202, headers: getCorsHeaders() });
+  } catch (error) {
+    // The workflow's `finally` revokes the key on run end — but if we never got
+    // there (provisioning ok, then mint ok, then start threw), the key would
+    // linger until its TTL. Revoke it now. If mint itself threw, there's no key.
+    if (ephemeralKeyId) {
+      try {
+        await deleteApiKey(ephemeralKeyId);
+      } catch (cleanupError) {
+        console.error("[handleChatGenerate] failed to revoke ephemeral key:", cleanupError);
+      }
     }
-
-    return NextResponse.json(
-      {
-        text: result.text,
-        roomId: body.roomId,
-        reasoningText: result.reasoningText,
-        sources: result.sources,
-        finishReason: result.finishReason,
-        usage: result.usage,
-        response: {
-          messages: result.response.messages,
-          headers: result.response.headers,
-          body: result.response.body,
-        },
-      },
-      {
-        status: 200,
-        headers: getCorsHeaders(),
-      },
-    );
-  } catch (e) {
-    console.error("/api/chat/generate Global error:", e);
-    return NextResponse.json(
-      {
-        status: "error",
-        message: e instanceof Error ? e.message : "Unknown error",
-      },
-      {
-        status: 500,
-        headers: getCorsHeaders(),
-      },
-    );
+    console.error("[handleChatGenerate] failed to start generation run:", error);
+    return errorResponse("Failed to start chat generation", 500);
   }
 }

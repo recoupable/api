@@ -18,32 +18,33 @@ export async function OPTIONS() {
 /**
  * POST /api/chat/generate
  *
- * Non-streaming chat endpoint that processes messages and returns a JSON response.
+ * Asynchronous, headless chat generation on the durable `runAgentWorkflow`
+ * (recoupable/chat#1813). Provisions a session + sandbox, starts a workflow run,
+ * and returns `{ runId }` with **202** immediately — generation, assistant-
+ * message persistence, and side effects happen server-side after the response.
  *
- * Authentication: x-api-key header required.
- * The account ID is inferred from the API key.
+ * Authentication: x-api-key header required (account inferred from the key;
+ * org keys may override via body `accountId`).
  *
  * Request body:
- * - messages: Array of chat messages (mutually exclusive with prompt)
  * - prompt: String prompt (mutually exclusive with messages)
- * - roomId: Optional UUID of the chat room
- * - topic: Optional topic for new chat room (ignored if room already exists)
+ * - messages: Array of UIMessages (mutually exclusive with prompt)
  * - artistId: Optional UUID of the artist account
- * - model: Optional model ID override
- * - excludeTools: Optional array of tool names to exclude
+ * - model: Optional model ID override (default anthropic/claude-haiku-4.5)
+ * - topic: Optional session title
  * - accountId: Optional accountId override (requires org API key)
  *
- * Response body:
- * - text: The generated text response
- * - reasoningText: Optional reasoning text (for models that support it)
- * - sources: Array of sources used in generation
- * - finishReason: The reason generation finished
- * - usage: Token usage information
- * - response: Additional response metadata
+ * Response body (202): `{ runId }` — the durable workflow run id.
  *
  * @param request - The request object
- * @returns A JSON response with the generated text or error
+ * @returns 202 `{ runId }`, or a 4xx/5xx error
  */
 export async function POST(request: NextRequest): Promise<Response> {
   return handleChatGenerate(request);
 }
+
+// Provisioning (repo + session + sandbox) runs before the 202 returns, so give
+// the function headroom beyond the default. The workflow itself runs durably
+// outside this request.
+export const maxDuration = 120;
+export const dynamic = "force-dynamic";
