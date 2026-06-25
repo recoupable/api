@@ -119,7 +119,7 @@ describe("toolChains", () => {
         const updateSteps = chain.filter(item => item.toolName === "update_account_info");
         const knowledgeLinkStep = updateSteps.find(item => item.system?.includes("knowledges"));
         expect(knowledgeLinkStep).toBeDefined();
-        expect(knowledgeLinkStep?.system).toContain("arweaveUrl");
+        expect(knowledgeLinkStep?.system).toContain("txtUrl");
       });
     });
 

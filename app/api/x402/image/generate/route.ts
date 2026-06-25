@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import generateImage from "@/lib/ai/generateImage";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { uploadImageAndCreateMoment } from "@/lib/arweave/uploadImageAndCreateMoment";
+import { uploadPublicAsset } from "@/lib/files/uploadPublicAsset";
+import { createImageMoment } from "@/lib/inprocess/createImageMoment";
+import type { CreateMomentResponse } from "@/lib/inprocess/createMoment";
 import { getBuyerAccount } from "@/lib/x402/getBuyerAccount";
 import { parseFilesFromQuery } from "@/lib/files/parseFilesFromQuery";
 
@@ -69,25 +71,40 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const {
-      arweaveResult,
-      imageUrl,
-      moment: momentResult,
-      arweaveError,
-    } = await uploadImageAndCreateMoment({
-      image,
-      prompt,
-      account,
-    });
+    let imageUrl: string | null = null;
+    let momentResult: CreateMomentResponse | null = null;
+    let uploadError: string | null = null;
+    try {
+      const { url } = await uploadPublicAsset({
+        data: Buffer.from(image.base64, "base64"),
+        contentType: image.mediaType,
+      });
+      imageUrl = url;
+
+      if (account) {
+        try {
+          momentResult = await createImageMoment({
+            prompt,
+            account,
+            imageUri: imageUrl,
+            mediaType: image.mediaType,
+          });
+        } catch (momentError) {
+          console.error("Error creating moment:", momentError);
+        }
+      }
+    } catch (e) {
+      console.error("Error uploading image:", e);
+      uploadError = "Failed to upload generated image";
+    }
 
     return NextResponse.json(
       {
         image,
         usage,
         imageUrl,
-        arweaveResult,
         moment: momentResult,
-        ...(arweaveError && { arweaveError }),
+        ...(uploadError && { uploadError }),
       },
       {
         status: 200,
@@ -97,12 +114,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error generating image:", error);
 
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-
     return NextResponse.json(
-      {
-        error: errorMessage,
-      },
+      { error: "Internal server error" },
       {
         status: 500,
         headers: getCorsHeaders(),

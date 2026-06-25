@@ -10,8 +10,8 @@ import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccou
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
-import { uploadLinkToArweave } from "@/lib/arweave/uploadLinkToArweave";
-import { getFetchableUrl } from "@/lib/arweave/getFetchableUrl";
+import { fetchRemoteImageBuffer } from "@/lib/networking/fetchRemoteImageBuffer";
+import { uploadPublicAsset } from "@/lib/files/uploadPublicAsset";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 import type { TablesInsert } from "@/types/database.types";
@@ -19,7 +19,7 @@ import type { TablesInsert } from "@/types/database.types";
 /**
  * Handles Instagram profile scraper Apify webhook results:
  *  - Persists the returned posts + social profile row.
- *  - Mirrors the profile pic to Arweave.
+ *  - Mirrors the profile pic to the public-uploads Supabase bucket.
  *  - Notifies subscribed account emails via Resend.
  *  - Queues the comments scraper for the profile's latest posts.
  *
@@ -43,11 +43,22 @@ export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookP
   await upsertPosts(postRows);
   const posts = await getPosts({ postUrls: postRows.map(p => p.post_url) });
 
-  const arweaveTx = await uploadLinkToArweave(
+  // Mirror the profile pic to durable storage so we don't lose it when
+  // Instagram's CDN rotates / expires the original URL. Fall back to the
+  // original on any failure.
+  const fetched = await fetchRemoteImageBuffer(
     firstResult.profilePicUrlHD || firstResult.profilePicUrl,
   );
-  if (arweaveTx) {
-    firstResult.profilePicUrl = getFetchableUrl(`ar://${arweaveTx}`) ?? firstResult.profilePicUrl;
+  if (fetched) {
+    try {
+      const { url } = await uploadPublicAsset({
+        data: fetched.buffer,
+        contentType: fetched.contentType,
+      });
+      firstResult.profilePicUrl = url;
+    } catch (err) {
+      console.error("[ERROR] uploading profile pic to public bucket:", err);
+    }
   }
 
   // Normalize once so the upsert and the subsequent lookup agree on the
