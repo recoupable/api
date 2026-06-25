@@ -80,6 +80,29 @@ describe("validateSendEmailBody", () => {
     });
   });
 
+  describe("subject defaulting", () => {
+    it("defaults a missing subject to the body's first heading", async () => {
+      const request = createRequest(
+        { to: ["d@example.com"], text: "# Pulse Report\n\nbody" },
+        { "x-api-key": "k" },
+      );
+      const result = await validateSendEmailBody(request);
+      expect(result).not.toBeInstanceOf(NextResponse);
+      if (!(result instanceof NextResponse)) {
+        expect(result.subject).toBe("Pulse Report");
+      }
+    });
+
+    it("defaults to `Message from Recoup` when subject and body are empty", async () => {
+      const request = createRequest({ to: ["d@example.com"] }, { "x-api-key": "k" });
+      const result = await validateSendEmailBody(request);
+      expect(result).not.toBeInstanceOf(NextResponse);
+      if (!(result instanceof NextResponse)) {
+        expect(result.subject).toBe("Message from Recoup");
+      }
+    });
+  });
+
   describe("successful validation", () => {
     it("returns validated data with to + subject + text", async () => {
       const request = createRequest(
@@ -194,12 +217,7 @@ describe("validateSendEmailBody", () => {
       if (result instanceof NextResponse) expect(result.status).toBe(400);
     });
 
-    it("rejects a missing subject", async () => {
-      const request = createRequest({ to: ["d@example.com"] }, { "x-api-key": "k" });
-      const result = await validateSendEmailBody(request);
-      expect(result).toBeInstanceOf(NextResponse);
-      if (result instanceof NextResponse) expect(result.status).toBe(400);
-    });
+    // subject is now optional (defaults from the body) — covered by "subject defaulting" above.
   });
 
   describe("auth", () => {

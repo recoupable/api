@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { assertRecipientsAllowed } from "@/lib/emails/assertRecipientsAllowed";
+import { resolveEmailSubject } from "@/lib/emails/resolveEmailSubject";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { z } from "zod";
@@ -12,7 +13,7 @@ export const sendEmailBodySchema = z.object({
     .min(1, "to must include at least one recipient")
     .optional(),
   cc: z.array(z.string().email("each 'cc' entry must be a valid email")).default([]).optional(),
-  subject: z.string({ message: "subject is required" }).min(1, "subject cannot be empty"),
+  subject: z.string().optional(),
   text: z.string().optional(),
   html: z.string().default("").optional(),
   headers: z.record(z.string(), z.string()).default({}).optional(),
@@ -22,8 +23,9 @@ export const sendEmailBodySchema = z.object({
 
 export type SendEmailBody = z.infer<typeof sendEmailBodySchema>;
 
-export type ValidatedSendEmailRequest = Omit<SendEmailBody, "to"> & {
+export type ValidatedSendEmailRequest = Omit<SendEmailBody, "to" | "subject"> & {
   to: string[];
+  subject: string;
   accountId: string;
 };
 
@@ -35,7 +37,9 @@ export type ValidatedSendEmailRequest = Omit<SendEmailBody, "to"> & {
  *
  * `to` is optional: when omitted, the email defaults to the authenticated
  * account's own email address(es) (via `account_emails`), so a caller can
- * "email me this" without restating their address. Returns the resolved `to`.
+ * "email me this" without restating their address. `subject` is optional too:
+ * when omitted it defaults to the body's first heading/line, else
+ * `Message from Recoup`. Returns the resolved `to` + `subject`.
  *
  * @param request - The NextRequest object
  * @returns A NextResponse with an error if validation/auth/recipients fail, or the validated request data.
@@ -99,9 +103,16 @@ export async function validateSendEmailBody(
     );
   }
 
+  const subject = resolveEmailSubject({
+    subject: result.data.subject,
+    text: result.data.text,
+    html: result.data.html,
+  });
+
   return {
     ...result.data,
     to,
+    subject,
     accountId: authContext.accountId,
   };
 }
