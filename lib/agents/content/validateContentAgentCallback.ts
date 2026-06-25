@@ -6,6 +6,7 @@ const contentRunResultSchema = z.object({
   runId: z.string(),
   status: z.enum(["completed", "failed", "timeout"]),
   videoUrl: z.string().optional(),
+  imageUrl: z.string().optional(),
   captionText: z.string().optional(),
   error: z.string().optional(),
 });
