@@ -62,4 +62,25 @@ describe("buildRecoupExecEnv", () => {
       RECOUP_ACCESS_TOKEN: "jwt.value",
     });
   });
+
+  // recoupable/chat#1815: both a Privy JWT and an ephemeral `recoup_sk_` API
+  // key surface as RECOUP_ACCESS_TOKEN (Bearer). The server parses the token
+  // format and authenticates a `recoup_sk_` key over Bearer too, so there is no
+  // client-side x-api-key routing here.
+  it("surfaces a recoup_sk_ API key as RECOUP_ACCESS_TOKEN (Bearer)", () => {
+    const env = buildRecoupExecEnv({
+      sandbox: baseSandbox,
+      recoupAccessToken: "recoup_sk_abc123",
+    });
+    expect(env).toEqual({ RECOUP_ACCESS_TOKEN: "recoup_sk_abc123" });
+  });
+
+  it("injects RECOUP_ORG_ID alongside a recoup_sk_ key", () => {
+    const env = buildRecoupExecEnv({
+      sandbox: baseSandbox,
+      recoupOrgId: "org-uuid",
+      recoupAccessToken: "recoup_sk_xyz",
+    });
+    expect(env).toEqual({ RECOUP_ORG_ID: "org-uuid", RECOUP_ACCESS_TOKEN: "recoup_sk_xyz" });
+  });
 });

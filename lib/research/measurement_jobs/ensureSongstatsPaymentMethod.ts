@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { findStripeCustomerForAccount } from "@/lib/stripe/findStripeCustomerForAccount";
-import { findDefaultPaymentMethodForCustomer } from "@/lib/stripe/findDefaultPaymentMethodForCustomer";
+import { accountHasPaymentMethod } from "@/lib/stripe/accountHasPaymentMethod";
 import { createCardOnFileSession } from "@/lib/stripe/createCardOnFileSession";
 import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
 
@@ -18,9 +17,7 @@ import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
 export async function ensureSongstatsPaymentMethod(
   accountId: string,
 ): Promise<NextResponse | null> {
-  const customerId = await findStripeCustomerForAccount(accountId);
-  const paymentMethod = customerId ? await findDefaultPaymentMethodForCustomer(customerId) : null;
-  if (paymentMethod) return null;
+  if (await accountHasPaymentMethod(accountId)) return null;
 
   const session = await createCardOnFileSession(
     accountId,
