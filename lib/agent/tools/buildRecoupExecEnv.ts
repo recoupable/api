@@ -7,12 +7,18 @@ import { isAgentContext } from "@/lib/agent/tools/isAgentContext";
  *
  * Injects:
  *   - `RECOUP_ORG_ID` — public organization UUID. Always safe.
- *   - `RECOUP_ACCESS_TOKEN` — short-lived Privy JWT, when the handler
- *     plumbed one through `AgentContext.recoupAccessToken`. Used by the
- *     `recoup-api` skill's curl examples to authenticate as the user.
+ *   - A short-lived credential from `AgentContext.recoupAccessToken`, routed by
+ *     type so the `recoup-api` skill sends the right auth header:
+ *       • an ephemeral `recoup_sk_` API key (headless `/api/chat/runs`) →
+ *         `RECOUP_API_KEY`, which the skill sends as `x-api-key`. REST
+ *         endpoints reject an API key over `Authorization: Bearer` (the JWT
+ *         path → 401), so it must NOT go in `RECOUP_ACCESS_TOKEN`
+ *         (recoupable/chat#1815).
+ *       • anything else (a short-lived Privy JWT from the interactive path) →
+ *         `RECOUP_ACCESS_TOKEN`, which the skill sends as `Authorization:
+ *         Bearer`.
  *     Long-lived api keys are deliberately NOT forwarded — only the
- *     short-lived bearer token is, and only when the caller used
- *     bearer auth (the handler enforces that gating).
+ *     short-lived credential the handler plumbed through.
  *
  * Returns `undefined` when nothing is available to inject so callers can
  * cleanly spread a conditional `...(env ? { env } : {})` into exec opts.
@@ -28,8 +34,13 @@ export function buildRecoupExecEnv(
   if (experimental_context.recoupOrgId) {
     env.RECOUP_ORG_ID = experimental_context.recoupOrgId;
   }
-  if (experimental_context.recoupAccessToken) {
-    env.RECOUP_ACCESS_TOKEN = experimental_context.recoupAccessToken;
+  const token = experimental_context.recoupAccessToken;
+  if (token) {
+    if (token.startsWith("recoup_sk_")) {
+      env.RECOUP_API_KEY = token;
+    } else {
+      env.RECOUP_ACCESS_TOKEN = token;
+    }
   }
 
   return Object.keys(env).length > 0 ? env : undefined;
