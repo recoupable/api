@@ -188,6 +188,30 @@ describe("fetchSongstatsResearch", () => {
     });
   });
 
+  it("maps artist urls to SongStats info and keeps only trusted https links", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: {
+        artist_info: {
+          links: [
+            { platform: "spotify", url: "https://open.spotify.com/artist/abc" },
+            { platform: "evil", url: "javascript:alert(1)" },
+          ],
+        },
+      },
+    });
+
+    const result = await fetchSongstatsResearch("/artist/artist_1/urls");
+
+    expect(fetchSongstats).toHaveBeenCalledWith("/artists/info", {
+      songstats_artist_id: "artist_1",
+    });
+    expect(result).toEqual({
+      status: 200,
+      data: { spotify: "https://open.spotify.com/artist/abc" },
+    });
+  });
+
   it("maps past artist playlists to top_playlists with scope=total", async () => {
     vi.mocked(fetchSongstats).mockResolvedValue({
       status: 200,
