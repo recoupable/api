@@ -7,12 +7,14 @@ import { isAgentContext } from "@/lib/agent/tools/isAgentContext";
  *
  * Injects:
  *   - `RECOUP_ORG_ID` — public organization UUID. Always safe.
- *   - `RECOUP_ACCESS_TOKEN` — short-lived Privy JWT, when the handler
- *     plumbed one through `AgentContext.recoupAccessToken`. Used by the
- *     `recoup-api` skill's curl examples to authenticate as the user.
- *     Long-lived api keys are deliberately NOT forwarded — only the
- *     short-lived bearer token is, and only when the caller used
- *     bearer auth (the handler enforces that gating).
+ *   - `RECOUP_ACCESS_TOKEN` — the short-lived credential from
+ *     `AgentContext.recoupAccessToken`, which the `recoup-api` skill sends as
+ *     `Authorization: Bearer`. This may be a Privy JWT (interactive path) or an
+ *     ephemeral `recoup_sk_` API key (headless `/api/chat/runs`) — the server
+ *     parses the format and authenticates either over Bearer, so there's no
+ *     client-side routing here (recoupable/chat#1815). Long-lived api keys are
+ *     deliberately NOT forwarded — only the short-lived credential the handler
+ *     plumbed through.
  *
  * Returns `undefined` when nothing is available to inject so callers can
  * cleanly spread a conditional `...(env ? { env } : {})` into exec opts.
