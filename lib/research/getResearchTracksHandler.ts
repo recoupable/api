@@ -18,9 +18,18 @@ export async function getResearchTracksHandler(request: NextRequest): Promise<Ne
   try {
     const validated = await validateArtistRequest(request);
     if (validated instanceof NextResponse) return validated;
+
+    const { searchParams } = new URL(request.url);
+    const query: Record<string, string> = {};
+    for (const key of ["limit", "offset", "source", "metric"] as const) {
+      const value = searchParams.get(key);
+      if (value) query[key] = value;
+    }
+
     const result = await handleArtistResearch({
       ...validated,
       path: cmId => `/artist/${cmId}/tracks`,
+      query,
     });
 
     if ("error" in result) return errorResponse(result.error, result.status);
