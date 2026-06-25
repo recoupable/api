@@ -60,7 +60,7 @@ describe("validateSendEmailBody", () => {
           text: "t",
           html: "<p>h</p>",
           headers: { "X-Custom": "v" },
-          room_id: "room-1",
+          chat_id: "chat-1",
         },
         { "x-api-key": "test-api-key" },
       );
@@ -72,7 +72,7 @@ describe("validateSendEmailBody", () => {
         expect(result.cc).toEqual(["cc@example.com"]);
         expect(result.html).toBe("<p>h</p>");
         expect(result.headers).toEqual({ "X-Custom": "v" });
-        expect(result.room_id).toBe("room-1");
+        expect(result.chat_id).toBe("chat-1");
       }
     });
 

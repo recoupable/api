@@ -4,6 +4,7 @@ import { sendEmailHandler } from "../sendEmailHandler";
 
 const mockValidateAuthContext = vi.fn();
 const mockProcessAndSendEmail = vi.fn();
+const mockAssertRecipientsAllowed = vi.fn();
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: (...args: unknown[]) => mockValidateAuthContext(...args),
@@ -11,6 +12,10 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 
 vi.mock("@/lib/emails/processAndSendEmail", () => ({
   processAndSendEmail: (...args: unknown[]) => mockProcessAndSendEmail(...args),
+}));
+
+vi.mock("@/lib/emails/assertRecipientsAllowed", () => ({
+  assertRecipientsAllowed: (...args: unknown[]) => mockAssertRecipientsAllowed(...args),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -42,15 +47,16 @@ describe("sendEmailHandler", () => {
       message: "Email sent successfully.",
       id: "resend-id-1",
     });
+    mockAssertRecipientsAllowed.mockResolvedValue({ allowed: true });
   });
 
-  it("sends to the explicit recipients and returns 200 with the result", async () => {
+  it("sends to the explicit recipients and maps chat_id to the footer link", async () => {
     const request = createRequest({
       to: ["dest@example.com"],
       cc: ["cc@example.com"],
       subject: "Weekly report",
       text: "body",
-      room_id: "room-1",
+      chat_id: "chat-1",
     });
     const response = await sendEmailHandler(request);
 
@@ -58,15 +64,34 @@ describe("sendEmailHandler", () => {
     const json = await response.json();
     expect(json).toEqual({ success: true, message: "Email sent successfully.", id: "resend-id-1" });
 
+    // Public field is chat_id; processAndSendEmail keeps the internal room_id arg.
     expect(mockProcessAndSendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         to: ["dest@example.com"],
         cc: ["cc@example.com"],
         subject: "Weekly report",
         text: "body",
-        room_id: "room-1",
+        room_id: "chat-1",
       }),
     );
+    expect(mockAssertRecipientsAllowed).toHaveBeenCalledWith({
+      accountId: "account-123",
+      recipients: ["dest@example.com", "cc@example.com"],
+    });
+  });
+
+  it("returns 403 when a recipient is disallowed without a payment method", async () => {
+    mockAssertRecipientsAllowed.mockResolvedValue({
+      allowed: false,
+      disallowed: ["stranger@example.com"],
+    });
+    const response = await sendEmailHandler(
+      createRequest({ to: ["stranger@example.com"], subject: "s" }),
+    );
+    expect(response.status).toBe(403);
+    const json = await response.json();
+    expect(json.disallowed_recipients).toEqual(["stranger@example.com"]);
+    expect(mockProcessAndSendEmail).not.toHaveBeenCalled();
   });
 
   it("returns 401 when authentication fails", async () => {

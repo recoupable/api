@@ -28,8 +28,11 @@ export async function OPTIONS() {
  * - html (optional): raw HTML body (takes precedence over text)
  * - cc (optional): array of CC email addresses
  * - headers (optional): custom email headers
- * - room_id (optional): room ID for a chat link in the footer
+ * - chat_id (optional): chat ID for a chat link in the footer
  * - account_id (optional): UUID of the account to send for (org keys only)
+ *
+ * Recipient restriction: without a payment method on file, to/cc are limited to
+ * the account's own email; a card on file lifts the restriction (403 otherwise).
  *
  * @param request - The request object.
  * @returns A NextResponse with the send result.

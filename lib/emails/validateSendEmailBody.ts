@@ -13,7 +13,7 @@ export const sendEmailBodySchema = z.object({
   text: z.string().optional(),
   html: z.string().default("").optional(),
   headers: z.record(z.string(), z.string()).default({}).optional(),
-  room_id: z.string().optional(),
+  chat_id: z.string().optional(),
   account_id: z.string().uuid("account_id must be a valid UUID").optional(),
 });
 
@@ -26,7 +26,7 @@ export type ValidatedSendEmailRequest = {
   text?: string;
   html?: string;
   headers?: Record<string, string>;
-  room_id?: string;
+  chat_id?: string;
   accountId: string;
 };
 
@@ -75,7 +75,7 @@ export async function validateSendEmailBody(
     text: result.data.text,
     html: result.data.html,
     headers: result.data.headers,
-    room_id: result.data.room_id,
+    chat_id: result.data.chat_id,
     accountId: authContext.accountId,
   };
 }
