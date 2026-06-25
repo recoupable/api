@@ -109,6 +109,15 @@ describe("handleStopChatWorkflow", () => {
     expect(await result.json()).toEqual({ success: true, stopped: true });
   });
 
+  it("returns stopped:false when a pending placeholder CAS loses the race", async () => {
+    mockValidated("pending-deterministic-uuid");
+    vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue({ ok: true, claimed: false });
+
+    const result = await handleStopChatWorkflow(makeRequest(), CHAT_ID);
+
+    expect(await result.json()).toEqual({ success: true, stopped: false });
+  });
+
   it("returns 502 and does NOT release the slot when run cancellation throws", async () => {
     mockValidated("wrun_abc");
     cancel.mockRejectedValue(new Error("cancel failed"));
