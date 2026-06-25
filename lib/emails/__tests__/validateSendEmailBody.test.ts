@@ -3,9 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateSendEmailBody } from "../validateSendEmailBody";
 
 const mockValidateAuthContext = vi.fn();
+const mockAssertRecipientsAllowed = vi.fn();
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: (...args: unknown[]) => mockValidateAuthContext(...args),
+}));
+
+vi.mock("@/lib/emails/assertRecipientsAllowed", () => ({
+  assertRecipientsAllowed: (...args: unknown[]) => mockAssertRecipientsAllowed(...args),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -31,6 +36,41 @@ describe("validateSendEmailBody", () => {
       accountId: "account-123",
       orgId: null,
       authToken: "test-api-key",
+    });
+    mockAssertRecipientsAllowed.mockResolvedValue({ allowed: true });
+  });
+
+  describe("recipient restriction", () => {
+    it("returns 403 with disallowed recipients when the gate blocks", async () => {
+      mockAssertRecipientsAllowed.mockResolvedValue({
+        allowed: false,
+        disallowed: ["stranger@example.com"],
+      });
+      const request = createRequest(
+        { to: ["stranger@example.com"], subject: "Hi" },
+        { "x-api-key": "test-api-key" },
+      );
+      const result = await validateSendEmailBody(request);
+
+      expect(result).toBeInstanceOf(NextResponse);
+      if (result instanceof NextResponse) {
+        expect(result.status).toBe(403);
+        const json = await result.json();
+        expect(json.disallowed_recipients).toEqual(["stranger@example.com"]);
+      }
+    });
+
+    it("checks to + cc together against the authenticated account", async () => {
+      const request = createRequest(
+        { to: ["a@example.com"], cc: ["b@example.com"], subject: "Hi" },
+        { "x-api-key": "test-api-key" },
+      );
+      await validateSendEmailBody(request);
+
+      expect(mockAssertRecipientsAllowed).toHaveBeenCalledWith({
+        accountId: "account-123",
+        recipients: ["a@example.com", "b@example.com"],
+      });
     });
   });
 

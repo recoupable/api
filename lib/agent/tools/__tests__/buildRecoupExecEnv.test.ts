@@ -63,26 +63,16 @@ describe("buildRecoupExecEnv", () => {
     });
   });
 
-  // recoupable/chat#1815: the headless /api/chat/runs path plumbs an ephemeral
-  // `recoup_sk_` API KEY (not a Privy JWT) through recoupAccessToken. REST
-  // endpoints reject an API key over `Authorization: Bearer` (the JWT path,
-  // 401) but accept it via `x-api-key`. So a `recoup_sk_` token must surface as
-  // RECOUP_API_KEY — which the recoup-api skill sends as `x-api-key` — NOT as
-  // RECOUP_ACCESS_TOKEN (which it sends as Bearer).
-  it("surfaces a recoup_sk_ API key as RECOUP_API_KEY (x-api-key), not RECOUP_ACCESS_TOKEN", () => {
+  // recoupable/chat#1815: both a Privy JWT and an ephemeral `recoup_sk_` API
+  // key surface as RECOUP_ACCESS_TOKEN (Bearer). The server parses the token
+  // format and authenticates a `recoup_sk_` key over Bearer too, so there is no
+  // client-side x-api-key routing here.
+  it("surfaces a recoup_sk_ API key as RECOUP_ACCESS_TOKEN (Bearer)", () => {
     const env = buildRecoupExecEnv({
       sandbox: baseSandbox,
       recoupAccessToken: "recoup_sk_abc123",
     });
-    expect(env).toEqual({ RECOUP_API_KEY: "recoup_sk_abc123" });
-  });
-
-  it("still surfaces a non-recoup_sk_ token (Privy JWT) as RECOUP_ACCESS_TOKEN (Bearer)", () => {
-    const env = buildRecoupExecEnv({
-      sandbox: baseSandbox,
-      recoupAccessToken: "eyJhbGciOiJFUzI1NiI.test.jwt",
-    });
-    expect(env).toEqual({ RECOUP_ACCESS_TOKEN: "eyJhbGciOiJFUzI1NiI.test.jwt" });
+    expect(env).toEqual({ RECOUP_ACCESS_TOKEN: "recoup_sk_abc123" });
   });
 
   it("injects RECOUP_ORG_ID alongside a recoup_sk_ key", () => {
@@ -91,6 +81,6 @@ describe("buildRecoupExecEnv", () => {
       recoupOrgId: "org-uuid",
       recoupAccessToken: "recoup_sk_xyz",
     });
-    expect(env).toEqual({ RECOUP_ORG_ID: "org-uuid", RECOUP_API_KEY: "recoup_sk_xyz" });
+    expect(env).toEqual({ RECOUP_ORG_ID: "org-uuid", RECOUP_ACCESS_TOKEN: "recoup_sk_xyz" });
   });
 });

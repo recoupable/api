@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { assertRecipientsAllowed } from "@/lib/emails/assertRecipientsAllowed";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { z } from "zod";
 
@@ -19,25 +20,16 @@ export const sendEmailBodySchema = z.object({
 
 export type SendEmailBody = z.infer<typeof sendEmailBodySchema>;
 
-export type ValidatedSendEmailRequest = {
-  to: string[];
-  cc?: string[];
-  subject: string;
-  text?: string;
-  html?: string;
-  headers?: Record<string, string>;
-  chat_id?: string;
-  accountId: string;
-};
+export type ValidatedSendEmailRequest = SendEmailBody & { accountId: string };
 
 /**
- * Validates POST /api/emails: parses the body against the schema, then
- * authenticates via validateAuthContext (x-api-key or Bearer). Unlike
- * /api/notifications (which emails the account's own address), this endpoint
- * takes an explicit `to` recipient list.
+ * Validates POST /api/emails: parses the body, authenticates via
+ * validateAuthContext (x-api-key or Bearer), then enforces the recipient
+ * restriction (without a payment method on file, `to`/`cc` are limited to the
+ * account's own email). Takes an explicit `to` recipient list.
  *
  * @param request - The NextRequest object
- * @returns A NextResponse with an error if validation/auth fails, or the validated request data.
+ * @returns A NextResponse with an error if validation/auth/recipients fail, or the validated request data.
  */
 export async function validateSendEmailBody(
   request: NextRequest,
@@ -68,14 +60,23 @@ export async function validateSendEmailBody(
     return authContext;
   }
 
+  const recipientCheck = await assertRecipientsAllowed({
+    accountId: authContext.accountId,
+    recipients: [...result.data.to, ...(result.data.cc ?? [])],
+  });
+  if (recipientCheck.allowed === false) {
+    return NextResponse.json(
+      {
+        status: "error",
+        error: `Without a payment method on file, emails can only be sent to the account's own address. Disallowed recipients: ${recipientCheck.disallowed.join(", ")}. Add a payment method to send to any recipient.`,
+        disallowed_recipients: recipientCheck.disallowed,
+      },
+      { status: 403, headers: getCorsHeaders() },
+    );
+  }
+
   return {
-    to: result.data.to,
-    cc: result.data.cc,
-    subject: result.data.subject,
-    text: result.data.text,
-    html: result.data.html,
-    headers: result.data.headers,
-    chat_id: result.data.chat_id,
+    ...result.data,
     accountId: authContext.accountId,
   };
 }

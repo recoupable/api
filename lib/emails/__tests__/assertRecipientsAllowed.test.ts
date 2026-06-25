@@ -4,7 +4,7 @@ import { assertRecipientsAllowed } from "../assertRecipientsAllowed";
 const mockAccountHasPaymentMethod = vi.fn();
 const mockSelectAccountEmails = vi.fn();
 
-vi.mock("@/lib/emails/accountHasPaymentMethod", () => ({
+vi.mock("@/lib/stripe/accountHasPaymentMethod", () => ({
   accountHasPaymentMethod: (...args: unknown[]) => mockAccountHasPaymentMethod(...args),
 }));
 

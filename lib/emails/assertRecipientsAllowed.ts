@@ -1,4 +1,4 @@
-import { accountHasPaymentMethod } from "@/lib/emails/accountHasPaymentMethod";
+import { accountHasPaymentMethod } from "@/lib/stripe/accountHasPaymentMethod";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
 export type RecipientCheckResult = { allowed: true } | { allowed: false; disallowed: string[] };
