@@ -240,7 +240,10 @@ describe("wrapWorkflowStreamWatcher", () => {
     expect((synthetic as { toolCallId: string }).toolCallId).toBe("tool-x");
   });
 
-  it("propagates consumer cancel to getRun(runId).cancel()", async () => {
+  it("does NOT cancel the underlying workflow on consumer disconnect (runs are durable)", async () => {
+    // Closed tabs / aborted fetches must not kill the run — the client is
+    // expected to be able to resume via GET /api/chat/{chatId}/stream.
+    // Only POST /stop should ever call getRun().cancel().
     const cancelSpy = vi.fn(() => Promise.resolve());
     mockRun({ status: () => "running", cancel: cancelSpy });
 
@@ -252,9 +255,51 @@ describe("wrapWorkflowStreamWatcher", () => {
 
     const wrapped = wrapWorkflowStreamWatcher(RUN_ID, source);
     const reader = wrapped.getReader();
-    await reader.read(); // pull the first chunk so start() runs
+    await reader.read();
     await reader.cancel();
 
-    expect(cancelSpy).toHaveBeenCalledTimes(1);
+    expect(cancelSpy).not.toHaveBeenCalled();
+  });
+
+  it("releases the inner reader on consumer cancel so the source unblocks", async () => {
+    mockRun({ status: () => "running" });
+    const innerCancel = vi.fn(() => Promise.resolve());
+    const source = new ReadableStream<UIMessageChunk>({
+      start(controller) {
+        controller.enqueue({ type: "text-start", id: "a" } as UIMessageChunk);
+      },
+      cancel: innerCancel,
+    });
+
+    const wrapped = wrapWorkflowStreamWatcher(RUN_ID, source);
+    const reader = wrapped.getReader();
+    await reader.read();
+    await reader.cancel();
+
+    expect(innerCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats AbortError from source read as a clean close, not a hard error", async () => {
+    mockRun({ status: () => "running" });
+    const source = new ReadableStream<UIMessageChunk>({
+      start(controller) {
+        const err = new Error("aborted");
+        err.name = "AbortError";
+        controller.error(err);
+      },
+    });
+    const out = await collect(wrapWorkflowStreamWatcher(RUN_ID, source));
+    expect(Array.isArray(out)).toBe(true);
+  });
+
+  it("treats late workflow-not-found 404 from source read as a clean close", async () => {
+    mockRun({ status: () => "running" });
+    const source = new ReadableStream<UIMessageChunk>({
+      start(controller) {
+        controller.error(new Error("Workflow run failed with status code 404 (not ok)"));
+      },
+    });
+    const out = await collect(wrapWorkflowStreamWatcher(RUN_ID, source));
+    expect(Array.isArray(out)).toBe(true);
   });
 });

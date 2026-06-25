@@ -11,5 +11,8 @@ import { selectChats } from "@/lib/supabase/chats/selectChats";
  */
 export async function hasActiveStreamForSession(sessionId: string): Promise<boolean> {
   const chats = await selectChats({ sessionId });
+  // On DB error we can't confirm the chats are idle; assume a stream may be
+  // active and defer hibernation rather than risk pausing mid-stream.
+  if (chats === null) return true;
   return chats.some(chat => chat.active_stream_id !== null);
 }
