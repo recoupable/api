@@ -30,7 +30,7 @@ export type ProcessAndSendEmailResult = ProcessAndSendEmailSuccess | ProcessAndS
 
 /**
  * Shared email processing and sending logic used by both the
- * POST /api/notifications handler and the send_email MCP tool.
+ * POST /api/emails handler and the send_email MCP tool.
  *
  * Handles room lookup, footer generation, markdown-to-HTML conversion,
  * and the Resend API call.
