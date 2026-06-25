@@ -4,6 +4,7 @@ import { validateSendEmailBody } from "../validateSendEmailBody";
 
 const mockValidateAuthContext = vi.fn();
 const mockAssertRecipientsAllowed = vi.fn();
+const mockSelectAccountEmails = vi.fn();
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: (...args: unknown[]) => mockValidateAuthContext(...args),
@@ -11,6 +12,10 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 
 vi.mock("@/lib/emails/assertRecipientsAllowed", () => ({
   assertRecipientsAllowed: (...args: unknown[]) => mockAssertRecipientsAllowed(...args),
+}));
+
+vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
+  default: (...args: unknown[]) => mockSelectAccountEmails(...args),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -38,6 +43,7 @@ describe("validateSendEmailBody", () => {
       authToken: "test-api-key",
     });
     mockAssertRecipientsAllowed.mockResolvedValue({ allowed: true });
+    mockSelectAccountEmails.mockResolvedValue([{ email: "owner@example.com" }]);
   });
 
   describe("recipient restriction", () => {
@@ -128,14 +134,52 @@ describe("validateSendEmailBody", () => {
     });
   });
 
-  describe("validation errors (400)", () => {
-    it("rejects a missing 'to'", async () => {
+  describe("default recipient (omitted 'to')", () => {
+    it("defaults 'to' to the account's own email when omitted", async () => {
+      mockSelectAccountEmails.mockResolvedValue([{ email: "owner@example.com" }]);
+      const request = createRequest({ subject: "s", text: "hi" }, { "x-api-key": "k" });
+      const result = await validateSendEmailBody(request);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      if (!(result instanceof NextResponse)) {
+        expect(result.to).toEqual(["owner@example.com"]);
+      }
+      expect(mockSelectAccountEmails).toHaveBeenCalledWith({ accountIds: "account-123" });
+    });
+
+    it("includes every account email when the account has more than one", async () => {
+      mockSelectAccountEmails.mockResolvedValue([
+        { email: "owner@example.com" },
+        { email: "owner.alt@example.com" },
+      ]);
+      const request = createRequest({ subject: "s" }, { "x-api-key": "k" });
+      const result = await validateSendEmailBody(request);
+
+      expect(result).not.toBeInstanceOf(NextResponse);
+      if (!(result instanceof NextResponse)) {
+        expect(result.to).toEqual(["owner@example.com", "owner.alt@example.com"]);
+      }
+    });
+
+    it("returns 400 when 'to' is omitted and the account has no email on file", async () => {
+      mockSelectAccountEmails.mockResolvedValue([]);
       const request = createRequest({ subject: "s" }, { "x-api-key": "k" });
       const result = await validateSendEmailBody(request);
       expect(result).toBeInstanceOf(NextResponse);
       if (result instanceof NextResponse) expect(result.status).toBe(400);
     });
 
+    it("does not resolve account emails when 'to' is provided", async () => {
+      const request = createRequest(
+        { to: ["dest@example.com"], subject: "s" },
+        { "x-api-key": "k" },
+      );
+      await validateSendEmailBody(request);
+      expect(mockSelectAccountEmails).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("validation errors (400)", () => {
     it("rejects an empty 'to' array", async () => {
       const request = createRequest({ to: [], subject: "s" }, { "x-api-key": "k" });
       const result = await validateSendEmailBody(request);

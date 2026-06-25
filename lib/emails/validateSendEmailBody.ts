@@ -3,12 +3,14 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { assertRecipientsAllowed } from "@/lib/emails/assertRecipientsAllowed";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
+import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { z } from "zod";
 
 export const sendEmailBodySchema = z.object({
   to: z
     .array(z.string().email("each 'to' entry must be a valid email"))
-    .min(1, "to must include at least one recipient"),
+    .min(1, "to must include at least one recipient")
+    .optional(),
   cc: z.array(z.string().email("each 'cc' entry must be a valid email")).default([]).optional(),
   subject: z.string({ message: "subject is required" }).min(1, "subject cannot be empty"),
   text: z.string().optional(),
@@ -20,13 +22,20 @@ export const sendEmailBodySchema = z.object({
 
 export type SendEmailBody = z.infer<typeof sendEmailBodySchema>;
 
-export type ValidatedSendEmailRequest = SendEmailBody & { accountId: string };
+export type ValidatedSendEmailRequest = Omit<SendEmailBody, "to"> & {
+  to: string[];
+  accountId: string;
+};
 
 /**
  * Validates POST /api/emails: parses the body, authenticates via
- * validateAuthContext (x-api-key or Bearer), then enforces the recipient
- * restriction (without a payment method on file, `to`/`cc` are limited to the
- * account's own email). Takes an explicit `to` recipient list.
+ * validateAuthContext (x-api-key or Bearer), resolves the recipients, then
+ * enforces the recipient restriction (without a payment method on file,
+ * `to`/`cc` are limited to the account's own email).
+ *
+ * `to` is optional: when omitted, the email defaults to the authenticated
+ * account's own email address(es) (via `account_emails`), so a caller can
+ * "email me this" without restating their address. Returns the resolved `to`.
  *
  * @param request - The NextRequest object
  * @returns A NextResponse with an error if validation/auth/recipients fail, or the validated request data.
@@ -60,9 +69,24 @@ export async function validateSendEmailBody(
     return authContext;
   }
 
+  let to = result.data.to ?? [];
+  if (to.length === 0) {
+    const ownRows = await selectAccountEmails({ accountIds: authContext.accountId });
+    to = ownRows.map(row => row.email);
+    if (to.length === 0) {
+      return NextResponse.json(
+        {
+          status: "error",
+          error: "No email address found for the authenticated account.",
+        },
+        { status: 400, headers: getCorsHeaders() },
+      );
+    }
+  }
+
   const recipientCheck = await assertRecipientsAllowed({
     accountId: authContext.accountId,
-    recipients: [...result.data.to, ...(result.data.cc ?? [])],
+    recipients: [...to, ...(result.data.cc ?? [])],
   });
   if (recipientCheck.allowed === false) {
     return NextResponse.json(
@@ -77,6 +101,7 @@ export async function validateSendEmailBody(
 
   return {
     ...result.data,
+    to,
     accountId: authContext.accountId,
   };
 }
