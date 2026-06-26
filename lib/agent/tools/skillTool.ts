@@ -43,7 +43,7 @@ Important:
 - NEVER just announce or mention a skill without actually calling this tool
 - Only use skills listed in "Available skills" in your system prompt`,
   inputSchema: skillInputSchema,
-  execute: async ({ skill, args }, { experimental_context }) => {
+  execute: async ({ skill, args }, { context: experimental_context }) => {
     const sandbox = await getSandbox(experimental_context, "skill");
     const skills = getSkills(experimental_context);
 

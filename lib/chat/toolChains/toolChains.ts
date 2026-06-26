@@ -4,14 +4,14 @@ import { createNewArtistToolChain } from "./createNewArtistToolChain";
 
 export type ToolChainItem = {
   toolName: string;
-  system?: string;
+  instructions?: string;
   messages?: ModelMessage[];
 };
 
 export type PrepareStepResult = {
   toolChoice?: { type: "tool"; toolName: string };
   model?: LanguageModel;
-  system?: string;
+  instructions?: string;
   messages?: ModelMessage[];
 };
 

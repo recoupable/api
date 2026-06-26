@@ -39,7 +39,7 @@ IMPORTANT:
 - NEVER proactively create documentation files (e.g., *.md) unless the user explicitly requests them
 - Do not write files that contain secrets or credentials (API keys, passwords, .env, etc.)`,
   inputSchema: writeInputSchema,
-  execute: async ({ filePath, content }, { experimental_context }) => {
+  execute: async ({ filePath, content }, { context: experimental_context }) => {
     const sandbox = await getSandbox(experimental_context, "write");
     const workingDirectory = sandbox.workingDirectory;
 

@@ -32,7 +32,7 @@ describe("readFileTool", () => {
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const tool = readFileTool;
     const result = (await tool.execute!({ filePath: "README.md" }, {
-      experimental_context: ctx,
+      context: ctx,
     } as never)) as { success: boolean; content: string; totalLines: number; path: string };
     expect(result.success).toBe(true);
     expect(result.totalLines).toBe(3);
@@ -50,7 +50,7 @@ describe("readFileTool", () => {
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const tool = readFileTool;
     const result = (await tool.execute!({ filePath: "x.txt", offset: 2, limit: 2 }, {
-      experimental_context: ctx,
+      context: ctx,
     } as never)) as { content: string; startLine: number; endLine: number };
     expect(result.startLine).toBe(2);
     // `endLine` is the last line included (1-indexed). With offset=2,limit=2
@@ -68,7 +68,7 @@ describe("readFileTool", () => {
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const tool = readFileTool;
     const result = (await tool.execute!({ filePath: "src" }, {
-      experimental_context: ctx,
+      context: ctx,
     } as never)) as { success: boolean; error: string };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/directory/i);
@@ -81,7 +81,7 @@ describe("readFileTool", () => {
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const tool = readFileTool;
     const result = (await tool.execute!({ filePath: "missing.ts" }, {
-      experimental_context: ctx,
+      context: ctx,
     } as never)) as { success: boolean; error: string };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/not found/);

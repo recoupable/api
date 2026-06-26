@@ -58,7 +58,7 @@ export const handleChatCredits = async ({
       modelId: model,
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
-      cachedInputTokens: usage.cachedInputTokens,
+      cachedInputTokens: usage.inputTokenDetails.cacheReadTokens,
     });
   } catch (error) {
     console.error("Failed to handle chat credits:", error);

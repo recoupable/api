@@ -1,4 +1,4 @@
-import { stepCountIs } from "ai";
+import { isStepCount } from "ai";
 
 export const MAX_MESSAGES = 55;
 
@@ -11,7 +11,7 @@ export const MAX_MESSAGES = 55;
  * Single-shot agents (compact, content, email-reply) use `stepCountIs(1)`
  * directly — they're not in the multi-step family.
  */
-export const CHAT_AGENT_STOP_WHEN = stepCountIs(111);
+export const CHAT_AGENT_STOP_WHEN = isStepCount(111);
 
 export const SYSTEM_PROMPT = `You are Recoup, a friendly, sharp, and strategic AI assistant for the music industry. You help music executives, artist teams, and self-starting artists analyze fan data, optimize marketing, and grow artist careers.
 
