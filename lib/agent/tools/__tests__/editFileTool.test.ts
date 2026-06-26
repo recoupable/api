@@ -29,7 +29,7 @@ describe("editFileTool", () => {
     const tool = editFileTool;
     const result = (await tool.execute!(
       { filePath: "a.txt", oldString: "old value", newString: "new value" },
-      { experimental_context: ctx } as never,
+      { context: ctx } as never,
     )) as { success: boolean; replacements: number; startLine: number };
     expect(result.success).toBe(true);
     expect(result.replacements).toBe(1);
@@ -42,7 +42,7 @@ describe("editFileTool", () => {
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const tool = editFileTool;
     const result = (await tool.execute!({ filePath: "a.txt", oldString: "x", newString: "x" }, {
-      experimental_context: ctx,
+      context: ctx,
     } as never)) as { success: boolean; error: string };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/must be different/);
@@ -54,7 +54,7 @@ describe("editFileTool", () => {
     const tool = editFileTool;
     const result = (await tool.execute!(
       { filePath: "a.txt", oldString: "missing", newString: "other" },
-      { experimental_context: ctx } as never,
+      { context: ctx } as never,
     )) as { success: boolean; error: string };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/not found/);
@@ -65,7 +65,7 @@ describe("editFileTool", () => {
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const tool = editFileTool;
     const result = (await tool.execute!({ filePath: "a.txt", oldString: "foo", newString: "baz" }, {
-      experimental_context: ctx,
+      context: ctx,
     } as never)) as { success: boolean; error: string };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/2 times/);
@@ -77,7 +77,7 @@ describe("editFileTool", () => {
     const tool = editFileTool;
     const result = (await tool.execute!(
       { filePath: "a.txt", oldString: "foo", newString: "qux", replaceAll: true },
-      { experimental_context: ctx } as never,
+      { context: ctx } as never,
     )) as { success: boolean; replacements: number };
     expect(result.success).toBe(true);
     expect(result.replacements).toBe(3);

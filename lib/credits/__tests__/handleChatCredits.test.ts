@@ -18,7 +18,7 @@ const mockRecordCreditDeduction = vi.mocked(recordCreditDeduction);
 const USAGE = {
   inputTokens: 1000,
   outputTokens: 500,
-  cachedInputTokens: 0,
+  inputTokenDetails: { cacheReadTokens: 0 },
 } as never;
 
 describe("handleChatCredits", () => {

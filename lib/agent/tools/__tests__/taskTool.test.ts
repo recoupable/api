@@ -28,7 +28,7 @@ function makeStreamResult(opts: {
   const calls = opts.toolCalls ?? [];
   const finishCount = opts.finishSteps ?? 1;
   return {
-    fullStream: (async function* () {
+    stream: (async function* () {
       for (const c of calls) {
         yield { type: "tool-call", toolName: c.toolName, input: c.input };
       }
@@ -60,7 +60,7 @@ describe("taskTool.execute (async generator)", () => {
   it("yields an initial chunk with toolCallCount=0 + startedAt + modelId before the subagent does any work", async () => {
     vi.mocked(streamText).mockReturnValue(makeStreamResult({}) as never);
     const gen = taskTool.execute!({ task: "x", instructions: "y" }, {
-      experimental_context: ctx,
+      context: ctx,
     } as never) as AsyncGenerator<TaskToolOutput>;
     const first = await gen.next();
     expect(first.done).toBe(false);
@@ -86,7 +86,7 @@ describe("taskTool.execute (async generator)", () => {
     );
     const chunks = (await drainGenerator(
       taskTool.execute!({ task: "x", instructions: "y" }, {
-        experimental_context: ctx,
+        context: ctx,
       } as never) as AsyncGenerator<TaskToolOutput>,
     )) as TaskToolOutput[];
     // Two tool-call yields + one finish-step yield (sticky pending so the
@@ -110,7 +110,7 @@ describe("taskTool.execute (async generator)", () => {
     );
     const chunks = (await drainGenerator(
       taskTool.execute!({ task: "x", instructions: "y" }, {
-        experimental_context: ctx,
+        context: ctx,
       } as never) as AsyncGenerator<TaskToolOutput>,
     )) as TaskToolOutput[];
     const usageChunks = chunks.filter(c => c.usage);
@@ -129,7 +129,7 @@ describe("taskTool.execute (async generator)", () => {
     vi.mocked(streamText).mockReturnValue(makeStreamResult({ responseMessages }) as never);
     const chunks = (await drainGenerator(
       taskTool.execute!({ task: "x", instructions: "y" }, {
-        experimental_context: ctx,
+        context: ctx,
       } as never) as AsyncGenerator<TaskToolOutput>,
     )) as TaskToolOutput[];
     const finalChunk = chunks.find(c => c.final);
@@ -143,7 +143,7 @@ describe("taskTool.execute (async generator)", () => {
     vi.mocked(streamText).mockReturnValue(makeStreamResult({}) as never);
     await drainGenerator(
       taskTool.execute!({ task: "x", instructions: "y" }, {
-        experimental_context: { ...ctx, subagentModel: subagentModelOverride },
+        context: { ...ctx, subagentModel: subagentModelOverride },
       } as never) as AsyncGenerator<TaskToolOutput>,
     );
     const args = vi.mocked(streamText).mock.calls[0]?.[0] as { model: unknown };
@@ -152,7 +152,7 @@ describe("taskTool.execute (async generator)", () => {
 
   it("throws when agent context is missing the `model` field", async () => {
     const gen = taskTool.execute!({ task: "x", instructions: "y" }, {
-      experimental_context: { sandbox: ctx.sandbox /* no model */ },
+      context: { sandbox: ctx.sandbox /* no model */ },
     } as never) as AsyncGenerator<TaskToolOutput>;
     await expect(gen.next()).rejects.toThrow(/model not initialized/i);
   });
@@ -161,7 +161,7 @@ describe("taskTool.execute (async generator)", () => {
     vi.mocked(streamText).mockReturnValue(makeStreamResult({}) as never);
     await drainGenerator(
       taskTool.execute!({ task: "x", instructions: "y" }, {
-        experimental_context: ctx,
+        context: ctx,
       } as never) as AsyncGenerator<TaskToolOutput>,
     );
     const args = vi.mocked(streamText).mock.calls[0]?.[0] as { tools: Record<string, unknown> };
@@ -179,7 +179,7 @@ describe("taskTool.execute (async generator)", () => {
     vi.mocked(streamText).mockReturnValue(makeStreamResult({}) as never);
     await drainGenerator(
       taskTool.execute!({ task: "x", instructions: "y" }, {
-        experimental_context: ctx,
+        context: ctx,
       } as never) as AsyncGenerator<TaskToolOutput>,
     );
     const args = vi.mocked(streamText).mock.calls[0]?.[0] as {

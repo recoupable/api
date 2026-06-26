@@ -331,7 +331,13 @@ describe("runAgentWorkflow", () => {
       source: "api",
       resourceUrl: "/sessions/session-1/chats/chat-1",
       gatewayCostUsd: undefined,
-      usage: { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 },
+      usage: {
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        inputTokenDetails: { noCacheTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+        outputTokenDetails: { textTokens: 0, reasoningTokens: 0 },
+      },
     });
   });
 

@@ -16,7 +16,7 @@ const generateArray = async ({
 }): Promise<GenerateArrayResult[]> => {
   const result = await generateObject({
     model: DEFAULT_MODEL,
-    system,
+    instructions: system,
     prompt,
     output: "array",
     schema: z.object({

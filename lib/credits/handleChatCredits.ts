@@ -65,7 +65,7 @@ export const handleChatCredits = async ({
       modelId: model,
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
-      cachedInputTokens: usage.cachedInputTokens,
+      cachedInputTokens: usage.inputTokenDetails.cacheReadTokens,
       ...(resourceUrl ? { resourceUrl } : {}),
       ...(toolCallCount !== undefined ? { toolCallCount } : {}),
     });

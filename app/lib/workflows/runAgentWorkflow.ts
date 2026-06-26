@@ -28,9 +28,11 @@ import { sendCatalogSurfaceStep } from "./sendCatalogSurfaceStep";
 
 const ZERO_USAGE: LanguageModelUsage = {
   inputTokens: 0,
-  cachedInputTokens: 0,
   outputTokens: 0,
-} as LanguageModelUsage;
+  totalTokens: 0,
+  inputTokenDetails: { noCacheTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+  outputTokenDetails: { textTokens: 0, reasoningTokens: 0 },
+};
 
 export type RunAgentWorkflowInput = {
   messages: UIMessage[];

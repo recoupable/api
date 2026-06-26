@@ -46,7 +46,7 @@ type StreamOpts = {
   messageMetadata?: unknown;
   generateMessageId?: unknown;
   originalMessages?: unknown[];
-  onFinish?: (e: { responseMessage: unknown }) => unknown;
+  onEnd?: (e: { responseMessage: unknown }) => unknown;
 };
 
 function makeStreamResult(opts?: {
@@ -67,7 +67,7 @@ function makeStreamResult(opts?: {
         yield { type: "text-start", id: "t1" };
         yield { type: "text-end", id: "t1" };
         if (opts && "emitResponseMessage" in opts) {
-          streamOpts.onFinish?.({ responseMessage: opts.emitResponseMessage });
+          streamOpts.onEnd?.({ responseMessage: opts.emitResponseMessage });
         }
       })();
     }),
@@ -303,7 +303,7 @@ describe("runAgentStep", () => {
     expect(result.finishReason).toBe("stop");
   });
 
-  it("returns the responseMessage captured from onFinish (so the workflow can charge credits)", async () => {
+  it("returns the responseMessage captured from onEnd (so the workflow can charge credits)", async () => {
     const emitted = {
       id: "asst-test-id",
       role: "assistant",
@@ -320,8 +320,8 @@ describe("runAgentStep", () => {
     expect(result.responseMessage).toEqual(emitted);
   });
 
-  it("returns responseMessage: undefined when onFinish never fires", async () => {
-    // Default mock never invokes onFinish.
+  it("returns responseMessage: undefined when onEnd never fires", async () => {
+    // Default mock never invokes onEnd.
     vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
     const { stream } = makeWritable();
 

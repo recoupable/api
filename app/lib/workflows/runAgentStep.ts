@@ -1,3 +1,4 @@
+import { buildToolsContext } from "@/lib/agent/tools/buildToolsContext";
 import { streamText, type ModelMessage, type UIMessage, type UIMessageChunk } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { agentCustomInstructions } from "@/lib/chat/agentCustomInstructions";
@@ -166,11 +167,11 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     ...(input.modelId === "openai/gpt-6-astra"
       ? { providerOptions: { openai: { reasoningEffort: input.reasoningEffort ?? "medium" } } }
       : {}),
-    system: systemPrompt,
+    instructions: systemPrompt,
     messages: addCacheControlToMessages({ messages: input.modelMessages, model: input.modelId }),
     tools,
     abortSignal: cancelController.signal,
-    experimental_context: agentContext,
+    toolsContext: buildToolsContext(tools, agentContext),
   });
 
   // `messageMetadata` emits {modelId, usage, cost} chunks the UI renders as
@@ -211,7 +212,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
       // would see one per iteration and render N assistant messages.
       sendStart: false,
       sendFinish: false,
-      onFinish: ({ responseMessage: finalMessage }) => {
+      onEnd: ({ responseMessage: finalMessage }) => {
         responseMessage = finalMessage;
       },
     })) {
