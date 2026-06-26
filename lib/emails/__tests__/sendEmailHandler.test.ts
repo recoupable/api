@@ -87,6 +87,16 @@ describe("sendEmailHandler", () => {
     expect(mockRecordCreditDeduction).not.toHaveBeenCalled();
   });
 
+  it("returns a controlled 500 with CORS when the credit gate throws", async () => {
+    mockEnsureCredits.mockRejectedValue(new Error("stripe down"));
+    const response = await sendEmailHandler(createRequest());
+    expect(response.status).toBe(500);
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    const json = await response.json();
+    expect(json.status).toBe("error");
+    expect(mockProcessAndSendEmail).not.toHaveBeenCalled();
+  });
+
   it("sends to the validated recipients and maps chat_id to the footer link", async () => {
     const response = await sendEmailHandler(createRequest());
 
