@@ -6,6 +6,7 @@ const mockValidateSendEmailBody = vi.fn();
 const mockProcessAndSendEmail = vi.fn();
 const mockEnsureCredits = vi.fn();
 const mockRecordCreditDeduction = vi.fn();
+const mockNotifyEmailSent = vi.fn();
 
 vi.mock("@/lib/emails/validateSendEmailBody", () => ({
   validateSendEmailBody: (...args: unknown[]) => mockValidateSendEmailBody(...args),
@@ -21,6 +22,10 @@ vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
 
 vi.mock("@/lib/credits/recordCreditDeduction", () => ({
   recordCreditDeduction: (...args: unknown[]) => mockRecordCreditDeduction(...args),
+}));
+
+vi.mock("@/lib/emails/notifyEmailSent", () => ({
+  notifyEmailSent: (...args: unknown[]) => mockNotifyEmailSent(...args),
 }));
 
 vi.mock("@/lib/credits/const", () => ({
@@ -57,6 +62,26 @@ describe("sendEmailHandler", () => {
     });
     mockEnsureCredits.mockResolvedValue(null); // credits available → proceed
     mockRecordCreditDeduction.mockResolvedValue({ success: true });
+    mockNotifyEmailSent.mockResolvedValue(undefined);
+  });
+
+  it("posts an Admin Telegram notification on a successful send", async () => {
+    const response = await sendEmailHandler(createRequest());
+    expect(response.status).toBe(200);
+    expect(mockNotifyEmailSent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: "account-123",
+        to: ["dest@example.com"],
+        subject: "Weekly report",
+        resendId: "resend-id-1",
+      }),
+    );
+  });
+
+  it("does not notify when the send fails", async () => {
+    mockProcessAndSendEmail.mockResolvedValue({ success: false, error: "resend boom" });
+    await sendEmailHandler(createRequest());
+    expect(mockNotifyEmailSent).not.toHaveBeenCalled();
   });
 
   it("gates on credits then charges 1 credit on a successful send", async () => {

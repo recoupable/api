@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateSendEmailBody } from "@/lib/emails/validateSendEmailBody";
 import { processAndSendEmail } from "@/lib/emails/processAndSendEmail";
+import { notifyEmailSent } from "@/lib/emails/notifyEmailSent";
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
@@ -72,6 +73,9 @@ export async function sendEmailHandler(request: NextRequest): Promise<NextRespon
     creditsToDeduct: EMAIL_CREDIT_COST,
     source: "api",
   });
+
+  // Admin Telegram ping for quality/frequency review (best-effort, non-blocking).
+  await notifyEmailSent({ accountId, to, cc, subject, resendId: result.id });
 
   return NextResponse.json(
     { success: true, message: result.message, id: result.id },
