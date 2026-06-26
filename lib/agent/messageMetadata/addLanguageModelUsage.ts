@@ -43,7 +43,5 @@ export function addLanguageModelUsage(
       ),
     },
     totalTokens: addTokenCounts(a.totalTokens, b.totalTokens),
-    reasoningTokens: addTokenCounts(a.reasoningTokens, b.reasoningTokens),
-    cachedInputTokens: addTokenCounts(a.cachedInputTokens, b.cachedInputTokens),
   };
 }

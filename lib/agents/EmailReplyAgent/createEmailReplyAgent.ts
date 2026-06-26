@@ -1,4 +1,4 @@
-import { Output, ToolLoopAgent, stepCountIs } from "ai";
+import { Output, ToolLoopAgent, isStepCount } from "ai";
 import { z } from "zod";
 import { LIGHTWEIGHT_MODEL, INBOUND_EMAIL_DOMAIN } from "@/lib/const";
 
@@ -25,6 +25,6 @@ export function createEmailReplyAgent() {
     model: LIGHTWEIGHT_MODEL,
     instructions,
     output: Output.object({ schema: replyDecisionSchema }),
-    stopWhen: stepCountIs(1),
+    stopWhen: isStepCount(1),
   });
 }

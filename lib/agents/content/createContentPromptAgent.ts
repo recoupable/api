@@ -1,4 +1,4 @@
-import { Output, ToolLoopAgent, stepCountIs } from "ai";
+import { Output, ToolLoopAgent, isStepCount } from "ai";
 import { z } from "zod";
 import { LIGHTWEIGHT_MODEL } from "@/lib/const";
 import { CONTENT_TEMPLATES, DEFAULT_CONTENT_TEMPLATE } from "@/lib/content/contentTemplates";
@@ -71,6 +71,6 @@ export function createContentPromptAgent() {
     model: LIGHTWEIGHT_MODEL,
     instructions,
     output: Output.object({ schema: contentPromptFlagsSchema }),
-    stopWhen: stepCountIs(1),
+    stopWhen: isStepCount(1),
   });
 }

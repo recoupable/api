@@ -1,5 +1,6 @@
-import { tool } from "ai";
+import { tool, type ToolExecutionOptions } from "ai";
 import { z } from "zod";
+import type { AgentContext } from "@/lib/agent/tools/AgentContext";
 import { buildRecoupExecEnv } from "@/lib/agent/tools/buildRecoupExecEnv";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
 import { shellEscape } from "@/lib/agent/tools/shellEscape";
@@ -48,9 +49,13 @@ USAGE:
   inputSchema: fetchInputSchema,
   outputSchema: fetchOutputSchema,
   execute: async (
-    { url, method = "GET", headers, body },
-    { experimental_context, abortSignal },
+    { url, method: methodInput, headers, body },
+    { context: experimental_context, abortSignal }: ToolExecutionOptions<AgentContext>,
   ) => {
+    // Default applied in-body rather than via a destructure default: combined
+    // with `outputSchema`, a parameter default poisons the AI SDK v7 `tool()`
+    // INPUT inference and breaks the typed-overload resolution.
+    const method = methodInput ?? "GET";
     const sandbox = await getSandbox(experimental_context, "web_fetch");
     const workingDirectory = sandbox.workingDirectory;
     const recoupEnv = buildRecoupExecEnv(experimental_context);
@@ -99,7 +104,7 @@ USAGE:
       // exit 23 = curl wrote partial output (`head -c` cut it off — expected for large responses).
       if (result.exitCode !== 0 && result.exitCode !== 23) {
         return {
-          success: false,
+          success: false as const,
           error: `Fetch failed: ${result.stderr || result.stdout || "Unknown error"}`,
         };
       }
@@ -111,14 +116,14 @@ USAGE:
       const status = /^\d+$/.test(statusText) ? parseInt(statusText, 10) : null;
 
       return {
-        success: true,
+        success: true as const,
         status,
         body: responseBody,
         truncated: result.exitCode === 23,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return { success: false, error: `Fetch failed: ${message}` };
+      return { success: false as const, error: `Fetch failed: ${message}` };
     }
   },
 });

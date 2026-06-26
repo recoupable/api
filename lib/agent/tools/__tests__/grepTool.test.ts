@@ -29,7 +29,7 @@ describe("grepTool", () => {
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const tool = grepTool;
     const result = (await tool.execute!({ pattern: "login", path: "src" }, {
-      experimental_context: ctx,
+      context: ctx,
     } as never)) as {
       success: boolean;
       matches: Array<{ file: string; line: number; content: string }>;
@@ -58,7 +58,7 @@ describe("grepTool", () => {
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const tool = grepTool;
     const result = (await tool.execute!({ pattern: "nothing", path: "src" }, {
-      experimental_context: ctx,
+      context: ctx,
     } as never)) as { success: boolean; matchCount: number };
     expect(result.success).toBe(true);
     expect(result.matchCount).toBe(0);
@@ -77,7 +77,7 @@ describe("grepTool", () => {
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const tool = grepTool;
     const result = (await tool.execute!({ pattern: "[", path: "src" }, {
-      experimental_context: ctx,
+      context: ctx,
     } as never)) as { success: boolean; error: string };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/invalid regex/);
@@ -96,7 +96,7 @@ describe("grepTool", () => {
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const tool = grepTool;
     await tool.execute!({ pattern: "x", path: ".", caseSensitive: false }, {
-      experimental_context: ctx,
+      context: ctx,
     } as never);
     expect(sb.exec.mock.calls[0]?.[0]).toContain(" -i ");
   });

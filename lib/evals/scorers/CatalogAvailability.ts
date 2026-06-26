@@ -19,7 +19,7 @@ export const CatalogAvailability = async ({
 
     const result = await generateObject({
       model: DEFAULT_MODEL,
-      system: `You are a music catalog analyst. Your job is to analyze song recommendations and determine which ones are available in the provided music catalog.
+      instructions: `You are a music catalog analyst. Your job is to analyze song recommendations and determine which ones are available in the provided music catalog.
 
 Instructions:
 1. Extract all song recommendations from the output text
