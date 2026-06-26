@@ -117,7 +117,9 @@ describe("toolChains", () => {
       it("includes update_account_info step with system prompt to link knowledge base", () => {
         const chain = TOOL_CHAINS.create_new_artist;
         const updateSteps = chain.filter(item => item.toolName === "update_account_info");
-        const knowledgeLinkStep = updateSteps.find(item => item.instructions?.includes("knowledges"));
+        const knowledgeLinkStep = updateSteps.find(item =>
+          item.instructions?.includes("knowledges"),
+        );
         expect(knowledgeLinkStep).toBeDefined();
         expect(knowledgeLinkStep?.instructions).toContain("arweaveUrl");
       });
