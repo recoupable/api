@@ -396,7 +396,11 @@ describe("Chat Integration Tests", () => {
       mockRecordCreditDeduction.mockResolvedValue({ success: true, newBalance: 332 });
 
       await handleChatCredits({
-        usage: { inputTokens: 10, outputTokens: 5, inputTokenDetails: { cacheReadTokens: 0 } } as never,
+        usage: {
+          inputTokens: 10,
+          outputTokens: 5,
+          inputTokenDetails: { cacheReadTokens: 0 },
+        } as never,
         model: "gpt-4",
         accountId: "account-123",
       });
@@ -424,7 +428,11 @@ describe("Chat Integration Tests", () => {
       mockGetCreditUsage.mockResolvedValue(0.001);
 
       await handleChatCredits({
-        usage: { inputTokens: 5, outputTokens: 5, inputTokenDetails: { cacheReadTokens: 0 } } as never,
+        usage: {
+          inputTokens: 5,
+          outputTokens: 5,
+          inputTokenDetails: { cacheReadTokens: 0 },
+        } as never,
         model: "gpt-4",
         accountId: "account-123",
       });

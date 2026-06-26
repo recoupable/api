@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm build:extension && next dev",
-    "build": "pnpm build:extension && next build && node scripts/mcp-oauth/checkProviderBuild.cjs",
+    "build": "pnpm build:extension && next build --webpack && node scripts/mcp-oauth/checkProviderBuild.cjs",
     "start": "next start",
     "format": "prettier -c .prettierrc --write \"**/*.{ts,js,cjs,json,md}\"",
     "format:check": "prettier -c .prettierrc --check \"**/*.{ts,js,cjs,json,md}\"",
