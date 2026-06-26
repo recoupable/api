@@ -91,7 +91,12 @@ describe("sendEmailHandler", () => {
       expect.objectContaining({ accountId: "account-123", creditsToDeduct: 1 }),
     );
     expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
-      expect.objectContaining({ accountId: "account-123", creditsToDeduct: 1, source: "api" }),
+      expect.objectContaining({
+        accountId: "account-123",
+        creditsToDeduct: 1,
+        source: "api",
+        modelId: "POST /api/emails",
+      }),
     );
   });
 
@@ -110,6 +115,16 @@ describe("sendEmailHandler", () => {
     const response = await sendEmailHandler(createRequest());
     expect(response.status).toBe(502);
     expect(mockRecordCreditDeduction).not.toHaveBeenCalled();
+  });
+
+  it("returns a controlled 500 with CORS when the credit gate throws", async () => {
+    mockEnsureCredits.mockRejectedValue(new Error("stripe down"));
+    const response = await sendEmailHandler(createRequest());
+    expect(response.status).toBe(500);
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    const json = await response.json();
+    expect(json.status).toBe("error");
+    expect(mockProcessAndSendEmail).not.toHaveBeenCalled();
   });
 
   it("sends to the validated recipients and maps chat_id to the footer link", async () => {
