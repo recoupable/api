@@ -66,7 +66,12 @@ describe("sendEmailHandler", () => {
       expect.objectContaining({ accountId: "account-123", creditsToDeduct: 1 }),
     );
     expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
-      expect.objectContaining({ accountId: "account-123", creditsToDeduct: 1, source: "api" }),
+      expect.objectContaining({
+        accountId: "account-123",
+        creditsToDeduct: 1,
+        source: "api",
+        modelId: "POST /api/emails",
+      }),
     );
   });
 

@@ -14,6 +14,12 @@ import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
 export const EMAIL_CREDIT_COST = 1;
 
 /**
+ * Stamped onto the `usage_events.model_id` for each send so endpoint usage is
+ * queryable: `select count(*) from usage_events where model_id = 'POST /api/emails'`.
+ */
+export const EMAIL_USAGE_MODEL_ID = "POST /api/emails";
+
+/**
  * Handler for POST /api/emails.
  *
  * Sends an email to the explicit recipients in the request body via Resend
@@ -72,6 +78,7 @@ export async function sendEmailHandler(request: NextRequest): Promise<NextRespon
       accountId,
       creditsToDeduct: EMAIL_CREDIT_COST,
       source: "api",
+      modelId: EMAIL_USAGE_MODEL_ID,
     });
 
     return NextResponse.json(
