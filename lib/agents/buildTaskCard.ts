@@ -1,4 +1,5 @@
 import { Card, CardText, Actions, LinkButton } from "chat";
+import { getFrontendBaseUrl } from "@/lib/composio/getFrontendBaseUrl";
 
 /**
  * Builds a Card with a message and a View Task button.
@@ -13,9 +14,7 @@ export function buildTaskCard(title: string, message: string, runId: string) {
     title,
     children: [
       CardText(message),
-      Actions([
-        LinkButton({ url: `https://chat.recoupable.com/tasks/${runId}`, label: "View Task" }),
-      ]),
+      Actions([LinkButton({ url: `${getFrontendBaseUrl()}/tasks/${runId}`, label: "View Task" })]),
     ],
   });
 }

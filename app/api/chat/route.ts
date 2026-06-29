@@ -25,7 +25,7 @@ export async function OPTIONS() {
  * retained as a backward-compatible alias while consumers (chat,
  * open-agents, API-key callers) migrate to `/api/chat`.
  *
- * Contract: https://developers.recoupable.com/api-reference/chat/workflow
+ * Contract: https://docs.recoupable.dev/api-reference/chat/workflow
  *
  * @param request - The incoming NextRequest.
  * @returns A streaming Response (200) or a NextResponse error.
