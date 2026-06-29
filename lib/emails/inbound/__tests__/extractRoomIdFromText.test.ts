@@ -27,6 +27,15 @@ describe("extractRoomIdFromText", () => {
       expect(result).toBe("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
     });
 
+    it("extracts roomId from a chat.recoupable.dev link (post-migration)", () => {
+      const text =
+        "Check out this chat: https://chat.recoupable.dev/chat/b2c3d4e5-f6a7-8901-bcde-f23456789012";
+
+      const result = extractRoomIdFromText(text);
+
+      expect(result).toBe("b2c3d4e5-f6a7-8901-bcde-f23456789012");
+    });
+
     it("handles case-insensitive domain matching", () => {
       const text = "Visit HTTPS://CHAT.RECOUPABLE.COM/CHAT/12345678-1234-1234-1234-123456789abc";
 

@@ -60,6 +60,22 @@ describe("extractRoomIdFromHtml", () => {
     });
   });
 
+  describe(".dev domain (post-migration links)", () => {
+    it("extracts roomId from a chat.recoupable.dev link", () => {
+      const html = `
+        <html>
+          <body>
+            <p>Continue the conversation: <a href="https://chat.recoupable.dev/chat/b2c3d4e5-f6a7-8901-bcde-f23456789012">https://chat.recoupable.dev/chat/b2c3d4e5-f6a7-8901-bcde-f23456789012</a></p>
+          </body>
+        </html>
+      `;
+
+      const result = extractRoomIdFromHtml(html);
+
+      expect(result).toBe("b2c3d4e5-f6a7-8901-bcde-f23456789012");
+    });
+  });
+
   describe("Gmail reply with proper threading", () => {
     it("extracts roomId from Gmail reply with quoted content", () => {
       const html = `

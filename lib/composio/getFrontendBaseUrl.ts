@@ -5,7 +5,7 @@ const TEST_FRONTEND_URL = "https://test-recoup-chat.vercel.app";
  */
 export function getFrontendBaseUrl(): string {
   if (process.env.VERCEL_ENV === "production") {
-    return "https://chat.recoupable.com";
+    return "https://chat.recoupable.dev";
   }
 
   if (process.env.VERCEL_GIT_COMMIT_REF === "test") {
