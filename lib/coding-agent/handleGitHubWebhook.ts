@@ -6,6 +6,7 @@ import { extractPRComment } from "./extractPRComment";
 import { getCodingAgentPRState, setCodingAgentPRState } from "./prState";
 import { triggerUpdatePR } from "@/lib/trigger/triggerUpdatePR";
 import { postGitHubComment } from "./postGitHubComment";
+import { getFrontendBaseUrl } from "@/lib/composio/getFrontendBaseUrl";
 
 const BOT_MENTION = "@recoup-coding-agent";
 
@@ -97,7 +98,7 @@ export async function handleGitHubWebhook(request: Request): Promise<NextRespons
     await postGitHubComment(
       fullRepo,
       thread.prNumber,
-      `Got your feedback. Updating the PRs...\n\n[View Task](https://chat.recoupable.com/tasks/${handle.id})`,
+      `Got your feedback. Updating the PRs...\n\n[View Task](${getFrontendBaseUrl()}/tasks/${handle.id})`,
     );
 
     return NextResponse.json({ status: "update_triggered" }, { headers: getCorsHeaders() });

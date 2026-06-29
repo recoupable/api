@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getEmailFooter } from "../getEmailFooter";
+import { getFrontendBaseUrl } from "@/lib/composio/getFrontendBaseUrl";
 
 describe("getEmailFooter", () => {
   it("includes reply note in all cases", () => {
@@ -21,14 +22,14 @@ describe("getEmailFooter", () => {
   it("includes chat link when roomId is provided", () => {
     const roomId = "test-room-123";
     const footer = getEmailFooter(roomId);
-    expect(footer).toContain(`https://chat.recoupable.com/chat/${roomId}`);
+    expect(footer).toContain(`${getFrontendBaseUrl()}/chat/${roomId}`);
     expect(footer).toContain("Or continue the conversation on Recoup");
   });
 
   it("generates proper HTML with roomId", () => {
     const roomId = "my-room-id";
     const footer = getEmailFooter(roomId);
-    expect(footer).toContain(`href="https://chat.recoupable.com/chat/${roomId}"`);
+    expect(footer).toContain(`href="${getFrontendBaseUrl()}/chat/${roomId}"`);
     expect(footer).toContain('target="_blank"');
     expect(footer).toContain('rel="noopener noreferrer"');
   });

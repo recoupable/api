@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import { buildTaskCard } from "../buildTaskCard";
 import { LinkButton } from "chat";
+import { getFrontendBaseUrl } from "@/lib/composio/getFrontendBaseUrl";
 
 vi.mock("chat", () => ({
   Card: vi.fn(({ title, children }) => ({ type: "card", title, children })),
@@ -28,7 +29,7 @@ describe("buildTaskCard", () => {
           buttons: [
             {
               type: "linkButton",
-              url: "https://chat.recoupable.com/tasks/run-abc-123",
+              url: `${getFrontendBaseUrl()}/tasks/run-abc-123`,
               label: "View Task",
             },
           ],
@@ -42,7 +43,7 @@ describe("buildTaskCard", () => {
     buildTaskCard("Title", "Message", "my-run-id");
 
     expect(LinkButton).toHaveBeenCalledWith({
-      url: "https://chat.recoupable.com/tasks/my-run-id",
+      url: `${getFrontendBaseUrl()}/tasks/my-run-id`,
       label: "View Task",
     });
   });
