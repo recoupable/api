@@ -40,10 +40,7 @@ describe("getFromWithName", () => {
     });
 
     it("prefers to array over cc array", () => {
-      const result = getFromWithName(
-        ["to-agent@recoupable.dev"],
-        ["cc-agent@recoupable.dev"],
-      );
+      const result = getFromWithName(["to-agent@recoupable.dev"], ["cc-agent@recoupable.dev"]);
 
       expect(result).toBe("To-agent by Recoup <to-agent@recoupable.dev>");
     });
