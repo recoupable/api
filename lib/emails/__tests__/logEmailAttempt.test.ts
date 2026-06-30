@@ -8,9 +8,11 @@ vi.mock("@/lib/supabase/email_send_log/insertEmailSendLog", () => ({
 }));
 
 describe("logEmailAttempt", () => {
+  let errorSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
     vi.clearAllMocks();
     mockInsert.mockResolvedValue({ error: null });
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   it("records account, chat, status, resend id, and the raw body", async () => {
@@ -42,5 +44,14 @@ describe("logEmailAttempt", () => {
     const row = mockInsert.mock.calls[0][0];
     expect(row.account_id).toBeNull();
     expect(row.chat_id).toBeNull();
+    expect(errorSpy).toHaveBeenCalled();
+  });
+
+  it("surfaces a returned insert error to the server logs", async () => {
+    mockInsert.mockResolvedValue({ error: { message: "rls denied" } });
+    await logEmailAttempt({ rawBody: "{}", status: "sent" });
+    expect(errorSpy).toHaveBeenCalledWith("email_send_log insert failed:", {
+      message: "rls denied",
+    });
   });
 });

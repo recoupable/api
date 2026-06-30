@@ -3,7 +3,7 @@ import { insertEmailSendLog } from "@/lib/supabase/email_send_log/insertEmailSen
 export type EmailAttemptStatus = "sent" | "send_failed" | "rejected";
 
 export type EmailAttemptLog = {
-  /** The raw request body, as received (stored in full). */
+  /** The request body as received (stored in full; "" when empty/unreadable). */
   rawBody: string;
   status: EmailAttemptStatus;
   accountId?: string | null;
@@ -13,23 +13,26 @@ export type EmailAttemptLog = {
 
 /**
  * Records one POST /api/emails attempt in `email_send_log` so a send can be
- * debugged days later without the (ephemeral) sandbox — the request body as
- * received, the outcome, and pointers to the account/chat and the Resend id.
+ * debugged days later without the (ephemeral) sandbox.
  *
- * Best-effort: this never throws. A logging failure must not affect the send.
+ * Best-effort: never throws (a logging failure must not affect the send), but a
+ * failed write IS surfaced to server logs so observability gaps are visible.
  *
  * @param attempt - The attempt to record.
  */
 export async function logEmailAttempt(attempt: EmailAttemptLog): Promise<void> {
   try {
-    await insertEmailSendLog({
+    const { error } = await insertEmailSendLog({
       account_id: attempt.accountId ?? null,
       chat_id: attempt.chatId ?? null,
       status: attempt.status,
       resend_id: attempt.resendId ?? null,
-      raw_body: attempt.rawBody || null,
+      raw_body: attempt.rawBody,
     });
-  } catch {
-    // Best-effort logging — swallow so the email send result is unaffected.
+    if (error) {
+      console.error("email_send_log insert failed:", error);
+    }
+  } catch (err) {
+    console.error("logEmailAttempt threw (swallowed):", err);
   }
 }

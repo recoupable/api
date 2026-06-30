@@ -3,7 +3,6 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { assertRecipientsAllowed } from "@/lib/emails/assertRecipientsAllowed";
 import { resolveEmailSubject } from "@/lib/emails/resolveEmailSubject";
-import { safeParseJson } from "@/lib/networking/safeParseJson";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { z } from "zod";
 
@@ -30,47 +29,60 @@ export type ValidatedSendEmailRequest = Omit<SendEmailBody, "to" | "subject"> & 
 };
 
 /**
- * Validates POST /api/emails: parses the body, authenticates via
- * validateAuthContext (x-api-key or Bearer), resolves the recipients, then
- * enforces the recipient restriction (without a payment method on file,
- * `to`/`cc` are limited to the account's own email).
- *
- * `to` is optional: when omitted, the email defaults to the authenticated
- * account's own email address(es) (via `account_emails`), so a caller can
- * "email me this" without restating their address. `subject` is optional too:
- * when omitted it defaults to the body's first heading/line, else
- * `Message from Recoup`. Returns the resolved `to` + `subject`.
+ * Validation outcome. Always carries `rawBody` — the request body as received —
+ * so the handler can record it in `email_send_log` on both the rejected and the
+ * accepted paths without re-reading the request.
+ */
+export type ValidateSendEmailResult =
+  | { rawBody: string; error: NextResponse }
+  | { rawBody: string; data: ValidatedSendEmailRequest };
+
+/** Read the request body once, as text (the source for both parsing and logging). */
+async function readRawBody(request: NextRequest): Promise<string> {
+  try {
+    return await request.text();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Validates POST /api/emails: reads the raw body, parses + schema-checks it,
+ * authenticates (x-api-key or Bearer), resolves the recipients, and enforces the
+ * recipient restriction. `to` defaults to the account's own email when omitted;
+ * `subject` is derived from the body when omitted. Always returns `rawBody`.
  *
  * @param request - The NextRequest object
- * @returns A NextResponse with an error if validation/auth/recipients fail, or the validated request data.
+ * @returns `{ rawBody, error }` if validation/auth/recipients fail, else `{ rawBody, data }`.
  */
 export async function validateSendEmailBody(
   request: NextRequest,
-): Promise<NextResponse | ValidatedSendEmailRequest> {
-  const body = await safeParseJson(request);
-  const result = sendEmailBodySchema.safeParse(body);
-
-  if (!result.success) {
-    const firstError = result.error.issues[0];
-    return NextResponse.json(
-      {
-        status: "error",
-        missing_fields: firstError.path,
-        error: firstError.message,
-      },
-      {
-        status: 400,
-        headers: getCorsHeaders(),
-      },
-    );
+): Promise<ValidateSendEmailResult> {
+  const rawBody = await readRawBody(request);
+  let parsed: unknown = {};
+  if (rawBody) {
+    try {
+      parsed = JSON.parse(rawBody);
+    } catch {
+      parsed = {};
+    }
   }
 
-  const authContext = await validateAuthContext(request, {
-    accountId: result.data.account_id,
-  });
+  const result = sendEmailBodySchema.safeParse(parsed);
+  if (!result.success) {
+    const firstError = result.error.issues[0];
+    return {
+      rawBody,
+      error: NextResponse.json(
+        { status: "error", missing_fields: firstError.path, error: firstError.message },
+        { status: 400, headers: getCorsHeaders() },
+      ),
+    };
+  }
 
+  const authContext = await validateAuthContext(request, { accountId: result.data.account_id });
   if (authContext instanceof NextResponse) {
-    return authContext;
+    return { rawBody, error: authContext };
   }
 
   let to = result.data.to ?? [];
@@ -78,13 +90,13 @@ export async function validateSendEmailBody(
     const ownRows = await selectAccountEmails({ accountIds: authContext.accountId });
     to = ownRows.map(row => row.email);
     if (to.length === 0) {
-      return NextResponse.json(
-        {
-          status: "error",
-          error: "No email address found for the authenticated account.",
-        },
-        { status: 400, headers: getCorsHeaders() },
-      );
+      return {
+        rawBody,
+        error: NextResponse.json(
+          { status: "error", error: "No email address found for the authenticated account." },
+          { status: 400, headers: getCorsHeaders() },
+        ),
+      };
     }
   }
 
@@ -93,14 +105,17 @@ export async function validateSendEmailBody(
     recipients: [...to, ...(result.data.cc ?? [])],
   });
   if (recipientCheck.allowed === false) {
-    return NextResponse.json(
-      {
-        status: "error",
-        error: `Without a payment method on file, emails can only be sent to the account's own address. Disallowed recipients: ${recipientCheck.disallowed.join(", ")}. Add a payment method to send to any recipient.`,
-        disallowed_recipients: recipientCheck.disallowed,
-      },
-      { status: 403, headers: getCorsHeaders() },
-    );
+    return {
+      rawBody,
+      error: NextResponse.json(
+        {
+          status: "error",
+          error: `Without a payment method on file, emails can only be sent to the account's own address. Disallowed recipients: ${recipientCheck.disallowed.join(", ")}. Add a payment method to send to any recipient.`,
+          disallowed_recipients: recipientCheck.disallowed,
+        },
+        { status: 403, headers: getCorsHeaders() },
+      ),
+    };
   }
 
   const subject = resolveEmailSubject({
@@ -109,10 +124,5 @@ export async function validateSendEmailBody(
     html: result.data.html,
   });
 
-  return {
-    ...result.data,
-    to,
-    subject,
-    accountId: authContext.accountId,
-  };
+  return { rawBody, data: { ...result.data, to, subject, accountId: authContext.accountId } };
 }

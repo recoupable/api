@@ -34,12 +34,15 @@ describe("sendEmailHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockValidateSendEmailBody.mockResolvedValue({
-      to: ["dest@example.com"],
-      cc: ["cc@example.com"],
-      subject: "Weekly report",
-      text: "body",
-      chat_id: "chat-1",
-      accountId: "account-123",
+      rawBody: '{"subject":"Weekly report"}',
+      data: {
+        to: ["dest@example.com"],
+        cc: ["cc@example.com"],
+        subject: "Weekly report",
+        text: "body",
+        chat_id: "chat-1",
+        accountId: "account-123",
+      },
     });
     mockProcessAndSendEmail.mockResolvedValue({
       success: true,
@@ -65,15 +68,24 @@ describe("sendEmailHandler", () => {
         room_id: "chat-1",
       }),
     );
+    // Single call, on every path (DRY); rawBody comes from validateSendEmailBody (SRP).
+    expect(mockLogEmailAttempt).toHaveBeenCalledTimes(1);
     expect(mockLogEmailAttempt).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "sent", resendId: "resend-id-1" }),
+      expect.objectContaining({
+        status: "sent",
+        resendId: "resend-id-1",
+        rawBody: '{"subject":"Weekly report"}',
+        accountId: "account-123",
+        chatId: "chat-1",
+      }),
     );
   });
 
   it("propagates the NextResponse from validateSendEmailBody (auth/validation/recipient errors)", async () => {
-    mockValidateSendEmailBody.mockResolvedValue(
-      NextResponse.json({ status: "error", error: "Forbidden" }, { status: 403 }),
-    );
+    mockValidateSendEmailBody.mockResolvedValue({
+      rawBody: "{}",
+      error: NextResponse.json({ status: "error", error: "Forbidden" }, { status: 403 }),
+    });
     const response = await sendEmailHandler(createRequest());
     expect(response.status).toBe(403);
     expect(mockProcessAndSendEmail).not.toHaveBeenCalled();
