@@ -23,7 +23,7 @@ vi.mock("@/lib/github/getServiceGithubToken", () => ({
 vi.mock("@/lib/sandbox/markSessionSandboxActive", () => ({
   markSessionSandboxActive: vi.fn(),
 }));
-vi.mock("@/lib/skills/discoverSkills", () => ({ discoverSkills: vi.fn(async () => []) }));
+vi.mock("@/lib/skills/discoverSkills", () => ({ discoverSkills: vi.fn() }));
 vi.mock("@/lib/skills/getSandboxSkillDirectories", () => ({
   getSandboxSkillDirectories: vi.fn(async () => ["/skills"]),
 }));
@@ -42,6 +42,7 @@ const sandbox = {
   getState: () => ({ type: "vercel" }),
   workingDirectory: "/work",
 };
+const platformApiSkill = { name: "recoup-platform-api-access" };
 
 describe("provisionRunSession", () => {
   beforeEach(() => {
@@ -53,6 +54,8 @@ describe("provisionRunSession", () => {
     } as never);
     vi.mocked(connectSandbox).mockResolvedValue(sandbox as never);
     vi.mocked(markSessionSandboxActive).mockResolvedValue(updated as never);
+    // Default: the platform API-access skill is present after discovery.
+    vi.mocked(discoverSkills).mockResolvedValue([platformApiSkill] as never);
   });
 
   it("installs global skills into the sandbox before discovering them", async () => {
@@ -69,12 +72,21 @@ describe("provisionRunSession", () => {
     expect(installOrder).toBeLessThan(discoverOrder);
   });
 
-  it("still completes the run when skill install fails (best-effort)", async () => {
+  it("still completes the run when skill install fails but discovery finds the skill", async () => {
     vi.mocked(installSessionGlobalSkills).mockRejectedValueOnce(new Error("install boom"));
 
     const result = await provisionRunSession({ accountId: "account-1", title: "t" });
 
     expect(result.session).toEqual(updated);
     expect(discoverSkills).toHaveBeenCalled();
+  });
+
+  it("aborts the run when the platform API-access skill is missing after discovery", async () => {
+    vi.mocked(discoverSkills).mockResolvedValue([] as never);
+
+    // Fail closed: better a missed run than an ungrounded (fabricated) one (chat#1822).
+    await expect(provisionRunSession({ accountId: "account-1", title: "t" })).rejects.toThrow(
+      /recoup-platform-api-access/,
+    );
   });
 });

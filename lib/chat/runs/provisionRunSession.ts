@@ -15,6 +15,10 @@ import type { SkillMetadata } from "@/lib/skills/skillTypes";
 
 const SANDBOX_TIMEOUT_MS = ms("30m");
 
+// The platform API-access skill the agent needs to reach the Recoup API for
+// account data. If it's missing post-provision the run is aborted (chat#1822).
+const REQUIRED_PLATFORM_API_SKILL = "recoup-platform-api-access";
+
 export type ProvisionedRunSession = {
   session: Tables<"sessions">;
   chat: Tables<"chats">;
@@ -99,6 +103,17 @@ export async function provisionRunSession({
     skills = await discoverSkills(sandbox, await getSandboxSkillDirectories(sandbox));
   } catch (error) {
     console.error("[provisionRunSession] skill discovery failed; using defaults:", error);
+  }
+
+  // Fail closed: if the platform API-access skill isn't available after install
+  // + discovery, abort instead of running an agent that can't reach the Recoup
+  // API — which guesses endpoints and fabricates ungrounded data (chat#1822).
+  // A missed run is recoverable; a fabricated report sent to a customer is not.
+  // The caller maps this throw to a 5xx and revokes any minted ephemeral key.
+  if (!skills.some(skill => skill.name === REQUIRED_PLATFORM_API_SKILL)) {
+    throw new Error(
+      `[provisionRunSession] required skill '${REQUIRED_PLATFORM_API_SKILL}' unavailable after install/discovery — aborting to avoid an ungrounded run`,
+    );
   }
 
   return {
