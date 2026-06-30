@@ -8,6 +8,54 @@ export type Database = {
   };
   public: {
     Tables: {
+      email_send_log: {
+        Row: {
+          account_id: string | null;
+          body_parsed: boolean;
+          chat_id: string | null;
+          created_at: string;
+          error: string | null;
+          html_length: number | null;
+          id: string;
+          raw_body: string | null;
+          resend_id: string | null;
+          status: string;
+          subject: string | null;
+          text_length: number | null;
+          to_count: number | null;
+        };
+        Insert: {
+          account_id?: string | null;
+          body_parsed?: boolean;
+          chat_id?: string | null;
+          created_at?: string;
+          error?: string | null;
+          html_length?: number | null;
+          id?: string;
+          raw_body?: string | null;
+          resend_id?: string | null;
+          status: string;
+          subject?: string | null;
+          text_length?: number | null;
+          to_count?: number | null;
+        };
+        Update: {
+          account_id?: string | null;
+          body_parsed?: boolean;
+          chat_id?: string | null;
+          created_at?: string;
+          error?: string | null;
+          html_length?: number | null;
+          id?: string;
+          raw_body?: string | null;
+          resend_id?: string | null;
+          status?: string;
+          subject?: string | null;
+          text_length?: number | null;
+          to_count?: number | null;
+        };
+        Relationships: [];
+      };
       account_api_keys: {
         Row: {
           account: string | null;

@@ -4,6 +4,7 @@ import { sendEmailHandler } from "../sendEmailHandler";
 
 const mockValidateSendEmailBody = vi.fn();
 const mockProcessAndSendEmail = vi.fn();
+const mockLogEmailAttempt = vi.fn();
 
 vi.mock("@/lib/emails/validateSendEmailBody", () => ({
   validateSendEmailBody: (...args: unknown[]) => mockValidateSendEmailBody(...args),
@@ -11,6 +12,10 @@ vi.mock("@/lib/emails/validateSendEmailBody", () => ({
 
 vi.mock("@/lib/emails/processAndSendEmail", () => ({
   processAndSendEmail: (...args: unknown[]) => mockProcessAndSendEmail(...args),
+}));
+
+vi.mock("@/lib/emails/logEmailAttempt", () => ({
+  logEmailAttempt: (...args: unknown[]) => mockLogEmailAttempt(...args),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -60,6 +65,9 @@ describe("sendEmailHandler", () => {
         room_id: "chat-1",
       }),
     );
+    expect(mockLogEmailAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "sent", resendId: "resend-id-1" }),
+    );
   });
 
   it("propagates the NextResponse from validateSendEmailBody (auth/validation/recipient errors)", async () => {
@@ -69,6 +77,9 @@ describe("sendEmailHandler", () => {
     const response = await sendEmailHandler(createRequest());
     expect(response.status).toBe(403);
     expect(mockProcessAndSendEmail).not.toHaveBeenCalled();
+    expect(mockLogEmailAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "rejected" }),
+    );
   });
 
   it("returns 502 when Resend delivery fails", async () => {
@@ -77,5 +88,8 @@ describe("sendEmailHandler", () => {
     expect(response.status).toBe(502);
     const json = await response.json();
     expect(json.error).toBe("resend boom");
+    expect(mockLogEmailAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "send_failed", error: "resend boom" }),
+    );
   });
 });
