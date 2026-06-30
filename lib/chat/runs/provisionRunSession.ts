@@ -5,6 +5,7 @@ import { getSessionSandboxName } from "@/lib/sandbox/getSessionSandboxName";
 import { resolveGitUser } from "@/lib/sandbox/resolveGitUser";
 import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
 import { markSessionSandboxActive } from "@/lib/sandbox/markSessionSandboxActive";
+import { installSessionGlobalSkills } from "@/lib/sandbox/installSessionGlobalSkills";
 import { discoverSkills } from "@/lib/skills/discoverSkills";
 import { getSandboxSkillDirectories } from "@/lib/skills/getSandboxSkillDirectories";
 import { DEFAULT_WORKING_DIRECTORY } from "@/lib/sandbox/vercel/sandbox/constants";
@@ -75,6 +76,18 @@ export async function provisionRunSession({
 
   const updated = await markSessionSandboxActive(session, sandbox.getState() as Json);
   if (!updated) throw new Error("Failed to activate session sandbox");
+
+  // Install global skills BEFORE discovery — the headless run path must
+  // provision skills, not just discover them. Without this the sandbox skills
+  // dir is empty, `discoverSkills` returns [], the agent gets no `skill` tool,
+  // and it falls back to guessing API endpoints + fabricating (chat#1822).
+  // Best-effort: a failed install must not block the run (mirrors
+  // `createSandboxHandler`).
+  try {
+    await installSessionGlobalSkills({ sessionRow: updated, sandbox });
+  } catch (error) {
+    console.error("[provisionRunSession] installSessionGlobalSkills failed:", error);
+  }
 
   // Best-effort skill + working-directory discovery from the live handle —
   // a failure falls back to defaults so the run can still start (tools surface
