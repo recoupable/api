@@ -7,7 +7,7 @@ import { processAndSendEmail } from "@/lib/emails/processAndSendEmail";
  * Handler for POST /api/emails.
  *
  * Sends an email to the explicit recipients in the request body via Resend
- * (from `Agent by Recoup <agent@recoupable.com>`), reusing the same
+ * (from `Agent by Recoup <agent@recoupable.dev>`), reusing the same
  * `processAndSendEmail` domain function as the `send_email` MCP tool.
  * Account-scoped: requires authentication via x-api-key or Authorization Bearer.
  * Body validation, auth, and the recipient restriction all live in

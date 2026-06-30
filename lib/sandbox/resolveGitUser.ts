@@ -33,7 +33,7 @@ export async function resolveGitUser(accountId: string): Promise<GitUser> {
   const emailRow = emails.find(row => typeof row.email === "string" && row.email.length > 0);
 
   const name = account?.name?.trim() || `recoupable-${accountId.slice(0, 8)}`;
-  const email = emailRow?.email ?? `${accountId}@users.noreply.recoupable.com`;
+  const email = emailRow?.email ?? `${accountId}@users.noreply.recoupable.dev`;
 
   return { name, email };
 }
