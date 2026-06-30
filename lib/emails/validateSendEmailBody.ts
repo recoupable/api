@@ -4,6 +4,7 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { assertRecipientsAllowed } from "@/lib/emails/assertRecipientsAllowed";
 import { resolveEmailSubject } from "@/lib/emails/resolveEmailSubject";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
+import { readRawBody } from "@/lib/networking/readRawBody";
 import { z } from "zod";
 
 export const sendEmailBodySchema = z.object({
@@ -36,15 +37,6 @@ export type ValidatedSendEmailRequest = Omit<SendEmailBody, "to" | "subject"> & 
 export type ValidateSendEmailResult =
   | { rawBody: string; error: NextResponse }
   | { rawBody: string; data: ValidatedSendEmailRequest };
-
-/** Read the request body once, as text (the source for both parsing and logging). */
-async function readRawBody(request: NextRequest): Promise<string> {
-  try {
-    return await request.text();
-  } catch {
-    return "";
-  }
-}
 
 /**
  * Validates POST /api/emails: reads the raw body, parses + schema-checks it,
