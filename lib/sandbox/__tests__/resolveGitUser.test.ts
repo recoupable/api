@@ -53,7 +53,7 @@ describe("resolveGitUser", () => {
     const gitUser = await resolveGitUser(ACCOUNT_ID);
 
     expect(gitUser.name).toBe("Ada Lovelace");
-    expect(gitUser.email).toBe(`${ACCOUNT_ID}@users.noreply.recoupable.com`);
+    expect(gitUser.email).toBe(`${ACCOUNT_ID}@users.noreply.recoupable.dev`);
   });
 
   it("falls back on both fields when nothing is on file", async () => {
@@ -64,7 +64,7 @@ describe("resolveGitUser", () => {
 
     expect(gitUser).toEqual({
       name: `recoupable-${ACCOUNT_ID.slice(0, 8)}`,
-      email: `${ACCOUNT_ID}@users.noreply.recoupable.com`,
+      email: `${ACCOUNT_ID}@users.noreply.recoupable.dev`,
     });
   });
 
@@ -78,6 +78,6 @@ describe("resolveGitUser", () => {
 
     const gitUser = await resolveGitUser(ACCOUNT_ID);
 
-    expect(gitUser.email).toBe(`${ACCOUNT_ID}@users.noreply.recoupable.com`);
+    expect(gitUser.email).toBe(`${ACCOUNT_ID}@users.noreply.recoupable.dev`);
   });
 });

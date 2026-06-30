@@ -34,7 +34,7 @@ describe("processAndSendEmail", () => {
     }
     expect(mockSendEmailWithResend).toHaveBeenCalledWith(
       expect.objectContaining({
-        from: "Agent by Recoup <agent@recoupable.com>",
+        from: "Agent by Recoup <agent@recoupable.dev>",
         to: ["user@example.com"],
         subject: "Test",
         html: expect.stringContaining("Hello world"),

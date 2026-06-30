@@ -15,7 +15,7 @@ const SHARED_ACCOUNT_ID = "recoup-shared-767f498e-e1e9-43c6-a152-a96ae3bd8d07";
  * Get Google Drive/Sheets/Docs connections from the shared Recoupable account.
  *
  * When a customer doesn't want to grant full Google Drive access,
- * they can share specific files with shared@recoupable.com instead.
+ * they can share specific files with shared@recoupable.dev instead.
  * This function fetches the shared account's connections so they
  * can be used as a fallback in tool router sessions.
  *
