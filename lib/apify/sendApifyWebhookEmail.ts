@@ -1,6 +1,7 @@
 import generateText from "@/lib/ai/generateText";
 import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 import { RECOUP_FROM_EMAIL } from "@/lib/const";
+import { getFrontendBaseUrl } from "@/lib/composio/getFrontendBaseUrl";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 
 /**
@@ -36,7 +37,7 @@ Latest Posts: ${(Array.isArray(profile.latestPosts) ? profile.latestPosts : []).
       write beautiful html email.
       subject: New Apify Dataset Notification. you're notifying music managers about new posts being available for one of their roster musician's Instagram profile.
       include a link to view the instagram profile.
-      call to action is to open a chat link to learn more about the latest posts using Recoup Chat (AI Agents): https://chat.recoupable.com/?q=tell%20me%20about%20my%20latest%20Ig%20posts
+      call to action is to open a chat link to learn more about the latest posts using Recoup Chat (AI Agents): ${getFrontendBaseUrl()}/?q=tell%20me%20about%20my%20latest%20Ig%20posts
       You'll be passed a dataset summary for a musician profile and their latest posts on instagram.
       your goal is to get the recipient to click a cta link to open a chat link to learn more about the latest posts using Recoup Chat (AI Agents).
       only include the email body html.
