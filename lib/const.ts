@@ -15,11 +15,11 @@ export const PRIVY_PROJECT_SECRET = process.env.PRIVY_PROJECT_SECRET;
 /** Base URL for the public API documentation site */
 export const DOCS_BASE_URL = "https://docs.recoupable.dev";
 
-/** Domain for receiving inbound emails (e.g., support@mail.recoupable.com) */
-export const INBOUND_EMAIL_DOMAIN = "@mail.recoupable.com";
+/** Domain for receiving inbound emails (e.g., support@recoupable.dev) */
+export const INBOUND_EMAIL_DOMAIN = "@recoupable.dev";
 
-/** Domain for sending outbound emails (e.g., support@recoupable.com) */
-export const OUTBOUND_EMAIL_DOMAIN = "@recoupable.com";
+/** Domain for sending outbound emails (e.g., support@recoupable.dev) */
+export const OUTBOUND_EMAIL_DOMAIN = "@recoupable.dev";
 
 /** Default from address for outbound emails */
 export const RECOUP_FROM_EMAIL = `Agent by Recoup <agent${OUTBOUND_EMAIL_DOMAIN}>`;

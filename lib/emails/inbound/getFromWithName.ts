@@ -6,7 +6,7 @@ import { OUTBOUND_EMAIL_DOMAIN, INBOUND_EMAIL_DOMAIN } from "@/lib/const";
  *
  * @param toEmails - Array of email addresses from the 'to' field
  * @param ccEmails - Optional array of email addresses from the 'cc' field (fallback)
- * @returns Formatted email address with display name (e.g., "Support by Recoup <support@recoupable.com>")
+ * @returns Formatted email address with display name (e.g., "Support by Recoup <support@recoupable.dev>")
  * @throws Error if no email ending with the inbound domain is found in either array
  */
 export function getFromWithName(toEmails: string[], ccEmails: string[] = []): string {

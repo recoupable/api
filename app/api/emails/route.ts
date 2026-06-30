@@ -18,7 +18,7 @@ export async function OPTIONS() {
  * POST /api/emails
  *
  * Sends an email to one or more explicit recipients via Resend. Emails are sent
- * from `Agent by Recoup <agent@recoupable.com>`. Account-scoped — requires
+ * from `Agent by Recoup <agent@recoupable.dev>`. Account-scoped — requires
  * authentication via x-api-key header or Authorization Bearer token.
  *
  * Body parameters:
