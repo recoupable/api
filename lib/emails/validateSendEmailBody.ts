@@ -7,19 +7,28 @@ import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmai
 import { readRawBody } from "@/lib/networking/readRawBody";
 import { z } from "zod";
 
-export const sendEmailBodySchema = z.object({
-  to: z
-    .array(z.string().email("each 'to' entry must be a valid email"))
-    .min(1, "to must include at least one recipient")
-    .optional(),
-  cc: z.array(z.string().email("each 'cc' entry must be a valid email")).default([]).optional(),
-  subject: z.string().optional(),
-  text: z.string().optional(),
-  html: z.string().default("").optional(),
-  headers: z.record(z.string(), z.string()).default({}).optional(),
-  chat_id: z.string().optional(),
-  account_id: z.string().uuid("account_id must be a valid UUID").optional(),
-});
+export const sendEmailBodySchema = z
+  .object({
+    to: z
+      .array(z.string().email("each 'to' entry must be a valid email"))
+      .min(1, "to must include at least one recipient")
+      .optional(),
+    cc: z.array(z.string().email("each 'cc' entry must be a valid email")).default([]).optional(),
+    subject: z.string().optional(),
+    text: z.string().optional(),
+    html: z.string().optional(),
+    headers: z.record(z.string(), z.string()).default({}).optional(),
+    chat_id: z.string().optional(),
+    account_id: z.string().uuid("account_id must be a valid UUID").optional(),
+  })
+  // Guard: never send an empty/footer-only email. A malformed or empty body
+  // parses to `{}` (readRawBody -> JSON.parse, `{}` on failure), which has
+  // neither field — so both that and an explicit body-less request fail here and
+  // return 400 instead of silently sending "Message from Recoup" + footer.
+  .refine(data => Boolean(data.html?.trim() || data.text?.trim()), {
+    message: "a non-empty html or text body is required",
+    path: ["html"],
+  });
 
 export type SendEmailBody = z.infer<typeof sendEmailBodySchema>;
 

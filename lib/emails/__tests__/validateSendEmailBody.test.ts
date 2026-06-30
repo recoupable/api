@@ -49,7 +49,7 @@ describe("validateSendEmailBody", () => {
         disallowed: ["stranger@example.com"],
       });
       const request = createRequest(
-        { to: ["stranger@example.com"], subject: "Hi" },
+        { to: ["stranger@example.com"], subject: "Hi", text: "body" },
         { "x-api-key": "test-api-key" },
       );
       const result = await validateSendEmailBody(request);
@@ -64,7 +64,7 @@ describe("validateSendEmailBody", () => {
 
     it("checks to + cc together against the authenticated account", async () => {
       const request = createRequest(
-        { to: ["a@example.com"], cc: ["b@example.com"], subject: "Hi" },
+        { to: ["a@example.com"], cc: ["b@example.com"], subject: "Hi", text: "body" },
         { "x-api-key": "test-api-key" },
       );
       await validateSendEmailBody(request);
@@ -89,13 +89,21 @@ describe("validateSendEmailBody", () => {
       }
     });
 
-    it("defaults to `Message from Recoup` when subject and body are empty", async () => {
+    it("returns 400 when neither html nor text is provided (no empty footer-only sends)", async () => {
       const request = createRequest({ to: ["d@example.com"] }, { "x-api-key": "k" });
       const result = await validateSendEmailBody(request);
-      expect("data" in result).toBe(true);
-      if ("data" in result) {
-        expect(result.data.subject).toBe("Message from Recoup");
-      }
+      expect("error" in result).toBe(true);
+      if ("error" in result) expect(result.error.status).toBe(400);
+    });
+
+    it("returns 400 when html is whitespace-only and no text is provided", async () => {
+      const request = createRequest(
+        { to: ["d@example.com"], subject: "Hi", html: "   " },
+        { "x-api-key": "k" },
+      );
+      const result = await validateSendEmailBody(request);
+      expect("error" in result).toBe(true);
+      if ("error" in result) expect(result.error.status).toBe(400);
     });
   });
 
@@ -143,7 +151,12 @@ describe("validateSendEmailBody", () => {
 
     it("passes account_id override through to validateAuthContext", async () => {
       const request = createRequest(
-        { to: ["d@example.com"], subject: "s", account_id: "550e8400-e29b-41d4-a716-446655440000" },
+        {
+          to: ["d@example.com"],
+          subject: "s",
+          account_id: "550e8400-e29b-41d4-a716-446655440000",
+          text: "body",
+        },
         { "x-api-key": "org-key" },
       );
       await validateSendEmailBody(request);
@@ -171,7 +184,7 @@ describe("validateSendEmailBody", () => {
         { email: "owner@example.com" },
         { email: "owner.alt@example.com" },
       ]);
-      const request = createRequest({ subject: "s" }, { "x-api-key": "k" });
+      const request = createRequest({ subject: "s", text: "body" }, { "x-api-key": "k" });
       const result = await validateSendEmailBody(request);
 
       expect("data" in result).toBe(true);
@@ -182,7 +195,7 @@ describe("validateSendEmailBody", () => {
 
     it("returns 400 when 'to' is omitted and the account has no email on file", async () => {
       mockSelectAccountEmails.mockResolvedValue([]);
-      const request = createRequest({ subject: "s" }, { "x-api-key": "k" });
+      const request = createRequest({ subject: "s", text: "body" }, { "x-api-key": "k" });
       const result = await validateSendEmailBody(request);
       expect("error" in result).toBe(true);
       if ("error" in result) expect(result.error.status).toBe(400);
@@ -190,7 +203,7 @@ describe("validateSendEmailBody", () => {
 
     it("does not resolve account emails when 'to' is provided", async () => {
       const request = createRequest(
-        { to: ["dest@example.com"], subject: "s" },
+        { to: ["dest@example.com"], subject: "s", text: "body" },
         { "x-api-key": "k" },
       );
       await validateSendEmailBody(request);
@@ -221,7 +234,7 @@ describe("validateSendEmailBody", () => {
       mockValidateAuthContext.mockResolvedValue(
         NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
       );
-      const request = createRequest({ to: ["d@example.com"], subject: "s" });
+      const request = createRequest({ to: ["d@example.com"], subject: "s", text: "body" });
       const result = await validateSendEmailBody(request);
       expect("error" in result).toBe(true);
       if ("error" in result) expect(result.error.status).toBe(401);
