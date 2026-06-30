@@ -8,7 +8,7 @@ import { selectAccountCatalogs } from "@/lib/supabase/account_catalogs/selectAcc
  *
  * Lists catalogs linked to the account via `account_catalogs`, ordered by
  * `created_at desc`. Response body is byte-identical to the legacy
- * `GET /api/catalogs?account_id=...` endpoint on `api.recoupable.com`.
+ * `GET /api/catalogs?account_id=...` endpoint on `api.recoupable.dev`.
  *
  * @param request - The incoming request
  * @param params - Route params containing the account ID

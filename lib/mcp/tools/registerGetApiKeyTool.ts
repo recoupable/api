@@ -10,7 +10,7 @@ import { getToolResultError } from "@/lib/mcp/getToolResultError";
  * Registers the "get_api_key" tool on the MCP server.
  *
  * Returns the Recoup API key the caller authenticated this MCP connection
- * with so the LLM can use it for direct HTTP requests to api.recoupable.com
+ * with so the LLM can use it for direct HTTP requests to api.recoupable.dev
  * (via the x-api-key header). The MCP Bearer header is opaque to the LLM by
  * design, so without this tool, skills that curl /api/* endpoints have no
  * credential to send.
@@ -22,7 +22,7 @@ export function registerGetApiKeyTool(server: McpServer): void {
     "get_api_key",
     {
       description:
-        "Return the Recoup API key for this session so the LLM can use it for direct HTTP calls to api.recoupable.com (x-api-key header, or Authorization: Bearer). Call this once when invoking any skill that makes raw HTTPS requests to the Recoup REST API — for example the recoup-api skill. The returned value is the same credential the customer used to authenticate this MCP connection. Endpoint reference: https://developers.recoupable.com (and https://developers.recoupable.com/llms.txt for the LLM-readable index).",
+        "Return the Recoup API key for this session so the LLM can use it for direct HTTP calls to api.recoupable.dev (x-api-key header, or Authorization: Bearer). Call this once when invoking any skill that makes raw HTTPS requests to the Recoup REST API — for example the recoup-api skill. The returned value is the same credential the customer used to authenticate this MCP connection. Endpoint reference: https://docs.recoupable.dev (and https://docs.recoupable.dev/llms.txt for the LLM-readable index).",
       inputSchema: z.object({}),
     },
     async (_args, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
