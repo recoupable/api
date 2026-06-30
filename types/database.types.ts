@@ -8,54 +8,6 @@ export type Database = {
   };
   public: {
     Tables: {
-      email_send_log: {
-        Row: {
-          account_id: string | null;
-          body_parsed: boolean;
-          chat_id: string | null;
-          created_at: string;
-          error: string | null;
-          html_length: number | null;
-          id: string;
-          raw_body: string | null;
-          resend_id: string | null;
-          status: string;
-          subject: string | null;
-          text_length: number | null;
-          to_count: number | null;
-        };
-        Insert: {
-          account_id?: string | null;
-          body_parsed?: boolean;
-          chat_id?: string | null;
-          created_at?: string;
-          error?: string | null;
-          html_length?: number | null;
-          id?: string;
-          raw_body?: string | null;
-          resend_id?: string | null;
-          status: string;
-          subject?: string | null;
-          text_length?: number | null;
-          to_count?: number | null;
-        };
-        Update: {
-          account_id?: string | null;
-          body_parsed?: boolean;
-          chat_id?: string | null;
-          created_at?: string;
-          error?: string | null;
-          html_length?: number | null;
-          id?: string;
-          raw_body?: string | null;
-          resend_id?: string | null;
-          status?: string;
-          subject?: string | null;
-          text_length?: number | null;
-          to_count?: number | null;
-        };
-        Relationships: [];
-      };
       account_api_keys: {
         Row: {
           account: string | null;
@@ -1257,6 +1209,36 @@ export type Database = {
           id?: number;
           timestamp?: string | null;
           url?: string | null;
+        };
+        Relationships: [];
+      };
+      email_send_log: {
+        Row: {
+          account_id: string | null;
+          chat_id: string | null;
+          created_at: string;
+          id: string;
+          raw_body: string | null;
+          resend_id: string | null;
+          status: string;
+        };
+        Insert: {
+          account_id?: string | null;
+          chat_id?: string | null;
+          created_at?: string;
+          id?: string;
+          raw_body?: string | null;
+          resend_id?: string | null;
+          status: string;
+        };
+        Update: {
+          account_id?: string | null;
+          chat_id?: string | null;
+          created_at?: string;
+          id?: string;
+          raw_body?: string | null;
+          resend_id?: string | null;
+          status?: string;
         };
         Relationships: [];
       };
@@ -3212,38 +3194,6 @@ export type Database = {
             isOneToOne: true;
             referencedRelation: "songs";
             referencedColumns: ["isrc"];
-          },
-        ];
-      };
-      songstats_quota_ledger: {
-        Row: {
-          account: string | null;
-          hits: number;
-          id: string;
-          purpose: string | null;
-          spent_at: string;
-        };
-        Insert: {
-          account?: string | null;
-          hits: number;
-          id?: string;
-          purpose?: string | null;
-          spent_at?: string;
-        };
-        Update: {
-          account?: string | null;
-          hits?: number;
-          id?: string;
-          purpose?: string | null;
-          spent_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "songstats_quota_ledger_account_fkey";
-            columns: ["account"];
-            isOneToOne: false;
-            referencedRelation: "accounts";
-            referencedColumns: ["id"];
           },
         ];
       };

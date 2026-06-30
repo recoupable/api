@@ -89,7 +89,7 @@ describe("sendEmailHandler", () => {
     const json = await response.json();
     expect(json.error).toBe("resend boom");
     expect(mockLogEmailAttempt).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "send_failed", error: "resend boom" }),
+      expect.objectContaining({ status: "send_failed" }),
     );
   });
 });

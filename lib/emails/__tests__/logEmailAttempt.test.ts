@@ -13,44 +13,34 @@ describe("logEmailAttempt", () => {
     mockInsert.mockResolvedValue({ error: null });
   });
 
-  it("records a sent attempt with parsed body, lengths, and resend id", async () => {
+  it("records account, chat, status, resend id, and the raw body", async () => {
+    const raw = JSON.stringify({ html: "<p>hi</p>" });
     await logEmailAttempt({
-      rawBody: JSON.stringify({ to: ["a@b.com"], html: "<p>hi</p>" }),
+      rawBody: raw,
       status: "sent",
       accountId: "acc-1",
-      to: ["a@b.com"],
-      subject: "S",
-      html: "<p>hi</p>",
       chatId: "chat-1",
       resendId: "re_123",
     });
     expect(mockInsert).toHaveBeenCalledTimes(1);
     const row = mockInsert.mock.calls[0][0];
     expect(row.status).toBe("sent");
-    expect(row.body_parsed).toBe(true);
     expect(row.account_id).toBe("acc-1");
-    expect(row.to_count).toBe(1);
-    expect(row.html_length).toBe("<p>hi</p>".length);
-    expect(row.resend_id).toBe("re_123");
     expect(row.chat_id).toBe("chat-1");
+    expect(row.resend_id).toBe("re_123");
+    expect(row.raw_body).toBe(raw);
   });
 
-  it("marks body_parsed false for a malformed body and still logs", async () => {
-    await logEmailAttempt({ rawBody: '{"to":[', status: "rejected" });
-    const row = mockInsert.mock.calls[0][0];
-    expect(row.body_parsed).toBe(false);
-    expect(row.status).toBe("rejected");
-    expect(row.account_id).toBeNull();
-  });
-
-  it("truncates a large raw body to 10000 chars", async () => {
+  it("stores the full raw body (no truncation)", async () => {
     await logEmailAttempt({ rawBody: "x".repeat(20000), status: "rejected" });
-    const row = mockInsert.mock.calls[0][0];
-    expect(row.raw_body.length).toBe(10000);
+    expect(mockInsert.mock.calls[0][0].raw_body.length).toBe(20000);
   });
 
-  it("never throws when the insert fails", async () => {
+  it("nulls optional ids and never throws when the insert fails", async () => {
     mockInsert.mockRejectedValue(new Error("db down"));
     await expect(logEmailAttempt({ rawBody: "{}", status: "rejected" })).resolves.toBeUndefined();
+    const row = mockInsert.mock.calls[0][0];
+    expect(row.account_id).toBeNull();
+    expect(row.chat_id).toBeNull();
   });
 });

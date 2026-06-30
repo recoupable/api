@@ -56,12 +56,7 @@ export async function sendEmailHandler(request: NextRequest): Promise<NextRespon
       rawBody,
       status: "send_failed",
       accountId: validated.accountId,
-      to,
-      subject,
-      html,
-      text,
       chatId: chat_id,
-      error: result.error,
     });
     return NextResponse.json(
       { status: "error", error: result.error },
@@ -73,10 +68,6 @@ export async function sendEmailHandler(request: NextRequest): Promise<NextRespon
     rawBody,
     status: "sent",
     accountId: validated.accountId,
-    to,
-    subject,
-    html,
-    text,
     chatId: chat_id,
     resendId: result.id,
   });
