@@ -22,10 +22,6 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-vi.mock("@/lib/networking/safeParseJson", () => ({
-  safeParseJson: vi.fn(async (req: Request) => req.json()),
-}));
-
 function createRequest(body: unknown, headers: Record<string, string> = {}): NextRequest {
   return new NextRequest("http://localhost/api/emails", {
     method: "POST",
@@ -58,10 +54,10 @@ describe("validateSendEmailBody", () => {
       );
       const result = await validateSendEmailBody(request);
 
-      expect(result).toBeInstanceOf(NextResponse);
-      if (result instanceof NextResponse) {
-        expect(result.status).toBe(403);
-        const json = await result.json();
+      expect("error" in result).toBe(true);
+      if ("error" in result) {
+        expect(result.error.status).toBe(403);
+        const json = await result.error.json();
         expect(json.disallowed_recipients).toEqual(["stranger@example.com"]);
       }
     });
@@ -87,18 +83,18 @@ describe("validateSendEmailBody", () => {
         { "x-api-key": "k" },
       );
       const result = await validateSendEmailBody(request);
-      expect(result).not.toBeInstanceOf(NextResponse);
-      if (!(result instanceof NextResponse)) {
-        expect(result.subject).toBe("Pulse Report");
+      expect("data" in result).toBe(true);
+      if ("data" in result) {
+        expect(result.data.subject).toBe("Pulse Report");
       }
     });
 
     it("defaults to `Message from Recoup` when subject and body are empty", async () => {
       const request = createRequest({ to: ["d@example.com"] }, { "x-api-key": "k" });
       const result = await validateSendEmailBody(request);
-      expect(result).not.toBeInstanceOf(NextResponse);
-      if (!(result instanceof NextResponse)) {
-        expect(result.subject).toBe("Message from Recoup");
+      expect("data" in result).toBe(true);
+      if ("data" in result) {
+        expect(result.data.subject).toBe("Message from Recoup");
       }
     });
   });
@@ -111,12 +107,12 @@ describe("validateSendEmailBody", () => {
       );
       const result = await validateSendEmailBody(request);
 
-      expect(result).not.toBeInstanceOf(NextResponse);
-      if (!(result instanceof NextResponse)) {
-        expect(result.to).toEqual(["dest@example.com"]);
-        expect(result.subject).toBe("Hi");
-        expect(result.text).toBe("Hello world");
-        expect(result.accountId).toBe("account-123");
+      expect("data" in result).toBe(true);
+      if ("data" in result) {
+        expect(result.data.to).toEqual(["dest@example.com"]);
+        expect(result.data.subject).toBe("Hi");
+        expect(result.data.text).toBe("Hello world");
+        expect(result.data.accountId).toBe("account-123");
       }
     });
 
@@ -135,13 +131,13 @@ describe("validateSendEmailBody", () => {
       );
       const result = await validateSendEmailBody(request);
 
-      expect(result).not.toBeInstanceOf(NextResponse);
-      if (!(result instanceof NextResponse)) {
-        expect(result.to).toEqual(["a@example.com", "b@example.com"]);
-        expect(result.cc).toEqual(["cc@example.com"]);
-        expect(result.html).toBe("<p>h</p>");
-        expect(result.headers).toEqual({ "X-Custom": "v" });
-        expect(result.chat_id).toBe("chat-1");
+      expect("data" in result).toBe(true);
+      if ("data" in result) {
+        expect(result.data.to).toEqual(["a@example.com", "b@example.com"]);
+        expect(result.data.cc).toEqual(["cc@example.com"]);
+        expect(result.data.html).toBe("<p>h</p>");
+        expect(result.data.headers).toEqual({ "X-Custom": "v" });
+        expect(result.data.chat_id).toBe("chat-1");
       }
     });
 
@@ -163,9 +159,9 @@ describe("validateSendEmailBody", () => {
       const request = createRequest({ subject: "s", text: "hi" }, { "x-api-key": "k" });
       const result = await validateSendEmailBody(request);
 
-      expect(result).not.toBeInstanceOf(NextResponse);
-      if (!(result instanceof NextResponse)) {
-        expect(result.to).toEqual(["owner@example.com"]);
+      expect("data" in result).toBe(true);
+      if ("data" in result) {
+        expect(result.data.to).toEqual(["owner@example.com"]);
       }
       expect(mockSelectAccountEmails).toHaveBeenCalledWith({ accountIds: "account-123" });
     });
@@ -178,9 +174,9 @@ describe("validateSendEmailBody", () => {
       const request = createRequest({ subject: "s" }, { "x-api-key": "k" });
       const result = await validateSendEmailBody(request);
 
-      expect(result).not.toBeInstanceOf(NextResponse);
-      if (!(result instanceof NextResponse)) {
-        expect(result.to).toEqual(["owner@example.com", "owner.alt@example.com"]);
+      expect("data" in result).toBe(true);
+      if ("data" in result) {
+        expect(result.data.to).toEqual(["owner@example.com", "owner.alt@example.com"]);
       }
     });
 
@@ -188,8 +184,8 @@ describe("validateSendEmailBody", () => {
       mockSelectAccountEmails.mockResolvedValue([]);
       const request = createRequest({ subject: "s" }, { "x-api-key": "k" });
       const result = await validateSendEmailBody(request);
-      expect(result).toBeInstanceOf(NextResponse);
-      if (result instanceof NextResponse) expect(result.status).toBe(400);
+      expect("error" in result).toBe(true);
+      if ("error" in result) expect(result.error.status).toBe(400);
     });
 
     it("does not resolve account emails when 'to' is provided", async () => {
@@ -206,15 +202,15 @@ describe("validateSendEmailBody", () => {
     it("rejects an empty 'to' array", async () => {
       const request = createRequest({ to: [], subject: "s" }, { "x-api-key": "k" });
       const result = await validateSendEmailBody(request);
-      expect(result).toBeInstanceOf(NextResponse);
-      if (result instanceof NextResponse) expect(result.status).toBe(400);
+      expect("error" in result).toBe(true);
+      if ("error" in result) expect(result.error.status).toBe(400);
     });
 
     it("rejects a non-email recipient", async () => {
       const request = createRequest({ to: ["not-an-email"], subject: "s" }, { "x-api-key": "k" });
       const result = await validateSendEmailBody(request);
-      expect(result).toBeInstanceOf(NextResponse);
-      if (result instanceof NextResponse) expect(result.status).toBe(400);
+      expect("error" in result).toBe(true);
+      if ("error" in result) expect(result.error.status).toBe(400);
     });
 
     // subject is now optional (defaults from the body) — covered by "subject defaulting" above.
@@ -227,8 +223,8 @@ describe("validateSendEmailBody", () => {
       );
       const request = createRequest({ to: ["d@example.com"], subject: "s" });
       const result = await validateSendEmailBody(request);
-      expect(result).toBeInstanceOf(NextResponse);
-      if (result instanceof NextResponse) expect(result.status).toBe(401);
+      expect("error" in result).toBe(true);
+      if ("error" in result) expect(result.error.status).toBe(401);
     });
   });
 });

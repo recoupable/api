@@ -4,6 +4,7 @@ import { sendEmailHandler } from "../sendEmailHandler";
 
 const mockValidateSendEmailBody = vi.fn();
 const mockProcessAndSendEmail = vi.fn();
+const mockLogEmailAttempt = vi.fn();
 
 vi.mock("@/lib/emails/validateSendEmailBody", () => ({
   validateSendEmailBody: (...args: unknown[]) => mockValidateSendEmailBody(...args),
@@ -11,6 +12,10 @@ vi.mock("@/lib/emails/validateSendEmailBody", () => ({
 
 vi.mock("@/lib/emails/processAndSendEmail", () => ({
   processAndSendEmail: (...args: unknown[]) => mockProcessAndSendEmail(...args),
+}));
+
+vi.mock("@/lib/emails/logEmailAttempt", () => ({
+  logEmailAttempt: (...args: unknown[]) => mockLogEmailAttempt(...args),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -29,12 +34,15 @@ describe("sendEmailHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockValidateSendEmailBody.mockResolvedValue({
-      to: ["dest@example.com"],
-      cc: ["cc@example.com"],
-      subject: "Weekly report",
-      text: "body",
-      chat_id: "chat-1",
-      accountId: "account-123",
+      rawBody: '{"subject":"Weekly report"}',
+      data: {
+        to: ["dest@example.com"],
+        cc: ["cc@example.com"],
+        subject: "Weekly report",
+        text: "body",
+        chat_id: "chat-1",
+        accountId: "account-123",
+      },
     });
     mockProcessAndSendEmail.mockResolvedValue({
       success: true,
@@ -60,15 +68,30 @@ describe("sendEmailHandler", () => {
         room_id: "chat-1",
       }),
     );
+    // Single call, on every path (DRY); rawBody comes from validateSendEmailBody (SRP).
+    expect(mockLogEmailAttempt).toHaveBeenCalledTimes(1);
+    expect(mockLogEmailAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "sent",
+        resendId: "resend-id-1",
+        rawBody: '{"subject":"Weekly report"}',
+        accountId: "account-123",
+        chatId: "chat-1",
+      }),
+    );
   });
 
   it("propagates the NextResponse from validateSendEmailBody (auth/validation/recipient errors)", async () => {
-    mockValidateSendEmailBody.mockResolvedValue(
-      NextResponse.json({ status: "error", error: "Forbidden" }, { status: 403 }),
-    );
+    mockValidateSendEmailBody.mockResolvedValue({
+      rawBody: "{}",
+      error: NextResponse.json({ status: "error", error: "Forbidden" }, { status: 403 }),
+    });
     const response = await sendEmailHandler(createRequest());
     expect(response.status).toBe(403);
     expect(mockProcessAndSendEmail).not.toHaveBeenCalled();
+    expect(mockLogEmailAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "rejected" }),
+    );
   });
 
   it("returns 502 when Resend delivery fails", async () => {
@@ -77,5 +100,8 @@ describe("sendEmailHandler", () => {
     expect(response.status).toBe(502);
     const json = await response.json();
     expect(json.error).toBe("resend boom");
+    expect(mockLogEmailAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "send_failed" }),
+    );
   });
 });
