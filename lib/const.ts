@@ -15,8 +15,8 @@ export const PRIVY_PROJECT_SECRET = process.env.PRIVY_PROJECT_SECRET;
 /** Base URL for the public API documentation site */
 export const DOCS_BASE_URL = "https://docs.recoupable.dev";
 
-/** Domain for receiving inbound emails (e.g., support@mail.recoupable.dev) */
-export const INBOUND_EMAIL_DOMAIN = "@mail.recoupable.dev";
+/** Domain for receiving inbound emails (e.g., support@recoupable.dev) */
+export const INBOUND_EMAIL_DOMAIN = "@recoupable.dev";
 
 /** Domain for sending outbound emails (e.g., support@recoupable.dev) */
 export const OUTBOUND_EMAIL_DOMAIN = "@recoupable.dev";
