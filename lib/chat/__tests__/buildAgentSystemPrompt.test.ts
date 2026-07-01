@@ -4,7 +4,7 @@ import { buildAgentSystemPrompt } from "@/lib/chat/buildAgentSystemPrompt";
 describe("buildAgentSystemPrompt", () => {
   it("emits only customInstructions when no cwd is provided", () => {
     const prompt = buildAgentSystemPrompt({ customInstructions: "hello" });
-    expect(prompt).toBe("hello");
+    expect(prompt).toContain("hello");
     expect(prompt).not.toMatch(/Working directory/);
   });
 
@@ -26,7 +26,9 @@ describe("buildAgentSystemPrompt", () => {
     expect(customIdx).toBeGreaterThan(envIdx);
   });
 
-  it("returns empty string when all options are empty", () => {
-    expect(buildAgentSystemPrompt({})).toBe("");
+  it("always includes the data-grounding no-fabrication rule, even with empty options", () => {
+    const prompt = buildAgentSystemPrompt({});
+    expect(prompt).toMatch(/never fabricate/i);
+    expect(prompt).toMatch(/sample|estimate|industry average/i);
   });
 });
