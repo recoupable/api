@@ -10,6 +10,7 @@ export function getSocialPlatformByLink(link: string): string {
   if (link.includes("instagram.com")) return "INSTAGRAM";
   if (link.includes("spotify.com")) return "SPOTIFY";
   if (link.includes("tiktok.com")) return "TIKTOK";
+  if (link.includes("linkedin.com")) return "LINKEDIN";
   if (link.includes("apple.com")) return "APPLE";
   if (link.includes("youtube.")) return "YOUTUBE";
   if (link.includes("facebook.com")) return "FACEBOOK";
