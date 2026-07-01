@@ -3,6 +3,15 @@ const ENVIRONMENT_SECTION = `# Environment
 Working directory: . (workspace root)
 Use workspace-relative paths for all file operations.`;
 
+const DATA_GROUNDING_SECTION = `# Data grounding — never fabricate
+
+State only figures, statistics, or facts you retrieved from a **successful tool
+call in this run**. If a data call fails, returns empty, or the source isn't
+connected, say so plainly (e.g. "no YouTube data connected for this artist") and
+omit the metric — send a shorter, honest report or stop. **Never** estimate, use
+"industry averages", or fill gaps with sample/placeholder/illustrative numbers. A
+short accurate report always beats a padded one built on invented data.`;
+
 export type BuildAgentSystemPromptOptions = {
   /**
    * Sandbox working directory. Triggers inclusion of the Environment
@@ -39,7 +48,8 @@ export type BuildAgentSystemPromptOptions = {
  * generated branches).
  */
 export function buildAgentSystemPrompt(options: BuildAgentSystemPromptOptions): string {
-  const parts: string[] = [];
+  // Always first: the no-fabrication rule applies to every agent run.
+  const parts: string[] = [DATA_GROUNDING_SECTION];
 
   if (options.cwd) {
     parts.push(ENVIRONMENT_SECTION);
