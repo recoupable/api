@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateApifyWebhookRequest } from "@/lib/apify/validateApifyWebhookRequest";
-import { handleInstagramProfileScraperResults } from "@/lib/apify/instagram/handleInstagramProfileScraperResults";
-import { handleInstagramCommentsScraper } from "@/lib/apify/instagram/handleInstagramCommentsScraper";
-
-const INSTAGRAM_PROFILE_ACTOR_ID = "dSCLg0C3YEZ83HzYX";
-const INSTAGRAM_COMMENTS_ACTOR_ID = "SbK00X0JYCPblD2wp";
+import { getApifyResultHandler } from "@/lib/apify/getApifyResultHandler";
 
 /**
  * Handler for `POST /api/apify`. Always responds 200 so Apify does not
@@ -20,23 +16,18 @@ export async function apifyWebhookHandler(request: NextRequest): Promise<NextRes
 
   const { actorId } = validated.eventData;
 
+  const handler = getApifyResultHandler(actorId);
+  if (!handler) {
+    console.warn(`[WARN] apifyWebhookHandler: unhandled actorId ${actorId}`);
+    return NextResponse.json(
+      { status: "error", error: `Unhandled actorId: ${actorId}` },
+      { status: 200 },
+    );
+  }
+
   try {
-    switch (actorId) {
-      case INSTAGRAM_PROFILE_ACTOR_ID: {
-        const result = await handleInstagramProfileScraperResults(validated);
-        return NextResponse.json(result, { status: 200 });
-      }
-      case INSTAGRAM_COMMENTS_ACTOR_ID: {
-        const result = await handleInstagramCommentsScraper(validated);
-        return NextResponse.json(result, { status: 200 });
-      }
-      default:
-        console.warn(`[WARN] apifyWebhookHandler: unhandled actorId ${actorId}`);
-        return NextResponse.json(
-          { status: "error", error: `Unhandled actorId: ${actorId}` },
-          { status: 200 },
-        );
-    }
+    const result = await handler(validated);
+    return NextResponse.json(result, { status: 200 });
   } catch (error) {
     console.error("[ERROR] apifyWebhookHandler:", error);
     return NextResponse.json({ status: "error", error: "Internal server error" }, { status: 200 });
