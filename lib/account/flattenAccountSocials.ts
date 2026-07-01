@@ -4,7 +4,7 @@ import type { AccountSocialWithSocial } from "@/lib/supabase/account_socials/sel
 type AccountSocialRow = Tables<"account_socials">;
 type SocialRow = Tables<"socials">;
 
-export type AccountSocialResponse = Pick<AccountSocialRow, "id" | "social_id"> &
+export type AccountSocialResponse = Pick<AccountSocialRow, "social_id"> &
   Pick<SocialRow, "username" | "profile_url" | "avatar" | "bio" | "region" | "updated_at"> & {
     follower_count: SocialRow["followerCount"];
     following_count: SocialRow["followingCount"];
@@ -27,7 +27,6 @@ export function flattenAccountSocials(
       throw new Error(`No social data found for account_social id: ${accountSocial.id}`);
     }
     return {
-      id: accountSocial.id,
       social_id: accountSocial.social_id,
       username: socialData.username,
       profile_url: socialData.profile_url,
