@@ -4,6 +4,7 @@ import startTwitterProfileScraping from "@/lib/apify/twitter/startTwitterProfile
 import startThreadsProfileScraping from "@/lib/apify/threads/startThreadsProfileScraping";
 import startYoutubeProfileScraping from "@/lib/apify/youtube/startYoutubeProfileScraping";
 import startFacebookProfileScraping from "@/lib/apify/facebook/startFacebookProfileScraping";
+import startLinkedinProfileScraping from "@/lib/apify/linkedin/startLinkedinProfileScraping";
 import { getUsernameFromProfileUrl } from "@/lib/socials/getUsernameFromProfileUrl";
 
 type ScrapeRunner = (handle: string) => Promise<{
@@ -50,6 +51,10 @@ const PLATFORM_SCRAPERS: Array<{
   {
     match: (url: string) => url.includes("facebook.com"),
     scraper: startFacebookProfileScraping,
+  },
+  {
+    match: (url: string) => url.includes("linkedin.com"),
+    scraper: startLinkedinProfileScraping,
   },
 ];
 

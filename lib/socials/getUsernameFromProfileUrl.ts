@@ -11,6 +11,12 @@ export const getUsernameFromProfileUrl = (profileUrl: string | null | undefined)
 
   try {
     const normalizedUrl = profileUrl.toLowerCase().trim();
+    // LinkedIn nests the handle under a path prefix (/in/, /company/, /school/) —
+    // the generic first-segment rule would return the prefix itself (e.g. "in").
+    const linkedin = normalizedUrl.match(/linkedin\.com\/(?:in|company|school)\/([^/?]+)/);
+    if (linkedin) {
+      return linkedin[1];
+    }
     const match = normalizedUrl.match(/(?:\.com|\.net)\/([^/?]+)/);
     return match ? match[1] : "";
   } catch (error) {

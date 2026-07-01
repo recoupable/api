@@ -6,7 +6,7 @@ describe("DEFAULT_GLOBAL_SKILL_REFS", () => {
     const sourceNames = DEFAULT_GLOBAL_SKILL_REFS.map(r => `${r.source}::${r.skillName}`);
     expect(sourceNames).toContain("recoupable/skills::recoup-platform-api-access");
     expect(sourceNames).toContain("recoupable/skills::recoup-platform-email-helper");
-    expect(sourceNames).toContain("recoupable/skills::recoup-platform-build-workspace");
+    expect(sourceNames).toContain("recoupable/skills::recoup-platform-build-os");
     expect(sourceNames).toContain("recoupable/skills::recoup-roster-add-artist");
     expect(sourceNames).toContain("recoupable/skills::recoup-roster-list-artists");
     expect(sourceNames).toContain("recoupable/skills::recoup-roster-manage-artist");
