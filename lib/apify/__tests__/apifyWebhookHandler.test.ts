@@ -10,6 +10,9 @@ vi.mock("../instagram/handleInstagramProfileScraperResults", () => ({
 vi.mock("../instagram/handleInstagramCommentsScraper", () => ({
   handleInstagramCommentsScraper: vi.fn(),
 }));
+vi.mock("../linkedin/handleLinkedinProfileScraperResults", () => ({
+  handleLinkedinProfileScraperResults: vi.fn(),
+}));
 
 function makeRequest(body: unknown, raw?: string) {
   return new NextRequest("http://localhost/api/apify", {

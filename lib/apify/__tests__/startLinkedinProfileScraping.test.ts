@@ -14,13 +14,19 @@ describe("startLinkedinProfileScraping", () => {
   it("starts the harvestapi actor with `urls` (the actor's real input key), building the /in/ URL from a handle", async () => {
     const r = await startLinkedinProfileScraping("sweetmaneth");
     expect(apifyClient.actor).toHaveBeenCalledWith("harvestapi/linkedin-profile-scraper");
-    expect(start).toHaveBeenCalledWith({ urls: ["https://www.linkedin.com/in/sweetmaneth"] });
+    expect(start).toHaveBeenCalledWith(
+      { urls: ["https://www.linkedin.com/in/sweetmaneth"] },
+      { webhooks: expect.any(Array) },
+    );
     expect(r).toEqual({ runId: "run-1", datasetId: "ds-1" });
   });
 
   it("passes a full profile URL through unchanged", async () => {
     await startLinkedinProfileScraping("https://www.linkedin.com/in/drew-thurlow");
-    expect(start).toHaveBeenCalledWith({ urls: ["https://www.linkedin.com/in/drew-thurlow"] });
+    expect(start).toHaveBeenCalledWith(
+      { urls: ["https://www.linkedin.com/in/drew-thurlow"] },
+      { webhooks: expect.any(Array) },
+    );
   });
   it("rejects LinkedIn path prefixes as handles (legacy rows stored 'in') instead of scraping the wrong profile", async () => {
     await expect(startLinkedinProfileScraping("in")).rejects.toThrow(/Invalid LinkedIn handle/);
