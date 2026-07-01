@@ -14,6 +14,8 @@ import type { GlobalSkillRef } from "@/lib/skills/globalSkillRef";
 export const DEFAULT_GLOBAL_SKILL_REFS: readonly GlobalSkillRef[] = [
   // API access + live data + send-email (was `recoup-api`).
   { source: "recoupable/skills", skillName: "recoup-platform-api-access" },
+  // Reliable email send (Node helper) — pairs with the api-access skill.
+  { source: "recoupable/skills", skillName: "recoup-platform-email-helper" },
   // Folder-tree / RECOUP.md scaffolding + roster ops (was `artist-workspace`).
   { source: "recoupable/skills", skillName: "recoup-platform-build-workspace" },
   { source: "recoupable/skills", skillName: "recoup-roster-add-artist" },

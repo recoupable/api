@@ -37,6 +37,12 @@ export type RunAgentStepInput = {
    */
   agentContext: DurableAgentContext;
   /**
+   * Whether a user is present to answer `ask_user_question`. Interactive chat
+   * sets true (default); headless runs (`/api/chat/runs`, `customer-prompt-task`)
+   * set false so the tool is withheld — no one is there to reply.
+   */
+  interactive?: boolean;
+  /**
    * Stable id to assign to the assistant message produced by this
    * step. Generated once in `runAgentWorkflow` so:
    *
@@ -107,7 +113,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   // without it, a hung tool keeps streamText awaiting forever on stop.
   const tools = wrapToolsWithAbort(
     addCacheControlToTools({
-      tools: buildAgentTools({ skills: input.agentContext.skills }),
+      tools: buildAgentTools({ skills: input.agentContext.skills, interactive: input.interactive }),
       model: input.modelId,
     }),
     cancelController.signal,
