@@ -24,9 +24,11 @@ beforeEach(() => {
 });
 
 describe("scrapeProfileUrl", () => {
-  it("dispatches linkedin.com to the LinkedIn scraper", async () => {
-    const r = await scrapeProfileUrl("https://www.linkedin.com/in/drew-thurlow", "drew-thurlow");
-    expect(li).toHaveBeenCalled();
+  it("dispatches linkedin.com to the LinkedIn scraper with the PROFILE URL (not the stored username)", async () => {
+    // Stored usernames for LinkedIn are unreliable (legacy rows hold the "/in/" path
+    // prefix), so the URL — the field the platform was matched on — is the input.
+    const r = await scrapeProfileUrl("https://www.linkedin.com/in/drew-thurlow", "in");
+    expect(li).toHaveBeenCalledWith("https://www.linkedin.com/in/drew-thurlow");
     expect(r).toMatchObject({ supported: true, runId: "li-run", datasetId: "li-ds" });
   });
   it("returns null for an unsupported platform (spotify)", async () => {
