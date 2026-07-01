@@ -38,8 +38,13 @@ import type { SkillMetadata } from "@/lib/skills/skillTypes";
  * @param options.skills - Discovered skill catalog. When empty / undefined,
  *   `skill` is omitted from the tool record so the model doesn't see it.
  */
-export function buildAgentTools(options: { skills?: SkillMetadata[] } = {}) {
+export function buildAgentTools(options: { skills?: SkillMetadata[]; interactive?: boolean } = {}) {
   const hasSkills = (options.skills?.length ?? 0) > 0;
+  // ask_user_question has no server execute — only a streaming chat UI can
+  // fulfill it. In headless/async runs (customer-prompt-task, /api/chat/runs)
+  // there is no user to answer, so it's a dead-end; omit it there and force the
+  // agent to act (send an honest result or stop) rather than hang on a question.
+  const interactive = options.interactive ?? true;
   return {
     bash: bashTool,
     read: readFileTool,
@@ -50,7 +55,7 @@ export function buildAgentTools(options: { skills?: SkillMetadata[] } = {}) {
     todo_write: todoWriteTool,
     web_fetch: webFetchTool,
     task: taskTool,
-    ask_user_question: askUserQuestionTool,
+    ...(interactive ? { ask_user_question: askUserQuestionTool } : {}),
     ...(hasSkills ? { skill: skillTool } : {}),
   };
 }
