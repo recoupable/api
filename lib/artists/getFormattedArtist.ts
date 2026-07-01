@@ -31,7 +31,10 @@ export interface ArtistQueryRow {
 // FormattedArtist composes fields from multiple tables + computed fields
 export interface FormattedArtist
   extends Pick<AccountInfoRow, "image" | "instruction" | "knowledges" | "label"> {
+  /** The artist's account id. Equal to `id` — sub-resources (/socials|posts|fans) key on this. */
   account_id: AccountRow["id"];
+  /** Same value as `account_id`; kept so callers using `.id` for /artists/{id}/* also resolve. */
+  id: AccountRow["id"];
   name: AccountRow["name"];
   account_socials: Array<
     Pick<SocialsRow, "id" | "profile_url" | "username"> & {
@@ -68,8 +71,14 @@ export function getFormattedArtist(row: ArtistQueryRow): FormattedArtist {
 
   return {
     name: artist.name,
-    ...info,
+    image: info.image,
+    instruction: info.instruction,
+    knowledges: info.knowledges,
+    label: info.label,
     account_id,
+    // `id` mirrors `account_id` — the list used to leak `account_info.id` here via
+    // `...info`, which the /artists/{id}/* sub-resources reject (they key on account_id).
+    id: account_id,
     account_socials,
     pinned: row.pinned || false,
   };
