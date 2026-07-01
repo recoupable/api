@@ -69,4 +69,16 @@ describe("buildAgentTools", () => {
     const tools = buildAgentTools() as Record<string, { execute?: unknown }>;
     expect(tools.ask_user_question?.execute).toBeUndefined();
   });
+  it("omits `ask_user_question` in non-interactive (headless) mode — no user to answer", () => {
+    const tools = buildAgentTools({ interactive: false });
+    expect(tools).not.toHaveProperty("ask_user_question");
+    for (const name of ALWAYS_PRESENT.filter(n => n !== "ask_user_question")) {
+      expect(tools).toHaveProperty(name);
+    }
+  });
+
+  it("keeps `ask_user_question` when interactive (default and explicit true)", () => {
+    expect(buildAgentTools()).toHaveProperty("ask_user_question");
+    expect(buildAgentTools({ interactive: true })).toHaveProperty("ask_user_question");
+  });
 });

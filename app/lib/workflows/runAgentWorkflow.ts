@@ -28,6 +28,8 @@ export type RunAgentWorkflowInput = {
    */
   accountId: string;
   modelId: string;
+  /** Whether an interactive user is present (chat UI) to answer ask_user_question. */
+  interactive?: boolean;
   /**
    * Optional chat title — used as context for the auto-commit
    * message-generation LLM call.
