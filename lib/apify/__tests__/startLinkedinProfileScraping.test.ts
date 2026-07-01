@@ -22,4 +22,11 @@ describe("startLinkedinProfileScraping", () => {
     await startLinkedinProfileScraping("https://www.linkedin.com/in/drew-thurlow");
     expect(start).toHaveBeenCalledWith({ urls: ["https://www.linkedin.com/in/drew-thurlow"] });
   });
+  it("rejects LinkedIn path prefixes as handles (legacy rows stored 'in') instead of scraping the wrong profile", async () => {
+    await expect(startLinkedinProfileScraping("in")).rejects.toThrow(/Invalid LinkedIn handle/);
+    await expect(startLinkedinProfileScraping("company")).rejects.toThrow(
+      /Invalid LinkedIn handle/,
+    );
+    expect(start).not.toHaveBeenCalled();
+  });
 });

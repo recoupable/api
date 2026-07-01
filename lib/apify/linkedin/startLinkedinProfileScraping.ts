@@ -12,8 +12,10 @@ import { ApifyRunInfo } from "@/lib/apify/types";
  */
 const startLinkedinProfileScraping = async (handle: string): Promise<ApifyRunInfo | null> => {
   const cleanHandle = handle.trim().replace(/^@/, "");
-  if (!cleanHandle) {
-    throw new Error("Invalid LinkedIn handle");
+  // Legacy rows stored the LinkedIn path prefix ("in") as the username — never
+  // scrape those (linkedin.com/in/in is a real, wrong profile URL); fail loudly.
+  if (!cleanHandle || ["in", "company", "school"].includes(cleanHandle.toLowerCase())) {
+    throw new Error(`Invalid LinkedIn handle: "${handle}"`);
   }
 
   const targetUrl = cleanHandle.startsWith("http")

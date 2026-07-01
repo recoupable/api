@@ -27,12 +27,6 @@ export type ScrapeProfileResult = ProfileScrapeResult & {
 const PLATFORM_SCRAPERS: Array<{
   match: (url: string) => boolean;
   scraper: ScrapeRunner;
-  /**
-   * What to pass the scraper: the platform handle/username (default) or the
-   * full profile URL. LinkedIn takes the URL — stored usernames for it are
-   * unreliable (legacy rows hold the "/in/" path prefix, not the handle).
-   */
-  input?: "url" | "username";
 }> = [
   {
     match: (url: string) => url.includes("tiktok.com"),
@@ -61,7 +55,6 @@ const PLATFORM_SCRAPERS: Array<{
   {
     match: (url: string) => url.includes("linkedin.com"),
     scraper: startLinkedinProfileScraping,
-    input: "url",
   },
 ];
 
@@ -81,10 +74,9 @@ export const scrapeProfileUrl = async (
   }
 
   const finalUsername = username || getUsernameFromProfileUrl(profileUrl);
-  const scraperInput = platform.input === "url" ? profileUrl : finalUsername;
 
   try {
-    const result = await platform.scraper(scraperInput);
+    const result = await platform.scraper(finalUsername);
 
     if (!result) {
       return {
