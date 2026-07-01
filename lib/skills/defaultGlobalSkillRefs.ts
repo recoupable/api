@@ -17,7 +17,7 @@ export const DEFAULT_GLOBAL_SKILL_REFS: readonly GlobalSkillRef[] = [
   // Reliable email send (Node helper) — pairs with the api-access skill.
   { source: "recoupable/skills", skillName: "recoup-platform-email-helper" },
   // Folder-tree / RECOUP.md scaffolding + roster ops (was `artist-workspace`).
-  { source: "recoupable/skills", skillName: "recoup-platform-build-workspace" },
+  { source: "recoupable/skills", skillName: "recoup-platform-build-os" },
   { source: "recoupable/skills", skillName: "recoup-roster-add-artist" },
   { source: "recoupable/skills", skillName: "recoup-roster-list-artists" },
   { source: "recoupable/skills", skillName: "recoup-roster-manage-artist" },
