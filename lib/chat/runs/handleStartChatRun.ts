@@ -64,6 +64,7 @@ export async function handleStartChatRun(request: NextRequest): Promise<Response
         skills: provisioned.skills,
         recoupAccessToken: rawKey,
         ephemeralKeyId: keyId,
+        interactive: false,
       }),
     ]);
 

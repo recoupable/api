@@ -8,9 +8,9 @@ const GLOBAL_SKILLS_INSTALL_TIMEOUT_MS = 120_000;
 /**
  * Installs the supplied skill refs into the sandbox by running
  * `npx skills add ...` for each one. Refs are validated and deduped
- * via `globalSkillRefsSchema` before any command runs. Throws on the
- * first failure — caller is expected to handle the error
- * (typically best-effort: log and continue).
+ * via `globalSkillRefsSchema` before any command runs. Best-effort per
+ * skill: a single failed install is logged and skipped so it never blocks
+ * the remaining skills (a bad/renamed ref used to abort the whole batch).
  *
  * @param params.sandbox - The connected sandbox handle.
  * @param params.globalSkillRefs - Refs to install (defaults + user prefs).
@@ -32,9 +32,10 @@ export async function installGlobalSkills(params: {
     );
 
     if (!result.success) {
-      throw new Error(
+      console.error(
         `Failed to install global skill ${ref.skillName} from ${ref.source}: ${result.stderr || result.stdout || "unknown error"}`,
       );
+      continue;
     }
   }
 }

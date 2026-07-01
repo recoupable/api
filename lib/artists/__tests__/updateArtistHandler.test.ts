@@ -159,6 +159,7 @@ describe("updateArtistHandler", () => {
     });
     expect(body.artist).toEqual({
       account_id: artistId,
+      id: artistId,
       name: "Updated Artist",
       image: "https://example.com/new-image.jpg",
       instruction: "Stay on brand",

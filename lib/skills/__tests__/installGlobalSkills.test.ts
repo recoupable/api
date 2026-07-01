@@ -52,7 +52,9 @@ describe("installGlobalSkills", () => {
     expect(exec).toHaveBeenCalledTimes(1);
   });
 
-  it("throws when any install command fails", async () => {
+  it("continues past a failed skill and still installs the rest (best-effort, never throws)", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // First skill fails; subsequent calls use the beforeEach success default.
     exec.mockResolvedValueOnce({
       success: false,
       exitCode: 1,
@@ -61,8 +63,13 @@ describe("installGlobalSkills", () => {
       truncated: false,
     });
 
-    await expect(installGlobalSkills({ sandbox, globalSkillRefs: [REF_API] })).rejects.toThrow(
-      /package not found/,
-    );
+    await expect(
+      installGlobalSkills({ sandbox, globalSkillRefs: [REF_API, REF_WORKSPACE] }),
+    ).resolves.toBeUndefined();
+
+    // A single bad skill must NOT block the rest — both are attempted.
+    expect(exec).toHaveBeenCalledTimes(2);
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("package not found"));
+    errorSpy.mockRestore();
   });
 });
