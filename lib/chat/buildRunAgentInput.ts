@@ -23,6 +23,8 @@ export type BuildRunAgentInputParams = {
    * `/api/chat/runs`). Omitted when absent so the service key never leaks.
    */
   recoupAccessToken?: string;
+  /** True for interactive chat (default), false for headless runs (withholds ask_user_question). */
+  interactive?: boolean;
   /**
    * Row id of an ephemeral key minted for a headless run, so the workflow can
    * delete it on run end (recoupable/chat#1813). Interactive callers omit it.
@@ -49,6 +51,7 @@ export function buildRunAgentInput({
   skills,
   recoupAccessToken,
   ephemeralKeyId,
+  interactive,
 }: BuildRunAgentInputParams): RunAgentWorkflowInput {
   const repoIds = parseGitHubRepoIdentifiers(cloneUrl);
   const recoupOrgId = cloneUrl ? (extractOrgId(cloneUrl) ?? undefined) : undefined;
@@ -60,6 +63,7 @@ export function buildRunAgentInput({
     accountId,
     modelId,
     sessionTitle,
+    interactive,
     repoOwner: repoIds?.owner,
     repoName: repoIds?.repo,
     agentContext: {
