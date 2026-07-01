@@ -20,7 +20,7 @@ const startLinkedinProfileScraping = async (handle: string): Promise<ApifyRunInf
     ? cleanHandle
     : `https://www.linkedin.com/in/${cleanHandle}`;
 
-  const input = { profiles: [targetUrl] };
+  const input = { urls: [targetUrl] };
 
   try {
     const run = await apifyClient.actor("harvestapi/linkedin-profile-scraper").start(input);
