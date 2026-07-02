@@ -4,6 +4,12 @@ import { z } from "zod";
 
 export const artistSocialsScrapeBodySchema = z.object({
   artist_account_id: z.string().min(1, "artist_account_id body parameter is required"),
+  posts: z
+    .number()
+    .int("posts must be an integer")
+    .min(1, "posts must be between 1 and 100")
+    .max(100, "posts must be between 1 and 100")
+    .optional(),
 });
 
 export type ArtistSocialsScrapeBody = z.infer<typeof artistSocialsScrapeBodySchema>;

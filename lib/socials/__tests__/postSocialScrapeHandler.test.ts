@@ -45,6 +45,17 @@ describe("postSocialScrapeHandler", () => {
     const res = await postSocialScrapeHandler(request, SOCIAL_ID);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ runId: "r1", datasetId: "d1" });
+    expect(scrapeProfileUrl).toHaveBeenCalledWith(social.profile_url, social.username, undefined);
+  });
+
+  it("forwards validated posts to scrapeProfileUrl", async () => {
+    vi.mocked(validatePostSocialScrapeRequest).mockResolvedValue({
+      social_id: SOCIAL_ID,
+      posts: 20,
+    });
+    vi.mocked(scrapeProfileUrl).mockResolvedValue({ runId: "r1", datasetId: "d1" } as never);
+    await postSocialScrapeHandler(request, SOCIAL_ID);
+    expect(scrapeProfileUrl).toHaveBeenCalledWith(social.profile_url, social.username, 20);
   });
 
   it("returns 400 when platform unsupported (scrapeProfileUrl returns null)", async () => {

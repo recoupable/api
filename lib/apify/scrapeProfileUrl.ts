@@ -7,7 +7,10 @@ import startFacebookProfileScraping from "@/lib/apify/facebook/startFacebookProf
 import startLinkedinProfileScraping from "@/lib/apify/linkedin/startLinkedinProfileScraping";
 import { getUsernameFromProfileUrl } from "@/lib/socials/getUsernameFromProfileUrl";
 
-type ScrapeRunner = (handle: string) => Promise<{
+type ScrapeRunner = (
+  handle: string,
+  posts?: number,
+) => Promise<{
   runId: string;
   datasetId: string;
   error?: string;
@@ -61,6 +64,7 @@ const PLATFORM_SCRAPERS: Array<{
 export const scrapeProfileUrl = async (
   profileUrl: string | null | undefined,
   username: string,
+  posts?: number,
 ): Promise<ScrapeProfileResult | null> => {
   if (!profileUrl) {
     return null;
@@ -76,7 +80,7 @@ export const scrapeProfileUrl = async (
   const finalUsername = username || getUsernameFromProfileUrl(profileUrl);
 
   try {
-    const result = await platform.scraper(finalUsername);
+    const result = await platform.scraper(finalUsername, posts);
 
     if (!result) {
       return {

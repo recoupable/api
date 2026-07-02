@@ -73,8 +73,33 @@ describe("validatePostSocialScrapeRequest", () => {
   it("returns validated payload when caller has access to an owning artist", async () => {
     expect(await validatePostSocialScrapeRequest(makeRequest(), SOCIAL_ID)).toEqual({
       social_id: SOCIAL_ID,
+      posts: undefined,
     });
   });
+
+  it("parses a valid posts query param", async () => {
+    const req = new NextRequest(`http://localhost/api/socials/${SOCIAL_ID}/scrape?posts=20`, {
+      method: "POST",
+      headers: { "x-api-key": "k" },
+    });
+    expect(await validatePostSocialScrapeRequest(req, SOCIAL_ID)).toEqual({
+      social_id: SOCIAL_ID,
+      posts: 20,
+    });
+  });
+
+  it.each([["0"], ["101"], ["abc"], ["1.5"]])(
+    "returns 400 for invalid posts query param %s",
+    async posts => {
+      const req = new NextRequest(
+        `http://localhost/api/socials/${SOCIAL_ID}/scrape?posts=${posts}`,
+        { method: "POST", headers: { "x-api-key": "k" } },
+      );
+      const res = (await validatePostSocialScrapeRequest(req, SOCIAL_ID)) as NextResponse;
+      expect(res.status).toBe(400);
+      expect(validateAuthContext).not.toHaveBeenCalled();
+    },
+  );
 
   it("propagates DB error from selectAccountSocials (fails closed as 500)", async () => {
     vi.mocked(selectAccountSocials).mockRejectedValue(new Error("db blew up"));

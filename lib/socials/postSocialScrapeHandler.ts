@@ -30,7 +30,11 @@ export async function postSocialScrapeHandler(
       );
     }
 
-    const scrapeResult = await scrapeProfileUrl(social.profile_url, social.username);
+    const scrapeResult = await scrapeProfileUrl(
+      social.profile_url,
+      social.username,
+      validated.posts,
+    );
 
     if (scrapeResult) {
       if (scrapeResult.error) {
