@@ -36,6 +36,10 @@ export type RunAgentStepInput = {
    * is added to `experimental_context` right before each model call.
    */
   agentContext: DurableAgentContext;
+  /** Active artist for the run — surfaced in the agent's system prompt (chat#1837). */
+  artistId?: string;
+  /** Owning account id — surfaced alongside the artist in the system prompt. */
+  accountId?: string;
   /**
    * Whether a user is present to answer `ask_user_question`. Interactive chat
    * sets true (default); headless runs (`/api/chat/runs`, `customer-prompt-task`)
@@ -135,6 +139,8 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   const systemPrompt = buildAgentSystemPrompt({
     cwd: input.agentContext.sandbox.workingDirectory,
     customInstructions: agentCustomInstructions,
+    artistId: input.artistId,
+    accountId: input.accountId,
   });
   const result = streamText({
     model: callModel,
