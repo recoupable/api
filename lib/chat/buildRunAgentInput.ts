@@ -11,6 +11,8 @@ export type BuildRunAgentInputParams = {
   sessionId: string;
   accountId: string;
   modelId: string;
+  /** Active artist for the run — surfaced in the agent's system prompt (chat#1837). */
+  artistId?: string;
   sessionTitle?: string;
   /** `session.clone_url` — the single source for repo ids + recoup org id. */
   cloneUrl: string | null;
@@ -44,6 +46,7 @@ export function buildRunAgentInput({
   sessionId,
   accountId,
   modelId,
+  artistId,
   sessionTitle,
   cloneUrl,
   sandboxState,
@@ -62,6 +65,7 @@ export function buildRunAgentInput({
     sessionId,
     accountId,
     modelId,
+    artistId,
     sessionTitle,
     interactive,
     repoOwner: repoIds?.owner,

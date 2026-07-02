@@ -28,6 +28,8 @@ export type RunAgentWorkflowInput = {
    */
   accountId: string;
   modelId: string;
+  /** Active artist for the run — surfaced in the agent's system prompt (chat#1837). */
+  artistId?: string;
   /** Whether an interactive user is present (chat UI) to answer ask_user_question. */
   interactive?: boolean;
   /**
