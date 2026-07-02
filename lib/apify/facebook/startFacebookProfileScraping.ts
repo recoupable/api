@@ -1,5 +1,6 @@
 import { ApifyRunInfo } from "@/lib/apify/types";
 import apifyClient from "@/lib/apify/client";
+import { getApifyWebhooks } from "@/lib/apify/getApifyWebhooks";
 import { OUTSTANDING_ERROR } from "@/lib/apify/errors";
 
 const startFacebookProfileScraping = async (handle: string): Promise<ApifyRunInfo | null> => {
@@ -11,13 +12,16 @@ const startFacebookProfileScraping = async (handle: string): Promise<ApifyRunInf
 
   const targetUrl = `https://www.facebook.com/${cleanHandle}`;
 
-  const run = await apifyClient.actor("apify~facebook-pages-scraper").start({
-    startUrls: [
-      {
-        url: targetUrl,
-      },
-    ],
-  });
+  const run = await apifyClient.actor("apify~facebook-pages-scraper").start(
+    {
+      startUrls: [
+        {
+          url: targetUrl,
+        },
+      ],
+    },
+    { webhooks: getApifyWebhooks() },
+  );
 
   if (!run?.id || !run?.defaultDatasetId) {
     console.error("Failed to start Facebook profile scraping for handle:", handle);

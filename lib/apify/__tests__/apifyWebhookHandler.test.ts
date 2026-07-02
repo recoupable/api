@@ -13,6 +13,21 @@ vi.mock("../instagram/handleInstagramCommentsScraper", () => ({
 vi.mock("../linkedin/handleLinkedinProfileScraperResults", () => ({
   handleLinkedinProfileScraperResults: vi.fn(),
 }));
+vi.mock("../tiktok/handleTiktokProfileScraperResults", () => ({
+  handleTiktokProfileScraperResults: vi.fn(),
+}));
+vi.mock("../twitter/handleTwitterProfileScraperResults", () => ({
+  handleTwitterProfileScraperResults: vi.fn(),
+}));
+vi.mock("../youtube/handleYoutubeProfileScraperResults", () => ({
+  handleYoutubeProfileScraperResults: vi.fn(),
+}));
+vi.mock("../threads/handleThreadsProfileScraperResults", () => ({
+  handleThreadsProfileScraperResults: vi.fn(),
+}));
+vi.mock("../facebook/handleFacebookProfileScraperResults", () => ({
+  handleFacebookProfileScraperResults: vi.fn(),
+}));
 
 function makeRequest(body: unknown, raw?: string) {
   return new NextRequest("http://localhost/api/apify", {
