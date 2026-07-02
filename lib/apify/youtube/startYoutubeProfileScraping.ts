@@ -1,4 +1,5 @@
 import apifyClient from "@/lib/apify/client";
+import { getApifyWebhooks } from "@/lib/apify/getApifyWebhooks";
 import { ApifyRunInfo } from "@/lib/apify/types";
 
 const DEFAULT_INPUT = {
@@ -37,7 +38,9 @@ const startYoutubeProfileScraping = async (handle: string): Promise<ApifyRunInfo
     startUrls: [{ url: targetUrl }],
   };
 
-  const run = await apifyClient.actor("streamers/youtube-scraper").start(input);
+  const run = await apifyClient
+    .actor("streamers/youtube-scraper")
+    .start(input, { webhooks: getApifyWebhooks() });
 
   return {
     runId: run.id,

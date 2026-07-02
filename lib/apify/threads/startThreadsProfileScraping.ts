@@ -1,5 +1,6 @@
 import { ApifyRunInfo } from "@/lib/apify/types";
 import apifyClient from "@/lib/apify/client";
+import { getApifyWebhooks } from "@/lib/apify/getApifyWebhooks";
 import { OUTSTANDING_ERROR } from "@/lib/apify/errors";
 
 const startThreadsProfileScraping = async (handle: string): Promise<ApifyRunInfo | null> => {
@@ -9,9 +10,12 @@ const startThreadsProfileScraping = async (handle: string): Promise<ApifyRunInfo
     throw new Error("Invalid Threads handle");
   }
 
-  const run = await apifyClient.actor("apify~threads-profile-api-scraper").start({
-    usernames: [cleanHandle],
-  });
+  const run = await apifyClient.actor("apify~threads-profile-api-scraper").start(
+    {
+      usernames: [cleanHandle],
+    },
+    { webhooks: getApifyWebhooks() },
+  );
 
   if (!run?.id || !run?.defaultDatasetId) {
     console.error("Failed to start Threads profile scraping for handle:", handle);
