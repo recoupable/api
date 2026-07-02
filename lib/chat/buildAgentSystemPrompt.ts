@@ -26,6 +26,10 @@ export type BuildAgentSystemPromptOptions = {
    * link prompt + recoup-api skill prompt).
    */
   customInstructions?: string;
+  /** Active artist for this run — injected so the agent never roster-guesses. */
+  artistId?: string;
+  /** Owning account id (the run's auth identity). */
+  accountId?: string;
 };
 
 /**
@@ -53,6 +57,22 @@ export function buildAgentSystemPrompt(options: BuildAgentSystemPromptOptions): 
 
   if (options.cwd) {
     parts.push(ENVIRONMENT_SECTION);
+  }
+
+  if (options.artistId || options.accountId) {
+    // Mirrors the interactive chat's getSystemPrompt context block — without
+    // this, headless agents roster-guess and can land on the org-scoped
+    // artist list instead of the run's actual artist (recoupable/chat#1837).
+    const lines = ["# IMPORTANT CONTEXT VALUES (use these exact values in tools)"];
+    if (options.artistId) {
+      lines.push(
+        `- artist_account_id: ${options.artistId} (the active artist for this run — use for /api/artists/{id}/* and roster operations; do NOT search the roster for it)`,
+      );
+    }
+    if (options.accountId) {
+      lines.push(`- account_id: ${options.accountId}`);
+    }
+    parts.push(lines.join("\n"));
   }
 
   if (options.customInstructions) {

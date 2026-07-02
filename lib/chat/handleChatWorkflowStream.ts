@@ -128,6 +128,7 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
       sessionId: validated.sessionId,
       accountId: validated.accountId,
       modelId,
+      artistId: session.artist_id ?? undefined,
       sessionTitle: session.title ?? undefined,
       cloneUrl: session.clone_url,
       sandboxState: session.sandbox_state as VercelState,
