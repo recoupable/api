@@ -31,4 +31,17 @@ describe("buildAgentSystemPrompt", () => {
     expect(prompt).toMatch(/never fabricate/i);
     expect(prompt).toMatch(/sample|estimate|industry average/i);
   });
+  it("emits IMPORTANT CONTEXT VALUES when artistId/accountId are provided", () => {
+    const prompt = buildAgentSystemPrompt({
+      artistId: "ebae4bb9-e38f-4763-b3c8-ff30e99f5d01",
+      accountId: "fb678396-a68f-4294-ae50-b8cacf9ce77b",
+    });
+    expect(prompt).toMatch(/IMPORTANT CONTEXT VALUES/);
+    expect(prompt).toContain("artist_account_id: ebae4bb9-e38f-4763-b3c8-ff30e99f5d01");
+    expect(prompt).toContain("account_id: fb678396-a68f-4294-ae50-b8cacf9ce77b");
+  });
+
+  it("omits the context section when neither artistId nor accountId is provided", () => {
+    expect(buildAgentSystemPrompt({})).not.toMatch(/IMPORTANT CONTEXT VALUES/);
+  });
 });

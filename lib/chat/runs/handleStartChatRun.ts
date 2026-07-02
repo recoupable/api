@@ -57,6 +57,7 @@ export async function handleStartChatRun(request: NextRequest): Promise<Response
         sessionId: provisioned.session.id,
         accountId,
         modelId,
+        artistId,
         sessionTitle: provisioned.session.title ?? undefined,
         cloneUrl: provisioned.session.clone_url,
         sandboxState: provisioned.sandboxState,
