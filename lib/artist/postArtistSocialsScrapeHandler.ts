@@ -36,6 +36,7 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
         profileUrl: social.social?.profile_url,
         username: social.social?.username,
       })),
+      validatedBody.posts,
     );
 
     return NextResponse.json(results, {

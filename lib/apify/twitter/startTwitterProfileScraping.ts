@@ -2,7 +2,10 @@ import apifyClient from "@/lib/apify/client";
 import { getApifyWebhooks } from "@/lib/apify/getApifyWebhooks";
 import { ApifyRunInfo } from "@/lib/apify/types";
 
-const startTwitterProfileScraping = async (handle: string): Promise<ApifyRunInfo | null> => {
+const startTwitterProfileScraping = async (
+  handle: string,
+  posts?: number,
+): Promise<ApifyRunInfo | null> => {
   const cleanHandle = handle.trim();
 
   if (!cleanHandle) {
@@ -12,7 +15,7 @@ const startTwitterProfileScraping = async (handle: string): Promise<ApifyRunInfo
   const input = {
     twitterHandles: [cleanHandle],
     sort: "Latest",
-    maxItems: 1,
+    maxItems: posts ?? 1,
   };
 
   const run = await apifyClient

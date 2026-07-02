@@ -24,7 +24,10 @@ const DEFAULT_INPUT = {
   subtitlesFormat: "srt",
 };
 
-const startYoutubeProfileScraping = async (handle: string): Promise<ApifyRunInfo | null> => {
+const startYoutubeProfileScraping = async (
+  handle: string,
+  posts?: number,
+): Promise<ApifyRunInfo | null> => {
   const cleanHandle = handle.trim().replace(/^@/, "");
 
   if (!cleanHandle) {
@@ -36,6 +39,9 @@ const startYoutubeProfileScraping = async (handle: string): Promise<ApifyRunInfo
   const input = {
     ...DEFAULT_INPUT,
     startUrls: [{ url: targetUrl }],
+    // The legacy snapshot excludes Shorts; a requested posts depth includes them.
+    maxResults: posts ?? DEFAULT_INPUT.maxResults,
+    maxResultsShorts: posts ?? DEFAULT_INPUT.maxResultsShorts,
   };
 
   const run = await apifyClient
