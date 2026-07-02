@@ -6,6 +6,8 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectSocials } from "@/lib/supabase/socials/selectSocials";
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
+import { ensureSocialScrapeCredits } from "@/lib/socials/ensureSocialScrapeCredits";
+import { getSocialScrapeCreditCost } from "@/lib/socials/getSocialScrapeCreditCost";
 
 export const postSocialScrapeParamsSchema = z.object({
   social_id: z.string().uuid("social_id must be a valid UUID"),
@@ -17,7 +19,9 @@ export const postSocialScrapeParamsSchema = z.object({
     .optional(),
 });
 
-export type PostSocialScrapeParams = z.infer<typeof postSocialScrapeParamsSchema>;
+export type PostSocialScrapeParams = z.infer<typeof postSocialScrapeParamsSchema> & {
+  account_id: string;
+};
 
 export async function validatePostSocialScrapeRequest(
   request: NextRequest,
@@ -60,5 +64,11 @@ export async function validatePostSocialScrapeRequest(
     return errorResponse("Unauthorized social scrape attempt", 403);
   }
 
-  return { social_id, posts: parsed.data.posts };
+  const short = await ensureSocialScrapeCredits(
+    authResult.accountId,
+    getSocialScrapeCreditCost(parsed.data.posts),
+  );
+  if (short) return short;
+
+  return { social_id, posts: parsed.data.posts, account_id: authResult.accountId };
 }

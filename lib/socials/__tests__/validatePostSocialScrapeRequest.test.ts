@@ -6,6 +6,7 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectSocials } from "@/lib/supabase/socials/selectSocials";
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
+import { ensureSocialScrapeCredits } from "../ensureSocialScrapeCredits";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
 vi.mock("@/lib/supabase/socials/selectSocials", () => ({ selectSocials: vi.fn() }));
@@ -15,6 +16,7 @@ vi.mock("@/lib/supabase/account_socials/selectAccountSocials", () => ({
 vi.mock("@/lib/artists/checkAccountArtistAccess", () => ({
   checkAccountArtistAccess: vi.fn(),
 }));
+vi.mock("../ensureSocialScrapeCredits", () => ({ ensureSocialScrapeCredits: vi.fn() }));
 vi.mock("@/lib/networking/getCorsHeaders", () => ({ getCorsHeaders: () => ({}) }));
 
 const SOCIAL_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -35,6 +37,7 @@ describe("validatePostSocialScrapeRequest", () => {
     vi.mocked(selectSocials).mockResolvedValue([{ id: SOCIAL_ID } as never]);
     vi.mocked(selectAccountSocials).mockResolvedValue([{ account_id: ARTIST_ID } as never]);
     vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+    vi.mocked(ensureSocialScrapeCredits).mockResolvedValue(null);
   });
 
   it.each([["not-a-uuid"], [""], ["123"]])("returns 400 for invalid uuid %s", async id => {
@@ -74,10 +77,12 @@ describe("validatePostSocialScrapeRequest", () => {
     expect(await validatePostSocialScrapeRequest(makeRequest(), SOCIAL_ID)).toEqual({
       social_id: SOCIAL_ID,
       posts: undefined,
+      account_id: ACCOUNT_ID,
     });
+    expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 5);
   });
 
-  it("parses a valid posts query param", async () => {
+  it("parses a valid posts query param and gates on 5 + posts credits", async () => {
     const req = new NextRequest(`http://localhost/api/socials/${SOCIAL_ID}/scrape?posts=20`, {
       method: "POST",
       headers: { "x-api-key": "k" },
@@ -85,7 +90,15 @@ describe("validatePostSocialScrapeRequest", () => {
     expect(await validatePostSocialScrapeRequest(req, SOCIAL_ID)).toEqual({
       social_id: SOCIAL_ID,
       posts: 20,
+      account_id: ACCOUNT_ID,
     });
+    expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 25);
+  });
+
+  it("short-circuits with the 402 when credits are insufficient", async () => {
+    const short = NextResponse.json({}, { status: 402 });
+    vi.mocked(ensureSocialScrapeCredits).mockResolvedValue(short);
+    expect(await validatePostSocialScrapeRequest(makeRequest(), SOCIAL_ID)).toBe(short);
   });
 
   it.each([["0"], ["101"], ["abc"], ["1.5"]])(
