@@ -9,6 +9,12 @@ import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess
 
 export const postSocialScrapeParamsSchema = z.object({
   social_id: z.string().uuid("social_id must be a valid UUID"),
+  posts: z.coerce
+    .number()
+    .int("posts must be an integer")
+    .min(1, "posts must be between 1 and 100")
+    .max(100, "posts must be between 1 and 100")
+    .optional(),
 });
 
 export type PostSocialScrapeParams = z.infer<typeof postSocialScrapeParamsSchema>;
@@ -17,7 +23,10 @@ export async function validatePostSocialScrapeRequest(
   request: NextRequest,
   id: string,
 ): Promise<PostSocialScrapeParams | NextResponse> {
-  const parsed = postSocialScrapeParamsSchema.safeParse({ social_id: id });
+  const parsed = postSocialScrapeParamsSchema.safeParse({
+    social_id: id,
+    posts: request.nextUrl.searchParams.get("posts") ?? undefined,
+  });
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     return validationErrorResponse(issue.message, issue.path);
@@ -51,5 +60,5 @@ export async function validatePostSocialScrapeRequest(
     return errorResponse("Unauthorized social scrape attempt", 403);
   }
 
-  return { social_id };
+  return { social_id, posts: parsed.data.posts };
 }

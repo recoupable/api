@@ -7,9 +7,12 @@ type ScrapeProfileUrlBatchInput = {
 
 export const scrapeProfileUrlBatch = async (
   inputs: ScrapeProfileUrlBatchInput[],
+  posts?: number,
 ): Promise<ProfileScrapeResult[]> => {
   const results = await Promise.all(
-    inputs.map(({ profileUrl, username }) => scrapeProfileUrl(profileUrl ?? null, username ?? "")),
+    inputs.map(({ profileUrl, username }) =>
+      scrapeProfileUrl(profileUrl ?? null, username ?? "", posts),
+    ),
   );
 
   return results
