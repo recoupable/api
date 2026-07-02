@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { scrapeProfileUrlBatch } from "@/lib/apify/scrapeProfileUrlBatch";
 import { validateArtistSocialsScrapeBody } from "@/lib/artist/validateArtistSocialsScrapeBody";
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
+import { ensureSocialScrapeCredits } from "@/lib/socials/ensureSocialScrapeCredits";
+import { deductSocialScrapeCredits } from "@/lib/socials/deductSocialScrapeCredits";
+import { getSocialScrapeCreditCost } from "@/lib/socials/getSocialScrapeCreditCost";
 
 /**
  * Handler for scraping artist social profiles.
  *
  * Body parameters:
  * - artist_account_id (required): The unique identifier of the artist account
+ * - posts (optional): Recent-posts depth forwarded to each platform scraper
+ *
+ * Costs 5 credits plus 1 per requested post, per social profile scraped.
+ * Credits are gated up-front against the number of linked profiles and
+ * deducted for the profiles whose scrape actually started.
  *
  * @param request - The request object containing the body with artist_account_id.
  * @returns A NextResponse with scraping results.
@@ -22,6 +33,17 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
       return validatedBody;
     }
 
+    const authResult = await validateAuthContext(request);
+    if (authResult instanceof NextResponse) return authResult;
+
+    const hasAccess = await checkAccountArtistAccess(
+      authResult.accountId,
+      validatedBody.artist_account_id,
+    );
+    if (!hasAccess) {
+      return errorResponse("Unauthorized artist socials scrape attempt", 403);
+    }
+
     const socials = await selectAccountSocials({ accountId: validatedBody.artist_account_id });
 
     if (!socials.length) {
@@ -31,6 +53,13 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
       });
     }
 
+    const costPerProfile = getSocialScrapeCreditCost(validatedBody.posts);
+    const short = await ensureSocialScrapeCredits(
+      authResult.accountId,
+      costPerProfile * socials.length,
+    );
+    if (short) return short;
+
     const results = await scrapeProfileUrlBatch(
       socials.map(social => ({
         profileUrl: social.social?.profile_url,
@@ -38,6 +67,10 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
       })),
       validatedBody.posts,
     );
+
+    if (results.length) {
+      await deductSocialScrapeCredits(authResult.accountId, costPerProfile * results.length);
+    }
 
     return NextResponse.json(results, {
       status: 200,
