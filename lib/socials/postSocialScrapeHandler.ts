@@ -3,6 +3,8 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { selectSocials } from "@/lib/supabase/socials/selectSocials";
 import { scrapeProfileUrl } from "@/lib/apify/scrapeProfileUrl";
 import { validatePostSocialScrapeRequest } from "@/lib/socials/validatePostSocialScrapeRequest";
+import { deductSocialScrapeCredits } from "@/lib/socials/deductSocialScrapeCredits";
+import { getSocialScrapeCreditCost } from "@/lib/socials/getSocialScrapeCreditCost";
 
 export async function postSocialScrapeHandler(
   request: NextRequest,
@@ -49,6 +51,10 @@ export async function postSocialScrapeHandler(
           },
         );
       }
+      await deductSocialScrapeCredits(
+        validated.account_id,
+        getSocialScrapeCreditCost(validated.posts),
+      );
       return NextResponse.json(
         {
           runId: scrapeResult.runId,
