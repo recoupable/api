@@ -70,4 +70,39 @@ describe("getOrCreateAccountByEmail", () => {
 
     expect(result).toBeNull();
   });
+
+  it("returns null when linking the email fails (account would be unfindable next call)", async () => {
+    vi.mocked(selectAccountByEmail).mockResolvedValue(null);
+    vi.mocked(insertAccount).mockResolvedValue({ id: "new-account-1", name: "" } as never);
+    vi.mocked(insertAccountEmail).mockResolvedValue(null);
+
+    const result = await getOrCreateAccountByEmail("new@example.com");
+
+    expect(result).toBeNull();
+    expect(initializeAccountCredits).not.toHaveBeenCalled();
+    expect(assignAccountToOrg).not.toHaveBeenCalled();
+  });
+
+  it("returns null when initializing credits rejects", async () => {
+    vi.mocked(selectAccountByEmail).mockResolvedValue(null);
+    vi.mocked(insertAccount).mockResolvedValue({ id: "new-account-1", name: "" } as never);
+    vi.mocked(insertAccountEmail).mockResolvedValue({} as never);
+    vi.mocked(initializeAccountCredits).mockRejectedValue(new Error("credits failed"));
+
+    const result = await getOrCreateAccountByEmail("new@example.com");
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null when org assignment rejects", async () => {
+    vi.mocked(selectAccountByEmail).mockResolvedValue(null);
+    vi.mocked(insertAccount).mockResolvedValue({ id: "new-account-1", name: "" } as never);
+    vi.mocked(insertAccountEmail).mockResolvedValue({} as never);
+    vi.mocked(initializeAccountCredits).mockResolvedValue({} as never);
+    vi.mocked(assignAccountToOrg).mockRejectedValue(new Error("org assignment failed"));
+
+    const result = await getOrCreateAccountByEmail("new@example.com");
+
+    expect(result).toBeNull();
+  });
 });

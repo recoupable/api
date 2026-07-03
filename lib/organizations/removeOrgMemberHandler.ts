@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { validateRemoveOrgMemberQuery } from "@/lib/organizations/validateRemoveOrgMemberQuery";
-import { canManageOrgMembers } from "@/lib/organizations/canManageOrgMembers";
+import { validateRemoveOrgMemberRequest } from "@/lib/organizations/validateRemoveOrgMemberRequest";
 import { deleteAccountOrganization } from "@/lib/supabase/account_organization_ids/deleteAccountOrganization";
 
 /**
@@ -10,49 +8,23 @@ import { deleteAccountOrganization } from "@/lib/supabase/account_organization_i
  * This operation is idempotent - removing an account that is not a member
  * succeeds without error.
  *
- * Query parameters:
- * - organization_id (required): The organization's account ID
- * - account_id (required): The member's account ID
- *
- * The caller must be a member of the organization or a Recoup admin.
+ * Auth, query validation, and access checks live in
+ * validateRemoveOrgMemberRequest. This handler performs the idempotent
+ * delete and shapes the response.
  *
  * @param request - The request object containing the query parameters
  * @returns A NextResponse with the operation status
  */
 export async function removeOrgMemberHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const authResult = await validateAuthContext(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
+    const validated = await validateRemoveOrgMemberRequest(request);
+    if (validated instanceof NextResponse) {
+      return validated;
     }
 
-    const validatedQuery = validateRemoveOrgMemberQuery(request);
-    if (validatedQuery instanceof NextResponse) {
-      return validatedQuery;
-    }
+    const { query } = validated;
 
-    const hasAccess = await canManageOrgMembers({
-      accountId: authResult.accountId,
-      organizationId: validatedQuery.organization_id,
-    });
-
-    if (!hasAccess) {
-      return NextResponse.json(
-        {
-          status: "error",
-          message: "Caller is not a member of the organization",
-        },
-        {
-          status: 403,
-          headers: getCorsHeaders(),
-        },
-      );
-    }
-
-    const deleted = await deleteAccountOrganization(
-      validatedQuery.account_id,
-      validatedQuery.organization_id,
-    );
+    const deleted = await deleteAccountOrganization(query.account_id, query.organization_id);
 
     if (!deleted) {
       return NextResponse.json(
@@ -81,7 +53,7 @@ export async function removeOrgMemberHandler(request: NextRequest): Promise<Next
     return NextResponse.json(
       {
         status: "error",
-        message: error instanceof Error ? error.message : "Internal server error",
+        message: "Internal server error",
       },
       {
         status: 500,

@@ -186,6 +186,20 @@ describe("addOrgMemberHandler", () => {
       expect(response.status).toBe(500);
       const body = await response.json();
       expect(body.status).toBe("error");
+      expect(body.message).toBe("Failed to add member to organization");
+    });
+
+    it("returns a generic 500 without leaking exception details when a dependency throws", async () => {
+      vi.mocked(getAccountOrganizations).mockRejectedValue(new Error("SECRET_DB_DETAIL"));
+
+      const response = await addOrgMemberHandler(
+        buildRequest({ organizationId: ORG_ID, accountId: MEMBER_ID }),
+      );
+
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body).toEqual({ status: "error", message: "Internal server error" });
+      expect(JSON.stringify(body)).not.toContain("SECRET_DB_DETAIL");
     });
   });
 });

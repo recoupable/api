@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { validateAddOrgMemberBody } from "@/lib/organizations/validateAddOrgMemberBody";
-import { canManageOrgMembers } from "@/lib/organizations/canManageOrgMembers";
+import { validateAddOrgMemberRequest } from "@/lib/organizations/validateAddOrgMemberRequest";
 import { getOrCreateAccountByEmail } from "@/lib/accounts/getOrCreateAccountByEmail";
 import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 import { addAccountToOrganization } from "@/lib/supabase/account_organization_ids/addAccountToOrganization";
@@ -12,49 +10,24 @@ import { addAccountToOrganization } from "@/lib/supabase/account_organization_id
  * This operation is idempotent - adding an existing member returns the
  * existing membership.
  *
- * Body parameters:
- * - organizationId (required): The organization's account ID
- * - accountId or email (exactly one): The member to add. An email is
- *   resolved to an account, creating it if it does not exist yet.
- *
- * The caller must be a member of the organization or a Recoup admin.
+ * Auth, body validation, and access checks live in
+ * validateAddOrgMemberRequest. This handler resolves the member account,
+ * performs the idempotent insert, and shapes the response.
  *
  * @param request - The request object containing the body
  * @returns A NextResponse with the membership record ID and member account ID
  */
 export async function addOrgMemberHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const authResult = await validateAuthContext(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
+    const validated = await validateAddOrgMemberRequest(request);
+    if (validated instanceof NextResponse) {
+      return validated;
     }
 
-    const body = await request.json().catch(() => null);
-    const validatedBody = validateAddOrgMemberBody(body);
-    if (validatedBody instanceof NextResponse) {
-      return validatedBody;
-    }
-
-    const hasAccess = await canManageOrgMembers({
-      accountId: authResult.accountId,
-      organizationId: validatedBody.organizationId,
-    });
-
-    if (!hasAccess) {
-      return NextResponse.json(
-        {
-          status: "error",
-          message: "Caller is not a member of the organization",
-        },
-        {
-          status: 403,
-          headers: getCorsHeaders(),
-        },
-      );
-    }
+    const { body } = validated;
 
     const memberAccountId =
-      validatedBody.accountId ?? (await getOrCreateAccountByEmail(validatedBody.email as string));
+      body.accountId ?? (await getOrCreateAccountByEmail(body.email as string));
 
     if (!memberAccountId) {
       return NextResponse.json(
@@ -71,12 +44,12 @@ export async function addOrgMemberHandler(request: NextRequest): Promise<NextRes
 
     const existingMemberships = await getAccountOrganizations({
       accountId: memberAccountId,
-      organizationId: validatedBody.organizationId,
+      organizationId: body.organizationId,
     });
 
     const id =
       existingMemberships[0]?.id ??
-      (await addAccountToOrganization(memberAccountId, validatedBody.organizationId));
+      (await addAccountToOrganization(memberAccountId, body.organizationId));
 
     if (!id) {
       return NextResponse.json(
@@ -107,7 +80,7 @@ export async function addOrgMemberHandler(request: NextRequest): Promise<NextRes
     return NextResponse.json(
       {
         status: "error",
-        message: error instanceof Error ? error.message : "Internal server error",
+        message: "Internal server error",
       },
       {
         status: 500,

@@ -104,6 +104,20 @@ describe("removeOrgMemberHandler", () => {
       expect(response.status).toBe(500);
       const body = await response.json();
       expect(body.status).toBe("error");
+      expect(body.message).toBe("Failed to remove member from organization");
+    });
+
+    it("returns a generic 500 without leaking exception details when a dependency throws", async () => {
+      vi.mocked(deleteAccountOrganization).mockRejectedValue(new Error("SECRET_DB_DETAIL"));
+
+      const response = await removeOrgMemberHandler(
+        buildRequest(`?organization_id=${ORG_ID}&account_id=${MEMBER_ID}`),
+      );
+
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body).toEqual({ status: "error", message: "Internal server error" });
+      expect(JSON.stringify(body)).not.toContain("SECRET_DB_DETAIL");
     });
   });
 });
