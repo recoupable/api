@@ -65,6 +65,23 @@ describe("handleTiktokProfileScraperResults", () => {
       profileUrl: "tiktok.com/@apache_207",
     });
   });
+  it("drops an unparseable createTimeISO instead of forwarding it to the upsert", async () => {
+    listItems.mockResolvedValue({
+      items: [
+        {
+          ...REAL_ITEM,
+          webVideoUrl: "https://www.tiktok.com/@apache_207/video/1",
+          createTimeISO: "garbage",
+        },
+      ],
+    });
+    persistPostsForSocial.mockResolvedValue({ posts: [], social: null });
+    await handleTiktokProfileScraperResults(payload);
+    expect(persistPostsForSocial).toHaveBeenCalledWith({
+      postRows: [{ post_url: "https://www.tiktok.com/@apache_207/video/1", updated_at: undefined }],
+      profileUrl: "tiktok.com/@apache_207",
+    });
+  });
   it("no-ops when the dataset is empty or has no authorMeta", async () => {
     listItems.mockResolvedValue({ items: [] });
     expect(await handleTiktokProfileScraperResults(payload)).toEqual({ social: null });

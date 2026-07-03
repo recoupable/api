@@ -2,6 +2,7 @@ import apifyClient from "@/lib/apify/client";
 import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
 import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
 import { persistPostsForSocial } from "@/lib/apify/persistPostsForSocial";
+import { toIsoDate } from "@/lib/apify/toIsoDate";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 import type { TablesInsert } from "@/types/database.types";
 
@@ -19,15 +20,6 @@ type TweetItem = {
     followers?: number;
     following?: number;
   };
-};
-
-/** The actor emits Twitter's legacy format ("Thu Jul 02 17:21:21 +0000 2026");
- * Postgres can't parse it, so convert to ISO. Invalid/absent dates → undefined
- * (the posts upsert applies its column default). */
-const toIsoDate = (value?: string): string | undefined => {
-  if (!value) return undefined;
-  const parsed = new Date(value);
-  return isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
 };
 
 /**

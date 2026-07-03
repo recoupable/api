@@ -2,6 +2,7 @@ import apifyClient from "@/lib/apify/client";
 import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
 import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
 import { persistPostsForSocial } from "@/lib/apify/persistPostsForSocial";
+import { toIsoDate } from "@/lib/apify/toIsoDate";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 import type { TablesInsert } from "@/types/database.types";
 
@@ -42,7 +43,9 @@ export async function handleTiktokProfileScraperResults(parsed: ApifyWebhookPayl
   await upsertSocials([social]);
 
   const postRows: TablesInsert<"posts">[] = (items as TiktokPostItem[]).flatMap(item =>
-    item.webVideoUrl ? [{ post_url: item.webVideoUrl, updated_at: item.createTimeISO }] : [],
+    item.webVideoUrl
+      ? [{ post_url: item.webVideoUrl, updated_at: toIsoDate(item.createTimeISO) }]
+      : [],
   );
   const { posts } = await persistPostsForSocial({ postRows, profileUrl: social.profile_url });
 
