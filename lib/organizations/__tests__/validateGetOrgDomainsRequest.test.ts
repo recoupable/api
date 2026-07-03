@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { validateRemoveOrgMemberRequest } from "../validateRemoveOrgMemberRequest";
+import { validateGetOrgDomainsRequest } from "../validateGetOrgDomainsRequest";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canManageOrganization } from "@/lib/organizations/canManageOrganization";
@@ -13,16 +13,13 @@ vi.mock("@/lib/organizations/canManageOrganization", () => ({
   canManageOrganization: vi.fn(),
 }));
 
-const ORG_ID = "11111111-1111-4111-8111-111111111111";
-const ACCOUNT_ID = "22222222-2222-4222-8222-222222222222";
+const ORG_ID = "9f0b5f61-6f8d-4b64-92f5-0d1a5f0a1c2e";
 
 function buildRequest(query: string): NextRequest {
-  return new NextRequest(`http://localhost/api/organizations/members${query}`, {
-    method: "DELETE",
-  });
+  return new NextRequest(`http://localhost/api/organizations/domains${query}`);
 }
 
-describe("validateRemoveOrgMemberRequest", () => {
+describe("validateGetOrgDomainsRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(validateAuthContext).mockResolvedValue({
@@ -34,13 +31,11 @@ describe("validateRemoveOrgMemberRequest", () => {
   });
 
   it("returns the caller account ID and query for a valid request", async () => {
-    const result = await validateRemoveOrgMemberRequest(
-      buildRequest(`?organization_id=${ORG_ID}&account_id=${ACCOUNT_ID}`),
-    );
+    const result = await validateGetOrgDomainsRequest(buildRequest(`?organization_id=${ORG_ID}`));
 
     expect(result).toEqual({
       callerAccountId: "caller-1",
-      query: { organization_id: ORG_ID, account_id: ACCOUNT_ID },
+      query: { organization_id: ORG_ID },
     });
     expect(canManageOrganization).toHaveBeenCalledWith({
       accountId: "caller-1",
@@ -55,9 +50,7 @@ describe("validateRemoveOrgMemberRequest", () => {
     );
     vi.mocked(validateAuthContext).mockResolvedValue(unauthorized);
 
-    const result = await validateRemoveOrgMemberRequest(
-      buildRequest(`?organization_id=${ORG_ID}&account_id=${ACCOUNT_ID}`),
-    );
+    const result = await validateGetOrgDomainsRequest(buildRequest(`?organization_id=${ORG_ID}`));
 
     expect(result).toBe(unauthorized);
     expect(canManageOrganization).not.toHaveBeenCalled();
@@ -66,61 +59,34 @@ describe("validateRemoveOrgMemberRequest", () => {
   it("returns 403 when the caller cannot manage the organization", async () => {
     vi.mocked(canManageOrganization).mockResolvedValue(false);
 
-    const result = await validateRemoveOrgMemberRequest(
-      buildRequest(`?organization_id=${ORG_ID}&account_id=${ACCOUNT_ID}`),
-    );
+    const result = await validateGetOrgDomainsRequest(buildRequest(`?organization_id=${ORG_ID}`));
 
     expect(result).toBeInstanceOf(NextResponse);
     if (result instanceof NextResponse) {
       expect(result.status).toBe(403);
       const body = await result.json();
-      expect(body.status).toBe("error");
-      expect(typeof body.error).toBe("string");
+      expect(body).toEqual({
+        status: "error",
+        error: "Access denied to specified organization_id",
+      });
     }
   });
 
   it("returns 400 when organization_id is missing", async () => {
-    const result = await validateRemoveOrgMemberRequest(buildRequest(`?account_id=${ACCOUNT_ID}`));
+    const result = await validateGetOrgDomainsRequest(buildRequest(""));
 
     expect(result).toBeInstanceOf(NextResponse);
     if (result instanceof NextResponse) {
       expect(result.status).toBe(400);
       const body = await result.json();
       expect(body.status).toBe("error");
-      expect(typeof body.error).toBe("string");
+      expect(body.error).toContain("organization_id");
     }
-  });
-
-  it("returns 400 when account_id is missing", async () => {
-    const result = await validateRemoveOrgMemberRequest(buildRequest(`?organization_id=${ORG_ID}`));
-
-    expect(result).toBeInstanceOf(NextResponse);
-    if (result instanceof NextResponse) {
-      expect(result.status).toBe(400);
-      const body = await result.json();
-      expect(body.status).toBe("error");
-      expect(typeof body.error).toBe("string");
-    }
+    expect(canManageOrganization).not.toHaveBeenCalled();
   });
 
   it("returns 400 when organization_id is not a UUID", async () => {
-    const result = await validateRemoveOrgMemberRequest(
-      buildRequest(`?organization_id=nope&account_id=${ACCOUNT_ID}`),
-    );
-
-    expect(result).toBeInstanceOf(NextResponse);
-    if (result instanceof NextResponse) {
-      expect(result.status).toBe(400);
-      const body = await result.json();
-      expect(body.status).toBe("error");
-      expect(typeof body.error).toBe("string");
-    }
-  });
-
-  it("returns 400 when account_id is not a UUID", async () => {
-    const result = await validateRemoveOrgMemberRequest(
-      buildRequest(`?organization_id=${ORG_ID}&account_id=nope`),
-    );
+    const result = await validateGetOrgDomainsRequest(buildRequest("?organization_id=org-1"));
 
     expect(result).toBeInstanceOf(NextResponse);
     if (result instanceof NextResponse) {
