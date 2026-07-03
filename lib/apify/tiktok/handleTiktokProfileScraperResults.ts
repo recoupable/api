@@ -1,10 +1,15 @@
 import apifyClient from "@/lib/apify/client";
 import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
 import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
+import { persistPostsForSocial } from "@/lib/apify/persistPostsForSocial";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
+import type { TablesInsert } from "@/types/database.types";
 
-/** Post item from clockworks~tiktok-scraper (real shape, run G4YRI0eUI0d5IidDN). */
+/** Post item from clockworks~tiktok-scraper (real shape, run G4YRI0eUI0d5IidDN;
+ * post fields verified on run 9AYX8xyaHWyHtnGtC). */
 type TiktokPostItem = {
+  webVideoUrl?: string;
+  createTimeISO?: string;
   authorMeta?: {
     name?: string;
     profileUrl?: string;
@@ -16,8 +21,9 @@ type TiktokPostItem = {
 };
 
 /**
- * Persists a TikTok profile scrape back to `socials` (upsert on `profile_url`).
- * The actor returns post items; the author's profile stats ride on
+ * Persists a TikTok profile scrape back to `socials` (upsert on `profile_url`)
+ * and the returned post items to `posts`/`social_posts` (chat#1840). The
+ * actor returns post items; the author's profile stats ride on
  * `authorMeta` of any item.
  */
 export async function handleTiktokProfileScraperResults(parsed: ApifyWebhookPayload) {
@@ -34,5 +40,11 @@ export async function handleTiktokProfileScraperResults(parsed: ApifyWebhookPayl
     followingCount: author.following ?? null,
   };
   await upsertSocials([social]);
-  return { social };
+
+  const postRows: TablesInsert<"posts">[] = (items as TiktokPostItem[]).flatMap(item =>
+    item.webVideoUrl ? [{ post_url: item.webVideoUrl, updated_at: item.createTimeISO }] : [],
+  );
+  const { posts } = await persistPostsForSocial({ postRows, profileUrl: social.profile_url });
+
+  return { social, posts };
 }
