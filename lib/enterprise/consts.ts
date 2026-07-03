@@ -9,4 +9,5 @@ export const ENTERPRISE_DOMAINS: ReadonlySet<string> = new Set([
   "fatbeats.com",
   "cantorarecords.net",
   "rostrumrecords.com",
+  "seekermusic.com",
 ]);
