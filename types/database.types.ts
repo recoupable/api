@@ -737,27 +737,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      apify_scraper_runs: {
-        Row: {
-          account_id: string;
-          created_at: string;
-          run_id: string;
-          social_id: string | null;
-        };
-        Insert: {
-          account_id: string;
-          created_at?: string;
-          run_id: string;
-          social_id?: string | null;
-        };
-        Update: {
-          account_id?: string;
-          created_at?: string;
-          run_id?: string;
-          social_id?: string | null;
-        };
-        Relationships: [];
-      };
       app_store_link_clicked: {
         Row: {
           clientId: string | null;

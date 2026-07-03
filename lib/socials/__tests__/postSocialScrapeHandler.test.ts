@@ -6,7 +6,6 @@ import { validatePostSocialScrapeRequest } from "../validatePostSocialScrapeRequ
 import { selectSocials } from "@/lib/supabase/socials/selectSocials";
 import { scrapeProfileUrl } from "@/lib/apify/scrapeProfileUrl";
 import { deductSocialScrapeCredits } from "../deductSocialScrapeCredits";
-import { insertApifyScraperRun } from "@/lib/supabase/apify_scraper_runs/insertApifyScraperRun";
 
 vi.mock("../validatePostSocialScrapeRequest", () => ({
   validatePostSocialScrapeRequest: vi.fn(),
@@ -14,9 +13,6 @@ vi.mock("../validatePostSocialScrapeRequest", () => ({
 vi.mock("@/lib/supabase/socials/selectSocials", () => ({ selectSocials: vi.fn() }));
 vi.mock("@/lib/apify/scrapeProfileUrl", () => ({ scrapeProfileUrl: vi.fn() }));
 vi.mock("../deductSocialScrapeCredits", () => ({ deductSocialScrapeCredits: vi.fn() }));
-vi.mock("@/lib/supabase/apify_scraper_runs/insertApifyScraperRun", () => ({
-  insertApifyScraperRun: vi.fn(),
-}));
 vi.mock("@/lib/networking/getCorsHeaders", () => ({ getCorsHeaders: () => ({}) }));
 
 const SOCIAL_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -66,22 +62,6 @@ describe("postSocialScrapeHandler", () => {
     await postSocialScrapeHandler(request, SOCIAL_ID);
     expect(scrapeProfileUrl).toHaveBeenCalledWith(social.profile_url, social.username, 20);
     expect(deductSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 25);
-  });
-
-  it("records run ownership on a successful start", async () => {
-    vi.mocked(scrapeProfileUrl).mockResolvedValue({ runId: "r1", datasetId: "d1" } as never);
-    await postSocialScrapeHandler(request, SOCIAL_ID);
-    expect(insertApifyScraperRun).toHaveBeenCalledWith({
-      run_id: "r1",
-      account_id: ACCOUNT_ID,
-      social_id: SOCIAL_ID,
-    });
-  });
-
-  it("does not record ownership when the scrape fails to start", async () => {
-    vi.mocked(scrapeProfileUrl).mockResolvedValue({ error: "boom" } as never);
-    await postSocialScrapeHandler(request, SOCIAL_ID);
-    expect(insertApifyScraperRun).not.toHaveBeenCalled();
   });
 
   it("does not deduct credits when the scrape fails to start", async () => {

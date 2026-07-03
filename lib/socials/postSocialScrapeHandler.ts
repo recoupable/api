@@ -5,7 +5,6 @@ import { scrapeProfileUrl } from "@/lib/apify/scrapeProfileUrl";
 import { validatePostSocialScrapeRequest } from "@/lib/socials/validatePostSocialScrapeRequest";
 import { deductSocialScrapeCredits } from "@/lib/socials/deductSocialScrapeCredits";
 import { getSocialScrapeCreditCost } from "@/lib/socials/getSocialScrapeCreditCost";
-import { insertApifyScraperRun } from "@/lib/supabase/apify_scraper_runs/insertApifyScraperRun";
 
 export async function postSocialScrapeHandler(
   request: NextRequest,
@@ -56,16 +55,6 @@ export async function postSocialScrapeHandler(
         validated.account_id,
         getSocialScrapeCreditCost(validated.posts),
       );
-      // Ownership map for GET /api/apify/runs/{runId} (chat#1840). The
-      // insert logs-and-returns-null on failure, so a mapping miss only
-      // degrades this run to admin-only polling — never fails the scrape.
-      if (scrapeResult.runId) {
-        await insertApifyScraperRun({
-          run_id: scrapeResult.runId,
-          account_id: validated.account_id,
-          social_id: validated.social_id,
-        });
-      }
       return NextResponse.json(
         {
           runId: scrapeResult.runId,
