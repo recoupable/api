@@ -5,9 +5,11 @@
 export const DEFAULT_CREDITS = 333;
 
 /**
- * Monthly credit allotment for accounts on a pro plan (directly or via an organization).
+ * Monthly credit allotment for accounts on a pro plan (directly, via an
+ * organization, or via an enterprise email domain). Effectively "don't think
+ * about credits" for paying customers.
  */
-export const PRO_CREDITS = 1000;
+export const PRO_CREDITS = 9999;
 
 /**
  * Credits added per automatic top-up when a request would push an account below
