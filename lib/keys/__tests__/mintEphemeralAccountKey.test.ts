@@ -20,7 +20,11 @@ vi.mock("@/lib/const", () => ({ PRIVY_PROJECT_SECRET: "secret" }));
 describe("mintEphemeralAccountKey", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("mints an account-scoped recoup_sk_ key with a ~15m expiry and returns rawKey + keyId", async () => {
+  it("defaults the ephemeral TTL to 60 minutes (long runs with step retries outlive 15m — chat#1839)", () => {
+    expect(DEFAULT_EPHEMERAL_KEY_TTL_MS).toBe(60 * 60 * 1000);
+  });
+
+  it("mints an account-scoped recoup_sk_ key with the default expiry and returns rawKey + keyId", async () => {
     vi.mocked(insertApiKey).mockResolvedValue({ data: { id: "key-1" }, error: null } as never);
 
     const before = Date.now();
