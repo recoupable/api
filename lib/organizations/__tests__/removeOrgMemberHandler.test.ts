@@ -3,15 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { removeOrgMemberHandler } from "../removeOrgMemberHandler";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { canManageOrgMembers } from "@/lib/organizations/canManageOrgMembers";
+import { canManageOrganization } from "@/lib/organizations/canManageOrganization";
 import { deleteAccountOrganization } from "@/lib/supabase/account_organization_ids/deleteAccountOrganization";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/organizations/canManageOrgMembers", () => ({
-  canManageOrgMembers: vi.fn(),
+vi.mock("@/lib/organizations/canManageOrganization", () => ({
+  canManageOrganization: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/account_organization_ids/deleteAccountOrganization", () => ({
@@ -35,7 +35,7 @@ describe("removeOrgMemberHandler", () => {
       orgId: null,
       authToken: "token",
     });
-    vi.mocked(canManageOrgMembers).mockResolvedValue(true);
+    vi.mocked(canManageOrganization).mockResolvedValue(true);
     vi.mocked(deleteAccountOrganization).mockResolvedValue(true);
   });
 
@@ -74,11 +74,11 @@ describe("removeOrgMemberHandler", () => {
       expect(response.status).toBe(400);
       const body = await response.json();
       expect(body.status).toBe("error");
-      expect(typeof body.message).toBe("string");
+      expect(typeof body.error).toBe("string");
     });
 
     it("returns 403 when the caller cannot manage the organization", async () => {
-      vi.mocked(canManageOrgMembers).mockResolvedValue(false);
+      vi.mocked(canManageOrganization).mockResolvedValue(false);
 
       const response = await removeOrgMemberHandler(
         buildRequest(`?organization_id=${ORG_ID}&account_id=${MEMBER_ID}`),
@@ -87,7 +87,7 @@ describe("removeOrgMemberHandler", () => {
       expect(response.status).toBe(403);
       const body = await response.json();
       expect(body.status).toBe("error");
-      expect(canManageOrgMembers).toHaveBeenCalledWith({
+      expect(canManageOrganization).toHaveBeenCalledWith({
         accountId: "caller-1",
         organizationId: ORG_ID,
       });
@@ -104,7 +104,7 @@ describe("removeOrgMemberHandler", () => {
       expect(response.status).toBe(500);
       const body = await response.json();
       expect(body.status).toBe("error");
-      expect(body.message).toBe("Failed to remove member from organization");
+      expect(body.error).toBe("Failed to remove member from organization");
     });
 
     it("returns a generic 500 without leaking exception details when a dependency throws", async () => {
@@ -116,7 +116,7 @@ describe("removeOrgMemberHandler", () => {
 
       expect(response.status).toBe(500);
       const body = await response.json();
-      expect(body).toEqual({ status: "error", message: "Internal server error" });
+      expect(body).toEqual({ status: "error", error: "Internal server error" });
       expect(JSON.stringify(body)).not.toContain("SECRET_DB_DETAIL");
     });
   });

@@ -3,37 +3,39 @@ import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canManageOrganization } from "@/lib/organizations/canManageOrganization";
+import { normalizeOrgDomain } from "@/lib/organizations/normalizeOrgDomain";
 import { z } from "zod";
 
-const addOrgMemberBodySchema = z
-  .object({
-    organizationId: z
-      .string({ message: "organizationId is required" })
-      .uuid("organizationId must be a valid UUID"),
-    accountId: z.string().uuid("accountId must be a valid UUID").optional(),
-    email: z.string().email("email must be a valid email address").optional(),
-  })
-  .refine(data => (data.accountId ? !data.email : !!data.email), {
-    message: "Provide exactly one of accountId or email",
-  });
+const addOrgDomainBodySchema = z.object({
+  organizationId: z
+    .string({ message: "organizationId is required" })
+    .uuid("organizationId must be a valid UUID"),
+  domain: z.string({ message: "domain is required" }),
+});
 
-export type AddOrgMemberBody = z.infer<typeof addOrgMemberBodySchema>;
+export interface AddOrgDomainBody {
+  organizationId: string;
+  /** The normalized bare email domain (lowercase, no "@") */
+  domain: string;
+}
 
-export interface AddOrgMemberRequestData {
+export interface AddOrgDomainRequestData {
   /** The authenticated caller's account ID */
   callerAccountId: string;
   /** The validated request body */
-  body: AddOrgMemberBody;
+  body: AddOrgDomainBody;
 }
 
 /**
- * Validates POST /api/organizations/members requests.
+ * Validates POST /api/organizations/domains requests.
  * Handles authentication (x-api-key or Authorization bearer token),
- * body validation, and the caller's access to manage org members.
+ * body validation, and the caller's access to manage the organization.
+ * Normalizes the domain (lowercase, trimmed, leading "@" stripped) and
+ * rejects strings that are not a plausible bare domain.
  *
  * Body parameters:
  * - organizationId (required): The organization's account ID
- * - accountId or email (exactly one): The member to add
+ * - domain (required): The email domain to map (e.g. "seekermusic.com")
  *
  * The caller must be a member of the organization or a Recoup admin.
  *
@@ -41,18 +43,23 @@ export interface AddOrgMemberRequestData {
  * @returns A NextResponse with an error (400/401/403) if validation fails,
  *   or the caller account ID and validated body.
  */
-export async function validateAddOrgMemberRequest(
+export async function validateAddOrgDomainRequest(
   request: NextRequest,
-): Promise<NextResponse | AddOrgMemberRequestData> {
+): Promise<NextResponse | AddOrgDomainRequestData> {
   const authResult = await validateAuthContext(request);
   if (authResult instanceof NextResponse) {
     return authResult;
   }
 
   const rawBody = await request.json().catch(() => null);
-  const result = addOrgMemberBodySchema.safeParse(rawBody);
+  const result = addOrgDomainBodySchema.safeParse(rawBody);
   if (!result.success) {
     return errorResponse(result.error.issues[0].message, 400);
+  }
+
+  const domain = normalizeOrgDomain(result.data.domain);
+  if (!domain) {
+    return errorResponse('domain must be a bare email domain (e.g. "seekermusic.com")', 400);
   }
 
   const hasAccess = await canManageOrganization({
@@ -61,11 +68,11 @@ export async function validateAddOrgMemberRequest(
   });
 
   if (!hasAccess) {
-    return errorResponse("Caller is not a member of the organization", 403);
+    return errorResponse("Access denied to specified organization_id", 403);
   }
 
   return {
     callerAccountId: authResult.accountId,
-    body: result.data,
+    body: { organizationId: result.data.organizationId, domain },
   };
 }
