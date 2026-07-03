@@ -3,8 +3,16 @@ import { hashApiKey } from "@/lib/keys/hashApiKey";
 import { insertApiKey } from "@/lib/supabase/account_api_keys/insertApiKey";
 import { PRIVY_PROJECT_SECRET } from "@/lib/const";
 
-/** Default lifetime for an ephemeral key: 15 minutes. */
-export const DEFAULT_EPHEMERAL_KEY_TTL_MS = 15 * 60 * 1000;
+/**
+ * Default lifetime for an ephemeral key: 60 minutes. The TTL is only the
+ * backstop — `runAgentWorkflow` revokes the key the moment the run ends
+ * (`deleteEphemeralKeyStep`), so a longer TTL does not extend key life on
+ * normal completion. 15 minutes proved too short for real runs: a
+ * `runAgentStep` timeout retries the whole agent loop (~10+ min per attempt),
+ * and on 2026-07-03 a customer run's final sends all 401'd on the expired key
+ * (chat#1839). 60 minutes covers several retry cycles.
+ */
+export const DEFAULT_EPHEMERAL_KEY_TTL_MS = 60 * 60 * 1000;
 
 export type EphemeralAccountKey = { rawKey: string; keyId: string };
 

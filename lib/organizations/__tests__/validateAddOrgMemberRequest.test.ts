@@ -3,14 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateAddOrgMemberRequest } from "../validateAddOrgMemberRequest";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { canManageOrgMembers } from "@/lib/organizations/canManageOrgMembers";
+import { canManageOrganization } from "@/lib/organizations/canManageOrganization";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/organizations/canManageOrgMembers", () => ({
-  canManageOrgMembers: vi.fn(),
+vi.mock("@/lib/organizations/canManageOrganization", () => ({
+  canManageOrganization: vi.fn(),
 }));
 
 const ORG_ID = "11111111-1111-4111-8111-111111111111";
@@ -31,7 +31,7 @@ describe("validateAddOrgMemberRequest", () => {
       orgId: null,
       authToken: "token",
     });
-    vi.mocked(canManageOrgMembers).mockResolvedValue(true);
+    vi.mocked(canManageOrganization).mockResolvedValue(true);
   });
 
   describe("valid requests", () => {
@@ -44,7 +44,7 @@ describe("validateAddOrgMemberRequest", () => {
         callerAccountId: "caller-1",
         body: { organizationId: ORG_ID, accountId: ACCOUNT_ID },
       });
-      expect(canManageOrgMembers).toHaveBeenCalledWith({
+      expect(canManageOrganization).toHaveBeenCalledWith({
         accountId: "caller-1",
         organizationId: ORG_ID,
       });
@@ -75,11 +75,11 @@ describe("validateAddOrgMemberRequest", () => {
       );
 
       expect(result).toBe(unauthorized);
-      expect(canManageOrgMembers).not.toHaveBeenCalled();
+      expect(canManageOrganization).not.toHaveBeenCalled();
     });
 
     it("returns 403 when the caller cannot manage the organization", async () => {
-      vi.mocked(canManageOrgMembers).mockResolvedValue(false);
+      vi.mocked(canManageOrganization).mockResolvedValue(false);
 
       const result = await validateAddOrgMemberRequest(
         buildRequest({ organizationId: ORG_ID, accountId: ACCOUNT_ID }),
@@ -90,7 +90,7 @@ describe("validateAddOrgMemberRequest", () => {
         expect(result.status).toBe(403);
         const body = await result.json();
         expect(body.status).toBe("error");
-        expect(typeof body.message).toBe("string");
+        expect(typeof body.error).toBe("string");
       }
     });
   });
@@ -104,7 +104,7 @@ describe("validateAddOrgMemberRequest", () => {
         expect(result.status).toBe(400);
         const body = await result.json();
         expect(body.status).toBe("error");
-        expect(typeof body.message).toBe("string");
+        expect(typeof body.error).toBe("string");
       }
     });
 
@@ -118,7 +118,7 @@ describe("validateAddOrgMemberRequest", () => {
         expect(result.status).toBe(400);
         const body = await result.json();
         expect(body.status).toBe("error");
-        expect(typeof body.message).toBe("string");
+        expect(typeof body.error).toBe("string");
       }
     });
 
@@ -132,7 +132,7 @@ describe("validateAddOrgMemberRequest", () => {
         expect(result.status).toBe(400);
         const body = await result.json();
         expect(body.status).toBe("error");
-        expect(typeof body.message).toBe("string");
+        expect(typeof body.error).toBe("string");
       }
     });
 
@@ -146,7 +146,7 @@ describe("validateAddOrgMemberRequest", () => {
         expect(result.status).toBe(400);
         const body = await result.json();
         expect(body.status).toBe("error");
-        expect(typeof body.message).toBe("string");
+        expect(typeof body.error).toBe("string");
       }
     });
 
@@ -163,7 +163,7 @@ describe("validateAddOrgMemberRequest", () => {
       if (result instanceof NextResponse) {
         expect(result.status).toBe(400);
         const body = await result.json();
-        expect(body.message).toContain("exactly one");
+        expect(body.error).toContain("exactly one");
       }
     });
 
@@ -174,7 +174,7 @@ describe("validateAddOrgMemberRequest", () => {
       if (result instanceof NextResponse) {
         expect(result.status).toBe(400);
         const body = await result.json();
-        expect(body.message).toContain("exactly one");
+        expect(body.error).toContain("exactly one");
       }
     });
 
@@ -186,9 +186,9 @@ describe("validateAddOrgMemberRequest", () => {
         expect(result.status).toBe(400);
         const body = await result.json();
         expect(body.status).toBe("error");
-        expect(typeof body.message).toBe("string");
+        expect(typeof body.error).toBe("string");
       }
-      expect(canManageOrgMembers).not.toHaveBeenCalled();
+      expect(canManageOrganization).not.toHaveBeenCalled();
     });
   });
 });

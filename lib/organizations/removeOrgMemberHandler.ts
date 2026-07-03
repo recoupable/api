@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateRemoveOrgMemberRequest } from "@/lib/organizations/validateRemoveOrgMemberRequest";
 import { deleteAccountOrganization } from "@/lib/supabase/account_organization_ids/deleteAccountOrganization";
 
@@ -27,16 +28,7 @@ export async function removeOrgMemberHandler(request: NextRequest): Promise<Next
     const deleted = await deleteAccountOrganization(query.account_id, query.organization_id);
 
     if (!deleted) {
-      return NextResponse.json(
-        {
-          status: "error",
-          message: "Failed to remove member from organization",
-        },
-        {
-          status: 500,
-          headers: getCorsHeaders(),
-        },
-      );
+      return errorResponse("Failed to remove member from organization", 500);
     }
 
     return NextResponse.json(
@@ -50,15 +42,6 @@ export async function removeOrgMemberHandler(request: NextRequest): Promise<Next
     );
   } catch (error) {
     console.error("[ERROR] removeOrgMemberHandler:", error);
-    return NextResponse.json(
-      {
-        status: "error",
-        message: "Internal server error",
-      },
-      {
-        status: 500,
-        headers: getCorsHeaders(),
-      },
-    );
+    return errorResponse("Internal server error", 500);
   }
 }

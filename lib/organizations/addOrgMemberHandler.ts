@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateAddOrgMemberRequest } from "@/lib/organizations/validateAddOrgMemberRequest";
 import { getOrCreateAccountByEmail } from "@/lib/accounts/getOrCreateAccountByEmail";
 import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
@@ -30,16 +31,7 @@ export async function addOrgMemberHandler(request: NextRequest): Promise<NextRes
       body.accountId ?? (await getOrCreateAccountByEmail(body.email as string));
 
     if (!memberAccountId) {
-      return NextResponse.json(
-        {
-          status: "error",
-          message: "Failed to resolve an account for the provided email",
-        },
-        {
-          status: 500,
-          headers: getCorsHeaders(),
-        },
-      );
+      return errorResponse("Failed to resolve an account for the provided email", 500);
     }
 
     const existingMemberships = await getAccountOrganizations({
@@ -52,16 +44,7 @@ export async function addOrgMemberHandler(request: NextRequest): Promise<NextRes
       (await addAccountToOrganization(memberAccountId, body.organizationId));
 
     if (!id) {
-      return NextResponse.json(
-        {
-          status: "error",
-          message: "Failed to add member to organization",
-        },
-        {
-          status: 500,
-          headers: getCorsHeaders(),
-        },
-      );
+      return errorResponse("Failed to add member to organization", 500);
     }
 
     return NextResponse.json(
@@ -77,15 +60,6 @@ export async function addOrgMemberHandler(request: NextRequest): Promise<NextRes
     );
   } catch (error) {
     console.error("[ERROR] addOrgMemberHandler:", error);
-    return NextResponse.json(
-      {
-        status: "error",
-        message: "Internal server error",
-      },
-      {
-        status: 500,
-        headers: getCorsHeaders(),
-      },
-    );
+    return errorResponse("Internal server error", 500);
   }
 }
