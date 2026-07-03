@@ -14,9 +14,14 @@ vi.mock("@/lib/supabase/social_posts/upsertSocialPosts", () => ({ upsertSocialPo
 const PROFILE_URL = "tiktok.com/@brauxelion";
 const SOCIAL = { id: "soc-1", profile_url: PROFILE_URL };
 const POST_ROWS = [
-  { post_url: "https://www.tiktok.com/@brauxelion/video/1", updated_at: "2026-06-15T19:18:17.000Z" },
+  {
+    post_url: "https://www.tiktok.com/@brauxelion/video/1",
+    updated_at: "2026-06-15T19:18:17.000Z",
+  },
 ];
-const DB_POSTS = [{ id: "post-1", post_url: POST_ROWS[0].post_url, updated_at: POST_ROWS[0].updated_at }];
+const DB_POSTS = [
+  { id: "post-1", post_url: POST_ROWS[0].post_url, updated_at: POST_ROWS[0].updated_at },
+];
 
 describe("persistPostsForSocial", () => {
   beforeEach(() => {
