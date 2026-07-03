@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { addOrgMemberHandler } from "../addOrgMemberHandler";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { canManageOrgMembers } from "@/lib/organizations/canManageOrgMembers";
+import { canManageOrganization } from "@/lib/organizations/canManageOrganization";
 import { getOrCreateAccountByEmail } from "@/lib/accounts/getOrCreateAccountByEmail";
 import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 import { addAccountToOrganization } from "@/lib/supabase/account_organization_ids/addAccountToOrganization";
@@ -12,8 +12,8 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/organizations/canManageOrgMembers", () => ({
-  canManageOrgMembers: vi.fn(),
+vi.mock("@/lib/organizations/canManageOrganization", () => ({
+  canManageOrganization: vi.fn(),
 }));
 
 vi.mock("@/lib/accounts/getOrCreateAccountByEmail", () => ({
@@ -46,7 +46,7 @@ describe("addOrgMemberHandler", () => {
       orgId: null,
       authToken: "token",
     });
-    vi.mocked(canManageOrgMembers).mockResolvedValue(true);
+    vi.mocked(canManageOrganization).mockResolvedValue(true);
     vi.mocked(getAccountOrganizations).mockResolvedValue([]);
     vi.mocked(addAccountToOrganization).mockResolvedValue("membership-1");
   });
@@ -124,7 +124,7 @@ describe("addOrgMemberHandler", () => {
       );
 
       expect(response.status).toBe(401);
-      expect(canManageOrgMembers).not.toHaveBeenCalled();
+      expect(canManageOrganization).not.toHaveBeenCalled();
     });
 
     it("returns 400 when the body is invalid", async () => {
@@ -148,7 +148,7 @@ describe("addOrgMemberHandler", () => {
     });
 
     it("returns 403 when the caller cannot manage the organization", async () => {
-      vi.mocked(canManageOrgMembers).mockResolvedValue(false);
+      vi.mocked(canManageOrganization).mockResolvedValue(false);
 
       const response = await addOrgMemberHandler(
         buildRequest({ organizationId: ORG_ID, accountId: MEMBER_ID }),
@@ -158,7 +158,7 @@ describe("addOrgMemberHandler", () => {
       const body = await response.json();
       expect(body.status).toBe("error");
       expect(typeof body.message).toBe("string");
-      expect(canManageOrgMembers).toHaveBeenCalledWith({
+      expect(canManageOrganization).toHaveBeenCalledWith({
         accountId: "caller-1",
         organizationId: ORG_ID,
       });

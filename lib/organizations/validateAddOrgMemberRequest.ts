@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { canManageOrgMembers } from "@/lib/organizations/canManageOrgMembers";
+import { canManageOrganization } from "@/lib/organizations/canManageOrganization";
 import { z } from "zod";
 
 const addOrgMemberBodySchema = z
@@ -65,7 +65,7 @@ export async function validateAddOrgMemberRequest(
     );
   }
 
-  const hasAccess = await canManageOrgMembers({
+  const hasAccess = await canManageOrganization({
     accountId: authResult.accountId,
     organizationId: result.data.organizationId,
   });

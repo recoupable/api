@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { validateAddOrgDomainBody } from "@/lib/organizations/validateAddOrgDomainBody";
-import { canManageOrganization } from "@/lib/organizations/canManageOrganization";
+import { validateAddOrgDomainRequest } from "@/lib/organizations/validateAddOrgDomainRequest";
 import { selectOrganizationDomain } from "@/lib/supabase/organization_domains/selectOrganizationDomain";
 import { insertOrganizationDomain } from "@/lib/supabase/organization_domains/insertOrganizationDomain";
 
@@ -12,51 +10,35 @@ import { insertOrganizationDomain } from "@/lib/supabase/organization_domains/in
  * domain to the same organization is idempotent, while a domain already
  * mapped to a different organization returns 409.
  *
- * Body parameters:
- * - organizationId (required): The organization's account ID (UUID)
- * - domain (required): The email domain to map (normalized to a lowercase bare domain)
+ * Auth, body validation (including domain normalization), and access
+ * checks live in validateAddOrgDomainRequest. This handler performs the
+ * idempotent insert and shapes the response.
  *
  * @param request - The request object containing the body
  * @returns A NextResponse with the domain mapping
  */
 export async function addOrgDomainHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const auth = await validateAuthContext(request);
-    if (auth instanceof NextResponse) {
-      return auth;
-    }
-
-    const body = await request.json().catch(() => null);
-    const validated = validateAddOrgDomainBody(body);
+    const validated = await validateAddOrgDomainRequest(request);
     if (validated instanceof NextResponse) {
       return validated;
     }
 
-    const hasAccess = await canManageOrganization({
-      accountId: auth.accountId,
-      organizationId: validated.organizationId,
-    });
+    const { body } = validated;
 
-    if (!hasAccess) {
-      return NextResponse.json(
-        { status: "error", message: "Access denied to specified organization_id" },
-        { status: 403, headers: getCorsHeaders() },
-      );
-    }
+    const existing = await selectOrganizationDomain(body.domain);
 
-    const existing = await selectOrganizationDomain(validated.domain);
-
-    if (existing && existing.organization_id !== validated.organizationId) {
+    if (existing && existing.organization_id !== body.organizationId) {
       return NextResponse.json(
         {
           status: "error",
-          message: `Domain "${validated.domain}" is already mapped to a different organization`,
+          message: `Domain "${body.domain}" is already mapped to a different organization`,
         },
         { status: 409, headers: getCorsHeaders() },
       );
     }
 
-    const row = existing ?? (await insertOrganizationDomain(validated));
+    const row = existing ?? (await insertOrganizationDomain(body));
 
     if (!row) {
       return NextResponse.json(
@@ -79,7 +61,7 @@ export async function addOrgDomainHandler(request: NextRequest): Promise<NextRes
     return NextResponse.json(
       {
         status: "error",
-        message: error instanceof Error ? error.message : "Internal server error",
+        message: "Internal server error",
       },
       { status: 500, headers: getCorsHeaders() },
     );

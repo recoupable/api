@@ -5,32 +5,28 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canManageOrganization } from "@/lib/organizations/canManageOrganization";
 import { z } from "zod";
 
-const removeOrgMemberQuerySchema = z.object({
+const getOrgDomainsQuerySchema = z.object({
   organization_id: z
     .string({ message: "organization_id is required" })
     .uuid("organization_id must be a valid UUID"),
-  account_id: z
-    .string({ message: "account_id is required" })
-    .uuid("account_id must be a valid UUID"),
 });
 
-export type RemoveOrgMemberQuery = z.infer<typeof removeOrgMemberQuerySchema>;
+export type GetOrgDomainsQuery = z.infer<typeof getOrgDomainsQuerySchema>;
 
-export interface RemoveOrgMemberRequestData {
+export interface GetOrgDomainsRequestData {
   /** The authenticated caller's account ID */
   callerAccountId: string;
   /** The validated query parameters */
-  query: RemoveOrgMemberQuery;
+  query: GetOrgDomainsQuery;
 }
 
 /**
- * Validates DELETE /api/organizations/members requests.
+ * Validates GET /api/organizations/domains requests.
  * Handles authentication (x-api-key or Authorization bearer token),
- * query validation, and the caller's access to manage org members.
+ * query validation, and the caller's access to manage the organization.
  *
  * Query parameters:
  * - organization_id (required): The organization's account ID
- * - account_id (required): The member's account ID
  *
  * The caller must be a member of the organization or a Recoup admin.
  *
@@ -38,26 +34,24 @@ export interface RemoveOrgMemberRequestData {
  * @returns A NextResponse with an error (400/401/403) if validation fails,
  *   or the caller account ID and validated query.
  */
-export async function validateRemoveOrgMemberRequest(
+export async function validateGetOrgDomainsRequest(
   request: NextRequest,
-): Promise<NextResponse | RemoveOrgMemberRequestData> {
+): Promise<NextResponse | GetOrgDomainsRequestData> {
   const authResult = await validateAuthContext(request);
   if (authResult instanceof NextResponse) {
     return authResult;
   }
 
   const searchParams = request.nextUrl.searchParams;
-  const result = removeOrgMemberQuerySchema.safeParse({
+  const result = getOrgDomainsQuerySchema.safeParse({
     organization_id: searchParams.get("organization_id") ?? undefined,
-    account_id: searchParams.get("account_id") ?? undefined,
   });
 
   if (!result.success) {
-    const firstError = result.error.issues[0];
     return NextResponse.json(
       {
         status: "error",
-        message: firstError.message,
+        message: result.error.issues[0].message,
       },
       {
         status: 400,
@@ -75,7 +69,7 @@ export async function validateRemoveOrgMemberRequest(
     return NextResponse.json(
       {
         status: "error",
-        message: "Caller is not a member of the organization",
+        message: "Access denied to specified organization_id",
       },
       {
         status: 403,

@@ -9,8 +9,8 @@ export interface CanManageOrganizationParams {
 }
 
 /**
- * Checks if an account can manage an organization's settings
- * (e.g. domain mappings).
+ * Checks if an account can manage an organization
+ * (e.g. its membership or domain mappings).
  *
  * Access rules:
  * - Members of the organization (or the org account itself) are allowed

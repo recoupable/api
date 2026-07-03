@@ -1,44 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { validateRemoveOrgDomainQuery } from "@/lib/organizations/validateRemoveOrgDomainQuery";
-import { canManageOrganization } from "@/lib/organizations/canManageOrganization";
+import { validateRemoveOrgDomainRequest } from "@/lib/organizations/validateRemoveOrgDomainRequest";
 import { deleteOrganizationDomain } from "@/lib/supabase/organization_domains/deleteOrganizationDomain";
 
 /**
  * Handler for removing an email domain mapping from an organization.
  * This operation is idempotent - removing a mapping that does not exist succeeds.
  *
- * Query parameters:
- * - organization_id (required): The organization's account ID (UUID)
- * - domain (required): The email domain to unmap (normalized to a lowercase bare domain)
+ * Auth, query validation (including domain normalization), and access
+ * checks live in validateRemoveOrgDomainRequest. This handler performs the
+ * idempotent delete and shapes the response.
  *
  * @param request - The request object
  * @returns A NextResponse indicating success
  */
 export async function removeOrgDomainHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const auth = await validateAuthContext(request);
-    if (auth instanceof NextResponse) {
-      return auth;
+    const validated = await validateRemoveOrgDomainRequest(request);
+    if (validated instanceof NextResponse) {
+      return validated;
     }
 
-    const query = validateRemoveOrgDomainQuery(request);
-    if (query instanceof NextResponse) {
-      return query;
-    }
-
-    const hasAccess = await canManageOrganization({
-      accountId: auth.accountId,
-      organizationId: query.organization_id,
-    });
-
-    if (!hasAccess) {
-      return NextResponse.json(
-        { status: "error", message: "Access denied to specified organization_id" },
-        { status: 403, headers: getCorsHeaders() },
-      );
-    }
+    const { query } = validated;
 
     const deleted = await deleteOrganizationDomain({
       domain: query.domain,
@@ -58,7 +41,7 @@ export async function removeOrgDomainHandler(request: NextRequest): Promise<Next
     return NextResponse.json(
       {
         status: "error",
-        message: error instanceof Error ? error.message : "Internal server error",
+        message: "Internal server error",
       },
       { status: 500, headers: getCorsHeaders() },
     );

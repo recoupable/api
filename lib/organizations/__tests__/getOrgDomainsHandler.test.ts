@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getOrgDomainsHandler } from "../getOrgDomainsHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { canManageOrganization } from "../canManageOrganization";
+import { canManageOrganization } from "@/lib/organizations/canManageOrganization";
 import { selectOrganizationDomains } from "@/lib/supabase/organization_domains/selectOrganizationDomains";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("../canManageOrganization", () => ({
+vi.mock("@/lib/organizations/canManageOrganization", () => ({
   canManageOrganization: vi.fn(),
 }));
 
@@ -89,6 +89,7 @@ describe("getOrgDomainsHandler", () => {
       expect(response.status).toBe(400);
       const body = await response.json();
       expect(body.status).toBe("error");
+      expect(typeof body.message).toBe("string");
     });
 
     it("returns 403 when the caller cannot manage the organization", async () => {
@@ -113,6 +114,18 @@ describe("getOrgDomainsHandler", () => {
 
       expect(response.status).toBe(500);
       expect(body.status).toBe("error");
+      expect(typeof body.message).toBe("string");
+    });
+
+    it("returns a generic 500 without leaking exception details when a dependency throws", async () => {
+      vi.mocked(selectOrganizationDomains).mockRejectedValue(new Error("SECRET_DB_DETAIL"));
+
+      const response = await getOrgDomainsHandler(makeRequest());
+      const body = await response.json();
+
+      expect(response.status).toBe(500);
+      expect(body).toEqual({ status: "error", message: "Internal server error" });
+      expect(JSON.stringify(body)).not.toContain("SECRET_DB_DETAIL");
     });
   });
 });

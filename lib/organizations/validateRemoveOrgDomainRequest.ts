@@ -3,34 +3,46 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canManageOrganization } from "@/lib/organizations/canManageOrganization";
+import { normalizeOrgDomain } from "@/lib/organizations/normalizeOrgDomain";
 import { z } from "zod";
 
-const removeOrgMemberQuerySchema = z.object({
+const removeOrgDomainQuerySchema = z.object({
   organization_id: z
     .string({ message: "organization_id is required" })
     .uuid("organization_id must be a valid UUID"),
-  account_id: z
-    .string({ message: "account_id is required" })
-    .uuid("account_id must be a valid UUID"),
+  domain: z.string({ message: "domain is required" }),
 });
 
-export type RemoveOrgMemberQuery = z.infer<typeof removeOrgMemberQuerySchema>;
+export interface RemoveOrgDomainQuery {
+  organization_id: string;
+  /** The normalized bare email domain (lowercase, no "@") */
+  domain: string;
+}
 
-export interface RemoveOrgMemberRequestData {
+export interface RemoveOrgDomainRequestData {
   /** The authenticated caller's account ID */
   callerAccountId: string;
   /** The validated query parameters */
-  query: RemoveOrgMemberQuery;
+  query: RemoveOrgDomainQuery;
+}
+
+function badRequest(message: string): NextResponse {
+  return NextResponse.json(
+    { status: "error", message },
+    { status: 400, headers: getCorsHeaders() },
+  );
 }
 
 /**
- * Validates DELETE /api/organizations/members requests.
+ * Validates DELETE /api/organizations/domains requests.
  * Handles authentication (x-api-key or Authorization bearer token),
- * query validation, and the caller's access to manage org members.
+ * query validation, and the caller's access to manage the organization.
+ * Normalizes the domain (lowercase, trimmed, leading "@" stripped) and
+ * rejects strings that are not a plausible bare domain.
  *
  * Query parameters:
  * - organization_id (required): The organization's account ID
- * - account_id (required): The member's account ID
+ * - domain (required): The email domain to unmap (e.g. "seekermusic.com")
  *
  * The caller must be a member of the organization or a Recoup admin.
  *
@@ -38,32 +50,27 @@ export interface RemoveOrgMemberRequestData {
  * @returns A NextResponse with an error (400/401/403) if validation fails,
  *   or the caller account ID and validated query.
  */
-export async function validateRemoveOrgMemberRequest(
+export async function validateRemoveOrgDomainRequest(
   request: NextRequest,
-): Promise<NextResponse | RemoveOrgMemberRequestData> {
+): Promise<NextResponse | RemoveOrgDomainRequestData> {
   const authResult = await validateAuthContext(request);
   if (authResult instanceof NextResponse) {
     return authResult;
   }
 
   const searchParams = request.nextUrl.searchParams;
-  const result = removeOrgMemberQuerySchema.safeParse({
+  const result = removeOrgDomainQuerySchema.safeParse({
     organization_id: searchParams.get("organization_id") ?? undefined,
-    account_id: searchParams.get("account_id") ?? undefined,
+    domain: searchParams.get("domain") ?? undefined,
   });
 
   if (!result.success) {
-    const firstError = result.error.issues[0];
-    return NextResponse.json(
-      {
-        status: "error",
-        message: firstError.message,
-      },
-      {
-        status: 400,
-        headers: getCorsHeaders(),
-      },
-    );
+    return badRequest(result.error.issues[0].message);
+  }
+
+  const domain = normalizeOrgDomain(result.data.domain);
+  if (!domain) {
+    return badRequest('domain must be a bare email domain (e.g. "seekermusic.com")');
   }
 
   const hasAccess = await canManageOrganization({
@@ -75,7 +82,7 @@ export async function validateRemoveOrgMemberRequest(
     return NextResponse.json(
       {
         status: "error",
-        message: "Caller is not a member of the organization",
+        message: "Access denied to specified organization_id",
       },
       {
         status: 403,
@@ -86,6 +93,6 @@ export async function validateRemoveOrgMemberRequest(
 
   return {
     callerAccountId: authResult.accountId,
-    query: result.data,
+    query: { organization_id: result.data.organization_id, domain },
   };
 }
