@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canManageOrganization } from "@/lib/organizations/canManageOrganization";
 import { z } from "zod";
@@ -52,17 +52,7 @@ export async function validateAddOrgMemberRequest(
   const rawBody = await request.json().catch(() => null);
   const result = addOrgMemberBodySchema.safeParse(rawBody);
   if (!result.success) {
-    const firstError = result.error.issues[0];
-    return NextResponse.json(
-      {
-        status: "error",
-        message: firstError.message,
-      },
-      {
-        status: 400,
-        headers: getCorsHeaders(),
-      },
-    );
+    return errorResponse(result.error.issues[0].message, 400);
   }
 
   const hasAccess = await canManageOrganization({
@@ -71,16 +61,7 @@ export async function validateAddOrgMemberRequest(
   });
 
   if (!hasAccess) {
-    return NextResponse.json(
-      {
-        status: "error",
-        message: "Caller is not a member of the organization",
-      },
-      {
-        status: 403,
-        headers: getCorsHeaders(),
-      },
-    );
+    return errorResponse("Caller is not a member of the organization", 403);
   }
 
   return {

@@ -120,7 +120,7 @@ describe("addOrgDomainHandler", () => {
       expect(response.status).toBe(400);
       const body = await response.json();
       expect(body.status).toBe("error");
-      expect(typeof body.message).toBe("string");
+      expect(typeof body.error).toBe("string");
     });
 
     it("returns 403 when the caller cannot manage the organization", async () => {
@@ -134,7 +134,7 @@ describe("addOrgDomainHandler", () => {
       expect(response.status).toBe(403);
       expect(body).toEqual({
         status: "error",
-        message: "Access denied to specified organization_id",
+        error: "Access denied to specified organization_id",
       });
       expect(insertOrganizationDomain).not.toHaveBeenCalled();
     });
@@ -154,7 +154,7 @@ describe("addOrgDomainHandler", () => {
 
       expect(response.status).toBe(409);
       expect(body.status).toBe("error");
-      expect(body.message).toContain("already mapped");
+      expect(body.error).toContain("already mapped");
       expect(insertOrganizationDomain).not.toHaveBeenCalled();
     });
 
@@ -168,7 +168,22 @@ describe("addOrgDomainHandler", () => {
 
       expect(response.status).toBe(500);
       expect(body.status).toBe("error");
-      expect(typeof body.message).toBe("string");
+      expect(typeof body.error).toBe("string");
+    });
+
+    it("returns 500 and does not insert when the existing-mapping lookup fails", async () => {
+      vi.mocked(selectOrganizationDomain).mockRejectedValue(
+        new Error("Failed to fetch organization_domain: boom"),
+      );
+
+      const response = await addOrgDomainHandler(
+        makeRequest({ organizationId: ORG_ID, domain: "seekermusic.com" }),
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(500);
+      expect(body).toEqual({ status: "error", error: "Internal server error" });
+      expect(insertOrganizationDomain).not.toHaveBeenCalled();
     });
 
     it("returns a generic 500 without leaking exception details when a dependency throws", async () => {
@@ -180,7 +195,7 @@ describe("addOrgDomainHandler", () => {
       const body = await response.json();
 
       expect(response.status).toBe(500);
-      expect(body).toEqual({ status: "error", message: "Internal server error" });
+      expect(body).toEqual({ status: "error", error: "Internal server error" });
       expect(JSON.stringify(body)).not.toContain("SECRET_DB_DETAIL");
     });
   });

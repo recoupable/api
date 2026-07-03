@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canManageOrganization } from "@/lib/organizations/canManageOrganization";
 import { normalizeOrgDomain } from "@/lib/organizations/normalizeOrgDomain";
@@ -24,13 +24,6 @@ export interface AddOrgDomainRequestData {
   callerAccountId: string;
   /** The validated request body */
   body: AddOrgDomainBody;
-}
-
-function badRequest(message: string): NextResponse {
-  return NextResponse.json(
-    { status: "error", message },
-    { status: 400, headers: getCorsHeaders() },
-  );
 }
 
 /**
@@ -61,12 +54,12 @@ export async function validateAddOrgDomainRequest(
   const rawBody = await request.json().catch(() => null);
   const result = addOrgDomainBodySchema.safeParse(rawBody);
   if (!result.success) {
-    return badRequest(result.error.issues[0].message);
+    return errorResponse(result.error.issues[0].message, 400);
   }
 
   const domain = normalizeOrgDomain(result.data.domain);
   if (!domain) {
-    return badRequest('domain must be a bare email domain (e.g. "seekermusic.com")');
+    return errorResponse('domain must be a bare email domain (e.g. "seekermusic.com")', 400);
   }
 
   const hasAccess = await canManageOrganization({
@@ -75,16 +68,7 @@ export async function validateAddOrgDomainRequest(
   });
 
   if (!hasAccess) {
-    return NextResponse.json(
-      {
-        status: "error",
-        message: "Access denied to specified organization_id",
-      },
-      {
-        status: 403,
-        headers: getCorsHeaders(),
-      },
-    );
+    return errorResponse("Access denied to specified organization_id", 403);
   }
 
   return {

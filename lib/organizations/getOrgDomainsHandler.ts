@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateGetOrgDomainsRequest } from "@/lib/organizations/validateGetOrgDomainsRequest";
 import { selectOrganizationDomains } from "@/lib/supabase/organization_domains/selectOrganizationDomains";
 
@@ -23,10 +24,7 @@ export async function getOrgDomainsHandler(request: NextRequest): Promise<NextRe
     const domains = await selectOrganizationDomains(validated.query.organization_id);
 
     if (domains === null) {
-      return NextResponse.json(
-        { status: "error", message: "Failed to fetch organization domains" },
-        { status: 500, headers: getCorsHeaders() },
-      );
+      return errorResponse("Failed to fetch organization domains", 500);
     }
 
     return NextResponse.json(
@@ -35,12 +33,6 @@ export async function getOrgDomainsHandler(request: NextRequest): Promise<NextRe
     );
   } catch (error) {
     console.error("[ERROR] getOrgDomainsHandler:", error);
-    return NextResponse.json(
-      {
-        status: "error",
-        message: "Internal server error",
-      },
-      { status: 500, headers: getCorsHeaders() },
-    );
+    return errorResponse("Internal server error", 500);
   }
 }

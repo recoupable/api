@@ -47,7 +47,7 @@ describe("selectOrganizationDomain", () => {
     expect(result).toBeNull();
   });
 
-  it("returns null on query error", async () => {
+  it("throws on query error so callers cannot mistake a failed query for 'not mapped'", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const maybeSingleFn = vi.fn().mockResolvedValue({ data: null, error: { message: "boom" } });
     const eqFn = vi.fn().mockReturnValue({ maybeSingle: maybeSingleFn });
@@ -55,9 +55,9 @@ describe("selectOrganizationDomain", () => {
       select: vi.fn().mockReturnValue({ eq: eqFn }),
     } as never);
 
-    const result = await selectOrganizationDomain("seekermusic.com");
-
-    expect(result).toBeNull();
+    await expect(selectOrganizationDomain("seekermusic.com")).rejects.toThrow(
+      "Failed to fetch organization_domain",
+    );
     expect(consoleError).toHaveBeenCalled();
     consoleError.mockRestore();
   });

@@ -133,7 +133,7 @@ describe("addOrgMemberHandler", () => {
       expect(response.status).toBe(400);
       const body = await response.json();
       expect(body.status).toBe("error");
-      expect(typeof body.message).toBe("string");
+      expect(typeof body.error).toBe("string");
     });
 
     it("returns 400 when the body is not valid JSON", async () => {
@@ -157,7 +157,7 @@ describe("addOrgMemberHandler", () => {
       expect(response.status).toBe(403);
       const body = await response.json();
       expect(body.status).toBe("error");
-      expect(typeof body.message).toBe("string");
+      expect(typeof body.error).toBe("string");
       expect(canManageOrganization).toHaveBeenCalledWith({
         accountId: "caller-1",
         organizationId: ORG_ID,
@@ -186,7 +186,7 @@ describe("addOrgMemberHandler", () => {
       expect(response.status).toBe(500);
       const body = await response.json();
       expect(body.status).toBe("error");
-      expect(body.message).toBe("Failed to add member to organization");
+      expect(body.error).toBe("Failed to add member to organization");
     });
 
     it("returns a generic 500 without leaking exception details when a dependency throws", async () => {
@@ -198,7 +198,7 @@ describe("addOrgMemberHandler", () => {
 
       expect(response.status).toBe(500);
       const body = await response.json();
-      expect(body).toEqual({ status: "error", message: "Internal server error" });
+      expect(body).toEqual({ status: "error", error: "Internal server error" });
       expect(JSON.stringify(body)).not.toContain("SECRET_DB_DETAIL");
     });
   });

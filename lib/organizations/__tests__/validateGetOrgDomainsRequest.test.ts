@@ -67,7 +67,7 @@ describe("validateGetOrgDomainsRequest", () => {
       const body = await result.json();
       expect(body).toEqual({
         status: "error",
-        message: "Access denied to specified organization_id",
+        error: "Access denied to specified organization_id",
       });
     }
   });
@@ -80,7 +80,7 @@ describe("validateGetOrgDomainsRequest", () => {
       expect(result.status).toBe(400);
       const body = await result.json();
       expect(body.status).toBe("error");
-      expect(body.message).toContain("organization_id");
+      expect(body.error).toContain("organization_id");
     }
     expect(canManageOrganization).not.toHaveBeenCalled();
   });
@@ -93,7 +93,7 @@ describe("validateGetOrgDomainsRequest", () => {
       expect(result.status).toBe(400);
       const body = await result.json();
       expect(body.status).toBe("error");
-      expect(typeof body.message).toBe("string");
+      expect(typeof body.error).toBe("string");
     }
   });
 });

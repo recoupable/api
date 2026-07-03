@@ -75,7 +75,7 @@ describe("validateRemoveOrgMemberRequest", () => {
       expect(result.status).toBe(403);
       const body = await result.json();
       expect(body.status).toBe("error");
-      expect(typeof body.message).toBe("string");
+      expect(typeof body.error).toBe("string");
     }
   });
 
@@ -87,7 +87,7 @@ describe("validateRemoveOrgMemberRequest", () => {
       expect(result.status).toBe(400);
       const body = await result.json();
       expect(body.status).toBe("error");
-      expect(typeof body.message).toBe("string");
+      expect(typeof body.error).toBe("string");
     }
   });
 
@@ -99,7 +99,7 @@ describe("validateRemoveOrgMemberRequest", () => {
       expect(result.status).toBe(400);
       const body = await result.json();
       expect(body.status).toBe("error");
-      expect(typeof body.message).toBe("string");
+      expect(typeof body.error).toBe("string");
     }
   });
 
@@ -113,7 +113,7 @@ describe("validateRemoveOrgMemberRequest", () => {
       expect(result.status).toBe(400);
       const body = await result.json();
       expect(body.status).toBe("error");
-      expect(typeof body.message).toBe("string");
+      expect(typeof body.error).toBe("string");
     }
   });
 
@@ -127,7 +127,7 @@ describe("validateRemoveOrgMemberRequest", () => {
       expect(result.status).toBe(400);
       const body = await result.json();
       expect(body.status).toBe("error");
-      expect(typeof body.message).toBe("string");
+      expect(typeof body.error).toBe("string");
     }
   });
 });

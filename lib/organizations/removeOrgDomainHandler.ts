@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateRemoveOrgDomainRequest } from "@/lib/organizations/validateRemoveOrgDomainRequest";
 import { deleteOrganizationDomain } from "@/lib/supabase/organization_domains/deleteOrganizationDomain";
 
@@ -29,21 +30,12 @@ export async function removeOrgDomainHandler(request: NextRequest): Promise<Next
     });
 
     if (!deleted) {
-      return NextResponse.json(
-        { status: "error", message: "Failed to remove domain mapping" },
-        { status: 500, headers: getCorsHeaders() },
-      );
+      return errorResponse("Failed to remove domain mapping", 500);
     }
 
     return NextResponse.json({ status: "success" }, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
     console.error("[ERROR] removeOrgDomainHandler:", error);
-    return NextResponse.json(
-      {
-        status: "error",
-        message: "Internal server error",
-      },
-      { status: 500, headers: getCorsHeaders() },
-    );
+    return errorResponse("Internal server error", 500);
   }
 }

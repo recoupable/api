@@ -76,7 +76,7 @@ describe("validateAddOrgDomainRequest", () => {
       const body = await result.json();
       expect(body).toEqual({
         status: "error",
-        message: "Access denied to specified organization_id",
+        error: "Access denied to specified organization_id",
       });
     }
   });
@@ -94,7 +94,7 @@ describe("validateAddOrgDomainRequest", () => {
       expect(result.status).toBe(400);
       const body = await result.json();
       expect(body.status).toBe("error");
-      expect(typeof body.message).toBe("string");
+      expect(typeof body.error).toBe("string");
     }
   });
 
@@ -106,7 +106,7 @@ describe("validateAddOrgDomainRequest", () => {
       expect(result.status).toBe(400);
       const body = await result.json();
       expect(body.status).toBe("error");
-      expect(body.message).toContain("organizationId");
+      expect(body.error).toContain("organizationId");
     }
   });
 
@@ -120,7 +120,7 @@ describe("validateAddOrgDomainRequest", () => {
       expect(result.status).toBe(400);
       const body = await result.json();
       expect(body.status).toBe("error");
-      expect(typeof body.message).toBe("string");
+      expect(typeof body.error).toBe("string");
     }
   });
 
@@ -132,7 +132,7 @@ describe("validateAddOrgDomainRequest", () => {
       expect(result.status).toBe(400);
       const body = await result.json();
       expect(body.status).toBe("error");
-      expect(body.message).toContain("domain");
+      expect(body.error).toContain("domain");
     }
   });
 
@@ -146,7 +146,7 @@ describe("validateAddOrgDomainRequest", () => {
       expect(result.status).toBe(400);
       const body = await result.json();
       expect(body.status).toBe("error");
-      expect(body.message).toContain("domain");
+      expect(body.error).toContain("domain");
     }
     expect(canManageOrganization).not.toHaveBeenCalled();
   });
@@ -161,7 +161,7 @@ describe("validateAddOrgDomainRequest", () => {
       expect(result.status).toBe(400);
       const body = await result.json();
       expect(body.status).toBe("error");
-      expect(typeof body.message).toBe("string");
+      expect(typeof body.error).toBe("string");
     }
   });
 });

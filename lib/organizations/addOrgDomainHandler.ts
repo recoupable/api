@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateAddOrgDomainRequest } from "@/lib/organizations/validateAddOrgDomainRequest";
 import { selectOrganizationDomain } from "@/lib/supabase/organization_domains/selectOrganizationDomain";
 import { insertOrganizationDomain } from "@/lib/supabase/organization_domains/insertOrganizationDomain";
@@ -29,22 +30,16 @@ export async function addOrgDomainHandler(request: NextRequest): Promise<NextRes
     const existing = await selectOrganizationDomain(body.domain);
 
     if (existing && existing.organization_id !== body.organizationId) {
-      return NextResponse.json(
-        {
-          status: "error",
-          message: `Domain "${body.domain}" is already mapped to a different organization`,
-        },
-        { status: 409, headers: getCorsHeaders() },
+      return errorResponse(
+        `Domain "${body.domain}" is already mapped to a different organization`,
+        409,
       );
     }
 
     const row = existing ?? (await insertOrganizationDomain(body));
 
     if (!row) {
-      return NextResponse.json(
-        { status: "error", message: "Failed to map domain to organization" },
-        { status: 500, headers: getCorsHeaders() },
-      );
+      return errorResponse("Failed to map domain to organization", 500);
     }
 
     return NextResponse.json(
@@ -58,12 +53,6 @@ export async function addOrgDomainHandler(request: NextRequest): Promise<NextRes
     );
   } catch (error) {
     console.error("[ERROR] addOrgDomainHandler:", error);
-    return NextResponse.json(
-      {
-        status: "error",
-        message: "Internal server error",
-      },
-      { status: 500, headers: getCorsHeaders() },
-    );
+    return errorResponse("Internal server error", 500);
   }
 }

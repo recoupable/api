@@ -74,7 +74,7 @@ describe("removeOrgMemberHandler", () => {
       expect(response.status).toBe(400);
       const body = await response.json();
       expect(body.status).toBe("error");
-      expect(typeof body.message).toBe("string");
+      expect(typeof body.error).toBe("string");
     });
 
     it("returns 403 when the caller cannot manage the organization", async () => {
@@ -104,7 +104,7 @@ describe("removeOrgMemberHandler", () => {
       expect(response.status).toBe(500);
       const body = await response.json();
       expect(body.status).toBe("error");
-      expect(body.message).toBe("Failed to remove member from organization");
+      expect(body.error).toBe("Failed to remove member from organization");
     });
 
     it("returns a generic 500 without leaking exception details when a dependency throws", async () => {
@@ -116,7 +116,7 @@ describe("removeOrgMemberHandler", () => {
 
       expect(response.status).toBe(500);
       const body = await response.json();
-      expect(body).toEqual({ status: "error", message: "Internal server error" });
+      expect(body).toEqual({ status: "error", error: "Internal server error" });
       expect(JSON.stringify(body)).not.toContain("SECRET_DB_DETAIL");
     });
   });
