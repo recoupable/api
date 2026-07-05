@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAdminAuth } from "@/lib/admins/validateAdminAuth";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 export const getScraperResultsParamsSchema = z.object({
   runId: z.string().min(1),
@@ -10,18 +10,22 @@ export const getScraperResultsParamsSchema = z.object({
 export type GetScraperResultsParams = z.infer<typeof getScraperResultsParamsSchema>;
 
 /**
- * Authenticates the request as an admin, then validates the runId path param.
+ * Authenticates the request (any valid API key or Bearer token), then
+ * validates the runId path param.
  *
- * Admin-only: Apify run identifiers are not account-scoped, and the poller
- * is a backend-only caller (tasks).
+ * Deliberately not owner-scoped (chat#1840 decision, 2026-07-03): scrape
+ * datasets are public social content and Apify run ids are unguessable,
+ * so possession of a runId plus any valid credential is sufficient.
+ * Authentication still gates the endpoint so anonymous callers can't use
+ * it as a free Apify proxy.
  */
 export async function validateGetScraperResultsRequest(
   request: NextRequest,
   runId: string,
 ): Promise<GetScraperResultsParams | NextResponse> {
-  const authResult = await validateAdminAuth(request);
-  if (authResult instanceof NextResponse) {
-    return authResult;
+  const auth = await validateAuthContext(request);
+  if (auth instanceof NextResponse) {
+    return auth;
   }
 
   const parsed = getScraperResultsParamsSchema.safeParse({ runId });

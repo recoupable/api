@@ -11,7 +11,7 @@ beforeEach(() => {
 });
 
 describe("startYoutubeProfileScraping", () => {
-  it("defaults to the legacy snapshot (maxResults: 1, Shorts excluded) when posts is omitted", async () => {
+  it("defaults to the legacy snapshot (maxResults: 1, Shorts and streams excluded) when posts is omitted", async () => {
     const r = await startYoutubeProfileScraping("@mycowtf");
     expect(apifyClient.actor).toHaveBeenCalledWith("streamers/youtube-scraper");
     expect(start).toHaveBeenCalledWith(
@@ -19,19 +19,21 @@ describe("startYoutubeProfileScraping", () => {
         startUrls: [{ url: "https://www.youtube.com/@mycowtf" }],
         maxResults: 1,
         maxResultsShorts: 0,
+        maxResultStreams: 0,
       }),
       { webhooks: expect.any(Array) },
     );
     expect(r).toEqual({ runId: "run-1", datasetId: "ds-1" });
   });
 
-  it("passes posts through as maxResults AND maxResultsShorts (Shorts included)", async () => {
+  it("passes posts through as maxResults, maxResultsShorts AND maxResultStreams (Shorts + streams included)", async () => {
     await startYoutubeProfileScraping("mycowtf", 20);
     expect(start).toHaveBeenCalledWith(
       expect.objectContaining({
         startUrls: [{ url: "https://www.youtube.com/@mycowtf" }],
         maxResults: 20,
         maxResultsShorts: 20,
+        maxResultStreams: 20,
       }),
       { webhooks: expect.any(Array) },
     );
