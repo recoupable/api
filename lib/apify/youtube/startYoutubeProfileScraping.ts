@@ -39,9 +39,10 @@ const startYoutubeProfileScraping = async (
   const input = {
     ...DEFAULT_INPUT,
     startUrls: [{ url: targetUrl }],
-    // The legacy snapshot excludes Shorts; a requested posts depth includes them.
+    // The legacy snapshot excludes Shorts and streams; a requested posts depth includes both.
     maxResults: posts ?? DEFAULT_INPUT.maxResults,
     maxResultsShorts: posts ?? DEFAULT_INPUT.maxResultsShorts,
+    maxResultStreams: posts ?? DEFAULT_INPUT.maxResultStreams,
   };
 
   const run = await apifyClient
