@@ -7,6 +7,7 @@ import { Tables } from "@/types/database.types";
  *
  * @param params.id - Optional snapshot id filter
  * @param params.account - Optional account filter
+ * @param params.catalog - Optional catalog filter (runs materialized into a catalog)
  * @param params.createdAfter - Optional inclusive created_at lower bound (ISO)
  * @param params.schedule - Optional schedule filter ("once" | "monthly")
  * @returns Matching rows newest-first, or [] if none exist or on error
@@ -14,11 +15,13 @@ import { Tables } from "@/types/database.types";
 export async function selectPlaycountSnapshots({
   id,
   account,
+  catalog,
   createdAfter,
   schedule,
 }: {
   id?: string;
   account?: string;
+  catalog?: string;
   createdAfter?: string;
   schedule?: string;
 }): Promise<Tables<"playcount_snapshots">[]> {
@@ -29,6 +32,7 @@ export async function selectPlaycountSnapshots({
 
   if (id) query = query.eq("id", id);
   if (account) query = query.eq("account", account);
+  if (catalog) query = query.eq("catalog", catalog);
   if (schedule) query = query.eq("schedule", schedule);
   if (createdAfter) query = query.gte("created_at", createdAfter);
 
