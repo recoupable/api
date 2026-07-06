@@ -1,7 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { handleTwitterProfileScraperResults } from "@/lib/apify/twitter/handleTwitterProfileScraperResults";
 const listItems = vi.fn();
-vi.mock("@/lib/apify/client", () => ({ default: { dataset: vi.fn(() => ({ listItems })) } }));
+const getRecord = vi.fn();
+vi.mock("@/lib/apify/client", () => ({
+  default: { dataset: vi.fn(() => ({ listItems })), keyValueStore: vi.fn(() => ({ getRecord })) },
+}));
+const startTwitterUserScraping = vi.fn();
+vi.mock("@/lib/apify/twitter/startTwitterUserScraping", () => ({
+  default: (...a: unknown[]) => startTwitterUserScraping(...a),
+}));
 const upsertSocials = vi.fn();
 vi.mock("@/lib/supabase/socials/upsertSocials", () => ({
   upsertSocials: (...a: unknown[]) => upsertSocials(...a),
@@ -13,7 +20,7 @@ vi.mock("@/lib/apify/persistPostsForSocial", () => ({
 
 const payload = {
   eventData: { actorId: "nfp1fpt5gUlBwPcor" },
-  resource: { defaultDatasetId: "ds-1" },
+  resource: { defaultDatasetId: "ds-1", defaultKeyValueStoreId: "kv-1" },
 } as never;
 // Trimmed from real run ALVMZYXkh3WHgeGfT (2026-07-01); tweet fields
 // (url, createdAt) verified on real run bx3asRqfbNnkKgogG (2026-07-02).
@@ -67,10 +74,33 @@ describe("handleTwitterProfileScraperResults", () => {
       profileUrl: "x.com/theasf",
     });
   });
-  it("no-ops on an empty dataset", async () => {
+  it("falls back to a profile-level user scrape on an empty dataset (tweetless account, chat#1851)", async () => {
     listItems.mockResolvedValue({ items: [] });
-    expect(await handleTwitterProfileScraperResults(payload)).toEqual({ social: null });
+    getRecord.mockResolvedValue({ key: "INPUT", value: { twitterHandles: ["KETTAMA_"] } });
+    startTwitterUserScraping.mockResolvedValue({ runId: "run-u1", datasetId: "ds-u1" });
+    expect(await handleTwitterProfileScraperResults(payload)).toEqual({
+      social: null,
+      fallbackRunId: "run-u1",
+    });
+    expect(startTwitterUserScraping).toHaveBeenCalledWith("KETTAMA_");
     expect(upsertSocials).not.toHaveBeenCalled();
     expect(persistPostsForSocial).not.toHaveBeenCalled();
+  });
+
+  it("no-ops on an empty dataset when the run INPUT carries no handle", async () => {
+    listItems.mockResolvedValue({ items: [] });
+    getRecord.mockResolvedValue({ key: "INPUT", value: {} });
+    expect(await handleTwitterProfileScraperResults(payload)).toEqual({ social: null });
+    expect(startTwitterUserScraping).not.toHaveBeenCalled();
+  });
+
+  it("no-ops on an empty dataset when the payload carries no key-value store id", async () => {
+    listItems.mockResolvedValue({ items: [] });
+    const bare = {
+      eventData: { actorId: "nfp1fpt5gUlBwPcor" },
+      resource: { defaultDatasetId: "ds-1" },
+    } as never;
+    expect(await handleTwitterProfileScraperResults(bare)).toEqual({ social: null });
+    expect(startTwitterUserScraping).not.toHaveBeenCalled();
   });
 });

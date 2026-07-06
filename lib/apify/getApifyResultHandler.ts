@@ -3,6 +3,7 @@ import { handleInstagramCommentsScraper } from "@/lib/apify/instagram/handleInst
 import { handleLinkedinProfileScraperResults } from "@/lib/apify/linkedin/handleLinkedinProfileScraperResults";
 import { handleTiktokProfileScraperResults } from "@/lib/apify/tiktok/handleTiktokProfileScraperResults";
 import { handleTwitterProfileScraperResults } from "@/lib/apify/twitter/handleTwitterProfileScraperResults";
+import { handleTwitterUserScraperResults } from "@/lib/apify/twitter/handleTwitterUserScraperResults";
 import { handleYoutubeProfileScraperResults } from "@/lib/apify/youtube/handleYoutubeProfileScraperResults";
 import { handleThreadsProfileScraperResults } from "@/lib/apify/threads/handleThreadsProfileScraperResults";
 import { handleFacebookProfileScraperResults } from "@/lib/apify/facebook/handleFacebookProfileScraperResults";
@@ -26,7 +27,8 @@ const HANDLERS_BY_ACTOR_ID: Record<string, ApifyResultHandler> = {
   SbK00X0JYCPblD2wp: handleInstagramCommentsScraper, // instagram comments
   LpVuK3Zozwuipa5bp: handleLinkedinProfileScraperResults, // linkedin profile (harvestapi)
   GdWCkxBtKWOsKjdch: handleTiktokProfileScraperResults, // tiktok (clockworks~tiktok-scraper)
-  nfp1fpt5gUlBwPcor: handleTwitterProfileScraperResults, // x/twitter (apidojo~twitter-scraper-lite)
+  nfp1fpt5gUlBwPcor: handleTwitterProfileScraperResults, // x/twitter tweets (apidojo~twitter-scraper-lite)
+  V38PZzpEgOfeeWvZY: handleTwitterUserScraperResults, // x/twitter profile fallback (apidojo~twitter-user-scraper)
   h7sDV53CddomktSi5: handleYoutubeProfileScraperResults, // youtube (streamers~youtube-scraper)
   kJdK90pa2hhYYrCK5: handleThreadsProfileScraperResults, // threads (apify~threads-profile-api-scraper)
   "4Hv5RhChiaDk6iwad": handleFacebookProfileScraperResults, // facebook (apify~facebook-pages-scraper)

@@ -5,10 +5,14 @@ import { handleInstagramCommentsScraper } from "@/lib/apify/instagram/handleInst
 import { handleLinkedinProfileScraperResults } from "@/lib/apify/linkedin/handleLinkedinProfileScraperResults";
 import { handleTiktokProfileScraperResults } from "@/lib/apify/tiktok/handleTiktokProfileScraperResults";
 import { handleTwitterProfileScraperResults } from "@/lib/apify/twitter/handleTwitterProfileScraperResults";
+import { handleTwitterUserScraperResults } from "@/lib/apify/twitter/handleTwitterUserScraperResults";
 import { handleYoutubeProfileScraperResults } from "@/lib/apify/youtube/handleYoutubeProfileScraperResults";
 import { handleThreadsProfileScraperResults } from "@/lib/apify/threads/handleThreadsProfileScraperResults";
 import { handleFacebookProfileScraperResults } from "@/lib/apify/facebook/handleFacebookProfileScraperResults";
 
+vi.mock("@/lib/apify/twitter/handleTwitterUserScraperResults", () => ({
+  handleTwitterUserScraperResults: vi.fn(),
+}));
 vi.mock("@/lib/apify/instagram/handleInstagramProfileScraperResults", () => ({
   handleInstagramProfileScraperResults: vi.fn(),
 }));
@@ -45,6 +49,7 @@ describe("getApifyResultHandler", () => {
   it("maps every platform's resolved actor id to its results handler", () => {
     expect(getApifyResultHandler("GdWCkxBtKWOsKjdch")).toBe(handleTiktokProfileScraperResults);
     expect(getApifyResultHandler("nfp1fpt5gUlBwPcor")).toBe(handleTwitterProfileScraperResults);
+    expect(getApifyResultHandler("V38PZzpEgOfeeWvZY")).toBe(handleTwitterUserScraperResults);
     expect(getApifyResultHandler("h7sDV53CddomktSi5")).toBe(handleYoutubeProfileScraperResults);
     expect(getApifyResultHandler("kJdK90pa2hhYYrCK5")).toBe(handleThreadsProfileScraperResults);
     expect(getApifyResultHandler("4Hv5RhChiaDk6iwad")).toBe(handleFacebookProfileScraperResults);

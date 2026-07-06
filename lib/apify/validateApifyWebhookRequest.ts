@@ -14,6 +14,10 @@ export const apifyWebhookPayloadSchema = z.object({
   }),
   resource: z.object({
     defaultDatasetId: z.string().min(1, "resource.defaultDatasetId is required"),
+    // Present on Apify's default run payload; needed by the X tweetless
+    // fallback to read the run INPUT (chat#1851). Optional so replayed or
+    // trimmed payloads keep validating.
+    defaultKeyValueStoreId: z.string().optional(),
   }),
 });
 

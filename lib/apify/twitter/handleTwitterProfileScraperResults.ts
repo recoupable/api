@@ -1,4 +1,5 @@
 import apifyClient from "@/lib/apify/client";
+import startTwitterUserScraping from "@/lib/apify/twitter/startTwitterUserScraping";
 import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
 import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
 import { persistPostsForSocial } from "@/lib/apify/persistPostsForSocial";
@@ -32,6 +33,22 @@ type TweetItem = {
  */
 export async function handleTwitterProfileScraperResults(parsed: ApifyWebhookPayload) {
   const { items } = await apifyClient.dataset(parsed.resource.defaultDatasetId).listItems();
+
+  // Tweetless accounts return zero items, so profile stats never arrive via
+  // `author`. Recover the requested handle from the run INPUT and fall back
+  // to a profile-level user scrape (chat#1851); its results are persisted by
+  // handleTwitterUserScraperResults through the same webhook receiver.
+  if (items.length === 0) {
+    const storeId = parsed.resource.defaultKeyValueStoreId;
+    if (!storeId) return { social: null };
+    const inputRecord = await apifyClient.keyValueStore(storeId).getRecord("INPUT");
+    const input = inputRecord?.value as { twitterHandles?: string[] } | undefined;
+    const handle = input?.twitterHandles?.[0]?.trim();
+    if (!handle) return { social: null };
+    const fallbackRun = await startTwitterUserScraping(handle);
+    return { social: null, fallbackRunId: fallbackRun?.runId ?? null };
+  }
+
   const author = (items[0] as TweetItem | undefined)?.author;
   if (!author?.url) return { social: null };
 
