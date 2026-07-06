@@ -8,6 +8,8 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import { ensureSocialScrapeCredits } from "@/lib/socials/ensureSocialScrapeCredits";
 import { deductSocialScrapeCredits } from "@/lib/socials/deductSocialScrapeCredits";
+import { insertApifyScraperRuns } from "@/lib/supabase/apify_scraper_runs/insertApifyScraperRuns";
+import { getSocialPlatformByLink } from "@/lib/artists/getSocialPlatformByLink";
 import { getSocialScrapeCreditCost } from "@/lib/socials/getSocialScrapeCreditCost";
 
 /**
@@ -70,12 +72,34 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
 
     if (results.length) {
       await deductSocialScrapeCredits(authResult.accountId, costPerProfile * results.length);
+
+      // Register the batch so per-platform webhook completions can assemble
+      // ONE consolidated new-posts digest instead of an email per platform
+      // (chat#1855). Registration failure must not fail the scrape.
+      const batchId = crypto.randomUUID();
+      const socialByUrl = new Map(
+        socials.map(s => [s.social?.profile_url ?? "", s.social?.id ?? null]),
+      );
+      await insertApifyScraperRuns(
+        results
+          .filter(r => r.runId)
+          .map(r => ({
+            run_id: r.runId as string,
+            account_id: authResult.accountId,
+            social_id: r.profileUrl ? (socialByUrl.get(r.profileUrl) ?? null) : null,
+            platform: r.profileUrl ? getSocialPlatformByLink(r.profileUrl).toLowerCase() : null,
+            batch_id: batchId,
+          })),
+      );
     }
 
-    return NextResponse.json(results, {
-      status: 200,
-      headers: getCorsHeaders(),
-    });
+    return NextResponse.json(
+      results.map(({ runId, datasetId, error }) => ({ runId, datasetId, error })),
+      {
+        status: 200,
+        headers: getCorsHeaders(),
+      },
+    );
   } catch (error) {
     console.error("[ERROR] postArtistSocialsScrapeHandler error:", error);
     return NextResponse.json(

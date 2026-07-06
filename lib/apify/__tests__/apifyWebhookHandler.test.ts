@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { completeApifyScraperRun } from "@/lib/supabase/apify_scraper_runs/completeApifyScraperRun";
+import { maybeSendScrapeDigest } from "@/lib/apify/digest/maybeSendScrapeDigest";
 import { NextRequest } from "next/server";
 import { apifyWebhookHandler } from "../apifyWebhookHandler";
 import { handleInstagramProfileScraperResults } from "../instagram/handleInstagramProfileScraperResults";
@@ -44,6 +46,13 @@ const baseBody = {
   resource: { defaultDatasetId: "ds_1" },
 };
 
+vi.mock("@/lib/supabase/apify_scraper_runs/completeApifyScraperRun", () => ({
+  completeApifyScraperRun: vi.fn(async () => null),
+}));
+vi.mock("@/lib/apify/digest/maybeSendScrapeDigest", () => ({
+  maybeSendScrapeDigest: vi.fn(async () => null),
+}));
+
 describe("apifyWebhookHandler", () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -58,6 +67,38 @@ describe("apifyWebhookHandler", () => {
     expect(await res.json()).toEqual({ posts: [1, 2] });
     expect(handleInstagramProfileScraperResults).toHaveBeenCalledOnce();
     expect(handleInstagramCommentsScraper).not.toHaveBeenCalled();
+  });
+
+  it("records batch completion + triggers the digest check when the payload carries a run id (chat#1855)", async () => {
+    vi.mocked(handleInstagramProfileScraperResults).mockResolvedValue({
+      posts: [],
+      newPostUrls: ["https://instagram.com/p/new1"],
+    } as never);
+    vi.mocked(completeApifyScraperRun).mockResolvedValue({
+      run_id: "run-9",
+      batch_id: "batch-7",
+    } as never);
+
+    const res = await apifyWebhookHandler(
+      makeRequest({
+        ...baseBody,
+        eventData: { actorId: "dSCLg0C3YEZ83HzYX" },
+        resource: { ...baseBody.resource, id: "run-9" },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(completeApifyScraperRun).toHaveBeenCalledWith("run-9", ["https://instagram.com/p/new1"]);
+    expect(maybeSendScrapeDigest).toHaveBeenCalledWith("batch-7");
+  });
+
+  it("skips digest bookkeeping when the payload has no run id", async () => {
+    vi.mocked(handleInstagramProfileScraperResults).mockResolvedValue({ posts: [] } as never);
+    await apifyWebhookHandler(
+      makeRequest({ ...baseBody, eventData: { actorId: "dSCLg0C3YEZ83HzYX" } }),
+    );
+    expect(completeApifyScraperRun).not.toHaveBeenCalled();
+    expect(maybeSendScrapeDigest).not.toHaveBeenCalled();
   });
 
   it("dispatches comments scraper for the IG comments actor", async () => {

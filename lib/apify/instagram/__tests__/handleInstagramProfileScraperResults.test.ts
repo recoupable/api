@@ -13,6 +13,7 @@ import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccoun
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { uploadLinkToArweave } from "@/lib/arweave/uploadLinkToArweave";
 import { filterNewPostUrls } from "@/lib/socials/filterNewPostUrls";
+import { selectApifyScraperRun } from "@/lib/supabase/apify_scraper_runs/selectApifyScraperRun";
 
 vi.mock("@/lib/apify/client", () => ({ default: { dataset: vi.fn() } }));
 
@@ -28,6 +29,9 @@ vi.mock("../handleInstagramProfileFollowUpRuns", () => ({
 }));
 vi.mock("@/lib/apify/sendApifyWebhookEmail", () => ({ sendApifyWebhookEmail: vi.fn() }));
 vi.mock("@/lib/socials/filterNewPostUrls", () => ({ filterNewPostUrls: vi.fn() }));
+vi.mock("@/lib/supabase/apify_scraper_runs/selectApifyScraperRun", () => ({
+  selectApifyScraperRun: vi.fn(async () => null),
+}));
 vi.mock("@/lib/supabase/socials/upsertSocials", () => ({ upsertSocials: vi.fn() }));
 vi.mock("@/lib/supabase/socials/selectSocials", () => ({
   selectSocials: vi.fn(),
@@ -127,5 +131,37 @@ describe("handleInstagramProfileScraperResults", () => {
     expect(upsertSocialPosts).toHaveBeenCalledOnce();
     expect(handleInstagramProfileFollowUpRuns).toHaveBeenCalledOnce();
     expect(result.social).toEqual({ id: "s1" });
+  });
+
+  it("suppresses the solo email for digest-batch runs (webhook layer sends ONE digest)", async () => {
+    mockDataset([
+      {
+        latestPosts: [{ url: "u-new", timestamp: "t" }],
+        username: "alice",
+        url: "instagram.com/alice",
+        profilePicUrl: "https://a",
+        fullName: "Alice",
+      },
+    ]);
+    vi.mocked(selectApifyScraperRun).mockResolvedValue({
+      run_id: "run-1",
+      batch_id: "b1",
+    } as never);
+    vi.mocked(upsertPosts).mockResolvedValue({ data: null, error: null } as never);
+    vi.mocked(getPosts).mockResolvedValue([{ id: "p1", post_url: "u-new" }] as never);
+    vi.mocked(uploadLinkToArweave).mockResolvedValue(null);
+    vi.mocked(upsertSocials).mockResolvedValue([] as never);
+    vi.mocked(selectSocials).mockResolvedValue([{ id: "s1" }] as never);
+    vi.mocked(selectAccountSocials).mockResolvedValue([{ account_id: "a1" }] as never);
+    vi.mocked(getAccountArtistIds).mockResolvedValue([{ account_id: "a1" }] as never);
+    vi.mocked(selectAccountEmails).mockResolvedValue([{ email: "x@y.com" }] as never);
+
+    const result = await handleInstagramProfileScraperResults({
+      ...(payload as Record<string, unknown>),
+      resource: { defaultDatasetId: "ds_1", id: "run-1" },
+    } as never);
+
+    expect(sendApifyWebhookEmail).not.toHaveBeenCalled(); // digest covers it
+    expect(result.newPostUrls).toEqual(["u-new"]);
   });
 });
