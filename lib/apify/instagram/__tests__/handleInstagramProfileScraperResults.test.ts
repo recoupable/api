@@ -97,7 +97,7 @@ describe("handleInstagramProfileScraperResults", () => {
 
     expect(upsertPosts).toHaveBeenCalledOnce();
     expect(upsertSocialPosts).toHaveBeenCalledOnce();
-    expect(sendApifyWebhookEmail).toHaveBeenCalledWith(expect.any(Object), ["x@y.com"]);
+    expect(sendApifyWebhookEmail).toHaveBeenCalledWith(expect.any(Object), ["x@y.com"], ["u1"]);
     expect(handleInstagramProfileFollowUpRuns).toHaveBeenCalledOnce();
     expect(result.social).toEqual({ id: "s1" });
     expect(result.posts).toEqual(posts);

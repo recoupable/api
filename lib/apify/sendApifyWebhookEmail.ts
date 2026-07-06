@@ -1,54 +1,39 @@
-import generateText from "@/lib/ai/generateText";
 import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 import { RECOUP_FROM_EMAIL } from "@/lib/const";
-import { getFrontendBaseUrl } from "@/lib/composio/getFrontendBaseUrl";
+import { renderScrapeDigestHtml } from "@/lib/apify/digest/renderScrapeDigestHtml";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 
 /**
- * Sends an Apify-webhook summary email to the given recipients using
- * Resend. Generates the email body via an LLM based on the first
- * profile result.
+ * Sends the legacy single-platform Instagram alert (non-batch scrape runs).
+ * Batch runs get the consolidated digest instead. Body comes from the shared
+ * deterministic renderer — the per-send LLM body is gone (chat#1855): stable
+ * branding, direct links to the new posts, no vendor jargon.
  *
  * @param profile - First dataset result from the profile scraper.
- * @param emails - Recipient email addresses.
- * @returns The Resend response, or `null` when there are no recipients.
+ * @param emails - Recipient email addresses (cross-tenant — BCC only).
+ * @param newPostUrls - Post URLs genuinely new to the platform.
+ * @returns The Resend response, or `null` when there is nothing to send.
  */
 export async function sendApifyWebhookEmail(
   profile: ApifyInstagramProfileResult,
   emails: string[],
+  newPostUrls: string[] = [],
 ) {
-  if (!emails?.length) return null;
+  if (!emails?.length || !newPostUrls.length) return null;
 
-  const prompt = `You have a new Apify dataset update. Here is the data:
-
-Key Data
-Full Name: ${profile.fullName}
-Username: ${profile.username}
-Profile URL: ${profile.url}
-Profile Picture: ${profile.profilePicUrl}
-Biography: ${profile.biography}
-Followers: ${profile.followersCount}
-Following: ${profile.followsCount}
-Latest Posts: ${(Array.isArray(profile.latestPosts) ? profile.latestPosts : []).map(p => JSON.stringify(p)).join(", ")}
-`;
-
-  const { text } = await generateText({
-    system: `you are a record label services manager for Recoup.
-      write beautiful html email.
-      subject: New Apify Dataset Notification. you're notifying music managers about new posts being available for one of their roster musician's Instagram profile.
-      include a link to view the instagram profile.
-      call to action is to open a chat link to learn more about the latest posts using Recoup Chat (AI Agents): ${getFrontendBaseUrl()}/?q=tell%20me%20about%20my%20latest%20Ig%20posts
-      You'll be passed a dataset summary for a musician profile and their latest posts on instagram.
-      your goal is to get the recipient to click a cta link to open a chat link to learn more about the latest posts using Recoup Chat (AI Agents).
-      only include the email body html.
-      no headers or subject`,
-    prompt,
+  const { subject, html } = renderScrapeDigestHtml({
+    sections: [{ platform: "instagram", postUrls: newPostUrls }],
+    artistName: profile.fullName ?? profile.username ?? null,
   });
 
+  // Recipients span multiple customer accounts (the social's watchers are
+  // resolved cross-tenant), so they must NEVER share a visible To: line —
+  // BCC only, with ourselves as the required To: (chat#1855).
   return await sendEmailWithResend({
     from: RECOUP_FROM_EMAIL,
-    to: emails,
-    subject: `${profile.fullName ?? profile.username ?? "Your artist"} has new posts on Instagram`,
-    html: text,
+    to: [RECOUP_FROM_EMAIL],
+    bcc: emails,
+    subject,
+    html,
   });
 }
