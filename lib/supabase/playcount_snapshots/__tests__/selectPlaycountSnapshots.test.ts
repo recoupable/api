@@ -38,6 +38,16 @@ describe("selectPlaycountSnapshots", () => {
     expect(result).toEqual(rows);
   });
 
+  it("filters by catalog", async () => {
+    const rows = [{ id: "snap_2", catalog: "cat_1" }];
+    const builder = mockBuilder({ data: rows, error: null });
+
+    const result = await selectPlaycountSnapshots({ catalog: "cat_1" });
+
+    expect(builder.eq).toHaveBeenCalledWith("catalog", "cat_1");
+    expect(result).toEqual(rows);
+  });
+
   it("returns [] on error", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     mockBuilder({ data: null, error: { message: "boom" } });
