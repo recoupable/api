@@ -30,17 +30,23 @@ export const getCatalogMeasurementsQuerySchema = z.object({
 export type GetCatalogMeasurementsQuery = z.infer<typeof getCatalogMeasurementsQuerySchema>;
 
 /**
- * Validates query parameters for GET /api/catalogs/measurements.
+ * Validates GET /api/catalogs/{catalogId}/measurements: the catalogId path
+ * segment (uuid) plus the optional query modifiers (artist_account_id,
+ * page, limit). The path id always wins — a catalogId smuggled into the
+ * query string is ignored.
  *
  * @param searchParams - The URL search parameters to validate.
- * @returns A NextResponse with an error if validation fails, or the validated query.
+ * @param catalogId - The catalogId path segment.
+ * @returns A NextResponse with an error if validation fails, or the validated request.
  */
 export function validateGetCatalogMeasurementsQuery(
   searchParams: URLSearchParams,
+  catalogId: string,
 ): NextResponse | GetCatalogMeasurementsQuery {
-  const result = getCatalogMeasurementsQuerySchema.safeParse(
-    Object.fromEntries(searchParams.entries()),
-  );
+  const result = getCatalogMeasurementsQuerySchema.safeParse({
+    ...Object.fromEntries(searchParams.entries()),
+    catalogId,
+  });
 
   if (!result.success) {
     const firstError = result.error.issues[0];

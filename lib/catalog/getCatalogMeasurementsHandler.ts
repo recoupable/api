@@ -10,7 +10,7 @@ import { selectCatalogMeasurementsAggregate } from "@/lib/supabase/song_measurem
 import { selectCatalogMeasurementsPage } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsPage";
 
 /**
- * GET /api/catalogs/measurements?catalogId=&artist_account_id=&page=&limit=
+ * GET /api/catalogs/{catalogId}/measurements?artist_account_id=&page=&limit=
  *
  * One page of the latest Spotify play counts per song (ISRC) in a catalog
  * plus whole-scope aggregates: measured_song_count, total_streams and a
@@ -24,12 +24,16 @@ import { selectCatalogMeasurementsPage } from "@/lib/supabase/song_measurements/
  * is a 404.
  *
  * @param request - The request object
+ * @param catalogIdParam - The catalogId path segment
  * @returns `{ status, measurements, pagination, measured_song_count, total_streams, valuation, artist_account_id, catalog_age_years }`
  */
-export async function getCatalogMeasurementsHandler(request: NextRequest): Promise<NextResponse> {
+export async function getCatalogMeasurementsHandler(
+  request: NextRequest,
+  catalogIdParam: string,
+): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(request.url);
-    const validated = validateGetCatalogMeasurementsQuery(searchParams);
+    const validated = validateGetCatalogMeasurementsQuery(searchParams, catalogIdParam);
     if (validated instanceof NextResponse) {
       return validated;
     }

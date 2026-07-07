@@ -32,7 +32,7 @@ const catalogId = "740d5050-40ec-4892-a040-b78bb50fef2f";
 const artistAccountId = "b1814076-8e19-4a77-9dea-2ec150e26aaa";
 
 const makeRequest = () =>
-  new NextRequest(`http://localhost/api/catalogs/measurements?catalogId=${catalogId}`);
+  new NextRequest(`http://localhost/api/catalogs/${catalogId}/measurements`);
 
 const okAuth = () =>
   vi.mocked(validateAuthContext).mockResolvedValue({
@@ -62,7 +62,7 @@ describe("getCatalogMeasurementsHandler", () => {
     const err = NextResponse.json({ status: "error" }, { status: 400 });
     vi.mocked(validateGetCatalogMeasurementsQuery).mockReturnValue(err);
 
-    const res = await getCatalogMeasurementsHandler(makeRequest());
+    const res = await getCatalogMeasurementsHandler(makeRequest(), catalogId);
 
     expect(res).toBe(err);
     expect(validateAuthContext).not.toHaveBeenCalled();
@@ -73,7 +73,7 @@ describe("getCatalogMeasurementsHandler", () => {
     const authErr = NextResponse.json({ status: "error" }, { status: 401 });
     vi.mocked(validateAuthContext).mockResolvedValue(authErr);
 
-    const res = await getCatalogMeasurementsHandler(makeRequest());
+    const res = await getCatalogMeasurementsHandler(makeRequest(), catalogId);
 
     expect(res).toBe(authErr);
     expect(selectAccountCatalog).not.toHaveBeenCalled();
@@ -84,7 +84,7 @@ describe("getCatalogMeasurementsHandler", () => {
     okAuth();
     vi.mocked(selectAccountCatalog).mockResolvedValue(null);
 
-    const res = await getCatalogMeasurementsHandler(makeRequest());
+    const res = await getCatalogMeasurementsHandler(makeRequest(), catalogId);
 
     expect(res.status).toBe(404);
     expect(selectAccountCatalog).toHaveBeenCalledWith({ accountId, catalogId });
@@ -104,10 +104,14 @@ describe("getCatalogMeasurementsHandler", () => {
     // 10 years of catalog age
     vi.mocked(getCatalogEarliestReleaseDate).mockResolvedValue("2016-07-01");
 
-    const res = await getCatalogMeasurementsHandler(makeRequest());
+    const res = await getCatalogMeasurementsHandler(makeRequest(), catalogId);
     const body = await res.json();
 
     expect(res.status).toBe(200);
+    expect(validateGetCatalogMeasurementsQuery).toHaveBeenCalledWith(
+      expect.any(URLSearchParams),
+      catalogId,
+    );
     expect(selectCatalogMeasurementsAggregate).toHaveBeenCalledWith({
       catalogId,
       artistAccountId: undefined,
@@ -148,7 +152,7 @@ describe("getCatalogMeasurementsHandler", () => {
     vi.mocked(selectCatalogMeasurementsPage).mockResolvedValue([pageRows[0]]);
     vi.mocked(getCatalogEarliestReleaseDate).mockResolvedValue("2016-07-01");
 
-    const res = await getCatalogMeasurementsHandler(makeRequest());
+    const res = await getCatalogMeasurementsHandler(makeRequest(), catalogId);
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -180,7 +184,7 @@ describe("getCatalogMeasurementsHandler", () => {
     vi.mocked(selectCatalogMeasurementsPage).mockResolvedValue([]);
     vi.mocked(getCatalogEarliestReleaseDate).mockResolvedValue(null);
 
-    const res = await getCatalogMeasurementsHandler(makeRequest());
+    const res = await getCatalogMeasurementsHandler(makeRequest(), catalogId);
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -200,7 +204,7 @@ describe("getCatalogMeasurementsHandler", () => {
     vi.mocked(selectCatalogMeasurementsPage).mockResolvedValue(pageRows);
     vi.mocked(getCatalogEarliestReleaseDate).mockResolvedValue(null);
 
-    const res = await getCatalogMeasurementsHandler(makeRequest());
+    const res = await getCatalogMeasurementsHandler(makeRequest(), catalogId);
 
     expect(res.status).toBe(500);
   });
@@ -216,7 +220,7 @@ describe("getCatalogMeasurementsHandler", () => {
     vi.mocked(selectCatalogMeasurementsPage).mockResolvedValue(null);
     vi.mocked(getCatalogEarliestReleaseDate).mockResolvedValue(null);
 
-    const res = await getCatalogMeasurementsHandler(makeRequest());
+    const res = await getCatalogMeasurementsHandler(makeRequest(), catalogId);
 
     expect(res.status).toBe(500);
   });
@@ -227,7 +231,7 @@ describe("getCatalogMeasurementsHandler", () => {
     okAuth();
     vi.mocked(selectAccountCatalog).mockRejectedValue(new Error("boom"));
 
-    const res = await getCatalogMeasurementsHandler(makeRequest());
+    const res = await getCatalogMeasurementsHandler(makeRequest(), catalogId);
 
     expect(res.status).toBe(500);
     consoleError.mockRestore();
