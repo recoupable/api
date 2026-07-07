@@ -9,10 +9,10 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 const catalogId = "740d5050-40ec-4892-a040-b78bb50fef2f";
 
 describe("validateGetCatalogMeasurementsQuery", () => {
-  it("returns the validated query for a valid catalogId", () => {
+  it("returns the validated query for a valid catalogId with default pagination", () => {
     const result = validateGetCatalogMeasurementsQuery(new URLSearchParams({ catalogId }));
 
-    expect(result).toEqual({ catalogId });
+    expect(result).toEqual({ catalogId, page: 1, limit: 50 });
   });
 
   it("returns 400 when catalogId is missing", async () => {
@@ -39,7 +39,12 @@ describe("validateGetCatalogMeasurementsQuery", () => {
       new URLSearchParams({ catalogId, artist_account_id: artistAccountId }),
     );
 
-    expect(result).toEqual({ catalogId, artist_account_id: artistAccountId });
+    expect(result).toEqual({
+      catalogId,
+      artist_account_id: artistAccountId,
+      page: 1,
+      limit: 50,
+    });
   });
 
   it("returns 400 when artist_account_id is malformed", async () => {
@@ -51,5 +56,29 @@ describe("validateGetCatalogMeasurementsQuery", () => {
     expect((result as NextResponse).status).toBe(400);
     const body = await (result as NextResponse).json();
     expect(body.status).toBe("error");
+  });
+
+  it("accepts explicit page and limit", () => {
+    const result = validateGetCatalogMeasurementsQuery(
+      new URLSearchParams({ catalogId, page: "3", limit: "100" }),
+    );
+
+    expect(result).toEqual({ catalogId, page: 3, limit: 100 });
+  });
+
+  it("returns 400 when page is not a positive integer", () => {
+    for (const page of ["0", "-1", "abc", "1.5"]) {
+      const result = validateGetCatalogMeasurementsQuery(new URLSearchParams({ catalogId, page }));
+      expect(result).toBeInstanceOf(NextResponse);
+      expect((result as NextResponse).status).toBe(400);
+    }
+  });
+
+  it("returns 400 when limit is out of range", () => {
+    for (const limit of ["0", "101", "abc"]) {
+      const result = validateGetCatalogMeasurementsQuery(new URLSearchParams({ catalogId, limit }));
+      expect(result).toBeInstanceOf(NextResponse);
+      expect((result as NextResponse).status).toBe(400);
+    }
   });
 });

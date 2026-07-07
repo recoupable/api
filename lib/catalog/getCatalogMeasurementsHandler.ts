@@ -3,27 +3,28 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateGetCatalogMeasurementsQuery } from "./validateGetCatalogMeasurementsQuery";
-import { latestMeasurementsPerIsrc } from "./latestMeasurementsPerIsrc";
 import { computeValuationBand } from "./computeValuationBand";
 import { getCatalogEarliestReleaseDate } from "./getCatalogEarliestReleaseDate";
-import { resolveCatalogSongsInScope } from "./resolveCatalogSongsInScope";
 import { selectAccountCatalog } from "@/lib/supabase/account_catalogs/selectAccountCatalog";
-import { selectAllSongMeasurements } from "@/lib/supabase/song_measurements/selectAllSongMeasurements";
+import { selectCatalogMeasurementsAggregate } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate";
+import { selectCatalogMeasurementsPage } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsPage";
 
 /**
- * GET /api/catalogs/measurements?catalogId=&artist_account_id=
+ * GET /api/catalogs/measurements?catalogId=&artist_account_id=&page=&limit=
  *
- * Latest Spotify play count per song (ISRC) in a catalog plus a valuation
- * band derived at read time with the same model as the marketing valuation
- * card. Optionally scoped to one artist's songs (catalog_songs ∩
- * song_artists) via artist_account_id; the applied filter is echoed back so
- * clients can verify the response scope. The read is exhaustive — no
- * 1,000-row cap. The account is resolved from credentials (Privy bearer or
- * x-api-key); a catalog that doesn't exist or belongs to another account is
- * a 404.
+ * One page of the latest Spotify play counts per song (ISRC) in a catalog
+ * plus whole-scope aggregates: measured_song_count, total_streams and a
+ * valuation band derived at read time with the same model as the marketing
+ * valuation card. The aggregates are computed in a single SQL aggregate over
+ * the entire scope — no row cap — regardless of the requested page.
+ * Optionally scoped to one artist's songs (catalog_songs ∩ song_artists) via
+ * artist_account_id; the applied filter is echoed back so clients can verify
+ * the response scope. The account is resolved from credentials (Privy bearer
+ * or x-api-key); a catalog that doesn't exist or belongs to another account
+ * is a 404.
  *
  * @param request - The request object
- * @returns `{ status, measurements, valuation, total_streams, artist_account_id, catalog_age_years }`
+ * @returns `{ status, measurements, pagination, measured_song_count, total_streams, valuation, artist_account_id, catalog_age_years }`
  */
 export async function getCatalogMeasurementsHandler(request: NextRequest): Promise<NextResponse> {
   try {
@@ -38,36 +39,38 @@ export async function getCatalogMeasurementsHandler(request: NextRequest): Promi
       return authResult;
     }
     const { accountId } = authResult;
-    const { catalogId, artist_account_id: artistAccountId } = validated;
+    const { catalogId, artist_account_id: artistAccountId, page, limit } = validated;
 
     const link = await selectAccountCatalog({ accountId, catalogId });
     if (!link) {
       return errorResponse("Catalog not found", 404);
     }
 
-    const songs = await resolveCatalogSongsInScope({ catalogId, artistAccountId });
-    const titles = new Map(songs.map(s => [s.isrc, s.title]));
-    const [rows, earliestReleaseDate] = await Promise.all([
-      songs.length > 0
-        ? selectAllSongMeasurements({
-            songs: songs.map(s => s.isrc),
-            platform: "spotify",
-            metric: "platform_displayed_play_count",
-          })
-        : Promise.resolve([]),
+    const [aggregate, measurements, earliestReleaseDate] = await Promise.all([
+      selectCatalogMeasurementsAggregate({ catalogId, artistAccountId }),
+      selectCatalogMeasurementsPage({ catalogId, artistAccountId, page, limit }),
       getCatalogEarliestReleaseDate(catalogId),
     ]);
+    if (!aggregate || !measurements) {
+      return errorResponse("Internal server error", 500);
+    }
 
-    const { measurements, totalStreams } = latestMeasurementsPerIsrc(rows, titles);
     const { valuation, catalogAgeYears } = computeValuationBand({
-      totalStreams,
+      totalStreams: aggregate.totalStreams,
       earliestReleaseDate,
     });
 
     return successResponse({
       measurements,
+      pagination: {
+        total_count: aggregate.measuredSongCount,
+        page,
+        limit,
+        total_pages: Math.ceil(aggregate.measuredSongCount / limit),
+      },
+      measured_song_count: aggregate.measuredSongCount,
+      total_streams: aggregate.totalStreams,
       valuation,
-      total_streams: totalStreams,
       artist_account_id: artistAccountId ?? null,
       catalog_age_years: catalogAgeYears,
     });
