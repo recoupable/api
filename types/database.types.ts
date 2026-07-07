@@ -3829,6 +3829,27 @@ export type Database = {
         Returns: undefined;
       };
       extract_domain: { Args: { email: string }; Returns: string };
+      get_catalog_measurements_aggregate: {
+        Args: { p_catalog: string; p_artist?: string };
+        Returns: {
+          measured_song_count: number;
+          total_streams: number;
+        }[];
+      };
+      get_catalog_measurements_page: {
+        Args: {
+          p_catalog: string;
+          p_artist?: string;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: {
+          isrc: string;
+          title: string | null;
+          playcount: number;
+          measured_at: string;
+        }[];
+      };
       get_account_invitations: {
         Args: { account_slug: string };
         Returns: {
