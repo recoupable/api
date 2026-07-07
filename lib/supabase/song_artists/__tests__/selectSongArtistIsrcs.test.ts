@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { selectCatalogSongTitles } from "../selectCatalogSongTitles";
+import { selectSongArtistIsrcs } from "../selectSongArtistIsrcs";
 import supabase from "../../serverClient";
 
 vi.mock("../../serverClient", () => {
@@ -26,64 +26,43 @@ function mockPages(results: Result[]) {
   return builders;
 }
 
-const row = (i: number) => ({ songs: { isrc: `ISRC${i}`, name: `Song ${i}` } });
+const artistAccountId = "b1814076-8e19-4a77-9dea-2ec150e26aaa";
 
-describe("selectCatalogSongTitles", () => {
+describe("selectSongArtistIsrcs", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns isrc + title pairs for the catalog's songs", async () => {
-    mockPages([
-      {
-        data: [
-          { songs: { isrc: "ISRC1", name: "Song One" } },
-          { songs: { isrc: "ISRC2", name: null } },
-        ],
-        error: null,
-      },
-    ]);
+  it("returns the ISRCs linked to the artist account", async () => {
+    const builders = mockPages([{ data: [{ song: "ISRC1" }, { song: "ISRC2" }], error: null }]);
 
-    const result = await selectCatalogSongTitles("cat_1");
+    const result = await selectSongArtistIsrcs(artistAccountId);
 
-    expect(supabase.from).toHaveBeenCalledWith("catalog_songs");
-    expect(result).toEqual([
-      { isrc: "ISRC1", title: "Song One" },
-      { isrc: "ISRC2", title: null },
-    ]);
+    expect(supabase.from).toHaveBeenCalledWith("song_artists");
+    expect(builders[0].eq).toHaveBeenCalledWith("artist", artistAccountId);
+    expect(result).toEqual(["ISRC1", "ISRC2"]);
   });
 
   it("paginates past the 1,000-row page size to exhaustion", async () => {
-    const pageOne = Array.from({ length: 1000 }, (_, i) => row(i));
-    const pageTwo = Array.from({ length: 680 }, (_, i) => row(1000 + i));
+    const pageOne = Array.from({ length: 1000 }, (_, i) => ({ song: `ISRC${i}` }));
+    const pageTwo = Array.from({ length: 200 }, (_, i) => ({ song: `ISRC${1000 + i}` }));
     const builders = mockPages([
       { data: pageOne, error: null },
       { data: pageTwo, error: null },
     ]);
 
-    const result = await selectCatalogSongTitles("cat_big");
+    const result = await selectSongArtistIsrcs(artistAccountId);
 
-    expect(result).toHaveLength(1680);
-    expect(result[0]).toEqual({ isrc: "ISRC0", title: "Song 0" });
-    expect(result[1679]).toEqual({ isrc: "ISRC1679", title: "Song 1679" });
-    expect(builders[0].eq).toHaveBeenCalledWith("catalog", "cat_big");
+    expect(result).toHaveLength(1200);
     expect(builders[0].range).toHaveBeenCalledWith(0, 999);
     expect(builders[1].range).toHaveBeenCalledWith(1000, 1999);
     // deterministic pagination requires a stable order
     expect(builders[0].order).toHaveBeenCalledWith("song", { ascending: true });
   });
 
-  it("stops after one page when the catalog fits in a single page", async () => {
-    mockPages([{ data: [row(1), row(2)], error: null }]);
-
-    await selectCatalogSongTitles("cat_small");
-
-    expect(supabase.from).toHaveBeenCalledTimes(1);
-  });
-
   it("returns [] on error", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     mockPages([{ data: null, error: { message: "boom" } }]);
 
-    expect(await selectCatalogSongTitles("cat_1")).toEqual([]);
+    expect(await selectSongArtistIsrcs(artistAccountId)).toEqual([]);
     consoleError.mockRestore();
   });
 });

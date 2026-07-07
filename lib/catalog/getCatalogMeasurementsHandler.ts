@@ -6,20 +6,24 @@ import { validateGetCatalogMeasurementsQuery } from "./validateGetCatalogMeasure
 import { latestMeasurementsPerIsrc } from "./latestMeasurementsPerIsrc";
 import { computeValuationBand } from "./computeValuationBand";
 import { getCatalogEarliestReleaseDate } from "./getCatalogEarliestReleaseDate";
+import { resolveCatalogSongsInScope } from "./resolveCatalogSongsInScope";
 import { selectAccountCatalog } from "@/lib/supabase/account_catalogs/selectAccountCatalog";
-import { selectCatalogSongTitles } from "@/lib/supabase/catalog_songs/selectCatalogSongTitles";
-import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
+import { selectAllSongMeasurements } from "@/lib/supabase/song_measurements/selectAllSongMeasurements";
 
 /**
- * GET /api/catalogs/measurements?catalogId=
+ * GET /api/catalogs/measurements?catalogId=&artist_account_id=
  *
  * Latest Spotify play count per song (ISRC) in a catalog plus a valuation
  * band derived at read time with the same model as the marketing valuation
- * card. The account is resolved from credentials (Privy bearer or x-api-key);
- * a catalog that doesn't exist or belongs to another account is a 404.
+ * card. Optionally scoped to one artist's songs (catalog_songs ∩
+ * song_artists) via artist_account_id; the applied filter is echoed back so
+ * clients can verify the response scope. The read is exhaustive — no
+ * 1,000-row cap. The account is resolved from credentials (Privy bearer or
+ * x-api-key); a catalog that doesn't exist or belongs to another account is
+ * a 404.
  *
  * @param request - The request object
- * @returns `{ status, measurements, valuation, total_streams, catalog_age_years }`
+ * @returns `{ status, measurements, valuation, total_streams, artist_account_id, catalog_age_years }`
  */
 export async function getCatalogMeasurementsHandler(request: NextRequest): Promise<NextResponse> {
   try {
@@ -34,18 +38,18 @@ export async function getCatalogMeasurementsHandler(request: NextRequest): Promi
       return authResult;
     }
     const { accountId } = authResult;
-    const { catalogId } = validated;
+    const { catalogId, artist_account_id: artistAccountId } = validated;
 
     const link = await selectAccountCatalog({ accountId, catalogId });
     if (!link) {
       return errorResponse("Catalog not found", 404);
     }
 
-    const songs = await selectCatalogSongTitles(catalogId);
+    const songs = await resolveCatalogSongsInScope({ catalogId, artistAccountId });
     const titles = new Map(songs.map(s => [s.isrc, s.title]));
     const [rows, earliestReleaseDate] = await Promise.all([
       songs.length > 0
-        ? selectSongMeasurements({
+        ? selectAllSongMeasurements({
             songs: songs.map(s => s.isrc),
             platform: "spotify",
             metric: "platform_displayed_play_count",
@@ -64,6 +68,7 @@ export async function getCatalogMeasurementsHandler(request: NextRequest): Promi
       measurements,
       valuation,
       total_streams: totalStreams,
+      artist_account_id: artistAccountId ?? null,
       catalog_age_years: catalogAgeYears,
     });
   } catch (error) {

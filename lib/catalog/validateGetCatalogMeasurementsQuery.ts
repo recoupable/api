@@ -6,6 +6,7 @@ export const getCatalogMeasurementsQuerySchema = z.object({
   catalogId: z
     .string({ message: "catalogId parameter is required" })
     .uuid("catalogId must be a valid UUID"),
+  artist_account_id: z.string().uuid("artist_account_id must be a valid UUID").optional(),
 });
 
 export type GetCatalogMeasurementsQuery = z.infer<typeof getCatalogMeasurementsQuerySchema>;
