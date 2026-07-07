@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateGetCatalogMeasurementsQuery } from "./validateGetCatalogMeasurementsQuery";
 import { computeValuationBand } from "./computeValuationBand";
 import { getCatalogEarliestReleaseDate } from "./getCatalogEarliestReleaseDate";
@@ -16,7 +15,8 @@ import { selectCatalogMeasurementsPage } from "@/lib/supabase/song_measurements/
  * plus whole-scope aggregates: measured_song_count, total_streams and a
  * valuation band derived at read time with the same model as the marketing
  * valuation card. The aggregates are computed in a single SQL aggregate over
- * the entire scope — no row cap — regardless of the requested page.
+ * the entire scope — no row cap — regardless of the requested page. Auth and
+ * input validation both live in validateGetCatalogMeasurementsQuery (SRP).
  * Optionally scoped to one artist's songs (catalog_songs ∩ song_artists) via
  * artist_account_id; the applied filter is echoed back so clients can verify
  * the response scope. The account is resolved from credentials (Privy bearer
@@ -32,18 +32,11 @@ export async function getCatalogMeasurementsHandler(
   catalogIdParam: string,
 ): Promise<NextResponse> {
   try {
-    const { searchParams } = new URL(request.url);
-    const validated = validateGetCatalogMeasurementsQuery(searchParams, catalogIdParam);
+    const validated = await validateGetCatalogMeasurementsQuery(request, catalogIdParam);
     if (validated instanceof NextResponse) {
       return validated;
     }
-
-    const authResult = await validateAuthContext(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
-    const { accountId } = authResult;
-    const { catalogId, artist_account_id: artistAccountId, page, limit } = validated;
+    const { accountId, catalogId, artist_account_id: artistAccountId, page, limit } = validated;
 
     const link = await selectAccountCatalog({ accountId, catalogId });
     if (!link) {

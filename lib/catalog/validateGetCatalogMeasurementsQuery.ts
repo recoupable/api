@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { z } from "zod";
 
 export const getCatalogMeasurementsQuerySchema = z.object({
@@ -27,22 +28,30 @@ export const getCatalogMeasurementsQuerySchema = z.object({
     ),
 });
 
-export type GetCatalogMeasurementsQuery = z.infer<typeof getCatalogMeasurementsQuerySchema>;
+export type GetCatalogMeasurementsQuery = z.infer<typeof getCatalogMeasurementsQuerySchema> & {
+  accountId: string;
+};
 
 /**
- * Validates GET /api/catalogs/{catalogId}/measurements: the catalogId path
- * segment (uuid) plus the optional query modifiers (artist_account_id,
- * page, limit). The path id always wins — a catalogId smuggled into the
- * query string is ignored.
+ * Validates GET /api/catalogs/{catalogId}/measurements — auth (Privy bearer
+ * or x-api-key, resolved to the caller's accountId), the catalogId path
+ * segment (uuid), and the optional query modifiers (artist_account_id, page,
+ * limit). Auth runs first, per the validator convention of the measurements
+ * family. The path id always wins — a catalogId smuggled into the query
+ * string is ignored.
  *
- * @param searchParams - The URL search parameters to validate.
+ * @param request - The incoming HTTP request.
  * @param catalogId - The catalogId path segment.
  * @returns A NextResponse with an error if validation fails, or the validated request.
  */
-export function validateGetCatalogMeasurementsQuery(
-  searchParams: URLSearchParams,
+export async function validateGetCatalogMeasurementsQuery(
+  request: NextRequest,
   catalogId: string,
-): NextResponse | GetCatalogMeasurementsQuery {
+): Promise<NextResponse | GetCatalogMeasurementsQuery> {
+  const authResult = await validateAuthContext(request);
+  if (authResult instanceof NextResponse) return authResult;
+
+  const { searchParams } = new URL(request.url);
   const result = getCatalogMeasurementsQuerySchema.safeParse({
     ...Object.fromEntries(searchParams.entries()),
     catalogId,
@@ -60,5 +69,5 @@ export function validateGetCatalogMeasurementsQuery(
     );
   }
 
-  return result.data;
+  return { ...result.data, accountId: authResult.accountId };
 }
