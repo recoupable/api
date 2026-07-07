@@ -4,12 +4,15 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetTaskRunQuery } from "./validateGetTaskRunQuery";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
 import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
+import { attachRunTitles } from "./attachRunTitles";
 
 /**
  * Handles GET /api/tasks/runs requests.
  * Always returns { status: "success", runs: [...] }.
  * When runId is provided, runs contains a single element.
- * When omitted, runs contains recent runs for the authenticated account.
+ * When omitted, runs contains recent runs for the authenticated account,
+ * each annotated with the originating scheduled task's title (null when
+ * the run cannot be mapped to a scheduled task).
  *
  * @param request - The NextRequest object
  * @returns A NextResponse with the runs array
@@ -26,8 +29,13 @@ export async function getTaskRunHandler(request: NextRequest): Promise<NextRespo
         { "filter[tag]": `account:${validatedQuery.accountId}` },
         validatedQuery.limit,
       );
+      const runsWithTitles = await attachRunTitles(
+        runs,
+        validatedQuery.accountId,
+        validatedQuery.limit,
+      );
       return NextResponse.json(
-        { status: "success", runs },
+        { status: "success", runs: runsWithTitles },
         { status: 200, headers: getCorsHeaders() },
       );
     }
