@@ -6,10 +6,18 @@ const {
   verifyStripeWebhookEventMock,
   processCreditsTopupSessionMock,
   processCreditsTopupPaymentIntentMock,
+  processSubscriptionCreatedMock,
+  processSubscriptionTrialWillEndMock,
+  processSubscriptionUpdatedMock,
+  processSubscriptionDeletedMock,
 } = vi.hoisted(() => ({
   verifyStripeWebhookEventMock: vi.fn(),
   processCreditsTopupSessionMock: vi.fn(),
   processCreditsTopupPaymentIntentMock: vi.fn(),
+  processSubscriptionCreatedMock: vi.fn(),
+  processSubscriptionTrialWillEndMock: vi.fn(),
+  processSubscriptionUpdatedMock: vi.fn(),
+  processSubscriptionDeletedMock: vi.fn(),
 }));
 
 vi.mock("@/lib/stripe/verifyStripeWebhookEvent", () => ({
@@ -20,6 +28,18 @@ vi.mock("@/lib/stripe/processCreditsTopupSession", () => ({
 }));
 vi.mock("@/lib/stripe/processCreditsTopupPaymentIntent", () => ({
   processCreditsTopupPaymentIntent: processCreditsTopupPaymentIntentMock,
+}));
+vi.mock("@/lib/stripe/processSubscriptionCreated", () => ({
+  processSubscriptionCreated: processSubscriptionCreatedMock,
+}));
+vi.mock("@/lib/stripe/processSubscriptionTrialWillEnd", () => ({
+  processSubscriptionTrialWillEnd: processSubscriptionTrialWillEndMock,
+}));
+vi.mock("@/lib/stripe/processSubscriptionUpdated", () => ({
+  processSubscriptionUpdated: processSubscriptionUpdatedMock,
+}));
+vi.mock("@/lib/stripe/processSubscriptionDeleted", () => ({
+  processSubscriptionDeleted: processSubscriptionDeletedMock,
 }));
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -77,6 +97,52 @@ describe("stripeWebhookHandler", () => {
     await expect(res.json()).resolves.toEqual({ received: true });
     expect(processCreditsTopupSessionMock).not.toHaveBeenCalled();
     expect(processCreditsTopupPaymentIntentMock).not.toHaveBeenCalled();
+  });
+
+
+  it("delegates customer.subscription.created to processSubscriptionCreated", async () => {
+    const sub = { id: "sub_1", status: "trialing" };
+    verifyStripeWebhookEventMock.mockResolvedValue({
+      event: event("customer.subscription.created", sub),
+    });
+    const res = await stripeWebhookHandler(makeReq());
+    expect(res.status).toBe(200);
+    expect(processSubscriptionCreatedMock).toHaveBeenCalledWith(sub);
+  });
+
+  it("delegates customer.subscription.trial_will_end to processSubscriptionTrialWillEnd", async () => {
+    const sub = { id: "sub_1", trial_end: 1783415103 };
+    verifyStripeWebhookEventMock.mockResolvedValue({
+      event: event("customer.subscription.trial_will_end", sub),
+    });
+    const res = await stripeWebhookHandler(makeReq());
+    expect(res.status).toBe(200);
+    expect(processSubscriptionTrialWillEndMock).toHaveBeenCalledWith(sub);
+  });
+
+  it("delegates customer.subscription.updated with previous_attributes", async () => {
+    const sub = { id: "sub_1", cancel_at_period_end: true };
+    const previous = { cancel_at_period_end: false };
+    verifyStripeWebhookEventMock.mockResolvedValue({
+      event: {
+        id: "evt_1",
+        type: "customer.subscription.updated",
+        data: { object: sub, previous_attributes: previous },
+      } as unknown as Stripe.Event,
+    });
+    const res = await stripeWebhookHandler(makeReq());
+    expect(res.status).toBe(200);
+    expect(processSubscriptionUpdatedMock).toHaveBeenCalledWith(sub, previous);
+  });
+
+  it("delegates customer.subscription.deleted to processSubscriptionDeleted", async () => {
+    const sub = { id: "sub_1", status: "canceled" };
+    verifyStripeWebhookEventMock.mockResolvedValue({
+      event: event("customer.subscription.deleted", sub),
+    });
+    const res = await stripeWebhookHandler(makeReq());
+    expect(res.status).toBe(200);
+    expect(processSubscriptionDeletedMock).toHaveBeenCalledWith(sub);
   });
 
   it("returns 500 when the event handler throws (so Stripe retries)", async () => {

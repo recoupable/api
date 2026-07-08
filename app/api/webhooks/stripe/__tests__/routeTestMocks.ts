@@ -15,3 +15,19 @@ vi.mock("@/lib/stripe/processCreditsTopupSession", () => ({
 vi.mock("@/lib/stripe/processCreditsTopupPaymentIntent", () => ({
   processCreditsTopupPaymentIntent: vi.fn(),
 }));
+
+vi.mock("@/lib/stripe/processSubscriptionCreated", () => ({
+  processSubscriptionCreated: vi.fn(),
+}));
+
+vi.mock("@/lib/stripe/processSubscriptionTrialWillEnd", () => ({
+  processSubscriptionTrialWillEnd: vi.fn(),
+}));
+
+vi.mock("@/lib/stripe/processSubscriptionUpdated", () => ({
+  processSubscriptionUpdated: vi.fn(),
+}));
+
+vi.mock("@/lib/stripe/processSubscriptionDeleted", () => ({
+  processSubscriptionDeleted: vi.fn(),
+}));
