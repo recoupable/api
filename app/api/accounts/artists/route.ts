@@ -2,15 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAddArtistBody, type AddArtistBody } from "@/lib/accounts/validateAddArtistBody";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { resolveAddArtistAccountId } from "@/lib/accounts/resolveAddArtistAccountId";
 import { addArtistToAccountHandler } from "@/lib/accounts/addArtistToAccountHandler";
 
 /**
  * POST /api/accounts/artists
  *
- * Add an artist to an account's list of associated artists.
+ * Add an artist to the authenticated account's list of associated artists.
+ * Requires authentication (x-api-key or Authorization bearer token); the
+ * target account is derived from the credential. An optional email override
+ * is allowed only when the caller has access to that account.
  * If the artist is already associated with the account, returns success.
  *
- * @param req - The incoming request with email and artistId in body
+ * @param req - The incoming request with artistId (and optional email) in body
  * @returns NextResponse with success status or error
  */
 export async function POST(req: NextRequest) {
@@ -20,8 +25,19 @@ export async function POST(req: NextRequest) {
   if (validated instanceof NextResponse) {
     return validated;
   }
+  const { email, artistId } = validated as AddArtistBody;
 
-  return addArtistToAccountHandler(validated as AddArtistBody);
+  const authResult = await validateAuthContext(req);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
+  const accountIdOrError = await resolveAddArtistAccountId(authResult.accountId, email);
+  if (accountIdOrError instanceof NextResponse) {
+    return accountIdOrError;
+  }
+
+  return addArtistToAccountHandler({ accountId: accountIdOrError, artistId });
 }
 
 /**

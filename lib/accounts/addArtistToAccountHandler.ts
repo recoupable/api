@@ -1,31 +1,25 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { selectAccountByEmail } from "@/lib/supabase/account_emails/selectAccountByEmail";
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
 import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
-import type { AddArtistBody } from "./validateAddArtistBody";
 
 /**
  * Handles POST /api/accounts/artists - Add artist to account's artist list.
  *
- * @param body - Validated request body with email and artistId
+ * The account ID must already be resolved from the authenticated credential
+ * (see resolveAddArtistAccountId) — never from unauthenticated user input.
+ *
+ * @param params - The resolved account ID and artist ID to link
  * @returns NextResponse with success status
  */
-export async function addArtistToAccountHandler(body: AddArtistBody): Promise<NextResponse> {
-  const { email, artistId } = body;
-
+export async function addArtistToAccountHandler({
+  accountId,
+  artistId,
+}: {
+  accountId: string;
+  artistId: string;
+}): Promise<NextResponse> {
   try {
-    // Find account by email
-    const accountEmail = await selectAccountByEmail(email);
-    if (!accountEmail?.account_id) {
-      return NextResponse.json(
-        { message: "Not found account." },
-        { status: 400, headers: getCorsHeaders() },
-      );
-    }
-
-    const accountId = accountEmail.account_id;
-
     // Check if artist is already associated with account
     const existingArtists = await getAccountArtistIds({ accountIds: [accountId] });
     const alreadyExists = existingArtists.some(a => a.artist_id === artistId);
