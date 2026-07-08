@@ -1,6 +1,5 @@
 import type Stripe from "stripe";
-import { getCustomerEmail } from "@/lib/stripe/getCustomerEmail";
-import { getCustomerLifetimeValue } from "@/lib/stripe/getCustomerLifetimeValue";
+import { buildCustomerSalesContext } from "@/lib/stripe/buildCustomerSalesContext";
 import { formatUsd } from "@/lib/stripe/formatUsd";
 
 export interface SubscriptionSalesContext {
@@ -21,10 +20,7 @@ export const buildSubscriptionSalesContext = async (
   const customerId =
     typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
 
-  const [email, lifetimeCents] = await Promise.all([
-    getCustomerEmail(customerId),
-    getCustomerLifetimeValue(customerId),
-  ]);
+  const { email, customerLine, lifetimeLine } = await buildCustomerSalesContext(customerId);
 
   const price = subscription.items?.data?.[0]?.price;
   const planLine =
@@ -32,10 +28,5 @@ export const buildSubscriptionSalesContext = async (
       ? `Plan: ${formatUsd(price.unit_amount)}/${price.recurring.interval}`
       : "Plan: unknown";
 
-  return {
-    email,
-    customerLine: email ? `Customer: ${email} (${customerId})` : `Customer: ${customerId}`,
-    planLine,
-    lifetimeLine: `Lifetime value: ${formatUsd(lifetimeCents)}`,
-  };
+  return { email, customerLine, planLine, lifetimeLine };
 };

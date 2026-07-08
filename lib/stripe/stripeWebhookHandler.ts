@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { notifyCreditsTopupPaymentIntent } from "@/lib/stripe/notifyCreditsTopupPaymentIntent";
+import { notifyCreditsTopupSession } from "@/lib/stripe/notifyCreditsTopupSession";
 import { processCreditsTopupPaymentIntent } from "@/lib/stripe/processCreditsTopupPaymentIntent";
 import { processCreditsTopupSession } from "@/lib/stripe/processCreditsTopupSession";
+import { processInvoicePaid } from "@/lib/stripe/processInvoicePaid";
 import { processSubscriptionCreated } from "@/lib/stripe/processSubscriptionCreated";
 import { processSubscriptionDeleted } from "@/lib/stripe/processSubscriptionDeleted";
 import { processSubscriptionTrialWillEnd } from "@/lib/stripe/processSubscriptionTrialWillEnd";
@@ -20,8 +23,12 @@ export async function stripeWebhookHandler(request: NextRequest): Promise<NextRe
   try {
     if (event.type === "checkout.session.completed") {
       await processCreditsTopupSession(event.data.object as Stripe.Checkout.Session);
+      await notifyCreditsTopupSession(event.data.object as Stripe.Checkout.Session);
     } else if (event.type === "payment_intent.succeeded") {
       await processCreditsTopupPaymentIntent(event.data.object as Stripe.PaymentIntent);
+      await notifyCreditsTopupPaymentIntent(event.data.object as Stripe.PaymentIntent);
+    } else if (event.type === "invoice.paid") {
+      await processInvoicePaid(event.data.object as Stripe.Invoice);
     } else if (event.type === "customer.subscription.created") {
       await processSubscriptionCreated(event.data.object as Stripe.Subscription);
     } else if (event.type === "customer.subscription.trial_will_end") {

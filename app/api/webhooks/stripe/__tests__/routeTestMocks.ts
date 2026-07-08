@@ -31,3 +31,15 @@ vi.mock("@/lib/stripe/processSubscriptionUpdated", () => ({
 vi.mock("@/lib/stripe/processSubscriptionDeleted", () => ({
   processSubscriptionDeleted: vi.fn(),
 }));
+
+vi.mock("@/lib/stripe/processInvoicePaid", () => ({
+  processInvoicePaid: vi.fn(),
+}));
+
+vi.mock("@/lib/stripe/notifyCreditsTopupPaymentIntent", () => ({
+  notifyCreditsTopupPaymentIntent: vi.fn(),
+}));
+
+vi.mock("@/lib/stripe/notifyCreditsTopupSession", () => ({
+  notifyCreditsTopupSession: vi.fn(),
+}));
