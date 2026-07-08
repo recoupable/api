@@ -1,6 +1,7 @@
 import { selectCreditsUsage } from "@/lib/supabase/credits_usage/selectCreditsUsage";
 import { incrementRemainingCredits } from "@/lib/supabase/credits_usage/incrementRemainingCredits";
 import { resolveStripeCustomerForAccount } from "@/lib/stripe/resolveStripeCustomerForAccount";
+import { getAutoRechargeOptOut } from "@/lib/stripe/getAutoRechargeOptOut";
 import {
   chargeCustomerOffSession,
   type DeclineReason,
@@ -47,6 +48,31 @@ export async function autoRechargeOrFail(
   if (remaining >= creditsToDeduct) return { kind: "available" };
 
   const customer = await resolveStripeCustomerForAccount(accountId);
+
+  // Consent gate: an opted-out customer is never charged off-session. Fresh
+  // read by id (not the eventually-consistent search index) so a just-flipped
+  // opt-out is honored by this very request. Falls through to the Checkout
+  // session below — the explicit-consent path.
+  if (await getAutoRechargeOptOut(customer)) {
+    const session = await createCreditsStripeSession({
+      accountId,
+      credits: CREDIT_AUTO_RECHARGE_CREDITS,
+      successUrl,
+      customer,
+    });
+    if (!session.url) {
+      throw new Error(
+        `[autoRechargeOrFail] createCreditsStripeSession returned no url for account ${accountId}`,
+      );
+    }
+    return {
+      kind: "insufficient_credits",
+      remainingCredits: remaining,
+      requiredCredits: creditsToDeduct,
+      checkoutUrl: session.url,
+    };
+  }
+
   const { totalCents } = computeCreditsTopupCharge(CREDIT_AUTO_RECHARGE_CREDITS);
 
   const charge = await chargeCustomerOffSession({
