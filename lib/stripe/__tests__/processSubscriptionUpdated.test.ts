@@ -14,11 +14,14 @@ vi.mock("@/lib/telegram/sendSalesNotification", () => ({ sendSalesNotification: 
 const { processSubscriptionUpdated } = await import("@/lib/stripe/processSubscriptionUpdated");
 
 const sub = (overrides: object = {}): Stripe.Subscription =>
-  ({ id: "sub_1", customer: "cus_9", cancel_at_period_end: false, ...overrides }) as unknown as
-    Stripe.Subscription;
+  ({
+    id: "sub_1",
+    customer: "cus_9",
+    cancel_at_period_end: false,
+    ...overrides,
+  }) as unknown as Stripe.Subscription;
 
-const prev = (attrs: object): Partial<Stripe.Subscription> =>
-  attrs as Partial<Stripe.Subscription>;
+const prev = (attrs: object): Partial<Stripe.Subscription> => attrs as Partial<Stripe.Subscription>;
 
 describe("processSubscriptionUpdated", () => {
   beforeEach(() => {

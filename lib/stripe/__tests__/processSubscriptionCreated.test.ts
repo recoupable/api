@@ -21,8 +21,12 @@ const CTX = {
 };
 
 const sub = (overrides: object = {}): Stripe.Subscription =>
-  ({ id: "sub_1", customer: "cus_9", status: "active", ...overrides }) as unknown as
-    Stripe.Subscription;
+  ({
+    id: "sub_1",
+    customer: "cus_9",
+    status: "active",
+    ...overrides,
+  }) as unknown as Stripe.Subscription;
 
 describe("processSubscriptionCreated", () => {
   beforeEach(() => {

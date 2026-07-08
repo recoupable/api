@@ -99,7 +99,6 @@ describe("stripeWebhookHandler", () => {
     expect(processCreditsTopupPaymentIntentMock).not.toHaveBeenCalled();
   });
 
-
   it("delegates customer.subscription.created to processSubscriptionCreated", async () => {
     const sub = { id: "sub_1", status: "trialing" };
     verifyStripeWebhookEventMock.mockResolvedValue({
