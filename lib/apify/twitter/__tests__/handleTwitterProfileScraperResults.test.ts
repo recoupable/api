@@ -76,4 +76,22 @@ describe("handleTwitterProfileScraperResults", () => {
     expect(upsertSocials).not.toHaveBeenCalled();
     expect(persistPostsForSocial).not.toHaveBeenCalled();
   });
+
+  it("excludes retweets and replies from persisted posts and the newness diff", async () => {
+    listItems.mockResolvedValue({
+      items: [
+        { ...REAL_ITEM, url: "https://x.com/a/status/1" },
+        { ...REAL_ITEM, url: "https://x.com/other/status/2", isRetweet: true },
+        { ...REAL_ITEM, url: "https://x.com/a/status/3", isReply: true },
+      ],
+    });
+    await handleTwitterProfileScraperResults(payload as never);
+    expect(persistPostsForSocial).toHaveBeenCalledWith(
+      expect.objectContaining({
+        postRows: [
+          { post_url: "https://x.com/a/status/1", updated_at: "2026-07-02T17:21:21.000Z" },
+        ],
+      }),
+    );
+  });
 });

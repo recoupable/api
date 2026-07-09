@@ -4,12 +4,16 @@ import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
 import { persistPostsForSocial } from "@/lib/apify/persistPostsForSocial";
 import { filterNewPostUrls } from "@/lib/socials/filterNewPostUrls";
 import { toIsoDate } from "@/lib/apify/toIsoDate";
+import { isOriginalTweet } from "@/lib/apify/twitter/isOriginalTweet";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 import type { TablesInsert } from "@/types/database.types";
 
 /** Tweet item from apidojo~twitter-scraper-lite (real shape, run ALVMZYXkh3WHgeGfT;
  * tweet fields verified on run bx3asRqfbNnkKgogG). */
 type TweetItem = {
+  isRetweet?: boolean;
+  isQuote?: boolean;
+  isReply?: boolean;
   url?: string;
   createdAt?: string;
   author?: {
@@ -50,8 +54,12 @@ export async function handleTwitterProfileScraperResults(parsed: ApifyWebhookPay
   // Tweet URLs keep the author's display casing — the path segment is the
   // case-sensitive status id's context, and unlike profile keys they are
   // stored as-is (posts upsert keys on exact post_url).
+  // Only the artist's own posts count — retweets are someone else's content
+  // and stats, replies are conversation (chat#1855).
   const postRows: TablesInsert<"posts">[] = (items as TweetItem[]).flatMap(item =>
-    item.url ? [{ post_url: item.url, updated_at: toIsoDate(item.createdAt) }] : [],
+    item.url && isOriginalTweet(item)
+      ? [{ post_url: item.url, updated_at: toIsoDate(item.createdAt) }]
+      : [],
   );
   // Diff before persisting so the digest can report genuinely new posts (chat#1855).
   const newPostUrls = await filterNewPostUrls(postRows.map(p => p.post_url));
