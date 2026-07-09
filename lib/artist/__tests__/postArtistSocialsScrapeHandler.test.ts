@@ -9,6 +9,9 @@ import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess
 import { ensureSocialScrapeCredits } from "@/lib/socials/ensureSocialScrapeCredits";
 import { deductSocialScrapeCredits } from "@/lib/socials/deductSocialScrapeCredits";
 
+vi.mock("@/lib/supabase/apify_scraper_runs/upsertApifyScraperRuns", () => ({
+  upsertApifyScraperRuns: vi.fn(async () => ({ data: null, error: null })),
+}));
 vi.mock("@/lib/apify/scrapeProfileUrlBatch", () => ({ scrapeProfileUrlBatch: vi.fn() }));
 vi.mock("@/lib/supabase/account_socials/selectAccountSocials", () => ({
   selectAccountSocials: vi.fn(),
@@ -42,8 +45,8 @@ describe("postArtistSocialsScrapeHandler", () => {
     vi.mocked(ensureSocialScrapeCredits).mockResolvedValue(null);
     vi.mocked(selectAccountSocials).mockResolvedValue(TWO_SOCIALS as never);
     vi.mocked(scrapeProfileUrlBatch).mockResolvedValue([
-      { runId: "r1", datasetId: "d1", error: null },
-      { runId: "r2", datasetId: "d2", error: null },
+      { runId: "r1", datasetId: "d1", error: null, profileUrl: null },
+      { runId: "r2", datasetId: "d2", error: null, profileUrl: null },
     ]);
   });
 
@@ -99,7 +102,7 @@ describe("postArtistSocialsScrapeHandler", () => {
 
   it("forwards posts and deducts (5 + posts) per profile actually scraped", async () => {
     vi.mocked(scrapeProfileUrlBatch).mockResolvedValue([
-      { runId: "r1", datasetId: "d1", error: null },
+      { runId: "r1", datasetId: "d1", error: null, profileUrl: null },
     ]);
     await postArtistSocialsScrapeHandler(makeRequest({ artist_account_id: ARTIST_ID, posts: 20 }));
     expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 50);

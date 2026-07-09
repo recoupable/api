@@ -14,6 +14,8 @@ import { uploadLinkToArweave } from "@/lib/arweave/uploadLinkToArweave";
 import { getFetchableUrl } from "@/lib/arweave/getFetchableUrl";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
+import { filterNewPostUrls } from "@/lib/socials/filterNewPostUrls";
+import { selectApifyScraperRun } from "@/lib/supabase/apify_scraper_runs/selectApifyScraperRun";
 import type { TablesInsert } from "@/types/database.types";
 
 /**
@@ -40,6 +42,9 @@ export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookP
     post.url ? [{ post_url: post.url, updated_at: post.timestamp }] : [],
   );
   if (postRows.length === 0) return { posts: [], social: null };
+  // Diff BEFORE upserting — afterwards every scraped post exists and nothing
+  // is distinguishable as new (chat#1855).
+  const newPostUrls = await filterNewPostUrls(postRows.map(p => p.post_url));
   await upsertPosts(postRows);
   const posts = await getPosts({ postUrls: postRows.map(p => p.post_url) });
 
@@ -94,12 +99,21 @@ export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookP
 
   // Email + follow-up scrape are independent side effects; isolate so a
   // mail outage doesn't block comment scraping and vice versa.
+  // Digest-batch runs get ONE consolidated email from the webhook layer —
+  // suppress the per-platform solo email for them (chat#1855). Legacy runs
+  // (no batch registration) keep the immediate alert.
+  const registeredRun = parsed.resource.id ? await selectApifyScraperRun(parsed.resource.id) : null;
+
   let sentEmails = null;
   try {
-    sentEmails = await sendApifyWebhookEmail(
-      firstResult,
-      accountEmails.map(e => e.email).filter(Boolean),
-    );
+    // Only notify when the scrape actually found posts new to the platform —
+    // otherwise every scrape re-announces the profile's recent feed.
+    if (newPostUrls.length > 0 && !registeredRun?.batch_id) {
+      sentEmails = await sendApifyWebhookEmail(
+        firstResult,
+        accountEmails.map(e => e.email).filter(Boolean),
+      );
+    }
   } catch (error) {
     console.error("[WARN] webhook email failed:", error);
   }
@@ -110,5 +124,5 @@ export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookP
     console.error("[WARN] follow-up scrape failed:", error);
   }
 
-  return { posts, social, accountSocials, accountEmails, sentEmails };
+  return { posts, social, accountSocials, accountEmails, sentEmails, newPostUrls };
 }

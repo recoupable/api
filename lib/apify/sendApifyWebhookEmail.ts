@@ -45,9 +45,13 @@ Latest Posts: ${(Array.isArray(profile.latestPosts) ? profile.latestPosts : []).
     prompt,
   });
 
+  // Recipients span multiple customer accounts (the social's watchers are
+  // resolved cross-tenant), so they must NEVER share a visible To: line —
+  // BCC only, with ourselves as the required To: (chat#1855).
   return await sendEmailWithResend({
     from: RECOUP_FROM_EMAIL,
-    to: emails,
+    to: [RECOUP_FROM_EMAIL],
+    bcc: emails,
     subject: `${profile.fullName ?? profile.username ?? "Your artist"} has new posts on Instagram`,
     html: text,
   });
