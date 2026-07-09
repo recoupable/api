@@ -1,4 +1,4 @@
-import { selectSongArtistsBySongs } from "@/lib/supabase/song_artists/selectSongArtistsBySongs";
+import { selectSongArtists } from "@/lib/supabase/song_artists/selectSongArtists";
 import { getDominantSongArtist } from "@/lib/songs/getDominantSongArtist";
 import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
 import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
@@ -25,7 +25,7 @@ export async function attachCanonicalArtistToAccount(params: {
   try {
     if (isrcs.length === 0) return null;
 
-    const links = await selectSongArtistsBySongs(isrcs);
+    const links = (await selectSongArtists({ songs: isrcs })) ?? [];
     const artistId = getDominantSongArtist(links);
     if (!artistId) return null;
 
