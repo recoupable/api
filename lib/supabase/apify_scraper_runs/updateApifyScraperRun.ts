@@ -1,5 +1,5 @@
 import supabase from "@/lib/supabase/serverClient";
-import type { ApifyScraperRunRow } from "@/lib/supabase/apify_scraper_runs/types";
+import type { Tables } from "@/types/database.types";
 
 /**
  * Marks a scrape run's results as processed and records which post URLs were
@@ -9,10 +9,10 @@ import type { ApifyScraperRunRow } from "@/lib/supabase/apify_scraper_runs/types
 export async function updateApifyScraperRun(
   runId: string,
   newPostUrls: string[],
-): Promise<ApifyScraperRunRow | null> {
+): Promise<Tables<"apify_scraper_runs"> | null> {
   const { data, error } = await supabase
-    .from("apify_scraper_runs" as never)
-    .update({ completed_at: new Date().toISOString(), new_post_urls: newPostUrls } as never)
+    .from("apify_scraper_runs")
+    .update({ completed_at: new Date().toISOString(), new_post_urls: newPostUrls })
     .eq("run_id", runId)
     .select()
     .maybeSingle();
@@ -20,5 +20,5 @@ export async function updateApifyScraperRun(
     console.error("[ERROR] updateApifyScraperRun:", error);
     return null;
   }
-  return (data as ApifyScraperRunRow | null) ?? null;
+  return data ?? null;
 }

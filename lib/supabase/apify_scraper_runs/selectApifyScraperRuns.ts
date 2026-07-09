@@ -1,5 +1,5 @@
 import supabase from "@/lib/supabase/serverClient";
-import type { ApifyScraperRunRow } from "@/lib/supabase/apify_scraper_runs/types";
+import type { Tables } from "@/types/database.types";
 
 /**
  * Select scrape runs with optional filters.
@@ -10,8 +10,8 @@ export async function selectApifyScraperRuns({
   batchId,
 }: {
   batchId?: string;
-} = {}): Promise<ApifyScraperRunRow[]> {
-  let query = supabase.from("apify_scraper_runs" as never).select("*");
+} = {}): Promise<Tables<"apify_scraper_runs">[]> {
+  let query = supabase.from("apify_scraper_runs").select("*");
 
   if (batchId) {
     query = query.eq("batch_id", batchId);
@@ -22,5 +22,5 @@ export async function selectApifyScraperRuns({
     console.error("[ERROR] selectApifyScraperRuns:", error);
     return [];
   }
-  return (data as ApifyScraperRunRow[] | null) ?? [];
+  return data ?? [];
 }

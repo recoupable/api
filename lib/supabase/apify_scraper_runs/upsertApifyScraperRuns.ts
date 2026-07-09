@@ -1,5 +1,5 @@
 import supabase from "@/lib/supabase/serverClient";
-import type { ApifyScraperRunRow } from "@/lib/supabase/apify_scraper_runs/types";
+import type { TablesInsert } from "@/types/database.types";
 
 /**
  * Records scrape runs at start time so per-platform webhook completions can
@@ -7,13 +7,11 @@ import type { ApifyScraperRunRow } from "@/lib/supabase/apify_scraper_runs/types
  *
  * @param runs - One row per started Apify run (run_id, account_id, batch_id, …).
  */
-export async function upsertApifyScraperRuns(
-  runs: Pick<ApifyScraperRunRow, "run_id" | "account_id" | "social_id" | "platform" | "batch_id">[],
-) {
+export async function upsertApifyScraperRuns(runs: TablesInsert<"apify_scraper_runs">[]) {
   if (!runs.length) return { data: null, error: null };
   const { data, error } = await supabase
-    .from("apify_scraper_runs" as never)
-    .upsert(runs as never[], { onConflict: "run_id", ignoreDuplicates: true });
+    .from("apify_scraper_runs")
+    .upsert(runs, { onConflict: "run_id", ignoreDuplicates: true });
   if (error) console.error("[ERROR] upsertApifyScraperRuns:", error);
   return { data, error };
 }
