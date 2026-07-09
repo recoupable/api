@@ -78,6 +78,19 @@ describe("renderScrapeDigestHtml", () => {
     expect(html).toContain('href="https://chat.recoupable.dev/?q=');
   });
 
+  it("shows the Recoup logo linking to recoupable.com", () => {
+    const { html } = renderScrapeDigestHtml({ sections: SECTIONS, artistName: "Ashnikko" });
+    expect(html).toContain('href="https://recoupable.com"');
+    expect(html).toContain('src="https://chat.recoupable.dev/icon-with-background.png"');
+  });
+
+  it("names the artist in the roster footer, with a safe fallback", () => {
+    const named = renderScrapeDigestHtml({ sections: SECTIONS, artistName: "Ashnikko" });
+    expect(named.html).toContain("because Ashnikko is in your roster on Recoup");
+    const anon = renderScrapeDigestHtml({ sections: SECTIONS });
+    expect(anon.html).toContain("because this artist is in your roster on Recoup");
+  });
+
   it("never leaks internal vendor jargon to customers", () => {
     const { html, subject } = renderScrapeDigestHtml({
       sections: SECTIONS,

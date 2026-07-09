@@ -18,6 +18,9 @@ export type ScrapeDigestPost = {
 // customers must never land (funnel-tracking landing page tracked separately
 // on chat#1855).
 const CHAT_APP_URL = "https://chat.recoupable.dev";
+const WEBSITE_URL = "https://recoupable.com";
+// Hosted on prod chat — email clients need an absolute PNG (no SVG support).
+const LOGO_URL = "https://chat.recoupable.dev/icon-with-background.png";
 
 export type ScrapeDigestSection = { platform: string; posts: ScrapeDigestPost[] };
 
@@ -113,12 +116,17 @@ export function renderScrapeDigestHtml({
   const html = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f7;padding:24px 0"><tr><td align="center">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #e8e8e8;border-radius:16px">
 <tr><td style="padding:32px 32px 24px;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td valign="top">
 <p style="margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b6b6b">New posts</p>
 <h1 style="margin:0 0 8px;font-size:26px;line-height:1.2;letter-spacing:-0.02em;color:#0a0a0a">${escapeHtml(who)}</h1>
 <p style="margin:0;font-size:14px;color:#6b6b6b">${total} new post${total === 1 ? "" : "s"} since we last checked</p>
+</td>
+<td valign="top" align="right" width="44"><a href="${WEBSITE_URL}"><img src="${LOGO_URL}" width="36" height="36" alt="Recoup" style="display:block;width:36px;height:36px;border-radius:8px"/></a></td>
+</tr></table>
 ${sectionHtml}
 <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 0"><tr><td style="background:#0a0a0a;border-radius:8px"><a href="${chatUrl}" style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none">Ask Recoup about these posts →</a></td></tr></table>
-<p style="margin:24px 0 0;font-size:12px;color:#6b6b6b">You're receiving this because you work with this artist on Recoup.</p>
+<p style="margin:24px 0 0;font-size:12px;color:#6b6b6b">You're receiving this because ${artistName ? escapeHtml(artistName) : "this artist"} is in your roster on Recoup.</p>
 </td></tr></table>
 </td></tr></table>`;
 
