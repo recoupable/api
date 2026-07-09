@@ -1,27 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { safeParseJson } from "@/lib/networking/safeParseJson";
-import { validateAddArtistBody, type AddArtistBody } from "@/lib/accounts/validateAddArtistBody";
 import { addArtistToAccountHandler } from "@/lib/accounts/addArtistToAccountHandler";
 
 /**
  * POST /api/accounts/artists
  *
- * Add an artist to an account's list of associated artists.
+ * Add an artist to the authenticated account's list of associated artists.
+ * Requires authentication (x-api-key or Authorization bearer token); the
+ * target account is derived from the credential. An optional email override
+ * is allowed only when the caller has access to that account.
  * If the artist is already associated with the account, returns success.
  *
- * @param req - The incoming request with email and artistId in body
+ * @param req - The incoming request with artistId (and optional email) in body
  * @returns NextResponse with success status or error
  */
 export async function POST(req: NextRequest) {
-  const body = await safeParseJson(req);
-
-  const validated = validateAddArtistBody(body);
-  if (validated instanceof NextResponse) {
-    return validated;
-  }
-
-  return addArtistToAccountHandler(validated as AddArtistBody);
+  return addArtistToAccountHandler(req);
 }
 
 /**

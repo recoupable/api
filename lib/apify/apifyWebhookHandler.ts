@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateApifyWebhookRequest } from "@/lib/apify/validateApifyWebhookRequest";
 import { getApifyResultHandler } from "@/lib/apify/getApifyResultHandler";
-import { completeApifyScraperRun } from "@/lib/supabase/apify_scraper_runs/completeApifyScraperRun";
+import { updateApifyScraperRun } from "@/lib/supabase/apify_scraper_runs/updateApifyScraperRun";
 import { maybeSendScrapeDigest } from "@/lib/apify/digest/maybeSendScrapeDigest";
 
 /**
@@ -38,7 +38,7 @@ export async function apifyWebhookHandler(request: NextRequest): Promise<NextRes
       try {
         const newPostUrls =
           (result as { newPostUrls?: string[] } | null | undefined)?.newPostUrls ?? [];
-        const run = await completeApifyScraperRun(runId, newPostUrls);
+        const run = await updateApifyScraperRun(runId, newPostUrls);
         await maybeSendScrapeDigest(run?.batch_id);
       } catch (digestError) {
         console.error("[WARN] scrape digest bookkeeping failed:", digestError);

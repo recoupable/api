@@ -3,15 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateDisconnectConnectorRequest } from "../validateDisconnectConnectorRequest";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
+import { checkConnectorAuthority } from "../../checkConnectorAuthority";
 import { verifyConnectorOwnership } from "../verifyConnectorOwnership";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/auth/checkAccountAccess", () => ({
-  checkAccountAccess: vi.fn(),
+vi.mock("../../checkConnectorAuthority", () => ({
+  checkConnectorAuthority: vi.fn(),
 }));
 
 vi.mock("../verifyConnectorOwnership", () => ({
@@ -91,7 +91,7 @@ describe("validateDisconnectConnectorRequest", () => {
       orgId: null,
       authToken: "test-token",
     });
-    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "artist" });
+    vi.mocked(checkConnectorAuthority).mockResolvedValue(true);
 
     const request = new NextRequest("http://localhost/api/connectors", {
       method: "DELETE",
@@ -99,7 +99,7 @@ describe("validateDisconnectConnectorRequest", () => {
     });
     const result = await validateDisconnectConnectorRequest(request);
 
-    expect(checkAccountAccess).toHaveBeenCalledWith("account-123", mockTargetAccountId);
+    expect(checkConnectorAuthority).toHaveBeenCalledWith("account-123", mockTargetAccountId);
     expect(verifyConnectorOwnership).not.toHaveBeenCalled();
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
@@ -115,7 +115,7 @@ describe("validateDisconnectConnectorRequest", () => {
       orgId: null,
       authToken: "test-token",
     });
-    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "workspace" });
+    vi.mocked(checkConnectorAuthority).mockResolvedValue(true);
 
     const request = new NextRequest("http://localhost/api/connectors", {
       method: "DELETE",
@@ -123,7 +123,7 @@ describe("validateDisconnectConnectorRequest", () => {
     });
     const result = await validateDisconnectConnectorRequest(request);
 
-    expect(checkAccountAccess).toHaveBeenCalledWith("account-123", mockTargetAccountId);
+    expect(checkConnectorAuthority).toHaveBeenCalledWith("account-123", mockTargetAccountId);
     expect(result).not.toBeInstanceOf(NextResponse);
   });
 
@@ -134,7 +134,7 @@ describe("validateDisconnectConnectorRequest", () => {
       orgId: null,
       authToken: "test-token",
     });
-    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: false });
+    vi.mocked(checkConnectorAuthority).mockResolvedValue(false);
 
     const request = new NextRequest("http://localhost/api/connectors", {
       method: "DELETE",

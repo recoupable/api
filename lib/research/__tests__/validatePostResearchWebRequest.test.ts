@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { validatePostResearchWebRequest } from "../validatePostResearchWebRequest";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
 
 vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
   ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
@@ -51,5 +52,12 @@ describe("validatePostResearchWebRequest", () => {
   it("returns validated payload on success", async () => {
     const res = await validatePostResearchWebRequest(req({ query: "x", country: "US" }));
     expect(res).toEqual({ accountId: "acct", query: "x", country: "US" });
+  });
+
+  it("gates with exactly 1 credit (web search costs 1, not the research family's 5)", async () => {
+    await validatePostResearchWebRequest(req({ query: "x" }));
+    expect(ensureCreditsOrShortCircuit).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: "acct", creditsToDeduct: 1 }),
+    );
   });
 });

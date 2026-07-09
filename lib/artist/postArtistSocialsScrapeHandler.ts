@@ -8,7 +8,7 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import { ensureSocialScrapeCredits } from "@/lib/socials/ensureSocialScrapeCredits";
 import { deductSocialScrapeCredits } from "@/lib/socials/deductSocialScrapeCredits";
-import { insertApifyScraperRuns } from "@/lib/supabase/apify_scraper_runs/insertApifyScraperRuns";
+import { upsertApifyScraperRuns } from "@/lib/supabase/apify_scraper_runs/upsertApifyScraperRuns";
 import { getSocialPlatformByLink } from "@/lib/artists/getSocialPlatformByLink";
 import { getSocialScrapeCreditCost } from "@/lib/socials/getSocialScrapeCreditCost";
 
@@ -80,7 +80,7 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
       const socialByUrl = new Map(
         socials.map(s => [s.social?.profile_url ?? "", s.social?.id ?? null]),
       );
-      await insertApifyScraperRuns(
+      await upsertApifyScraperRuns(
         results
           .filter(r => r.runId)
           .map(r => ({

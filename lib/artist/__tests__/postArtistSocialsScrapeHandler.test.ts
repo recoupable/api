@@ -9,8 +9,8 @@ import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess
 import { ensureSocialScrapeCredits } from "@/lib/socials/ensureSocialScrapeCredits";
 import { deductSocialScrapeCredits } from "@/lib/socials/deductSocialScrapeCredits";
 
-vi.mock("@/lib/supabase/apify_scraper_runs/insertApifyScraperRuns", () => ({
-  insertApifyScraperRuns: vi.fn(async () => ({ data: null, error: null })),
+vi.mock("@/lib/supabase/apify_scraper_runs/upsertApifyScraperRuns", () => ({
+  upsertApifyScraperRuns: vi.fn(async () => ({ data: null, error: null })),
 }));
 vi.mock("@/lib/apify/scrapeProfileUrlBatch", () => ({ scrapeProfileUrlBatch: vi.fn() }));
 vi.mock("@/lib/supabase/account_socials/selectAccountSocials", () => ({
