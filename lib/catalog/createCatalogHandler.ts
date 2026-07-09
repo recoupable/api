@@ -8,6 +8,8 @@ import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/sel
 import { selectCatalogById } from "@/lib/supabase/catalogs/selectCatalogById";
 import { insertCatalog } from "@/lib/supabase/catalogs/insertCatalog";
 import { insertAccountCatalog } from "@/lib/supabase/account_catalogs/insertAccountCatalog";
+import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
+import { attachCanonicalArtistToAccount } from "./attachCanonicalArtistToAccount";
 
 const DEFAULT_CATALOG_NAME = "Valuation Catalog";
 
@@ -19,7 +21,9 @@ const DEFAULT_CATALOG_NAME = "Valuation Catalog";
  *
  * With `snapshot`, materializes the catalog from a completed valuation snapshot:
  * the snapshot must be owned by the caller, and re-claiming the same snapshot is
- * idempotent (returns the catalog already created for that run).
+ * idempotent (returns the catalog already created for that run). Claiming —
+ * including re-claiming — also attaches the snapshot's canonical artist to the
+ * caller's roster (chat#1850 P1).
  *
  * @param request - The request object
  * @returns A NextResponse with `{ status, catalog, songs_added }`
@@ -53,10 +57,17 @@ export async function createCatalogHandler(request: NextRequest): Promise<NextRe
       return errorResponse("Snapshot belongs to a different account", 403);
     }
 
-    // Idempotent re-claim: the run already produced a catalog.
+    // Idempotent re-claim: the run already produced a catalog. Still attach
+    // the canonical artist (chat#1850 P1) so claims made before the roster
+    // attach shipped heal on the next click; the attach is itself idempotent.
     if (snapshot.catalog) {
       const existing = await selectCatalogById(snapshot.catalog);
       if (existing) {
+        const measurements = await selectSongMeasurements({ snapshot: snapshot.id });
+        const isrcs = [...new Set(measurements.map(m => m.song))];
+        if (isrcs.length > 0) {
+          await attachCanonicalArtistToAccount({ accountId, isrcs });
+        }
         return successResponse({ catalog: existing, songs_added: 0 });
       }
     }
