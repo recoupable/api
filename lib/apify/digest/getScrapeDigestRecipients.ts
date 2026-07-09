@@ -7,9 +7,11 @@ import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmai
  * of every artist watching any of them (same chain the per-platform alert
  * used). Recipients span tenants — senders must BCC (chat#1855).
  */
-export async function getScrapeDigestRecipients(socialIds: string[]): Promise<string[]> {
+export async function getScrapeDigestRecipients(
+  socialIds: string[],
+): Promise<{ emails: string[]; artistIds: string[] }> {
   const uniqueSocialIds = Array.from(new Set(socialIds.filter(Boolean)));
-  if (!uniqueSocialIds.length) return [];
+  if (!uniqueSocialIds.length) return { emails: [], artistIds: [] };
 
   const accountSocials = (
     await Promise.all(
@@ -24,5 +26,8 @@ export async function getScrapeDigestRecipients(socialIds: string[]): Promise<st
     new Set(accountArtistIds.map(a => a.account_id).filter((id): id is string => Boolean(id))),
   );
   const accountEmails = await selectAccountEmails({ accountIds: uniqueAccountIds });
-  return Array.from(new Set(accountEmails.map(e => e.email).filter(Boolean)));
+  return {
+    emails: Array.from(new Set(accountEmails.map(e => e.email).filter(Boolean))),
+    artistIds: Array.from(new Set(accountSocials.map(a => a.account_id).filter(Boolean))),
+  };
 }
