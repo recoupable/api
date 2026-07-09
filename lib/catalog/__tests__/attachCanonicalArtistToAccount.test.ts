@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { attachCanonicalArtistToAccount } from "../attachCanonicalArtistToAccount";
-import { selectSongArtistsBySongs } from "@/lib/supabase/song_artists/selectSongArtistsBySongs";
+import { selectSongArtists } from "@/lib/supabase/song_artists/selectSongArtists";
 import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
 import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
 
-vi.mock("@/lib/supabase/song_artists/selectSongArtistsBySongs", () => ({
-  selectSongArtistsBySongs: vi.fn(),
+vi.mock("@/lib/supabase/song_artists/selectSongArtists", () => ({
+  selectSongArtists: vi.fn(),
 }));
 vi.mock("@/lib/supabase/account_artist_ids/selectAccountArtistId", () => ({
   selectAccountArtistId: vi.fn(),
@@ -23,7 +23,7 @@ describe("attachCanonicalArtistToAccount", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("resolves the dominant artist through song_artists and links it to the account", async () => {
-    vi.mocked(selectSongArtistsBySongs).mockResolvedValue([
+    vi.mocked(selectSongArtists).mockResolvedValue([
       link("A", canonicalId),
       link("B", canonicalId),
       link("B", "collab-1"),
@@ -32,13 +32,13 @@ describe("attachCanonicalArtistToAccount", () => {
 
     const result = await attachCanonicalArtistToAccount({ accountId, isrcs: ["A", "B"] });
 
-    expect(selectSongArtistsBySongs).toHaveBeenCalledWith(["A", "B"]);
+    expect(selectSongArtists).toHaveBeenCalledWith({ songs: ["A", "B"] });
     expect(insertAccountArtistId).toHaveBeenCalledWith(accountId, canonicalId);
     expect(result).toBe(canonicalId);
   });
 
   it("does not insert when the account already has the canonical artist", async () => {
-    vi.mocked(selectSongArtistsBySongs).mockResolvedValue([link("A", canonicalId)]);
+    vi.mocked(selectSongArtists).mockResolvedValue([link("A", canonicalId)]);
     vi.mocked(selectAccountArtistId).mockResolvedValue({
       id: "existing",
       artist_id: canonicalId,
@@ -52,7 +52,7 @@ describe("attachCanonicalArtistToAccount", () => {
   });
 
   it("no-ops when the songs have no artist links yet", async () => {
-    vi.mocked(selectSongArtistsBySongs).mockResolvedValue([]);
+    vi.mocked(selectSongArtists).mockResolvedValue([]);
 
     const result = await attachCanonicalArtistToAccount({ accountId, isrcs: ["A"] });
 
@@ -64,13 +64,13 @@ describe("attachCanonicalArtistToAccount", () => {
   it("no-ops when there are no ISRCs", async () => {
     const result = await attachCanonicalArtistToAccount({ accountId, isrcs: [] });
 
-    expect(selectSongArtistsBySongs).not.toHaveBeenCalled();
+    expect(selectSongArtists).not.toHaveBeenCalled();
     expect(result).toBeNull();
   });
 
   it("never throws: a failed attach must not fail the claim", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.mocked(selectSongArtistsBySongs).mockResolvedValue([link("A", canonicalId)]);
+    vi.mocked(selectSongArtists).mockResolvedValue([link("A", canonicalId)]);
     vi.mocked(selectAccountArtistId).mockResolvedValue(null);
     vi.mocked(insertAccountArtistId).mockRejectedValue(new Error("insert failed"));
 

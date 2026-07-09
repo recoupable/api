@@ -1,6 +1,7 @@
 import { deleteAccountArtistId } from "@/lib/supabase/account_artist_ids/deleteAccountArtistId";
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
 import { deleteAccountById } from "@/lib/supabase/accounts/deleteAccountById";
+import { selectSongArtists } from "@/lib/supabase/song_artists/selectSongArtists";
 
 export interface DeleteArtistParams {
   artistId: string;
@@ -12,7 +13,11 @@ export interface DeleteArtistParams {
  *
  * The validator is responsible for existence and access checks. This helper
  * only removes the direct owner link and deletes the artist account if that
- * link was the last remaining association.
+ * link was the last remaining association AND the canonical artist has no
+ * song dependencies. account_artist_ids.artist_id cascades on account delete,
+ * so hard-deleting a canonical with song_artists rows would destroy the song
+ * graph shared across customers — in that case only the caller's link is
+ * removed and the canonical account is kept.
  *
  * @param params - Delete artist parameters
  * @param params.artistId - Artist account ID to remove
@@ -33,7 +38,13 @@ export async function deleteArtist({
   });
 
   if (remainingLinks.length === 0) {
-    await deleteAccountById(artistId);
+    const songArtists = await selectSongArtists({ artists: [artistId] });
+    // Fail closed: a null (query error) is treated as "has dependencies" so an
+    // unknown state never hard-deletes a canonical that may own a song graph.
+    const hasSongDependencies = songArtists === null || songArtists.length > 0;
+    if (!hasSongDependencies) {
+      await deleteAccountById(artistId);
+    }
   }
 
   return artistId;
