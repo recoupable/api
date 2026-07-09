@@ -90,3 +90,38 @@ describe("extractPostsFromDatasetItems", () => {
     expect(posts[1]).toEqual({ url: "https://instagram.com/p/not-in-items" });
   });
 });
+
+const TWEET_ITEMS = [
+  {
+    url: "https://x.com/a/status/1",
+    fullText: "New single out on all platforms",
+    createdAt: "Wed Jul 08 19:43:50 +0000 2026",
+    likeCount: 5,
+    replyCount: 1,
+    retweetCount: 2,
+    viewCount: 748,
+    extendedEntities: { media: [{ media_url_https: "https://pbs.twimg.com/media/x.jpg" }] },
+  },
+];
+
+describe("extractPostsFromDatasetItems — twitter", () => {
+  it("maps tweets limited to the new URLs, with media and stats", () => {
+    const posts = extractPostsFromDatasetItems("twitter", TWEET_ITEMS, [
+      "https://x.com/a/status/1",
+    ]);
+    expect(posts).toEqual([
+      {
+        url: "https://x.com/a/status/1",
+        caption: "New single out on all platforms",
+        thumbnailUrl: "https://pbs.twimg.com/media/x.jpg",
+        timestamp: "2026-07-08T19:43:50.000Z",
+        stats: { likes: 5, comments: 1, views: 748, shares: 2 },
+      },
+    ]);
+  });
+
+  it("maps the x platform alias identically", () => {
+    const posts = extractPostsFromDatasetItems("x", TWEET_ITEMS, ["https://x.com/a/status/1"]);
+    expect(posts[0].caption).toBe("New single out on all platforms");
+  });
+});

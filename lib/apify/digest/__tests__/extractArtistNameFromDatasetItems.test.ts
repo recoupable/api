@@ -25,3 +25,16 @@ describe("extractArtistNameFromDatasetItems", () => {
     expect(extractArtistNameFromDatasetItems("instagram", [])).toBeNull();
   });
 });
+
+describe("extractArtistNameFromDatasetItems — twitter", () => {
+  it("uses the tweet author's display name, falling back to handle", () => {
+    expect(
+      extractArtistNameFromDatasetItems("twitter", [
+        { author: { name: "Sweetman", userName: "sweetman_eth" } },
+      ]),
+    ).toBe("Sweetman");
+    expect(extractArtistNameFromDatasetItems("x", [{ author: { userName: "sweetman_eth" } }])).toBe(
+      "sweetman_eth",
+    );
+  });
+});

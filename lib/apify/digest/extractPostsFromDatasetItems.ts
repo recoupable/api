@@ -1,10 +1,13 @@
 import { extractInstagramPosts } from "@/lib/apify/digest/extractInstagramPosts";
 import { extractTiktokPosts } from "@/lib/apify/digest/extractTiktokPosts";
+import { extractTwitterPosts } from "@/lib/apify/digest/extractTwitterPosts";
 import type { ScrapeDigestPost } from "@/lib/apify/digest/renderScrapeDigestHtml";
 
 const EXTRACTORS: Record<string, (items: unknown[]) => Map<string, ScrapeDigestPost>> = {
   instagram: extractInstagramPosts,
   tiktok: extractTiktokPosts,
+  twitter: extractTwitterPosts,
+  x: extractTwitterPosts,
 };
 
 /**

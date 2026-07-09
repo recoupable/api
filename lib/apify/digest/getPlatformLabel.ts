@@ -4,6 +4,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   x: "X",
   twitter: "X",
   youtube: "YouTube",
+  linkedin: "LinkedIn",
   facebook: "Facebook",
   threads: "Threads",
 };

@@ -36,6 +36,14 @@ describe("renderScrapeDigestHtml", () => {
     expect(html).toContain("TikTok");
   });
 
+  it("labels every wired platform, including LinkedIn", () => {
+    const { html } = renderScrapeDigestHtml({
+      sections: [{ platform: "linkedin", posts: [{ url: "https://linkedin.com/posts/x" }] }],
+      artistName: "A",
+    });
+    expect(html).toContain("LinkedIn");
+  });
+
   it("renders post media and caption excerpts when available", () => {
     const { html } = renderScrapeDigestHtml({ sections: SECTIONS, artistName: "Ashnikko" });
     expect(html).toContain('src="https://cdn.example.com/thumb-abc.jpg"');

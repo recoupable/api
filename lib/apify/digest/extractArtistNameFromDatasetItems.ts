@@ -20,6 +20,11 @@ export function extractArtistNameFromDatasetItems(
       const author = asRecord(first.authorMeta);
       return str(author.nickName) ?? str(author.name);
     }
+    case "twitter":
+    case "x": {
+      const author = asRecord(first.author);
+      return str(author.name) ?? str(author.userName);
+    }
     default:
       return null;
   }
