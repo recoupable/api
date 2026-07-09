@@ -4,6 +4,7 @@ import { insertAccountCatalog } from "@/lib/supabase/account_catalogs/insertAcco
 import { insertCatalogSongs } from "@/lib/supabase/catalog_songs/insertCatalogSongs";
 import { updatePlaycountSnapshot } from "@/lib/supabase/playcount_snapshots/updatePlaycountSnapshot";
 import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
+import { attachCanonicalArtistToAccount } from "./attachCanonicalArtistToAccount";
 
 const DEFAULT_CATALOG_NAME = "Valuation Catalog";
 
@@ -12,8 +13,9 @@ const DEFAULT_CATALOG_NAME = "Valuation Catalog";
  * `catalogs` row, links it to the account via `account_catalogs`, adds the
  * snapshot's **measured** ISRCs (from `song_measurements`, not the snapshot's
  * own `isrcs` column — that's null for album-scoped valuation runs) as
- * `catalog_songs`, and records the new catalog on the snapshot (the idempotency
- * key for re-claims).
+ * `catalog_songs`, attaches the songs' canonical artist to the account's
+ * roster (chat#1850 P1), and records the new catalog on the snapshot (the
+ * idempotency key for re-claims).
  *
  * Callers must first confirm the snapshot is owned by `accountId` and not yet
  * claimed (`snapshot.catalog` is null).
@@ -37,6 +39,10 @@ export async function createSnapshotCatalog(params: {
   const isrcs = [...new Set(measurements.map(m => m.song))];
   if (isrcs.length > 0) {
     await insertCatalogSongs(isrcs.map(isrc => ({ catalog: catalog.id, song: isrc })));
+    // Roster attach (chat#1850 P1): the claim is when the account takes
+    // ownership, so link the songs' canonical artist here — the marketing
+    // funnel no longer mints a per-signup duplicate artist.
+    await attachCanonicalArtistToAccount({ accountId, isrcs });
   }
 
   await updatePlaycountSnapshot(snapshot.id, { catalog: catalog.id });

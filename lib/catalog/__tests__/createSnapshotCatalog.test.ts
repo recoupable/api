@@ -6,6 +6,7 @@ import { insertAccountCatalog } from "@/lib/supabase/account_catalogs/insertAcco
 import { insertCatalogSongs } from "@/lib/supabase/catalog_songs/insertCatalogSongs";
 import { updatePlaycountSnapshot } from "@/lib/supabase/playcount_snapshots/updatePlaycountSnapshot";
 import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
+import { attachCanonicalArtistToAccount } from "../attachCanonicalArtistToAccount";
 
 vi.mock("@/lib/supabase/catalogs/insertCatalog", () => ({ insertCatalog: vi.fn() }));
 vi.mock("@/lib/supabase/account_catalogs/insertAccountCatalog", () => ({
@@ -17,6 +18,9 @@ vi.mock("@/lib/supabase/playcount_snapshots/updatePlaycountSnapshot", () => ({
 }));
 vi.mock("@/lib/supabase/song_measurements/selectSongMeasurements", () => ({
   selectSongMeasurements: vi.fn(),
+}));
+vi.mock("../attachCanonicalArtistToAccount", () => ({
+  attachCanonicalArtistToAccount: vi.fn(),
 }));
 
 const accountId = "550e8400-e29b-41d4-a716-446655440000";
@@ -54,6 +58,28 @@ describe("createSnapshotCatalog", () => {
     ]);
     expect(updatePlaycountSnapshot).toHaveBeenCalledWith(snapshotId, { catalog: catalogId });
     expect(result).toEqual({ catalog, songsAdded: 3 });
+  });
+
+  it("attaches the canonical artist for the measured ISRCs to the claiming account (chat#1850 P1)", async () => {
+    vi.mocked(selectSongMeasurements).mockResolvedValue([
+      measurement("ISRC_A"),
+      measurement("ISRC_B"),
+    ]);
+
+    await createSnapshotCatalog({ accountId, snapshot });
+
+    expect(attachCanonicalArtistToAccount).toHaveBeenCalledWith({
+      accountId,
+      isrcs: ["ISRC_A", "ISRC_B"],
+    });
+  });
+
+  it("skips the canonical-artist attach when the snapshot has no measurements", async () => {
+    vi.mocked(selectSongMeasurements).mockResolvedValue([]);
+
+    await createSnapshotCatalog({ accountId, snapshot });
+
+    expect(attachCanonicalArtistToAccount).not.toHaveBeenCalled();
   });
 
   it("dedupes ISRCs across multiple measurement rows per track", async () => {
