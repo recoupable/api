@@ -737,6 +737,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      apify_scraper_runs: {
+        Row: {
+          account_id: string;
+          batch_id: string | null;
+          completed_at: string | null;
+          created_at: string;
+          new_post_urls: Json | null;
+          platform: string | null;
+          run_id: string;
+          social_id: string | null;
+        };
+        Insert: {
+          account_id: string;
+          batch_id?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          new_post_urls?: Json | null;
+          platform?: string | null;
+          run_id: string;
+          social_id?: string | null;
+        };
+        Update: {
+          account_id?: string;
+          batch_id?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          new_post_urls?: Json | null;
+          platform?: string | null;
+          run_id?: string;
+          social_id?: string | null;
+        };
+        Relationships: [];
+      };
       app_store_link_clicked: {
         Row: {
           clientId: string | null;
@@ -3869,6 +3902,27 @@ export type Database = {
       get_campaign_fans: {
         Args: { artistid: string; email: string };
         Returns: Json;
+      };
+      get_catalog_measurements_aggregate: {
+        Args: { p_artist?: string; p_catalog: string };
+        Returns: {
+          measured_song_count: number;
+          total_streams: number;
+        }[];
+      };
+      get_catalog_measurements_page: {
+        Args: {
+          p_artist?: string;
+          p_catalog: string;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: {
+          isrc: string;
+          measured_at: string;
+          playcount: number;
+          title: string;
+        }[];
       };
       get_config: { Args: never; Returns: Json };
       get_credit_spend_digest: {

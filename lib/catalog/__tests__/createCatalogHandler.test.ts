@@ -9,6 +9,8 @@ import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/sel
 import { selectCatalogById } from "@/lib/supabase/catalogs/selectCatalogById";
 import { insertCatalog } from "@/lib/supabase/catalogs/insertCatalog";
 import { insertAccountCatalog } from "@/lib/supabase/account_catalogs/insertAccountCatalog";
+import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
+import { attachCanonicalArtistToAccount } from "../attachCanonicalArtistToAccount";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -23,6 +25,12 @@ vi.mock("@/lib/supabase/catalogs/selectCatalogById", () => ({ selectCatalogById:
 vi.mock("@/lib/supabase/catalogs/insertCatalog", () => ({ insertCatalog: vi.fn() }));
 vi.mock("@/lib/supabase/account_catalogs/insertAccountCatalog", () => ({
   insertAccountCatalog: vi.fn(),
+}));
+vi.mock("@/lib/supabase/song_measurements/selectSongMeasurements", () => ({
+  selectSongMeasurements: vi.fn(),
+}));
+vi.mock("../attachCanonicalArtistToAccount", () => ({
+  attachCanonicalArtistToAccount: vi.fn(),
 }));
 
 const accountId = "550e8400-e29b-41d4-a716-446655440000";
@@ -135,6 +143,7 @@ describe("createCatalogHandler", () => {
       { id: snapshotId, account: accountId, catalog: catalogId, isrcs: ["A", "B"] } as never,
     ]);
     vi.mocked(selectCatalogById).mockResolvedValue(catalog);
+    vi.mocked(selectSongMeasurements).mockResolvedValue([]);
 
     const res = await createCatalogHandler(makeRequest());
     const body = await res.json();
@@ -143,6 +152,29 @@ describe("createCatalogHandler", () => {
     expect(selectCatalogById).toHaveBeenCalledWith(catalogId);
     expect(createSnapshotCatalog).not.toHaveBeenCalled();
     expect(body).toEqual({ status: "success", catalog, songs_added: 0 });
+  });
+
+  it("re-claims still attach the canonical artist to the roster (chat#1850 P1)", async () => {
+    vi.mocked(validateCreateCatalogBody).mockReturnValue({ snapshot: snapshotId });
+    okAuth();
+    vi.mocked(selectPlaycountSnapshots).mockResolvedValue([
+      { id: snapshotId, account: accountId, catalog: catalogId, isrcs: null } as never,
+    ]);
+    vi.mocked(selectCatalogById).mockResolvedValue(catalog);
+    vi.mocked(selectSongMeasurements).mockResolvedValue([
+      { song: "ISRC_A" } as never,
+      { song: "ISRC_A" } as never,
+      { song: "ISRC_B" } as never,
+    ]);
+
+    const res = await createCatalogHandler(makeRequest());
+
+    expect(res.status).toBe(200);
+    expect(selectSongMeasurements).toHaveBeenCalledWith({ snapshot: snapshotId });
+    expect(attachCanonicalArtistToAccount).toHaveBeenCalledWith({
+      accountId,
+      isrcs: ["ISRC_A", "ISRC_B"],
+    });
   });
 
   it("returns a generic 500 without leaking the underlying error", async () => {

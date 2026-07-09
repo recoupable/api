@@ -11,11 +11,11 @@ beforeEach(() => {
 });
 
 describe("startTwitterProfileScraping", () => {
-  it("defaults to the legacy single-item snapshot (maxItems: 1) when posts is omitted", async () => {
+  it("defaults to a 10-item fetch when posts is omitted — retweets/replies are filtered AFTER the fetch, so depth 1 would rarely surface an authored post", async () => {
     const r = await startTwitterProfileScraping("sweetman_eth");
     expect(apifyClient.actor).toHaveBeenCalledWith("apidojo/twitter-scraper-lite");
     expect(start).toHaveBeenCalledWith(
-      { twitterHandles: ["sweetman_eth"], sort: "Latest", maxItems: 1 },
+      { twitterHandles: ["sweetman_eth"], sort: "Latest", maxItems: 10 },
       { webhooks: expect.any(Array) },
     );
     expect(r).toEqual({ runId: "run-1", datasetId: "ds-1" });

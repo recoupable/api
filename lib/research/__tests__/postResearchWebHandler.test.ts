@@ -5,6 +5,7 @@ import { postResearchWebHandler } from "../postResearchWebHandler";
 import { validatePostResearchWebRequest } from "../validatePostResearchWebRequest";
 import { searchPerplexity } from "@/lib/perplexity/searchPerplexity";
 import { formatSearchResultsAsMarkdown } from "@/lib/perplexity/formatSearchResultsAsMarkdown";
+import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 
 vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
   ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
@@ -79,5 +80,8 @@ describe("postResearchWebHandler", () => {
     expect(body.status).toBe("success");
     expect(body.results).toEqual(mockResults);
     expect(body.formatted).toBe("# Results\n...");
+    expect(recordCreditDeduction).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: "test-id", creditsToDeduct: 1 }),
+    );
   });
 });

@@ -2,7 +2,7 @@ import type { ToolSet } from "ai";
 import { getComposioClient } from "../client";
 import { getCallbackUrl } from "../getCallbackUrl";
 import { getConnectors } from "../connectors/getConnectors";
-import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
+import { checkConnectorAuthority } from "../checkConnectorAuthority";
 import { getSharedAccountConnections } from "./getSharedAccountConnections";
 import { pickValid } from "./pickValid";
 import { scopedAuthConfigs } from "./scopedAuthConfigs";
@@ -46,7 +46,7 @@ export async function getComposioTools(
 
   try {
     const effectiveArtistId =
-      artistId && (await checkAccountArtistAccess(accountId, artistId)) ? artistId : undefined;
+      artistId && (await checkConnectorAuthority(accountId, artistId)) ? artistId : undefined;
 
     const composio = await getComposioClient();
     const callbackUrl = getCallbackUrl({ destination: "chat", roomId });

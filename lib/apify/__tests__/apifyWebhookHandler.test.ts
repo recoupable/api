@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { completeApifyScraperRun } from "@/lib/supabase/apify_scraper_runs/completeApifyScraperRun";
+import { updateApifyScraperRun } from "@/lib/supabase/apify_scraper_runs/updateApifyScraperRun";
 import { maybeSendScrapeDigest } from "@/lib/apify/digest/maybeSendScrapeDigest";
 import { NextRequest } from "next/server";
 import { apifyWebhookHandler } from "../apifyWebhookHandler";
@@ -46,8 +46,8 @@ const baseBody = {
   resource: { defaultDatasetId: "ds_1" },
 };
 
-vi.mock("@/lib/supabase/apify_scraper_runs/completeApifyScraperRun", () => ({
-  completeApifyScraperRun: vi.fn(async () => null),
+vi.mock("@/lib/supabase/apify_scraper_runs/updateApifyScraperRun", () => ({
+  updateApifyScraperRun: vi.fn(async () => null),
 }));
 vi.mock("@/lib/apify/digest/maybeSendScrapeDigest", () => ({
   maybeSendScrapeDigest: vi.fn(async () => null),
@@ -74,7 +74,7 @@ describe("apifyWebhookHandler", () => {
       posts: [],
       newPostUrls: ["https://instagram.com/p/new1"],
     } as never);
-    vi.mocked(completeApifyScraperRun).mockResolvedValue({
+    vi.mocked(updateApifyScraperRun).mockResolvedValue({
       run_id: "run-9",
       batch_id: "batch-7",
     } as never);
@@ -88,7 +88,7 @@ describe("apifyWebhookHandler", () => {
     );
 
     expect(res.status).toBe(200);
-    expect(completeApifyScraperRun).toHaveBeenCalledWith("run-9", ["https://instagram.com/p/new1"]);
+    expect(updateApifyScraperRun).toHaveBeenCalledWith("run-9", ["https://instagram.com/p/new1"]);
     expect(maybeSendScrapeDigest).toHaveBeenCalledWith("batch-7");
   });
 
@@ -97,7 +97,7 @@ describe("apifyWebhookHandler", () => {
     await apifyWebhookHandler(
       makeRequest({ ...baseBody, eventData: { actorId: "dSCLg0C3YEZ83HzYX" } }),
     );
-    expect(completeApifyScraperRun).not.toHaveBeenCalled();
+    expect(updateApifyScraperRun).not.toHaveBeenCalled();
     expect(maybeSendScrapeDigest).not.toHaveBeenCalled();
   });
 

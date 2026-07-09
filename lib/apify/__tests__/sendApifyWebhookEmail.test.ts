@@ -18,7 +18,14 @@ const PROFILE = {
   biography: "bio",
   followersCount: 100,
   followsCount: 10,
-  latestPosts: [],
+  latestPosts: [
+    {
+      url: "https://instagram.com/p/new1",
+      caption: "New tour dates",
+      displayUrl: "https://cdn.ig/new1.jpg",
+      timestamp: "2026-07-08T12:00:00.000Z",
+    },
+  ],
 } as never;
 const NEW_URLS = ["https://instagram.com/p/new1"];
 
@@ -48,6 +55,13 @@ describe("sendApifyWebhookEmail", () => {
     const payload = sendEmailWithResend.mock.calls[0][0] as Record<string, string>;
     expect(payload.html).toContain('href="https://instagram.com/p/new1"');
     expect((payload.html + payload.subject).toLowerCase()).not.toContain("apify");
+  });
+
+  it("enriches the body with the post's media and caption from the dataset in hand", async () => {
+    await sendApifyWebhookEmail(PROFILE, ["a@b.com"], NEW_URLS);
+    const payload = sendEmailWithResend.mock.calls[0][0] as Record<string, string>;
+    expect(payload.html).toContain('src="https://cdn.ig/new1.jpg"');
+    expect(payload.html).toContain("New tour dates");
   });
 
   it("returns null and sends nothing when there are no recipients", async () => {
