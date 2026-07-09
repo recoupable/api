@@ -4,7 +4,7 @@ import { deleteArtist } from "../deleteArtist";
 import { deleteAccountArtistId } from "@/lib/supabase/account_artist_ids/deleteAccountArtistId";
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
 import { deleteAccountById } from "@/lib/supabase/accounts/deleteAccountById";
-import { getSongArtistExistsByArtist } from "@/lib/supabase/song_artists/getSongArtistExistsByArtist";
+import { selectSongArtistsByArtist } from "@/lib/supabase/song_artists/selectSongArtistsByArtist";
 
 vi.mock("@/lib/supabase/account_artist_ids/deleteAccountArtistId", () => ({
   deleteAccountArtistId: vi.fn(),
@@ -18,8 +18,8 @@ vi.mock("@/lib/supabase/accounts/deleteAccountById", () => ({
   deleteAccountById: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/song_artists/getSongArtistExistsByArtist", () => ({
-  getSongArtistExistsByArtist: vi.fn(),
+vi.mock("@/lib/supabase/song_artists/selectSongArtistsByArtist", () => ({
+  selectSongArtistsByArtist: vi.fn(),
 }));
 
 describe("deleteArtist", () => {
@@ -51,23 +51,35 @@ describe("deleteArtist", () => {
 
     expect(result).toBe(artistId);
     expect(deleteAccountById).not.toHaveBeenCalled();
-    expect(getSongArtistExistsByArtist).not.toHaveBeenCalled();
+    expect(selectSongArtistsByArtist).not.toHaveBeenCalled();
   });
 
   it("keeps the canonical account when the last link is removed but song dependencies exist", async () => {
     vi.mocked(getAccountArtistIds).mockResolvedValue([] as never);
-    vi.mocked(getSongArtistExistsByArtist).mockResolvedValue(true);
+    vi.mocked(selectSongArtistsByArtist).mockResolvedValue([
+      { id: "sa-1", song: "ISRC1", artist: artistId },
+    ] as never);
 
     const result = await deleteArtist({ artistId, requesterAccountId });
 
     expect(result).toBe(artistId);
-    expect(getSongArtistExistsByArtist).toHaveBeenCalledWith(artistId);
+    expect(selectSongArtistsByArtist).toHaveBeenCalledWith(artistId);
+    expect(deleteAccountById).not.toHaveBeenCalled();
+  });
+
+  it("fails closed and keeps the canonical account when the dependency lookup errors", async () => {
+    vi.mocked(getAccountArtistIds).mockResolvedValue([] as never);
+    vi.mocked(selectSongArtistsByArtist).mockResolvedValue(null);
+
+    const result = await deleteArtist({ artistId, requesterAccountId });
+
+    expect(result).toBe(artistId);
     expect(deleteAccountById).not.toHaveBeenCalled();
   });
 
   it("hard-deletes the account when the last link is removed and no dependencies exist", async () => {
     vi.mocked(getAccountArtistIds).mockResolvedValue([] as never);
-    vi.mocked(getSongArtistExistsByArtist).mockResolvedValue(false);
+    vi.mocked(selectSongArtistsByArtist).mockResolvedValue([] as never);
 
     const result = await deleteArtist({ artistId, requesterAccountId });
 

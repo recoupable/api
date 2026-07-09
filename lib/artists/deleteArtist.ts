@@ -1,7 +1,7 @@
 import { deleteAccountArtistId } from "@/lib/supabase/account_artist_ids/deleteAccountArtistId";
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
 import { deleteAccountById } from "@/lib/supabase/accounts/deleteAccountById";
-import { getSongArtistExistsByArtist } from "@/lib/supabase/song_artists/getSongArtistExistsByArtist";
+import { selectSongArtistsByArtist } from "@/lib/supabase/song_artists/selectSongArtistsByArtist";
 
 export interface DeleteArtistParams {
   artistId: string;
@@ -38,7 +38,10 @@ export async function deleteArtist({
   });
 
   if (remainingLinks.length === 0) {
-    const hasSongDependencies = await getSongArtistExistsByArtist(artistId);
+    const songArtists = await selectSongArtistsByArtist(artistId);
+    // Fail closed: a null (query error) is treated as "has dependencies" so an
+    // unknown state never hard-deletes a canonical that may own a song graph.
+    const hasSongDependencies = songArtists === null || songArtists.length > 0;
     if (!hasSongDependencies) {
       await deleteAccountById(artistId);
     }
