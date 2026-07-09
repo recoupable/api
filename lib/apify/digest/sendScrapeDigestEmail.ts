@@ -1,8 +1,8 @@
 import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 import { RECOUP_FROM_EMAIL } from "@/lib/const";
 import { renderScrapeDigestHtml } from "@/lib/apify/digest/renderScrapeDigestHtml";
+import type { ScrapeDigestSection } from "@/lib/apify/digest/renderScrapeDigestHtml";
 
-export type ScrapeDigestSection = { platform: string; postUrls: string[] };
 export type ScrapeDigestInput = {
   emails: string[];
   sections: ScrapeDigestSection[];

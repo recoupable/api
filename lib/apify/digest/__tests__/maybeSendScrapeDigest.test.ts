@@ -10,6 +10,14 @@ vi.mock("@/lib/supabase/apify_scraper_runs/selectApifyScraperRuns", () => ({
 vi.mock("@/lib/apify/digest/getScrapeDigestRecipients", () => ({
   getScrapeDigestRecipients: vi.fn(),
 }));
+vi.mock("@/lib/apify/digest/getRunDigestSection", () => ({
+  // URL-only translation of a run row — enrichment is unit-tested separately
+  getRunDigestSection: vi.fn(async (run: { platform: string; new_post_urls: string[] | null }) =>
+    run.new_post_urls?.length
+      ? { platform: run.platform, posts: run.new_post_urls.map((url: string) => ({ url })) }
+      : null,
+  ),
+}));
 vi.mock("@/lib/apify/digest/sendScrapeDigestEmail", () => ({
   sendScrapeDigestEmail: vi.fn(),
 }));
@@ -51,8 +59,8 @@ describe("maybeSendScrapeDigest", () => {
     expect(sendScrapeDigestEmail).toHaveBeenCalledOnce();
     const arg = vi.mocked(sendScrapeDigestEmail).mock.calls[0][0];
     expect(arg.sections).toEqual([
-      { platform: "instagram", postUrls: ["https://instagram.com/p/1"] },
-      { platform: "tiktok", postUrls: ["https://tiktok.com/v/2"] },
+      { platform: "instagram", posts: [{ url: "https://instagram.com/p/1" }] },
+      { platform: "tiktok", posts: [{ url: "https://tiktok.com/v/2" }] },
     ]); // x omitted — nothing new
     expect(arg.emails).toEqual(["owner@example.com"]);
   });

@@ -4,23 +4,65 @@ import { renderScrapeDigestHtml } from "@/lib/apify/digest/renderScrapeDigestHtm
 const SECTIONS = [
   {
     platform: "instagram",
-    postUrls: ["https://instagram.com/p/abc", "https://instagram.com/p/def"],
+    posts: [
+      {
+        url: "https://instagram.com/p/abc",
+        caption: "Behind the scenes <b>tour</b> & more",
+        thumbnailUrl: "https://cdn.example.com/thumb-abc.jpg",
+        timestamp: "2026-07-08T12:00:00.000Z",
+      },
+      { url: "https://instagram.com/p/def", caption: null, thumbnailUrl: null, timestamp: null },
+    ],
   },
-  { platform: "tiktok", postUrls: ["https://tiktok.com/@a/video/1"] },
+  {
+    platform: "tiktok",
+    posts: [
+      {
+        url: "https://tiktok.com/@a/video/1",
+        caption: "New single out now",
+        thumbnailUrl: "https://cdn.example.com/cover-1.jpg",
+        timestamp: "2026-07-09T09:30:00.000Z",
+      },
+    ],
+  },
 ];
 
 describe("renderScrapeDigestHtml", () => {
-  it("links every new post, grouped under its platform", () => {
+  it("links every new post, grouped under its platform label", () => {
     const { html } = renderScrapeDigestHtml({ sections: SECTIONS, artistName: "Ashnikko" });
-    for (const s of SECTIONS) for (const u of s.postUrls) expect(html).toContain(`href="${u}"`);
-    expect(html.toLowerCase()).toContain("instagram");
-    expect(html.toLowerCase()).toContain("tiktok");
+    for (const s of SECTIONS) for (const p of s.posts) expect(html).toContain(`href="${p.url}"`);
+    expect(html).toContain("Instagram");
+    expect(html).toContain("TikTok");
+  });
+
+  it("renders post media and caption excerpts when available", () => {
+    const { html } = renderScrapeDigestHtml({ sections: SECTIONS, artistName: "Ashnikko" });
+    expect(html).toContain('src="https://cdn.example.com/thumb-abc.jpg"');
+    expect(html).toContain('src="https://cdn.example.com/cover-1.jpg"');
+    expect(html).toContain("New single out now");
+  });
+
+  it("escapes HTML in captions so scraped content cannot inject markup", () => {
+    const { html } = renderScrapeDigestHtml({ sections: SECTIONS, artistName: "Ashnikko" });
+    expect(html).not.toContain("<b>tour</b>");
+    expect(html).toContain("&lt;b&gt;tour&lt;/b&gt; &amp; more");
+  });
+
+  it("still renders a linked card when a post has no media or caption", () => {
+    const { html } = renderScrapeDigestHtml({ sections: SECTIONS, artistName: "Ashnikko" });
+    expect(html).toContain('href="https://instagram.com/p/def"');
   });
 
   it("is deterministic — identical input renders identical output", () => {
     const a = renderScrapeDigestHtml({ sections: SECTIONS, artistName: "Ashnikko" });
     const b = renderScrapeDigestHtml({ sections: SECTIONS, artistName: "Ashnikko" });
     expect(a).toEqual(b);
+  });
+
+  it("uses the house style — achromatic chrome, no ad-hoc colors", () => {
+    const { html } = renderScrapeDigestHtml({ sections: SECTIONS, artistName: "Ashnikko" });
+    expect(html).toContain("#0a0a0a");
+    expect(html).toContain("#e8e8e8");
   });
 
   it("never leaks internal vendor jargon to customers", () => {

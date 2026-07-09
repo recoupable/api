@@ -1,6 +1,7 @@
 import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 import { RECOUP_FROM_EMAIL } from "@/lib/const";
 import { renderScrapeDigestHtml } from "@/lib/apify/digest/renderScrapeDigestHtml";
+import { extractPostsFromDatasetItems } from "@/lib/apify/digest/extractPostsFromDatasetItems";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 
 /**
@@ -21,8 +22,12 @@ export async function sendApifyWebhookEmail(
 ) {
   if (!emails?.length || !newPostUrls.length) return null;
 
+  // The profile IS dataset item 0, so the shared extractor enriches the new
+  // URLs with caption/media/timestamp from latestPosts already in hand.
   const { subject, html } = renderScrapeDigestHtml({
-    sections: [{ platform: "instagram", postUrls: newPostUrls }],
+    sections: [
+      { platform: "instagram", posts: extractPostsFromDatasetItems("instagram", [profile], newPostUrls) },
+    ],
     artistName: profile.fullName ?? profile.username ?? null,
   });
 

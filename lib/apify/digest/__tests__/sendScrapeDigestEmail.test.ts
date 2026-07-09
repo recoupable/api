@@ -12,8 +12,11 @@ vi.mock("@/lib/composio/getFrontendBaseUrl", () => ({
 }));
 
 const SECTIONS = [
-  { platform: "instagram", postUrls: ["https://instagram.com/p/a", "https://instagram.com/p/b"] },
-  { platform: "tiktok", postUrls: ["https://tiktok.com/@x/video/1"] },
+  {
+    platform: "instagram",
+    posts: [{ url: "https://instagram.com/p/a" }, { url: "https://instagram.com/p/b" }],
+  },
+  { platform: "tiktok", posts: [{ url: "https://tiktok.com/@x/video/1" }] },
 ];
 
 beforeEach(() => {

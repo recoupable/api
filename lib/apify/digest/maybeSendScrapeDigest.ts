@@ -1,7 +1,8 @@
 import { selectApifyScraperRuns } from "@/lib/supabase/apify_scraper_runs/selectApifyScraperRuns";
-import { parseNewPostUrls } from "@/lib/apify/digest/parseNewPostUrls";
+import { getRunDigestSection } from "@/lib/apify/digest/getRunDigestSection";
 import { getScrapeDigestRecipients } from "@/lib/apify/digest/getScrapeDigestRecipients";
 import { sendScrapeDigestEmail } from "@/lib/apify/digest/sendScrapeDigestEmail";
+import type { ScrapeDigestSection } from "@/lib/apify/digest/renderScrapeDigestHtml";
 
 /**
  * Batch-completion check for the one-digest-per-scrape design (chat#1855):
@@ -16,9 +17,9 @@ export async function maybeSendScrapeDigest(batchId: string | null | undefined) 
   const runs = await selectApifyScraperRuns({ batchId });
   if (!runs.length || runs.some(r => !r.completed_at)) return null;
 
-  const sections = runs
-    .map(r => ({ platform: r.platform ?? "other", postUrls: parseNewPostUrls(r.new_post_urls) }))
-    .filter(s => s.postUrls.length > 0);
+  const sections = (await Promise.all(runs.map(getRunDigestSection))).filter(
+    (s): s is ScrapeDigestSection => s !== null,
+  );
   if (!sections.length) return null;
 
   const emails = await getScrapeDigestRecipients(
