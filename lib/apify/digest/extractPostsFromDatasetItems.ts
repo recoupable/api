@@ -1,4 +1,7 @@
-import type { ScrapeDigestPost } from "@/lib/apify/digest/renderScrapeDigestHtml";
+import type {
+  ScrapeDigestPost,
+  ScrapeDigestPostStats,
+} from "@/lib/apify/digest/renderScrapeDigestHtml";
 
 type Extractor = (items: unknown[]) => Map<string, ScrapeDigestPost>;
 
@@ -6,6 +9,14 @@ const asRecord = (v: unknown): Record<string, unknown> =>
   v && typeof v === "object" ? (v as Record<string, unknown>) : {};
 
 const str = (v: unknown): string | null => (typeof v === "string" && v ? v : null);
+
+const num = (v: unknown): number | null => (typeof v === "number" && isFinite(v) ? v : null);
+
+/** Drops the stats object entirely when the scraper returned no counts. */
+const stats = (s: ScrapeDigestPostStats): ScrapeDigestPostStats | undefined =>
+  Object.values(s).some(v => v != null)
+    ? Object.fromEntries(Object.entries(s).filter(([, v]) => v != null))
+    : undefined;
 
 /** Instagram profile-scraper dataset: posts ride on item[0].latestPosts. */
 const instagram: Extractor = items => {
@@ -15,11 +26,17 @@ const instagram: Extractor = items => {
     const post = asRecord(raw);
     const url = str(post.url);
     if (!url) continue;
+    const postStats = stats({
+      likes: num(post.likesCount),
+      comments: num(post.commentsCount),
+      views: num(post.videoViewCount),
+    });
     map.set(url, {
       url,
       caption: str(post.caption),
       thumbnailUrl: str(post.displayUrl),
       timestamp: str(post.timestamp),
+      ...(postStats && { stats: postStats }),
     });
   }
   return map;
@@ -32,11 +49,18 @@ const tiktok: Extractor = items => {
     const item = asRecord(raw);
     const url = str(item.webVideoUrl);
     if (!url) continue;
+    const videoStats = stats({
+      likes: num(item.diggCount),
+      comments: num(item.commentCount),
+      views: num(item.playCount),
+      shares: num(item.shareCount),
+    });
     map.set(url, {
       url,
       caption: str(item.text),
       thumbnailUrl: str(asRecord(item.videoMeta).coverUrl),
       timestamp: str(item.createTimeISO),
+      ...(videoStats && { stats: videoStats }),
     });
   }
   return map;

@@ -9,6 +9,9 @@ const IG_ITEMS = [
         caption: "cap one",
         displayUrl: "https://cdn.ig/new1.jpg",
         timestamp: "2026-07-08T12:00:00.000Z",
+        likesCount: 100,
+        commentsCount: 5,
+        videoViewCount: 9000,
       },
       {
         url: "https://instagram.com/p/old",
@@ -26,6 +29,10 @@ const TIKTOK_ITEMS = [
     text: "tt caption",
     createTimeISO: "2026-07-09T09:00:00.000Z",
     videoMeta: { coverUrl: "https://cdn.tt/1.jpg" },
+    diggCount: 200,
+    commentCount: 10,
+    playCount: 50000,
+    shareCount: 7,
   },
   {
     webVideoUrl: "https://tiktok.com/@a/video/2",
@@ -45,6 +52,7 @@ describe("extractPostsFromDatasetItems", () => {
         caption: "cap one",
         thumbnailUrl: "https://cdn.ig/new1.jpg",
         timestamp: "2026-07-08T12:00:00.000Z",
+        stats: { likes: 100, comments: 5, views: 9000 },
       },
     ]);
   });
@@ -59,6 +67,7 @@ describe("extractPostsFromDatasetItems", () => {
         caption: "tt caption",
         thumbnailUrl: "https://cdn.tt/1.jpg",
         timestamp: "2026-07-09T09:00:00.000Z",
+        stats: { likes: 200, comments: 10, views: 50000, shares: 7 },
       },
     ]);
   });

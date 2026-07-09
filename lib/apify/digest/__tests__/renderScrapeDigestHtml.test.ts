@@ -10,6 +10,7 @@ const SECTIONS = [
         caption: "Behind the scenes <b>tour</b> & more",
         thumbnailUrl: "https://cdn.example.com/thumb-abc.jpg",
         timestamp: "2026-07-08T12:00:00.000Z",
+        stats: { likes: 12345, comments: 678, views: 1200000 },
       },
       { url: "https://instagram.com/p/def", caption: null, thumbnailUrl: null, timestamp: null },
     ],
@@ -48,6 +49,13 @@ describe("renderScrapeDigestHtml", () => {
     expect(html).toContain("&lt;b&gt;tour&lt;/b&gt; &amp; more");
   });
 
+  it("renders compact engagement stats when available", () => {
+    const { html } = renderScrapeDigestHtml({ sections: SECTIONS, artistName: "Ashnikko" });
+    expect(html).toContain("12.3K likes");
+    expect(html).toContain("678 comments");
+    expect(html).toContain("1.2M views");
+  });
+
   it("still renders a linked card when a post has no media or caption", () => {
     const { html } = renderScrapeDigestHtml({ sections: SECTIONS, artistName: "Ashnikko" });
     expect(html).toContain('href="https://instagram.com/p/def"');
@@ -63,6 +71,11 @@ describe("renderScrapeDigestHtml", () => {
     const { html } = renderScrapeDigestHtml({ sections: SECTIONS, artistName: "Ashnikko" });
     expect(html).toContain("#0a0a0a");
     expect(html).toContain("#e8e8e8");
+  });
+
+  it("CTA always points at the chat app, never the API deployment", () => {
+    const { html } = renderScrapeDigestHtml({ sections: SECTIONS, artistName: "Ashnikko" });
+    expect(html).toContain('href="https://chat.recoupable.dev/?q=');
   });
 
   it("never leaks internal vendor jargon to customers", () => {
