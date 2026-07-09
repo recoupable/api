@@ -27,7 +27,11 @@ const TIKTOK_ITEMS = [
     createTimeISO: "2026-07-09T09:00:00.000Z",
     videoMeta: { coverUrl: "https://cdn.tt/1.jpg" },
   },
-  { webVideoUrl: "https://tiktok.com/@a/video/2", text: "known", createTimeISO: "2026-01-01T00:00:00.000Z" },
+  {
+    webVideoUrl: "https://tiktok.com/@a/video/2",
+    text: "known",
+    createTimeISO: "2026-01-01T00:00:00.000Z",
+  },
 ];
 
 describe("extractPostsFromDatasetItems", () => {
@@ -60,9 +64,11 @@ describe("extractPostsFromDatasetItems", () => {
   });
 
   it("falls back to URL-only posts for platforms without an extractor", () => {
-    const posts = extractPostsFromDatasetItems("youtube", [{ some: "shape" }], [
-      "https://youtube.com/watch?v=1",
-    ]);
+    const posts = extractPostsFromDatasetItems(
+      "youtube",
+      [{ some: "shape" }],
+      ["https://youtube.com/watch?v=1"],
+    );
     expect(posts).toEqual([{ url: "https://youtube.com/watch?v=1" }]);
   });
 

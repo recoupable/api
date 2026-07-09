@@ -26,7 +26,10 @@ export async function sendApifyWebhookEmail(
   // URLs with caption/media/timestamp from latestPosts already in hand.
   const { subject, html } = renderScrapeDigestHtml({
     sections: [
-      { platform: "instagram", posts: extractPostsFromDatasetItems("instagram", [profile], newPostUrls) },
+      {
+        platform: "instagram",
+        posts: extractPostsFromDatasetItems("instagram", [profile], newPostUrls),
+      },
     ],
     artistName: profile.fullName ?? profile.username ?? null,
   });
