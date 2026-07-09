@@ -1,5 +1,5 @@
 import { selectApifyScraperRuns } from "@/lib/supabase/apify_scraper_runs/selectApifyScraperRuns";
-import { parseNewPostUrls } from "@/lib/supabase/apify_scraper_runs/parseNewPostUrls";
+import { parseNewPostUrls } from "@/lib/apify/digest/parseNewPostUrls";
 import { getScrapeDigestRecipients } from "@/lib/apify/digest/getScrapeDigestRecipients";
 import { sendScrapeDigestEmail } from "@/lib/apify/digest/sendScrapeDigestEmail";
 
