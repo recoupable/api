@@ -1,4 +1,4 @@
-import { selectApifyScraperRunsByBatch } from "@/lib/supabase/apify_scraper_runs/selectApifyScraperRunsByBatch";
+import { selectApifyScraperRuns } from "@/lib/supabase/apify_scraper_runs/selectApifyScraperRuns";
 import { getScrapeDigestRecipients } from "@/lib/apify/digest/getScrapeDigestRecipients";
 import { sendScrapeDigestEmail } from "@/lib/apify/digest/sendScrapeDigestEmail";
 
@@ -12,7 +12,7 @@ import { sendScrapeDigestEmail } from "@/lib/apify/digest/sendScrapeDigestEmail"
 export async function maybeSendScrapeDigest(batchId: string | null | undefined) {
   if (!batchId) return null;
 
-  const runs = await selectApifyScraperRunsByBatch(batchId);
+  const runs = await selectApifyScraperRuns({ batchId });
   if (!runs.length || runs.some(r => !r.completed_at)) return null;
 
   const sections = runs

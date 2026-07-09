@@ -7,13 +7,13 @@ import type { ApifyScraperRunRow } from "@/lib/supabase/apify_scraper_runs/types
  *
  * @param runs - One row per started Apify run (run_id, account_id, batch_id, …).
  */
-export async function insertApifyScraperRuns(
+export async function upsertApifyScraperRuns(
   runs: Pick<ApifyScraperRunRow, "run_id" | "account_id" | "social_id" | "platform" | "batch_id">[],
 ) {
   if (!runs.length) return { data: null, error: null };
   const { data, error } = await supabase
     .from("apify_scraper_runs" as never)
     .upsert(runs as never[], { onConflict: "run_id", ignoreDuplicates: true });
-  if (error) console.error("[ERROR] insertApifyScraperRuns:", error);
+  if (error) console.error("[ERROR] upsertApifyScraperRuns:", error);
   return { data, error };
 }

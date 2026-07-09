@@ -1,5 +1,5 @@
-/** apify_scraper_runs row incl. the digest-batch columns added in
- * recoupable/database#41 (not yet in generated database.types). */
+/** apify_scraper_runs row — table created in recoupable/database#47
+ * (not yet in generated database.types). */
 export type ApifyScraperRunRow = {
   run_id: string;
   account_id: string;

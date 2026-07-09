@@ -6,7 +6,7 @@ import type { ApifyScraperRunRow } from "@/lib/supabase/apify_scraper_runs/types
  * genuinely new. Returns the updated row (carrying batch_id) or null when the
  * run was never registered (legacy/non-batch runs).
  */
-export async function completeApifyScraperRun(
+export async function updateApifyScraperRun(
   runId: string,
   newPostUrls: string[],
 ): Promise<ApifyScraperRunRow | null> {
@@ -17,7 +17,7 @@ export async function completeApifyScraperRun(
     .select()
     .maybeSingle();
   if (error) {
-    console.error("[ERROR] completeApifyScraperRun:", error);
+    console.error("[ERROR] updateApifyScraperRun:", error);
     return null;
   }
   return (data as ApifyScraperRunRow | null) ?? null;
