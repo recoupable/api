@@ -15,6 +15,16 @@ export const PRIVY_PROJECT_SECRET = process.env.PRIVY_PROJECT_SECRET;
 /** Base URL for the public API documentation site */
 export const DOCS_BASE_URL = "https://docs.recoupable.dev";
 
+/** Public marketing site. */
+export const WEBSITE_URL = "https://recoupable.com";
+
+/** Chat app — customer-facing emails must always link here, never a derived
+ * deployment URL (previews would point at the API deployment itself). */
+export const CHAT_APP_URL = "https://chat.recoupable.dev";
+
+/** Brand icon hosted on prod chat (email clients need an absolute PNG). */
+export const RECOUP_LOGO_URL = "https://chat.recoupable.dev/icon-with-background.png";
+
 /** Domain for receiving inbound emails (e.g., support@recoupable.dev) */
 export const INBOUND_EMAIL_DOMAIN = "@recoupable.dev";
 
