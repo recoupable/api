@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAutoRechargeParams } from "@/lib/billing/validateAutoRechargeParams";
 import { validateUpdateAutoRechargeBody } from "@/lib/billing/validateUpdateAutoRechargeBody";
 import { resolveStripeCustomerForAccount } from "@/lib/stripe/resolveStripeCustomerForAccount";
 import { setAutoRechargeOptOut } from "@/lib/stripe/setAutoRechargeOptOut";
@@ -24,22 +23,16 @@ export async function updateAutoRechargeHandler(
 ): Promise<NextResponse> {
   try {
     const { id } = await params;
-    const validated = await validateAutoRechargeParams(request, id);
+    const validated = await validateUpdateAutoRechargeBody(request, id);
     if (validated instanceof NextResponse) {
       return validated;
     }
 
-    const body = await request.json().catch(() => null);
-    const validatedBody = validateUpdateAutoRechargeBody(body);
-    if (validatedBody instanceof NextResponse) {
-      return validatedBody;
-    }
-
-    const customer = await resolveStripeCustomerForAccount(validated);
-    await setAutoRechargeOptOut(customer, !validatedBody.enabled);
+    const customer = await resolveStripeCustomerForAccount(validated.accountId);
+    await setAutoRechargeOptOut(customer, !validated.enabled);
 
     return NextResponse.json(
-      { account_id: validated, enabled: validatedBody.enabled },
+      { account_id: validated.accountId, enabled: validated.enabled },
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {
