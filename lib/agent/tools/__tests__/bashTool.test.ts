@@ -36,7 +36,7 @@ describe("bashTool.execute", () => {
 
     const tool = bashTool;
     const result = await tool.execute!({ command: "ls" }, {
-      experimental_context: baseContext,
+      context: baseContext,
     } as never);
     expect(result).toEqual({
       success: true,
@@ -66,7 +66,7 @@ describe("bashTool.execute", () => {
 
     const tool = bashTool;
     const result = (await tool.execute!({ command: "find ." }, {
-      experimental_context: baseContext,
+      context: baseContext,
     } as never)) as { truncated?: boolean };
     expect(result.truncated).toBe(true);
   });
@@ -85,7 +85,7 @@ describe("bashTool.execute", () => {
 
     const tool = bashTool;
     await tool.execute!({ command: "ls", cwd: "apps/web" }, {
-      experimental_context: baseContext,
+      context: baseContext,
     } as never);
     expect(sandbox.exec).toHaveBeenCalledWith(
       "ls",
@@ -109,7 +109,7 @@ describe("bashTool.execute", () => {
 
     const tool = bashTool;
     await tool.execute!({ command: "curl example.com" }, {
-      experimental_context: { ...baseContext, recoupOrgId: "org-uuid" },
+      context: { ...baseContext, recoupOrgId: "org-uuid" },
     } as never);
     const opts = sandbox.exec.mock.calls[0]?.[3] as { env?: Record<string, string> };
     expect(opts.env).toEqual({ RECOUP_ORG_ID: "org-uuid" });
@@ -123,7 +123,7 @@ describe("bashTool.execute", () => {
 
     const tool = bashTool;
     const result = (await tool.execute!({ command: "npm run dev", detached: true }, {
-      experimental_context: baseContext,
+      context: baseContext,
     } as never)) as { success: boolean; stdout: string };
     expect(result.success).toBe(true);
     expect(result.stdout).toMatch(/cmd-123/);
@@ -136,7 +136,7 @@ describe("bashTool.execute", () => {
 
     const tool = bashTool;
     const result = (await tool.execute!({ command: "npm run dev", detached: true }, {
-      experimental_context: baseContext,
+      context: baseContext,
     } as never)) as { success: boolean; stderr: string };
     expect(result.success).toBe(false);
     expect(result.stderr).toMatch(/detached mode is not supported/i);
@@ -150,7 +150,7 @@ describe("bashTool.execute", () => {
 
     const tool = bashTool;
     await tool.execute!({ command: "npm run dev", detached: true }, {
-      experimental_context: { ...baseContext, recoupOrgId: "org-uuid" },
+      context: { ...baseContext, recoupOrgId: "org-uuid" },
     } as never);
     // execDetached signature is (command, cwd) — no env arg.
     expect(sandbox.execDetached.mock.calls[0]).toHaveLength(2);

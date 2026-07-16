@@ -47,7 +47,7 @@ IMPORTANT:
   inputSchema: editInputSchema,
   execute: async (
     { filePath, oldString, newString, replaceAll = false },
-    { experimental_context },
+    { context: experimental_context },
   ) => {
     const sandbox = await getSandbox(experimental_context, "edit");
     const workingDirectory = sandbox.workingDirectory;

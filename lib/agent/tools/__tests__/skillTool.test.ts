@@ -24,7 +24,7 @@ describe("skillTool", () => {
   it("returns success:false with available skills when the requested skill isn't in context", async () => {
     vi.mocked(connectVercel).mockResolvedValue(makeSandbox(vi.fn()) as never);
     const result = (await skillTool.execute!({ skill: "unknown" }, {
-      experimental_context: {
+      context: {
         ...baseCtx,
         skills: [
           {
@@ -51,7 +51,7 @@ describe("skillTool", () => {
   it("returns success:false when no skills are loaded", async () => {
     vi.mocked(connectVercel).mockResolvedValue(makeSandbox(vi.fn()) as never);
     const result = (await skillTool.execute!({ skill: "commit" }, {
-      experimental_context: { ...baseCtx, skills: [] },
+      context: { ...baseCtx, skills: [] },
     } as never)) as { success: boolean; error: string };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/Available skills: none/);
@@ -63,7 +63,7 @@ describe("skillTool", () => {
     const result = (await skillTool.execute!(
       { skill: "COMMIT" }, // model typed it loud
       {
-        experimental_context: {
+        context: {
           ...baseCtx,
           skills: [
             {
@@ -85,7 +85,7 @@ describe("skillTool", () => {
     const sb = makeSandbox(vi.fn().mockResolvedValue(skillMd("Run git commit -m ...")));
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const result = (await skillTool.execute!({ skill: "commit" }, {
-      experimental_context: {
+      context: {
         ...baseCtx,
         skills: [
           {
@@ -109,7 +109,7 @@ describe("skillTool", () => {
     const sb = makeSandbox(vi.fn().mockResolvedValue(skillMd('git commit -m "$ARGUMENTS"')));
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const result = (await skillTool.execute!({ skill: "commit", args: "fix bug" }, {
-      experimental_context: {
+      context: {
         ...baseCtx,
         skills: [
           {
@@ -129,7 +129,7 @@ describe("skillTool", () => {
   it("rejects skills with disable-model-invocation set", async () => {
     vi.mocked(connectVercel).mockResolvedValue(makeSandbox(vi.fn()) as never);
     const result = (await skillTool.execute!({ skill: "internal" }, {
-      experimental_context: {
+      context: {
         ...baseCtx,
         skills: [
           {
@@ -150,7 +150,7 @@ describe("skillTool", () => {
     const sb = makeSandbox(vi.fn().mockRejectedValue(new Error("ENOENT")));
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const result = (await skillTool.execute!({ skill: "commit" }, {
-      experimental_context: {
+      context: {
         ...baseCtx,
         skills: [
           {

@@ -50,11 +50,11 @@ vi.mock("workflow/api", () => ({
 }));
 
 // Captures the options runAgentStep passes to createUIMessageStream so
-// tests can drive its onStepFinish / onFinish callbacks directly.
+// tests can drive its onStepEnd / onEnd callbacks directly.
 type CreateOpts = {
   generateId?: () => string;
-  onStepFinish?: (e: { responseMessage: unknown }) => unknown;
-  onFinish?: (e: { responseMessage: unknown }) => unknown;
+  onStepEnd?: (e: { responseMessage: unknown }) => unknown;
+  onEnd?: (e: { responseMessage: unknown }) => unknown;
   execute?: (a: { writer: { write: () => void; merge: () => void; onError: undefined } }) => void;
 };
 let capturedCreateOpts: CreateOpts;
@@ -174,9 +174,9 @@ describe("runAgentStep", () => {
     } as never);
 
     const args = vi.mocked(streamText).mock.calls[0]?.[0] as { system?: string };
-    expect(args.system).toMatch(/# Environment/);
-    expect(args.system).toMatch(/Working directory: \. \(workspace root\)/);
-    expect(args.system).toMatch(/workspace-relative paths/);
+    expect(args.instructions).toMatch(/# Environment/);
+    expect(args.instructions).toMatch(/Working directory: \. \(workspace root\)/);
+    expect(args.instructions).toMatch(/workspace-relative paths/);
   });
 
   it("wraps tools with anthropic cacheControl on the last tool before passing to streamText", async () => {
@@ -242,26 +242,26 @@ describe("runAgentStep", () => {
     expect(cb({ part: { type: "start" } })).toBeUndefined();
   });
 
-  it("persists the assistant message on each step via onStepFinish", async () => {
+  it("persists the assistant message on each step via onStepEnd", async () => {
     vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
     const { stream } = makeWritable();
 
     await runAgentStep({ ...baseInput, writable: stream } as never);
 
     const msg = { id: "a1", role: "assistant", parts: [{ type: "text", text: "partial" }] };
-    await capturedCreateOpts.onStepFinish?.({ responseMessage: msg });
+    await capturedCreateOpts.onStepEnd?.({ responseMessage: msg });
 
     expect(persistAssistantMessage).toHaveBeenCalledWith("chat-1", msg);
   });
 
-  it("persists the final assistant message via onFinish", async () => {
+  it("persists the final assistant message via onEnd", async () => {
     vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
     const { stream } = makeWritable();
 
     await runAgentStep({ ...baseInput, writable: stream } as never);
 
     const msg = { id: "a1", role: "assistant", parts: [{ type: "text", text: "done" }] };
-    await capturedCreateOpts.onFinish?.({ responseMessage: msg });
+    await capturedCreateOpts.onEnd?.({ responseMessage: msg });
 
     expect(persistAssistantMessage).toHaveBeenCalledWith("chat-1", msg);
   });
@@ -306,7 +306,7 @@ describe("runAgentStep", () => {
     expect(result.finishReason).toBe("stop");
   });
 
-  it("returns the responseMessage captured from onFinish (so the workflow can charge credits)", async () => {
+  it("returns the responseMessage captured from onEnd (so the workflow can charge credits)", async () => {
     const emitted = {
       id: "asst-test-id",
       role: "assistant",
@@ -317,8 +317,8 @@ describe("runAgentStep", () => {
     vi.mocked(createUIMessageStream).mockImplementation((opts: never) => {
       const o = opts as CreateOpts;
       o.execute?.({ writer: { write: () => {}, merge: () => {}, onError: undefined } });
-      // Drive onFinish so runAgentStep captures the final message.
-      void o.onFinish?.({ responseMessage: emitted });
+      // Drive onEnd so runAgentStep captures the final message.
+      void o.onEnd?.({ responseMessage: emitted });
       return new ReadableStream({
         start(controller) {
           controller.close();
@@ -332,8 +332,8 @@ describe("runAgentStep", () => {
     expect(result.responseMessage).toEqual(emitted);
   });
 
-  it("returns responseMessage: undefined when onFinish never fires", async () => {
-    // Default mock never invokes onFinish.
+  it("returns responseMessage: undefined when onEnd never fires", async () => {
+    // Default mock never invokes onEnd.
     vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
     const { stream } = makeWritable();
 
@@ -422,7 +422,7 @@ describe("runAgentStep", () => {
     });
 
     it("re-persists with closed tool-error parts when aborting mid-tool-call", async () => {
-      // onStepFinish runs while the step is still emitting (a tool-call was
+      // onStepEnd runs while the step is still emitting (a tool-call was
       // streamed in this step). The step's captured responseMessage has the
       // tool-call in input-available, with no terminal output chunk yet.
       const openMessage = {
@@ -444,9 +444,9 @@ describe("runAgentStep", () => {
         capturedCreateOpts.execute?.({
           writer: { write: () => {}, merge: () => {}, onError: undefined },
         });
-        // Drive onStepFinish synchronously so responseMessage is populated
+        // Drive onStepEnd synchronously so responseMessage is populated
         // before the abort path runs in runAgentStep.
-        capturedCreateOpts.onStepFinish?.({ responseMessage: openMessage });
+        capturedCreateOpts.onStepEnd?.({ responseMessage: openMessage });
         return new ReadableStream({
           start(controller) {
             controller.close();
@@ -467,7 +467,7 @@ describe("runAgentStep", () => {
 
       expect(result.aborted).toBe(true);
 
-      // Two persists: the step's onStepFinish, then the abort-path re-persist
+      // Two persists: the step's onStepEnd, then the abort-path re-persist
       // with closed tool parts.
       expect(persistAssistantMessage).toHaveBeenCalledTimes(2);
       const second = vi.mocked(persistAssistantMessage).mock.calls[1]?.[1] as {
@@ -492,7 +492,7 @@ describe("runAgentStep", () => {
         capturedCreateOpts.execute?.({
           writer: { write: () => {}, merge: () => {}, onError: undefined },
         });
-        capturedCreateOpts.onStepFinish?.({ responseMessage: closedMessage });
+        capturedCreateOpts.onStepEnd?.({ responseMessage: closedMessage });
         return new ReadableStream({
           start(controller) {
             controller.close();
@@ -511,7 +511,7 @@ describe("runAgentStep", () => {
 
       await runAgentStep({ ...baseInput, writable: stream } as never);
 
-      // Just the onStepFinish persist — no re-persist needed.
+      // Just the onStepEnd persist — no re-persist needed.
       expect(persistAssistantMessage).toHaveBeenCalledTimes(1);
     });
 
