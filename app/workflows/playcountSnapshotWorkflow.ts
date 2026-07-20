@@ -1,5 +1,6 @@
 import { getSnapshotStep } from "@/app/workflows/getSnapshotStep";
 import { markSnapshotStep } from "@/app/workflows/markSnapshotStep";
+import { sendValuationEmailStep } from "@/app/workflows/sendValuationEmailStep";
 import { fetchChunkStep } from "@/app/workflows/fetchChunkStep";
 import { mapAndWriteChunkStep } from "@/app/workflows/mapAndWriteChunkStep";
 
@@ -29,6 +30,7 @@ export async function playcountSnapshotWorkflow(snapshotId: string) {
     }
 
     await markSnapshotStep(snapshotId, { state: "done" });
+    await sendValuationEmailStep(snapshot);
     return { success: true as const, measurementsWritten: written };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
