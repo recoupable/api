@@ -57,12 +57,17 @@ export async function createCatalogHandler(request: NextRequest): Promise<NextRe
       return errorResponse("Snapshot belongs to a different account", 403);
     }
 
-    // Idempotent re-claim: the run already produced a catalog. Still attach
-    // the canonical artist (chat#1850 P1) so claims made before the roster
-    // attach shipped heal on the next click; the attach is itself idempotent.
+    // Idempotent re-claim: the run already produced a catalog. Link the caller
+    // to it (chat#1867): the report's measurements endpoint 404s on a missing
+    // account_catalogs row, so a reader whose account differs from the original
+    // claimer (account divergence / prior double-account race) otherwise sees
+    // "No valuation found". insertAccountCatalog is idempotent, so this heals
+    // an unlinked reader without duplicating an existing link. Still attach the
+    // canonical artist (chat#1850 P1); the attach is itself idempotent.
     if (snapshot.catalog) {
       const existing = await selectCatalogById(snapshot.catalog);
       if (existing) {
+        await insertAccountCatalog({ account: accountId, catalog: existing.id });
         const measurements = await selectSongMeasurements({ snapshot: snapshot.id });
         const isrcs = [...new Set(measurements.map(m => m.song))];
         if (isrcs.length > 0) {

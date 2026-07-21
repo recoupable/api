@@ -154,6 +154,25 @@ describe("createCatalogHandler", () => {
     expect(body).toEqual({ status: "success", catalog, songs_added: 0 });
   });
 
+  it("re-claims link the caller's account so the report can read measurements", async () => {
+    // Regression: the re-claim branch returned the existing catalog without an
+    // account_catalogs link, so a reader whose account differed from the
+    // original claimer (account divergence / prior double-account race) got a
+    // report 404 — getCatalogMeasurementsHandler 404s on a missing link.
+    vi.mocked(validateCreateCatalogBody).mockReturnValue({ snapshot: snapshotId });
+    okAuth();
+    vi.mocked(selectPlaycountSnapshots).mockResolvedValue([
+      { id: snapshotId, account: accountId, catalog: catalogId, isrcs: ["A"] } as never,
+    ]);
+    vi.mocked(selectCatalogById).mockResolvedValue(catalog);
+    vi.mocked(selectSongMeasurements).mockResolvedValue([]);
+
+    const res = await createCatalogHandler(makeRequest());
+
+    expect(res.status).toBe(200);
+    expect(insertAccountCatalog).toHaveBeenCalledWith({ account: accountId, catalog: catalogId });
+  });
+
   it("re-claims still attach the canonical artist to the roster (chat#1850 P1)", async () => {
     vi.mocked(validateCreateCatalogBody).mockReturnValue({ snapshot: snapshotId });
     okAuth();
