@@ -7,7 +7,7 @@ import { createSnapshotCatalog } from "./createSnapshotCatalog";
 import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots";
 import { selectCatalogById } from "@/lib/supabase/catalogs/selectCatalogById";
 import { insertCatalog } from "@/lib/supabase/catalogs/insertCatalog";
-import { insertAccountCatalog } from "@/lib/supabase/account_catalogs/insertAccountCatalog";
+import { upsertAccountCatalog } from "@/lib/supabase/account_catalogs/upsertAccountCatalog";
 import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
 import { attachCanonicalArtistToAccount } from "./attachCanonicalArtistToAccount";
 
@@ -45,7 +45,7 @@ export async function createCatalogHandler(request: NextRequest): Promise<NextRe
 
     if (!validated.snapshot) {
       const catalog = await insertCatalog(validated.name ?? DEFAULT_CATALOG_NAME);
-      await insertAccountCatalog({ account: accountId, catalog: catalog.id });
+      await upsertAccountCatalog({ account: accountId, catalog: catalog.id });
       return successResponse({ catalog, songs_added: 0 });
     }
 
@@ -61,13 +61,13 @@ export async function createCatalogHandler(request: NextRequest): Promise<NextRe
     // to it (chat#1867): the report's measurements endpoint 404s on a missing
     // account_catalogs row, so a reader whose account differs from the original
     // claimer (account divergence / prior double-account race) otherwise sees
-    // "No valuation found". insertAccountCatalog is idempotent, so this heals
+    // "No valuation found". upsertAccountCatalog is idempotent, so this heals
     // an unlinked reader without duplicating an existing link. Still attach the
     // canonical artist (chat#1850 P1); the attach is itself idempotent.
     if (snapshot.catalog) {
       const existing = await selectCatalogById(snapshot.catalog);
       if (existing) {
-        await insertAccountCatalog({ account: accountId, catalog: existing.id });
+        await upsertAccountCatalog({ account: accountId, catalog: existing.id });
         const measurements = await selectSongMeasurements({ snapshot: snapshot.id });
         const isrcs = [...new Set(measurements.map(m => m.song))];
         if (isrcs.length > 0) {

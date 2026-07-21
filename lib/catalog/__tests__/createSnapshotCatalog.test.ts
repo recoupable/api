@@ -2,15 +2,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { createSnapshotCatalog } from "../createSnapshotCatalog";
 import { insertCatalog } from "@/lib/supabase/catalogs/insertCatalog";
-import { insertAccountCatalog } from "@/lib/supabase/account_catalogs/insertAccountCatalog";
+import { upsertAccountCatalog } from "@/lib/supabase/account_catalogs/upsertAccountCatalog";
 import { insertCatalogSongs } from "@/lib/supabase/catalog_songs/insertCatalogSongs";
 import { updatePlaycountSnapshot } from "@/lib/supabase/playcount_snapshots/updatePlaycountSnapshot";
 import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
 import { attachCanonicalArtistToAccount } from "../attachCanonicalArtistToAccount";
 
 vi.mock("@/lib/supabase/catalogs/insertCatalog", () => ({ insertCatalog: vi.fn() }));
-vi.mock("@/lib/supabase/account_catalogs/insertAccountCatalog", () => ({
-  insertAccountCatalog: vi.fn(),
+vi.mock("@/lib/supabase/account_catalogs/upsertAccountCatalog", () => ({
+  upsertAccountCatalog: vi.fn(),
 }));
 vi.mock("@/lib/supabase/catalog_songs/insertCatalogSongs", () => ({ insertCatalogSongs: vi.fn() }));
 vi.mock("@/lib/supabase/playcount_snapshots/updatePlaycountSnapshot", () => ({
@@ -48,7 +48,7 @@ describe("createSnapshotCatalog", () => {
     const result = await createSnapshotCatalog({ accountId, snapshot, name: "Bad Bunny Catalog" });
 
     expect(insertCatalog).toHaveBeenCalledWith("Bad Bunny Catalog");
-    expect(insertAccountCatalog).toHaveBeenCalledWith({ account: accountId, catalog: catalogId });
+    expect(upsertAccountCatalog).toHaveBeenCalledWith({ account: accountId, catalog: catalogId });
     // ISRCs come from measurements by snapshot, NOT snapshot.isrcs (null here)
     expect(selectSongMeasurements).toHaveBeenCalledWith({ snapshot: snapshotId });
     expect(insertCatalogSongs).toHaveBeenCalledWith([

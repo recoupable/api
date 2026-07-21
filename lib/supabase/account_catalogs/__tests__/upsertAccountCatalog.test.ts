@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { insertAccountCatalog } from "../insertAccountCatalog";
+import { upsertAccountCatalog } from "../upsertAccountCatalog";
 
 const mockFrom = vi.fn();
 const mockUpsert = vi.fn();
@@ -11,7 +11,7 @@ vi.mock("@/lib/supabase/serverClient", () => ({
   },
 }));
 
-describe("insertAccountCatalog", () => {
+describe("upsertAccountCatalog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFrom.mockReturnValue({ upsert: mockUpsert });
@@ -19,7 +19,7 @@ describe("insertAccountCatalog", () => {
   });
 
   it("idempotently links an account to a catalog (upsert, ignore duplicates)", async () => {
-    await insertAccountCatalog({ account: "acct-1", catalog: "cat-1" });
+    await upsertAccountCatalog({ account: "acct-1", catalog: "cat-1" });
 
     expect(mockFrom).toHaveBeenCalledWith("account_catalogs");
     expect(mockUpsert).toHaveBeenCalledWith(
@@ -31,7 +31,7 @@ describe("insertAccountCatalog", () => {
   it("throws when the upsert fails", async () => {
     mockUpsert.mockResolvedValue({ error: { message: "boom" } });
 
-    await expect(insertAccountCatalog({ account: "acct-1", catalog: "cat-1" })).rejects.toThrow(
+    await expect(upsertAccountCatalog({ account: "acct-1", catalog: "cat-1" })).rejects.toThrow(
       /Failed to link account_catalogs/,
     );
   });

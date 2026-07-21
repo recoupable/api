@@ -1,6 +1,6 @@
 import { Tables } from "@/types/database.types";
 import { insertCatalog } from "@/lib/supabase/catalogs/insertCatalog";
-import { insertAccountCatalog } from "@/lib/supabase/account_catalogs/insertAccountCatalog";
+import { upsertAccountCatalog } from "@/lib/supabase/account_catalogs/upsertAccountCatalog";
 import { insertCatalogSongs } from "@/lib/supabase/catalog_songs/insertCatalogSongs";
 import { updatePlaycountSnapshot } from "@/lib/supabase/playcount_snapshots/updatePlaycountSnapshot";
 import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
@@ -33,7 +33,7 @@ export async function createSnapshotCatalog(params: {
   const { accountId, snapshot, name } = params;
 
   const catalog = await insertCatalog(name ?? DEFAULT_CATALOG_NAME);
-  await insertAccountCatalog({ account: accountId, catalog: catalog.id });
+  await upsertAccountCatalog({ account: accountId, catalog: catalog.id });
 
   const measurements = await selectSongMeasurements({ snapshot: snapshot.id });
   const isrcs = [...new Set(measurements.map(m => m.song))];

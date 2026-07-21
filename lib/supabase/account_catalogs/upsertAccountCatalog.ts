@@ -12,7 +12,7 @@ import supabase from "../serverClient";
  * @param params.catalog - Catalog id to link
  * @throws Error if the upsert fails
  */
-export async function insertAccountCatalog(params: {
+export async function upsertAccountCatalog(params: {
   account: string;
   catalog: string;
 }): Promise<void> {

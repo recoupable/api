@@ -8,7 +8,7 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots";
 import { selectCatalogById } from "@/lib/supabase/catalogs/selectCatalogById";
 import { insertCatalog } from "@/lib/supabase/catalogs/insertCatalog";
-import { insertAccountCatalog } from "@/lib/supabase/account_catalogs/insertAccountCatalog";
+import { upsertAccountCatalog } from "@/lib/supabase/account_catalogs/upsertAccountCatalog";
 import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
 import { attachCanonicalArtistToAccount } from "../attachCanonicalArtistToAccount";
 
@@ -23,8 +23,8 @@ vi.mock("@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots", () => ({
 }));
 vi.mock("@/lib/supabase/catalogs/selectCatalogById", () => ({ selectCatalogById: vi.fn() }));
 vi.mock("@/lib/supabase/catalogs/insertCatalog", () => ({ insertCatalog: vi.fn() }));
-vi.mock("@/lib/supabase/account_catalogs/insertAccountCatalog", () => ({
-  insertAccountCatalog: vi.fn(),
+vi.mock("@/lib/supabase/account_catalogs/upsertAccountCatalog", () => ({
+  upsertAccountCatalog: vi.fn(),
 }));
 vi.mock("@/lib/supabase/song_measurements/selectSongMeasurements", () => ({
   selectSongMeasurements: vi.fn(),
@@ -84,7 +84,7 @@ describe("createCatalogHandler", () => {
 
     expect(res.status).toBe(200);
     expect(insertCatalog).toHaveBeenCalledWith("Bad Bunny — Catalog");
-    expect(insertAccountCatalog).toHaveBeenCalledWith({ account: accountId, catalog: catalogId });
+    expect(upsertAccountCatalog).toHaveBeenCalledWith({ account: accountId, catalog: catalogId });
     expect(body).toEqual({ status: "success", catalog, songs_added: 0 });
     expect(selectPlaycountSnapshots).not.toHaveBeenCalled();
   });
@@ -170,7 +170,7 @@ describe("createCatalogHandler", () => {
     const res = await createCatalogHandler(makeRequest());
 
     expect(res.status).toBe(200);
-    expect(insertAccountCatalog).toHaveBeenCalledWith({ account: accountId, catalog: catalogId });
+    expect(upsertAccountCatalog).toHaveBeenCalledWith({ account: accountId, catalog: catalogId });
   });
 
   it("re-claims still attach the canonical artist to the roster (chat#1850 P1)", async () => {
