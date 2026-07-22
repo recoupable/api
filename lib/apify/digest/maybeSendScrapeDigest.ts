@@ -1,5 +1,6 @@
 import { selectApifyScraperRuns } from "@/lib/supabase/apify_scraper_runs/selectApifyScraperRuns";
-import { parseNewPostUrls } from "@/lib/apify/digest/parseNewPostUrls";
+import { getRunDigestSection } from "@/lib/apify/digest/getRunDigestSection";
+import type { RunDigestSection } from "@/lib/apify/digest/getRunDigestSection";
 import { getScrapeDigestRecipients } from "@/lib/apify/digest/getScrapeDigestRecipients";
 import { sendScrapeDigestEmail } from "@/lib/apify/digest/sendScrapeDigestEmail";
 
@@ -16,13 +17,15 @@ export async function maybeSendScrapeDigest(batchId: string | null | undefined) 
   const runs = await selectApifyScraperRuns({ batchId });
   if (!runs.length || runs.some(r => !r.completed_at)) return null;
 
-  const sections = runs
-    .map(r => ({ platform: r.platform ?? "other", postUrls: parseNewPostUrls(r.new_post_urls) }))
-    .filter(s => s.postUrls.length > 0);
+  const sections = (await Promise.all(runs.map(getRunDigestSection))).filter(
+    (s): s is RunDigestSection => s !== null,
+  );
   if (!sections.length) return null;
 
   const emails = await getScrapeDigestRecipients(
     runs.map(r => r.social_id).filter((id): id is string => Boolean(id)),
   );
-  return await sendScrapeDigestEmail({ emails, sections });
+  // A batch is one artist's scrape — any platform's profile name addresses it.
+  const artistName = sections.map(s => s.artistName).find(Boolean) ?? null;
+  return await sendScrapeDigestEmail({ emails, sections, artistName });
 }

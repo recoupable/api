@@ -112,6 +112,7 @@ export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookP
       sentEmails = await sendApifyWebhookEmail(
         firstResult,
         accountEmails.map(e => e.email).filter(Boolean),
+        newPostUrls,
       );
     }
   } catch (error) {

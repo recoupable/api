@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { sendApifyWebhookEmail } from "@/lib/apify/sendApifyWebhookEmail";
 import { RECOUP_FROM_EMAIL } from "@/lib/const";
 
-vi.mock("@/lib/ai/generateText", () => ({
-  default: vi.fn(async () => ({ text: "<p>body</p>" })),
-}));
 const sendEmailWithResend = vi.fn();
 vi.mock("@/lib/emails/sendEmail", () => ({
   sendEmailWithResend: (...a: unknown[]) => sendEmailWithResend(...a),
+}));
+vi.mock("@/lib/composio/getFrontendBaseUrl", () => ({
+  getFrontendBaseUrl: () => "https://chat.recoupable.dev",
 }));
 
 const PROFILE = {
@@ -18,8 +18,16 @@ const PROFILE = {
   biography: "bio",
   followersCount: 100,
   followsCount: 10,
-  latestPosts: [],
+  latestPosts: [
+    {
+      url: "https://instagram.com/p/new1",
+      caption: "New tour dates",
+      displayUrl: "https://cdn.ig/new1.jpg",
+      timestamp: "2026-07-08T12:00:00.000Z",
+    },
+  ],
 } as never;
+const NEW_URLS = ["https://instagram.com/p/new1"];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -28,12 +36,8 @@ beforeEach(() => {
 
 describe("sendApifyWebhookEmail", () => {
   it("BCCs recipients so no account can see another's address (chat#1855)", async () => {
-    const recipients = [
-      "manager@customer-a.com",
-      "label@customer-b.com",
-      "internal@recoupable.com",
-    ];
-    await sendApifyWebhookEmail(PROFILE, recipients);
+    const recipients = ["manager@customer-a.com", "label@customer-b.com"];
+    await sendApifyWebhookEmail(PROFILE, recipients, NEW_URLS);
     const payload = sendEmailWithResend.mock.calls[0][0] as Record<string, unknown>;
     expect(payload.bcc).toEqual(recipients);
     expect(payload.to).toEqual([RECOUP_FROM_EMAIL]);
@@ -41,14 +45,32 @@ describe("sendApifyWebhookEmail", () => {
 
   it("never carries more than our own address in to/cc, regardless of recipient count", async () => {
     const recipients = Array.from({ length: 25 }, (_, i) => `user${i}@example.com`);
-    await sendApifyWebhookEmail(PROFILE, recipients);
+    await sendApifyWebhookEmail(PROFILE, recipients, NEW_URLS);
     const payload = sendEmailWithResend.mock.calls[0][0] as Record<string, unknown>;
-    const visible = [payload.to, payload.cc].flat().filter(Boolean);
-    expect(visible).toEqual([RECOUP_FROM_EMAIL]);
+    expect([payload.to, payload.cc].flat().filter(Boolean)).toEqual([RECOUP_FROM_EMAIL]);
+  });
+
+  it("links the new posts in the deterministic body — no vendor jargon", async () => {
+    await sendApifyWebhookEmail(PROFILE, ["a@b.com"], NEW_URLS);
+    const payload = sendEmailWithResend.mock.calls[0][0] as Record<string, string>;
+    expect(payload.html).toContain('href="https://instagram.com/p/new1"');
+    expect((payload.html + payload.subject).toLowerCase()).not.toContain("apify");
+  });
+
+  it("enriches the body with the post's media and caption from the dataset in hand", async () => {
+    await sendApifyWebhookEmail(PROFILE, ["a@b.com"], NEW_URLS);
+    const payload = sendEmailWithResend.mock.calls[0][0] as Record<string, string>;
+    expect(payload.html).toContain('src="https://cdn.ig/new1.jpg"');
+    expect(payload.html).toContain("New tour dates");
   });
 
   it("returns null and sends nothing when there are no recipients", async () => {
-    expect(await sendApifyWebhookEmail(PROFILE, [])).toBeNull();
+    expect(await sendApifyWebhookEmail(PROFILE, [], NEW_URLS)).toBeNull();
+    expect(sendEmailWithResend).not.toHaveBeenCalled();
+  });
+
+  it("returns null and sends nothing when no post is genuinely new", async () => {
+    expect(await sendApifyWebhookEmail(PROFILE, ["a@b.com"], [])).toBeNull();
     expect(sendEmailWithResend).not.toHaveBeenCalled();
   });
 });
