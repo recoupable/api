@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidTimeZone } from "@/lib/tasks/timezone/isValidTimeZone";
 
 /**
  * PATCH /api/tasks JSON body aligned with OpenAPI `UpdateTaskRequest`:
@@ -21,6 +22,13 @@ export const updateTaskRestBodySchema = z
     artist_account_id: z.string().uuid("artist_account_id must be a valid UUID").optional(),
     enabled: z.boolean().nullable().optional(),
     model: z.string().min(1, "model must be a non-empty string").optional(),
+    timezone: z
+      .string()
+      .refine(isValidTimeZone, "timezone must be a valid IANA time zone")
+      .optional()
+      .describe(
+        "Optional IANA time zone the cron is interpreted in (DST-aware). Applied to the Trigger.dev schedule; a timezone-only change re-syncs the schedule.",
+      ),
   })
   .strict();
 
