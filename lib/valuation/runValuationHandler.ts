@@ -12,6 +12,7 @@ import { computeValuationBand } from "@/lib/catalog/computeValuationBand";
 import { validateRunValuationRequest } from "./validateRunValuationRequest";
 import { extractValuationAlbums } from "./extractValuationAlbums";
 import { waitForSnapshotMeasurements } from "./waitForSnapshotMeasurements";
+import { linkSearchedArtistToAccount } from "./linkSearchedArtistToAccount";
 
 interface SpotifyAlbumsResponse {
   items?: { id: string; release_date?: string | null }[];
@@ -89,10 +90,22 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
     //    freshly created, not yet claimed — so createSnapshotCatalog is safe).
     const [snapshot] = await selectPlaycountSnapshots({ id: snapshotId });
     if (!snapshot) return errorResponse("Snapshot not found", 404);
-    const { catalog, songsAdded } = await createSnapshotCatalog({
+    const { catalog, songsAdded, attachedArtistId } = await createSnapshotCatalog({
       accountId,
       snapshot,
     });
+
+    // Guarantee a populated roster: the canonical (ISRC → song_artists) attach
+    // is empty for funnel signups whose songs aren't yet ingested, which left
+    // them on an empty /artists (chat#1881 P0). When it resolves nothing, link
+    // the searched Spotify artist directly so they can confirm their roster.
+    if (!attachedArtistId) {
+      await linkSearchedArtistToAccount({
+        accountId,
+        spotifyArtistId: spotify_artist_id,
+        accessToken: spotifyToken.access_token,
+      });
+    }
 
     // 5. Value it — same model as GET /catalogs/{id}/measurements.
     const [aggregate, earliestReleaseDate] = await Promise.all([
