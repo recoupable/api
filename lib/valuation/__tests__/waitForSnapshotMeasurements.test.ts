@@ -21,9 +21,11 @@ describe("waitForSnapshotMeasurements", () => {
     expect(selectSongMeasurements).toHaveBeenCalledWith({ snapshot: "snap-1", limit: 1 });
   });
 
-  it("returns false when nothing lands within the bound", async () => {
+  it("returns false only after polling through every attempt", async () => {
     vi.mocked(selectSongMeasurements).mockResolvedValue([] as never);
     const ok = await waitForSnapshotMeasurements("snap-1", noSleep);
     expect(ok).toBe(false);
+    // Guards against a regression that bails after the first empty response.
+    expect(selectSongMeasurements).toHaveBeenCalledTimes(15);
   });
 });

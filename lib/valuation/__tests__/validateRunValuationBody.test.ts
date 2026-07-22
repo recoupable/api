@@ -8,10 +8,14 @@ describe("validateRunValuationBody", () => {
     expect(result).toEqual({ spotify_artist_id: "0xPoV" });
   });
 
-  it("400s when spotify_artist_id is missing", () => {
+  it("400s with an error envelope when spotify_artist_id is missing", async () => {
     const result = validateRunValuationBody({});
     expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(400);
+    const res = result as NextResponse;
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.status).toBe("error");
+    expect(body.missing_fields).toEqual(["spotify_artist_id"]);
   });
 
   it("400s when spotify_artist_id is empty or not a string", () => {

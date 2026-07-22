@@ -46,16 +46,19 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
     if (auth instanceof NextResponse) return auth;
     const { accountId } = auth;
 
-    // 1. Resolve the artist's releases.
-    const token = await generateAccessToken();
-    if (!token || token.error || !token.access_token) {
+    // 1. Resolve the artist's releases. The caller's auth already came from the
+    //    request header above (validateAuthContext -> accountId). This is a
+    //    separate Spotify app token (client credentials) needed to read
+    //    Spotify's public Web API — not the caller's credential.
+    const spotifyToken = await generateAccessToken();
+    if (!spotifyToken || spotifyToken.error || !spotifyToken.access_token) {
       return errorResponse("Spotify authentication failed", 502);
     }
     const albumsResult = await getArtistAlbums({
       id: validated.spotify_artist_id,
       include_groups: "album,single",
       limit: 50,
-      accessToken: token.access_token,
+      accessToken: spotifyToken.access_token,
     });
     if (albumsResult.error || !albumsResult.data) {
       return errorResponse("Couldn't resolve the artist's releases", 502);
