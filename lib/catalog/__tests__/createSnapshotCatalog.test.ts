@@ -36,6 +36,7 @@ describe("createSnapshotCatalog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(insertCatalog).mockResolvedValue(catalog);
+    vi.mocked(attachCanonicalArtistToAccount).mockResolvedValue(null);
   });
 
   it("sources measured ISRCs from song_measurements (by snapshot) and adds them as catalog songs", async () => {
@@ -44,6 +45,7 @@ describe("createSnapshotCatalog", () => {
       measurement("ISRC_B"),
       measurement("ISRC_C"),
     ]);
+    vi.mocked(attachCanonicalArtistToAccount).mockResolvedValue("artist-canonical-id");
 
     const result = await createSnapshotCatalog({ accountId, snapshot, name: "Bad Bunny Catalog" });
 
@@ -57,7 +59,18 @@ describe("createSnapshotCatalog", () => {
       { catalog: catalogId, song: "ISRC_C" },
     ]);
     expect(updatePlaycountSnapshot).toHaveBeenCalledWith(snapshotId, { catalog: catalogId });
-    expect(result).toEqual({ catalog, songsAdded: 3 });
+    // The return surfaces the canonical artist id so the caller can decide
+    // whether a searched-artist fallback link is needed (chat#1881 P0).
+    expect(result).toEqual({ catalog, songsAdded: 3, attachedArtistId: "artist-canonical-id" });
+  });
+
+  it("returns attachedArtistId=null when the canonical graph resolves no artist", async () => {
+    vi.mocked(selectSongMeasurements).mockResolvedValue([measurement("ISRC_A")]);
+    vi.mocked(attachCanonicalArtistToAccount).mockResolvedValue(null);
+
+    const result = await createSnapshotCatalog({ accountId, snapshot });
+
+    expect(result).toEqual({ catalog, songsAdded: 1, attachedArtistId: null });
   });
 
   it("attaches the canonical artist for the measured ISRCs to the claiming account (chat#1850 P1)", async () => {
@@ -95,7 +108,7 @@ describe("createSnapshotCatalog", () => {
       { catalog: catalogId, song: "ISRC_A" },
       { catalog: catalogId, song: "ISRC_B" },
     ]);
-    expect(result).toEqual({ catalog, songsAdded: 2 });
+    expect(result).toEqual({ catalog, songsAdded: 2, attachedArtistId: null });
   });
 
   it("adds no songs when the snapshot has no measurements", async () => {
@@ -105,7 +118,7 @@ describe("createSnapshotCatalog", () => {
 
     expect(insertCatalogSongs).not.toHaveBeenCalled();
     expect(updatePlaycountSnapshot).toHaveBeenCalledWith(snapshotId, { catalog: catalogId });
-    expect(result).toEqual({ catalog, songsAdded: 0 });
+    expect(result).toEqual({ catalog, songsAdded: 0, attachedArtistId: null });
   });
 
   it("falls back to a default name when none is supplied", async () => {
