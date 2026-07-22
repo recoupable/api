@@ -3,7 +3,7 @@ import { CHAT_APP_URL, RECOUP_FROM_EMAIL } from "@/lib/const";
 import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 import { logEmailAttempt } from "@/lib/emails/logEmailAttempt";
 import { renderValuationReportHtml } from "@/lib/emails/valuationReport/renderValuationReportHtml";
-import { selectValuationEmailSendLog } from "@/lib/supabase/email_send_log/selectValuationEmailSendLog";
+import { selectEmailSendLog } from "@/lib/supabase/email_send_log/selectEmailSendLog";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { selectCatalogById } from "@/lib/supabase/catalogs/selectCatalogById";
 import { selectCatalogMeasurementsAggregate } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate";
@@ -33,7 +33,14 @@ export type SendValuationReportEmailResult =
 export async function sendValuationReportEmail(
   snapshot: Tables<"playcount_snapshots">,
 ): Promise<SendValuationReportEmailResult> {
-  if (await selectValuationEmailSendLog(snapshot.id)) {
+  // Long-window idempotency: a prior successful send for this run is marked by
+  // the `"snapshot_id":"<id>"` marker in raw_body (Resend's key only covers 24h).
+  const alreadySent = await selectEmailSendLog({
+    status: "sent",
+    rawBodyLike: `"snapshot_id":"${snapshot.id}"`,
+    limit: 1,
+  });
+  if (alreadySent.length > 0) {
     return { sent: false, skipped: "already_sent" };
   }
 

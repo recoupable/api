@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { sendValuationReportEmail } from "../sendValuationReportEmail";
 import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 import { logEmailAttempt } from "@/lib/emails/logEmailAttempt";
-import { selectValuationEmailSendLog } from "@/lib/supabase/email_send_log/selectValuationEmailSendLog";
+import { selectEmailSendLog } from "@/lib/supabase/email_send_log/selectEmailSendLog";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { selectCatalogById } from "@/lib/supabase/catalogs/selectCatalogById";
 import { selectCatalogMeasurementsAggregate } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate";
@@ -13,8 +13,8 @@ import type { Tables } from "@/types/database.types";
 
 vi.mock("@/lib/emails/sendEmail", () => ({ sendEmailWithResend: vi.fn() }));
 vi.mock("@/lib/emails/logEmailAttempt", () => ({ logEmailAttempt: vi.fn() }));
-vi.mock("@/lib/supabase/email_send_log/selectValuationEmailSendLog", () => ({
-  selectValuationEmailSendLog: vi.fn(),
+vi.mock("@/lib/supabase/email_send_log/selectEmailSendLog", () => ({
+  selectEmailSendLog: vi.fn(),
 }));
 vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({ default: vi.fn() }));
 vi.mock("@/lib/supabase/catalogs/selectCatalogById", () => ({ selectCatalogById: vi.fn() }));
@@ -34,7 +34,7 @@ const snapshot = {
 } as Tables<"playcount_snapshots">;
 
 function arrange() {
-  vi.mocked(selectValuationEmailSendLog).mockResolvedValue(null);
+  vi.mocked(selectEmailSendLog).mockResolvedValue([]);
   vi.mocked(selectAccountEmails).mockResolvedValue([
     { email: "digital@epitaph.com", account_id: "acc_1" } as Tables<"account_emails">,
   ]);
@@ -80,9 +80,7 @@ describe("sendValuationReportEmail", () => {
   });
 
   it("skips without sending when a send is already logged for this snapshot", async () => {
-    vi.mocked(selectValuationEmailSendLog).mockResolvedValue({
-      id: "log_1",
-    } as Tables<"email_send_log">);
+    vi.mocked(selectEmailSendLog).mockResolvedValue([{ id: "log_1" } as Tables<"email_send_log">]);
 
     const result = await sendValuationReportEmail(snapshot);
 

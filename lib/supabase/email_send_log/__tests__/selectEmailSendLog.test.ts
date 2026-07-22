@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { selectValuationEmailSendLog } from "../selectValuationEmailSendLog";
+import { selectEmailSendLog } from "../selectEmailSendLog";
 import supabase from "../../serverClient";
 
 vi.mock("../../serverClient", () => {
@@ -17,30 +17,45 @@ function mockBuilder(result: { data: unknown; error: unknown }) {
   return builder;
 }
 
-describe("selectValuationEmailSendLog", () => {
+describe("selectEmailSendLog", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("matches sent rows carrying this snapshot's marker", async () => {
+  it("applies the status, raw_body-substring, and limit filters", async () => {
     const rows = [{ id: "log_1", status: "sent" }];
     const builder = mockBuilder({ data: rows, error: null });
 
-    const result = await selectValuationEmailSendLog("snap_1");
+    const result = await selectEmailSendLog({
+      status: "sent",
+      rawBodyLike: '"snapshot_id":"snap_1"',
+      limit: 1,
+    });
 
     expect(supabase.from).toHaveBeenCalledWith("email_send_log");
     expect(builder.eq).toHaveBeenCalledWith("status", "sent");
     expect(builder.like).toHaveBeenCalledWith("raw_body", '%"snapshot_id":"snap_1"%');
-    expect(result).toEqual(rows[0]);
+    expect(builder.limit).toHaveBeenCalledWith(1);
+    expect(result).toEqual(rows);
   });
 
-  it("returns null when no send is recorded", async () => {
+  it("skips filters that aren't provided", async () => {
+    const builder = mockBuilder({ data: [], error: null });
+
+    await selectEmailSendLog();
+
+    expect(builder.eq).not.toHaveBeenCalled();
+    expect(builder.like).not.toHaveBeenCalled();
+    expect(builder.limit).not.toHaveBeenCalled();
+  });
+
+  it("returns an empty array when nothing matches", async () => {
     mockBuilder({ data: [], error: null });
-    expect(await selectValuationEmailSendLog("snap_1")).toBeNull();
+    expect(await selectEmailSendLog({ status: "sent" })).toEqual([]);
   });
 
-  it("returns null on error", async () => {
+  it("returns an empty array on error", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     mockBuilder({ data: null, error: { message: "boom" } });
-    expect(await selectValuationEmailSendLog("snap_1")).toBeNull();
+    expect(await selectEmailSendLog({ status: "sent" })).toEqual([]);
     consoleError.mockRestore();
   });
 });
