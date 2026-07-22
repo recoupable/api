@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import generateAccessToken from "@/lib/spotify/generateAccessToken";
 import getArtistAlbums from "@/lib/spotify/getArtistAlbums";
 import { createMeasurementJob } from "@/lib/research/measurement_jobs/createMeasurementJob";
@@ -10,7 +9,7 @@ import { createSnapshotCatalog } from "@/lib/catalog/createSnapshotCatalog";
 import { selectCatalogMeasurementsAggregate } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate";
 import { getCatalogEarliestReleaseDate } from "@/lib/catalog/getCatalogEarliestReleaseDate";
 import { computeValuationBand } from "@/lib/catalog/computeValuationBand";
-import { validateRunValuationBody } from "./validateRunValuationBody";
+import { validateRunValuationRequest } from "./validateRunValuationRequest";
 import { extractValuationAlbums } from "./extractValuationAlbums";
 import { waitForSnapshotMeasurements } from "./waitForSnapshotMeasurements";
 
@@ -38,13 +37,11 @@ interface SpotifyAlbumsResponse {
  */
 export async function runValuationHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const body = await request.json().catch(() => null);
-    const validated = validateRunValuationBody(body);
+    // Auth + body validation in one place (SRP) — resolves the owning account
+    // from credentials and requires a spotify_artist_id.
+    const validated = await validateRunValuationRequest(request);
     if (validated instanceof NextResponse) return validated;
-
-    const auth = await validateAuthContext(request);
-    if (auth instanceof NextResponse) return auth;
-    const { accountId } = auth;
+    const { accountId, spotify_artist_id } = validated;
 
     // 1. Resolve the artist's releases. The caller's auth already came from the
     //    request header above (validateAuthContext -> accountId). This is a
@@ -55,7 +52,7 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
       return errorResponse("Spotify authentication failed", 502);
     }
     const albumsResult = await getArtistAlbums({
-      id: validated.spotify_artist_id,
+      id: spotify_artist_id,
       include_groups: "album,single",
       limit: 50,
       accessToken: spotifyToken.access_token,
