@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidTimeZone } from "@/lib/tasks/timezone/isValidTimeZone";
 
 /**
  * Zod schemas for POST /api/tasks and MCP `create_task`, aligned with `CreateTaskRequest` in OpenAPI.
@@ -32,6 +33,13 @@ const createTaskBodyFields = {
     .string()
     .optional()
     .describe("Optional AI model id for this task. If omitted, the default model is used."),
+  timezone: z
+    .string()
+    .refine(isValidTimeZone, "timezone must be a valid IANA time zone")
+    .optional()
+    .describe(
+      "Optional IANA time zone (e.g. America/New_York) the cron schedule is interpreted in, DST-aware. Defaults to UTC. Stored on the Trigger.dev schedule (the source of truth), not persisted on scheduled_actions.",
+    ),
 };
 
 /**
