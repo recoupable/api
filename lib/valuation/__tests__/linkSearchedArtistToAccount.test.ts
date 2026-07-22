@@ -4,10 +4,12 @@ import { linkSearchedArtistToAccount } from "../linkSearchedArtistToAccount";
 import getArtist from "@/lib/spotify/getArtist";
 import { createArtistInDb } from "@/lib/artists/createArtistInDb";
 import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
+import { enrichSearchedArtistProfile } from "../enrichSearchedArtistProfile";
 
 vi.mock("@/lib/spotify/getArtist", () => ({ default: vi.fn() }));
 vi.mock("@/lib/artists/createArtistInDb", () => ({ createArtistInDb: vi.fn() }));
 vi.mock("@/lib/artist/updateArtistSocials", () => ({ updateArtistSocials: vi.fn() }));
+vi.mock("../enrichSearchedArtistProfile", () => ({ enrichSearchedArtistProfile: vi.fn() }));
 
 const accountId = "550e8400-e29b-41d4-a716-446655440000";
 const spotifyArtistId = "4q3ewBCX7sLwd24euuV69X";
@@ -34,6 +36,11 @@ describe("linkSearchedArtistToAccount", () => {
     expect(createArtistInDb).toHaveBeenCalledWith("Bad Bunny", accountId);
     expect(updateArtistSocials).toHaveBeenCalledWith(createdArtistId, {
       SPOTIFY: `https://open.spotify.com/artist/${spotifyArtistId}`,
+    });
+    expect(enrichSearchedArtistProfile).toHaveBeenCalledWith({
+      artistId: createdArtistId,
+      spotifyArtistId,
+      spotifyArtist: { id: spotifyArtistId, name: "Bad Bunny" },
     });
     expect(result).toBe(createdArtistId);
   });

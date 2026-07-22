@@ -1,6 +1,7 @@
 import getArtist from "@/lib/spotify/getArtist";
 import { createArtistInDb } from "@/lib/artists/createArtistInDb";
 import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
+import { enrichSearchedArtistProfile } from "./enrichSearchedArtistProfile";
 
 /**
  * Fallback roster attach for the valuation flow: when the ISRC → song_artists
@@ -32,6 +33,14 @@ export async function linkSearchedArtistToAccount(params: {
 
     await updateArtistSocials(created.account_id, {
       SPOTIFY: `https://open.spotify.com/artist/${spotifyArtistId}`,
+    });
+
+    // Enrich the new artist with its real Spotify avatar + follower count so it
+    // doesn't render as a blank avatar / "0 followers" (chat#1881 P1).
+    await enrichSearchedArtistProfile({
+      artistId: created.account_id,
+      spotifyArtistId,
+      spotifyArtist: artist,
     });
 
     return created.account_id;
