@@ -10,7 +10,9 @@ vi.mock("@/lib/supabase/socials/upsertSocials", () => ({ upsertSocials: vi.fn() 
 
 const artistId = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 const spotifyArtistId = "4q3ewBCX7sLwd24euuV69X";
-const profileUrl = `https://open.spotify.com/artist/${spotifyArtistId}`;
+// Normalized key (protocol stripped) — MUST match the row updateArtistSocials
+// creates/links, or enrichment lands on an orphan row (chat#1881 P1 regression).
+const profileUrl = `open.spotify.com/artist/${spotifyArtistId}`;
 
 const spotifyArtist = {
   id: spotifyArtistId,

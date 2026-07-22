@@ -1,6 +1,7 @@
 import type { SpotifyArtist } from "@/types/spotify.types";
 import { upsertArtistInfoFields } from "@/lib/artists/upsertArtistInfoFields";
 import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
+import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
 
 /**
  * Enrich a freshly linked searched artist with its real Spotify profile so the
@@ -26,9 +27,14 @@ export async function enrichSearchedArtistProfile(params: {
     if (avatar) {
       await upsertArtistInfoFields({ artistId, image: avatar });
     }
+    // Upsert the SAME row updateArtistSocials created/linked. That path stores
+    // the social under a normalized profile_url (protocol/www/trailing-slash
+    // stripped), so we must normalize here too — otherwise the upsert lands on
+    // a separate orphan row (raw vs normalized key) and the account-linked
+    // social stays un-enriched (chat#1881 P1 — caught in preview verification).
     await upsertSocials([
       {
-        profile_url: `https://open.spotify.com/artist/${spotifyArtistId}`,
+        profile_url: normalizeProfileUrl(`https://open.spotify.com/artist/${spotifyArtistId}`),
         username: spotifyArtist.name,
         avatar: avatar ?? null,
         followerCount: spotifyArtist.followers?.total ?? null,
