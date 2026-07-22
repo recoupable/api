@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import generateAccessToken from "@/lib/spotify/generateAccessToken";
+import getArtist from "@/lib/spotify/getArtist";
 import getArtistAlbums from "@/lib/spotify/getArtistAlbums";
 import { createMeasurementJob } from "@/lib/research/measurement_jobs/createMeasurementJob";
 import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots";
@@ -12,6 +13,8 @@ import { computeValuationBand } from "@/lib/catalog/computeValuationBand";
 import { validateRunValuationRequest } from "./validateRunValuationRequest";
 import { extractValuationAlbums } from "./extractValuationAlbums";
 import { waitForSnapshotMeasurements } from "./waitForSnapshotMeasurements";
+import { linkSearchedArtistToAccount } from "./linkSearchedArtistToAccount";
+import { enrichSearchedArtistProfile } from "./enrichSearchedArtistProfile";
 
 interface SpotifyAlbumsResponse {
   items?: { id: string; release_date?: string | null }[];
@@ -89,10 +92,43 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
     //    freshly created, not yet claimed — so createSnapshotCatalog is safe).
     const [snapshot] = await selectPlaycountSnapshots({ id: snapshotId });
     if (!snapshot) return errorResponse("Snapshot not found", 404);
-    const { catalog, songsAdded } = await createSnapshotCatalog({
+    const { catalog, songsAdded, attachedArtistId } = await createSnapshotCatalog({
       accountId,
       snapshot,
     });
+
+    // Resolve the searched Spotify profile once (name + avatar + followers).
+    const { artist: searchedArtist } = await getArtist(
+      spotify_artist_id,
+      spotifyToken.access_token,
+    );
+
+    // Guarantee a populated roster: the canonical (ISRC → song_artists) attach
+    // is empty for funnel signups whose songs aren't yet ingested, which left
+    // them on an empty /artists (chat#1881 P0). When it resolves nothing, link
+    // the searched Spotify artist directly so they can confirm their roster.
+    const rosterArtistId =
+      attachedArtistId ??
+      (searchedArtist?.name
+        ? await linkSearchedArtistToAccount({
+            accountId,
+            spotifyArtistId: spotify_artist_id,
+            artistName: searchedArtist.name,
+          })
+        : null);
+
+    // Enrich whichever artist landed on the roster (canonical OR fallback) with
+    // the searched Spotify avatar + follower count, so it doesn't render as a
+    // blank avatar / "0 followers" (chat#1881 P1). The canonical path is the
+    // common case, so enriching here — not inside the fallback — is what makes
+    // enrichment actually reach real funnel claims.
+    if (rosterArtistId && searchedArtist) {
+      await enrichSearchedArtistProfile({
+        artistId: rosterArtistId,
+        spotifyArtistId: spotify_artist_id,
+        spotifyArtist: searchedArtist,
+      });
+    }
 
     // 5. Value it — same model as GET /catalogs/{id}/measurements.
     const [aggregate, earliestReleaseDate] = await Promise.all([
