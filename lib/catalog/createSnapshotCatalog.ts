@@ -17,19 +17,28 @@ const DEFAULT_CATALOG_NAME = "Valuation Catalog";
  * roster (chat#1850 P1), and records the new catalog on the snapshot (the
  * idempotency key for re-claims).
  *
+ * Returns the attached canonical artist id (or null when the ISRC →
+ * song_artists graph resolves no artist) so the caller can decide whether a
+ * searched-artist fallback link is needed for a populated roster (chat#1881 P0).
+ *
  * Callers must first confirm the snapshot is owned by `accountId` and not yet
  * claimed (`snapshot.catalog` is null).
  *
  * @param params.accountId - Owning account (already authorized)
  * @param params.snapshot - The owned, unclaimed snapshot row
  * @param params.name - Optional catalog name; falls back to a default
- * @returns The created catalog and the number of songs added
+ * @returns The created catalog, the number of songs added, and the attached
+ *   canonical artist id (null when none was resolved)
  */
 export async function createSnapshotCatalog(params: {
   accountId: string;
   snapshot: Tables<"playcount_snapshots">;
   name?: string;
-}): Promise<{ catalog: Tables<"catalogs">; songsAdded: number }> {
+}): Promise<{
+  catalog: Tables<"catalogs">;
+  songsAdded: number;
+  attachedArtistId: string | null;
+}> {
   const { accountId, snapshot, name } = params;
 
   const catalog = await insertCatalog(name ?? DEFAULT_CATALOG_NAME);
@@ -37,15 +46,16 @@ export async function createSnapshotCatalog(params: {
 
   const measurements = await selectSongMeasurements({ snapshot: snapshot.id });
   const isrcs = [...new Set(measurements.map(m => m.song))];
+  let attachedArtistId: string | null = null;
   if (isrcs.length > 0) {
     await insertCatalogSongs(isrcs.map(isrc => ({ catalog: catalog.id, song: isrc })));
     // Roster attach (chat#1850 P1): the claim is when the account takes
     // ownership, so link the songs' canonical artist here — the marketing
     // funnel no longer mints a per-signup duplicate artist.
-    await attachCanonicalArtistToAccount({ accountId, isrcs });
+    attachedArtistId = await attachCanonicalArtistToAccount({ accountId, isrcs });
   }
 
   await updatePlaycountSnapshot(snapshot.id, { catalog: catalog.id });
 
-  return { catalog, songsAdded: isrcs.length };
+  return { catalog, songsAdded: isrcs.length, attachedArtistId };
 }
