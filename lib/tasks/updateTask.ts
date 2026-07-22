@@ -61,6 +61,13 @@ export async function updateTask(
     updateData.trigger_schedule_id = newTriggerScheduleId;
   }
 
+  // A timezone-only change touches the Trigger.dev schedule but no
+  // scheduled_actions column, leaving `updateData` empty — skip the DB write
+  // (an empty update errors) and return the unchanged row (chat#1881 3c).
+  if (Object.keys(updateData).length === 0) {
+    return existingTask;
+  }
+
   const updated = await updateScheduledAction({
     id,
     ...updateData,
