@@ -1,22 +1,5 @@
 import type { ReleaseRollup } from "@/lib/catalog/buildReleaseRollups";
-import type { SpotifyAlbum } from "@/lib/spotify/getAlbums";
-import type { ValuationReleaseRow } from "./renderValuationReportHtml";
-
-/**
- * Map each album name (trimmed, lowercased) to its smallest cover-art URL from
- * a Spotify /v1/albums response. Spotify returns images largest-first, so the
- * last entry is the ~64px thumbnail best suited to an email row.
- */
-export function buildAlbumArtMap(albums: SpotifyAlbum[]): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const album of albums ?? []) {
-    const name = album?.name?.trim().toLowerCase();
-    const images = album?.images ?? [];
-    const url = images[images.length - 1]?.url;
-    if (name && url && !map.has(name)) map.set(name, url);
-  }
-  return map;
-}
+import type { ValuationReleaseRow } from "@/lib/emails/valuationReport/valuationReportTypes";
 
 /**
  * Turn per-release rollups into the email's release rows: proportional-share

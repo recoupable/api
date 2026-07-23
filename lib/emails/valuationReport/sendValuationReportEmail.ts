@@ -3,22 +3,14 @@ import { CHAT_APP_URL, RECOUP_FROM_EMAIL } from "@/lib/const";
 import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 import { logEmailAttempt } from "@/lib/emails/logEmailAttempt";
 import { renderValuationReportHtml } from "@/lib/emails/valuationReport/renderValuationReportHtml";
-import {
-  buildAlbumArtMap,
-  buildValuationReleaseRows,
-} from "@/lib/emails/valuationReport/buildValuationReleaseRows";
+import { buildReleaseRows } from "@/lib/emails/valuationReport/buildReleaseRows";
 import { selectEmailSendLog } from "@/lib/supabase/email_send_log/selectEmailSendLog";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { selectCatalogById } from "@/lib/supabase/catalogs/selectCatalogById";
 import { selectCatalogMeasurementsAggregate } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate";
-import { selectCatalogMeasurementsPage } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsPage";
-import { selectCatalogSongsWithArtists } from "@/lib/supabase/catalog_songs/selectCatalogSongsWithArtists";
 import { getCatalogEarliestReleaseDate } from "@/lib/catalog/getCatalogEarliestReleaseDate";
 import { computeValuationBand } from "@/lib/catalog/computeValuationBand";
-import { buildReleaseRollups } from "@/lib/catalog/buildReleaseRollups";
-import generateAccessToken from "@/lib/spotify/generateAccessToken";
-import getAlbums from "@/lib/spotify/getAlbums";
-import type { ValuationReportEmailParams } from "@/lib/emails/valuationReport/renderValuationReportHtml";
+import type { ValuationReportEmailParams } from "@/lib/emails/valuationReport/valuationReportTypes";
 import type { SpotifyArtist } from "@/types/spotify.types";
 import type { Tables } from "@/types/database.types";
 
@@ -26,43 +18,6 @@ export type SendValuationReportEmailResult =
   | { sent: true; resendId: string }
   | { sent: false; skipped: "already_sent" | "no_email" }
   | { sent: false; error: string };
-
-// One page is enough for the report: valuation-claimed catalogs are well under
-// this, and the release table only needs the measured tracks.
-const MEASUREMENTS_LIMIT = 1000;
-
-/**
- * Gather the per-release table (album, streams, proportional value, art) for a
- * valued catalog. Best-effort: any read/Spotify failure returns [] so the email
- * still sends with the headline band, just without the breakdown.
- */
-async function buildReleaseRows(
-  catalogId: string,
-  albumIds: string[],
-  totalStreams: number,
-  bandMid: number,
-): Promise<ValuationReportEmailParams["releases"]> {
-  try {
-    const [{ songs }, measurements, tokenResult] = await Promise.all([
-      selectCatalogSongsWithArtists({ catalogId }),
-      selectCatalogMeasurementsPage({ catalogId, page: 1, limit: MEASUREMENTS_LIMIT }),
-      generateAccessToken(),
-    ]);
-
-    const rollups = buildReleaseRollups(songs, measurements ?? []);
-
-    let artByAlbum = new Map<string, string>();
-    if (albumIds.length > 0 && tokenResult.access_token) {
-      const { albums } = await getAlbums({ ids: albumIds, accessToken: tokenResult.access_token });
-      if (albums) artByAlbum = buildAlbumArtMap(albums);
-    }
-
-    return buildValuationReleaseRows({ rollups, totalStreams, bandMid, artByAlbum });
-  } catch (error) {
-    console.error(`Valuation email release-table build failed for catalog ${catalogId}:`, error);
-    return [];
-  }
-}
 
 /**
  * Emails the valuation summary for a completed snapshot run to the owning
