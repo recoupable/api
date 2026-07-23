@@ -1,5 +1,4 @@
-import { RECOUP_LOGO_URL, WEBSITE_URL } from "@/lib/const";
-import { getFrontendBaseUrl } from "@/lib/composio/getFrontendBaseUrl";
+import { CHAT_APP_URL, RECOUP_LOGO_URL, WEBSITE_URL } from "@/lib/const";
 import { getEmailFooter } from "@/lib/emails/getEmailFooter";
 import { renderWelcomeSteps } from "@/lib/emails/welcome/renderWelcomeSteps";
 
@@ -14,12 +13,15 @@ const FONT = "ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif";
  *
  * House style follows DESIGN.md / the valuation email: achromatic chrome
  * (#0a0a0a on #ffffff, #e8e8e8 borders, #6b6b6b muted), tables + inline styles
- * only, system font stack, fixed CTA to the chat app. Copy avoids em/en dashes.
+ * only, system font stack. Copy avoids em/en dashes.
+ *
+ * Deep links use the fixed `CHAT_APP_URL` (never a derived deployment URL, same
+ * as the valuation email) so `/setup/*` always resolves to the real chat app,
+ * including from preview test sends.
  *
  * @returns The email subject and HTML body.
  */
 export function buildWelcomeEmail(): { subject: string; html: string } {
-  const baseUrl = getFrontendBaseUrl();
   const footer = getEmailFooter();
 
   const html = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f7;padding:24px 0"><tr><td align="center">
@@ -33,8 +35,8 @@ export function buildWelcomeEmail(): { subject: string; html: string } {
 <td valign="top" align="right" width="44"><a href="${WEBSITE_URL}"><img src="${RECOUP_LOGO_URL}" width="36" height="36" alt="Recoup" style="display:block;width:36px;height:36px;border-radius:8px"/></a></td>
 </tr></table>
 <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#0a0a0a">Recoup is your AI team for the music business. Here is the five step path from a new account to a catalog you measure, grow, and automate.</p>
-${renderWelcomeSteps(baseUrl)}
-<table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0 8px"><tr><td style="background:#0a0a0a;border-radius:8px"><a href="${baseUrl}/setup" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none">Confirm your roster &rarr;</a></td></tr></table>
+${renderWelcomeSteps(CHAT_APP_URL)}
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0 8px"><tr><td style="background:#0a0a0a;border-radius:8px"><a href="${CHAT_APP_URL}/setup" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none">Confirm your roster &rarr;</a></td></tr></table>
 ${footer}
 </td></tr></table>
 </td></tr></table>`;

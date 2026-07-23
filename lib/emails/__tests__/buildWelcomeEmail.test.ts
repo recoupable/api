@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
-const mockGetFrontendBaseUrl = vi.fn();
-vi.mock("@/lib/composio/getFrontendBaseUrl", () => ({
-  getFrontendBaseUrl: (...args: unknown[]) => mockGetFrontendBaseUrl(...args),
-}));
+import { CHAT_APP_URL } from "@/lib/const";
 
 const mockGetEmailFooter = vi.fn();
 vi.mock("@/lib/emails/getEmailFooter", () => ({
@@ -15,7 +11,6 @@ const { buildWelcomeEmail } = await import("../buildWelcomeEmail");
 describe("buildWelcomeEmail", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetFrontendBaseUrl.mockReturnValue("https://chat.example.com");
     mockGetEmailFooter.mockReturnValue("<footer>reply note</footer>");
   });
 
@@ -25,10 +20,11 @@ describe("buildWelcomeEmail", () => {
     expect(subject).toBe("Welcome to Recoup");
   });
 
-  it("points the primary CTA at the setup flow", () => {
+  it("points the primary CTA at the fixed chat-app setup flow", () => {
     const { html } = buildWelcomeEmail();
 
-    expect(html).toContain('href="https://chat.example.com/setup"');
+    expect(html).toContain(`href="${CHAT_APP_URL}/setup"`);
+    expect(CHAT_APP_URL).toBe("https://chat.recoupable.dev");
     expect(html.toLowerCase()).toContain("valuation");
   });
 
@@ -75,7 +71,7 @@ describe("buildWelcomeEmail", () => {
       "/setup/valuation",
       "/setup/tasks",
     ]) {
-      expect(html).toContain(`href="https://chat.example.com${path}"`);
+      expect(html).toContain(`href="${CHAT_APP_URL}${path}"`);
     }
   });
 
