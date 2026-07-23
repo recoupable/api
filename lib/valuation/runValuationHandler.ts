@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import generateAccessToken from "@/lib/spotify/generateAccessToken";
@@ -10,6 +10,8 @@ import { createSnapshotCatalog } from "@/lib/catalog/createSnapshotCatalog";
 import { selectCatalogMeasurementsAggregate } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate";
 import { getCatalogEarliestReleaseDate } from "@/lib/catalog/getCatalogEarliestReleaseDate";
 import { computeValuationBand } from "@/lib/catalog/computeValuationBand";
+import { sendValuationReportEmail } from "@/lib/emails/valuationReport/sendValuationReportEmail";
+import { captureValuationLead } from "@/lib/valuation/captureValuationLead";
 import { validateRunValuationRequest } from "./validateRunValuationRequest";
 import { extractValuationAlbums } from "./extractValuationAlbums";
 import { waitForSnapshotMeasurements } from "./waitForSnapshotMeasurements";
@@ -139,6 +141,33 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
       totalStreams: aggregate?.totalStreams ?? 0,
       earliestReleaseDate,
     });
+
+    // Email the valuation report after the catalog is materialized (chat#1881):
+    // the local `snapshot` predates createSnapshotCatalog, so point it at the
+    // fresh catalog id. Deferred with `after` so it never blocks the response,
+    // and self-guarded (dedup + idempotency key) inside sendValuationReportEmail.
+    after(() =>
+      sendValuationReportEmail(
+        { ...snapshot, catalog: catalog.id },
+        { artist: searchedArtist },
+      ).catch(error => console.error("Valuation report email failed:", error)),
+    );
+
+    // Capture the lead + team Telegram alert for every valuation caller (chat,
+    // direct api, marketing funnel) — the shared handler owns this milestone now,
+    // not the marketing frontend (chat#1885). `after` so it never blocks the
+    // response; best-effort inside captureValuationLead. lifetimeStreams is the
+    // measured total the marketing funnel's client-side path never had.
+    after(() =>
+      captureValuationLead({
+        accountId,
+        artistName: searchedArtist?.name ?? "Unknown artist",
+        artistId: spotify_artist_id,
+        valueBand: valuation,
+        lifetimeStreams: aggregate?.totalStreams ?? undefined,
+        followerCount: searchedArtist?.followers?.total ?? undefined,
+      }).catch(error => console.error("Valuation lead capture failed:", error)),
+    );
 
     return successResponse({
       catalog,
