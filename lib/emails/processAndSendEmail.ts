@@ -1,5 +1,6 @@
 import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 import { getEmailFooter } from "@/lib/emails/getEmailFooter";
+import { renderEmailLayout } from "@/lib/emails/renderEmailLayout";
 import { selectRoomWithArtist } from "@/lib/supabase/rooms/selectRoomWithArtist";
 import { RECOUP_FROM_EMAIL } from "@/lib/const";
 import { NextResponse } from "next/server";
@@ -43,14 +44,19 @@ export async function processAndSendEmail(
   const roomData = room_id ? await selectRoomWithArtist(room_id) : null;
   const footer = getEmailFooter(room_id, roomData?.artist_name || undefined);
   const bodyHtml = html || (text ? await marked(text) : "");
-  const htmlWithFooter = `${bodyHtml}\n\n${footer}`;
+  // Wrap in the shared house-style layout so every outbound email — including
+  // the live weekly-report send that flows through here — shares one visual
+  // language with the welcome/valuation emails (recoupable/chat#1885
+  // consistency pass): Recoup wordmark header, achromatic shadow-as-border
+  // card, DESIGN.md font stack, and the existing footer as the layout footer.
+  const htmlWithLayout = renderEmailLayout({ bodyHtml, footerHtml: footer });
 
   const result = await sendEmailWithResend({
     from: RECOUP_FROM_EMAIL,
     to,
     cc: cc.length > 0 ? cc : undefined,
     subject,
-    html: htmlWithFooter,
+    html: htmlWithLayout,
     headers,
   });
 
