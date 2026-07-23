@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextResponse } from "next/server";
 import { RECOUP_FROM_EMAIL } from "@/lib/const";
 
-const mockSelectWelcomeEmailLog = vi.fn();
-vi.mock("@/lib/supabase/email_send_log/selectWelcomeEmailLog", () => ({
-  selectWelcomeEmailLog: (...args: unknown[]) => mockSelectWelcomeEmailLog(...args),
+const mockSelectEmailSendLog = vi.fn();
+vi.mock("@/lib/supabase/email_send_log/selectEmailSendLog", () => ({
+  selectEmailSendLog: (...args: unknown[]) => mockSelectEmailSendLog(...args),
 }));
 
 const mockBuildWelcomeEmail = vi.fn();
@@ -29,7 +29,7 @@ describe("sendWelcomeEmail", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSelectWelcomeEmailLog.mockResolvedValue(null);
+    mockSelectEmailSendLog.mockResolvedValue([]);
     mockBuildWelcomeEmail.mockReturnValue({ subject: "Welcome to Recoup", html: "<p>hi</p>" });
     mockSendEmailWithResend.mockResolvedValue({ id: "re_1" });
     mockLogEmailAttempt.mockResolvedValue(undefined);
@@ -59,10 +59,15 @@ describe("sendWelcomeEmail", () => {
   });
 
   it("skips the send when a welcome email was already sent for the account", async () => {
-    mockSelectWelcomeEmailLog.mockResolvedValue({ id: "log-1" });
+    mockSelectEmailSendLog.mockResolvedValue([{ id: "log-1" }]);
 
     await sendWelcomeEmail({ accountId: "acc-1", email: "new@example.com" });
 
+    expect(mockSelectEmailSendLog).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: "acc-1", status: "sent" }),
+    );
+    const filters = mockSelectEmailSendLog.mock.calls[0][0];
+    expect(filters.rawBodyLike).toContain('"type":"welcome_email"');
     expect(mockSendEmailWithResend).not.toHaveBeenCalled();
     expect(mockLogEmailAttempt).not.toHaveBeenCalled();
   });

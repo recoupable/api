@@ -1,17 +1,6 @@
 import { escapeHtml } from "@/lib/emails/escapeHtml";
+import { imageTag } from "@/lib/emails/welcome/imageTag";
 import { WELCOME_ONBOARDING_STEPS } from "@/lib/emails/welcome/welcomeOnboardingSteps";
-
-/** Inline-style the step thumbnail by kind (overlap strip vs album cover vs IG). */
-function imageTag(url: string, style: "wide" | "square" | "rounded", alt: string): string {
-  const src = escapeHtml(url);
-  const a = escapeHtml(alt);
-  if (style === "wide") {
-    // Overlapping-avatar strip (~3.9:1); fixed width, height auto keeps the ratio.
-    return `<img src="${src}" width="132" alt="${a}" style="display:block;width:132px;height:auto;border:0"/>`;
-  }
-  const radius = style === "rounded" ? "12px" : "8px";
-  return `<img src="${src}" width="56" height="56" alt="${a}" style="display:block;width:56px;height:56px;border-radius:${radius};object-fit:cover"/>`;
-}
 
 /**
  * Render the numbered onboarding steps. Each row is an art thumbnail beside the

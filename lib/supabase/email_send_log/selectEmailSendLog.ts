@@ -3,6 +3,8 @@ import type { Tables } from "@/types/database.types";
 
 /** Optional filters for a generic `email_send_log` read. */
 export interface SelectEmailSendLogFilters {
+  /** Exact match on `account_id` — for per-account dedup checks. */
+  accountId?: string;
   /** Exact match on `status` (e.g. "sent"). */
   status?: string;
   /** Substring matched within `raw_body` (LIKE `%value%`) — pass the marker the send was keyed on. */
@@ -24,6 +26,7 @@ export async function selectEmailSendLog(
 ): Promise<Tables<"email_send_log">[]> {
   let query = supabase.from("email_send_log").select("*");
 
+  if (filters.accountId) query = query.eq("account_id", filters.accountId);
   if (filters.status) query = query.eq("status", filters.status);
   if (filters.rawBodyLike) query = query.like("raw_body", `%${filters.rawBodyLike}%`);
   if (filters.limit) query = query.limit(filters.limit);

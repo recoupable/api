@@ -3,7 +3,7 @@ import { RECOUP_FROM_EMAIL, WELCOME_EMAIL_LOG_TYPE } from "@/lib/const";
 import { buildWelcomeEmail } from "@/lib/emails/buildWelcomeEmail";
 import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 import { logEmailAttempt } from "@/lib/emails/logEmailAttempt";
-import { selectWelcomeEmailLog } from "@/lib/supabase/email_send_log/selectWelcomeEmailLog";
+import { selectEmailSendLog } from "@/lib/supabase/email_send_log/selectEmailSendLog";
 
 /**
  * Sends the one-time welcome email to a newly created account and records the
@@ -24,8 +24,16 @@ export async function sendWelcomeEmail({
   email: string;
 }): Promise<void> {
   try {
-    const alreadySent = await selectWelcomeEmailLog(accountId);
-    if (alreadySent) {
+    // Idempotency: a prior sent welcome for this account is marked by the
+    // `"type":"welcome_email"` marker in raw_body (send_failed rows don't match,
+    // so a failed welcome can retry). Reuses the generic email_send_log reader.
+    const alreadySent = await selectEmailSendLog({
+      accountId,
+      status: "sent",
+      rawBodyLike: `"type":"${WELCOME_EMAIL_LOG_TYPE}"`,
+      limit: 1,
+    });
+    if (alreadySent.length > 0) {
       return;
     }
 
