@@ -25,10 +25,10 @@ describe("buildWelcomeEmail", () => {
     expect(subject).toBe("Welcome to Recoup");
   });
 
-  it("links the one next step to the chat app", () => {
+  it("points the primary CTA at the setup flow", () => {
     const { html } = buildWelcomeEmail();
 
-    expect(html).toContain('href="https://chat.example.com"');
+    expect(html).toContain('href="https://chat.example.com/setup"');
     expect(html.toLowerCase()).toContain("valuation");
   });
 
@@ -65,21 +65,26 @@ describe("buildWelcomeEmail", () => {
     }
   });
 
-  it("features the full cast with stable Spotify art (no expiring social CDNs)", () => {
+  it("links each step into its /setup route", () => {
     const { html } = buildWelcomeEmail();
 
-    for (const name of [
-      "Gatsby Grace",
-      "LA EQUIS",
-      "Sound of Fractures",
-      "Brauxelion",
-      "LATASHA",
+    for (const path of [
+      "/setup/artists",
+      "/setup/socials",
+      "/setup/catalog",
+      "/setup/valuation",
+      "/setup/tasks",
     ]) {
-      expect(html).toContain(name);
+      expect(html).toContain(`href="https://chat.example.com${path}"`);
     }
-    // At least the 5 PFPs + the album covers used in the steps.
-    const imageCount = (html.match(/i\.scdn\.co/g) ?? []).length;
-    expect(imageCount).toBeGreaterThanOrEqual(8);
+  });
+
+  it("uses only durable image hosts (no expiring social CDNs)", () => {
+    const { html } = buildWelcomeEmail();
+
+    // Album covers on Spotify CDN + the pre-composed step 1/2 art on Vercel Blob.
+    expect(html).toContain("i.scdn.co");
+    expect(html).toContain("blob.vercel-storage.com");
     expect(html).not.toContain("cdninstagram.com");
     expect(html).not.toContain("tiktokcdn");
   });
