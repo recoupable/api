@@ -1,6 +1,7 @@
 import { getEmailByAuthToken } from "./getEmailByAuthToken";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { createAccountWithEmail } from "@/lib/agents/createAccountWithEmail";
+import { sendWelcomeEmail } from "@/lib/emails/sendWelcomeEmail";
 
 /**
  * Get account ID from a Privy auth token, creating an account on the fly
@@ -23,5 +24,11 @@ export async function getOrCreateAccountIdByAuthToken(authToken: string): Promis
     return existingAccountId;
   }
 
-  return createAccountWithEmail(email);
+  const accountId = await createAccountWithEmail(email);
+
+  // First creation of this account: send the one-time welcome email.
+  // Best-effort (never throws) and guarded by email_send_log inside.
+  await sendWelcomeEmail({ accountId, email });
+
+  return accountId;
 }

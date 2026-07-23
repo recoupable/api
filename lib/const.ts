@@ -34,6 +34,9 @@ export const OUTBOUND_EMAIL_DOMAIN = "@recoupable.dev";
 /** Default from address for outbound emails */
 export const RECOUP_FROM_EMAIL = `Agent by Recoup <agent${OUTBOUND_EMAIL_DOMAIN}>`;
 
+/** Marker stored in email_send_log.raw_body to identify welcome-email sends. */
+export const WELCOME_EMAIL_LOG_TYPE = "welcome_email";
+
 /**
  * Generic message returned for every POST /api/agents/signup response,
  * regardless of which branch (new agent+, existing account, new normal

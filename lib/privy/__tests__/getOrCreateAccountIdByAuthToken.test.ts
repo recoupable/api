@@ -16,6 +16,11 @@ vi.mock("@/lib/agents/createAccountWithEmail", () => ({
   createAccountWithEmail: vi.fn(),
 }));
 
+const mockSendWelcomeEmail = vi.fn();
+vi.mock("@/lib/emails/sendWelcomeEmail", () => ({
+  sendWelcomeEmail: (...args: unknown[]) => mockSendWelcomeEmail(...args),
+}));
+
 describe("getOrCreateAccountIdByAuthToken", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -31,6 +36,7 @@ describe("getOrCreateAccountIdByAuthToken", () => {
 
     expect(accountId).toBe("acc-existing");
     expect(createAccountWithEmail).not.toHaveBeenCalled();
+    expect(mockSendWelcomeEmail).not.toHaveBeenCalled();
   });
 
   it("creates an account and returns the new accountId when email is unknown", async () => {
@@ -42,6 +48,10 @@ describe("getOrCreateAccountIdByAuthToken", () => {
 
     expect(createAccountWithEmail).toHaveBeenCalledWith("new@example.com");
     expect(accountId).toBe("acc-new");
+    expect(mockSendWelcomeEmail).toHaveBeenCalledWith({
+      accountId: "acc-new",
+      email: "new@example.com",
+    });
   });
 
   it("creates an account when account_emails returns null", async () => {
