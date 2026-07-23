@@ -8,6 +8,7 @@ import { insertAccountEmail } from "@/lib/supabase/account_emails/insertAccountE
 import { insertAccountWallet } from "@/lib/supabase/account_wallets/insertAccountWallet";
 import { initializeAccountCredits } from "@/lib/credits/initializeAccountCredits";
 import { assignAccountToOrg } from "@/lib/organizations/assignAccountToOrg";
+import { sendWelcomeEmail } from "@/lib/emails/sendWelcomeEmail";
 import type { CreateAccountBody } from "./validateCreateAccountBody";
 
 /**
@@ -92,6 +93,12 @@ export async function createAccountHandler(body: CreateAccountBody): Promise<Nex
     }
 
     await initializeAccountCredits(newAccount.id);
+
+    if (email) {
+      // First creation of this account: send the one-time welcome email.
+      // Best-effort (never throws) and guarded by email_send_log inside.
+      await sendWelcomeEmail({ accountId: newAccount.id, email });
+    }
 
     const newAccountData: AccountDataResponse = {
       id: newAccount.id,

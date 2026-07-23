@@ -20,17 +20,19 @@ function mockBuilder(result: { data: unknown; error: unknown }) {
 describe("selectEmailSendLog", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("applies the status, raw_body-substring, and limit filters", async () => {
+  it("applies the account_id, status, raw_body-substring, and limit filters", async () => {
     const rows = [{ id: "log_1", status: "sent" }];
     const builder = mockBuilder({ data: rows, error: null });
 
     const result = await selectEmailSendLog({
+      accountId: "acc_1",
       status: "sent",
       rawBodyLike: '"snapshot_id":"snap_1"',
       limit: 1,
     });
 
     expect(supabase.from).toHaveBeenCalledWith("email_send_log");
+    expect(builder.eq).toHaveBeenCalledWith("account_id", "acc_1");
     expect(builder.eq).toHaveBeenCalledWith("status", "sent");
     expect(builder.like).toHaveBeenCalledWith("raw_body", '%"snapshot_id":"snap_1"%');
     expect(builder.limit).toHaveBeenCalledWith(1);
