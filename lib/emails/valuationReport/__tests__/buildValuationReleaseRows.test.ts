@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  buildAlbumArtMap,
-  buildValuationReleaseRows,
-} from "../buildValuationReleaseRows";
+import { buildAlbumArtMap, buildValuationReleaseRows } from "../buildValuationReleaseRows";
 
 describe("buildAlbumArtMap", () => {
   it("maps lowercased album names to the smallest cover-art url", () => {

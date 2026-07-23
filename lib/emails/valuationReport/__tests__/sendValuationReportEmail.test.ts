@@ -68,9 +68,7 @@ function arrange() {
   });
   vi.mocked(getCatalogEarliestReleaseDate).mockResolvedValue("2016-01-01");
   vi.mocked(selectCatalogSongsWithArtists).mockResolvedValue({
-    songs: [
-      { isrc: "US1", album: "Epitaph Hits", artists: [{ name: "Epitaph" }] },
-    ] as never,
+    songs: [{ isrc: "US1", album: "Epitaph Hits", artists: [{ name: "Epitaph" }] }] as never,
     total_count: 1,
   });
   vi.mocked(selectCatalogMeasurementsPage).mockResolvedValue([
