@@ -45,4 +45,42 @@ describe("buildWelcomeEmail", () => {
     expect(subject).not.toMatch(/[–—]/);
     expect(html).not.toMatch(/[–—]/);
   });
+
+  it("walks the five onboarding steps in order", () => {
+    const { html } = buildWelcomeEmail();
+
+    const order = [
+      "1. Confirm your artists",
+      "2. Verify their socials",
+      "3. Claim your catalog",
+      "4. See your baseline valuation",
+      "5. Automate with tasks",
+    ];
+    let cursor = -1;
+    for (const label of order) {
+      const at = html.indexOf(label);
+      expect(at, `"${label}" present`).toBeGreaterThan(-1);
+      expect(at, `"${label}" after the previous step`).toBeGreaterThan(cursor);
+      cursor = at;
+    }
+  });
+
+  it("features the full cast with stable Spotify art (no expiring social CDNs)", () => {
+    const { html } = buildWelcomeEmail();
+
+    for (const name of [
+      "Gatsby Grace",
+      "LA EQUIS",
+      "Sound of Fractures",
+      "Brauxelion",
+      "LATASHA",
+    ]) {
+      expect(html).toContain(name);
+    }
+    // At least the 5 PFPs + the album covers used in the steps.
+    const imageCount = (html.match(/i\.scdn\.co/g) ?? []).length;
+    expect(imageCount).toBeGreaterThanOrEqual(8);
+    expect(html).not.toContain("cdninstagram.com");
+    expect(html).not.toContain("tiktokcdn");
+  });
 });
