@@ -8,7 +8,16 @@ import { mintEphemeralAccountKey } from "@/lib/keys/mintEphemeralAccountKey";
 import { deleteApiKey } from "@/lib/supabase/account_api_keys/deleteApiKey";
 import { buildRunAgentInput } from "@/lib/chat/buildRunAgentInput";
 import { start } from "workflow/api";
+import { alertZombieOwner } from "@/lib/chat/runs/alertZombieOwner";
 
+// `after()` schedules post-response work; run the callback synchronously in tests.
+vi.mock("next/server", async importOriginal => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return { ...actual, after: (fn: () => unknown) => fn() };
+});
+vi.mock("@/lib/chat/runs/alertZombieOwner", () => ({
+  alertZombieOwner: vi.fn(),
+}));
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
@@ -96,6 +105,23 @@ describe("handleStartChatRun", () => {
     expect(start).toHaveBeenCalledOnce();
     // key is NOT deleted here — the workflow's finally owns that on run end
     expect(deleteApiKey).not.toHaveBeenCalled();
+  });
+
+  it("fires the zombie-owner alert (alert-only) for the run's owner after starting", async () => {
+    const res = await handleStartChatRun(req());
+
+    expect(res.status).toBe(202);
+    expect(alertZombieOwner).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: "acc-1", chatId: "chat-1", sessionId: "sess-1" }),
+    );
+  });
+
+  it("does not block the run when the zombie-owner alert throws", async () => {
+    vi.mocked(alertZombieOwner).mockRejectedValueOnce(new Error("alert boom"));
+
+    const res = await handleStartChatRun(req());
+
+    expect(res.status).toBe(202);
   });
 
   it("returns the validation error short-circuit", async () => {
