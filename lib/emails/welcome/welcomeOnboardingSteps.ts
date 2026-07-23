@@ -61,7 +61,7 @@ export const WELCOME_ONBOARDING_STEPS: WelcomeStep[] = [
     title: "See your baseline valuation",
     description:
       "Get what your catalog is worth today. It is the number every weekly report moves.",
-    linkText: "See your baseline valuation",
+    linkText: "See your baseline valuation.",
     linkPath: "/setup/valuation",
     imageUrl: "https://i.scdn.co/image/ab67616d00001e024aafdbad18bc27d7c429cdf1",
     imageStyle: "square",
