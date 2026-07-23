@@ -2,6 +2,7 @@ export type SpotifyAlbum = {
   id: string;
   name?: string;
   release_date?: string;
+  images?: Array<{ url: string; height?: number | null; width?: number | null }>;
 };
 
 // Spotify's GET /v1/albums caps ids at 20 per request.
