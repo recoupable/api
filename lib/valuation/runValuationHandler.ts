@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import generateAccessToken from "@/lib/spotify/generateAccessToken";
@@ -10,6 +10,7 @@ import { createSnapshotCatalog } from "@/lib/catalog/createSnapshotCatalog";
 import { selectCatalogMeasurementsAggregate } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate";
 import { getCatalogEarliestReleaseDate } from "@/lib/catalog/getCatalogEarliestReleaseDate";
 import { computeValuationBand } from "@/lib/catalog/computeValuationBand";
+import { sendValuationReportEmail } from "@/lib/emails/valuationReport/sendValuationReportEmail";
 import { validateRunValuationRequest } from "./validateRunValuationRequest";
 import { extractValuationAlbums } from "./extractValuationAlbums";
 import { waitForSnapshotMeasurements } from "./waitForSnapshotMeasurements";
@@ -139,6 +140,17 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
       totalStreams: aggregate?.totalStreams ?? 0,
       earliestReleaseDate,
     });
+
+    // Email the valuation report after the catalog is materialized (chat#1881):
+    // the local `snapshot` predates createSnapshotCatalog, so point it at the
+    // fresh catalog id. Deferred with `after` so it never blocks the response,
+    // and self-guarded (dedup + idempotency key) inside sendValuationReportEmail.
+    after(() =>
+      sendValuationReportEmail(
+        { ...snapshot, catalog: catalog.id },
+        { artist: searchedArtist },
+      ).catch(error => console.error("Valuation report email failed:", error)),
+    );
 
     return successResponse({
       catalog,
