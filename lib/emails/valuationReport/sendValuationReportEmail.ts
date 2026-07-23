@@ -3,13 +3,23 @@ import { CHAT_APP_URL, RECOUP_FROM_EMAIL } from "@/lib/const";
 import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 import { logEmailAttempt } from "@/lib/emails/logEmailAttempt";
 import { renderValuationReportHtml } from "@/lib/emails/valuationReport/renderValuationReportHtml";
+import {
+  buildAlbumArtMap,
+  buildValuationReleaseRows,
+} from "@/lib/emails/valuationReport/buildValuationReleaseRows";
 import { selectEmailSendLog } from "@/lib/supabase/email_send_log/selectEmailSendLog";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { selectCatalogById } from "@/lib/supabase/catalogs/selectCatalogById";
 import { selectCatalogMeasurementsAggregate } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate";
+import { selectCatalogMeasurementsPage } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsPage";
+import { selectCatalogSongsWithArtists } from "@/lib/supabase/catalog_songs/selectCatalogSongsWithArtists";
 import { getCatalogEarliestReleaseDate } from "@/lib/catalog/getCatalogEarliestReleaseDate";
 import { computeValuationBand } from "@/lib/catalog/computeValuationBand";
+import { buildReleaseRollups } from "@/lib/catalog/buildReleaseRollups";
+import generateAccessToken from "@/lib/spotify/generateAccessToken";
+import getAlbums from "@/lib/spotify/getAlbums";
 import type { ValuationReportEmailParams } from "@/lib/emails/valuationReport/renderValuationReportHtml";
+import type { SpotifyArtist } from "@/types/spotify.types";
 import type { Tables } from "@/types/database.types";
 
 export type SendValuationReportEmailResult =
@@ -17,21 +27,63 @@ export type SendValuationReportEmailResult =
   | { sent: false; skipped: "already_sent" | "no_email" }
   | { sent: false; error: string };
 
+// One page is enough for the report: valuation-claimed catalogs are well under
+// this, and the release table only needs the measured tracks.
+const MEASUREMENTS_LIMIT = 1000;
+
+/**
+ * Gather the per-release table (album, streams, proportional value, art) for a
+ * valued catalog. Best-effort: any read/Spotify failure returns [] so the email
+ * still sends with the headline band, just without the breakdown.
+ */
+async function buildReleaseRows(
+  catalogId: string,
+  albumIds: string[],
+  totalStreams: number,
+  bandMid: number,
+): Promise<ValuationReportEmailParams["releases"]> {
+  try {
+    const [{ songs }, measurements, tokenResult] = await Promise.all([
+      selectCatalogSongsWithArtists({ catalogId }),
+      selectCatalogMeasurementsPage({ catalogId, page: 1, limit: MEASUREMENTS_LIMIT }),
+      generateAccessToken(),
+    ]);
+
+    const rollups = buildReleaseRollups(songs, measurements ?? []);
+
+    let artByAlbum = new Map<string, string>();
+    if (albumIds.length > 0 && tokenResult.access_token) {
+      const { albums } = await getAlbums({ ids: albumIds, accessToken: tokenResult.access_token });
+      if (albums) artByAlbum = buildAlbumArtMap(albums);
+    }
+
+    return buildValuationReleaseRows({ rollups, totalStreams, bandMid, artByAlbum });
+  } catch (error) {
+    console.error(`Valuation email release-table build failed for catalog ${catalogId}:`, error);
+    return [];
+  }
+}
+
 /**
  * Emails the valuation summary for a completed snapshot run to the owning
- * account (recoupable/chat#1867): headline valuation band + lifetime streams
- * + measured counts, deep-linked to the catalog report on chat. Idempotent
- * per run twice over: a `"snapshot_id"` marker in `email_send_log.raw_body`
- * guards re-invocations for as long as the log exists, and the Resend
- * idempotency key (`valuation-report/<id>`) guards racing retries within
- * Resend's 24h window. Skips silently when the account has no email.
- * Measurement enrichment is best-effort: a read failure degrades to the
- * link-only email rather than dropping the send.
+ * account (recoupable/chat#1867, enriched per chat#1881). Reproduces the
+ * marketing / chat catalog-report result — artist header, headline band,
+ * measured-scope stats, and a per-release table with album art + proportional
+ * value — so it reinforces numbers the signup already saw. Idempotent per run
+ * twice over: a `"snapshot_id"` marker in `email_send_log.raw_body` guards
+ * re-invocations for as long as the log exists, and the Resend idempotency key
+ * (`valuation-report/<id>`) guards racing retries within Resend's 24h window.
+ * Skips silently when the account has no email. Every enrichment step is
+ * best-effort: a failure degrades toward the link-only email rather than
+ * dropping the send. Fired from runValuationHandler after the catalog is
+ * materialized (chat#1881), so `snapshot.catalog` is set by call time.
  *
- * @param snapshot - The completed playcount_snapshots row
+ * @param snapshot - The completed playcount_snapshots row (with catalog claimed)
+ * @param options.artist - The searched Spotify artist for the header (name, avatar, followers)
  */
 export async function sendValuationReportEmail(
   snapshot: Tables<"playcount_snapshots">,
+  options: { artist?: SpotifyArtist | null } = {},
 ): Promise<SendValuationReportEmailResult> {
   // Long-window idempotency: a prior successful send for this run is marked by
   // the `"snapshot_id":"<id>"` marker in raw_body (Resend's key only covers 24h).
@@ -56,6 +108,14 @@ export async function sendValuationReportEmail(
     albumCount: snapshot.album_count ?? snapshot.album_ids?.length ?? 0,
   };
 
+  if (options.artist?.name) {
+    params.artist = {
+      name: options.artist.name,
+      imageUrl: options.artist.images?.[0]?.url ?? null,
+      followers: options.artist.followers?.total ?? null,
+    };
+  }
+
   if (snapshot.catalog) {
     try {
       const [catalog, aggregate, earliestReleaseDate] = await Promise.all([
@@ -73,6 +133,15 @@ export async function sendValuationReportEmail(
         params.totalStreams = aggregate.totalStreams;
         params.measuredSongCount = aggregate.measuredSongCount;
         params.catalogAgeYears = catalogAgeYears;
+
+        const releases = await buildReleaseRows(
+          snapshot.catalog,
+          snapshot.album_ids ?? [],
+          aggregate.totalStreams,
+          valuation.mid,
+        );
+        params.releases = releases;
+        params.releaseCount = releases?.length || undefined;
       }
     } catch (error) {
       console.error(`Valuation email enrichment failed for snapshot ${snapshot.id}:`, error);
