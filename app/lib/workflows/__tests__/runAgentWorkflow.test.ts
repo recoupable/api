@@ -262,7 +262,7 @@ describe("runAgentWorkflow", () => {
     });
   });
 
-  it("does NOT call handleChatCredits when runAgentStep returns no responseMessage", async () => {
+  it("STILL bills the turn (1c floor) when runAgentStep returns no responseMessage — a mid-turn side-effect (e.g. send_email) may already have fired", async () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
       aborted: false,
@@ -271,15 +271,37 @@ describe("runAgentWorkflow", () => {
 
     await runAgentWorkflow(baseInput);
 
-    expect(handleChatCredits).not.toHaveBeenCalled();
+    // Previously this path skipped billing entirely — a turn that emailed
+    // the customer but returned no responseMessage was free + left no
+    // usage_events audit row. Now it bills once with zero usage → 1c floor
+    // + a model_id row.
+    expect(handleChatCredits).toHaveBeenCalledTimes(1);
+    expect(handleChatCredits).toHaveBeenCalledWith({
+      accountId: "acc-1",
+      model: "anthropic/claude-haiku-4.5",
+      source: "api",
+      gatewayCostUsd: undefined,
+      usage: { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 },
+    });
   });
 
-  it("does NOT call handleChatCredits when runAgentStep throws (no message to bill)", async () => {
+  it("STILL bills the turn (1c floor) when runAgentStep throws after a side-effect — email out must never escape the wallet debit + audit row", async () => {
     vi.mocked(runAgentStep).mockRejectedValue(new Error("model exploded"));
 
+    // The error still propagates (workflow fails)...
     await expect(runAgentWorkflow(baseInput)).rejects.toThrow("model exploded");
 
-    expect(handleChatCredits).not.toHaveBeenCalled();
+    // ...but the `finally` backstop bills the turn first, so a turn that ran
+    // a customer-facing tool (send_email) then threw is charged + audited
+    // instead of emailing-but-not-billing.
+    expect(handleChatCredits).toHaveBeenCalledTimes(1);
+    expect(handleChatCredits).toHaveBeenCalledWith({
+      accountId: "acc-1",
+      model: "anthropic/claude-haiku-4.5",
+      source: "api",
+      gatewayCostUsd: undefined,
+      usage: { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 },
+    });
   });
 
   describe("auto-commit", () => {

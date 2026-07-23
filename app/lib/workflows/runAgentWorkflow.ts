@@ -97,35 +97,47 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
   const assistantMessageId =
     latestMessage?.role === "assistant" ? latestMessage.id : await generateAssistantMessageId();
 
+  // Charge the account for this turn: atomic wallet debit + audit row via the
+  // `deduct_credits_with_audit` Postgres function (`handleChatCredits` →
+  // `recordCreditDeduction`), using the usage on `responseMessage.metadata`
+  // when present.
+  //
+  // This MUST run even when the step throws or returns no `responseMessage`.
+  // A turn can run a customer-facing tool (e.g. `send_email`) mid-step, so if
+  // billing were gated on a clean `responseMessage` return, a turn that emails
+  // the customer and then fails would be free AND leave no `usage_events` row
+  // (observed 2026-07-23: a scheduled briefing emailed the customer but wrote
+  // zero LLM rows). `chargeTurn` is idempotent — the normal path bills exactly
+  // once below; the `finally` backstop only fires when a throw skipped it.
+  // ZERO_USAGE with no gateway cost floors to the 1c minimum in
+  // `handleChatCredits`, so a failed turn still writes a `model_id` audit row.
+  let result: Awaited<ReturnType<typeof runAgentStep>> | undefined;
+  let charged = false;
+  const chargeTurn = async () => {
+    if (charged) return;
+    charged = true;
+    const metadata = result?.responseMessage?.metadata as AgentMessageMetadata | undefined;
+    await handleChatCredits({
+      accountId: input.accountId,
+      model: input.modelId,
+      source: "api",
+      gatewayCostUsd: metadata?.totalMessageCost,
+      usage: metadata?.totalMessageUsage ?? ZERO_USAGE,
+    });
+  };
+
   try {
-    const result = await runAgentStep({
+    result = await runAgentStep({
       ...input,
       writable,
       assistantMessageId,
     });
     console.log("[runAgentWorkflow] finish", { finishReason: result.finishReason });
 
-    // The assistant message is persisted per step inside `runAgentStep`, so
-    // it's not written here. We still use the final `responseMessage` to
-    // charge the account for this turn: atomic wallet debit + audit row via
-    // the `deduct_credits_with_audit` Postgres function (`handleChatCredits`
-    // → `recordCreditDeduction`).
-    //
-    // Charge on user-stop too — the provider already billed us for the
-    // tokens consumed, and the assistant message (including partial tool
-    // runs) is persisted, so the user owes the charge regardless of how
-    // the turn ended. `result.responseMessage.metadata` carries the
-    // usage actually consumed up to the abort point.
-    if (result.responseMessage) {
-      const metadata = result.responseMessage.metadata as AgentMessageMetadata | undefined;
-      await handleChatCredits({
-        accountId: input.accountId,
-        model: input.modelId,
-        source: "api",
-        gatewayCostUsd: metadata?.totalMessageCost,
-        usage: metadata?.totalMessageUsage ?? ZERO_USAGE,
-      });
-    }
+    // Charge on user-stop too — the provider already billed us for the tokens
+    // consumed, and the assistant message (including partial tool runs) is
+    // persisted, so the user owes the charge regardless of how the turn ended.
+    await chargeTurn();
 
     // Auto-commit + push only after a natural finish. Skip on user-stop —
     // don't push half-done work, and `autoCommitChatTurn` can run 30+
@@ -145,6 +157,16 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
       });
     }
   } finally {
+    // Billing backstop: if `runAgentStep` threw AFTER a customer-facing
+    // side-effect already fired (e.g. the agent's `send_email` tool sent the
+    // email, then the turn errored), the in-`try` charge above was skipped.
+    // Bill here — `chargeTurn` is idempotent, so the success path is never
+    // double-charged; a failed turn still lands a wallet debit + `usage_events`
+    // audit row instead of emailing-but-not-billing. Runs before cleanup;
+    // `handleChatCredits` swallows its own errors so it can't break the
+    // cleanup steps below or mask the original throw.
+    await chargeTurn();
+
     // Run two cleanup steps in parallel:
     //   1) `clearChatActiveStream` — CAS-gated DB clear of the chat's
     //      `active_stream_id` so the recovery probe flips to false.
