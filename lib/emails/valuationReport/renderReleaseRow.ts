@@ -1,6 +1,6 @@
 import { escapeHtml } from "@/lib/emails/escapeHtml";
 import { formatCompactNumber } from "@/lib/emails/valuationReport/formatCompactNumber";
-import { formatUsd } from "@/lib/emails/valuationReport/formatUsd";
+import { formatCompactUsd } from "@/lib/emails/valuationReport/formatCompactUsd";
 import type { ValuationReleaseRow } from "@/lib/emails/valuationReport/valuationReportTypes";
 
 /**
@@ -20,6 +20,6 @@ export function renderReleaseRow(release: ValuationReleaseRow): string {
 <td valign="middle" width="40" style="padding:10px 12px 10px 0;border-bottom:1px solid #f0f0f0">${art}</td>
 <td valign="middle" style="padding:10px 12px 10px 0;border-bottom:1px solid #f0f0f0"><p style="margin:0;font-size:14px;font-weight:600;color:#0a0a0a">${album}</p>${artists}</td>
 <td valign="middle" align="right" style="padding:10px 12px 10px 0;border-bottom:1px solid #f0f0f0;font-size:13px;color:#6b6b6b;white-space:nowrap">${formatCompactNumber(release.streams)}</td>
-<td valign="middle" align="right" style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#0a0a0a;white-space:nowrap">${formatUsd(release.value)}</td>
+<td valign="middle" align="right" style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#0a0a0a;white-space:nowrap">${formatCompactUsd(release.value)}</td>
 </tr>`;
 }
