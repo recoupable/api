@@ -59,7 +59,7 @@ describe("renderEmailLayout", () => {
     expect(html).toContain("'Plus Jakarta Sans'");
     // No style attribute may contain a stray double quote before its close.
     for (const style of html.match(/style="[^"]*"/g) ?? []) {
-      expect(style).not.toContain("font-family:\"");
+      expect(style).not.toContain('font-family:"');
     }
   });
 
