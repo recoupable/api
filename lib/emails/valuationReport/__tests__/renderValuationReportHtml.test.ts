@@ -106,4 +106,14 @@ describe("renderValuationReportHtml", () => {
     expect(subject).not.toMatch(/[–—]/);
     expect(html).not.toMatch(/[–—]/);
   });
+
+  it("renders inside the shared house layout (consistency pass)", () => {
+    const { html } = renderValuationReportHtml(baseParams);
+
+    // Shared wrapper markers: the house footer tagline + shadow-as-border card.
+    expect(html).toContain("the AI agent platform for the music industry");
+    expect(html).toContain("box-shadow: 0px 0px 0px 1px #e8e8e8");
+    // The email no longer ships its own outer page/card chrome.
+    expect(html).not.toContain("background:#f7f7f7;padding:24px 0");
+  });
 });

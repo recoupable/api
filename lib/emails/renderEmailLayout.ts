@@ -26,8 +26,13 @@ const CTA_FG = "#ffffff"; // --primary-foreground
 
 // UI font stack — Plus Jakarta Sans (DESIGN.md four-font system) with system
 // fallbacks for clients that can't load a webfont.
+//
+// Font names are SINGLE-quoted on purpose: this stack is interpolated into
+// double-quoted `style="…"` attributes, so double quotes here would terminate
+// the attribute early — silently dropping the font (clients fall back to
+// serif) and every declaration after it.
 const FONT_STACK =
-  '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+  "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
 // Shadow-as-border (DESIGN.md) — a hairline outline + subtle elevation via
 // box-shadow instead of a CSS `border` on the card.
@@ -77,7 +82,7 @@ export function renderEmailLayout({ bodyHtml, footerHtml, cta }: RenderEmailLayo
     ${footerBlock}
   </div>
   <div style="max-width:560px;margin:16px auto 0;text-align:center;font-family:${FONT_STACK};font-size:11px;color:${MUTED_INK};">
-    Recoup — the AI agent platform for the music industry
+    Recoup, the AI agent platform for the music industry
   </div>
 </div>`.trim();
 }

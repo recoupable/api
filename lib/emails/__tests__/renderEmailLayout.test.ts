@@ -48,6 +48,21 @@ describe("renderEmailLayout", () => {
     expect(html).toContain("max-width");
   });
 
+  it("never breaks a style attribute with quotes in the font stack", () => {
+    const html = renderEmailLayout({ bodyHtml: "<p>Body</p>" });
+
+    // Regression: double-quoted font names inside a double-quoted style="…"
+    // attribute terminate it early, silently dropping the font (clients fall
+    // back to serif) and every declaration after it. Font names must be
+    // single-quoted so the attribute stays intact.
+    expect(html).not.toContain('"Plus Jakarta Sans"');
+    expect(html).toContain("'Plus Jakarta Sans'");
+    // No style attribute may contain a stray double quote before its close.
+    for (const style of html.match(/style="[^"]*"/g) ?? []) {
+      expect(style).not.toContain("font-family:\"");
+    }
+  });
+
   it("returns a single HTML string", () => {
     expect(typeof renderEmailLayout({ bodyHtml: "<p>x</p>" })).toBe("string");
   });
