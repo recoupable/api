@@ -42,15 +42,16 @@ describe("buildWelcomeEmail", () => {
     expect(html).not.toMatch(/[–—]/);
   });
 
-  it("walks the five onboarding steps in order", () => {
+  it("walks the app's four derived checkpoints in order", () => {
     const { html } = buildWelcomeEmail();
 
+    // Four, not five: the app derives exactly these checkpoints, and the
+    // baseline valuation is the payoff rather than a numbered step (chat#1889).
     const order = [
       "1. Confirm your artists",
       "2. Verify their socials",
       "3. Claim your catalog",
-      "4. See your baseline valuation",
-      "5. Automate with tasks",
+      "4. Automate with tasks",
     ];
     let cursor = -1;
     for (const label of order) {
@@ -73,6 +74,16 @@ describe("buildWelcomeEmail", () => {
     ]) {
       expect(html).toContain(`href="${CHAT_APP_URL}${path}"`);
     }
+  });
+
+  it("renders inside the shared house layout (consistency pass)", () => {
+    const { html } = buildWelcomeEmail();
+
+    // Shared wrapper markers: the house footer tagline + shadow-as-border card.
+    expect(html).toContain("the AI agent platform for the music industry");
+    expect(html).toContain("box-shadow: 0px 0px 0px 1px #e8e8e8");
+    // The email no longer ships its own outer page/card chrome.
+    expect(html).not.toContain("background:#f7f7f7;padding:24px 0");
   });
 
   it("uses only durable image hosts (no expiring social CDNs)", () => {
