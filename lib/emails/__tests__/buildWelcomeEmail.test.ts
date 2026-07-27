@@ -42,15 +42,16 @@ describe("buildWelcomeEmail", () => {
     expect(html).not.toMatch(/[–—]/);
   });
 
-  it("walks the five onboarding steps in order", () => {
+  it("walks the app's four derived checkpoints in order", () => {
     const { html } = buildWelcomeEmail();
 
+    // Four, not five: the app derives exactly these checkpoints, and the
+    // baseline valuation is the payoff rather than a numbered step (chat#1889).
     const order = [
       "1. Confirm your artists",
       "2. Verify their socials",
       "3. Claim your catalog",
-      "4. See your baseline valuation",
-      "5. Automate with tasks",
+      "4. Automate with tasks",
     ];
     let cursor = -1;
     for (const label of order) {

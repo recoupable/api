@@ -1,12 +1,20 @@
 /**
- * The five onboarding steps mirrored in the welcome email, using the product's
- * real flow language (chat `lib/onboarding/getOnboardingStepContent.ts`:
- * Confirm artists, Verify socials, Claim catalog, Schedule report) plus the
- * baseline valuation. Each step links into the matching `/setup/*` route and is
- * illustrated with art:
+ * The four onboarding steps mirrored in the welcome email — a deliberate MIRROR
+ * of chat's `ONBOARDING_STEP_IDS` (artists, socials, catalog, task). chat and
+ * api share no package, so the list cannot be imported; `__tests__` asserts the
+ * titles and order match the app's derived checkpoints, which is what keeps the
+ * mirror honest.
+ *
+ * The baseline valuation is deliberately NOT one of the numbered steps
+ * (chat#1889). It is not a derivable checkpoint — `catalogs` persists no
+ * valuation and the number is computed live at read time — and numbering the
+ * payoff alongside the chores was the wrong model. It stays in the email as the
+ * reward the steps unlock.
+ *
+ * Each step links into the matching `/setup/*` route and is illustrated with art:
  *   - step 1: an overlapping stack of the house cast's PFPs (social proof),
  *   - step 2: a real Instagram post thumbnail with an IG badge,
- *   - steps 3-5: album covers from house artists.
+ *   - steps 3-4: album covers from house artists.
  *
  * The step 1 + step 2 images are pre-composed PNGs on Vercel Blob (overlap and
  * badge overlay can't be done reliably in email HTML), stored durably so they
@@ -54,16 +62,6 @@ export const WELCOME_ONBOARDING_STEPS: WelcomeStep[] = [
     linkText: "Claim your catalog.",
     linkPath: "/setup/catalog",
     imageUrl: "https://i.scdn.co/image/ab67616d00001e028d88dae207e00a332c234837",
-    imageStyle: "square",
-    imageAlt: "Album cover",
-  },
-  {
-    title: "See your baseline valuation",
-    description:
-      "Get what your catalog is worth today. It is the number every weekly report moves.",
-    linkText: "See your baseline valuation.",
-    linkPath: "/setup/valuation",
-    imageUrl: "https://i.scdn.co/image/ab67616d00001e024aafdbad18bc27d7c429cdf1",
     imageStyle: "square",
     imageAlt: "Album cover",
   },

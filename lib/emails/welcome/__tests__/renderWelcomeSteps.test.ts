@@ -31,10 +31,20 @@ describe("renderWelcomeSteps", () => {
       "/setup/artists",
       "/setup/socials",
       "/setup/catalog",
-      "/setup/valuation",
       "/setup/tasks",
     ]) {
       expect(html).toContain(`href="${BASE}${path}"`);
     }
+  });
+
+  it("does not number the baseline valuation among the steps", () => {
+    const html = renderWelcomeSteps(BASE);
+
+    // The payoff is rendered separately by renderValuationPayoff (chat#1889),
+    // so it must not appear in the numbered list.
+    expect(html).not.toContain("/setup/valuation");
+    // A numbered label only, not any "5." (the Blob host contains one).
+    expect(html).not.toMatch(/>\s*5\.\s/);
+    expect(html).not.toContain("baseline valuation");
   });
 });
