@@ -12,6 +12,12 @@ vi.mock("@/lib/tasks/validateCreateTaskRequest", () => ({
 }));
 vi.mock("@/lib/tasks/createTask", () => ({ createTask: vi.fn() }));
 
+const mockSendScheduleConfirmationEmail = vi.fn();
+vi.mock("@/lib/emails/sendScheduleConfirmationEmail", () => ({
+  sendScheduleConfirmationEmail: (...args: unknown[]) =>
+    mockSendScheduleConfirmationEmail(...args),
+}));
+
 const ACCOUNT_A = "123e4567-e89b-12d3-a456-426614174000";
 const ARTIST_ID = "323e4567-e89b-12d3-a456-426614174000";
 const validated = () => ({
@@ -55,6 +61,45 @@ describe("createTaskHandler", () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ status: "success", tasks: [created] });
     expect(createTask).toHaveBeenCalledWith(v);
+  });
+
+  it("confirms the new schedule to the account holder", async () => {
+    const v = validated();
+    vi.mocked(validateCreateTaskRequest).mockResolvedValue(v);
+    const created = { id: "sched-1", ...v } as Awaited<ReturnType<typeof createTask>>;
+    vi.mocked(createTask).mockResolvedValue(created);
+
+    await createTaskHandler(
+      new NextRequest("http://localhost/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": "k" },
+        body: "{}",
+      }),
+    );
+
+    // Bridges signup to the first report landing (chat#1889).
+    expect(mockSendScheduleConfirmationEmail).toHaveBeenCalledWith({
+      accountId: ACCOUNT_A,
+      taskId: "sched-1",
+      title: v.title,
+      schedule: v.schedule,
+      timeZone: undefined,
+    });
+  });
+
+  it("does not confirm a schedule that was never created", async () => {
+    vi.mocked(validateCreateTaskRequest).mockResolvedValue(validated());
+    vi.mocked(createTask).mockRejectedValue(new Error("Trigger failure"));
+
+    await createTaskHandler(
+      new NextRequest("http://localhost/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": "k" },
+        body: "{}",
+      }),
+    );
+
+    expect(mockSendScheduleConfirmationEmail).not.toHaveBeenCalled();
   });
 
   it.each([
