@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  RECOUP_FROM_EMAIL,
-  SCHEDULE_CONFIRMATION_EMAIL_LOG_TYPE,
-} from "@/lib/const";
+import { RECOUP_FROM_EMAIL, SCHEDULE_CONFIRMATION_EMAIL_LOG_TYPE } from "@/lib/const";
 import { buildScheduleConfirmationEmail } from "@/lib/emails/buildScheduleConfirmationEmail";
 import { describeCronCadence } from "@/lib/emails/describeCronCadence";
 import { sendEmailWithResend } from "@/lib/emails/sendEmail";

@@ -6,9 +6,7 @@ vi.mock("@/lib/emails/getEmailFooter", () => ({
   getEmailFooter: (...args: unknown[]) => mockGetEmailFooter(...args),
 }));
 
-const { buildScheduleConfirmationEmail } = await import(
-  "../buildScheduleConfirmationEmail"
-);
+const { buildScheduleConfirmationEmail } = await import("../buildScheduleConfirmationEmail");
 
 const params = {
   title: "Weekly valuation + streams report",

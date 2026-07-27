@@ -22,10 +22,7 @@ const pad = (value: number): string => String(value).padStart(2, "0");
  * @param schedule - Standard 5-field cron expression.
  * @param timeZone - IANA zone the expression is interpreted in; defaults to UTC.
  */
-export function describeCronCadence(
-  schedule: string,
-  timeZone = "UTC",
-): string {
+export function describeCronCadence(schedule: string, timeZone = "UTC"): string {
   const fields = schedule.trim().split(/\s+/);
   const fallback = `the schedule ${schedule}`;
   if (fields.length !== 5) return fallback;
@@ -35,10 +32,7 @@ export function describeCronCadence(
   const hourNum = Number(hour);
 
   const isFixedTime =
-    /^\d{1,2}$/.test(minute) &&
-    /^\d{1,2}$/.test(hour) &&
-    minuteNum < 60 &&
-    hourNum < 24;
+    /^\d{1,2}$/.test(minute) && /^\d{1,2}$/.test(hour) && minuteNum < 60 && hourNum < 24;
   if (!isFixedTime || dayOfMonth !== "*" || month !== "*") return fallback;
 
   const at = `${pad(hourNum)}:${pad(minuteNum)} ${timeZone}`;
