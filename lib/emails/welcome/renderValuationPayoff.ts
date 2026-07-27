@@ -1,7 +1,6 @@
 import { escapeHtml } from "@/lib/emails/escapeHtml";
 
-const COVER =
-  "https://i.scdn.co/image/ab67616d00001e024aafdbad18bc27d7c429cdf1";
+const COVER = "https://i.scdn.co/image/ab67616d00001e024aafdbad18bc27d7c429cdf1";
 
 /**
  * The baseline valuation, framed as the payoff the four steps unlock rather than

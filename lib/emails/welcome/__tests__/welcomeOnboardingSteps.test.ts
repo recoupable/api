@@ -21,13 +21,11 @@ const APP_CHECKPOINT_TITLES = [
 
 describe("WELCOME_ONBOARDING_STEPS", () => {
   it("numbers exactly the app's four derived checkpoints, in order", () => {
-    expect(WELCOME_ONBOARDING_STEPS.map((s) => s.title)).toEqual(
-      APP_CHECKPOINT_TITLES,
-    );
+    expect(WELCOME_ONBOARDING_STEPS.map(s => s.title)).toEqual(APP_CHECKPOINT_TITLES);
   });
 
   it("does not number the baseline valuation as a step", () => {
-    const paths = WELCOME_ONBOARDING_STEPS.map((s) => s.linkPath);
+    const paths = WELCOME_ONBOARDING_STEPS.map(s => s.linkPath);
     expect(paths).not.toContain("/setup/valuation");
     for (const step of WELCOME_ONBOARDING_STEPS) {
       expect(step.title.toLowerCase()).not.toContain("valuation");
@@ -35,7 +33,7 @@ describe("WELCOME_ONBOARDING_STEPS", () => {
   });
 
   it("keeps every step pointed at its canonical /setup route", () => {
-    expect(WELCOME_ONBOARDING_STEPS.map((s) => s.linkPath)).toEqual([
+    expect(WELCOME_ONBOARDING_STEPS.map(s => s.linkPath)).toEqual([
       "/setup/artists",
       "/setup/socials",
       "/setup/catalog",

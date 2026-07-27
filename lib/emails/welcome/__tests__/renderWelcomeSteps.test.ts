@@ -27,12 +27,7 @@ describe("renderWelcomeSteps", () => {
   it("points every step at its /setup route", () => {
     const html = renderWelcomeSteps(BASE);
 
-    for (const path of [
-      "/setup/artists",
-      "/setup/socials",
-      "/setup/catalog",
-      "/setup/tasks",
-    ]) {
+    for (const path of ["/setup/artists", "/setup/socials", "/setup/catalog", "/setup/tasks"]) {
       expect(html).toContain(`href="${BASE}${path}"`);
     }
   });
