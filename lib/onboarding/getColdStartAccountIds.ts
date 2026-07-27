@@ -26,6 +26,6 @@ export function getColdStartAccountIds({
   const nudged = new Set(alreadyNudgedAccountIds);
 
   return [...new Set(welcomedAccountIds)].filter(
-    (accountId) => !rostered.has(accountId) && !nudged.has(accountId),
+    accountId => !rostered.has(accountId) && !nudged.has(accountId),
   );
 }

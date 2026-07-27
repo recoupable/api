@@ -1,7 +1,4 @@
-import {
-  COLD_START_NUDGE_EMAIL_LOG_TYPE,
-  WELCOME_EMAIL_LOG_TYPE,
-} from "@/lib/const";
+import { COLD_START_NUDGE_EMAIL_LOG_TYPE, WELCOME_EMAIL_LOG_TYPE } from "@/lib/const";
 import { sendColdStartNudgeEmail } from "@/lib/emails/sendColdStartNudgeEmail";
 import { getColdStartAccountIds } from "@/lib/onboarding/getColdStartAccountIds";
 import { selectRosteredAccountIds } from "@/lib/supabase/account_artist_ids/selectRosteredAccountIds";
@@ -46,7 +43,7 @@ export async function runColdStartNudgeSweep(
   });
 
   const welcomedAccountIds = welcomeRows
-    .map((row) => row.account_id)
+    .map(row => row.account_id)
     .filter((id): id is string => !!id);
 
   if (welcomedAccountIds.length === 0) {
@@ -65,7 +62,7 @@ export async function runColdStartNudgeSweep(
     welcomedAccountIds,
     rosteredAccountIds,
     alreadyNudgedAccountIds: nudgedRows
-      .map((row) => row.account_id)
+      .map(row => row.account_id)
       .filter((id): id is string => !!id),
   });
 

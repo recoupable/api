@@ -11,9 +11,7 @@ import { runColdStartNudgeSweep } from "@/lib/onboarding/runColdStartNudgeSweep"
  * @param request - The incoming HTTP request.
  * @returns The JSON response describing what the sweep did.
  */
-export async function coldStartNudgeHandler(
-  request: NextRequest,
-): Promise<NextResponse> {
+export async function coldStartNudgeHandler(request: NextRequest): Promise<NextResponse> {
   const denied = validateCronRequest(request);
   if (denied) return denied;
 

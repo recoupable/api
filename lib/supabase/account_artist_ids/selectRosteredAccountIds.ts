@@ -10,9 +10,7 @@ import supabase from "../serverClient";
  * @param accountIds - Accounts to check.
  * @returns The subset that has at least one artist (deduplicated).
  */
-export async function selectRosteredAccountIds(
-  accountIds: string[],
-): Promise<string[]> {
+export async function selectRosteredAccountIds(accountIds: string[]): Promise<string[]> {
   if (accountIds.length === 0) return [];
 
   const { data, error } = await supabase
@@ -27,5 +25,5 @@ export async function selectRosteredAccountIds(
     return accountIds;
   }
 
-  return [...new Set((data ?? []).map((row) => row.account_id))];
+  return [...new Set((data ?? []).map(row => row.account_id))];
 }

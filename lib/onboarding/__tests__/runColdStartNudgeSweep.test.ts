@@ -8,12 +8,10 @@ vi.mock("@/lib/supabase/email_send_log/selectEmailSendLog", () => ({
   selectEmailSendLog: (...args: unknown[]) => mockSelectEmailSendLog(...args),
 }));
 vi.mock("@/lib/supabase/account_artist_ids/selectRosteredAccountIds", () => ({
-  selectRosteredAccountIds: (...args: unknown[]) =>
-    mockSelectRosteredAccountIds(...args),
+  selectRosteredAccountIds: (...args: unknown[]) => mockSelectRosteredAccountIds(...args),
 }));
 vi.mock("@/lib/emails/sendColdStartNudgeEmail", () => ({
-  sendColdStartNudgeEmail: (...args: unknown[]) =>
-    mockSendColdStartNudgeEmail(...args),
+  sendColdStartNudgeEmail: (...args: unknown[]) => mockSendColdStartNudgeEmail(...args),
 }));
 
 const { runColdStartNudgeSweep } = await import("../runColdStartNudgeSweep");
@@ -88,9 +86,7 @@ describe("runColdStartNudgeSweep", () => {
       .mockResolvedValueOnce([]);
     mockSelectRosteredAccountIds.mockResolvedValue([]);
     // e.g. a wallet-only account with no email address
-    mockSendColdStartNudgeEmail
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(false);
+    mockSendColdStartNudgeEmail.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
 
     const result = await runColdStartNudgeSweep(NOW);
 
