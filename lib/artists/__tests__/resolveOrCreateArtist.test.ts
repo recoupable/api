@@ -6,6 +6,7 @@ import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectA
 import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
 import { selectAccountWithSocials } from "@/lib/supabase/accounts/selectAccountWithSocials";
 import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
+import { enrichArtistSpotifyProfile } from "@/lib/artists/enrichArtistSpotifyProfile";
 
 vi.mock("@/lib/artists/createArtistInDb", () => ({ createArtistInDb: vi.fn() }));
 vi.mock("@/lib/valuation/findCanonicalArtistBySpotifyId", () => ({
@@ -21,6 +22,9 @@ vi.mock("@/lib/supabase/accounts/selectAccountWithSocials", () => ({
   selectAccountWithSocials: vi.fn(),
 }));
 vi.mock("@/lib/artist/updateArtistSocials", () => ({ updateArtistSocials: vi.fn() }));
+vi.mock("@/lib/artists/enrichArtistSpotifyProfile", () => ({
+  enrichArtistSpotifyProfile: vi.fn(),
+}));
 
 const SPOTIFY_ID = "0xPoVNPnxIIUS1vrxAYV00";
 const created = { id: "new-1", account_id: "new-1", name: "Del Water Gap" };
@@ -49,6 +53,40 @@ describe("resolveOrCreateArtist", () => {
       SPOTIFY: `https://open.spotify.com/artist/${SPOTIFY_ID}`,
     });
     expect(result).toEqual({ artist: created, created: true });
+  });
+
+  // chat#1889 row 16: the create-time attach stores the URL path segment as
+  // the username ("@artist · 0 followers"). Enrich with the real Spotify
+  // profile right after the attach so verify-socials shows real metadata.
+  it("enriches the attached social with the real Spotify profile", async () => {
+    await resolveOrCreateArtist({
+      name: "Del Water Gap",
+      accountId: "acct-1",
+      spotifyArtistId: SPOTIFY_ID,
+    });
+
+    expect(enrichArtistSpotifyProfile).toHaveBeenCalledWith({
+      artistId: "new-1",
+      spotifyArtistId: SPOTIFY_ID,
+    });
+  });
+
+  it("does not enrich on the plain create path (no spotify id)", async () => {
+    await resolveOrCreateArtist({ name: "X", accountId: "acct-1" });
+
+    expect(enrichArtistSpotifyProfile).not.toHaveBeenCalled();
+  });
+
+  it("does not enrich when the social attach fails (nothing to enrich)", async () => {
+    vi.mocked(updateArtistSocials).mockRejectedValue(new Error("nope"));
+
+    await resolveOrCreateArtist({
+      name: "Del Water Gap",
+      accountId: "acct-1",
+      spotifyArtistId: SPOTIFY_ID,
+    });
+
+    expect(enrichArtistSpotifyProfile).not.toHaveBeenCalled();
   });
 
   // One canonical artist per Spotify id (chat#1889, decision 2026-07-29):
