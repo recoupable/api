@@ -1020,6 +1020,50 @@ export type Database = {
           },
         ];
       };
+      catalog_valuations: {
+        Row: {
+          catalog_id: string;
+          created_at: string;
+          high: number;
+          id: string;
+          low: number;
+          measured_at: string;
+          measured_song_count: number;
+          mid: number;
+          total_streams: number;
+        };
+        Insert: {
+          catalog_id: string;
+          created_at?: string;
+          high: number;
+          id?: string;
+          low: number;
+          measured_at?: string;
+          measured_song_count: number;
+          mid: number;
+          total_streams: number;
+        };
+        Update: {
+          catalog_id?: string;
+          created_at?: string;
+          high?: number;
+          id?: string;
+          low?: number;
+          measured_at?: string;
+          measured_song_count?: number;
+          mid?: number;
+          total_streams?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "catalog_valuations_catalog_id_fkey";
+            columns: ["catalog_id"];
+            isOneToOne: false;
+            referencedRelation: "catalogs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       catalogs: {
         Row: {
           created_at: string;
