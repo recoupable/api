@@ -1,4 +1,4 @@
-import { selectSocialsBySpotifyArtistId } from "@/lib/supabase/socials/selectSocialsBySpotifyArtistId";
+import { selectSocials } from "@/lib/supabase/socials/selectSocials";
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
 
 /**
@@ -21,7 +21,7 @@ export async function findCanonicalArtistBySpotifyId(
   spotifyArtistId: string,
 ): Promise<string | null> {
   try {
-    const socials = await selectSocialsBySpotifyArtistId(spotifyArtistId);
+    const socials = (await selectSocials({ profileUrlContains: spotifyArtistId })) ?? [];
     if (socials.length === 0) return null;
 
     for (const social of socials) {
