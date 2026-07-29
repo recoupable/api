@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 // The card-on-file body is the same single `successUrl` contract as the paid
 // subscription session, so the strict schema is shared rather than duplicated.
@@ -22,17 +23,9 @@ export type ValidatedCreateCardOnFileSessionRequest = {
 export async function validateCreateCardOnFileSessionRequest(
   request: NextRequest,
 ): Promise<NextResponse | ValidatedCreateCardOnFileSessionRequest> {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON body" },
-      { status: 400, headers: getCorsHeaders() },
-    );
-  }
-
-  const parsed = createSubscriptionSessionBodySchema.safeParse(body);
+  // safeParseJson yields `{}` for an absent or unparseable body, so both fall
+  // through to the schema and surface as the same 400 as a missing field.
+  const parsed = createSubscriptionSessionBodySchema.safeParse(await safeParseJson(request));
   if (!parsed.success) {
     const first = parsed.error.issues[0];
     return NextResponse.json({ error: first.message }, { status: 400, headers: getCorsHeaders() });

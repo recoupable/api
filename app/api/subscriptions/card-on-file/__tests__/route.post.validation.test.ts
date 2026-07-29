@@ -40,7 +40,11 @@ describe("POST /api/subscriptions/card-on-file (validation)", () => {
   it("returns 400 when body is invalid JSON", async () => {
     const res = await POST(postRequest("not-json"));
     expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toEqual({ error: "Invalid JSON body" });
+    // safeParseJson turns an unparseable body into `{}`, so this lands on the
+    // same missing-field message as an empty body rather than a JSON-specific one.
+    await expect(res.json()).resolves.toEqual({
+      error: "Invalid input: expected string, received undefined",
+    });
     expect(createCardOnFileSession).not.toHaveBeenCalled();
   });
 
