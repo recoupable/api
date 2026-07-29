@@ -56,4 +56,20 @@ describe("findCanonicalArtistBySpotifyId", () => {
 
     expect(await findCanonicalArtistBySpotifyId(SPOTIFY_ID)).toBeNull();
   });
+  // Row 10 (chat#1889): enrichSearchedArtistProfile bumps socials.updated_at
+  // mid-flow, so a newest-first pick can flip between the creation call and
+  // the valuation fallback. Oldest-first is stable — and after the row-9
+  // cleanup there is exactly one candidate anyway.
+  it("picks the OLDEST social's artist when several match", async () => {
+    vi.mocked(selectSocials).mockResolvedValue([
+      { id: "social-newest", updated_at: "2026-07-29T00:00:00Z" },
+      { id: "social-oldest", updated_at: "2025-05-30T00:00:00Z" },
+    ] as never);
+    vi.mocked(selectAccountSocials).mockImplementation((async (args: { socialId: string }) => {
+      if (args.socialId === "social-oldest") return [{ account_id: "true-canonical" }];
+      return [{ account_id: "fresh-duplicate" }];
+    }) as never);
+
+    expect(await findCanonicalArtistBySpotifyId(SPOTIFY_ID)).toBe("true-canonical");
+  });
 });

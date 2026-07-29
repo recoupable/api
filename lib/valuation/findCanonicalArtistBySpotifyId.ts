@@ -24,7 +24,14 @@ export async function findCanonicalArtistBySpotifyId(
     const socials = (await selectSocials({ profileUrlContains: spotifyArtistId })) ?? [];
     if (socials.length === 0) return null;
 
-    for (const social of socials) {
+    // Oldest first: enrichment bumps updated_at mid-flow, so a newest-first
+    // pick can flip between two lookups in the same add (chat#1889 row 10).
+    // The oldest social is the stable, true canonical.
+    const oldestFirst = [...socials].sort(
+      (a, b) => new Date(a.updated_at ?? 0).getTime() - new Date(b.updated_at ?? 0).getTime(),
+    );
+
+    for (const social of oldestFirst) {
       const links = await selectAccountSocials({ socialId: social.id });
       const linked = links.find(link => link.account_id);
       if (linked?.account_id) return linked.account_id;
