@@ -6,6 +6,7 @@ import { z } from "zod";
 
 export const createArtistBodySchema = z.object({
   name: z.string({ message: "name is required" }).min(1, "name cannot be empty"),
+  spotify_artist_id: z.string().min(1, "spotify_artist_id cannot be empty").optional(),
   account_id: z.uuid({ message: "account_id must be a valid UUID" }).optional(),
   organization_id: z.uuid({ message: "organization_id must be a valid UUID" }).optional(),
 });
@@ -16,6 +17,8 @@ export type ValidatedCreateArtistRequest = {
   name: string;
   accountId: string;
   organizationId?: string;
+  /** Optional Spotify artist id: the handler resolves-or-creates the canonical for it (chat#1889 row 8). */
+  spotifyArtistId?: string;
 };
 
 /**
@@ -61,5 +64,6 @@ export async function validateCreateArtistBody(
     name: result.data.name,
     accountId: authContext.accountId,
     organizationId: result.data.organization_id,
+    spotifyArtistId: result.data.spotify_artist_id,
   };
 }
