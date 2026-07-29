@@ -5,6 +5,11 @@ import { sendEmailHandler } from "../sendEmailHandler";
 const mockValidateSendEmailBody = vi.fn();
 const mockProcessAndSendEmail = vi.fn();
 const mockLogEmailAttempt = vi.fn();
+const mockSelectAccountCatalog = vi.fn();
+
+vi.mock("@/lib/supabase/account_catalogs/selectAccountCatalog", () => ({
+  selectAccountCatalog: (...args: unknown[]) => mockSelectAccountCatalog(...args),
+}));
 
 vi.mock("@/lib/emails/validateSendEmailBody", () => ({
   validateSendEmailBody: (...args: unknown[]) => mockValidateSendEmailBody(...args),
@@ -48,6 +53,57 @@ describe("sendEmailHandler", () => {
       success: true,
       message: "Email sent successfully.",
       id: "resend-id-1",
+    });
+  });
+
+  // chat#1911 row 5: catalog_id passes through ONLY when the caller owns the
+  // catalog - otherwise it is dropped and the email sends unchanged, so a
+  // caller can never lead their email with someone else's valuation.
+  describe("catalog_id ownership gate", () => {
+    const catalogId = "740d5050-40ec-4892-a040-b78bb50fef2f";
+    const withCatalog = () =>
+      mockValidateSendEmailBody.mockResolvedValue({
+        rawBody: "{}",
+        data: {
+          to: ["dest@example.com"],
+          subject: "Weekly report",
+          text: "body",
+          catalog_id: catalogId,
+          accountId: "account-123",
+        },
+      });
+
+    it("passes catalog_id through when the account owns the catalog", async () => {
+      withCatalog();
+      mockSelectAccountCatalog.mockResolvedValue({ account: "account-123", catalog: catalogId });
+
+      await sendEmailHandler(createRequest());
+
+      expect(mockSelectAccountCatalog).toHaveBeenCalledWith({
+        accountId: "account-123",
+        catalogId,
+      });
+      expect(mockProcessAndSendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ catalog_id: catalogId }),
+      );
+    });
+
+    it("drops catalog_id when the catalog is not owned by the caller", async () => {
+      withCatalog();
+      mockSelectAccountCatalog.mockResolvedValue(null);
+
+      const response = await sendEmailHandler(createRequest());
+
+      expect(response.status).toBe(200);
+      expect(mockProcessAndSendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ catalog_id: undefined }),
+      );
+    });
+
+    it("never checks ownership when no catalog_id is sent", async () => {
+      await sendEmailHandler(createRequest());
+
+      expect(mockSelectAccountCatalog).not.toHaveBeenCalled();
     });
   });
 

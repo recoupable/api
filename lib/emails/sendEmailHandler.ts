@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateSendEmailBody } from "@/lib/emails/validateSendEmailBody";
 import { processAndSendEmail } from "@/lib/emails/processAndSendEmail";
+import { selectAccountCatalog } from "@/lib/supabase/account_catalogs/selectAccountCatalog";
 import { logEmailAttempt, type EmailAttemptLog } from "@/lib/emails/logEmailAttempt";
 
 /**
@@ -29,8 +30,19 @@ export async function sendEmailHandler(request: NextRequest): Promise<NextRespon
       html = "",
       headers = {},
       chat_id,
+      catalog_id,
       accountId,
     } = validated.data;
+
+    // catalog_id passes through only when the caller owns the catalog — an
+    // unowned id is dropped (email sends unchanged, per the documented
+    // contract) so a caller can never lead their email with someone else's
+    // valuation (chat#1911 row 5).
+    const ownedCatalogId =
+      catalog_id && (await selectAccountCatalog({ accountId, catalogId: catalog_id }))
+        ? catalog_id
+        : undefined;
+
     const result = await processAndSendEmail({
       to,
       cc,
@@ -39,6 +51,7 @@ export async function sendEmailHandler(request: NextRequest): Promise<NextRespon
       html,
       headers,
       room_id: chat_id,
+      catalog_id: ownedCatalogId,
     });
 
     if (result.success === false) {

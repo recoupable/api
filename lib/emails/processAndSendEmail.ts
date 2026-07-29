@@ -1,6 +1,9 @@
 import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 import { getEmailFooter } from "@/lib/emails/getEmailFooter";
 import { renderEmailLayout } from "@/lib/emails/renderEmailLayout";
+import { getCatalogValuationDelta } from "@/lib/catalog/getCatalogValuationDelta";
+import { buildValuationDeltaSubjectPrefix } from "@/lib/emails/valuationDelta/buildValuationDeltaSubjectPrefix";
+import { renderValuationDeltaHero } from "@/lib/emails/valuationDelta/renderValuationDeltaHero";
 import { selectRoomWithArtist } from "@/lib/supabase/rooms/selectRoomWithArtist";
 import { RECOUP_FROM_EMAIL } from "@/lib/const";
 import { NextResponse } from "next/server";
@@ -14,6 +17,8 @@ export interface ProcessAndSendEmailInput {
   html?: string;
   headers?: Record<string, string>;
   room_id?: string;
+  /** Ownership-checked by the caller — leads the email with the catalog's value delta (chat#1911 row 5). */
+  catalog_id?: string;
 }
 
 export interface ProcessAndSendEmailSuccess {
@@ -39,11 +44,28 @@ export type ProcessAndSendEmailResult = ProcessAndSendEmailSuccess | ProcessAndS
 export async function processAndSendEmail(
   input: ProcessAndSendEmailInput,
 ): Promise<ProcessAndSendEmailResult> {
-  const { to, cc = [], subject, text, html = "", headers = {}, room_id } = input;
+  const { to, cc = [], subject, text, html = "", headers = {}, room_id, catalog_id } = input;
 
   const roomData = room_id ? await selectRoomWithArtist(room_id) : null;
   const footer = getEmailFooter(room_id, roomData?.artist_name || undefined);
-  const bodyHtml = html || (text ? await marked(text) : "");
+  let bodyHtml = html || (text ? await marked(text) : "");
+  let finalSubject = subject;
+
+  // Lead with the catalog's value delta when the caller asked for it
+  // (chat#1911 row 5): subject prefix + hero block above the body. Best-effort
+  // by contract — an unowned/empty catalog or a lookup failure sends the email
+  // unchanged; the delta must never cost a delivery.
+  if (catalog_id) {
+    try {
+      const delta = await getCatalogValuationDelta({ catalogId: catalog_id });
+      if (delta) {
+        finalSubject = buildValuationDeltaSubjectPrefix(delta) + subject;
+        bodyHtml = renderValuationDeltaHero(delta) + bodyHtml;
+      }
+    } catch (error) {
+      console.error("Valuation delta enrichment failed:", error);
+    }
+  }
   // Wrap in the shared house-style layout so every outbound email — including
   // the live weekly-report send that flows through here — shares one visual
   // language with the welcome/valuation emails (recoupable/chat#1885
@@ -55,7 +77,7 @@ export async function processAndSendEmail(
     from: RECOUP_FROM_EMAIL,
     to,
     cc: cc.length > 0 ? cc : undefined,
-    subject,
+    subject: finalSubject,
     html: htmlWithLayout,
     headers,
   });
