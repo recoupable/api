@@ -13,9 +13,9 @@ describe("toolChains", () => {
     it("allows tool chain item with system prompt", () => {
       const item: ToolChainItem = {
         toolName: "test_tool",
-        system: "Custom system prompt",
+        instructions: "Custom system prompt",
       };
-      expect(item.system).toBe("Custom system prompt");
+      expect(item.instructions).toBe("Custom system prompt");
     });
 
     it("allows tool chain item with messages", () => {
@@ -47,12 +47,12 @@ describe("toolChains", () => {
       const result: PrepareStepResult = {
         toolChoice: { type: "tool", toolName: "test_tool" },
         model: "gemini-2.5-pro" as any,
-        system: "Custom prompt",
+        instructions: "Custom prompt",
         messages: [{ role: "user", content: "Test" }],
       };
       expect(result.toolChoice).toBeDefined();
       expect(result.model).toBeDefined();
-      expect(result.system).toBeDefined();
+      expect(result.instructions).toBeDefined();
       expect(result.messages).toBeDefined();
     });
   });
@@ -81,10 +81,10 @@ describe("toolChains", () => {
       it("includes update_account_info with custom system prompt", () => {
         const chain = TOOL_CHAINS.create_new_artist;
         const updateAccountStep = chain.find(
-          item => item.toolName === "update_account_info" && item.system,
+          item => item.toolName === "update_account_info" && item.instructions,
         );
         expect(updateAccountStep).toBeDefined();
-        expect(updateAccountStep?.system).toContain("get_spotify_search");
+        expect(updateAccountStep?.instructions).toContain("get_spotify_search");
       });
 
       it("has expected number of steps", () => {
@@ -110,16 +110,18 @@ describe("toolChains", () => {
         const chain = TOOL_CHAINS.create_new_artist;
         const generateStep = chain.find(item => item.toolName === "generate_txt_file");
         expect(generateStep).toBeDefined();
-        expect(generateStep?.system).toBeDefined();
-        expect(generateStep?.system).toContain("knowledge base report");
+        expect(generateStep?.instructions).toBeDefined();
+        expect(generateStep?.instructions).toContain("knowledge base report");
       });
 
       it("includes update_account_info step with system prompt to link knowledge base", () => {
         const chain = TOOL_CHAINS.create_new_artist;
         const updateSteps = chain.filter(item => item.toolName === "update_account_info");
-        const knowledgeLinkStep = updateSteps.find(item => item.system?.includes("knowledges"));
+        const knowledgeLinkStep = updateSteps.find(item =>
+          item.instructions?.includes("knowledges"),
+        );
         expect(knowledgeLinkStep).toBeDefined();
-        expect(knowledgeLinkStep?.system).toContain("arweaveUrl");
+        expect(knowledgeLinkStep?.instructions).toContain("arweaveUrl");
       });
     });
 
@@ -133,7 +135,7 @@ describe("toolChains", () => {
         const chain = TOOL_CHAINS.create_release_report;
         const generateStep = chain.find(item => item.toolName === "generate_txt_file");
         expect(generateStep).toBeDefined();
-        expect(generateStep?.system).toBeDefined();
+        expect(generateStep?.instructions).toBeDefined();
       });
 
       it("ends with send_email", () => {

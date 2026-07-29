@@ -1,4 +1,4 @@
-import { ToolLoopAgent, stepCountIs } from "ai";
+import { ToolLoopAgent, isStepCount } from "ai";
 import { LIGHTWEIGHT_MODEL } from "@/lib/const";
 
 const DEFAULT_INSTRUCTIONS = `You are a conversation summarizer. Create a concise summary of the conversation that:
@@ -19,6 +19,6 @@ export function createCompactAgent(customInstructions?: string) {
   return new ToolLoopAgent({
     model: LIGHTWEIGHT_MODEL,
     instructions: customInstructions || DEFAULT_INSTRUCTIONS,
-    stopWhen: stepCountIs(1),
+    stopWhen: isStepCount(1),
   });
 }

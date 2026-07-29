@@ -30,7 +30,7 @@ IMPORTANT:
 - This tool can only read files, not directories — attempting to read a directory returns an error
 - You can call multiple reads in parallel to speculatively load several files`,
   inputSchema: readInputSchema,
-  execute: async ({ filePath, offset = 1, limit = 2000 }, { experimental_context }) => {
+  execute: async ({ filePath, offset = 1, limit = 2000 }, { context: experimental_context }) => {
     const sandbox = await getSandbox(experimental_context, "read");
     const workingDirectory = sandbox.workingDirectory;
 

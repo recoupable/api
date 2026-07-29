@@ -48,8 +48,8 @@ const getPrepareStepResult = (options: PrepareStepOptions): PrepareStepResult | 
       };
 
       // Add system prompt if available
-      if (nextToolItem.system) {
-        result.system = nextToolItem.system;
+      if (nextToolItem.instructions) {
+        result.instructions = nextToolItem.instructions;
       }
 
       // Add messages if available

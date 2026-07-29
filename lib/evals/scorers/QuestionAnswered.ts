@@ -18,7 +18,7 @@ export const QuestionAnswered = async ({
   try {
     const result = await generateObject({
       model: DEFAULT_MODEL,
-      system: `You are an AI evaluation expert. Your job is to determine if an AI assistant actually answered the customer's question with a specific answer, or if it deflected, explained why it couldn't answer, or gave generic suggestions without providing the requested information.
+      instructions: `You are an AI evaluation expert. Your job is to determine if an AI assistant actually answered the customer's question with a specific answer, or if it deflected, explained why it couldn't answer, or gave generic suggestions without providing the requested information.
 
 Instructions:
 1. Read the customer's question carefully to understand what specific information they're asking for

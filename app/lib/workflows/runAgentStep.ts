@@ -10,6 +10,7 @@ import { agentCustomInstructions } from "@/lib/chat/agentCustomInstructions";
 import { buildAgentSystemPrompt } from "@/lib/chat/buildAgentSystemPrompt";
 import { CHAT_AGENT_STOP_WHEN } from "@/lib/chat/const";
 import { buildAgentTools } from "@/lib/agent/buildAgentTools";
+import { buildToolsContext } from "@/lib/agent/tools/buildToolsContext";
 import type { AgentContext, DurableAgentContext } from "@/lib/agent/tools/AgentContext";
 import { buildMessageMetadataCallback } from "@/lib/agent/messageMetadata/buildMessageMetadataCallback";
 import { addCacheControlToTools } from "@/lib/agent/contextManagement/addCacheControlToTools";
@@ -144,12 +145,12 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   });
   const result = streamText({
     model: callModel,
-    system: systemPrompt,
+    instructions: systemPrompt,
     messages: modelMessages,
     tools,
     stopWhen: CHAT_AGENT_STOP_WHEN,
     abortSignal: cancelController.signal,
-    experimental_context: agentContext,
+    toolsContext: buildToolsContext(tools, agentContext),
     // Mark the LAST message with cacheControl on every step so Anthropic
     // incrementally caches the conversation prefix. Mirrors open-agents'
     // `prepareStep` in `open-harness-agent.ts:100`.
@@ -171,11 +172,11 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   let responseMessage: UIMessage | undefined;
   const uiStream = createUIMessageStream<UIMessage>({
     generateId: () => input.assistantMessageId,
-    onStepFinish: ({ responseMessage: stepMessage }) => {
+    onStepEnd: ({ responseMessage: stepMessage }) => {
       responseMessage = stepMessage;
       return persistAssistantMessage(input.chatId, stepMessage);
     },
-    onFinish: ({ responseMessage: finalMessage }) => {
+    onEnd: ({ responseMessage: finalMessage }) => {
       responseMessage = finalMessage;
       return persistAssistantMessage(input.chatId, finalMessage);
     },

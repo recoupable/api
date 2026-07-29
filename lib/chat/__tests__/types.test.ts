@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { stepCountIs, ToolLoopAgent } from "ai";
+import { isStepCount, ToolLoopAgent } from "ai";
 import type { ChatConfig, RoutingDecision } from "../types";
 
 describe("Chat Types", () => {
@@ -27,7 +27,7 @@ describe("Chat Types", () => {
         model: "gpt-4",
         instructions: "Test instructions",
         agent: new ToolLoopAgent({ model: "gpt-4" }),
-        stopWhen: stepCountIs(5),
+        stopWhen: isStepCount(5),
       };
       expect(decision.stopWhen).toBeDefined();
     });

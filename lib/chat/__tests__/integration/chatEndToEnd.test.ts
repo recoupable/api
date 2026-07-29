@@ -121,7 +121,7 @@ vi.mock("@/lib/ai/generateText", () => ({
 // Mock AI SDK
 vi.mock("ai", () => ({
   convertToModelMessages: vi.fn((messages: unknown[]) => messages),
-  stepCountIs: vi.fn().mockReturnValue(() => true),
+  isStepCount: vi.fn().mockReturnValue(() => true),
   ToolLoopAgent: vi.fn().mockImplementation(() => ({
     stream: vi.fn(),
     tools: {},
@@ -359,17 +359,18 @@ describe("Chat Integration Tests", () => {
     it("calculates and deducts credits based on usage", async () => {
       mockGetCreditUsage.mockResolvedValue(0.5);
 
+      const usage = {
+        inputTokens: 1000,
+        outputTokens: 500,
+        inputTokenDetails: { cacheReadTokens: 0 },
+      };
       await handleChatCredits({
-        usage: { promptTokens: 1000, completionTokens: 500 },
+        usage: usage as never,
         model: "gpt-4",
         accountId: "account-123",
       });
 
-      expect(mockGetCreditUsage).toHaveBeenCalledWith(
-        { promptTokens: 1000, completionTokens: 500 },
-        "gpt-4",
-        undefined,
-      );
+      expect(mockGetCreditUsage).toHaveBeenCalledWith(usage, "gpt-4", undefined);
       expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
         expect.objectContaining({
           accountId: "account-123",
@@ -395,7 +396,11 @@ describe("Chat Integration Tests", () => {
       mockRecordCreditDeduction.mockResolvedValue({ success: true, newBalance: 332 });
 
       await handleChatCredits({
-        usage: { promptTokens: 10, completionTokens: 5 },
+        usage: {
+          inputTokens: 10,
+          outputTokens: 5,
+          inputTokenDetails: { cacheReadTokens: 0 },
+        } as never,
         model: "gpt-4",
         accountId: "account-123",
       });
@@ -423,7 +428,11 @@ describe("Chat Integration Tests", () => {
       mockGetCreditUsage.mockResolvedValue(0.001);
 
       await handleChatCredits({
-        usage: { promptTokens: 5, completionTokens: 5 },
+        usage: {
+          inputTokens: 5,
+          outputTokens: 5,
+          inputTokenDetails: { cacheReadTokens: 0 },
+        } as never,
         model: "gpt-4",
         accountId: "account-123",
       });

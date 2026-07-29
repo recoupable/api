@@ -28,7 +28,7 @@ describe("writeFileTool", () => {
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const tool = writeFileTool;
     const result = (await tool.execute!({ filePath: "src/index.ts", content: "export {}" }, {
-      experimental_context: ctx,
+      context: ctx,
     } as never)) as { success: boolean; path: string; bytesWritten: number };
     expect(result.success).toBe(true);
     expect(result.path).toBe("src/index.ts");
@@ -44,7 +44,7 @@ describe("writeFileTool", () => {
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const tool = writeFileTool;
     const result = (await tool.execute!({ filePath: "a.ts", content: "x" }, {
-      experimental_context: ctx,
+      context: ctx,
     } as never)) as { success: boolean; error: string };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/EACCES/);

@@ -6,7 +6,7 @@ vi.mock("ai", () => ({
     config,
     generate: vi.fn(),
   })),
-  stepCountIs: vi.fn().mockReturnValue("stepCountMock"),
+  isStepCount: vi.fn().mockReturnValue("stepCountMock"),
 }));
 
 vi.mock("@/lib/const", () => ({

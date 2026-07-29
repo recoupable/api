@@ -9,7 +9,7 @@ vi.mock("../toolChains", () => ({
     custom_chain: [
       {
         toolName: "custom_step_one",
-        system: "Custom system prompt for step one",
+        instructions: "Custom system prompt for step one",
       },
       {
         toolName: "custom_step_two",
@@ -219,7 +219,7 @@ describe("getPrepareStepResult", () => {
       const result = getPrepareStepResult(options as any);
       expect(result).toEqual({
         toolChoice: { type: "tool", toolName: "custom_step_one" },
-        system: "Custom system prompt for step one",
+        instructions: "Custom system prompt for step one",
         model: "gpt-4-turbo",
       });
     });

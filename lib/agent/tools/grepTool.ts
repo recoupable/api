@@ -1,5 +1,6 @@
-import { tool } from "ai";
+import { tool, type ToolExecutionOptions } from "ai";
 import { z } from "zod";
+import type { AgentContext } from "@/lib/agent/tools/AgentContext";
 import * as path from "path";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
 import { shellEscape } from "@/lib/agent/tools/shellEscape";
@@ -56,7 +57,7 @@ IMPORTANT:
   inputSchema: grepInputSchema,
   execute: async (
     { pattern, path: searchPath, glob, caseSensitive = true },
-    { experimental_context, abortSignal },
+    { context: experimental_context, abortSignal }: ToolExecutionOptions<AgentContext>,
   ) => {
     const sandbox = await getSandbox(experimental_context, "grep");
     const workingDirectory = sandbox.workingDirectory;
