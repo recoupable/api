@@ -45,7 +45,19 @@ export async function resolveOrCreateArtist(
       if (!alreadyRostered) {
         await insertAccountArtistId(accountId, canonicalId);
       }
-      const artist = await selectAccountWithSocials(canonicalId);
+      let artist = await selectAccountWithSocials(canonicalId);
+      // Backfill a blank canonical image at add-time (chat#1911 row 4).
+      // Filling a blank is not the chat#1866 shared-write problem — nothing
+      // is overwritten, and a canonical with an image is left untouched.
+      // Best-effort: a Spotify outage must not fail the add.
+      if (artist && !artist.account_info?.[0]?.image) {
+        try {
+          await enrichArtistSpotifyProfile({ artistId: canonicalId, spotifyArtistId });
+          artist = (await selectAccountWithSocials(canonicalId)) ?? artist;
+        } catch {
+          // Keep the un-enriched canonical — the roster card self-heals later.
+        }
+      }
       return {
         artist: artist ? { ...artist, account_id: artist.id } : null,
         created: false,

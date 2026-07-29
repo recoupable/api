@@ -107,6 +107,76 @@ describe("resolveOrCreateArtist", () => {
     expect(result.artist).toMatchObject({ id: "canonical-1", account_id: "canonical-1" });
   });
 
+  // chat#1911 row 4: a reused canonical with no image renders a grey roster
+  // card until seeding self-heals it (~30s), and never heals for accounts
+  // that already have a catalog. Backfill the blank at add-time.
+  describe("blank canonical image backfill (reuse path)", () => {
+    beforeEach(() => vi.mocked(findCanonicalArtistBySpotifyId).mockResolvedValue("canonical-1"));
+
+    it("enriches and re-fetches when the canonical has no image", async () => {
+      const blank = { id: "canonical-1", name: "Del Water Gap", account_info: [{ image: null }] };
+      const healed = {
+        id: "canonical-1",
+        name: "Del Water Gap",
+        account_info: [{ image: "https://i.scdn.co/image/x" }],
+      };
+      vi.mocked(selectAccountWithSocials)
+        .mockResolvedValueOnce(blank as never)
+        .mockResolvedValueOnce(healed as never);
+
+      const result = await resolveOrCreateArtist({
+        name: "Del Water Gap",
+        accountId: "acct-1",
+        spotifyArtistId: SPOTIFY_ID,
+      });
+
+      expect(enrichArtistSpotifyProfile).toHaveBeenCalledWith({
+        artistId: "canonical-1",
+        spotifyArtistId: SPOTIFY_ID,
+      });
+      expect(selectAccountWithSocials).toHaveBeenCalledTimes(2);
+      expect(result.artist).toMatchObject({
+        id: "canonical-1",
+        account_info: [{ image: "https://i.scdn.co/image/x" }],
+      });
+    });
+
+    it("does not enrich when the canonical already has an image (no shared-write)", async () => {
+      vi.mocked(selectAccountWithSocials).mockResolvedValue({
+        id: "canonical-1",
+        name: "Del Water Gap",
+        account_info: [{ image: "https://existing.jpg" }],
+      } as never);
+
+      await resolveOrCreateArtist({
+        name: "Del Water Gap",
+        accountId: "acct-1",
+        spotifyArtistId: SPOTIFY_ID,
+      });
+
+      expect(enrichArtistSpotifyProfile).not.toHaveBeenCalled();
+      expect(selectAccountWithSocials).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns the original canonical when the backfill throws (best-effort)", async () => {
+      vi.mocked(selectAccountWithSocials).mockResolvedValue({
+        id: "canonical-1",
+        name: "Del Water Gap",
+        account_info: [],
+      } as never);
+      vi.mocked(enrichArtistSpotifyProfile).mockRejectedValue(new Error("spotify down"));
+
+      const result = await resolveOrCreateArtist({
+        name: "Del Water Gap",
+        accountId: "acct-1",
+        spotifyArtistId: SPOTIFY_ID,
+      });
+
+      expect(result.created).toBe(false);
+      expect(result.artist).toMatchObject({ id: "canonical-1", account_id: "canonical-1" });
+    });
+  });
+
   it("does not re-link a canonical the account already rosters", async () => {
     vi.mocked(findCanonicalArtistBySpotifyId).mockResolvedValue("canonical-1");
     vi.mocked(selectAccountArtistId).mockResolvedValue({ id: "link-1" } as never);
