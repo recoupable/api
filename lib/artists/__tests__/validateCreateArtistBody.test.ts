@@ -253,4 +253,26 @@ describe("validateCreateArtistBody", () => {
       });
     });
   });
+  // Row 8 (chat#1889): spotify_artist_id rides the create so the server can
+  // resolve-or-create the canonical instead of minting a duplicate per signup.
+  it("passes spotify_artist_id through when provided", async () => {
+    const request = createRequest(
+      { name: "Del Water Gap", spotify_artist_id: "0xPoVNPnxIIUS1vrxAYV00" },
+      { "x-api-key": "k" },
+    );
+    const result = await validateCreateArtistBody(request);
+
+    expect(result).not.toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) {
+      expect(result.spotifyArtistId).toBe("0xPoVNPnxIIUS1vrxAYV00");
+    }
+  });
+
+  it("rejects an empty spotify_artist_id", async () => {
+    const request = createRequest({ name: "X", spotify_artist_id: "" }, { "x-api-key": "k" });
+    const result = await validateCreateArtistBody(request);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) expect(result.status).toBe(400);
+  });
 });

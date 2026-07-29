@@ -3,11 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createArtistPostHandler } from "../createArtistPostHandler";
 
-const mockCreateArtistInDb = vi.fn();
+const mockResolveOrCreateArtist = vi.fn();
 const mockValidateAuthContext = vi.fn();
 
-vi.mock("@/lib/artists/createArtistInDb", () => ({
-  createArtistInDb: (...args: unknown[]) => mockCreateArtistInDb(...args),
+vi.mock("@/lib/artists/resolveOrCreateArtist", () => ({
+  resolveOrCreateArtist: (...args: unknown[]) => mockResolveOrCreateArtist(...args),
 }));
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
@@ -45,7 +45,7 @@ describe("createArtistPostHandler", () => {
       account_info: [{ image: null }],
       account_socials: [],
     };
-    mockCreateArtistInDb.mockResolvedValue(mockArtist);
+    mockResolveOrCreateArtist.mockResolvedValue({ artist: mockArtist, created: true });
 
     const request = createRequest({ name: "Test Artist" });
     const response = await createArtistPostHandler(request);
@@ -53,10 +53,8 @@ describe("createArtistPostHandler", () => {
 
     expect(response.status).toBe(201);
     expect(data.artist).toEqual(mockArtist);
-    expect(mockCreateArtistInDb).toHaveBeenCalledWith(
-      "Test Artist",
-      "api-key-account-id",
-      undefined,
+    expect(mockResolveOrCreateArtist).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Test Artist", accountId: "api-key-account-id" }),
     );
   });
 
@@ -74,7 +72,7 @@ describe("createArtistPostHandler", () => {
       account_info: [{ image: null }],
       account_socials: [],
     };
-    mockCreateArtistInDb.mockResolvedValue(mockArtist);
+    mockResolveOrCreateArtist.mockResolvedValue({ artist: mockArtist, created: true });
 
     const request = createRequest({
       name: "Test Artist",
@@ -82,10 +80,11 @@ describe("createArtistPostHandler", () => {
     });
     const response = await createArtistPostHandler(request);
 
-    expect(mockCreateArtistInDb).toHaveBeenCalledWith(
-      "Test Artist",
-      "550e8400-e29b-41d4-a716-446655440000",
-      undefined,
+    expect(mockResolveOrCreateArtist).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Test Artist",
+        accountId: "550e8400-e29b-41d4-a716-446655440000",
+      }),
     );
     expect(response.status).toBe(201);
   });
@@ -115,7 +114,7 @@ describe("createArtistPostHandler", () => {
       account_info: [{ image: null }],
       account_socials: [],
     };
-    mockCreateArtistInDb.mockResolvedValue(mockArtist);
+    mockResolveOrCreateArtist.mockResolvedValue({ artist: mockArtist, created: true });
 
     const request = createRequest({
       name: "Test Artist",
@@ -124,10 +123,8 @@ describe("createArtistPostHandler", () => {
 
     await createArtistPostHandler(request);
 
-    expect(mockCreateArtistInDb).toHaveBeenCalledWith(
-      "Test Artist",
-      "api-key-account-id",
-      "660e8400-e29b-41d4-a716-446655440001",
+    expect(mockResolveOrCreateArtist).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Test Artist", accountId: "api-key-account-id" }),
     );
   });
 
@@ -178,7 +175,7 @@ describe("createArtistPostHandler", () => {
   });
 
   it("returns 500 when artist creation fails", async () => {
-    mockCreateArtistInDb.mockResolvedValue(null);
+    mockResolveOrCreateArtist.mockResolvedValue({ artist: null, created: true });
 
     const request = createRequest({ name: "Test Artist" });
     const response = await createArtistPostHandler(request);
@@ -189,7 +186,7 @@ describe("createArtistPostHandler", () => {
   });
 
   it("returns 500 with error message when exception thrown", async () => {
-    mockCreateArtistInDb.mockRejectedValue(new Error("Database error"));
+    mockResolveOrCreateArtist.mockRejectedValue(new Error("Database error"));
 
     const request = createRequest({ name: "Test Artist" });
     const response = await createArtistPostHandler(request);
@@ -197,5 +194,33 @@ describe("createArtistPostHandler", () => {
 
     expect(response.status).toBe(500);
     expect(data.error).toBe("Database error");
+  });
+  // Row 8 (chat#1889): 200 = existing canonical linked, 201 = created.
+  it("returns 200 when an existing canonical was linked instead of created", async () => {
+    mockResolveOrCreateArtist.mockResolvedValue({
+      artist: { id: "canonical-1", account_id: "canonical-1", name: "Del Water Gap" },
+      created: false,
+    });
+    const response = await createArtistPostHandler(
+      createRequest({ name: "Del Water Gap", spotify_artist_id: "0xPoVNPnxIIUS1vrxAYV00" }),
+    );
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json.artist.account_id).toBe("canonical-1");
+  });
+
+  it("passes the spotify id through to resolveOrCreateArtist", async () => {
+    mockResolveOrCreateArtist.mockResolvedValue({
+      artist: { id: "new-1", account_id: "new-1", name: "X" },
+      created: true,
+    });
+    await createArtistPostHandler(
+      createRequest({ name: "X", spotify_artist_id: "0xPoVNPnxIIUS1vrxAYV00" }),
+    );
+
+    expect(mockResolveOrCreateArtist).toHaveBeenCalledWith(
+      expect.objectContaining({ spotifyArtistId: "0xPoVNPnxIIUS1vrxAYV00" }),
+    );
   });
 });
