@@ -18,10 +18,12 @@ export async function createCardOnFileSessionHandler(request: NextRequest): Prom
     }
 
     const session = await createCardOnFileSession(validated.accountId, validated.successUrl);
+    // The caller cannot correct a session Stripe returned without a URL, so
+    // this is a 500 rather than the sibling subscription route's 400.
     if (!session.url) {
       return NextResponse.json(
         { error: "Checkout session URL missing" },
-        { status: 400, headers: getCorsHeaders() },
+        { status: 500, headers: getCorsHeaders() },
       );
     }
 

@@ -53,7 +53,7 @@ describe("POST /api/subscriptions/card-on-file (handler outcomes)", () => {
     expect(createCardOnFileSession).toHaveBeenCalledWith(ACCOUNT, SUCCESS_URL);
   });
 
-  it("returns 400 when session.url is null", async () => {
+  it("returns 500 when session.url is null", async () => {
     vi.mocked(validateCreateCardOnFileSessionRequest).mockResolvedValue({
       accountId: ACCOUNT,
       successUrl: SUCCESS_URL,
@@ -64,7 +64,7 @@ describe("POST /api/subscriptions/card-on-file (handler outcomes)", () => {
     } as Awaited<ReturnType<typeof createCardOnFileSession>>);
 
     const res = await POST(postRequest());
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(500);
     await expect(res.json()).resolves.toEqual({ error: "Checkout session URL missing" });
   });
 
