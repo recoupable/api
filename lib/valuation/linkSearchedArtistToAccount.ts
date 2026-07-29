@@ -38,7 +38,7 @@ export async function linkSearchedArtistToAccount(params: {
   try {
     if (!artistName) return null;
 
-    const canonicalId = await findCanonicalArtistBySpotifyId(spotifyArtistId);
+    const canonicalId = await findCanonicalArtistBySpotifyId(spotifyArtistId, accountId);
     if (canonicalId) {
       const alreadyRostered = await selectAccountArtistId(accountId, canonicalId);
       if (!alreadyRostered) {
