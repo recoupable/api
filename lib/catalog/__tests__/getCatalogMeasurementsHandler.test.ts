@@ -7,6 +7,7 @@ import { getCatalogEarliestReleaseDate } from "../getCatalogEarliestReleaseDate"
 import { selectAccountCatalog } from "@/lib/supabase/account_catalogs/selectAccountCatalog";
 import { selectCatalogMeasurementsAggregate } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate";
 import { selectCatalogMeasurementsPage } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsPage";
+import { persistCatalogValuation } from "../persistCatalogValuation";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -24,6 +25,7 @@ vi.mock("@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate", (
 vi.mock("@/lib/supabase/song_measurements/selectCatalogMeasurementsPage", () => ({
   selectCatalogMeasurementsPage: vi.fn(),
 }));
+vi.mock("../persistCatalogValuation", () => ({ persistCatalogValuation: vi.fn() }));
 
 const accountId = "550e8400-e29b-41d4-a716-446655440000";
 const catalogId = "740d5050-40ec-4892-a040-b78bb50fef2f";
@@ -120,6 +122,44 @@ describe("getCatalogMeasurementsHandler", () => {
     expect(body.valuation.low).toBeCloseTo(25 * 0.0035 * 1.25 * 0.6375 * 10, 5);
     expect(body.valuation.mid).toBeCloseTo(25 * 0.0035 * 1.4 * 0.6375 * 13, 5);
     expect(body.valuation.high).toBeCloseTo(25 * 0.0035 * 1.6 * 0.6375 * 16, 5);
+  });
+
+  it("persists the whole-catalog band as a daily-deduped history row (chat#1889 row 15)", async () => {
+    okQuery();
+    okCatalog();
+    vi.mocked(selectCatalogMeasurementsAggregate).mockResolvedValue({
+      measuredSongCount: 120,
+      totalStreams: 250,
+    });
+    vi.mocked(selectCatalogMeasurementsPage).mockResolvedValue(pageRows);
+    vi.mocked(getCatalogEarliestReleaseDate).mockResolvedValue("2016-07-01");
+
+    const res = await getCatalogMeasurementsHandler(makeRequest(), catalogId);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(persistCatalogValuation).toHaveBeenCalledWith({
+      catalogId,
+      valuation: body.valuation,
+      measuredSongCount: 120,
+      totalStreams: 250,
+      dedupeDaily: true,
+    });
+  });
+
+  it("does not persist a history row for an artist-scoped read (partial-catalog band)", async () => {
+    okQuery({ catalogId, artist_account_id: artistAccountId, page: 1, limit: 50 });
+    okCatalog();
+    vi.mocked(selectCatalogMeasurementsAggregate).mockResolvedValue({
+      measuredSongCount: 11,
+      totalStreams: 200,
+    });
+    vi.mocked(selectCatalogMeasurementsPage).mockResolvedValue([pageRows[0]]);
+    vi.mocked(getCatalogEarliestReleaseDate).mockResolvedValue("2016-07-01");
+
+    await getCatalogMeasurementsHandler(makeRequest(), catalogId);
+
+    expect(persistCatalogValuation).not.toHaveBeenCalled();
   });
 
   it("scopes the read to the artist and echoes the applied filter", async () => {

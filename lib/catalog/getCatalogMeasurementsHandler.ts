@@ -3,6 +3,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { validateGetCatalogMeasurementsQuery } from "./validateGetCatalogMeasurementsQuery";
 import { computeValuationBand } from "./computeValuationBand";
+import { persistCatalogValuation } from "./persistCatalogValuation";
 import { getCatalogEarliestReleaseDate } from "./getCatalogEarliestReleaseDate";
 import { selectAccountCatalog } from "@/lib/supabase/account_catalogs/selectAccountCatalog";
 import { selectCatalogMeasurementsAggregate } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate";
@@ -56,6 +57,19 @@ export async function getCatalogMeasurementsHandler(
       totalStreams: aggregate.totalStreams,
       earliestReleaseDate,
     });
+
+    // Persist the whole-catalog band into the valuation history (chat#1889
+    // row 15) — daily-deduped so page refreshes don't mint rows. Artist-scoped
+    // reads value a slice of the catalog, not the catalog, so they never write.
+    if (!artistAccountId) {
+      await persistCatalogValuation({
+        catalogId,
+        valuation,
+        measuredSongCount: aggregate.measuredSongCount,
+        totalStreams: aggregate.totalStreams,
+        dedupeDaily: true,
+      });
+    }
 
     return successResponse({
       measurements,
