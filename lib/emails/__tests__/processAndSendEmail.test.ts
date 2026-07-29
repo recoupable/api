@@ -94,6 +94,24 @@ describe("processAndSendEmail", () => {
     );
   });
 
+  it("wraps the email in the shared house-style layout (weekly-report consistency pass)", async () => {
+    mockSendEmailWithResend.mockResolvedValue({ id: "email-layout" });
+
+    await processAndSendEmail({
+      to: ["user@example.com"],
+      subject: "Weekly report",
+      html: "<h1>This week</h1>",
+    });
+
+    const sent = mockSendEmailWithResend.mock.calls[0][0] as { html: string };
+    // Body preserved…
+    expect(sent.html).toContain("<h1>This week</h1>");
+    // …inside the shared layout: Recoup wordmark header + shadow-as-border card.
+    expect(sent.html).toContain("Recoup");
+    expect(sent.html).toContain("box-shadow");
+    expect(sent.html).toContain("Plus Jakarta Sans");
+  });
+
   it("returns error when Resend fails", async () => {
     const errorResponse = NextResponse.json(
       { error: { message: "Rate limited" } },

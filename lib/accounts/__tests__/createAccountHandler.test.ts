@@ -42,6 +42,11 @@ vi.mock("@/lib/organizations/assignAccountToOrg", () => ({
   assignAccountToOrg: (...args: unknown[]) => mockAssignAccountToOrg(...args),
 }));
 
+const mockSendWelcomeEmail = vi.fn();
+vi.mock("@/lib/emails/sendWelcomeEmail", () => ({
+  sendWelcomeEmail: (...args: unknown[]) => mockSendWelcomeEmail(...args),
+}));
+
 describe("createAccountHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -129,6 +134,29 @@ describe("createAccountHandler", () => {
     expect(mockAssignAccountToOrg).toHaveBeenCalledWith("account-789", "new@example.com");
     expect(mockInsertAccountWallet).toHaveBeenCalledWith("account-789", "0xdef");
     expect(mockInitializeAccountCredits).toHaveBeenCalledWith("account-789");
+    expect(mockSendWelcomeEmail).toHaveBeenCalledWith({
+      accountId: "account-789",
+      email: "new@example.com",
+    });
+  });
+
+  it("does not send a welcome email to an existing account", async () => {
+    mockSelectAccountByEmail.mockResolvedValue({ account_id: "account-123" });
+    mockGetAccountWithDetails.mockResolvedValue({ account_id: "account-123" });
+
+    await createAccountHandler({ email: "user@example.com" });
+
+    expect(mockSendWelcomeEmail).not.toHaveBeenCalled();
+  });
+
+  it("does not send a welcome email for a wallet-only signup", async () => {
+    mockSelectAccountByEmail.mockResolvedValue(null);
+    mockSelectAccountByWallet.mockRejectedValue(new Error("not found"));
+    mockInsertAccount.mockResolvedValue({ id: "account-789" });
+
+    await createAccountHandler({ wallet: "0xdef" });
+
+    expect(mockSendWelcomeEmail).not.toHaveBeenCalled();
   });
 
   it("returns 400 when account creation fails", async () => {
