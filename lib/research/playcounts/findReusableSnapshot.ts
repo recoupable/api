@@ -1,8 +1,6 @@
 import type { Tables } from "@/types/database.types";
 import { sameScope } from "./sameScope";
-
-/** A capture that failed has nothing to hand back. */
-const REUSABLE_STATES = new Set(["queued", "running", "done"]);
+import { isReusableSnapshotState } from "./isReusableSnapshotState";
 
 /**
  * Finds a recent capture of exactly the same scope that a new request can reuse
@@ -35,7 +33,7 @@ export function findReusableSnapshot({
   const cutoff = now.getTime() - windowMinutes * 60 * 1000;
 
   const eligible = snapshots.filter(row => {
-    if (!REUSABLE_STATES.has(row.state ?? "")) return false;
+    if (!isReusableSnapshotState(row.state)) return false;
     if (!row.created_at || new Date(row.created_at).getTime() < cutoff) return false;
     return sameScope(row, albumIds, platforms, schedule);
   });

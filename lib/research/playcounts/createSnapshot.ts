@@ -7,6 +7,7 @@ import { findReusableSnapshot } from "@/lib/research/playcounts/findReusableSnap
 import { buildReusedSnapshotResult } from "@/lib/research/playcounts/buildReusedSnapshotResult";
 import { pickCanonicalSnapshot } from "@/lib/research/playcounts/pickCanonicalSnapshot";
 import { sameScope } from "@/lib/research/playcounts/sameScope";
+import { isReusableSnapshotState } from "@/lib/research/playcounts/isReusableSnapshotState";
 import { deletePlaycountSnapshot } from "@/lib/supabase/playcount_snapshots/deletePlaycountSnapshot";
 import { getMonthlySpendUsd } from "@/lib/research/playcounts/getMonthlySpendUsd";
 import { CreateSnapshotBody } from "@/lib/research/playcounts/validateCreateSnapshotRequest";
@@ -103,7 +104,7 @@ export async function createSnapshot(params: {
       candidate =>
         candidate.id === row.id ||
         (sameScope(candidate, albumIds, params.body.platforms, params.body.schedule) &&
-          candidate.state === "queued"),
+          isReusableSnapshotState(candidate.state)),
     ),
   );
   if (canonical && canonical.id !== row.id) {

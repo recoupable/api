@@ -255,4 +255,64 @@ describe("createSnapshot", () => {
     expect(start).toHaveBeenCalledWith(expect.anything(), ["mine"]);
     expect((result as { data: { snapshot_id: string } }).data.snapshot_id).toBe("mine");
   });
+
+  // Review finding (coderabbit + cubic P1, 2026-07-30). The reconcile used to
+  // count only `queued` claims, but findReusableSnapshot treats queued,
+  // running and done as reusable. A winner that advanced to `running` between
+  // the pre-check and the re-read was therefore invisible, and both requests
+  // scraped — the exact race this row exists to close.
+  it("defers to a winner that has already started running", async () => {
+    vi.mocked(resolveSnapshotAlbums).mockResolvedValue(["a1"]);
+    vi.mocked(insertPlaycountSnapshot).mockResolvedValue({ id: "mine" } as never);
+    const scope = {
+      album_ids: ["a1"],
+      platforms: ["spotify"],
+      schedule: "once",
+      album_count: 1,
+      estimated_cost_usd: 0.003,
+    };
+    vi.mocked(selectPlaycountSnapshots)
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([
+        { ...scope, id: "theirs", state: "running", created_at: "2026-07-30T12:00:00.000Z" },
+        { ...scope, id: "mine", state: "queued", created_at: "2026-07-30T12:00:01.000Z" },
+      ] as never);
+
+    const result = await createSnapshot({
+      accountId: "acc_1",
+      body: { album_ids: ["a1"], platforms: ["spotify"], schedule: "once" },
+    });
+
+    expect(deletePlaycountSnapshot).toHaveBeenCalledWith("mine");
+    expect(start).not.toHaveBeenCalled();
+    expect((result as { data: { snapshot_id: string } }).data.snapshot_id).toBe("theirs");
+  });
+
+  // A failed capture is not a claim: nothing can be handed back from it, so a
+  // new request must go ahead and scrape.
+  it("does not defer to a failed claim", async () => {
+    vi.mocked(resolveSnapshotAlbums).mockResolvedValue(["a1"]);
+    vi.mocked(insertPlaycountSnapshot).mockResolvedValue({ id: "mine" } as never);
+    const scope = {
+      album_ids: ["a1"],
+      platforms: ["spotify"],
+      schedule: "once",
+      album_count: 1,
+      estimated_cost_usd: 0.003,
+    };
+    vi.mocked(selectPlaycountSnapshots)
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([
+        { ...scope, id: "failed", state: "failed", created_at: "2026-07-30T12:00:00.000Z" },
+        { ...scope, id: "mine", state: "queued", created_at: "2026-07-30T12:00:01.000Z" },
+      ] as never);
+
+    await createSnapshot({
+      accountId: "acc_1",
+      body: { album_ids: ["a1"], platforms: ["spotify"], schedule: "once" },
+    });
+
+    expect(deletePlaycountSnapshot).not.toHaveBeenCalled();
+    expect(start).toHaveBeenCalledWith(expect.anything(), ["mine"]);
+  });
 });
