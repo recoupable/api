@@ -7,9 +7,13 @@ import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistan
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
 import { deleteEphemeralKeyStep } from "@/app/lib/workflows/deleteEphemeralKeyStep";
+import { gateWorkflowCredits } from "@/app/lib/workflows/gateWorkflowCredits";
 
 vi.mock("@/app/lib/workflows/deleteEphemeralKeyStep", () => ({
   deleteEphemeralKeyStep: vi.fn(),
+}));
+vi.mock("@/app/lib/workflows/gateWorkflowCredits", () => ({
+  gateWorkflowCredits: vi.fn(),
 }));
 vi.mock("@/app/lib/workflows/runAgentStep", () => ({
   runAgentStep: vi.fn(),
@@ -45,6 +49,8 @@ vi.mock("workflow", () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(generateAssistantMessageId).mockResolvedValue("asst-fresh-id");
+  // Default: account is funded so existing behavior is unchanged.
+  vi.mocked(gateWorkflowCredits).mockResolvedValue({ hasCredits: true });
 });
 
 const baseInput = {
@@ -356,6 +362,65 @@ describe("runAgentWorkflow", () => {
       await runAgentWorkflow(baseInput);
 
       expect(autoCommitChatTurn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("credit gate", () => {
+    it("gates on credits before running the step, keyed to the account/chat/session", async () => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        aborted: false,
+        responseMessage: undefined,
+      });
+
+      await runAgentWorkflow(baseInput);
+
+      expect(gateWorkflowCredits).toHaveBeenCalledWith({
+        accountId: "acc-1",
+        chatId: "chat-1",
+        sessionId: "session-1",
+      });
+    });
+
+    it("skips runAgentStep + billing when the gate reports no credits", async () => {
+      vi.mocked(gateWorkflowCredits).mockResolvedValue({ hasCredits: false });
+
+      await runAgentWorkflow(baseInput);
+
+      expect(runAgentStep).not.toHaveBeenCalled();
+      expect(handleChatCredits).not.toHaveBeenCalled();
+      expect(autoCommitChatTurn).not.toHaveBeenCalled();
+    });
+
+    it("does not generate an assistant message id when the gate blocks the run", async () => {
+      vi.mocked(gateWorkflowCredits).mockResolvedValue({ hasCredits: false });
+
+      await runAgentWorkflow(baseInput);
+
+      expect(generateAssistantMessageId).not.toHaveBeenCalled();
+    });
+
+    it("still runs cleanup (clearActiveStream + closeChatStream) when the gate blocks the run", async () => {
+      vi.mocked(gateWorkflowCredits).mockResolvedValue({ hasCredits: false });
+
+      await runAgentWorkflow(baseInput);
+
+      expect(clearChatActiveStream).toHaveBeenCalledTimes(1);
+      expect(closeChatStream).toHaveBeenCalledTimes(1);
+    });
+
+    it("revokes the ephemeral key when the gate blocks a headless run", async () => {
+      vi.mocked(gateWorkflowCredits).mockResolvedValue({ hasCredits: false });
+
+      await runAgentWorkflow({
+        ...baseInput,
+        agentContext: {
+          sandbox: { state: { type: "vercel" }, workingDirectory: "/sandbox/mono" },
+          ephemeralKeyId: "ephem-key-1",
+        } as never,
+      });
+
+      expect(deleteEphemeralKeyStep).toHaveBeenCalledWith("ephem-key-1");
     });
   });
 

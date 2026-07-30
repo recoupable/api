@@ -3,6 +3,7 @@ import type { LanguageModelUsage, UIMessage, UIMessageChunk } from "ai";
 import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
+import { gateWorkflowCredits } from "@/app/lib/workflows/gateWorkflowCredits";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { deleteEphemeralKeyStep } from "@/app/lib/workflows/deleteEphemeralKeyStep";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
@@ -84,20 +85,41 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
 
   const writable = getWritable<UIMessageChunk>();
 
-  // Pick or generate a stable id for the assistant message. If the
-  // last message in the conversation is already an assistant message
-  // (we're resuming an in-progress turn after a tool-call interaction)
-  // reuse its id so chunks append to the same `chat_messages` row.
-  // Otherwise generate a fresh id once via a `"use step"` so the
-  // value is durable across workflow replays. Mirrors open-agents'
-  // pattern in `apps/web/app/workflows/chat.ts` where the id is
-  // generated in the workflow body and threaded into every
-  // `runAgentStep` call.
-  const latestMessage = input.messages.at(-1);
-  const assistantMessageId =
-    latestMessage?.role === "assistant" ? latestMessage.id : await generateAssistantMessageId();
-
   try {
+    // Pre-run credit gate. `runAgentStep` charges AFTER the turn, so without a
+    // pre-gate an unfunded account (out of credits, no card to auto-recharge)
+    // keeps running scheduled turns into a deep negative balance
+    // (recoupable/chat#1885 — WAVS Digital hit -1,563). Gate first — before we
+    // even mint an assistant message id or spend a model token — and skip the
+    // run on shortfall, firing a Telegram alert. `finally` still runs cleanup.
+    const gate = await gateWorkflowCredits({
+      accountId: input.accountId,
+      chatId: input.chatId,
+      sessionId: input.sessionId,
+    });
+    if (!gate.hasCredits) {
+      console.warn("[runAgentWorkflow] skipping run — insufficient credits", {
+        accountId: input.accountId,
+        chatId: input.chatId,
+        sessionId: input.sessionId,
+        workflowRunId,
+      });
+      return;
+    }
+
+    // Pick or generate a stable id for the assistant message. If the
+    // last message in the conversation is already an assistant message
+    // (we're resuming an in-progress turn after a tool-call interaction)
+    // reuse its id so chunks append to the same `chat_messages` row.
+    // Otherwise generate a fresh id once via a `"use step"` so the
+    // value is durable across workflow replays. Mirrors open-agents'
+    // pattern in `apps/web/app/workflows/chat.ts` where the id is
+    // generated in the workflow body and threaded into every
+    // `runAgentStep` call.
+    const latestMessage = input.messages.at(-1);
+    const assistantMessageId =
+      latestMessage?.role === "assistant" ? latestMessage.id : await generateAssistantMessageId();
+
     const result = await runAgentStep({
       ...input,
       writable,
