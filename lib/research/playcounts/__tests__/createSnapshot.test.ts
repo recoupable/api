@@ -315,4 +315,41 @@ describe("createSnapshot", () => {
     expect(deletePlaycountSnapshot).not.toHaveBeenCalled();
     expect(start).toHaveBeenCalledWith(expect.anything(), ["mine"]);
   });
+
+  // Preview verification of 8 concurrent identical requests: exactly one row
+  // and one scrape survived (the point of this row), but four callers were
+  // handed the id of a mid-ranked claim that then withdrew itself, leaving
+  // them polling a snapshot that no longer exists. After withdrawing, re-read
+  // and hand back a claim that is still standing.
+  it("never hands back a claim that has itself withdrawn", async () => {
+    vi.mocked(resolveSnapshotAlbums).mockResolvedValue(["a1"]);
+    vi.mocked(insertPlaycountSnapshot).mockResolvedValue({ id: "mine" } as never);
+    const scope = {
+      album_ids: ["a1"],
+      platforms: ["spotify"],
+      schedule: "once",
+      album_count: 1,
+      estimated_cost_usd: 0.003,
+      state: "queued",
+    };
+    vi.mocked(selectPlaycountSnapshots)
+      .mockResolvedValueOnce([] as never)
+      // reconcile: a mid-ranked claim looks canonical from here
+      .mockResolvedValueOnce([
+        { ...scope, id: "midranked", created_at: "2026-07-30T12:00:01.000Z" },
+        { ...scope, id: "mine", created_at: "2026-07-30T12:00:02.000Z" },
+      ] as never)
+      // after withdrawing: midranked has withdrawn too, the true earliest stands
+      .mockResolvedValueOnce([
+        { ...scope, id: "earliest", created_at: "2026-07-30T12:00:00.000Z" },
+      ] as never);
+
+    const result = await createSnapshot({
+      accountId: "acc_1",
+      body: { album_ids: ["a1"], platforms: ["spotify"], schedule: "once" },
+    });
+
+    expect(deletePlaycountSnapshot).toHaveBeenCalledWith("mine");
+    expect((result as { data: { snapshot_id: string } }).data.snapshot_id).toBe("earliest");
+  });
 });

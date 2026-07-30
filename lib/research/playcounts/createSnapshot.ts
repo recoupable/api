@@ -109,7 +109,23 @@ export async function createSnapshot(params: {
   );
   if (canonical && canonical.id !== row.id) {
     await deletePlaycountSnapshot(row.id);
-    return buildReusedSnapshotResult(canonical);
+
+    // The claim that looked canonical from here may itself have been a loser
+    // that withdrew, which would hand this caller a snapshot id that no longer
+    // exists. Re-read after withdrawing so the id returned is one still
+    // standing (observed with 8 concurrent requests during verification).
+    const remaining = await selectPlaycountSnapshots({
+      account: params.accountId,
+      createdAfter: reuseCutoff.toISOString(),
+    });
+    const survivor = pickCanonicalSnapshot(
+      remaining.filter(
+        candidate =>
+          sameScope(candidate, albumIds, params.body.platforms, params.body.schedule) &&
+          isReusableSnapshotState(candidate.state),
+      ),
+    );
+    return buildReusedSnapshotResult(survivor ?? canonical);
   }
 
   await start(playcountSnapshotWorkflow, [row.id]);
