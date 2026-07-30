@@ -58,4 +58,46 @@ describe("createMeasurementJob", () => {
     const r = await createMeasurementJob(req("current"));
     expect(r).toEqual({ error: "cap reached", status: 429 });
   });
+
+  // Preview verification of chat#1912 row 4 showed this endpoint dropping the
+  // reuse flag: a handed-back capture was indistinguishable from a fresh one
+  // except by its zero cost. Callers polling for a new capture need to know.
+  it("passes the reuse flag through for a handed-back capture", async () => {
+    vi.mocked(createSnapshot).mockResolvedValue({
+      data: {
+        status: "success",
+        snapshot_id: "snap_reused",
+        state: "done",
+        album_count: 2,
+        estimated_cost_usd: 0,
+        reused: true,
+      },
+    });
+
+    const result = await createMeasurementJob({
+      accountId: "acc_1",
+      body: { source: "current", scope: { album_ids: ["a1"] }, platforms: ["spotify"] },
+    } as never);
+
+    expect((result as { data: Record<string, unknown> }).data.reused).toBe(true);
+  });
+
+  it("omits the reuse flag for a fresh capture", async () => {
+    vi.mocked(createSnapshot).mockResolvedValue({
+      data: {
+        status: "success",
+        snapshot_id: "snap_new",
+        state: "queued",
+        album_count: 2,
+        estimated_cost_usd: 0.006,
+      },
+    });
+
+    const result = await createMeasurementJob({
+      accountId: "acc_1",
+      body: { source: "current", scope: { album_ids: ["a1"] }, platforms: ["spotify"] },
+    } as never);
+
+    expect((result as { data: Record<string, unknown> }).data.reused).toBeUndefined();
+  });
 });
