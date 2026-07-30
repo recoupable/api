@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { selectCatalogSongsWithArtists } from "@/lib/supabase/catalog_songs/selectCatalogSongsWithArtists";
 import { validateCatalogSongsQuery } from "@/lib/songs/validateCatalogSongsQuery";
+import { authorizeCatalogAccess } from "@/lib/songs/authorizeCatalogAccess";
 
 /**
  * Handler for retrieving catalog songs with pagination.
@@ -23,6 +24,12 @@ export async function getCatalogSongsHandler(request: NextRequest): Promise<Next
     if (validatedQuery instanceof NextResponse) {
       return validatedQuery;
     }
+
+    // Catalog songs are account-scoped (chat#1912 row 6, contract in
+    // recoupable/docs#282): this read was previously open to anyone holding a
+    // catalog id, while the sibling /measurements endpoint required credentials.
+    const authorized = await authorizeCatalogAccess(request, [validatedQuery.catalog_id]);
+    if (authorized instanceof NextResponse) return authorized;
 
     // Fetch catalog songs with pagination
     const result = await selectCatalogSongsWithArtists({

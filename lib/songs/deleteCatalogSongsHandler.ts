@@ -3,6 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { selectCatalogSongsWithArtists } from "@/lib/supabase/catalog_songs/selectCatalogSongsWithArtists";
 import { deleteCatalogSongs } from "@/lib/supabase/catalog_songs/deleteCatalogSongs";
 import { validateCatalogSongsRequest } from "@/lib/songs/validateCatalogSongsRequest";
+import { authorizeCatalogAccess } from "@/lib/songs/authorizeCatalogAccess";
 
 /**
  * Handler for deleting catalog-song relationships.
@@ -25,6 +26,14 @@ export async function deleteCatalogSongsHandler(request: NextRequest): Promise<N
     if (validatedBody instanceof NextResponse) {
       return validatedBody;
     }
+
+    // Every catalog named in the body must belong to the caller (chat#1912
+    // row 6). This write previously enforced nothing at all.
+    const authorized = await authorizeCatalogAccess(
+      request,
+      validatedBody.songs.map(song => song.catalog_id).filter((id): id is string => !!id),
+    );
+    if (authorized instanceof NextResponse) return authorized;
 
     // Delete catalog_songs relationships
     const affectedCatalogIds = await deleteCatalogSongs(validatedBody.songs);

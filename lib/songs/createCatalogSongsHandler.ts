@@ -5,6 +5,7 @@ import { selectCatalogSongsWithArtists } from "@/lib/supabase/catalog_songs/sele
 import { processSongsInput } from "@/lib/songs/processSongsInput";
 import { SongInput } from "@/lib/songs/formatSongsInput";
 import { validateCatalogSongsRequest } from "@/lib/songs/validateCatalogSongsRequest";
+import { authorizeCatalogAccess } from "@/lib/songs/authorizeCatalogAccess";
 
 /**
  * Handler for creating catalog-song relationships.
@@ -27,6 +28,14 @@ export async function createCatalogSongsHandler(request: NextRequest): Promise<N
     if (validatedBody instanceof NextResponse) {
       return validatedBody;
     }
+
+    // Every catalog named in the body must belong to the caller (chat#1912
+    // row 6). This write previously enforced nothing at all.
+    const authorized = await authorizeCatalogAccess(
+      request,
+      validatedBody.songs.map(song => song.catalog_id).filter((id): id is string => !!id),
+    );
+    if (authorized instanceof NextResponse) return authorized;
 
     // Get unique ISRCs and create song records with CSV data preserved
     const dataByIsrc = validatedBody.songs.reduce((map, song) => {
