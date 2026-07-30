@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { start } from "workflow/api";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { alertZombieOwner } from "@/lib/chat/runs/alertZombieOwner";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateChatRunRequest } from "@/lib/chat/runs/validateChatRunRequest";
 import { provisionRunSession } from "@/lib/chat/runs/provisionRunSession";
@@ -68,6 +69,19 @@ export async function handleStartChatRun(request: NextRequest): Promise<Response
         interactive: false,
       }),
     ]);
+
+    // Alert-only zombie-owner check (recoupable/chat#1885): scheduled runs start
+    // with no check that a human still uses the account. Fire a deduped Telegram
+    // alert when the owner's last `role='user'` message is > 45 days old. Runs
+    // via `after()` so it never blocks the 202 or the run itself, and swallows
+    // its own errors.
+    after(() =>
+      alertZombieOwner({
+        accountId,
+        chatId: provisioned.chat.id,
+        sessionId: provisioned.session.id,
+      }),
+    );
 
     // Return the run handle plus the persisted-output identifiers so the caller
     // can read the result later (the workflow runId alone can't be resolved back
