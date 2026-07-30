@@ -49,9 +49,7 @@ describe("findReusableSnapshot", () => {
   });
 
   it("does not reuse a capture older than the window", () => {
-    expect(
-      find([snapshot({ created_at: "2026-07-30T14:00:00.000Z" })]),
-    ).toBeNull();
+    expect(find([snapshot({ created_at: "2026-07-30T14:00:00.000Z" })])).toBeNull();
   });
 
   it("does not reuse a failed capture", () => {
