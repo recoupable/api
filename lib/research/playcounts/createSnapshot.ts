@@ -3,11 +3,17 @@ import { resolveSnapshotAlbums } from "@/lib/research/playcounts/resolveSnapshot
 import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots";
 import { insertPlaycountSnapshot } from "@/lib/supabase/playcount_snapshots/insertPlaycountSnapshot";
 import { playcountSnapshotWorkflow } from "@/app/workflows/playcountSnapshotWorkflow";
+import { findReusableSnapshot } from "@/lib/research/playcounts/findReusableSnapshot";
 import { CreateSnapshotBody } from "@/lib/research/playcounts/validateCreateSnapshotRequest";
 
 /** Actor pricing: ~$3 per 1k album URLs. */
 const COST_PER_ALBUM_USD = 0.003;
 const DEFAULT_MONTHLY_CAP_USD = 25;
+/**
+ * Play counts do not move meaningfully in minutes, so an identical capture
+ * requested inside this window reuses the earlier one (chat#1912 row 4).
+ */
+const REUSE_WINDOW_MINUTES = 15;
 
 export type CreateSnapshotResult = { data: unknown } | { error: string; status: number };
 
@@ -41,6 +47,30 @@ export async function createSnapshot(params: {
   });
   const spentUsd = monthSnapshots.reduce((sum, row) => sum + (row.estimated_cost_usd ?? 0), 0);
   const estimatedCostUsd = Number((albumIds.length * COST_PER_ALBUM_USD).toFixed(4));
+
+  // Hand back an identical capture taken moments ago rather than scraping the
+  // same albums twice. The month's snapshots are already loaded for the cap
+  // check, so this costs no extra query.
+  const reusable = findReusableSnapshot({
+    snapshots: monthSnapshots,
+    albumIds,
+    platforms: params.body.platforms,
+    schedule: params.body.schedule,
+    windowMinutes: REUSE_WINDOW_MINUTES,
+    now: new Date(),
+  });
+  if (reusable) {
+    return {
+      data: {
+        status: "success",
+        snapshot_id: reusable.id,
+        state: reusable.state,
+        album_count: reusable.album_count,
+        estimated_cost_usd: 0,
+        reused: true,
+      },
+    };
+  }
   const capUsd = Number(process.env.SNAPSHOT_MONTHLY_CAP_USD) || DEFAULT_MONTHLY_CAP_USD;
   if (spentUsd + estimatedCostUsd > capUsd) {
     return { error: "Per-organization monthly snapshot cap reached", status: 429 };
