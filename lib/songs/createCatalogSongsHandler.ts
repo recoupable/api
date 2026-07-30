@@ -5,8 +5,6 @@ import { selectCatalogSongsWithArtists } from "@/lib/supabase/catalog_songs/sele
 import { processSongsInput } from "@/lib/songs/processSongsInput";
 import { SongInput } from "@/lib/songs/formatSongsInput";
 import { validateCatalogSongsRequest } from "@/lib/songs/validateCatalogSongsRequest";
-import { authorizeCatalogAccess } from "@/lib/songs/authorizeCatalogAccess";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 /**
  * Handler for creating catalog-song relationships.
@@ -22,26 +20,10 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
  */
 export async function createCatalogSongsHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    // Authenticate before parsing the body, so a caller with no credentials
-    // gets 401 rather than a body-validation 400 (chat#1912 row 6).
-    const auth = await validateAuthContext(request);
-    if (auth instanceof NextResponse) return auth;
-
-    const body = await request.json();
-
-    // Validate request body
-    const validatedBody = validateCatalogSongsRequest(body);
+    const validatedBody = await validateCatalogSongsRequest(request);
     if (validatedBody instanceof NextResponse) {
       return validatedBody;
     }
-
-    // Every catalog named in the body must belong to the caller. This write
-    // previously enforced nothing at all.
-    const forbidden = await authorizeCatalogAccess(
-      auth.accountId,
-      validatedBody.songs.map(song => song.catalog_id).filter((id): id is string => !!id),
-    );
-    if (forbidden) return forbidden;
 
     // Get unique ISRCs and create song records with CSV data preserved
     const dataByIsrc = validatedBody.songs.reduce((map, song) => {

@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { selectCatalogSongsWithArtists } from "@/lib/supabase/catalog_songs/selectCatalogSongsWithArtists";
 import { validateCatalogSongsQuery } from "@/lib/songs/validateCatalogSongsQuery";
-import { authorizeCatalogAccess } from "@/lib/songs/authorizeCatalogAccess";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 /**
  * Handler for retrieving catalog songs with pagination.
@@ -19,23 +17,10 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
  */
 export async function getCatalogSongsHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    // Authenticate before touching the request, so a caller with no
-    // credentials gets 401 rather than a query-validation 400 (chat#1912 row 6).
-    const auth = await validateAuthContext(request);
-    if (auth instanceof NextResponse) return auth;
-
-    const { searchParams } = new URL(request.url);
-
-    const validatedQuery = validateCatalogSongsQuery(searchParams);
+    const validatedQuery = await validateCatalogSongsQuery(request);
     if (validatedQuery instanceof NextResponse) {
       return validatedQuery;
     }
-
-    // Catalog songs are account-scoped (contract in recoupable/docs#282): this
-    // read was previously open to anyone holding a catalog id, while the
-    // sibling /measurements endpoint required credentials.
-    const forbidden = await authorizeCatalogAccess(auth.accountId, [validatedQuery.catalog_id]);
-    if (forbidden) return forbidden;
 
     // Fetch catalog songs with pagination
     const result = await selectCatalogSongsWithArtists({
