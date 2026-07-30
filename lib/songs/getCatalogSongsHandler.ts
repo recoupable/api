@@ -3,6 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { selectCatalogSongsWithArtists } from "@/lib/supabase/catalog_songs/selectCatalogSongsWithArtists";
 import { validateCatalogSongsQuery } from "@/lib/songs/validateCatalogSongsQuery";
 import { authorizeCatalogAccess } from "@/lib/songs/authorizeCatalogAccess";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 /**
  * Handler for retrieving catalog songs with pagination.
@@ -18,6 +19,11 @@ import { authorizeCatalogAccess } from "@/lib/songs/authorizeCatalogAccess";
  */
 export async function getCatalogSongsHandler(request: NextRequest): Promise<NextResponse> {
   try {
+    // Authenticate before touching the request, so a caller with no
+    // credentials gets 401 rather than a query-validation 400 (chat#1912 row 6).
+    const auth = await validateAuthContext(request);
+    if (auth instanceof NextResponse) return auth;
+
     const { searchParams } = new URL(request.url);
 
     const validatedQuery = validateCatalogSongsQuery(searchParams);
@@ -25,11 +31,11 @@ export async function getCatalogSongsHandler(request: NextRequest): Promise<Next
       return validatedQuery;
     }
 
-    // Catalog songs are account-scoped (chat#1912 row 6, contract in
-    // recoupable/docs#282): this read was previously open to anyone holding a
-    // catalog id, while the sibling /measurements endpoint required credentials.
-    const authorized = await authorizeCatalogAccess(request, [validatedQuery.catalog_id]);
-    if (authorized instanceof NextResponse) return authorized;
+    // Catalog songs are account-scoped (contract in recoupable/docs#282): this
+    // read was previously open to anyone holding a catalog id, while the
+    // sibling /measurements endpoint required credentials.
+    const forbidden = await authorizeCatalogAccess(auth.accountId, [validatedQuery.catalog_id]);
+    if (forbidden) return forbidden;
 
     // Fetch catalog songs with pagination
     const result = await selectCatalogSongsWithArtists({
@@ -63,7 +69,9 @@ export async function getCatalogSongsHandler(request: NextRequest): Promise<Next
     return NextResponse.json(
       {
         status: "error",
-        error: error instanceof Error ? error.message : "Internal server error",
+        // Fixed message: this path can now surface auth and database
+        // failures, whose text must not reach the caller.
+        error: "Internal server error",
       },
       {
         status: 500,

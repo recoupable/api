@@ -1,47 +1,39 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { selectAccountCatalog } from "@/lib/supabase/account_catalogs/selectAccountCatalog";
+import { selectAccountCatalogs } from "@/lib/supabase/account_catalogs/selectAccountCatalogs";
 
 /**
- * Gate for every `/api/catalogs/songs` operation: the caller must be
- * authenticated and the catalog must belong to them.
+ * Ownership half of the `/api/catalogs/songs` gate: every catalog the operation
+ * touches must belong to `accountId`.
  *
- * All three operations previously enforced nothing, so anyone holding a
- * catalog id could read, add or remove its songs while the sibling
- * `/measurements` endpoint returned 401 for the same catalog (chat#1912 row 6,
- * contract in recoupable/docs#282).
+ * Authentication is deliberately **not** done here. Callers run
+ * `validateAuthContext` before parsing or validating the request, so a caller
+ * with no credentials gets 401 rather than a body-validation 400 — the exact
+ * confusion that hid this hole in the first place (chat#1912 row 6).
  *
- * The account is always the authenticated one, never a caller-supplied value.
+ * Reads the caller's catalogs in **one** query and checks membership in memory,
+ * so a bulk body naming many catalogs cannot fan out into many simultaneous
+ * queries. `selectAccountCatalogs` throws on a query failure, so a database
+ * outage surfaces as a 500 rather than a false "does not belong" 403.
  *
- * A write can name several catalogs in one body, so every distinct catalog is
- * checked — authorizing only the first would let one owned catalog carry edits
- * to catalogs the caller does not own.
- *
- * @param request - The incoming request, carrying `x-api-key` or a bearer token
+ * @param accountId - The authenticated account
  * @param catalogIds - Every catalog the operation touches
- * @returns `{ accountId }` when authorized, or a 401/403 NextResponse
+ * @returns A 403 NextResponse when any catalog is not the caller's, else null
  */
 export async function authorizeCatalogAccess(
-  request: NextRequest,
+  accountId: string,
   catalogIds: string[],
-): Promise<{ accountId: string } | NextResponse> {
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) return authResult;
+): Promise<NextResponse | null> {
+  const owned = await selectAccountCatalogs(accountId);
+  const ownedIds = new Set(owned.map(catalog => catalog.id));
 
-  const { accountId } = authResult;
-  const links = await Promise.all(
-    [...new Set(catalogIds)].map(catalogId => selectAccountCatalog({ accountId, catalogId })),
+  if (catalogIds.every(id => ownedIds.has(id))) return null;
+
+  return NextResponse.json(
+    {
+      status: "error",
+      error: "This catalog does not belong to the authenticated account",
+    },
+    { status: 403, headers: getCorsHeaders() },
   );
-  if (links.some(link => !link)) {
-    return NextResponse.json(
-      {
-        status: "error",
-        error: "This catalog does not belong to the authenticated account",
-      },
-      { status: 403, headers: getCorsHeaders() },
-    );
-  }
-
-  return { accountId };
 }

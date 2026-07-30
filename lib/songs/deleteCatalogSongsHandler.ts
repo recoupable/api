@@ -4,6 +4,7 @@ import { selectCatalogSongsWithArtists } from "@/lib/supabase/catalog_songs/sele
 import { deleteCatalogSongs } from "@/lib/supabase/catalog_songs/deleteCatalogSongs";
 import { validateCatalogSongsRequest } from "@/lib/songs/validateCatalogSongsRequest";
 import { authorizeCatalogAccess } from "@/lib/songs/authorizeCatalogAccess";
+import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 /**
  * Handler for deleting catalog-song relationships.
@@ -19,6 +20,11 @@ import { authorizeCatalogAccess } from "@/lib/songs/authorizeCatalogAccess";
  */
 export async function deleteCatalogSongsHandler(request: NextRequest): Promise<NextResponse> {
   try {
+    // Authenticate before parsing the body, so a caller with no credentials
+    // gets 401 rather than a body-validation 400 (chat#1912 row 6).
+    const auth = await validateAuthContext(request);
+    if (auth instanceof NextResponse) return auth;
+
     const body = await request.json();
 
     // Validate request body
@@ -27,13 +33,13 @@ export async function deleteCatalogSongsHandler(request: NextRequest): Promise<N
       return validatedBody;
     }
 
-    // Every catalog named in the body must belong to the caller (chat#1912
-    // row 6). This write previously enforced nothing at all.
-    const authorized = await authorizeCatalogAccess(
-      request,
+    // Every catalog named in the body must belong to the caller. This write
+    // previously enforced nothing at all.
+    const forbidden = await authorizeCatalogAccess(
+      auth.accountId,
       validatedBody.songs.map(song => song.catalog_id).filter((id): id is string => !!id),
     );
-    if (authorized instanceof NextResponse) return authorized;
+    if (forbidden) return forbidden;
 
     // Delete catalog_songs relationships
     const affectedCatalogIds = await deleteCatalogSongs(validatedBody.songs);
@@ -67,7 +73,9 @@ export async function deleteCatalogSongsHandler(request: NextRequest): Promise<N
     return NextResponse.json(
       {
         status: "error",
-        error: error instanceof Error ? error.message : "Internal server error",
+        // Fixed message: this path can now surface auth and database
+        // failures, whose text must not reach the caller.
+        error: "Internal server error",
       },
       {
         status: 500,
