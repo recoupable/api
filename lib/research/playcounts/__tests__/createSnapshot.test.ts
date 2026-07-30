@@ -4,6 +4,7 @@ import { createSnapshot } from "../createSnapshot";
 import { resolveSnapshotAlbums } from "../resolveSnapshotAlbums";
 import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots";
 import { insertPlaycountSnapshot } from "@/lib/supabase/playcount_snapshots/insertPlaycountSnapshot";
+import { deletePlaycountSnapshot } from "@/lib/supabase/playcount_snapshots/deletePlaycountSnapshot";
 import { start } from "workflow/api";
 
 vi.mock("../resolveSnapshotAlbums", () => ({ resolveSnapshotAlbums: vi.fn() }));
@@ -12,6 +13,9 @@ vi.mock("@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots", () => ({
 }));
 vi.mock("@/lib/supabase/playcount_snapshots/insertPlaycountSnapshot", () => ({
   insertPlaycountSnapshot: vi.fn(),
+}));
+vi.mock("@/lib/supabase/playcount_snapshots/deletePlaycountSnapshot", () => ({
+  deletePlaycountSnapshot: vi.fn(),
 }));
 vi.mock("workflow/api", () => ({ start: vi.fn() }));
 vi.mock("@/app/workflows/playcountSnapshotWorkflow", () => ({
@@ -179,5 +183,76 @@ describe("createSnapshot", () => {
       status: 429,
     });
     vi.useRealTimers();
+  });
+
+  // chat#1912 row 7: two simultaneous identical requests both insert before
+  // either can see the other. On re-read the loser must withdraw its claim and
+  // hand back the winner's, so exactly one capture is scraped and one row
+  // survives.
+  it("withdraws its own claim when a concurrent request won the race", async () => {
+    vi.mocked(resolveSnapshotAlbums).mockResolvedValue(["a1"]);
+    vi.mocked(insertPlaycountSnapshot).mockResolvedValue({ id: "mine" } as never);
+    const scope = {
+      album_ids: ["a1"],
+      platforms: ["spotify"],
+      schedule: "once",
+      state: "queued",
+      album_count: 1,
+      estimated_cost_usd: 0.003,
+    };
+    vi.mocked(selectPlaycountSnapshots)
+      // pre-check: nobody has claimed it yet
+      .mockResolvedValueOnce([] as never)
+      // reconcile: the other request's row landed first
+      .mockResolvedValueOnce([
+        { ...scope, id: "theirs", created_at: "2026-07-30T12:00:00.000Z" },
+        { ...scope, id: "mine", created_at: "2026-07-30T12:00:01.000Z" },
+      ] as never);
+
+    const result = await createSnapshot({
+      accountId: "acc_1",
+      body: { album_ids: ["a1"], platforms: ["spotify"], schedule: "once" },
+    });
+
+    expect(deletePlaycountSnapshot).toHaveBeenCalledWith("mine");
+    expect(start).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      data: {
+        status: "success",
+        snapshot_id: "theirs",
+        state: "queued",
+        album_count: 1,
+        estimated_cost_usd: 0,
+        reused: true,
+      },
+    });
+  });
+
+  it("keeps its claim and scrapes when it won the race", async () => {
+    vi.mocked(resolveSnapshotAlbums).mockResolvedValue(["a1"]);
+    vi.mocked(insertPlaycountSnapshot).mockResolvedValue({ id: "mine" } as never);
+    const scope = {
+      album_ids: ["a1"],
+      platforms: ["spotify"],
+      schedule: "once",
+      state: "queued",
+      album_count: 1,
+      estimated_cost_usd: 0.003,
+    };
+    vi.mocked(selectPlaycountSnapshots)
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([
+        { ...scope, id: "mine", created_at: "2026-07-30T12:00:00.000Z" },
+        { ...scope, id: "theirs", created_at: "2026-07-30T12:00:01.000Z" },
+      ] as never);
+
+    const result = await createSnapshot({
+      accountId: "acc_1",
+      body: { album_ids: ["a1"], platforms: ["spotify"], schedule: "once" },
+    });
+
+    expect(deletePlaycountSnapshot).not.toHaveBeenCalled();
+    expect(start).toHaveBeenCalledWith(expect.anything(), ["mine"]);
+    expect((result as { data: { snapshot_id: string } }).data.snapshot_id).toBe("mine");
   });
 });

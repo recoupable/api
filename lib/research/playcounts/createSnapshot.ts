@@ -5,6 +5,9 @@ import { insertPlaycountSnapshot } from "@/lib/supabase/playcount_snapshots/inse
 import { playcountSnapshotWorkflow } from "@/app/workflows/playcountSnapshotWorkflow";
 import { findReusableSnapshot } from "@/lib/research/playcounts/findReusableSnapshot";
 import { buildReusedSnapshotResult } from "@/lib/research/playcounts/buildReusedSnapshotResult";
+import { pickCanonicalSnapshot } from "@/lib/research/playcounts/pickCanonicalSnapshot";
+import { sameScope } from "@/lib/research/playcounts/sameScope";
+import { deletePlaycountSnapshot } from "@/lib/supabase/playcount_snapshots/deletePlaycountSnapshot";
 import { getMonthlySpendUsd } from "@/lib/research/playcounts/getMonthlySpendUsd";
 import { CreateSnapshotBody } from "@/lib/research/playcounts/validateCreateSnapshotRequest";
 
@@ -86,6 +89,27 @@ export async function createSnapshot(params: {
     album_count: albumIds.length,
     estimated_cost_usd: estimatedCostUsd,
   });
+
+  // The insert is a claim, not yet a scrape. Two simultaneous identical
+  // requests both get here before either can see the other, so re-read and
+  // let the earliest claim win — the loser withdraws its row and hands back
+  // the winner's rather than starting a second capture (chat#1912 row 7).
+  const claims = await selectPlaycountSnapshots({
+    account: params.accountId,
+    createdAfter: reuseCutoff.toISOString(),
+  });
+  const canonical = pickCanonicalSnapshot(
+    claims.filter(
+      candidate =>
+        candidate.id === row.id ||
+        (sameScope(candidate, albumIds, params.body.platforms, params.body.schedule) &&
+          candidate.state === "queued"),
+    ),
+  );
+  if (canonical && canonical.id !== row.id) {
+    await deletePlaycountSnapshot(row.id);
+    return buildReusedSnapshotResult(canonical);
+  }
 
   await start(playcountSnapshotWorkflow, [row.id]);
 
