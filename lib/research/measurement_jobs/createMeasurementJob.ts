@@ -9,6 +9,8 @@ type SnapshotData = {
   state: string;
   album_count: number;
   estimated_cost_usd: number;
+  /** Present only when an existing capture was handed back (chat#1912 row 4). */
+  reused?: boolean;
 };
 
 /**
@@ -42,6 +44,9 @@ export async function createMeasurementJob(
       state: d.state,
       album_count: d.album_count,
       estimated_cost_usd: d.estimated_cost_usd,
+      // Surfaced so a caller can tell a handed-back capture from a fresh one
+      // without inferring it from the zero cost.
+      ...(d.reused ? { reused: true } : {}),
     },
   };
 }
