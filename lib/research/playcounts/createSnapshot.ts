@@ -4,16 +4,19 @@ import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/sel
 import { insertPlaycountSnapshot } from "@/lib/supabase/playcount_snapshots/insertPlaycountSnapshot";
 import { playcountSnapshotWorkflow } from "@/app/workflows/playcountSnapshotWorkflow";
 import { findReusableSnapshot } from "@/lib/research/playcounts/findReusableSnapshot";
+import { buildReusedSnapshotResult } from "@/lib/research/playcounts/buildReusedSnapshotResult";
+import { getMonthlySpendUsd } from "@/lib/research/playcounts/getMonthlySpendUsd";
 import { CreateSnapshotBody } from "@/lib/research/playcounts/validateCreateSnapshotRequest";
 
 /** Actor pricing: ~$3 per 1k album URLs. */
 const COST_PER_ALBUM_USD = 0.003;
 const DEFAULT_MONTHLY_CAP_USD = 25;
 /**
- * Play counts do not move meaningfully in minutes, so an identical capture
- * requested inside this window reuses the earlier one (chat#1912 row 4).
+ * Play counts do not move meaningfully inside an hour, so an identical capture
+ * requested within this window reuses the earlier one rather than re-scraping
+ * (chat#1912 row 4).
  */
-const REUSE_WINDOW_MINUTES = 15;
+const REUSE_WINDOW_MINUTES = 60;
 
 export type CreateSnapshotResult = { data: unknown } | { error: string; status: number };
 
@@ -38,39 +41,35 @@ export async function createSnapshot(params: {
     };
   }
 
-  const monthStart = new Date();
+  const now = new Date();
+  const monthStart = new Date(now);
   monthStart.setUTCDate(1);
   monthStart.setUTCHours(0, 0, 0, 0);
-  const monthSnapshots = await selectPlaycountSnapshots({
+  const reuseCutoff = new Date(now.getTime() - REUSE_WINDOW_MINUTES * 60 * 1000);
+
+  // One query serves both needs, so the lower bound is whichever reaches
+  // further back. Without this, a request in the first hour of a UTC month
+  // could not see the previous month's captures and re-scraped them.
+  const lookbackStart = reuseCutoff < monthStart ? reuseCutoff : monthStart;
+  const snapshots = await selectPlaycountSnapshots({
     account: params.accountId,
-    createdAfter: monthStart.toISOString(),
+    createdAfter: lookbackStart.toISOString(),
   });
-  const spentUsd = monthSnapshots.reduce((sum, row) => sum + (row.estimated_cost_usd ?? 0), 0);
+
+  const spentUsd = getMonthlySpendUsd(snapshots, monthStart);
   const estimatedCostUsd = Number((albumIds.length * COST_PER_ALBUM_USD).toFixed(4));
 
-  // Hand back an identical capture taken moments ago rather than scraping the
-  // same albums twice. The month's snapshots are already loaded for the cap
-  // check, so this costs no extra query.
+  // Hand back an identical recent capture rather than scraping the same albums
+  // twice.
   const reusable = findReusableSnapshot({
-    snapshots: monthSnapshots,
+    snapshots,
     albumIds,
     platforms: params.body.platforms,
     schedule: params.body.schedule,
     windowMinutes: REUSE_WINDOW_MINUTES,
-    now: new Date(),
+    now,
   });
-  if (reusable) {
-    return {
-      data: {
-        status: "success",
-        snapshot_id: reusable.id,
-        state: reusable.state,
-        album_count: reusable.album_count,
-        estimated_cost_usd: 0,
-        reused: true,
-      },
-    };
-  }
+  if (reusable) return buildReusedSnapshotResult(reusable);
   const capUsd = Number(process.env.SNAPSHOT_MONTHLY_CAP_USD) || DEFAULT_MONTHLY_CAP_USD;
   if (spentUsd + estimatedCostUsd > capUsd) {
     return { error: "Per-organization monthly snapshot cap reached", status: 429 };
