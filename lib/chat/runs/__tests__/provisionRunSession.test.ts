@@ -77,4 +77,15 @@ describe("provisionRunSession", () => {
     expect(result.session).toEqual(updated);
     expect(discoverSkills).toHaveBeenCalled();
   });
+
+  it("forwards modelId to createSessionWithInitialChat (chat#1918)", async () => {
+    await provisionRunSession({
+      accountId: "acc-1",
+      title: "T",
+      modelId: "anthropic/claude-sonnet-5",
+    });
+    expect(createSessionWithInitialChat).toHaveBeenCalledWith(
+      expect.objectContaining({ modelId: "anthropic/claude-sonnet-5" }),
+    );
+  });
 });
