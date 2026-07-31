@@ -79,6 +79,7 @@ describe("enrichTasks", () => {
         upcoming: ["2026-03-27T09:00:00Z", "2026-04-03T09:00:00Z"],
         owner_email: "owner@example.com",
         timezone: "America/New_York",
+        trigger_lookup_failed: false,
       },
     ]);
     expect(fetchTriggerRuns).toHaveBeenCalledWith({ "filter[schedule]": "sched_abc" }, 5);
@@ -99,6 +100,7 @@ describe("enrichTasks", () => {
         upcoming: [],
         owner_email: null,
         timezone: null,
+        trigger_lookup_failed: false,
       },
     ]);
     expect(fetchTriggerRuns).not.toHaveBeenCalled();
@@ -118,6 +120,7 @@ describe("enrichTasks", () => {
         upcoming: [],
         owner_email: null,
         timezone: null,
+        trigger_lookup_failed: true,
       },
     ]);
   });
@@ -136,8 +139,33 @@ describe("enrichTasks", () => {
         upcoming: [],
         owner_email: null,
         timezone: "UTC",
+        trigger_lookup_failed: false,
       },
     ]);
     expect(retrieveTaskRun).not.toHaveBeenCalled();
+  });
+
+  it("flags trigger_lookup_failed when the Trigger lookup throws (chat#1918)", async () => {
+    vi.mocked(fetchTriggerRuns).mockRejectedValue(new Error("Trigger API 503"));
+    vi.mocked(retrieveScheduleTimezone).mockResolvedValue(null as never);
+    vi.mocked(selectAccountEmails).mockResolvedValue([] as never);
+    const [enriched] = await enrichTasks([mockTask]);
+    expect(enriched.trigger_lookup_failed).toBe(true);
+    expect(enriched.upcoming).toEqual([]);
+  });
+
+  it("does NOT flag a live schedule that legitimately has no runs yet", async () => {
+    vi.mocked(fetchTriggerRuns).mockResolvedValue([] as never);
+    vi.mocked(retrieveScheduleTimezone).mockResolvedValue("UTC" as never);
+    vi.mocked(selectAccountEmails).mockResolvedValue([] as never);
+    const [enriched] = await enrichTasks([mockTask]);
+    expect(enriched.trigger_lookup_failed).toBe(false);
+    expect(enriched.upcoming).toEqual([]);
+  });
+
+  it("does NOT flag a task that has no trigger_schedule_id to look up", async () => {
+    vi.mocked(selectAccountEmails).mockResolvedValue([] as never);
+    const [enriched] = await enrichTasks([{ ...mockTask, trigger_schedule_id: null }]);
+    expect(enriched.trigger_lookup_failed).toBe(false);
   });
 });

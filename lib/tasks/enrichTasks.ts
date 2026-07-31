@@ -12,12 +12,20 @@ export type EnrichedTask = ScheduledAction & {
   owner_email: string | null;
   /** IANA timezone read from the Trigger.dev schedule (source of truth); null when unavailable. */
   timezone: string | null;
+  /**
+   * True when the Trigger.dev lookup errored, so `recent_runs` / `upcoming` /
+   * `timezone` are not authoritative. Without this, a failed lookup and a live
+   * schedule with no runs yet were both an empty `upcoming` — which got a live
+   * schedule misdiagnosed as dead and a duplicate task created (chat#1918).
+   */
+  trigger_lookup_failed: boolean;
 };
 
 interface TriggerInfo {
   recent_runs: TriggerRun[];
   upcoming: string[];
   timezone: string | null;
+  trigger_lookup_failed: boolean;
 }
 
 type TriggerInfoEntry = readonly [string, TriggerInfo];
@@ -34,7 +42,10 @@ export async function enrichTasks(tasks: ScheduledAction[]): Promise<EnrichedTas
       const scheduleId = task.trigger_schedule_id;
 
       if (!scheduleId) {
-        return [task.id, { recent_runs: [], upcoming: [], timezone: null }] as const;
+        return [
+          task.id,
+          { recent_runs: [], upcoming: [], timezone: null, trigger_lookup_failed: false },
+        ] as const;
       }
 
       try {
@@ -64,11 +75,19 @@ export async function enrichTasks(tasks: ScheduledAction[]): Promise<EnrichedTas
 
         return [
           task.id,
-          { recent_runs: recentRuns, upcoming, timezone: timezone ?? null },
+          {
+            recent_runs: recentRuns,
+            upcoming,
+            timezone: timezone ?? null,
+            trigger_lookup_failed: false,
+          },
         ] as const;
       } catch {
-        // Trigger.dev API failed — return task without trigger enrichment
-        return [task.id, { recent_runs: [], upcoming: [], timezone: null }] as const;
+        // Trigger.dev API failed — the enrichment fields are unknown, not empty.
+        return [
+          task.id,
+          { recent_runs: [], upcoming: [], timezone: null, trigger_lookup_failed: true },
+        ] as const;
       }
     }),
   );
