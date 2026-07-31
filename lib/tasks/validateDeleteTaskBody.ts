@@ -4,6 +4,13 @@ import { z } from "zod";
 
 export const deleteTaskBodySchema = z.object({
   id: z.string().uuid("id must be a valid UUID").describe("UUID of the task to delete"),
+  account_id: z
+    .string()
+    .uuid("account_id must be a valid UUID")
+    .optional()
+    .describe(
+      "Account context for org/API-key rules; authorized via validateAuthContext. Not a raw column override.",
+    ),
 });
 
 export type DeleteTaskBody = z.infer<typeof deleteTaskBodySchema>;

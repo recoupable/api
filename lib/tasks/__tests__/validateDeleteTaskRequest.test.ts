@@ -62,4 +62,29 @@ describe("validateDeleteTaskRequest", () => {
     const res = await validateDeleteTaskRequest(request);
     expect(res).toBe(forbidden);
   });
+
+  it("forwards body account_id to validateAuthContext as the override (chat#1918)", async () => {
+    const OTHER = "999e4567-e89b-12d3-a456-426614174999";
+    const request = new NextRequest("http://localhost/api/tasks", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "x-api-key": "test-key" },
+      body: JSON.stringify({ id: TASK_ID, account_id: OTHER }),
+    });
+    await validateDeleteTaskRequest(request);
+    expect(validateAuthContext).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ accountId: OTHER }),
+    );
+  });
+
+  it("rejects a non-UUID account_id with 400", async () => {
+    const request = new NextRequest("http://localhost/api/tasks", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "x-api-key": "test-key" },
+      body: JSON.stringify({ id: TASK_ID, account_id: "not-a-uuid" }),
+    });
+    const result = await validateDeleteTaskRequest(request);
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(400);
+  });
 });
