@@ -60,4 +60,17 @@ describe("createSessionWithInitialChat", () => {
     expect(r).toEqual({ ok: false, reason: "insert" });
     expect(deleteSessionById).toHaveBeenCalledWith("sess-1");
   });
+
+  it("persists modelId onto the chat row so the run's model is recorded (chat#1918)", async () => {
+    await createSessionWithInitialChat({ ...args, modelId: "moonshotai/kimi-k3" });
+    expect(insertChat).toHaveBeenCalledWith(
+      expect.objectContaining({ model_id: "moonshotai/kimi-k3" }),
+    );
+  });
+
+  it("omits model_id when no modelId is supplied", async () => {
+    await createSessionWithInitialChat(args);
+    const row = vi.mocked(insertChat).mock.calls[0]![0] as Record<string, unknown>;
+    expect(row.model_id).toBeUndefined();
+  });
 });

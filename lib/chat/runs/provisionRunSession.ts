@@ -37,16 +37,20 @@ export async function provisionRunSession({
   accountId,
   title,
   artistId,
+  modelId,
 }: {
   accountId: string;
   title: string;
   artistId?: string;
+  /** Resolved model for this run; persisted onto the chat row (chat#1918). */
+  modelId?: string;
 }): Promise<ProvisionedRunSession> {
   const created = await createSessionWithInitialChat({
     accountId,
     title,
     chatTitle: "Scheduled generation",
     artistId,
+    modelId,
   });
   if (created.ok === false) {
     throw new Error(

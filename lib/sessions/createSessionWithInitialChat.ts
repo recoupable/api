@@ -35,12 +35,20 @@ export async function createSessionWithInitialChat({
   title,
   chatTitle,
   artistId,
+  modelId,
 }: {
   accountId: string;
   workspaceAccountId?: string;
   title: string;
   chatTitle: string;
   artistId?: string;
+  /**
+   * Model the run will execute on. Persisted onto the chat so `chats.model_id`
+   * reflects reality — the generation path reads the model from the chat row,
+   * so leaving it unset made every headless run record the default regardless
+   * of what the task configured (chat#1918).
+   */
+  modelId?: string;
 }): Promise<CreateSessionWithChatResult> {
   const cloneUrl = await ensurePersonalRepo({ accountId: workspaceAccountId ?? accountId });
   if (!cloneUrl) return { ok: false, reason: "repo" };
@@ -50,7 +58,12 @@ export async function createSessionWithInitialChat({
   );
   if (!session) return { ok: false, reason: "insert" };
 
-  const chat = await insertChat({ id: generateUUID(), session_id: session.id, title: chatTitle });
+  const chat = await insertChat({
+    id: generateUUID(),
+    session_id: session.id,
+    title: chatTitle,
+    ...(modelId ? { model_id: modelId } : {}),
+  });
   if (!chat) {
     const rolledBack = await deleteSessionById(session.id);
     if (!rolledBack) {

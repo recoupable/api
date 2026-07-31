@@ -121,4 +121,11 @@ describe("handleStartChatRun", () => {
     expect(mintEphemeralAccountKey).not.toHaveBeenCalled();
     expect(deleteApiKey).not.toHaveBeenCalled();
   });
+
+  it("passes the resolved modelId to provisionRunSession so chats.model_id is accurate (chat#1918)", async () => {
+    await handleStartChatRun(req());
+    expect(provisionRunSession).toHaveBeenCalledWith(
+      expect.objectContaining({ modelId: expect.any(String) }),
+    );
+  });
 });
