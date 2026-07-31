@@ -7,16 +7,29 @@ export interface TaskTriggerInfo {
   upcoming: string[];
   /** IANA timezone read from the Trigger.dev schedule (source of truth); null when unavailable. */
   timezone: string | null;
+  /**
+   * True when the Trigger.dev lookup errored, so `recent_runs` / `upcoming` /
+   * `timezone` are not authoritative. Without it a failed lookup and a live
+   * schedule with no runs yet are both an empty `upcoming`, which got a live
+   * schedule misdiagnosed as dead and a duplicate task created (chat#1918).
+   */
+  trigger_lookup_failed: boolean;
 }
 
-const EMPTY: TaskTriggerInfo = { recent_runs: [], upcoming: [], timezone: null };
+const EMPTY: TaskTriggerInfo = {
+  recent_runs: [],
+  upcoming: [],
+  timezone: null,
+  trigger_lookup_failed: false,
+};
 
 /**
  * What Trigger.dev knows about one task's schedule: its last 5 runs, the
  * upcoming fire times, and the timezone. The schedule owns the timezone
  * (chat#1881 3c) and, for a task that has never run, the only known next
  * fire time (chat#2006 item 6); a run's payload carries the fuller list.
- * Best-effort: any Trigger.dev failure yields the empty shape.
+ * Best-effort: any Trigger.dev failure yields the empty shape, flagged with
+ * `trigger_lookup_failed` so callers can tell it from a schedule with no runs.
  */
 export async function getTaskTriggerInfo(scheduleId: string | null): Promise<TaskTriggerInfo> {
   if (!scheduleId) return EMPTY;
@@ -38,8 +51,13 @@ export async function getTaskTriggerInfo(scheduleId: string | null): Promise<Tas
         // payload retrieval failed — keep the schedule's next fire
       }
     }
-    return { recent_runs: recentRuns, upcoming, timezone: schedule.timezone ?? null };
+    return {
+      recent_runs: recentRuns,
+      upcoming,
+      timezone: schedule.timezone ?? null,
+      trigger_lookup_failed: false,
+    };
   } catch {
-    return EMPTY;
+    return { ...EMPTY, trigger_lookup_failed: true };
   }
 }
