@@ -40,7 +40,12 @@ export async function validateDeleteTaskRequest(
     );
   }
 
-  const authContext = await validateAuthContext(request);
+  // Mirror GET/POST/PATCH: an org or admin key may act in a member account's
+  // context. Without this, an admin key could create and edit a customer's task
+  // but got 403 deleting it (chat#1918).
+  const authContext = await validateAuthContext(request, {
+    accountId: validationResult.data.account_id,
+  });
   if (authContext instanceof NextResponse) {
     return authContext;
   }
