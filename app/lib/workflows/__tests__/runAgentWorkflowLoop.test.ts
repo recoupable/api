@@ -5,10 +5,14 @@ import { convertMessagesStep } from "@/app/lib/workflows/convertMessagesStep";
 import { sendStreamStart } from "@/app/lib/workflows/sendStreamStart";
 import { sendStreamFinish } from "@/app/lib/workflows/sendStreamFinish";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
+import { persistAssistantMessageStep } from "@/app/lib/workflows/persistAssistantMessageStep";
 import { CHAT_AGENT_MAX_ITERATIONS } from "@/lib/chat/const";
 
 vi.mock("@/app/lib/workflows/runAgentStep", () => ({ runAgentStep: vi.fn() }));
 vi.mock("@/app/lib/workflows/convertMessagesStep", () => ({ convertMessagesStep: vi.fn() }));
+vi.mock("@/app/lib/workflows/persistAssistantMessageStep", () => ({
+  persistAssistantMessageStep: vi.fn(),
+}));
 vi.mock("@/app/lib/workflows/sendStreamStart", () => ({ sendStreamStart: vi.fn() }));
 vi.mock("@/app/lib/workflows/sendStreamFinish", () => ({ sendStreamFinish: vi.fn() }));
 vi.mock("@/app/lib/workflows/generateAssistantMessageId", () => ({
@@ -165,6 +169,41 @@ describe("runAgentWorkflow — per-iteration agent loop", () => {
     await runAgentWorkflow(baseInput);
 
     expect(runAgentStep).toHaveBeenCalledTimes(1);
+  });
+
+  // Persistence lives in the workflow body, mirroring upstream open-agents
+  // (`persistAssistantMessage(options.chatId, pendingAssistantResponse)`).
+  // Persisting per iteration keeps a long turn's transcript live rather than
+  // landing only at the end.
+  it("persists the accumulated assistant message after each iteration", async () => {
+    queueSteps([
+      {
+        finishReason: "tool-calls",
+        aborted: false,
+        responseMessage: assistantMessage("a1"),
+        responseMessages: [{ role: "assistant", content: "call-1" }],
+      },
+      {
+        finishReason: "stop",
+        aborted: false,
+        responseMessage: assistantMessage("a2"),
+        responseMessages: [],
+      },
+    ]);
+
+    await runAgentWorkflow(baseInput);
+
+    expect(persistAssistantMessageStep).toHaveBeenCalledTimes(2);
+    expect(persistAssistantMessageStep).toHaveBeenNthCalledWith(
+      1,
+      "chat-1",
+      assistantMessage("a1"),
+    );
+    expect(persistAssistantMessageStep).toHaveBeenNthCalledWith(
+      2,
+      "chat-1",
+      assistantMessage("a2"),
+    );
   });
 
   it("bounds a runaway tool-call loop at CHAT_AGENT_MAX_ITERATIONS", async () => {

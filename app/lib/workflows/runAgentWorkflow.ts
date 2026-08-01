@@ -6,6 +6,7 @@ import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { convertMessagesStep } from "@/app/lib/workflows/convertMessagesStep";
 import { sendStreamStart } from "@/app/lib/workflows/sendStreamStart";
 import { sendStreamFinish } from "@/app/lib/workflows/sendStreamFinish";
+import { persistAssistantMessageStep } from "@/app/lib/workflows/persistAssistantMessageStep";
 import { CHAT_AGENT_MAX_ITERATIONS } from "@/lib/chat/const";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { deleteEphemeralKeyStep } from "@/app/lib/workflows/deleteEphemeralKeyStep";
@@ -141,7 +142,6 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
         modelMessages: [...modelMessages],
         originalMessages: [pendingAssistantResponse],
         modelId: input.modelId,
-        chatId: input.chatId,
         accountId: input.accountId,
         artistId: input.artistId,
         interactive: input.interactive,
@@ -150,7 +150,13 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
         assistantMessageId,
       });
 
-      if (result.responseMessage) pendingAssistantResponse = result.responseMessage;
+      if (result.responseMessage) {
+        pendingAssistantResponse = result.responseMessage;
+        // Persist per iteration so a long turn's transcript stays live rather
+        // than landing only at the end. The stable assistantMessageId makes
+        // each write overwrite the same row.
+        await persistAssistantMessageStep(input.chatId, pendingAssistantResponse);
+      }
       modelMessages.push(...result.responseMessages);
 
       // A turn continues only while the model asked for more tools. Any

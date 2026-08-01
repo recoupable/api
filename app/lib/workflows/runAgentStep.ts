@@ -1,10 +1,4 @@
-import {
-  streamText,
-  createUIMessageStream,
-  type ModelMessage,
-  type UIMessage,
-  type UIMessageChunk,
-} from "ai";
+import { streamText, type ModelMessage, type UIMessage, type UIMessageChunk } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { agentCustomInstructions } from "@/lib/chat/agentCustomInstructions";
 import { buildAgentSystemPrompt } from "@/lib/chat/buildAgentSystemPrompt";
@@ -15,11 +9,11 @@ import type { AgentMessageMetadata } from "@/lib/agent/messageMetadata/AgentMess
 import { addCacheControlToTools } from "@/lib/agent/contextManagement/addCacheControlToTools";
 import { addCacheControlToMessages } from "@/lib/agent/contextManagement/addCacheControlToMessages";
 import { wrapToolsWithAbort } from "@/lib/agent/contextManagement/wrapToolsWithAbort";
-import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
-import { finalizeAbortedAssistantMessage } from "@/lib/chat/finalizeAbortedAssistantMessage";
+import { closeOpenToolCalls } from "@/lib/chat/closeOpenToolCalls";
+import { isAbortError } from "@/lib/chat/isAbortError";
+import { isRunCancelled } from "@/lib/chat/isRunCancelled";
 import { getWorkflowMetadata } from "workflow";
-import { pipeWorkflowStreamWithStopDetection } from "@/lib/chat/pipeWorkflowStreamWithStopDetection";
 
 export type RunAgentStepInput = {
   /**
@@ -37,8 +31,6 @@ export type RunAgentStepInput = {
   originalMessages: UIMessage[];
   modelId: string;
   writable: WritableStream<UIMessageChunk>;
-  /** Target chat for persisting the assistant message as it streams. */
-  chatId: string;
   /**
    * The JSON-serializable agent context that survives the durable
    * workflow input. `runAgentStep` widens it into a full `AgentContext`
@@ -80,10 +72,11 @@ export type RunAgentStepInput = {
 export type RunAgentStepResult = {
   finishReason: string;
   /**
-   * The assembled assistant message captured from the stream's `onFinish`.
-   * `undefined` if the stream finished without emitting one. Per-step
-   * persistence happens inside this function; this is returned so
-   * `runAgentWorkflow` can charge credits from `responseMessage.metadata`.
+   * The assembled assistant message captured from the stream's `onFinish`,
+   * cumulative across iterations via `originalMessages`. `undefined` if the
+   * stream finished without emitting one. Returned rather than persisted
+   * here — `runAgentWorkflow` persists it and charges credits from its
+   * metadata.
    */
   responseMessage: UIMessage | undefined;
   /**
@@ -188,91 +181,86 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     seed: previousMetadata,
   });
 
-  // createUIMessageStream exposes onStepFinish/onFinish (toUIMessageStream
-  // only has onFinish), so the assistant message is persisted after every
-  // step — a stopped or crashed turn keeps the partial reply rather than
-  // dropping it. The stable assistantMessageId makes each upsert overwrite
-  // the same row. The final message is also captured so runAgentWorkflow can
-  // charge credits from its metadata.
+  // Drive the stream directly and write each part to the shared writable,
+  // mirroring upstream open-agents. There is deliberately no
+  // `createUIMessageStream` wrapper: its only draw was `onStepFinish` for
+  // in-step persistence, and with one model call per step that fires once
+  // anyway. The wrapper also has to be put in "persistence mode" separately
+  // from the inner stream, and missing that silently dropped every tool call
+  // from the transcript (chat#1918). Persistence now lives in the workflow
+  // body via `persistAssistantMessageStep`.
   let responseMessage: UIMessage | undefined;
-  const uiStream = createUIMessageStream<UIMessage>({
-    generateId: () => input.assistantMessageId,
-    // Persistence mode: this outer stream is what assembles the message
-    // handed to onStepFinish/onFinish, so it needs the in-progress assistant
-    // message too — not just the inner `toUIMessageStream`. Without it every
-    // iteration rebuilds the message from its own chunks alone, and the final
-    // text-only persist wipes every tool call made earlier in the turn.
-    originalMessages: input.originalMessages,
-    onStepFinish: ({ responseMessage: stepMessage }) => {
-      responseMessage = stepMessage;
-      return persistAssistantMessage(input.chatId, stepMessage);
-    },
-    onFinish: ({ responseMessage: finalMessage }) => {
-      responseMessage = finalMessage;
-      return persistAssistantMessage(input.chatId, finalMessage);
-    },
-    onError: error => {
-      if (cancelController.signal.aborted) return "";
-      return error instanceof Error ? error.message : String(error);
-    },
-    execute: ({ writer }) => {
-      writer.merge(
-        result.toUIMessageStream({
-          messageMetadata,
-          generateMessageId: () => input.assistantMessageId,
-          // Continue building the in-progress assistant message rather than
-          // starting a new one, so `responseMessage` stays cumulative across
-          // iterations and each persist overwrites a single row.
-          originalMessages: input.originalMessages,
-          // The turn's `start`/`finish` chunks are emitted ONCE by the
-          // workflow body (`sendStreamStart` / `sendStreamFinish`). Without
-          // this the client would see one per iteration and render N
-          // assistant messages instead of one.
-          sendStart: false,
-          sendFinish: false,
-        }),
-      );
-    },
-  });
-
-  // Pipe the stream to the workflow writable and detect user-stop vs natural
-  // finish (see pipeWorkflowStreamWithStopDetection for the why).
-  const userAborted = await pipeWorkflowStreamWithStopDetection({
-    uiStream,
-    writable: input.writable,
-    cancelController,
-    workflowRunId,
-    poller,
-  });
-
-  // Short-circuit on user-stop — `result.finishReason` rejects when streamText aborts.
   let finishReason: string;
   let responseMessages: ModelMessage[] = [];
-  if (userAborted) {
-    finishReason = "stop";
-    // Prevent the late-rejecting promises from becoming unhandled rejections.
-    void Promise.resolve(result.finishReason).catch(() => {});
-    void Promise.resolve(result.response).catch(() => {});
-  } else {
-    // `result.response.messages` is the assistant message for this call plus
-    // any tool-result message — exactly what the next iteration needs
-    // appended. (`result.responseMessages` is ai@7; this repo is on 6.0.190.)
+
+  try {
+    for await (const part of result.toUIMessageStream<UIMessage>({
+      messageMetadata,
+      generateMessageId: () => input.assistantMessageId,
+      // Continue building the in-progress assistant message rather than
+      // starting a new one, so `responseMessage` stays cumulative across
+      // iterations and each persist overwrites a single row.
+      originalMessages: input.originalMessages,
+      // The turn's `start`/`finish` chunks are emitted ONCE by the workflow
+      // body (`sendStreamStart` / `sendStreamFinish`). Without this the client
+      // would see one per iteration and render N assistant messages.
+      sendStart: false,
+      sendFinish: false,
+      onFinish: ({ responseMessage: finalMessage }) => {
+        responseMessage = finalMessage;
+      },
+    })) {
+      // A writer lock taken inside a step applies only within that step, so
+      // sequential steps can share one stream. Release per part so the step's
+      // request can terminate.
+      const writer = input.writable.getWriter();
+      try {
+        await writer.write(part);
+      } finally {
+        writer.releaseLock();
+      }
+    }
+
+    // `response.messages` is the assistant message for this call plus any
+    // tool-result message — exactly what the next iteration needs appended.
+    // (`result.responseMessages` is ai@7; this repo is on 6.0.190.)
     const [reason, response] = await Promise.all([result.finishReason, result.response]);
     finishReason = reason;
     responseMessages = response.messages;
-  }
+  } catch (error) {
+    // Three ways a user-stop surfaces here: the stream throws AbortError; the
+    // poller already flipped our signal; or `run.cancel()` closed the workflow
+    // writable underneath us and the write threw something unrelated before
+    // the poller noticed. Confirm the last case against the run itself so a
+    // genuine failure still propagates.
+    if (
+      !isAbortError(error) &&
+      !cancelController.signal.aborted &&
+      !(await isRunCancelled(workflowRunId))
+    )
+      throw error;
 
-  // On user-stop, close any tool-call parts the step boundary left open and
-  // re-persist (see finalizeAbortedAssistantMessage for the why).
-  if (userAborted && responseMessage) {
-    responseMessage = await finalizeAbortedAssistantMessage(input.chatId, responseMessage);
+    // User-stop. `result.finishReason` / `result.response` reject once
+    // streamText aborts — swallow them so they don't surface as unhandled.
+    void Promise.resolve(result.finishReason).catch(() => {});
+    void Promise.resolve(result.response).catch(() => {});
+    finishReason = "stop";
+    // Close any tool-call parts left without a terminal result, otherwise a
+    // reload renders them spinning forever. The workflow body persists it.
+    if (responseMessage) responseMessage = closeOpenToolCalls(responseMessage);
+
+    console.log("[runAgentStep] aborted", { hasResponseMessage: !!responseMessage });
+    return { finishReason, responseMessage, responseMessages: [], aborted: true };
+  } finally {
+    poller.stop();
+    cancelController.abort();
+    await poller.done.catch(() => {});
   }
 
   console.log("[runAgentStep] finish", {
     finishReason,
     hasResponseMessage: !!responseMessage,
     responseMessageCount: responseMessages.length,
-    aborted: userAborted,
   });
-  return { finishReason, responseMessage, responseMessages, aborted: userAborted };
+  return { finishReason, responseMessage, responseMessages, aborted: false };
 }

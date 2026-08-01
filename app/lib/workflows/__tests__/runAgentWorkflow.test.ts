@@ -27,6 +27,9 @@ vi.mock("@/app/lib/workflows/generateAssistantMessageId", () => ({
 vi.mock("@/app/lib/workflows/convertMessagesStep", () => ({
   convertMessagesStep: vi.fn(() => Promise.resolve([])),
 }));
+vi.mock("@/app/lib/workflows/persistAssistantMessageStep", () => ({
+  persistAssistantMessageStep: vi.fn(),
+}));
 vi.mock("@/app/lib/workflows/sendStreamStart", () => ({ sendStreamStart: vi.fn() }));
 vi.mock("@/app/lib/workflows/sendStreamFinish", () => ({ sendStreamFinish: vi.fn() }));
 vi.mock("@/lib/credits/handleChatCredits", () => ({
@@ -157,7 +160,9 @@ describe("runAgentWorkflow", () => {
     expect(closeChatStream).toHaveBeenCalledWith(writableStub);
   });
 
-  it("forwards chatId to runAgentStep so it can persist the assistant message per step", async () => {
+  // Persistence moved to the workflow body, so the step has no business
+  // knowing the chat id. Guards against re-coupling them.
+  it("does NOT pass chatId to runAgentStep — persistence is the workflow body's job", async () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
       aborted: false,
@@ -167,7 +172,9 @@ describe("runAgentWorkflow", () => {
 
     await runAgentWorkflow(baseInput);
 
-    expect(runAgentStep).toHaveBeenCalledWith(expect.objectContaining({ chatId: "chat-1" }));
+    expect(runAgentStep).toHaveBeenCalledWith(
+      expect.not.objectContaining({ chatId: expect.anything() }),
+    );
   });
 
   it("generates a fresh assistantMessageId via the step and forwards it to runAgentStep", async () => {
