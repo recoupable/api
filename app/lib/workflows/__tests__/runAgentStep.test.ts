@@ -78,6 +78,7 @@ function makeStreamResult(opts?: {
       },
     ),
     finishReason: Promise.resolve("stop"),
+    responseMessages: Promise.resolve([]),
   };
 }
 
@@ -92,7 +93,10 @@ function makeWritable() {
 }
 
 const baseInput = {
-  messages: [
+  // The workflow body now owns conversion and threading, so the step takes
+  // model messages directly plus the UI message it is appending to.
+  modelMessages: [{ role: "user" as const, content: "hi" }],
+  originalMessages: [
     {
       id: "m1",
       role: "user" as const,
@@ -201,33 +205,76 @@ describe("runAgentStep", () => {
     }
   });
 
-  it("wires a prepareStep callback that marks the last message with cacheControl", async () => {
+  // With one model call per step there is no in-call step boundary left for
+  // `prepareStep` to hook, so cacheControl is applied to the messages handed
+  // to streamText directly.
+  it("marks the last model message with cacheControl before passing it to streamText", async () => {
+    vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+    const { stream } = makeWritable();
+
+    await runAgentStep({
+      ...baseInput,
+      modelMessages: [
+        { role: "user", content: "first" },
+        { role: "user", content: "second" },
+      ],
+      writable: stream,
+    } as never);
+
+    const args = vi.mocked(streamText).mock.calls[0]?.[0] as {
+      prepareStep?: unknown;
+      messages: Array<{ providerOptions?: Record<string, unknown> }>;
+    };
+    expect(args.prepareStep).toBeUndefined();
+    expect(args.messages[0]?.providerOptions).toBeUndefined();
+    expect(args.messages[1]?.providerOptions).toEqual({
+      anthropic: { cacheControl: { type: "ephemeral" } },
+    });
+  });
+
+  // The decomposition contract: one model call per step. If a `stopWhen`
+  // creeps back in, the step regrows past Vercel's 800 s ceiling and the
+  // duplicate-email failure returns (chat#1918).
+  it("does NOT set stopWhen, so the AI SDK default bounds the step to one model call", async () => {
     vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
     const { stream } = makeWritable();
 
     await runAgentStep({ ...baseInput, writable: stream } as never);
 
-    const args = vi.mocked(streamText).mock.calls[0]?.[0] as {
-      prepareStep?: (opts: {
-        messages: Array<{ role: string; providerOptions?: Record<string, unknown> }>;
-        model: unknown;
-        steps?: unknown[];
-      }) => { messages?: unknown[] } | undefined;
-    };
-    expect(typeof args.prepareStep).toBe("function");
-    const anthropicModel = { provider: "anthropic", modelId: "claude-haiku-4.5" } as never;
-    const result = args.prepareStep!({
-      messages: [
-        { role: "user", content: "first" } as never,
-        { role: "user", content: "second" } as never,
-      ],
-      model: anthropicModel,
-      steps: [],
-    });
-    const out = result?.messages as Array<{ providerOptions?: Record<string, unknown> }>;
-    expect(out).toBeDefined();
-    expect(out[0]?.providerOptions).toBeUndefined();
-    expect(out[1]?.providerOptions).toEqual({ anthropic: { cacheControl: { type: "ephemeral" } } });
+    const args = vi.mocked(streamText).mock.calls[0]?.[0] as { stopWhen?: unknown };
+    expect(args.stopWhen).toBeUndefined();
+  });
+
+  it("suppresses per-iteration start/finish chunks so the turn renders as one message", async () => {
+    const streamOpts: Array<{ sendStart?: boolean; sendFinish?: boolean }> = [];
+    vi.mocked(streamText).mockReturnValue({
+      toUIMessageStream: vi.fn((opts: { sendStart?: boolean; sendFinish?: boolean }) => {
+        streamOpts.push(opts);
+        return (async function* () {})();
+      }),
+      finishReason: Promise.resolve("stop"),
+      responseMessages: Promise.resolve([]),
+    } as never);
+    const { stream } = makeWritable();
+
+    await runAgentStep({ ...baseInput, writable: stream } as never);
+
+    expect(streamOpts[0]?.sendStart).toBe(false);
+    expect(streamOpts[0]?.sendFinish).toBe(false);
+  });
+
+  it("returns responseMessages so the workflow can thread them into the next iteration", async () => {
+    const produced = [{ role: "assistant", content: "tool call" }];
+    vi.mocked(streamText).mockReturnValue({
+      toUIMessageStream: vi.fn(() => (async function* () {})()),
+      finishReason: Promise.resolve("tool-calls"),
+      responseMessages: Promise.resolve(produced),
+    } as never);
+    const { stream } = makeWritable();
+
+    const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+
+    expect(result.responseMessages).toEqual(produced);
   });
 
   it("the wired callback returns undefined for non-finish-step parts", async () => {
@@ -366,6 +413,7 @@ describe("runAgentStep", () => {
           })(),
         ),
         finishReason: Promise.resolve("length"),
+        responseMessages: Promise.resolve([]),
       } as never);
       const { stream } = makeWritable();
 

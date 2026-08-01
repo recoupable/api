@@ -1,17 +1,17 @@
 import {
   streamText,
-  convertToModelMessages,
   createUIMessageStream,
+  type ModelMessage,
   type UIMessage,
   type UIMessageChunk,
 } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { agentCustomInstructions } from "@/lib/chat/agentCustomInstructions";
 import { buildAgentSystemPrompt } from "@/lib/chat/buildAgentSystemPrompt";
-import { CHAT_AGENT_STOP_WHEN } from "@/lib/chat/const";
 import { buildAgentTools } from "@/lib/agent/buildAgentTools";
 import type { AgentContext, DurableAgentContext } from "@/lib/agent/tools/AgentContext";
 import { buildMessageMetadataCallback } from "@/lib/agent/messageMetadata/buildMessageMetadataCallback";
+import type { AgentMessageMetadata } from "@/lib/agent/messageMetadata/AgentMessageMetadata";
 import { addCacheControlToTools } from "@/lib/agent/contextManagement/addCacheControlToTools";
 import { addCacheControlToMessages } from "@/lib/agent/contextManagement/addCacheControlToMessages";
 import { wrapToolsWithAbort } from "@/lib/agent/contextManagement/wrapToolsWithAbort";
@@ -22,7 +22,19 @@ import { getWorkflowMetadata } from "workflow";
 import { pipeWorkflowStreamWithStopDetection } from "@/lib/chat/pipeWorkflowStreamWithStopDetection";
 
 export type RunAgentStepInput = {
-  messages: UIMessage[];
+  /**
+   * Conversation so far, in model form. Owned by `runAgentWorkflow`, which
+   * appends each iteration's `responseMessages` before the next call — that
+   * is how iteration N+1 sees iteration N's tool results.
+   */
+  modelMessages: ModelMessage[];
+  /**
+   * The UI-form messages this iteration appends to. When the last entry is
+   * the in-progress assistant message, the AI SDK keeps building THAT
+   * message rather than starting a new one, so `responseMessage` comes back
+   * cumulative and each persist overwrites one row.
+   */
+  originalMessages: UIMessage[];
   modelId: string;
   writable: WritableStream<UIMessageChunk>;
   /** Target chat for persisting the assistant message as it streams. */
@@ -74,32 +86,42 @@ export type RunAgentStepResult = {
    * `runAgentWorkflow` can charge credits from `responseMessage.metadata`.
    */
   responseMessage: UIMessage | undefined;
+  /**
+   * Model-form messages this iteration produced (assistant turn + any tool
+   * results). `runAgentWorkflow` appends these to `modelMessages` so the
+   * next iteration continues the conversation instead of repeating it.
+   */
+  responseMessages: ModelMessage[];
   /** True when the user stopped the run; `runAgentWorkflow` skips billing + auto-commit on abort. */
   aborted: boolean;
 };
 
 /**
- * One LLM turn (with internal tool-call iteration) in the chat workflow.
+ * ONE LLM call (plus that call's tool executions) in the chat workflow.
  * Runs as a Vercel Workflow `"use step"` so:
  *
  *   - Sandbox-banned APIs (`fetch`, `setTimeout`, `crypto`) are legal inside.
- *   - The result is cached as a single durable event — replays after a crash
- *     do not re-bill the model or re-execute tools.
+ *   - The result is journaled — a replay resumes from the last completed
+ *     iteration rather than re-billing the model and re-running tools.
  *
- * `streamText` drives the tool-call → tool-result → next-LLM-call loop
- * internally using its default stop condition. Our outer workflow stays
- * single-turn for now — multi-turn message threading lands when the rest
- * of the tool surface ports in a follow-up PR.
+ * Deliberately does NOT set `stopWhen`: the AI SDK default is
+ * `isStepCount(1)`, so this returns after a single model call and the
+ * tool-call → tool-result → next-call loop is driven by `runAgentWorkflow`'s
+ * body instead. That is the whole point of the decomposition — a step that
+ * wrapped the full loop ran 11-25 minutes, blew Vercel's 800 s function
+ * ceiling, and was retried 4 times, mailing the customer once per attempt
+ * (chat#1918).
  *
- * @param input - Messages + selected model + writable stream + agent context.
- * @returns finishReason plus the assembled assistant message.
+ * @param input - Model messages + selected model + writable stream + agent context.
+ * @returns finishReason, the cumulative assistant message, and this
+ *          iteration's response messages for threading into the next.
  */
 export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentStepResult> {
   "use step";
 
   console.log("[runAgentStep] start", {
     modelId: input.modelId,
-    messageCount: input.messages.length,
+    messageCount: input.modelMessages.length,
     hasSandboxState: Boolean(input.agentContext.sandbox?.state),
   });
 
@@ -108,11 +130,8 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   const cancelController = new AbortController();
   const poller = pollWorkflowCancellation(workflowRunId, cancelController);
 
-  const modelMessages = await convertToModelMessages(input.messages);
   // Mark the last tool with `cacheControl: { type: "ephemeral" }` so
-  // Anthropic caches the tool-definitions block across the
-  // conversation. Per-step message caching is wired via `prepareStep`
-  // below. Mirrors open-agents' `prepareCall` + `prepareStep` split.
+  // Anthropic caches the tool-definitions block across the conversation.
   // wrapToolsWithAbort backstops tools that ignore their own abortSignal —
   // without it, a hung tool keeps streamText awaiting forever on stop.
   const tools = wrapToolsWithAbort(
@@ -142,25 +161,32 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     artistId: input.artistId,
     accountId: input.accountId,
   });
+  // No `stopWhen` — the AI SDK default `isStepCount(1)` bounds this call to
+  // ONE model call so the step stays seconds long. The loop lives in
+  // `runAgentWorkflow`. Mark the LAST message with cacheControl so Anthropic
+  // incrementally caches the conversation prefix; with one call per step
+  // this replaces the old `prepareStep` hook.
   const result = streamText({
     model: callModel,
     system: systemPrompt,
-    messages: modelMessages,
+    messages: addCacheControlToMessages({ messages: input.modelMessages, model: input.modelId }),
     tools,
-    stopWhen: CHAT_AGENT_STOP_WHEN,
     abortSignal: cancelController.signal,
     experimental_context: agentContext,
-    // Mark the LAST message with cacheControl on every step so Anthropic
-    // incrementally caches the conversation prefix. Mirrors open-agents'
-    // `prepareStep` in `open-harness-agent.ts:100`.
-    prepareStep: ({ messages, model }) => ({
-      messages: addCacheControlToMessages({ messages, model }),
-    }),
   });
 
   // `messageMetadata` emits {modelId, usage, cost} chunks the UI renders as
-  // model/cost badges.
-  const messageMetadata = buildMessageMetadataCallback({ modelId: input.modelId });
+  // model/cost badges. Seeded from the in-progress assistant message so the
+  // running totals span the whole turn rather than resetting each iteration.
+  const previousMessage = input.originalMessages.at(-1);
+  const previousMetadata =
+    previousMessage?.role === "assistant"
+      ? (previousMessage.metadata as AgentMessageMetadata | undefined)
+      : undefined;
+  const messageMetadata = buildMessageMetadataCallback({
+    modelId: input.modelId,
+    seed: previousMetadata,
+  });
 
   // createUIMessageStream exposes onStepFinish/onFinish (toUIMessageStream
   // only has onFinish), so the assistant message is persisted after every
@@ -188,6 +214,16 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
         result.toUIMessageStream({
           messageMetadata,
           generateMessageId: () => input.assistantMessageId,
+          // Continue building the in-progress assistant message rather than
+          // starting a new one, so `responseMessage` stays cumulative across
+          // iterations and each persist overwrites a single row.
+          originalMessages: input.originalMessages,
+          // The turn's `start`/`finish` chunks are emitted ONCE by the
+          // workflow body (`sendStreamStart` / `sendStreamFinish`). Without
+          // this the client would see one per iteration and render N
+          // assistant messages instead of one.
+          sendStart: false,
+          sendFinish: false,
         }),
       );
     },
@@ -205,12 +241,17 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
 
   // Short-circuit on user-stop — `result.finishReason` rejects when streamText aborts.
   let finishReason: string;
+  let responseMessages: ModelMessage[] = [];
   if (userAborted) {
     finishReason = "stop";
-    // Prevent the late-rejecting promise from becoming an unhandled rejection.
+    // Prevent the late-rejecting promises from becoming unhandled rejections.
     void Promise.resolve(result.finishReason).catch(() => {});
+    void Promise.resolve(result.responseMessages).catch(() => {});
   } else {
-    finishReason = await result.finishReason;
+    [finishReason, responseMessages] = await Promise.all([
+      result.finishReason,
+      result.responseMessages,
+    ]);
   }
 
   // On user-stop, close any tool-call parts the step boundary left open and
@@ -222,7 +263,8 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   console.log("[runAgentStep] finish", {
     finishReason,
     hasResponseMessage: !!responseMessage,
+    responseMessageCount: responseMessages.length,
     aborted: userAborted,
   });
-  return { finishReason, responseMessage, aborted: userAborted };
+  return { finishReason, responseMessage, responseMessages, aborted: userAborted };
 }

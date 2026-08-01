@@ -19,12 +19,23 @@ import type { AgentStepFinishMetadata } from "@/lib/agent/messageMetadata/AgentS
  * Each call to `buildMessageMetadataCallback` returns a FRESH closure —
  * one per assistant turn — so totals reset between turns.
  */
-export function buildMessageMetadataCallback(opts: { modelId: string }) {
+export function buildMessageMetadataCallback(opts: {
+  modelId: string;
+  /**
+   * Running totals carried over from earlier iterations of the same turn.
+   *
+   * `runAgentWorkflow` now runs one `runAgentStep` per LLM call, and each
+   * call builds a fresh closure — without a seed the badges would reset to
+   * this iteration's numbers and under-report the turn. Pass the in-progress
+   * assistant message's metadata to keep the totals cumulative.
+   */
+  seed?: Pick<AgentMessageMetadata, "totalMessageUsage" | "totalMessageCost" | "stepFinishReasons">;
+}) {
   let lastStepUsage: LanguageModelUsage | undefined;
-  let totalMessageUsage: LanguageModelUsage | undefined;
+  let totalMessageUsage: LanguageModelUsage | undefined = opts.seed?.totalMessageUsage;
   let lastStepCost: number | undefined;
-  let totalMessageCost: number | undefined;
-  let stepFinishReasons: AgentStepFinishMetadata[] = [];
+  let totalMessageCost: number | undefined = opts.seed?.totalMessageCost;
+  let stepFinishReasons: AgentStepFinishMetadata[] = [...(opts.seed?.stepFinishReasons ?? [])];
 
   return function messageMetadata({
     part,

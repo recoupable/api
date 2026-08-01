@@ -23,6 +23,12 @@ vi.mock("@/app/lib/workflows/closeChatStream", () => ({
 vi.mock("@/app/lib/workflows/generateAssistantMessageId", () => ({
   generateAssistantMessageId: vi.fn(),
 }));
+// The loop's supporting steps — exercised in runAgentWorkflowLoop.test.ts.
+vi.mock("@/app/lib/workflows/convertMessagesStep", () => ({
+  convertMessagesStep: vi.fn(() => Promise.resolve([])),
+}));
+vi.mock("@/app/lib/workflows/sendStreamStart", () => ({ sendStreamStart: vi.fn() }));
+vi.mock("@/app/lib/workflows/sendStreamFinish", () => ({ sendStreamFinish: vi.fn() }));
 vi.mock("@/lib/credits/handleChatCredits", () => ({
   handleChatCredits: vi.fn(),
 }));
@@ -76,6 +82,7 @@ describe("runAgentWorkflow", () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
       aborted: false,
+      responseMessages: [],
       responseMessage: undefined,
     });
 
@@ -98,6 +105,7 @@ describe("runAgentWorkflow", () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
       aborted: false,
+      responseMessages: [],
       responseMessage: undefined,
     });
 
@@ -117,6 +125,7 @@ describe("runAgentWorkflow", () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
       aborted: false,
+      responseMessages: [],
       responseMessage: undefined,
     });
 
@@ -129,6 +138,7 @@ describe("runAgentWorkflow", () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
       aborted: false,
+      responseMessages: [],
       responseMessage: undefined,
     });
 
@@ -151,6 +161,7 @@ describe("runAgentWorkflow", () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
       aborted: false,
+      responseMessages: [],
       responseMessage: undefined,
     });
 
@@ -163,6 +174,7 @@ describe("runAgentWorkflow", () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
       aborted: false,
+      responseMessages: [],
       responseMessage: undefined,
     });
 
@@ -178,6 +190,7 @@ describe("runAgentWorkflow", () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
       aborted: false,
+      responseMessages: [],
       responseMessage: undefined,
     });
 
@@ -218,6 +231,7 @@ describe("runAgentWorkflow", () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
       aborted: false,
+      responseMessages: [],
       responseMessage: responseMessage as never,
     });
 
@@ -247,6 +261,7 @@ describe("runAgentWorkflow", () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
       aborted: false,
+      responseMessages: [],
       responseMessage: responseMessage as never,
     });
 
@@ -266,6 +281,7 @@ describe("runAgentWorkflow", () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",
       aborted: false,
+      responseMessages: [],
       responseMessage: undefined,
     });
 
@@ -292,6 +308,7 @@ describe("runAgentWorkflow", () => {
       vi.mocked(runAgentStep).mockResolvedValue({
         finishReason: "stop",
         aborted: false,
+        responseMessages: [],
         responseMessage: responseMessageWithMetadata,
       });
 
@@ -308,6 +325,7 @@ describe("runAgentWorkflow", () => {
           responseMessage: responseMessageWithMetadata,
           finishReason: "stop",
           aborted: false,
+          responseMessages: [],
           sessionId: "session-1",
           sessionTitle: "test session",
           repoOwner: "recoupable",
@@ -321,6 +339,7 @@ describe("runAgentWorkflow", () => {
       vi.mocked(runAgentStep).mockResolvedValue({
         finishReason: "stop",
         aborted: false,
+        responseMessages: [],
         responseMessage: responseMessageWithMetadata,
       });
 
@@ -334,6 +353,7 @@ describe("runAgentWorkflow", () => {
       vi.mocked(runAgentStep).mockResolvedValue({
         finishReason: "stop",
         aborted: false,
+        responseMessages: [],
         responseMessage: responseMessageWithMetadata,
       });
 
@@ -350,6 +370,7 @@ describe("runAgentWorkflow", () => {
       vi.mocked(runAgentStep).mockResolvedValue({
         finishReason: "stop",
         aborted: false,
+        responseMessages: [],
         responseMessage: undefined,
       });
 
@@ -378,6 +399,7 @@ describe("runAgentWorkflow", () => {
       vi.mocked(runAgentStep).mockResolvedValue({
         finishReason: "stop",
         aborted: true,
+        responseMessages: [],
         responseMessage: abortedResponseMessage as never,
       });
 
@@ -398,6 +420,7 @@ describe("runAgentWorkflow", () => {
       vi.mocked(runAgentStep).mockResolvedValue({
         finishReason: "stop",
         aborted: true,
+        responseMessages: [],
         responseMessage: abortedResponseMessage as never,
       });
 
@@ -410,6 +433,7 @@ describe("runAgentWorkflow", () => {
       vi.mocked(runAgentStep).mockResolvedValue({
         finishReason: "stop",
         aborted: true,
+        responseMessages: [],
         responseMessage: abortedResponseMessage as never,
       });
 
