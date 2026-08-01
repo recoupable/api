@@ -53,6 +53,7 @@ vi.mock("workflow/api", () => ({
 // tests can drive its onStepFinish / onFinish callbacks directly.
 type CreateOpts = {
   generateId?: () => string;
+  originalMessages?: unknown[];
   onStepFinish?: (e: { responseMessage: unknown }) => unknown;
   onFinish?: (e: { responseMessage: unknown }) => unknown;
   execute?: (a: { writer: { write: () => void; merge: () => void; onError: undefined } }) => void;
@@ -261,6 +262,20 @@ describe("runAgentStep", () => {
 
     expect(streamOpts[0]?.sendStart).toBe(false);
     expect(streamOpts[0]?.sendFinish).toBe(false);
+  });
+
+  // Regression guard for the transcript loss caught on the preview: the OUTER
+  // createUIMessageStream is what assembles the message handed to
+  // onStepFinish/onFinish, so it needs originalMessages too. Without it each
+  // iteration rebuilds the message from only its own chunks and the final
+  // text-only persist overwrites every tool call made earlier in the turn.
+  it("puts createUIMessageStream in persistence mode so each persist keeps earlier iterations' parts", async () => {
+    vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+    const { stream } = makeWritable();
+
+    await runAgentStep({ ...baseInput, writable: stream } as never);
+
+    expect(capturedCreateOpts.originalMessages).toBe(baseInput.originalMessages);
   });
 
   it("returns responseMessages so the workflow can thread them into the next iteration", async () => {

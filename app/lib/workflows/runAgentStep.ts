@@ -197,6 +197,12 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   let responseMessage: UIMessage | undefined;
   const uiStream = createUIMessageStream<UIMessage>({
     generateId: () => input.assistantMessageId,
+    // Persistence mode: this outer stream is what assembles the message
+    // handed to onStepFinish/onFinish, so it needs the in-progress assistant
+    // message too — not just the inner `toUIMessageStream`. Without it every
+    // iteration rebuilds the message from its own chunks alone, and the final
+    // text-only persist wipes every tool call made earlier in the turn.
+    originalMessages: input.originalMessages,
     onStepFinish: ({ responseMessage: stepMessage }) => {
       responseMessage = stepMessage;
       return persistAssistantMessage(input.chatId, stepMessage);
