@@ -78,7 +78,7 @@ function makeStreamResult(opts?: {
       },
     ),
     finishReason: Promise.resolve("stop"),
-    responseMessages: Promise.resolve([]),
+    response: Promise.resolve({ messages: [] }),
   };
 }
 
@@ -253,7 +253,7 @@ describe("runAgentStep", () => {
         return (async function* () {})();
       }),
       finishReason: Promise.resolve("stop"),
-      responseMessages: Promise.resolve([]),
+      response: Promise.resolve({ messages: [] }),
     } as never);
     const { stream } = makeWritable();
 
@@ -268,7 +268,7 @@ describe("runAgentStep", () => {
     vi.mocked(streamText).mockReturnValue({
       toUIMessageStream: vi.fn(() => (async function* () {})()),
       finishReason: Promise.resolve("tool-calls"),
-      responseMessages: Promise.resolve(produced),
+      response: Promise.resolve({ messages: produced }),
     } as never);
     const { stream } = makeWritable();
 
@@ -413,7 +413,7 @@ describe("runAgentStep", () => {
           })(),
         ),
         finishReason: Promise.resolve("length"),
-        responseMessages: Promise.resolve([]),
+        response: Promise.resolve({ messages: [] }),
       } as never);
       const { stream } = makeWritable();
 

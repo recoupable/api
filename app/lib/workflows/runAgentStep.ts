@@ -246,12 +246,14 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     finishReason = "stop";
     // Prevent the late-rejecting promises from becoming unhandled rejections.
     void Promise.resolve(result.finishReason).catch(() => {});
-    void Promise.resolve(result.responseMessages).catch(() => {});
+    void Promise.resolve(result.response).catch(() => {});
   } else {
-    [finishReason, responseMessages] = await Promise.all([
-      result.finishReason,
-      result.responseMessages,
-    ]);
+    // `result.response.messages` is the assistant message for this call plus
+    // any tool-result message — exactly what the next iteration needs
+    // appended. (`result.responseMessages` is ai@7; this repo is on 6.0.190.)
+    const [reason, response] = await Promise.all([result.finishReason, result.response]);
+    finishReason = reason;
+    responseMessages = response.messages;
   }
 
   // On user-stop, close any tool-call parts the step boundary left open and
