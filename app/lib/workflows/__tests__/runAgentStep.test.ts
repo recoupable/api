@@ -1,22 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { streamText, createUIMessageStream } from "ai";
+import { streamText } from "ai";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
-import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
-import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
-import { getRun } from "workflow/api";
 
 vi.mock("ai", async () => {
   const actual = await vi.importActual<typeof import("ai")>("ai");
-  return { ...actual, streamText: vi.fn(), createUIMessageStream: vi.fn() };
+  return { ...actual, streamText: vi.fn() };
 });
 
 // Avoid pulling in real gateway / fetch surface.
 vi.mock("@ai-sdk/gateway", () => ({
   gateway: vi.fn((modelId: string) => ({ modelId, __mock: "gateway" })),
-}));
-
-vi.mock("@/lib/chat/persistAssistantMessage", () => ({
-  persistAssistantMessage: vi.fn(),
 }));
 
 // runAgentStep now reads workflowRunId via getWorkflowMetadata() and polls
@@ -49,35 +42,37 @@ vi.mock("workflow/api", () => ({
   })),
 }));
 
-// Captures the options runAgentStep passes to createUIMessageStream so
-// tests can drive its onStepFinish / onFinish callbacks directly.
-type CreateOpts = {
-  generateId?: () => string;
-  onStepFinish?: (e: { responseMessage: unknown }) => unknown;
+type StreamOpts = {
+  messageMetadata?: unknown;
+  generateMessageId?: unknown;
+  originalMessages?: unknown[];
   onFinish?: (e: { responseMessage: unknown }) => unknown;
-  execute?: (a: { writer: { write: () => void; merge: () => void; onError: undefined } }) => void;
 };
-let capturedCreateOpts: CreateOpts;
 
 function makeStreamResult(opts?: {
   metadataCalls?: Array<unknown>;
   generateIdCalls?: Array<unknown>;
+  streamOptsOut?: Array<StreamOpts>;
+  emitResponseMessage?: unknown;
 }) {
   const calls = opts?.metadataCalls ?? [];
   const genCalls = opts?.generateIdCalls ?? [];
   return {
-    toUIMessageStream: vi.fn(
-      (streamOpts: { messageMetadata?: unknown; generateMessageId?: unknown }) => {
-        // Capture the callbacks so tests can inspect them.
-        calls.push(streamOpts.messageMetadata);
-        genCalls.push(streamOpts.generateMessageId);
-        return (async function* () {
-          yield { type: "start" };
-          yield { type: "finish" };
-        })();
-      },
-    ),
+    toUIMessageStream: vi.fn((streamOpts: StreamOpts) => {
+      // Capture the callbacks so tests can inspect them.
+      calls.push(streamOpts.messageMetadata);
+      genCalls.push(streamOpts.generateMessageId);
+      opts?.streamOptsOut?.push(streamOpts);
+      return (async function* () {
+        yield { type: "text-start", id: "t1" };
+        yield { type: "text-end", id: "t1" };
+        if (opts && "emitResponseMessage" in opts) {
+          streamOpts.onFinish?.({ responseMessage: opts.emitResponseMessage });
+        }
+      })();
+    }),
     finishReason: Promise.resolve("stop"),
+    response: Promise.resolve({ messages: [] }),
   };
 }
 
@@ -92,7 +87,10 @@ function makeWritable() {
 }
 
 const baseInput = {
-  messages: [
+  // The workflow body now owns conversion and threading, so the step takes
+  // model messages directly plus the UI message it is appending to.
+  modelMessages: [{ role: "user" as const, content: "hi" }],
+  originalMessages: [
     {
       id: "m1",
       role: "user" as const,
@@ -100,7 +98,6 @@ const baseInput = {
     },
   ],
   modelId: "anthropic/claude-haiku-4.5",
-  chatId: "chat-1",
   agentContext: {
     sandbox: { state: { type: "vercel" }, workingDirectory: "/sandbox/mono" },
   },
@@ -108,23 +105,7 @@ const baseInput = {
 };
 
 describe("runAgentStep", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Default: capture the options, run execute (so toUIMessageStream — and
-    // its messageMetadata callback — is exercised), and return an empty
-    // stream that closes immediately so pipeTo resolves.
-    vi.mocked(createUIMessageStream).mockImplementation((opts: never) => {
-      capturedCreateOpts = opts as CreateOpts;
-      capturedCreateOpts.execute?.({
-        writer: { write: () => {}, merge: () => {}, onError: undefined },
-      });
-      return new ReadableStream({
-        start(controller) {
-          controller.close();
-        },
-      }) as never;
-    });
-  });
+  beforeEach(() => vi.clearAllMocks());
 
   it("wires a messageMetadata callback into toUIMessageStream", async () => {
     const captured: unknown[] = [];
@@ -201,33 +182,76 @@ describe("runAgentStep", () => {
     }
   });
 
-  it("wires a prepareStep callback that marks the last message with cacheControl", async () => {
+  // With one model call per step there is no in-call step boundary left for
+  // `prepareStep` to hook, so cacheControl is applied to the messages handed
+  // to streamText directly.
+  it("marks the last model message with cacheControl before passing it to streamText", async () => {
+    vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+    const { stream } = makeWritable();
+
+    await runAgentStep({
+      ...baseInput,
+      modelMessages: [
+        { role: "user", content: "first" },
+        { role: "user", content: "second" },
+      ],
+      writable: stream,
+    } as never);
+
+    const args = vi.mocked(streamText).mock.calls[0]?.[0] as {
+      prepareStep?: unknown;
+      messages: Array<{ providerOptions?: Record<string, unknown> }>;
+    };
+    expect(args.prepareStep).toBeUndefined();
+    expect(args.messages[0]?.providerOptions).toBeUndefined();
+    expect(args.messages[1]?.providerOptions).toEqual({
+      anthropic: { cacheControl: { type: "ephemeral" } },
+    });
+  });
+
+  // The decomposition contract: one model call per step. If a `stopWhen`
+  // creeps back in, the step regrows past Vercel's 800 s ceiling and the
+  // duplicate-email failure returns (chat#1918).
+  it("does NOT set stopWhen, so the AI SDK default bounds the step to one model call", async () => {
     vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
     const { stream } = makeWritable();
 
     await runAgentStep({ ...baseInput, writable: stream } as never);
 
-    const args = vi.mocked(streamText).mock.calls[0]?.[0] as {
-      prepareStep?: (opts: {
-        messages: Array<{ role: string; providerOptions?: Record<string, unknown> }>;
-        model: unknown;
-        steps?: unknown[];
-      }) => { messages?: unknown[] } | undefined;
-    };
-    expect(typeof args.prepareStep).toBe("function");
-    const anthropicModel = { provider: "anthropic", modelId: "claude-haiku-4.5" } as never;
-    const result = args.prepareStep!({
-      messages: [
-        { role: "user", content: "first" } as never,
-        { role: "user", content: "second" } as never,
-      ],
-      model: anthropicModel,
-      steps: [],
-    });
-    const out = result?.messages as Array<{ providerOptions?: Record<string, unknown> }>;
-    expect(out).toBeDefined();
-    expect(out[0]?.providerOptions).toBeUndefined();
-    expect(out[1]?.providerOptions).toEqual({ anthropic: { cacheControl: { type: "ephemeral" } } });
+    const args = vi.mocked(streamText).mock.calls[0]?.[0] as { stopWhen?: unknown };
+    expect(args.stopWhen).toBeUndefined();
+  });
+
+  it("suppresses per-iteration start/finish chunks so the turn renders as one message", async () => {
+    const streamOpts: Array<{ sendStart?: boolean; sendFinish?: boolean }> = [];
+    vi.mocked(streamText).mockReturnValue({
+      toUIMessageStream: vi.fn((opts: { sendStart?: boolean; sendFinish?: boolean }) => {
+        streamOpts.push(opts);
+        return (async function* () {})();
+      }),
+      finishReason: Promise.resolve("stop"),
+      response: Promise.resolve({ messages: [] }),
+    } as never);
+    const { stream } = makeWritable();
+
+    await runAgentStep({ ...baseInput, writable: stream } as never);
+
+    expect(streamOpts[0]?.sendStart).toBe(false);
+    expect(streamOpts[0]?.sendFinish).toBe(false);
+  });
+
+  it("returns responseMessages so the workflow can thread them into the next iteration", async () => {
+    const produced = [{ role: "assistant", content: "tool call" }];
+    vi.mocked(streamText).mockReturnValue({
+      toUIMessageStream: vi.fn(() => (async function* () {})()),
+      finishReason: Promise.resolve("tool-calls"),
+      response: Promise.resolve({ messages: produced }),
+    } as never);
+    const { stream } = makeWritable();
+
+    const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+
+    expect(result.responseMessages).toEqual(produced);
   });
 
   it("the wired callback returns undefined for non-finish-step parts", async () => {
@@ -240,30 +264,6 @@ describe("runAgentStep", () => {
     const cb = captured[0] as (args: { part: { type: string } }) => unknown;
     expect(cb({ part: { type: "text-delta" } })).toBeUndefined();
     expect(cb({ part: { type: "start" } })).toBeUndefined();
-  });
-
-  it("persists the assistant message on each step via onStepFinish", async () => {
-    vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
-    const { stream } = makeWritable();
-
-    await runAgentStep({ ...baseInput, writable: stream } as never);
-
-    const msg = { id: "a1", role: "assistant", parts: [{ type: "text", text: "partial" }] };
-    await capturedCreateOpts.onStepFinish?.({ responseMessage: msg });
-
-    expect(persistAssistantMessage).toHaveBeenCalledWith("chat-1", msg);
-  });
-
-  it("persists the final assistant message via onFinish", async () => {
-    vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
-    const { stream } = makeWritable();
-
-    await runAgentStep({ ...baseInput, writable: stream } as never);
-
-    const msg = { id: "a1", role: "assistant", parts: [{ type: "text", text: "done" }] };
-    await capturedCreateOpts.onFinish?.({ responseMessage: msg });
-
-    expect(persistAssistantMessage).toHaveBeenCalledWith("chat-1", msg);
   });
 
   it("forwards assistantMessageId into toUIMessageStream's generateMessageId (stable row id)", async () => {
@@ -283,20 +283,6 @@ describe("runAgentStep", () => {
     expect(gen()).toBe("asst-from-workflow-xyz");
   });
 
-  it("sets a stable generateId on the createUIMessageStream", async () => {
-    vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
-    const { stream } = makeWritable();
-
-    await runAgentStep({
-      ...baseInput,
-      writable: stream,
-      assistantMessageId: "asst-from-workflow-xyz",
-    } as never);
-
-    expect(typeof capturedCreateOpts.generateId).toBe("function");
-    expect(capturedCreateOpts.generateId!()).toBe("asst-from-workflow-xyz");
-  });
-
   it("returns the finishReason from the model result", async () => {
     vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
     const { stream } = makeWritable();
@@ -313,18 +299,9 @@ describe("runAgentStep", () => {
       parts: [{ type: "text", text: "Hello" }],
       metadata: { totalMessageCost: 0.05 },
     };
-    vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
-    vi.mocked(createUIMessageStream).mockImplementation((opts: never) => {
-      const o = opts as CreateOpts;
-      o.execute?.({ writer: { write: () => {}, merge: () => {}, onError: undefined } });
-      // Drive onFinish so runAgentStep captures the final message.
-      void o.onFinish?.({ responseMessage: emitted });
-      return new ReadableStream({
-        start(controller) {
-          controller.close();
-        },
-      }) as never;
-    });
+    vi.mocked(streamText).mockReturnValue(
+      makeStreamResult({ emitResponseMessage: emitted }) as never,
+    );
     const { stream } = makeWritable();
 
     const result = await runAgentStep({ ...baseInput, writable: stream } as never);
@@ -366,6 +343,7 @@ describe("runAgentStep", () => {
           })(),
         ),
         finishReason: Promise.resolve("length"),
+        response: Promise.resolve({ messages: [] }),
       } as never);
       const { stream } = makeWritable();
 
@@ -373,202 +351,6 @@ describe("runAgentStep", () => {
 
       expect(result.aborted).toBe(false);
       expect(result.finishReason).toBe("length");
-    });
-  });
-
-  describe("user-abort path", () => {
-    it("returns { aborted: true, finishReason: 'stop' } when the poller fires", async () => {
-      // Poller fires synchronously — controller is aborted by the time pipeTo runs.
-      vi.mocked(pollWorkflowCancellation).mockImplementation(
-        (_runId: string, controller: AbortController) => {
-          controller.abort();
-          return { stop: vi.fn(), done: Promise.resolve() };
-        },
-      );
-      vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
-      const { stream } = makeWritable();
-
-      const result = await runAgentStep({ ...baseInput, writable: stream } as never);
-
-      expect(result.aborted).toBe(true);
-      expect(result.finishReason).toBe("stop");
-    });
-
-    it("does not await result.finishReason on abort (would deadlock if unresolved)", async () => {
-      vi.mocked(pollWorkflowCancellation).mockImplementation(
-        (_runId: string, controller: AbortController) => {
-          controller.abort();
-          return { stop: vi.fn(), done: Promise.resolve() };
-        },
-      );
-      // finishReason here is a forever-pending Promise — if runAgentStep awaited it
-      // on the abort path, the test would hang.
-      const neverResolves = new Promise<string>(() => {});
-      vi.mocked(streamText).mockReturnValue({
-        toUIMessageStream: vi.fn(() =>
-          (async function* () {
-            yield { type: "start" };
-            yield { type: "finish" };
-          })(),
-        ),
-        finishReason: neverResolves,
-      } as never);
-      const { stream } = makeWritable();
-
-      const result = await runAgentStep({ ...baseInput, writable: stream } as never);
-
-      expect(result.finishReason).toBe("stop");
-      expect(result.aborted).toBe(true);
-    });
-
-    it("re-persists with closed tool-error parts when aborting mid-tool-call", async () => {
-      // onStepFinish runs while the step is still emitting (a tool-call was
-      // streamed in this step). The step's captured responseMessage has the
-      // tool-call in input-available, with no terminal output chunk yet.
-      const openMessage = {
-        id: "asst-test-id",
-        role: "assistant",
-        parts: [
-          { type: "text", text: "running a tool..." },
-          {
-            type: "tool-bash",
-            toolCallId: "t-open",
-            state: "input-available",
-            input: { cmd: "sleep 30" },
-          },
-        ],
-      };
-
-      vi.mocked(createUIMessageStream).mockImplementationOnce((opts: never) => {
-        capturedCreateOpts = opts as CreateOpts;
-        capturedCreateOpts.execute?.({
-          writer: { write: () => {}, merge: () => {}, onError: undefined },
-        });
-        // Drive onStepFinish synchronously so responseMessage is populated
-        // before the abort path runs in runAgentStep.
-        capturedCreateOpts.onStepFinish?.({ responseMessage: openMessage });
-        return new ReadableStream({
-          start(controller) {
-            controller.close();
-          },
-        }) as never;
-      });
-
-      vi.mocked(pollWorkflowCancellation).mockImplementation(
-        (_runId: string, controller: AbortController) => {
-          controller.abort();
-          return { stop: vi.fn(), done: Promise.resolve() };
-        },
-      );
-      vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
-      const { stream } = makeWritable();
-
-      const result = await runAgentStep({ ...baseInput, writable: stream } as never);
-
-      expect(result.aborted).toBe(true);
-
-      // Two persists: the step's onStepFinish, then the abort-path re-persist
-      // with closed tool parts.
-      expect(persistAssistantMessage).toHaveBeenCalledTimes(2);
-      const second = vi.mocked(persistAssistantMessage).mock.calls[1]?.[1] as {
-        parts: Array<{ type: string; state?: string; errorText?: string }>;
-      };
-      const toolPart = second.parts.find(p => p.type === "tool-bash")!;
-      expect(toolPart.state).toBe("output-error");
-      expect(toolPart.errorText).toBe("Cancelled");
-      // responseMessage on the returned result should be the closed version.
-      expect(result.responseMessage).toBe(second);
-    });
-
-    it("does NOT re-persist when there are no open tool-call parts at abort", async () => {
-      const closedMessage = {
-        id: "asst-test-id",
-        role: "assistant",
-        parts: [{ type: "text", text: "done text" }],
-      };
-
-      vi.mocked(createUIMessageStream).mockImplementationOnce((opts: never) => {
-        capturedCreateOpts = opts as CreateOpts;
-        capturedCreateOpts.execute?.({
-          writer: { write: () => {}, merge: () => {}, onError: undefined },
-        });
-        capturedCreateOpts.onStepFinish?.({ responseMessage: closedMessage });
-        return new ReadableStream({
-          start(controller) {
-            controller.close();
-          },
-        }) as never;
-      });
-
-      vi.mocked(pollWorkflowCancellation).mockImplementation(
-        (_runId: string, controller: AbortController) => {
-          controller.abort();
-          return { stop: vi.fn(), done: Promise.resolve() };
-        },
-      );
-      vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
-      const { stream } = makeWritable();
-
-      await runAgentStep({ ...baseInput, writable: stream } as never);
-
-      // Just the onStepFinish persist — no re-persist needed.
-      expect(persistAssistantMessage).toHaveBeenCalledTimes(1);
-    });
-
-    it("detects runtime-cancel even when pipeTo resolves cleanly (writable closed by runtime)", async () => {
-      // The poller never fires — pipeTo completes naturally because the
-      // runtime closed the destination writable when run.cancel() landed.
-      // runAgentStep must still detect this via getRun().status and mark
-      // the result as aborted so the abort-path re-persist runs.
-      vi.mocked(getRun).mockReturnValueOnce({
-        get status() {
-          return Promise.resolve("cancelled");
-        },
-        cancel: vi.fn(() => Promise.resolve()),
-      } as never);
-
-      vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
-      const { stream } = makeWritable();
-
-      const result = await runAgentStep({ ...baseInput, writable: stream } as never);
-
-      expect(result.aborted).toBe(true);
-    });
-
-    it("attaches .catch to result.finishReason so a late rejection is not unhandled", async () => {
-      vi.mocked(pollWorkflowCancellation).mockImplementation(
-        (_runId: string, controller: AbortController) => {
-          controller.abort();
-          return { stop: vi.fn(), done: Promise.resolve() };
-        },
-      );
-      const rejection = new Error("finishReason late reject");
-      vi.mocked(streamText).mockReturnValue({
-        toUIMessageStream: vi.fn(() =>
-          (async function* () {
-            yield { type: "start" };
-            yield { type: "finish" };
-          })(),
-        ),
-        finishReason: Promise.reject(rejection),
-      } as never);
-
-      // Catch unhandled rejections globally for the duration of this test.
-      const unhandled: unknown[] = [];
-      const onUnhandled = (e: Event) => {
-        unhandled.push((e as PromiseRejectionEvent).reason);
-      };
-      process.on("unhandledRejection", onUnhandled);
-      try {
-        const { stream } = makeWritable();
-        await runAgentStep({ ...baseInput, writable: stream } as never);
-        // Give microtasks a chance to flush.
-        await new Promise(r => setTimeout(r, 10));
-      } finally {
-        process.off("unhandledRejection", onUnhandled);
-      }
-
-      expect(unhandled).not.toContain(rejection);
     });
   });
 });

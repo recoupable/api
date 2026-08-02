@@ -3,6 +3,11 @@ import type { LanguageModelUsage, UIMessage, UIMessageChunk } from "ai";
 import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
+import { convertMessagesStep } from "@/app/lib/workflows/convertMessagesStep";
+import { sendStreamStart } from "@/app/lib/workflows/sendStreamStart";
+import { sendStreamFinish } from "@/app/lib/workflows/sendStreamFinish";
+import { persistAssistantMessageStep } from "@/app/lib/workflows/persistAssistantMessageStep";
+import { CHAT_AGENT_MAX_ITERATIONS } from "@/lib/chat/const";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { deleteEphemeralKeyStep } from "@/app/lib/workflows/deleteEphemeralKeyStep";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
@@ -60,11 +65,16 @@ export type RunAgentWorkflowInput = {
  * client; this function writes UIMessage chunks into the workflow's writable
  * via `runAgentStep`.
  *
- * Currently runs a SINGLE `runAgentStep` turn. Tool-call iteration (up to
- * MAX_TOOL_STEPS) happens INSIDE `streamText` via `stopWhen` — so the
- * single workflow turn covers the full "user → assistant → tool → tool
- * result → assistant" cycle without our outer loop having to thread
- * messages between iterations.
+ * Runs the agent loop in THIS body, one `runAgentStep` per LLM call, up to
+ * `CHAT_AGENT_MAX_ITERATIONS`. Each iteration is journaled, so a killed or
+ * retried run resumes at the last completed call instead of re-executing the
+ * whole turn from minute zero.
+ *
+ * This replaced a single step that wrapped the entire loop via
+ * `stopWhen: stepCountIs(111)`. That step ran 11-25 minutes, exceeded
+ * Vercel's 800 s function ceiling, and was killed and retried 4 times — five
+ * complete agent runs, five emails to the customer, then a failed workflow.
+ * See chat#1918.
  *
  * WDK constraints honored:
  *   - All I/O (streamText, sandbox.exec, fetches) lives in `"use step"` functions.
@@ -97,27 +107,84 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
   const assistantMessageId =
     latestMessage?.role === "assistant" ? latestMessage.id : await generateAssistantMessageId();
 
-  try {
-    const result = await runAgentStep({
-      ...input,
-      writable,
-      assistantMessageId,
-    });
-    console.log("[runAgentWorkflow] finish", { finishReason: result.finishReason });
+  // Convert once, before the loop. The workflow body owns this array and
+  // appends every iteration's `responseMessages` to it, which is how
+  // iteration N+1 sees iteration N's tool results.
+  const modelMessages = await convertMessagesStep(input.messages);
 
-    // The assistant message is persisted per step inside `runAgentStep`, so
-    // it's not written here. We still use the final `responseMessage` to
+  // The assistant message under construction. Threaded into each iteration
+  // as `originalMessages` so the AI SDK keeps appending to it instead of
+  // starting a new message, and so the turn's running usage totals carry
+  // across iterations.
+  let pendingAssistantResponse: UIMessage =
+    latestMessage?.role === "assistant"
+      ? latestMessage
+      : { id: assistantMessageId, role: "assistant", parts: [] };
+
+  // One `start` chunk for the whole turn — each iteration's stream is told
+  // `sendStart: false`, so without this the client renders N messages.
+  await sendStreamStart(writable, assistantMessageId);
+
+  try {
+    let result: Awaited<ReturnType<typeof runAgentStep>> | undefined;
+
+    // The agent loop lives HERE, in the workflow body, with one journaled
+    // step per LLM call. It used to live inside `streamText` via
+    // `stopWhen: stepCountIs(111)`, which made a single step run 11-25
+    // minutes — past Vercel's 800 s function ceiling, so the platform killed
+    // it and the queue retried it 4 times, each attempt a full agent run
+    // that mailed the customer again (chat#1918).
+    for (let iteration = 0; iteration < CHAT_AGENT_MAX_ITERATIONS; iteration++) {
+      result = await runAgentStep({
+        // Snapshot, not the live array — each iteration's input is a durable
+        // step input and must describe the conversation as it was at THAT
+        // call, unaffected by later appends.
+        modelMessages: [...modelMessages],
+        originalMessages: [pendingAssistantResponse],
+        modelId: input.modelId,
+        accountId: input.accountId,
+        artistId: input.artistId,
+        interactive: input.interactive,
+        agentContext: input.agentContext,
+        writable,
+        assistantMessageId,
+      });
+
+      if (result.responseMessage) {
+        pendingAssistantResponse = result.responseMessage;
+        // Persist per iteration so a long turn's transcript stays live rather
+        // than landing only at the end. The stable assistantMessageId makes
+        // each write overwrite the same row.
+        await persistAssistantMessageStep(input.chatId, pendingAssistantResponse);
+      }
+      modelMessages.push(...result.responseMessages);
+
+      // A turn continues only while the model asked for more tools. Any
+      // other finish reason — and any user stop — ends it.
+      if (result.aborted || result.finishReason !== "tool-calls") break;
+    }
+
+    console.log("[runAgentWorkflow] finish", { finishReason: result?.finishReason });
+
+    await sendStreamFinish(writable);
+
+    // The assistant message is persisted per iteration inside `runAgentStep`,
+    // so it's not written here. We still use the accumulated message to
     // charge the account for this turn: atomic wallet debit + audit row via
     // the `deduct_credits_with_audit` Postgres function (`handleChatCredits`
     // → `recordCreditDeduction`).
     //
+    // `pendingAssistantResponse.metadata` carries the totals for the WHOLE
+    // turn, not just the last iteration — `runAgentStep` seeds each
+    // iteration's metadata callback from the message it was handed, so the
+    // running totals survive the step boundaries.
+    //
     // Charge on user-stop too — the provider already billed us for the
     // tokens consumed, and the assistant message (including partial tool
     // runs) is persisted, so the user owes the charge regardless of how
-    // the turn ended. `result.responseMessage.metadata` carries the
-    // usage actually consumed up to the abort point.
-    if (result.responseMessage) {
-      const metadata = result.responseMessage.metadata as AgentMessageMetadata | undefined;
+    // the turn ended.
+    if (result?.responseMessage) {
+      const metadata = pendingAssistantResponse.metadata as AgentMessageMetadata | undefined;
       await handleChatCredits({
         accountId: input.accountId,
         model: input.modelId,
@@ -133,13 +200,14 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
     // the raw VercelState; the auto-commit helpers operate on the
     // discriminated SandboxState union so they can fan out to other
     // sandbox backends in the future.
-    if (result.responseMessage && !result.aborted) {
+    if (result?.responseMessage && !result.aborted) {
       const sandboxState = input.agentContext.sandbox?.state
         ? ({ type: "vercel", ...input.agentContext.sandbox.state } as const)
         : undefined;
       await autoCommitChatTurn({
         ...input,
         ...result,
+        responseMessage: pendingAssistantResponse,
         writable,
         sandboxState,
       });
