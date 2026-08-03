@@ -23,6 +23,15 @@ const chatIdSchema = z.string().uuid("chatId must be a valid UUID");
  * `GET /api/chat/{chatId}/stream` so both enforce identical auth,
  * chat-id validation and ownership semantics.
  *
+ * Honours the `account_id` **query** override, so an org/admin key can act
+ * on a member account's chat. Both routes carry their id in the path and
+ * parse no body, so a query param is the channel that works for `GET` and
+ * `POST` alike without consuming the request body. `validateAuthContext` is
+ * what decides whether the caller may actually use the override — passing it
+ * through does not weaken the check, and omitting it was why an admin key got
+ * a 403 on a chat it legitimately administers (same gap as `DELETE
+ * /api/tasks`, chat#1918).
+ *
  * @param request - The incoming request, carrying the credentials.
  * @param chatId - Chat id from the route params.
  * @returns The auth context + chat row, or an error response
@@ -32,7 +41,8 @@ export async function validateChatOwnership(
   request: NextRequest,
   chatId: string,
 ): Promise<NextResponse | ValidatedChatOwnership> {
-  const auth = await validateAuthContext(request);
+  const accountIdOverride = new URL(request.url).searchParams.get("account_id") ?? undefined;
+  const auth = await validateAuthContext(request, { accountId: accountIdOverride });
   if (auth instanceof NextResponse) return auth;
 
   const parsed = chatIdSchema.safeParse(chatId);

@@ -25,7 +25,10 @@ function withChat(activeStreamId: string | null) {
   } as never);
 }
 
-function withRun(status: string, getReadable = vi.fn(() => new ReadableStream())) {
+function withRun(
+  status: string,
+  getReadable = vi.fn(() => Object.assign(new ReadableStream(), { getTailIndex: async () => 41 })),
+) {
   vi.mocked(getRun).mockReturnValue({
     get status() {
       return Promise.resolve(status);
@@ -128,5 +131,36 @@ describe("handleResumeChatStream", () => {
 
     expect(res.status).toBe(502);
     expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
+  });
+
+  // Upstream open-agents returns this so the client knows which startIndex to
+  // send on its next reconnect; the SDK's WorkflowChatTransport reads it to
+  // compute absolute chunk positions. Without it a reconnect replays from 0.
+  it("advertises the stream tail index so the client can resume precisely", async () => {
+    withChat(RUN_ID);
+    withRun("running");
+
+    const res = await handleResumeChatStream(request(), CHAT_ID);
+
+    expect(res.headers.get("x-workflow-stream-tail-index")).toBe("41");
+  });
+
+  it("still streams when the tail index cannot be read", async () => {
+    withChat(RUN_ID);
+    withRun(
+      "running",
+      vi.fn(() =>
+        Object.assign(new ReadableStream(), {
+          getTailIndex: async () => {
+            throw new Error("unsupported");
+          },
+        }),
+      ),
+    );
+
+    const res = await handleResumeChatStream(request(), CHAT_ID);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("x-workflow-stream-tail-index")).toBeNull();
   });
 });

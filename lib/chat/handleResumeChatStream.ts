@@ -66,11 +66,26 @@ export async function handleResumeChatStream(
     return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
   }
 
+  const readable = run.getReadable<UIMessageChunk>({ startIndex });
+
+  // Tell the client where this read ends so its next reconnect can resume
+  // exactly there instead of replaying from chunk zero. Upstream open-agents
+  // returns the same header, and the SDK's WorkflowChatTransport reads it to
+  // compute absolute chunk positions. Best-effort: if the runtime can't report
+  // a tail index we still stream — a replaying client beats no client.
+  let tailIndex: number | undefined;
+  try {
+    tailIndex = await readable.getTailIndex();
+  } catch (error) {
+    console.error("[handleResumeChatStream] getTailIndex failed:", error);
+  }
+
   return createUIMessageStreamResponse({
-    stream: wrapWorkflowStreamWatcher(
-      activeStreamId,
-      run.getReadable<UIMessageChunk>({ startIndex }),
-    ),
-    headers: { ...getCorsHeaders(), "x-workflow-run-id": activeStreamId },
+    stream: wrapWorkflowStreamWatcher(activeStreamId, readable),
+    headers: {
+      ...getCorsHeaders(),
+      "x-workflow-run-id": activeStreamId,
+      ...(tailIndex === undefined ? {} : { "x-workflow-stream-tail-index": String(tailIndex) }),
+    },
   });
 }
