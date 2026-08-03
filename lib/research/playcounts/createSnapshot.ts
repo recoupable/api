@@ -5,6 +5,10 @@ import { insertPlaycountSnapshot } from "@/lib/supabase/playcount_snapshots/inse
 import { playcountSnapshotWorkflow } from "@/app/workflows/playcountSnapshotWorkflow";
 import { findReusableSnapshot } from "@/lib/research/playcounts/findReusableSnapshot";
 import { buildReusedSnapshotResult } from "@/lib/research/playcounts/buildReusedSnapshotResult";
+import { pickCanonicalSnapshot } from "@/lib/research/playcounts/pickCanonicalSnapshot";
+import { sameScope } from "@/lib/research/playcounts/sameScope";
+import { isReusableSnapshotState } from "@/lib/research/playcounts/isReusableSnapshotState";
+import { deletePlaycountSnapshot } from "@/lib/supabase/playcount_snapshots/deletePlaycountSnapshot";
 import { getMonthlySpendUsd } from "@/lib/research/playcounts/getMonthlySpendUsd";
 import { CreateSnapshotBody } from "@/lib/research/playcounts/validateCreateSnapshotRequest";
 
@@ -86,6 +90,43 @@ export async function createSnapshot(params: {
     album_count: albumIds.length,
     estimated_cost_usd: estimatedCostUsd,
   });
+
+  // The insert is a claim, not yet a scrape. Two simultaneous identical
+  // requests both get here before either can see the other, so re-read and
+  // let the earliest claim win — the loser withdraws its row and hands back
+  // the winner's rather than starting a second capture (chat#1912 row 7).
+  const claims = await selectPlaycountSnapshots({
+    account: params.accountId,
+    createdAfter: reuseCutoff.toISOString(),
+  });
+  const canonical = pickCanonicalSnapshot(
+    claims.filter(
+      candidate =>
+        candidate.id === row.id ||
+        (sameScope(candidate, albumIds, params.body.platforms, params.body.schedule) &&
+          isReusableSnapshotState(candidate.state)),
+    ),
+  );
+  if (canonical && canonical.id !== row.id) {
+    await deletePlaycountSnapshot(row.id);
+
+    // The claim that looked canonical from here may itself have been a loser
+    // that withdrew, which would hand this caller a snapshot id that no longer
+    // exists. Re-read after withdrawing so the id returned is one still
+    // standing (observed with 8 concurrent requests during verification).
+    const remaining = await selectPlaycountSnapshots({
+      account: params.accountId,
+      createdAfter: reuseCutoff.toISOString(),
+    });
+    const survivor = pickCanonicalSnapshot(
+      remaining.filter(
+        candidate =>
+          sameScope(candidate, albumIds, params.body.platforms, params.body.schedule) &&
+          isReusableSnapshotState(candidate.state),
+      ),
+    );
+    return buildReusedSnapshotResult(survivor ?? canonical);
+  }
 
   await start(playcountSnapshotWorkflow, [row.id]);
 
