@@ -8,6 +8,7 @@ import { mintEphemeralAccountKey } from "@/lib/keys/mintEphemeralAccountKey";
 import { deleteApiKey } from "@/lib/supabase/account_api_keys/deleteApiKey";
 import { buildRunAgentInput } from "@/lib/chat/buildRunAgentInput";
 import { start } from "workflow/api";
+import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -31,6 +32,9 @@ vi.mock("workflow/api", () => ({
   start: vi.fn(),
 }));
 vi.mock("@/app/lib/workflows/runAgentWorkflow", () => ({ runAgentWorkflow: vi.fn() }));
+vi.mock("@/lib/chat/compareAndSetChatActiveStreamId", () => ({
+  compareAndSetChatActiveStreamId: vi.fn(async () => ({ ok: true, claimed: true })),
+}));
 
 const req = () =>
   new NextRequest("https://x.test/api/chat/generate", {
@@ -120,5 +124,15 @@ describe("handleStartChatRun", () => {
     expect(res.status).toBe(500);
     expect(mintEphemeralAccountKey).not.toHaveBeenCalled();
     expect(deleteApiKey).not.toHaveBeenCalled();
+  });
+
+  // The published contract cross-references this: "start a headless run, then
+  // pass the returned chatId to GET /api/chat/{chatId}/stream to watch its
+  // output live". That route keys on chats.active_stream_id, so a headless run
+  // that never claims the slot is unresumable (chat#1923).
+  it("claims chats.active_stream_id with the run id so the run is resumable", async () => {
+    await handleStartChatRun({} as never);
+
+    expect(compareAndSetChatActiveStreamId).toHaveBeenCalledWith("chat-1", null, "wrun_abc");
   });
 });
