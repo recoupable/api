@@ -63,7 +63,7 @@
     "workflow": "^4.8.0",
     "x402-fetch": "^0.7.3",
     "x402-next": "^0.7.3",
-    "zod": "^4.1.13",
+    "zod": "^4.3.6",
     "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
