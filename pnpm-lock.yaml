@@ -30,8 +30,8 @@ importers:
         specifier: ^4.15.0
         version: 4.15.0
       '@chat-adapter/state-ioredis':
-        specifier: ^4.15.0
-        version: 4.15.0
+        specifier: ^4.36.0
+        version: 4.36.0(ai@6.0.190(zod@4.3.6))(workflow@4.8.0(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(@opentelemetry/api@1.9.0)(@swc/cli@0.8.1(@swc/core@1.15.3(@swc/helpers@0.5.17))(chokidar@5.0.0))(@swc/core@1.15.3(@swc/helpers@0.5.17))(@swc/helpers@0.5.17)(next@16.0.10(@opentelemetry/api@1.9.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(typescript@5.9.3))(zod@4.3.6)
       '@chat-adapter/whatsapp':
         specifier: ^4.20.0
         version: 4.20.0
@@ -358,8 +358,9 @@ packages:
   '@chat-adapter/slack@4.15.0':
     resolution: {integrity: sha512-DE2puxMXitt2AVLBvMAldZ4KKUKpKWxSd62nWLDX6xXtOo6z9uXAggZD3FnMOGITqw+oQypdFopvm/Wu6OxeFg==}
 
-  '@chat-adapter/state-ioredis@4.15.0':
-    resolution: {integrity: sha512-1892j1GCaxwDDMBc7gzUQsbohtf6SArlnr0PYLSIXeSguNl/V9X36WBLbE3ExgjBhyqCBfsDzicGA8e0HIco+A==}
+  '@chat-adapter/state-ioredis@4.36.0':
+    resolution: {integrity: sha512-+LrIZsgQfvLT7Hqs/gUMTD8n2rfZaPMTxtxLgfJDh83mlJ63fGRDMGVUf3nDvRVwdMhWqsy8kdItaSxX4Hfd9A==}
+    engines: {node: '>=20'}
 
   '@chat-adapter/whatsapp@4.20.0':
     resolution: {integrity: sha512-B9Z6FN9tP6J4g6PU+jLPK21hLmOsIbpeTZNNdi0d3C1U4gZgJrKA88ppnW5POA0St6qzGlmCpLjqezZpvBdD1A==}
@@ -3846,6 +3847,21 @@ packages:
 
   chat@4.20.0:
     resolution: {integrity: sha512-9/SvX0wM1AZa7VyibyVjRkb3WsbmSbIm54i1MMtzFQEj96oAisFdxkRoBKQDZ4R9tfLe7f6SOwWIHqwCGaCxoA==}
+
+  chat@4.36.0:
+    resolution: {integrity: sha512-3A5HjnjilStMazAgY2PESloyT8g+GsoEf5uvqzPtvpGJrNh9oGWQ7IRZzw4+pFFTbUnCEtsclEAc2KMloRRZRQ==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      ai: ^6.0.182 || ^7.0.0
+      workflow: ^5.0.0-beta.35
+      zod: ^3.0.0 || ^4.0.0
+    peerDependenciesMeta:
+      ai:
+        optional: true
+      workflow:
+        optional: true
+      zod:
+        optional: true
 
   check-error@2.1.3:
     resolution: {integrity: sha512-PAJdDJusoxnwm1VwW07VWwUN1sl7smmC3OKggvndJFadxxDRyFJBX/ggnu/KE4kQAB7a3Dp8f/YXC1FlUprWmA==}
@@ -8120,12 +8136,15 @@ snapshots:
       - debug
       - supports-color
 
-  '@chat-adapter/state-ioredis@4.15.0':
+  '@chat-adapter/state-ioredis@4.36.0(ai@6.0.190(zod@4.3.6))(workflow@4.8.0(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(@opentelemetry/api@1.9.0)(@swc/cli@0.8.1(@swc/core@1.15.3(@swc/helpers@0.5.17))(chokidar@5.0.0))(@swc/core@1.15.3(@swc/helpers@0.5.17))(@swc/helpers@0.5.17)(next@16.0.10(@opentelemetry/api@1.9.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(typescript@5.9.3))(zod@4.3.6)':
     dependencies:
-      chat: 4.15.0
+      chat: 4.36.0(ai@6.0.190(zod@4.3.6))(workflow@4.8.0(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(@opentelemetry/api@1.9.0)(@swc/cli@0.8.1(@swc/core@1.15.3(@swc/helpers@0.5.17))(chokidar@5.0.0))(@swc/core@1.15.3(@swc/helpers@0.5.17))(@swc/helpers@0.5.17)(next@16.0.10(@opentelemetry/api@1.9.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(typescript@5.9.3))(zod@4.3.6)
       ioredis: 5.8.2
     transitivePeerDependencies:
+      - ai
       - supports-color
+      - workflow
+      - zod
 
   '@chat-adapter/whatsapp@4.20.0':
     dependencies:
@@ -8957,7 +8976,7 @@ snapshots:
       '@ethereumjs/tx': 4.2.0
       '@types/debug': 4.1.12
       debug: 4.4.3(supports-color@8.1.1)
-      semver: 7.7.4
+      semver: 7.8.5
       superstruct: 1.0.4
     transitivePeerDependencies:
       - supports-color
@@ -10870,10 +10889,10 @@ snapshots:
       commander: 8.3.0
       minimatch: 9.0.5
       piscina: 4.9.2
-      semver: 7.7.4
+      semver: 7.8.5
       slash: 3.0.0
       source-map: 0.7.6
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.17
     optionalDependencies:
       chokidar: 5.0.0
     transitivePeerDependencies:
@@ -12676,7 +12695,7 @@ snapshots:
   binary-version-check@6.1.0:
     dependencies:
       binary-version: 7.1.0
-      semver: 7.7.4
+      semver: 7.8.5
       semver-truncate: 3.0.0
 
   binary-version@7.1.0:
@@ -12955,6 +12974,22 @@ snapshots:
       remark-stringify: 11.0.0
       remend: 1.2.2
       unified: 11.0.5
+    transitivePeerDependencies:
+      - supports-color
+
+  chat@4.36.0(ai@6.0.190(zod@4.3.6))(workflow@4.8.0(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(@opentelemetry/api@1.9.0)(@swc/cli@0.8.1(@swc/core@1.15.3(@swc/helpers@0.5.17))(chokidar@5.0.0))(@swc/core@1.15.3(@swc/helpers@0.5.17))(@swc/helpers@0.5.17)(next@16.0.10(@opentelemetry/api@1.9.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(typescript@5.9.3))(zod@4.3.6):
+    dependencies:
+      '@workflow/serde': 4.1.0-beta.2
+      mdast-util-to-string: 4.0.0
+      remark-gfm: 4.0.1
+      remark-parse: 11.0.0
+      remark-stringify: 11.0.0
+      remend: 1.2.2
+      unified: 11.0.5
+    optionalDependencies:
+      ai: 6.0.190(zod@4.3.6)
+      workflow: 4.8.0(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(@opentelemetry/api@1.9.0)(@swc/cli@0.8.1(@swc/core@1.15.3(@swc/helpers@0.5.17))(chokidar@5.0.0))(@swc/core@1.15.3(@swc/helpers@0.5.17))(@swc/helpers@0.5.17)(next@16.0.10(@opentelemetry/api@1.9.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(typescript@5.9.3)
+      zod: 4.3.6
     transitivePeerDependencies:
       - supports-color
 
@@ -16302,7 +16337,7 @@ snapshots:
 
   semver-truncate@3.0.0:
     dependencies:
-      semver: 7.7.4
+      semver: 7.8.5
 
   semver@6.3.1: {}
 
