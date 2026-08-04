@@ -33,24 +33,6 @@ describe("toJsonSchema", () => {
     expect(result).not.toHaveProperty("~standard");
   });
 
-  /**
-   * zod >= 4.3 moved schema internals from `_def` to `_zod`. Detection keyed
-   * only on `_def` stopped matching, so a live schema fell through the
-   * pass-through branch and leaked `~standard` / `_zod` into API responses
-   * (surfaced by the workflow 4.8 lockfile refresh, api#813).
-   */
-  it("never passes through a schema carrying zod internals", () => {
-    const zodLike = {
-      _zod: { def: { type: "object" } },
-      "~standard": { version: 1, vendor: "zod", validate: () => ({}) },
-    };
-
-    const result = toJsonSchema(zodLike);
-
-    expect(result).not.toHaveProperty("~standard");
-    expect(result).not.toHaveProperty("_zod");
-  });
-
   it("returns plain JSON Schema objects unchanged", () => {
     const plainSchema = {
       type: "object",

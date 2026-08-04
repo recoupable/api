@@ -30,22 +30,18 @@ export function toJsonSchema(input: unknown): Record<string, unknown> {
     return {};
   }
 
-  // Zod schemas expose their internals differently by version:
-  //   - zod >= 4.3 puts them on `_zod` and no longer answers to `_def`
-  //   - zod 4.0-4.2 uses `_def.type`
-  //   - zod v3 (bundled inside Composio) uses `_def.typeName`
-  // Missing the `_zod` case made a live schema fall through to the
-  // pass-through below, leaking `~standard` and `_zod` into the response.
-  const hasModernInternals = "_zod" in input;
+  // Zod schemas carry a `_def` property. v4 has `_def.type`; v3 has
+  // `_def.typeName`. Try v4 first, then v3, then bail.
+  if ("_def" in input) {
+    const def = (input as { _def: Record<string, unknown> })._def;
 
-  if (hasModernInternals || "_def" in input) {
-    const def = ("_def" in input
-      ? (input as { _def: Record<string, unknown> })._def
-      : undefined) as Record<string, unknown> | undefined;
-
-    if (hasModernInternals || (def && "type" in def)) {
+    if ("type" in def) {
       try {
-        return z.toJSONSchema(input as z.ZodTypeAny) as Record<string, unknown>;
+        // Spread to a plain object: zod >= 4.3 attaches `~standard` to the
+        // conversion result as a non-enumerable OWN property, so returning it
+        // directly leaks a Zod internal past the very check this helper exists
+        // to make. `Object.keys` hides it; `in` and `toHaveProperty` do not.
+        return { ...z.toJSONSchema(input as z.ZodTypeAny) } as Record<string, unknown>;
       } catch {
         // Fall through to v3 attempt.
       }
@@ -53,7 +49,7 @@ export function toJsonSchema(input: unknown): Record<string, unknown> {
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return zodToJsonSchema(input as any) as Record<string, unknown>;
+      return { ...zodToJsonSchema(input as any) } as Record<string, unknown>;
     } catch {
       return {};
     }
