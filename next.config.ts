@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["date-fns", "@ai-sdk/anthropic", "@ai-sdk/openai", "@ai-sdk/google"],
   },
+  // Build type-checks app code only. Next 16.3 switched to the project-local
+  // `tsc` CLI, which checks everything the tsconfig selects (tests included);
+  // 16.0's checker did not. See the comment in tsconfig.build.json.
+  typescript: {
+    tsconfigPath: "tsconfig.build.json",
+  },
   async headers() {
     return [
       {
