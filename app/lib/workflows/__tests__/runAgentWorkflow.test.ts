@@ -3,6 +3,7 @@ import { runAgentWorkflow } from "@/app/lib/workflows/runAgentWorkflow";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
+import { sendStreamFinish } from "@/app/lib/workflows/sendStreamFinish";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
@@ -162,6 +163,42 @@ describe("runAgentWorkflow", () => {
 
   // Persistence moved to the workflow body, so the step has no business
   // knowing the chat id. Guards against re-coupling them.
+  /**
+   * The stall this exists to end. A stream closed WITHOUT a terminal `finish`
+   * chunk leaves the client in-flight forever: `useChat` waits for it, and
+   * `WorkflowChatTransport` loops `while (!gotFinish)`. Once the run is
+   * terminal the resume route 204s, so that chunk is unreachable after the
+   * fact — it has to go out before the close, on every exit path.
+   *
+   * Mirrors open-agents `chat.ts` L939 / L968-971:
+   *   sendFinish(writable).then(() => closeStream(writable))
+   */
+  it("sends finish before closing when runAgentStep throws", async () => {
+    vi.mocked(runAgentStep).mockRejectedValue(new Error("model exploded"));
+
+    await expect(runAgentWorkflow(baseInput)).rejects.toThrow("model exploded");
+
+    expect(sendStreamFinish).toHaveBeenCalledTimes(1);
+    expect(sendStreamFinish).toHaveBeenCalledWith(writableStub);
+    expect(closeChatStream).toHaveBeenCalledTimes(1);
+  });
+
+  // Guarded by `streamClosed` so the happy path does not emit two finishes —
+  // a duplicate terminal chunk is its own client-side confusion.
+  it("sends exactly one finish on a successful run", async () => {
+    vi.mocked(runAgentStep).mockResolvedValue({
+      finishReason: "stop",
+      aborted: false,
+      responseMessages: [],
+      responseMessage: undefined,
+    });
+
+    await runAgentWorkflow(baseInput);
+
+    expect(sendStreamFinish).toHaveBeenCalledTimes(1);
+    expect(closeChatStream).toHaveBeenCalledTimes(1);
+  });
+
   it("does NOT pass chatId to runAgentStep — persistence is the workflow body's job", async () => {
     vi.mocked(runAgentStep).mockResolvedValue({
       finishReason: "stop",

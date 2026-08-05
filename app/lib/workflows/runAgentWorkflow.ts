@@ -125,6 +125,10 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
   // `sendStart: false`, so without this the client renders N messages.
   await sendStreamStart(writable, assistantMessageId);
 
+  // Tracks whether the terminal `finish` chunk has gone out, so the cleanup
+  // below can emit it on a failure path without doubling it on the happy one.
+  let streamFinished = false;
+
   try {
     let result: Awaited<ReturnType<typeof runAgentStep>> | undefined;
 
@@ -167,6 +171,7 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
     console.log("[runAgentWorkflow] finish", { finishReason: result?.finishReason });
 
     await sendStreamFinish(writable);
+    streamFinished = true;
 
     // The assistant message is persisted per iteration inside `runAgentStep`,
     // so it's not written here. We still use the accumulated message to
@@ -231,9 +236,19 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
     //
     // `Promise.all` is safe because all helpers swallow their own errors —
     // a failure in one doesn't cancel the others.
+    // `finish` must precede the close on EVERY exit path. A stream that ends
+    // without it leaves the client in-flight forever — `useChat` waits for the
+    // terminal chunk and `WorkflowChatTransport` loops `while (!gotFinish)` —
+    // and once the run is terminal the resume route 204s, so the chunk is
+    // unreachable after the fact. Guarded by `streamFinished` so a successful
+    // turn does not emit two. Mirrors open-agents `chat.ts` L939 / L968-971:
+    // `sendFinish(writable).then(() => closeStream(writable))`.
     await Promise.all([
       clearChatActiveStream(input.chatId, workflowRunId),
-      closeChatStream(writable),
+      (async () => {
+        if (!streamFinished) await sendStreamFinish(writable);
+        await closeChatStream(writable);
+      })(),
       ...(input.agentContext.ephemeralKeyId
         ? [deleteEphemeralKeyStep(input.agentContext.ephemeralKeyId)]
         : []),
