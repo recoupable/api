@@ -13,6 +13,11 @@ vi.mock("@/lib/supabase/rooms/selectRoomWithArtist", () => ({
   selectRoomWithArtist: (...args: unknown[]) => mockSelectRoomWithArtist(...args),
 }));
 
+const mockGetCatalogValuationDelta = vi.fn();
+vi.mock("@/lib/catalog/getCatalogValuationDelta", () => ({
+  getCatalogValuationDelta: (...args: unknown[]) => mockGetCatalogValuationDelta(...args),
+}));
+
 describe("processAndSendEmail", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -110,6 +115,87 @@ describe("processAndSendEmail", () => {
     expect(sent.html).toContain("Recoup");
     expect(sent.html).toContain("box-shadow");
     expect(sent.html).toContain("Plus Jakarta Sans");
+  });
+
+  // chat#1911 row 5: a catalog_id leads the email with the value delta.
+  describe("catalog_id valuation delta", () => {
+    const delta = {
+      current: {
+        low: 880_000,
+        mid: 1_100_000,
+        high: 1_320_000,
+        measured_at: "2026-07-29T00:00:00Z",
+      },
+      previous: {
+        low: 800_000,
+        mid: 1_000_000,
+        high: 1_200_000,
+        measured_at: "2026-07-22T00:00:00Z",
+      },
+    };
+
+    it("prefixes the subject and prepends the hero when a delta resolves", async () => {
+      mockSendEmailWithResend.mockResolvedValue({ id: "email-d1" });
+      mockGetCatalogValuationDelta.mockResolvedValue(delta);
+
+      await processAndSendEmail({
+        to: ["user@example.com"],
+        subject: "Weekly report",
+        text: "Body",
+        catalog_id: "740d5050-40ec-4892-a040-b78bb50fef2f",
+      });
+
+      expect(mockGetCatalogValuationDelta).toHaveBeenCalledWith({
+        catalogId: "740d5050-40ec-4892-a040-b78bb50fef2f",
+      });
+      expect(mockSendEmailWithResend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: "$1.1M (+10.0%) · Weekly report",
+          html: expect.stringContaining("since your last measurement"),
+        }),
+      );
+    });
+
+    it("sends the email unchanged when no delta resolves (unowned/empty catalog)", async () => {
+      mockSendEmailWithResend.mockResolvedValue({ id: "email-d2" });
+      mockGetCatalogValuationDelta.mockResolvedValue(null);
+
+      await processAndSendEmail({
+        to: ["user@example.com"],
+        subject: "Weekly report",
+        text: "Body",
+        catalog_id: "740d5050-40ec-4892-a040-b78bb50fef2f",
+      });
+
+      expect(mockSendEmailWithResend).toHaveBeenCalledWith(
+        expect.objectContaining({ subject: "Weekly report" }),
+      );
+    });
+
+    it("still sends when the delta lookup throws (best-effort)", async () => {
+      mockSendEmailWithResend.mockResolvedValue({ id: "email-d3" });
+      mockGetCatalogValuationDelta.mockRejectedValue(new Error("down"));
+
+      const result = await processAndSendEmail({
+        to: ["user@example.com"],
+        subject: "Weekly report",
+        text: "Body",
+        catalog_id: "740d5050-40ec-4892-a040-b78bb50fef2f",
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockSendEmailWithResend).toHaveBeenCalledWith(
+        expect.objectContaining({ subject: "Weekly report" }),
+      );
+    });
+
+    it("never touches the delta path without a catalog_id", async () => {
+      mockSendEmailWithResend.mockResolvedValue({ id: "email-d4" });
+
+      await processAndSendEmail({ to: ["user@example.com"], subject: "T", text: "B" });
+
+      expect(mockGetCatalogValuationDelta).not.toHaveBeenCalled();
+    });
   });
 
   it("returns error when Resend fails", async () => {

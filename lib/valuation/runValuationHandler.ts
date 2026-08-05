@@ -10,6 +10,7 @@ import { createSnapshotCatalog } from "@/lib/catalog/createSnapshotCatalog";
 import { selectCatalogMeasurementsAggregate } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate";
 import { getCatalogEarliestReleaseDate } from "@/lib/catalog/getCatalogEarliestReleaseDate";
 import { computeValuationBand } from "@/lib/catalog/computeValuationBand";
+import { persistCatalogValuation } from "@/lib/catalog/persistCatalogValuation";
 import { sendValuationReportEmail } from "@/lib/emails/valuationReport/sendValuationReportEmail";
 import { captureValuationLead } from "@/lib/valuation/captureValuationLead";
 import { validateRunValuationRequest } from "./validateRunValuationRequest";
@@ -140,6 +141,16 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
     const { valuation } = computeValuationBand({
       totalStreams: aggregate?.totalStreams ?? 0,
       earliestReleaseDate,
+    });
+
+    // Persist the run's band into the valuation history (chat#1889 row 15).
+    // Every run writes — each is a fresh measurement — and it's best-effort,
+    // so a history failure never fails the valuation itself.
+    await persistCatalogValuation({
+      catalogId: catalog.id,
+      valuation,
+      measuredSongCount: aggregate?.measuredSongCount ?? 0,
+      totalStreams: aggregate?.totalStreams ?? 0,
     });
 
     // Email the valuation report after the catalog is materialized (chat#1881):
