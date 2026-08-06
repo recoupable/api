@@ -44,7 +44,7 @@ describe("getCatalogsHandler", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(selectAccountCatalogs).toHaveBeenCalledWith(accountId);
+    expect(selectAccountCatalogs).toHaveBeenCalledWith([accountId]);
     expect(body).toEqual({
       status: "success",
       catalogs: [
@@ -60,6 +60,9 @@ describe("getCatalogsHandler", () => {
     );
 
     const res = await getCatalogsHandler(makeRequest(), Promise.resolve({ id: accountId }));
+    vi.mock("@/lib/catalog/getCatalogOwnerIds", () => ({
+      getCatalogOwnerIds: vi.fn(async (accountId: string) => [accountId]),
+    }));
     const body = await res.json();
 
     expect(res.status).toBe(500);
