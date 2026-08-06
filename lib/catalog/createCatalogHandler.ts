@@ -16,8 +16,12 @@ const DEFAULT_CATALOG_NAME = "Valuation Catalog";
 /**
  * POST /api/catalogs
  *
- * Creates a catalog owned by the authenticated account. The owning account is
- * resolved from credentials (Privy bearer or x-api-key), never from the body.
+ * Creates a catalog owned by the authenticated account, or by one of the caller's
+ * organizations when `organization_id` is supplied — every member of that
+ * organization then sees it via `GET /api/accounts/{id}/catalogs` (chat#1938).
+ * The caller is always resolved from credentials (Privy bearer or x-api-key),
+ * never from the body; `organization_id` selects an owner and is authorized by
+ * `validateAuthContext`, which 403s a non-member.
  *
  * With `snapshot`, materializes the catalog from a completed valuation snapshot:
  * the snapshot must be owned by the caller, and re-claiming the same snapshot is
@@ -37,15 +41,20 @@ export async function createCatalogHandler(request: NextRequest): Promise<NextRe
       return validated;
     }
 
-    const authResult = await validateAuthContext(request);
+    // organization_id is authorized here, not trusted: validateAuthContext 403s a
+    // caller who is not a member of the organization (chat#1938).
+    const authResult = await validateAuthContext(request, {
+      organizationId: validated.organization_id,
+    });
     if (authResult instanceof NextResponse) {
       return authResult;
     }
     const { accountId } = authResult;
+    const ownerId = validated.organization_id ?? accountId;
 
     if (!validated.snapshot) {
       const catalog = await insertCatalog(validated.name ?? DEFAULT_CATALOG_NAME);
-      await insertAccountCatalog({ account: accountId, catalog: catalog.id });
+      await insertAccountCatalog({ account: ownerId, catalog: catalog.id });
       return successResponse({ catalog, songs_added: 0 });
     }
 
@@ -74,6 +83,7 @@ export async function createCatalogHandler(request: NextRequest): Promise<NextRe
 
     const { catalog, songsAdded } = await createSnapshotCatalog({
       accountId,
+      ownerId,
       snapshot,
       name: validated.name,
     });
