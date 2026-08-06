@@ -1,28 +1,20 @@
 import supabase from "../serverClient";
-import { getAccountOrganizations } from "../account_organization_ids/getAccountOrganizations";
 
 /**
- * Select the catalogs visible to an account via `account_catalogs`, ordered by
- * `created_at desc`.
+ * Select the catalogs linked to any of `accountIds` via `account_catalogs`,
+ * ordered by `created_at desc`.
  *
- * Visibility is the account's own catalogs plus those owned by any organization
- * it belongs to. An organization is itself a row in `accounts`, so an org-owned
- * catalog is just an `account_catalogs` row whose `account` is the organization
- * id. Membership is resolved here at read time rather than duplicated per member
- * at write time, so access follows the org as people join and leave (chat#1938).
+ * Takes owner ids and nothing else — it does not resolve organization membership.
+ * Callers pass the owners they want, which for a catalog read is
+ * `getCatalogOwnerIds(accountId)`: the account plus its organizations (chat#1938).
  *
- * A catalog owned both directly and through an organization is returned once.
+ * A catalog linked by more than one of the given owners is returned once.
  *
+ * @param accountIds - Owner account ids to read catalogs for
  * @throws Error if the query fails
  */
-export async function selectAccountCatalogs(accountId: string) {
-  const organizations = await getAccountOrganizations({ accountId });
-  const ownerIds = [
-    ...new Set([
-      accountId,
-      ...organizations.map(o => o.organization_id).filter((id): id is string => Boolean(id)),
-    ]),
-  ];
+export async function selectAccountCatalogs(accountIds: string[]) {
+  if (!accountIds.length) return [];
 
   const { data, error } = await supabase
     .from("account_catalogs")
@@ -36,7 +28,7 @@ export async function selectAccountCatalogs(accountId: string) {
     )
   `,
     )
-    .in("account", ownerIds)
+    .in("account", accountIds)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -44,5 +36,5 @@ export async function selectAccountCatalogs(accountId: string) {
   }
 
   const catalogs = (data ?? []).map(row => row.catalogs);
-  return [...new Map(catalogs.map(c => [c.id, c])).values()];
+  return [...new Map(catalogs.map(catalog => [catalog.id, catalog])).values()];
 }
