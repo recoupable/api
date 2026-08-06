@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { selectAccountCatalog } from "@/lib/supabase/account_catalogs/selectAccountCatalog";
-import { selectPlaycountSnapshotIdsByCatalog } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshotIdsByCatalog";
+import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots";
 import { deleteCatalogById } from "@/lib/supabase/catalogs/deleteCatalogById";
 import { getCatalogOwnerIds } from "./getCatalogOwnerIds";
 import { validateDeleteCatalogRequest } from "./validateDeleteCatalogRequest";
@@ -25,9 +25,7 @@ import { validateDeleteCatalogRequest } from "./validateDeleteCatalogRequest";
  *
  * The account is resolved from credentials. A catalog that doesn't exist, or
  * belongs to neither the account nor one of its organizations, is a 404 — the
- * same visibility rule the catalog reads use (chat#1938). Fails closed: a
- * failed snapshot lookup is a 500 and nothing is deleted, because deleting
- * without knowing what was released would strand the paid-for measurement.
+ * same visibility rule the catalog reads use (chat#1938).
  *
  * @param request - The request object
  * @param catalogIdParam - The catalogId path segment
@@ -50,10 +48,8 @@ export async function deleteCatalogHandler(
       return errorResponse("Catalog not found", 404);
     }
 
-    const releasedSnapshotIds = await selectPlaycountSnapshotIdsByCatalog(catalogId);
-    if (releasedSnapshotIds === null) {
-      return errorResponse("Internal server error", 500);
-    }
+    const releasedSnapshots = await selectPlaycountSnapshots({ catalog: catalogId });
+    const releasedSnapshotIds = releasedSnapshots.map(snapshot => snapshot.id);
 
     const deletedId = await deleteCatalogById(catalogId);
     if (!deletedId) {

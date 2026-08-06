@@ -5,7 +5,7 @@ import { deleteCatalogHandler } from "../deleteCatalogHandler";
 import { validateDeleteCatalogRequest } from "../validateDeleteCatalogRequest";
 import { getCatalogOwnerIds } from "../getCatalogOwnerIds";
 import { selectAccountCatalog } from "@/lib/supabase/account_catalogs/selectAccountCatalog";
-import { selectPlaycountSnapshotIdsByCatalog } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshotIdsByCatalog";
+import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots";
 import { deleteCatalogById } from "@/lib/supabase/catalogs/deleteCatalogById";
 
 vi.mock("../validateDeleteCatalogRequest", () => ({ validateDeleteCatalogRequest: vi.fn() }));
@@ -13,8 +13,8 @@ vi.mock("../getCatalogOwnerIds", () => ({ getCatalogOwnerIds: vi.fn() }));
 vi.mock("@/lib/supabase/account_catalogs/selectAccountCatalog", () => ({
   selectAccountCatalog: vi.fn(),
 }));
-vi.mock("@/lib/supabase/playcount_snapshots/selectPlaycountSnapshotIdsByCatalog", () => ({
-  selectPlaycountSnapshotIdsByCatalog: vi.fn(),
+vi.mock("@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots", () => ({
+  selectPlaycountSnapshots: vi.fn(),
 }));
 vi.mock("@/lib/supabase/catalogs/deleteCatalogById", () => ({ deleteCatalogById: vi.fn() }));
 
@@ -22,6 +22,21 @@ const accountId = "550e8400-e29b-41d4-a716-446655440000";
 const organizationId = "550e8400-e29b-41d4-a716-446655440111";
 const catalogId = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
 const snapshotId = "11111111-2222-4333-8444-555555555555";
+
+const snapshot = {
+  id: snapshotId,
+  account: accountId,
+  album_count: 1,
+  album_ids: ["album-1"],
+  catalog: catalogId,
+  created_at: "2026-08-06T00:00:00Z",
+  estimated_cost_usd: 0,
+  isrcs: null,
+  platforms: ["spotify"],
+  schedule: "once",
+  state: "done",
+  updated_at: "2026-08-06T00:00:00Z",
+};
 
 const link = {
   id: "cccccccc-dddd-4eee-8fff-000000000000",
@@ -66,7 +81,7 @@ describe("deleteCatalogHandler", () => {
     okValidation();
     vi.mocked(getCatalogOwnerIds).mockResolvedValue([accountId]);
     vi.mocked(selectAccountCatalog).mockResolvedValue(link);
-    vi.mocked(selectPlaycountSnapshotIdsByCatalog).mockResolvedValue([snapshotId]);
+    vi.mocked(selectPlaycountSnapshots).mockResolvedValue([snapshot]);
     vi.mocked(deleteCatalogById).mockResolvedValue(catalogId);
 
     const res = await deleteCatalogHandler(makeRequest(), catalogId);
@@ -77,6 +92,7 @@ describe("deleteCatalogHandler", () => {
       catalog_id: catalogId,
       released_snapshot_ids: [snapshotId],
     });
+    expect(selectPlaycountSnapshots).toHaveBeenCalledWith({ catalog: catalogId });
     expect(deleteCatalogById).toHaveBeenCalledWith(catalogId);
   });
 
@@ -84,12 +100,12 @@ describe("deleteCatalogHandler", () => {
     okValidation();
     vi.mocked(getCatalogOwnerIds).mockResolvedValue([accountId]);
     vi.mocked(selectAccountCatalog).mockResolvedValue(link);
-    vi.mocked(selectPlaycountSnapshotIdsByCatalog).mockResolvedValue([snapshotId]);
+    vi.mocked(selectPlaycountSnapshots).mockResolvedValue([snapshot]);
     vi.mocked(deleteCatalogById).mockResolvedValue(catalogId);
 
     await deleteCatalogHandler(makeRequest(), catalogId);
 
-    expect(vi.mocked(selectPlaycountSnapshotIdsByCatalog).mock.invocationCallOrder[0]).toBeLessThan(
+    expect(vi.mocked(selectPlaycountSnapshots).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(deleteCatalogById).mock.invocationCallOrder[0],
     );
   });
@@ -98,7 +114,7 @@ describe("deleteCatalogHandler", () => {
     okValidation();
     vi.mocked(getCatalogOwnerIds).mockResolvedValue([accountId, organizationId]);
     vi.mocked(selectAccountCatalog).mockResolvedValue({ ...link, account: organizationId });
-    vi.mocked(selectPlaycountSnapshotIdsByCatalog).mockResolvedValue([]);
+    vi.mocked(selectPlaycountSnapshots).mockResolvedValue([]);
     vi.mocked(deleteCatalogById).mockResolvedValue(catalogId);
 
     const res = await deleteCatalogHandler(makeRequest(), catalogId);
@@ -110,23 +126,11 @@ describe("deleteCatalogHandler", () => {
     });
   });
 
-  it("fails closed when the snapshot lookup errors, rather than deleting blind", async () => {
-    okValidation();
-    vi.mocked(getCatalogOwnerIds).mockResolvedValue([accountId]);
-    vi.mocked(selectAccountCatalog).mockResolvedValue(link);
-    vi.mocked(selectPlaycountSnapshotIdsByCatalog).mockResolvedValue(null);
-
-    const res = await deleteCatalogHandler(makeRequest(), catalogId);
-
-    expect(res.status).toBe(500);
-    expect(deleteCatalogById).not.toHaveBeenCalled();
-  });
-
   it("404s when the catalog row is already gone at delete time", async () => {
     okValidation();
     vi.mocked(getCatalogOwnerIds).mockResolvedValue([accountId]);
     vi.mocked(selectAccountCatalog).mockResolvedValue(link);
-    vi.mocked(selectPlaycountSnapshotIdsByCatalog).mockResolvedValue([]);
+    vi.mocked(selectPlaycountSnapshots).mockResolvedValue([]);
     vi.mocked(deleteCatalogById).mockResolvedValue(null);
 
     const res = await deleteCatalogHandler(makeRequest(), catalogId);
@@ -138,7 +142,7 @@ describe("deleteCatalogHandler", () => {
     okValidation();
     vi.mocked(getCatalogOwnerIds).mockResolvedValue([accountId]);
     vi.mocked(selectAccountCatalog).mockResolvedValue(link);
-    vi.mocked(selectPlaycountSnapshotIdsByCatalog).mockResolvedValue([]);
+    vi.mocked(selectPlaycountSnapshots).mockResolvedValue([]);
     vi.mocked(deleteCatalogById).mockRejectedValue(new Error("boom"));
 
     const res = await deleteCatalogHandler(makeRequest(), catalogId);
