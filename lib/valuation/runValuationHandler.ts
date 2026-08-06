@@ -46,7 +46,7 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
     // from credentials and requires a spotify_artist_id.
     const validated = await validateRunValuationRequest(request);
     if (validated instanceof NextResponse) return validated;
-    const { accountId, spotify_artist_id } = validated;
+    const { accountId, spotify_artist_id, organizationId } = validated;
 
     // 1. Resolve the artist's releases. The caller's auth already came from the
     //    request header above (validateAuthContext -> accountId). This is a
@@ -90,12 +90,15 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
       return errorResponse("The measurement didn't complete in time; retry shortly", 504);
     }
 
-    // 4. Materialize the catalog from the snapshot (owned by this account,
-    //    freshly created, not yet claimed — so createSnapshotCatalog is safe).
+    // 4. Materialize the catalog from the snapshot (freshly created by this
+    //    account, not yet claimed — so createSnapshotCatalog is safe). The
+    //    catalog goes to the organization when one was named (chat#1938); the
+    //    roster attach inside still targets the calling account.
     const [snapshot] = await selectPlaycountSnapshots({ id: snapshotId });
     if (!snapshot) return errorResponse("Snapshot not found", 404);
     const { catalog, songsAdded, attachedArtistId } = await createSnapshotCatalog({
       accountId,
+      ownerId: organizationId,
       snapshot,
     });
 

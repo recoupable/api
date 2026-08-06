@@ -128,4 +128,31 @@ describe("createSnapshotCatalog", () => {
 
     expect(insertCatalog).toHaveBeenCalledWith("Valuation Catalog");
   });
+
+  it("links the catalog to ownerId while the roster attach still targets accountId", async () => {
+    const orgId = "7f9c1e2a-3b4d-4c5e-8f60-1a2b3c4d5e6f";
+    vi.mocked(selectSongMeasurements).mockResolvedValue([measurement("ISRC_A")]);
+
+    await createSnapshotCatalog({ accountId, ownerId: orgId, snapshot, name: "Org Catalog" });
+
+    // the catalog belongs to the organization...
+    expect(insertAccountCatalog).toHaveBeenCalledWith({ account: orgId, catalog: catalogId });
+    // ...but the artist lands on the roster of whoever ran it
+    expect(attachCanonicalArtistToAccount).toHaveBeenCalledWith({
+      accountId,
+      isrcs: ["ISRC_A"],
+    });
+  });
+
+  it("defaults the owner to accountId when ownerId is omitted", async () => {
+    vi.mocked(selectSongMeasurements).mockResolvedValue([measurement("ISRC_A")]);
+
+    await createSnapshotCatalog({ accountId, snapshot, name: "Personal Catalog" });
+
+    expect(insertAccountCatalog).toHaveBeenCalledWith({ account: accountId, catalog: catalogId });
+    expect(attachCanonicalArtistToAccount).toHaveBeenCalledWith({
+      accountId,
+      isrcs: ["ISRC_A"],
+    });
+  });
 });

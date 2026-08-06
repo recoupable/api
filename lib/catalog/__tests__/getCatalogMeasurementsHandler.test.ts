@@ -24,6 +24,9 @@ vi.mock("@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate", (
 vi.mock("@/lib/supabase/song_measurements/selectCatalogMeasurementsPage", () => ({
   selectCatalogMeasurementsPage: vi.fn(),
 }));
+vi.mock("@/lib/catalog/getCatalogOwnerIds", () => ({
+  getCatalogOwnerIds: vi.fn(async (accountId: string) => [accountId]),
+}));
 
 const accountId = "550e8400-e29b-41d4-a716-446655440000";
 const catalogId = "740d5050-40ec-4892-a040-b78bb50fef2f";
@@ -69,7 +72,7 @@ describe("getCatalogMeasurementsHandler", () => {
     const res = await getCatalogMeasurementsHandler(makeRequest(), catalogId);
 
     expect(res.status).toBe(404);
-    expect(selectAccountCatalog).toHaveBeenCalledWith({ accountId, catalogId });
+    expect(selectAccountCatalog).toHaveBeenCalledWith({ accountIds: [accountId], catalogId });
     expect(selectCatalogMeasurementsAggregate).not.toHaveBeenCalled();
   });
 
