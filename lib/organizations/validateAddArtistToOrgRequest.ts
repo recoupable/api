@@ -3,8 +3,16 @@ import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canManageOrganization } from "@/lib/organizations/canManageOrganization";
-import { addArtistToOrgBodySchema } from "@/lib/organizations/validateAddArtistToOrgBody";
-import type { AddArtistToOrgBody } from "@/lib/organizations/validateAddArtistToOrgBody";
+import { z } from "zod";
+
+const addArtistToOrgBodySchema = z.object({
+  artistId: z.string({ message: "artistId is required" }).uuid("artistId must be a valid UUID"),
+  organizationId: z
+    .string({ message: "organizationId is required" })
+    .uuid("organizationId must be a valid UUID"),
+});
+
+export type AddArtistToOrgBody = z.infer<typeof addArtistToOrgBodySchema>;
 
 export interface AddArtistToOrgRequestData {
   /** The authenticated caller's account ID */

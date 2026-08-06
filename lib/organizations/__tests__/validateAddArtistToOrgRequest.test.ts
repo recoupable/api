@@ -84,6 +84,9 @@ describe("validateAddArtistToOrgRequest", () => {
 
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(403);
+      const body = await (result as NextResponse).json();
+      expect(body.status).toBe("error");
+      expect(typeof body.error).toBe("string");
     });
   });
 
@@ -93,6 +96,9 @@ describe("validateAddArtistToOrgRequest", () => {
 
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
+      const body = await (result as NextResponse).json();
+      expect(body.status).toBe("error");
+      expect(typeof body.error).toBe("string");
     });
 
     it("returns 400 when organizationId is missing", async () => {
@@ -100,6 +106,9 @@ describe("validateAddArtistToOrgRequest", () => {
 
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
+      const body = await (result as NextResponse).json();
+      expect(body.status).toBe("error");
+      expect(typeof body.error).toBe("string");
     });
 
     it("returns 400 when artistId is not a UUID", async () => {
@@ -109,6 +118,9 @@ describe("validateAddArtistToOrgRequest", () => {
 
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
+      const body = await (result as NextResponse).json();
+      expect(body.status).toBe("error");
+      expect(typeof body.error).toBe("string");
     });
 
     it("returns 400 when the body is not valid JSON", async () => {
@@ -116,6 +128,9 @@ describe("validateAddArtistToOrgRequest", () => {
 
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
+      const body = await (result as NextResponse).json();
+      expect(body.status).toBe("error");
+      expect(typeof body.error).toBe("string");
     });
   });
 });
