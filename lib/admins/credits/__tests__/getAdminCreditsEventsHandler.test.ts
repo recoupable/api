@@ -16,6 +16,11 @@ vi.mock("@/lib/supabase/usage_events/countUsageEvents", () => ({
   countUsageEvents: (...args: unknown[]) => mockCountUsageEvents(...args),
 }));
 
+const mockSelectCreditGrants = vi.fn();
+vi.mock("@/lib/supabase/credit_grants/selectCreditGrants", () => ({
+  selectCreditGrants: (...args: unknown[]) => mockSelectCreditGrants(...args),
+}));
+
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({}),
 }));
@@ -30,6 +35,7 @@ beforeEach(() => {
   mockValidateAdminAuth.mockResolvedValue(mockAuth);
   mockSelectUsageEvents.mockResolvedValue([]);
   mockCountUsageEvents.mockResolvedValue(0);
+  mockSelectCreditGrants.mockResolvedValue([]);
 });
 
 describe("getAdminCreditsEventsHandler", () => {
@@ -122,6 +128,63 @@ describe("getAdminCreditsEventsHandler", () => {
     expect(call.from).toBe(100);
     expect(call.to).toBe(149);
     expect(call.createdAfter).toBeTypeOf("string");
+  });
+
+  it("returns admin grants alongside the debits, so a hand-set balance is attributable", async () => {
+    mockSelectCreditGrants.mockResolvedValue([
+      {
+        id: "33333333-3333-3333-3333-333333333333",
+        account_id: ACCT,
+        granted_by: "22222222-2222-2222-2222-222222222222",
+        reason: "Trial headroom for the Aug 12 label demo",
+        previous_credits: 12,
+        remaining_credits: 9999,
+        created_at: "2026-08-06T23:00:00.000Z",
+      },
+    ]);
+
+    const request = new NextRequest(
+      `http://localhost/api/admins/credits/events?account_id=${ACCT}`,
+    );
+    const body = await (await getAdminCreditsEventsHandler(request)).json();
+
+    expect(body.grants).toHaveLength(1);
+    expect(body.grants[0].granted_by).toBe("22222222-2222-2222-2222-222222222222");
+    expect(body.grants[0].reason).toBe("Trial headroom for the Aug 12 label demo");
+    expect(body.grants[0].previous_credits).toBe(12);
+  });
+
+  it("always returns a grants array, empty for the accounts that were never granted anything", async () => {
+    const request = new NextRequest(
+      `http://localhost/api/admins/credits/events?account_id=${ACCT}`,
+    );
+    const body = await (await getAdminCreditsEventsHandler(request)).json();
+
+    expect(body.grants).toEqual([]);
+  });
+
+  it("scopes grants to the same account and period as the events", async () => {
+    const request = new NextRequest(
+      `http://localhost/api/admins/credits/events?account_id=${ACCT}&period=weekly`,
+    );
+    await getAdminCreditsEventsHandler(request);
+
+    expect(mockSelectCreditGrants).toHaveBeenCalledTimes(1);
+    const call = mockSelectCreditGrants.mock.calls[0][0];
+    expect(call.accountId).toBe(ACCT);
+    expect(call.createdAfter).toBe(mockSelectUsageEvents.mock.calls[0][0].createdAfter);
+  });
+
+  it("leaves total_count describing usage_events only, not grants", async () => {
+    mockCountUsageEvents.mockResolvedValue(3);
+    mockSelectCreditGrants.mockResolvedValue([{ id: "g1" }, { id: "g2" }]);
+
+    const request = new NextRequest(
+      `http://localhost/api/admins/credits/events?account_id=${ACCT}`,
+    );
+    const body = await (await getAdminCreditsEventsHandler(request)).json();
+
+    expect(body.total_count).toBe(3);
   });
 
   it("omits createdAfter when period='all'", async () => {

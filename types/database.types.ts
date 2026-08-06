@@ -1195,6 +1195,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      credit_grants: {
+        Row: {
+          account_id: string;
+          created_at: string;
+          granted_by: string;
+          id: string;
+          previous_credits: number | null;
+          reason: string;
+          remaining_credits: number;
+        };
+        Insert: {
+          account_id: string;
+          created_at?: string;
+          granted_by: string;
+          id?: string;
+          previous_credits?: number | null;
+          reason: string;
+          remaining_credits: number;
+        };
+        Update: {
+          account_id?: string;
+          created_at?: string;
+          granted_by?: string;
+          id?: string;
+          previous_credits?: number | null;
+          reason?: string;
+          remaining_credits?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "credit_grants_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "credit_grants_granted_by_fkey";
+            columns: ["granted_by"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       credits_usage: {
         Row: {
           account_id: string;
@@ -3860,6 +3905,15 @@ export type Database = {
           p_event_id: string;
         };
         Returns: undefined;
+      };
+      grant_credits_with_audit: {
+        Args: {
+          p_account_id: string;
+          p_granted_by: string;
+          p_reason: string;
+          p_remaining_credits: number;
+        };
+        Returns: Database["public"]["Tables"]["credit_grants"]["Row"];
       };
       extract_domain: { Args: { email: string }; Returns: string };
       get_account_invitations: {
