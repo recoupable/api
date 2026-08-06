@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { selectUsageEvents } from "@/lib/supabase/usage_events/selectUsageEvents";
 import { countUsageEvents } from "@/lib/supabase/usage_events/countUsageEvents";
+import { selectCreditGrants } from "@/lib/supabase/credit_grants/selectCreditGrants";
 import { getCutoffMs } from "@/lib/admins/getCutoffMs";
 import { validateGetAdminCreditsEventsQuery } from "./validateGetAdminCreditsEventsQuery";
 
@@ -26,7 +27,7 @@ export async function getAdminCreditsEventsHandler(request: NextRequest): Promis
     const createdAfter = cutoffMs === null ? undefined : new Date(cutoffMs).toISOString();
     const offset = (page - 1) * limit;
 
-    const [rows, totalCount] = await Promise.all([
+    const [rows, totalCount, grants] = await Promise.all([
       selectUsageEvents({
         accountId: account_id,
         createdAfter,
@@ -34,6 +35,11 @@ export async function getAdminCreditsEventsHandler(request: NextRequest): Promis
         to: offset + limit - 1,
       }),
       countUsageEvents({ accountId: account_id, createdAfter }),
+      // The write-side counterpart to `events`: balances a person set by hand,
+      // with an actor and a reason attached. Same account and period, but not
+      // paginated with the events and not counted in `total_count` — grants are
+      // rare enough that a page control would be noise.
+      selectCreditGrants({ accountId: account_id, createdAfter }),
     ]);
 
     return NextResponse.json(
@@ -45,6 +51,7 @@ export async function getAdminCreditsEventsHandler(request: NextRequest): Promis
         limit,
         total_count: totalCount,
         events: rows,
+        grants,
       },
       { status: 200, headers: getCorsHeaders() },
     );

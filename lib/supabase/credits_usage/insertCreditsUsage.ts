@@ -10,17 +10,24 @@ import type { Tables } from "@/types/database.types";
  *
  * @param accountId - The account ID to initialize credits for
  * @param remainingCredits - Initial balance (caller decides — no default)
+ * @param timestamp - Optional explicit `timestamp` (ISO string). The monthly
+ *   reset measures staleness from this column, so a caller that needs the
+ *   refill clock to start at a known moment — an admin grant, which reports an
+ *   expiry back to the operator — sets it rather than trusting a column
+ *   default. Omitted when absent, leaving prior behaviour untouched.
  * @returns The inserted credits_usage record, or null if failed
  */
 export async function insertCreditsUsage(
   accountId: string,
   remainingCredits: number,
+  timestamp?: string,
 ): Promise<Tables<"credits_usage"> | null> {
   const { data, error } = await supabase
     .from("credits_usage")
     .insert({
       account_id: accountId,
       remaining_credits: remainingCredits,
+      ...(timestamp ? { timestamp } : {}),
     })
     .select("*")
     .single();
