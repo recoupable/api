@@ -50,8 +50,13 @@ export async function getCatalogsHandler(
     return NextResponse.json(
       {
         status: "success",
+        // Field by field, not a spread: selectAccountCatalogs also carries the
+        // internal `owners` link list, which is not part of the contract.
         catalogs: catalogs.map(catalog => ({
-          ...catalog,
+          id: catalog.id,
+          name: catalog.name,
+          created_at: catalog.created_at,
+          updated_at: catalog.updated_at,
           measured_song_count: valuations.get(catalog.id)?.measuredSongCount ?? 0,
           valuation: valuations.get(catalog.id)?.valuation ?? null,
           owner: owners.get(catalog.id) ?? null,

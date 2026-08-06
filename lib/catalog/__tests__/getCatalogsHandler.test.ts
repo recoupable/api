@@ -34,6 +34,7 @@ const catalog = {
   name: "Catalog A",
   created_at: "2024-01-01",
   updated_at: "2024-01-02",
+  owners: [accountId],
 };
 
 const band = { low: 10, mid: 20, high: 30 };
@@ -77,10 +78,23 @@ describe("getCatalogsHandler", () => {
 
     expect(res.status).toBe(200);
     expect(selectAccountCatalogs).toHaveBeenCalledWith([accountId]);
+    // `owners` is the selector's internal ownership list — the response must
+    // carry the documented fields only.
     expect(body).toEqual({
       status: "success",
-      catalogs: [{ ...catalog, measured_song_count: 26, valuation: band, owner }],
+      catalogs: [
+        {
+          id: catalog.id,
+          name: catalog.name,
+          created_at: catalog.created_at,
+          updated_at: catalog.updated_at,
+          measured_song_count: 26,
+          valuation: band,
+          owner,
+        },
+      ],
     });
+    expect(body.catalogs[0]).not.toHaveProperty("owners");
   });
 
   it("reports a null valuation for a catalog with nothing measured", async () => {

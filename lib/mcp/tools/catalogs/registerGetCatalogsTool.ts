@@ -30,7 +30,15 @@ export function registerGetCatalogsTool(server: McpServer): void {
     },
     async (args: GetCatalogsParams) => {
       const ownerIds = await getCatalogOwnerIds(args.account_id);
-      const catalogs = await selectAccountCatalogs(ownerIds);
+      const accountCatalogs = await selectAccountCatalogs(ownerIds);
+      // The tool documents id/name/created_at/updated_at; `owners` is internal
+      // ownership bookkeeping and has no business in a model-facing payload.
+      const catalogs = accountCatalogs.map(({ id, name, created_at, updated_at }) => ({
+        id,
+        name,
+        created_at,
+        updated_at,
+      }));
       return getToolResultSuccess({ status: "success", catalogs });
     },
   );

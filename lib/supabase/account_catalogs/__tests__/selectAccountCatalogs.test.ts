@@ -27,13 +27,35 @@ describe("selectAccountCatalogs", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("filters on exactly the owner ids it is given", async () => {
-    const builder = mockBuilder({ data: [{ catalogs: catalog("cat_1") }], error: null });
+    const builder = mockBuilder({
+      data: [{ account: "acc_1", catalogs: catalog("cat_1") }],
+      error: null,
+    });
 
     const result = await selectAccountCatalogs(["acc_1", "org_1"]);
 
     expect(supabase.from).toHaveBeenCalledWith("account_catalogs");
     expect(builder.in).toHaveBeenCalledWith("account", ["acc_1", "org_1"]);
-    expect(result).toEqual([catalog("cat_1")]);
+    expect(result).toEqual([{ ...catalog("cat_1"), owners: ["acc_1"] }]);
+  });
+
+  it("narrows to specific catalogs when asked, without a second query", async () => {
+    const builder = mockBuilder({
+      data: [{ account: "org_1", catalogs: catalog("cat_1") }],
+      error: null,
+    });
+
+    await selectAccountCatalogs(["acc_1", "org_1"], { catalogIds: ["cat_1"] });
+
+    expect(builder.in).toHaveBeenCalledWith("account", ["acc_1", "org_1"]);
+    expect(builder.in).toHaveBeenCalledWith("catalog", ["cat_1"]);
+  });
+
+  it("returns an empty list without querying when the catalog filter is empty", async () => {
+    const result = await selectAccountCatalogs(["acc_1"], { catalogIds: [] });
+
+    expect(result).toEqual([]);
+    expect(supabase.from).not.toHaveBeenCalled();
   });
 
   it("resolves no organizations itself — a single id queries only that id", async () => {
@@ -44,15 +66,20 @@ describe("selectAccountCatalogs", () => {
     expect(builder.in).toHaveBeenCalledWith("account", ["acc_1"]);
   });
 
-  it("returns a catalog once when two owner ids both link it", async () => {
+  it("returns a catalog once when two owner ids both link it, keeping both owners", async () => {
     mockBuilder({
-      data: [{ catalogs: catalog("shared") }, { catalogs: catalog("shared") }],
+      data: [
+        { account: "acc_1", catalogs: catalog("shared") },
+        { account: "org_1", catalogs: catalog("shared") },
+      ],
       error: null,
     });
 
     const result = await selectAccountCatalogs(["acc_1", "org_1"]);
 
-    expect(result).toEqual([catalog("shared")]);
+    // Both owners matter: the list dedupes the catalog, and the owner shown on
+    // a card is picked from this set (chat#1943).
+    expect(result).toEqual([{ ...catalog("shared"), owners: ["acc_1", "org_1"] }]);
   });
 
   it("returns an empty list without querying when given no owner ids", async () => {

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { resolveCatalogOwners } from "../resolveCatalogOwners";
-import { selectCatalogOwnerLinks } from "@/lib/supabase/account_catalogs/selectCatalogOwnerLinks";
+import { selectAccountCatalogs } from "@/lib/supabase/account_catalogs/selectAccountCatalogs";
 import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 import { selectAccountInfos } from "@/lib/supabase/account_info/selectAccountInfos";
 
-vi.mock("@/lib/supabase/account_catalogs/selectCatalogOwnerLinks", () => ({
-  selectCatalogOwnerLinks: vi.fn(),
+vi.mock("@/lib/supabase/account_catalogs/selectAccountCatalogs", () => ({
+  selectAccountCatalogs: vi.fn(),
 }));
 vi.mock("@/lib/supabase/accounts/selectAccounts", () => ({ selectAccounts: vi.fn() }));
 vi.mock("@/lib/supabase/account_info/selectAccountInfos", () => ({ selectAccountInfos: vi.fn() }));
@@ -16,12 +16,12 @@ const org = "550e8400-e29b-41d4-a716-446655440111";
 const catalogA = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
 const catalogB = "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff";
 
-const link = (catalog: string, account: string) => ({
-  id: `${catalog}-${account}`,
-  account,
-  catalog,
+const owned = (id: string, owners: string[]) => ({
+  id,
+  name: "Catalog",
   created_at: "2026-08-06T00:00:00Z",
   updated_at: "2026-08-06T00:00:00Z",
+  owners,
 });
 
 describe("resolveCatalogOwners", () => {
@@ -35,14 +35,31 @@ describe("resolveCatalogOwners", () => {
     });
 
     expect(owners.size).toBe(0);
-    expect(selectCatalogOwnerLinks).not.toHaveBeenCalled();
+    expect(selectAccountCatalogs).not.toHaveBeenCalled();
+  });
+
+  it("asks only for the owners the caller reads through", async () => {
+    vi.mocked(selectAccountCatalogs).mockResolvedValue([owned(catalogA, [person])]);
+    vi.mocked(selectAccounts).mockResolvedValue([{ id: person, name: "Sweetman.eth" }] as never);
+    vi.mocked(selectAccountInfos).mockResolvedValue([]);
+
+    await resolveCatalogOwners({
+      catalogIds: [catalogA],
+      ownerIds: [person, org],
+      organizationIds: [org],
+    });
+
+    // The authorization filter is the query itself: a catalog can carry links to
+    // unrelated accounts, and naming one would be wrong attribution plus a
+    // disclosure of their identity.
+    expect(selectAccountCatalogs).toHaveBeenCalledWith([person, org], {
+      catalogIds: [catalogA],
+    });
   });
 
   it("marks a personal owner as not an organization and carries its avatar", async () => {
-    vi.mocked(selectCatalogOwnerLinks).mockResolvedValue([link(catalogA, person)]);
-    vi.mocked(selectAccounts).mockResolvedValue([
-      { id: person, name: "Sweetman.eth", timestamp: 0 },
-    ] as never);
+    vi.mocked(selectAccountCatalogs).mockResolvedValue([owned(catalogA, [person])]);
+    vi.mocked(selectAccounts).mockResolvedValue([{ id: person, name: "Sweetman.eth" }] as never);
     vi.mocked(selectAccountInfos).mockResolvedValue([
       { account_id: person, image: "https://img/person.png" },
     ] as never);
@@ -62,7 +79,7 @@ describe("resolveCatalogOwners", () => {
   });
 
   it("marks an owner the caller belongs to as an organization", async () => {
-    vi.mocked(selectCatalogOwnerLinks).mockResolvedValue([link(catalogA, org)]);
+    vi.mocked(selectAccountCatalogs).mockResolvedValue([owned(catalogA, [org])]);
     vi.mocked(selectAccounts).mockResolvedValue([{ id: org, name: "Duetti" }] as never);
     vi.mocked(selectAccountInfos).mockResolvedValue([
       { account_id: org, image: "https://img/org.png" },
@@ -78,10 +95,7 @@ describe("resolveCatalogOwners", () => {
   });
 
   it("prefers the organization when a catalog is owned both ways", async () => {
-    vi.mocked(selectCatalogOwnerLinks).mockResolvedValue([
-      link(catalogA, person),
-      link(catalogA, org),
-    ]);
+    vi.mocked(selectAccountCatalogs).mockResolvedValue([owned(catalogA, [person, org])]);
     vi.mocked(selectAccounts).mockResolvedValue([{ id: org, name: "Duetti" }] as never);
     vi.mocked(selectAccountInfos).mockResolvedValue([]);
 
@@ -96,7 +110,7 @@ describe("resolveCatalogOwners", () => {
   });
 
   it("returns a null image rather than omitting an owner with no avatar", async () => {
-    vi.mocked(selectCatalogOwnerLinks).mockResolvedValue([link(catalogB, org)]);
+    vi.mocked(selectAccountCatalogs).mockResolvedValue([owned(catalogB, [org])]);
     vi.mocked(selectAccounts).mockResolvedValue([{ id: org, name: "Recoup" }] as never);
     vi.mocked(selectAccountInfos).mockResolvedValue([{ account_id: org, image: null }] as never);
 
@@ -115,7 +129,7 @@ describe("resolveCatalogOwners", () => {
   });
 
   it("still reports the owner id when the account row is missing", async () => {
-    vi.mocked(selectCatalogOwnerLinks).mockResolvedValue([link(catalogA, person)]);
+    vi.mocked(selectAccountCatalogs).mockResolvedValue([owned(catalogA, [person])]);
     vi.mocked(selectAccounts).mockResolvedValue([]);
     vi.mocked(selectAccountInfos).mockResolvedValue([]);
 
@@ -133,13 +147,9 @@ describe("resolveCatalogOwners", () => {
     });
   });
 
-  it("ignores owner links outside the set the caller reads through", async () => {
-    const stranger = "550e8400-e29b-41d4-a716-446655440222";
-    vi.mocked(selectCatalogOwnerLinks).mockResolvedValue([
-      link(catalogA, stranger),
-      link(catalogA, person),
-    ]);
-    vi.mocked(selectAccounts).mockResolvedValue([{ id: person, name: "Sweetman.eth" }] as never);
+  it("omits a catalog that resolves to no authorized owner", async () => {
+    vi.mocked(selectAccountCatalogs).mockResolvedValue([]);
+    vi.mocked(selectAccounts).mockResolvedValue([]);
     vi.mocked(selectAccountInfos).mockResolvedValue([]);
 
     const owners = await resolveCatalogOwners({
@@ -148,9 +158,6 @@ describe("resolveCatalogOwners", () => {
       organizationIds: [],
     });
 
-    // A catalog can be linked to accounts this caller has nothing to do with —
-    // naming one would be wrong attribution and a disclosure of their identity.
-    expect(owners.get(catalogA)?.id).toBe(person);
-    expect(selectAccounts).toHaveBeenCalledWith([person]);
+    expect(owners.has(catalogA)).toBe(false);
   });
 });

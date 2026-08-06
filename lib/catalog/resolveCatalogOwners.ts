@@ -1,4 +1,4 @@
-import { selectCatalogOwnerLinks } from "@/lib/supabase/account_catalogs/selectCatalogOwnerLinks";
+import { selectAccountCatalogs } from "@/lib/supabase/account_catalogs/selectAccountCatalogs";
 import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 import { selectAccountInfos } from "@/lib/supabase/account_info/selectAccountInfos";
 
@@ -13,20 +13,19 @@ export type CatalogOwner = {
  * The owner to show for each catalog in a list response.
  *
  * Ownership lives on `account_catalogs`, not on the catalog, and a catalog can
- * carry several links — one for the account and one for an organization it
- * also belongs to. When both exist the **organization wins**: a member seeing
- * their own avatar on a catalog the whole org can edit is the misleading half
- * of the truth (chat#1943).
+ * carry several links — one for the account and one for an organization it also
+ * belongs to. When both exist the **organization wins**: a member seeing their
+ * own avatar on a catalog the whole org can edit is the misleading half of the
+ * truth (chat#1943).
+ *
+ * Only owners the caller reads through are eligible, because
+ * `selectAccountCatalogs` is asked for exactly those. A catalog can be linked to
+ * unrelated accounts — one on prod carries four links — and naming a stranger
+ * would be wrong attribution *and* a disclosure of their name and avatar.
  *
  * `is_organization` is derived, not stored: an owner is an organization when it
  * is one of the caller's organizations, the same set `getCatalogOwnerIds`
  * resolves for visibility (chat#1938).
- *
- * **Only owners the caller was authorized through are eligible.** A catalog can
- * be linked to accounts that have nothing to do with this caller — one catalog
- * on prod carries four owner links — and naming a stranger on the card would be
- * both wrong attribution and a disclosure of another account's name and avatar.
- * Links outside `ownerIds` are dropped before the organization tie-break.
  *
  * Three batched reads regardless of how many catalogs are passed.
  *
@@ -47,17 +46,14 @@ export async function resolveCatalogOwners({
   const owners = new Map<string, CatalogOwner>();
   if (!catalogIds.length) return owners;
 
-  const links = await selectCatalogOwnerLinks(catalogIds);
+  const catalogs = await selectAccountCatalogs(ownerIds, { catalogIds });
   const organizations = new Set(organizationIds);
-  const authorized = new Set(ownerIds);
 
   const ownerIdByCatalog = new Map<string, string>();
-  for (const link of links) {
-    if (!authorized.has(link.account)) continue;
-    const current = ownerIdByCatalog.get(link.catalog);
-    if (!current || (organizations.has(link.account) && !organizations.has(current))) {
-      ownerIdByCatalog.set(link.catalog, link.account);
-    }
+  for (const catalog of catalogs) {
+    const organization = catalog.owners.find(owner => organizations.has(owner));
+    const ownerId = organization ?? catalog.owners[0];
+    if (ownerId) ownerIdByCatalog.set(catalog.id, ownerId);
   }
 
   const resolvedOwnerIds = [...new Set(ownerIdByCatalog.values())];
