@@ -3,14 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateTranscribeRequest } from "../validateTranscribeRequest";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/organizations/canAccessAccount", () => ({
-  canAccessAccount: vi.fn(),
+vi.mock("@/lib/auth/checkAccountAccess", () => ({
+  checkAccountAccess: vi.fn(),
 }));
 
 const CALLER_ID = "11111111-1111-4111-8111-111111111111";
@@ -33,7 +33,7 @@ describe("validateTranscribeRequest", () => {
       orgId: null,
       authToken: "token",
     });
-    vi.mocked(canAccessAccount).mockResolvedValue(true);
+    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "artist" });
   });
 
   describe("valid requests", () => {
@@ -99,13 +99,13 @@ describe("validateTranscribeRequest", () => {
       const result = await validateTranscribeRequest(buildRequest({}));
 
       expect(result).toBe(unauthorized);
-      expect(canAccessAccount).not.toHaveBeenCalled();
+      expect(checkAccountAccess).not.toHaveBeenCalled();
     });
   });
 
   describe("authorization", () => {
     it("returns 403 when the caller cannot access the artist account", async () => {
-      vi.mocked(canAccessAccount).mockResolvedValue(false);
+      vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: false });
 
       const result = await validateTranscribeRequest(
         buildRequest({ audio_url: AUDIO_URL, artist_account_id: ARTIST_ID }),
@@ -113,10 +113,7 @@ describe("validateTranscribeRequest", () => {
 
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(403);
-      expect(canAccessAccount).toHaveBeenCalledWith({
-        currentAccountId: CALLER_ID,
-        targetAccountId: ARTIST_ID,
-      });
+      expect(checkAccountAccess).toHaveBeenCalledWith(CALLER_ID, ARTIST_ID);
     });
   });
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
 
 /**
  * `account_id` is deliberately absent. The owner account is derived from
@@ -63,10 +63,14 @@ export async function validateTranscribeRequest(
     );
   }
 
-  const hasAccess = await canAccessAccount({
-    currentAccountId: authResult.accountId,
-    targetAccountId: parsed.data.artist_account_id,
-  });
+  // checkAccountAccess, not canAccessAccount: the target here is an ARTIST, and
+  // artists are reached through account_artist_ids, not only through a shared
+  // organization. canAccessAccount covers self + shared-org only, so it denied
+  // callers access to artists on their own roster.
+  const { hasAccess } = await checkAccountAccess(
+    authResult.accountId,
+    parsed.data.artist_account_id,
+  );
   if (!hasAccess) {
     return NextResponse.json(
       { status: "error", error: "Access denied to specified artist_account_id" },
