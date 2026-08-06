@@ -90,23 +90,30 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
       return errorResponse("The measurement didn't complete in time; retry shortly", 504);
     }
 
+    // Resolve the searched Spotify profile once (name + avatar + followers).
+    // Deliberately ahead of the catalog creation below: the artist's name is
+    // what the catalog is named after, and without it every valuation produced
+    // a catalog called "Valuation Catalog" (chat#1942).
+    const { artist: searchedArtist } = await getArtist(
+      spotify_artist_id,
+      spotifyToken.access_token,
+    );
+
     // 4. Materialize the catalog from the snapshot (freshly created by this
     //    account, not yet claimed — so createSnapshotCatalog is safe). The
     //    catalog goes to the organization when one was named (chat#1938); the
-    //    roster attach inside still targets the calling account.
+    //    roster attach inside still targets the calling account. Named after
+    //    the measured artist so a roster of valuations is legible at a glance;
+    //    when Spotify resolves nothing, createSnapshotCatalog's
+    //    DEFAULT_CATALOG_NAME still applies (chat#1942).
     const [snapshot] = await selectPlaycountSnapshots({ id: snapshotId });
     if (!snapshot) return errorResponse("Snapshot not found", 404);
     const { catalog, songsAdded, attachedArtistId } = await createSnapshotCatalog({
       accountId,
       ownerId: organizationId,
       snapshot,
+      name: searchedArtist?.name?.trim() || undefined,
     });
-
-    // Resolve the searched Spotify profile once (name + avatar + followers).
-    const { artist: searchedArtist } = await getArtist(
-      spotify_artist_id,
-      spotifyToken.access_token,
-    );
 
     // Guarantee a populated roster: the canonical (ISRC → song_artists) attach
     // is empty for funnel signups whose songs aren't yet ingested, which left
