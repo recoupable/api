@@ -43,7 +43,7 @@ export async function getCatalogValuations(
   if (!catalogIds.length) return summaries;
 
   const [aggregates, earliestReleaseDates] = await Promise.all([
-    Promise.all(catalogIds.map(catalogId => selectCatalogMeasurementsAggregate({ catalogId }))),
+    Promise.all(catalogIds.map(catalogId => aggregateWithRetry(catalogId))),
     getEarliestReleaseDates(catalogIds),
   ]);
 
@@ -62,6 +62,32 @@ export async function getCatalogValuations(
   });
 
   return summaries;
+}
+
+/**
+ * The measurements aggregate for one catalog, retried once.
+ *
+ * `selectCatalogMeasurementsAggregate` returns null both when the RPC fails and
+ * — by this function's reading — for a catalog with nothing measured, so a
+ * transient failure would otherwise be published as "not measured". That is not
+ * theoretical: preview testing caught a 9,939-song catalog reporting a null
+ * valuation on one run and $88.9M on the next. One retry costs a single extra
+ * RPC on the rare failure; a still-failing catalog is logged, because at that
+ * point the list cannot tell zero from unknown (chat#1943).
+ *
+ * @param catalogId - The catalog to aggregate
+ */
+async function aggregateWithRetry(catalogId: string) {
+  const first = await selectCatalogMeasurementsAggregate({ catalogId });
+  if (first) return first;
+
+  const second = await selectCatalogMeasurementsAggregate({ catalogId });
+  if (!second) {
+    console.error(
+      `[getCatalogValuations] measurements aggregate failed twice for catalog ${catalogId}; reporting it as unmeasured`,
+    );
+  }
+  return second;
 }
 
 /**

@@ -212,13 +212,30 @@ describe("getCatalogValuations", () => {
     expect(result.get(catalogA)?.valuation).toEqual(fallback);
   });
 
-  it("treats an aggregate failure as unmeasured rather than throwing", async () => {
+  it("retries a failed aggregate before calling a catalog unmeasured", async () => {
+    vi.mocked(selectCatalogMeasurementsAggregate)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ measuredSongCount: 26, totalStreams: 7676 });
+    vi.mocked(selectPlaycountSnapshots).mockResolvedValue([]);
+    okToken();
+
+    const result = await getCatalogValuations([catalogA]);
+
+    // A transient RPC failure must not be published as "not measured" — caught
+    // live on a 9,939-song catalog that reported null once and $88.9M next.
+    expect(selectCatalogMeasurementsAggregate).toHaveBeenCalledTimes(2);
+    expect(result.get(catalogA)?.measuredSongCount).toBe(26);
+    expect(result.get(catalogA)?.valuation).not.toBeNull();
+  });
+
+  it("treats a twice-failed aggregate as unmeasured rather than throwing", async () => {
     vi.mocked(selectCatalogMeasurementsAggregate).mockResolvedValue(null);
     vi.mocked(selectPlaycountSnapshots).mockResolvedValue([]);
     okToken();
 
     const result = await getCatalogValuations([catalogA]);
 
+    expect(selectCatalogMeasurementsAggregate).toHaveBeenCalledTimes(2);
     expect(result.get(catalogA)).toEqual({ measuredSongCount: 0, valuation: null });
   });
 });
