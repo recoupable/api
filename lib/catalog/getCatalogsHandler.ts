@@ -44,7 +44,7 @@ export async function getCatalogsHandler(
     const organizationIds = ownerIds.filter(ownerId => ownerId !== validated.accountId);
     const [valuations, owners] = await Promise.all([
       getCatalogValuations(catalogIds),
-      resolveCatalogOwners({ catalogIds, organizationIds }),
+      resolveCatalogOwners({ catalogIds, ownerIds, organizationIds }),
     ]);
 
     return NextResponse.json(

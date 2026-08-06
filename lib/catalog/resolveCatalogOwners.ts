@@ -22,17 +22,26 @@ export type CatalogOwner = {
  * is one of the caller's organizations, the same set `getCatalogOwnerIds`
  * resolves for visibility (chat#1938).
  *
+ * **Only owners the caller was authorized through are eligible.** A catalog can
+ * be linked to accounts that have nothing to do with this caller — one catalog
+ * on prod carries four owner links — and naming a stranger on the card would be
+ * both wrong attribution and a disclosure of another account's name and avatar.
+ * Links outside `ownerIds` are dropped before the organization tie-break.
+ *
  * Three batched reads regardless of how many catalogs are passed.
  *
  * @param params.catalogIds - Catalogs to resolve owners for
- * @param params.organizationIds - The caller's organization ids
+ * @param params.ownerIds - The owner set the caller reads through: their account plus its organizations
+ * @param params.organizationIds - The caller's organization ids, a subset of ownerIds
  * @returns catalog id → owner
  */
 export async function resolveCatalogOwners({
   catalogIds,
+  ownerIds,
   organizationIds,
 }: {
   catalogIds: string[];
+  ownerIds: string[];
   organizationIds: string[];
 }): Promise<Map<string, CatalogOwner>> {
   const owners = new Map<string, CatalogOwner>();
@@ -40,19 +49,21 @@ export async function resolveCatalogOwners({
 
   const links = await selectCatalogOwnerLinks(catalogIds);
   const organizations = new Set(organizationIds);
+  const authorized = new Set(ownerIds);
 
   const ownerIdByCatalog = new Map<string, string>();
   for (const link of links) {
+    if (!authorized.has(link.account)) continue;
     const current = ownerIdByCatalog.get(link.catalog);
     if (!current || (organizations.has(link.account) && !organizations.has(current))) {
       ownerIdByCatalog.set(link.catalog, link.account);
     }
   }
 
-  const ownerIds = [...new Set(ownerIdByCatalog.values())];
+  const resolvedOwnerIds = [...new Set(ownerIdByCatalog.values())];
   const [accounts, infos] = await Promise.all([
-    selectAccounts(ownerIds),
-    selectAccountInfos(ownerIds),
+    selectAccounts(resolvedOwnerIds),
+    selectAccountInfos(resolvedOwnerIds),
   ]);
   const nameById = new Map(accounts.map(account => [account.id, account.name ?? null]));
   const imageById = new Map(infos.map(info => [info.account_id, info.image ?? null]));

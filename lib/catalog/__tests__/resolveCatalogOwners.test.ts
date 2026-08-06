@@ -28,7 +28,11 @@ describe("resolveCatalogOwners", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("returns an empty map without querying when there are no catalogs", async () => {
-    const owners = await resolveCatalogOwners({ catalogIds: [], organizationIds: [org] });
+    const owners = await resolveCatalogOwners({
+      catalogIds: [],
+      ownerIds: [person, org],
+      organizationIds: [org],
+    });
 
     expect(owners.size).toBe(0);
     expect(selectCatalogOwnerLinks).not.toHaveBeenCalled();
@@ -43,7 +47,11 @@ describe("resolveCatalogOwners", () => {
       { account_id: person, image: "https://img/person.png" },
     ] as never);
 
-    const owners = await resolveCatalogOwners({ catalogIds: [catalogA], organizationIds: [org] });
+    const owners = await resolveCatalogOwners({
+      catalogIds: [catalogA],
+      ownerIds: [person, org],
+      organizationIds: [org],
+    });
 
     expect(owners.get(catalogA)).toEqual({
       id: person,
@@ -60,7 +68,11 @@ describe("resolveCatalogOwners", () => {
       { account_id: org, image: "https://img/org.png" },
     ] as never);
 
-    const owners = await resolveCatalogOwners({ catalogIds: [catalogA], organizationIds: [org] });
+    const owners = await resolveCatalogOwners({
+      catalogIds: [catalogA],
+      ownerIds: [person, org],
+      organizationIds: [org],
+    });
 
     expect(owners.get(catalogA)?.is_organization).toBe(true);
   });
@@ -73,7 +85,11 @@ describe("resolveCatalogOwners", () => {
     vi.mocked(selectAccounts).mockResolvedValue([{ id: org, name: "Duetti" }] as never);
     vi.mocked(selectAccountInfos).mockResolvedValue([]);
 
-    const owners = await resolveCatalogOwners({ catalogIds: [catalogA], organizationIds: [org] });
+    const owners = await resolveCatalogOwners({
+      catalogIds: [catalogA],
+      ownerIds: [person, org],
+      organizationIds: [org],
+    });
 
     expect(owners.get(catalogA)?.id).toBe(org);
     expect(owners.get(catalogA)?.is_organization).toBe(true);
@@ -84,7 +100,11 @@ describe("resolveCatalogOwners", () => {
     vi.mocked(selectAccounts).mockResolvedValue([{ id: org, name: "Recoup" }] as never);
     vi.mocked(selectAccountInfos).mockResolvedValue([{ account_id: org, image: null }] as never);
 
-    const owners = await resolveCatalogOwners({ catalogIds: [catalogB], organizationIds: [org] });
+    const owners = await resolveCatalogOwners({
+      catalogIds: [catalogB],
+      ownerIds: [person, org],
+      organizationIds: [org],
+    });
 
     expect(owners.get(catalogB)).toEqual({
       id: org,
@@ -99,7 +119,11 @@ describe("resolveCatalogOwners", () => {
     vi.mocked(selectAccounts).mockResolvedValue([]);
     vi.mocked(selectAccountInfos).mockResolvedValue([]);
 
-    const owners = await resolveCatalogOwners({ catalogIds: [catalogA], organizationIds: [] });
+    const owners = await resolveCatalogOwners({
+      catalogIds: [catalogA],
+      ownerIds: [person],
+      organizationIds: [],
+    });
 
     expect(owners.get(catalogA)).toEqual({
       id: person,
@@ -107,5 +131,26 @@ describe("resolveCatalogOwners", () => {
       image: null,
       is_organization: false,
     });
+  });
+
+  it("ignores owner links outside the set the caller reads through", async () => {
+    const stranger = "550e8400-e29b-41d4-a716-446655440222";
+    vi.mocked(selectCatalogOwnerLinks).mockResolvedValue([
+      link(catalogA, stranger),
+      link(catalogA, person),
+    ]);
+    vi.mocked(selectAccounts).mockResolvedValue([{ id: person, name: "Sweetman.eth" }] as never);
+    vi.mocked(selectAccountInfos).mockResolvedValue([]);
+
+    const owners = await resolveCatalogOwners({
+      catalogIds: [catalogA],
+      ownerIds: [person],
+      organizationIds: [],
+    });
+
+    // A catalog can be linked to accounts this caller has nothing to do with —
+    // naming one would be wrong attribution and a disclosure of their identity.
+    expect(owners.get(catalogA)?.id).toBe(person);
+    expect(selectAccounts).toHaveBeenCalledWith([person]);
   });
 });

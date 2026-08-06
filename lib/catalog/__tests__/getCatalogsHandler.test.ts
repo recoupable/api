@@ -108,6 +108,7 @@ describe("getCatalogsHandler", () => {
 
     expect(resolveCatalogOwners).toHaveBeenCalledWith({
       catalogIds: ["c1"],
+      ownerIds: [accountId, organizationId],
       organizationIds: [organizationId],
     });
   });
@@ -122,7 +123,11 @@ describe("getCatalogsHandler", () => {
 
     expect(body).toEqual({ status: "success", catalogs: [] });
     expect(getCatalogValuations).toHaveBeenCalledWith([]);
-    expect(resolveCatalogOwners).toHaveBeenCalledWith({ catalogIds: [], organizationIds: [] });
+    expect(resolveCatalogOwners).toHaveBeenCalledWith({
+      catalogIds: [],
+      ownerIds: [accountId],
+      organizationIds: [],
+    });
   });
 
   it("returns 500 with a generic error, not the raw exception message", async () => {
