@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAddArtistToOrgBody } from "@/lib/organizations/validateAddArtistToOrgBody";
+import { validateAddArtistToOrgRequest } from "@/lib/organizations/validateAddArtistToOrgRequest";
 import { addArtistToOrganization } from "@/lib/supabase/artist_organization_ids/addArtistToOrganization";
 
 /**
@@ -16,14 +16,14 @@ import { addArtistToOrganization } from "@/lib/supabase/artist_organization_ids/
  */
 export async function addArtistToOrgHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const body = await request.json();
-
-    const validatedBody = validateAddArtistToOrgBody(body);
-    if (validatedBody instanceof NextResponse) {
-      return validatedBody;
+    const validated = await validateAddArtistToOrgRequest(request);
+    if (validated instanceof NextResponse) {
+      return validated;
     }
 
-    const id = await addArtistToOrganization(validatedBody.artistId, validatedBody.organizationId);
+    const { body } = validated;
+
+    const id = await addArtistToOrganization(body.artistId, body.organizationId);
 
     if (!id) {
       return NextResponse.json(

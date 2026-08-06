@@ -52,7 +52,7 @@ const imageGenerateOutputSchema = {
   },
 };
 
-export const middleware = paymentMiddleware(
+export const proxy = paymentMiddleware(
   SMART_ACCOUNT_ADDRESS,
   {
     "GET /api/x402/image/generate": {
@@ -74,8 +74,12 @@ export const middleware = paymentMiddleware(
   },
 );
 
-// Configure which paths the middleware should run on
+// Configure which paths the proxy should run on.
+//
+// No `runtime` key: proxy always runs on Node.js and Next rejects the file
+// outright if one is present ("Route segment config is not allowed in Proxy
+// file"). The old `runtime: "nodejs"` was already what we wanted, so this is a
+// deletion rather than a behaviour change.
 export const config = {
   matcher: ["/protected/:path*", "/api/:path*"],
-  runtime: "nodejs",
 };
