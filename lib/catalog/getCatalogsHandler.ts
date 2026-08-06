@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetCatalogsRequest } from "@/lib/catalog/validateGetCatalogsRequest";
 import { selectAccountCatalogs } from "@/lib/supabase/account_catalogs/selectAccountCatalogs";
+import { getCatalogOwnerIds } from "./getCatalogOwnerIds";
 
 /**
  * Handler for GET /api/accounts/{id}/catalogs.
@@ -26,7 +27,8 @@ export async function getCatalogsHandler(
       return validated;
     }
 
-    const catalogs = await selectAccountCatalogs(validated.accountId);
+    const ownerIds = await getCatalogOwnerIds(validated.accountId);
+    const catalogs = await selectAccountCatalogs(ownerIds);
 
     return NextResponse.json(
       { status: "success", catalogs },

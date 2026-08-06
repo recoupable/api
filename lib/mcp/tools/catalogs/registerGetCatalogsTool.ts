@@ -4,6 +4,7 @@ import {
   type GetCatalogsParams,
 } from "@/lib/catalog/validateGetCatalogsRequest";
 import { selectAccountCatalogs } from "@/lib/supabase/account_catalogs/selectAccountCatalogs";
+import { getCatalogOwnerIds } from "@/lib/catalog/getCatalogOwnerIds";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 /**
  * Registers the "select_catalogs" tool on the MCP server.
@@ -28,7 +29,8 @@ export function registerGetCatalogsTool(server: McpServer): void {
       inputSchema: getCatalogsParamsSchema,
     },
     async (args: GetCatalogsParams) => {
-      const catalogs = await selectAccountCatalogs(args.account_id);
+      const ownerIds = await getCatalogOwnerIds(args.account_id);
+      const catalogs = await selectAccountCatalogs(ownerIds);
       return getToolResultSuccess({ status: "success", catalogs });
     },
   );

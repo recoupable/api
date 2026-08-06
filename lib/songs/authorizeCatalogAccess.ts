@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { selectAccountCatalogs } from "@/lib/supabase/account_catalogs/selectAccountCatalogs";
+import { getCatalogOwnerIds } from "@/lib/catalog/getCatalogOwnerIds";
 
 /**
  * Ownership half of the `/api/catalogs/songs` gate: every catalog the operation
- * touches must belong to `accountId`.
+ * touches must be visible to `accountId` — owned by it directly, or by one of its
+ * organizations (chat#1938).
  *
  * Authentication is deliberately **not** done here. Callers run
  * `validateAuthContext` before parsing or validating the request, so a caller
@@ -24,7 +26,8 @@ export async function authorizeCatalogAccess(
   accountId: string,
   catalogIds: string[],
 ): Promise<NextResponse | null> {
-  const owned = await selectAccountCatalogs(accountId);
+  const ownerIds = await getCatalogOwnerIds(accountId);
+  const owned = await selectAccountCatalogs(ownerIds);
   const ownedIds = new Set(owned.map(catalog => catalog.id));
 
   if (catalogIds.every(id => ownedIds.has(id))) return null;

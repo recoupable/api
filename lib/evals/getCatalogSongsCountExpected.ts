@@ -4,7 +4,7 @@ import { EVAL_ACCOUNT_ID } from "@/lib/consts";
 
 async function getCatalogSongsCountExpected() {
   try {
-    const catalogs = await selectAccountCatalogs(EVAL_ACCOUNT_ID);
+    const catalogs = await selectAccountCatalogs([EVAL_ACCOUNT_ID]);
 
     if (catalogs.length === 0) {
       throw new Error("No catalogs found for account");
