@@ -9,6 +9,12 @@ export type CatalogValuationSummary = {
   valuation: ValuationBand | null;
 };
 
+/** Spotify's GET /v1/albums caps ids at 20 per request. */
+const SPOTIFY_ALBUM_BATCH = 20;
+
+/** Requests in flight at once — fast enough for a list page, polite to the rate limit. */
+const SPOTIFY_CONCURRENCY = 8;
+
 /**
  * Value a set of catalogs in one pass — the list-page counterpart of the
  * single-catalog derivation in `getCatalogMeasurementsHandler`, using the same
@@ -82,12 +88,32 @@ async function getEarliestReleaseDates(catalogIds: string[]): Promise<Map<string
   const { access_token } = await generateAccessToken();
   if (!access_token) return earliest;
 
-  const { albums } = await getAlbums({ ids: albumIds, accessToken: access_token });
-  if (!albums) return earliest;
+  // getAlbums batches 20 ids per Spotify request but walks its batches
+  // sequentially, which for a real account is the whole cost of this endpoint:
+  // 41 catalogs meant 730 album ids — 37 requests back to back, 11.8s. Chunking
+  // here and running the chunks concurrently (bounded, so a burst can't trip
+  // Spotify's rate limit) is what keeps the list page usable.
+  const chunks: string[][] = [];
+  for (let i = 0; i < albumIds.length; i += SPOTIFY_ALBUM_BATCH) {
+    chunks.push(albumIds.slice(i, i + SPOTIFY_ALBUM_BATCH));
+  }
 
-  const releaseDateById = new Map(
-    albums.filter(album => album.release_date).map(album => [album.id, album.release_date!]),
-  );
+  const releaseDateById = new Map<string, string>();
+  for (let i = 0; i < chunks.length; i += SPOTIFY_CONCURRENCY) {
+    const wave = await Promise.all(
+      chunks
+        .slice(i, i + SPOTIFY_CONCURRENCY)
+        .map(ids => getAlbums({ ids, accessToken: access_token })),
+    );
+    for (const { albums } of wave) {
+      // A failed chunk costs those albums their release date, not the whole
+      // valuation: the catalogs it covered fall back to the default age.
+      for (const album of albums ?? []) {
+        if (album.release_date) releaseDateById.set(album.id, album.release_date);
+      }
+    }
+  }
+  if (!releaseDateById.size) return earliest;
 
   for (const [catalogId, ids] of albumIdsByCatalog) {
     const dates = ids

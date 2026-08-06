@@ -84,7 +84,7 @@ describe("getCatalogValuations", () => {
     expect(result.get(catalogA)).toEqual({ measuredSongCount: 0, valuation: null });
   });
 
-  it("asks Spotify once for the union of album ids, not once per catalog", async () => {
+  it("asks Spotify for the union of album ids, not once per catalog", async () => {
     vi.mocked(selectCatalogMeasurementsAggregate).mockResolvedValue({
       measuredSongCount: 5,
       totalStreams: 1000,
@@ -107,8 +107,55 @@ describe("getCatalogValuations", () => {
 
     expect(selectPlaycountSnapshots).toHaveBeenCalledTimes(1);
     expect(selectPlaycountSnapshots).toHaveBeenCalledWith({ catalogs: [catalogA, catalogB] });
+    // 3 deduped ids, one batch — "album-2" is shared and must not be fetched twice.
     expect(getAlbums).toHaveBeenCalledTimes(1);
     expect(vi.mocked(getAlbums).mock.calls[0][0].ids).toEqual(["album-1", "album-2", "album-3"]);
+  });
+
+  it("splits a large album set into concurrent batches of 20", async () => {
+    const albumIds = Array.from({ length: 45 }, (_, index) => `album-${index}`);
+    vi.mocked(selectCatalogMeasurementsAggregate).mockResolvedValue({
+      measuredSongCount: 5,
+      totalStreams: 1000,
+    });
+    vi.mocked(selectPlaycountSnapshots).mockResolvedValue([snapshot(catalogA, albumIds)]);
+    okToken();
+    vi.mocked(getAlbums).mockImplementation(async ({ ids }) => ({
+      albums: ids.map(id => ({ id, release_date: "2020-01-01" })),
+      error: null,
+    }));
+
+    await getCatalogValuations([catalogA]);
+
+    // 45 ids -> 20 + 20 + 5. getAlbums walks its own batches sequentially, so
+    // the chunking has to happen here for the requests to overlap.
+    expect(getAlbums).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(getAlbums).mock.calls.map(call => call[0].ids.length)).toEqual([20, 20, 5]);
+  });
+
+  it("keeps valuing the catalogs a failed batch did not cover", async () => {
+    const albumIds = Array.from({ length: 25 }, (_, index) => `album-${index}`);
+    vi.mocked(selectCatalogMeasurementsAggregate).mockResolvedValue({
+      measuredSongCount: 5,
+      totalStreams: 1000,
+    });
+    vi.mocked(selectPlaycountSnapshots).mockResolvedValue([snapshot(catalogA, albumIds)]);
+    okToken();
+    vi.mocked(getAlbums).mockImplementation(async ({ ids }) =>
+      ids.length === 20
+        ? { albums: null, error: new Error("Spotify API request failed") }
+        : { albums: ids.map(id => ({ id, release_date: "2001-01-01" })), error: null },
+    );
+
+    const result = await getCatalogValuations([catalogA]);
+
+    // The surviving batch still dates the catalog — a partial Spotify failure
+    // must not drop the valuation.
+    const expected = computeValuationBand({
+      totalStreams: 1000,
+      earliestReleaseDate: "2001-01-01",
+    }).valuation;
+    expect(result.get(catalogA)?.valuation).toEqual(expected);
   });
 
   it("uses each catalog's own earliest release date", async () => {
