@@ -49,7 +49,14 @@ describe("validateUpdateCatalogRequest", () => {
 
     const result = await validateUpdateCatalogRequest(makeRequest({}), catalogId);
 
-    expect((result as NextResponse).status).toBe(400);
+    expect(result).toBeInstanceOf(NextResponse);
+    const res = result as NextResponse;
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({
+      status: "error",
+      missing_fields: ["name"],
+      error: "name is required",
+    });
   });
 
   it("400s an empty or whitespace-only name", async () => {
