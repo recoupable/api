@@ -9,8 +9,8 @@ import { attachCanonicalArtistToAccount } from "./attachCanonicalArtistToAccount
 const DEFAULT_CATALOG_NAME = "Valuation Catalog";
 
 /**
- * Creates an account-linked catalog from a valuation snapshot: creates the
- * `catalogs` row, links it to the account via `account_catalogs`, adds the
+ * Creates a catalog from a valuation snapshot: creates the
+ * `catalogs` row, links it to its owner via `account_catalogs`, adds the
  * snapshot's **measured** ISRCs (from `song_measurements`, not the snapshot's
  * own `isrcs` column — that's null for album-scoped valuation runs) as
  * `catalog_songs`, attaches the songs' canonical artist to the account's
@@ -24,7 +24,12 @@ const DEFAULT_CATALOG_NAME = "Valuation Catalog";
  * Callers must first confirm the snapshot is owned by `accountId` and not yet
  * claimed (`snapshot.catalog` is null).
  *
- * @param params.accountId - Owning account (already authorized)
+ * @param params.accountId - The claiming account (already authorized). Owns the
+ *   catalog unless `ownerId` says otherwise, and always receives the roster attach.
+ * @param params.ownerId - Optional account to own the catalog instead of
+ *   `accountId` — an organization id, so every member sees it (chat#1938).
+ *   Ownership only; the roster attach still targets `accountId`, because the
+ *   artist belongs on the roster of whoever ran the claim.
  * @param params.snapshot - The owned, unclaimed snapshot row
  * @param params.name - Optional catalog name; falls back to a default
  * @returns The created catalog, the number of songs added, and the attached
@@ -32,6 +37,7 @@ const DEFAULT_CATALOG_NAME = "Valuation Catalog";
  */
 export async function createSnapshotCatalog(params: {
   accountId: string;
+  ownerId?: string;
   snapshot: Tables<"playcount_snapshots">;
   name?: string;
 }): Promise<{
@@ -39,10 +45,10 @@ export async function createSnapshotCatalog(params: {
   songsAdded: number;
   attachedArtistId: string | null;
 }> {
-  const { accountId, snapshot, name } = params;
+  const { accountId, ownerId, snapshot, name } = params;
 
   const catalog = await insertCatalog(name ?? DEFAULT_CATALOG_NAME);
-  await insertAccountCatalog({ account: accountId, catalog: catalog.id });
+  await insertAccountCatalog({ account: ownerId ?? accountId, catalog: catalog.id });
 
   const measurements = await selectSongMeasurements({ snapshot: snapshot.id });
   const isrcs = [...new Set(measurements.map(m => m.song))];

@@ -6,6 +6,7 @@ export const createCatalogBodySchema = z
   .object({
     name: z.string().min(1, "name must not be empty").optional(),
     snapshot: z.string().uuid("snapshot must be a valid UUID").optional(),
+    organization_id: z.string().uuid("organization_id must be a valid UUID").optional(),
   })
   .refine(data => data.name !== undefined || data.snapshot !== undefined, {
     message: "Provide at least one of name or snapshot",
@@ -16,10 +17,15 @@ export type CreateCatalogBody = z.infer<typeof createCatalogBodySchema>;
 /**
  * Validates a create-catalog request body.
  *
- * Accepts `{ name?, snapshot? }`; at least one is required. `snapshot` is a
- * completed playcount snapshot id (valuation run) to materialize from. The
- * owning account is never taken from the body - it is resolved from the
- * request credentials by the handler.
+ * Accepts `{ name?, snapshot?, organization_id? }`; at least one of `name` or
+ * `snapshot` is required. `snapshot` is a completed playcount snapshot id
+ * (valuation run) to materialize from.
+ *
+ * `organization_id` names an organization to own the catalog instead of the
+ * caller (chat#1938). It is not an account override: the handler still resolves
+ * the caller from credentials and authorizes membership via `validateAuthContext`,
+ * which 403s a caller who does not belong to the organization. Absent, the
+ * catalog is owned by the calling account as before.
  *
  * @param body - The parsed request body to validate.
  * @returns A NextResponse with a 400 error if validation fails, or the

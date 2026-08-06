@@ -9,6 +9,9 @@ vi.mock("@/lib/supabase/account_catalogs/selectAccountCatalogs", () => ({
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
 }));
+vi.mock("@/lib/catalog/getCatalogOwnerIds", () => ({
+  getCatalogOwnerIds: vi.fn(async (accountId: string) => [accountId]),
+}));
 
 describe("authorizeCatalogAccess", () => {
   beforeEach(() => {
@@ -53,7 +56,7 @@ describe("authorizeCatalogAccess", () => {
     await authorizeCatalogAccess("acc_1", ["a", "b", "c", "a", "b"]);
 
     expect(selectAccountCatalogs).toHaveBeenCalledTimes(1);
-    expect(selectAccountCatalogs).toHaveBeenCalledWith("acc_1");
+    expect(selectAccountCatalogs).toHaveBeenCalledWith(["acc_1"]);
   });
 
   // Review finding (cubic, 2026-07-30). selectAccountCatalogs throws on a query
