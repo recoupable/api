@@ -63,6 +63,15 @@ describe("selectCreditGrants", () => {
     expect(result).toEqual(rows);
   });
 
+  it("breaks created_at ties on id, so the 500-row cap cannot return a shifting set", async () => {
+    await selectCreditGrants({ accountId: ACCOUNT });
+
+    // Two grants written in the same instant would otherwise order
+    // non-deterministically, and near the cap that changes which rows come
+    // back at all. Matches the sibling selectUsageEvents.
+    expect(mockOrder).toHaveBeenCalledWith("id", { ascending: false });
+  });
+
   it("filters on created_at when a cutoff is supplied", async () => {
     await selectCreditGrants({ accountId: ACCOUNT, createdAfter: "2026-07-06T00:00:00.000Z" });
 

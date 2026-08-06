@@ -110,6 +110,16 @@ describe("validateGrantCreditsRequest", () => {
 
     expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(400);
+
+    // Pin the envelope, not just the status: the documented 400 shape is
+    // `{ status, error, missing_fields }`, and a field silently moving to
+    // `message` would break the published contract while a status-only
+    // assertion stayed green.
+    const parsed = await (result as NextResponse).json();
+    expect(parsed.status).toBe("error");
+    expect(parsed.error).toBeTypeOf("string");
+    expect(Array.isArray(parsed.missing_fields)).toBe(true);
+    expect(parsed.missing_fields.length).toBeGreaterThan(0);
   });
 
   it("accepts zero, which is how an account is deliberately zeroed out", async () => {
@@ -128,5 +138,8 @@ describe("validateGrantCreditsRequest", () => {
     const body = await (result as NextResponse).json();
     expect(body.status).toBe("error");
     expect(body.error).toBeTypeOf("string");
+    // No field path to report when the body never parsed — the contract
+    // documents missing_fields as absent in exactly this case.
+    expect(body.missing_fields).toBeUndefined();
   });
 });

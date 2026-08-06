@@ -27,7 +27,11 @@ export async function selectCreditGrants(
     .from("credit_grants")
     .select("*")
     .eq("account_id", params.accountId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    // Deterministic tiebreaker for grants written in the same instant —
+    // without it the 500-row cap could return a different set each call.
+    // Matches selectUsageEvents.
+    .order("id", { ascending: false });
 
   if (params.createdAfter) query = query.gte("created_at", params.createdAfter);
 
