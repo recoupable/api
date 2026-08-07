@@ -3,6 +3,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { handleResearch } from "@/lib/research/handleResearch";
 import { resolveTrack } from "@/lib/research/resolveTrack";
+import { pickTopPlaylistsQuery } from "@/lib/research/songstats/pickTopPlaylistsQuery";
 import { validateGetResearchTrackPlaylistsRequest } from "@/lib/research/validateGetResearchTrackPlaylistsRequest";
 
 /**
@@ -30,7 +31,7 @@ export async function getResearchTrackPlaylistsHandler(
     const result = await handleResearch({
       accountId: validated.accountId,
       path: `/track/${trackId}/${validated.platform}/${validated.status}/playlists`,
-      query: { ...validated.pagination, ...validated.filters },
+      query: pickTopPlaylistsQuery(validated.pagination),
     });
 
     if ("error" in result) return errorResponse(result.error, result.status);

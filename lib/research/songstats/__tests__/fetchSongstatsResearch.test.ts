@@ -188,6 +188,53 @@ describe("fetchSongstatsResearch", () => {
     });
   });
 
+  it("maps current track playlists to tracks/top_playlists and drops legacy filter params", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: {
+        result: "success",
+        data: [
+          {
+            source: "spotify",
+            top_playlists: [{ playlist_id: "p1", playlist_name: "RapCaviar" }],
+          },
+        ],
+      },
+    });
+
+    const result = await fetchSongstatsResearch("/track/track_1/spotify/current/playlists", {
+      limit: "5",
+      editorial: "true",
+      indie: "true",
+    });
+
+    expect(fetchSongstats).toHaveBeenCalledWith("/tracks/top_playlists", {
+      songstats_track_id: "track_1",
+      source: "spotify",
+      scope: "current",
+      limit: "5",
+    });
+    expect(result).toEqual({
+      status: 200,
+      data: [{ playlist_id: "p1", playlist_name: "RapCaviar" }],
+    });
+  });
+
+  it("maps past track playlists to tracks/top_playlists with scope=total", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: { result: "success", data: [{ source: "deezer", top_playlists: [] }] },
+    });
+
+    await fetchSongstatsResearch("/track/track_1/deezer/past/playlists");
+
+    expect(fetchSongstats).toHaveBeenCalledWith("/tracks/top_playlists", {
+      songstats_track_id: "track_1",
+      source: "deezer",
+      scope: "total",
+    });
+  });
+
   it("maps past artist playlists to top_playlists with scope=total", async () => {
     vi.mocked(fetchSongstats).mockResolvedValue({
       status: 200,

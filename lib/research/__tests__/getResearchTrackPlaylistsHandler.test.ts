@@ -71,6 +71,29 @@ describe("getResearchTrackPlaylistsHandler", () => {
     expect(body.status).toBe("success");
     expect(body.placements).toHaveLength(1);
     expect(body.placements[0].playlist.name).toBe("Chill Vibes");
+    expect(vi.mocked(handleResearch)).toHaveBeenCalledWith({
+      accountId: "test-id",
+      path: "/track/18220712/spotify/current/playlists",
+      query: {},
+    });
+  });
+
+  it("forwards only pagination params to SongStats, not legacy filter flags", async () => {
+    vi.mocked(validateGetResearchTrackPlaylistsRequest).mockResolvedValue({
+      ...baseValidated,
+      filters: { editorial: "true", chart: "false" },
+      pagination: { limit: "15", offset: "5", sortColumn: "date" },
+    });
+    vi.mocked(handleResearch).mockResolvedValue({ data: [] });
+
+    const req = new NextRequest("http://localhost/api/research/track/playlists?id=1");
+    await getResearchTrackPlaylistsHandler(req);
+
+    expect(vi.mocked(handleResearch)).toHaveBeenCalledWith({
+      accountId: "test-id",
+      path: "/track/18220712/spotify/current/playlists",
+      query: { limit: "15", offset: "5" },
+    });
   });
 
   it("resolves track by name when q is provided", async () => {

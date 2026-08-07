@@ -7,7 +7,9 @@ import { normalizeTopPlaylists } from "@/lib/research/songstats/normalizeTopPlay
 import { normalizeUrlMap } from "@/lib/research/songstats/normalizeUrlMap";
 import { mapArtistAudienceSource } from "@/lib/research/songstats/mapArtistAudienceSource";
 import { mapArtistStatsSource } from "@/lib/research/songstats/mapArtistStatsSource";
+import { mapLegacyPlaylistScope } from "@/lib/research/songstats/mapLegacyPlaylistScope";
 import { parsePositiveLimit } from "@/lib/research/songstats/parsePositiveLimit";
+import { pickTopPlaylistsQuery } from "@/lib/research/songstats/pickTopPlaylistsQuery";
 
 export function mapSongstatsArtistPath(
   path: string,
@@ -100,8 +102,8 @@ export function mapSongstatsArtistPath(
       {
         songstats_artist_id: match[1],
         source: match[2],
-        scope: match[3] === "past" ? "total" : "current",
-        ...query,
+        scope: mapLegacyPlaylistScope(match[3] as "current" | "past"),
+        ...pickTopPlaylistsQuery(query),
       },
       normalizeTopPlaylists,
     );

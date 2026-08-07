@@ -1,5 +1,6 @@
 import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { pickTopPlaylistsQuery } from "@/lib/research/songstats/pickTopPlaylistsQuery";
 import { validateGetResearchPlaylistsRequest } from "@/lib/research/validateGetResearchPlaylistsRequest";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { successResponse } from "@/lib/networking/successResponse";
@@ -18,16 +19,17 @@ export async function getResearchPlaylistsHandler(request: NextRequest): Promise
     if (validated instanceof NextResponse) return validated;
 
     const { searchParams } = new URL(request.url);
-
-    const query: Record<string, string> = {};
     const limit = searchParams.get("limit");
-    if (limit) query.limit = limit;
+    const offset = searchParams.get("offset");
 
     const { platform, status, ...rest } = validated;
     const result = await handleArtistResearch({
       ...rest,
       path: cmId => `/artist/${cmId}/${platform}/${status}/playlists`,
-      query,
+      query: pickTopPlaylistsQuery({
+        ...(limit ? { limit } : {}),
+        ...(offset ? { offset } : {}),
+      }),
     });
 
     if ("error" in result) return errorResponse(result.error, result.status);
