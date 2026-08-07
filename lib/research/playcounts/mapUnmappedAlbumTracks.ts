@@ -7,6 +7,7 @@ import { SpotifyRateLimitError } from "@/lib/spotify/SpotifyRateLimitError";
 import { getSpotifyArtists } from "@/lib/songs/getSpotifyArtists";
 import { linkSongsToArtists } from "@/lib/songs/linkSongsToArtists";
 import { queueRedisSongs } from "@/lib/songs/queueRedisSongs";
+import { generateTrackNotes } from "@/lib/songs/generateTrackNotes";
 import { SongWithSpotify } from "@/lib/songs/getSongsByIsrc";
 
 /**
@@ -54,14 +55,25 @@ export async function mapUnmappedAlbumTracks(
           albumId: context.albumId,
           albumName: context.albumName,
           spotifyArtists: getSpotifyArtists(track.artists ?? []),
+          track,
         },
       ];
     });
     if (resolved.length === 0) return new Map();
 
+    // Notes: generate inline, exactly as the manual flow does (getSongsByIsrc →
+    // generateTrackNotes). The `songs-isrc-processing` queue has no worker, so
+    // notes never arrive that way — without this, captured songs stay note-less
+    // and the catalog view's isCompleteSong hides them.
+    const notesByIsrc = new Map<string, string>(
+      await Promise.all(
+        resolved.map(async r => [r.isrc, await generateTrackNotes(r.track)] as const),
+      ),
+    );
+
     // Dedupe by ISRC: reissues put the same recording on several albums in one
     // batch, and upsertSongs' DO UPDATE cannot affect the same row twice. Carry
-    // the Spotify artists through for enrichment.
+    // the Spotify artists + notes through for enrichment.
     const songsByIsrc = new Map<string, SongWithSpotify>(
       resolved.map(r => [
         r.isrc,
@@ -69,6 +81,7 @@ export async function mapUnmappedAlbumTracks(
           isrc: r.isrc,
           name: r.name ?? null,
           album: r.albumName ?? null,
+          notes: notesByIsrc.get(r.isrc) ?? null,
           spotifyArtists: r.spotifyArtists,
         },
       ]),
@@ -92,9 +105,10 @@ export async function mapUnmappedAlbumTracks(
     );
 
     // Root cause (chat#1801): give captured songs the same enrichment as the
-    // manual/CSV flow — link artists (auto-creating the artist account) and
-    // queue note generation — so valuation tracks aren't "missing info" and
-    // render in the catalog view rather than being filtered out.
+    // manual/CSV flow — notes generated inline (above) + artists linked
+    // (auto-creating the artist account) — so valuation tracks land complete
+    // and render in the catalog view instead of being filtered out as "missing
+    // info". queueRedisSongs mirrors the manual flow's queue step.
     await linkSongsToArtists(songs);
     await queueRedisSongs(songs);
 

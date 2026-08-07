@@ -7,6 +7,7 @@ import { upsertSongs } from "@/lib/supabase/songs/upsertSongs";
 import { upsertSongIdentifiers } from "@/lib/supabase/song_identifiers/upsertSongIdentifiers";
 import { linkSongsToArtists } from "@/lib/songs/linkSongsToArtists";
 import { queueRedisSongs } from "@/lib/songs/queueRedisSongs";
+import { generateTrackNotes } from "@/lib/songs/generateTrackNotes";
 import { SpotifyRateLimitError } from "@/lib/spotify/SpotifyRateLimitError";
 
 vi.mock("@/lib/spotify/generateAccessToken", () => ({ default: vi.fn() }));
@@ -17,6 +18,7 @@ vi.mock("@/lib/supabase/song_identifiers/upsertSongIdentifiers", () => ({
 }));
 vi.mock("@/lib/songs/linkSongsToArtists", () => ({ linkSongsToArtists: vi.fn() }));
 vi.mock("@/lib/songs/queueRedisSongs", () => ({ queueRedisSongs: vi.fn() }));
+vi.mock("@/lib/songs/generateTrackNotes", () => ({ generateTrackNotes: vi.fn() }));
 
 const ALBUMS = [
   {
@@ -35,6 +37,9 @@ describe("mapUnmappedAlbumTracks", () => {
     vi.clearAllMocks();
     vi.mocked(generateAccessToken).mockResolvedValue({ access_token: "tok" } as never);
     vi.mocked(upsertSongs).mockResolvedValue([] as never);
+    vi.mocked(generateTrackNotes).mockImplementation(
+      async (t: { name?: string | null }) => `notes:${t?.name}`,
+    );
   });
 
   it("resolves ISRCs for unmapped tracks, upserts songs + identifiers, returns new mappings", async () => {
@@ -49,9 +54,19 @@ describe("mapUnmappedAlbumTracks", () => {
     const mapped = await mapUnmappedAlbumTracks(ALBUMS, new Set(["t_mapped"]));
 
     expect(getTracks).toHaveBeenCalledWith({ ids: ["t_new", "t_noisrc"], accessToken: "tok" });
+    // Notes generated inline at capture (root cause: the songs-isrc queue has no
+    // worker), and written onto the song so it passes the catalog's isCompleteSong.
     expect(upsertSongs).toHaveBeenCalledWith([
-      { isrc: "ISRC_NIKES", name: "Nikes on My Feet", album: "K.I.D.S. (Deluxe)" },
+      {
+        isrc: "ISRC_NIKES",
+        name: "Nikes on My Feet",
+        album: "K.I.D.S. (Deluxe)",
+        notes: "notes:Nikes on My Feet",
+      },
     ]);
+    expect(generateTrackNotes).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "t_new", external_ids: { isrc: "ISRC_NIKES" } }),
+    );
     expect(upsertSongIdentifiers).toHaveBeenCalledWith([
       { song: "ISRC_NIKES", platform: "spotify", identifier_type: "track_id", value: "t_new" },
       { song: "ISRC_NIKES", platform: "spotify", identifier_type: "album_id", value: "album_1" },
