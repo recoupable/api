@@ -4,6 +4,7 @@ import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectA
 import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
 import { selectAccountWithSocials } from "@/lib/supabase/accounts/selectAccountWithSocials";
 import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
+import { enrichArtistSpotifyProfile } from "@/lib/artists/enrichArtistSpotifyProfile";
 
 export interface ResolveOrCreateArtistParams {
   name: string;
@@ -58,6 +59,14 @@ export async function resolveOrCreateArtist(
     try {
       await updateArtistSocials(created.account_id, {
         SPOTIFY: `https://open.spotify.com/artist/${spotifyArtistId}`,
+      });
+      // The attach stores the URL path segment as the username, which renders
+      // as "@artist · 0 followers" in verify-socials (chat#1889 row 16).
+      // Overwrite it with the real Spotify handle/followers/avatar. Inside the
+      // same try: if the attach failed there is no linked social to enrich.
+      await enrichArtistSpotifyProfile({
+        artistId: created.account_id,
+        spotifyArtistId,
       });
     } catch {
       // Non-fatal by design — see docstring.
