@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { validateArtistRequest } from "@/lib/research/validateArtistRequest";
+import { validateGetResearchAudienceRequest } from "@/lib/research/validateGetResearchAudienceRequest";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { successResponse } from "@/lib/networking/successResponse";
 import { errorResponse } from "@/lib/networking/errorResponse";
@@ -17,14 +17,12 @@ import { errorResponse } from "@/lib/networking/errorResponse";
  */
 export async function getResearchAudienceHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const validated = await validateArtistRequest(request);
+    const validated = await validateGetResearchAudienceRequest(request);
     if (validated instanceof NextResponse) return validated;
 
-    const { searchParams } = new URL(request.url);
-    const platform = searchParams.get("platform") || "instagram";
     const result = await handleArtistResearch({
       ...validated,
-      path: cmId => `/artist/${cmId}/${platform}-audience-stats`,
+      path: cmId => `/artist/${cmId}/${validated.platform}-audience-stats`,
     });
 
     if ("error" in result) return errorResponse(result.error, result.status);
