@@ -44,6 +44,14 @@ export async function selectCatalogSongsWithArtists(
 ): Promise<CatalogSongsWithPagination> {
   const { catalogId, isrcs, artistName, page, limit } = params;
 
+  // When filtering by artistName, inner-join song_artists/accounts so the filter
+  // RESTRICTS rows. With a plain LEFT join a non-matching `.eq` only nulls the
+  // embed — returning every row with `artists: [null]`, which hides the whole
+  // catalog and crashes the row renderer (chat#1801). Without a filter, keep the
+  // LEFT join so artist-less captured tracks still surface (api#681).
+  const artistsJoin = artistName ? "song_artists!inner" : "song_artists";
+  const accountsJoin = artistName ? "accounts!inner" : "accounts";
+
   let query = supabase
     .from("catalog_songs")
     .select(
@@ -55,9 +63,9 @@ export async function selectCatalogSongsWithArtists(
         album,
         notes,
         updated_at,
-        song_artists (
+        ${artistsJoin} (
           artist,
-          accounts (
+          ${accountsJoin} (
             id,
             name,
             timestamp
@@ -102,7 +110,8 @@ export async function selectCatalogSongsWithArtists(
     return {
       catalog_id: catalog,
       ...songData,
-      artists: song_artists?.map((sa: SongArtistWithAccount) => sa.accounts) || [],
+      // filter(Boolean): a LEFT-joined account can be null; never emit `[null]`.
+      artists: song_artists?.map((sa: SongArtistWithAccount) => sa.accounts).filter(Boolean) || [],
     };
   });
 
