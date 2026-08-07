@@ -4,6 +4,7 @@ import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectA
 import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
 import { selectAccountWithSocials } from "@/lib/supabase/accounts/selectAccountWithSocials";
 import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
+import { enrichArtistSpotifyProfile } from "@/lib/artists/enrichArtistSpotifyProfile";
 
 export interface ResolveOrCreateArtistParams {
   name: string;
@@ -44,7 +45,19 @@ export async function resolveOrCreateArtist(
       if (!alreadyRostered) {
         await insertAccountArtistId(accountId, canonicalId);
       }
-      const artist = await selectAccountWithSocials(canonicalId);
+      let artist = await selectAccountWithSocials(canonicalId);
+      // Backfill a blank canonical image at add-time (chat#1911 row 4).
+      // Filling a blank is not the chat#1866 shared-write problem — nothing
+      // is overwritten, and a canonical with an image is left untouched.
+      // Best-effort: a Spotify outage must not fail the add.
+      if (artist && !artist.account_info?.[0]?.image) {
+        try {
+          await enrichArtistSpotifyProfile({ artistId: canonicalId, spotifyArtistId });
+          artist = (await selectAccountWithSocials(canonicalId)) ?? artist;
+        } catch {
+          // Keep the un-enriched canonical — the roster card self-heals later.
+        }
+      }
       return {
         artist: artist ? { ...artist, account_id: artist.id } : null,
         created: false,
@@ -58,6 +71,14 @@ export async function resolveOrCreateArtist(
     try {
       await updateArtistSocials(created.account_id, {
         SPOTIFY: `https://open.spotify.com/artist/${spotifyArtistId}`,
+      });
+      // The attach stores the URL path segment as the username, which renders
+      // as "@artist · 0 followers" in verify-socials (chat#1889 row 16).
+      // Overwrite it with the real Spotify handle/followers/avatar. Inside the
+      // same try: if the attach failed there is no linked social to enrich.
+      await enrichArtistSpotifyProfile({
+        artistId: created.account_id,
+        spotifyArtistId,
       });
     } catch {
       // Non-fatal by design — see docstring.

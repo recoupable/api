@@ -6,6 +6,7 @@ import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectA
 import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
 import { selectAccountWithSocials } from "@/lib/supabase/accounts/selectAccountWithSocials";
 import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
+import { enrichArtistSpotifyProfile } from "@/lib/artists/enrichArtistSpotifyProfile";
 
 vi.mock("@/lib/artists/createArtistInDb", () => ({ createArtistInDb: vi.fn() }));
 vi.mock("@/lib/valuation/findCanonicalArtistBySpotifyId", () => ({
@@ -21,6 +22,9 @@ vi.mock("@/lib/supabase/accounts/selectAccountWithSocials", () => ({
   selectAccountWithSocials: vi.fn(),
 }));
 vi.mock("@/lib/artist/updateArtistSocials", () => ({ updateArtistSocials: vi.fn() }));
+vi.mock("@/lib/artists/enrichArtistSpotifyProfile", () => ({
+  enrichArtistSpotifyProfile: vi.fn(),
+}));
 
 const SPOTIFY_ID = "0xPoVNPnxIIUS1vrxAYV00";
 const created = { id: "new-1", account_id: "new-1", name: "Del Water Gap" };
@@ -51,6 +55,40 @@ describe("resolveOrCreateArtist", () => {
     expect(result).toEqual({ artist: created, created: true });
   });
 
+  // chat#1889 row 16: the create-time attach stores the URL path segment as
+  // the username ("@artist · 0 followers"). Enrich with the real Spotify
+  // profile right after the attach so verify-socials shows real metadata.
+  it("enriches the attached social with the real Spotify profile", async () => {
+    await resolveOrCreateArtist({
+      name: "Del Water Gap",
+      accountId: "acct-1",
+      spotifyArtistId: SPOTIFY_ID,
+    });
+
+    expect(enrichArtistSpotifyProfile).toHaveBeenCalledWith({
+      artistId: "new-1",
+      spotifyArtistId: SPOTIFY_ID,
+    });
+  });
+
+  it("does not enrich on the plain create path (no spotify id)", async () => {
+    await resolveOrCreateArtist({ name: "X", accountId: "acct-1" });
+
+    expect(enrichArtistSpotifyProfile).not.toHaveBeenCalled();
+  });
+
+  it("does not enrich when the social attach fails (nothing to enrich)", async () => {
+    vi.mocked(updateArtistSocials).mockRejectedValue(new Error("nope"));
+
+    await resolveOrCreateArtist({
+      name: "Del Water Gap",
+      accountId: "acct-1",
+      spotifyArtistId: SPOTIFY_ID,
+    });
+
+    expect(enrichArtistSpotifyProfile).not.toHaveBeenCalled();
+  });
+
   // One canonical artist per Spotify id (chat#1889, decision 2026-07-29):
   // when it exists, link it to the account — never mint a second row.
   it("links and returns the existing canonical instead of creating", async () => {
@@ -67,6 +105,76 @@ describe("resolveOrCreateArtist", () => {
     expect(insertAccountArtistId).toHaveBeenCalledWith("acct-1", "canonical-1");
     expect(result.created).toBe(false);
     expect(result.artist).toMatchObject({ id: "canonical-1", account_id: "canonical-1" });
+  });
+
+  // chat#1911 row 4: a reused canonical with no image renders a grey roster
+  // card until seeding self-heals it (~30s), and never heals for accounts
+  // that already have a catalog. Backfill the blank at add-time.
+  describe("blank canonical image backfill (reuse path)", () => {
+    beforeEach(() => vi.mocked(findCanonicalArtistBySpotifyId).mockResolvedValue("canonical-1"));
+
+    it("enriches and re-fetches when the canonical has no image", async () => {
+      const blank = { id: "canonical-1", name: "Del Water Gap", account_info: [{ image: null }] };
+      const healed = {
+        id: "canonical-1",
+        name: "Del Water Gap",
+        account_info: [{ image: "https://i.scdn.co/image/x" }],
+      };
+      vi.mocked(selectAccountWithSocials)
+        .mockResolvedValueOnce(blank as never)
+        .mockResolvedValueOnce(healed as never);
+
+      const result = await resolveOrCreateArtist({
+        name: "Del Water Gap",
+        accountId: "acct-1",
+        spotifyArtistId: SPOTIFY_ID,
+      });
+
+      expect(enrichArtistSpotifyProfile).toHaveBeenCalledWith({
+        artistId: "canonical-1",
+        spotifyArtistId: SPOTIFY_ID,
+      });
+      expect(selectAccountWithSocials).toHaveBeenCalledTimes(2);
+      expect(result.artist).toMatchObject({
+        id: "canonical-1",
+        account_info: [{ image: "https://i.scdn.co/image/x" }],
+      });
+    });
+
+    it("does not enrich when the canonical already has an image (no shared-write)", async () => {
+      vi.mocked(selectAccountWithSocials).mockResolvedValue({
+        id: "canonical-1",
+        name: "Del Water Gap",
+        account_info: [{ image: "https://existing.jpg" }],
+      } as never);
+
+      await resolveOrCreateArtist({
+        name: "Del Water Gap",
+        accountId: "acct-1",
+        spotifyArtistId: SPOTIFY_ID,
+      });
+
+      expect(enrichArtistSpotifyProfile).not.toHaveBeenCalled();
+      expect(selectAccountWithSocials).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns the original canonical when the backfill throws (best-effort)", async () => {
+      vi.mocked(selectAccountWithSocials).mockResolvedValue({
+        id: "canonical-1",
+        name: "Del Water Gap",
+        account_info: [],
+      } as never);
+      vi.mocked(enrichArtistSpotifyProfile).mockRejectedValue(new Error("spotify down"));
+
+      const result = await resolveOrCreateArtist({
+        name: "Del Water Gap",
+        accountId: "acct-1",
+        spotifyArtistId: SPOTIFY_ID,
+      });
+
+      expect(result.created).toBe(false);
+      expect(result.artist).toMatchObject({ id: "canonical-1", account_id: "canonical-1" });
+    });
   });
 
   it("does not re-link a canonical the account already rosters", async () => {
