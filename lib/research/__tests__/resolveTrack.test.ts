@@ -48,7 +48,7 @@ describe("resolveTrack", () => {
       },
     } as never);
     vi.mocked(handleResearch).mockResolvedValue({
-      data: { songstats_track_id: "track_42" },
+      data: { id: "track_42" },
     });
 
     const result = await resolveTrack("q", undefined, accountId);
@@ -69,7 +69,7 @@ describe("resolveTrack", () => {
     } as never);
     vi.mocked(handleResearch)
       .mockResolvedValueOnce({ data: {} })
-      .mockResolvedValueOnce({ data: { songstats_track_id: "track_99" } });
+      .mockResolvedValueOnce({ data: { id: "track_99" } });
 
     const result = await resolveTrack("q", undefined, accountId);
     expect(vi.mocked(handleResearch)).toHaveBeenNthCalledWith(2, {
@@ -86,7 +86,7 @@ describe("resolveTrack", () => {
       },
     } as never);
     vi.mocked(handleResearch).mockResolvedValue({
-      data: { songstats_track_ids: ["track_7"] },
+      data: { id: "track_7" },
     });
 
     const result = await resolveTrack("q", undefined, accountId);
@@ -120,7 +120,7 @@ describe("resolveTrack", () => {
       },
     } as never);
     vi.mocked(handleResearch).mockResolvedValue({
-      data: { songstats_track_id: "track_123" },
+      data: { id: "track_123" },
     });
 
     const result = await resolveTrack("q", undefined, accountId);
