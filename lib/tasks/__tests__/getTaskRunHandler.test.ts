@@ -6,9 +6,14 @@ import { getTaskRunHandler } from "../getTaskRunHandler";
 import { validateGetTaskRunQuery } from "../validateGetTaskRunQuery";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
 import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
+import { attachRunTitles } from "../attachRunTitles";
 
 vi.mock("../validateGetTaskRunQuery", () => ({
   validateGetTaskRunQuery: vi.fn(),
+}));
+
+vi.mock("../attachRunTitles", () => ({
+  attachRunTitles: vi.fn(),
 }));
 
 vi.mock("@/lib/trigger/retrieveTaskRun", () => ({
@@ -43,6 +48,11 @@ const mockRun = {
   metadata: null,
   output: { result: "ok" },
   error: null,
+};
+
+const mockListRun = {
+  ...mockRun,
+  createdAt: "2025-01-01T00:00:00.000Z",
 };
 
 describe("getTaskRunHandler", () => {
@@ -100,6 +110,7 @@ describe("getTaskRunHandler", () => {
         limit: 20,
       });
       vi.mocked(fetchTriggerRuns).mockResolvedValue([]);
+      vi.mocked(attachRunTitles).mockResolvedValue([]);
 
       const response = await getTaskRunHandler(createMockRequest());
       const json = await response.json();
@@ -115,12 +126,32 @@ describe("getTaskRunHandler", () => {
         limit: 20,
       });
       vi.mocked(fetchTriggerRuns).mockResolvedValue([mockRun]);
+      vi.mocked(attachRunTitles).mockResolvedValue([{ ...mockListRun, title: null }]);
 
       const response = await getTaskRunHandler(createMockRequest());
       const json = await response.json();
 
       expect(json.status).toBe("success");
       expect(json.runs).toHaveLength(1);
+    });
+
+    it("annotates list runs with titles via attachRunTitles", async () => {
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
+        mode: "list",
+        accountId: "acc_123",
+        limit: 20,
+      });
+      vi.mocked(fetchTriggerRuns).mockResolvedValue([mockListRun]);
+      vi.mocked(attachRunTitles).mockResolvedValue([
+        { ...mockListRun, title: "Weekly valuation + streams report" },
+      ]);
+
+      const response = await getTaskRunHandler(createMockRequest());
+      const json = await response.json();
+
+      expect(attachRunTitles).toHaveBeenCalledWith([mockListRun], "acc_123", 20);
+      expect(json.runs[0].title).toBe("Weekly valuation + streams report");
+      expect(json.runs[0].id).toBe("run_123");
     });
 
     it("calls fetchTriggerRuns with accountId and limit", async () => {
@@ -130,6 +161,7 @@ describe("getTaskRunHandler", () => {
         limit: 50,
       });
       vi.mocked(fetchTriggerRuns).mockResolvedValue([]);
+      vi.mocked(attachRunTitles).mockResolvedValue([]);
 
       await getTaskRunHandler(createMockRequest());
 
