@@ -33,7 +33,8 @@ export async function validateGetResearchAlbumsRequest(
   if (!PROVIDER_ID_REGEX.test(artistId))
     return errorResponse("artist_id must be a provider artist ID", 400);
 
-  const isPrimary = searchParams.get("is_primary") ?? "true";
+  const isPrimaryRaw = searchParams.get("is_primary") ?? searchParams.get("isPrimary");
+  const isPrimary = isPrimaryRaw?.trim() ? isPrimaryRaw.trim() : "true";
   if (!(VALID_BOOLEAN as readonly string[]).includes(isPrimary)) {
     return errorResponse(`is_primary must be "true" or "false"`, 400);
   }
