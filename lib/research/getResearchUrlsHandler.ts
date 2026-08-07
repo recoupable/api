@@ -1,5 +1,6 @@
 import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { formatResearchUrlsResponse } from "@/lib/research/formatResearchUrlsResponse";
 import { validateArtistRequest } from "@/lib/research/validateArtistRequest";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { successResponse } from "@/lib/networking/successResponse";
@@ -25,12 +26,7 @@ export async function getResearchUrlsHandler(request: NextRequest): Promise<Next
     });
 
     if ("error" in result) return errorResponse(result.error, result.status);
-    const data = result.data;
-    return successResponse({
-      urls: Array.isArray(data)
-        ? data
-        : Object.entries(data as Record<string, string>).map(([domain, url]) => ({ domain, url })),
-    });
+    return successResponse({ urls: formatResearchUrlsResponse(result.data) });
   } catch (error) {
     console.error("[ERROR] getResearchUrlsHandler:", error);
     return errorResponse("Internal error", 500);
