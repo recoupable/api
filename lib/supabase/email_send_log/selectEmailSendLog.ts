@@ -9,6 +9,10 @@ export interface SelectEmailSendLogFilters {
   status?: string;
   /** Substring matched within `raw_body` (LIKE `%value%`) — pass the marker the send was keyed on. */
   rawBodyLike?: string;
+  /** Only rows created at or after this ISO timestamp. */
+  createdAfter?: string;
+  /** Only rows created at or before this ISO timestamp. */
+  createdBefore?: string;
   /** Cap the number of rows returned. */
   limit?: number;
 }
@@ -29,6 +33,8 @@ export async function selectEmailSendLog(
   if (filters.accountId) query = query.eq("account_id", filters.accountId);
   if (filters.status) query = query.eq("status", filters.status);
   if (filters.rawBodyLike) query = query.like("raw_body", `%${filters.rawBodyLike}%`);
+  if (filters.createdAfter) query = query.gte("created_at", filters.createdAfter);
+  if (filters.createdBefore) query = query.lte("created_at", filters.createdBefore);
   if (filters.limit) query = query.limit(filters.limit);
 
   const { data, error } = await query;

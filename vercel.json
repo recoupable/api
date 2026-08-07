@@ -8,6 +8,10 @@
     {
       "path": "/api/internal/playcount-maintenance",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/internal/cold-start-nudge",
+      "schedule": "0 15 * * *"
     }
   ]
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateTaskRequest } from "@/lib/tasks/validateCreateTaskRequest";
 import { createTask } from "@/lib/tasks/createTask";
+import { sendScheduleConfirmationEmail } from "@/lib/emails/sendScheduleConfirmationEmail";
 
 /**
  * Creates a new task (scheduled action)
@@ -27,6 +28,17 @@ export async function createTaskHandler(request: NextRequest): Promise<NextRespo
     }
 
     const createdTask = await createTask(validatedBody);
+
+    // Bridge from signing up to the first report landing (chat#1889): confirm
+    // what was scheduled and when. Fires after the schedule is materialized,
+    // and is best-effort inside, so it can never fail task creation.
+    await sendScheduleConfirmationEmail({
+      accountId: validatedBody.account_id,
+      taskId: createdTask.id,
+      title: validatedBody.title,
+      schedule: validatedBody.schedule,
+      timeZone: validatedBody.timezone,
+    });
 
     return NextResponse.json(
       {
