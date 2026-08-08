@@ -7,6 +7,7 @@ import type { NextRequest } from "next/server";
 
 export const getSlackTagsQuerySchema = z.object({
   period: adminPeriodSchema.default("all"),
+  tag: z.string().optional(),
 });
 
 export type GetSlackTagsQuery = z.infer<typeof getSlackTagsQuerySchema>;
@@ -15,7 +16,7 @@ export type GetSlackTagsQuery = z.infer<typeof getSlackTagsQuerySchema>;
  * Validates the query parameters and admin auth for GET /api/admins/coding/slack.
  *
  * @param request - The incoming Next.js request
- * @returns A NextResponse on error, or { period } on success
+ * @returns A NextResponse on error, or { period, tag } on success
  */
 export async function validateGetSlackTagsQuery(
   request: NextRequest,
@@ -26,7 +27,10 @@ export async function validateGetSlackTagsQuery(
   }
 
   const { searchParams } = new URL(request.url);
-  const raw = { period: searchParams.get("period") ?? "all" };
+  const raw = {
+    period: searchParams.get("period") ?? "all",
+    tag: searchParams.get("tag") ?? undefined,
+  };
 
   const result = getSlackTagsQuerySchema.safeParse(raw);
 

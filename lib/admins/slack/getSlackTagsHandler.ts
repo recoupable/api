@@ -7,7 +7,7 @@ import { fetchSlackMentions } from "./fetchSlackMentions";
  * Handler for GET /api/admins/coding/slack
  *
  * Returns a list of Slack mentions of the Recoup Coding Agent bot, pulled directly
- * from the Slack API as the source of truth. Supports optional time-period filtering.
+ * from the Slack API as the source of truth. Supports optional time-period and tag filtering.
  *
  * Requires admin authentication.
  *
@@ -21,7 +21,12 @@ export async function getSlackTagsHandler(request: NextRequest): Promise<NextRes
       return query;
     }
 
-    const tags = await fetchSlackMentions(query.period);
+    let tags = await fetchSlackMentions(query.period);
+
+    if (query.tag) {
+      tags = tags.filter(t => t.user_id === query.tag);
+    }
+
     const totalPullRequests = tags.reduce((sum, tag) => sum + tag.pull_requests.length, 0);
     const tagsWithPullRequests = tags.filter(tag => tag.pull_requests.length > 0).length;
 
