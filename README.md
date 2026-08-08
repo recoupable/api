@@ -1,5 +1,9 @@
 # x402-next Example App
 
+```js
+console.log("Hello from the Recoup API 🎵");
+```
+
 This is a Next.js application that demonstrates how to use the `x402-next` middleware to implement paywall functionality in your Next.js routes.
 
 ## Prerequisites
