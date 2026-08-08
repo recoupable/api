@@ -68,7 +68,13 @@ export async function handleContentAgentCallback(request: Request): Promise<Next
         await thread.post("Content generation finished but no videos were produced.");
       }
 
-      await thread.setState({ status: "completed" });
+      // Persist generated URLs so thread replies can reference them for edits
+      const videoUrls = videos.map(v => v.videoUrl).filter(Boolean) as string[];
+
+      await thread.setState({
+        status: "completed",
+        ...(videoUrls.length > 0 && { videoUrls }),
+      });
       break;
     }
 
