@@ -87,6 +87,15 @@ describe("validatePostResearchEventsRequest", () => {
     expect((result as NextResponse).status).toBe(400);
   });
 
+  // A caller who omits the field should be told which field, not just
+  // "expected string, received undefined".
+  it("names the field when artist_id is missing", async () => {
+    const result = await validatePostResearchEventsRequest(req({}));
+    const body = await (result as NextResponse).json();
+
+    expect(body.error).toMatch(/artist_id/);
+  });
+
   it("rejects a bandsintown_id-only body with a 400", async () => {
     const result = await validatePostResearchEventsRequest(req({ bandsintown_id: "1590132" }));
 

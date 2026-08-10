@@ -5,7 +5,12 @@ import { ensureEventsResearchCredits } from "@/lib/research/ensureEventsResearch
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 const bodySchema = z.object({
-  artist_id: z.string().uuid("artist_id must be a valid UUID"),
+  // The `error` option covers the missing/wrong-type case, which otherwise
+  // surfaces Zod's default "expected string, received undefined" and never
+  // tells the caller which field they left out.
+  artist_id: z
+    .string({ error: "artist_id is required and must be a valid UUID" })
+    .uuid("artist_id must be a valid UUID"),
   date: z.enum(["upcoming", "past", "all"]).optional(),
 });
 
