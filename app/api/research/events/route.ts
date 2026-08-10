@@ -14,11 +14,11 @@ export async function OPTIONS() {
 }
 
 /**
- * POST /api/research/events — List an artist's live shows by Bandsintown artist id.
- * Body: `{ bandsintown_id, date? }`.
+ * POST /api/research/events — List a Recoup artist's live shows.
+ * Body: `{ artist_id, date? }`.
  *
- * @param request - JSON body with `bandsintown_id` string
- * @returns JSON `{ status, events }` or error
+ * @param request - JSON body with `artist_id` uuid
+ * @returns JSON `{ status, events }`, 404 when no events profile is connected, or error
  */
 export async function POST(request: NextRequest) {
   return postResearchEventsHandler(request);

@@ -2,18 +2,32 @@ import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
+import { getArtists } from "@/lib/artists/getArtists";
+import { getArtistBandsintownId } from "@/lib/research/getArtistBandsintownId";
 import { fetchBandsintownEvents } from "@/lib/apify/bandsintown/fetchBandsintownEvents";
 import { validatePostResearchEventsRequest } from "@/lib/research/validatePostResearchEventsRequest";
 
 /**
- * Artist events handler — returns an artist's live shows from Bandsintown,
- * keyed on the artist's numeric id so results cannot drift to a same-named
- * performer.
+ * Returned when the artist is reachable but has no Bandsintown profile
+ * connected. States the exact URL format and links the field that accepts it,
+ * so the caller can fix it without opening a support thread.
+ */
+const NO_BANDSINTOWN_ID_ERROR =
+  "Error: no bandsintown ID connected to this artist. " +
+  "Please connect the bandsintown ID in this format: bandsintown.com/a/{id}-{slug} " +
+  "Docs here: https://docs.recoupable.dev/api-reference/artists/update#body-profile-urls";
+
+/**
+ * Artist events handler — returns a Recoup artist's live shows.
  *
- * An artist with no matching events is a success with an empty array, not a
- * 404: "this artist is not touring" is a valid answer to the question asked.
+ * The caller supplies an `artist_id`; the provider id is resolved from that
+ * artist's connected socials. Two negative cases are kept deliberately
+ * distinct, because collapsing them would let a missing profile read as
+ * "this artist has no shows":
+ *   - no profile connected (or artist not accessible) -> 404
+ *   - profile connected, nothing scheduled            -> 200 with `events: []`
  *
- * @param request - JSON body with `bandsintown_id` and optional `date`
+ * @param request - JSON body with `artist_id` and optional `date`
  * @returns JSON `{ status, events }`, or an error response
  */
 export async function postResearchEventsHandler(request: NextRequest): Promise<NextResponse> {
@@ -21,8 +35,23 @@ export async function postResearchEventsHandler(request: NextRequest): Promise<N
     const validated = await validatePostResearchEventsRequest(request);
     if (validated instanceof NextResponse) return validated;
 
+    // Scope the lookup to the caller's own roster. Without this, any
+    // authenticated account could read any artist's connected profile.
+    const artists = await getArtists({
+      accountId: validated.accountId,
+      orgId: validated.orgId,
+    });
+    if (!artists.some(artist => artist.account_id === validated.artist_id)) {
+      return errorResponse("Artist not found", 404);
+    }
+
+    const bandsintownId = await getArtistBandsintownId(validated.artist_id);
+    if (!bandsintownId) {
+      return errorResponse(NO_BANDSINTOWN_ID_ERROR, 404);
+    }
+
     const events = await fetchBandsintownEvents({
-      bandsintownId: validated.bandsintown_id,
+      bandsintownId,
       ...(validated.date && { date: validated.date }),
     });
 

@@ -17,6 +17,8 @@ vi.mock("../ensureEventsResearchCredits", () => ({
   ensureEventsResearchCredits: vi.fn(),
 }));
 
+const ARTIST_ID = "123694f2-1dab-40b4-8a75-84d39571c0bc";
+
 function req(body: unknown) {
   return new NextRequest("http://localhost/api/research/events", {
     method: "POST",
@@ -27,7 +29,10 @@ function req(body: unknown) {
 describe("validatePostResearchEventsRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(validateAuthContext).mockResolvedValue({ accountId: "acct-1" } as never);
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acct-1",
+      orgId: null,
+    } as never);
     vi.mocked(ensureEventsResearchCredits).mockResolvedValue(null as never);
   });
 
@@ -35,46 +40,62 @@ describe("validatePostResearchEventsRequest", () => {
     const unauthorized = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     vi.mocked(validateAuthContext).mockResolvedValue(unauthorized as never);
 
-    const result = await validatePostResearchEventsRequest(req({ bandsintown_id: "1590132" }));
+    const result = await validatePostResearchEventsRequest(req({ artist_id: ARTIST_ID }));
 
     expect(result).toBe(unauthorized);
   });
 
-  it("accepts a numeric id and defaults date to undefined", async () => {
-    const result = await validatePostResearchEventsRequest(req({ bandsintown_id: "1590132" }));
+  it("accepts a uuid artist_id and carries the auth scope through", async () => {
+    const result = await validatePostResearchEventsRequest(req({ artist_id: ARTIST_ID }));
 
-    expect(result).toEqual({ accountId: "acct-1", bandsintown_id: "1590132" });
+    expect(result).toEqual({ accountId: "acct-1", orgId: null, artist_id: ARTIST_ID });
+  });
+
+  it("passes the org scope through so the handler can scope the roster lookup", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "acct-1",
+      orgId: "org-9",
+    } as never);
+
+    const result = await validatePostResearchEventsRequest(req({ artist_id: ARTIST_ID }));
+
+    expect(result).toMatchObject({ orgId: "org-9" });
   });
 
   it("accepts an explicit date filter", async () => {
     const result = await validatePostResearchEventsRequest(
-      req({ bandsintown_id: "1590132", date: "past" }),
+      req({ artist_id: ARTIST_ID, date: "past" }),
     );
 
-    expect(result).toEqual({ accountId: "acct-1", bandsintown_id: "1590132", date: "past" });
+    expect(result).toMatchObject({ artist_id: ARTIST_ID, date: "past" });
   });
 
-  // The endpoint exists to remove name-based ambiguity; accepting a name here
-  // would reintroduce exactly the bug it was built to prevent.
-  it.each(["Loreen", "micky-dolenz", "", "1590132abc", "a1590132"])(
-    "rejects non-numeric bandsintown_id %j with a 400",
+  // A provider id is no longer part of the contract; only a Recoup uuid is valid.
+  it.each(["1590132", "Loreen", "", "not-a-uuid", "123694f2-1dab-40b4-8a75"])(
+    "rejects a non-uuid artist_id %j with a 400",
     async value => {
-      const result = await validatePostResearchEventsRequest(req({ bandsintown_id: value }));
+      const result = await validatePostResearchEventsRequest(req({ artist_id: value }));
 
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(400);
     },
   );
 
-  it("rejects a missing bandsintown_id with a 400", async () => {
+  it("rejects a missing artist_id with a 400", async () => {
     const result = await validatePostResearchEventsRequest(req({}));
+
+    expect((result as NextResponse).status).toBe(400);
+  });
+
+  it("rejects a bandsintown_id-only body with a 400", async () => {
+    const result = await validatePostResearchEventsRequest(req({ bandsintown_id: "1590132" }));
 
     expect((result as NextResponse).status).toBe(400);
   });
 
   it("rejects an unknown date value with a 400", async () => {
     const result = await validatePostResearchEventsRequest(
-      req({ bandsintown_id: "1590132", date: "tomorrow" }),
+      req({ artist_id: ARTIST_ID, date: "tomorrow" }),
     );
 
     expect((result as NextResponse).status).toBe(400);
@@ -84,7 +105,7 @@ describe("validatePostResearchEventsRequest", () => {
     const paymentRequired = NextResponse.json({ error: "Insufficient credits" }, { status: 402 });
     vi.mocked(ensureEventsResearchCredits).mockResolvedValue(paymentRequired as never);
 
-    const result = await validatePostResearchEventsRequest(req({ bandsintown_id: "1590132" }));
+    const result = await validatePostResearchEventsRequest(req({ artist_id: ARTIST_ID }));
 
     expect(result).toBe(paymentRequired);
   });
