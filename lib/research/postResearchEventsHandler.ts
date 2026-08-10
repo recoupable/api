@@ -37,9 +37,16 @@ export async function postResearchEventsHandler(request: NextRequest): Promise<N
 
     // Scope the lookup to the caller's own roster. Without this, any
     // authenticated account could read any artist's connected profile.
+    //
+    // `orgId` is omitted rather than passed as null when the auth context
+    // carries none: getArtists treats null as "personal artists only,
+    // explicitly excluding every org artist" and undefined as "personal + all
+    // orgs". Passing null 404s every artist that lives in an organization,
+    // which is how most customer rosters are held. An explicitly org-scoped
+    // key still narrows to that org.
     const artists = await getArtists({
       accountId: validated.accountId,
-      orgId: validated.orgId,
+      ...(validated.orgId ? { orgId: validated.orgId } : {}),
     });
     if (!artists.some(artist => artist.account_id === validated.artist_id)) {
       return errorResponse("Artist not found", 404);
