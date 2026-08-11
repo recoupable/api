@@ -6,6 +6,7 @@ import { getArtists } from "@/lib/artists/getArtists";
 import { getArtistBandsintownId } from "@/lib/research/getArtistBandsintownId";
 import { fetchBandsintownEvents } from "@/lib/apify/bandsintown/fetchBandsintownEvents";
 import { validatePostResearchEventsRequest } from "@/lib/research/validatePostResearchEventsRequest";
+import { isApifyCapacityError } from "@/lib/apify/isApifyCapacityError";
 
 /**
  * Returned when the artist is reachable but has no Bandsintown profile
@@ -74,6 +75,17 @@ export async function postResearchEventsHandler(request: NextRequest): Promise<N
 
     return successResponse({ events });
   } catch (error) {
+    // A saturated provider quota is a capacity condition, not a server fault:
+    // the caller's request is fine and retrying later will work. Reporting it
+    // as a 500 tells callers to give up, and echoing the provider's own text
+    // leaks our infrastructure to them.
+    if (isApifyCapacityError(error)) {
+      return errorResponse(
+        "Events provider is at capacity. Retry this request after a short delay.",
+        503,
+      );
+    }
+
     return errorResponse(
       error instanceof Error ? error.message : "Artist events lookup failed",
       500,
