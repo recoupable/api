@@ -199,6 +199,24 @@ describe("postResearchEventsHandler", () => {
     expect(recordCreditDeduction).not.toHaveBeenCalled();
   });
 
+  // Apify's shared account quota is a capacity condition, not a server fault.
+  // Returning 500 with the raw provider text both misclassifies it and leaks
+  // our infrastructure to callers.
+  it("returns 503 with a clean message when the provider is at capacity", async () => {
+    wireValid();
+    vi.mocked(fetchBandsintownEvents).mockRejectedValue(
+      new Error("By launching this job you will exceed the memory limit of 65536MB"),
+    );
+
+    const res = await postResearchEventsHandler(req({ artist_id: ARTIST_ID }));
+    const body = await res.json();
+
+    expect(res.status).toBe(503);
+    expect(body.status).toBe("error");
+    expect(body.error).not.toMatch(/memory limit/i);
+    expect(body.error).toMatch(/capacity/i);
+  });
+
   it("returns 500 when the actor run fails", async () => {
     wireValid();
     vi.mocked(fetchBandsintownEvents).mockRejectedValue(
