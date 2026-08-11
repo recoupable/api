@@ -81,6 +81,20 @@ describe("postResearchEventsHandler", () => {
     expect(fetchBandsintownEvents).not.toHaveBeenCalled();
   });
 
+  // getArtists treats orgId null as "personal only, EXCLUDING org artists" and
+  // orgId undefined as "personal + all orgs". Passing null therefore 404s every
+  // artist that lives in an organization, which is most customer rosters.
+  it("omits orgId entirely when the auth context carries none", async () => {
+    wireValid();
+    vi.mocked(fetchBandsintownEvents).mockResolvedValue([]);
+
+    await postResearchEventsHandler(req({ artist_id: ARTIST_ID }));
+
+    expect(getArtists).toHaveBeenCalledWith({ accountId: "acct-1" });
+    const call = vi.mocked(getArtists).mock.calls[0][0];
+    expect("orgId" in call).toBe(false);
+  });
+
   it("scopes the roster lookup to the caller's account and org", async () => {
     wireValid();
     vi.mocked(validatePostResearchEventsRequest).mockResolvedValue({
