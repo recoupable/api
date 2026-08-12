@@ -19,8 +19,8 @@ export async function OPTIONS() {
  * POST /api/notifications/lead
  *
  * Pages the admin Telegram chat when the marketing site captures a lead.
- * Internal, server-to-server only — requires
- * `Authorization: Bearer ${INTERNAL_API_SECRET}`.
+ * Unauthenticated by decision (chat#1800, 2026-08-12) — the public capture
+ * forms feeding it make endpoint auth moot; revisit if spammed.
  *
  * Body parameters:
  * - email (required): the lead's email address

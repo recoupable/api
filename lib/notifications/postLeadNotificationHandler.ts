@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateInternalRequest } from "@/lib/internal/validateInternalRequest";
 import { validatePostLeadBody } from "@/lib/notifications/validatePostLeadBody";
 import { buildLeadNotification } from "@/lib/notifications/buildLeadNotification";
 import { sendSalesNotification } from "@/lib/telegram/sendSalesNotification";
@@ -15,17 +14,18 @@ import { isTestEmail } from "@/lib/emails/isTestEmail";
  * was simply unreachable over HTTP, so no marketing capture ever announced
  * itself (recoupable/chat#1800).
  *
+ * Unauthenticated by decision (chat#1800, 2026-08-12): the capture forms that
+ * feed it are public anyway, so a bearer secret only stops direct curls, not
+ * spam. If abuse materializes, add auth then.
+ *
  * Always 200s once the body is valid. The lead is already stored in Attio by
  * the time this is called, so a Telegram outage must not tell the caller the
  * capture failed — that would trade a silent loss for a false alarm.
  *
  * @param request - The incoming request
- * @returns 200 with whether a message was sent, or 401/400 on rejection.
+ * @returns 200 with whether a message was sent, or 400 on rejection.
  */
 export async function postLeadNotificationHandler(request: NextRequest): Promise<NextResponse> {
-  const denied = validateInternalRequest(request);
-  if (denied) return denied;
-
   let body: unknown;
   try {
     body = await request.json();
