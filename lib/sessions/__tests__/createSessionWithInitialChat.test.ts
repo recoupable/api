@@ -48,9 +48,7 @@ describe("createSessionWithInitialChat", () => {
   // never rely on the chats.model_id column default to fill it in.
   it("writes the caller's modelId onto the inserted chat row", async () => {
     await createSessionWithInitialChat(args);
-    expect(insertChat).toHaveBeenCalledWith(
-      expect.objectContaining({ model_id: "test/model-x" }),
-    );
+    expect(insertChat).toHaveBeenCalledWith(expect.objectContaining({ model_id: "test/model-x" }));
   });
 
   it("uses workspaceAccountId for the repo when provided", async () => {

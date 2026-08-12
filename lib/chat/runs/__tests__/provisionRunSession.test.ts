@@ -82,7 +82,11 @@ describe("provisionRunSession", () => {
   it("still completes the run when skill install fails (best-effort)", async () => {
     vi.mocked(installSessionGlobalSkills).mockRejectedValueOnce(new Error("install boom"));
 
-    const result = await provisionRunSession({ accountId: "account-1", title: "t", modelId: "test/model-x" });
+    const result = await provisionRunSession({
+      accountId: "account-1",
+      title: "t",
+      modelId: "test/model-x",
+    });
 
     expect(result.session).toEqual(updated);
     expect(discoverSkills).toHaveBeenCalled();
