@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { updateApifyScraperRun } from "@/lib/supabase/apify_scraper_runs/updateApifyScraperRun";
-import { maybeSendScrapeDigest } from "@/lib/apify/digest/maybeSendScrapeDigest";
 import { NextRequest } from "next/server";
 import { apifyWebhookHandler } from "../apifyWebhookHandler";
 import { handleInstagramProfileScraperResults } from "../instagram/handleInstagramProfileScraperResults";
 import { handleInstagramCommentsScraper } from "../instagram/handleInstagramCommentsScraper";
+import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 
 vi.mock("../instagram/handleInstagramProfileScraperResults", () => ({
   handleInstagramProfileScraperResults: vi.fn(),
@@ -49,8 +49,8 @@ const baseBody = {
 vi.mock("@/lib/supabase/apify_scraper_runs/updateApifyScraperRun", () => ({
   updateApifyScraperRun: vi.fn(async () => null),
 }));
-vi.mock("@/lib/apify/digest/maybeSendScrapeDigest", () => ({
-  maybeSendScrapeDigest: vi.fn(async () => null),
+vi.mock("@/lib/emails/sendEmail", () => ({
+  sendEmailWithResend: vi.fn(async () => null),
 }));
 
 describe("apifyWebhookHandler", () => {
@@ -69,7 +69,7 @@ describe("apifyWebhookHandler", () => {
     expect(handleInstagramCommentsScraper).not.toHaveBeenCalled();
   });
 
-  it("records batch completion + triggers the digest check when the payload carries a run id (chat#1855)", async () => {
+  it("records scrape-run completion when the payload carries a run id", async () => {
     vi.mocked(handleInstagramProfileScraperResults).mockResolvedValue({
       posts: [],
       newPostUrls: ["https://instagram.com/p/new1"],
@@ -89,16 +89,14 @@ describe("apifyWebhookHandler", () => {
 
     expect(res.status).toBe(200);
     expect(updateApifyScraperRun).toHaveBeenCalledWith("run-9", ["https://instagram.com/p/new1"]);
-    expect(maybeSendScrapeDigest).toHaveBeenCalledWith("batch-7");
   });
 
-  it("skips digest bookkeeping when the payload has no run id", async () => {
+  it("skips scrape-run bookkeeping when the payload has no run id", async () => {
     vi.mocked(handleInstagramProfileScraperResults).mockResolvedValue({ posts: [] } as never);
     await apifyWebhookHandler(
       makeRequest({ ...baseBody, eventData: { actorId: "dSCLg0C3YEZ83HzYX" } }),
     );
     expect(updateApifyScraperRun).not.toHaveBeenCalled();
-    expect(maybeSendScrapeDigest).not.toHaveBeenCalled();
   });
 
   it("dispatches comments scraper for the IG comments actor", async () => {
@@ -159,5 +157,26 @@ describe("apifyWebhookHandler", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual({ status: "error", error: "Invalid JSON" });
+  });
+
+  // The scrape notification email type was removed (chat#1955). This asserts the
+  // invariant at the real boundary, so it keeps holding no matter how the
+  // internals are refactored: a completed scrape webhook sends nothing.
+  it("sends no email when a scrape webhook completes", async () => {
+    vi.mocked(handleInstagramProfileScraperResults).mockResolvedValue({
+      posts: [1],
+      newPostUrls: ["https://instagram.com/p/new1"],
+    } as never);
+
+    const res = await apifyWebhookHandler(
+      makeRequest({
+        ...baseBody,
+        eventData: { actorId: "shu8hvrXbJbY3Eb9W" },
+        resource: { ...baseBody.resource, id: "run_1" },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(sendEmailWithResend).not.toHaveBeenCalled();
   });
 });
