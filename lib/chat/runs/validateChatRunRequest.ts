@@ -6,9 +6,10 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { validationErrorResponse } from "@/lib/zod/validationErrorResponse";
 import { generateUUID } from "@/lib/uuid/generateUUID";
+import { DEFAULT_CHAT_MODEL_ID } from "@/lib/const";
 
-/** Default model for headless generation when the caller omits `model`. */
-export const DEFAULT_RUN_MODEL_ID = "anthropic/claude-haiku-4.5";
+/** Default model for headless generation when the caller omits `model` (alias of the shared default). */
+export const DEFAULT_RUN_MODEL_ID = DEFAULT_CHAT_MODEL_ID;
 
 /**
  * Body schema for `POST /api/chat/runs` (the durable-workflow re-point,

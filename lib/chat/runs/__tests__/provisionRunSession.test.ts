@@ -56,7 +56,7 @@ describe("provisionRunSession", () => {
   });
 
   it("installs global skills into the sandbox before discovering them", async () => {
-    await provisionRunSession({ accountId: "account-1", title: "t" });
+    await provisionRunSession({ accountId: "account-1", title: "t", modelId: "test/model-x" });
 
     // Headless runs must PROVISION skills, not just discover them (chat#1822).
     expect(installSessionGlobalSkills).toHaveBeenCalledWith({
@@ -69,10 +69,20 @@ describe("provisionRunSession", () => {
     expect(installOrder).toBeLessThan(discoverOrder);
   });
 
+  // Provenance thread-through (chat#1956): the resolved model must reach the
+  // chat insert, not stop at the workflow input.
+  it("forwards modelId to createSessionWithInitialChat", async () => {
+    await provisionRunSession({ accountId: "account-1", title: "t", modelId: "test/model-x" });
+
+    expect(createSessionWithInitialChat).toHaveBeenCalledWith(
+      expect.objectContaining({ modelId: "test/model-x" }),
+    );
+  });
+
   it("still completes the run when skill install fails (best-effort)", async () => {
     vi.mocked(installSessionGlobalSkills).mockRejectedValueOnce(new Error("install boom"));
 
-    const result = await provisionRunSession({ accountId: "account-1", title: "t" });
+    const result = await provisionRunSession({ accountId: "account-1", title: "t", modelId: "test/model-x" });
 
     expect(result.session).toEqual(updated);
     expect(discoverSkills).toHaveBeenCalled();

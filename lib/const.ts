@@ -10,6 +10,13 @@ export const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as Addr
 export const PAYMASTER_URL = `https://api.developer.coinbase.com/rpc/v1/base/${process.env.PAYMASTER_KEY}`;
 export const IMAGE_GENERATE_PRICE = "0.15";
 export const DEFAULT_MODEL = "openai/gpt-5.4-nano";
+/**
+ * Default model for chat generation when the caller picks none — the single
+ * source for interactive chats, headless runs, and the value written to
+ * `chats.model_id` at provision time (chat#1956). Every chat writer persists
+ * a model explicitly; nothing relies on a database column default.
+ */
+export const DEFAULT_CHAT_MODEL_ID = "anthropic/claude-haiku-4.5";
 export const LIGHTWEIGHT_MODEL = "openai/gpt-4o-mini";
 export const PRIVY_PROJECT_SECRET = process.env.PRIVY_PROJECT_SECRET;
 /** Base URL for the public API documentation site */

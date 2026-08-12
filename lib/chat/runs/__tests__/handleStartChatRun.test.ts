@@ -86,7 +86,12 @@ describe("handleStartChatRun", () => {
     });
 
     expect(provisionRunSession).toHaveBeenCalledWith(
-      expect.objectContaining({ accountId: "acc-1", title: "Scheduled generation" }),
+      expect.objectContaining({
+        accountId: "acc-1",
+        title: "Scheduled generation",
+        // Provenance (chat#1956): the resolved model reaches the chat insert.
+        modelId: "anthropic/claude-haiku-4.5",
+      }),
     );
     // the minted key is injected as recoupAccessToken AND threaded as ephemeralKeyId
     expect(buildRunAgentInput).toHaveBeenCalledWith(

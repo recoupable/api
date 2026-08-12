@@ -1,3 +1,4 @@
+import { DEFAULT_CHAT_MODEL_ID } from "@/lib/const";
 import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
 import { start, getRun } from "workflow/api";
@@ -22,7 +23,7 @@ import { discoverSkills } from "@/lib/skills/discoverSkills";
 import { getSandboxSkillDirectories } from "@/lib/skills/getSandboxSkillDirectories";
 import generateUUID from "@/lib/uuid/generateUUID";
 
-const DEFAULT_MODEL_ID = "anthropic/claude-haiku-4.5";
+const DEFAULT_MODEL_ID = DEFAULT_CHAT_MODEL_ID;
 
 /**
  * Handles POST /api/chat/workflow.

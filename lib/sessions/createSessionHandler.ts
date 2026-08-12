@@ -9,6 +9,7 @@ import {
 import { failedToCreateSession } from "@/lib/sessions/failedToCreateSession";
 import { toSessionResponse } from "@/lib/sessions/toSessionResponse";
 import { toChatResponse } from "@/lib/sessions/toChatResponse";
+import { DEFAULT_CHAT_MODEL_ID } from "@/lib/const";
 
 const INITIAL_CHAT_TITLE = "New chat";
 
@@ -49,6 +50,7 @@ export async function createSessionHandler(request: NextRequest): Promise<NextRe
     title,
     chatTitle: INITIAL_CHAT_TITLE,
     artistId: body.artistId,
+    modelId: DEFAULT_CHAT_MODEL_ID,
   });
 
   if (result.ok === false) {
