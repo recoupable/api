@@ -20,8 +20,8 @@ vi.mock("@/lib/const", () => ({ PRIVY_PROJECT_SECRET: "secret" }));
 describe("mintEphemeralAccountKey", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("defaults the ephemeral TTL to 60 minutes (long runs with step retries outlive 15m — chat#1839)", () => {
-    expect(DEFAULT_EPHEMERAL_KEY_TTL_MS).toBe(60 * 60 * 1000);
+  it("defaults the ephemeral TTL to 24 hours (60m killed a slow-model run mid-flight — chat#1957; 15m did the same — chat#1839)", () => {
+    expect(DEFAULT_EPHEMERAL_KEY_TTL_MS).toBe(24 * 60 * 60 * 1000);
   });
 
   it("mints an account-scoped recoup_sk_ key with the default expiry and returns rawKey + keyId", async () => {
