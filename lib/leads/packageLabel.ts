@@ -1,7 +1,12 @@
 const PACKAGE_LABELS: Record<string, string> = {
+  // /advisory packages
   "strategy-session": "Strategy Session ($2,500)",
   "ai-transformation": "AI Transformation ($10,000)",
   "retained-advisor": "Retained Advisor ($5,000/mo)",
+  // /build packages (chat#1800 Phase 2) — published "from" floors
+  "care-plan": "Care Plan (from $750/mo)",
+  "starter-build": "Starter Build (from $2,500)",
+  "custom-build": "Custom Build (from $10k)",
 };
 
 /**
