@@ -48,7 +48,7 @@ const validated = {
   orgId: null,
   messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "go" }] }],
   artistId: undefined,
-  modelId: "anthropic/claude-haiku-4.5",
+  modelId: "test/model-y",
 };
 
 const provisioned = {
@@ -86,7 +86,12 @@ describe("handleStartChatRun", () => {
     });
 
     expect(provisionRunSession).toHaveBeenCalledWith(
-      expect.objectContaining({ accountId: "acc-1", title: "Scheduled generation" }),
+      expect.objectContaining({
+        accountId: "acc-1",
+        title: "Scheduled generation",
+        // Provenance (chat#1956): the resolved model reaches the chat insert.
+        modelId: "test/model-y",
+      }),
     );
     // the minted key is injected as recoupAccessToken AND threaded as ephemeralKeyId
     expect(buildRunAgentInput).toHaveBeenCalledWith(

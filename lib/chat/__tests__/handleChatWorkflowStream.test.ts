@@ -286,7 +286,7 @@ describe("handleChatWorkflowStream", () => {
       mockStartedRun();
       await handleChatWorkflowStream(makeRequest());
       const startArgs = vi.mocked(start).mock.calls[0]?.[1]?.[0] as { modelId: string };
-      expect(startArgs.modelId).toBe("anthropic/claude-haiku-4.5");
+      expect(startArgs.modelId).toBe("moonshotai/kimi-k3");
     });
 
     // Bundle A.4 — forward the Privy JWT from the validated body into

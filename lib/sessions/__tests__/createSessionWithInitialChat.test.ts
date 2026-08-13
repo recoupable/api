@@ -16,7 +16,13 @@ vi.mock("@/lib/supabase/sessions/insertSession", () => ({ insertSession: vi.fn()
 vi.mock("@/lib/supabase/sessions/deleteSessionById", () => ({ deleteSessionById: vi.fn() }));
 vi.mock("@/lib/supabase/chats/insertChat", () => ({ insertChat: vi.fn() }));
 
-const args = { accountId: "acc-1", title: "T", chatTitle: "New chat", artistId: "art-1" };
+const args = {
+  accountId: "acc-1",
+  title: "T",
+  chatTitle: "New chat",
+  artistId: "art-1",
+  modelId: "test/model-x",
+};
 
 describe("createSessionWithInitialChat", () => {
   beforeEach(() => {
@@ -36,6 +42,13 @@ describe("createSessionWithInitialChat", () => {
         cloneUrl: "https://github.com/recoupable/acc-1",
       }),
     );
+  });
+
+  // Provenance: the chat row must record the model that will run (chat#1956) —
+  // never rely on the chats.model_id column default to fill it in.
+  it("writes the caller's modelId onto the inserted chat row", async () => {
+    await createSessionWithInitialChat(args);
+    expect(insertChat).toHaveBeenCalledWith(expect.objectContaining({ model_id: "test/model-x" }));
   });
 
   it("uses workspaceAccountId for the repo when provided", async () => {

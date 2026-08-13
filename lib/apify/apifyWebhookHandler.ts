@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateApifyWebhookRequest } from "@/lib/apify/validateApifyWebhookRequest";
 import { getApifyResultHandler } from "@/lib/apify/getApifyResultHandler";
 import { updateApifyScraperRun } from "@/lib/supabase/apify_scraper_runs/updateApifyScraperRun";
-import { maybeSendScrapeDigest } from "@/lib/apify/digest/maybeSendScrapeDigest";
 
 /**
  * Handler for `POST /api/apify`. Always responds 200 so Apify does not
@@ -30,18 +29,19 @@ export async function apifyWebhookHandler(request: NextRequest): Promise<NextRes
   try {
     const result = await handler(validated);
 
-    // Digest-batch bookkeeping (chat#1855): record this run's genuinely-new
-    // posts and, when it was the batch's last completion, send the single
-    // consolidated digest. Never fails the webhook.
+    // Scrape-run bookkeeping: record this run's completion and the posts that
+    // were genuinely new, as an audit trail of what each scrape did. The
+    // notification email this used to trigger was removed (chat#1955); the
+    // record is kept because it is the only history of scrape activity.
+    // Never fails the webhook.
     const runId = validated.resource.id;
     if (runId) {
       try {
         const newPostUrls =
           (result as { newPostUrls?: string[] } | null | undefined)?.newPostUrls ?? [];
-        const run = await updateApifyScraperRun(runId, newPostUrls);
-        await maybeSendScrapeDigest(run?.batch_id);
-      } catch (digestError) {
-        console.error("[WARN] scrape digest bookkeeping failed:", digestError);
+        await updateApifyScraperRun(runId, newPostUrls);
+      } catch (bookkeepingError) {
+        console.error("[WARN] scrape run bookkeeping failed:", bookkeepingError);
       }
     }
 

@@ -35,12 +35,15 @@ export async function createSessionWithInitialChat({
   title,
   chatTitle,
   artistId,
+  modelId,
 }: {
   accountId: string;
   workspaceAccountId?: string;
   title: string;
   chatTitle: string;
   artistId?: string;
+  /** Model recorded on the chat row — provenance, never left to a column default (chat#1956). */
+  modelId: string;
 }): Promise<CreateSessionWithChatResult> {
   const cloneUrl = await ensurePersonalRepo({ accountId: workspaceAccountId ?? accountId });
   if (!cloneUrl) return { ok: false, reason: "repo" };
@@ -50,7 +53,12 @@ export async function createSessionWithInitialChat({
   );
   if (!session) return { ok: false, reason: "insert" };
 
-  const chat = await insertChat({ id: generateUUID(), session_id: session.id, title: chatTitle });
+  const chat = await insertChat({
+    id: generateUUID(),
+    session_id: session.id,
+    title: chatTitle,
+    model_id: modelId,
+  });
   if (!chat) {
     const rolledBack = await deleteSessionById(session.id);
     if (!rolledBack) {

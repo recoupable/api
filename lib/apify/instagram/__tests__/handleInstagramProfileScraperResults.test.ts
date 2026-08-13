@@ -4,7 +4,7 @@ import apifyClient from "@/lib/apify/client";
 import { upsertPosts } from "@/lib/supabase/posts/upsertPosts";
 import { getPosts } from "@/lib/supabase/posts/getPosts";
 import { handleInstagramProfileFollowUpRuns } from "../handleInstagramProfileFollowUpRuns";
-import { sendApifyWebhookEmail } from "@/lib/apify/sendApifyWebhookEmail";
+import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
 import { selectSocials } from "@/lib/supabase/socials/selectSocials";
 import { upsertSocialPosts } from "@/lib/supabase/social_posts/upsertSocialPosts";
@@ -13,7 +13,6 @@ import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccoun
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { uploadLinkToArweave } from "@/lib/arweave/uploadLinkToArweave";
 import { filterNewPostUrls } from "@/lib/socials/filterNewPostUrls";
-import { selectApifyScraperRun } from "@/lib/supabase/apify_scraper_runs/selectApifyScraperRun";
 
 vi.mock("@/lib/apify/client", () => ({ default: { dataset: vi.fn() } }));
 
@@ -27,11 +26,8 @@ vi.mock("@/lib/supabase/posts/getPosts", () => ({ getPosts: vi.fn() }));
 vi.mock("../handleInstagramProfileFollowUpRuns", () => ({
   handleInstagramProfileFollowUpRuns: vi.fn(),
 }));
-vi.mock("@/lib/apify/sendApifyWebhookEmail", () => ({ sendApifyWebhookEmail: vi.fn() }));
+vi.mock("@/lib/emails/sendEmail", () => ({ sendEmailWithResend: vi.fn(async () => null) }));
 vi.mock("@/lib/socials/filterNewPostUrls", () => ({ filterNewPostUrls: vi.fn() }));
-vi.mock("@/lib/supabase/apify_scraper_runs/selectApifyScraperRun", () => ({
-  selectApifyScraperRun: vi.fn(async () => null),
-}));
 vi.mock("@/lib/supabase/socials/upsertSocials", () => ({ upsertSocials: vi.fn() }));
 vi.mock("@/lib/supabase/socials/selectSocials", () => ({
   selectSocials: vi.fn(),
@@ -91,13 +87,13 @@ describe("handleInstagramProfileScraperResults", () => {
     vi.mocked(selectAccountSocials).mockResolvedValue([{ account_id: "a1" }] as never);
     vi.mocked(getAccountArtistIds).mockResolvedValue([{ account_id: "a1" }] as never);
     vi.mocked(selectAccountEmails).mockResolvedValue([{ email: "x@y.com" }] as never);
-    vi.mocked(sendApifyWebhookEmail).mockResolvedValue({ id: "email_1" } as never);
 
     const result = await handleInstagramProfileScraperResults(payload);
 
     expect(upsertPosts).toHaveBeenCalledOnce();
     expect(upsertSocialPosts).toHaveBeenCalledOnce();
-    expect(sendApifyWebhookEmail).toHaveBeenCalledWith(expect.any(Object), ["x@y.com"], ["u1"]);
+    // chat#1955: scraping must persist posts and send nothing.
+    expect(sendEmailWithResend).not.toHaveBeenCalled();
     expect(handleInstagramProfileFollowUpRuns).toHaveBeenCalledOnce();
     expect(result.social).toEqual({ id: "s1" });
     expect(result.posts).toEqual(posts);
@@ -125,7 +121,7 @@ describe("handleInstagramProfileScraperResults", () => {
 
     const result = await handleInstagramProfileScraperResults(payload);
 
-    expect(sendApifyWebhookEmail).not.toHaveBeenCalled();
+    expect(sendEmailWithResend).not.toHaveBeenCalled();
     // persistence is unaffected — only the notification is gated
     expect(upsertPosts).toHaveBeenCalledOnce();
     expect(upsertSocialPosts).toHaveBeenCalledOnce();
@@ -133,7 +129,7 @@ describe("handleInstagramProfileScraperResults", () => {
     expect(result.social).toEqual({ id: "s1" });
   });
 
-  it("suppresses the solo email for digest-batch runs (webhook layer sends ONE digest)", async () => {
+  it("sends nothing even when the scrape finds new posts", async () => {
     mockDataset([
       {
         latestPosts: [{ url: "u-new", timestamp: "t" }],
@@ -143,10 +139,6 @@ describe("handleInstagramProfileScraperResults", () => {
         fullName: "Alice",
       },
     ]);
-    vi.mocked(selectApifyScraperRun).mockResolvedValue({
-      run_id: "run-1",
-      batch_id: "b1",
-    } as never);
     vi.mocked(upsertPosts).mockResolvedValue({ data: null, error: null } as never);
     vi.mocked(getPosts).mockResolvedValue([{ id: "p1", post_url: "u-new" }] as never);
     vi.mocked(uploadLinkToArweave).mockResolvedValue(null);
@@ -161,7 +153,7 @@ describe("handleInstagramProfileScraperResults", () => {
       resource: { defaultDatasetId: "ds_1", id: "run-1" },
     } as never);
 
-    expect(sendApifyWebhookEmail).not.toHaveBeenCalled(); // digest covers it
+    expect(sendEmailWithResend).not.toHaveBeenCalled();
     expect(result.newPostUrls).toEqual(["u-new"]);
   });
 });
