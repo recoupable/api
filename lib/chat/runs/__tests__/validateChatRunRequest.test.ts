@@ -50,7 +50,17 @@ describe("validateChatRunRequest", () => {
 
     const noModel = await validateChatRunRequest(req({ prompt: "hi" }));
     if (noModel instanceof NextResponse) throw new Error("unexpected error");
-    expect(noModel.modelId).toBe("anthropic/claude-haiku-4.5");
+    expect(noModel.modelId).toBe("moonshotai/kimi-k3");
+
+    // cubic P2: an empty or whitespace model must normalize to the default,
+    // never persist as "" (provenance) or reach the workflow as "".
+    const emptyModel = await validateChatRunRequest(req({ prompt: "hi", model: "" }));
+    if (emptyModel instanceof NextResponse) throw new Error("unexpected error");
+    expect(emptyModel.modelId).toBe("moonshotai/kimi-k3");
+
+    const blankModel = await validateChatRunRequest(req({ prompt: "hi", model: "   " }));
+    if (blankModel instanceof NextResponse) throw new Error("unexpected error");
+    expect(blankModel.modelId).toBe("moonshotai/kimi-k3");
   });
 
   it("rejects when neither prompt nor messages is provided (400)", async () => {

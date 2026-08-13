@@ -70,7 +70,7 @@ describe("createSessionHandler — persistence", () => {
     expect(chatArgs.title).toBe("New chat");
     // Provenance (chat#1956): every writer sets model_id explicitly so the
     // chats.model_id column default can be dropped.
-    expect(chatArgs.model_id).toBe("anthropic/claude-haiku-4.5");
+    expect(chatArgs.model_id).toBe("moonshotai/kimi-k3");
   });
 
   it("uses auth.accountId for personal sessions", async () => {

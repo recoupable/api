@@ -8,9 +8,6 @@ import { validationErrorResponse } from "@/lib/zod/validationErrorResponse";
 import { generateUUID } from "@/lib/uuid/generateUUID";
 import { DEFAULT_CHAT_MODEL_ID } from "@/lib/const";
 
-/** Default model for headless generation when the caller omits `model` (alias of the shared default). */
-export const DEFAULT_RUN_MODEL_ID = DEFAULT_CHAT_MODEL_ID;
-
 /**
  * Body schema for `POST /api/chat/runs` (the durable-workflow re-point,
  * recoupable/chat#1813). Exactly one of `prompt` / `messages` must be present.
@@ -79,11 +76,15 @@ export async function validateChatRunRequest(
     ? [{ id: generateUUID(), role: "user", parts: [{ type: "text", text: trimmedPrompt }] }]
     : (messages as UIMessage[]);
 
+  // `||` not `??`: an empty/whitespace model must fall back too, or "" would
+  // be persisted as provenance and sent to the workflow as the model id.
+  const trimmedModel = typeof model === "string" ? model.trim() : "";
+
   return {
     accountId: auth.accountId,
     orgId: auth.orgId,
     messages: uiMessages,
     artistId,
-    modelId: model ?? DEFAULT_RUN_MODEL_ID,
+    modelId: trimmedModel || DEFAULT_CHAT_MODEL_ID,
   };
 }

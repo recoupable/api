@@ -15,8 +15,13 @@ export const DEFAULT_MODEL = "openai/gpt-5.4-nano";
  * source for interactive chats, headless runs, and the value written to
  * `chats.model_id` at provision time (chat#1956). Every chat writer persists
  * a model explicitly; nothing relies on a database column default.
+ *
+ * Distinct from DEFAULT_MODEL above, which powers internal utility LLM calls
+ * (evals, catalog batch analysis, general agent), not user-facing chat.
+ * kimi-k3 chosen 2026-08-12: best recall and lowest cost in a 4-model A/B on
+ * a production roster-brief task (api#830 review thread).
  */
-export const DEFAULT_CHAT_MODEL_ID = "anthropic/claude-haiku-4.5";
+export const DEFAULT_CHAT_MODEL_ID = "moonshotai/kimi-k3";
 export const LIGHTWEIGHT_MODEL = "openai/gpt-4o-mini";
 export const PRIVY_PROJECT_SECRET = process.env.PRIVY_PROJECT_SECRET;
 /** Base URL for the public API documentation site */
