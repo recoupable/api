@@ -6,7 +6,7 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { validationErrorResponse } from "@/lib/zod/validationErrorResponse";
 import { generateUUID } from "@/lib/uuid/generateUUID";
-import { DEFAULT_CHAT_MODEL_ID } from "@/lib/const";
+import { DEFAULT_MODEL } from "@/lib/const";
 
 /**
  * Body schema for `POST /api/chat/runs` (the durable-workflow re-point,
@@ -85,6 +85,6 @@ export async function validateChatRunRequest(
     orgId: auth.orgId,
     messages: uiMessages,
     artistId,
-    modelId: trimmedModel || DEFAULT_CHAT_MODEL_ID,
+    modelId: trimmedModel || DEFAULT_MODEL,
   };
 }

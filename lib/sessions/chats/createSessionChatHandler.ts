@@ -5,7 +5,7 @@ import { validateCreateSessionChatRequest } from "@/lib/sessions/chats/validateC
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { insertChat } from "@/lib/supabase/chats/insertChat";
 import { toChatResponse } from "@/lib/sessions/toChatResponse";
-import { DEFAULT_CHAT_MODEL_ID } from "@/lib/const";
+import { DEFAULT_MODEL } from "@/lib/const";
 
 const INITIAL_CHAT_TITLE = "New chat";
 
@@ -54,7 +54,7 @@ export async function createSessionChatHandler(
     id: requestedChatId ?? generateUUID(),
     session_id: sessionId,
     title: INITIAL_CHAT_TITLE,
-    model_id: DEFAULT_CHAT_MODEL_ID,
+    model_id: DEFAULT_MODEL,
   });
 
   if (!chatRow) {

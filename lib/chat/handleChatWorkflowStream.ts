@@ -1,4 +1,4 @@
-import { DEFAULT_CHAT_MODEL_ID } from "@/lib/const";
+import { DEFAULT_MODEL } from "@/lib/const";
 import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
 import { start, getRun } from "workflow/api";
@@ -89,7 +89,7 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   await updateSession(validated.sessionId, buildActiveLifecycleUpdate(session.sandbox_state));
   void persistLatestUserMessage(validated.chatId, validated.messages as never);
 
-  const modelId = chat.model_id ?? DEFAULT_CHAT_MODEL_ID;
+  const modelId = chat.model_id ?? DEFAULT_MODEL;
 
   // Connect the sandbox up-front so we can (a) read the real working
   // directory and (b) discover project-level skills. The connected

@@ -9,19 +9,14 @@ export const SMART_ACCOUNT_ADDRESS = "0xbAf31935ED514e8F7da81D0A730AB5362DEEEEb7
 export const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as Address;
 export const PAYMASTER_URL = `https://api.developer.coinbase.com/rpc/v1/base/${process.env.PAYMASTER_KEY}`;
 export const IMAGE_GENERATE_PRICE = "0.15";
-export const DEFAULT_MODEL = "openai/gpt-5.4-nano";
 /**
- * Default model for chat generation when the caller picks none — the single
- * source for interactive chats, headless runs, and the value written to
- * `chats.model_id` at provision time (chat#1956). Every chat writer persists
- * a model explicitly; nothing relies on a database column default.
- *
- * Distinct from DEFAULT_MODEL above, which powers internal utility LLM calls
- * (evals, catalog batch analysis, general agent), not user-facing chat.
+ * THE default model, everywhere a caller picks none: interactive chats,
+ * headless runs (persisted to `chats.model_id` at provision time, chat#1956),
+ * evals, catalog batch analysis, and the general agent's fallback.
  * kimi-k3 chosen 2026-08-12: best recall and lowest cost in a 4-model A/B on
  * a production roster-brief task (api#830 review thread).
  */
-export const DEFAULT_CHAT_MODEL_ID = "moonshotai/kimi-k3";
+export const DEFAULT_MODEL = "moonshotai/kimi-k3";
 export const LIGHTWEIGHT_MODEL = "openai/gpt-4o-mini";
 export const PRIVY_PROJECT_SECRET = process.env.PRIVY_PROJECT_SECRET;
 /** Base URL for the public API documentation site */
