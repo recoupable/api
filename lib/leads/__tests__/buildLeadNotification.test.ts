@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildLeadNotification } from "@/lib/notifications/buildLeadNotification";
+import { buildLeadNotification } from "@/lib/leads/buildLeadNotification";
 
 const lead = {
   email: "ada@example.com",
