@@ -1,3 +1,4 @@
+import { DEFAULT_MODEL } from "@/lib/const";
 import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
 import { start, getRun } from "workflow/api";
@@ -21,8 +22,6 @@ import type { VercelState } from "@/lib/sandbox/vercel/state";
 import { discoverSkills } from "@/lib/skills/discoverSkills";
 import { getSandboxSkillDirectories } from "@/lib/skills/getSandboxSkillDirectories";
 import generateUUID from "@/lib/uuid/generateUUID";
-
-const DEFAULT_MODEL_ID = "anthropic/claude-haiku-4.5";
 
 /**
  * Handles POST /api/chat/workflow.
@@ -90,7 +89,7 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   await updateSession(validated.sessionId, buildActiveLifecycleUpdate(session.sandbox_state));
   void persistLatestUserMessage(validated.chatId, validated.messages as never);
 
-  const modelId = chat.model_id ?? DEFAULT_MODEL_ID;
+  const modelId = chat.model_id ?? DEFAULT_MODEL;
 
   // Connect the sandbox up-front so we can (a) read the real working
   // directory and (b) discover project-level skills. The connected
