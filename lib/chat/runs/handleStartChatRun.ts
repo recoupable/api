@@ -38,7 +38,7 @@ export async function handleStartChatRun(request: NextRequest): Promise<Response
   const validated = await validateChatRunRequest(request);
   if (validated instanceof NextResponse) return validated;
 
-  const { accountId, messages, artistId, modelId } = validated;
+  const { accountId, messages, artistId, modelId, triggerRunId } = validated;
 
   let ephemeralKeyId: string | undefined;
   try {
@@ -68,6 +68,7 @@ export async function handleStartChatRun(request: NextRequest): Promise<Response
         recoupAccessToken: rawKey,
         ephemeralKeyId: keyId,
         interactive: false,
+        triggerRunId,
       }),
     ]);
 

@@ -30,6 +30,7 @@ export async function sendEmailHandler(request: NextRequest): Promise<NextRespon
       headers = {},
       chat_id,
       accountId,
+      trigger_run_id,
     } = validated.data;
     const result = await processAndSendEmail({
       to,
@@ -46,13 +47,26 @@ export async function sendEmailHandler(request: NextRequest): Promise<NextRespon
         { status: "error", error: result.error },
         { status: 502, headers: getCorsHeaders() },
       );
-      attempt = { status: "send_failed", accountId, chatId: chat_id };
+      attempt = {
+        status: "send_failed",
+        accountId,
+        chatId: chat_id,
+        subject,
+        triggerRunId: trigger_run_id,
+      };
     } else {
       response = NextResponse.json(
         { success: true, message: result.message, id: result.id },
         { status: 200, headers: getCorsHeaders() },
       );
-      attempt = { status: "sent", accountId, chatId: chat_id, resendId: result.id };
+      attempt = {
+        status: "sent",
+        accountId,
+        chatId: chat_id,
+        resendId: result.id,
+        subject,
+        triggerRunId: trigger_run_id,
+      };
     }
   } else {
     response = validated.error;

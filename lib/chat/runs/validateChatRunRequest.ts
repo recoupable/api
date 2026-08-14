@@ -22,6 +22,9 @@ export const chatRunBodySchema = z.object({
   accountId: z.string().optional(),
   organizationId: z.string().optional(),
   model: z.string().optional(),
+  // Trigger.dev run id of the scheduled task starting this run — threaded to
+  // the sandbox so emails the agent sends can be linked back (chat#1958).
+  trigger_run_id: z.string().optional(),
 });
 
 export type ChatRunRequest = {
@@ -30,6 +33,8 @@ export type ChatRunRequest = {
   messages: UIMessage[];
   artistId?: string;
   modelId: string;
+  /** Trigger.dev run id of the scheduled task starting this run (chat#1958). */
+  triggerRunId?: string;
 };
 
 /**
@@ -86,5 +91,6 @@ export async function validateChatRunRequest(
     messages: uiMessages,
     artistId,
     modelId: trimmedModel || DEFAULT_MODEL,
+    triggerRunId: parsed.data.trigger_run_id,
   };
 }

@@ -105,3 +105,36 @@ describe("sendEmailHandler", () => {
     );
   });
 });
+
+// chat#1958: the handler forwards subject + trigger_run_id to the send log so
+// task runs can be named by the email they sent.
+describe("sendEmailHandler run linkage (chat#1958)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockValidateSendEmailBody.mockResolvedValue({
+      rawBody: '{"subject":"Weekly report"}',
+      data: {
+        to: ["dest@example.com"],
+        subject: "Weekly report",
+        text: "body",
+        accountId: "account-123",
+        trigger_run_id: "run_abc123",
+      },
+    });
+    mockProcessAndSendEmail.mockResolvedValue({
+      success: true,
+      message: "Email sent successfully.",
+      id: "resend-id-1",
+    });
+  });
+
+  it("logs subject and triggerRunId on a successful send", async () => {
+    await sendEmailHandler(createRequest());
+    expect(mockLogEmailAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: "Weekly report",
+        triggerRunId: "run_abc123",
+      }),
+    );
+  });
+});

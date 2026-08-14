@@ -241,3 +241,31 @@ describe("validateSendEmailBody", () => {
     });
   });
 });
+
+// chat#1958: optional trigger_run_id links a send to the scheduled run that
+// produced it.
+describe("trigger_run_id (chat#1958)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockValidateAuthContext.mockResolvedValue({
+      accountId: "account-123",
+      orgId: null,
+      authToken: "test-api-key",
+    });
+    mockAssertRecipientsAllowed.mockResolvedValue({ allowed: true });
+    mockSelectAccountEmails.mockResolvedValue([{ email: "owner@example.com" }]);
+  });
+
+  it("accepts and returns trigger_run_id", async () => {
+    const result = await validateSendEmailBody(
+      createRequest({
+        to: ["owner@example.com"],
+        subject: "Weekly report",
+        text: "hi",
+        trigger_run_id: "run_abc123",
+      }),
+    );
+    if (!("data" in result)) throw new Error("expected data");
+    expect(result.data.trigger_run_id).toBe("run_abc123");
+  });
+});

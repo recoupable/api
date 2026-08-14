@@ -19,6 +19,9 @@ export const sendEmailBodySchema = z
     html: z.string().optional(),
     headers: z.record(z.string(), z.string()).default({}).optional(),
     chat_id: z.string().optional(),
+    // Trigger.dev run id of the scheduled task that produced this send —
+    // persisted so the run can be named by this email's subject (chat#1958).
+    trigger_run_id: z.string().optional(),
     account_id: z.string().uuid("account_id must be a valid UUID").optional(),
   })
   // Guard: never send an empty/footer-only email. A malformed or empty body

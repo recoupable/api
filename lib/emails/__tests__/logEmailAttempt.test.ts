@@ -55,3 +55,32 @@ describe("logEmailAttempt", () => {
     });
   });
 });
+
+// chat#1958: subject + trigger_run_id are persisted so task runs can be named
+// by the email they sent.
+describe("logEmailAttempt run linkage (chat#1958)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockInsert.mockResolvedValue({ error: null });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("persists subject and trigger_run_id when provided", async () => {
+    await logEmailAttempt({
+      rawBody: "{}",
+      status: "sent",
+      subject: "Weekly LA EQUIS report",
+      triggerRunId: "run_abc123",
+    });
+    const row = mockInsert.mock.calls[0][0];
+    expect(row.subject).toBe("Weekly LA EQUIS report");
+    expect(row.trigger_run_id).toBe("run_abc123");
+  });
+
+  it("writes nulls when subject and trigger_run_id are absent", async () => {
+    await logEmailAttempt({ rawBody: "{}", status: "sent" });
+    const row = mockInsert.mock.calls[0][0];
+    expect(row.subject).toBeNull();
+    expect(row.trigger_run_id).toBeNull();
+  });
+});
