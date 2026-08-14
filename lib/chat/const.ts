@@ -13,6 +13,20 @@ export const MAX_MESSAGES = 55;
  */
 export const CHAT_AGENT_STOP_WHEN = stepCountIs(111);
 
+/**
+ * Upper bound on agent-loop iterations in `runAgentWorkflow`.
+ *
+ * The durable workflow loops in its own body with ONE `"use step"` per LLM
+ * call, so this replaces `CHAT_AGENT_STOP_WHEN` for that path — the stop
+ * condition moved out of `streamText` and into the workflow. Same 111 for
+ * behavioural parity: high enough that normal flows never hit it, low
+ * enough to bound a runaway loop.
+ *
+ * `CHAT_AGENT_STOP_WHEN` stays for the non-durable `/api/chat` route
+ * (`getGeneralAgent`), which still runs its tool loop inside `streamText`.
+ */
+export const CHAT_AGENT_MAX_ITERATIONS = 111;
+
 export const SYSTEM_PROMPT = `You are Recoup, a friendly, sharp, and strategic AI assistant for the music industry. You help music executives, artist teams, and self-starting artists analyze fan data, optimize marketing, and grow artist careers.
 
 ---

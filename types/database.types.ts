@@ -737,6 +737,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      apify_scraper_runs: {
+        Row: {
+          account_id: string;
+          batch_id: string | null;
+          completed_at: string | null;
+          created_at: string;
+          new_post_urls: Json | null;
+          platform: string | null;
+          run_id: string;
+          social_id: string | null;
+        };
+        Insert: {
+          account_id: string;
+          batch_id?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          new_post_urls?: Json | null;
+          platform?: string | null;
+          run_id: string;
+          social_id?: string | null;
+        };
+        Update: {
+          account_id?: string;
+          batch_id?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          new_post_urls?: Json | null;
+          platform?: string | null;
+          run_id?: string;
+          social_id?: string | null;
+        };
+        Relationships: [];
+      };
       app_store_link_clicked: {
         Row: {
           clientId: string | null;
@@ -1161,6 +1194,51 @@ export type Database = {
           uniquePlayerID?: string | null;
         };
         Relationships: [];
+      };
+      credit_grants: {
+        Row: {
+          account_id: string;
+          created_at: string;
+          granted_by: string;
+          id: string;
+          previous_credits: number | null;
+          reason: string;
+          remaining_credits: number;
+        };
+        Insert: {
+          account_id: string;
+          created_at?: string;
+          granted_by: string;
+          id?: string;
+          previous_credits?: number | null;
+          reason: string;
+          remaining_credits: number;
+        };
+        Update: {
+          account_id?: string;
+          created_at?: string;
+          granted_by?: string;
+          id?: string;
+          previous_credits?: number | null;
+          reason?: string;
+          remaining_credits?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "credit_grants_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "credit_grants_granted_by_fkey";
+            columns: ["granted_by"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       credits_usage: {
         Row: {
@@ -3828,28 +3906,16 @@ export type Database = {
         };
         Returns: undefined;
       };
-      extract_domain: { Args: { email: string }; Returns: string };
-      get_catalog_measurements_aggregate: {
-        Args: { p_catalog: string; p_artist?: string };
-        Returns: {
-          measured_song_count: number;
-          total_streams: number;
-        }[];
-      };
-      get_catalog_measurements_page: {
+      grant_credits_with_audit: {
         Args: {
-          p_catalog: string;
-          p_artist?: string;
-          p_limit?: number;
-          p_offset?: number;
+          p_account_id: string;
+          p_granted_by: string;
+          p_reason: string;
+          p_remaining_credits: number;
         };
-        Returns: {
-          isrc: string;
-          title: string | null;
-          playcount: number;
-          measured_at: string;
-        }[];
+        Returns: Database["public"]["Tables"]["credit_grants"]["Row"];
       };
+      extract_domain: { Args: { email: string }; Returns: string };
       get_account_invitations: {
         Args: { account_slug: string };
         Returns: {
@@ -3890,6 +3956,27 @@ export type Database = {
       get_campaign_fans: {
         Args: { artistid: string; email: string };
         Returns: Json;
+      };
+      get_catalog_measurements_aggregate: {
+        Args: { p_artist?: string; p_catalog: string };
+        Returns: {
+          measured_song_count: number;
+          total_streams: number;
+        }[];
+      };
+      get_catalog_measurements_page: {
+        Args: {
+          p_artist?: string;
+          p_catalog: string;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: {
+          isrc: string;
+          measured_at: string;
+          playcount: number;
+          title: string;
+        }[];
       };
       get_config: { Args: never; Returns: Json };
       get_credit_spend_digest: {

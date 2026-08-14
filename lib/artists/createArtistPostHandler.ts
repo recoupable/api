@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateArtistBody } from "@/lib/artists/validateCreateArtistBody";
-import { createArtistInDb } from "@/lib/artists/createArtistInDb";
+import { resolveOrCreateArtist } from "@/lib/artists/resolveOrCreateArtist";
 
 /**
  * Handler for POST /api/artists.
@@ -26,11 +26,12 @@ export async function createArtistPostHandler(request: NextRequest): Promise<Nex
   }
 
   try {
-    const artist = await createArtistInDb(
-      validated.name,
-      validated.accountId,
-      validated.organizationId,
-    );
+    const { artist, created } = await resolveOrCreateArtist({
+      name: validated.name,
+      accountId: validated.accountId,
+      organizationId: validated.organizationId,
+      spotifyArtistId: validated.spotifyArtistId,
+    });
 
     if (!artist) {
       return NextResponse.json(
@@ -39,7 +40,11 @@ export async function createArtistPostHandler(request: NextRequest): Promise<Nex
       );
     }
 
-    return NextResponse.json({ artist }, { status: 201, headers: getCorsHeaders() });
+    // 200 = existing canonical linked to the account; 201 = created (chat#1889 row 8).
+    return NextResponse.json(
+      { artist },
+      { status: created ? 201 : 200, headers: getCorsHeaders() },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create artist";
     return NextResponse.json(

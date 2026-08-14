@@ -2,6 +2,7 @@ import apifyClient from "@/lib/apify/client";
 import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
 import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
 import { persistPostsForSocial } from "@/lib/apify/persistPostsForSocial";
+import { filterNewPostUrls } from "@/lib/socials/filterNewPostUrls";
 import { toIsoDate } from "@/lib/apify/toIsoDate";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 import type { TablesInsert } from "@/types/database.types";
@@ -47,7 +48,9 @@ export async function handleTiktokProfileScraperResults(parsed: ApifyWebhookPayl
       ? [{ post_url: item.webVideoUrl, updated_at: toIsoDate(item.createTimeISO) }]
       : [],
   );
+  // Diff before persisting so the digest can report genuinely new posts (chat#1855).
+  const newPostUrls = await filterNewPostUrls(postRows.map(p => p.post_url));
   const { posts } = await persistPostsForSocial({ postRows, profileUrl: social.profile_url });
 
-  return { social, posts };
+  return { social, posts, newPostUrls };
 }

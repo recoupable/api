@@ -1,9 +1,12 @@
 import { SongWithSpotify } from "./getSongsByIsrc";
 import { getPreferredArtistAccountIds } from "@/lib/supabase/songs/getPreferredArtistAccountIds";
 import { insertSongArtists } from "@/lib/supabase/song_artists/insertSongArtists";
+import { attachSpotifySocialsToArtists } from "./attachSpotifySocialsToArtists";
 
 /**
- * Links songs to artists
+ * Links songs to artists, and attaches each resolved artist account's Spotify
+ * profile when it lacks one (chat#1850 P1 — auto-created canonical artists
+ * had zero socials, making them unfindable by Spotify id).
  *
  * @param songs - The songs to link to artists
  * @returns A promise that resolves when the songs are linked to artists
@@ -11,6 +14,7 @@ import { insertSongArtists } from "@/lib/supabase/song_artists/insertSongArtists
  */
 export async function linkSongsToArtists(songs: SongWithSpotify[]): Promise<void> {
   const normalizedToOriginal = new Map<string, string>();
+  const spotifyIdByNormalized = new Map<string, string>();
 
   songs.forEach(song => {
     (song.spotifyArtists ?? []).forEach(artist => {
@@ -20,6 +24,10 @@ export async function linkSongsToArtists(songs: SongWithSpotify[]): Promise<void
       const normalized = trimmed.toLowerCase();
       if (!normalizedToOriginal.has(normalized)) {
         normalizedToOriginal.set(normalized, trimmed);
+      }
+      const spotifyId = artist?.id?.trim();
+      if (spotifyId && !spotifyIdByNormalized.has(normalized)) {
+        spotifyIdByNormalized.set(normalized, spotifyId);
       }
     });
   });
@@ -52,4 +60,11 @@ export async function linkSongsToArtists(songs: SongWithSpotify[]): Promise<void
   });
 
   await insertSongArtists(songArtists);
+
+  await attachSpotifySocialsToArtists(
+    [...spotifyIdByNormalized.entries()].flatMap(([normalized, spotifyArtistId]) => {
+      const artistAccountId = nameToAccountId.get(normalized);
+      return artistAccountId ? [{ artistAccountId, spotifyArtistId }] : [];
+    }),
+  );
 }

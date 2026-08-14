@@ -3,7 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { z } from "zod";
 
 export const addArtistBodySchema = z.object({
-  email: z.string().email("email must be a valid email address"),
+  email: z.string().email("email must be a valid email address").optional(),
   artistId: z.string().uuid("artistId must be a valid UUID"),
 });
 

@@ -15,7 +15,10 @@ const startTwitterProfileScraping = async (
   const input = {
     twitterHandles: [cleanHandle],
     sort: "Latest",
-    maxItems: posts ?? 1,
+    // Timeline items include retweets/replies, which are dropped AFTER the
+    // fetch (isOriginalTweet) — depth 1 would rarely surface an authored
+    // post for active retweeters (chat#1855).
+    maxItems: posts ?? 10,
   };
 
   const run = await apifyClient

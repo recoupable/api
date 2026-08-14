@@ -5,6 +5,7 @@ import { validateGetCatalogMeasurementsQuery } from "./validateGetCatalogMeasure
 import { computeValuationBand } from "./computeValuationBand";
 import { getCatalogEarliestReleaseDate } from "./getCatalogEarliestReleaseDate";
 import { selectAccountCatalog } from "@/lib/supabase/account_catalogs/selectAccountCatalog";
+import { getCatalogOwnerIds } from "./getCatalogOwnerIds";
 import { selectCatalogMeasurementsAggregate } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate";
 import { selectCatalogMeasurementsPage } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsPage";
 
@@ -20,8 +21,9 @@ import { selectCatalogMeasurementsPage } from "@/lib/supabase/song_measurements/
  * Optionally scoped to one artist's songs (catalog_songs ∩ song_artists) via
  * artist_account_id; the applied filter is echoed back so clients can verify
  * the response scope. The account is resolved from credentials (Privy bearer
- * or x-api-key); a catalog that doesn't exist or belongs to another account
- * is a 404.
+ * or x-api-key); a catalog that doesn't exist, or belongs to neither the account
+ * nor one of its organizations, is a 404 — the same visibility the catalog list
+ * uses, so anything listed can also be opened (chat#1938).
  *
  * @param request - The request object
  * @param catalogIdParam - The catalogId path segment
@@ -38,7 +40,8 @@ export async function getCatalogMeasurementsHandler(
     }
     const { accountId, catalogId, artist_account_id: artistAccountId, page, limit } = validated;
 
-    const link = await selectAccountCatalog({ accountId, catalogId });
+    const ownerIds = await getCatalogOwnerIds(accountId);
+    const link = await selectAccountCatalog({ accountIds: ownerIds, catalogId });
     if (!link) {
       return errorResponse("Catalog not found", 404);
     }

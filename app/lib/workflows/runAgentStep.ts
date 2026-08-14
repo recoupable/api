@@ -1,32 +1,36 @@
-import {
-  streamText,
-  convertToModelMessages,
-  createUIMessageStream,
-  type UIMessage,
-  type UIMessageChunk,
-} from "ai";
+import { streamText, type ModelMessage, type UIMessage, type UIMessageChunk } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { agentCustomInstructions } from "@/lib/chat/agentCustomInstructions";
 import { buildAgentSystemPrompt } from "@/lib/chat/buildAgentSystemPrompt";
-import { CHAT_AGENT_STOP_WHEN } from "@/lib/chat/const";
 import { buildAgentTools } from "@/lib/agent/buildAgentTools";
 import type { AgentContext, DurableAgentContext } from "@/lib/agent/tools/AgentContext";
 import { buildMessageMetadataCallback } from "@/lib/agent/messageMetadata/buildMessageMetadataCallback";
+import type { AgentMessageMetadata } from "@/lib/agent/messageMetadata/AgentMessageMetadata";
 import { addCacheControlToTools } from "@/lib/agent/contextManagement/addCacheControlToTools";
 import { addCacheControlToMessages } from "@/lib/agent/contextManagement/addCacheControlToMessages";
 import { wrapToolsWithAbort } from "@/lib/agent/contextManagement/wrapToolsWithAbort";
-import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
-import { finalizeAbortedAssistantMessage } from "@/lib/chat/finalizeAbortedAssistantMessage";
+import { closeOpenToolCalls } from "@/lib/chat/closeOpenToolCalls";
+import { isAbortError } from "@/lib/chat/isAbortError";
+import { isRunCancelled } from "@/lib/chat/isRunCancelled";
 import { getWorkflowMetadata } from "workflow";
-import { pipeWorkflowStreamWithStopDetection } from "@/lib/chat/pipeWorkflowStreamWithStopDetection";
 
 export type RunAgentStepInput = {
-  messages: UIMessage[];
+  /**
+   * Conversation so far, in model form. Owned by `runAgentWorkflow`, which
+   * appends each iteration's `responseMessages` before the next call — that
+   * is how iteration N+1 sees iteration N's tool results.
+   */
+  modelMessages: ModelMessage[];
+  /**
+   * The UI-form messages this iteration appends to. When the last entry is
+   * the in-progress assistant message, the AI SDK keeps building THAT
+   * message rather than starting a new one, so `responseMessage` comes back
+   * cumulative and each persist overwrites one row.
+   */
+  originalMessages: UIMessage[];
   modelId: string;
   writable: WritableStream<UIMessageChunk>;
-  /** Target chat for persisting the assistant message as it streams. */
-  chatId: string;
   /**
    * The JSON-serializable agent context that survives the durable
    * workflow input. `runAgentStep` widens it into a full `AgentContext`
@@ -68,38 +72,49 @@ export type RunAgentStepInput = {
 export type RunAgentStepResult = {
   finishReason: string;
   /**
-   * The assembled assistant message captured from the stream's `onFinish`.
-   * `undefined` if the stream finished without emitting one. Per-step
-   * persistence happens inside this function; this is returned so
-   * `runAgentWorkflow` can charge credits from `responseMessage.metadata`.
+   * The assembled assistant message captured from the stream's `onFinish`,
+   * cumulative across iterations via `originalMessages`. `undefined` if the
+   * stream finished without emitting one. Returned rather than persisted
+   * here — `runAgentWorkflow` persists it and charges credits from its
+   * metadata.
    */
   responseMessage: UIMessage | undefined;
+  /**
+   * Model-form messages this iteration produced (assistant turn + any tool
+   * results). `runAgentWorkflow` appends these to `modelMessages` so the
+   * next iteration continues the conversation instead of repeating it.
+   */
+  responseMessages: ModelMessage[];
   /** True when the user stopped the run; `runAgentWorkflow` skips billing + auto-commit on abort. */
   aborted: boolean;
 };
 
 /**
- * One LLM turn (with internal tool-call iteration) in the chat workflow.
+ * ONE LLM call (plus that call's tool executions) in the chat workflow.
  * Runs as a Vercel Workflow `"use step"` so:
  *
  *   - Sandbox-banned APIs (`fetch`, `setTimeout`, `crypto`) are legal inside.
- *   - The result is cached as a single durable event — replays after a crash
- *     do not re-bill the model or re-execute tools.
+ *   - The result is journaled — a replay resumes from the last completed
+ *     iteration rather than re-billing the model and re-running tools.
  *
- * `streamText` drives the tool-call → tool-result → next-LLM-call loop
- * internally using its default stop condition. Our outer workflow stays
- * single-turn for now — multi-turn message threading lands when the rest
- * of the tool surface ports in a follow-up PR.
+ * Deliberately does NOT set `stopWhen`: the AI SDK default is
+ * `isStepCount(1)`, so this returns after a single model call and the
+ * tool-call → tool-result → next-call loop is driven by `runAgentWorkflow`'s
+ * body instead. That is the whole point of the decomposition — a step that
+ * wrapped the full loop ran 11-25 minutes, blew Vercel's 800 s function
+ * ceiling, and was retried 4 times, mailing the customer once per attempt
+ * (chat#1918).
  *
- * @param input - Messages + selected model + writable stream + agent context.
- * @returns finishReason plus the assembled assistant message.
+ * @param input - Model messages + selected model + writable stream + agent context.
+ * @returns finishReason, the cumulative assistant message, and this
+ *          iteration's response messages for threading into the next.
  */
 export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentStepResult> {
   "use step";
 
   console.log("[runAgentStep] start", {
     modelId: input.modelId,
-    messageCount: input.messages.length,
+    messageCount: input.modelMessages.length,
     hasSandboxState: Boolean(input.agentContext.sandbox?.state),
   });
 
@@ -108,11 +123,8 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   const cancelController = new AbortController();
   const poller = pollWorkflowCancellation(workflowRunId, cancelController);
 
-  const modelMessages = await convertToModelMessages(input.messages);
   // Mark the last tool with `cacheControl: { type: "ephemeral" }` so
-  // Anthropic caches the tool-definitions block across the
-  // conversation. Per-step message caching is wired via `prepareStep`
-  // below. Mirrors open-agents' `prepareCall` + `prepareStep` split.
+  // Anthropic caches the tool-definitions block across the conversation.
   // wrapToolsWithAbort backstops tools that ignore their own abortSignal —
   // without it, a hung tool keeps streamText awaiting forever on stop.
   const tools = wrapToolsWithAbort(
@@ -142,87 +154,113 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     artistId: input.artistId,
     accountId: input.accountId,
   });
+  // No `stopWhen` — the AI SDK default `isStepCount(1)` bounds this call to
+  // ONE model call so the step stays seconds long. The loop lives in
+  // `runAgentWorkflow`. Mark the LAST message with cacheControl so Anthropic
+  // incrementally caches the conversation prefix; with one call per step
+  // this replaces the old `prepareStep` hook.
   const result = streamText({
     model: callModel,
     system: systemPrompt,
-    messages: modelMessages,
+    messages: addCacheControlToMessages({ messages: input.modelMessages, model: input.modelId }),
     tools,
-    stopWhen: CHAT_AGENT_STOP_WHEN,
     abortSignal: cancelController.signal,
     experimental_context: agentContext,
-    // Mark the LAST message with cacheControl on every step so Anthropic
-    // incrementally caches the conversation prefix. Mirrors open-agents'
-    // `prepareStep` in `open-harness-agent.ts:100`.
-    prepareStep: ({ messages, model }) => ({
-      messages: addCacheControlToMessages({ messages, model }),
-    }),
   });
 
   // `messageMetadata` emits {modelId, usage, cost} chunks the UI renders as
-  // model/cost badges.
-  const messageMetadata = buildMessageMetadataCallback({ modelId: input.modelId });
+  // model/cost badges. Seeded from the in-progress assistant message so the
+  // running totals span the whole turn rather than resetting each iteration.
+  const previousMessage = input.originalMessages.at(-1);
+  const previousMetadata =
+    previousMessage?.role === "assistant"
+      ? (previousMessage.metadata as AgentMessageMetadata | undefined)
+      : undefined;
+  const messageMetadata = buildMessageMetadataCallback({
+    modelId: input.modelId,
+    seed: previousMetadata,
+  });
 
-  // createUIMessageStream exposes onStepFinish/onFinish (toUIMessageStream
-  // only has onFinish), so the assistant message is persisted after every
-  // step — a stopped or crashed turn keeps the partial reply rather than
-  // dropping it. The stable assistantMessageId makes each upsert overwrite
-  // the same row. The final message is also captured so runAgentWorkflow can
-  // charge credits from its metadata.
+  // Drive the stream directly and write each part to the shared writable,
+  // mirroring upstream open-agents. There is deliberately no
+  // `createUIMessageStream` wrapper: its only draw was `onStepFinish` for
+  // in-step persistence, and with one model call per step that fires once
+  // anyway. The wrapper also has to be put in "persistence mode" separately
+  // from the inner stream, and missing that silently dropped every tool call
+  // from the transcript (chat#1918). Persistence now lives in the workflow
+  // body via `persistAssistantMessageStep`.
   let responseMessage: UIMessage | undefined;
-  const uiStream = createUIMessageStream<UIMessage>({
-    generateId: () => input.assistantMessageId,
-    onStepFinish: ({ responseMessage: stepMessage }) => {
-      responseMessage = stepMessage;
-      return persistAssistantMessage(input.chatId, stepMessage);
-    },
-    onFinish: ({ responseMessage: finalMessage }) => {
-      responseMessage = finalMessage;
-      return persistAssistantMessage(input.chatId, finalMessage);
-    },
-    onError: error => {
-      if (cancelController.signal.aborted) return "";
-      return error instanceof Error ? error.message : String(error);
-    },
-    execute: ({ writer }) => {
-      writer.merge(
-        result.toUIMessageStream({
-          messageMetadata,
-          generateMessageId: () => input.assistantMessageId,
-        }),
-      );
-    },
-  });
-
-  // Pipe the stream to the workflow writable and detect user-stop vs natural
-  // finish (see pipeWorkflowStreamWithStopDetection for the why).
-  const userAborted = await pipeWorkflowStreamWithStopDetection({
-    uiStream,
-    writable: input.writable,
-    cancelController,
-    workflowRunId,
-    poller,
-  });
-
-  // Short-circuit on user-stop — `result.finishReason` rejects when streamText aborts.
   let finishReason: string;
-  if (userAborted) {
-    finishReason = "stop";
-    // Prevent the late-rejecting promise from becoming an unhandled rejection.
-    void Promise.resolve(result.finishReason).catch(() => {});
-  } else {
-    finishReason = await result.finishReason;
-  }
+  let responseMessages: ModelMessage[] = [];
 
-  // On user-stop, close any tool-call parts the step boundary left open and
-  // re-persist (see finalizeAbortedAssistantMessage for the why).
-  if (userAborted && responseMessage) {
-    responseMessage = await finalizeAbortedAssistantMessage(input.chatId, responseMessage);
+  try {
+    for await (const part of result.toUIMessageStream<UIMessage>({
+      messageMetadata,
+      generateMessageId: () => input.assistantMessageId,
+      // Continue building the in-progress assistant message rather than
+      // starting a new one, so `responseMessage` stays cumulative across
+      // iterations and each persist overwrites a single row.
+      originalMessages: input.originalMessages,
+      // The turn's `start`/`finish` chunks are emitted ONCE by the workflow
+      // body (`sendStreamStart` / `sendStreamFinish`). Without this the client
+      // would see one per iteration and render N assistant messages.
+      sendStart: false,
+      sendFinish: false,
+      onFinish: ({ responseMessage: finalMessage }) => {
+        responseMessage = finalMessage;
+      },
+    })) {
+      // A writer lock taken inside a step applies only within that step, so
+      // sequential steps can share one stream. Release per part so the step's
+      // request can terminate.
+      const writer = input.writable.getWriter();
+      try {
+        await writer.write(part);
+      } finally {
+        writer.releaseLock();
+      }
+    }
+
+    // `response.messages` is the assistant message for this call plus any
+    // tool-result message — exactly what the next iteration needs appended.
+    // (`result.responseMessages` is ai@7; this repo is on 6.0.190.)
+    const [reason, response] = await Promise.all([result.finishReason, result.response]);
+    finishReason = reason;
+    responseMessages = response.messages;
+  } catch (error) {
+    // Three ways a user-stop surfaces here: the stream throws AbortError; the
+    // poller already flipped our signal; or `run.cancel()` closed the workflow
+    // writable underneath us and the write threw something unrelated before
+    // the poller noticed. Confirm the last case against the run itself so a
+    // genuine failure still propagates.
+    if (
+      !isAbortError(error) &&
+      !cancelController.signal.aborted &&
+      !(await isRunCancelled(workflowRunId))
+    )
+      throw error;
+
+    // User-stop. `result.finishReason` / `result.response` reject once
+    // streamText aborts — swallow them so they don't surface as unhandled.
+    void Promise.resolve(result.finishReason).catch(() => {});
+    void Promise.resolve(result.response).catch(() => {});
+    finishReason = "stop";
+    // Close any tool-call parts left without a terminal result, otherwise a
+    // reload renders them spinning forever. The workflow body persists it.
+    if (responseMessage) responseMessage = closeOpenToolCalls(responseMessage);
+
+    console.log("[runAgentStep] aborted", { hasResponseMessage: !!responseMessage });
+    return { finishReason, responseMessage, responseMessages: [], aborted: true };
+  } finally {
+    poller.stop();
+    cancelController.abort();
+    await poller.done.catch(() => {});
   }
 
   console.log("[runAgentStep] finish", {
     finishReason,
     hasResponseMessage: !!responseMessage,
-    aborted: userAborted,
+    responseMessageCount: responseMessages.length,
   });
-  return { finishReason, responseMessage, aborted: userAborted };
+  return { finishReason, responseMessage, responseMessages, aborted: false };
 }

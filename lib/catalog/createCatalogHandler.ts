@@ -8,18 +8,26 @@ import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/sel
 import { selectCatalogById } from "@/lib/supabase/catalogs/selectCatalogById";
 import { insertCatalog } from "@/lib/supabase/catalogs/insertCatalog";
 import { insertAccountCatalog } from "@/lib/supabase/account_catalogs/insertAccountCatalog";
+import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
+import { attachCanonicalArtistToAccount } from "./attachCanonicalArtistToAccount";
 
 const DEFAULT_CATALOG_NAME = "Valuation Catalog";
 
 /**
  * POST /api/catalogs
  *
- * Creates a catalog owned by the authenticated account. The owning account is
- * resolved from credentials (Privy bearer or x-api-key), never from the body.
+ * Creates a catalog owned by the authenticated account, or by one of the caller's
+ * organizations when `organization_id` is supplied — every member of that
+ * organization then sees it via `GET /api/accounts/{id}/catalogs` (chat#1938).
+ * The caller is always resolved from credentials (Privy bearer or x-api-key),
+ * never from the body; `organization_id` selects an owner and is authorized by
+ * `validateAuthContext`, which 403s a non-member.
  *
  * With `snapshot`, materializes the catalog from a completed valuation snapshot:
  * the snapshot must be owned by the caller, and re-claiming the same snapshot is
- * idempotent (returns the catalog already created for that run).
+ * idempotent (returns the catalog already created for that run). Claiming —
+ * including re-claiming — also attaches the snapshot's canonical artist to the
+ * caller's roster (chat#1850 P1).
  *
  * @param request - The request object
  * @returns A NextResponse with `{ status, catalog, songs_added }`
@@ -33,15 +41,20 @@ export async function createCatalogHandler(request: NextRequest): Promise<NextRe
       return validated;
     }
 
-    const authResult = await validateAuthContext(request);
+    // organization_id is authorized here, not trusted: validateAuthContext 403s a
+    // caller who is not a member of the organization (chat#1938).
+    const authResult = await validateAuthContext(request, {
+      organizationId: validated.organization_id,
+    });
     if (authResult instanceof NextResponse) {
       return authResult;
     }
     const { accountId } = authResult;
+    const ownerId = validated.organization_id ?? accountId;
 
     if (!validated.snapshot) {
       const catalog = await insertCatalog(validated.name ?? DEFAULT_CATALOG_NAME);
-      await insertAccountCatalog({ account: accountId, catalog: catalog.id });
+      await insertAccountCatalog({ account: ownerId, catalog: catalog.id });
       return successResponse({ catalog, songs_added: 0 });
     }
 
@@ -53,16 +66,24 @@ export async function createCatalogHandler(request: NextRequest): Promise<NextRe
       return errorResponse("Snapshot belongs to a different account", 403);
     }
 
-    // Idempotent re-claim: the run already produced a catalog.
+    // Idempotent re-claim: the run already produced a catalog. Still attach
+    // the canonical artist (chat#1850 P1) so claims made before the roster
+    // attach shipped heal on the next click; the attach is itself idempotent.
     if (snapshot.catalog) {
       const existing = await selectCatalogById(snapshot.catalog);
       if (existing) {
+        const measurements = await selectSongMeasurements({ snapshot: snapshot.id });
+        const isrcs = [...new Set(measurements.map(m => m.song))];
+        if (isrcs.length > 0) {
+          await attachCanonicalArtistToAccount({ accountId, isrcs });
+        }
         return successResponse({ catalog: existing, songs_added: 0 });
       }
     }
 
     const { catalog, songsAdded } = await createSnapshotCatalog({
       accountId,
+      ownerId,
       snapshot,
       name: validated.name,
     });

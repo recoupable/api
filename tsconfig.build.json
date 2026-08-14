@@ -1,0 +1,16 @@
+{
+  "//": [
+    "Type-check project for `next build`, selected via `typescript.tsconfigPath`.",
+    "",
+    "Next.js 16.3 changed the default type checker to the project-local `tsc`",
+    "CLI, which checks the complete project selected by the tsconfig -- test",
+    "files included. Next 16.0's compiler-API checker narrowed that to app code,",
+    "so pointing the build at this file preserves the behaviour we already had.",
+    "",
+    "This is scoping, not silencing: `pnpm exec tsc --noEmit` still uses the",
+    "root tsconfig.json and still reports every error in the test suites.",
+    "See recoupable/chat#1929."
+  ],
+  "extends": "./tsconfig.json",
+  "exclude": ["node_modules", "**/__tests__/**", "**/*.test.ts"]
+}

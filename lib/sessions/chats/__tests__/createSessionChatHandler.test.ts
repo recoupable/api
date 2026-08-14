@@ -95,6 +95,9 @@ describe("createSessionChatHandler", () => {
     expect(insertArgs.id).toBe("chat_requested");
     expect(insertArgs.session_id).toBe("sess_1");
     expect(insertArgs.title).toBe("New chat");
+    // Provenance (chat#1956): every writer sets model_id explicitly so the
+    // chats.model_id column default can be dropped.
+    expect(insertArgs.model_id).toBe("moonshotai/kimi-k3");
   });
 
   it("creates a chat with a generated id when no id is provided", async () => {

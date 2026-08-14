@@ -9,11 +9,28 @@ export const SMART_ACCOUNT_ADDRESS = "0xbAf31935ED514e8F7da81D0A730AB5362DEEEEb7
 export const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as Address;
 export const PAYMASTER_URL = `https://api.developer.coinbase.com/rpc/v1/base/${process.env.PAYMASTER_KEY}`;
 export const IMAGE_GENERATE_PRICE = "0.15";
-export const DEFAULT_MODEL = "openai/gpt-5.4-nano";
+/**
+ * THE default model, everywhere a caller picks none: interactive chats,
+ * headless runs (persisted to `chats.model_id` at provision time, chat#1956),
+ * evals, catalog batch analysis, and the general agent's fallback.
+ * kimi-k3 chosen 2026-08-12: best recall and lowest cost in a 4-model A/B on
+ * a production roster-brief task (api#830 review thread).
+ */
+export const DEFAULT_MODEL = "moonshotai/kimi-k3";
 export const LIGHTWEIGHT_MODEL = "openai/gpt-4o-mini";
 export const PRIVY_PROJECT_SECRET = process.env.PRIVY_PROJECT_SECRET;
 /** Base URL for the public API documentation site */
 export const DOCS_BASE_URL = "https://docs.recoupable.dev";
+
+/** Public marketing site. */
+export const WEBSITE_URL = "https://recoupable.com";
+
+/** Chat app — customer-facing emails must always link here, never a derived
+ * deployment URL (previews would point at the API deployment itself). */
+export const CHAT_APP_URL = "https://chat.recoupable.dev";
+
+/** Brand icon hosted on prod chat (email clients need an absolute PNG). */
+export const RECOUP_LOGO_URL = "https://chat.recoupable.dev/icon-with-background.png";
 
 /** Domain for receiving inbound emails (e.g., support@recoupable.dev) */
 export const INBOUND_EMAIL_DOMAIN = "@recoupable.dev";
@@ -23,6 +40,9 @@ export const OUTBOUND_EMAIL_DOMAIN = "@recoupable.dev";
 
 /** Default from address for outbound emails */
 export const RECOUP_FROM_EMAIL = `Agent by Recoup <agent${OUTBOUND_EMAIL_DOMAIN}>`;
+
+/** Marker stored in email_send_log.raw_body to identify welcome-email sends. */
+export const WELCOME_EMAIL_LOG_TYPE = "welcome_email";
 
 /**
  * Generic message returned for every POST /api/agents/signup response,

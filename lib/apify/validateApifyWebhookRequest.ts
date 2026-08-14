@@ -13,6 +13,10 @@ export const apifyWebhookPayloadSchema = z.object({
     actorId: z.string().min(1, "eventData.actorId is required"),
   }),
   resource: z.object({
+    // Run id — present on Apify's default payload; used to complete the
+    // digest-batch registration (chat#1855). Optional so trimmed payloads
+    // keep validating.
+    id: z.string().optional(),
     defaultDatasetId: z.string().min(1, "resource.defaultDatasetId is required"),
   }),
 });

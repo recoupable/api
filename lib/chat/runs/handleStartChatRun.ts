@@ -8,6 +8,7 @@ import { mintEphemeralAccountKey } from "@/lib/keys/mintEphemeralAccountKey";
 import { deleteApiKey } from "@/lib/supabase/account_api_keys/deleteApiKey";
 import { buildRunAgentInput } from "@/lib/chat/buildRunAgentInput";
 import { runAgentWorkflow } from "@/app/lib/workflows/runAgentWorkflow";
+import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
 
 /** Default title for the session a headless run provisions (no caller-supplied title). */
 const DEFAULT_RUN_SESSION_TITLE = "Scheduled generation";
@@ -45,6 +46,7 @@ export async function handleStartChatRun(request: NextRequest): Promise<Response
       accountId,
       title: DEFAULT_RUN_SESSION_TITLE,
       artistId,
+      modelId,
     });
 
     const { rawKey, keyId } = await mintEphemeralAccountKey(accountId);
@@ -68,6 +70,21 @@ export async function handleStartChatRun(request: NextRequest): Promise<Response
         interactive: false,
       }),
     ]);
+
+    // Claim the chat's stream slot with this run so `GET /api/chat/{chatId}/stream`
+    // can resume it — that route keys on `active_stream_id`, so without this a
+    // headless run is unresumable and the documented "watch its output live"
+    // cross-reference returns 204 (chat#1923). The chat was just provisioned, so
+    // nothing contends for the slot; the workflow's `clearChatActiveStream`
+    // releases it on run end. Best-effort: a failed claim costs resumability, not
+    // the run, so don't fail a started run over it.
+    const claimed = await compareAndSetChatActiveStreamId(provisioned.chat.id, null, run.runId);
+    if (!claimed.ok || !claimed.claimed) {
+      console.error(
+        "[handleStartChatRun] could not claim active_stream_id; run is not resumable:",
+        { chatId: provisioned.chat.id, runId: run.runId },
+      );
+    }
 
     // Return the run handle plus the persisted-output identifiers so the caller
     // can read the result later (the workflow runId alone can't be resolved back

@@ -20,7 +20,7 @@ export async function updateTask(
   input: UpdateTaskPersistInput,
 ): Promise<Tables<"scheduled_actions">> {
   const validatedInput = updateTaskPersistInputSchema.parse(input);
-  const { id, schedule, enabled, resolvedAccountId } = validatedInput;
+  const { id, schedule, enabled, timezone, resolvedAccountId } = validatedInput;
 
   const existingTasks = await selectScheduledActions({ id });
   const existingTask = existingTasks[0];
@@ -36,14 +36,17 @@ export async function updateTask(
   const updateData = Object.fromEntries(
     Object.entries(validatedInput).filter(([key, value]) => {
       if (value === undefined) return false;
-      if (key === "id" || key === "resolvedAccountId") return false;
+      // `timezone` lives on the Trigger.dev schedule, not scheduled_actions.
+      if (key === "id" || key === "resolvedAccountId" || key === "timezone") return false;
       return true;
     }),
   ) as Partial<TablesUpdate<"scheduled_actions">>;
 
   const finalEnabled = enabled !== undefined ? enabled : (existingTask.enabled ?? true);
   const cronExpression = schedule ?? existingTask.schedule;
-  const scheduleChanged = schedule !== undefined;
+  // A timezone-only change still needs the schedule re-synced (the cron falls
+  // back to the existing expression), so treat it as a schedule change.
+  const scheduleChanged = schedule !== undefined || timezone !== undefined;
 
   const newTriggerScheduleId = await syncTriggerSchedule({
     taskId: id,
@@ -51,10 +54,18 @@ export async function updateTask(
     cronExpression,
     scheduleChanged,
     existingScheduleId: existingTask.trigger_schedule_id ?? null,
+    timezone,
   });
 
   if (newTriggerScheduleId !== existingTask.trigger_schedule_id) {
     updateData.trigger_schedule_id = newTriggerScheduleId;
+  }
+
+  // A timezone-only change touches the Trigger.dev schedule but no
+  // scheduled_actions column, leaving `updateData` empty — skip the DB write
+  // (an empty update errors) and return the unchanged row (chat#1881 3c).
+  if (Object.keys(updateData).length === 0) {
+    return existingTask;
   }
 
   const updated = await updateScheduledAction({

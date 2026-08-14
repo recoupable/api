@@ -3,11 +3,24 @@ import { resolveSnapshotAlbums } from "@/lib/research/playcounts/resolveSnapshot
 import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots";
 import { insertPlaycountSnapshot } from "@/lib/supabase/playcount_snapshots/insertPlaycountSnapshot";
 import { playcountSnapshotWorkflow } from "@/app/workflows/playcountSnapshotWorkflow";
+import { findReusableSnapshot } from "@/lib/research/playcounts/findReusableSnapshot";
+import { buildReusedSnapshotResult } from "@/lib/research/playcounts/buildReusedSnapshotResult";
+import { pickCanonicalSnapshot } from "@/lib/research/playcounts/pickCanonicalSnapshot";
+import { sameScope } from "@/lib/research/playcounts/sameScope";
+import { isReusableSnapshotState } from "@/lib/research/playcounts/isReusableSnapshotState";
+import { deletePlaycountSnapshot } from "@/lib/supabase/playcount_snapshots/deletePlaycountSnapshot";
+import { getMonthlySpendUsd } from "@/lib/research/playcounts/getMonthlySpendUsd";
 import { CreateSnapshotBody } from "@/lib/research/playcounts/validateCreateSnapshotRequest";
 
 /** Actor pricing: ~$3 per 1k album URLs. */
 const COST_PER_ALBUM_USD = 0.003;
 const DEFAULT_MONTHLY_CAP_USD = 25;
+/**
+ * Play counts do not move meaningfully inside an hour, so an identical capture
+ * requested within this window reuses the earlier one rather than re-scraping
+ * (chat#1912 row 4).
+ */
+const REUSE_WINDOW_MINUTES = 60;
 
 export type CreateSnapshotResult = { data: unknown } | { error: string; status: number };
 
@@ -32,15 +45,35 @@ export async function createSnapshot(params: {
     };
   }
 
-  const monthStart = new Date();
+  const now = new Date();
+  const monthStart = new Date(now);
   monthStart.setUTCDate(1);
   monthStart.setUTCHours(0, 0, 0, 0);
-  const monthSnapshots = await selectPlaycountSnapshots({
+  const reuseCutoff = new Date(now.getTime() - REUSE_WINDOW_MINUTES * 60 * 1000);
+
+  // One query serves both needs, so the lower bound is whichever reaches
+  // further back. Without this, a request in the first hour of a UTC month
+  // could not see the previous month's captures and re-scraped them.
+  const lookbackStart = reuseCutoff < monthStart ? reuseCutoff : monthStart;
+  const snapshots = await selectPlaycountSnapshots({
     account: params.accountId,
-    createdAfter: monthStart.toISOString(),
+    createdAfter: lookbackStart.toISOString(),
   });
-  const spentUsd = monthSnapshots.reduce((sum, row) => sum + (row.estimated_cost_usd ?? 0), 0);
+
+  const spentUsd = getMonthlySpendUsd(snapshots, monthStart);
   const estimatedCostUsd = Number((albumIds.length * COST_PER_ALBUM_USD).toFixed(4));
+
+  // Hand back an identical recent capture rather than scraping the same albums
+  // twice.
+  const reusable = findReusableSnapshot({
+    snapshots,
+    albumIds,
+    platforms: params.body.platforms,
+    schedule: params.body.schedule,
+    windowMinutes: REUSE_WINDOW_MINUTES,
+    now,
+  });
+  if (reusable) return buildReusedSnapshotResult(reusable);
   const capUsd = Number(process.env.SNAPSHOT_MONTHLY_CAP_USD) || DEFAULT_MONTHLY_CAP_USD;
   if (spentUsd + estimatedCostUsd > capUsd) {
     return { error: "Per-organization monthly snapshot cap reached", status: 429 };
@@ -57,6 +90,43 @@ export async function createSnapshot(params: {
     album_count: albumIds.length,
     estimated_cost_usd: estimatedCostUsd,
   });
+
+  // The insert is a claim, not yet a scrape. Two simultaneous identical
+  // requests both get here before either can see the other, so re-read and
+  // let the earliest claim win — the loser withdraws its row and hands back
+  // the winner's rather than starting a second capture (chat#1912 row 7).
+  const claims = await selectPlaycountSnapshots({
+    account: params.accountId,
+    createdAfter: reuseCutoff.toISOString(),
+  });
+  const canonical = pickCanonicalSnapshot(
+    claims.filter(
+      candidate =>
+        candidate.id === row.id ||
+        (sameScope(candidate, albumIds, params.body.platforms, params.body.schedule) &&
+          isReusableSnapshotState(candidate.state)),
+    ),
+  );
+  if (canonical && canonical.id !== row.id) {
+    await deletePlaycountSnapshot(row.id);
+
+    // The claim that looked canonical from here may itself have been a loser
+    // that withdrew, which would hand this caller a snapshot id that no longer
+    // exists. Re-read after withdrawing so the id returned is one still
+    // standing (observed with 8 concurrent requests during verification).
+    const remaining = await selectPlaycountSnapshots({
+      account: params.accountId,
+      createdAfter: reuseCutoff.toISOString(),
+    });
+    const survivor = pickCanonicalSnapshot(
+      remaining.filter(
+        candidate =>
+          sameScope(candidate, albumIds, params.body.platforms, params.body.schedule) &&
+          isReusableSnapshotState(candidate.state),
+      ),
+    );
+    return buildReusedSnapshotResult(survivor ?? canonical);
+  }
 
   await start(playcountSnapshotWorkflow, [row.id]);
 

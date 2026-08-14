@@ -28,7 +28,7 @@ export async function postResearchWebHandler(request: NextRequest): Promise<Next
     try {
       await recordCreditDeduction({
         accountId: validated.accountId,
-        creditsToDeduct: 5,
+        creditsToDeduct: 1,
         source: "api",
       });
     } catch {

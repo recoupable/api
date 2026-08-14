@@ -7,6 +7,7 @@ const {
   chargeOffSessionMock,
   createCreditsSessionMock,
   computeChargeMock,
+  getAutoRechargeOptOutMock,
 } = vi.hoisted(() => ({
   selectCreditsUsageMock: vi.fn(),
   incrementMock: vi.fn(),
@@ -14,6 +15,7 @@ const {
   chargeOffSessionMock: vi.fn(),
   createCreditsSessionMock: vi.fn(),
   computeChargeMock: vi.fn(),
+  getAutoRechargeOptOutMock: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/credits_usage/selectCreditsUsage", () => ({
@@ -34,6 +36,9 @@ vi.mock("@/lib/stripe/createCreditsStripeSession", () => ({
 vi.mock("@/lib/stripe/computeCreditsTopupCharge", () => ({
   computeCreditsTopupCharge: computeChargeMock,
 }));
+vi.mock("@/lib/stripe/getAutoRechargeOptOut", () => ({
+  getAutoRechargeOptOut: getAutoRechargeOptOutMock,
+}));
 
 const { autoRechargeOrFail } = await import("@/lib/credits/autoRechargeOrFail");
 
@@ -48,6 +53,7 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => undefined);
   computeChargeMock.mockReturnValue({ totalCents: 534 });
   resolveStripeCustomerMock.mockResolvedValue("cus_x");
+  getAutoRechargeOptOutMock.mockResolvedValue(false);
 });
 
 describe("autoRechargeOrFail", () => {
@@ -60,6 +66,24 @@ describe("autoRechargeOrFail", () => {
     expect(chargeOffSessionMock).not.toHaveBeenCalled();
     expect(incrementMock).not.toHaveBeenCalled();
     expect(createCreditsSessionMock).not.toHaveBeenCalled();
+  });
+
+  it("never charges off-session when the customer has opted out — falls to checkout", async () => {
+    selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 2 }]);
+    getAutoRechargeOptOutMock.mockResolvedValue(true);
+    createCreditsSessionMock.mockResolvedValue({ url: "https://checkout.stripe.com/x" });
+
+    const result = await autoRechargeOrFail(params);
+
+    expect(result).toEqual({
+      kind: "insufficient_credits",
+      remainingCredits: 2,
+      requiredCredits: 5,
+      checkoutUrl: "https://checkout.stripe.com/x",
+    });
+    expect(getAutoRechargeOptOutMock).toHaveBeenCalledWith("cus_x");
+    expect(chargeOffSessionMock).not.toHaveBeenCalled();
+    expect(incrementMock).not.toHaveBeenCalled();
   });
 
   it("auto-charges and increments when balance is short and card succeeds", async () => {

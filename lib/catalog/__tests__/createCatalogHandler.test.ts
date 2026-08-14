@@ -9,6 +9,8 @@ import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/sel
 import { selectCatalogById } from "@/lib/supabase/catalogs/selectCatalogById";
 import { insertCatalog } from "@/lib/supabase/catalogs/insertCatalog";
 import { insertAccountCatalog } from "@/lib/supabase/account_catalogs/insertAccountCatalog";
+import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
+import { attachCanonicalArtistToAccount } from "../attachCanonicalArtistToAccount";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -23,6 +25,12 @@ vi.mock("@/lib/supabase/catalogs/selectCatalogById", () => ({ selectCatalogById:
 vi.mock("@/lib/supabase/catalogs/insertCatalog", () => ({ insertCatalog: vi.fn() }));
 vi.mock("@/lib/supabase/account_catalogs/insertAccountCatalog", () => ({
   insertAccountCatalog: vi.fn(),
+}));
+vi.mock("@/lib/supabase/song_measurements/selectSongMeasurements", () => ({
+  selectSongMeasurements: vi.fn(),
+}));
+vi.mock("../attachCanonicalArtistToAccount", () => ({
+  attachCanonicalArtistToAccount: vi.fn(),
 }));
 
 const accountId = "550e8400-e29b-41d4-a716-446655440000";
@@ -90,7 +98,11 @@ describe("createCatalogHandler", () => {
     vi.mocked(selectPlaycountSnapshots).mockResolvedValue([
       { id: snapshotId, account: accountId, catalog: null, isrcs: ["A", "B"] } as never,
     ]);
-    vi.mocked(createSnapshotCatalog).mockResolvedValue({ catalog, songsAdded: 2 });
+    vi.mocked(createSnapshotCatalog).mockResolvedValue({
+      catalog,
+      songsAdded: 2,
+      attachedArtistId: null,
+    });
 
     const res = await createCatalogHandler(makeRequest());
     const body = await res.json();
@@ -98,6 +110,8 @@ describe("createCatalogHandler", () => {
     expect(res.status).toBe(200);
     expect(createSnapshotCatalog).toHaveBeenCalledWith({
       accountId,
+      // no organization_id in the body, so the caller owns it (chat#1938)
+      ownerId: accountId,
       snapshot: expect.objectContaining({ id: snapshotId }),
       name: "Bad Bunny — Catalog",
     });
@@ -135,6 +149,7 @@ describe("createCatalogHandler", () => {
       { id: snapshotId, account: accountId, catalog: catalogId, isrcs: ["A", "B"] } as never,
     ]);
     vi.mocked(selectCatalogById).mockResolvedValue(catalog);
+    vi.mocked(selectSongMeasurements).mockResolvedValue([]);
 
     const res = await createCatalogHandler(makeRequest());
     const body = await res.json();
@@ -143,6 +158,29 @@ describe("createCatalogHandler", () => {
     expect(selectCatalogById).toHaveBeenCalledWith(catalogId);
     expect(createSnapshotCatalog).not.toHaveBeenCalled();
     expect(body).toEqual({ status: "success", catalog, songs_added: 0 });
+  });
+
+  it("re-claims still attach the canonical artist to the roster (chat#1850 P1)", async () => {
+    vi.mocked(validateCreateCatalogBody).mockReturnValue({ snapshot: snapshotId });
+    okAuth();
+    vi.mocked(selectPlaycountSnapshots).mockResolvedValue([
+      { id: snapshotId, account: accountId, catalog: catalogId, isrcs: null } as never,
+    ]);
+    vi.mocked(selectCatalogById).mockResolvedValue(catalog);
+    vi.mocked(selectSongMeasurements).mockResolvedValue([
+      { song: "ISRC_A" } as never,
+      { song: "ISRC_A" } as never,
+      { song: "ISRC_B" } as never,
+    ]);
+
+    const res = await createCatalogHandler(makeRequest());
+
+    expect(res.status).toBe(200);
+    expect(selectSongMeasurements).toHaveBeenCalledWith({ snapshot: snapshotId });
+    expect(attachCanonicalArtistToAccount).toHaveBeenCalledWith({
+      accountId,
+      isrcs: ["ISRC_A", "ISRC_B"],
+    });
   });
 
   it("returns a generic 500 without leaking the underlying error", async () => {
@@ -156,5 +194,91 @@ describe("createCatalogHandler", () => {
     expect(res.status).toBe(500);
     expect(body.status).toBe("error");
     expect(JSON.stringify(body)).not.toContain("10.0.0.1");
+  });
+
+  describe("organization_id owner (chat#1938)", () => {
+    const orgId = "7f9c1e2a-3b4d-4c5e-8f60-1a2b3c4d5e6f";
+
+    it("passes organization_id to validateAuthContext so membership is authorized", async () => {
+      vi.mocked(validateCreateCatalogBody).mockReturnValue({
+        name: "Org Catalog",
+        organization_id: orgId,
+      });
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId,
+        orgId,
+        authToken: "t",
+      });
+      vi.mocked(insertCatalog).mockResolvedValue({ id: catalogId } as never);
+
+      await createCatalogHandler(makeRequest());
+
+      expect(validateAuthContext).toHaveBeenCalledWith(expect.anything(), {
+        organizationId: orgId,
+      });
+    });
+
+    it("creates a name-only catalog owned by the organization", async () => {
+      vi.mocked(validateCreateCatalogBody).mockReturnValue({
+        name: "Org Catalog",
+        organization_id: orgId,
+      });
+      vi.mocked(validateAuthContext).mockResolvedValue({ accountId, orgId, authToken: "t" });
+      vi.mocked(insertCatalog).mockResolvedValue({ id: catalogId } as never);
+
+      await createCatalogHandler(makeRequest());
+
+      expect(insertAccountCatalog).toHaveBeenCalledWith({ account: orgId, catalog: catalogId });
+    });
+
+    it("materializes a snapshot catalog owned by the organization", async () => {
+      vi.mocked(validateCreateCatalogBody).mockReturnValue({
+        snapshot: snapshotId,
+        organization_id: orgId,
+      });
+      vi.mocked(validateAuthContext).mockResolvedValue({ accountId, orgId, authToken: "t" });
+      vi.mocked(selectPlaycountSnapshots).mockResolvedValue([
+        { id: snapshotId, account: accountId, catalog: null },
+      ] as never);
+      vi.mocked(createSnapshotCatalog).mockResolvedValue({
+        catalog: { id: catalogId } as never,
+        songsAdded: 3,
+        attachedArtistId: null,
+      });
+
+      await createCatalogHandler(makeRequest());
+
+      expect(createSnapshotCatalog).toHaveBeenCalledWith(
+        expect.objectContaining({ accountId, ownerId: orgId }),
+      );
+    });
+
+    it("returns the 403 from validateAuthContext when the caller is not a member", async () => {
+      vi.mocked(validateCreateCatalogBody).mockReturnValue({
+        name: "Org Catalog",
+        organization_id: orgId,
+      });
+      vi.mocked(validateAuthContext).mockResolvedValue(
+        NextResponse.json({ status: "error", error: "denied" }, { status: 403 }),
+      );
+
+      const res = await createCatalogHandler(makeRequest());
+
+      expect(res.status).toBe(403);
+      expect(insertAccountCatalog).not.toHaveBeenCalled();
+    });
+
+    it("still owns the catalog personally when organization_id is absent", async () => {
+      vi.mocked(validateCreateCatalogBody).mockReturnValue({ name: "Mine" });
+      vi.mocked(validateAuthContext).mockResolvedValue({ accountId, orgId: null, authToken: "t" });
+      vi.mocked(insertCatalog).mockResolvedValue({ id: catalogId } as never);
+
+      await createCatalogHandler(makeRequest());
+
+      expect(validateAuthContext).toHaveBeenCalledWith(expect.anything(), {
+        organizationId: undefined,
+      });
+      expect(insertAccountCatalog).toHaveBeenCalledWith({ account: accountId, catalog: catalogId });
+    });
   });
 });

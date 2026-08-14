@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { handleTiktokProfileScraperResults } from "@/lib/apify/tiktok/handleTiktokProfileScraperResults";
 const listItems = vi.fn();
+vi.mock("@/lib/socials/filterNewPostUrls", () => ({
+  filterNewPostUrls: vi.fn(async (urls: string[]) => urls),
+}));
 vi.mock("@/lib/apify/client", () => ({ default: { dataset: vi.fn(() => ({ listItems })) } }));
 const upsertSocials = vi.fn();
 vi.mock("@/lib/supabase/socials/upsertSocials", () => ({

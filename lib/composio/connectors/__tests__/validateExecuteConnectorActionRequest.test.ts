@@ -3,14 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateExecuteConnectorActionRequest } from "../validateExecuteConnectorActionRequest";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
+import { checkConnectorAuthority } from "../../checkConnectorAuthority";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/auth/checkAccountAccess", () => ({
-  checkAccountAccess: vi.fn(),
+vi.mock("../../checkConnectorAuthority", () => ({
+  checkConnectorAuthority: vi.fn(),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -68,13 +68,13 @@ describe("validateExecuteConnectorActionRequest", () => {
       orgId: null,
       authToken: "test-token",
     });
-    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "artist" });
+    vi.mocked(checkConnectorAuthority).mockResolvedValue(true);
 
     const result = await validateExecuteConnectorActionRequest(
       buildRequest({ ...validBody, account_id: target }),
     );
 
-    expect(checkAccountAccess).toHaveBeenCalledWith("account-123", target);
+    expect(checkConnectorAuthority).toHaveBeenCalledWith("account-123", target);
     expect(result).toEqual({
       accountId: target,
       actionSlug: "GMAIL_FETCH_EMAILS",
@@ -89,7 +89,7 @@ describe("validateExecuteConnectorActionRequest", () => {
       orgId: null,
       authToken: "test-token",
     });
-    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: false });
+    vi.mocked(checkConnectorAuthority).mockResolvedValue(false);
 
     const result = await validateExecuteConnectorActionRequest(
       buildRequest({ ...validBody, account_id: target }),

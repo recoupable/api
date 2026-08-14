@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { enrichTasks } from "../enrichTasks";
 import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
+import { retrieveScheduleTimezone } from "@/lib/trigger/retrieveScheduleTimezone";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
 vi.mock("@/lib/trigger/fetchTriggerRuns", () => ({
@@ -10,6 +11,10 @@ vi.mock("@/lib/trigger/fetchTriggerRuns", () => ({
 
 vi.mock("@/lib/trigger/retrieveTaskRun", () => ({
   retrieveTaskRun: vi.fn(),
+}));
+
+vi.mock("@/lib/trigger/retrieveScheduleTimezone", () => ({
+  retrieveScheduleTimezone: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
@@ -44,10 +49,12 @@ const mockRun = {
 describe("enrichTasks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(retrieveScheduleTimezone).mockResolvedValue(undefined);
   });
 
-  it("returns recent_runs, upcoming, and owner_email", async () => {
+  it("returns recent_runs, upcoming, owner_email, and the schedule's timezone", async () => {
     vi.mocked(fetchTriggerRuns).mockResolvedValue([mockRun] as never);
+    vi.mocked(retrieveScheduleTimezone).mockResolvedValue("America/New_York");
     vi.mocked(retrieveTaskRun).mockResolvedValue({
       ...mockRun,
       payload: {
@@ -71,13 +78,15 @@ describe("enrichTasks", () => {
         recent_runs: [mockRun],
         upcoming: ["2026-03-27T09:00:00Z", "2026-04-03T09:00:00Z"],
         owner_email: "owner@example.com",
+        timezone: "America/New_York",
       },
     ]);
     expect(fetchTriggerRuns).toHaveBeenCalledWith({ "filter[schedule]": "sched_abc" }, 5);
+    expect(retrieveScheduleTimezone).toHaveBeenCalledWith("sched_abc");
     expect(selectAccountEmails).toHaveBeenCalledWith({ accountIds: ["account-456"] });
   });
 
-  it("returns empty trigger fields and null owner_email when no schedule or email exists", async () => {
+  it("returns empty trigger fields, null owner_email, and null timezone when no schedule exists", async () => {
     vi.mocked(selectAccountEmails).mockResolvedValue([]);
 
     const result = await enrichTasks([{ ...mockTask, trigger_schedule_id: null }]);
@@ -89,12 +98,14 @@ describe("enrichTasks", () => {
         recent_runs: [],
         upcoming: [],
         owner_email: null,
+        timezone: null,
       },
     ]);
     expect(fetchTriggerRuns).not.toHaveBeenCalled();
+    expect(retrieveScheduleTimezone).not.toHaveBeenCalled();
   });
 
-  it("returns empty trigger enrichment when Trigger.dev fails", async () => {
+  it("returns empty enrichment (timezone null) when Trigger.dev fails", async () => {
     vi.mocked(fetchTriggerRuns).mockRejectedValue(new Error("API error"));
     vi.mocked(selectAccountEmails).mockResolvedValue([]);
 
@@ -106,12 +117,14 @@ describe("enrichTasks", () => {
         recent_runs: [],
         upcoming: [],
         owner_email: null,
+        timezone: null,
       },
     ]);
   });
 
-  it("returns empty upcoming when no runs exist", async () => {
+  it("returns empty upcoming but still the timezone when no runs exist", async () => {
     vi.mocked(fetchTriggerRuns).mockResolvedValue([] as never);
+    vi.mocked(retrieveScheduleTimezone).mockResolvedValue("UTC");
     vi.mocked(selectAccountEmails).mockResolvedValue([]);
 
     const result = await enrichTasks([mockTask]);
@@ -122,6 +135,7 @@ describe("enrichTasks", () => {
         recent_runs: [],
         upcoming: [],
         owner_email: null,
+        timezone: "UTC",
       },
     ]);
     expect(retrieveTaskRun).not.toHaveBeenCalled();

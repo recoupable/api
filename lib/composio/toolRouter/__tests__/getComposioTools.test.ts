@@ -5,7 +5,7 @@ import { getComposioClient } from "../../client";
 import { getCallbackUrl } from "../../getCallbackUrl";
 import { getConnectors } from "../../connectors/getConnectors";
 import { getSharedAccountConnections } from "../getSharedAccountConnections";
-import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
+import { checkConnectorAuthority } from "../../checkConnectorAuthority";
 
 vi.mock("../../client", () => ({ getComposioClient: vi.fn() }));
 vi.mock("../../getCallbackUrl", () => ({ getCallbackUrl: vi.fn() }));
@@ -13,8 +13,8 @@ vi.mock("../../connectors/getConnectors", () => ({ getConnectors: vi.fn() }));
 vi.mock("../getSharedAccountConnections", () => ({
   getSharedAccountConnections: vi.fn(),
 }));
-vi.mock("@/lib/artists/checkAccountArtistAccess", () => ({
-  checkAccountArtistAccess: vi.fn(),
+vi.mock("../../checkConnectorAuthority", () => ({
+  checkConnectorAuthority: vi.fn(),
 }));
 
 const mockTool = (name = "mock") => ({
@@ -94,7 +94,7 @@ describe("getComposioTools", () => {
   });
 
   it("fetches artist's real tools when artistId is in scope", async () => {
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+    vi.mocked(checkConnectorAuthority).mockResolvedValue(true);
     vi.mocked(getConnectors).mockImplementation(async (id: string) =>
       id === "artist-456"
         ? [{ slug: "tiktok", name: "TikTok", isConnected: true, connectedAccountId: "ca_tt" }]
@@ -129,7 +129,7 @@ describe("getComposioTools", () => {
   });
 
   it("artist tools win over customer's on toolkit overlap", async () => {
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+    vi.mocked(checkConnectorAuthority).mockResolvedValue(true);
     vi.mocked(getConnectors).mockImplementation(async (id: string) => {
       const tiktok = {
         slug: "tiktok",
@@ -179,8 +179,8 @@ describe("getComposioTools", () => {
     expect(result.GOOGLEDOCS_GET_DOCUMENT_PLAINTEXT).toBe(customerDocs);
   });
 
-  it("does not fetch artist tools when access is denied", async () => {
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(false);
+  it("does not fetch artist tools for a roster-only caller (authority denied)", async () => {
+    vi.mocked(checkConnectorAuthority).mockResolvedValue(false);
     vi.mocked(getConnectors).mockImplementation(async (id: string) =>
       id === "artist-456"
         ? [{ slug: "tiktok", name: "TikTok", isConnected: true, connectedAccountId: "ca_tt" }]
@@ -189,7 +189,7 @@ describe("getComposioTools", () => {
 
     await getComposioTools("account-123", "artist-456");
 
-    expect(checkAccountArtistAccess).toHaveBeenCalledWith("account-123", "artist-456");
+    expect(checkConnectorAuthority).toHaveBeenCalledWith("account-123", "artist-456");
     const artistCalls = mockToolsGet.mock.calls.filter(([id]) => id === "artist-456");
     expect(artistCalls).toHaveLength(0);
   });
@@ -218,7 +218,7 @@ describe("getComposioTools", () => {
   });
 
   it("still returns meta-tools when an owner fetch rejects", async () => {
-    vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
+    vi.mocked(checkConnectorAuthority).mockResolvedValue(true);
     vi.mocked(getConnectors).mockImplementation(async (id: string) =>
       id === "artist-456"
         ? [{ slug: "tiktok", name: "TikTok", isConnected: true, connectedAccountId: "ca_tt" }]

@@ -13,21 +13,27 @@ import type { Tables } from "@/types/database.types";
  */
 export async function createTask(input: CreateTaskBody): Promise<Tables<"scheduled_actions">> {
   const validatedInput = createTaskPayloadSchema.parse(input);
+  // `timezone` lives on the Trigger.dev schedule (source of truth), not on
+  // `scheduled_actions` — strip it before the insert (chat#1881 3c). `schedule`
+  // stays in the insert (it's a real column) and is also used below.
+  const { timezone, ...scheduledActionInput } = validatedInput;
   const { schedule } = validatedInput;
 
   // Insert the task into the database
-  const tasks = await insertScheduledAction(validatedInput);
+  const tasks = await insertScheduledAction(scheduledActionInput);
   const created = tasks[0];
 
   if (!created || !created.id) {
     throw new Error("Failed to create task: missing Supabase id for scheduling");
   }
 
-  // Create the Trigger.dev schedule
+  // Create the Trigger.dev schedule (it interprets the cron in `timezone`,
+  // DST-aware; defaults to UTC when omitted).
   const triggerSchedule = await createSchedule({
     cron: schedule,
     deduplicationKey: created.id,
     externalId: created.id,
+    timezone,
   });
 
   if (!triggerSchedule.id) {

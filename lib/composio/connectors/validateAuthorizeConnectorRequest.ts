@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateAuthorizeConnectorBody } from "./validateAuthorizeConnectorBody";
-import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
+import { checkConnectorAuthority } from "../checkConnectorAuthority";
 import { scopedAuthConfigs } from "../toolRouter/scopedAuthConfigs";
 
 /**
@@ -55,8 +55,8 @@ export async function validateAuthorizeConnectorRequest(
 
   // 3. If account_id is provided, verify access and use that entity
   if (account_id) {
-    const accessResult = await checkAccountAccess(accountId, account_id);
-    if (!accessResult.hasAccess) {
+    const hasAuthority = await checkConnectorAuthority(accountId, account_id);
+    if (!hasAuthority) {
       return NextResponse.json(
         { error: "Access denied to this account" },
         { status: 403, headers },

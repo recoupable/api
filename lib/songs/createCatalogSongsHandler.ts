@@ -20,10 +20,7 @@ import { validateCatalogSongsRequest } from "@/lib/songs/validateCatalogSongsReq
  */
 export async function createCatalogSongsHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const body = await request.json();
-
-    // Validate request body
-    const validatedBody = validateCatalogSongsRequest(body);
+    const validatedBody = await validateCatalogSongsRequest(request);
     if (validatedBody instanceof NextResponse) {
       return validatedBody;
     }
@@ -85,7 +82,9 @@ export async function createCatalogSongsHandler(request: NextRequest): Promise<N
     return NextResponse.json(
       {
         status: "error",
-        error: error instanceof Error ? error.message : "Internal server error",
+        // Fixed message: this path can now surface auth and database
+        // failures, whose text must not reach the caller.
+        error: "Internal server error",
       },
       {
         status: 500,

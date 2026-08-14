@@ -3,14 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateAuthorizeConnectorRequest } from "../validateAuthorizeConnectorRequest";
 
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
+import { checkConnectorAuthority } from "../../checkConnectorAuthority";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
 
-vi.mock("@/lib/auth/checkAccountAccess", () => ({
-  checkAccountAccess: vi.fn(),
+vi.mock("../../checkConnectorAuthority", () => ({
+  checkConnectorAuthority: vi.fn(),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -68,7 +68,7 @@ describe("validateAuthorizeConnectorRequest", () => {
       orgId: null,
       authToken: "test-token",
     });
-    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "artist" });
+    vi.mocked(checkConnectorAuthority).mockResolvedValue(true);
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
@@ -76,7 +76,7 @@ describe("validateAuthorizeConnectorRequest", () => {
     });
     const result = await validateAuthorizeConnectorRequest(request);
 
-    expect(checkAccountAccess).toHaveBeenCalledWith(mockAccountId, mockTargetAccountId);
+    expect(checkConnectorAuthority).toHaveBeenCalledWith(mockAccountId, mockTargetAccountId);
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(result).toEqual({
       accountId: mockTargetAccountId,
@@ -94,7 +94,7 @@ describe("validateAuthorizeConnectorRequest", () => {
       orgId: null,
       authToken: "test-token",
     });
-    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "artist" });
+    vi.mocked(checkConnectorAuthority).mockResolvedValue(true);
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
@@ -120,7 +120,7 @@ describe("validateAuthorizeConnectorRequest", () => {
       orgId: null,
       authToken: "test-token",
     });
-    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "workspace" });
+    vi.mocked(checkConnectorAuthority).mockResolvedValue(true);
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
@@ -145,10 +145,7 @@ describe("validateAuthorizeConnectorRequest", () => {
       orgId: null,
       authToken: "test-token",
     });
-    vi.mocked(checkAccountAccess).mockResolvedValue({
-      hasAccess: true,
-      entityType: "organization",
-    });
+    vi.mocked(checkConnectorAuthority).mockResolvedValue(true);
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
@@ -173,7 +170,7 @@ describe("validateAuthorizeConnectorRequest", () => {
       orgId: null,
       authToken: "test-token",
     });
-    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: false });
+    vi.mocked(checkConnectorAuthority).mockResolvedValue(false);
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
@@ -197,7 +194,7 @@ describe("validateAuthorizeConnectorRequest", () => {
       orgId: null,
       authToken: "test-token",
     });
-    vi.mocked(checkAccountAccess).mockResolvedValue({ hasAccess: true, entityType: "artist" });
+    vi.mocked(checkConnectorAuthority).mockResolvedValue(true);
 
     const request = new NextRequest("http://localhost/api/connectors/authorize", {
       method: "POST",
