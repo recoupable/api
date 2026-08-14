@@ -84,3 +84,19 @@ describe("buildRecoupExecEnv", () => {
     expect(env).toEqual({ RECOUP_ORG_ID: "org-uuid", RECOUP_ACCESS_TOKEN: "recoup_sk_xyz" });
   });
 });
+
+// chat#1958: the scheduled run's Trigger id rides sandbox env so the agent's
+// POST /api/emails can link the send back to the run.
+describe("buildRecoupExecEnv trigger run id", () => {
+  const baseSandbox = { state: {}, workingDirectory: "/vercel/sandbox" };
+
+  it("injects RECOUP_TRIGGER_RUN_ID when present in context", () => {
+    const env = buildRecoupExecEnv({ sandbox: baseSandbox, triggerRunId: "run_abc" });
+    expect(env?.RECOUP_TRIGGER_RUN_ID).toBe("run_abc");
+  });
+
+  it("omits RECOUP_TRIGGER_RUN_ID when absent", () => {
+    const env = buildRecoupExecEnv({ sandbox: baseSandbox, recoupOrgId: "org-uuid" });
+    expect(env).not.toHaveProperty("RECOUP_TRIGGER_RUN_ID");
+  });
+});

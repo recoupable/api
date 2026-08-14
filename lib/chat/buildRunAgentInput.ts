@@ -27,6 +27,8 @@ export type BuildRunAgentInputParams = {
   recoupAccessToken?: string;
   /** True for interactive chat (default), false for headless runs (withholds ask_user_question). */
   interactive?: boolean;
+  /** Trigger.dev run id of the scheduled task starting this run (chat#1958). */
+  triggerRunId?: string;
   /**
    * Row id of an ephemeral key minted for a headless run, so the workflow can
    * delete it on run end (recoupable/chat#1813). Interactive callers omit it.
@@ -55,6 +57,7 @@ export function buildRunAgentInput({
   recoupAccessToken,
   ephemeralKeyId,
   interactive,
+  triggerRunId,
 }: BuildRunAgentInputParams): RunAgentWorkflowInput {
   const repoIds = parseGitHubRepoIdentifiers(cloneUrl);
   const recoupOrgId = cloneUrl ? (extractOrgId(cloneUrl) ?? undefined) : undefined;
@@ -76,6 +79,7 @@ export function buildRunAgentInput({
       skills,
       ...(recoupAccessToken ? { recoupAccessToken } : {}),
       ...(ephemeralKeyId ? { ephemeralKeyId } : {}),
+      ...(triggerRunId ? { triggerRunId } : {}),
     },
   };
 }

@@ -33,6 +33,9 @@ export function buildRecoupExecEnv(
   if (experimental_context.recoupAccessToken) {
     env.RECOUP_ACCESS_TOKEN = experimental_context.recoupAccessToken;
   }
+  if (experimental_context.triggerRunId) {
+    env.RECOUP_TRIGGER_RUN_ID = experimental_context.triggerRunId;
+  }
 
   return Object.keys(env).length > 0 ? env : undefined;
 }

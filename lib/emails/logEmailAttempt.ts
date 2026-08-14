@@ -9,6 +9,10 @@ export type EmailAttemptLog = {
   accountId?: string | null;
   chatId?: string | null;
   resendId?: string;
+  /** The email subject, when known — lets the tasks UI name a run by it (chat#1958). */
+  subject?: string | null;
+  /** Trigger.dev run id of the scheduled task that produced the send (chat#1958). */
+  triggerRunId?: string | null;
 };
 
 /**
@@ -28,6 +32,8 @@ export async function logEmailAttempt(attempt: EmailAttemptLog): Promise<void> {
       status: attempt.status,
       resend_id: attempt.resendId ?? null,
       raw_body: attempt.rawBody,
+      subject: attempt.subject ?? null,
+      trigger_run_id: attempt.triggerRunId ?? null,
     });
     if (error) {
       console.error("email_send_log insert failed:", error);

@@ -56,6 +56,15 @@ export type AgentContext = {
    */
   recoupAccessToken?: string;
   /**
+   * Trigger.dev run id (`run_…`) of the scheduled task that started this
+   * headless run, when one did (POST /api/chat/runs `trigger_run_id`).
+   * Forwarded into the sandbox env as `RECOUP_TRIGGER_RUN_ID` so the
+   * agent's `POST /api/emails` calls can link the send back to the run —
+   * which is what lets the tasks UI name a run by the subject of the email
+   * it sent (recoupable/chat#1958). Public identifier, no secret value.
+   */
+  triggerRunId?: string;
+  /**
    * Skills discovered in the sandbox before workflow start (handler
    * calls `discoverSkills(sandbox, getSandboxSkillDirectories(sandbox))`).
    * The `skillTool` reads this list to:
