@@ -16,6 +16,13 @@ vi.mock("../attachRunTitles", () => ({
   attachRunTitles: vi.fn(),
 }));
 
+vi.mock("../attachRunEmailSubjects", () => ({
+  // chat#1958: pass-through that mirrors the fail-open null default.
+  attachRunEmailSubjects: vi.fn(async (runs: { id: string }[]) =>
+    runs.map(run => ({ ...run, email_subject: run.id === "run_mail" ? "Weekly report" : null })),
+  ),
+}));
+
 vi.mock("@/lib/trigger/retrieveTaskRun", () => ({
   retrieveTaskRun: vi.fn(),
 }));

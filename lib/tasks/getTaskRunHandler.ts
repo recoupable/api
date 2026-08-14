@@ -5,6 +5,7 @@ import { validateGetTaskRunQuery } from "./validateGetTaskRunQuery";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
 import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
 import { attachRunTitles } from "./attachRunTitles";
+import { attachRunEmailSubjects } from "./attachRunEmailSubjects";
 
 /**
  * Handles GET /api/tasks/runs requests.
@@ -34,8 +35,11 @@ export async function getTaskRunHandler(request: NextRequest): Promise<NextRespo
         validatedQuery.accountId,
         validatedQuery.limit,
       );
+      // email_subject outranks title in display (chat#1958): a run that sent
+      // an email is named by that email's subject.
+      const runsWithNames = await attachRunEmailSubjects(runsWithTitles);
       return NextResponse.json(
-        { status: "success", runs: runsWithTitles },
+        { status: "success", runs: runsWithNames },
         { status: 200, headers: getCorsHeaders() },
       );
     }
