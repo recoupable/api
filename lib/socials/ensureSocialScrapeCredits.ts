@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
-import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
+import { CREDIT_SHORTFALL_SUCCESS_URL } from "@/lib/credits/const";
 
 /**
  * Per-route credit gate for the social scrape endpoints. Checks the account
@@ -16,6 +16,6 @@ export function ensureSocialScrapeCredits(
   return ensureCreditsOrShortCircuit({
     accountId,
     creditsToDeduct: credits,
-    successUrl: CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
+    successUrl: CREDIT_SHORTFALL_SUCCESS_URL,
   });
 }

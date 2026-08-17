@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
-import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
+import { CREDIT_SHORTFALL_SUCCESS_URL } from "@/lib/credits/const";
 import { getMessages } from "@/lib/messages/getMessages";
 import convertToUiMessages from "@/lib/messages/convertToUiMessages";
 import { setupConversation } from "@/lib/chat/setupConversation";
@@ -102,7 +102,7 @@ export async function validateChatRequest(
   const short = await ensureCreditsOrShortCircuit({
     accountId,
     creditsToDeduct: 1,
-    successUrl: CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
+    successUrl: CREDIT_SHORTFALL_SUCCESS_URL,
   });
   if (short) return short;
 

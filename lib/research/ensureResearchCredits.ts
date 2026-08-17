@@ -1,5 +1,5 @@
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
-import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
+import { CREDIT_SHORTFALL_SUCCESS_URL } from "@/lib/credits/const";
 
 /** Credits charged per read-only research call (artist & non-artist). */
 const RESEARCH_CREDIT_COST = 5;
@@ -15,5 +15,5 @@ export const ensureResearchCredits = (accountId: string) =>
   ensureCreditsOrShortCircuit({
     accountId,
     creditsToDeduct: RESEARCH_CREDIT_COST,
-    successUrl: CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
+    successUrl: CREDIT_SHORTFALL_SUCCESS_URL,
   });
