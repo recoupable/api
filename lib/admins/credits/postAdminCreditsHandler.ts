@@ -10,10 +10,9 @@ import { validateGrantCreditsRequest } from "./validateGrantCreditsRequest";
  * Sets an account's credit balance to an absolute value and records who set it
  * and why. Admin-only. See the OpenAPI contract on docs.recoupable.
  *
- * The grant holds until it is spent. It used to report an `expires_at`, because
- * the monthly refill would overwrite the balance with the plan total on the next
- * read; the refill is a floor now and cannot reduce a balance, so there is
- * nothing to expire and nothing to re-grant on a schedule.
+ * The grant holds until it is spent: the monthly refill is a floor and cannot
+ * reduce a balance, so there is nothing to expire and nothing to re-grant on a
+ * schedule.
  *
  * @param request - The incoming Next.js request.
  * @returns A NextResponse with the recorded grant.
