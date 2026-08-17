@@ -95,10 +95,9 @@ export async function validateChatRequest(
   }
   const { accountId, orgId } = authResult;
 
-  // Approach A preflight: require at least 1 credit before streaming. Auto-
-  // recharges silently if the account is short and has a saved card; otherwise
-  // 402s with checkoutUrl (+ declineReason when Stripe rejected the card) so
-  // open-agents can route the human to update billing.
+  // Approach A preflight: require at least 1 credit before streaming. A short
+  // balance 402s with a checkoutUrl so open-agents can route the human to
+  // billing; the card is never charged by the gate.
   const short = await ensureCreditsOrShortCircuit({
     accountId,
     creditsToDeduct: 1,

@@ -1,22 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const {
-  selectCreditsUsageMock,
-  incrementMock,
-  resolveStripeCustomerMock,
-  createCreditsSessionMock,
-} = vi.hoisted(() => ({
-  selectCreditsUsageMock: vi.fn(),
-  incrementMock: vi.fn(),
-  resolveStripeCustomerMock: vi.fn(),
-  createCreditsSessionMock: vi.fn(),
-}));
+const { selectCreditsUsageMock, resolveStripeCustomerMock, createCreditsSessionMock } = vi.hoisted(
+  () => ({
+    selectCreditsUsageMock: vi.fn(),
+    resolveStripeCustomerMock: vi.fn(),
+    createCreditsSessionMock: vi.fn(),
+  }),
+);
 
 vi.mock("@/lib/supabase/credits_usage/selectCreditsUsage", () => ({
   selectCreditsUsage: selectCreditsUsageMock,
-}));
-vi.mock("@/lib/supabase/credits_usage/incrementRemainingCredits", () => ({
-  incrementRemainingCredits: incrementMock,
 }));
 vi.mock("@/lib/stripe/resolveStripeCustomerForAccount", () => ({
   resolveStripeCustomerForAccount: resolveStripeCustomerMock,
@@ -48,7 +41,6 @@ describe("checkCreditsAvailable", () => {
     expect(result).toEqual({ kind: "available" });
     expect(resolveStripeCustomerMock).not.toHaveBeenCalled();
     expect(createCreditsSessionMock).not.toHaveBeenCalled();
-    expect(incrementMock).not.toHaveBeenCalled();
   });
 
   it("returns insufficient_credits with a checkout url when the balance is short", async () => {
@@ -66,17 +58,6 @@ describe("checkCreditsAvailable", () => {
       requiredCredits: 5,
       checkoutUrl: "https://pay.recoupable.com/c/pay/cs_x",
     });
-  });
-
-  // The whole point of this change: a short balance must never move money.
-  // There is exactly one exit path now, and it does not charge.
-  it("never charges a saved card, whatever the account's Stripe state", async () => {
-    selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 0 }]);
-    createCreditsSessionMock.mockResolvedValue({ id: "cs_y", url: "https://x/y" });
-
-    await checkCreditsAvailable(params);
-
-    expect(incrementMock).not.toHaveBeenCalled();
   });
 
   it("does not read or honor a Stripe opt-out flag — there is nothing to opt out of", async () => {

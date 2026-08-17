@@ -4,7 +4,7 @@ import { CREDIT_SHORTFALL_SUCCESS_URL } from "@/lib/credits/const";
 
 /**
  * Per-route credit gate for the social scrape endpoints. Checks the account
- * can cover `credits` (auto-recharging via a saved card if needed) before any
+ * can cover `credits` before any
  * Apify run is started. Returns a 402 NextResponse the caller can `return`
  * directly, or `null` to signal "you're good, proceed." Deduction happens
  * after the scrape starts, via `deductSocialScrapeCredits`.

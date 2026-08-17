@@ -20,14 +20,17 @@ export type CheckCreditsAvailableResult =
 
 /**
  * Just-in-time credit gate. Reports whether the account's `remaining_credits`
- * covers `creditsToDeduct`, and nothing else — it never moves money.
+ * covers `creditsToDeduct`. It never moves money: the silent off-session
+ * charge this replaces is gone, and a charge now requires the account to ask
+ * for one through `POST /api/credits/sessions`.
+ *
+ * Not read-only on a shortfall, though: it still resolves the Stripe customer
+ * (created on first touch) and mints the Checkout Session behind the 402's
+ * `checkoutUrl`. The follow-up PR replaces that with a static billing URL so
+ * the gate stops writing to Stripe entirely.
  *
  * Does **not** deduct either; that stays with the caller, so the existing
  * pattern of "do the work first, deduct on success" survives.
- *
- * This used to attempt a silent off-session charge against the account's saved
- * card unless a Stripe metadata key said not to. That is gone: a charge now
- * requires the account to ask for one through `POST /api/credits/sessions`.
  */
 export async function checkCreditsAvailable(
   params: CheckCreditsAvailableParams,
