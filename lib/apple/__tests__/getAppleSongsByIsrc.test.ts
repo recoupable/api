@@ -100,6 +100,37 @@ describe("getAppleSongsByIsrc", () => {
     });
   });
 
+  // `limit` is ignored on filter queries — verified live 2026-08-17, limit=2 against 10
+  // matches still returned all 10 with no `next`. Sending it invites the false belief
+  // that `data` can be truncated relative to `meta.filters`.
+  it("does not send a limit, which Apple ignores on identifier filters", async () => {
+    mockFetch.mockResolvedValue(appleResponse({}) as never);
+
+    await getAppleSongsByIsrc({ isrcs: ["DEH742611917"], storefront: "us" });
+
+    expect(new URL(mockFetch.mock.calls[0][0] as string).searchParams.has("limit")).toBe(false);
+  });
+
+  // `meta.filters` is the authority on existence. If a hit ever failed to resolve
+  // against `data`, reporting found:false would claim a live recording had gone dark —
+  // the one error this endpoint must never make. Fail toward found:true instead.
+  it("reports found from the meta hits even when a song fails to resolve", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [],
+        meta: { filters: { isrc: { DEH742611917: [{ id: "missing-from-data", type: "songs" }] } } },
+      }),
+    } as never);
+
+    const { results } = await getAppleSongsByIsrc({
+      isrcs: ["DEH742611917"],
+      storefront: "us",
+    });
+
+    expect(results?.[0]).toMatchObject({ isrc: "DEH742611917", found: true, songs: [] });
+  });
+
   // Apple returns 200 + an empty `data` for a miss, so a non-ok status is a real failure.
   it("surfaces an upstream failure as an error instead of an empty result", async () => {
     mockFetch.mockResolvedValue({

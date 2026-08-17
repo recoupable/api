@@ -1,4 +1,5 @@
-import type { AppleCatalogAlbum, AppleCatalogSong, AppleSong, AppleSongAlbum } from "./types";
+import type { AppleCatalogAlbum, AppleCatalogSong } from "./catalogTypes";
+import type { AppleSong, AppleSongAlbum } from "./types";
 
 function mapAlbum(album: AppleCatalogAlbum | undefined): AppleSongAlbum | null {
   if (!album) return null;

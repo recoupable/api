@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mapAppleSong } from "../mapAppleSong";
-import type { AppleCatalogSong } from "../types";
+import type { AppleCatalogSong } from "../catalogTypes";
 
 /** Trimmed from a live `filter[isrc]` response captured 2026-08-17. */
 const liveSong = {
