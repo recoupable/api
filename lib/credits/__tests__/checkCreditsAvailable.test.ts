@@ -60,13 +60,12 @@ describe("checkCreditsAvailable", () => {
     });
   });
 
-  it("does not read or honor a Stripe opt-out flag — there is nothing to opt out of", async () => {
+  it("returns the same insufficient_credits result regardless of the account's Stripe state", async () => {
     selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 0 }]);
     createCreditsSessionMock.mockResolvedValue({ id: "cs_z", url: "https://x/z" });
 
     const result = await checkCreditsAvailable(params);
 
-    // Same result an "opted-in" customer with a good card used to avoid.
     expect(result).toMatchObject({ kind: "insufficient_credits", remainingCredits: 0 });
   });
 

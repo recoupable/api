@@ -9,11 +9,9 @@ export type InsufficientCreditsBody = {
  * Shapes the 402 Payment Required body for credit-gated endpoints.
  *
  * Deliberately *not* the same shape as the `POST /api/credits/sessions`
- * response, which is `{ id, url, declineReason? }`. The two used to be
- * described as interchangeable, which is what invited `declineReason` onto this
- * envelope: it can only be produced by an off-session charge, and the credit
- * gate no longer makes one. `declineReason` stays on the top-up response, where
- * a real card decline still happens.
+ * response, which is `{ id, url, declineReason? }`. A decline can only come
+ * from a charge, and only the top-up endpoint charges — so `declineReason`
+ * belongs there, never on this envelope.
  */
 export function buildInsufficientCreditsResponse(args: {
   remainingCredits: number;

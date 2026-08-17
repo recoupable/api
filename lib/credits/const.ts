@@ -21,7 +21,5 @@ export const CREDIT_SHORTFALL_TOPUP_CREDITS = 500;
  * Fallback `successUrl` baked into the Checkout Session offered on a 402.
  * Callers can plug their own URL when they have request context; the chat
  * stream and shared research helpers don't, so this is the sane default.
- * Points at the app root: the previous value lived on
- * `sandbox.recoupable.com`, a host that no longer resolves.
  */
 export const CREDIT_SHORTFALL_SUCCESS_URL = "https://app.recoupable.dev";
