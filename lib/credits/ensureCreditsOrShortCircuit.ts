@@ -6,7 +6,6 @@ import { buildInsufficientCreditsResponse } from "@/lib/credits/buildInsufficien
 export type EnsureCreditsParams = {
   accountId: string;
   creditsToDeduct: number;
-  successUrl: string;
 };
 
 /**
@@ -27,7 +26,6 @@ export async function ensureCreditsOrShortCircuit(
     buildInsufficientCreditsResponse({
       remainingCredits: result.remainingCredits,
       requiredCredits: result.requiredCredits,
-      checkoutUrl: result.checkoutUrl,
     }),
     { status: 402, headers: getCorsHeaders() },
   );
