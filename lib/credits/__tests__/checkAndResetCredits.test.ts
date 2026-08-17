@@ -163,9 +163,6 @@ describe("checkAndResetCredits", () => {
     expect(updateCreditsUsage).not.toHaveBeenCalled();
     expect(result).toEqual({ creditsUsage: row, isPro: true });
   });
-  // The defect this replaces: the refill SET remaining_credits to the plan
-  // total, so a balance above it was cut on the next read. 50 accounts on prod
-  // were one balance read away from losing credits.
   describe("the refill is a floor, not an assignment", () => {
     it("raises a balance BELOW the plan total up to it (free tier)", async () => {
       const row = baseRow({ timestamp: "2026-03-01T00:00:00.000Z", remaining_credits: 100 });

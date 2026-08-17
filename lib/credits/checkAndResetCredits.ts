@@ -16,12 +16,9 @@ export interface CheckAndResetCreditsResult {
  * (≥1 month since the last update, or an active subscription started after it),
  * raises `remaining_credits` up to the plan total and bumps the timestamp.
  *
- * The refill is a **floor, not an assignment**: it never lowers a balance. It
- * used to SET the plan total, so any account holding more than its plan total
- * (from a top-up or an admin grant) was cut on its next balance read — and
- * because the refill is lazy and read-triggered, reading a balance was what
- * destroyed it. Raising-only protects a granted balance without the read path
- * needing to know where the balance came from.
+ * The refill is a **floor, not an assignment**: it never lowers a balance, so
+ * a top-up or an admin grant above the plan total survives every refill
+ * without the read path needing to know where the balance came from.
  *
  * Also returns `isPro` so callers don't need to repeat the subscription lookup.
  */
