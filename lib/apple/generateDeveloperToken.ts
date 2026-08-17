@@ -19,6 +19,20 @@ function requireEnv(name: string): string {
 }
 
 /**
+ * Normalizes a PEM that lost its real line breaks in transit.
+ *
+ * A `.p8` routed through a shell, a CI secret store, or a JSON blob commonly
+ * arrives with literal `\n` and sometimes wrapping quotes. `createPrivateKey`
+ * rejects both, and the resulting 500 gives no hint why, so accept either form.
+ */
+function normalizePem(value: string): string {
+  return value
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .replace(/\\n/g, "\n");
+}
+
+/**
  * Mints (and caches) an Apple Music API developer token.
  *
  * Apple authenticates with a self-signed ES256 JWT rather than a
@@ -42,7 +56,7 @@ export function generateDeveloperToken(): string {
     return cached.token;
   }
 
-  const privateKey = createPrivateKey(requireEnv("APPLE_MUSIC_PRIVATE_KEY"));
+  const privateKey = createPrivateKey(normalizePem(requireEnv("APPLE_MUSIC_PRIVATE_KEY")));
   const keyId = requireEnv("APPLE_MUSIC_KEY_ID");
   const teamId = requireEnv("APPLE_MUSIC_TEAM_ID");
   const expiresAt = now + TOKEN_TTL_SECONDS;

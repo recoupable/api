@@ -91,4 +91,31 @@ describe("generateDeveloperToken", () => {
 
     expect(() => generateDeveloperToken()).toThrow(/APPLE_MUSIC_TEAM_ID/);
   });
+
+  // A .p8 pasted through a shell, a CI secret store, or a JSON blob often arrives
+  // with literal backslash-n instead of real line breaks. createPrivateKey rejects
+  // that, and the resulting 500 says nothing about why.
+  it("accepts a private key whose newlines arrived escaped", async () => {
+    process.env.APPLE_MUSIC_PRIVATE_KEY = privateKey.replace(/\n/g, "\\n");
+    const generateDeveloperToken = await loadFresh();
+
+    const [header, payload, signature] = generateDeveloperToken().split(".");
+
+    expect(decode(header).alg).toBe("ES256");
+    expect(
+      cryptoVerify(
+        "sha256",
+        Buffer.from(`${header}.${payload}`),
+        { key: createPublicKey(publicKey), dsaEncoding: "ieee-p1363" },
+        Buffer.from(signature, "base64url"),
+      ),
+    ).toBe(true);
+  });
+
+  it("tolerates a key wrapped in quotes by a copy-paste", async () => {
+    process.env.APPLE_MUSIC_PRIVATE_KEY = `"${privateKey}"`;
+    const generateDeveloperToken = await loadFresh();
+
+    expect(() => generateDeveloperToken()).not.toThrow();
+  });
 });
