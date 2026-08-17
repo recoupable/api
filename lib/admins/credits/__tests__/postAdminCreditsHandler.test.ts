@@ -69,8 +69,17 @@ describe("postAdminCreditsHandler", () => {
       reason: "Trial headroom for the Aug 12 label demo",
       granted_by: ADMIN,
       granted_at: "2026-08-06T23:00:00.000Z",
-      expires_at: "2026-09-06T23:00:00.000Z",
     });
+  });
+
+  // expires_at existed only to tell an admin when the monthly refill would
+  // destroy the grant. The refill is now a floor and cannot reduce a balance,
+  // so the field described an event that no longer happens and was telling
+  // admins to re-grant credits they do not need to re-grant.
+  it("no longer reports an expires_at, because a grant cannot be reduced by a refill", async () => {
+    const body = await (await postAdminCreditsHandler(request())).json();
+
+    expect(body).not.toHaveProperty("expires_at");
   });
 
   it("passes the validated grant through to the atomic write", async () => {

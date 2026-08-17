@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 import { grantCreditsWithAudit } from "@/lib/supabase/credit_grants/grantCreditsWithAudit";
-import { getGrantExpiresAt } from "@/lib/credits/getGrantExpiresAt";
 import { validateGrantCreditsRequest } from "./validateGrantCreditsRequest";
 
 /**
@@ -11,8 +10,13 @@ import { validateGrantCreditsRequest } from "./validateGrantCreditsRequest";
  * Sets an account's credit balance to an absolute value and records who set it
  * and why. Admin-only. See the OpenAPI contract on docs.recoupable.
  *
+ * The grant holds until it is spent. It used to report an `expires_at`, because
+ * the monthly refill would overwrite the balance with the plan total on the next
+ * read; the refill is a floor now and cannot reduce a balance, so there is
+ * nothing to expire and nothing to re-grant on a schedule.
+ *
  * @param request - The incoming Next.js request.
- * @returns A NextResponse with the recorded grant, including when it expires.
+ * @returns A NextResponse with the recorded grant.
  */
 export async function postAdminCreditsHandler(request: NextRequest): Promise<NextResponse> {
   try {
@@ -48,7 +52,6 @@ export async function postAdminCreditsHandler(request: NextRequest): Promise<Nex
         reason: grant.reason,
         granted_by: grant.granted_by,
         granted_at: grant.created_at,
-        expires_at: getGrantExpiresAt(grant.created_at),
       },
       { status: 200, headers: getCorsHeaders() },
     );
