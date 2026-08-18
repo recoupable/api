@@ -1,5 +1,5 @@
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
-import { selectSongIsrcsByArtist } from "@/lib/supabase/song_artists/selectSongIsrcsByArtist";
+import { selectSongArtists } from "@/lib/supabase/song_artists/selectSongArtists";
 import { selectCatalogsBySongs } from "@/lib/supabase/catalog_songs/selectCatalogsBySongs";
 import { countCatalogSongs } from "@/lib/supabase/catalog_songs/countCatalogSongs";
 import { getSocialPlatformByLink } from "@/lib/artists/getSocialPlatformByLink";
@@ -38,26 +38,31 @@ export async function getArtistPublicProfile(
   if (!artist) return null;
 
   const info = artist.account_info?.[0];
-  const isrcs = await selectSongIsrcsByArtist(artistId);
+  const songRows = await selectSongArtists({ artists: [artistId] });
+  const isrcs = [...new Set((songRows ?? []).map(row => row.song))];
   const catalogRows = await selectCatalogsBySongs(isrcs);
   const counts = await countCatalogSongs(catalogRows.map(c => c.id));
+
+  const socials = (artist.account_socials ?? [])
+    .filter(row => row.social?.profile_url)
+    .map(row => ({
+      type: getSocialPlatformByLink(row.social?.profile_url ?? ""),
+      username: row.social?.username ?? null,
+      profile_url: row.social?.profile_url ?? "",
+    }));
+
+  const catalogs = catalogRows.map(c => ({
+    id: c.id,
+    name: c.name,
+    song_count: counts[c.id] ?? 0,
+    updated_at: c.updated_at,
+  }));
 
   return {
     id: artistId,
     name: artist.name ?? null,
     image: info?.image || null,
-    socials: (artist.account_socials ?? [])
-      .filter(row => row.social?.profile_url)
-      .map(row => ({
-        type: getSocialPlatformByLink(row.social?.profile_url ?? ""),
-        username: row.social?.username ?? null,
-        profile_url: row.social?.profile_url ?? "",
-      })),
-    catalogs: catalogRows.map(c => ({
-      id: c.id,
-      name: c.name,
-      song_count: counts[c.id] ?? 0,
-      updated_at: c.updated_at,
-    })),
+    socials,
+    catalogs,
   };
 }

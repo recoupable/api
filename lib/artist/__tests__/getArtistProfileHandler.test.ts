@@ -42,7 +42,7 @@ describe("getArtistProfileHandler", () => {
     const res = await getArtistProfileHandler(req(), ARTIST);
 
     expect(res.status).toBe(404);
-    await expect(res.json()).resolves.toEqual({ status: "error", message: "Artist not found" });
+    await expect(res.json()).resolves.toEqual({ status: "error", error: "Artist not found" });
   });
 
   // A malformed id cannot exist, so it gets the same 404 as an unknown one —
@@ -51,7 +51,7 @@ describe("getArtistProfileHandler", () => {
     const res = await getArtistProfileHandler(req(), "not-a-uuid");
 
     expect(res.status).toBe(404);
-    await expect(res.json()).resolves.toEqual({ status: "error", message: "Artist not found" });
+    await expect(res.json()).resolves.toEqual({ status: "error", error: "Artist not found" });
     expect(getArtistPublicProfileMock).not.toHaveBeenCalled();
   });
 
@@ -62,6 +62,6 @@ describe("getArtistProfileHandler", () => {
 
     expect(res.status).toBe(500);
     const body = await res.json();
-    expect(body).toEqual({ status: "error", message: "Internal server error" });
+    expect(body).toEqual({ status: "error", error: "Internal server error" });
   });
 });

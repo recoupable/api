@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { getArtistPublicProfile } from "@/lib/artist/getArtistPublicProfile";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-const notFound = () =>
-  NextResponse.json(
-    { status: "error", message: "Artist not found" },
-    { status: 404, headers: getCorsHeaders() },
-  );
 
 /**
  * Handler for GET /api/artists/{id}/profile — the public artist profile.
@@ -27,10 +22,10 @@ export async function getArtistProfileHandler(
   id: string,
 ): Promise<NextResponse> {
   try {
-    if (!UUID_RE.test(id)) return notFound();
+    if (!UUID_RE.test(id)) return errorResponse("Artist not found", 404);
 
     const profile = await getArtistPublicProfile(id);
-    if (!profile) return notFound();
+    if (!profile) return errorResponse("Artist not found", 404);
 
     return NextResponse.json(profile, {
       status: 200,
@@ -41,9 +36,6 @@ export async function getArtistProfileHandler(
     });
   } catch (error) {
     console.error("[ERROR] getArtistProfileHandler:", error);
-    return NextResponse.json(
-      { status: "error", message: "Internal server error" },
-      { status: 500, headers: getCorsHeaders() },
-    );
+    return errorResponse("Internal server error", 500);
   }
 }
