@@ -14,7 +14,11 @@ export interface CheckAndResetCreditsResult {
 /**
  * Reads the credits_usage row for an account and, if a monthly refill is due
  * (≥1 month since the last update, or an active subscription started after it),
- * refills `remaining_credits` to the plan total and bumps the timestamp.
+ * raises `remaining_credits` up to the plan total and bumps the timestamp.
+ *
+ * The refill is a **floor, not an assignment**: it never lowers a balance, so
+ * a top-up or an admin grant above the plan total survives every refill
+ * without the read path needing to know where the balance came from.
  *
  * Also returns `isPro` so callers don't need to repeat the subscription lookup.
  */
@@ -51,13 +55,20 @@ export async function checkAndResetCredits(accountId: string): Promise<CheckAndR
     return { creditsUsage, isPro };
   }
 
-  const refilled = await updateCreditsUsage({
-    account_id: accountId,
-    updates: {
-      remaining_credits: isPro ? PRO_CREDITS : DEFAULT_CREDITS,
-      timestamp: new Date().toISOString(),
-    },
-  });
+  const planTotal = isPro ? PRO_CREDITS : DEFAULT_CREDITS;
+  const remaining = creditsUsage.remaining_credits ?? 0;
+
+  // The timestamp advances on every due refill, including the no-op ones —
+  // otherwise the account re-evaluates as refill-due on every subsequent read.
+  // `remaining_credits` is omitted rather than written back as `max(remaining,
+  // planTotal)` when the balance already clears the total: writing a value read
+  // moments earlier would resurrect credits a concurrent deduction had spent.
+  const updates: Partial<Pick<CreditsUsage, "remaining_credits" | "timestamp">> = {
+    timestamp: new Date().toISOString(),
+  };
+  if (remaining < planTotal) updates.remaining_credits = planTotal;
+
+  const refilled = await updateCreditsUsage({ account_id: accountId, updates });
 
   return { creditsUsage: refilled, isPro };
 }
