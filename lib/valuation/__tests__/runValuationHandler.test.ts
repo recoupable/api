@@ -4,8 +4,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { runValuationHandler } from "../runValuationHandler";
 import { validateRunValuationRequest } from "../validateRunValuationRequest";
 import { waitForSnapshotMeasurements } from "../waitForSnapshotMeasurements";
-import { linkSearchedArtistToAccount } from "../linkSearchedArtistToAccount";
 import { enrichSearchedArtistProfile } from "../enrichSearchedArtistProfile";
+import { captureValuationLead } from "../captureValuationLead";
+import { sendValuationReportEmail } from "@/lib/emails/valuationReport/sendValuationReportEmail";
+import { attachCanonicalArtistToAccount } from "@/lib/catalog/attachCanonicalArtistToAccount";
+import { resolveOrCreateArtist } from "@/lib/artists/resolveOrCreateArtist";
 import generateAccessToken from "@/lib/spotify/generateAccessToken";
 import getArtist from "@/lib/spotify/getArtist";
 import getArtistAlbums from "@/lib/spotify/getArtistAlbums";
@@ -17,13 +20,16 @@ import { getCatalogEarliestReleaseDate } from "@/lib/catalog/getCatalogEarliestR
 
 vi.mock("next/server", async importOriginal => {
   const actual = await importOriginal<typeof import("next/server")>();
-  // `after` throws outside a request scope; the deferred email + lead capture
-  // are not what this suite asserts.
-  return { ...actual, after: vi.fn() };
+  // `after` throws outside a request scope — run its callback inline so the
+  // deferred lead capture is assertable.
+  return { ...actual, after: vi.fn((cb: () => unknown) => cb()) };
 });
 vi.mock("../validateRunValuationRequest", () => ({ validateRunValuationRequest: vi.fn() }));
 vi.mock("../waitForSnapshotMeasurements", () => ({ waitForSnapshotMeasurements: vi.fn() }));
-vi.mock("../linkSearchedArtistToAccount", () => ({ linkSearchedArtistToAccount: vi.fn() }));
+vi.mock("@/lib/catalog/attachCanonicalArtistToAccount", () => ({
+  attachCanonicalArtistToAccount: vi.fn(),
+}));
+vi.mock("@/lib/artists/resolveOrCreateArtist", () => ({ resolveOrCreateArtist: vi.fn() }));
 vi.mock("../enrichSearchedArtistProfile", () => ({ enrichSearchedArtistProfile: vi.fn() }));
 vi.mock("@/lib/spotify/generateAccessToken", () => ({ default: vi.fn() }));
 vi.mock("@/lib/spotify/getArtist", () => ({ default: vi.fn() }));
@@ -99,14 +105,17 @@ const happyPath = () => {
   vi.mocked(createSnapshotCatalog).mockResolvedValue({
     catalog,
     songsAdded: 12,
-    attachedArtistId: null,
+    isrcs: ["ISRC_A"],
   });
   vi.mocked(selectCatalogMeasurementsAggregate).mockResolvedValue({
     measuredSongCount: 12,
     totalStreams: 1_000_000,
   });
   vi.mocked(getCatalogEarliestReleaseDate).mockResolvedValue("2020-01-01");
-  vi.mocked(linkSearchedArtistToAccount).mockResolvedValue(null);
+  vi.mocked(sendValuationReportEmail).mockResolvedValue(undefined as never);
+  vi.mocked(captureValuationLead).mockResolvedValue(undefined);
+  vi.mocked(attachCanonicalArtistToAccount).mockResolvedValue(null);
+  vi.mocked(resolveOrCreateArtist).mockResolvedValue({ artist: null, created: false });
   vi.mocked(enrichSearchedArtistProfile).mockResolvedValue(undefined);
 };
 
@@ -168,6 +177,104 @@ describe("runValuationHandler", () => {
     await runValuationHandler(makeRequest());
 
     expect(vi.mocked(createSnapshotCatalog).mock.calls[0][0].name).toBeUndefined();
+  });
+
+  // Roster attach: one sequence, one catch site (chat#1965).
+  describe("roster attach", () => {
+    const withArtist = () =>
+      vi.mocked(getArtist).mockResolvedValue({
+        artist: { name: "Bad Bunny" } as Awaited<ReturnType<typeof getArtist>>["artist"],
+        error: null,
+      });
+
+    it("attaches the canonical artist from the measured ISRCs and enriches it", async () => {
+      happyPath();
+      withArtist();
+      vi.mocked(attachCanonicalArtistToAccount).mockResolvedValue("canonical-1");
+
+      const res = await runValuationHandler(makeRequest());
+
+      expect(res.status).toBe(200);
+      expect(attachCanonicalArtistToAccount).toHaveBeenCalledWith({
+        accountId,
+        isrcs: ["ISRC_A"],
+      });
+      expect(resolveOrCreateArtist).not.toHaveBeenCalled();
+      expect(enrichSearchedArtistProfile).toHaveBeenCalledWith(
+        expect.objectContaining({ artistId: "canonical-1" }),
+      );
+      expect(captureValuationLead).toHaveBeenCalledWith(
+        expect.objectContaining({ rosterArtistId: "canonical-1" }),
+      );
+      expect(vi.mocked(captureValuationLead).mock.calls[0][0].rosterAttachError).toBeUndefined();
+    });
+
+    it("falls back to the shared resolver when the song graph resolves nothing", async () => {
+      happyPath();
+      withArtist();
+      vi.mocked(sendValuationReportEmail).mockResolvedValue(undefined as never);
+      vi.mocked(captureValuationLead).mockResolvedValue(undefined);
+      vi.mocked(attachCanonicalArtistToAccount).mockResolvedValue(null);
+      vi.mocked(resolveOrCreateArtist).mockResolvedValue({
+        artist: { id: "canonical-2", account_id: "canonical-2", name: "Bad Bunny" } as never,
+        created: false,
+      });
+
+      const res = await runValuationHandler(makeRequest());
+
+      expect(res.status).toBe(200);
+      expect(resolveOrCreateArtist).toHaveBeenCalledWith({
+        name: "Bad Bunny",
+        accountId,
+        spotifyArtistId: "spotify-artist-1",
+      });
+      expect(enrichSearchedArtistProfile).toHaveBeenCalledWith(
+        expect.objectContaining({ artistId: "canonical-2" }),
+      );
+      expect(captureValuationLead).toHaveBeenCalledWith(
+        expect.objectContaining({ rosterArtistId: "canonical-2" }),
+      );
+    });
+
+    it("a failed attach never fails the valuation and surfaces in the lead alert", async () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      happyPath();
+      withArtist();
+      vi.mocked(attachCanonicalArtistToAccount).mockRejectedValue(new Error("link exploded"));
+
+      const res = await runValuationHandler(makeRequest());
+
+      expect(res.status).toBe(200);
+      expect(enrichSearchedArtistProfile).not.toHaveBeenCalled();
+      expect(captureValuationLead).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rosterArtistId: null,
+          rosterAttachError: "link exploded",
+        }),
+      );
+      consoleSpy.mockRestore();
+    });
+
+    it("a failed fallback resolve also surfaces in the lead alert", async () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      happyPath();
+      withArtist();
+      vi.mocked(sendValuationReportEmail).mockResolvedValue(undefined as never);
+      vi.mocked(captureValuationLead).mockResolvedValue(undefined);
+      vi.mocked(attachCanonicalArtistToAccount).mockResolvedValue(null);
+      vi.mocked(resolveOrCreateArtist).mockRejectedValue(new Error("resolver exploded"));
+
+      const res = await runValuationHandler(makeRequest());
+
+      expect(res.status).toBe(200);
+      expect(captureValuationLead).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rosterArtistId: null,
+          rosterAttachError: "resolver exploded",
+        }),
+      );
+      consoleSpy.mockRestore();
+    });
   });
 
   it("returns the validator response without measuring when validation fails", async () => {

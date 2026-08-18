@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { resolveOrCreateArtist } from "@/lib/artists/resolveOrCreateArtist";
 import { createArtistInDb } from "@/lib/artists/createArtistInDb";
 import { findCanonicalArtistBySpotifyId } from "@/lib/valuation/findCanonicalArtistBySpotifyId";
-import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
 import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
 import { selectAccountWithSocials } from "@/lib/supabase/accounts/selectAccountWithSocials";
 import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
@@ -10,9 +9,6 @@ import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
 vi.mock("@/lib/artists/createArtistInDb", () => ({ createArtistInDb: vi.fn() }));
 vi.mock("@/lib/valuation/findCanonicalArtistBySpotifyId", () => ({
   findCanonicalArtistBySpotifyId: vi.fn(),
-}));
-vi.mock("@/lib/supabase/account_artist_ids/selectAccountArtistId", () => ({
-  selectAccountArtistId: vi.fn(),
 }));
 vi.mock("@/lib/supabase/account_artist_ids/insertAccountArtistId", () => ({
   insertAccountArtistId: vi.fn(),
@@ -30,7 +26,6 @@ describe("resolveOrCreateArtist", () => {
     vi.clearAllMocks();
     vi.mocked(createArtistInDb).mockResolvedValue(created as never);
     vi.mocked(findCanonicalArtistBySpotifyId).mockResolvedValue(null);
-    vi.mocked(selectAccountArtistId).mockResolvedValue(null as never);
     vi.mocked(selectAccountWithSocials).mockResolvedValue({
       id: "canonical-1",
       name: "Del Water Gap",
@@ -52,7 +47,9 @@ describe("resolveOrCreateArtist", () => {
   });
 
   // One canonical artist per Spotify id (chat#1889, decision 2026-07-29):
-  // when it exists, link it to the account — never mint a second row.
+  // when it exists, link it to the account — never mint a second row. The link
+  // is a blind upsert: idempotency is the database's job, not a precheck's
+  // (chat#1965).
   it("links and returns the existing canonical instead of creating", async () => {
     vi.mocked(findCanonicalArtistBySpotifyId).mockResolvedValue("canonical-1");
 
@@ -67,20 +64,6 @@ describe("resolveOrCreateArtist", () => {
     expect(insertAccountArtistId).toHaveBeenCalledWith("acct-1", "canonical-1");
     expect(result.created).toBe(false);
     expect(result.artist).toMatchObject({ id: "canonical-1", account_id: "canonical-1" });
-  });
-
-  it("does not re-link a canonical the account already rosters", async () => {
-    vi.mocked(findCanonicalArtistBySpotifyId).mockResolvedValue("canonical-1");
-    vi.mocked(selectAccountArtistId).mockResolvedValue({ id: "link-1" } as never);
-
-    const result = await resolveOrCreateArtist({
-      name: "Del Water Gap",
-      accountId: "acct-1",
-      spotifyArtistId: SPOTIFY_ID,
-    });
-
-    expect(insertAccountArtistId).not.toHaveBeenCalled();
-    expect(result.created).toBe(false);
   });
 
   it("plain create path is untouched when no spotify id is given", async () => {

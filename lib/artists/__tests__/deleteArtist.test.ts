@@ -67,9 +67,9 @@ describe("deleteArtist", () => {
     expect(deleteAccountById).not.toHaveBeenCalled();
   });
 
-  it("fails closed and keeps the canonical account when the dependency lookup errors", async () => {
+  it("fails closed and keeps the canonical account when the dependency lookup throws", async () => {
     vi.mocked(getAccountArtistIds).mockResolvedValue([] as never);
-    vi.mocked(selectSongArtists).mockResolvedValue(null);
+    vi.mocked(selectSongArtists).mockRejectedValue(new Error("query failed"));
 
     const result = await deleteArtist({ artistId, requesterAccountId });
 

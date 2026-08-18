@@ -1,40 +1,32 @@
 import supabase from "../serverClient";
-import type { Tables } from "@/types/database.types";
-
-type AccountArtistId = Tables<"account_artist_ids">;
 
 /**
- * Inserts an account-artist relationship into the account_artist_ids table.
- * This associates an artist account with a user/owner account.
+ * Idempotently links an artist account to an owning account in
+ * account_artist_ids. Upserts on the (account_id, artist_id) unique pair
+ * (constraint account_artist_ids_account_id_artist_id_key); an existing link
+ * is left untouched, so double-linking is a silent no-op (chat#1965).
  *
  * @param accountId - The account ID of the user/owner
  * @param artistId - The account ID of the artist
- * @param options - Optional column values to set on insert (e.g. `pinned`)
- * @returns The inserted relationship record
- * @throws Error if the insert fails
+ * @param options - Optional column values to set on insert (e.g. `pinned`) —
+ *   not applied when the link already exists
+ * @throws Error if the upsert fails
  */
 export async function insertAccountArtistId(
   accountId: string,
   artistId: string,
   options?: { pinned?: boolean },
-): Promise<AccountArtistId> {
-  const { data, error } = await supabase
-    .from("account_artist_ids")
-    .insert({
+): Promise<void> {
+  const { error } = await supabase.from("account_artist_ids").upsert(
+    {
       account_id: accountId,
       artist_id: artistId,
       ...(options?.pinned !== undefined && { pinned: options.pinned }),
-    })
-    .select()
-    .single();
+    },
+    { onConflict: "account_id,artist_id", ignoreDuplicates: true },
+  );
 
   if (error) {
-    throw new Error(`Failed to insert account-artist relationship: ${error.message}`);
+    throw new Error(`Failed to upsert account-artist relationship: ${error.message}`);
   }
-
-  if (!data) {
-    throw new Error("Failed to insert account-artist relationship: No data returned");
-  }
-
-  return data;
 }

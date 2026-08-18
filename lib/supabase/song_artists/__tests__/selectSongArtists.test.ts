@@ -57,15 +57,12 @@ describe("selectSongArtists", () => {
     expect(mockIn).toHaveBeenCalledTimes(3);
   });
 
-  it("returns null on query error (callers decide how to treat an unknown state)", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("throws on query error instead of conflating it with no rows (chat#1965)", async () => {
     mockIn.mockResolvedValue({ data: null, error: { message: "boom" } });
 
-    const result = await selectSongArtists({ artists: ["artist-1"] });
-
-    expect(result).toBeNull();
-    expect(consoleSpy).toHaveBeenCalled();
-    consoleSpy.mockRestore();
+    await expect(selectSongArtists({ artists: ["artist-1"] })).rejects.toThrow(
+      "Failed to fetch song_artists: boom",
+    );
   });
 
   it("throws when neither songs nor artists is provided", async () => {

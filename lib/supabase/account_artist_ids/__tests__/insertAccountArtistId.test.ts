@@ -3,9 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { insertAccountArtistId } from "../insertAccountArtistId";
 
 const mockFrom = vi.fn();
-const mockInsert = vi.fn();
-const mockSelect = vi.fn();
-const mockSingle = vi.fn();
+const mockUpsert = vi.fn();
 
 vi.mock("@/lib/supabase/serverClient", () => ({
   default: {
@@ -16,45 +14,41 @@ vi.mock("@/lib/supabase/serverClient", () => ({
 describe("insertAccountArtistId", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFrom.mockReturnValue({ insert: mockInsert });
-    mockInsert.mockReturnValue({ select: mockSelect });
-    mockSelect.mockReturnValue({ single: mockSingle });
+    mockFrom.mockReturnValue({ upsert: mockUpsert });
+    mockUpsert.mockResolvedValue({ error: null });
   });
 
-  it("inserts an account-artist relationship and returns the data", async () => {
-    const mockData = {
-      id: "rel-123",
-      account_id: "account-456",
-      artist_id: "artist-789",
-    };
-    mockSingle.mockResolvedValue({ data: mockData, error: null });
-
-    const result = await insertAccountArtistId("account-456", "artist-789");
+  it("upserts the account-artist link on the (account_id, artist_id) pair", async () => {
+    await insertAccountArtistId("account-456", "artist-789");
 
     expect(mockFrom).toHaveBeenCalledWith("account_artist_ids");
-    expect(mockInsert).toHaveBeenCalledWith({
-      account_id: "account-456",
-      artist_id: "artist-789",
-    });
-    expect(result).toEqual(mockData);
-  });
-
-  it("throws an error when insert fails", async () => {
-    mockSingle.mockResolvedValue({
-      data: null,
-      error: { message: "Insert failed" },
-    });
-
-    await expect(insertAccountArtistId("account-456", "artist-789")).rejects.toThrow(
-      "Failed to insert account-artist relationship: Insert failed",
+    expect(mockUpsert).toHaveBeenCalledWith(
+      { account_id: "account-456", artist_id: "artist-789" },
+      { onConflict: "account_id,artist_id", ignoreDuplicates: true },
     );
   });
 
-  it("throws an error when no data is returned", async () => {
-    mockSingle.mockResolvedValue({ data: null, error: null });
+  it("passes pinned through when provided", async () => {
+    await insertAccountArtistId("account-456", "artist-789", { pinned: true });
+
+    expect(mockUpsert).toHaveBeenCalledWith(
+      { account_id: "account-456", artist_id: "artist-789", pinned: true },
+      { onConflict: "account_id,artist_id", ignoreDuplicates: true },
+    );
+  });
+
+  it("resolves when the pair is already linked (conflict ignored)", async () => {
+    // ignoreDuplicates: a conflicting upsert is a silent no-op, not an error.
+    mockUpsert.mockResolvedValue({ error: null });
+
+    await expect(insertAccountArtistId("account-456", "artist-789")).resolves.toBeUndefined();
+  });
+
+  it("throws when the upsert fails", async () => {
+    mockUpsert.mockResolvedValue({ error: { message: "Upsert failed" } });
 
     await expect(insertAccountArtistId("account-456", "artist-789")).rejects.toThrow(
-      "Failed to insert account-artist relationship: No data returned",
+      "Failed to upsert account-artist relationship: Upsert failed",
     );
   });
 });
