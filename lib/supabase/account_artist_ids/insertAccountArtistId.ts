@@ -6,7 +6,7 @@ import supabase from "../serverClient";
  * (constraint account_artist_ids_account_id_artist_id_key); an existing link
  * is left untouched, so double-linking is a silent no-op (chat#1965).
  *
- * @param accountId - The account ID of the user/owner
+ * @param accountId - The account ID of the owning account
  * @param artistId - The account ID of the artist
  * @param options - Optional column values to set on insert (e.g. `pinned`) —
  *   not applied when the link already exists
