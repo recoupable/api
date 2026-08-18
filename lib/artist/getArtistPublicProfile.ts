@@ -1,5 +1,6 @@
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
-import { selectAccountCatalogs } from "@/lib/supabase/account_catalogs/selectAccountCatalogs";
+import { selectSongIsrcsByArtist } from "@/lib/supabase/song_artists/selectSongIsrcsByArtist";
+import { selectCatalogsBySongs } from "@/lib/supabase/catalog_songs/selectCatalogsBySongs";
 import { countCatalogSongs } from "@/lib/supabase/catalog_songs/countCatalogSongs";
 import { getSocialPlatformByLink } from "@/lib/artists/getSocialPlatformByLink";
 
@@ -22,6 +23,10 @@ export type ArtistPublicProfile = {
  * one roster (`account_artist_ids`); personal and workspace accounts return
  * `null`, which the handler turns into the same 404 as an unknown id.
  *
+ * Catalogs resolve through the songs graph — `song_artists` (the artist's
+ * credited ISRCs) into `catalog_songs` — because `account_catalogs` links a
+ * catalog to its owner account, not to the artists whose songs it holds.
+ *
  * @param artistId - The artist's account id.
  * @returns The public profile, or null when the id is not an artist.
  */
@@ -33,7 +38,8 @@ export async function getArtistPublicProfile(
   if (!artist) return null;
 
   const info = artist.account_info?.[0];
-  const catalogRows = await selectAccountCatalogs([artistId]);
+  const isrcs = await selectSongIsrcsByArtist(artistId);
+  const catalogRows = await selectCatalogsBySongs(isrcs);
   const counts = await countCatalogSongs(catalogRows.map(c => c.id));
 
   return {

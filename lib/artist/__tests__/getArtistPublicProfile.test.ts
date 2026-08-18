@@ -1,18 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { getAccountArtistIdsMock, selectAccountCatalogsMock, countCatalogSongsMock } = vi.hoisted(
-  () => ({
-    getAccountArtistIdsMock: vi.fn(),
-    selectAccountCatalogsMock: vi.fn(),
-    countCatalogSongsMock: vi.fn(),
-  }),
-);
+const {
+  getAccountArtistIdsMock,
+  selectSongIsrcsByArtistMock,
+  selectCatalogsBySongsMock,
+  countCatalogSongsMock,
+} = vi.hoisted(() => ({
+  getAccountArtistIdsMock: vi.fn(),
+  selectSongIsrcsByArtistMock: vi.fn(),
+  selectCatalogsBySongsMock: vi.fn(),
+  countCatalogSongsMock: vi.fn(),
+}));
 
 vi.mock("@/lib/supabase/account_artist_ids/getAccountArtistIds", () => ({
   getAccountArtistIds: getAccountArtistIdsMock,
 }));
-vi.mock("@/lib/supabase/account_catalogs/selectAccountCatalogs", () => ({
-  selectAccountCatalogs: selectAccountCatalogsMock,
+vi.mock("@/lib/supabase/song_artists/selectSongIsrcsByArtist", () => ({
+  selectSongIsrcsByArtist: selectSongIsrcsByArtistMock,
+}));
+vi.mock("@/lib/supabase/catalog_songs/selectCatalogsBySongs", () => ({
+  selectCatalogsBySongs: selectCatalogsBySongsMock,
 }));
 vi.mock("@/lib/supabase/catalog_songs/countCatalogSongs", () => ({
   countCatalogSongs: countCatalogSongsMock,
@@ -57,14 +64,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => undefined);
   getAccountArtistIdsMock.mockResolvedValue([rosterRow]);
-  selectAccountCatalogsMock.mockResolvedValue([
-    {
-      id: "cat_1",
-      name: "Brauxelion Catalog",
-      created_at: "c",
-      updated_at: "2026-08-01",
-      owners: [ARTIST],
-    },
+  selectSongIsrcsByArtistMock.mockResolvedValue(["ISRC1", "ISRC2"]);
+  selectCatalogsBySongsMock.mockResolvedValue([
+    { id: "cat_1", name: "Brauxelion Catalog", updated_at: "2026-08-01" },
   ]);
   countCatalogSongsMock.mockResolvedValue({ cat_1: 24 });
 });
@@ -113,14 +115,33 @@ describe("getArtistPublicProfile", () => {
     getAccountArtistIdsMock.mockResolvedValue([]);
 
     expect(await getArtistPublicProfile(ARTIST)).toBeNull();
-    expect(selectAccountCatalogsMock).not.toHaveBeenCalled();
+    expect(selectSongIsrcsByArtistMock).not.toHaveBeenCalled();
+  });
+
+  // Catalogs come from the songs graph: catalog_songs joined through the
+  // artist's credited ISRCs. account_catalogs links catalogs to their OWNER
+  // account, which for an artist page is the wrong relationship.
+  it("resolves catalogs through the artist's credited songs, not catalog ownership", async () => {
+    await getArtistPublicProfile(ARTIST);
+
+    expect(selectSongIsrcsByArtistMock).toHaveBeenCalledWith(ARTIST);
+    expect(selectCatalogsBySongsMock).toHaveBeenCalledWith(["ISRC1", "ISRC2"]);
+  });
+
+  it("returns no catalogs for an artist with no credited songs", async () => {
+    selectSongIsrcsByArtistMock.mockResolvedValue([]);
+    selectCatalogsBySongsMock.mockResolvedValue([]);
+
+    const profile = await getArtistPublicProfile(ARTIST);
+    expect(profile?.catalogs).toEqual([]);
   });
 
   it("returns image null and empty arrays when the artist has no info, socials or catalogs", async () => {
     getAccountArtistIdsMock.mockResolvedValue([
       { artist_info: { id: ARTIST, name: "Bare", account_socials: [], account_info: [] } },
     ]);
-    selectAccountCatalogsMock.mockResolvedValue([]);
+    selectSongIsrcsByArtistMock.mockResolvedValue([]);
+    selectCatalogsBySongsMock.mockResolvedValue([]);
     countCatalogSongsMock.mockResolvedValue({});
 
     expect(await getArtistPublicProfile(ARTIST)).toEqual({
