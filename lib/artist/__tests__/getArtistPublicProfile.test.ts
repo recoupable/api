@@ -132,6 +132,20 @@ describe("getArtistPublicProfile", () => {
     expect(selectCatalogsBySongsMock).toHaveBeenCalledWith(["ISRC1", "ISRC2"]);
   });
 
+  // selectSongArtists throws on query error (chat#1965); the unauthenticated
+  // artist page degrades to an empty catalog list instead of a 500.
+  it("degrades to an empty catalog list when the songs-graph lookup fails", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    selectSongArtistsMock.mockRejectedValue(new Error("query failed"));
+    selectCatalogsBySongsMock.mockResolvedValue([]);
+
+    const profile = await getArtistPublicProfile(ARTIST);
+
+    expect(profile?.id).toBe(ARTIST);
+    expect(profile?.catalogs).toEqual([]);
+    consoleSpy.mockRestore();
+  });
+
   it("returns no catalogs for an artist with no credited songs", async () => {
     selectSongArtistsMock.mockResolvedValue([]);
     selectCatalogsBySongsMock.mockResolvedValue([]);

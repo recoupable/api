@@ -38,8 +38,15 @@ export async function getArtistPublicProfile(
   if (!artist) return null;
 
   const info = artist.account_info?.[0];
-  const songRows = await selectSongArtists({ artists: [artistId] });
-  const isrcs = [...new Set((songRows ?? []).map(row => row.song))];
+  // Degrade, don't fail: a songs-graph query error costs the catalog list,
+  // never the whole unauthenticated page (selectSongArtists throws, chat#1965).
+  let songRows: Awaited<ReturnType<typeof selectSongArtists>> = [];
+  try {
+    songRows = await selectSongArtists({ artists: [artistId] });
+  } catch (error) {
+    console.error("Error resolving credited songs for public profile:", error);
+  }
+  const isrcs = [...new Set(songRows.map(row => row.song))];
   const catalogRows = await selectCatalogsBySongs(isrcs);
   const counts = await countCatalogSongs(catalogRows.map(c => c.id));
 
