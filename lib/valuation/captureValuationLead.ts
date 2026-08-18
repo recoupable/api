@@ -13,6 +13,10 @@ export type CaptureValuationLeadInput = {
   valueBand: ValuationBand;
   lifetimeStreams?: number;
   followerCount?: number;
+  /** The artist landed on the caller's roster, or null when nothing attached. */
+  rosterArtistId: string | null;
+  /** Set when the roster attach threw — surfaced in the alert (chat#1965). */
+  rosterAttachError?: string;
 };
 
 /**
@@ -57,6 +61,14 @@ export async function captureValuationLead(input: CaptureValuationLeadInput): Pr
       console.error("[valuation/lead] Attio enrichment failed:", attio.error);
     }
 
+    // Roster attach outcome (chat#1965): a human reads this alert for every
+    // valuation, so a silent empty-roster signup is visible the same hour.
+    const roster = input.rosterAttachError
+      ? `Roster: ATTACH FAILED — ${input.rosterAttachError}`
+      : input.rosterArtistId
+        ? "Roster: attached ✓"
+        : "Roster: nothing attached";
+
     // Deep-link the Attio record so the channel can open the lead in one tap.
     const attioLink = attio.recordUrl ? `\nAttio: ${attio.recordUrl}` : "";
     await sendMessage(
@@ -64,7 +76,8 @@ export async function captureValuationLead(input: CaptureValuationLeadInput): Pr
         `Email: ${email}\n` +
         `Artist: ${input.artistName}\n` +
         `Estimated catalog value: ${usd(input.valueBand.mid)} ` +
-        `(range ${usd(input.valueBand.low)}–${usd(input.valueBand.high)})` +
+        `(range ${usd(input.valueBand.low)}–${usd(input.valueBand.high)})\n` +
+        roster +
         attioLink,
     );
   } catch (error) {

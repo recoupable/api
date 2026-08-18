@@ -13,12 +13,14 @@ const CHUNK_SIZE = 200;
  *
  * @param params.songs - Song ISRCs to match on the `song` column
  * @param params.artists - Artist account IDs to match on the `artist` column
- * @returns The matching rows, or null on query error
+ * @returns The matching rows
+ * @throws Error on query error — an empty array always means "no rows",
+ *   never "the query failed" (chat#1965)
  */
 export async function selectSongArtists(params: {
   songs?: string[];
   artists?: string[];
-}): Promise<Tables<"song_artists">[] | null> {
+}): Promise<Tables<"song_artists">[]> {
   const { songs, artists } = params;
   const column = songs ? "song" : artists ? "artist" : null;
   const values = songs ?? artists;
@@ -34,8 +36,7 @@ export async function selectSongArtists(params: {
     const { data, error } = await supabase.from("song_artists").select("*").in(column, chunk);
 
     if (error) {
-      console.error("Error fetching song_artists:", error);
-      return null;
+      throw new Error(`Failed to fetch song_artists: ${error.message}`);
     }
 
     rows.push(...(data ?? []));

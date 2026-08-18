@@ -38,10 +38,16 @@ export async function deleteArtist({
   });
 
   if (remainingLinks.length === 0) {
-    const songArtists = await selectSongArtists({ artists: [artistId] });
-    // Fail closed: a null (query error) is treated as "has dependencies" so an
-    // unknown state never hard-deletes a canonical that may own a song graph.
-    const hasSongDependencies = songArtists === null || songArtists.length > 0;
+    // Fail closed: a dependency-lookup error is treated as "has dependencies"
+    // so an unknown state never hard-deletes a canonical that may own a song
+    // graph.
+    let hasSongDependencies = true;
+    try {
+      const songArtists = await selectSongArtists({ artists: [artistId] });
+      hasSongDependencies = songArtists.length > 0;
+    } catch (error) {
+      console.error("Error checking song dependencies before artist delete:", error);
+    }
     if (!hasSongDependencies) {
       await deleteAccountById(artistId);
     }

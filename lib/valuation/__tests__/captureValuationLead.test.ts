@@ -16,6 +16,7 @@ const input = {
   valueBand: { low: 37_500_000, mid: 54_600_000, high: 76_800_000 },
   lifetimeStreams: 22_000_000_000,
   followerCount: 13_000_000,
+  rosterArtistId: "artist-roster-1",
 };
 
 describe("captureValuationLead", () => {
@@ -55,6 +56,33 @@ describe("captureValuationLead", () => {
     expect(msg).toContain("$54,600,000");
     expect(msg).toContain("$37,500,000–$76,800,000");
     expect(msg).toContain("https://app.attio.com/recoup/person/rec_1/overview");
+  });
+
+  // The roster line makes a silent attach failure same-hour visible in the
+  // alert a human already reads for every valuation (chat#1965).
+  it("reports a successful roster attach in the Telegram message", async () => {
+    await captureValuationLead(input);
+
+    const msg = vi.mocked(sendMessage).mock.calls[0][0] as string;
+    expect(msg).toContain("Roster: attached ✓");
+  });
+
+  it("reports a roster attach failure with the error in the Telegram message", async () => {
+    await captureValuationLead({
+      ...input,
+      rosterArtistId: null,
+      rosterAttachError: "insert failed",
+    });
+
+    const msg = vi.mocked(sendMessage).mock.calls[0][0] as string;
+    expect(msg).toContain("Roster: ATTACH FAILED — insert failed");
+  });
+
+  it("reports when nothing was attached and nothing errored", async () => {
+    await captureValuationLead({ ...input, rosterArtistId: null });
+
+    const msg = vi.mocked(sendMessage).mock.calls[0][0] as string;
+    expect(msg).toContain("Roster: nothing attached");
   });
 
   it("skips entirely (no Attio, no Telegram) when the account has no email", async () => {

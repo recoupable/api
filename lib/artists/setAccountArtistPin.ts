@@ -1,6 +1,6 @@
 import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
 import { updateAccountArtistPinById } from "@/lib/supabase/account_artist_ids/updateAccountArtistPinById";
-import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
+import { upsertAccountArtistId } from "@/lib/supabase/account_artist_ids/upsertAccountArtistId";
 
 export interface SetAccountArtistPinParams {
   accountId: string;
@@ -29,5 +29,5 @@ export async function setAccountArtistPin({
     return;
   }
 
-  await insertAccountArtistId(accountId, artistId, { pinned });
+  await upsertAccountArtistId(accountId, artistId, { pinned });
 }

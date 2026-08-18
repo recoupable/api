@@ -2,17 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { attachCanonicalArtistToAccount } from "../attachCanonicalArtistToAccount";
 import { selectSongArtists } from "@/lib/supabase/song_artists/selectSongArtists";
-import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
-import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
+import { upsertAccountArtistId } from "@/lib/supabase/account_artist_ids/upsertAccountArtistId";
 
 vi.mock("@/lib/supabase/song_artists/selectSongArtists", () => ({
   selectSongArtists: vi.fn(),
 }));
-vi.mock("@/lib/supabase/account_artist_ids/selectAccountArtistId", () => ({
-  selectAccountArtistId: vi.fn(),
-}));
-vi.mock("@/lib/supabase/account_artist_ids/insertAccountArtistId", () => ({
-  insertAccountArtistId: vi.fn(),
+vi.mock("@/lib/supabase/account_artist_ids/upsertAccountArtistId", () => ({
+  upsertAccountArtistId: vi.fn(),
 }));
 
 const accountId = "550e8400-e29b-41d4-a716-446655440000";
@@ -28,26 +24,11 @@ describe("attachCanonicalArtistToAccount", () => {
       link("B", canonicalId),
       link("B", "collab-1"),
     ]);
-    vi.mocked(selectAccountArtistId).mockResolvedValue(null);
 
     const result = await attachCanonicalArtistToAccount({ accountId, isrcs: ["A", "B"] });
 
     expect(selectSongArtists).toHaveBeenCalledWith({ songs: ["A", "B"] });
-    expect(insertAccountArtistId).toHaveBeenCalledWith(accountId, canonicalId);
-    expect(result).toBe(canonicalId);
-  });
-
-  it("does not insert when the account already has the canonical artist", async () => {
-    vi.mocked(selectSongArtists).mockResolvedValue([link("A", canonicalId)]);
-    vi.mocked(selectAccountArtistId).mockResolvedValue({
-      id: "existing",
-      artist_id: canonicalId,
-      pinned: false,
-    });
-
-    const result = await attachCanonicalArtistToAccount({ accountId, isrcs: ["A"] });
-
-    expect(insertAccountArtistId).not.toHaveBeenCalled();
+    expect(upsertAccountArtistId).toHaveBeenCalledWith(accountId, canonicalId);
     expect(result).toBe(canonicalId);
   });
 
@@ -56,8 +37,7 @@ describe("attachCanonicalArtistToAccount", () => {
 
     const result = await attachCanonicalArtistToAccount({ accountId, isrcs: ["A"] });
 
-    expect(selectAccountArtistId).not.toHaveBeenCalled();
-    expect(insertAccountArtistId).not.toHaveBeenCalled();
+    expect(upsertAccountArtistId).not.toHaveBeenCalled();
     expect(result).toBeNull();
   });
 
@@ -68,16 +48,23 @@ describe("attachCanonicalArtistToAccount", () => {
     expect(result).toBeNull();
   });
 
-  it("never throws: a failed attach must not fail the claim", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  // Whether a failed attach may fail the surrounding operation is the calling
+  // surface's decision, not this helper's — swallowing here is what made the
+  // 2026-08-18 empty-roster incident invisible (chat#1965).
+  it("propagates a link failure to the caller", async () => {
     vi.mocked(selectSongArtists).mockResolvedValue([link("A", canonicalId)]);
-    vi.mocked(selectAccountArtistId).mockResolvedValue(null);
-    vi.mocked(insertAccountArtistId).mockRejectedValue(new Error("insert failed"));
+    vi.mocked(upsertAccountArtistId).mockRejectedValue(new Error("insert failed"));
 
-    const result = await attachCanonicalArtistToAccount({ accountId, isrcs: ["A"] });
+    await expect(attachCanonicalArtistToAccount({ accountId, isrcs: ["A"] })).rejects.toThrow(
+      "insert failed",
+    );
+  });
 
-    expect(result).toBeNull();
-    expect(consoleSpy).toHaveBeenCalled();
-    consoleSpy.mockRestore();
+  it("propagates a song-graph query failure to the caller", async () => {
+    vi.mocked(selectSongArtists).mockRejectedValue(new Error("query failed"));
+
+    await expect(attachCanonicalArtistToAccount({ accountId, isrcs: ["A"] })).rejects.toThrow(
+      "query failed",
+    );
   });
 });

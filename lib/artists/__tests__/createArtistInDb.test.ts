@@ -20,8 +20,8 @@ vi.mock("@/lib/supabase/accounts/selectAccountWithSocials", () => ({
   selectAccountWithSocials: (...args: unknown[]) => mockSelectAccountWithSocials(...args),
 }));
 
-vi.mock("@/lib/supabase/account_artist_ids/insertAccountArtistId", () => ({
-  insertAccountArtistId: (...args: unknown[]) => mockInsertAccountArtistId(...args),
+vi.mock("@/lib/supabase/account_artist_ids/upsertAccountArtistId", () => ({
+  upsertAccountArtistId: (...args: unknown[]) => mockInsertAccountArtistId(...args),
 }));
 
 vi.mock("@/lib/supabase/artist_organization_ids/addArtistToOrganization", () => ({

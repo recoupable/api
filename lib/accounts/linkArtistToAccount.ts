@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
-import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
+import { upsertAccountArtistId } from "@/lib/supabase/account_artist_ids/upsertAccountArtistId";
 import type { AddArtistParams } from "@/lib/accounts/validateAddArtistRequest";
 
 /**
  * Links an artist to an account's artist list (the business step of
- * POST /api/accounts/artists). Idempotent: returns success without inserting
- * when the link already exists.
+ * POST /api/accounts/artists). Idempotent: the link is an upsert on
+ * (account_id, artist_id), so re-linking an existing pair is a no-op
+ * (chat#1965).
  *
  * The account ID must already be resolved from the authenticated credential
  * (see validateAddArtistRequest) — never from unauthenticated user input.
@@ -20,16 +20,7 @@ export async function linkArtistToAccount({
   artistId,
 }: AddArtistParams): Promise<NextResponse> {
   try {
-    // Check if artist is already associated with account
-    const existingArtists = await getAccountArtistIds({ accountIds: [accountId] });
-    const alreadyExists = existingArtists.some(a => a.artist_id === artistId);
-
-    if (alreadyExists) {
-      return NextResponse.json({ success: true }, { status: 200, headers: getCorsHeaders() });
-    }
-
-    // Add artist to account
-    await insertAccountArtistId(accountId, artistId);
+    await upsertAccountArtistId(accountId, artistId);
 
     return NextResponse.json({ success: true }, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
