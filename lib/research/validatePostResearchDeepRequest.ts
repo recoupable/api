@@ -2,7 +2,6 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
-import { CREDIT_SHORTFALL_SUCCESS_URL } from "@/lib/credits/const";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 const bodySchema = z.object({
@@ -34,7 +33,6 @@ export async function validatePostResearchDeepRequest(
   const short = await ensureCreditsOrShortCircuit({
     accountId: authResult.accountId,
     creditsToDeduct: 25,
-    successUrl: CREDIT_SHORTFALL_SUCCESS_URL,
   });
   if (short) return short;
 

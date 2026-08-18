@@ -1,5 +1,4 @@
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
-import { CREDIT_SHORTFALL_SUCCESS_URL } from "@/lib/credits/const";
 
 /**
  * Credits charged per web-search call. Priced separately from the research
@@ -18,5 +17,4 @@ export const ensureWebResearchCredits = (accountId: string) =>
   ensureCreditsOrShortCircuit({
     accountId,
     creditsToDeduct: WEB_RESEARCH_CREDIT_COST,
-    successUrl: CREDIT_SHORTFALL_SUCCESS_URL,
   });

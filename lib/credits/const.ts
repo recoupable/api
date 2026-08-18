@@ -12,14 +12,11 @@ export const DEFAULT_CREDITS = 333;
 export const PRO_CREDITS = 9999;
 
 /**
- * Credits the Checkout Session offered on a 402 is sized for. Sized so one
- * purchase covers ~500 chat turns or 100 research calls.
+ * Where a caller that ran out of credits is pointed. A constant, so a 402
+ * creates nothing — scheduled tasks can hit the gate unattended without
+ * writing to Stripe.
+ *
+ * Deliberately the app root and not a deep link: the account modal is where a
+ * card is saved, and the app can move that without changing this contract.
  */
-export const CREDIT_SHORTFALL_TOPUP_CREDITS = 500;
-
-/**
- * Fallback `successUrl` baked into the Checkout Session offered on a 402.
- * Callers can plug their own URL when they have request context; the chat
- * stream and shared research helpers don't, so this is the sane default.
- */
-export const CREDIT_SHORTFALL_SUCCESS_URL = "https://app.recoupable.dev";
+export const CREDIT_BILLING_URL = "https://app.recoupable.dev";

@@ -11,6 +11,7 @@ const { selectCreditsUsageMock, resolveStripeCustomerMock, createCreditsSessionM
 vi.mock("@/lib/supabase/credits_usage/selectCreditsUsage", () => ({
   selectCreditsUsage: selectCreditsUsageMock,
 }));
+// Mocked only so the assertions below can prove they are never reached.
 vi.mock("@/lib/stripe/resolveStripeCustomerForAccount", () => ({
   resolveStripeCustomerForAccount: resolveStripeCustomerMock,
 }));
@@ -20,84 +21,61 @@ vi.mock("@/lib/stripe/createCreditsStripeSession", () => ({
 
 const { checkCreditsAvailable } = await import("@/lib/credits/checkCreditsAvailable");
 
-const params = {
-  accountId: "acct_123",
-  creditsToDeduct: 5,
-  successUrl: "https://chat.recoupable.dev/settings/profile",
-};
+const params = { accountId: "acct_123", creditsToDeduct: 5 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => undefined);
-  resolveStripeCustomerMock.mockResolvedValue("cus_x");
 });
 
 describe("checkCreditsAvailable", () => {
-  it("returns available when balance covers the cost (no Stripe calls)", async () => {
+  it("returns available when the balance covers the cost", async () => {
     selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 100 }]);
 
-    const result = await checkCreditsAvailable(params);
-
-    expect(result).toEqual({ kind: "available" });
-    expect(resolveStripeCustomerMock).not.toHaveBeenCalled();
-    expect(createCreditsSessionMock).not.toHaveBeenCalled();
+    expect(await checkCreditsAvailable(params)).toEqual({ kind: "available" });
   });
 
-  it("returns insufficient_credits with a checkout url when the balance is short", async () => {
+  it("returns insufficient_credits with the balance and the cost, and nothing else", async () => {
     selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 2 }]);
-    createCreditsSessionMock.mockResolvedValue({
-      id: "cs_x",
-      url: "https://pay.recoupable.com/c/pay/cs_x",
-    });
 
-    const result = await checkCreditsAvailable(params);
-
-    expect(result).toEqual({
+    expect(await checkCreditsAvailable(params)).toEqual({
       kind: "insufficient_credits",
       remainingCredits: 2,
       requiredCredits: 5,
-      checkoutUrl: "https://pay.recoupable.com/c/pay/cs_x",
     });
   });
 
-  it("returns the same insufficient_credits result regardless of the account's Stripe state", async () => {
+  it("creates no Stripe object when the balance is short", async () => {
     selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 0 }]);
-    createCreditsSessionMock.mockResolvedValue({ id: "cs_z", url: "https://x/z" });
 
-    const result = await checkCreditsAvailable(params);
+    await checkCreditsAvailable(params);
 
-    expect(result).toMatchObject({ kind: "insufficient_credits", remainingCredits: 0 });
+    expect(createCreditsSessionMock).not.toHaveBeenCalled();
+    expect(resolveStripeCustomerMock).not.toHaveBeenCalled();
   });
 
-  it("never returns a declineReason", async () => {
-    selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 1 }]);
-    createCreditsSessionMock.mockResolvedValue({ id: "cs_d", url: "https://x/d" });
+  it("stays free of Stripe across repeated shortfalls, so an unattended caller creates nothing", async () => {
+    selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 0 }]);
 
-    const result = await checkCreditsAvailable(params);
+    for (let i = 0; i < 20; i += 1) await checkCreditsAvailable(params);
 
-    expect(result).not.toHaveProperty("declineReason");
+    expect(createCreditsSessionMock).toHaveBeenCalledTimes(0);
+    expect(resolveStripeCustomerMock).toHaveBeenCalledTimes(0);
   });
 
   it("treats an empty credits_usage row as a zero balance", async () => {
     selectCreditsUsageMock.mockResolvedValue([]);
-    createCreditsSessionMock.mockResolvedValue({ id: "cs_e", url: "https://x/e" });
 
-    const result = await checkCreditsAvailable({ ...params, creditsToDeduct: 1 });
-
-    expect(result).toEqual({
+    expect(await checkCreditsAvailable({ ...params, creditsToDeduct: 1 })).toEqual({
       kind: "insufficient_credits",
       remainingCredits: 0,
       requiredCredits: 1,
-      checkoutUrl: "https://x/e",
     });
   });
 
-  it("throws when createCreditsStripeSession returns no url (not a usable 402)", async () => {
-    selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 0 }]);
-    createCreditsSessionMock.mockResolvedValue({ id: "cs_nourl", url: null });
+  it("returns available when the balance exactly equals the cost", async () => {
+    selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 5 }]);
 
-    await expect(checkCreditsAvailable(params)).rejects.toThrow(
-      /createCreditsStripeSession returned no url/,
-    );
+    expect(await checkCreditsAvailable(params)).toEqual({ kind: "available" });
   });
 });

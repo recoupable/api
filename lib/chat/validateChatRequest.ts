@@ -4,7 +4,6 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
-import { CREDIT_SHORTFALL_SUCCESS_URL } from "@/lib/credits/const";
 import { getMessages } from "@/lib/messages/getMessages";
 import convertToUiMessages from "@/lib/messages/convertToUiMessages";
 import { setupConversation } from "@/lib/chat/setupConversation";
@@ -96,12 +95,11 @@ export async function validateChatRequest(
   const { accountId, orgId } = authResult;
 
   // Approach A preflight: require at least 1 credit before streaming. A short
-  // balance 402s with a checkoutUrl so open-agents can route the human to
-  // billing; the card is never charged by the gate.
+  // balance 402s with a static billingUrl so open-agents can route the human to
+  // billing; nothing is charged and no Stripe object is created.
   const short = await ensureCreditsOrShortCircuit({
     accountId,
     creditsToDeduct: 1,
-    successUrl: CREDIT_SHORTFALL_SUCCESS_URL,
   });
   if (short) return short;
 
