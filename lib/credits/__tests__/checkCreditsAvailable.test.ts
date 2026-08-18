@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { selectCreditsUsageMock, resolveStripeCustomerMock, createCreditsSessionMock } = vi.hoisted(
-  () => ({
-    selectCreditsUsageMock: vi.fn(),
-    resolveStripeCustomerMock: vi.fn(),
-    createCreditsSessionMock: vi.fn(),
-  }),
-);
+const {
+  selectCreditsUsageMock,
+  resolveStripeCustomerMock,
+  createCreditsSessionMock,
+  checkAndResetCreditsMock,
+} = vi.hoisted(() => ({
+  selectCreditsUsageMock: vi.fn(),
+  resolveStripeCustomerMock: vi.fn(),
+  createCreditsSessionMock: vi.fn(),
+  checkAndResetCreditsMock: vi.fn(),
+}));
 
 vi.mock("@/lib/supabase/credits_usage/selectCreditsUsage", () => ({
   selectCreditsUsage: selectCreditsUsageMock,
@@ -18,6 +22,9 @@ vi.mock("@/lib/stripe/resolveStripeCustomerForAccount", () => ({
 vi.mock("@/lib/stripe/createCreditsStripeSession", () => ({
   createCreditsStripeSession: createCreditsSessionMock,
 }));
+vi.mock("@/lib/credits/checkAndResetCredits", () => ({
+  checkAndResetCredits: checkAndResetCreditsMock,
+}));
 
 const { checkCreditsAvailable } = await import("@/lib/credits/checkCreditsAvailable");
 
@@ -26,6 +33,11 @@ const params = { accountId: "acct_123", creditsToDeduct: 5 };
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => undefined);
+  // Default: no refill due — the row comes back unchanged.
+  checkAndResetCreditsMock.mockImplementation(async () => ({
+    creditsUsage: { remaining_credits: 0 },
+    isPro: false,
+  }));
 });
 
 describe("checkCreditsAvailable", () => {
@@ -37,6 +49,10 @@ describe("checkCreditsAvailable", () => {
 
   it("returns insufficient_credits with the balance and the cost, and nothing else", async () => {
     selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 2 }]);
+    checkAndResetCreditsMock.mockResolvedValue({
+      creditsUsage: { remaining_credits: 2 },
+      isPro: false,
+    });
 
     expect(await checkCreditsAvailable(params)).toEqual({
       kind: "insufficient_credits",
@@ -65,6 +81,7 @@ describe("checkCreditsAvailable", () => {
 
   it("treats an empty credits_usage row as a zero balance", async () => {
     selectCreditsUsageMock.mockResolvedValue([]);
+    checkAndResetCreditsMock.mockResolvedValue({ creditsUsage: null, isPro: false });
 
     expect(await checkCreditsAvailable({ ...params, creditsToDeduct: 1 })).toEqual({
       kind: "insufficient_credits",
@@ -77,5 +94,51 @@ describe("checkCreditsAvailable", () => {
     selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 5 }]);
 
     expect(await checkCreditsAvailable(params)).toEqual({ kind: "available" });
+  });
+
+  describe("a due-but-unapplied monthly refill", () => {
+    it("is applied on a shortfall, so the first gated request after the boundary passes", async () => {
+      selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 0 }]);
+      checkAndResetCreditsMock.mockResolvedValue({
+        creditsUsage: { remaining_credits: 333 },
+        isPro: false,
+      });
+
+      expect(await checkCreditsAvailable(params)).toEqual({ kind: "available" });
+      expect(checkAndResetCreditsMock).toHaveBeenCalledWith("acct_123");
+    });
+
+    it("still 402s with the refreshed balance when the refilled total does not cover the cost", async () => {
+      selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 0 }]);
+      checkAndResetCreditsMock.mockResolvedValue({
+        creditsUsage: { remaining_credits: 3 },
+        isPro: false,
+      });
+
+      expect(await checkCreditsAvailable(params)).toEqual({
+        kind: "insufficient_credits",
+        remainingCredits: 3,
+        requiredCredits: 5,
+      });
+    });
+
+    it("is not consulted on the happy path — a sufficient balance stays a single read", async () => {
+      selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 100 }]);
+
+      await checkCreditsAvailable(params);
+
+      expect(checkAndResetCreditsMock).not.toHaveBeenCalled();
+    });
+
+    it("treats a missing row from the refill check as a zero balance", async () => {
+      selectCreditsUsageMock.mockResolvedValue([]);
+      checkAndResetCreditsMock.mockResolvedValue({ creditsUsage: null, isPro: false });
+
+      expect(await checkCreditsAvailable({ ...params, creditsToDeduct: 1 })).toEqual({
+        kind: "insufficient_credits",
+        remainingCredits: 0,
+        requiredCredits: 1,
+      });
+    });
   });
 });
