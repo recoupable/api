@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { accountHasPaymentMethod } from "@/lib/stripe/accountHasPaymentMethod";
 import { createCardOnFileSession } from "@/lib/stripe/createCardOnFileSession";
-import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
+import { CREDIT_SHORTFALL_SUCCESS_URL } from "@/lib/credits/const";
 
 /**
  * Payment-method gate for Songstats-backed work (the heavily quota-capped
@@ -19,10 +19,7 @@ export async function ensureSongstatsPaymentMethod(
 ): Promise<NextResponse | null> {
   if (await accountHasPaymentMethod(accountId)) return null;
 
-  const session = await createCardOnFileSession(
-    accountId,
-    CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
-  );
+  const session = await createCardOnFileSession(accountId, CREDIT_SHORTFALL_SUCCESS_URL);
   return NextResponse.json(
     {
       status: "error",

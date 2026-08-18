@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
-import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
+import { CREDIT_SHORTFALL_SUCCESS_URL } from "@/lib/credits/const";
 import { errorResponse } from "@/lib/networking/errorResponse";
 
 const bodySchema = z.object({
@@ -16,9 +16,8 @@ export type ValidatedPostResearchDeepRequest = {
 
 /**
  * Validates `POST /api/research/deep` — auth + body (`query` required) +
- * 25-credit budget (deep research is expensive). Auto-recharges via a saved
- * card if the account is short; returns a 402 NextResponse if no card or
- * decline.
+ * 25-credit budget (deep research is expensive). A short balance returns a
+ * 402 NextResponse with a `checkoutUrl`; the gate never charges a card.
  */
 export async function validatePostResearchDeepRequest(
   request: NextRequest,
@@ -35,7 +34,7 @@ export async function validatePostResearchDeepRequest(
   const short = await ensureCreditsOrShortCircuit({
     accountId: authResult.accountId,
     creditsToDeduct: 25,
-    successUrl: CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
+    successUrl: CREDIT_SHORTFALL_SUCCESS_URL,
   });
   if (short) return short;
 

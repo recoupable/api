@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
-import { CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL } from "@/lib/credits/const";
+import { CREDIT_SHORTFALL_SUCCESS_URL } from "@/lib/credits/const";
 import { getMessages } from "@/lib/messages/getMessages";
 import convertToUiMessages from "@/lib/messages/convertToUiMessages";
 import { setupConversation } from "@/lib/chat/setupConversation";
@@ -95,14 +95,13 @@ export async function validateChatRequest(
   }
   const { accountId, orgId } = authResult;
 
-  // Approach A preflight: require at least 1 credit before streaming. Auto-
-  // recharges silently if the account is short and has a saved card; otherwise
-  // 402s with checkoutUrl (+ declineReason when Stripe rejected the card) so
-  // open-agents can route the human to update billing.
+  // Approach A preflight: require at least 1 credit before streaming. A short
+  // balance 402s with a checkoutUrl so open-agents can route the human to
+  // billing; the card is never charged by the gate.
   const short = await ensureCreditsOrShortCircuit({
     accountId,
     creditsToDeduct: 1,
-    successUrl: CREDIT_AUTO_RECHARGE_FALLBACK_SUCCESS_URL,
+    successUrl: CREDIT_SHORTFALL_SUCCESS_URL,
   });
   if (short) return short;
 
