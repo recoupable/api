@@ -16,7 +16,7 @@ export type HandleResearchResult = { data: unknown } | { error: string; status: 
  * provider and deducts credits on success. Credit-deduction failures are
  * non-fatal so transient billing failures don't block read endpoints.
  *
- * Credit gating (auto-recharge + 402 short-circuit) lives in route handlers
+ * Credit gating (the 402 short-circuit) lives in route handlers
  * via `ensureCreditsOrShortCircuit` — keeping this helper free of NextResponse
  * means non-route consumers (e.g. `resolveTrack`) keep working unchanged.
  *

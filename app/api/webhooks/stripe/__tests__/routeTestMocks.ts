@@ -36,10 +36,6 @@ vi.mock("@/lib/stripe/processInvoicePaid", () => ({
   processInvoicePaid: vi.fn(),
 }));
 
-vi.mock("@/lib/stripe/notifyCreditsTopupPaymentIntent", () => ({
-  notifyCreditsTopupPaymentIntent: vi.fn(),
-}));
-
 vi.mock("@/lib/stripe/notifyCreditsTopupSession", () => ({
   notifyCreditsTopupSession: vi.fn(),
 }));
