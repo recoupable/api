@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { insertAccountArtistId } from "../insertAccountArtistId";
+import { upsertAccountArtistId } from "../upsertAccountArtistId";
 
 const mockFrom = vi.fn();
 const mockUpsert = vi.fn();
@@ -11,7 +11,7 @@ vi.mock("@/lib/supabase/serverClient", () => ({
   },
 }));
 
-describe("insertAccountArtistId", () => {
+describe("upsertAccountArtistId", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFrom.mockReturnValue({ upsert: mockUpsert });
@@ -19,7 +19,7 @@ describe("insertAccountArtistId", () => {
   });
 
   it("upserts the account-artist link on the (account_id, artist_id) pair", async () => {
-    await insertAccountArtistId("account-456", "artist-789");
+    await upsertAccountArtistId("account-456", "artist-789");
 
     expect(mockFrom).toHaveBeenCalledWith("account_artist_ids");
     expect(mockUpsert).toHaveBeenCalledWith(
@@ -29,7 +29,7 @@ describe("insertAccountArtistId", () => {
   });
 
   it("passes pinned through when provided", async () => {
-    await insertAccountArtistId("account-456", "artist-789", { pinned: true });
+    await upsertAccountArtistId("account-456", "artist-789", { pinned: true });
 
     expect(mockUpsert).toHaveBeenCalledWith(
       { account_id: "account-456", artist_id: "artist-789", pinned: true },
@@ -37,17 +37,10 @@ describe("insertAccountArtistId", () => {
     );
   });
 
-  it("resolves when the pair is already linked (conflict ignored)", async () => {
-    // ignoreDuplicates: a conflicting upsert is a silent no-op, not an error.
-    mockUpsert.mockResolvedValue({ error: null });
-
-    await expect(insertAccountArtistId("account-456", "artist-789")).resolves.toBeUndefined();
-  });
-
   it("throws when the upsert fails", async () => {
     mockUpsert.mockResolvedValue({ error: { message: "Upsert failed" } });
 
-    await expect(insertAccountArtistId("account-456", "artist-789")).rejects.toThrow(
+    await expect(upsertAccountArtistId("account-456", "artist-789")).rejects.toThrow(
       "Failed to upsert account-artist relationship: Upsert failed",
     );
   });

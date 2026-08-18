@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { attachCanonicalArtistToAccount } from "../attachCanonicalArtistToAccount";
 import { selectSongArtists } from "@/lib/supabase/song_artists/selectSongArtists";
-import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
+import { upsertAccountArtistId } from "@/lib/supabase/account_artist_ids/upsertAccountArtistId";
 
 vi.mock("@/lib/supabase/song_artists/selectSongArtists", () => ({
   selectSongArtists: vi.fn(),
 }));
-vi.mock("@/lib/supabase/account_artist_ids/insertAccountArtistId", () => ({
-  insertAccountArtistId: vi.fn(),
+vi.mock("@/lib/supabase/account_artist_ids/upsertAccountArtistId", () => ({
+  upsertAccountArtistId: vi.fn(),
 }));
 
 const accountId = "550e8400-e29b-41d4-a716-446655440000";
@@ -28,7 +28,7 @@ describe("attachCanonicalArtistToAccount", () => {
     const result = await attachCanonicalArtistToAccount({ accountId, isrcs: ["A", "B"] });
 
     expect(selectSongArtists).toHaveBeenCalledWith({ songs: ["A", "B"] });
-    expect(insertAccountArtistId).toHaveBeenCalledWith(accountId, canonicalId);
+    expect(upsertAccountArtistId).toHaveBeenCalledWith(accountId, canonicalId);
     expect(result).toBe(canonicalId);
   });
 
@@ -37,7 +37,7 @@ describe("attachCanonicalArtistToAccount", () => {
 
     const result = await attachCanonicalArtistToAccount({ accountId, isrcs: ["A"] });
 
-    expect(insertAccountArtistId).not.toHaveBeenCalled();
+    expect(upsertAccountArtistId).not.toHaveBeenCalled();
     expect(result).toBeNull();
   });
 
@@ -53,7 +53,7 @@ describe("attachCanonicalArtistToAccount", () => {
   // 2026-08-18 empty-roster incident invisible (chat#1965).
   it("propagates a link failure to the caller", async () => {
     vi.mocked(selectSongArtists).mockResolvedValue([link("A", canonicalId)]);
-    vi.mocked(insertAccountArtistId).mockRejectedValue(new Error("insert failed"));
+    vi.mocked(upsertAccountArtistId).mockRejectedValue(new Error("insert failed"));
 
     await expect(attachCanonicalArtistToAccount({ accountId, isrcs: ["A"] })).rejects.toThrow(
       "insert failed",

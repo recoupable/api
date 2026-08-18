@@ -12,7 +12,7 @@ import supabase from "../serverClient";
  *   not applied when the link already exists
  * @throws Error if the upsert fails
  */
-export async function insertAccountArtistId(
+export async function upsertAccountArtistId(
   accountId: string,
   artistId: string,
   options?: { pinned?: boolean },

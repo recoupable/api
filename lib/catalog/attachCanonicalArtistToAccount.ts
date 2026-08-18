@@ -1,6 +1,6 @@
 import { selectSongArtists } from "@/lib/supabase/song_artists/selectSongArtists";
 import { getDominantSongArtist } from "@/lib/songs/getDominantSongArtist";
-import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
+import { upsertAccountArtistId } from "@/lib/supabase/account_artist_ids/upsertAccountArtistId";
 
 /**
  * Claim-time roster attach (chat#1850 P1): resolve the claimed songs'
@@ -28,6 +28,6 @@ export async function attachCanonicalArtistToAccount(params: {
   const artistId = getDominantSongArtist(links);
   if (!artistId) return null;
 
-  await insertAccountArtistId(accountId, artistId);
+  await upsertAccountArtistId(accountId, artistId);
   return artistId;
 }

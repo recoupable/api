@@ -236,6 +236,22 @@ describe("runValuationHandler", () => {
       );
     });
 
+    it("reports nothing attached when both the graph and the resolver come up empty", async () => {
+      happyPath();
+      withArtist();
+      vi.mocked(attachCanonicalArtistToAccount).mockResolvedValue(null);
+      vi.mocked(resolveOrCreateArtist).mockResolvedValue({ artist: null, created: false });
+
+      const res = await runValuationHandler(makeRequest());
+
+      expect(res.status).toBe(200);
+      expect(enrichSearchedArtistProfile).not.toHaveBeenCalled();
+      expect(captureValuationLead).toHaveBeenCalledWith(
+        expect.objectContaining({ rosterArtistId: null }),
+      );
+      expect(vi.mocked(captureValuationLead).mock.calls[0][0].rosterAttachError).toBeUndefined();
+    });
+
     it("a failed attach never fails the valuation and surfaces in the lead alert", async () => {
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       happyPath();

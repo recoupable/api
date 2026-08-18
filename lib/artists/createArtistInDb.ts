@@ -4,7 +4,7 @@ import {
   selectAccountWithSocials,
   type AccountWithSocials,
 } from "@/lib/supabase/accounts/selectAccountWithSocials";
-import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
+import { upsertAccountArtistId } from "@/lib/supabase/account_artist_ids/upsertAccountArtistId";
 import { addArtistToOrganization } from "@/lib/supabase/artist_organization_ids/addArtistToOrganization";
 
 /**
@@ -40,7 +40,7 @@ export async function createArtistInDb(
     if (!artist) return null;
 
     // Step 4: Associate the artist with the owner via account_artist_ids
-    await insertAccountArtistId(accountId, account.id);
+    await upsertAccountArtistId(accountId, account.id);
 
     // Step 5: Link to organization if provided
     if (organizationId) {

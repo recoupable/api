@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { linkArtistToAccount } from "../linkArtistToAccount";
 
-vi.mock("@/lib/supabase/account_artist_ids/insertAccountArtistId", () => ({
-  insertAccountArtistId: vi.fn(),
+vi.mock("@/lib/supabase/account_artist_ids/upsertAccountArtistId", () => ({
+  upsertAccountArtistId: vi.fn(),
 }));
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-const { insertAccountArtistId } = await import(
-  "@/lib/supabase/account_artist_ids/insertAccountArtistId"
+const { upsertAccountArtistId } = await import(
+  "@/lib/supabase/account_artist_ids/upsertAccountArtistId"
 );
 
 const ACCOUNT_ID = "22222222-2222-4222-8222-222222222222";
@@ -24,16 +24,16 @@ describe("linkArtistToAccount", () => {
   // No roster precheck: the link is an idempotent upsert, so an existing link
   // is a silent no-op at the database (chat#1965).
   it("upserts the link and returns success", async () => {
-    vi.mocked(insertAccountArtistId).mockResolvedValue(undefined);
+    vi.mocked(upsertAccountArtistId).mockResolvedValue(undefined);
 
     const res = await linkArtistToAccount({ accountId: ACCOUNT_ID, artistId: ARTIST_ID });
 
     expect(res.status).toBe(200);
-    expect(insertAccountArtistId).toHaveBeenCalledWith(ACCOUNT_ID, ARTIST_ID);
+    expect(upsertAccountArtistId).toHaveBeenCalledWith(ACCOUNT_ID, ARTIST_ID);
   });
 
   it("returns 400 with a generic message (no raw error text) when the write fails", async () => {
-    vi.mocked(insertAccountArtistId).mockRejectedValue(new Error("boom"));
+    vi.mocked(upsertAccountArtistId).mockRejectedValue(new Error("boom"));
 
     const res = await linkArtistToAccount({ accountId: ACCOUNT_ID, artistId: ARTIST_ID });
     const body = await res.json();

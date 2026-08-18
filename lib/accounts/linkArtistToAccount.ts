@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
+import { upsertAccountArtistId } from "@/lib/supabase/account_artist_ids/upsertAccountArtistId";
 import type { AddArtistParams } from "@/lib/accounts/validateAddArtistRequest";
 
 /**
@@ -20,7 +20,7 @@ export async function linkArtistToAccount({
   artistId,
 }: AddArtistParams): Promise<NextResponse> {
   try {
-    await insertAccountArtistId(accountId, artistId);
+    await upsertAccountArtistId(accountId, artistId);
 
     return NextResponse.json({ success: true }, { status: 200, headers: getCorsHeaders() });
   } catch (error) {

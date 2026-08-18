@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { resolveOrCreateArtist } from "@/lib/artists/resolveOrCreateArtist";
 import { createArtistInDb } from "@/lib/artists/createArtistInDb";
 import { findCanonicalArtistBySpotifyId } from "@/lib/valuation/findCanonicalArtistBySpotifyId";
-import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
+import { upsertAccountArtistId } from "@/lib/supabase/account_artist_ids/upsertAccountArtistId";
 import { selectAccountWithSocials } from "@/lib/supabase/accounts/selectAccountWithSocials";
 import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
 
@@ -10,8 +10,8 @@ vi.mock("@/lib/artists/createArtistInDb", () => ({ createArtistInDb: vi.fn() }))
 vi.mock("@/lib/valuation/findCanonicalArtistBySpotifyId", () => ({
   findCanonicalArtistBySpotifyId: vi.fn(),
 }));
-vi.mock("@/lib/supabase/account_artist_ids/insertAccountArtistId", () => ({
-  insertAccountArtistId: vi.fn(),
+vi.mock("@/lib/supabase/account_artist_ids/upsertAccountArtistId", () => ({
+  upsertAccountArtistId: vi.fn(),
 }));
 vi.mock("@/lib/supabase/accounts/selectAccountWithSocials", () => ({
   selectAccountWithSocials: vi.fn(),
@@ -61,7 +61,7 @@ describe("resolveOrCreateArtist", () => {
 
     expect(createArtistInDb).not.toHaveBeenCalled();
     expect(updateArtistSocials).not.toHaveBeenCalled();
-    expect(insertAccountArtistId).toHaveBeenCalledWith("acct-1", "canonical-1");
+    expect(upsertAccountArtistId).toHaveBeenCalledWith("acct-1", "canonical-1");
     expect(result.created).toBe(false);
     expect(result.artist).toMatchObject({ id: "canonical-1", account_id: "canonical-1" });
   });

@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Tables } from "@/types/database.types";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateCreateCatalogBody } from "./validateCreateCatalogBody";
-import { createSnapshotCatalog } from "./createSnapshotCatalog";
+import { resolveClaimedCatalog } from "./resolveClaimedCatalog";
 import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots";
-import { selectCatalogById } from "@/lib/supabase/catalogs/selectCatalogById";
 import { insertCatalog } from "@/lib/supabase/catalogs/insertCatalog";
 import { insertAccountCatalog } from "@/lib/supabase/account_catalogs/insertAccountCatalog";
-import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
 import { attachCanonicalArtistToAccount } from "./attachCanonicalArtistToAccount";
 
 const DEFAULT_CATALOG_NAME = "Valuation Catalog";
@@ -67,27 +64,15 @@ export async function createCatalogHandler(request: NextRequest): Promise<NextRe
       return errorResponse("Snapshot belongs to a different account", 403);
     }
 
-    // Idempotent re-claim: the run already produced a catalog — reuse it. A
-    // re-claim still runs the roster attach below (chat#1850 P1) so claims
-    // made before the attach shipped heal on the next click.
-    let catalog: Tables<"catalogs"> | null = null;
-    let songsAdded = 0;
-    let isrcs: string[] = [];
-    if (snapshot.catalog) {
-      catalog = await selectCatalogById(snapshot.catalog);
-      if (catalog) {
-        const measurements = await selectSongMeasurements({ snapshot: snapshot.id });
-        isrcs = [...new Set(measurements.map(m => m.song))];
-      }
-    }
-    if (!catalog) {
-      ({ catalog, songsAdded, isrcs } = await createSnapshotCatalog({
-        accountId,
-        ownerId,
-        snapshot,
-        name: validated.name,
-      }));
-    }
+    // Idempotent re-claim reuses the prior catalog; a re-claim still runs the
+    // roster attach below (chat#1850 P1) so claims made before the attach
+    // shipped heal on the next click.
+    const { catalog, songsAdded, isrcs } = await resolveClaimedCatalog({
+      accountId,
+      ownerId,
+      snapshot,
+      name: validated.name,
+    });
 
     // Roster attach (chat#1850 P1): the claim is when the account takes
     // ownership, so link the songs' canonical artist here. Best-effort on this
