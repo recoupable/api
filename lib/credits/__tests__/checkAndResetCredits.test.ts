@@ -163,4 +163,121 @@ describe("checkAndResetCredits", () => {
     expect(updateCreditsUsage).not.toHaveBeenCalled();
     expect(result).toEqual({ creditsUsage: row, isPro: true });
   });
+  describe("the refill is a floor, not an assignment", () => {
+    it("raises a balance BELOW the plan total up to it (free tier)", async () => {
+      const row = baseRow({ timestamp: "2026-03-01T00:00:00.000Z", remaining_credits: 100 });
+      vi.mocked(selectCreditsUsage).mockResolvedValue([row]);
+      vi.mocked(updateCreditsUsage).mockResolvedValue({
+        ...row,
+        remaining_credits: DEFAULT_CREDITS,
+        timestamp: "2026-05-11T12:00:00.000Z",
+      });
+      vi.mocked(getAccountSubscriptionState).mockResolvedValue(freeState);
+
+      await checkAndResetCredits(ACCOUNT);
+
+      expect(updateCreditsUsage).toHaveBeenCalledWith({
+        account_id: ACCOUNT,
+        updates: {
+          remaining_credits: DEFAULT_CREDITS,
+          timestamp: "2026-05-11T12:00:00.000Z",
+        },
+      });
+    });
+
+    it("leaves a balance ABOVE the plan total untouched, and still advances the timestamp", async () => {
+      const row = baseRow({ timestamp: "2026-03-01T00:00:00.000Z", remaining_credits: 9999 });
+      vi.mocked(selectCreditsUsage).mockResolvedValue([row]);
+      vi.mocked(updateCreditsUsage).mockResolvedValue({
+        ...row,
+        timestamp: "2026-05-11T12:00:00.000Z",
+      });
+      vi.mocked(getAccountSubscriptionState).mockResolvedValue(freeState);
+
+      const result = await checkAndResetCredits(ACCOUNT);
+
+      // remaining_credits is absent from the update, not set to 9999: a stale
+      // read must not resurrect credits a concurrent deduction just spent.
+      expect(updateCreditsUsage).toHaveBeenCalledWith({
+        account_id: ACCOUNT,
+        updates: { timestamp: "2026-05-11T12:00:00.000Z" },
+      });
+      expect(result.creditsUsage?.remaining_credits).toBe(9999);
+    });
+
+    it("writes only the timestamp when the balance is exactly the plan total", async () => {
+      const row = baseRow({
+        timestamp: "2026-03-01T00:00:00.000Z",
+        remaining_credits: DEFAULT_CREDITS,
+      });
+      vi.mocked(selectCreditsUsage).mockResolvedValue([row]);
+      vi.mocked(updateCreditsUsage).mockResolvedValue({
+        ...row,
+        timestamp: "2026-05-11T12:00:00.000Z",
+      });
+      vi.mocked(getAccountSubscriptionState).mockResolvedValue(freeState);
+
+      await checkAndResetCredits(ACCOUNT);
+
+      expect(updateCreditsUsage).toHaveBeenCalledWith({
+        account_id: ACCOUNT,
+        updates: { timestamp: "2026-05-11T12:00:00.000Z" },
+      });
+    });
+
+    it("does not cut a pro account holding more than PRO_CREDITS", async () => {
+      const row = baseRow({ timestamp: "2026-03-01T00:00:00.000Z", remaining_credits: 25000 });
+      vi.mocked(selectCreditsUsage).mockResolvedValue([row]);
+      vi.mocked(updateCreditsUsage).mockResolvedValue({
+        ...row,
+        timestamp: "2026-05-11T12:00:00.000Z",
+      });
+      vi.mocked(getAccountSubscriptionState).mockResolvedValue(proStateFromAccount);
+
+      const result = await checkAndResetCredits(ACCOUNT);
+
+      expect(updateCreditsUsage).toHaveBeenCalledWith({
+        account_id: ACCOUNT,
+        updates: { timestamp: "2026-05-11T12:00:00.000Z" },
+      });
+      expect(result.creditsUsage?.remaining_credits).toBe(25000);
+    });
+
+    it("protects an admin grant on a free account without knowing it is a grant", async () => {
+      // 9,999 granted to a free-tier account: no provenance is consulted, the
+      // floor rule alone keeps it.
+      const row = baseRow({ timestamp: "2026-03-01T00:00:00.000Z", remaining_credits: 9999 });
+      vi.mocked(selectCreditsUsage).mockResolvedValue([row]);
+      vi.mocked(updateCreditsUsage).mockResolvedValue({
+        ...row,
+        timestamp: "2026-05-11T12:00:00.000Z",
+      });
+      vi.mocked(getAccountSubscriptionState).mockResolvedValue(freeState);
+
+      const result = await checkAndResetCredits(ACCOUNT);
+
+      const [{ updates }] = vi.mocked(updateCreditsUsage).mock.calls[0];
+      expect(updates).not.toHaveProperty("remaining_credits");
+      expect(result.creditsUsage?.remaining_credits).toBe(9999);
+      expect(result.creditsUsage?.remaining_credits).not.toBe(DEFAULT_CREDITS);
+    });
+
+    it("treats a newly-subscribed refill as a floor too (does not cut a topped-up balance)", async () => {
+      const row = baseRow({ timestamp: "2026-05-05T00:00:00.000Z", remaining_credits: 12000 });
+      vi.mocked(selectCreditsUsage).mockResolvedValue([row]);
+      vi.mocked(updateCreditsUsage).mockResolvedValue({
+        ...row,
+        timestamp: "2026-05-11T12:00:00.000Z",
+      });
+      vi.mocked(getAccountSubscriptionState).mockResolvedValue(proStateFromOrgNewlySubscribed);
+
+      const result = await checkAndResetCredits(ACCOUNT);
+
+      expect(updateCreditsUsage).toHaveBeenCalledWith({
+        account_id: ACCOUNT,
+        updates: { timestamp: "2026-05-11T12:00:00.000Z" },
+      });
+      expect(result.creditsUsage?.remaining_credits).toBe(12000);
+    });
+  });
 });
