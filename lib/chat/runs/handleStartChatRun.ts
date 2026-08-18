@@ -46,6 +46,7 @@ export async function handleStartChatRun(request: NextRequest): Promise<Response
       accountId,
       title: DEFAULT_RUN_SESSION_TITLE,
       artistId,
+      modelId,
     });
 
     const { rawKey, keyId } = await mintEphemeralAccountKey(accountId);

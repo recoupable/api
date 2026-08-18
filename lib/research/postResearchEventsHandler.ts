@@ -6,6 +6,7 @@ import { getArtists } from "@/lib/artists/getArtists";
 import { getArtistBandsintownId } from "@/lib/research/getArtistBandsintownId";
 import { fetchBandsintownEvents } from "@/lib/apify/bandsintown/fetchBandsintownEvents";
 import { validatePostResearchEventsRequest } from "@/lib/research/validatePostResearchEventsRequest";
+import { isApifyCapacityError } from "@/lib/apify/isApifyCapacityError";
 
 /**
  * Returned when the artist is reachable but has no Bandsintown profile
@@ -37,9 +38,16 @@ export async function postResearchEventsHandler(request: NextRequest): Promise<N
 
     // Scope the lookup to the caller's own roster. Without this, any
     // authenticated account could read any artist's connected profile.
+    //
+    // `orgId` is omitted rather than passed as null when the auth context
+    // carries none: getArtists treats null as "personal artists only,
+    // explicitly excluding every org artist" and undefined as "personal + all
+    // orgs". Passing null 404s every artist that lives in an organization,
+    // which is how most customer rosters are held. An explicitly org-scoped
+    // key still narrows to that org.
     const artists = await getArtists({
       accountId: validated.accountId,
-      orgId: validated.orgId,
+      ...(validated.orgId ? { orgId: validated.orgId } : {}),
     });
     if (!artists.some(artist => artist.account_id === validated.artist_id)) {
       return errorResponse("Artist not found", 404);
@@ -67,6 +75,17 @@ export async function postResearchEventsHandler(request: NextRequest): Promise<N
 
     return successResponse({ events });
   } catch (error) {
+    // A saturated provider quota is a capacity condition, not a server fault:
+    // the caller's request is fine and retrying later will work. Reporting it
+    // as a 500 tells callers to give up, and echoing the provider's own text
+    // leaks our infrastructure to them.
+    if (isApifyCapacityError(error)) {
+      return errorResponse(
+        "Events provider is at capacity. Retry this request after a short delay.",
+        503,
+      );
+    }
+
     return errorResponse(
       error instanceof Error ? error.message : "Artist events lookup failed",
       500,

@@ -69,8 +69,13 @@ describe("postAdminCreditsHandler", () => {
       reason: "Trial headroom for the Aug 12 label demo",
       granted_by: ADMIN,
       granted_at: "2026-08-06T23:00:00.000Z",
-      expires_at: "2026-09-06T23:00:00.000Z",
     });
+  });
+
+  it("reports no expires_at: a grant cannot be reduced by a refill, so nothing expires", async () => {
+    const body = await (await postAdminCreditsHandler(request())).json();
+
+    expect(body).not.toHaveProperty("expires_at");
   });
 
   it("passes the validated grant through to the atomic write", async () => {

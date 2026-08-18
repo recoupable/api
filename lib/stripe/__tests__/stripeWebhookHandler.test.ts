@@ -11,7 +11,6 @@ const {
   processSubscriptionUpdatedMock,
   processSubscriptionDeletedMock,
   processInvoicePaidMock,
-  notifyCreditsTopupPaymentIntentMock,
   notifyCreditsTopupSessionMock,
 } = vi.hoisted(() => ({
   verifyStripeWebhookEventMock: vi.fn(),
@@ -22,7 +21,6 @@ const {
   processSubscriptionUpdatedMock: vi.fn(),
   processSubscriptionDeletedMock: vi.fn(),
   processInvoicePaidMock: vi.fn(),
-  notifyCreditsTopupPaymentIntentMock: vi.fn(),
   notifyCreditsTopupSessionMock: vi.fn(),
 }));
 
@@ -49,9 +47,6 @@ vi.mock("@/lib/stripe/processSubscriptionDeleted", () => ({
 }));
 vi.mock("@/lib/stripe/processInvoicePaid", () => ({
   processInvoicePaid: processInvoicePaidMock,
-}));
-vi.mock("@/lib/stripe/notifyCreditsTopupPaymentIntent", () => ({
-  notifyCreditsTopupPaymentIntent: notifyCreditsTopupPaymentIntentMock,
 }));
 vi.mock("@/lib/stripe/notifyCreditsTopupSession", () => ({
   notifyCreditsTopupSession: notifyCreditsTopupSessionMock,
@@ -167,14 +162,13 @@ describe("stripeWebhookHandler", () => {
     expect(processInvoicePaidMock).toHaveBeenCalledWith(invoice);
   });
 
-  it("notifies alongside the credits grant on payment_intent.succeeded", async () => {
-    const pi = { id: "pi_1", metadata: { purpose: "credits_auto_recharge" } };
+  it("grants credits on payment_intent.succeeded", async () => {
+    const pi = { id: "pi_1", metadata: { purpose: "credits_topup" } };
     verifyStripeWebhookEventMock.mockResolvedValue({
       event: event("payment_intent.succeeded", pi),
     });
     await stripeWebhookHandler(makeReq());
     expect(processCreditsTopupPaymentIntentMock).toHaveBeenCalledWith(pi);
-    expect(notifyCreditsTopupPaymentIntentMock).toHaveBeenCalledWith(pi);
   });
 
   it("notifies alongside the credits grant on checkout.session.completed", async () => {

@@ -18,7 +18,7 @@ export type HandleArtistResearchResult = { data: unknown } | { error: string; st
  * Resolves an artist to a provider artist ID, proxies to the built upstream
  * path, and deducts credits on success. Credit-deduction failures are non-fatal.
  *
- * Credit gating (auto-recharge + 402 short-circuit) lives in route handlers
+ * Credit gating (the 402 short-circuit) lives in route handlers
  * via `ensureCreditsOrShortCircuit` — see `handleResearch` for the rationale.
  *
  * @returns `{ data }` on success, `{ error, status }` on failure.

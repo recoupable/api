@@ -6,9 +6,7 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { validationErrorResponse } from "@/lib/zod/validationErrorResponse";
 import { generateUUID } from "@/lib/uuid/generateUUID";
-
-/** Default model for headless generation when the caller omits `model`. */
-export const DEFAULT_RUN_MODEL_ID = "anthropic/claude-haiku-4.5";
+import { DEFAULT_MODEL } from "@/lib/const";
 
 /**
  * Body schema for `POST /api/chat/runs` (the durable-workflow re-point,
@@ -78,11 +76,15 @@ export async function validateChatRunRequest(
     ? [{ id: generateUUID(), role: "user", parts: [{ type: "text", text: trimmedPrompt }] }]
     : (messages as UIMessage[]);
 
+  // `||` not `??`: an empty/whitespace model must fall back too, or "" would
+  // be persisted as provenance and sent to the workflow as the model id.
+  const trimmedModel = typeof model === "string" ? model.trim() : "";
+
   return {
     accountId: auth.accountId,
     orgId: auth.orgId,
     messages: uiMessages,
     artistId,
-    modelId: model ?? DEFAULT_RUN_MODEL_ID,
+    modelId: trimmedModel || DEFAULT_MODEL,
   };
 }

@@ -2,7 +2,6 @@ import apifyClient from "@/lib/apify/client";
 import { upsertPosts } from "@/lib/supabase/posts/upsertPosts";
 import { getPosts } from "@/lib/supabase/posts/getPosts";
 import { handleInstagramProfileFollowUpRuns } from "@/lib/apify/instagram/handleInstagramProfileFollowUpRuns";
-import { sendApifyWebhookEmail } from "@/lib/apify/sendApifyWebhookEmail";
 import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
 import { selectSocials } from "@/lib/supabase/socials/selectSocials";
 import { upsertSocialPosts } from "@/lib/supabase/social_posts/upsertSocialPosts";
@@ -15,14 +14,13 @@ import { getFetchableUrl } from "@/lib/arweave/getFetchableUrl";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 import { filterNewPostUrls } from "@/lib/socials/filterNewPostUrls";
-import { selectApifyScraperRun } from "@/lib/supabase/apify_scraper_runs/selectApifyScraperRun";
 import type { TablesInsert } from "@/types/database.types";
 
 /**
  * Handles Instagram profile scraper Apify webhook results:
  *  - Persists the returned posts + social profile row.
  *  - Mirrors the profile pic to Arweave.
- *  - Notifies subscribed account emails via Resend.
+ *  - Records the posts that were genuinely new to the platform.
  *  - Queues the comments scraper for the profile's latest posts.
  *
  * Returns a summary object for downstream inspection. Failures
@@ -97,33 +95,14 @@ export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookP
 
   const accountEmails = await selectAccountEmails({ accountIds: uniqueAccountIds });
 
-  // Email + follow-up scrape are independent side effects; isolate so a
-  // mail outage doesn't block comment scraping and vice versa.
-  // Digest-batch runs get ONE consolidated email from the webhook layer —
-  // suppress the per-platform solo email for them (chat#1855). Legacy runs
-  // (no batch registration) keep the immediate alert.
-  const registeredRun = parsed.resource.id ? await selectApifyScraperRun(parsed.resource.id) : null;
-
-  let sentEmails = null;
-  try {
-    // Only notify when the scrape actually found posts new to the platform —
-    // otherwise every scrape re-announces the profile's recent feed.
-    if (newPostUrls.length > 0 && !registeredRun?.batch_id) {
-      sentEmails = await sendApifyWebhookEmail(
-        firstResult,
-        accountEmails.map(e => e.email).filter(Boolean),
-        newPostUrls,
-      );
-    }
-  } catch (error) {
-    console.error("[WARN] webhook email failed:", error);
-  }
-
+  // Scraping no longer notifies anyone: the per-platform alert and the batched
+  // digest were both removed (chat#1955). `accountEmails` is still resolved and
+  // returned because callers use it, but nothing is sent.
   try {
     await handleInstagramProfileFollowUpRuns(dataset, firstResult);
   } catch (error) {
     console.error("[WARN] follow-up scrape failed:", error);
   }
 
-  return { posts, social, accountSocials, accountEmails, sentEmails, newPostUrls };
+  return { posts, social, accountSocials, accountEmails, newPostUrls };
 }

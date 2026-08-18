@@ -17,8 +17,9 @@ export async function OPTIONS() {
 /**
  * POST /api/subscriptions/card-on-file: creates a $0 Stripe `setup` checkout
  * session that saves a card on file for the authenticated account. No charge is
- * made and no subscription starts; the saved card is what lets a later credit
- * shortfall auto-recharge instead of dead-ending.
+ * made and no subscription starts; the saved card is what lets a later
+ * `POST /api/credits/sessions` top-up charge without collecting a card again.
+ * Saving a card never authorizes a charge on its own.
  *
  * @param request - The incoming HTTP request.
  * @returns A NextResponse with session `id` and `url`, or an error body.

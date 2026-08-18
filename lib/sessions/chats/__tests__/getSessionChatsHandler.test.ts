@@ -70,7 +70,7 @@ describe("getSessionChatsHandler", () => {
       defaultModelId: string;
     };
     expect(body.chats).toEqual(summaries);
-    expect(body.defaultModelId).toBe("openai/gpt-5.4-nano");
+    expect(body.defaultModelId).toBe("moonshotai/kimi-k3");
     expect(getChatSummaries).toHaveBeenCalledWith({
       sessionId: "sess_1",
       accountId,

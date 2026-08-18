@@ -32,7 +32,7 @@ export async function OPTIONS() {
  * - prompt: String prompt (mutually exclusive with messages)
  * - messages: Array of UIMessages (mutually exclusive with prompt)
  * - artistId: Optional UUID of the artist account
- * - model: Optional model ID override (default anthropic/claude-haiku-4.5)
+ * - model: Optional model ID override (default moonshotai/kimi-k3)
  * - topic: Optional session title
  * - accountId: Optional accountId override (requires org API key)
  *
