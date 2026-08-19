@@ -1,6 +1,6 @@
 import { getAppleSongsByIsrc } from "@/lib/apple/getAppleSongsByIsrc";
 import { resolveAppleArtworkUrl } from "@/lib/apple/resolveAppleArtworkUrl";
-import { updateSongArtworkUrl } from "@/lib/supabase/songs/updateSongArtworkUrl";
+import { updateSong } from "@/lib/supabase/songs/updateSong";
 
 /**
  * Resolve artwork for songs that have none stored: one batched Apple Music
@@ -34,7 +34,7 @@ export async function resolveSongArtwork(missingIsrcs: string[]): Promise<Record
   await Promise.all(
     Object.entries(artwork).map(async ([isrc, url]) => {
       try {
-        await updateSongArtworkUrl(isrc, url);
+        await updateSong(isrc, { artwork_url: url });
       } catch (writeError) {
         console.error("Artwork write-through failed:", writeError);
       }

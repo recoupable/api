@@ -2,9 +2,9 @@ import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccoun
 import { selectSongArtists } from "@/lib/supabase/song_artists/selectSongArtists";
 import { selectCatalogsBySongs } from "@/lib/supabase/catalog_songs/selectCatalogsBySongs";
 import { countCatalogSongs } from "@/lib/supabase/catalog_songs/countCatalogSongs";
-import { selectCatalogSongIsrcs } from "@/lib/supabase/catalog_songs/selectCatalogSongIsrcs";
+import { selectCatalogSongs } from "@/lib/supabase/catalog_songs/selectCatalogSongs";
 import { selectSongs } from "@/lib/supabase/songs/selectSongs";
-import { selectLatestSongPlays } from "@/lib/supabase/song_measurements/selectLatestSongPlays";
+import { selectLatestSongPlays } from "@/lib/songs/selectLatestSongPlays";
 import { resolveSongArtwork } from "@/lib/artist/resolveSongArtwork";
 import { buildProfileSongs, type ProfileSong } from "@/lib/artist/buildProfileSongs";
 import { getCatalogEarliestReleaseDate } from "@/lib/catalog/getCatalogEarliestReleaseDate";
@@ -65,7 +65,7 @@ export async function getArtistPublicProfile(
   const counts = await countCatalogSongs(catalogRows.map(c => c.id));
 
   const [catalogSongRows, songRecords, plays] = await Promise.all([
-    selectCatalogSongIsrcs(isrcs),
+    selectCatalogSongs(isrcs),
     selectSongs(isrcs),
     selectLatestSongPlays(isrcs),
   ]);

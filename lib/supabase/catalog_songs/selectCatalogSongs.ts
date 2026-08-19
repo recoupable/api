@@ -10,7 +10,7 @@ const CHUNK_SIZE = 200;
  * @param isrcs - Song ISRCs to look up.
  * @returns Rows of catalog id + song ISRC.
  */
-export async function selectCatalogSongIsrcs(
+export async function selectCatalogSongs(
   isrcs: string[],
 ): Promise<Array<{ catalog: string; song: string }>> {
   if (!isrcs.length) return [];

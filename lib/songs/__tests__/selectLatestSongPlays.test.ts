@@ -9,7 +9,7 @@ vi.mock("@/lib/supabase/song_measurements/selectSongMeasurements", () => ({
 }));
 
 const { selectLatestSongPlays } = await import(
-  "@/lib/supabase/song_measurements/selectLatestSongPlays"
+  "@/lib/songs/selectLatestSongPlays"
 );
 
 beforeEach(() => {

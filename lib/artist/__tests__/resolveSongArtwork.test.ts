@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { getAppleSongsByIsrcMock, updateSongArtworkUrlMock } = vi.hoisted(() => ({
+const { getAppleSongsByIsrcMock, updateSongMock } = vi.hoisted(() => ({
   getAppleSongsByIsrcMock: vi.fn(),
-  updateSongArtworkUrlMock: vi.fn(),
+  updateSongMock: vi.fn(),
 }));
 
 vi.mock("@/lib/apple/getAppleSongsByIsrc", () => ({
   getAppleSongsByIsrc: getAppleSongsByIsrcMock,
 }));
-vi.mock("@/lib/supabase/songs/updateSongArtworkUrl", () => ({
-  updateSongArtworkUrl: updateSongArtworkUrlMock,
+vi.mock("@/lib/supabase/songs/updateSong", () => ({
+  updateSong: updateSongMock,
 }));
 
 const { resolveSongArtwork } = await import("@/lib/artist/resolveSongArtwork");
@@ -17,7 +17,7 @@ const { resolveSongArtwork } = await import("@/lib/artist/resolveSongArtwork");
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => undefined);
-  updateSongArtworkUrlMock.mockResolvedValue(undefined);
+  updateSongMock.mockResolvedValue(undefined);
 });
 
 describe("resolveSongArtwork", () => {
@@ -43,7 +43,9 @@ describe("resolveSongArtwork", () => {
       isrcs: ["ISRC1", "ISRC2"],
       storefront: "us",
     });
-    expect(updateSongArtworkUrlMock).toHaveBeenCalledWith("ISRC1", "https://a/1.jpg/296x296bb.jpg");
+    expect(updateSongMock).toHaveBeenCalledWith("ISRC1", {
+      artwork_url: "https://a/1.jpg/296x296bb.jpg",
+    });
   });
 
   // Apple is a third party on a public path: its failure yields no artwork,
@@ -52,7 +54,7 @@ describe("resolveSongArtwork", () => {
     getAppleSongsByIsrcMock.mockResolvedValue({ results: null, error: new Error("apple down") });
 
     expect(await resolveSongArtwork(["ISRC1"])).toEqual({});
-    expect(updateSongArtworkUrlMock).not.toHaveBeenCalled();
+    expect(updateSongMock).not.toHaveBeenCalled();
   });
 
   it("returns {} for no ISRCs without calling Apple", async () => {
@@ -67,7 +69,7 @@ describe("resolveSongArtwork", () => {
       ],
       error: null,
     });
-    updateSongArtworkUrlMock.mockRejectedValue(new Error("db write failed"));
+    updateSongMock.mockRejectedValue(new Error("db write failed"));
 
     expect(await resolveSongArtwork(["ISRC1"])).toEqual({ ISRC1: "https://a/1.jpg" });
   });
