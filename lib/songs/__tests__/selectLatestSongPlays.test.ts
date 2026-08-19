@@ -8,9 +8,7 @@ vi.mock("@/lib/supabase/song_measurements/selectSongMeasurements", () => ({
   selectSongMeasurements: selectSongMeasurementsMock,
 }));
 
-const { selectLatestSongPlays } = await import(
-  "@/lib/songs/selectLatestSongPlays"
-);
+const { selectLatestSongPlays } = await import("@/lib/songs/selectLatestSongPlays");
 
 beforeEach(() => {
   vi.clearAllMocks();
