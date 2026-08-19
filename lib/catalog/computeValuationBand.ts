@@ -25,13 +25,21 @@ export function computeValuationBand(params: {
   totalStreams: number;
   earliestReleaseDate: string | null;
   now?: Date;
-}): { valuation: ValuationBand; catalogAgeYears: number } {
+}): { valuation: ValuationBand; catalogAgeYears: number; ageFlooredToOneYear: boolean } {
   const now = params.now ?? new Date();
 
   let catalogAgeYears = DEFAULT_AGE_YEARS;
+  let ageFlooredToOneYear = false;
   if (params.earliestReleaseDate) {
     const ageMs = now.getTime() - new Date(params.earliestReleaseDate).getTime();
-    catalogAgeYears = Math.max(1, Math.round(ageMs / YEAR_MS));
+    // An unparseable date yields NaN, which would poison the whole band —
+    // fall back to the default age instead (chat#1969 review).
+    if (Number.isFinite(ageMs)) {
+      catalogAgeYears = Math.max(1, Math.round(ageMs / YEAR_MS));
+      // A catalog younger than a year is priced on a full-year run rate;
+      // callers surface the floor honestly (chat#1969).
+      ageFlooredToOneYear = ageMs < YEAR_MS;
+    }
   }
 
   const annualGross = (params.totalStreams / catalogAgeYears) * SPOTIFY_PER_STREAM_USD;
@@ -44,5 +52,6 @@ export function computeValuationBand(params: {
       high: annualGross * GROSS_UP.high * net * MULTIPLE.high,
     },
     catalogAgeYears,
+    ageFlooredToOneYear,
   };
 }

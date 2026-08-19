@@ -13,15 +13,19 @@ export type ValuationReleaseRow = {
   artUrl: string | null;
 };
 
+// The numbers are required so an empty "valuation" email is unrepresentable
+// at the type level (chat#1969).
 export type ValuationReportEmailParams = {
   catalogName: string | null;
   deepLinkUrl: string;
   albumCount: number;
   artist?: { name: string | null; imageUrl: string | null; followers: number | null };
-  valuation?: { low: number; mid: number; high: number };
-  totalStreams?: number;
-  measuredSongCount?: number;
+  valuation: { low: number; mid: number; high: number };
+  totalStreams: number;
+  measuredSongCount: number;
   releaseCount?: number;
-  catalogAgeYears?: number;
+  catalogAgeYears: number;
+  /** True when the model priced a sub-year catalog on its one-year floor. */
+  ageFlooredToOneYear: boolean;
   releases?: ValuationReleaseRow[];
 };
