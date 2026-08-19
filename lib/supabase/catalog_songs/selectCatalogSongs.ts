@@ -1,32 +1,21 @@
 import supabase from "../serverClient";
 
-/** PostgREST `in` filters ride the URL, so large ISRC lists are chunked. */
-const CHUNK_SIZE = 200;
-
 /**
- * Select the (catalog, song) pairs for the given song ISRCs — the grouping
- * step between an artist's credited songs and the catalogs that hold them.
+ * Select catalog_songs rows for the given song ISRCs.
  *
- * @param isrcs - Song ISRCs to look up.
+ * @param isrcs - Song ISRCs to filter on.
  * @returns Rows of catalog id + song ISRC.
  */
 export async function selectCatalogSongs(
   isrcs: string[],
 ): Promise<Array<{ catalog: string; song: string }>> {
-  if (!isrcs.length) return [];
+  const { data, error } = await supabase
+    .from("catalog_songs")
+    .select("catalog, song")
+    .in("song", isrcs);
 
-  const rows: Array<{ catalog: string; song: string }> = [];
-  for (let i = 0; i < isrcs.length; i += CHUNK_SIZE) {
-    const chunk = isrcs.slice(i, i + CHUNK_SIZE);
-    const { data, error } = await supabase
-      .from("catalog_songs")
-      .select("catalog, song")
-      .in("song", chunk);
-
-    if (error) {
-      throw new Error(`Failed to fetch catalog_songs: ${error.message}`);
-    }
-    rows.push(...(data ?? []));
+  if (error) {
+    throw new Error(`Failed to fetch catalog_songs: ${error.message}`);
   }
-  return rows;
+  return data ?? [];
 }

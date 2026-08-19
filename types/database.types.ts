@@ -3219,6 +3219,7 @@ export type Database = {
       songs: {
         Row: {
           album: string | null;
+          artwork_url: string | null;
           isrc: string;
           name: string | null;
           notes: string | null;
@@ -3226,6 +3227,7 @@ export type Database = {
         };
         Insert: {
           album?: string | null;
+          artwork_url?: string | null;
           isrc: string;
           name?: string | null;
           notes?: string | null;
@@ -3233,6 +3235,7 @@ export type Database = {
         };
         Update: {
           album?: string | null;
+          artwork_url?: string | null;
           isrc?: string;
           name?: string | null;
           notes?: string | null;

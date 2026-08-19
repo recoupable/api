@@ -5,7 +5,7 @@ const {
   selectSongArtistsMock,
   selectCatalogsBySongsMock,
   countCatalogSongsMock,
-  selectCatalogSongsMock,
+  getCatalogSongsMock,
   selectSongsMock,
   selectLatestSongPlaysMock,
   resolveSongArtworkMock,
@@ -15,7 +15,7 @@ const {
   selectSongArtistsMock: vi.fn(),
   selectCatalogsBySongsMock: vi.fn(),
   countCatalogSongsMock: vi.fn(),
-  selectCatalogSongsMock: vi.fn(),
+  getCatalogSongsMock: vi.fn(),
   selectSongsMock: vi.fn(),
   selectLatestSongPlaysMock: vi.fn(),
   resolveSongArtworkMock: vi.fn(),
@@ -34,8 +34,8 @@ vi.mock("@/lib/supabase/catalog_songs/selectCatalogsBySongs", () => ({
 vi.mock("@/lib/supabase/catalog_songs/countCatalogSongs", () => ({
   countCatalogSongs: countCatalogSongsMock,
 }));
-vi.mock("@/lib/supabase/catalog_songs/selectCatalogSongs", () => ({
-  selectCatalogSongs: selectCatalogSongsMock,
+vi.mock("@/lib/songs/getCatalogSongs", () => ({
+  getCatalogSongs: getCatalogSongsMock,
 }));
 vi.mock("@/lib/supabase/songs/selectSongs", () => ({
   selectSongs: selectSongsMock,
@@ -98,7 +98,7 @@ beforeEach(() => {
     { id: "cat_1", name: "Brauxelion Catalog", updated_at: "2026-08-01" },
   ]);
   countCatalogSongsMock.mockResolvedValue({ cat_1: 24 });
-  selectCatalogSongsMock.mockResolvedValue([
+  getCatalogSongsMock.mockResolvedValue([
     { catalog: "cat_1", song: "ISRC1" },
     { catalog: "cat_1", song: "ISRC2" },
   ]);
@@ -204,7 +204,7 @@ describe("getArtistPublicProfile", () => {
     selectSongArtistsMock.mockResolvedValue([]);
     selectCatalogsBySongsMock.mockResolvedValue([]);
     countCatalogSongsMock.mockResolvedValue({});
-    selectCatalogSongsMock.mockResolvedValue([]);
+    getCatalogSongsMock.mockResolvedValue([]);
     selectSongsMock.mockResolvedValue([]);
     selectLatestSongPlaysMock.mockResolvedValue({});
     resolveSongArtworkMock.mockResolvedValue({});

@@ -2,7 +2,7 @@ import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccoun
 import { selectSongArtists } from "@/lib/supabase/song_artists/selectSongArtists";
 import { selectCatalogsBySongs } from "@/lib/supabase/catalog_songs/selectCatalogsBySongs";
 import { countCatalogSongs } from "@/lib/supabase/catalog_songs/countCatalogSongs";
-import { selectCatalogSongs } from "@/lib/supabase/catalog_songs/selectCatalogSongs";
+import { getCatalogSongs } from "@/lib/songs/getCatalogSongs";
 import { selectSongs } from "@/lib/supabase/songs/selectSongs";
 import { selectLatestSongPlays } from "@/lib/songs/selectLatestSongPlays";
 import { resolveSongArtwork } from "@/lib/artist/resolveSongArtwork";
@@ -65,17 +65,15 @@ export async function getArtistPublicProfile(
   const counts = await countCatalogSongs(catalogRows.map(c => c.id));
 
   const [catalogSongRows, songRecords, plays] = await Promise.all([
-    selectCatalogSongs(isrcs),
+    getCatalogSongs(isrcs),
     selectSongs(isrcs),
     selectLatestSongPlays(isrcs),
   ]);
-  // songs.artwork_url ships in database#58; until types regenerate the column
-  // rides as an optional extra on the generated row type.
   const songsWithArt = songRecords.map(song => ({
     isrc: song.isrc,
     name: song.name,
     album: song.album,
-    artwork_url: (song as { artwork_url?: string | null }).artwork_url ?? null,
+    artwork_url: song.artwork_url,
   }));
   const missingArtwork = songsWithArt.filter(s => !s.artwork_url).map(s => s.isrc);
   const artwork = await resolveSongArtwork(missingArtwork);
