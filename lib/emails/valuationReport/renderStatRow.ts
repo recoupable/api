@@ -3,21 +3,15 @@ import type { ValuationReportEmailParams } from "@/lib/emails/valuationReport/va
 
 /**
  * Render the measured-scope stat strip (lifetime streams, tracks measured,
- * releases, catalog age). Each cell is omitted when its value is unavailable.
+ * releases, catalog age).
  */
 export function renderStatRow(params: ValuationReportEmailParams): string {
-  const stats = [
-    params.totalStreams != null
-      ? ["Lifetime streams", formatCompactNumber(params.totalStreams)]
-      : null,
-    params.measuredSongCount != null
-      ? ["Tracks measured", formatCompactNumber(params.measuredSongCount)]
-      : null,
+  const stats: [string, string][] = [
+    ["Lifetime streams", formatCompactNumber(params.totalStreams)],
+    ["Tracks measured", formatCompactNumber(params.measuredSongCount)],
     ["Releases", formatCompactNumber(params.releaseCount ?? params.albumCount)],
-    params.catalogAgeYears != null
-      ? ["Catalog age", `${params.catalogAgeYears} year${params.catalogAgeYears === 1 ? "" : "s"}`]
-      : null,
-  ].filter((s): s is [string, string] => s !== null);
+    ["Catalog age", `${params.catalogAgeYears} year${params.catalogAgeYears === 1 ? "" : "s"}`],
+  ];
 
   const cells = stats
     .map(

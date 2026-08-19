@@ -12,6 +12,10 @@ import { getCatalogEarliestReleaseDate } from "@/lib/catalog/getCatalogEarliestR
 import { computeValuationBand } from "@/lib/catalog/computeValuationBand";
 import { sendValuationReportEmail } from "@/lib/emails/valuationReport/sendValuationReportEmail";
 import { captureValuationLead } from "@/lib/valuation/captureValuationLead";
+import {
+  toValuationEmailOutcome,
+  type ValuationEmailOutcome,
+} from "@/lib/valuation/toValuationEmailOutcome";
 import { attachCanonicalArtistToAccount } from "@/lib/catalog/attachCanonicalArtistToAccount";
 import { resolveOrCreateArtist } from "@/lib/artists/resolveOrCreateArtist";
 import { validateRunValuationRequest } from "./validateRunValuationRequest";
@@ -31,8 +35,7 @@ interface SpotifyAlbumsResponse {
  *   1. resolve the artist's releases (Spotify),
  *   2. capture current play counts under the caller's account (spends credits),
  *   3. wait (bounded) for the capture to land,
- *   4. materialize the catalog from the snapshot (reuses createSnapshotCatalog,
- *      which also attaches the canonical artist to the roster),
+ *   4. materialize the catalog from the snapshot (createSnapshotCatalog),
  *   5. value it with the same model as GET /catalogs/{id}/measurements.
  *
  * The owning account is resolved from credentials, never the body. This is the
@@ -154,29 +157,40 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
       selectCatalogMeasurementsAggregate({ catalogId: catalog.id }),
       getCatalogEarliestReleaseDate(catalog.id),
     ]);
-    const { valuation } = computeValuationBand({
+    const { valuation, catalogAgeYears, ageFlooredToOneYear } = computeValuationBand({
       totalStreams: aggregate?.totalStreams ?? 0,
       earliestReleaseDate,
     });
 
-    // Email the valuation report after the catalog is materialized (chat#1881):
-    // the local `snapshot` predates createSnapshotCatalog, so point it at the
-    // fresh catalog id. Deferred with `after` so it never blocks the response,
-    // and self-guarded (dedup + idempotency key) inside sendValuationReportEmail.
-    after(() =>
-      sendValuationReportEmail(
-        { ...snapshot, catalog: catalog.id },
-        { artist: searchedArtist },
-      ).catch(error => console.error("Valuation report email failed:", error)),
-    );
+    // Deferred so it never blocks the response (chat#1881); one block, in
+    // order: the email consumes the numbers computed above and only fires when
+    // there are streams to show (chat#1969), then the lead capture (chat#1885)
+    // reports the email's actual fate next to the roster outcome.
+    after(async () => {
+      const emailOutcome: ValuationEmailOutcome =
+        aggregate && aggregate.totalStreams > 0
+          ? await sendValuationReportEmail({
+              snapshot,
+              catalogId: catalog.id,
+              catalogName: catalog.name,
+              valuation,
+              totalStreams: aggregate.totalStreams,
+              measuredSongCount: aggregate.measuredSongCount,
+              catalogAgeYears,
+              ageFlooredToOneYear,
+              artist: searchedArtist,
+            })
+              .then(toValuationEmailOutcome)
+              .catch(error => {
+                console.error("Valuation report email failed:", error);
+                return {
+                  status: "failed" as const,
+                  error: error instanceof Error ? error.message : String(error),
+                };
+              })
+          : { status: "skipped", reason: aggregate ? "0 streams" : "no measurements" };
 
-    // Capture the lead + team Telegram alert for every valuation caller (chat,
-    // direct api, marketing funnel) — the shared handler owns this milestone now,
-    // not the marketing frontend (chat#1885). `after` so it never blocks the
-    // response; best-effort inside captureValuationLead. lifetimeStreams is the
-    // measured total the marketing funnel's client-side path never had.
-    after(() =>
-      captureValuationLead({
+      await captureValuationLead({
         accountId,
         artistName: searchedArtist?.name ?? "Unknown artist",
         artistId: spotify_artist_id,
@@ -185,8 +199,9 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
         followerCount: searchedArtist?.followers?.total ?? undefined,
         rosterArtistId,
         rosterAttachError,
-      }).catch(error => console.error("Valuation lead capture failed:", error)),
-    );
+        emailOutcome,
+      }).catch(error => console.error("Valuation lead capture failed:", error));
+    });
 
     return successResponse({
       catalog,

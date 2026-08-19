@@ -15,6 +15,7 @@ const baseParams = {
   measuredSongCount: 112,
   releaseCount: 3,
   catalogAgeYears: 5,
+  ageFlooredToOneYear: false,
   releases: [
     {
       album: "Album B",
@@ -89,16 +90,21 @@ describe("renderValuationReportHtml", () => {
     expect(html).toContain("&lt;img src=&quot;x&quot;&gt;Catalog");
   });
 
-  it("degrades to a link-only email when no measurements are available", () => {
+  // The shell branch is gone (chat#1969): valuation is required at the type
+  // level, so a numbers-free render is unrepresentable.
+  it("adds the age-floor caveat for a catalog under a year old", () => {
     const { html } = renderValuationReportHtml({
-      catalogName: null,
-      deepLinkUrl: "https://chat.recoupable.dev",
-      albumCount: 4,
+      ...baseParams,
+      catalogAgeYears: 1,
+      ageFlooredToOneYear: true,
     });
-    expect(html).not.toContain("Estimated catalog value");
-    expect(html).not.toContain("Directional model");
-    expect(html).toContain("Your catalog");
-    expect(html).toContain('href="https://chat.recoupable.dev"');
+    expect(html).toContain("under a year old");
+    expect(html).toContain("one year run rate floor");
+  });
+
+  it("omits the age-floor caveat for an established catalog", () => {
+    const { html } = renderValuationReportHtml(baseParams);
+    expect(html).not.toContain("under a year old");
   });
 
   it("contains no em or en dashes in outward-facing copy", () => {

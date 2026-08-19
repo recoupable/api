@@ -4,6 +4,7 @@ import type { ValuationLeadInput } from "@/lib/valuation/valuationLeadInput";
 import { sendMessage } from "@/lib/telegram/sendMessage";
 import { usd } from "@/lib/format/usd";
 import type { ValuationBand } from "@/lib/catalog/computeValuationBand";
+import type { ValuationEmailOutcome } from "@/lib/valuation/toValuationEmailOutcome";
 
 export type CaptureValuationLeadInput = {
   accountId: string;
@@ -17,6 +18,8 @@ export type CaptureValuationLeadInput = {
   rosterArtistId: string | null;
   /** Set when the roster attach threw — surfaced in the alert (chat#1965). */
   rosterAttachError?: string;
+  /** The valuation email's actual fate for this run (chat#1969). */
+  emailOutcome: ValuationEmailOutcome;
 };
 
 /**
@@ -69,6 +72,15 @@ export async function captureValuationLead(input: CaptureValuationLeadInput): Pr
         ? "Roster: attached ✓"
         : "Roster: nothing attached";
 
+    // Email outcome (chat#1969): a gated or failed send is a recorded
+    // decision, never a mystery.
+    const emailLine =
+      input.emailOutcome.status === "sent"
+        ? "Email: sent"
+        : input.emailOutcome.status === "skipped"
+          ? `Email: skipped (${input.emailOutcome.reason})`
+          : `Email: SEND FAILED — ${input.emailOutcome.error}`;
+
     // Deep-link the Attio record so the channel can open the lead in one tap.
     const attioLink = attio.recordUrl ? `\nAttio: ${attio.recordUrl}` : "";
     await sendMessage(
@@ -78,6 +90,8 @@ export async function captureValuationLead(input: CaptureValuationLeadInput): Pr
         `Estimated catalog value: ${usd(input.valueBand.mid)} ` +
         `(range ${usd(input.valueBand.low)}–${usd(input.valueBand.high)})\n` +
         roster +
+        `\n` +
+        emailLine +
         attioLink,
     );
   } catch (error) {

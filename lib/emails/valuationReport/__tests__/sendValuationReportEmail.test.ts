@@ -22,18 +22,21 @@ vi.mock("@/lib/supabase/email_send_log/selectEmailSendLog", () => ({
   selectEmailSendLog: vi.fn(),
 }));
 vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({ default: vi.fn() }));
+// The catalog/aggregate/release-date modules are mocked ONLY to assert they are
+// never touched: the email consumes the handler's computed valuation and does
+// no data fetching or valuation math of its own (chat#1969).
 vi.mock("@/lib/supabase/catalogs/selectCatalogById", () => ({ selectCatalogById: vi.fn() }));
 vi.mock("@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate", () => ({
   selectCatalogMeasurementsAggregate: vi.fn(),
+}));
+vi.mock("@/lib/catalog/getCatalogEarliestReleaseDate", () => ({
+  getCatalogEarliestReleaseDate: vi.fn(),
 }));
 vi.mock("@/lib/supabase/song_measurements/selectCatalogMeasurementsPage", () => ({
   selectCatalogMeasurementsPage: vi.fn(),
 }));
 vi.mock("@/lib/supabase/catalog_songs/selectCatalogSongsWithArtists", () => ({
   selectCatalogSongsWithArtists: vi.fn(),
-}));
-vi.mock("@/lib/catalog/getCatalogEarliestReleaseDate", () => ({
-  getCatalogEarliestReleaseDate: vi.fn(),
 }));
 vi.mock("@/lib/spotify/generateAccessToken", () => ({ default: vi.fn() }));
 vi.mock("@/lib/spotify/getAlbums", () => ({ default: vi.fn() }));
@@ -53,20 +56,23 @@ const artist = {
   followers: { total: 50_000 },
 } as SpotifyArtist;
 
+const baseParams = {
+  snapshot,
+  catalogId: "cat_1",
+  catalogName: "Epitaph Catalog",
+  valuation: { low: 7_200, mid: 10_400, high: 14_100 },
+  totalStreams: 3_480_000,
+  measuredSongCount: 112,
+  catalogAgeYears: 10,
+  ageFlooredToOneYear: false,
+  artist,
+};
+
 function arrange() {
   vi.mocked(selectEmailSendLog).mockResolvedValue([]);
   vi.mocked(selectAccountEmails).mockResolvedValue([
     { email: "digital@epitaph.com", account_id: "acc_1" } as Tables<"account_emails">,
   ]);
-  vi.mocked(selectCatalogById).mockResolvedValue({
-    id: "cat_1",
-    name: "Epitaph Catalog",
-  } as Tables<"catalogs">);
-  vi.mocked(selectCatalogMeasurementsAggregate).mockResolvedValue({
-    measuredSongCount: 112,
-    totalStreams: 3_480_000,
-  });
-  vi.mocked(getCatalogEarliestReleaseDate).mockResolvedValue("2016-01-01");
   vi.mocked(selectCatalogSongsWithArtists).mockResolvedValue({
     songs: [{ isrc: "US1", album: "Epitaph Hits", artists: [{ name: "Epitaph" }] }] as never,
     total_count: 1,
@@ -102,8 +108,8 @@ describe("sendValuationReportEmail", () => {
     arrange();
   });
 
-  it("sends the rich report (artist header + release table) and logs the send", async () => {
-    const result = await sendValuationReportEmail(snapshot, { artist });
+  it("sends the rich report from the caller's computed valuation and logs the send", async () => {
+    const result = await sendValuationReportEmail(baseParams);
 
     expect(sendEmailWithResend).toHaveBeenCalledTimes(1);
     const [payload, options] = vi.mocked(sendEmailWithResend).mock.calls[0];
@@ -111,6 +117,7 @@ describe("sendValuationReportEmail", () => {
     expect(payload.to).toEqual(["digital@epitaph.com"]);
     expect(payload.subject).toBe("Your catalog valuation is ready");
     expect(payload.html).toContain("Epitaph Catalog");
+    expect(payload.html).toContain("$10.4K"); // the caller's band, not a recompute
     expect(payload.html).toContain("https://chat.recoupable.dev/catalogs/cat_1");
     // artist header
     expect(payload.html).toContain("https://art/artist.jpg");
@@ -130,10 +137,18 @@ describe("sendValuationReportEmail", () => {
     expect(result).toEqual({ sent: true, resendId: "resend_1" });
   });
 
+  it("does no data fetching or valuation math of its own (chat#1969)", async () => {
+    await sendValuationReportEmail(baseParams);
+
+    expect(selectCatalogById).not.toHaveBeenCalled();
+    expect(selectCatalogMeasurementsAggregate).not.toHaveBeenCalled();
+    expect(getCatalogEarliestReleaseDate).not.toHaveBeenCalled();
+  });
+
   it("skips without sending when a send is already logged for this snapshot", async () => {
     vi.mocked(selectEmailSendLog).mockResolvedValue([{ id: "log_1" } as Tables<"email_send_log">]);
 
-    const result = await sendValuationReportEmail(snapshot, { artist });
+    const result = await sendValuationReportEmail(baseParams);
 
     expect(sendEmailWithResend).not.toHaveBeenCalled();
     expect(logEmailAttempt).not.toHaveBeenCalled();
@@ -143,31 +158,20 @@ describe("sendValuationReportEmail", () => {
   it("skips when the account has no email address", async () => {
     vi.mocked(selectAccountEmails).mockResolvedValue([]);
 
-    const result = await sendValuationReportEmail(snapshot, { artist });
+    const result = await sendValuationReportEmail(baseParams);
 
     expect(sendEmailWithResend).not.toHaveBeenCalled();
     expect(result).toEqual({ sent: false, skipped: "no_email" });
   });
 
-  it("falls back to the app link when no catalog was claimed", async () => {
-    const result = await sendValuationReportEmail({ ...snapshot, catalog: null });
-
-    expect(selectCatalogById).not.toHaveBeenCalled();
-    expect(selectCatalogMeasurementsAggregate).not.toHaveBeenCalled();
-    const [payload] = vi.mocked(sendEmailWithResend).mock.calls[0];
-    expect(payload.html).toContain('href="https://chat.recoupable.dev"');
-    expect(payload.html).not.toContain("/catalogs/");
-    expect(result).toEqual({ sent: true, resendId: "resend_1" });
-  });
-
   it("still sends the headline email when the release-table build fails", async () => {
     vi.mocked(selectCatalogSongsWithArtists).mockRejectedValue(new Error("db down"));
 
-    const result = await sendValuationReportEmail(snapshot, { artist });
+    const result = await sendValuationReportEmail(baseParams);
 
     const [payload] = vi.mocked(sendEmailWithResend).mock.calls[0];
     expect(payload.html).toContain("Epitaph Catalog");
-    expect(payload.html).toContain("$"); // headline band still rendered
+    expect(payload.html).toContain("$10.4K"); // headline band still rendered
     expect(result).toEqual({ sent: true, resendId: "resend_1" });
   });
 
@@ -176,7 +180,7 @@ describe("sendValuationReportEmail", () => {
       NextResponse.json({ error: "Failed to send email" }, { status: 502 }),
     );
 
-    const result = await sendValuationReportEmail(snapshot, { artist });
+    const result = await sendValuationReportEmail(baseParams);
 
     const attempt = vi.mocked(logEmailAttempt).mock.calls[0][0];
     expect(attempt.status).toBe("send_failed");

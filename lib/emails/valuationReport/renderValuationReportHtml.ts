@@ -30,9 +30,12 @@ export function renderValuationReportHtml(params: ValuationReportEmailParams): {
 } {
   const name = params.catalogName ? escapeHtml(params.catalogName) : "Your catalog";
 
-  const disclaimer = params.valuation
-    ? `<p style="margin:0 0 24px;font-size:12px;line-height:1.5;color:#6b6b6b">Directional model, not an appraisal. Based on live Spotify play counts measured today, an annual run-rate from your catalog's lifetime average, and a master-side net royalty share times a 10 to 16x market multiple. Real statements collapse the range.</p>`
+  // Honesty over implication (chat#1969): the model floors catalog age at one
+  // year, so a weeks-old catalog reads as a conservative full-year run rate.
+  const ageCaveat = params.ageFlooredToOneYear
+    ? `<p style="margin:0 0 12px;font-size:12px;line-height:1.5;color:#6b6b6b">This catalog is under a year old, so the estimate prices it on a conservative one year run rate floor. Expect it to firm up as streaming history accumulates.</p>`
     : "";
+  const disclaimer = `<p style="margin:0 0 24px;font-size:12px;line-height:1.5;color:#6b6b6b">Directional model, not an appraisal. Based on live Spotify play counts measured today, an annual run-rate from your catalog's lifetime average, and a master-side net royalty share times a 10 to 16x market multiple. Real statements collapse the range.</p>`;
 
   const bodyHtml = `<p style="margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b6b6b">Catalog valuation</p>
 <h1 style="margin:0 0 20px;font-size:24px;line-height:1.2;letter-spacing:-0.02em;color:#0a0a0a">${name}</h1>
@@ -40,7 +43,7 @@ ${renderArtistHeader(params.artist)}
 ${renderValuationBlock(params.valuation)}
 ${renderStatRow(params)}
 ${renderReleasesTable(params.releases)}
-${disclaimer}`;
+${ageCaveat}${disclaimer}`;
 
   const html = renderEmailLayout({
     bodyHtml,

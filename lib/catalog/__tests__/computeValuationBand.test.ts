@@ -20,7 +20,7 @@ describe("computeValuationBand", () => {
     expect(v.valuation.high).toBeCloseTo(35_000 * 1.6 * 0.85 * 0.75 * 16, 0);
   });
 
-  it("clamps catalog age to at least one year", () => {
+  it("clamps catalog age to at least one year and flags the floor (chat#1969)", () => {
     const v = computeValuationBand({
       totalStreams: 1_000_000,
       earliestReleaseDate: "2026-01-01",
@@ -28,8 +28,32 @@ describe("computeValuationBand", () => {
     });
 
     expect(v.catalogAgeYears).toBe(1);
+    // A ~5-month-old catalog is priced on a full-year floor; callers surface
+    // that honestly (the valuation email's caveat line).
+    expect(v.ageFlooredToOneYear).toBe(true);
     // age 1y: annual proxy = lifetime
     expect(v.valuation.mid).toBeCloseTo(1_000_000 * 0.0035 * 1.4 * 0.85 * 0.75 * 13, 0);
+  });
+
+  it("does not flag the floor for a catalog older than a year", () => {
+    const v = computeValuationBand({
+      totalStreams: 1_000_000,
+      earliestReleaseDate: "2024-06-12",
+      now: new Date("2026-06-12"),
+    });
+
+    expect(v.catalogAgeYears).toBe(2);
+    expect(v.ageFlooredToOneYear).toBe(false);
+  });
+
+  it("does not flag the floor when age falls back to the default (no release date)", () => {
+    const v = computeValuationBand({
+      totalStreams: 1_000_000,
+      earliestReleaseDate: null,
+      now: new Date("2026-06-12"),
+    });
+
+    expect(v.ageFlooredToOneYear).toBe(false);
   });
 
   it("returns a zero band for zero streams", () => {
