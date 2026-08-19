@@ -6,7 +6,7 @@ import getArtist from "@/lib/spotify/getArtist";
 import getArtistAlbums from "@/lib/spotify/getArtistAlbums";
 import { createMeasurementJob } from "@/lib/research/measurement_jobs/createMeasurementJob";
 import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots";
-import { createSnapshotCatalog } from "@/lib/catalog/createSnapshotCatalog";
+import { resolveClaimedCatalog } from "@/lib/catalog/resolveClaimedCatalog";
 import { selectCatalogMeasurementsAggregate } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate";
 import { getCatalogEarliestReleaseDate } from "@/lib/catalog/getCatalogEarliestReleaseDate";
 import { computeValuationBand } from "@/lib/catalog/computeValuationBand";
@@ -35,7 +35,8 @@ interface SpotifyAlbumsResponse {
  *   1. resolve the artist's releases (Spotify),
  *   2. capture current play counts under the caller's account (spends credits),
  *   3. wait (bounded) for the capture to land,
- *   4. materialize the catalog from the snapshot (createSnapshotCatalog),
+ *   4. materialize the catalog from the snapshot (resolveClaimedCatalog —
+ *      idempotent when the snapshot is already claimed),
  *   5. value it with the same model as GET /catalogs/{id}/measurements.
  *
  * The owning account is resolved from credentials, never the body. This is the
@@ -103,17 +104,19 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
       spotifyToken.access_token,
     );
 
-    // 4. Materialize the catalog from the snapshot (freshly created by this
-    //    account, not yet claimed — so createSnapshotCatalog is safe). The
-    //    catalog goes to the organization when one was named (chat#1938).
-    //    Named after the measured artist so a roster of valuations is legible
-    //    at a glance; when Spotify resolves nothing, createSnapshotCatalog's
-    //    DEFAULT_CATALOG_NAME still applies (chat#1942).
+    // 4. Materialize the catalog from the snapshot. createMeasurementJob can
+    //    hand back an already-claimed capture (60-minute reuse, chat#1912 row
+    //    4), so the claim goes through resolveClaimedCatalog: a re-run reuses
+    //    the existing catalog instead of minting a duplicate and repointing
+    //    the snapshot (chat#1967). The catalog goes to the organization when
+    //    one was named (chat#1938). Named after the measured artist so a
+    //    roster of valuations is legible at a glance; when Spotify resolves
+    //    nothing, the DEFAULT_CATALOG_NAME still applies (chat#1942).
     const [snapshot] = await selectPlaycountSnapshots({ id: snapshotId });
     if (!snapshot) return errorResponse("Snapshot not found", 404);
-    const { catalog, songsAdded, isrcs } = await createSnapshotCatalog({
+    const { catalog, songsAdded, isrcs } = await resolveClaimedCatalog({
       accountId,
-      ownerId: organizationId,
+      ownerId: organizationId ?? accountId,
       snapshot,
       name: searchedArtist?.name?.trim() || undefined,
     });

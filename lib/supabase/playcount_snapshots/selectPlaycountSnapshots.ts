@@ -12,6 +12,7 @@ import { Tables } from "@/types/database.types";
  *   would otherwise issue one query per catalog
  * @param params.createdAfter - Optional inclusive created_at lower bound (ISO)
  * @param params.schedule - Optional schedule filter ("once" | "monthly")
+ * @param params.limit - Optional maximum rows to return (newest-first)
  * @returns Matching rows newest-first, or [] if none exist or on error
  */
 export async function selectPlaycountSnapshots({
@@ -21,6 +22,7 @@ export async function selectPlaycountSnapshots({
   catalogs,
   createdAfter,
   schedule,
+  limit,
 }: {
   id?: string;
   account?: string;
@@ -28,6 +30,7 @@ export async function selectPlaycountSnapshots({
   catalogs?: string[];
   createdAfter?: string;
   schedule?: string;
+  limit?: number;
 }): Promise<Tables<"playcount_snapshots">[]> {
   let query = supabase
     .from("playcount_snapshots")
@@ -43,6 +46,7 @@ export async function selectPlaycountSnapshots({
   }
   if (schedule) query = query.eq("schedule", schedule);
   if (createdAfter) query = query.gte("created_at", createdAfter);
+  if (limit) query = query.limit(limit);
 
   const { data, error } = await query;
 
