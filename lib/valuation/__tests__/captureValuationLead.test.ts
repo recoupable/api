@@ -17,6 +17,7 @@ const input = {
   lifetimeStreams: 22_000_000_000,
   followerCount: 13_000_000,
   rosterArtistId: "artist-roster-1",
+  emailOutcome: { status: "sent" } as const,
 };
 
 describe("captureValuationLead", () => {
@@ -83,6 +84,35 @@ describe("captureValuationLead", () => {
 
     const msg = vi.mocked(sendMessage).mock.calls[0][0] as string;
     expect(msg).toContain("Roster: nothing attached");
+  });
+
+  // The Email line reports the actual send outcome (chat#1969) so a skipped or
+  // failed valuation email is same-hour visible next to the Roster line.
+  it("reports a sent email in the Telegram message", async () => {
+    await captureValuationLead(input);
+
+    const msg = vi.mocked(sendMessage).mock.calls[0][0] as string;
+    expect(msg).toContain("Report email: sent");
+  });
+
+  it("reports a gated email skip with its reason", async () => {
+    await captureValuationLead({
+      ...input,
+      emailOutcome: { status: "skipped", reason: "0 streams" },
+    });
+
+    const msg = vi.mocked(sendMessage).mock.calls[0][0] as string;
+    expect(msg).toContain("Report email: skipped (0 streams)");
+  });
+
+  it("reports a failed email send with the error", async () => {
+    await captureValuationLead({
+      ...input,
+      emailOutcome: { status: "failed", error: "rate limited" },
+    });
+
+    const msg = vi.mocked(sendMessage).mock.calls[0][0] as string;
+    expect(msg).toContain("Report email: SEND FAILED — rate limited");
   });
 
   it("skips entirely (no Attio, no Telegram) when the account has no email", async () => {

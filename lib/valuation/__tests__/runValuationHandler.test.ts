@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 
 import { runValuationHandler } from "../runValuationHandler";
 import { validateRunValuationRequest } from "../validateRunValuationRequest";
@@ -78,6 +78,9 @@ const snapshot = {
   updated_at: "2026-08-06T00:00:00Z",
 };
 
+/** The after() mock returns each callback's promise; flush them before asserting. */
+const flushAfter = () => Promise.all(vi.mocked(after).mock.results.map(r => r.value));
+
 const makeRequest = () =>
   new NextRequest("http://localhost/api/valuation", {
     method: "POST",
@@ -112,7 +115,7 @@ const happyPath = () => {
     totalStreams: 1_000_000,
   });
   vi.mocked(getCatalogEarliestReleaseDate).mockResolvedValue("2020-01-01");
-  vi.mocked(sendValuationReportEmail).mockResolvedValue(undefined as never);
+  vi.mocked(sendValuationReportEmail).mockResolvedValue({ sent: true, resendId: "re_1" });
   vi.mocked(captureValuationLead).mockResolvedValue(undefined);
   vi.mocked(attachCanonicalArtistToAccount).mockResolvedValue(null);
   vi.mocked(resolveOrCreateArtist).mockResolvedValue({ artist: null, created: false });
@@ -193,6 +196,7 @@ describe("runValuationHandler", () => {
       vi.mocked(attachCanonicalArtistToAccount).mockResolvedValue("canonical-1");
 
       const res = await runValuationHandler(makeRequest());
+      await flushAfter();
 
       expect(res.status).toBe(200);
       expect(attachCanonicalArtistToAccount).toHaveBeenCalledWith({
@@ -212,7 +216,7 @@ describe("runValuationHandler", () => {
     it("falls back to the shared resolver when the song graph resolves nothing", async () => {
       happyPath();
       withArtist();
-      vi.mocked(sendValuationReportEmail).mockResolvedValue(undefined as never);
+      vi.mocked(sendValuationReportEmail).mockResolvedValue({ sent: true, resendId: "re_1" });
       vi.mocked(captureValuationLead).mockResolvedValue(undefined);
       vi.mocked(attachCanonicalArtistToAccount).mockResolvedValue(null);
       vi.mocked(resolveOrCreateArtist).mockResolvedValue({
@@ -221,6 +225,7 @@ describe("runValuationHandler", () => {
       });
 
       const res = await runValuationHandler(makeRequest());
+      await flushAfter();
 
       expect(res.status).toBe(200);
       expect(resolveOrCreateArtist).toHaveBeenCalledWith({
@@ -243,6 +248,7 @@ describe("runValuationHandler", () => {
       vi.mocked(resolveOrCreateArtist).mockResolvedValue({ artist: null, created: false });
 
       const res = await runValuationHandler(makeRequest());
+      await flushAfter();
 
       expect(res.status).toBe(200);
       expect(enrichSearchedArtistProfile).not.toHaveBeenCalled();
@@ -259,6 +265,7 @@ describe("runValuationHandler", () => {
       vi.mocked(attachCanonicalArtistToAccount).mockRejectedValue(new Error("link exploded"));
 
       const res = await runValuationHandler(makeRequest());
+      await flushAfter();
 
       expect(res.status).toBe(200);
       expect(enrichSearchedArtistProfile).not.toHaveBeenCalled();
@@ -275,18 +282,125 @@ describe("runValuationHandler", () => {
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       happyPath();
       withArtist();
-      vi.mocked(sendValuationReportEmail).mockResolvedValue(undefined as never);
+      vi.mocked(sendValuationReportEmail).mockResolvedValue({ sent: true, resendId: "re_1" });
       vi.mocked(captureValuationLead).mockResolvedValue(undefined);
       vi.mocked(attachCanonicalArtistToAccount).mockResolvedValue(null);
       vi.mocked(resolveOrCreateArtist).mockRejectedValue(new Error("resolver exploded"));
 
       const res = await runValuationHandler(makeRequest());
+      await flushAfter();
 
       expect(res.status).toBe(200);
       expect(captureValuationLead).toHaveBeenCalledWith(
         expect.objectContaining({
           rosterArtistId: null,
           rosterAttachError: "resolver exploded",
+        }),
+      );
+      consoleSpy.mockRestore();
+    });
+  });
+
+  // The email consumes the handler's computed valuation and only fires with
+  // numbers; the lead alert reports the actual outcome (chat#1969).
+  describe("valuation email gate + outcome", () => {
+    const withArtist = () =>
+      vi.mocked(getArtist).mockResolvedValue({
+        artist: { name: "Bad Bunny" } as Awaited<ReturnType<typeof getArtist>>["artist"],
+        error: null,
+      });
+
+    it("passes the computed valuation to the email and reports sent", async () => {
+      happyPath();
+      withArtist();
+
+      const res = await runValuationHandler(makeRequest());
+      await flushAfter();
+
+      expect(res.status).toBe(200);
+      expect(sendValuationReportEmail).toHaveBeenCalledTimes(1);
+      const emailArgs = vi.mocked(sendValuationReportEmail).mock.calls[0][0];
+      expect(emailArgs).toMatchObject({
+        catalogId,
+        catalogName: "Bad Bunny",
+        totalStreams: 1_000_000,
+        measuredSongCount: 12,
+      });
+      // The handler's own band, computed once for the API response.
+      expect(emailArgs.valuation.mid).toBeGreaterThan(0);
+      expect(captureValuationLead).toHaveBeenCalledWith(
+        expect.objectContaining({ emailOutcome: { status: "sent" } }),
+      );
+    });
+
+    it("never calls the email for a zero-stream catalog and reports the skip", async () => {
+      happyPath();
+      withArtist();
+      vi.mocked(selectCatalogMeasurementsAggregate).mockResolvedValue({
+        measuredSongCount: 29,
+        totalStreams: 0,
+      });
+
+      const res = await runValuationHandler(makeRequest());
+      await flushAfter();
+
+      expect(res.status).toBe(200);
+      expect(sendValuationReportEmail).not.toHaveBeenCalled();
+      expect(captureValuationLead).toHaveBeenCalledWith(
+        expect.objectContaining({
+          emailOutcome: { status: "skipped", reason: "0 streams" },
+        }),
+      );
+    });
+
+    it("reports measurements unavailable when the aggregate RPC fails", async () => {
+      happyPath();
+      withArtist();
+      vi.mocked(selectCatalogMeasurementsAggregate).mockResolvedValue(null);
+
+      const res = await runValuationHandler(makeRequest());
+      await flushAfter();
+
+      expect(res.status).toBe(200);
+      expect(sendValuationReportEmail).not.toHaveBeenCalled();
+      expect(captureValuationLead).toHaveBeenCalledWith(
+        expect.objectContaining({
+          emailOutcome: { status: "skipped", reason: "measurements unavailable" },
+        }),
+      );
+    });
+
+    it("reports a deduped send as skipped (already sent)", async () => {
+      happyPath();
+      withArtist();
+      vi.mocked(sendValuationReportEmail).mockResolvedValue({
+        sent: false,
+        skipped: "already_sent",
+      });
+
+      await runValuationHandler(makeRequest());
+      await flushAfter();
+
+      expect(captureValuationLead).toHaveBeenCalledWith(
+        expect.objectContaining({
+          emailOutcome: { status: "skipped", reason: "already sent" },
+        }),
+      );
+    });
+
+    it("a thrown email send never fails the valuation and reports the failure", async () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      happyPath();
+      withArtist();
+      vi.mocked(sendValuationReportEmail).mockRejectedValue(new Error("resend down"));
+
+      const res = await runValuationHandler(makeRequest());
+      await flushAfter();
+
+      expect(res.status).toBe(200);
+      expect(captureValuationLead).toHaveBeenCalledWith(
+        expect.objectContaining({
+          emailOutcome: { status: "failed", error: "resend down" },
         }),
       );
       consoleSpy.mockRestore();
