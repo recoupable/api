@@ -21,10 +21,16 @@ beforeEach(() => {
 });
 
 describe("resolveSongArtwork", () => {
-  it("fetches Apple artwork for the missing ISRCs and writes it through", async () => {
+  // Apple returns artwork as a {w}x{h} template; the stored and served URL
+  // must be directly fetchable, so the template resolves before write-through.
+  it("resolves Apple's size template and writes the fetchable URL through", async () => {
     getAppleSongsByIsrcMock.mockResolvedValue({
       results: [
-        { isrc: "ISRC1", found: true, songs: [{ isrc: "ISRC1", artwork_url: "https://a/1.jpg" }] },
+        {
+          isrc: "ISRC1",
+          found: true,
+          songs: [{ isrc: "ISRC1", artwork_url: "https://a/1.jpg/{w}x{h}bb.jpg" }],
+        },
         { isrc: "ISRC2", found: false, songs: [] },
       ],
       error: null,
@@ -32,12 +38,12 @@ describe("resolveSongArtwork", () => {
 
     const art = await resolveSongArtwork(["ISRC1", "ISRC2"]);
 
-    expect(art).toEqual({ ISRC1: "https://a/1.jpg" });
+    expect(art).toEqual({ ISRC1: "https://a/1.jpg/296x296bb.jpg" });
     expect(getAppleSongsByIsrcMock).toHaveBeenCalledWith({
       isrcs: ["ISRC1", "ISRC2"],
       storefront: "us",
     });
-    expect(updateSongArtworkUrlMock).toHaveBeenCalledWith("ISRC1", "https://a/1.jpg");
+    expect(updateSongArtworkUrlMock).toHaveBeenCalledWith("ISRC1", "https://a/1.jpg/296x296bb.jpg");
   });
 
   // Apple is a third party on a public path: its failure yields no artwork,

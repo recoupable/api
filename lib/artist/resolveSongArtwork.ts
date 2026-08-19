@@ -1,4 +1,5 @@
 import { getAppleSongsByIsrc } from "@/lib/apple/getAppleSongsByIsrc";
+import { resolveAppleArtworkUrl } from "@/lib/apple/resolveAppleArtworkUrl";
 import { updateSongArtworkUrl } from "@/lib/supabase/songs/updateSongArtworkUrl";
 
 /**
@@ -27,7 +28,7 @@ export async function resolveSongArtwork(missingIsrcs: string[]): Promise<Record
   const artwork: Record<string, string> = {};
   for (const result of results) {
     const url = result.songs?.[0]?.artwork_url;
-    if (result.found && url) artwork[result.isrc] = url;
+    if (result.found && url) artwork[result.isrc] = resolveAppleArtworkUrl(url);
   }
 
   await Promise.all(
