@@ -188,7 +188,7 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
                   error: error instanceof Error ? error.message : String(error),
                 };
               })
-          : { status: "skipped", reason: aggregate ? "0 streams" : "no measurements" };
+          : { status: "skipped", reason: aggregate ? "0 streams" : "measurements unavailable" };
 
       await captureValuationLead({
         accountId,

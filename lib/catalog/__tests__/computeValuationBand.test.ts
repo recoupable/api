@@ -66,6 +66,18 @@ describe("computeValuationBand", () => {
     expect(v.valuation).toEqual({ low: 0, mid: 0, high: 0 });
   });
 
+  it("falls back to the 5y default age when the release date is unparseable", () => {
+    const v = computeValuationBand({
+      totalStreams: 50_000_000,
+      earliestReleaseDate: "not-a-date",
+      now: new Date("2026-06-12"),
+    });
+
+    expect(v.catalogAgeYears).toBe(5);
+    expect(v.ageFlooredToOneYear).toBe(false);
+    expect(Number.isFinite(v.valuation.mid)).toBe(true);
+  });
+
   it("falls back to the 5y default age when no release date is known", () => {
     const v = computeValuationBand({
       totalStreams: 50_000_000,

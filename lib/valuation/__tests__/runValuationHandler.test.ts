@@ -353,7 +353,7 @@ describe("runValuationHandler", () => {
       );
     });
 
-    it("reports a no-measurements skip when the aggregate is unavailable", async () => {
+    it("reports measurements unavailable when the aggregate RPC fails", async () => {
       happyPath();
       withArtist();
       vi.mocked(selectCatalogMeasurementsAggregate).mockResolvedValue(null);
@@ -365,7 +365,7 @@ describe("runValuationHandler", () => {
       expect(sendValuationReportEmail).not.toHaveBeenCalled();
       expect(captureValuationLead).toHaveBeenCalledWith(
         expect.objectContaining({
-          emailOutcome: { status: "skipped", reason: "no measurements" },
+          emailOutcome: { status: "skipped", reason: "measurements unavailable" },
         }),
       );
     });

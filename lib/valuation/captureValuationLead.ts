@@ -76,10 +76,10 @@ export async function captureValuationLead(input: CaptureValuationLeadInput): Pr
     // decision, never a mystery.
     const emailLine =
       input.emailOutcome.status === "sent"
-        ? "Email: sent"
+        ? "Report email: sent"
         : input.emailOutcome.status === "skipped"
-          ? `Email: skipped (${input.emailOutcome.reason})`
-          : `Email: SEND FAILED — ${input.emailOutcome.error}`;
+          ? `Report email: skipped (${input.emailOutcome.reason})`
+          : `Report email: SEND FAILED — ${input.emailOutcome.error}`;
 
     // Deep-link the Attio record so the channel can open the lead in one tap.
     const attioLink = attio.recordUrl ? `\nAttio: ${attio.recordUrl}` : "";

@@ -92,7 +92,7 @@ describe("captureValuationLead", () => {
     await captureValuationLead(input);
 
     const msg = vi.mocked(sendMessage).mock.calls[0][0] as string;
-    expect(msg).toContain("Email: sent");
+    expect(msg).toContain("Report email: sent");
   });
 
   it("reports a gated email skip with its reason", async () => {
@@ -102,7 +102,7 @@ describe("captureValuationLead", () => {
     });
 
     const msg = vi.mocked(sendMessage).mock.calls[0][0] as string;
-    expect(msg).toContain("Email: skipped (0 streams)");
+    expect(msg).toContain("Report email: skipped (0 streams)");
   });
 
   it("reports a failed email send with the error", async () => {
@@ -112,7 +112,7 @@ describe("captureValuationLead", () => {
     });
 
     const msg = vi.mocked(sendMessage).mock.calls[0][0] as string;
-    expect(msg).toContain("Email: SEND FAILED — rate limited");
+    expect(msg).toContain("Report email: SEND FAILED — rate limited");
   });
 
   it("skips entirely (no Attio, no Telegram) when the account has no email", async () => {
