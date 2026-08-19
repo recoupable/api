@@ -8,8 +8,8 @@ import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccou
  * many accounts roster the same artist (chat#1866). So this lookup is
  * deliberately **global**, not scoped to the requesting account: scoping it
  * per-account is what lets every signup mint its own copy of the same Spotify
- * artist, which is the duplicate `linkSearchedArtistToAccount` was producing
- * (chat#1889 row 8).
+ * artist — the duplicate class the valuation funnel's fallback link was
+ * producing (chat#1889 row 8).
  *
  * Best-effort: never throws. Failing this lookup falls back to creating an
  * artist, which is strictly better than failing the valuation.

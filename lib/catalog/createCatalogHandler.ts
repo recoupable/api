@@ -3,12 +3,10 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateCreateCatalogBody } from "./validateCreateCatalogBody";
-import { createSnapshotCatalog } from "./createSnapshotCatalog";
+import { resolveClaimedCatalog } from "./resolveClaimedCatalog";
 import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots";
-import { selectCatalogById } from "@/lib/supabase/catalogs/selectCatalogById";
 import { insertCatalog } from "@/lib/supabase/catalogs/insertCatalog";
 import { insertAccountCatalog } from "@/lib/supabase/account_catalogs/insertAccountCatalog";
-import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
 import { attachCanonicalArtistToAccount } from "./attachCanonicalArtistToAccount";
 
 const DEFAULT_CATALOG_NAME = "Valuation Catalog";
@@ -66,27 +64,27 @@ export async function createCatalogHandler(request: NextRequest): Promise<NextRe
       return errorResponse("Snapshot belongs to a different account", 403);
     }
 
-    // Idempotent re-claim: the run already produced a catalog. Still attach
-    // the canonical artist (chat#1850 P1) so claims made before the roster
-    // attach shipped heal on the next click; the attach is itself idempotent.
-    if (snapshot.catalog) {
-      const existing = await selectCatalogById(snapshot.catalog);
-      if (existing) {
-        const measurements = await selectSongMeasurements({ snapshot: snapshot.id });
-        const isrcs = [...new Set(measurements.map(m => m.song))];
-        if (isrcs.length > 0) {
-          await attachCanonicalArtistToAccount({ accountId, isrcs });
-        }
-        return successResponse({ catalog: existing, songs_added: 0 });
-      }
-    }
-
-    const { catalog, songsAdded } = await createSnapshotCatalog({
+    // Idempotent re-claim reuses the prior catalog; a re-claim still runs the
+    // roster attach below (chat#1850 P1) so claims made before the attach
+    // shipped heal on the next click.
+    const { catalog, songsAdded, isrcs } = await resolveClaimedCatalog({
       accountId,
       ownerId,
       snapshot,
       name: validated.name,
     });
+
+    // Roster attach (chat#1850 P1): the claim is when the account takes
+    // ownership, so link the songs' canonical artist here. Best-effort on this
+    // surface — a failed attach must not fail the claim (chat#1965).
+    try {
+      if (isrcs.length > 0) {
+        await attachCanonicalArtistToAccount({ accountId, isrcs });
+      }
+    } catch (error) {
+      console.error("Error attaching canonical artist on claim:", error);
+    }
+
     return successResponse({ catalog, songs_added: songsAdded });
   } catch (error) {
     console.error("Error creating catalog:", error);

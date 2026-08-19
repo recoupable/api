@@ -101,7 +101,7 @@ describe("createCatalogHandler", () => {
     vi.mocked(createSnapshotCatalog).mockResolvedValue({
       catalog,
       songsAdded: 2,
-      attachedArtistId: null,
+      isrcs: ["A", "B"],
     });
 
     const res = await createCatalogHandler(makeRequest());
@@ -115,7 +115,36 @@ describe("createCatalogHandler", () => {
       snapshot: expect.objectContaining({ id: snapshotId }),
       name: "Bad Bunny — Catalog",
     });
+    // Roster attach (chat#1850 P1) is this handler's job now, on the measured
+    // ISRCs the materialization returned (chat#1965).
+    expect(attachCanonicalArtistToAccount).toHaveBeenCalledWith({
+      accountId,
+      isrcs: ["A", "B"],
+    });
     expect(body).toEqual({ status: "success", catalog, songs_added: 2 });
+  });
+
+  it("a failed roster attach does not fail the claim (best-effort on this surface)", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(validateCreateCatalogBody).mockReturnValue({ snapshot: snapshotId });
+    okAuth();
+    vi.mocked(selectPlaycountSnapshots).mockResolvedValue([
+      { id: snapshotId, account: accountId, catalog: null, isrcs: null } as never,
+    ]);
+    vi.mocked(createSnapshotCatalog).mockResolvedValue({
+      catalog,
+      songsAdded: 1,
+      isrcs: ["ISRC_A"],
+    });
+    vi.mocked(attachCanonicalArtistToAccount).mockRejectedValue(new Error("link failed"));
+
+    const res = await createCatalogHandler(makeRequest());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toEqual({ status: "success", catalog, songs_added: 1 });
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
   });
 
   it("returns 404 when the snapshot does not exist", async () => {
@@ -243,7 +272,7 @@ describe("createCatalogHandler", () => {
       vi.mocked(createSnapshotCatalog).mockResolvedValue({
         catalog: { id: catalogId } as never,
         songsAdded: 3,
-        attachedArtistId: null,
+        isrcs: [],
       });
 
       await createCatalogHandler(makeRequest());

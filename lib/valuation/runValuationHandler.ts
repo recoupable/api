@@ -12,10 +12,15 @@ import { getCatalogEarliestReleaseDate } from "@/lib/catalog/getCatalogEarliestR
 import { computeValuationBand } from "@/lib/catalog/computeValuationBand";
 import { sendValuationReportEmail } from "@/lib/emails/valuationReport/sendValuationReportEmail";
 import { captureValuationLead } from "@/lib/valuation/captureValuationLead";
+import {
+  toValuationEmailOutcome,
+  type ValuationEmailOutcome,
+} from "@/lib/valuation/toValuationEmailOutcome";
+import { attachCanonicalArtistToAccount } from "@/lib/catalog/attachCanonicalArtistToAccount";
+import { resolveOrCreateArtist } from "@/lib/artists/resolveOrCreateArtist";
 import { validateRunValuationRequest } from "./validateRunValuationRequest";
 import { extractValuationAlbums } from "./extractValuationAlbums";
 import { waitForSnapshotMeasurements } from "./waitForSnapshotMeasurements";
-import { linkSearchedArtistToAccount } from "./linkSearchedArtistToAccount";
 import { enrichSearchedArtistProfile } from "./enrichSearchedArtistProfile";
 
 interface SpotifyAlbumsResponse {
@@ -30,8 +35,7 @@ interface SpotifyAlbumsResponse {
  *   1. resolve the artist's releases (Spotify),
  *   2. capture current play counts under the caller's account (spends credits),
  *   3. wait (bounded) for the capture to land,
- *   4. materialize the catalog from the snapshot (reuses createSnapshotCatalog,
- *      which also attaches the canonical artist to the roster),
+ *   4. materialize the catalog from the snapshot (createSnapshotCatalog),
  *   5. value it with the same model as GET /catalogs/{id}/measurements.
  *
  * The owning account is resolved from credentials, never the body. This is the
@@ -101,45 +105,51 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
 
     // 4. Materialize the catalog from the snapshot (freshly created by this
     //    account, not yet claimed — so createSnapshotCatalog is safe). The
-    //    catalog goes to the organization when one was named (chat#1938); the
-    //    roster attach inside still targets the calling account. Named after
-    //    the measured artist so a roster of valuations is legible at a glance;
-    //    when Spotify resolves nothing, createSnapshotCatalog's
+    //    catalog goes to the organization when one was named (chat#1938).
+    //    Named after the measured artist so a roster of valuations is legible
+    //    at a glance; when Spotify resolves nothing, createSnapshotCatalog's
     //    DEFAULT_CATALOG_NAME still applies (chat#1942).
     const [snapshot] = await selectPlaycountSnapshots({ id: snapshotId });
     if (!snapshot) return errorResponse("Snapshot not found", 404);
-    const { catalog, songsAdded, attachedArtistId } = await createSnapshotCatalog({
+    const { catalog, songsAdded, isrcs } = await createSnapshotCatalog({
       accountId,
       ownerId: organizationId,
       snapshot,
       name: searchedArtist?.name?.trim() || undefined,
     });
 
-    // Guarantee a populated roster: the canonical (ISRC → song_artists) attach
-    // is empty for funnel signups whose songs aren't yet ingested, which left
-    // them on an empty /artists (chat#1881 P0). When it resolves nothing, link
-    // the searched Spotify artist directly so they can confirm their roster.
-    const rosterArtistId =
-      attachedArtistId ??
-      (searchedArtist?.name
-        ? await linkSearchedArtistToAccount({
-            accountId,
-            spotifyArtistId: spotify_artist_id,
-            artistName: searchedArtist.name,
-          })
-        : null);
-
-    // Enrich whichever artist landed on the roster (canonical OR fallback) with
-    // the searched Spotify avatar + follower count, so it doesn't render as a
-    // blank avatar / "0 followers" (chat#1881 P1). The canonical path is the
-    // common case, so enriching here — not inside the fallback — is what makes
-    // enrichment actually reach real funnel claims.
-    if (rosterArtistId && searchedArtist) {
-      await enrichSearchedArtistProfile({
-        artistId: rosterArtistId,
-        spotifyArtistId: spotify_artist_id,
-        spotifyArtist: searchedArtist,
-      });
+    // Populate the roster — one sequence, one catch site (chat#1965). The
+    // canonical (ISRC → song_artists) attach targets the calling account (the
+    // artist belongs on the roster of whoever ran the claim, chat#1938); when
+    // the graph resolves nothing (funnel signups whose songs aren't ingested,
+    // chat#1881 P0), the shared resolver links or creates the searched Spotify
+    // artist instead. The rostered artist is then enriched with the searched
+    // avatar + follower count so it doesn't render blank (chat#1881 P1).
+    // A failed attach must not fail the valuation — the customer paid credits
+    // and is owed their number — but it must never be silent either: the error
+    // is carried into the lead alert below.
+    let rosterArtistId: string | null = null;
+    let rosterAttachError: string | undefined;
+    try {
+      rosterArtistId = await attachCanonicalArtistToAccount({ accountId, isrcs });
+      if (!rosterArtistId && searchedArtist?.name) {
+        const { artist } = await resolveOrCreateArtist({
+          name: searchedArtist.name,
+          accountId,
+          spotifyArtistId: spotify_artist_id,
+        });
+        rosterArtistId = artist?.account_id ?? null;
+      }
+      if (rosterArtistId && searchedArtist) {
+        await enrichSearchedArtistProfile({
+          artistId: rosterArtistId,
+          spotifyArtistId: spotify_artist_id,
+          spotifyArtist: searchedArtist,
+        });
+      }
+    } catch (error) {
+      console.error("Roster attach failed for valuation:", error);
+      rosterAttachError = error instanceof Error ? error.message : String(error);
     }
 
     // 5. Value it — same model as GET /catalogs/{id}/measurements.
@@ -147,37 +157,51 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
       selectCatalogMeasurementsAggregate({ catalogId: catalog.id }),
       getCatalogEarliestReleaseDate(catalog.id),
     ]);
-    const { valuation } = computeValuationBand({
+    const { valuation, catalogAgeYears, ageFlooredToOneYear } = computeValuationBand({
       totalStreams: aggregate?.totalStreams ?? 0,
       earliestReleaseDate,
     });
 
-    // Email the valuation report after the catalog is materialized (chat#1881):
-    // the local `snapshot` predates createSnapshotCatalog, so point it at the
-    // fresh catalog id. Deferred with `after` so it never blocks the response,
-    // and self-guarded (dedup + idempotency key) inside sendValuationReportEmail.
-    after(() =>
-      sendValuationReportEmail(
-        { ...snapshot, catalog: catalog.id },
-        { artist: searchedArtist },
-      ).catch(error => console.error("Valuation report email failed:", error)),
-    );
+    // Deferred so it never blocks the response (chat#1881); one block, in
+    // order: the email consumes the numbers computed above and only fires when
+    // there are streams to show (chat#1969), then the lead capture (chat#1885)
+    // reports the email's actual fate next to the roster outcome.
+    after(async () => {
+      const emailOutcome: ValuationEmailOutcome =
+        aggregate && aggregate.totalStreams > 0
+          ? await sendValuationReportEmail({
+              snapshot,
+              catalogId: catalog.id,
+              catalogName: catalog.name,
+              valuation,
+              totalStreams: aggregate.totalStreams,
+              measuredSongCount: aggregate.measuredSongCount,
+              catalogAgeYears,
+              ageFlooredToOneYear,
+              artist: searchedArtist,
+            })
+              .then(toValuationEmailOutcome)
+              .catch(error => {
+                console.error("Valuation report email failed:", error);
+                return {
+                  status: "failed" as const,
+                  error: error instanceof Error ? error.message : String(error),
+                };
+              })
+          : { status: "skipped", reason: aggregate ? "0 streams" : "measurements unavailable" };
 
-    // Capture the lead + team Telegram alert for every valuation caller (chat,
-    // direct api, marketing funnel) — the shared handler owns this milestone now,
-    // not the marketing frontend (chat#1885). `after` so it never blocks the
-    // response; best-effort inside captureValuationLead. lifetimeStreams is the
-    // measured total the marketing funnel's client-side path never had.
-    after(() =>
-      captureValuationLead({
+      await captureValuationLead({
         accountId,
         artistName: searchedArtist?.name ?? "Unknown artist",
         artistId: spotify_artist_id,
         valueBand: valuation,
         lifetimeStreams: aggregate?.totalStreams ?? undefined,
         followerCount: searchedArtist?.followers?.total ?? undefined,
-      }).catch(error => console.error("Valuation lead capture failed:", error)),
-    );
+        rosterArtistId,
+        rosterAttachError,
+        emailOutcome,
+      }).catch(error => console.error("Valuation lead capture failed:", error));
+    });
 
     return successResponse({
       catalog,

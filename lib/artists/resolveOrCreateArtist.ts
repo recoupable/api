@@ -1,7 +1,6 @@
 import { createArtistInDb, type CreateArtistResult } from "@/lib/artists/createArtistInDb";
 import { findCanonicalArtistBySpotifyId } from "@/lib/valuation/findCanonicalArtistBySpotifyId";
-import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
-import { insertAccountArtistId } from "@/lib/supabase/account_artist_ids/insertAccountArtistId";
+import { upsertAccountArtistId } from "@/lib/supabase/account_artist_ids/upsertAccountArtistId";
 import { selectAccountWithSocials } from "@/lib/supabase/accounts/selectAccountWithSocials";
 import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
 
@@ -40,10 +39,7 @@ export async function resolveOrCreateArtist(
   if (spotifyArtistId) {
     const canonicalId = await findCanonicalArtistBySpotifyId(spotifyArtistId);
     if (canonicalId) {
-      const alreadyRostered = await selectAccountArtistId(accountId, canonicalId);
-      if (!alreadyRostered) {
-        await insertAccountArtistId(accountId, canonicalId);
-      }
+      await upsertAccountArtistId(accountId, canonicalId);
       const artist = await selectAccountWithSocials(canonicalId);
       return {
         artist: artist ? { ...artist, account_id: artist.id } : null,
