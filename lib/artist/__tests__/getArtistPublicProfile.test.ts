@@ -5,11 +5,21 @@ const {
   selectSongArtistsMock,
   selectCatalogsBySongsMock,
   countCatalogSongsMock,
+  selectCatalogSongIsrcsMock,
+  selectSongsMock,
+  selectLatestSongPlaysMock,
+  resolveSongArtworkMock,
+  getCatalogEarliestReleaseDateMock,
 } = vi.hoisted(() => ({
   getAccountArtistIdsMock: vi.fn(),
   selectSongArtistsMock: vi.fn(),
   selectCatalogsBySongsMock: vi.fn(),
   countCatalogSongsMock: vi.fn(),
+  selectCatalogSongIsrcsMock: vi.fn(),
+  selectSongsMock: vi.fn(),
+  selectLatestSongPlaysMock: vi.fn(),
+  resolveSongArtworkMock: vi.fn(),
+  getCatalogEarliestReleaseDateMock: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/account_artist_ids/getAccountArtistIds", () => ({
@@ -23,6 +33,21 @@ vi.mock("@/lib/supabase/catalog_songs/selectCatalogsBySongs", () => ({
 }));
 vi.mock("@/lib/supabase/catalog_songs/countCatalogSongs", () => ({
   countCatalogSongs: countCatalogSongsMock,
+}));
+vi.mock("@/lib/supabase/catalog_songs/selectCatalogSongIsrcs", () => ({
+  selectCatalogSongIsrcs: selectCatalogSongIsrcsMock,
+}));
+vi.mock("@/lib/supabase/songs/selectSongs", () => ({
+  selectSongs: selectSongsMock,
+}));
+vi.mock("@/lib/supabase/song_measurements/selectLatestSongPlays", () => ({
+  selectLatestSongPlays: selectLatestSongPlaysMock,
+}));
+vi.mock("@/lib/artist/resolveSongArtwork", () => ({
+  resolveSongArtwork: resolveSongArtworkMock,
+}));
+vi.mock("@/lib/catalog/getCatalogEarliestReleaseDate", () => ({
+  getCatalogEarliestReleaseDate: getCatalogEarliestReleaseDateMock,
 }));
 
 const { getArtistPublicProfile } = await import("@/lib/artist/getArtistPublicProfile");
@@ -73,6 +98,17 @@ beforeEach(() => {
     { id: "cat_1", name: "Brauxelion Catalog", updated_at: "2026-08-01" },
   ]);
   countCatalogSongsMock.mockResolvedValue({ cat_1: 24 });
+  selectCatalogSongIsrcsMock.mockResolvedValue([
+    { catalog: "cat_1", song: "ISRC1" },
+    { catalog: "cat_1", song: "ISRC2" },
+  ]);
+  selectSongsMock.mockResolvedValue([
+    { isrc: "ISRC1", name: "Monster Truck", album: "Monster Truck" },
+    { isrc: "ISRC2", name: "Hi-Tech", album: "Xpeed Gear" },
+  ]);
+  selectLatestSongPlaysMock.mockResolvedValue({ ISRC1: 128441, ISRC2: 96102 });
+  resolveSongArtworkMock.mockResolvedValue({ ISRC1: "https://a/1.jpg" });
+  getCatalogEarliestReleaseDateMock.mockResolvedValue("2021-06-01");
 });
 
 describe("getArtistPublicProfile", () => {
@@ -96,8 +132,15 @@ describe("getArtistPublicProfile", () => {
         },
       ],
       catalogs: [
-        { id: "cat_1", name: "Brauxelion Catalog", song_count: 24, updated_at: "2026-08-01" },
+        {
+          id: "cat_1",
+          name: "Brauxelion Catalog",
+          song_count: 24,
+          updated_at: "2026-08-01",
+          songs: expect.any(Array),
+        },
       ],
+      valuation: expect.objectContaining({ mid: expect.any(Number) }),
     });
   });
 
@@ -161,6 +204,10 @@ describe("getArtistPublicProfile", () => {
     selectSongArtistsMock.mockResolvedValue([]);
     selectCatalogsBySongsMock.mockResolvedValue([]);
     countCatalogSongsMock.mockResolvedValue({});
+    selectCatalogSongIsrcsMock.mockResolvedValue([]);
+    selectSongsMock.mockResolvedValue([]);
+    selectLatestSongPlaysMock.mockResolvedValue({});
+    resolveSongArtworkMock.mockResolvedValue({});
 
     expect(await getArtistPublicProfile(ARTIST)).toEqual({
       id: ARTIST,
@@ -168,6 +215,7 @@ describe("getArtistPublicProfile", () => {
       image: null,
       socials: [],
       catalogs: [],
+      valuation: null,
     });
   });
 
@@ -176,5 +224,51 @@ describe("getArtistPublicProfile", () => {
 
     const profile = await getArtistPublicProfile(ARTIST);
     expect(profile?.catalogs[0].song_count).toBe(0);
+  });
+
+  describe("v2: songs and valuation", () => {
+    it("attaches the catalog's songs sorted by plays with all six public fields", async () => {
+      const profile = await getArtistPublicProfile(ARTIST);
+
+      const songs = profile?.catalogs[0].songs;
+      expect(songs?.map(s => s.isrc)).toEqual(["ISRC1", "ISRC2"]);
+      expect(songs?.[0]).toMatchObject({
+        isrc: "ISRC1",
+        name: "Monster Truck",
+        album: "Monster Truck",
+        artwork_url: "https://a/1.jpg",
+        plays: 128441,
+      });
+      expect(songs?.[0].est_value_usd).toBeGreaterThan(0);
+    });
+
+    it("returns a low/mid/high valuation band across all songs", async () => {
+      const profile = await getArtistPublicProfile(ARTIST);
+
+      expect(profile?.valuation).toEqual({
+        low: expect.any(Number),
+        mid: expect.any(Number),
+        high: expect.any(Number),
+      });
+      expect(profile!.valuation!.low).toBeLessThan(profile!.valuation!.high);
+    });
+
+    it("asks Apple only for the songs missing stored artwork", async () => {
+      selectSongsMock.mockResolvedValue([
+        { isrc: "ISRC1", name: "Monster Truck", album: null, artwork_url: "https://stored/1.jpg" },
+        { isrc: "ISRC2", name: "Hi-Tech", album: null },
+      ]);
+
+      await getArtistPublicProfile(ARTIST);
+
+      expect(resolveSongArtworkMock).toHaveBeenCalledWith(["ISRC2"]);
+    });
+
+    it("returns valuation null when nothing is measured", async () => {
+      selectLatestSongPlaysMock.mockResolvedValue({});
+
+      const profile = await getArtistPublicProfile(ARTIST);
+      expect(profile?.valuation).toBeNull();
+    });
   });
 });

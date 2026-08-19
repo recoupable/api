@@ -2,14 +2,28 @@ import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccoun
 import { selectSongArtists } from "@/lib/supabase/song_artists/selectSongArtists";
 import { selectCatalogsBySongs } from "@/lib/supabase/catalog_songs/selectCatalogsBySongs";
 import { countCatalogSongs } from "@/lib/supabase/catalog_songs/countCatalogSongs";
+import { selectCatalogSongIsrcs } from "@/lib/supabase/catalog_songs/selectCatalogSongIsrcs";
+import { selectSongs } from "@/lib/supabase/songs/selectSongs";
+import { selectLatestSongPlays } from "@/lib/supabase/song_measurements/selectLatestSongPlays";
+import { resolveSongArtwork } from "@/lib/artist/resolveSongArtwork";
+import { buildProfileSongs, type ProfileSong } from "@/lib/artist/buildProfileSongs";
+import { getCatalogEarliestReleaseDate } from "@/lib/catalog/getCatalogEarliestReleaseDate";
 import { getSocialPlatformByLink } from "@/lib/artists/getSocialPlatformByLink";
+import type { ValuationBand } from "@/lib/catalog/computeValuationBand";
 
 export type ArtistPublicProfile = {
   id: string;
   name: string | null;
   image: string | null;
   socials: Array<{ type: string; username: string | null; profile_url: string }>;
-  catalogs: Array<{ id: string; name: string; song_count: number; updated_at: string }>;
+  catalogs: Array<{
+    id: string;
+    name: string;
+    song_count: number;
+    updated_at: string;
+    songs: ProfileSong[];
+  }>;
+  valuation: ValuationBand | null;
 };
 
 /**
@@ -50,6 +64,33 @@ export async function getArtistPublicProfile(
   const catalogRows = await selectCatalogsBySongs(isrcs);
   const counts = await countCatalogSongs(catalogRows.map(c => c.id));
 
+  const [catalogSongRows, songRecords, plays] = await Promise.all([
+    selectCatalogSongIsrcs(isrcs),
+    selectSongs(isrcs),
+    selectLatestSongPlays(isrcs),
+  ]);
+  // songs.artwork_url ships in database#58; until types regenerate the column
+  // rides as an optional extra on the generated row type.
+  const songsWithArt = songRecords.map(song => ({
+    isrc: song.isrc,
+    name: song.name,
+    album: song.album,
+    artwork_url: (song as { artwork_url?: string | null }).artwork_url ?? null,
+  }));
+  const missingArtwork = songsWithArt.filter(s => !s.artwork_url).map(s => s.isrc);
+  const artwork = await resolveSongArtwork(missingArtwork);
+
+  const earliestEntries = await Promise.all(
+    catalogRows.map(async c => [c.id, await getCatalogEarliestReleaseDate(c.id)] as const),
+  );
+  const { songsByCatalog, valuation } = buildProfileSongs({
+    catalogSongRows,
+    songs: songsWithArt,
+    plays,
+    artwork,
+    earliestReleaseDates: Object.fromEntries(earliestEntries),
+  });
+
   const socials = (artist.account_socials ?? [])
     .filter(row => row.social?.profile_url)
     .map(row => ({
@@ -63,6 +104,7 @@ export async function getArtistPublicProfile(
     name: c.name,
     song_count: counts[c.id] ?? 0,
     updated_at: c.updated_at,
+    songs: songsByCatalog[c.id] ?? [],
   }));
 
   return {
@@ -71,5 +113,6 @@ export async function getArtistPublicProfile(
     image: info?.image || null,
     socials,
     catalogs,
+    valuation,
   };
 }
