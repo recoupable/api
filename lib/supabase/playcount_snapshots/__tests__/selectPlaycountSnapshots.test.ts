@@ -12,7 +12,8 @@ function mockBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, ReturnType<typeof vi.fn>> & {
     then?: (resolve: (v: unknown) => void) => void;
   } = {} as never;
-  for (const m of ["select", "eq", "gte", "order"]) builder[m] = vi.fn().mockReturnValue(builder);
+  for (const m of ["select", "eq", "gte", "order", "limit", "in"])
+    builder[m] = vi.fn().mockReturnValue(builder);
   builder.then = resolve => resolve(result);
   vi.mocked(supabase.from).mockReturnValue(builder as never);
   return builder;
@@ -48,11 +49,24 @@ describe("selectPlaycountSnapshots", () => {
     expect(result).toEqual(rows);
   });
 
-  it("returns [] on error", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("throws on query error so callers never mistake a failure for no rows", async () => {
     mockBuilder({ data: null, error: { message: "boom" } });
 
-    expect(await selectPlaycountSnapshots({})).toEqual([]);
-    consoleError.mockRestore();
+    await expect(selectPlaycountSnapshots({})).rejects.toThrow(
+      "Failed to fetch playcount_snapshots: boom",
+    );
+  });
+
+  it("applies limit with a stable id tie-break for limited newest-first reads", async () => {
+    const rows = [{ id: "snap_9" }];
+    const builder = mockBuilder({ data: rows, error: null });
+
+    const result = await selectPlaycountSnapshots({ account: "acc_1", limit: 3 });
+
+    expect(builder.eq).toHaveBeenCalledWith("account", "acc_1");
+    expect(builder.order).toHaveBeenCalledWith("created_at", { ascending: false });
+    expect(builder.order).toHaveBeenCalledWith("id", { ascending: false });
+    expect(builder.limit).toHaveBeenCalledWith(3);
+    expect(result).toEqual(rows);
   });
 });
