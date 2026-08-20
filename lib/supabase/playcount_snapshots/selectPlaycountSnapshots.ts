@@ -13,7 +13,10 @@ import { Tables } from "@/types/database.types";
  * @param params.createdAfter - Optional inclusive created_at lower bound (ISO)
  * @param params.schedule - Optional schedule filter ("once" | "monthly")
  * @param params.limit - Optional maximum rows to return (newest-first)
- * @returns Matching rows newest-first, or [] if none exist or on error
+ * @returns Matching rows newest-first (ties broken by id so limited reads are
+ *   stable across requests), or [] if none exist
+ * @throws Error on query error — a database failure must never read as "no
+ *   rows" (the empty-vs-error conflation class, chat#1965)
  */
 export async function selectPlaycountSnapshots({
   id,
@@ -35,7 +38,8 @@ export async function selectPlaycountSnapshots({
   let query = supabase
     .from("playcount_snapshots")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false });
 
   if (id) query = query.eq("id", id);
   if (account) query = query.eq("account", account);
@@ -51,8 +55,7 @@ export async function selectPlaycountSnapshots({
   const { data, error } = await query;
 
   if (error) {
-    console.error("Error fetching playcount_snapshots:", error);
-    return [];
+    throw new Error(`Failed to fetch playcount_snapshots: ${error.message}`);
   }
 
   return data || [];
