@@ -25,11 +25,11 @@ beforeEach(() => {
 });
 
 describe("validateGetCatalogMeasurementsQuery", () => {
-  it("returns the auth error before validating params when credentials are missing", async () => {
+  it("returns the auth error when credentials are missing", async () => {
     const authErr = NextResponse.json({ status: "error" }, { status: 401 });
     vi.mocked(validateAuthContext).mockResolvedValue(authErr as never);
 
-    const result = await validateGetCatalogMeasurementsQuery(makeRequest(), "not-a-uuid");
+    const result = await validateGetCatalogMeasurementsQuery(makeRequest(), catalogId);
 
     expect(result).toBe(authErr);
   });
@@ -38,6 +38,60 @@ describe("validateGetCatalogMeasurementsQuery", () => {
     const result = await validateGetCatalogMeasurementsQuery(makeRequest(), catalogId);
 
     expect(result).toEqual({ accountId, catalogId, page: 1, limit: 50 });
+  });
+
+  // chat#1974: the account_id override must reach validateAuthContext, which
+  // owns the authorization decision — a silent ignore turned admin reads into
+  // 404s against the caller's own catalogs.
+  it("passes account_id to validateAuthContext and returns the resolved override", async () => {
+    const targetAccountId = "0aa11a2f-7c40-4f17-bf9c-5e94a2371904";
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: targetAccountId,
+      orgId: null,
+      authToken: "t",
+    } as never);
+
+    const request = makeRequest(`?account_id=${targetAccountId}`);
+    const result = await validateGetCatalogMeasurementsQuery(request, catalogId);
+
+    expect(validateAuthContext).toHaveBeenCalledWith(request, { accountId: targetAccountId });
+    expect(result).toEqual({
+      accountId: targetAccountId,
+      account_id: targetAccountId,
+      catalogId,
+      page: 1,
+      limit: 50,
+    });
+  });
+
+  it("returns the override rejection from validateAuthContext untouched", async () => {
+    const rejection = NextResponse.json({ status: "error" }, { status: 403 });
+    vi.mocked(validateAuthContext).mockResolvedValue(rejection as never);
+
+    const result = await validateGetCatalogMeasurementsQuery(
+      makeRequest("?account_id=0aa11a2f-7c40-4f17-bf9c-5e94a2371904"),
+      catalogId,
+    );
+
+    expect(result).toBe(rejection);
+  });
+
+  it("returns 400 for a malformed account_id without calling validateAuthContext", async () => {
+    const result = await validateGetCatalogMeasurementsQuery(
+      makeRequest("?account_id=not-a-uuid"),
+      catalogId,
+    );
+
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(400);
+    expect(validateAuthContext).not.toHaveBeenCalled();
+  });
+
+  it("calls validateAuthContext with an undefined override when account_id is absent", async () => {
+    const request = makeRequest();
+    await validateGetCatalogMeasurementsQuery(request, catalogId);
+
+    expect(validateAuthContext).toHaveBeenCalledWith(request, { accountId: undefined });
   });
 
   it("returns 400 when the path catalogId is not a uuid", async () => {

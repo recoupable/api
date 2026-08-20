@@ -7,6 +7,7 @@ export const getCatalogMeasurementsQuerySchema = z.object({
   catalogId: z
     .string({ message: "catalogId parameter is required" })
     .uuid("catalogId must be a valid UUID"),
+  account_id: z.string().uuid("account_id must be a valid UUID").optional(),
   artist_account_id: z.string().uuid("artist_account_id must be a valid UUID").optional(),
   page: z
     .string()
@@ -33,12 +34,12 @@ export type GetCatalogMeasurementsQuery = z.infer<typeof getCatalogMeasurementsQ
 };
 
 /**
- * Validates GET /api/catalogs/{catalogId}/measurements — auth (Privy bearer
- * or x-api-key, resolved to the caller's accountId), the catalogId path
- * segment (uuid), and the optional query modifiers (artist_account_id, page,
- * limit). Auth runs first, per the validator convention of the measurements
- * family. The path id always wins — a catalogId smuggled into the query
- * string is ignored.
+ * Validates GET /api/catalogs/{catalogId}/measurements — the catalogId path
+ * segment (uuid), the optional query modifiers (account_id, artist_account_id,
+ * page, limit), then auth (Privy bearer or x-api-key). Params parse first so
+ * the optional account_id override can reach validateAuthContext, which owns
+ * the authorization decision for acting on another account. The path id
+ * always wins — a catalogId smuggled into the query string is ignored.
  *
  * @param request - The incoming HTTP request.
  * @param catalogId - The catalogId path segment.
@@ -48,9 +49,6 @@ export async function validateGetCatalogMeasurementsQuery(
   request: NextRequest,
   catalogId: string,
 ): Promise<NextResponse | GetCatalogMeasurementsQuery> {
-  const authResult = await validateAuthContext(request);
-  if (authResult instanceof NextResponse) return authResult;
-
   const { searchParams } = new URL(request.url);
   const result = getCatalogMeasurementsQuerySchema.safeParse({
     ...Object.fromEntries(searchParams.entries()),
@@ -68,6 +66,9 @@ export async function validateGetCatalogMeasurementsQuery(
       { status: 400, headers: getCorsHeaders() },
     );
   }
+
+  const authResult = await validateAuthContext(request, { accountId: result.data.account_id });
+  if (authResult instanceof NextResponse) return authResult;
 
   return { ...result.data, accountId: authResult.accountId };
 }
