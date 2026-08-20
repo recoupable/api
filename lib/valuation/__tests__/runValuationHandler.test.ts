@@ -14,7 +14,7 @@ import getArtist from "@/lib/spotify/getArtist";
 import getArtistAlbums from "@/lib/spotify/getArtistAlbums";
 import { createMeasurementJob } from "@/lib/research/measurement_jobs/createMeasurementJob";
 import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots";
-import { createSnapshotCatalog } from "@/lib/catalog/createSnapshotCatalog";
+import { resolveClaimedCatalog } from "@/lib/catalog/resolveClaimedCatalog";
 import { selectCatalogMeasurementsAggregate } from "@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate";
 import { getCatalogEarliestReleaseDate } from "@/lib/catalog/getCatalogEarliestReleaseDate";
 
@@ -40,7 +40,7 @@ vi.mock("@/lib/research/measurement_jobs/createMeasurementJob", () => ({
 vi.mock("@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots", () => ({
   selectPlaycountSnapshots: vi.fn(),
 }));
-vi.mock("@/lib/catalog/createSnapshotCatalog", () => ({ createSnapshotCatalog: vi.fn() }));
+vi.mock("@/lib/catalog/resolveClaimedCatalog", () => ({ resolveClaimedCatalog: vi.fn() }));
 vi.mock("@/lib/supabase/song_measurements/selectCatalogMeasurementsAggregate", () => ({
   selectCatalogMeasurementsAggregate: vi.fn(),
 }));
@@ -105,7 +105,7 @@ const happyPath = () => {
   } as Awaited<ReturnType<typeof createMeasurementJob>>);
   vi.mocked(waitForSnapshotMeasurements).mockResolvedValue(true);
   vi.mocked(selectPlaycountSnapshots).mockResolvedValue([snapshot]);
-  vi.mocked(createSnapshotCatalog).mockResolvedValue({
+  vi.mocked(resolveClaimedCatalog).mockResolvedValue({
     catalog,
     songsAdded: 12,
     isrcs: ["ISRC_A"],
@@ -135,8 +135,8 @@ describe("runValuationHandler", () => {
     const res = await runValuationHandler(makeRequest());
 
     expect(res.status).toBe(200);
-    expect(createSnapshotCatalog).toHaveBeenCalledWith(
-      expect.objectContaining({ accountId, snapshot, name: "Bad Bunny" }),
+    expect(resolveClaimedCatalog).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId, ownerId: accountId, snapshot, name: "Bad Bunny" }),
     );
   });
 
@@ -151,7 +151,7 @@ describe("runValuationHandler", () => {
 
     // The name can only be passed if the lookup is hoisted above the create.
     expect(vi.mocked(getArtist).mock.invocationCallOrder[0]).toBeLessThan(
-      vi.mocked(createSnapshotCatalog).mock.invocationCallOrder[0],
+      vi.mocked(resolveClaimedCatalog).mock.invocationCallOrder[0],
     );
   });
 
@@ -165,9 +165,9 @@ describe("runValuationHandler", () => {
     const res = await runValuationHandler(makeRequest());
 
     expect(res.status).toBe(200);
-    expect(createSnapshotCatalog).toHaveBeenCalledTimes(1);
-    // No name passed — createSnapshotCatalog applies DEFAULT_CATALOG_NAME.
-    expect(vi.mocked(createSnapshotCatalog).mock.calls[0][0].name).toBeUndefined();
+    expect(resolveClaimedCatalog).toHaveBeenCalledTimes(1);
+    // No name passed — the claim path applies its default catalog name.
+    expect(vi.mocked(resolveClaimedCatalog).mock.calls[0][0].name).toBeUndefined();
   });
 
   it("treats a blank Spotify name as unresolved rather than naming a catalog nothing", async () => {
@@ -179,7 +179,7 @@ describe("runValuationHandler", () => {
 
     await runValuationHandler(makeRequest());
 
-    expect(vi.mocked(createSnapshotCatalog).mock.calls[0][0].name).toBeUndefined();
+    expect(vi.mocked(resolveClaimedCatalog).mock.calls[0][0].name).toBeUndefined();
   });
 
   // Roster attach: one sequence, one catch site (chat#1965).
@@ -407,6 +407,31 @@ describe("runValuationHandler", () => {
     });
   });
 
+  // chat#1967: the claim goes through resolveClaimedCatalog, so a re-run whose
+  // snapshot is already claimed reuses the existing catalog instead of minting
+  // a duplicate. The reuse branch itself is pinned in resolveClaimedCatalog's
+  // own suite; this pins that the handler consumes it.
+  it("claims through resolveClaimedCatalog so re-runs reuse the existing catalog", async () => {
+    happyPath();
+    vi.mocked(getArtist).mockResolvedValue({
+      artist: { name: "Bad Bunny" } as Awaited<ReturnType<typeof getArtist>>["artist"],
+      error: null,
+    });
+    vi.mocked(resolveClaimedCatalog).mockResolvedValue({
+      catalog: { id: "existing-cat", name: "Bad Bunny" } as never,
+      songsAdded: 0,
+      isrcs: ["ISRC_A"],
+    });
+
+    const res = await runValuationHandler(makeRequest());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.catalog.id).toBe("existing-cat");
+    // The reused catalog's tracks are still measured — never reported as 0.
+    expect(body.songs_measured).toBe(1);
+  });
+
   it("returns the validator response without measuring when validation fails", async () => {
     const err = NextResponse.json({ status: "error" }, { status: 400 });
     vi.mocked(validateRunValuationRequest).mockResolvedValue(err);
@@ -415,6 +440,6 @@ describe("runValuationHandler", () => {
 
     expect(res).toBe(err);
     expect(createMeasurementJob).not.toHaveBeenCalled();
-    expect(createSnapshotCatalog).not.toHaveBeenCalled();
+    expect(resolveClaimedCatalog).not.toHaveBeenCalled();
   });
 });
