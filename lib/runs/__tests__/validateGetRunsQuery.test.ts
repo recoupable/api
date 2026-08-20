@@ -26,10 +26,14 @@ describe("validateGetRunsQuery", () => {
   });
 
   // Future kinds are new enum values, not new endpoints — until then, honest 400.
-  it("rejects an unknown kind with 400", () => {
+  it("rejects an unknown kind with 400 and the error envelope", async () => {
     const result = validateGetRunsQuery(params({ kind: "backfill" }));
     expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(400);
+    const body = await (result as NextResponse).json();
+    expect(body.status).toBe("error");
+    expect(typeof body.error).toBe("string");
+    expect(body.error.length).toBeGreaterThan(0);
   });
 
   it("rejects an out-of-range limit with 400", () => {

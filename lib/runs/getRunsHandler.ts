@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { selectPlaycountSnapshots } from "@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots";
+import { selectLatestAccountSnapshots } from "@/lib/supabase/playcount_snapshots/selectLatestAccountSnapshots";
 import { validateGetRunsQuery } from "./validateGetRunsQuery";
 import { toValuationRun } from "./toValuationRun";
 
@@ -26,7 +26,10 @@ export async function getRunsHandler(request: NextRequest): Promise<NextResponse
     if (authResult instanceof NextResponse) return authResult;
     const { accountId } = authResult;
 
-    const snapshots = await selectPlaycountSnapshots({
+    // Throws on query error: a database failure must never read as "this
+    // account has never run one" (chat#1965 conflation class) — it becomes
+    // the 500 below instead of an empty run list.
+    const snapshots = await selectLatestAccountSnapshots({
       account: accountId,
       limit: validated.limit,
     });

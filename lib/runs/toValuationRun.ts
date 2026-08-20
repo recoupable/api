@@ -28,13 +28,16 @@ export function toValuationRun(
   now: Date = new Date(),
 ): ValuationRun {
   const claimed = snapshot.state === "done" && !!snapshot.catalog;
-  const ageMs = now.getTime() - new Date(snapshot.created_at).getTime();
+  // The claim window measures from the last state transition (updated_at),
+  // not run creation: a long capture must not flash failed the moment it
+  // finishes.
+  const sinceMs = now.getTime() - new Date(snapshot.updated_at ?? snapshot.created_at).getTime();
 
   let state: ValuationRun["state"];
   if (claimed) state = "claimed";
   else if (snapshot.state === "queued") state = "queued";
   else if (snapshot.state === "running") state = "measuring";
-  else if (snapshot.state === "done" && ageMs < CLAIM_WINDOW_MS) state = "measuring";
+  else if (snapshot.state === "done" && sinceMs < CLAIM_WINDOW_MS) state = "measuring";
   else state = "failed";
 
   return {

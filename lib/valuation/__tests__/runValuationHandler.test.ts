@@ -166,7 +166,7 @@ describe("runValuationHandler", () => {
 
     expect(res.status).toBe(200);
     expect(resolveClaimedCatalog).toHaveBeenCalledTimes(1);
-    // No name passed — createSnapshotCatalog applies DEFAULT_CATALOG_NAME.
+    // No name passed — the claim path applies its default catalog name.
     expect(vi.mocked(resolveClaimedCatalog).mock.calls[0][0].name).toBeUndefined();
   });
 
@@ -428,7 +428,8 @@ describe("runValuationHandler", () => {
 
     expect(res.status).toBe(200);
     expect(body.catalog.id).toBe("existing-cat");
-    expect(body.songs_measured).toBe(0);
+    // The reused catalog's tracks are still measured — never reported as 0.
+    expect(body.songs_measured).toBe(1);
   });
 
   it("returns the validator response without measuring when validation fails", async () => {

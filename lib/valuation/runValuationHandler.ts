@@ -114,7 +114,7 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
     //    nothing, the DEFAULT_CATALOG_NAME still applies (chat#1942).
     const [snapshot] = await selectPlaycountSnapshots({ id: snapshotId });
     if (!snapshot) return errorResponse("Snapshot not found", 404);
-    const { catalog, songsAdded, isrcs } = await resolveClaimedCatalog({
+    const { catalog, isrcs } = await resolveClaimedCatalog({
       accountId,
       ownerId: organizationId ?? accountId,
       snapshot,
@@ -209,7 +209,10 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
     return successResponse({
       catalog,
       band: valuation,
-      songs_measured: songsAdded,
+      // The measured ISRC count: an idempotent re-run adds nothing to the
+      // reused catalog but its tracks are still measured; identical to
+      // songsAdded on the fresh path.
+      songs_measured: isrcs.length,
     });
   } catch (error) {
     console.error("Error running valuation:", error);

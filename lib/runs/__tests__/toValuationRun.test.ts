@@ -44,6 +44,28 @@ describe("toValuationRun", () => {
 
   // The orphaned class chat#1965/#1969 kept meeting: capture done, claim never
   // happened. Honest terminal answer, not an eternal "measuring".
+  it("measures the claim window from the last state transition, not run creation", () => {
+    // A 30-minute capture that finished 2 minutes ago is still claiming.
+    const run = toValuationRun(
+      {
+        ...base,
+        state: "done",
+        created_at: "2026-08-20T11:30:00Z",
+        updated_at: "2026-08-20T12:03:00Z",
+      } as never,
+      now,
+    );
+    expect(run.state).toBe("measuring");
+  });
+
+  it("flips to failed at exactly the claim-window boundary", () => {
+    const run = toValuationRun(
+      { ...base, state: "done", created_at: "2026-08-20T11:55:00Z" },
+      now,
+    );
+    expect(run.state).toBe("failed");
+  });
+
   it("maps done-but-unclaimed past the claim window to failed", () => {
     const run = toValuationRun({ ...base, state: "done", created_at: "2026-08-20T11:00:00Z" }, now);
     expect(run.state).toBe("failed");
