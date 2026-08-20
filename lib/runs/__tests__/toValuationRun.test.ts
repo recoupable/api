@@ -59,10 +59,7 @@ describe("toValuationRun", () => {
   });
 
   it("flips to failed at exactly the claim-window boundary", () => {
-    const run = toValuationRun(
-      { ...base, state: "done", created_at: "2026-08-20T11:55:00Z" },
-      now,
-    );
+    const run = toValuationRun({ ...base, state: "done", created_at: "2026-08-20T11:55:00Z" }, now);
     expect(run.state).toBe("failed");
   });
 
