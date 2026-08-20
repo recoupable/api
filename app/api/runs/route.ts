@@ -23,3 +23,7 @@ export async function OPTIONS() {
 export async function GET(request: NextRequest) {
   return getRunsHandler(request);
 }
+
+// Clients poll this endpoint for in-flight run status; a cached response would
+// freeze the state they are polling for.
+export const dynamic = "force-dynamic";
