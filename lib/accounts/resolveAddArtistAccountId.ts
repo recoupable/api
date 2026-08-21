@@ -8,7 +8,7 @@ import { checkAccountAccess } from "@/lib/auth/checkAccountAccess";
  *
  * Defaults to the authenticated account. When an email override is provided,
  * the email is resolved to an account and the caller must have access to it
- * (self, managed artist, owned workspace, or member organization).
+ * (self, managed artist, or member organization).
  *
  * @param authenticatedAccountId - The account ID derived from the credential
  * @param email - Optional email override for the target account
