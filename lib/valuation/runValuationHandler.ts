@@ -39,9 +39,11 @@ interface SpotifyAlbumsResponse {
  *      idempotent when the snapshot is already claimed),
  *   5. value it with the same model as GET /catalogs/{id}/measurements.
  *
- * The owning account is resolved from credentials, never the body. This is the
- * shared server-side version of marketing/lib/valuation/runValuationFlow so
- * marketing and chat call one endpoint instead of orchestrating client-side.
+ * The owning account comes from credentials; an authorized caller may act for
+ * a member account via the validated `account_id` override (every side effect
+ * scopes to that effective account). This is the shared server-side version of
+ * marketing/lib/valuation/runValuationFlow so marketing and chat call one
+ * endpoint instead of orchestrating client-side.
  *
  * @returns `{ status, catalog, band, songs_measured }`
  */

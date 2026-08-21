@@ -3,10 +3,12 @@ import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
+import { validateAccountIdOverride } from "@/lib/auth/validateAccountIdOverride";
 
 export const runValuationBodySchema = z.object({
   spotify_artist_id: z.string().min(1, "spotify_artist_id must not be empty"),
   organization_id: z.string().uuid("organization_id must be a valid UUID").optional(),
+  account_id: z.string().uuid("account_id must be a valid UUID").optional(),
 });
 
 export type ValidatedRunValuationRequest = {
@@ -21,13 +23,18 @@ export type ValidatedRunValuationRequest = {
  * and requires a `spotify_artist_id`. Mirrors validateCreateMeasurementJobRequest.
  *
  * `organization_id` optionally names an organization to own the resulting catalog
- * instead of the caller (chat#1938). Membership is authorized here, not trusted.
+ * instead of the caller (chat#1938). `account_id` optionally runs the whole
+ * valuation on behalf of another accessible account (chat#1974) — every side
+ * effect (snapshot, claim, roster attach, report email) scopes to it, and the
+ * organization membership check runs against that effective account.
+ * Both are authorized here, not trusted.
  *
- * Membership is checked with `validateOrganizationAccess` after the body is parsed,
- * rather than by passing `organizationId` into `validateAuthContext`, because that
- * would force the body to be read before authenticating — the 401 deliberately
- * precedes any body handling on this endpoint. `validateAuthContext` delegates to
- * the same function, so the authorization is identical.
+ * Both checks run after the body is parsed (`validateAccountIdOverride`,
+ * `validateOrganizationAccess`), rather than by passing them into
+ * `validateAuthContext`, because that would force the body to be read before
+ * authenticating — the 401 deliberately precedes any body handling on this
+ * endpoint. `validateAuthContext` delegates to the same functions, so the
+ * authorization is identical.
  *
  * @param request - The incoming HTTP request.
  * @returns The validated `{ accountId, spotify_artist_id, organizationId }`, or a
@@ -53,10 +60,20 @@ export async function validateRunValuationRequest(
     );
   }
 
+  let accountId = authResult.accountId;
+  if (result.data.account_id) {
+    const overrideResult = await validateAccountIdOverride({
+      currentAccountId: authResult.accountId,
+      targetAccountId: result.data.account_id,
+    });
+    if (overrideResult instanceof NextResponse) return overrideResult;
+    accountId = overrideResult.accountId;
+  }
+
   const organizationId = result.data.organization_id;
   if (organizationId) {
     const hasOrgAccess = await validateOrganizationAccess({
-      accountId: authResult.accountId,
+      accountId,
       organizationId,
     });
 
@@ -69,7 +86,7 @@ export async function validateRunValuationRequest(
   }
 
   return {
-    accountId: authResult.accountId,
+    accountId,
     spotify_artist_id: result.data.spotify_artist_id,
     organizationId,
   };
