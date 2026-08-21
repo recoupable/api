@@ -74,15 +74,23 @@ describe("validateCreateMusicBody", () => {
     expect((guidance as NextResponse).status).toBe(400);
   });
 
-  it("passes account_id and organization_id through to the auth context check", async () => {
-    await validateCreateMusicBody(
-      makeRequest({ ...validBody, account_id: accountId, organization_id: orgId }),
-    );
+  it("passes account_id through to the auth context as an override", async () => {
+    await validateCreateMusicBody(makeRequest({ ...validBody, account_id: accountId }));
 
-    expect(validateAuthContext).toHaveBeenCalledWith(expect.anything(), {
-      accountId,
-      organizationId: orgId,
-    });
+    expect(validateAuthContext).toHaveBeenCalledWith(expect.anything(), { accountId });
+  });
+
+  it("scopes to an organization by that organization's account id, not a second field", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: orgId,
+      orgId,
+      authToken: "t",
+    } as never);
+
+    const result = await validateCreateMusicBody(makeRequest({ ...validBody, account_id: orgId }));
+
+    expect(result).toMatchObject({ accountId: orgId });
+    expect(result).not.toHaveProperty("organizationId");
   });
 
   it("returns the auth failure untouched", async () => {
@@ -92,17 +100,5 @@ describe("validateCreateMusicBody", () => {
     const result = await validateCreateMusicBody(makeRequest(validBody));
 
     expect(result).toBe(authErr);
-  });
-
-  it("resolves the organization from the auth context when the body omits it", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId,
-      orgId,
-      authToken: "t",
-    } as never);
-
-    const result = await validateCreateMusicBody(makeRequest(validBody));
-
-    expect(result).toMatchObject({ organizationId: orgId });
   });
 });
