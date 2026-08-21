@@ -157,7 +157,7 @@ describe("getArtistPublicProfile", () => {
   });
 
   // An account is an artist iff it appears as artist_id on someone's roster.
-  // Personal and workspace accounts get null, which the handler 404s.
+  // Other accounts get null, which the handler 404s.
   it("returns null for an account that is not on any roster as an artist", async () => {
     getAccountArtistIdsMock.mockResolvedValue([]);
 

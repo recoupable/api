@@ -187,7 +187,7 @@ describe("getSystemPrompt", () => {
         accountId: "acc-1",
         artistInstruction: "Always mention tour dates",
       });
-      expect(result).toContain("-----SELECTED ARTIST/WORKSPACE CONTEXT-----");
+      expect(result).toContain("-----SELECTED ARTIST CONTEXT-----");
       expect(result).toContain("Always mention tour dates");
     });
 
@@ -196,12 +196,12 @@ describe("getSystemPrompt", () => {
         accountId: "acc-1",
         artistInstruction: "Some instruction",
       });
-      expect(result).toContain("-----END ARTIST/WORKSPACE CONTEXT-----");
+      expect(result).toContain("-----END ARTIST CONTEXT-----");
     });
 
     it("omits artist context section when no artistInstruction", () => {
       const result = getSystemPrompt({ accountId: "acc-1" });
-      expect(result).not.toContain("-----SELECTED ARTIST/WORKSPACE CONTEXT-----");
+      expect(result).not.toContain("-----SELECTED ARTIST CONTEXT-----");
     });
   });
 
@@ -211,7 +211,7 @@ describe("getSystemPrompt", () => {
         accountId: "acc-1",
         knowledgeBaseText: "FAQ: What is Recoup?\nAnswer: AI platform for music",
       });
-      expect(result).toContain("-----ARTIST/WORKSPACE KNOWLEDGE BASE-----");
+      expect(result).toContain("-----ARTIST KNOWLEDGE BASE-----");
       expect(result).toContain("FAQ: What is Recoup?");
     });
 
@@ -220,12 +220,12 @@ describe("getSystemPrompt", () => {
         accountId: "acc-1",
         knowledgeBaseText: "Some knowledge",
       });
-      expect(result).toContain("-----END ARTIST/WORKSPACE KNOWLEDGE BASE-----");
+      expect(result).toContain("-----END ARTIST KNOWLEDGE BASE-----");
     });
 
     it("omits knowledge base section when no knowledgeBaseText", () => {
       const result = getSystemPrompt({ accountId: "acc-1" });
-      expect(result).not.toContain("-----ARTIST/WORKSPACE KNOWLEDGE BASE-----");
+      expect(result).not.toContain("-----ARTIST KNOWLEDGE BASE-----");
     });
   });
 
@@ -238,7 +238,7 @@ describe("getSystemPrompt", () => {
       });
 
       const userIndex = result.indexOf("CURRENT USER CONTEXT");
-      const artistIndex = result.indexOf("SELECTED ARTIST/WORKSPACE");
+      const artistIndex = result.indexOf("SELECTED ARTIST");
       expect(userIndex).toBeLessThan(artistIndex);
     });
 
@@ -249,7 +249,7 @@ describe("getSystemPrompt", () => {
         knowledgeBaseText: "Knowledge content",
       });
 
-      const artistIndex = result.indexOf("SELECTED ARTIST/WORKSPACE");
+      const artistIndex = result.indexOf("SELECTED ARTIST");
       const kbIndex = result.indexOf("KNOWLEDGE BASE");
       expect(artistIndex).toBeLessThan(kbIndex);
     });
