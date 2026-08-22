@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createMusicHandler } from "@/lib/music/createMusicHandler";
+import { getMusicHandler } from "@/lib/music/getMusicHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -26,6 +27,20 @@ export async function OPTIONS() {
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   return createMusicHandler(request);
+}
+
+/**
+ * GET /api/music
+ *
+ * The account's music generations, newest first (contract:
+ * recoupable/docs#308).
+ *
+ * @param request - Query params `account_id?`, `status?`, `limit?`, `offset?`.
+ * @returns 200 with the generations, 400 on a bad query, 401 unauthenticated,
+ *   403 on a denied override, or 500.
+ */
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  return getMusicHandler(request);
 }
 
 export const dynamic = "force-dynamic";
