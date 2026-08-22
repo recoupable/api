@@ -6,7 +6,7 @@ import { pollMusicGenerationStep } from "@/app/workflows/music/pollMusicGenerati
 import { fetchMusicResultStep } from "@/app/workflows/music/fetchMusicResultStep";
 import { storeMusicAudioStep } from "@/app/workflows/music/storeMusicAudioStep";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
-import { MUSIC_MODEL, MUSIC_POLL_INTERVAL_MS, MUSIC_POLL_TIMEOUT_MS } from "@/lib/music/const";
+import { MUSIC_MODEL, MUSIC_MAX_POLL_ATTEMPTS, MUSIC_POLL_INTERVAL } from "@/lib/music/const";
 
 export type MusicGenerationParams = {
   duration: number;
@@ -51,13 +51,17 @@ export async function musicGenerationWorkflow(generationId: string, params: Musi
       fal_request_id: requestId,
     });
 
-    const deadline = Date.now() + MUSIC_POLL_TIMEOUT_MS;
+    // A counted loop, not a wall-clock deadline. Inside a workflow `Date.now()`
+    // reads a logical clock, so `Date.now() > deadline` is not guaranteed to
+    // become true and the first version of this loop polled fal indefinitely
+    // on a run that could never time out. Counting attempts is the only bound
+    // that cannot depend on how the runtime advances time.
     let state = await pollMusicGenerationStep(requestId);
-    while (state !== "completed") {
-      if (Date.now() > deadline) {
+    for (let attempt = 1; state !== "completed"; attempt++) {
+      if (attempt > MUSIC_MAX_POLL_ATTEMPTS) {
         throw new Error("Music generation timed out waiting for fal");
       }
-      await sleep(new Date(Date.now() + MUSIC_POLL_INTERVAL_MS));
+      await sleep(MUSIC_POLL_INTERVAL);
       state = await pollMusicGenerationStep(requestId);
     }
 
