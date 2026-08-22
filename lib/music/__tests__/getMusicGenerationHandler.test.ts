@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { getMusicGenerationHandler } from "../getMusicGenerationHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectMusicGenerations } from "@/lib/supabase/music_generations/selectMusicGenerations";
+import { fetchMusicLogs } from "../fetchMusicLogs";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -13,6 +14,7 @@ vi.mock("@/lib/supabase/music_generations/selectMusicGenerations", () => ({
   selectMusicGenerations: vi.fn(),
 }));
 vi.mock("@/lib/organizations/canAccessAccount", () => ({ canAccessAccount: vi.fn() }));
+vi.mock("../fetchMusicLogs", () => ({ fetchMusicLogs: vi.fn() }));
 
 const accountId = "550e8400-e29b-41d4-a716-446655440000";
 const strangerId = "770e8400-e29b-41d4-a716-446655440002";
@@ -49,16 +51,39 @@ describe("getMusicGenerationHandler", () => {
     } as never);
     vi.mocked(selectMusicGenerations).mockResolvedValue([row()]);
     vi.mocked(canAccessAccount).mockResolvedValue(true as never);
+    vi.mocked(fetchMusicLogs).mockResolvedValue([]);
   });
 
-  it("returns the generation", async () => {
+  it("returns the generation with a timeline read live from fal", async () => {
+    vi.mocked(fetchMusicLogs).mockResolvedValue([{ at: "t1", message: "0/180" }]);
+
     const res = await getMusicGenerationHandler(request(), generationId);
     const body = await res.json();
 
     expect(res.status).toBe(200);
     expect(body.generation.id).toBe(generationId);
-    // The timeline lives on the workflow run, not here (chat#1992 decision).
-    expect(body.generation).not.toHaveProperty("logs");
+    // Sourced from fal via the stored request id, never from a column.
+    expect(fetchMusicLogs).toHaveBeenCalledWith("req_1");
+    expect(body.generation.logs).toEqual([{ at: "t1", message: "0/180" }]);
+  });
+
+  it("still returns the generation when fal has no timeline to give", async () => {
+    vi.mocked(fetchMusicLogs).mockResolvedValue([]);
+
+    const res = await getMusicGenerationHandler(request(), generationId);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.generation.logs).toEqual([]);
+  });
+
+  it("does not ask fal for logs on a generation that never reached it", async () => {
+    vi.mocked(selectMusicGenerations).mockResolvedValue([row({ fal_request_id: null })]);
+
+    const res = await getMusicGenerationHandler(request(), generationId);
+
+    expect(res.status).toBe(200);
+    expect(fetchMusicLogs).toHaveBeenCalledWith(null);
   });
 
   it("404s an unknown generation", async () => {
@@ -96,6 +121,7 @@ describe("getMusicGenerationHandler", () => {
       authToken: "t",
     } as never);
     vi.mocked(canAccessAccount).mockResolvedValue(true as never);
+    vi.mocked(fetchMusicLogs).mockResolvedValue([]);
 
     const res = await getMusicGenerationHandler(request(), generationId);
 

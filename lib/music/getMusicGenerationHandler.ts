@@ -7,11 +7,19 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import { selectMusicGenerations } from "@/lib/supabase/music_generations/selectMusicGenerations";
 import { toMusicGeneration } from "@/lib/music/toMusicGeneration";
+import { fetchMusicLogs } from "@/lib/music/fetchMusicLogs";
 
 /**
  * GET /api/music/{generationId}
  *
- * One generation — the endpoint a client polls while a song renders.
+ * One generation plus its progress timeline — the endpoint a client polls
+ * while a song renders.
+ *
+ * `logs` are read live from fal through the stored `fal_request_id` and merged
+ * into the response, rather than copied into a column of our own. fal is the
+ * system that produced them, so storing them would have been a second source
+ * of truth that could disagree with the first (recoupable/chat#1992). They are
+ * absent from the list read, where the cost would be one fal call per row.
  *
  * Access is checked against the row's owning account rather than filtering the
  * read by the caller, so a generation belonging to someone else is a 403 and a
@@ -43,7 +51,9 @@ export async function getMusicGenerationHandler(
     });
     if (!allowed) return errorResponse("Access denied to this generation", 403);
 
-    return successResponse({ generation: toMusicGeneration(row) });
+    const logs = await fetchMusicLogs(row.fal_request_id);
+
+    return successResponse({ generation: { ...toMusicGeneration(row), logs } });
   } catch (error) {
     console.error("Error fetching music generation:", error);
     return errorResponse("Internal server error", 500);
