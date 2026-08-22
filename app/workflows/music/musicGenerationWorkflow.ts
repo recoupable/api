@@ -1,10 +1,10 @@
 import { sleep } from "workflow";
-import { getMusicGenerationStep } from "@/app/workflows/getMusicGenerationStep";
-import { markMusicGenerationStep } from "@/app/workflows/markMusicGenerationStep";
-import { submitMusicGenerationStep } from "@/app/workflows/submitMusicGenerationStep";
-import { pollMusicGenerationStep } from "@/app/workflows/pollMusicGenerationStep";
-import { fetchMusicResultStep } from "@/app/workflows/fetchMusicResultStep";
-import { storeMusicAudioStep } from "@/app/workflows/storeMusicAudioStep";
+import { getMusicGenerationStep } from "@/app/workflows/music/getMusicGenerationStep";
+import { markMusicGenerationStep } from "@/app/workflows/music/markMusicGenerationStep";
+import { submitMusicGenerationStep } from "@/app/workflows/music/submitMusicGenerationStep";
+import { pollMusicGenerationStep } from "@/app/workflows/music/pollMusicGenerationStep";
+import { fetchMusicResultStep } from "@/app/workflows/music/fetchMusicResultStep";
+import { storeMusicAudioStep } from "@/app/workflows/music/storeMusicAudioStep";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 import { MUSIC_MODEL, MUSIC_POLL_INTERVAL_MS, MUSIC_POLL_TIMEOUT_MS } from "@/lib/music/const";
 

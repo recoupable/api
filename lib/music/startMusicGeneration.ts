@@ -1,6 +1,6 @@
 import { start } from "workflow/api";
 import { insertMusicGeneration } from "@/lib/supabase/music_generations/insertMusicGeneration";
-import { musicGenerationWorkflow } from "@/app/workflows/musicGenerationWorkflow";
+import { musicGenerationWorkflow } from "@/app/workflows/music/musicGenerationWorkflow";
 import { creditCostForDuration } from "@/lib/music/creditCostForDuration";
 import { MUSIC_MODEL } from "@/lib/music/const";
 import type { ValidatedCreateMusicBody } from "@/lib/music/validateCreateMusicBody";
