@@ -6,7 +6,7 @@ import { pollMusicGenerationStep } from "@/app/workflows/music/pollMusicGenerati
 import { fetchMusicResultStep } from "@/app/workflows/music/fetchMusicResultStep";
 import { storeMusicAudioStep } from "@/app/workflows/music/storeMusicAudioStep";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
-import { MUSIC_MODEL, MUSIC_MAX_POLL_ATTEMPTS, MUSIC_POLL_INTERVAL } from "@/lib/music/const";
+import { MUSIC_MODEL, MUSIC_MAX_POLL_ATTEMPTS, MUSIC_POLL_INTERVAL_MS } from "@/lib/music/const";
 
 export type MusicGenerationParams = {
   duration: number;
@@ -61,7 +61,7 @@ export async function musicGenerationWorkflow(generationId: string, params: Musi
       if (attempt > MUSIC_MAX_POLL_ATTEMPTS) {
         throw new Error("Music generation timed out waiting for fal");
       }
-      await sleep(MUSIC_POLL_INTERVAL);
+      await sleep(new Date(Date.now() + MUSIC_POLL_INTERVAL_MS));
       state = await pollMusicGenerationStep(requestId);
     }
 
