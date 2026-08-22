@@ -2130,6 +2130,62 @@ export type Database = {
           },
         ];
       };
+      music_generations: {
+        Row: {
+          account_id: string;
+          created_at: string;
+          duration_seconds: number | null;
+          error_message: string | null;
+          fal_request_id: string | null;
+          id: string;
+          lyrics: string;
+          model: string;
+          prompt: string;
+          status: string;
+          storage_key: string | null;
+          updated_at: string;
+          workflow_run_id: string | null;
+        };
+        Insert: {
+          account_id: string;
+          created_at?: string;
+          duration_seconds?: number | null;
+          error_message?: string | null;
+          fal_request_id?: string | null;
+          id?: string;
+          lyrics: string;
+          model?: string;
+          prompt: string;
+          status?: string;
+          storage_key?: string | null;
+          updated_at?: string;
+          workflow_run_id?: string | null;
+        };
+        Update: {
+          account_id?: string;
+          created_at?: string;
+          duration_seconds?: number | null;
+          error_message?: string | null;
+          fal_request_id?: string | null;
+          id?: string;
+          lyrics?: string;
+          model?: string;
+          prompt?: string;
+          status?: string;
+          storage_key?: string | null;
+          updated_at?: string;
+          workflow_run_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "music_generations_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       notifications: {
         Row: {
           account_id: string;
