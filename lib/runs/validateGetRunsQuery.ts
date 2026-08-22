@@ -5,7 +5,7 @@ import { z } from "zod";
 // `kind` is a required enum: future run kinds are new values here, never new
 // endpoints (chat#1973 decision).
 export const getRunsQuerySchema = z.object({
-  kind: z.enum(["valuation"], { message: "kind must be one of: valuation" }),
+  kind: z.enum(["valuation", "music"], { message: "kind must be one of: valuation, music" }),
   limit: z.coerce.number().int().min(1).max(20).default(1),
 });
 

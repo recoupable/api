@@ -11,6 +11,9 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() 
 vi.mock("@/lib/supabase/playcount_snapshots/selectPlaycountSnapshots", () => ({
   selectPlaycountSnapshots: vi.fn(),
 }));
+vi.mock("@/lib/supabase/music_generations/selectMusicGenerations", () => ({
+  selectMusicGenerations: vi.fn(),
+}));
 
 const accountId = "550e8400-e29b-41d4-a716-446655440000";
 const makeRequest = (qs: string) =>
