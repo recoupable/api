@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateRunValuationRequest } from "@/lib/valuation/validateRunValuationRequest";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
+import { validateAccountIdOverride } from "@/lib/auth/validateAccountIdOverride";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
@@ -10,6 +11,10 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 
 vi.mock("@/lib/organizations/validateOrganizationAccess", () => ({
   validateOrganizationAccess: vi.fn(),
+}));
+
+vi.mock("@/lib/auth/validateAccountIdOverride", () => ({
+  validateAccountIdOverride: vi.fn(),
 }));
 
 const post = (body: unknown) =>
@@ -104,6 +109,81 @@ describe("validateRunValuationRequest", () => {
         accountId: "acc_1",
         spotify_artist_id: "art_1",
         organizationId: undefined,
+      });
+    });
+  });
+
+  // chat#1974 (second instance): the body account_id was silently ignored, so
+  // an admin-key run intended for another account landed every side effect —
+  // snapshot, claim, roster attach, report email — on the caller.
+  describe("account_id override", () => {
+    const targetAccountId = "0aa11a2f-7c40-4f17-bf9c-5e94a2371904";
+
+    it("resolves the override through validateAccountIdOverride and returns the target accountId", async () => {
+      vi.mocked(validateAccountIdOverride).mockResolvedValue({
+        accountId: targetAccountId,
+      } as never);
+
+      const r = await validateRunValuationRequest(
+        post({ spotify_artist_id: "x", account_id: targetAccountId }),
+      );
+
+      expect(validateAccountIdOverride).toHaveBeenCalledWith({
+        currentAccountId: "acc_1",
+        targetAccountId,
+      });
+      expect(r).toEqual({
+        accountId: targetAccountId,
+        spotify_artist_id: "x",
+        organizationId: undefined,
+      });
+    });
+
+    it("returns the override rejection untouched", async () => {
+      const rejection = NextResponse.json({ status: "error" }, { status: 403 });
+      vi.mocked(validateAccountIdOverride).mockResolvedValue(rejection as never);
+
+      const r = await validateRunValuationRequest(
+        post({ spotify_artist_id: "x", account_id: targetAccountId }),
+      );
+
+      expect(r).toBe(rejection);
+    });
+
+    it("400s on a malformed account_id without consulting the override path", async () => {
+      const r = await validateRunValuationRequest(
+        post({ spotify_artist_id: "x", account_id: "not-a-uuid" }),
+      );
+
+      expect((r as NextResponse).status).toBe(400);
+      expect(validateAccountIdOverride).not.toHaveBeenCalled();
+    });
+
+    it("skips the override path entirely when account_id is absent", async () => {
+      const r = await validateRunValuationRequest(post({ spotify_artist_id: "x" }));
+
+      expect(validateAccountIdOverride).not.toHaveBeenCalled();
+      expect((r as { accountId: string }).accountId).toBe("acc_1");
+    });
+
+    it("checks organization access for the effective (overridden) account", async () => {
+      vi.mocked(validateAccountIdOverride).mockResolvedValue({
+        accountId: targetAccountId,
+      } as never);
+      vi.mocked(validateOrganizationAccess).mockResolvedValue(true as never);
+      const organizationId = "7b2f8f9e-1f26-4a3f-a1cf-3a1c1f2e9b0d";
+
+      await validateRunValuationRequest(
+        post({
+          spotify_artist_id: "x",
+          account_id: targetAccountId,
+          organization_id: organizationId,
+        }),
+      );
+
+      expect(validateOrganizationAccess).toHaveBeenCalledWith({
+        accountId: targetAccountId,
+        organizationId,
       });
     });
   });
