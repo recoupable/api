@@ -1,5 +1,6 @@
 import { start } from "workflow/api";
 import { insertMusicGeneration } from "@/lib/supabase/music_generations/insertMusicGeneration";
+import { updateMusicGeneration } from "@/lib/supabase/music_generations/updateMusicGeneration";
 import { musicGenerationWorkflow } from "@/app/workflows/music/musicGenerationWorkflow";
 import { creditCostForDuration } from "@/lib/music/creditCostForDuration";
 import { MUSIC_MODEL } from "@/lib/music/const";
@@ -31,7 +32,7 @@ export async function startMusicGeneration(
     lyrics: validated.lyrics,
   });
 
-  await start(musicGenerationWorkflow, [
+  const run = await start(musicGenerationWorkflow, [
     row.id,
     {
       duration: validated.duration,
@@ -42,5 +43,13 @@ export async function startMusicGeneration(
     },
   ]);
 
-  return row;
+  // Persisted immediately rather than from inside the workflow: if a run dies
+  // without reaching its own error handler, this id is the only way back to
+  // its history. Best effort, because a generation that is already running
+  // must not be failed by a bookkeeping write.
+  const withRun = await updateMusicGeneration(row.id, { workflow_run_id: run.runId }).catch(
+    () => row,
+  );
+
+  return withRun;
 }
