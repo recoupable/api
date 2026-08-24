@@ -42,3 +42,23 @@ export function usdToCredits(usd: number): number {
 export function creditsToUsd(credits: number): number {
   return credits / CREDITS_PER_USD;
 }
+
+/**
+ * Credits for a dollar amount, never rounding below the cost.
+ *
+ * For pass-through pricing, where we charge what a provider charges us and
+ * rounding down means paying the difference ourselves. `usdToCredits` rounds
+ * to nearest, which is right for usage-based billing that averages out over
+ * many calls but wrong for a single call priced at cost.
+ *
+ * Two policies rather than one, chosen deliberately per billing model instead
+ * of drifting per endpoint. The gap between them is at most one credit, and at
+ * a micro-dollar (chat#2000) it stops being visible at all: today one credit
+ * buys five seconds of fal audio, then it buys five thousandths of a second.
+ *
+ * @param usd - Cost in dollars.
+ * @returns Whole credits, minimum 1.
+ */
+export function usdToCreditsAtLeastCost(usd: number): number {
+  return Math.max(1, Math.ceil(usd * CREDITS_PER_USD));
+}

@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { CREDITS_PER_USD, usdToCredits, creditsToUsd } from "../creditUnit";
+import {
+  CREDITS_PER_USD,
+  usdToCredits,
+  usdToCreditsAtLeastCost,
+  creditsToUsd,
+} from "../creditUnit";
 
 describe("credit unit", () => {
   it("is a cent today", () => {
@@ -32,5 +37,22 @@ describe("credit unit", () => {
     // CREDITS_PER_USD credits must be one dollar. A change to the constant
     // that breaks this breaks billing in both directions at once.
     expect(creditsToUsd(CREDITS_PER_USD)).toBe(1);
+  });
+});
+
+describe("usdToCreditsAtLeastCost", () => {
+  it("never rounds below the cost, unlike usdToCredits", () => {
+    // $0.122 is 12.2 credits today. Rounding to nearest gives 12 and we pay
+    // fal the difference; a pass-through price has to round the other way.
+    expect(usdToCredits(0.122)).toBe(12);
+    expect(usdToCreditsAtLeastCost(0.122)).toBe(13);
+  });
+
+  it("agrees with usdToCredits when the amount lands on a whole credit", () => {
+    expect(usdToCreditsAtLeastCost(0.12)).toBe(usdToCredits(0.12));
+  });
+
+  it("still charges at least one credit", () => {
+    expect(usdToCreditsAtLeastCost(0.0000001)).toBe(1);
   });
 });
