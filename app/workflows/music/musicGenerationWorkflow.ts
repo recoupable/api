@@ -6,6 +6,7 @@ import { pollMusicGenerationStep } from "@/app/workflows/music/pollMusicGenerati
 import { fetchMusicResultStep } from "@/app/workflows/music/fetchMusicResultStep";
 import { storeMusicAudioStep } from "@/app/workflows/music/storeMusicAudioStep";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
+import { creditsForCompletedGeneration } from "@/lib/music/creditsForCompletedGeneration";
 import { notifyMusicGenerationStep } from "./notifyMusicGenerationStep";
 import { MUSIC_MODEL, MUSIC_MAX_POLL_ATTEMPTS, MUSIC_POLL_INTERVAL_MS } from "@/lib/music/const";
 
@@ -72,10 +73,18 @@ export async function musicGenerationWorkflow(generationId: string, params: Musi
     const result = await fetchMusicResultStep(requestId);
     const stored = await storeMusicAudioStep(generationId, result.audioUrl, result.contentType);
 
-    if (params.creditsToCharge > 0) {
+    // Charge for the audio fal actually produced, not the length requested.
+    // `params.creditsToCharge` is what the caller was gated and quoted on; it
+    // stays the ceiling, so the deduction only ever moves in their favour.
+    const creditsToDeduct = creditsForCompletedGeneration({
+      requestedSeconds: params.duration,
+      actualSeconds: result.durationSeconds,
+    });
+
+    if (creditsToDeduct > 0) {
       await recordCreditDeduction({
         accountId: generation.account_id,
-        creditsToDeduct: params.creditsToCharge,
+        creditsToDeduct,
         source: "api",
         provider: "fal",
         modelId: MUSIC_MODEL,
