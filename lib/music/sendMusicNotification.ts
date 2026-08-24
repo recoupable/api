@@ -1,5 +1,4 @@
 import { sendMessage } from "@/lib/telegram/sendMessage";
-import { isTestEmail } from "@/lib/emails/isTestEmail";
 import {
   buildMusicNotification,
   type MusicNotificationInput,
@@ -13,14 +12,18 @@ import {
  * work that succeeded — the same posture `sendSalesNotification` takes with
  * Stripe webhooks.
  *
- * Skips internal and test accounts, as the sales notifications do, so a test
- * generation does not read like customer activity.
+ * Deliberately does not filter internal accounts, unlike the sales
+ * notifications. That filter exists so a test signup does not look like
+ * revenue; this is observability, where an internal generation is exactly the
+ * signal you want — and most current traffic is our own dogfooding.
+ *
+ * Filtering it cost the first live test of this feature: the generation came
+ * from an account whose email is one of the two `isTestEmail` matches, so it
+ * completed and notified nobody, silently.
  *
  * @param input - The finished generation.
  */
 export async function sendMusicNotification(input: MusicNotificationInput): Promise<void> {
-  if (input.accountEmail && isTestEmail(input.accountEmail)) return;
-
   try {
     await sendMessage(buildMusicNotification(input));
   } catch (error) {

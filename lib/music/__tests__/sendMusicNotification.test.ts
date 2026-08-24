@@ -23,12 +23,14 @@ describe("sendMusicNotification", () => {
     expect(vi.mocked(sendMessage).mock.calls[0][0]).toContain("/music/11111111");
   });
 
-  it("skips test accounts so they do not read as customer activity", async () => {
-    // isTestEmail matches two exact addresses, not a pattern, so this is the
-    // real filter rather than a plus-addressed variant.
+  it("notifies for internal accounts too", async () => {
+    // sweetmantech@gmail.com is one of isTestEmail's two matches. Filtering it
+    // meant the first live generation of this feature notified nobody: most
+    // current music traffic is our own, and an internal generation is exactly
+    // the signal this exists to surface.
     await sendMusicNotification({ ...input, accountEmail: "sweetmantech@gmail.com" });
 
-    expect(sendMessage).not.toHaveBeenCalled();
+    expect(sendMessage).toHaveBeenCalledOnce();
   });
 
   it("still notifies when the account has no email on file", async () => {
