@@ -4,6 +4,7 @@ import { getMusicGenerationHandler } from "../getMusicGenerationHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { selectMusicGenerations } from "@/lib/supabase/music_generations/selectMusicGenerations";
 import { fetchMusicLogs } from "../fetchMusicLogs";
+import { fetchMusicSeed } from "../fetchMusicSeed";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -15,6 +16,7 @@ vi.mock("@/lib/supabase/music_generations/selectMusicGenerations", () => ({
 }));
 vi.mock("@/lib/organizations/canAccessAccount", () => ({ canAccessAccount: vi.fn() }));
 vi.mock("../fetchMusicLogs", () => ({ fetchMusicLogs: vi.fn() }));
+vi.mock("../fetchMusicSeed", () => ({ fetchMusicSeed: vi.fn() }));
 
 const accountId = "550e8400-e29b-41d4-a716-446655440000";
 const strangerId = "770e8400-e29b-41d4-a716-446655440002";
@@ -52,6 +54,7 @@ describe("getMusicGenerationHandler", () => {
     vi.mocked(selectMusicGenerations).mockResolvedValue([row()]);
     vi.mocked(canAccessAccount).mockResolvedValue(true as never);
     vi.mocked(fetchMusicLogs).mockResolvedValue([]);
+    vi.mocked(fetchMusicSeed).mockResolvedValue(null);
   });
 
   it("returns the generation with a timeline read live from fal", async () => {
@@ -126,6 +129,27 @@ describe("getMusicGenerationHandler", () => {
     const res = await getMusicGenerationHandler(request(), generationId);
 
     expect(res.status).toBe(200);
+  });
+
+  it("returns the seed fal used, read live off the finished result", async () => {
+    vi.mocked(selectMusicGenerations).mockResolvedValue([row({ status: "completed" })]);
+    vi.mocked(fetchMusicSeed).mockResolvedValue(42);
+
+    const res = await getMusicGenerationHandler(request(), generationId);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(fetchMusicSeed).toHaveBeenCalledWith("req_1", "completed");
+    expect(body.generation.seed).toBe(42);
+  });
+
+  it("reports a null seed rather than omitting the field while rendering", async () => {
+    vi.mocked(fetchMusicSeed).mockResolvedValue(null);
+
+    const res = await getMusicGenerationHandler(request(), generationId);
+    const body = await res.json();
+
+    expect(body.generation).toHaveProperty("seed", null);
   });
 
   it("returns 500 when the read fails", async () => {
