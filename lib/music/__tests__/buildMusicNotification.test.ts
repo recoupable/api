@@ -14,7 +14,9 @@ describe("buildMusicNotification", () => {
   it("links to the song page so the message is actionable", () => {
     const text = buildMusicNotification(base);
 
-    expect(text).toContain("https://chat.recoupable.dev/music/11111111-2222-4333-8444-555555555555");
+    expect(text).toContain(
+      "https://chat.recoupable.dev/music/11111111-2222-4333-8444-555555555555",
+    );
   });
 
   it("names the account that generated it", () => {

@@ -33,8 +33,7 @@ const truncate = (text: string, max: number): string =>
 export function buildMusicNotification(input: MusicNotificationInput): string {
   const failed = input.status === "failed";
   const who = input.accountEmail ?? "unknown account";
-  const length =
-    input.durationSeconds === null ? null : `${input.durationSeconds.toFixed(1)}s`;
+  const length = input.durationSeconds === null ? null : `${input.durationSeconds.toFixed(1)}s`;
 
   return [
     failed ? "🚫 Music generation failed" : "🎵 New song generated",
