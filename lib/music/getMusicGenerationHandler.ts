@@ -8,6 +8,7 @@ import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import { selectMusicGenerations } from "@/lib/supabase/music_generations/selectMusicGenerations";
 import { toMusicGeneration } from "@/lib/music/toMusicGeneration";
 import { fetchMusicLogs } from "@/lib/music/fetchMusicLogs";
+import { fetchMusicSeed } from "@/lib/music/fetchMusicSeed";
 
 /**
  * GET /api/music/{generationId}
@@ -15,11 +16,17 @@ import { fetchMusicLogs } from "@/lib/music/fetchMusicLogs";
  * One generation plus its progress timeline — the endpoint a client polls
  * while a song renders.
  *
- * `logs` are read live from fal through the stored `fal_request_id` and merged
- * into the response, rather than copied into a column of our own. fal is the
- * system that produced them, so storing them would have been a second source
- * of truth that could disagree with the first (recoupable/chat#1992). They are
- * absent from the list read, where the cost would be one fal call per row.
+ * `logs` and `seed` are read live from fal through the stored
+ * `fal_request_id` and merged into the response, rather than copied into
+ * columns of our own. fal is the system that produced them, so storing them
+ * would have been a second source of truth that could disagree with the first
+ * (recoupable/chat#1992). Both are absent from the list read, where the cost
+ * would be a fal call per row.
+ *
+ * `seed` is the only generation parameter fal gives back;
+ * `num_inference_steps` and `guidance_scale` are consumed at submit and never
+ * echoed anywhere, so the response reports the settings that genuinely exist
+ * rather than implying we kept the rest.
  *
  * Access is checked against the row's owning account rather than filtering the
  * read by the caller, so a generation belonging to someone else is a 403 and a
@@ -51,9 +58,12 @@ export async function getMusicGenerationHandler(
     });
     if (!allowed) return errorResponse("Access denied to this generation", 403);
 
-    const logs = await fetchMusicLogs(row.fal_request_id);
+    const [logs, seed] = await Promise.all([
+      fetchMusicLogs(row.fal_request_id),
+      fetchMusicSeed(row.fal_request_id, row.status),
+    ]);
 
-    return successResponse({ generation: { ...toMusicGeneration(row), logs } });
+    return successResponse({ generation: { ...toMusicGeneration(row), seed, logs } });
   } catch (error) {
     console.error("Error fetching music generation:", error);
     return errorResponse("Internal server error", 500);
