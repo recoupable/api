@@ -1,4 +1,5 @@
 import { getCreditUsage } from "./getCreditUsage";
+import { usdToCredits } from "@/lib/credits/creditUnit";
 import { recordCreditDeduction } from "./recordCreditDeduction";
 import { LanguageModelUsage } from "ai";
 
@@ -49,7 +50,7 @@ export const handleChatCredits = async ({
 
   try {
     const usageCost = await getCreditUsage(usage, model, gatewayCostUsd);
-    const creditsToDeduct = Math.max(1, Math.round(usageCost * 100));
+    const creditsToDeduct = usdToCredits(usageCost);
 
     await recordCreditDeduction({
       accountId,
