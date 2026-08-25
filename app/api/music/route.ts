@@ -19,8 +19,12 @@ export async function OPTIONS() {
  * recoupable/docs#308). Body is validated by `validateCreateMusicBody` in
  * `lib/music/`.
  *
+ * Organizations are accounts, so an organization generation is scoped by
+ * sending the organization's id as `account_id`; there is no separate
+ * organization field.
+ *
  * @param request - JSON body `{ prompt, lyrics, duration?, seed?,
- *   num_inference_steps?, guidance_scale?, account_id?, organization_id? }`.
+ *   num_inference_steps?, guidance_scale?, account_id? }`.
  * @returns 202 with the accepted generation and a Location header, 400 on a
  *   bad body, 401 unauthenticated, 402 without credits, 403 on a denied
  *   override, or 500.
