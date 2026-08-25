@@ -95,11 +95,7 @@ export async function handleGitHubWebhook(request: Request): Promise<NextRespons
       callbackThreadId: threadId,
     });
 
-    await postGitHubComment(
-      fullRepo,
-      thread.prNumber,
-      `Got your feedback. Updating the PRs...\n\n[View Task](${getFrontendBaseUrl()}/tasks/${handle.id})`,
-    );
+    await postGitHubComment(fullRepo, thread.prNumber, "Got your feedback. Updating the PRs...");
 
     return NextResponse.json({ status: "update_triggered" }, { headers: getCorsHeaders() });
   } catch (error) {

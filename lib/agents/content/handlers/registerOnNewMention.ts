@@ -6,7 +6,6 @@ import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadine
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { parseContentPrompt } from "../parseContentPrompt";
 import { extractMessageAttachments } from "../extractMessageAttachments";
-import { buildTaskCard } from "@/lib/agents/buildTaskCard";
 
 /**
  * Registers the onNewMention handler on the content agent bot.
@@ -104,12 +103,9 @@ export function registerOnNewMention(bot: ContentAgentBot) {
       if (imageUrls.length > 0) {
         details.push(`- Images: ${imageUrls.length} attached`);
       }
-      const card = buildTaskCard(
-        "Content Generation Started",
-        `Generating content for *${artistSlug}*...\n${details.join("\n")}\n\nI'll reply here when ready (~5-10 min).`,
-        runIds[0],
+      await thread.post(
+        `Content Generation Started\nGenerating content for *${artistSlug}*...\n${details.join("\n")}\n\nI'll reply here when ready (~5-10 min).`,
       );
-      await thread.post({ card });
 
       // Set thread state
       await thread.setState({
