@@ -6,6 +6,8 @@ import { pollMusicGenerationStep } from "@/app/workflows/music/pollMusicGenerati
 import { fetchMusicResultStep } from "@/app/workflows/music/fetchMusicResultStep";
 import { storeMusicAudioStep } from "@/app/workflows/music/storeMusicAudioStep";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
+import { creditsForCompletedGeneration } from "@/lib/music/creditsForCompletedGeneration";
+import { notifyMusicGenerationStep } from "./notifyMusicGenerationStep";
 import { MUSIC_MODEL, MUSIC_MAX_POLL_ATTEMPTS, MUSIC_POLL_INTERVAL_MS } from "@/lib/music/const";
 
 export type MusicGenerationParams = {
@@ -34,8 +36,11 @@ export type MusicGenerationParams = {
 export async function musicGenerationWorkflow(generationId: string, params: MusicGenerationParams) {
   "use workflow";
 
+  // Hoisted so the catch can still name the owning account when notifying.
+  let generation: Awaited<ReturnType<typeof getMusicGenerationStep>> | undefined;
+
   try {
-    const generation = await getMusicGenerationStep(generationId);
+    generation = await getMusicGenerationStep(generationId);
 
     const requestId = await submitMusicGenerationStep({
       prompt: generation.prompt,
@@ -68,10 +73,18 @@ export async function musicGenerationWorkflow(generationId: string, params: Musi
     const result = await fetchMusicResultStep(requestId);
     const stored = await storeMusicAudioStep(generationId, result.audioUrl, result.contentType);
 
-    if (params.creditsToCharge > 0) {
+    // Charge for the audio fal actually produced, not the length requested.
+    // `params.creditsToCharge` is what the caller was gated and quoted on; it
+    // stays the ceiling, so the deduction only ever moves in their favour.
+    const creditsToDeduct = creditsForCompletedGeneration({
+      requestedSeconds: params.duration,
+      actualSeconds: result.durationSeconds,
+    });
+
+    if (creditsToDeduct > 0) {
       await recordCreditDeduction({
         accountId: generation.account_id,
-        creditsToDeduct: params.creditsToCharge,
+        creditsToDeduct,
         source: "api",
         provider: "fal",
         modelId: MUSIC_MODEL,
@@ -84,6 +97,14 @@ export async function musicGenerationWorkflow(generationId: string, params: Musi
       duration_seconds: result.durationSeconds,
     });
 
+    await notifyMusicGenerationStep(generation.account_id, {
+      generationId,
+      prompt: generation.prompt,
+      lyrics: generation.lyrics,
+      durationSeconds: result.durationSeconds,
+      status: "completed",
+    });
+
     return { success: true as const, generationId };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -94,6 +115,21 @@ export async function musicGenerationWorkflow(generationId: string, params: Musi
       status: "failed",
       error_message: message,
     }).catch(() => {});
+
+    // A generation that failed after the caller was gated on credits is the
+    // event most worth reacting to, so it notifies too. `generation` may be
+    // undefined if the failure happened before the row was read.
+    if (generation) {
+      await notifyMusicGenerationStep(generation.account_id, {
+        generationId,
+        prompt: generation.prompt,
+        lyrics: generation.lyrics,
+        durationSeconds: null,
+        status: "failed",
+        errorMessage: message,
+      });
+    }
+
     return { success: false as const, error: message };
   }
 }
