@@ -31,7 +31,7 @@ export async function handleFeedback(
       prs: state.prs,
     });
 
-    const handle = await triggerUpdatePR({
+    await triggerUpdatePR({
       feedback: messageText,
       snapshotId: state.snapshotId,
       branch: state.branch,

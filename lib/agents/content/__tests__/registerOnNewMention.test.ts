@@ -501,6 +501,8 @@ describe("registerOnNewMention", () => {
   });
 
   it("posts a plain-text acknowledgment after triggering", async () => {
+    const bot = createMockBot();
+    registerOnNewMention(bot as never);
     const thread = createMockThread();
     const message = createMockMessage("make a video");
     await bot.getHandler()!(thread, message);

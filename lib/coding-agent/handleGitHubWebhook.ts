@@ -6,7 +6,6 @@ import { extractPRComment } from "./extractPRComment";
 import { getCodingAgentPRState, setCodingAgentPRState } from "./prState";
 import { triggerUpdatePR } from "@/lib/trigger/triggerUpdatePR";
 import { postGitHubComment } from "./postGitHubComment";
-import { getFrontendBaseUrl } from "@/lib/composio/getFrontendBaseUrl";
 
 const BOT_MENTION = "@recoup-coding-agent";
 
@@ -87,7 +86,7 @@ export async function handleGitHubWebhook(request: Request): Promise<NextRespons
   const threadId = encodeGitHubThreadId(thread);
 
   try {
-    const handle = await triggerUpdatePR({
+    await triggerUpdatePR({
       feedback,
       snapshotId: prState.snapshotId,
       branch: prState.branch,
