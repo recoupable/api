@@ -9,6 +9,7 @@ import { deleteApiKey } from "@/lib/supabase/account_api_keys/deleteApiKey";
 import { buildRunAgentInput } from "@/lib/chat/buildRunAgentInput";
 import { start } from "workflow/api";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
+import { updateTriggerRunMetadata } from "@/lib/trigger/updateTriggerRunMetadata";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -34,6 +35,9 @@ vi.mock("workflow/api", () => ({
 vi.mock("@/app/lib/workflows/runAgentWorkflow", () => ({ runAgentWorkflow: vi.fn() }));
 vi.mock("@/lib/chat/compareAndSetChatActiveStreamId", () => ({
   compareAndSetChatActiveStreamId: vi.fn(async () => ({ ok: true, claimed: true })),
+}));
+vi.mock("@/lib/trigger/updateTriggerRunMetadata", () => ({
+  updateTriggerRunMetadata: vi.fn(async () => true),
 }));
 
 const req = () =>
@@ -139,5 +143,48 @@ describe("handleStartChatRun", () => {
     await handleStartChatRun({} as never);
 
     expect(compareAndSetChatActiveStreamId).toHaveBeenCalledWith("chat-1", null, "wrun_abc");
+  });
+});
+
+describe("handleStartChatRun trigger_run_id link (chat#2006 item 4a)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(provisionRunSession).mockResolvedValue(provisioned as never);
+    vi.mocked(mintEphemeralAccountKey).mockResolvedValue({
+      rawKey: "recoup_sk_raw",
+      keyId: "key-1",
+    });
+    vi.mocked(start).mockResolvedValue({ runId: "wrun_abc" } as never);
+  });
+
+  it("writes { sessionId, chatId, workflowRunId } to the Trigger run's metadata", async () => {
+    vi.mocked(validateChatRunRequest).mockResolvedValue({
+      ...validated,
+      triggerRunId: "run_trig",
+    } as never);
+    const res = await handleStartChatRun(req());
+    expect(res.status).toBe(202);
+    expect(updateTriggerRunMetadata).toHaveBeenCalledWith("run_trig", {
+      sessionId: "sess-1",
+      chatId: "chat-1",
+      workflowRunId: "wrun_abc",
+    });
+  });
+
+  it("skips the metadata write when no trigger_run_id was sent", async () => {
+    vi.mocked(validateChatRunRequest).mockResolvedValue(validated as never);
+    await handleStartChatRun(req());
+    expect(updateTriggerRunMetadata).not.toHaveBeenCalled();
+  });
+
+  it("still returns 202 when the metadata write fails (best-effort link)", async () => {
+    vi.mocked(validateChatRunRequest).mockResolvedValue({
+      ...validated,
+      triggerRunId: "run_trig",
+    } as never);
+    vi.mocked(updateTriggerRunMetadata).mockResolvedValueOnce(false);
+    const res = await handleStartChatRun(req());
+    expect(res.status).toBe(202);
+    expect(await res.json()).toEqual({ runId: "wrun_abc", chatId: "chat-1", sessionId: "sess-1" });
   });
 });

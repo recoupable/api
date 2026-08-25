@@ -9,6 +9,7 @@ import { deleteApiKey } from "@/lib/supabase/account_api_keys/deleteApiKey";
 import { buildRunAgentInput } from "@/lib/chat/buildRunAgentInput";
 import { runAgentWorkflow } from "@/app/lib/workflows/runAgentWorkflow";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
+import { linkTriggerRunToWorkflow } from "@/lib/chat/runs/linkTriggerRunToWorkflow";
 
 /** Default title for the session a headless run provisions (no caller-supplied title). */
 const DEFAULT_RUN_SESSION_TITLE = "Scheduled generation";
@@ -38,7 +39,7 @@ export async function handleStartChatRun(request: NextRequest): Promise<Response
   const validated = await validateChatRunRequest(request);
   if (validated instanceof NextResponse) return validated;
 
-  const { accountId, messages, artistId, modelId } = validated;
+  const { accountId, messages, artistId, modelId, triggerRunId } = validated;
 
   let ephemeralKeyId: string | undefined;
   try {
@@ -84,6 +85,17 @@ export async function handleStartChatRun(request: NextRequest): Promise<Response
         "[handleStartChatRun] could not claim active_stream_id; run is not resumable:",
         { chatId: provisioned.chat.id, runId: run.runId },
       );
+    }
+
+    // A scheduled task started this run: link its Trigger run to the work
+    // (chat#2006 item 4a). Best-effort, like the stream claim above.
+    if (triggerRunId) {
+      await linkTriggerRunToWorkflow({
+        triggerRunId,
+        sessionId: provisioned.session.id,
+        chatId: provisioned.chat.id,
+        workflowRunId: run.runId,
+      });
     }
 
     // Return the run handle plus the persisted-output identifiers so the caller
