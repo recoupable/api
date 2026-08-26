@@ -22,6 +22,8 @@ export const chatRunBodySchema = z.object({
   accountId: z.string().optional(),
   organizationId: z.string().optional(),
   model: z.string().optional(),
+  /** Trigger.dev run id of the scheduled task kicking this run off (chat#2006 item 4a). */
+  trigger_run_id: z.string().optional(),
 });
 
 export type ChatRunRequest = {
@@ -30,6 +32,8 @@ export type ChatRunRequest = {
   messages: UIMessage[];
   artistId?: string;
   modelId: string;
+  /** Present when a scheduled task started the run; the workflow's ids are written back to it. */
+  triggerRunId?: string;
 };
 
 /**
@@ -57,7 +61,8 @@ export async function validateChatRunRequest(
     return validationErrorResponse(firstError.message, firstError.path);
   }
 
-  const { prompt, messages, artistId, accountId, organizationId, model } = parsed.data;
+  const { prompt, messages, artistId, accountId, organizationId, model, trigger_run_id } =
+    parsed.data;
 
   const trimmedPrompt = typeof prompt === "string" ? prompt.trim() : "";
   const hasPrompt = trimmedPrompt.length > 0;
@@ -86,5 +91,6 @@ export async function validateChatRunRequest(
     messages: uiMessages,
     artistId,
     modelId: trimmedModel || DEFAULT_MODEL,
+    triggerRunId: trigger_run_id,
   };
 }
