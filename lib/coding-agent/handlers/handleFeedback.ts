@@ -1,5 +1,4 @@
 import type { Thread } from "chat";
-import { buildTaskCard } from "@/lib/agents/buildTaskCard";
 import { triggerUpdatePR } from "@/lib/trigger/triggerUpdatePR";
 import { setCodingAgentPRState } from "../prState";
 import type { CodingAgentThreadState } from "../types";
@@ -32,7 +31,7 @@ export async function handleFeedback(
       prs: state.prs,
     });
 
-    const handle = await triggerUpdatePR({
+    await triggerUpdatePR({
       feedback: messageText,
       snapshotId: state.snapshotId,
       branch: state.branch,
@@ -40,8 +39,7 @@ export async function handleFeedback(
       callbackThreadId: thread.id,
     });
 
-    const card = buildTaskCard("Updating PRs", "Got your feedback. Updating the PRs...", handle.id);
-    await thread.post({ card });
+    await thread.post("Updating PRs\nGot your feedback. Updating the PRs...");
     return true;
   }
 
