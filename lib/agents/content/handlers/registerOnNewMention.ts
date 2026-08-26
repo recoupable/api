@@ -87,7 +87,7 @@ export function registerOnNewMention(bot: ContentAgentBot) {
         return;
       }
 
-      // Post View Task card with details and the first run ID
+      // Acknowledge in the thread with the request details
       const details = [
         `- Artist: *${artistSlug}*`,
         `- Template: ${template}`,
