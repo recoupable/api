@@ -30,4 +30,13 @@ describe("retrieveScheduleInfo", () => {
     vi.mocked(schedules.retrieve).mockRejectedValue(new Error("boom"));
     await expect(retrieveScheduleInfo("sched_missing")).resolves.toEqual({});
   });
+
+  it("gives up with an empty object when Trigger.dev hangs, so /api/tasks is never blocked", async () => {
+    vi.useFakeTimers();
+    vi.mocked(schedules.retrieve).mockReturnValue(new Promise(() => {}) as never);
+    const pending = retrieveScheduleInfo("sched_hung");
+    await vi.advanceTimersByTimeAsync(6000);
+    await expect(pending).resolves.toEqual({});
+    vi.useRealTimers();
+  });
 });
