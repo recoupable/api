@@ -66,9 +66,7 @@ describe("registerOnNewMention", () => {
 
     expect(mockThread.subscribe).toHaveBeenCalledOnce();
     expect(mockTriggerCodingAgent).toHaveBeenCalled();
-    expect(mockThread.post).toHaveBeenCalledWith(
-      expect.objectContaining({ card: expect.anything() }),
-    );
+    expect(mockThread.post).toHaveBeenCalledWith(expect.stringContaining("Starting work on"));
     expect(mockThread.setState).toHaveBeenCalledWith(
       expect.objectContaining({
         status: "running",
@@ -118,9 +116,7 @@ describe("registerOnNewMention", () => {
         repo: "recoupable/tasks",
       }),
     );
-    expect(mockThread.post).toHaveBeenCalledWith(
-      expect.objectContaining({ card: expect.anything() }),
-    );
+    expect(mockThread.post).toHaveBeenCalledWith(expect.stringContaining("Updating the PRs"));
     expect(mockThread.setState).toHaveBeenCalledWith(
       expect.objectContaining({ status: "updating" }),
     );

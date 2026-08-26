@@ -32,7 +32,14 @@ describe("handleChatRunStatus", () => {
     vi.mocked(getRun).mockReturnValue({ status: Promise.resolve("running") } as never);
     const res = await handleChatRunStatus(req(), "wrun_abc");
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ runId: "wrun_abc", status: "running" });
+    expect(await res.json()).toEqual({
+      runId: "wrun_abc",
+      status: "running",
+      createdAt: null,
+      startedAt: null,
+      completedAt: null,
+      durationMs: null,
+    });
   });
 
   it("normalizes pending → running and completed/failed/cancelled through", async () => {
@@ -63,5 +70,65 @@ describe("handleChatRunStatus", () => {
     });
     const res = await handleChatRunStatus(req(), "wrun_missing");
     expect(res.status).toBe(404);
+  });
+});
+
+describe("handleChatRunStatus timing (chat#2006 item 4a)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+  });
+
+  it("returns createdAt / startedAt / completedAt / durationMs from the workflow run", async () => {
+    vi.mocked(getRun).mockReturnValue({
+      status: Promise.resolve("completed"),
+      createdAt: Promise.resolve(new Date("2026-08-25T19:33:56.000Z")),
+      startedAt: Promise.resolve(new Date("2026-08-25T19:34:16.386Z")),
+      completedAt: Promise.resolve(new Date("2026-08-25T20:15:55.000Z")),
+    } as never);
+    const res = await handleChatRunStatus(req(), "wrun_abc");
+    expect(await res.json()).toEqual({
+      runId: "wrun_abc",
+      status: "completed",
+      createdAt: "2026-08-25T19:33:56.000Z",
+      startedAt: "2026-08-25T19:34:16.386Z",
+      completedAt: "2026-08-25T20:15:55.000Z",
+      durationMs: 2498614,
+    });
+  });
+
+  it("nulls the timing fields that are not set yet on a running run", async () => {
+    vi.mocked(getRun).mockReturnValue({
+      status: Promise.resolve("running"),
+      createdAt: Promise.resolve(new Date("2026-08-25T19:33:56.000Z")),
+      startedAt: Promise.resolve(new Date("2026-08-25T19:34:16.386Z")),
+      completedAt: Promise.resolve(undefined),
+    } as never);
+    const body = await (await handleChatRunStatus(req(), "wrun_abc")).json();
+    expect(body.startedAt).toBe("2026-08-25T19:34:16.386Z");
+    expect(body.completedAt).toBeNull();
+    expect(body.durationMs).toBeNull();
+  });
+});
+
+describe("handleChatRunStatus timing resilience (api#858 review)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+  });
+
+  it("still returns 200 with null timing when a timing getter rejects but status resolves", async () => {
+    vi.mocked(getRun).mockReturnValue({
+      status: Promise.resolve("running"),
+      createdAt: Promise.resolve(new Date("2026-08-25T19:33:56.000Z")),
+      startedAt: Promise.reject(new Error("transient")),
+      completedAt: Promise.resolve(undefined),
+    } as never);
+    const res = await handleChatRunStatus(req(), "wrun_abc");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("running");
+    expect(body.createdAt).toBe("2026-08-25T19:33:56.000Z");
+    expect(body.startedAt).toBeNull();
   });
 });
