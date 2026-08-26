@@ -1,5 +1,4 @@
 import type { CodingAgentBot } from "../bot";
-import { buildTaskCard } from "@/lib/agents/buildTaskCard";
 import { triggerCodingAgent } from "@/lib/trigger/triggerCodingAgent";
 import { resolvePRState } from "../resolvePRState";
 import { handleFeedback } from "./handleFeedback";
@@ -33,12 +32,9 @@ export function registerOnNewMention(bot: CodingAgentBot) {
         callbackThreadId: thread.id,
       });
 
-      const card = buildTaskCard(
-        "Task Started",
-        `Starting work on: "${prompt}"\n\nI'll reply here when done.`,
-        handle.id,
+      await thread.post(
+        `Task Started\nStarting work on: "${prompt}"\n\nI'll reply here when done.`,
       );
-      await thread.post({ card });
 
       await thread.setState({
         status: "running",
