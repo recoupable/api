@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { enrichTasks } from "../enrichTasks";
 import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
-import { retrieveScheduleTimezone } from "@/lib/trigger/retrieveScheduleTimezone";
+import { retrieveScheduleInfo } from "@/lib/trigger/retrieveScheduleInfo";
+import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
 vi.mock("@/lib/trigger/fetchTriggerRuns", () => ({
@@ -13,8 +14,12 @@ vi.mock("@/lib/trigger/retrieveTaskRun", () => ({
   retrieveTaskRun: vi.fn(),
 }));
 
-vi.mock("@/lib/trigger/retrieveScheduleTimezone", () => ({
-  retrieveScheduleTimezone: vi.fn(),
+vi.mock("@/lib/trigger/retrieveScheduleInfo", () => ({
+  retrieveScheduleInfo: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/accounts/selectAccounts", () => ({
+  selectAccounts: vi.fn(async () => [{ id: "artist-789", name: "Braden Bales" }]),
 }));
 
 vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
@@ -49,12 +54,12 @@ const mockRun = {
 describe("enrichTasks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(retrieveScheduleTimezone).mockResolvedValue(undefined);
+    vi.mocked(retrieveScheduleInfo).mockResolvedValue({});
   });
 
   it("returns recent_runs, upcoming, owner_email, and the schedule's timezone", async () => {
     vi.mocked(fetchTriggerRuns).mockResolvedValue([mockRun] as never);
-    vi.mocked(retrieveScheduleTimezone).mockResolvedValue("America/New_York");
+    vi.mocked(retrieveScheduleInfo).mockResolvedValue({ timezone: "America/New_York" });
     vi.mocked(retrieveTaskRun).mockResolvedValue({
       ...mockRun,
       payload: {
@@ -78,11 +83,12 @@ describe("enrichTasks", () => {
         recent_runs: [mockRun],
         upcoming: ["2026-03-27T09:00:00Z", "2026-04-03T09:00:00Z"],
         owner_email: "owner@example.com",
+        artist_name: "Braden Bales",
         timezone: "America/New_York",
       },
     ]);
     expect(fetchTriggerRuns).toHaveBeenCalledWith({ "filter[schedule]": "sched_abc" }, 5);
-    expect(retrieveScheduleTimezone).toHaveBeenCalledWith("sched_abc");
+    expect(retrieveScheduleInfo).toHaveBeenCalledWith("sched_abc");
     expect(selectAccountEmails).toHaveBeenCalledWith({ accountIds: ["account-456"] });
   });
 
@@ -98,11 +104,12 @@ describe("enrichTasks", () => {
         recent_runs: [],
         upcoming: [],
         owner_email: null,
+        artist_name: "Braden Bales",
         timezone: null,
       },
     ]);
     expect(fetchTriggerRuns).not.toHaveBeenCalled();
-    expect(retrieveScheduleTimezone).not.toHaveBeenCalled();
+    expect(retrieveScheduleInfo).not.toHaveBeenCalled();
   });
 
   it("returns empty enrichment (timezone null) when Trigger.dev fails", async () => {
@@ -117,6 +124,7 @@ describe("enrichTasks", () => {
         recent_runs: [],
         upcoming: [],
         owner_email: null,
+        artist_name: "Braden Bales",
         timezone: null,
       },
     ]);
@@ -124,7 +132,7 @@ describe("enrichTasks", () => {
 
   it("returns empty upcoming but still the timezone when no runs exist", async () => {
     vi.mocked(fetchTriggerRuns).mockResolvedValue([] as never);
-    vi.mocked(retrieveScheduleTimezone).mockResolvedValue("UTC");
+    vi.mocked(retrieveScheduleInfo).mockResolvedValue({ timezone: "UTC" });
     vi.mocked(selectAccountEmails).mockResolvedValue([]);
 
     const result = await enrichTasks([mockTask]);
@@ -135,9 +143,45 @@ describe("enrichTasks", () => {
         recent_runs: [],
         upcoming: [],
         owner_email: null,
+        artist_name: "Braden Bales",
         timezone: "UTC",
       },
     ]);
     expect(retrieveTaskRun).not.toHaveBeenCalled();
+  });
+
+  it("labels the task with its artist's display name (chat#2006 item 6)", async () => {
+    vi.mocked(fetchTriggerRuns).mockResolvedValue([]);
+    const [task] = await enrichTasks([mockTask]);
+    expect(selectAccounts).toHaveBeenCalledWith(["artist-789"]);
+    expect(task.artist_name).toBe("Braden Bales");
+  });
+
+  it("nulls artist_name when the artist account no longer exists", async () => {
+    vi.mocked(fetchTriggerRuns).mockResolvedValue([]);
+    vi.mocked(selectAccounts).mockResolvedValueOnce([]);
+    const [task] = await enrichTasks([mockTask]);
+    expect(task.artist_name).toBeNull();
+  });
+
+  it("falls back to the schedule's next fire time for upcoming when the task has never run", async () => {
+    vi.mocked(fetchTriggerRuns).mockResolvedValue([]);
+    vi.mocked(retrieveScheduleInfo).mockResolvedValue({
+      timezone: "UTC",
+      nextRun: "2026-08-31T14:00:00.000Z",
+    });
+    const [task] = await enrichTasks([mockTask]);
+    expect(task.upcoming).toEqual(["2026-08-31T14:00:00.000Z"]);
+  });
+
+  it("keeps the run payload's upcoming over the schedule fallback when a run exists", async () => {
+    vi.mocked(fetchTriggerRuns).mockResolvedValue([mockRun] as never);
+    vi.mocked(retrieveScheduleInfo).mockResolvedValue({ nextRun: "2026-09-07T14:00:00.000Z" });
+    vi.mocked(retrieveTaskRun).mockResolvedValue({
+      ...mockRun,
+      payload: { upcoming: ["2026-08-31T14:00:00.000Z"] },
+    } as never);
+    const [task] = await enrichTasks([mockTask]);
+    expect(task.upcoming).toEqual(["2026-08-31T14:00:00.000Z"]);
   });
 });

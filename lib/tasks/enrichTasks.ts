@@ -1,7 +1,8 @@
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { fetchTriggerRuns, type TriggerRun } from "@/lib/trigger/fetchTriggerRuns";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
-import { retrieveScheduleTimezone } from "@/lib/trigger/retrieveScheduleTimezone";
+import { retrieveScheduleInfo } from "@/lib/trigger/retrieveScheduleInfo";
+import { selectAccounts } from "@/lib/supabase/accounts/selectAccounts";
 import type { Tables } from "@/types/database.types";
 
 type ScheduledAction = Tables<"scheduled_actions">;
@@ -12,6 +13,8 @@ export type EnrichedTask = ScheduledAction & {
   owner_email: string | null;
   /** IANA timezone read from the Trigger.dev schedule (source of truth); null when unavailable. */
   timezone: string | null;
+  /** Display name of the artist account the task runs for; null when it no longer exists (chat#2006 item 6). */
+  artist_name: string | null;
 };
 
 interface TriggerInfo {
@@ -38,14 +41,18 @@ export async function enrichTasks(tasks: ScheduledAction[]): Promise<EnrichedTas
       }
 
       try {
-        // The schedule owns the timezone (chat#1881 3c) — read it back so the
-        // edit UI can prefill the current zone. Runs in parallel with the runs.
-        const [recentRuns, timezone] = await Promise.all([
+        // The schedule owns the timezone (chat#1881 3c) and, for a task that
+        // has never run, the only known next fire time (chat#2006 item 6).
+        // Runs in parallel with the runs.
+        const [recentRuns, schedule] = await Promise.all([
           fetchTriggerRuns({ "filter[schedule]": scheduleId }, 5),
-          retrieveScheduleTimezone(scheduleId),
+          retrieveScheduleInfo(scheduleId),
         ]);
+        const timezone = schedule.timezone;
 
-        let upcoming: string[] = [];
+        // A run's payload carries the schedule's upcoming fire times; before
+        // the first run only the schedule itself knows the next one.
+        let upcoming: string[] = schedule.nextRun ? [schedule.nextRun] : [];
 
         const latestRun = recentRuns[0];
         if (latestRun) {
@@ -73,12 +80,17 @@ export async function enrichTasks(tasks: ScheduledAction[]): Promise<EnrichedTas
     }),
   );
 
-  const [triggerInfoEntries, accountEmails] = await Promise.all([
+  const [triggerInfoEntries, accountEmails, artistAccounts] = await Promise.all([
     triggerInfoEntriesPromise,
     selectAccountEmails({
       accountIds: [...new Set(tasks.map(task => task.account_id))],
     }),
+    selectAccounts([...new Set(tasks.map(task => task.artist_account_id))]),
   ]);
+
+  const artistNameById = new Map<string, string | null>(
+    artistAccounts.map(account => [account.id, account.name] as const),
+  );
 
   const emailByAccountId = new Map<string, string>(
     accountEmails.flatMap(accountEmail =>
@@ -93,6 +105,7 @@ export async function enrichTasks(tasks: ScheduledAction[]): Promise<EnrichedTas
   return tasks.map(task => ({
     ...task,
     ...triggerInfoMap.get(task.id)!,
+    artist_name: artistNameById.get(task.artist_account_id) ?? null,
     owner_email: emailByAccountId.get(task.account_id) ?? null,
   }));
 }
