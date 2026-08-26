@@ -110,3 +110,25 @@ describe("handleChatRunStatus timing (chat#2006 item 4a)", () => {
     expect(body.durationMs).toBeNull();
   });
 });
+
+describe("handleChatRunStatus timing resilience (api#858 review)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+  });
+
+  it("still returns 200 with null timing when a timing getter rejects but status resolves", async () => {
+    vi.mocked(getRun).mockReturnValue({
+      status: Promise.resolve("running"),
+      createdAt: Promise.resolve(new Date("2026-08-25T19:33:56.000Z")),
+      startedAt: Promise.reject(new Error("transient")),
+      completedAt: Promise.resolve(undefined),
+    } as never);
+    const res = await handleChatRunStatus(req(), "wrun_abc");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("running");
+    expect(body.createdAt).toBe("2026-08-25T19:33:56.000Z");
+    expect(body.startedAt).toBeNull();
+  });
+});

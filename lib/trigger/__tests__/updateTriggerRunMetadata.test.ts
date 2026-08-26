@@ -56,3 +56,13 @@ describe("updateTriggerRunMetadata", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+describe("updateTriggerRunMetadata timeout", () => {
+  it("bounds the request with an abort signal so a hung Trigger.dev cannot stall the 202", async () => {
+    process.env.TRIGGER_SECRET_KEY = "tr_test_key";
+    global.fetch = vi.fn().mockResolvedValue({ ok: true }) as unknown as typeof fetch;
+    await updateTriggerRunMetadata("run_abc", { chatId: "c" });
+    const init = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+});

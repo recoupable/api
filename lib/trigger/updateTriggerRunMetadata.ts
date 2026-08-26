@@ -11,6 +11,8 @@
  * @param metadata - Flat key/value pairs to merge onto the run's metadata
  * @returns true when Trigger.dev accepted the write
  */
+const METADATA_TIMEOUT_MS = 5000;
+
 export async function updateTriggerRunMetadata(
   runId: string,
   metadata: Record<string, string>,
@@ -26,6 +28,9 @@ export async function updateTriggerRunMetadata(
       method: "PUT",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ metadata }),
+      // A hung Trigger.dev must not stall the caller's 202; a timeout is the
+      // same best-effort false as any other failure.
+      signal: AbortSignal.timeout(METADATA_TIMEOUT_MS),
     });
     if (!response.ok) {
       console.error(`[updateTriggerRunMetadata] ${runId}: Trigger.dev ${response.status}`);

@@ -92,6 +92,7 @@ export async function handleStartChatRun(request: NextRequest): Promise<Response
     if (triggerRunId) {
       await linkTriggerRunToWorkflow({
         triggerRunId,
+        accountId,
         sessionId: provisioned.session.id,
         chatId: provisioned.chat.id,
         workflowRunId: run.runId,

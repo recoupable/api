@@ -9,7 +9,7 @@ import { deleteApiKey } from "@/lib/supabase/account_api_keys/deleteApiKey";
 import { buildRunAgentInput } from "@/lib/chat/buildRunAgentInput";
 import { start } from "workflow/api";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
-import { updateTriggerRunMetadata } from "@/lib/trigger/updateTriggerRunMetadata";
+import { linkTriggerRunToWorkflow } from "@/lib/chat/runs/linkTriggerRunToWorkflow";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -36,8 +36,8 @@ vi.mock("@/app/lib/workflows/runAgentWorkflow", () => ({ runAgentWorkflow: vi.fn
 vi.mock("@/lib/chat/compareAndSetChatActiveStreamId", () => ({
   compareAndSetChatActiveStreamId: vi.fn(async () => ({ ok: true, claimed: true })),
 }));
-vi.mock("@/lib/trigger/updateTriggerRunMetadata", () => ({
-  updateTriggerRunMetadata: vi.fn(async () => true),
+vi.mock("@/lib/chat/runs/linkTriggerRunToWorkflow", () => ({
+  linkTriggerRunToWorkflow: vi.fn(async () => undefined),
 }));
 
 const req = () =>
@@ -164,7 +164,9 @@ describe("handleStartChatRun trigger_run_id link (chat#2006 item 4a)", () => {
     } as never);
     const res = await handleStartChatRun(req());
     expect(res.status).toBe(202);
-    expect(updateTriggerRunMetadata).toHaveBeenCalledWith("run_trig", {
+    expect(linkTriggerRunToWorkflow).toHaveBeenCalledWith({
+      triggerRunId: "run_trig",
+      accountId: "acc-1",
       sessionId: "sess-1",
       chatId: "chat-1",
       workflowRunId: "wrun_abc",
@@ -174,7 +176,7 @@ describe("handleStartChatRun trigger_run_id link (chat#2006 item 4a)", () => {
   it("skips the metadata write when no trigger_run_id was sent", async () => {
     vi.mocked(validateChatRunRequest).mockResolvedValue(validated as never);
     await handleStartChatRun(req());
-    expect(updateTriggerRunMetadata).not.toHaveBeenCalled();
+    expect(linkTriggerRunToWorkflow).not.toHaveBeenCalled();
   });
 
   it("still returns 202 when the metadata write fails (best-effort link)", async () => {
@@ -182,7 +184,7 @@ describe("handleStartChatRun trigger_run_id link (chat#2006 item 4a)", () => {
       ...validated,
       triggerRunId: "run_trig",
     } as never);
-    vi.mocked(updateTriggerRunMetadata).mockResolvedValueOnce(false);
+    vi.mocked(linkTriggerRunToWorkflow).mockResolvedValueOnce(undefined);
     const res = await handleStartChatRun(req());
     expect(res.status).toBe(202);
     expect(await res.json()).toEqual({ runId: "wrun_abc", chatId: "chat-1", sessionId: "sess-1" });

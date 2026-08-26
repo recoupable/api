@@ -21,25 +21,23 @@ export async function handleChatRunStatus(request: NextRequest, runId: string): 
   const auth = await validateAuthContext(request);
   if (auth instanceof NextResponse) return auth;
 
+  // `status` alone decides whether the run exists (404). Timing comes from
+  // the same run (chat#2006 item 4a) but is best-effort: a getter that
+  // rejects yields null for that field rather than turning a live run into
+  // a 404.
+  let run: ReturnType<typeof getRun>;
   let rawStatus: string;
-  let createdAt: Date | undefined;
-  let startedAt: Date | undefined;
-  let completedAt: Date | undefined;
   try {
-    const run = getRun(runId);
-    [rawStatus, createdAt, startedAt, completedAt] = await Promise.all([
-      run.status,
-      run.createdAt,
-      run.startedAt,
-      run.completedAt,
-    ]);
+    run = getRun(runId);
+    rawStatus = await run.status;
   } catch (error) {
     console.error(`[handleChatRunStatus] run not found ${runId}:`, error);
     return errorResponse("Run not found", 404);
   }
+  const [createdAt, startedAt, completedAt] = (
+    await Promise.allSettled([run.createdAt, run.startedAt, run.completedAt])
+  ).map(result => (result.status === "fulfilled" ? result.value : undefined));
 
-  // Timing straight from the workflow run (chat#2006 item 4a) so the run
-  // page can show a real timeline; null until each milestone is reached.
   const durationMs = startedAt && completedAt ? completedAt.getTime() - startedAt.getTime() : null;
 
   return NextResponse.json(
