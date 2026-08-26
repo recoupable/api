@@ -33,13 +33,6 @@ vi.mock("../extractMessageAttachments", () => ({
   extractMessageAttachments: vi.fn(),
 }));
 
-vi.mock("@/lib/agents/buildTaskCard", () => ({
-  buildTaskCard: vi.fn((_title: string, _message: string, _runId: string) => ({
-    mockCard: true,
-  })),
-}));
-
-const { buildTaskCard } = await import("@/lib/agents/buildTaskCard");
 const { triggerCreateContent } = await import("@/lib/trigger/triggerCreateContent");
 const { triggerPollContentRun } = await import("@/lib/trigger/triggerPollContentRun");
 const { resolveArtistSlug } = await import("@/lib/content/resolveArtistSlug");
@@ -282,14 +275,14 @@ describe("registerOnNewMention", () => {
     const message = createMockMessage("make 2 lipsync videos");
     await bot.getHandler()!(thread, message);
 
-    const cardBody = vi.mocked(buildTaskCard).mock.calls[0][1];
+    const cardBody = vi.mocked(thread.post).mock.calls[0][0] as string;
     expect(cardBody).toContain("*test-artist*");
     expect(cardBody).not.toContain("**");
     expect(cardBody).toContain("Lipsync:");
     expect(cardBody).toContain("Videos:");
   });
 
-  it("posts only one message on success (the View Task card)", async () => {
+  it("posts only one plain-text message on success (no View Task link)", async () => {
     const bot = createMockBot();
     registerOnNewMention(bot as never);
 
@@ -312,7 +305,10 @@ describe("registerOnNewMention", () => {
     await bot.getHandler()!(thread, message);
 
     expect(thread.post).toHaveBeenCalledTimes(1);
-    expect(thread.post).toHaveBeenCalledWith({ card: { mockCard: true } });
+    const posted = vi.mocked(thread.post).mock.calls[0][0] as string;
+    expect(posted).toContain("Content Generation Started");
+    expect(posted).not.toContain("/tasks/");
+    expect(posted).not.toContain("run-abc-123");
   });
 
   it("adds song URL to songs array when audio is attached", async () => {
@@ -471,7 +467,7 @@ describe("registerOnNewMention", () => {
     const message = createMockMessage("make a video");
     await bot.getHandler()!(thread, message);
 
-    const cardBody = vi.mocked(buildTaskCard).mock.calls[0][1];
+    const cardBody = vi.mocked(thread.post).mock.calls[0][0] as string;
     expect(cardBody).toContain("Audio: attached file");
     expect(cardBody).toContain("Images: 1 attached");
   });
@@ -499,71 +495,21 @@ describe("registerOnNewMention", () => {
     const message = createMockMessage("make a video for hiccups");
     await bot.getHandler()!(thread, message);
 
-    const cardBody = vi.mocked(buildTaskCard).mock.calls[0][1];
+    const cardBody = vi.mocked(thread.post).mock.calls[0][0] as string;
     expect(cardBody).toContain("Songs:");
     expect(cardBody).toContain("hiccups");
   });
 
-  it("posts a View Task card with the first run ID after triggering", async () => {
+  it("posts a plain-text acknowledgment after triggering", async () => {
     const bot = createMockBot();
     registerOnNewMention(bot as never);
-
-    vi.mocked(parseContentPrompt).mockResolvedValue({
-      lipsync: false,
-      batch: 1,
-      captionLength: "short",
-      upscale: false,
-      template: "artist-caption-bedroom",
-    });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-abc-123" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
-
     const thread = createMockThread();
     const message = createMockMessage("make a video");
     await bot.getHandler()!(thread, message);
 
-    expect(buildTaskCard).toHaveBeenCalledWith(
-      "Content Generation Started",
-      expect.stringContaining("test-artist"),
-      "run-abc-123",
-    );
-    // Second post call is the card
-    expect(thread.post).toHaveBeenCalledWith({ card: { mockCard: true } });
-  });
-
-  it("uses the first run ID for View Task card when batch triggers multiple runs", async () => {
-    const bot = createMockBot();
-    registerOnNewMention(bot as never);
-
-    vi.mocked(parseContentPrompt).mockResolvedValue({
-      lipsync: false,
-      batch: 3,
-      captionLength: "short",
-      upscale: false,
-      template: "artist-caption-bedroom",
-    });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
-    vi.mocked(getArtistContentReadiness).mockResolvedValue({
-      githubRepo: "https://github.com/test/repo",
-    } as never);
-    vi.mocked(triggerCreateContent)
-      .mockResolvedValueOnce({ id: "run-first" })
-      .mockResolvedValueOnce({ id: "run-second" })
-      .mockResolvedValueOnce({ id: "run-third" });
-    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
-
-    const thread = createMockThread();
-    const message = createMockMessage("make 3 videos");
-    await bot.getHandler()!(thread, message);
-
-    expect(buildTaskCard).toHaveBeenCalledWith(
-      "Content Generation Started",
-      expect.any(String),
-      "run-first",
+    expect(thread.post).toHaveBeenCalledWith(expect.stringContaining("test-artist"));
+    expect(thread.post).not.toHaveBeenCalledWith(
+      expect.objectContaining({ card: expect.anything() }),
     );
   });
 });
