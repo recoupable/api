@@ -43,7 +43,6 @@ export interface FormattedArtist
     }
   >;
   pinned: boolean;
-  isWorkspace?: boolean;
 }
 
 /**
