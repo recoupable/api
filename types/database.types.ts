@@ -2799,9 +2799,7 @@ export type Database = {
           created_at: string | null;
           enabled: boolean | null;
           id: string;
-          last_run: string | null;
           model: string | null;
-          next_run: string | null;
           prompt: string;
           schedule: string;
           title: string;
@@ -2814,9 +2812,7 @@ export type Database = {
           created_at?: string | null;
           enabled?: boolean | null;
           id?: string;
-          last_run?: string | null;
           model?: string | null;
-          next_run?: string | null;
           prompt: string;
           schedule: string;
           title: string;
@@ -2829,9 +2825,7 @@ export type Database = {
           created_at?: string | null;
           enabled?: boolean | null;
           id?: string;
-          last_run?: string | null;
           model?: string | null;
-          next_run?: string | null;
           prompt?: string;
           schedule?: string;
           title?: string;

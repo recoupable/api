@@ -36,8 +36,6 @@ const mockTask = {
   trigger_schedule_id: "sched_abc",
   enabled: true,
   created_at: "2026-01-01T00:00:00Z",
-  next_run: null,
-  last_run: null,
   model: null,
   updated_at: null,
 } as Parameters<typeof enrichTasks>[0][number];
