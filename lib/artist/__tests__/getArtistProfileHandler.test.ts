@@ -23,7 +23,7 @@ beforeEach(() => {
 });
 
 describe("getArtistProfileHandler", () => {
-  it("returns 200 with the profile and public cache headers, no auth consulted", async () => {
+  it("returns 200 with the profile and CORS headers, no auth consulted", async () => {
     const profile = { id: ARTIST, name: "Brauxelion", image: null, socials: [], catalogs: [] };
     getArtistPublicProfileMock.mockResolvedValue(profile);
 
@@ -31,9 +31,18 @@ describe("getArtistProfileHandler", () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual(profile);
-    expect(res.headers.get("Cache-Control")).toBe(
-      "public, s-maxage=300, stale-while-revalidate=600",
-    );
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+  });
+
+  // Every neighbouring artist route is dynamic and sets no Cache-Control; a
+  // shared-cache directive here let the CDN serve writes minutes late
+  // (recoupable/app#1984), so the response must carry none.
+  it("sets no Cache-Control header, so no shared cache can hold a stale profile", async () => {
+    getArtistPublicProfileMock.mockResolvedValue({ id: ARTIST, name: "Brauxelion" });
+
+    const res = await getArtistProfileHandler(req(), ARTIST);
+
+    expect(res.headers.get("Cache-Control")).toBeNull();
   });
 
   it("returns 404 when the account is not an artist", async () => {

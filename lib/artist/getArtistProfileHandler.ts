@@ -13,6 +13,10 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * unknown id and a non-artist account all get the identical 404, so the
  * endpoint cannot be used to probe which account ids exist.
  *
+ * Dynamic like every other artist route: the response sets no Cache-Control,
+ * so a write (socials, name, image, roster, catalog) is visible on the next
+ * request instead of after a CDN TTL (recoupable/app#1984).
+ *
  * @param request - The incoming request.
  * @param id - The artist account id from the route params.
  * @returns A NextResponse with the profile, 404, or 500.
@@ -27,13 +31,7 @@ export async function getArtistProfileHandler(
     const profile = await getArtistPublicProfile(id);
     if (!profile) return errorResponse("Artist not found", 404);
 
-    return NextResponse.json(profile, {
-      status: 200,
-      headers: {
-        ...getCorsHeaders(),
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-      },
-    });
+    return NextResponse.json(profile, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
     console.error("[ERROR] getArtistProfileHandler:", error);
     return errorResponse("Internal server error", 500);
