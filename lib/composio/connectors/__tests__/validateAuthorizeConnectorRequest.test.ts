@@ -112,31 +112,6 @@ describe("validateAuthorizeConnectorRequest", () => {
     });
   });
 
-  it("should allow any connector for workspace account_id", async () => {
-    const mockAccountId = "account-123";
-    const mockTargetAccountId = "550e8400-e29b-41d4-a716-446655440000";
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: mockAccountId,
-      orgId: null,
-      authToken: "test-token",
-    });
-    vi.mocked(checkConnectorAuthority).mockResolvedValue(true);
-
-    const request = new NextRequest("http://localhost/api/connectors/authorize", {
-      method: "POST",
-      body: JSON.stringify({ connector: "googlesheets", account_id: mockTargetAccountId }),
-    });
-    const result = await validateAuthorizeConnectorRequest(request);
-
-    expect(result).not.toBeInstanceOf(NextResponse);
-    expect(result).toEqual({
-      accountId: mockTargetAccountId,
-      connector: "googlesheets",
-      callbackUrl: undefined,
-      authConfigs: undefined,
-    });
-  });
-
   it("should allow any connector for organization account_id", async () => {
     const mockAccountId = "account-123";
     const mockTargetAccountId = "550e8400-e29b-41d4-a716-446655440000";

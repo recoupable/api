@@ -34,8 +34,8 @@ export type ArtistPublicProfile = {
  * stay out by construction.
  *
  * An account qualifies as an artist iff it appears as `artist_id` on at least
- * one roster (`account_artist_ids`); personal and workspace accounts return
- * `null`, which the handler turns into the same 404 as an unknown id.
+ * one roster (`account_artist_ids`); other accounts return `null`, which the
+ * handler turns into the same 404 as an unknown id.
  *
  * Catalogs resolve through the songs graph — `song_artists` (the artist's
  * credited ISRCs) into `catalog_songs` — because `account_catalogs` links a

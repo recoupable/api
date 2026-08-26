@@ -1,5 +1,4 @@
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
-import { selectAccountWorkspaceId } from "@/lib/supabase/account_workspace_ids/selectAccountWorkspaceId";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
 
 /**
@@ -7,10 +6,9 @@ import { validateOrganizationAccess } from "@/lib/organizations/validateOrganiza
  *
  * - "self": The caller's own account
  * - "artist": An artist the caller manages
- * - "workspace": A workspace the caller owns
  * - "organization": An organization the caller belongs to
  */
-export type AccountEntityType = "self" | "artist" | "workspace" | "organization";
+export type AccountEntityType = "self" | "artist" | "organization";
 
 /**
  * Result of checking account access.
@@ -27,8 +25,7 @@ export interface CheckAccountAccessResult {
  * Tries all access paths in order:
  * 1. Self-access (target === caller)
  * 2. Artist access (via account_artist_ids or shared org)
- * 3. Workspace access (via account_workspace_ids)
- * 4. Organization access (caller is a member of the target org)
+ * 3. Organization access (caller is a member of the target org)
  *
  * Returns the first match with the entity type, or { hasAccess: false } if none.
  * Fails closed: any database error results in denied access.
@@ -52,13 +49,7 @@ export async function checkAccountAccess(
     return { hasAccess: true, entityType: "artist" };
   }
 
-  // 3. Workspace access — target is a workspace the caller owns
-  const isWorkspace = await selectAccountWorkspaceId(authenticatedAccountId, targetAccountId);
-  if (isWorkspace) {
-    return { hasAccess: true, entityType: "workspace" };
-  }
-
-  // 4. Organization access — target is an org the caller belongs to
+  // 3. Organization access — target is an org the caller belongs to
   const isOrg = await validateOrganizationAccess({
     accountId: authenticatedAccountId,
     organizationId: targetAccountId,

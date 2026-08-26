@@ -4,7 +4,6 @@ import { checkConnectorAuthority } from "../checkConnectorAuthority";
 import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 import { selectArtistOrganizationIds } from "@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds";
 import { selectAccountOrganizationIds } from "@/lib/supabase/account_organization_ids/selectAccountOrganizationIds";
-import { selectAccountWorkspaceId } from "@/lib/supabase/account_workspace_ids/selectAccountWorkspaceId";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
 import { selectAccountArtistId } from "@/lib/supabase/account_artist_ids/selectAccountArtistId";
 
@@ -24,10 +23,6 @@ vi.mock("@/lib/supabase/account_organization_ids/selectAccountOrganizationIds", 
   selectAccountOrganizationIds: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/account_workspace_ids/selectAccountWorkspaceId", () => ({
-  selectAccountWorkspaceId: vi.fn(),
-}));
-
 vi.mock("@/lib/organizations/validateOrganizationAccess", () => ({
   validateOrganizationAccess: vi.fn(),
 }));
@@ -42,7 +37,6 @@ describe("checkConnectorAuthority", () => {
     vi.mocked(getAccountOrganizations).mockResolvedValue([]);
     vi.mocked(selectArtistOrganizationIds).mockResolvedValue([]);
     vi.mocked(selectAccountOrganizationIds).mockResolvedValue([]);
-    vi.mocked(selectAccountWorkspaceId).mockResolvedValue(null);
     vi.mocked(validateOrganizationAccess).mockResolvedValue(false);
   });
 
@@ -96,13 +90,12 @@ describe("checkConnectorAuthority", () => {
     expect(selectArtistOrganizationIds).not.toHaveBeenCalled();
   });
 
-  it("grants access to a workspace the caller owns", async () => {
-    vi.mocked(selectAccountWorkspaceId).mockResolvedValue({ workspace_id: "workspace-789" });
-
+  it("denies a workspace pair — account_workspace_ids no longer grants authority", async () => {
+    // Workspaces are removed as an account type (chat#1979): no authority path
+    // reads account_workspace_ids, so a lingering join row grants nothing.
     const result = await checkConnectorAuthority("account-123", "workspace-789");
 
-    expect(selectAccountWorkspaceId).toHaveBeenCalledWith("account-123", "workspace-789");
-    expect(result).toBe(true);
+    expect(result).toBe(false);
   });
 
   it("grants access to an organization the caller belongs to", async () => {
