@@ -73,12 +73,16 @@ describe("getTasksHandler", () => {
         recent_runs: [],
         upcoming: [],
         owner_email: "owner1@example.com",
+        artist_name: null,
+        timezone: null,
       },
       {
         ...tasks[1],
         recent_runs: [],
         upcoming: [],
         owner_email: null,
+        artist_name: null,
+        timezone: null,
       },
     ]);
 
@@ -96,12 +100,16 @@ describe("getTasksHandler", () => {
           recent_runs: [],
           upcoming: [],
           owner_email: "owner1@example.com",
+          artist_name: null,
+          timezone: null,
         },
         {
           ...tasks[1],
           recent_runs: [],
           upcoming: [],
           owner_email: null,
+          artist_name: null,
+          timezone: null,
         },
       ],
     });
