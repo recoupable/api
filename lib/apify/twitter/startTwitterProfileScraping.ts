@@ -1,10 +1,11 @@
 import apifyClient from "@/lib/apify/client";
 import { getApifyWebhooks } from "@/lib/apify/getApifyWebhooks";
-import { ApifyRunInfo } from "@/lib/apify/types";
+import { ApifyRunInfo, ApifyRunLineage } from "@/lib/apify/types";
 
 const startTwitterProfileScraping = async (
   handle: string,
   posts?: number,
+  lineage: ApifyRunLineage = { origin: "artist" },
 ): Promise<ApifyRunInfo | null> => {
   const cleanHandle = handle.trim();
 
@@ -23,7 +24,7 @@ const startTwitterProfileScraping = async (
 
   const run = await apifyClient
     .actor("apidojo/twitter-scraper-lite")
-    .start(input, { webhooks: getApifyWebhooks() });
+    .start(input, { webhooks: getApifyWebhooks(lineage) });
 
   return {
     runId: run.id,

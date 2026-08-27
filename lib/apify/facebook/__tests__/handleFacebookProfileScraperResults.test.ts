@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { handleFacebookProfileScraperResults } from "@/lib/apify/facebook/handleFacebookProfileScraperResults";
 const listItems = vi.fn();
 vi.mock("@/lib/apify/client", () => ({ default: { dataset: vi.fn(() => ({ listItems })) } }));
-const upsertSocials = vi.fn();
-vi.mock("@/lib/supabase/socials/upsertSocials", () => ({
-  upsertSocials: (...a: unknown[]) => upsertSocials(...a),
+const upsertSocialsWithSnapshot = vi.fn();
+vi.mock("@/lib/socials/upsertSocialsWithSnapshot", () => ({
+  upsertSocialsWithSnapshot: (...a: unknown[]) => upsertSocialsWithSnapshot(...a),
 }));
 
 const payload = {
@@ -22,14 +22,14 @@ const REAL_ITEM = {
 };
 beforeEach(() => {
   vi.clearAllMocks();
-  upsertSocials.mockResolvedValue([]);
+  upsertSocialsWithSnapshot.mockResolvedValue([]);
 });
 
 describe("handleFacebookProfileScraperResults", () => {
   it("upserts the page from a real item (keyed on profile_url)", async () => {
     listItems.mockResolvedValue({ items: [REAL_ITEM] });
     await handleFacebookProfileScraperResults(payload);
-    expect(upsertSocials).toHaveBeenCalledWith([
+    expect(upsertSocialsWithSnapshot).toHaveBeenCalledWith([
       {
         profile_url: "facebook.com/facebook",
         username: "facebook",
@@ -41,6 +41,6 @@ describe("handleFacebookProfileScraperResults", () => {
   it("no-ops on an empty dataset", async () => {
     listItems.mockResolvedValue({ items: [] });
     expect(await handleFacebookProfileScraperResults(payload)).toEqual({ social: null });
-    expect(upsertSocials).not.toHaveBeenCalled();
+    expect(upsertSocialsWithSnapshot).not.toHaveBeenCalled();
   });
 });

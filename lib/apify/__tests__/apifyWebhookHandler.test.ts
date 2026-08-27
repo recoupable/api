@@ -12,6 +12,9 @@ vi.mock("../instagram/handleInstagramProfileScraperResults", () => ({
 vi.mock("../instagram/handleInstagramCommentsScraper", () => ({
   handleInstagramCommentsScraper: vi.fn(),
 }));
+vi.mock("../linkedin/handleLinkedinPostsScraperResults", () => ({
+  handleLinkedinPostsScraperResults: vi.fn(),
+}));
 vi.mock("../linkedin/handleLinkedinProfileScraperResults", () => ({
   handleLinkedinProfileScraperResults: vi.fn(),
 }));

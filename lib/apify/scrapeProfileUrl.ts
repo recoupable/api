@@ -6,10 +6,12 @@ import startYoutubeProfileScraping from "@/lib/apify/youtube/startYoutubeProfile
 import startFacebookProfileScraping from "@/lib/apify/facebook/startFacebookProfileScraping";
 import startLinkedinProfileScraping from "@/lib/apify/linkedin/startLinkedinProfileScraping";
 import { getUsernameFromProfileUrl } from "@/lib/socials/getUsernameFromProfileUrl";
+import type { ApifyRunLineage } from "@/lib/apify/types";
 
 type ScrapeRunner = (
   handle: string,
   posts?: number,
+  lineage?: ApifyRunLineage,
 ) => Promise<{
   runId: string;
   datasetId: string;
@@ -37,7 +39,9 @@ const PLATFORM_SCRAPERS: Array<{
   },
   {
     match: (url: string) => url.includes("instagram.com"),
-    scraper: startInstagramProfileScraping,
+    // The profile actor has no posts depth; it always returns the latest posts.
+    scraper: (handle, _posts, lineage) =>
+      startInstagramProfileScraping(handle, lineage ?? { origin: "artist" }),
   },
   {
     match: (url: string) => url.includes("twitter.com") || url.includes("x.com"),
@@ -80,7 +84,8 @@ export const scrapeProfileUrl = async (
   const finalUsername = username || getUsernameFromProfileUrl(profileUrl);
 
   try {
-    const result = await platform.scraper(finalUsername, posts);
+    // Both scrape routes dispatch here, always for a roster artist (app#2018).
+    const result = await platform.scraper(finalUsername, posts, { origin: "artist" });
 
     if (!result) {
       return {

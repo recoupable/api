@@ -10,10 +10,19 @@ vi.mock("../../account_socials/selectAccountSocialIds", () => ({
 
 const ARTIST_ID = "11111111-1111-4111-8111-111111111111";
 const SOCIAL_IDS = ["s1", "s2"];
-const POST = { id: "p1", post_url: "https://x.example/p/1", updated_at: "2026-04-20T00:00:00Z" };
+const POST = {
+  id: "p1",
+  post_url: "https://x.example/p/1",
+  updated_at: "2026-04-20T00:00:00Z",
+  views: 440,
+  likes: 40,
+  comments: 2,
+  reposts: null,
+};
 const POST_WITH_EMBED = { ...POST, social_posts: [{ social_id: "s1" }] };
 const FILTER_PATH = "social_posts.social_id";
-const EMBED = "id, post_url, updated_at, social_posts!inner(social_id)";
+const EMBED =
+  "id, post_url, updated_at, views, likes, comments, reposts, social_posts!inner(social_id)";
 
 type Result<T> = { data: T; error: { message: string } | null; count?: number };
 
