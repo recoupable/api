@@ -4,8 +4,9 @@ import { validateAccountCreditsParams } from "@/lib/credits/validateAccountCredi
 import { mapToAccountCreditsError } from "@/lib/credits/mapToAccountCreditsError";
 import { formatCentsAsUsd } from "@/lib/credits/formatCentsAsUsd";
 import { validateGetAccountUsageQuery } from "@/lib/usage/validateGetAccountUsageQuery";
-import { selectUsageEventsByAccount } from "@/lib/supabase/usage_events/selectUsageEventsByAccount";
-import { sumUsageEventsByAccount } from "@/lib/supabase/usage_events/sumUsageEventsByAccount";
+import { selectUsageEvents } from "@/lib/supabase/usage_events/selectUsageEvents";
+import { selectAllUsageEvents } from "@/lib/admins/credits/selectAllUsageEvents";
+import { sumCreditsDeducted } from "@/lib/usage/sumCreditsDeducted";
 import { toUsageEvent } from "@/lib/usage/toUsageEvent";
 
 /**
@@ -31,15 +32,21 @@ export async function getAccountUsageHandler(
     }
 
     const period = { from: query.from, to: query.to };
-    const [rows, total] = await Promise.all([
-      selectUsageEventsByAccount({
+    // The page ends at the cursor when one is given and it falls inside the
+    // period; the total always covers the whole period.
+    const pageBefore =
+      query.cursor && new Date(query.cursor) < new Date(query.to) ? query.cursor : query.to;
+    const [rows, periodRows] = await Promise.all([
+      selectUsageEvents({
         accountId,
-        ...period,
-        cursor: query.cursor,
-        limit: query.limit,
+        createdAfter: query.from,
+        createdBefore: pageBefore,
+        from: 0,
+        to: query.limit - 1,
       }),
-      sumUsageEventsByAccount({ accountId, ...period }),
+      selectAllUsageEvents({ accountId, createdAfter: query.from, createdBefore: query.to }),
     ]);
+    const total = sumCreditsDeducted(periodRows);
     const events = rows.map(toUsageEvent);
     const last = events[events.length - 1];
 

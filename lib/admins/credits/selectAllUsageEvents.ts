@@ -1,10 +1,11 @@
-import type { UsageEventRow } from "@/lib/supabase/usage_events/usageEventRow";
+import type { Tables } from "@/types/database.types";
 import { selectUsageEvents } from "@/lib/supabase/usage_events/selectUsageEvents";
 
 interface SelectAllUsageEventsParams {
   accountId?: string;
   /** Lower bound on `created_at` (ISO string). Omit to fetch all-time. */
   createdAfter?: string;
+  createdBefore?: string;
 }
 
 const BATCH_SIZE = 1000;
@@ -19,13 +20,14 @@ const BATCH_SIZE = 1000;
  */
 export async function selectAllUsageEvents(
   params: SelectAllUsageEventsParams = {},
-): Promise<UsageEventRow[]> {
-  const all: UsageEventRow[] = [];
+): Promise<Tables<"usage_events">[]> {
+  const all: Tables<"usage_events">[] = [];
   let offset = 0;
   while (true) {
     const batch = await selectUsageEvents({
       accountId: params.accountId,
       createdAfter: params.createdAfter,
+      createdBefore: params.createdBefore,
       from: offset,
       to: offset + BATCH_SIZE - 1,
     });
