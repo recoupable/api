@@ -3806,6 +3806,7 @@ export type Database = {
           model_id: string | null;
           output_tokens: number;
           provider: string | null;
+          resource_url: string | null;
           source: string;
           tool_call_count: number;
         };
@@ -3820,6 +3821,7 @@ export type Database = {
           model_id?: string | null;
           output_tokens?: number;
           provider?: string | null;
+          resource_url?: string | null;
           source?: string;
           tool_call_count?: number;
         };
@@ -3834,6 +3836,7 @@ export type Database = {
           model_id?: string | null;
           output_tokens?: number;
           provider?: string | null;
+          resource_url?: string | null;
           source?: string;
           tool_call_count?: number;
         };

@@ -29,6 +29,7 @@ describe("recordCreditDeduction", () => {
       outputTokens: 567,
       cachedInputTokens: 890,
       toolCallCount: 3,
+      resourceUrl: "/sessions/session-1/chats/chat-1",
     });
 
     expect(deductCreditsWithAuditMock).toHaveBeenCalledTimes(1);
@@ -46,6 +47,7 @@ describe("recordCreditDeduction", () => {
       cached_input_tokens: 890,
       output_tokens: 567,
       tool_call_count: 3,
+      resource_url: "/sessions/session-1/chats/chat-1",
     });
     expect(result).toEqual({ success: true });
   });

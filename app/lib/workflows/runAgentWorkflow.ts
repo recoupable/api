@@ -194,6 +194,7 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
         accountId: input.accountId,
         model: input.modelId,
         source: "api",
+        resourceUrl: `/sessions/${input.sessionId}/chats/${input.chatId}`,
         gatewayCostUsd: metadata?.totalMessageCost,
         usage: metadata?.totalMessageUsage ?? ZERO_USAGE,
       });
