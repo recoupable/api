@@ -17,6 +17,8 @@ export interface UsageEventItem {
   credits_deducted: number;
   /** The same charge formatted as USD with two decimals. */
   usd: string;
+  /** App-relative link to what produced the charge; null for plain API calls. */
+  resource_url: string | null;
 }
 
 /**
