@@ -17,7 +17,7 @@ describe("buildSpotifyHistoricStat", () => {
       [
         row("2026-06-10T23:10:49Z", 1332534384, "apify_spotify_playcount"),
         row("2026-06-09T07:00:00Z", 1331384578, "apify_spotify_playcount"),
-        row("2024-01-01T00:00:00Z", 900000000, "songstats"),
+        row("2024-01-01T00:00:00Z", 900000000, "granted_analytics"),
       ],
       {},
     );
@@ -26,7 +26,7 @@ describe("buildSpotifyHistoricStat", () => {
       source: "spotify",
       data: {
         history: [
-          { date: "2024-01-01", streams_total: 900000000, data_source: "songstats" },
+          { date: "2024-01-01", streams_total: 900000000, data_source: "granted_analytics" },
           { date: "2026-06-09", streams_total: 1331384578, data_source: "apify_spotify_playcount" },
           { date: "2026-06-10", streams_total: 1332534384, data_source: "apify_spotify_playcount" },
         ],
@@ -38,7 +38,7 @@ describe("buildSpotifyHistoricStat", () => {
     const result = buildSpotifyHistoricStat(
       [
         row("2026-06-10T23:00:00Z", 1332534384, "apify_spotify_playcount"),
-        row("2026-06-10T01:00:00Z", 1332000000, "songstats"),
+        row("2026-06-10T01:00:00Z", 1332000000, "granted_analytics"),
       ],
       {},
     );
@@ -53,7 +53,7 @@ describe("buildSpotifyHistoricStat", () => {
       [
         row("2026-06-10T23:00:00Z", 3, "apify_spotify_playcount"),
         row("2026-06-09T01:00:00Z", 2, "apify_spotify_playcount"),
-        row("2024-01-01T00:00:00Z", 1, "songstats"),
+        row("2024-01-01T00:00:00Z", 1, "granted_analytics"),
       ],
       { startDate: "2026-06-09", endDate: "2026-06-09" },
     );

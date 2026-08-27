@@ -6,10 +6,7 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
   ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
 }));
-
-vi.mock("@/lib/auth/validateAuthContext", () => ({
-  validateAuthContext: vi.fn(),
-}));
+vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
 
 describe("validateGetResearchTrackStatsRequest", () => {
   beforeEach(() => {
@@ -22,59 +19,38 @@ describe("validateGetResearchTrackStatsRequest", () => {
       NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }) as never,
     );
     const result = await validateGetResearchTrackStatsRequest(
-      new NextRequest("http://x/?isrc=USQY51771120&source=spotify"),
+      new NextRequest("http://x/?isrc=USQY51771120"),
     );
-    expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(401);
   });
 
-  it("returns 400 when no track identifier is provided", async () => {
+  it("returns 400 when isrc is missing", async () => {
     const result = await validateGetResearchTrackStatsRequest(
       new NextRequest("http://x/?source=spotify"),
     );
-    expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(400);
-    const body = await (result as NextResponse).json();
-    expect(body.error).toContain("identifier");
+    expect((await (result as NextResponse).json()).error).toBe("isrc parameter is required");
   });
 
-  it("returns 400 when more than one track identifier is provided (exactly one required)", async () => {
+  it("returns 400 when source is anything but spotify", async () => {
     const result = await validateGetResearchTrackStatsRequest(
-      new NextRequest("http://x/?isrc=USQY51771120&spotify_track_id=abc&source=spotify"),
+      new NextRequest("http://x/?isrc=USQY51771120&source=deezer"),
     );
-    expect(result).toBeInstanceOf(NextResponse);
     expect((result as NextResponse).status).toBe(400);
-    const body = await (result as NextResponse).json();
-    expect(body.error).toContain("exactly one");
+    expect((await (result as NextResponse).json()).error).toBe("source must be spotify");
   });
 
-  it("returns 400 when source is missing", async () => {
+  it("returns accountId + isrc, defaulting source to spotify", async () => {
     const result = await validateGetResearchTrackStatsRequest(
       new NextRequest("http://x/?isrc=USQY51771120"),
     );
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(400);
-    const body = await (result as NextResponse).json();
-    expect(body.error).toBe("source parameter is required");
+    expect(result).toEqual({ accountId: "acc_1", isrc: "USQY51771120" });
   });
 
-  it("returns accountId + forwarded params on success (isrc + passthroughs)", async () => {
+  it("accepts an explicit source=spotify", async () => {
     const result = await validateGetResearchTrackStatsRequest(
-      new NextRequest("http://x/?isrc=USQY51771120&source=spotify&with_playlists=true&limit=5"),
+      new NextRequest("http://x/?isrc=USQY51771120&source=spotify"),
     );
-    expect(result).toEqual({
-      accountId: "acc_1",
-      params: { isrc: "USQY51771120", source: "spotify", with_playlists: "true", limit: "5" },
-    });
-  });
-
-  it("accepts songstats_track_id as the identifier", async () => {
-    const result = await validateGetResearchTrackStatsRequest(
-      new NextRequest("http://x/?songstats_track_id=abc123&source=all"),
-    );
-    expect(result).toEqual({
-      accountId: "acc_1",
-      params: { songstats_track_id: "abc123", source: "all" },
-    });
+    expect(result).toEqual({ accountId: "acc_1", isrc: "USQY51771120" });
   });
 });

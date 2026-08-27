@@ -14,11 +14,10 @@ export async function OPTIONS() {
 }
 
 /**
- * GET /api/research/track/stats — Per-track, per-source current stats (including
- * absolute `streams_total`) by `isrc` / `songstats_track_id` / `spotify_track_id`
- * / `apple_music_track_id`. Requires a track identifier and `?source=`.
+ * GET /api/research/track/stats — Current Spotify play count for one recording
+ * by `isrc`, from the measurement store.
  *
- * @param request - must include one track identifier and a `source` query param
+ * @param request - must include `isrc`; `source` is optional and must be `spotify`
  * @returns JSON per-track stats or error
  */
 export async function GET(request: NextRequest) {

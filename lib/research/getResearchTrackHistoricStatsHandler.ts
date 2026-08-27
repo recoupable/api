@@ -8,9 +8,8 @@ import { endpointModelId } from "@/lib/credits/endpointModelId";
 /**
  * GET /api/research/track/historic-stats
  *
- * Historic per-track, per-source stats (a daily time-series of cumulative
- * counters incl. `streams_total`) by `isrc` / `songstats_track_id` /
- * `spotify_track_id` / `apple_music_track_id`. Spotify history is served from the measurement store (stitched snapshot + backfill points); other sources via Songstats.
+ * Historic Spotify series for one recording by `isrc` (one cumulative
+ * `streams_total` point per capture date) from the measurement store;
  * sibling of `GET /api/research/track/stats`.
  *
  * @param request - The incoming HTTP request.

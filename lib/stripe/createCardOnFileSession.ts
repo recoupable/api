@@ -5,8 +5,8 @@ import { resolveStripeCustomerForAccount } from "@/lib/stripe/resolveStripeCusto
 /**
  * A Stripe Checkout session that **only collects a card on file** — `mode:
  * "setup"`, $0, no subscription or price. This is the "free tier": the account
- * saves a payment method (so metered Songstats usage can be charged later via
- * the credits system) without committing to any recurring plan. Needs no Stripe
+ * saves a payment method (so metered usage can be charged later via the
+ * credits system) without committing to any recurring plan. Needs no Stripe
  * product. Contrast with {@link createStripeSession}, which is the paid
  * subscription flow.
  *
