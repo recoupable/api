@@ -16,7 +16,12 @@ export async function selectPosts({ artistAccountId, page, limit }: SelectPostsP
 
   let query = supabase
     .from("posts")
-    .select("id, post_url, updated_at, social_posts!inner(social_id)", { count: "exact" });
+    .select(
+      "id, post_url, updated_at, views, likes, comments, reposts, social_posts!inner(social_id)",
+      {
+        count: "exact",
+      },
+    );
 
   if (artistAccountId) {
     const socialIds = await selectAccountSocialIds(artistAccountId);
@@ -33,6 +38,10 @@ export async function selectPosts({ artistAccountId, page, limit }: SelectPostsP
     id: row.id,
     post_url: row.post_url,
     updated_at: row.updated_at,
+    views: row.views,
+    likes: row.likes,
+    comments: row.comments,
+    reposts: row.reposts,
   }));
 
   return { posts, totalCount: count ?? 0 };

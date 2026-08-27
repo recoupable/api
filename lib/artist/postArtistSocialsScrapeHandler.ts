@@ -11,6 +11,7 @@ import { deductSocialScrapeCredits } from "@/lib/socials/deductSocialScrapeCredi
 import { upsertApifyScraperRuns } from "@/lib/supabase/apify_scraper_runs/upsertApifyScraperRuns";
 import { getSocialPlatformByLink } from "@/lib/artists/getSocialPlatformByLink";
 import { getSocialScrapeCreditCost } from "@/lib/socials/getSocialScrapeCreditCost";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * Handler for scraping artist social profiles.
@@ -71,7 +72,11 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
     );
 
     if (results.length) {
-      await deductSocialScrapeCredits(authResult.accountId, costPerProfile * results.length);
+      await deductSocialScrapeCredits(
+        authResult.accountId,
+        costPerProfile * results.length,
+        endpointModelId(request, "/api/artist/socials/scrape"),
+      );
 
       // Register the batch so per-platform webhook completions can assemble
       // ONE consolidated new-posts digest instead of an email per platform
@@ -89,6 +94,7 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
             social_id: r.profileUrl ? (socialByUrl.get(r.profileUrl) ?? null) : null,
             platform: r.profileUrl ? getSocialPlatformByLink(r.profileUrl).toLowerCase() : null,
             batch_id: batchId,
+            origin: "artist",
           })),
       );
     }

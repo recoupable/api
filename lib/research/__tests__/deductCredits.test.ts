@@ -25,4 +25,11 @@ describe("deductCredits", () => {
     expect(consoleError).toHaveBeenCalled();
     consoleError.mockRestore();
   });
+
+  it("forwards modelId so the billing endpoint lands on the usage event", async () => {
+    await deductCredits("acct", "GET /api/research/playcounts");
+    expect(recordCreditDeduction).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: "acct", modelId: "GET /api/research/playcounts" }),
+    );
+  });
 });

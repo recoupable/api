@@ -9,14 +9,19 @@ import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
+const MAX_HISTORY_DAYS = 90;
 
 const pageSchema = z.coerce.number().int().positive().default(DEFAULT_PAGE);
 const limitSchema = z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT);
+const historySchema = z.coerce.number().int().min(1).max(MAX_HISTORY_DAYS).optional();
 
 export const getArtistSocialsParamsSchema = {
   artist_account_id: z.string().min(1).describe("The artist account ID"),
   page: pageSchema.describe(`Page number (default: ${DEFAULT_PAGE})`),
   limit: limitSchema.describe(`Per page (default: ${DEFAULT_LIMIT}, max: ${MAX_LIMIT})`),
+  history: historySchema.describe(
+    `Days of follower snapshots to attach per social (max: ${MAX_HISTORY_DAYS}); omitted → none`,
+  ),
 };
 
 export type GetArtistSocialsParams = z.infer<z.ZodObject<typeof getArtistSocialsParamsSchema>>;
@@ -32,10 +37,13 @@ export async function validateGetArtistSocialsRequest(
   if (validatedParams instanceof NextResponse) return validatedParams;
 
   const { searchParams } = new URL(request.url);
-  const query = z.object({ page: pageSchema, limit: limitSchema }).safeParse({
-    page: searchParams.get("page") ?? undefined,
-    limit: searchParams.get("limit") ?? undefined,
-  });
+  const query = z
+    .object({ page: pageSchema, limit: limitSchema, history: historySchema })
+    .safeParse({
+      page: searchParams.get("page") ?? undefined,
+      limit: searchParams.get("limit") ?? undefined,
+      history: searchParams.get("history") ?? undefined,
+    });
   if (!query.success) {
     return errorResponse(400, { status: "error", error: query.error.issues[0].message });
   }
@@ -50,5 +58,10 @@ export async function validateGetArtistSocialsRequest(
   const hasAccess = await checkAccountArtistAccess(authResult.accountId, artist_account_id);
   if (!hasAccess) return errorResponse(403, { status: "error", error: "Unauthorized" });
 
-  return { artist_account_id, page: query.data.page, limit: query.data.limit };
+  return {
+    artist_account_id,
+    page: query.data.page,
+    limit: query.data.limit,
+    history: query.data.history,
+  };
 }

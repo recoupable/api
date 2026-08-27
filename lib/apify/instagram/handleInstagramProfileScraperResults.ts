@@ -2,107 +2,91 @@ import apifyClient from "@/lib/apify/client";
 import { upsertPosts } from "@/lib/supabase/posts/upsertPosts";
 import { getPosts } from "@/lib/supabase/posts/getPosts";
 import { handleInstagramProfileFollowUpRuns } from "@/lib/apify/instagram/handleInstagramProfileFollowUpRuns";
-import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
-import { selectSocials } from "@/lib/supabase/socials/selectSocials";
+import { mapInstagramProfileToSocial } from "@/lib/apify/instagram/mapInstagramProfileToSocial";
+import { mapInstagramPostsToRows } from "@/lib/apify/instagram/mapInstagramPostsToRows";
+import { upsertSocialsWithSnapshot } from "@/lib/socials/upsertSocialsWithSnapshot";
 import { upsertSocialPosts } from "@/lib/supabase/social_posts/upsertSocialPosts";
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
-import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
-import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
-import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
 import { uploadLinkToArweave } from "@/lib/arweave/uploadLinkToArweave";
 import { getFetchableUrl } from "@/lib/arweave/getFetchableUrl";
+import { filterNewPostUrls } from "@/lib/socials/filterNewPostUrls";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
-import { filterNewPostUrls } from "@/lib/socials/filterNewPostUrls";
-import type { TablesInsert } from "@/types/database.types";
 
 /**
- * Handles Instagram profile scraper Apify webhook results:
- *  - Persists the returned posts + social profile row.
- *  - Mirrors the profile pic to Arweave.
- *  - Records the posts that were genuinely new to the platform.
- *  - Queues the comments scraper for the profile's latest posts.
+ * Handles Instagram profile scraper webhook results (app#2018):
+ *  - Every profile in the dataset is upserted to `socials` with avatar,
+ *    bio, follower/following counts, plus a follower snapshot — this is
+ *    how a commenter batch (`origin: "fan"`) enriches every fan, not
+ *    just `dataset[0]`.
+ *  - Only an `origin: "artist"` run continues: Arweave-mirrored avatar,
+ *    posts with engagement, `social_posts` links, and — only when the
+ *    profile is linked to an account — the comments follow-up run.
+ *  - A fan batch, or a legacy payload with no `origin`, stops after the
+ *    socials upsert. Fan discovery is one hop deep by construction; the
+ *    old `dataset.length === 1` heuristic is gone.
  *
- * Returns a summary object for downstream inspection. Failures
- * propagate to the webhook route's outer try/catch, which logs and
- * returns an error response (always HTTP 200 to Apify).
- *
- * @param parsed - Validated Apify webhook payload.
+ * Failures propagate to the webhook route's outer try/catch, which logs
+ * and returns an error response (always HTTP 200 to Apify).
  */
 export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookPayload) {
-  const { items: dataset } = await apifyClient
-    .dataset(parsed.resource.defaultDatasetId)
-    .listItems();
-  const firstResult = dataset[0] as ApifyInstagramProfileResult | undefined;
-  if (!firstResult?.latestPosts) return { posts: [], social: null };
+  const { items } = await apifyClient.dataset(parsed.resource.defaultDatasetId).listItems();
+  const profiles = (items as ApifyInstagramProfileResult[]).filter(p => p?.url);
+  if (profiles.length === 0) return { posts: [], social: null };
 
-  const postRows: TablesInsert<"posts">[] = firstResult.latestPosts.flatMap(post =>
-    post.url ? [{ post_url: post.url, updated_at: post.timestamp }] : [],
+  const isArtistRun = parsed.origin === "artist";
+  const [firstResult] = profiles;
+
+  // Artists get their avatar mirrored to Arweave; fans keep the CDN URL —
+  // one upload per commenter batch would be cost without product.
+  let artistAvatar: string | null | undefined;
+  if (isArtistRun) {
+    const arweaveTx = await uploadLinkToArweave(
+      firstResult.profilePicUrlHD || firstResult.profilePicUrl,
+    );
+    if (arweaveTx) artistAvatar = getFetchableUrl(`ar://${arweaveTx}`) ?? firstResult.profilePicUrl;
+  }
+
+  const upserted = await upsertSocialsWithSnapshot(
+    profiles.map((p, i) => mapInstagramProfileToSocial(p, i === 0 ? artistAvatar : undefined)),
   );
-  if (postRows.length === 0) return { posts: [], social: null };
+  if (!isArtistRun) return { posts: [], social: null, socials: profiles.length };
+
+  const postRows = mapInstagramPostsToRows(firstResult.latestPosts);
   // Diff BEFORE upserting — afterwards every scraped post exists and nothing
   // is distinguishable as new (chat#1855).
   const newPostUrls = await filterNewPostUrls(postRows.map(p => p.post_url));
-  await upsertPosts(postRows);
-  const posts = await getPosts({ postUrls: postRows.map(p => p.post_url) });
+  if (postRows.length > 0) await upsertPosts(postRows);
+  const posts =
+    postRows.length > 0 ? await getPosts({ postUrls: postRows.map(p => p.post_url) }) : [];
 
-  const arweaveTx = await uploadLinkToArweave(
-    firstResult.profilePicUrlHD || firstResult.profilePicUrl,
-  );
-  if (arweaveTx) {
-    firstResult.profilePicUrl = getFetchableUrl(`ar://${arweaveTx}`) ?? firstResult.profilePicUrl;
-  }
-
-  // Normalize once so the upsert and the subsequent lookup agree on the
-  // `profile_url` key — otherwise the lookup misses and the rest of the
-  // chain (social_posts link, email, follow-up scrape) is short-circuited.
-  const normalizedUrl = normalizeProfileUrl(firstResult.url);
-
-  await upsertSocials([
-    {
-      username: firstResult.username ?? "",
-      avatar: firstResult.profilePicUrl ?? null,
-      profile_url: normalizedUrl,
-      bio: firstResult.biography ?? null,
-      followerCount: firstResult.followersCount ?? null,
-      followingCount: firstResult.followsCount ?? null,
-    },
-  ]);
-
-  const matches = await selectSocials({ profile_url: normalizedUrl });
-  const social = matches?.[0] ?? null;
-
-  if (!social) return { posts, social: null };
+  const profileUrl = mapInstagramProfileToSocial(firstResult).profile_url;
+  const socialRow = upserted.find(s => s.profile_url === profileUrl) ?? null;
+  if (!socialRow) return { posts, social: null, newPostUrls };
 
   if (posts.length) {
     await upsertSocialPosts(
       posts.map(post => ({
         post_id: post.id,
         updated_at: post.updated_at,
-        social_id: social.id,
+        social_id: socialRow.id,
       })),
     );
   }
 
-  const accountSocials = await selectAccountSocials({ socialId: social.id, limit: 10000 });
-  const accountArtistIds = await getAccountArtistIds({
-    artistIds: accountSocials.map(a => a.account_id),
-  });
-
-  const uniqueAccountIds = Array.from(
-    new Set(accountArtistIds.map(a => a.account_id).filter((id): id is string => Boolean(id))),
-  );
-
-  const accountEmails = await selectAccountEmails({ accountIds: uniqueAccountIds });
-
-  // Scraping no longer notifies anyone: the per-platform alert and the batched
-  // digest were both removed (chat#1955). `accountEmails` is still resolved and
-  // returned because callers use it, but nothing is sent.
-  try {
-    await handleInstagramProfileFollowUpRuns(dataset, firstResult);
-  } catch (error) {
-    console.error("[WARN] follow-up scrape failed:", error);
+  // Follow-ups only for a profile some account actually owns: an artist
+  // run for an unlinked profile persists, but spawns nothing.
+  const accountSocials = await selectAccountSocials({ socialId: socialRow.id, limit: 10000 });
+  if (accountSocials.length > 0) {
+    try {
+      await handleInstagramProfileFollowUpRuns(firstResult, {
+        origin: "artist",
+        parentRunId: parsed.resource.id,
+      });
+    } catch (error) {
+      console.error("[WARN] follow-up scrape failed:", error);
+    }
   }
 
-  return { posts, social, accountSocials, accountEmails, newPostUrls };
+  return { posts, social: socialRow, accountSocials, newPostUrls };
 }

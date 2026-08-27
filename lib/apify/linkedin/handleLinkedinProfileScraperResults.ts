@@ -1,5 +1,5 @@
 import apifyClient from "@/lib/apify/client";
-import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
+import { upsertSocialsWithSnapshot } from "@/lib/socials/upsertSocialsWithSnapshot";
 import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 
@@ -46,7 +46,7 @@ export async function handleLinkedinProfileScraperResults(parsed: ApifyWebhookPa
     followerCount: first.followerCount ?? null,
     region: first.location?.linkedinText ?? null,
   };
-  await upsertSocials([social]);
+  await upsertSocialsWithSnapshot([social]);
 
   return { social };
 }

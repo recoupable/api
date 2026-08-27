@@ -17,10 +17,12 @@ describe("getApifyWebhooks", () => {
     process.env.VERCEL_ENV = "production";
     process.env.VERCEL_URL = "recoup-api-abc.vercel.app";
 
-    expect(getApifyWebhooks()).toEqual([
+    expect(getApifyWebhooks({ origin: "artist" })).toEqual([
       {
         eventTypes: ["ACTOR.RUN.SUCCEEDED"],
         requestUrl: "https://recoup-api.vercel.app/api/apify",
+        payloadTemplate:
+          '{"userId":{{userId}},"createdAt":{{createdAt}},"eventType":{{eventType}},"eventData":{{eventData}},"resource":{{resource}},"origin":"artist"}',
       },
     ]);
   });
@@ -29,18 +31,25 @@ describe("getApifyWebhooks", () => {
     delete process.env.VERCEL_ENV;
     process.env.VERCEL_URL = "preview-xyz.vercel.app";
 
-    expect(getApifyWebhooks()).toEqual([
-      {
-        eventTypes: ["ACTOR.RUN.SUCCEEDED"],
-        requestUrl: "https://preview-xyz.vercel.app/api/apify",
-      },
-    ]);
+    expect(getApifyWebhooks({ origin: "artist" })[0]).toMatchObject({
+      eventTypes: ["ACTOR.RUN.SUCCEEDED"],
+      requestUrl: "https://preview-xyz.vercel.app/api/apify",
+    });
+  });
+
+  it("stamps origin + parentRunId into the payload so the webhook knows the run's lineage without another Apify call", () => {
+    process.env.VERCEL_ENV = "production";
+
+    const [hook] = getApifyWebhooks({ origin: "fan", parentRunId: "run_parent" });
+    expect(hook.payloadTemplate).toBe(
+      '{"userId":{{userId}},"createdAt":{{createdAt}},"eventType":{{eventType}},"eventData":{{eventData}},"resource":{{resource}},"origin":"fan","parentRunId":"run_parent"}',
+    );
   });
 
   it("returns no webhooks locally so we don't hand Apify an unreachable URL", () => {
     delete process.env.VERCEL_ENV;
     delete process.env.VERCEL_URL;
 
-    expect(getApifyWebhooks()).toEqual([]);
+    expect(getApifyWebhooks({ origin: "artist" })).toEqual([]);
   });
 });

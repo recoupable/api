@@ -6,6 +6,8 @@ import { selectUsagePage } from "@/lib/usage/selectUsagePage";
 import { encodeUsageCursor } from "@/lib/usage/encodeUsageCursor";
 import { selectAllUsageEvents } from "@/lib/admins/credits/selectAllUsageEvents";
 import { sumCreditsDeducted } from "@/lib/usage/sumCreditsDeducted";
+import { pickSeriesBucket } from "@/lib/usage/pickSeriesBucket";
+import { buildUsageSeries } from "@/lib/usage/buildUsageSeries";
 import { toUsageEvent } from "@/lib/usage/toUsageEvent";
 
 /**
@@ -40,6 +42,12 @@ export async function getAccountUsageHandler(
     ]);
     const total = sumCreditsDeducted(periodRows);
     const events = rows.map(toUsageEvent);
+    // The spend series rides on the first page only; cursor pages are the
+    // table paging and never recompute it.
+    const seriesBucket = pickSeriesBucket(query.from, query.to);
+    const series = query.cursor
+      ? {}
+      : { series_bucket: seriesBucket, series: buildUsageSeries(periodRows, seriesBucket) };
     const last = events[events.length - 1];
 
     return NextResponse.json(
@@ -51,6 +59,7 @@ export async function getAccountUsageHandler(
         events,
         next_cursor:
           events.length === query.limit && last ? encodeUsageCursor(query.sort, last) : null,
+        ...series,
       },
       { status: 200, headers: getCorsHeaders() },
     );

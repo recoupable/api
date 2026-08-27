@@ -9,6 +9,8 @@ export type HandleResearchParams = {
   query?: Record<string, string>;
   /** Credits to charge on success. Defaults to 5. */
   credits?: number;
+  /** `usage_events.model_id` for this charge: the billing endpoint (`METHOD /route`). */
+  modelId?: string;
 };
 
 export type HandleResearchResult = { data: unknown } | { error: string; status: number };
@@ -25,7 +27,7 @@ export type HandleResearchResult = { data: unknown } | { error: string; status: 
  * @returns `{ data }` on success, `{ error, status }` on upstream failure.
  */
 export async function handleResearch(params: HandleResearchParams): Promise<HandleResearchResult> {
-  const { accountId, path, query, credits = usdToCredits(PRICES_USD.research) } = params;
+  const { accountId, path, query, credits = usdToCredits(PRICES_USD.research), modelId } = params;
 
   const result = await fetchSongstatsResearch(path, query);
   if (result.status !== 200) {
@@ -37,6 +39,7 @@ export async function handleResearch(params: HandleResearchParams): Promise<Hand
       accountId,
       creditsToDeduct: credits,
       source: "api",
+      modelId,
     });
   } catch (error) {
     console.error("[research] credit deduction failed:", error);

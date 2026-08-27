@@ -4,6 +4,7 @@ import { validateGetResearchMetricsRequest } from "@/lib/research/validateGetRes
 import { successResponse } from "@/lib/networking/successResponse";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { getResearchMetrics } from "@/lib/research/getResearchMetrics";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * GET /api/research/metrics
@@ -20,7 +21,10 @@ export async function getResearchMetricsHandler(request: NextRequest): Promise<N
     const validated = await validateGetResearchMetricsRequest(request);
     if (validated instanceof NextResponse) return validated;
 
-    const result = await getResearchMetrics(validated);
+    const result = await getResearchMetrics({
+      ...validated,
+      modelId: endpointModelId(request, "/api/research/metrics"),
+    });
     if ("error" in result) return errorResponse(result.error, result.status);
 
     const data = result.data;

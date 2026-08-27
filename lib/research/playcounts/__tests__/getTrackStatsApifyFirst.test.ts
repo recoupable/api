@@ -31,7 +31,7 @@ describe("getTrackStatsApifyFirst", () => {
 
     expect(getSpotifyStatFromStore).toHaveBeenCalledWith("USA2P2015959");
     expect(getResearchTrackStats).not.toHaveBeenCalled();
-    expect(deductCredits).toHaveBeenCalledWith("acc_1");
+    expect(deductCredits).toHaveBeenCalledWith("acc_1", undefined);
     expect(result).toEqual({ data: { result: "success", stats: [STORE_STAT] } });
   });
 
