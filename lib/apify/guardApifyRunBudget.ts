@@ -2,6 +2,7 @@ import { selectApifyScraperRun } from "@/lib/supabase/apify_scraper_runs/selectA
 import { countApifyScraperRunsForAccount } from "@/lib/supabase/apify_scraper_runs/countApifyScraperRunsForAccount";
 import { countApifyRunDescendants } from "@/lib/apify/countApifyRunDescendants";
 import { sendMessage } from "@/lib/telegram/sendMessage";
+import { describeAccountForAlert } from "@/lib/apify/describeAccountForAlert";
 import type { Tables } from "@/types/database.types";
 
 /**
@@ -33,7 +34,7 @@ async function resolveRoot(parentRunId: string): Promise<Tables<"apify_scraper_r
 async function alert(text: string): Promise<void> {
   console.error(`[ERROR] apify run budget tripped: ${text}`);
   try {
-    await sendMessage(`*Apify run budget tripped*\n${text}`);
+    await sendMessage(`🚨 *Apify run budget tripped*\n${text}`);
   } catch (error) {
     console.error("[WARN] budget alert failed:", error);
   }
@@ -64,8 +65,9 @@ export async function guardApifyRunBudget({
 
     const spawned = await countApifyRunDescendants(root.run_id, APIFY_RUN_BUDGET.perScrape);
     if (spawned >= APIFY_RUN_BUDGET.perScrape) {
+      const who = await describeAccountForAlert(root.account_id);
       await alert(
-        `scrape ${root.run_id} (${platform}, account ${root.account_id ?? "unknown"}) has spawned ${spawned} runs; cap ${APIFY_RUN_BUDGET.perScrape}. Not starting more.`,
+        `scrape ${root.run_id} (${platform}, ${who}) has spawned ${spawned} runs; cap ${APIFY_RUN_BUDGET.perScrape}. Not starting more.`,
       );
       return { allowed: false, reason: "per_scrape_cap" };
     }
@@ -74,8 +76,9 @@ export async function guardApifyRunBudget({
       const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
       const hourly = await countApifyScraperRunsForAccount({ accountId: root.account_id, since });
       if (hourly >= APIFY_RUN_BUDGET.perAccountPerHour) {
+        const who = await describeAccountForAlert(root.account_id);
         await alert(
-          `account ${root.account_id} started ${hourly} runs in the last hour (latest chain ${root.run_id}, ${platform}); cap ${APIFY_RUN_BUDGET.perAccountPerHour}. Not starting more.`,
+          `${who} started ${hourly} runs in the last hour (latest chain ${root.run_id}, ${platform}); cap ${APIFY_RUN_BUDGET.perAccountPerHour}. Not starting more.`,
         );
         return { allowed: false, reason: "per_account_hourly_cap" };
       }
