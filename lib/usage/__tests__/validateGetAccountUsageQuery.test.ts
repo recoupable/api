@@ -56,7 +56,7 @@ describe("validateGetAccountUsageQuery", () => {
   it("accepts explicit bounds, a cursor and a limit, normalised to UTC ISO", async () => {
     const result = await validateGetAccountUsageQuery(
       req(
-        "?limit=5&from=2026-08-10T00:00:00+02:00&to=2026-08-20T00:00:00Z&cursor=2026-08-15T10:00:00Z",
+        "?limit=5&from=2026-08-10T00:00:00%2B02:00&to=2026-08-20T00:00:00Z&cursor=2026-08-15T10:00:00Z",
       ),
       ACCOUNT_ID,
     );
