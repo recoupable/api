@@ -8,10 +8,17 @@ import startLinkedinProfileScraping from "@/lib/apify/linkedin/startLinkedinProf
 import { getUsernameFromProfileUrl } from "@/lib/socials/getUsernameFromProfileUrl";
 import type { ApifyRunLineage } from "@/lib/apify/types";
 
+/** Per-scrape options that only some platforms honor. */
+export interface ScrapeProfileOptions {
+  /** YouTube only: download each returned video's captions into the run dataset. */
+  subtitles?: boolean;
+}
+
 type ScrapeRunner = (
   handle: string,
   posts?: number,
   lineage?: ApifyRunLineage,
+  options?: ScrapeProfileOptions,
 ) => Promise<{
   runId: string;
   datasetId: string;
@@ -69,6 +76,7 @@ export const scrapeProfileUrl = async (
   profileUrl: string | null | undefined,
   username: string,
   posts?: number,
+  options?: ScrapeProfileOptions,
 ): Promise<ScrapeProfileResult | null> => {
   if (!profileUrl) {
     return null;
@@ -85,7 +93,10 @@ export const scrapeProfileUrl = async (
 
   try {
     // Both scrape routes dispatch here, always for a roster artist (app#2018).
-    const result = await platform.scraper(finalUsername, posts, { origin: "artist" });
+    const lineage: ApifyRunLineage = { origin: "artist" };
+    const result = options
+      ? await platform.scraper(finalUsername, posts, lineage, options)
+      : await platform.scraper(finalUsername, posts, lineage);
 
     if (!result) {
       return {

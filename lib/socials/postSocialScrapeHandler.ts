@@ -38,6 +38,7 @@ export async function postSocialScrapeHandler(
       social.profile_url,
       social.username,
       validated.posts,
+      ...(validated.subtitles ? [{ subtitles: true }] : []),
     );
 
     if (scrapeResult) {
