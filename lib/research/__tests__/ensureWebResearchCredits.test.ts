@@ -21,7 +21,7 @@ describe("ensureWebResearchCredits", () => {
 
     await expect(ensureWebResearchCredits("acct")).resolves.toBeNull();
     expect(ensureCreditsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ accountId: "acct", creditsToDeduct: 1 }),
+      expect.objectContaining({ accountId: "acct", creditsToDeduct: 10_000 }),
     );
   });
 

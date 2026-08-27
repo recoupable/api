@@ -3,6 +3,8 @@ import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
 import { errorResponse } from "@/lib/networking/errorResponse";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 const bodySchema = z.object({
   query: z.string().min(1, "query is required"),
@@ -32,7 +34,7 @@ export async function validatePostResearchDeepRequest(
 
   const short = await ensureCreditsOrShortCircuit({
     accountId: authResult.accountId,
-    creditsToDeduct: 25,
+    creditsToDeduct: usdToCredits(PRICES_USD.researchDeep),
   });
   if (short) return short;
 

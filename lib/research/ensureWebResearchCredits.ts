@@ -1,4 +1,6 @@
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 /**
  * Credits charged per web-search call. Priced separately from the research
@@ -7,7 +9,7 @@ import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortC
  * (chat#1861). Songstats-backed research endpoints stay on
  * `ensureResearchCredits` at 5.
  */
-const WEB_RESEARCH_CREDIT_COST = 1;
+const WEB_RESEARCH_CREDIT_COST = usdToCredits(PRICES_USD.researchWeb);
 
 /**
  * Per-route credit gate for `POST /api/research/web`. Returns a 402

@@ -1,6 +1,8 @@
 import { resolveArtist } from "@/lib/research/resolveArtist";
 import { fetchSongstatsResearch } from "@/lib/research/songstats/fetchSongstatsResearch";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 export type HandleArtistResearchParams = {
   artist: string;
@@ -26,7 +28,14 @@ export type HandleArtistResearchResult = { data: unknown } | { error: string; st
 export async function handleArtistResearch(
   params: HandleArtistResearchParams,
 ): Promise<HandleArtistResearchResult> {
-  const { artist, artistId, accountId, path, query, credits = 5 } = params;
+  const {
+    artist,
+    artistId,
+    accountId,
+    path,
+    query,
+    credits = usdToCredits(PRICES_USD.research),
+  } = params;
 
   const resolved = artistId ? { id: artistId } : await resolveArtist(artist);
   if ("error" in resolved) return { error: resolved.error, status: 404 };

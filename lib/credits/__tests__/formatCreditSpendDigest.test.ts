@@ -7,15 +7,15 @@ function row(overrides: Partial<CreditSpendDigestRow> = {}): CreditSpendDigestRo
     account_id: "acc-1",
     account_name: "Jane",
     account_email: "jane@example.com",
-    total_cents: 412,
+    total_cents: 4_120_000,
     turn_count: 7,
     input_tokens: 1_200_000,
     output_tokens: 40_000,
     cached_input_tokens: 0,
     tool_calls: 3,
-    main_cents: 412,
+    main_cents: 4_120_000,
     subagent_cents: 0,
-    by_model: { "claude-opus": 300, "claude-haiku": 112 },
+    by_model: { "claude-opus": 3_000_000, "claude-haiku": 1_120_000 },
     ...overrides,
   };
 }
@@ -56,7 +56,10 @@ describe("formatCreditSpendDigest", () => {
   });
 
   it("shows the main/subagent split when subagent spend exists", () => {
-    const out = formatCreditSpendDigest([row({ main_cents: 300, subagent_cents: 112 })], 10);
+    const out = formatCreditSpendDigest(
+      [row({ main_cents: 3_000_000, subagent_cents: 1_120_000 })],
+      10,
+    );
     expect(out).toContain("main $3.00 · subagent $1.12");
   });
 

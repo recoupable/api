@@ -3,6 +3,8 @@ import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
 import { errorResponse } from "@/lib/networking/errorResponse";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 const bodySchema = z.object({
   urls: z.array(z.string().min(1)).min(1).max(10),
@@ -35,7 +37,7 @@ export async function validatePostResearchExtractRequest(
 
   const short = await ensureCreditsOrShortCircuit({
     accountId: authResult.accountId,
-    creditsToDeduct: 5 * parsed.data.urls.length,
+    creditsToDeduct: usdToCredits(PRICES_USD.researchExtractPerUrl) * parsed.data.urls.length,
   });
   if (short) return short;
 

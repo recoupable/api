@@ -1,13 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { creditsToUsd } from "../creditsToUsd";
 import { usdToCredits } from "../usdToCredits";
-import { CREDITS_PER_USD } from "../creditsPerUsd";
 
 describe("creditsToUsd", () => {
   it("keeps the two directions consistent at the unit boundary", () => {
-    // Whatever the unit is, one dollar must be CREDITS_PER_USD credits and
-    // CREDITS_PER_USD credits must be one dollar.
-    expect(creditsToUsd(CREDITS_PER_USD)).toBe(1);
-    expect(creditsToUsd(usdToCredits(4.12))).toBeCloseTo(4.12, 10);
+    expect(creditsToUsd(1_000_000)).toBe(1);
+    expect(creditsToUsd(92_440_000)).toBe(92.44);
+    expect(creditsToUsd(usdToCredits(4.12))).toBe(4.12);
+  });
+
+  it("carries sub-cent amounts", () => {
+    expect(creditsToUsd(51_740)).toBe(0.05174);
   });
 });

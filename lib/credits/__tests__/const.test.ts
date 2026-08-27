@@ -8,8 +8,8 @@ describe("credit grant totals", () => {
     expect(PRO_CREDITS).toBe(usdToCredits(PRO_CREDITS_USD));
   });
 
-  it("are $3.33 and $99.99 at today's unit", () => {
-    expect(DEFAULT_CREDITS).toBe(333);
-    expect(PRO_CREDITS).toBe(9999);
+  it("are $3.33 and $99.99 in micro-dollars", () => {
+    expect(DEFAULT_CREDITS).toBe(3_330_000);
+    expect(PRO_CREDITS).toBe(99_990_000);
   });
 });

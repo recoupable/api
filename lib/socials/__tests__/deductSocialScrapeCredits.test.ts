@@ -13,16 +13,16 @@ describe("deductSocialScrapeCredits", () => {
   });
 
   it("records the deduction with the given credits", async () => {
-    await deductSocialScrapeCredits(ACCOUNT_ID, 25);
+    await deductSocialScrapeCredits(ACCOUNT_ID, 250_000);
     expect(recordCreditDeduction).toHaveBeenCalledWith({
       accountId: ACCOUNT_ID,
-      creditsToDeduct: 25,
+      creditsToDeduct: 250_000,
       source: "api",
     });
   });
 
   it("never throws when the deduction fails (billing must not fail a started scrape)", async () => {
     vi.mocked(recordCreditDeduction).mockRejectedValue(new Error("db down"));
-    await expect(deductSocialScrapeCredits(ACCOUNT_ID, 5)).resolves.toBeUndefined();
+    await expect(deductSocialScrapeCredits(ACCOUNT_ID, 50_000)).resolves.toBeUndefined();
   });
 });
