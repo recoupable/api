@@ -12,7 +12,7 @@ import { LanguageModelUsage } from "ai";
  *   2. Token-based estimate using `model.pricing.input/output` from
  *      the gateway catalog (`getModel`). Authoritative for token cost.
  *   3. `0` when nothing prices the turn (caller floors to the 1c
- *      minimum via `Math.max(1, Math.round(usd * 100))`).
+ *      minimum via `usdToCredits`, which floors at one credit).
  *
  * @param usage - The language model usage data
  * @param modelId - The ID of the model used

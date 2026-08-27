@@ -39,7 +39,7 @@ describe("handleResearch", () => {
     });
     expect(recordCreditDeduction).toHaveBeenCalledWith({
       accountId: "acc_1",
-      creditsToDeduct: 5,
+      creditsToDeduct: 50_000,
       source: "api",
     });
     expect(result).toEqual({ data: [{ id: 1 }] });

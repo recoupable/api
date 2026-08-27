@@ -12,7 +12,7 @@ describe("deductCredits", () => {
 
     expect(recordCreditDeduction).toHaveBeenCalledWith({
       accountId: "acc_1",
-      creditsToDeduct: 5,
+      creditsToDeduct: 50_000,
       source: "api",
     });
   });

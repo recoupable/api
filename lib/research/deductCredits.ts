@@ -1,7 +1,9 @@
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 /** Credits charged per successful read-only research call. */
-const RESEARCH_CREDIT_COST = 5;
+const RESEARCH_CREDIT_COST = usdToCredits(PRICES_USD.research);
 
 /**
  * Deduct research credits for a successful read. Failures are logged, never

@@ -1,5 +1,7 @@
 import { fetchSongstats } from "@/lib/songstats/fetchSongstats";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 export type GetResearchTrackHistoricStatsParams = {
   accountId: string;
@@ -27,7 +29,11 @@ export async function getResearchTrackHistoricStats(
   }
 
   try {
-    await recordCreditDeduction({ accountId: params.accountId, creditsToDeduct: 5, source: "api" });
+    await recordCreditDeduction({
+      accountId: params.accountId,
+      creditsToDeduct: usdToCredits(PRICES_USD.research),
+      source: "api",
+    });
   } catch (error) {
     console.error("[research] credit deduction failed:", error);
   }

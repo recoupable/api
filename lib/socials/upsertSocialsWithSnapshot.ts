@@ -1,5 +1,8 @@
 import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
-import { upsertSocialSnapshots } from "@/lib/supabase/social_snapshots/upsertSocialSnapshots";
+import {
+  upsertSocialSnapshots,
+  type SocialSnapshotInsert,
+} from "@/lib/supabase/social_snapshots/upsertSocialSnapshots";
 import type { Tables, TablesInsert } from "@/types/database.types";
 
 /** A socials upsert row plus the one field only the snapshot keeps. */
@@ -29,7 +32,7 @@ export async function upsertSocialsWithSnapshot(
   const upserted = await upsertSocials(rows);
 
   const idByUrl = new Map(upserted.map(s => [s.profile_url, s.id]));
-  const snapshots: TablesInsert<"social_snapshots">[] = [];
+  const snapshots: SocialSnapshotInsert[] = [];
   for (const social of socials) {
     const socialId = idByUrl.get(social.profile_url);
     if (socialId === undefined || social.followerCount == null) continue;

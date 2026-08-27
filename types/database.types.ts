@@ -391,42 +391,6 @@ export type Database = {
           },
         ];
       };
-      account_workspace_ids: {
-        Row: {
-          account_id: string | null;
-          id: string;
-          updated_at: string | null;
-          workspace_id: string | null;
-        };
-        Insert: {
-          account_id?: string | null;
-          id?: string;
-          updated_at?: string | null;
-          workspace_id?: string | null;
-        };
-        Update: {
-          account_id?: string | null;
-          id?: string;
-          updated_at?: string | null;
-          workspace_id?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "account_workspace_ids_account_id_fkey";
-            columns: ["account_id"];
-            isOneToOne: false;
-            referencedRelation: "accounts";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "account_workspace_ids_workspace_id_fkey";
-            columns: ["workspace_id"];
-            isOneToOne: false;
-            referencedRelation: "accounts";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       accounts: {
         Row: {
           id: string;
@@ -739,31 +703,37 @@ export type Database = {
       };
       apify_scraper_runs: {
         Row: {
-          account_id: string;
+          account_id: string | null;
           batch_id: string | null;
           completed_at: string | null;
           created_at: string;
           new_post_urls: Json | null;
+          origin: string | null;
+          parent_run_id: string | null;
           platform: string | null;
           run_id: string;
           social_id: string | null;
         };
         Insert: {
-          account_id: string;
+          account_id?: string | null;
           batch_id?: string | null;
           completed_at?: string | null;
           created_at?: string;
           new_post_urls?: Json | null;
+          origin?: string | null;
+          parent_run_id?: string | null;
           platform?: string | null;
           run_id: string;
           social_id?: string | null;
         };
         Update: {
-          account_id?: string;
+          account_id?: string | null;
           batch_id?: string | null;
           completed_at?: string | null;
           created_at?: string;
           new_post_urls?: Json | null;
+          origin?: string | null;
+          parent_run_id?: string | null;
           platform?: string | null;
           run_id?: string;
           social_id?: string | null;
@@ -2499,19 +2469,31 @@ export type Database = {
       };
       posts: {
         Row: {
+          comments: number | null;
           id: string;
+          likes: number | null;
           post_url: string;
+          reposts: number | null;
           updated_at: string;
+          views: number | null;
         };
         Insert: {
+          comments?: number | null;
           id?: string;
+          likes?: number | null;
           post_url: string;
+          reposts?: number | null;
           updated_at?: string;
+          views?: number | null;
         };
         Update: {
+          comments?: number | null;
           id?: string;
+          likes?: number | null;
           post_url?: string;
+          reposts?: number | null;
           updated_at?: string;
+          views?: number | null;
         };
         Relationships: [];
       };
@@ -3136,6 +3118,44 @@ export type Database = {
           },
           {
             foreignKeyName: "social_posts_social_id_fkey";
+            columns: ["social_id"];
+            isOneToOne: false;
+            referencedRelation: "socials";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      social_snapshots: {
+        Row: {
+          captured_at: string;
+          captured_on: string;
+          follower_count: number;
+          following_count: number | null;
+          id: string;
+          post_count: number | null;
+          social_id: string;
+        };
+        Insert: {
+          captured_at?: string;
+          captured_on: string;
+          follower_count: number;
+          following_count?: number | null;
+          id?: string;
+          post_count?: number | null;
+          social_id: string;
+        };
+        Update: {
+          captured_at?: string;
+          captured_on?: string;
+          follower_count?: number;
+          following_count?: number | null;
+          id?: string;
+          post_count?: number | null;
+          social_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "social_snapshots_social_id_fkey";
             columns: ["social_id"];
             isOneToOne: false;
             referencedRelation: "socials";
@@ -3780,7 +3800,7 @@ export type Database = {
           agent_type: string;
           cached_input_tokens: number;
           created_at: string;
-          credits_deducted_cents: number;
+          credits_deducted: number;
           id: string;
           input_tokens: number;
           model_id: string | null;
@@ -3794,7 +3814,7 @@ export type Database = {
           agent_type?: string;
           cached_input_tokens?: number;
           created_at?: string;
-          credits_deducted_cents?: number;
+          credits_deducted?: number;
           id: string;
           input_tokens?: number;
           model_id?: string | null;
@@ -3808,7 +3828,7 @@ export type Database = {
           agent_type?: string;
           cached_input_tokens?: number;
           created_at?: string;
-          credits_deducted_cents?: number;
+          credits_deducted?: number;
           id?: string;
           input_tokens?: number;
           model_id?: string | null;

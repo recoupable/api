@@ -30,7 +30,7 @@ describe("validateCreateCreditsSessionRequest — auth + happy path", () => {
     const req = new NextRequest(URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ successUrl: "https://chat.recoupable.com/done", credits: 100 }),
+      body: JSON.stringify({ successUrl: "https://chat.recoupable.com/done", credits: 1_000_000 }),
     });
     const res = await validateCreateCreditsSessionRequest(req);
     expect((res as NextResponse).status).toBe(401);
@@ -48,12 +48,12 @@ describe("validateCreateCreditsSessionRequest — auth + happy path", () => {
     const req = new NextRequest(URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": "k" },
-      body: JSON.stringify({ successUrl: "https://chat.recoupable.com/done", credits: 250 }),
+      body: JSON.stringify({ successUrl: "https://chat.recoupable.com/done", credits: 2_500_000 }),
     });
     expect(await validateCreateCreditsSessionRequest(req)).toEqual({
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/done",
-      credits: 250,
+      credits: 2_500_000,
     });
     expect(validateAuthContext).toHaveBeenCalledWith(req, { accountId: undefined });
   });
@@ -69,14 +69,14 @@ describe("validateCreateCreditsSessionRequest — auth + happy path", () => {
       headers: { "Content-Type": "application/json", "x-api-key": "k" },
       body: JSON.stringify({
         successUrl: "https://chat.recoupable.com/done",
-        credits: 100,
+        credits: 1_000_000,
         accountId: ADMIN,
       }),
     });
     expect(await validateCreateCreditsSessionRequest(req)).toEqual({
       accountId: ADMIN,
       successUrl: "https://chat.recoupable.com/done",
-      credits: 100,
+      credits: 1_000_000,
     });
     expect(validateAuthContext).toHaveBeenCalledWith(req, { accountId: ADMIN });
   });

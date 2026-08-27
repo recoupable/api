@@ -17,15 +17,15 @@ describe("ensureSocialScrapeCredits", () => {
   });
 
   it("gates on the given credit amount", async () => {
-    expect(await ensureSocialScrapeCredits(ACCOUNT_ID, 25)).toBeNull();
+    expect(await ensureSocialScrapeCredits(ACCOUNT_ID, 250_000)).toBeNull();
     expect(ensureCreditsOrShortCircuit).toHaveBeenCalledWith(
-      expect.objectContaining({ accountId: ACCOUNT_ID, creditsToDeduct: 25 }),
+      expect.objectContaining({ accountId: ACCOUNT_ID, creditsToDeduct: 250_000 }),
     );
   });
 
   it("passes through the 402 short-circuit response", async () => {
     const short = NextResponse.json({}, { status: 402 });
     vi.mocked(ensureCreditsOrShortCircuit).mockResolvedValue(short);
-    expect(await ensureSocialScrapeCredits(ACCOUNT_ID, 5)).toBe(short);
+    expect(await ensureSocialScrapeCredits(ACCOUNT_ID, 50_000)).toBe(short);
   });
 });

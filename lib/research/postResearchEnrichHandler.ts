@@ -5,6 +5,8 @@ import { successResponse } from "@/lib/networking/successResponse";
 import { deductCredits } from "@/lib/credits/deductCredits";
 import { enrichEntity } from "@/lib/parallel/enrichEntity";
 import { validatePostResearchEnrichRequest } from "@/lib/research/validatePostResearchEnrichRequest";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 /**
  * POST /api/research/enrich
@@ -21,8 +23,13 @@ export async function postResearchEnrichHandler(request: NextRequest): Promise<N
     const validated = await validatePostResearchEnrichRequest(request);
     if (validated instanceof NextResponse) return validated;
 
-    const creditCost =
-      validated.processor === "ultra" ? 25 : validated.processor === "core" ? 10 : 5;
+    const creditCost = usdToCredits(
+      validated.processor === "ultra"
+        ? PRICES_USD.researchEnrich.ultra
+        : validated.processor === "core"
+          ? PRICES_USD.researchEnrich.core
+          : PRICES_USD.researchEnrich.base,
+    );
     const result = await enrichEntity(validated.input, validated.schema, validated.processor);
 
     if (result.status === "timeout") {

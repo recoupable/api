@@ -81,7 +81,7 @@ describe("postResearchWebHandler", () => {
     expect(body.results).toEqual(mockResults);
     expect(body.formatted).toBe("# Results\n...");
     expect(recordCreditDeduction).toHaveBeenCalledWith(
-      expect.objectContaining({ accountId: "test-id", creditsToDeduct: 1 }),
+      expect.objectContaining({ accountId: "test-id", creditsToDeduct: 10_000 }),
     );
   });
 });
