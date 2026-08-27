@@ -18,7 +18,7 @@ const row: Tables<"usage_events"> = {
 };
 
 describe("toUsageEvent", () => {
-  it("maps the row to the documented item, naming the charge credits_deducted", () => {
+  it("maps the row to the documented item", () => {
     expect(toUsageEvent(row)).toEqual({
       id: "3AANn3Ij9uF-zZIlW_zlP",
       created_at: "2026-08-27T11:56:58.000Z",
@@ -33,7 +33,6 @@ describe("toUsageEvent", () => {
       credits_deducted: 20000,
       usd: "$0.02",
     });
-    expect(toUsageEvent(row)).not.toHaveProperty("credits_deducted");
   });
 
   it("formats a sub-cent charge as $0.00 and keeps the exact integer", () => {
