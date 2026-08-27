@@ -1,5 +1,5 @@
 import supabase from "@/lib/supabase/serverClient";
-import type { Tables } from "@/types/database.types";
+import type { UsageEventRow } from "@/lib/supabase/usage_events/usageEventRow";
 
 interface SelectUsageEventsParams {
   accountId?: string;
@@ -18,9 +18,7 @@ interface SelectUsageEventsParams {
  * @param params - Filters + range bounds.
  * @returns Matching usage_events rows for the range.
  */
-export async function selectUsageEvents(
-  params: SelectUsageEventsParams,
-): Promise<Tables<"usage_events">[]> {
+export async function selectUsageEvents(params: SelectUsageEventsParams): Promise<UsageEventRow[]> {
   let query = supabase
     .from("usage_events")
     .select("*")
@@ -36,5 +34,6 @@ export async function selectUsageEvents(
     console.error("Error selecting usage_events:", error);
     throw error;
   }
-  return data ?? [];
+  // Cast until `types/database.types.ts` is regenerated after database#64.
+  return (data ?? []) as unknown as UsageEventRow[];
 }

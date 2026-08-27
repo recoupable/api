@@ -85,10 +85,10 @@ describe("getAdminCreditsRollupHandler", () => {
 
   it("aggregates by account_id, sorts by total descending, and joins names + emails", async () => {
     mockSelectAllUsageEvents.mockResolvedValue([
-      { account_id: "acc-1", credits_deducted_cents: 5 },
-      { account_id: "acc-1", credits_deducted_cents: 7 },
-      { account_id: "acc-2", credits_deducted_cents: 50 },
-      { account_id: "acc-3", credits_deducted_cents: 1 },
+      { account_id: "acc-1", credits_deducted: 5 },
+      { account_id: "acc-1", credits_deducted: 7 },
+      { account_id: "acc-2", credits_deducted: 50 },
+      { account_id: "acc-3", credits_deducted: 1 },
     ]);
     mockSelectAccounts.mockResolvedValue([
       { id: "acc-1", name: "Alice" },
@@ -111,30 +111,28 @@ describe("getAdminCreditsRollupHandler", () => {
         account_id: "acc-2",
         account_name: "Bob Inc.",
         account_email: "bob@example.com",
-        total_credits_deducted_cents: 50,
+        total_credits_deducted: 50,
         event_count: 1,
       },
       {
         account_id: "acc-1",
         account_name: "Alice",
         account_email: "alice@example.com",
-        total_credits_deducted_cents: 12,
+        total_credits_deducted: 12,
         event_count: 2,
       },
       {
         account_id: "acc-3",
         account_name: null,
         account_email: null,
-        total_credits_deducted_cents: 1,
+        total_credits_deducted: 1,
         event_count: 1,
       },
     ]);
   });
 
   it("picks the most-recently-updated email for accounts with multiple", async () => {
-    mockSelectAllUsageEvents.mockResolvedValue([
-      { account_id: "acc-1", credits_deducted_cents: 1 },
-    ]);
+    mockSelectAllUsageEvents.mockResolvedValue([{ account_id: "acc-1", credits_deducted: 1 }]);
     mockSelectAccounts.mockResolvedValue([{ id: "acc-1", name: "Alice" }]);
     mockSelectAccountEmails.mockResolvedValue([
       { account_id: "acc-1", email: "old@example.com", updated_at: "2026-01-01T00:00:00Z" },
@@ -150,9 +148,9 @@ describe("getAdminCreditsRollupHandler", () => {
 
   it("breaks ties on total_credits by sorting account_id ascending", async () => {
     mockSelectAllUsageEvents.mockResolvedValue([
-      { account_id: "z", credits_deducted_cents: 10 },
-      { account_id: "a", credits_deducted_cents: 10 },
-      { account_id: "m", credits_deducted_cents: 10 },
+      { account_id: "z", credits_deducted: 10 },
+      { account_id: "a", credits_deducted: 10 },
+      { account_id: "m", credits_deducted: 10 },
     ]);
 
     const request = new NextRequest("http://localhost/api/admins/credits/rollup");
@@ -164,10 +162,10 @@ describe("getAdminCreditsRollupHandler", () => {
 
   it("respects limit + page (returns the requested slice and the full total_count)", async () => {
     mockSelectAllUsageEvents.mockResolvedValue([
-      { account_id: "a", credits_deducted_cents: 100 },
-      { account_id: "b", credits_deducted_cents: 50 },
-      { account_id: "c", credits_deducted_cents: 25 },
-      { account_id: "d", credits_deducted_cents: 10 },
+      { account_id: "a", credits_deducted: 100 },
+      { account_id: "b", credits_deducted: 50 },
+      { account_id: "c", credits_deducted: 25 },
+      { account_id: "d", credits_deducted: 10 },
     ]);
 
     const request = new NextRequest("http://localhost/api/admins/credits/rollup?limit=2&page=2");
