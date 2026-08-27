@@ -3,6 +3,7 @@ import { countApifyScraperRunsForAccount } from "@/lib/supabase/apify_scraper_ru
 import { countApifyRunDescendants } from "@/lib/apify/countApifyRunDescendants";
 import { sendMessage } from "@/lib/telegram/sendMessage";
 import { describeAccountForAlert } from "@/lib/apify/describeAccountForAlert";
+import { describeSocialForAlert } from "@/lib/apify/describeSocialForAlert";
 import type { Tables } from "@/types/database.types";
 
 /**
@@ -66,8 +67,9 @@ export async function guardApifyRunBudget({
     const spawned = await countApifyRunDescendants(root.run_id, APIFY_RUN_BUDGET.perScrape);
     if (spawned >= APIFY_RUN_BUDGET.perScrape) {
       const who = await describeAccountForAlert(root.account_id);
+      const what = await describeSocialForAlert(root.social_id, root.run_id);
       await alert(
-        `scrape ${root.run_id} (${platform}, ${who}) has spawned ${spawned} runs; cap ${APIFY_RUN_BUDGET.perScrape}. Not starting more.`,
+        `scrape of ${what} (${platform}, ${who}) has spawned ${spawned} runs; cap ${APIFY_RUN_BUDGET.perScrape}. Not starting more.`,
       );
       return { allowed: false, reason: "per_scrape_cap" };
     }
@@ -77,8 +79,9 @@ export async function guardApifyRunBudget({
       const hourly = await countApifyScraperRunsForAccount({ accountId: root.account_id, since });
       if (hourly >= APIFY_RUN_BUDGET.perAccountPerHour) {
         const who = await describeAccountForAlert(root.account_id);
+        const what = await describeSocialForAlert(root.social_id, root.run_id);
         await alert(
-          `${who} started ${hourly} runs in the last hour (latest chain ${root.run_id}, ${platform}); cap ${APIFY_RUN_BUDGET.perAccountPerHour}. Not starting more.`,
+          `${who} started ${hourly} runs in the last hour (latest: ${what}, ${platform}); cap ${APIFY_RUN_BUDGET.perAccountPerHour}. Not starting more.`,
         );
         return { allowed: false, reason: "per_account_hourly_cap" };
       }
