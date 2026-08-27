@@ -12,6 +12,8 @@ export type GetTrackMeasurementsParams = {
   metric: string;
   windowDays: number;
   aggregate?: "run_rate";
+  /** `usage_events.model_id` for this charge: the billing endpoint (`METHOD /route`). */
+  modelId?: string;
 };
 
 export type GetTrackMeasurementsResult = { data: unknown } | { error: string; status: number };

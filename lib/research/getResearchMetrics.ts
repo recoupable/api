@@ -9,6 +9,8 @@ export type GetResearchMetricsParams = {
   artist: string;
   artistId?: string;
   source: string;
+  /** `usage_events.model_id` for this charge: the billing endpoint (`METHOD /route`). */
+  modelId?: string;
 };
 
 export type GetResearchMetricsResult = { data: unknown } | { error: string; status: number };
