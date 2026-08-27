@@ -121,4 +121,21 @@ describe("handleArtistResearch", () => {
     expect(fetchSongstatsResearch).toHaveBeenCalledWith("/artist/artist_123", undefined);
     expect(result).toEqual({ data: "ok" });
   });
+
+  it("forwards modelId so the billing endpoint lands on the usage event", async () => {
+    vi.mocked(fetchSongstatsResearch).mockResolvedValue({
+      status: 200,
+      data: { ok: true },
+    } as never);
+    vi.mocked(recordCreditDeduction).mockResolvedValue(undefined as never);
+    await handleArtistResearch({
+      artistId: "3380",
+      accountId: "acct",
+      path: id => `/artist/${id}/audience`,
+      modelId: "GET /api/research/audience",
+    });
+    expect(recordCreditDeduction).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: "acct", modelId: "GET /api/research/audience" }),
+    );
+  });
 });

@@ -41,7 +41,7 @@ export async function getTrackMeasurements(
   });
   if (rows.length === 0) return { error: NO_DATA_ERROR, status: 404 };
 
-  await deductCredits(params.accountId);
+  await deductCredits(params.accountId, params.modelId);
 
   const head = {
     status: "success",

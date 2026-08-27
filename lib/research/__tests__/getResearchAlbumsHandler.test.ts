@@ -59,6 +59,7 @@ describe("getResearchAlbumsHandler", () => {
       { id: 2, name: "Views" },
     ]);
     expect(handleResearch).toHaveBeenCalledWith({
+      modelId: "GET /api/research/albums",
       accountId: "test-id",
       path: "/artist/3380/albums",
       query: { isPrimary: "true" },
@@ -80,6 +81,7 @@ describe("getResearchAlbumsHandler", () => {
     await getResearchAlbumsHandler(req);
 
     expect(handleResearch).toHaveBeenCalledWith({
+      modelId: "GET /api/research/albums",
       accountId: "test-id",
       path: "/artist/3380/albums",
       query: { isPrimary: "false", limit: "25", offset: "50" },

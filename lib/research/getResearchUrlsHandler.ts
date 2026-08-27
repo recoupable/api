@@ -4,6 +4,7 @@ import { validateArtistRequest } from "@/lib/research/validateArtistRequest";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { successResponse } from "@/lib/networking/successResponse";
 import { errorResponse } from "@/lib/networking/errorResponse";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * GET /api/research/urls
@@ -20,6 +21,7 @@ export async function getResearchUrlsHandler(request: NextRequest): Promise<Next
     const validated = await validateArtistRequest(request);
     if (validated instanceof NextResponse) return validated;
     const result = await handleArtistResearch({
+      modelId: endpointModelId(request, "/api/research/urls"),
       ...validated,
       path: cmId => `/artist/${cmId}/urls`,
     });

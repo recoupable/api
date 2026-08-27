@@ -37,6 +37,7 @@ export async function getResearchMetrics(
       accountId: params.accountId,
       creditsToDeduct: usdToCredits(PRICES_USD.research),
       source: "api",
+      modelId: params.modelId,
     });
   } catch (error) {
     console.error("[research] credit deduction failed:", error);

@@ -3,6 +3,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { getTrackStatsApifyFirst } from "@/lib/research/playcounts/getTrackStatsApifyFirst";
 import { validateGetResearchTrackStatsRequest } from "@/lib/research/validateGetResearchTrackStatsRequest";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * GET /api/research/track/stats
@@ -21,7 +22,10 @@ export async function getResearchTrackStatsHandler(request: NextRequest): Promis
     const validated = await validateGetResearchTrackStatsRequest(request);
     if (validated instanceof NextResponse) return validated;
 
-    const result = await getTrackStatsApifyFirst(validated);
+    const result = await getTrackStatsApifyFirst({
+      ...validated,
+      modelId: endpointModelId(request, "/api/research/track/stats"),
+    });
     if ("error" in result) return errorResponse(result.error, result.status);
 
     const data = result.data;

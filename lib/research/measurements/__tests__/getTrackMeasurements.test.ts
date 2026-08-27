@@ -66,7 +66,7 @@ describe("getTrackMeasurements", () => {
   it("returns the ascending daily series by default and charges one credit", async () => {
     const r = await getTrackMeasurements({ ...base });
     expect(computePlaycountDeltas).not.toHaveBeenCalled();
-    expect(deductCredits).toHaveBeenCalledWith("acc_1");
+    expect(deductCredits).toHaveBeenCalledWith("acc_1", undefined);
     expect(r).toEqual({
       data: {
         status: "success",

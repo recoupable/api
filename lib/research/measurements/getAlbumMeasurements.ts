@@ -23,6 +23,8 @@ type PlaycountRow = {
  */
 export async function getAlbumMeasurements(params: {
   accountId: string;
+  /** `usage_events.model_id` for this charge: the billing endpoint (`METHOD /route`). */
+  modelId?: string;
   spotifyAlbumId: string;
 }): Promise<GetAlbumMeasurementsResult> {
   const result = await getAlbumPlaycounts(params);

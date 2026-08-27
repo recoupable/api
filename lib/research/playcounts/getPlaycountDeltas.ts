@@ -18,6 +18,8 @@ export type GetPlaycountDeltasResult = { data: unknown } | { error: string; stat
  */
 export async function getPlaycountDeltas(params: {
   accountId: string;
+  /** `usage_events.model_id` for this charge: the billing endpoint (`METHOD /route`). */
+  modelId?: string;
   isrc: string;
   since: string;
   until?: string;
@@ -28,7 +30,7 @@ export async function getPlaycountDeltas(params: {
   const rows = await selectSongMeasurements({ song: params.isrc });
   const deltas = computePlaycountDeltas(rows, { since: params.since, until: params.until });
 
-  await deductCredits(params.accountId);
+  await deductCredits(params.accountId, params.modelId);
 
   return { data: { status: "success", isrc: params.isrc, deltas } };
 }

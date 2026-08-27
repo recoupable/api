@@ -31,7 +31,7 @@ export async function getTrackStatsApifyFirst(
   const remainingSources = storeStat ? sources.filter(s => s !== "spotify") : sources;
 
   if (storeStat && remainingSources.length === 0) {
-    await deductCredits(params.accountId);
+    await deductCredits(params.accountId, params.modelId);
     return { data: { result: "success", stats: [storeStat] } };
   }
 

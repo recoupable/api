@@ -46,7 +46,7 @@ describe("getPlaycountDeltas", () => {
     });
 
     expect(selectSongMeasurements).toHaveBeenCalledWith({ song: ISRC });
-    expect(deductCredits).toHaveBeenCalledWith("acc_1");
+    expect(deductCredits).toHaveBeenCalledWith("acc_1", undefined);
     const data = (result as { data: { isrc: string; deltas: unknown[] } }).data;
     expect(data.isrc).toBe(ISRC);
     expect(data.deltas).toHaveLength(1);

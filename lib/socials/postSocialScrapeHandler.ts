@@ -5,6 +5,7 @@ import { scrapeProfileUrl } from "@/lib/apify/scrapeProfileUrl";
 import { validatePostSocialScrapeRequest } from "@/lib/socials/validatePostSocialScrapeRequest";
 import { deductSocialScrapeCredits } from "@/lib/socials/deductSocialScrapeCredits";
 import { getSocialScrapeCreditCost } from "@/lib/socials/getSocialScrapeCreditCost";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 export async function postSocialScrapeHandler(
   request: NextRequest,
@@ -54,6 +55,7 @@ export async function postSocialScrapeHandler(
       await deductSocialScrapeCredits(
         validated.account_id,
         getSocialScrapeCreditCost(validated.posts),
+        endpointModelId(request, "/api/socials/[id]/scrape"),
       );
       return NextResponse.json(
         {

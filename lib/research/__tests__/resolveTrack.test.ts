@@ -53,6 +53,7 @@ describe("resolveTrack", () => {
 
     const result = await resolveTrack("q", undefined, accountId);
     expect(vi.mocked(handleResearch)).toHaveBeenCalledWith({
+      modelId: undefined,
       accountId,
       path: "/track/isrc/ISRC123/get-ids",
     });
@@ -91,6 +92,7 @@ describe("resolveTrack", () => {
 
     const result = await resolveTrack("q", undefined, accountId);
     expect(vi.mocked(handleResearch)).toHaveBeenCalledWith({
+      modelId: undefined,
       accountId,
       path: "/track/spotify/sp9/get-ids",
     });

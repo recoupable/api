@@ -173,6 +173,7 @@ describe("postResearchEventsHandler", () => {
     await postResearchEventsHandler(req({ artist_id: ARTIST_ID }));
 
     expect(recordCreditDeduction).toHaveBeenCalledWith({
+      modelId: "POST /api/research/events",
       accountId: "acct-1",
       creditsToDeduct: 10_000,
       source: "api",
