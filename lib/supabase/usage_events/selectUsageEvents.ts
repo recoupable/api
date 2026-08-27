@@ -1,13 +1,6 @@
 import supabase from "@/lib/supabase/serverClient";
 import type { Tables } from "@/types/database.types";
 
-/**
- * A `usage_events` row. `resource_url` is typed here until
- * `types/database.types.ts` is regenerated after the column lands
- * (database migration `20260827050000_add_usage_events_resource_url.sql`).
- */
-export type UsageEventRow = Tables<"usage_events"> & { resource_url?: string | null };
-
 interface SelectUsageEventsParams {
   accountId?: string;
   /** Lower bound on `created_at` (ISO string), inclusive. Omit for all-time. */
@@ -31,7 +24,9 @@ interface SelectUsageEventsParams {
  * @param params - Filters + range bounds.
  * @returns Matching usage_events rows for the range.
  */
-export async function selectUsageEvents(params: SelectUsageEventsParams): Promise<UsageEventRow[]> {
+export async function selectUsageEvents(
+  params: SelectUsageEventsParams,
+): Promise<Tables<"usage_events">[]> {
   let query = supabase
     .from("usage_events")
     .select("*")

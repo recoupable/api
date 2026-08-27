@@ -15,6 +15,7 @@ const row: Tables<"usage_events"> = {
   tool_call_count: 0,
   created_at: "2026-08-27T11:56:58.000+00:00",
   credits_deducted: 20000,
+  resource_url: null,
 };
 
 describe("toUsageEvent", () => {

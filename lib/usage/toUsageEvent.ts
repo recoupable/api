@@ -1,4 +1,4 @@
-import type { UsageEventRow } from "@/lib/supabase/usage_events/selectUsageEvents";
+import type { Tables } from "@/types/database.types";
 import { formatCentsAsUsd } from "@/lib/credits/formatCentsAsUsd";
 
 /** One line item of `GET /api/accounts/{id}/usage`. */
@@ -29,7 +29,7 @@ export interface UsageEventItem {
  * @param row - A `usage_events` row.
  * @returns The response item.
  */
-export function toUsageEvent(row: UsageEventRow): UsageEventItem {
+export function toUsageEvent(row: Tables<"usage_events">): UsageEventItem {
   return {
     id: row.id,
     created_at: new Date(row.created_at).toISOString(),
@@ -43,6 +43,6 @@ export function toUsageEvent(row: UsageEventRow): UsageEventItem {
     tool_call_count: row.tool_call_count,
     credits_deducted: row.credits_deducted,
     usd: formatCentsAsUsd(row.credits_deducted),
-    resource_url: row.resource_url ?? null,
+    resource_url: row.resource_url,
   };
 }
