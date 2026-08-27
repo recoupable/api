@@ -102,6 +102,38 @@ describe("handleYoutubeProfileScraperResults", () => {
       ],
     });
   });
+  it("skips the leading /about error item (real run FyKpfOPuDsv4zSeRz): channel from the first video item, no post row for the /about url", async () => {
+    // With maxResults > 1 the actor emits a first item for the channel's /about page that
+    // carries only { aboutChannelInfo, error, input, note, url } — no inputChannelUrl, no video.
+    const ABOUT_ITEM = {
+      url: "https://www.youtube.com/@adritorron/about",
+      input: "https://www.youtube.com/@adritorron",
+      error: "This channel has no about section",
+      note: "channel about page",
+      aboutChannelInfo: { numberOfSubscribers: 108000 },
+    };
+    listItems.mockResolvedValue({ items: [ABOUT_ITEM, SHORT] });
+    await handleYoutubeProfileScraperResults(payload);
+    expect(upsertSocialsWithSnapshot).toHaveBeenCalledWith([
+      expect.objectContaining({
+        profile_url: "youtube.com/@adritorron",
+        followerCount: 108000,
+        postCount: 104,
+      }),
+    ]);
+    expect(persistPostsForSocial).toHaveBeenCalledWith({
+      postRows: [
+        {
+          post_url: "https://www.youtube.com/shorts/abc123",
+          updated_at: "2026-08-01T10:00:00.000Z",
+          views: 90000,
+          likes: 4000,
+          comments: 120,
+        },
+      ],
+      profileUrl: "youtube.com/@adritorron",
+    });
+  });
   it("no-ops on an empty dataset", async () => {
     listItems.mockResolvedValue({ items: [] });
     expect(await handleYoutubeProfileScraperResults(payload)).toEqual({ social: null });

@@ -31,10 +31,17 @@ type YoutubeVideoItem = {
  * `inputChannelUrl` — the exact URL this service passed to the actor —
  * because the actor's own `channelUrl` is the `/channel/UC…` form, which
  * would never match the stored `@handle` row (and would upsert a duplicate).
+ *
+ * With a posts depth the actor also emits a record for the channel's
+ * `/about` page (`{ aboutChannelInfo, error, note, url }`, no
+ * `inputChannelUrl`), often first (real run FyKpfOPuDsv4zSeRz). Only items
+ * carrying `inputChannelUrl` are video items, so the channel comes from the
+ * first of those and the `/about` url never becomes a post.
  */
 export async function handleYoutubeProfileScraperResults(parsed: ApifyWebhookPayload) {
   const { items } = await apifyClient.dataset(parsed.resource.defaultDatasetId).listItems();
-  const first = items[0] as YoutubeVideoItem | undefined;
+  const videos = (items as YoutubeVideoItem[]).filter(item => item?.inputChannelUrl);
+  const first = videos[0];
   if (!first?.inputChannelUrl) return { social: null };
 
   const social = {
@@ -48,7 +55,7 @@ export async function handleYoutubeProfileScraperResults(parsed: ApifyWebhookPay
   };
   await upsertSocialsWithSnapshot([social]);
 
-  const postRows: TablesInsert<"posts">[] = (items as YoutubeVideoItem[]).flatMap(item =>
+  const postRows: TablesInsert<"posts">[] = videos.flatMap(item =>
     item.url
       ? [
           {
