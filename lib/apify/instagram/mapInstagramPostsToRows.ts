@@ -1,3 +1,4 @@
+import { toIsoDate } from "@/lib/apify/toIsoDate";
 import type { ApifyInstagramPost } from "@/lib/apify/types";
 import type { TablesInsert } from "@/types/database.types";
 
@@ -14,7 +15,7 @@ export function mapInstagramPostsToRows(
       ? [
           {
             post_url: post.url,
-            updated_at: post.timestamp,
+            updated_at: toIsoDate(post.timestamp),
             likes: post.likesCount ?? null,
             comments: post.commentsCount ?? null,
           },

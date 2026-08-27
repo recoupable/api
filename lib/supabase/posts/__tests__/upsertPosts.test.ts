@@ -11,11 +11,15 @@ describe("upsertPosts", () => {
     const upsert = vi.fn().mockResolvedValue({ data: null, error: null });
     vi.mocked(supabase.from).mockReturnValue({ upsert } as never);
 
-    const rows = [{ post_url: "u1", updated_at: "t", views: 5 }];
-    await upsertPosts(rows);
+    await upsertPosts([
+      { post_url: "u1", updated_at: "t", views: 5, likes: null, reposts: undefined },
+    ]);
 
     expect(supabase.from).toHaveBeenCalledWith("posts");
-    expect(upsert).toHaveBeenCalledWith(rows, { onConflict: "post_url" });
+    // nullish fields are stripped: an omitted count never clears a stored one
+    expect(upsert).toHaveBeenCalledWith([{ post_url: "u1", updated_at: "t", views: 5 }], {
+      onConflict: "post_url",
+    });
   });
 
   it("throws on a database error", async () => {

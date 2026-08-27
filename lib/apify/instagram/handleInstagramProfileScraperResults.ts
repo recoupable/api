@@ -5,7 +5,6 @@ import { handleInstagramProfileFollowUpRuns } from "@/lib/apify/instagram/handle
 import { mapInstagramProfileToSocial } from "@/lib/apify/instagram/mapInstagramProfileToSocial";
 import { mapInstagramPostsToRows } from "@/lib/apify/instagram/mapInstagramPostsToRows";
 import { upsertSocialsWithSnapshot } from "@/lib/socials/upsertSocialsWithSnapshot";
-import { selectSocials } from "@/lib/supabase/socials/selectSocials";
 import { upsertSocialPosts } from "@/lib/supabase/social_posts/upsertSocialPosts";
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
 import { uploadLinkToArweave } from "@/lib/arweave/uploadLinkToArweave";
@@ -48,7 +47,7 @@ export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookP
     if (arweaveTx) artistAvatar = getFetchableUrl(`ar://${arweaveTx}`) ?? firstResult.profilePicUrl;
   }
 
-  await upsertSocialsWithSnapshot(
+  const upserted = await upsertSocialsWithSnapshot(
     profiles.map((p, i) => mapInstagramProfileToSocial(p, i === 0 ? artistAvatar : undefined)),
   );
   if (!isArtistRun) return { posts: [], social: null, socials: profiles.length };
@@ -61,9 +60,8 @@ export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookP
   const posts =
     postRows.length > 0 ? await getPosts({ postUrls: postRows.map(p => p.post_url) }) : [];
 
-  const social = mapInstagramProfileToSocial(firstResult);
-  const matches = await selectSocials({ profile_url: social.profile_url });
-  const socialRow = matches?.[0] ?? null;
+  const profileUrl = mapInstagramProfileToSocial(firstResult).profile_url;
+  const socialRow = upserted.find(s => s.profile_url === profileUrl) ?? null;
   if (!socialRow) return { posts, social: null, newPostUrls };
 
   if (posts.length) {

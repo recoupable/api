@@ -11,8 +11,9 @@ type RegisterRootApifyRunParams = {
 /**
  * Registers the run a scrape endpoint started — the root of a run chain —
  * so the comments and commenter runs it spawns can inherit its account and
- * social through `parent_run_id` (app#2018). Registration failure is
- * logged by the upsert and never fails the scrape.
+ * social through `parent_run_id` (app#2018). Bookkeeping only: never
+ * throws, so a database hiccup cannot 500 a scrape that already started
+ * and charged credits.
  */
 export async function registerRootApifyRun({
   runId,
@@ -20,13 +21,17 @@ export async function registerRootApifyRun({
   socialId,
   profileUrl,
 }: RegisterRootApifyRunParams): Promise<void> {
-  await upsertApifyScraperRuns([
-    {
-      run_id: runId,
-      account_id: accountId,
-      social_id: socialId,
-      platform: getSocialPlatformByLink(profileUrl).toLowerCase(),
-      origin: "artist",
-    },
-  ]);
+  try {
+    await upsertApifyScraperRuns([
+      {
+        run_id: runId,
+        account_id: accountId,
+        social_id: socialId,
+        platform: getSocialPlatformByLink(profileUrl.toLowerCase()).toLowerCase(),
+        origin: "artist",
+      },
+    ]);
+  } catch (error) {
+    console.error("[WARN] registerRootApifyRun failed:", error);
+  }
 }

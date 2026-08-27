@@ -5,7 +5,6 @@ import { upsertPosts } from "@/lib/supabase/posts/upsertPosts";
 import { getPosts } from "@/lib/supabase/posts/getPosts";
 import { handleInstagramProfileFollowUpRuns } from "../handleInstagramProfileFollowUpRuns";
 import { upsertSocialsWithSnapshot } from "@/lib/socials/upsertSocialsWithSnapshot";
-import { selectSocials } from "@/lib/supabase/socials/selectSocials";
 import { upsertSocialPosts } from "@/lib/supabase/social_posts/upsertSocialPosts";
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
 import { uploadLinkToArweave } from "@/lib/arweave/uploadLinkToArweave";
@@ -24,7 +23,6 @@ vi.mock("../handleInstagramProfileFollowUpRuns", () => ({
 }));
 vi.mock("@/lib/socials/filterNewPostUrls", () => ({ filterNewPostUrls: vi.fn() }));
 vi.mock("@/lib/socials/upsertSocialsWithSnapshot", () => ({ upsertSocialsWithSnapshot: vi.fn() }));
-vi.mock("@/lib/supabase/socials/selectSocials", () => ({ selectSocials: vi.fn() }));
 vi.mock("@/lib/supabase/social_posts/upsertSocialPosts", () => ({ upsertSocialPosts: vi.fn() }));
 vi.mock("@/lib/supabase/account_socials/selectAccountSocials", () => ({
   selectAccountSocials: vi.fn(),
@@ -67,11 +65,16 @@ describe("handleInstagramProfileScraperResults", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(filterNewPostUrls).mockImplementation(async urls => urls);
-    vi.mocked(upsertSocialsWithSnapshot).mockResolvedValue([] as never);
+    vi.mocked(upsertSocialsWithSnapshot).mockImplementation(
+      async rows =>
+        rows.map((r, i) => ({
+          id: i === 0 ? "s1" : `s${i + 1}`,
+          profile_url: r.profile_url,
+        })) as never,
+    );
     vi.mocked(upsertPosts).mockResolvedValue({ data: null, error: null } as never);
     vi.mocked(getPosts).mockResolvedValue([]);
     vi.mocked(uploadLinkToArweave).mockResolvedValue(null);
-    vi.mocked(selectSocials).mockResolvedValue([{ id: "s1" }] as never);
     vi.mocked(selectAccountSocials).mockResolvedValue([{ account_id: "a1" }] as never);
   });
 
