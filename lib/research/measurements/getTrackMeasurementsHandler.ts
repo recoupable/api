@@ -3,6 +3,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { getTrackMeasurements } from "@/lib/research/measurements/getTrackMeasurements";
 import { validateGetTrackMeasurementsRequest } from "@/lib/research/measurements/validateGetTrackMeasurementsRequest";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * GET /api/research/tracks/{id}/measurements
@@ -23,7 +24,10 @@ export async function getTrackMeasurementsHandler(
     const validated = await validateGetTrackMeasurementsRequest(request, id);
     if (validated instanceof NextResponse) return validated;
 
-    const result = await getTrackMeasurements(validated);
+    const result = await getTrackMeasurements({
+      ...validated,
+      modelId: endpointModelId(request, "/api/research/tracks/[id]/measurements"),
+    });
     if ("error" in result) return errorResponse(result.error, result.status);
 
     return successResponse(result.data as Record<string, unknown>);

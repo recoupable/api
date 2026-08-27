@@ -1,11 +1,12 @@
 import apifyClient from "@/lib/apify/client";
 import { getApifyWebhooks } from "@/lib/apify/getApifyWebhooks";
 import { OUTSTANDING_ERROR } from "@/lib/apify/errors";
-import { ApifyRunInfo } from "@/lib/apify/types";
+import { ApifyRunInfo, ApifyRunLineage } from "@/lib/apify/types";
 
 const startTiktokProfileScraping = async (
   handle: string,
   resultsPerPage = 1,
+  lineage: ApifyRunLineage = { origin: "artist" },
 ): Promise<ApifyRunInfo | null> => {
   const cleanHandle = handle.trim();
 
@@ -22,7 +23,7 @@ const startTiktokProfileScraping = async (
   try {
     const run = await apifyClient
       .actor("clockworks~tiktok-scraper")
-      .start(input, { webhooks: getApifyWebhooks() });
+      .start(input, { webhooks: getApifyWebhooks(lineage) });
 
     if (!run?.id || !run?.defaultDatasetId) {
       console.error("Failed to start TikTok profile scraping for handle:", handle);

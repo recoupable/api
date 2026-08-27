@@ -7,6 +7,8 @@ export type GetResearchTrackStatsParams = {
   accountId: string;
   /** Query params forwarded verbatim to Songstats `enterprise/v1/tracks/stats`. */
   params: Record<string, string>;
+  /** `usage_events.model_id` for this charge: the billing endpoint (`METHOD /route`). */
+  modelId?: string;
 };
 
 export type GetResearchTrackStatsResult = { data: unknown } | { error: string; status: number };
@@ -30,6 +32,7 @@ export async function getResearchTrackStats(
       accountId: params.accountId,
       creditsToDeduct: usdToCredits(PRICES_USD.research),
       source: "api",
+      modelId: params.modelId,
     });
   } catch (error) {
     console.error("[research] credit deduction failed:", error);

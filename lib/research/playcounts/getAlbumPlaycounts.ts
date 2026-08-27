@@ -21,6 +21,8 @@ const NO_SNAPSHOT_ERROR =
  */
 export async function getAlbumPlaycounts(params: {
   accountId: string;
+  /** `usage_events.model_id` for this charge: the billing endpoint (`METHOD /route`). */
+  modelId?: string;
   spotifyAlbumId: string;
 }): Promise<GetAlbumPlaycountsResult> {
   const albumRows = await selectSongIdentifiers({
@@ -60,7 +62,7 @@ export async function getAlbumPlaycounts(params: {
     data_source: row.data_source,
   }));
 
-  await deductCredits(params.accountId);
+  await deductCredits(params.accountId, params.modelId);
 
   return {
     data: {

@@ -3,6 +3,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { getAlbumPlaycounts } from "@/lib/research/playcounts/getAlbumPlaycounts";
 import { validateGetResearchPlaycountsRequest } from "@/lib/research/playcounts/validateGetResearchPlaycountsRequest";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * GET /api/research/playcounts
@@ -19,7 +20,10 @@ export async function getResearchPlaycountsHandler(request: NextRequest): Promis
     const validated = await validateGetResearchPlaycountsRequest(request);
     if (validated instanceof NextResponse) return validated;
 
-    const result = await getAlbumPlaycounts(validated);
+    const result = await getAlbumPlaycounts({
+      ...validated,
+      modelId: endpointModelId(request, "/api/research/playcounts"),
+    });
     if ("error" in result) return errorResponse(result.error, result.status);
 
     return successResponse(result.data as Record<string, unknown>);

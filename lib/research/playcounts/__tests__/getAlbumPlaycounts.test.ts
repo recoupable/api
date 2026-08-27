@@ -65,7 +65,7 @@ describe("getAlbumPlaycounts", () => {
       platform: "spotify",
       metric: "platform_displayed_play_count",
     });
-    expect(deductCredits).toHaveBeenCalledWith("acc_1");
+    expect(deductCredits).toHaveBeenCalledWith("acc_1", undefined);
     expect(result).toEqual({
       data: {
         status: "success",

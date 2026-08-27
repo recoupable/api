@@ -3,6 +3,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { getTrackHistoricStatsApifyFirst } from "@/lib/research/playcounts/getTrackHistoricStatsApifyFirst";
 import { validateGetResearchTrackHistoricStatsRequest } from "@/lib/research/validateGetResearchTrackHistoricStatsRequest";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * GET /api/research/track/historic-stats
@@ -22,7 +23,10 @@ export async function getResearchTrackHistoricStatsHandler(
     const validated = await validateGetResearchTrackHistoricStatsRequest(request);
     if (validated instanceof NextResponse) return validated;
 
-    const result = await getTrackHistoricStatsApifyFirst(validated);
+    const result = await getTrackHistoricStatsApifyFirst({
+      ...validated,
+      modelId: endpointModelId(request, "/api/research/track/historic-stats"),
+    });
     if ("error" in result) return errorResponse(result.error, result.status);
 
     const data = result.data;
