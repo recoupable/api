@@ -24,9 +24,10 @@ const comments = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(selectApifyScraperRun).mockImplementation(
-    async id => (({ root, comments }) as Record<string, unknown>)[id] as never,
-  );
+  vi.mocked(selectApifyScraperRun).mockImplementation(async ({ runId } = {}) => {
+    const row = ({ root, comments } as Record<string, unknown>)[runId ?? ""];
+    return (row ? [row] : []) as never;
+  });
   vi.mocked(countApifyRunDescendants).mockResolvedValue(2);
   vi.mocked(countApifyScraperRunsForAccount).mockResolvedValue(3);
   vi.mocked(sendMessage).mockResolvedValue({} as never);
@@ -67,7 +68,7 @@ describe("guardApifyRunBudget", () => {
   });
 
   it("allows when the parent is unregistered (no chain to budget; the origin guard already makes it terminal)", async () => {
-    vi.mocked(selectApifyScraperRun).mockResolvedValue(null);
+    vi.mocked(selectApifyScraperRun).mockResolvedValue([]);
     const r = await guardApifyRunBudget({ parentRunId: "legacy", platform: "instagram" });
     expect(r).toEqual({ allowed: true });
     expect(countApifyRunDescendants).not.toHaveBeenCalled();

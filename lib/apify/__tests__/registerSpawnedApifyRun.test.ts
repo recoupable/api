@@ -14,11 +14,9 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("registerSpawnedApifyRun", () => {
   it("inherits account_id and social_id from the registered parent run", async () => {
-    vi.mocked(selectApifyScraperRun).mockResolvedValue({
-      run_id: "run-parent",
-      account_id: "acc-1",
-      social_id: "soc-1",
-    } as never);
+    vi.mocked(selectApifyScraperRun).mockResolvedValue([
+      { run_id: "run-parent", account_id: "acc-1", social_id: "soc-1" },
+    ] as never);
 
     await registerSpawnedApifyRun({
       runId: "run-child",
@@ -27,6 +25,7 @@ describe("registerSpawnedApifyRun", () => {
       platform: "instagram",
     });
 
+    expect(selectApifyScraperRun).toHaveBeenCalledWith({ runId: "run-parent" });
     expect(upsertApifyScraperRuns).toHaveBeenCalledWith([
       {
         run_id: "run-child",
@@ -40,7 +39,7 @@ describe("registerSpawnedApifyRun", () => {
   });
 
   it("registers with a null account when the parent is unknown (chain rooted before lineage shipped)", async () => {
-    vi.mocked(selectApifyScraperRun).mockResolvedValue(null);
+    vi.mocked(selectApifyScraperRun).mockResolvedValue([]);
     await registerSpawnedApifyRun({
       runId: "run-child",
       parentRunId: "run-legacy",

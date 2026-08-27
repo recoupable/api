@@ -1,4 +1,4 @@
-import { selectApifyScraperRunIdsByParent } from "@/lib/supabase/apify_scraper_runs/selectApifyScraperRunIdsByParent";
+import { selectApifyScraperRun } from "@/lib/supabase/apify_scraper_runs/selectApifyScraperRun";
 
 /** A healthy chain is 3 deep (profile → comments → fans); anything past this is a bug. */
 const MAX_DEPTH = 5;
@@ -17,7 +17,8 @@ export async function countApifyRunDescendants(rootRunId: string, upTo: number):
   let frontier = [rootRunId];
   let total = 0;
   for (let depth = 0; depth < MAX_DEPTH && frontier.length > 0 && total < upTo; depth++) {
-    frontier = await selectApifyScraperRunIdsByParent(frontier.slice(0, upTo));
+    const generation = await selectApifyScraperRun({ parentRunIds: frontier.slice(0, upTo) });
+    frontier = generation.map(r => r.run_id);
     total += frontier.length;
   }
   return Math.min(total, upTo);

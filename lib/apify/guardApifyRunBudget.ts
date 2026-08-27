@@ -21,13 +21,13 @@ const ROOT_WALK_LIMIT = 6;
 
 /** Walks `parent_run_id` up to the run a scrape endpoint started. */
 async function resolveRoot(parentRunId: string): Promise<Tables<"apify_scraper_runs"> | null> {
-  let row = await selectApifyScraperRun(parentRunId);
+  let [row] = await selectApifyScraperRun({ runId: parentRunId });
   for (let i = 0; row?.parent_run_id && i < ROOT_WALK_LIMIT; i++) {
-    const up = await selectApifyScraperRun(row.parent_run_id);
+    const [up] = await selectApifyScraperRun({ runId: row.parent_run_id });
     if (!up) break;
     row = up;
   }
-  return row;
+  return row ?? null;
 }
 
 async function alert(text: string): Promise<void> {
