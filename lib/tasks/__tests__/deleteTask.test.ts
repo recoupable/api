@@ -5,6 +5,7 @@ import { deleteTask } from "../deleteTask";
 import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
 import { deleteScheduledAction } from "@/lib/supabase/scheduled_actions/deleteScheduledAction";
 import { deleteSchedule } from "@/lib/trigger/deleteSchedule";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 // Mock external dependencies
 vi.mock("@/lib/supabase/scheduled_actions/selectScheduledActions", () => ({
@@ -15,6 +16,11 @@ vi.mock("@/lib/supabase/scheduled_actions/deleteScheduledAction", () => ({
   deleteScheduledAction: vi.fn(),
 }));
 
+vi.mock("@/lib/organizations/canAccessAccount", () => ({
+  canAccessAccount: vi.fn(
+    async ({ currentAccountId, targetAccountId }) => currentAccountId === targetAccountId,
+  ),
+}));
 vi.mock("@/lib/trigger/deleteSchedule", () => ({
   deleteSchedule: vi.fn(),
 }));
@@ -81,10 +87,25 @@ describe("deleteTask", () => {
       ).rejects.toThrow("Task not found");
     });
 
-    it("throws error when account does not own task", async () => {
+    it("throws error when the caller cannot access the task's account", async () => {
       await expect(
         deleteTask({ id: mockTaskId, resolvedAccountId: "different-account" }),
       ).rejects.toThrow("Access denied to this task");
+      expect(canAccessAccount).toHaveBeenCalledWith({
+        currentAccountId: "different-account",
+        targetAccountId: mockResolvedAccountId,
+      });
+      expect(mockDeleteScheduledAction).not.toHaveBeenCalled();
+    });
+
+    it("deletes another account's task when the caller can access that account (org member or admin) — no body account_id needed (app#2016)", async () => {
+      vi.mocked(canAccessAccount).mockResolvedValueOnce(true);
+      await deleteTask({ id: mockTaskId, resolvedAccountId: "admin-account" });
+      expect(canAccessAccount).toHaveBeenCalledWith({
+        currentAccountId: "admin-account",
+        targetAccountId: mockResolvedAccountId,
+      });
+      expect(mockDeleteScheduledAction).toHaveBeenCalledWith(mockTaskId);
     });
 
     it("propagates error from selectScheduledActions", async () => {
