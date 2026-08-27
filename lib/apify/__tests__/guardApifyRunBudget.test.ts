@@ -41,7 +41,7 @@ describe("guardApifyRunBudget", () => {
 
   it("walks up to the ROOT scrape before counting: the per-scrape cap is on the whole chain, not the immediate parent", async () => {
     await guardApifyRunBudget({ parentRunId: "comments", platform: "instagram" });
-    expect(countApifyRunDescendants).toHaveBeenCalledWith("root");
+    expect(countApifyRunDescendants).toHaveBeenCalledWith("root", APIFY_RUN_BUDGET.perScrape);
     expect(countApifyScraperRunsForAccount).toHaveBeenCalledWith({
       accountId: "acc-1",
       since: expect.any(String),

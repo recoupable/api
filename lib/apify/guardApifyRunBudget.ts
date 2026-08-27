@@ -46,6 +46,10 @@ async function alert(text: string): Promise<void> {
  * runs in the last hour. Alerts are naturally bounded: a blocked run never
  * starts, so no further webhooks arrive for that chain.
  *
+ * The check is read-then-spawn, not an atomic reservation: webhooks already
+ * in flight for the same chain can each pass and overshoot a cap by that
+ * handful. Acceptable for a ceiling set at 25x a healthy chain.
+ *
  * Fails open on an unregistered parent (nothing to budget; the origin guard
  * already makes such chains terminal) and on a database error (bookkeeping
  * must never stop persistence).
@@ -58,7 +62,7 @@ export async function guardApifyRunBudget({
     const root = await resolveRoot(parentRunId);
     if (!root) return { allowed: true };
 
-    const spawned = await countApifyRunDescendants(root.run_id);
+    const spawned = await countApifyRunDescendants(root.run_id, APIFY_RUN_BUDGET.perScrape);
     if (spawned >= APIFY_RUN_BUDGET.perScrape) {
       await alert(
         `scrape ${root.run_id} (${platform}, account ${root.account_id ?? "unknown"}) has spawned ${spawned} runs; cap ${APIFY_RUN_BUDGET.perScrape}. Not starting more.`,

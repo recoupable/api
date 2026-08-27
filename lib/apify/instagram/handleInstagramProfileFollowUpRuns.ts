@@ -11,8 +11,10 @@ import type { ApifyInstagramProfileResult, ApifyRunLineage } from "@/lib/apify/t
  * backfill. Each spawned run carries the artist lineage and is registered
  * under the profile run that found the posts.
  *
- * The caller decides whether follow-ups are allowed at all (artist origin
- * + account link, app#2018); this function only fans out.
+ * The caller decides whether the profile is eligible for follow-ups at all
+ * (artist origin + account link, app#2018). This function fans out under
+ * the run budget: it consults `guardApifyRunBudget` immediately before
+ * each spawn and starts nothing without a parent run id to attribute to.
  *
  * @param profile - The artist's profile item.
  * @param lineage - Artist lineage; `parentRunId` is the profile run.
@@ -24,21 +26,17 @@ export async function handleInstagramProfileFollowUpRuns(
   const postUrls = Array.from(
     new Set((profile.latestPosts ?? []).flatMap(p => (p.url ? [p.url] : []))),
   );
-  if (postUrls.length === 0) return;
-  if (lineage.parentRunId) {
-    const verdict = await guardApifyRunBudget({
-      parentRunId: lineage.parentRunId,
-      platform: "instagram",
-    });
-    if (!verdict.allowed) return;
-  }
+  const parentRunId = lineage.parentRunId;
+  if (postUrls.length === 0 || !parentRunId) return;
 
   const start = async (urls: string[], resultsLimit?: number) => {
+    const verdict = await guardApifyRunBudget({ parentRunId, platform: "instagram" });
+    if (!verdict.allowed) return;
     const run = await startInstagramCommentsScraping(urls, resultsLimit, lineage);
-    if (run && lineage.parentRunId) {
+    if (run) {
       await registerSpawnedApifyRun({
         runId: run.runId,
-        parentRunId: lineage.parentRunId,
+        parentRunId,
         origin: lineage.origin,
         platform: "instagram",
       });

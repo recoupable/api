@@ -14,7 +14,7 @@ describe("countApifyRunDescendants", () => {
       .mockResolvedValueOnce(["comments"])
       .mockResolvedValueOnce(["fans"])
       .mockResolvedValueOnce([]);
-    expect(await countApifyRunDescendants("root")).toBe(2);
+    expect(await countApifyRunDescendants("root", 50)).toBe(2);
     expect(selectApifyScraperRunIdsByParent).toHaveBeenNthCalledWith(1, ["root"]);
     expect(selectApifyScraperRunIdsByParent).toHaveBeenNthCalledWith(2, ["comments"]);
     expect(selectApifyScraperRunIdsByParent).toHaveBeenNthCalledWith(3, ["fans"]);
@@ -22,13 +22,19 @@ describe("countApifyRunDescendants", () => {
 
   it("stops at a bounded depth so a pathological chain cannot recurse forever", async () => {
     vi.mocked(selectApifyScraperRunIdsByParent).mockResolvedValue(["x"]);
-    const n = await countApifyRunDescendants("root");
-    expect(n).toBeGreaterThan(0);
-    expect(vi.mocked(selectApifyScraperRunIdsByParent).mock.calls.length).toBeLessThanOrEqual(6);
+    expect(await countApifyRunDescendants("root", 50)).toBe(5);
+    expect(vi.mocked(selectApifyScraperRunIdsByParent).mock.calls).toHaveLength(5);
   });
 
   it("returns 0 for a root with no children", async () => {
     vi.mocked(selectApifyScraperRunIdsByParent).mockResolvedValue([]);
-    expect(await countApifyRunDescendants("root")).toBe(0);
+    expect(await countApifyRunDescendants("root", 50)).toBe(0);
+  });
+
+  it("stops walking once the cap is reached and never queries past it", async () => {
+    const wide = Array.from({ length: 80 }, (_, i) => `run-${i}`);
+    vi.mocked(selectApifyScraperRunIdsByParent).mockResolvedValue(wide);
+    expect(await countApifyRunDescendants("root", 50)).toBe(50);
+    expect(selectApifyScraperRunIdsByParent).toHaveBeenCalledTimes(1);
   });
 });
