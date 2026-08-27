@@ -3,6 +3,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { getAlbumMeasurements } from "@/lib/research/measurements/getAlbumMeasurements";
 import { validateGetAlbumMeasurementsRequest } from "@/lib/research/measurements/validateGetAlbumMeasurementsRequest";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * GET /api/research/albums/{id}/measurements
@@ -22,7 +23,10 @@ export async function getAlbumMeasurementsHandler(
     const validated = await validateGetAlbumMeasurementsRequest(request, id);
     if (validated instanceof NextResponse) return validated;
 
-    const result = await getAlbumMeasurements(validated);
+    const result = await getAlbumMeasurements({
+      ...validated,
+      modelId: endpointModelId(request, "/api/research/albums/[id]/measurements"),
+    });
     if ("error" in result) return errorResponse(result.error, result.status);
 
     return successResponse(result.data as Record<string, unknown>);

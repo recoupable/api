@@ -5,12 +5,17 @@ import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
  * never thrown — a billing hiccup must not fail a scrape that is already
  * running (mirrors the research family's deduction).
  */
-export async function deductSocialScrapeCredits(accountId: string, credits: number): Promise<void> {
+export async function deductSocialScrapeCredits(
+  accountId: string,
+  credits: number,
+  modelId?: string,
+): Promise<void> {
   try {
     await recordCreditDeduction({
       accountId,
       creditsToDeduct: credits,
       source: "api",
+      modelId,
     });
   } catch (error) {
     console.error("[socials] scrape credit deduction failed:", error);

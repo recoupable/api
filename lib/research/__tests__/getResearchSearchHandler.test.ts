@@ -71,6 +71,7 @@ describe("getResearchSearchHandler", () => {
     await getResearchSearchHandler(req);
 
     expect(handleResearch).toHaveBeenCalledWith({
+      modelId: "GET /api/research",
       accountId: "test-id",
       path: "/search",
       query: { q: "Drake", type: "artists", limit: "10" },
@@ -92,6 +93,7 @@ describe("getResearchSearchHandler", () => {
     await getResearchSearchHandler(req);
 
     expect(handleResearch).toHaveBeenCalledWith({
+      modelId: "GET /api/research",
       accountId: "test-id",
       path: "/search",
       query: {

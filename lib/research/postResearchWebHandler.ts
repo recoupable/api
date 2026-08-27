@@ -7,6 +7,7 @@ import { formatSearchResultsAsMarkdown } from "@/lib/perplexity/formatSearchResu
 import { validatePostResearchWebRequest } from "@/lib/research/validatePostResearchWebRequest";
 import { usdToCredits } from "@/lib/credits/usdToCredits";
 import { PRICES_USD } from "@/lib/credits/pricesUsd";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * Web search handler — queries Perplexity for real-time web results with formatted markdown output.
@@ -32,6 +33,7 @@ export async function postResearchWebHandler(request: NextRequest): Promise<Next
         accountId: validated.accountId,
         creditsToDeduct: usdToCredits(PRICES_USD.researchWeb),
         source: "api",
+        modelId: endpointModelId(request, "/api/research/web"),
       });
     } catch {
       // Credit deduction failed but data was fetched — log but don't block

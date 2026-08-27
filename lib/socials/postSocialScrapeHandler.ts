@@ -6,6 +6,7 @@ import { validatePostSocialScrapeRequest } from "@/lib/socials/validatePostSocia
 import { deductSocialScrapeCredits } from "@/lib/socials/deductSocialScrapeCredits";
 import { registerRootApifyRun } from "@/lib/apify/registerRootApifyRun";
 import { getSocialScrapeCreditCost } from "@/lib/socials/getSocialScrapeCreditCost";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 export async function postSocialScrapeHandler(
   request: NextRequest,
@@ -55,6 +56,7 @@ export async function postSocialScrapeHandler(
       await deductSocialScrapeCredits(
         validated.account_id,
         getSocialScrapeCreditCost(validated.posts),
+        endpointModelId(request, "/api/socials/[id]/scrape"),
       );
       if (scrapeResult.runId) {
         await registerRootApifyRun({

@@ -17,6 +17,7 @@ export async function resolveTrack(
   q: string,
   artist: string | undefined,
   accountId: string,
+  modelId?: string,
 ): Promise<{ id: string; error?: never } | { id?: never; error: string }> {
   const searchQuery = artist ? `${q} artist:${artist}` : q;
 
@@ -52,6 +53,7 @@ export async function resolveTrack(
 
   if (isrc) {
     const result = await handleResearch({
+      modelId,
       accountId,
       path: `/track/isrc/${isrc}/get-ids`,
     });
@@ -63,6 +65,7 @@ export async function resolveTrack(
 
   const spotifyId = spotifyTrack.id;
   const result = await handleResearch({
+    modelId,
     accountId,
     path: `/track/spotify/${spotifyId}/get-ids`,
   });

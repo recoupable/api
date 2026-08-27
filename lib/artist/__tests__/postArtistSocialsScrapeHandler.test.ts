@@ -97,7 +97,11 @@ describe("postArtistSocialsScrapeHandler", () => {
       ],
       undefined,
     );
-    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 100_000);
+    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(
+      ACCOUNT_ID,
+      100_000,
+      "POST /api/artist/socials/scrape",
+    );
   });
 
   it("forwards posts and deducts ($0.05 + $0.01 × posts) per profile actually scraped", async () => {
@@ -107,7 +111,11 @@ describe("postArtistSocialsScrapeHandler", () => {
     await postArtistSocialsScrapeHandler(makeRequest({ artist_account_id: ARTIST_ID, posts: 20 }));
     expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 500_000);
     expect(scrapeProfileUrlBatch).toHaveBeenCalledWith(expect.any(Array), 20);
-    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 250_000);
+    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(
+      ACCOUNT_ID,
+      250_000,
+      "POST /api/artist/socials/scrape",
+    );
   });
 
   it("returns [] and charges nothing when the artist has no socials", async () => {

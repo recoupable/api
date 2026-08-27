@@ -12,6 +12,8 @@ export type HandleArtistResearchParams = {
   query?: Record<string, string>;
   /** Credits to charge on success. Defaults to 5. */
   credits?: number;
+  /** `usage_events.model_id` for this charge: the billing endpoint (`METHOD /route`). */
+  modelId?: string;
 };
 
 export type HandleArtistResearchResult = { data: unknown } | { error: string; status: number };
@@ -35,6 +37,7 @@ export async function handleArtistResearch(
     path,
     query,
     credits = usdToCredits(PRICES_USD.research),
+    modelId,
   } = params;
 
   const resolved = artistId ? { id: artistId } : await resolveArtist(artist);
@@ -50,6 +53,7 @@ export async function handleArtistResearch(
       accountId,
       creditsToDeduct: credits,
       source: "api",
+      modelId,
     });
   } catch (error) {
     console.error("[research] credit deduction failed:", error);
