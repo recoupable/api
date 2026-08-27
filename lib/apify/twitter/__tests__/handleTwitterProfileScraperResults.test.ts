@@ -5,9 +5,9 @@ vi.mock("@/lib/socials/filterNewPostUrls", () => ({
   filterNewPostUrls: vi.fn(async (urls: string[]) => urls),
 }));
 vi.mock("@/lib/apify/client", () => ({ default: { dataset: vi.fn(() => ({ listItems })) } }));
-const upsertSocials = vi.fn();
-vi.mock("@/lib/supabase/socials/upsertSocials", () => ({
-  upsertSocials: (...a: unknown[]) => upsertSocials(...a),
+const upsertSocialsWithSnapshot = vi.fn();
+vi.mock("@/lib/socials/upsertSocialsWithSnapshot", () => ({
+  upsertSocialsWithSnapshot: (...a: unknown[]) => upsertSocialsWithSnapshot(...a),
 }));
 const persistPostsForSocial = vi.fn();
 vi.mock("@/lib/apify/persistPostsForSocial", () => ({
@@ -24,6 +24,10 @@ const REAL_ITEM = {
   type: "tweet",
   url: "https://x.com/TheASF/status/2072732371472748952",
   createdAt: "Thu Jul 02 17:21:21 +0000 2026",
+  retweetCount: 3,
+  replyCount: 2,
+  likeCount: 40,
+  viewCount: 440,
   author: {
     userName: "TheASF",
     url: "https://x.com/TheASF",
@@ -32,11 +36,12 @@ const REAL_ITEM = {
     location: "Worldwide",
     followers: 66208,
     following: 210,
+    statusesCount: 958,
   },
 };
 beforeEach(() => {
   vi.clearAllMocks();
-  upsertSocials.mockResolvedValue([]);
+  upsertSocialsWithSnapshot.mockResolvedValue([]);
   persistPostsForSocial.mockResolvedValue({ posts: [], social: null });
 });
 
@@ -44,7 +49,7 @@ describe("handleTwitterProfileScraperResults", () => {
   it("upserts author stats with a LOWERCASED profile_url (matches stored rows; X handles are case-insensitive)", async () => {
     listItems.mockResolvedValue({ items: [REAL_ITEM] });
     await handleTwitterProfileScraperResults(payload);
-    expect(upsertSocials).toHaveBeenCalledWith([
+    expect(upsertSocialsWithSnapshot).toHaveBeenCalledWith([
       {
         profile_url: "x.com/theasf",
         username: "TheASF",
@@ -53,6 +58,7 @@ describe("handleTwitterProfileScraperResults", () => {
         followerCount: 66208,
         followingCount: 210,
         region: "Worldwide",
+        postCount: 958,
       },
     ]);
   });
@@ -65,6 +71,10 @@ describe("handleTwitterProfileScraperResults", () => {
         {
           post_url: "https://x.com/TheASF/status/2072732371472748952",
           updated_at: "2026-07-02T17:21:21.000Z",
+          views: 440,
+          likes: 40,
+          comments: 2,
+          reposts: 3,
         },
       ],
       profileUrl: "x.com/theasf",
@@ -73,7 +83,7 @@ describe("handleTwitterProfileScraperResults", () => {
   it("no-ops on an empty dataset", async () => {
     listItems.mockResolvedValue({ items: [] });
     expect(await handleTwitterProfileScraperResults(payload)).toEqual({ social: null });
-    expect(upsertSocials).not.toHaveBeenCalled();
+    expect(upsertSocialsWithSnapshot).not.toHaveBeenCalled();
     expect(persistPostsForSocial).not.toHaveBeenCalled();
   });
 
@@ -89,7 +99,14 @@ describe("handleTwitterProfileScraperResults", () => {
     expect(persistPostsForSocial).toHaveBeenCalledWith(
       expect.objectContaining({
         postRows: [
-          { post_url: "https://x.com/a/status/1", updated_at: "2026-07-02T17:21:21.000Z" },
+          {
+            post_url: "https://x.com/a/status/1",
+            updated_at: "2026-07-02T17:21:21.000Z",
+            views: 440,
+            likes: 40,
+            comments: 2,
+            reposts: 3,
+          },
         ],
       }),
     );

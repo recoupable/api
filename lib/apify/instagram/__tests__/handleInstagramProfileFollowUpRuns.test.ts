@@ -2,80 +2,76 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { handleInstagramProfileFollowUpRuns } from "../handleInstagramProfileFollowUpRuns";
 import { startInstagramCommentsScraping } from "../startInstagramCommentsScraping";
 import { getPosts } from "@/lib/supabase/posts/getPosts";
+import { registerSpawnedApifyRun } from "@/lib/apify/registerSpawnedApifyRun";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 
-vi.mock("../startInstagramCommentsScraping", () => ({
-  startInstagramCommentsScraping: vi.fn(),
-}));
-vi.mock("@/lib/supabase/posts/getPosts", () => ({
-  getPosts: vi.fn(),
-}));
+vi.mock("../startInstagramCommentsScraping", () => ({ startInstagramCommentsScraping: vi.fn() }));
+vi.mock("@/lib/supabase/posts/getPosts", () => ({ getPosts: vi.fn() }));
+vi.mock("@/lib/apify/registerSpawnedApifyRun", () => ({ registerSpawnedApifyRun: vi.fn() }));
 
-const baseProfile: ApifyInstagramProfileResult = {
+const lineage = { origin: "artist" as const, parentRunId: "run-parent" };
+const baseProfile = {
   username: "alice",
   url: "https://instagram.com/alice",
-  profilePicUrl: "",
-  profilePicUrlHD: "",
-  biography: "",
-  followersCount: 0,
-  followsCount: 0,
   latestPosts: [],
 } as unknown as ApifyInstagramProfileResult;
 
 describe("handleInstagramProfileFollowUpRuns", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(startInstagramCommentsScraping).mockResolvedValue({
+      runId: "run-c",
+      datasetId: "ds-c",
+    });
+  });
 
-  it("does not kick off comments scrape when dataset has more than one profile", async () => {
-    const dataset = [baseProfile, baseProfile, baseProfile];
-
-    await handleInstagramProfileFollowUpRuns(dataset, {
-      ...baseProfile,
-      latestPosts: [{ url: "https://instagram.com/p/1" }],
-    } as ApifyInstagramProfileResult);
-
+  it("does nothing when latestPosts is empty", async () => {
+    await handleInstagramProfileFollowUpRuns({ ...baseProfile, latestPosts: [] }, lineage);
     expect(startInstagramCommentsScraping).not.toHaveBeenCalled();
     expect(getPosts).not.toHaveBeenCalled();
   });
 
-  it("does not kick off comments scrape when latestPosts is empty", async () => {
-    await handleInstagramProfileFollowUpRuns([baseProfile], {
-      ...baseProfile,
-      latestPosts: [],
-    } as ApifyInstagramProfileResult);
-
-    expect(startInstagramCommentsScraping).not.toHaveBeenCalled();
-    expect(getPosts).not.toHaveBeenCalled();
+  it("starts one default-depth comments run for unseen posts, stamped with the artist lineage, and registers it under the parent run", async () => {
+    vi.mocked(getPosts).mockResolvedValue([]);
+    await handleInstagramProfileFollowUpRuns(
+      {
+        ...baseProfile,
+        latestPosts: [{ url: "https://instagram.com/p/1" }],
+      } as ApifyInstagramProfileResult,
+      lineage,
+    );
+    expect(startInstagramCommentsScraping).toHaveBeenCalledWith(
+      ["https://instagram.com/p/1"],
+      undefined,
+      lineage,
+    );
+    expect(registerSpawnedApifyRun).toHaveBeenCalledWith({
+      runId: "run-c",
+      parentRunId: "run-parent",
+      origin: "artist",
+      platform: "instagram",
+    });
   });
 
-  it("fans out two scrapes: resultsLimit=1 for seen urls, default for unseen", async () => {
+  it("fans out two runs: resultsLimit=1 for seen urls, default for unseen — both carrying lineage", async () => {
     const url1 = "https://instagram.com/p/1";
     const url2 = "https://instagram.com/p/2";
-
     vi.mocked(getPosts).mockResolvedValue([
       { id: "p1", post_url: url1, post_comments: [{ post_id: "p1" }] },
       { id: "p2", post_url: url2, post_comments: [] },
     ] as never);
 
-    await handleInstagramProfileFollowUpRuns([baseProfile], {
-      ...baseProfile,
-      latestPosts: [{ url: url1 }, { url: url2 }],
-    } as ApifyInstagramProfileResult);
+    await handleInstagramProfileFollowUpRuns(
+      {
+        ...baseProfile,
+        latestPosts: [{ url: url1 }, { url: url2 }],
+      } as ApifyInstagramProfileResult,
+      lineage,
+    );
 
     expect(startInstagramCommentsScraping).toHaveBeenCalledTimes(2);
-    expect(startInstagramCommentsScraping).toHaveBeenCalledWith([url1], 1);
-    expect(startInstagramCommentsScraping).toHaveBeenCalledWith([url2]);
-  });
-
-  it("backfills comments for all urls when no posts row exists yet", async () => {
-    const url1 = "https://instagram.com/p/1";
-    vi.mocked(getPosts).mockResolvedValue([]);
-
-    await handleInstagramProfileFollowUpRuns([baseProfile], {
-      ...baseProfile,
-      latestPosts: [{ url: url1 }],
-    } as ApifyInstagramProfileResult);
-
-    expect(startInstagramCommentsScraping).toHaveBeenCalledOnce();
-    expect(startInstagramCommentsScraping).toHaveBeenCalledWith([url1]);
+    expect(startInstagramCommentsScraping).toHaveBeenCalledWith([url1], 1, lineage);
+    expect(startInstagramCommentsScraping).toHaveBeenCalledWith([url2], undefined, lineage);
+    expect(registerSpawnedApifyRun).toHaveBeenCalledTimes(2);
   });
 });

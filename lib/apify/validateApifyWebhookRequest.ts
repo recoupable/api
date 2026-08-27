@@ -19,6 +19,11 @@ export const apifyWebhookPayloadSchema = z.object({
     id: z.string().optional(),
     defaultDatasetId: z.string().min(1, "resource.defaultDatasetId is required"),
   }),
+  // Lineage stamped by getApifyWebhooks' payload template (app#2018). Both
+  // optional: a run started before lineage shipped arrives without them and
+  // is treated as terminal (no follow-ups) by the handlers.
+  origin: z.enum(["artist", "fan"]).optional(),
+  parentRunId: z.string().optional(),
 });
 
 export type ApifyWebhookPayload = z.infer<typeof apifyWebhookPayloadSchema>;

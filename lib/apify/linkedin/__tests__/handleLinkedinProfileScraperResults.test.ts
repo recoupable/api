@@ -6,9 +6,9 @@ const listItems = vi.fn();
 vi.mock("@/lib/apify/client", () => ({
   default: { dataset: vi.fn(() => ({ listItems })) },
 }));
-const upsertSocials = vi.fn();
-vi.mock("@/lib/supabase/socials/upsertSocials", () => ({
-  upsertSocials: (...a: unknown[]) => upsertSocials(...a),
+const upsertSocialsWithSnapshot = vi.fn();
+vi.mock("@/lib/socials/upsertSocialsWithSnapshot", () => ({
+  upsertSocialsWithSnapshot: (...a: unknown[]) => upsertSocialsWithSnapshot(...a),
 }));
 
 const payload = {
@@ -32,7 +32,7 @@ const REAL_PROFILE = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  upsertSocials.mockResolvedValue([]);
+  upsertSocialsWithSnapshot.mockResolvedValue([]);
 });
 
 describe("handleLinkedinProfileScraperResults", () => {
@@ -40,7 +40,7 @@ describe("handleLinkedinProfileScraperResults", () => {
     listItems.mockResolvedValue({ items: [REAL_PROFILE] });
     const result = await handleLinkedinProfileScraperResults(payload);
 
-    expect(upsertSocials).toHaveBeenCalledWith([
+    expect(upsertSocialsWithSnapshot).toHaveBeenCalledWith([
       {
         profile_url: "linkedin.com/in/sweetmaneth",
         username: "sweetmaneth",
@@ -59,14 +59,14 @@ describe("handleLinkedinProfileScraperResults", () => {
       items: [{ element: {}, error: "Profile not found", status: 404, query: {} }],
     });
     const result = await handleLinkedinProfileScraperResults(payload);
-    expect(upsertSocials).not.toHaveBeenCalled();
+    expect(upsertSocialsWithSnapshot).not.toHaveBeenCalled();
     expect(result).toEqual({ social: null });
   });
 
   it("no-ops on an empty dataset", async () => {
     listItems.mockResolvedValue({ items: [] });
     const result = await handleLinkedinProfileScraperResults(payload);
-    expect(upsertSocials).not.toHaveBeenCalled();
+    expect(upsertSocialsWithSnapshot).not.toHaveBeenCalled();
     expect(result).toEqual({ social: null });
   });
 });

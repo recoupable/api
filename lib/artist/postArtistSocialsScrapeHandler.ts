@@ -89,6 +89,7 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
             social_id: r.profileUrl ? (socialByUrl.get(r.profileUrl) ?? null) : null,
             platform: r.profileUrl ? getSocialPlatformByLink(r.profileUrl).toLowerCase() : null,
             batch_id: batchId,
+            origin: "artist",
           })),
       );
     }

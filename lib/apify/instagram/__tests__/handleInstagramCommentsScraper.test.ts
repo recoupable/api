@@ -5,6 +5,7 @@ import { upsertPostComments } from "@/lib/supabase/post_comments/upsertPostComme
 import { getOrCreatePostsForComments } from "../getOrCreatePostsForComments";
 import { getOrCreateSocialsForComments } from "../getOrCreateSocialsForComments";
 import { startInstagramProfileScraping } from "../startInstagramProfileScraping";
+import { registerSpawnedApifyRun } from "@/lib/apify/registerSpawnedApifyRun";
 
 vi.mock("@/lib/apify/client", () => ({ default: { dataset: vi.fn() } }));
 vi.mock("@/lib/supabase/post_comments/upsertPostComments", () => ({
@@ -15,6 +16,7 @@ vi.mock("../getOrCreateSocialsForComments", () => ({ getOrCreateSocialsForCommen
 vi.mock("../startInstagramProfileScraping", () => ({
   startInstagramProfileScraping: vi.fn(),
 }));
+vi.mock("@/lib/apify/registerSpawnedApifyRun", () => ({ registerSpawnedApifyRun: vi.fn() }));
 
 const mockDataset = (items: unknown[]) =>
   vi
@@ -26,7 +28,9 @@ const payload = {
   createdAt: "2026-01-01T00:00:00Z",
   eventType: "ACTOR.RUN.SUCCEEDED",
   eventData: { actorId: "SbK00X0JYCPblD2wp" },
-  resource: { defaultDatasetId: "ds_1" },
+  resource: { id: "run-comments", defaultDatasetId: "ds_1" },
+  origin: "artist",
+  parentRunId: "run-profile",
 } as never;
 
 describe("handleInstagramCommentsScraper", () => {
@@ -81,8 +85,16 @@ describe("handleInstagramCommentsScraper", () => {
     expect(rows[0]).toMatchObject({ post_id: "p1", social_id: "s1", comment: "hi" });
 
     expect(startInstagramProfileScraping).toHaveBeenCalledOnce();
-    const [handles] = vi.mocked(startInstagramProfileScraping).mock.calls[0];
+    const [handles, lineage] = vi.mocked(startInstagramProfileScraping).mock.calls[0];
     expect(new Set(handles as string[])).toEqual(new Set(["alice", "bob"]));
+    // The commenter batch is a FAN run: terminal, and traceable to this comments run.
+    expect(lineage).toEqual({ origin: "fan", parentRunId: "run-comments" });
+    expect(registerSpawnedApifyRun).toHaveBeenCalledWith({
+      runId: "r",
+      parentRunId: "run-comments",
+      origin: "fan",
+      platform: "instagram",
+    });
     expect(result.comments).toHaveLength(3);
     expect(new Set(result.processedPostUrls)).toEqual(new Set(["u1", "u2"]));
   });
