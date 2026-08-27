@@ -15,11 +15,11 @@ describe("usdToCredits", () => {
     expect(usdToCredits(0.002 * 25.87)).toBe(51_740);
   });
 
-  it("never rounds up: a fraction of the ledger unit is absorbed, not charged", () => {
-    // recoupable/app#2000, owner decision 2026-08-27: pass provider prices
-    // through; the unit is the precision and any residue below it is ours.
-    expect(usdToCredits(0.0000019)).toBe(1);
-    expect(usdToCredits(0.1234567)).toBe(123_456);
+  it("rounds to the nearest unit, and accepts amounts String() would print in exponent notation", () => {
+    // The unit is the precision: a residue below it rounds to the nearest
+    // micro-dollar rather than being carried, and 7e-7 dollars still parses.
+    expect(usdToCredits(0.1234567)).toBe(123_457);
+    expect(usdToCredits(0.0000007)).toBe(1);
   });
 
   it("charges at least one ledger unit, even for a zero or sub-unit cost", () => {
