@@ -5,13 +5,17 @@ import {
   updateTaskPersistInputSchema,
   type UpdateTaskPersistInput,
 } from "@/lib/tasks/updateTaskSchemas";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import type { Tables, TablesUpdate } from "@/types/database.types";
 
-/** Thrown row exists but `{ resolvedAccountId }` does not match `scheduled_actions.account_id`. */
+/** Thrown when the row exists but `resolvedAccountId` cannot access `scheduled_actions.account_id`. */
 export const TASK_ACCESS_DENIED_MESSAGE = "Access denied to this task";
 
 /**
- * Updates an existing task (scheduled action) when the authenticated account owns the row.
+ * Updates an existing task (scheduled action) when the caller can access the
+ * account that owns it: their own, one sharing an organization, or any for a
+ * Recoup admin (`canAccessAccount`). Body `account_id` is accepted for
+ * compatibility but no longer needed to reach another account's task.
  *
  * @param input - Validated PATCH body minus body `account_id`, plus resolved `resolvedAccountId`
  * @returns The updated task
@@ -29,7 +33,11 @@ export async function updateTask(
     throw new Error("Task not found");
   }
 
-  if (existingTask.account_id !== resolvedAccountId) {
+  const allowed = await canAccessAccount({
+    currentAccountId: resolvedAccountId,
+    targetAccountId: existingTask.account_id,
+  });
+  if (!allowed) {
     throw new Error(TASK_ACCESS_DENIED_MESSAGE);
   }
 
