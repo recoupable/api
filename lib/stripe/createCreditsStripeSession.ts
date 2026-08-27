@@ -2,11 +2,12 @@ import type Stripe from "stripe";
 import stripeClient from "@/lib/stripe/client";
 import { CREDIT_TOPUP_PURPOSE } from "@/lib/stripe/creditsTopupPurpose";
 import { computeCreditsTopupCharge } from "@/lib/stripe/computeCreditsTopupCharge";
+import { creditsToStripeCents } from "@/lib/credits/creditsToStripeCents";
 
 /**
- * One credit equals one US cent ($0.01). Total charge = unit_amount * credits.
+ * Credits are micro-dollars; the line item is their whole-cent USD value
+ * (`creditsToStripeCents`), quantity 1, plus the processing fee.
  */
-const UNIT_AMOUNT_CENTS_PER_CREDIT = 1;
 
 interface CreateCreditsStripeSessionParams {
   accountId: string;
@@ -51,10 +52,10 @@ export async function createCreditsStripeSession({
       {
         price_data: {
           currency: "usd",
-          unit_amount: UNIT_AMOUNT_CENTS_PER_CREDIT,
+          unit_amount: creditsToStripeCents(credits),
           product_data: { name: "Recoup credits" },
         },
-        quantity: credits,
+        quantity: 1,
       },
       {
         price_data: {

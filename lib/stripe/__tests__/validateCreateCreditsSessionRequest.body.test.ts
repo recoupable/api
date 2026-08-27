@@ -17,7 +17,7 @@ const HEADERS = { "Content-Type": "application/json", "x-api-key": "k" };
 const body = (overrides: Record<string, unknown> = {}) =>
   JSON.stringify({
     successUrl: "https://chat.recoupable.com/done",
-    credits: 250,
+    credits: 2_500_000,
     ...overrides,
   });
 
@@ -34,11 +34,12 @@ describe("validateCreateCreditsSessionRequest — body validation", () => {
   });
 
   it.each([
-    ["missing successUrl", JSON.stringify({ credits: 100 })],
+    ["missing successUrl", JSON.stringify({ credits: 1_000_000 })],
     ["missing credits", JSON.stringify({ successUrl: "https://chat.recoupable.com/done" })],
     ["credits = 0", body({ credits: 0 })],
     ["credits = -5", body({ credits: -5 })],
     ["credits = 12.5", body({ credits: 12.5 })],
+    ["credits = 250 (not a whole number of cents)", body({ credits: 250 })],
     ["malformed successUrl", body({ successUrl: "not-a-url" })],
     ["bad accountId UUID", body({ accountId: "not-a-uuid" })],
     ["unknown body key (strict)", body({ extra: true })],

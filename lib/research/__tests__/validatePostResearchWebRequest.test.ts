@@ -57,7 +57,7 @@ describe("validatePostResearchWebRequest", () => {
   it("gates with exactly 1 credit (web search costs 1, not the research family's 5)", async () => {
     await validatePostResearchWebRequest(req({ query: "x" }));
     expect(ensureCreditsOrShortCircuit).toHaveBeenCalledWith(
-      expect.objectContaining({ accountId: "acct", creditsToDeduct: 1 }),
+      expect.objectContaining({ accountId: "acct", creditsToDeduct: 10_000 }),
     );
   });
 });

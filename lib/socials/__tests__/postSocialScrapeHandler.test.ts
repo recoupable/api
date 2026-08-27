@@ -43,16 +43,16 @@ describe("postSocialScrapeHandler", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns 200 with { runId, datasetId } on success and deducts the base 5 credits", async () => {
+  it("returns 200 with { runId, datasetId } on success and deducts the base $0.05", async () => {
     vi.mocked(scrapeProfileUrl).mockResolvedValue({ runId: "r1", datasetId: "d1" } as never);
     const res = await postSocialScrapeHandler(request, SOCIAL_ID);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ runId: "r1", datasetId: "d1" });
     expect(scrapeProfileUrl).toHaveBeenCalledWith(social.profile_url, social.username, undefined);
-    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 5);
+    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 50_000);
   });
 
-  it("forwards validated posts to scrapeProfileUrl and deducts 5 + posts credits", async () => {
+  it("forwards validated posts to scrapeProfileUrl and deducts $0.05 + $0.01 per post", async () => {
     vi.mocked(validatePostSocialScrapeRequest).mockResolvedValue({
       social_id: SOCIAL_ID,
       account_id: ACCOUNT_ID,
@@ -61,7 +61,7 @@ describe("postSocialScrapeHandler", () => {
     vi.mocked(scrapeProfileUrl).mockResolvedValue({ runId: "r1", datasetId: "d1" } as never);
     await postSocialScrapeHandler(request, SOCIAL_ID);
     expect(scrapeProfileUrl).toHaveBeenCalledWith(social.profile_url, social.username, 20);
-    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 25);
+    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 250_000);
   });
 
   it("does not deduct credits when the scrape fails to start", async () => {

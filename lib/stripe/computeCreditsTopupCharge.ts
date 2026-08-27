@@ -1,4 +1,5 @@
 import { STRIPE_CARD_FEE_FIXED_CENTS, STRIPE_CARD_FEE_PERCENTAGE } from "@/lib/stripe/config";
+import { creditsToStripeCents } from "@/lib/credits/creditsToStripeCents";
 
 export interface CreditsTopupCharge {
   /** Processing fee in cents (Stripe US card pricing). */
@@ -22,8 +23,9 @@ export function computeCreditsTopupCharge(credits: number): CreditsTopupCharge {
     throw new Error("credits must be a positive integer");
   }
 
+  const amountCents = creditsToStripeCents(credits);
   const totalCents = Math.ceil(
-    (credits + STRIPE_CARD_FEE_FIXED_CENTS) / (1 - STRIPE_CARD_FEE_PERCENTAGE),
+    (amountCents + STRIPE_CARD_FEE_FIXED_CENTS) / (1 - STRIPE_CARD_FEE_PERCENTAGE),
   );
-  return { feeCents: totalCents - credits, totalCents };
+  return { feeCents: totalCents - amountCents, totalCents };
 }

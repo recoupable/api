@@ -36,7 +36,7 @@ describe("createCreditsSessionHandler — auth, auto-charge, and 5xx paths", () 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({
       paymentIntentId: "pi_ok",
-      creditsPurchased: 250,
+      creditsPurchased: 2_500_000,
       totalCents: 289,
     });
     expect(createCreditsStripeSession).not.toHaveBeenCalled();

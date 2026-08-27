@@ -20,25 +20,25 @@ describe("createCreditsStripeSession", () => {
     });
   });
 
-  it("creates a one-time payment checkout with two line items: credits @ 1¢ + processing fee", async () => {
+  it("creates a one-time payment checkout with two line items: credits as whole cents + processing fee", async () => {
     await createCreditsStripeSession({
       accountId: "acc-1",
-      credits: 250,
+      credits: 2_500_000,
       successUrl: "https://example.com/success",
       customer: "cus_acc1",
     });
 
-    // For 250 credits: gross-up math is ceil((250 + 30) / 0.971) = 289¢, so fee = 39¢
+    // For 2,500,000 credits ($2.50): gross-up math is ceil((250 + 30) / 0.971) = 289¢, so fee = 39¢
     expect(checkoutSessionsCreate).toHaveBeenCalledWith({
       customer: "cus_acc1",
       line_items: [
         {
           price_data: {
             currency: "usd",
-            unit_amount: 1,
+            unit_amount: 250,
             product_data: { name: "Recoup credits" },
           },
-          quantity: 250,
+          quantity: 1,
         },
         {
           price_data: {
@@ -53,14 +53,14 @@ describe("createCreditsStripeSession", () => {
       client_reference_id: "acc-1",
       metadata: {
         accountId: "acc-1",
-        credits: "250",
+        credits: "2500000",
         purpose: "credits_topup",
       },
       payment_intent_data: {
         setup_future_usage: "off_session",
         metadata: {
           accountId: "acc-1",
-          credits: "250",
+          credits: "2500000",
           purpose: "credits_topup",
           paymentMethod: "checkout",
         },
