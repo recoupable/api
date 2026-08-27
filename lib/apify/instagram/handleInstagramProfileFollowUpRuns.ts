@@ -1,5 +1,6 @@
 import { startInstagramCommentsScraping } from "@/lib/apify/instagram/startInstagramCommentsScraping";
 import { registerSpawnedApifyRun } from "@/lib/apify/registerSpawnedApifyRun";
+import { guardApifyRunBudget } from "@/lib/apify/guardApifyRunBudget";
 import { getPosts } from "@/lib/supabase/posts/getPosts";
 import type { ApifyInstagramProfileResult, ApifyRunLineage } from "@/lib/apify/types";
 
@@ -24,6 +25,13 @@ export async function handleInstagramProfileFollowUpRuns(
     new Set((profile.latestPosts ?? []).flatMap(p => (p.url ? [p.url] : []))),
   );
   if (postUrls.length === 0) return;
+  if (lineage.parentRunId) {
+    const verdict = await guardApifyRunBudget({
+      parentRunId: lineage.parentRunId,
+      platform: "instagram",
+    });
+    if (!verdict.allowed) return;
+  }
 
   const start = async (urls: string[], resultsLimit?: number) => {
     const run = await startInstagramCommentsScraping(urls, resultsLimit, lineage);
