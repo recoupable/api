@@ -94,7 +94,7 @@ describe("getAdminCreditsEventsHandler", () => {
         cached_input_tokens: 0,
         output_tokens: 6,
         tool_call_count: 0,
-        credits_deducted_cents: 7,
+        credits_deducted: 7,
         created_at: "2026-05-15T18:31:22.747Z",
       },
     ]);
@@ -113,7 +113,7 @@ describe("getAdminCreditsEventsHandler", () => {
     expect(body.limit).toBe(25);
     expect(body.total_count).toBe(42);
     expect(body.events).toHaveLength(1);
-    expect(body.events[0].credits_deducted_cents).toBe(7);
+    expect(body.events[0].credits_deducted).toBe(7);
   });
 
   it("passes range + cutoff through to the supabase select", async () => {
