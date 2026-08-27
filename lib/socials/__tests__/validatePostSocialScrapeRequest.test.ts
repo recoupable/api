@@ -78,6 +78,7 @@ describe("validatePostSocialScrapeRequest", () => {
       social_id: SOCIAL_ID,
       posts: undefined,
       account_id: ACCOUNT_ID,
+      subtitles: false,
     });
     expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 50_000);
   });
@@ -91,6 +92,7 @@ describe("validatePostSocialScrapeRequest", () => {
       social_id: SOCIAL_ID,
       posts: 20,
       account_id: ACCOUNT_ID,
+      subtitles: false,
     });
     expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 250_000);
   });
@@ -119,5 +121,29 @@ describe("validatePostSocialScrapeRequest", () => {
     await expect(validatePostSocialScrapeRequest(makeRequest(), SOCIAL_ID)).rejects.toThrow(
       "db blew up",
     );
+  });
+  it("parses subtitles=true, defaults to false, and rejects other values", async () => {
+    const withFlag = new NextRequest(
+      `http://localhost/api/socials/${SOCIAL_ID}/scrape?subtitles=true`,
+      {
+        method: "POST",
+        headers: { "x-api-key": "k" },
+      },
+    );
+    const on = await validatePostSocialScrapeRequest(withFlag, SOCIAL_ID);
+    expect(on).toMatchObject({ subtitles: true });
+
+    const off = await validatePostSocialScrapeRequest(makeRequest(), SOCIAL_ID);
+    expect(off).toMatchObject({ subtitles: false });
+
+    const bad = new NextRequest(
+      `http://localhost/api/socials/${SOCIAL_ID}/scrape?subtitles=maybe`,
+      {
+        method: "POST",
+        headers: { "x-api-key": "k" },
+      },
+    );
+    const res = (await validatePostSocialScrapeRequest(bad, SOCIAL_ID)) as NextResponse;
+    expect(res.status).toBe(400);
   });
 });
