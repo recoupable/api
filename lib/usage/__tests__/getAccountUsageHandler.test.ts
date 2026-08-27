@@ -79,6 +79,16 @@ describe("getAccountUsageHandler", () => {
     expect(body.events[0].credits_deducted).toBe(20000);
     expect(body.events[0].usd).toBe("$0.02");
     expect(body.next_cursor).toBe("2026-08-10T10:00:00.000Z");
+    // First page: the series covers the whole period at the span's bucket.
+    expect(body.series_bucket).toBe("day");
+    expect(body.series).toEqual([
+      { start: "2026-08-10T00:00:00.000Z", credits_deducted: 10000, usd: "$0.01", events: 1 },
+      { start: "2026-08-20T00:00:00.000Z", credits_deducted: 20000, usd: "$0.02", events: 1 },
+      { start: "2026-08-25T00:00:00.000Z", credits_deducted: 40000, usd: "$0.04", events: 1 },
+    ]);
+    expect(
+      body.series.reduce((t: number, p: { credits_deducted: number }) => t + p.credits_deducted, 0),
+    ).toBe(body.total_credits_deducted);
     expect(selectAllUsageEvents).toHaveBeenCalledWith({
       accountId: ACCOUNT_ID,
       createdAfter: "2026-08-01T00:00:00.000Z",
@@ -109,6 +119,21 @@ describe("getAccountUsageHandler", () => {
     expect(selectAllUsageEvents).toHaveBeenCalledWith(
       expect.objectContaining({ createdBefore: "2026-08-27T00:00:00.000Z" }),
     );
+  });
+
+  it("omits the series on cursor pages", async () => {
+    vi.mocked(selectUsageEvents).mockResolvedValue([] as never);
+    vi.mocked(validateGetAccountUsageQuery).mockResolvedValue({
+      accountId: ACCOUNT_ID,
+      limit: 5,
+      cursor: "2026-08-20T10:00:00.000Z",
+      from: "2026-08-01T00:00:00.000Z",
+      to: "2026-08-27T00:00:00.000Z",
+    });
+    const body = await (await getAccountUsageHandler(req(), params)).json();
+    expect(body).not.toHaveProperty("series");
+    expect(body).not.toHaveProperty("series_bucket");
+    expect(body.total_credits_deducted).toBe(70000);
   });
 
   it("returns next_cursor null on a short page and total 0 for an empty period", async () => {
