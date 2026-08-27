@@ -1,4 +1,4 @@
-import { creditsToUsd } from "@/lib/credits/creditUnit";
+import { creditsToUsd } from "@/lib/credits/creditsToUsd";
 
 /**
  * Formats a credit amount as a USD string.

@@ -1,5 +1,5 @@
 import { getCreditUsage } from "./getCreditUsage";
-import { usdToCredits } from "@/lib/credits/creditUnit";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
 import { recordCreditDeduction } from "./recordCreditDeduction";
 import { LanguageModelUsage } from "ai";
 
