@@ -17,6 +17,10 @@ export const postSocialScrapeParamsSchema = z.object({
     .min(1, "posts must be between 1 and 100")
     .max(100, "posts must be between 1 and 100")
     .optional(),
+  subtitles: z
+    .enum(["true", "false"], { message: "subtitles must be true or false" })
+    .optional()
+    .transform(value => value === "true"),
 });
 
 export type PostSocialScrapeParams = z.infer<typeof postSocialScrapeParamsSchema> & {
@@ -30,6 +34,7 @@ export async function validatePostSocialScrapeRequest(
   const parsed = postSocialScrapeParamsSchema.safeParse({
     social_id: id,
     posts: request.nextUrl.searchParams.get("posts") ?? undefined,
+    subtitles: request.nextUrl.searchParams.get("subtitles") ?? undefined,
   });
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
@@ -70,5 +75,10 @@ export async function validatePostSocialScrapeRequest(
   );
   if (short) return short;
 
-  return { social_id, posts: parsed.data.posts, account_id: authResult.accountId };
+  return {
+    social_id,
+    posts: parsed.data.posts,
+    subtitles: parsed.data.subtitles,
+    account_id: authResult.accountId,
+  };
 }

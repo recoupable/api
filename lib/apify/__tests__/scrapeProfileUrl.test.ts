@@ -38,4 +38,14 @@ describe("scrapeProfileUrl", () => {
     expect(r).toBeNull();
     expect(li).not.toHaveBeenCalled();
   });
+  it("passes options through to the YouTube scraper", async () => {
+    const yt = (await import("@/lib/apify/youtube/startYoutubeProfileScraping"))
+      .default as unknown as ReturnType<typeof vi.fn>;
+    yt.mockResolvedValue({ runId: "yt-run", datasetId: "yt-ds" });
+    const r = await scrapeProfileUrl("https://www.youtube.com/@mycowtf", "mycowtf", 10, {
+      subtitles: true,
+    });
+    expect(yt).toHaveBeenCalledWith("mycowtf", 10, { origin: "artist" }, { subtitles: true });
+    expect(r).toMatchObject({ runId: "yt-run", datasetId: "yt-ds", supported: true });
+  });
 });
