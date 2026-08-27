@@ -129,6 +129,7 @@ describe("handleArtistResearch", () => {
     } as never);
     vi.mocked(recordCreditDeduction).mockResolvedValue(undefined as never);
     await handleArtistResearch({
+      artist: "Drake",
       artistId: "3380",
       accountId: "acct",
       path: id => `/artist/${id}/audience`,
