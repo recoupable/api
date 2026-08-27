@@ -18,9 +18,7 @@ interface SelectUsageEventsParams {
  * @param params - Filters + range bounds.
  * @returns Matching usage_events rows for the range.
  */
-export async function selectUsageEvents(
-  params: SelectUsageEventsParams,
-): Promise<UsageEventRow[]> {
+export async function selectUsageEvents(params: SelectUsageEventsParams): Promise<UsageEventRow[]> {
   let query = supabase
     .from("usage_events")
     .select("*")

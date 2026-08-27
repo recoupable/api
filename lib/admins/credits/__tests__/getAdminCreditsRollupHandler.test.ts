@@ -132,9 +132,7 @@ describe("getAdminCreditsRollupHandler", () => {
   });
 
   it("picks the most-recently-updated email for accounts with multiple", async () => {
-    mockSelectAllUsageEvents.mockResolvedValue([
-      { account_id: "acc-1", credits_deducted: 1 },
-    ]);
+    mockSelectAllUsageEvents.mockResolvedValue([{ account_id: "acc-1", credits_deducted: 1 }]);
     mockSelectAccounts.mockResolvedValue([{ id: "acc-1", name: "Alice" }]);
     mockSelectAccountEmails.mockResolvedValue([
       { account_id: "acc-1", email: "old@example.com", updated_at: "2026-01-01T00:00:00Z" },
