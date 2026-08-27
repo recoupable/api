@@ -4,6 +4,7 @@ import { selectSocials } from "@/lib/supabase/socials/selectSocials";
 import { scrapeProfileUrl } from "@/lib/apify/scrapeProfileUrl";
 import { validatePostSocialScrapeRequest } from "@/lib/socials/validatePostSocialScrapeRequest";
 import { deductSocialScrapeCredits } from "@/lib/socials/deductSocialScrapeCredits";
+import { registerRootApifyRun } from "@/lib/apify/registerRootApifyRun";
 import { getSocialScrapeCreditCost } from "@/lib/socials/getSocialScrapeCreditCost";
 import { endpointModelId } from "@/lib/credits/endpointModelId";
 
@@ -57,6 +58,14 @@ export async function postSocialScrapeHandler(
         getSocialScrapeCreditCost(validated.posts),
         endpointModelId(request, "/api/socials/[id]/scrape"),
       );
+      if (scrapeResult.runId) {
+        await registerRootApifyRun({
+          runId: scrapeResult.runId,
+          accountId: validated.account_id,
+          socialId: social.id,
+          profileUrl: social.profile_url,
+        });
+      }
       return NextResponse.json(
         {
           runId: scrapeResult.runId,

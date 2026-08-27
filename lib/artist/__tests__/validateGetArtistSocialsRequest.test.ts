@@ -30,6 +30,9 @@ describe("validateGetArtistSocialsRequest", () => {
     ["invalid uuid", "not-a-uuid", `/api/artists/not-a-uuid/socials`],
     ["page=0", ARTIST_ID, `/api/artists/${ARTIST_ID}/socials?page=0`],
     ["limit>max", ARTIST_ID, `/api/artists/${ARTIST_ID}/socials?limit=500`],
+    ["history=0", ARTIST_ID, `/api/artists/${ARTIST_ID}/socials?history=0`],
+    ["history>90", ARTIST_ID, `/api/artists/${ARTIST_ID}/socials?history=91`],
+    ["history=abc", ARTIST_ID, `/api/artists/${ARTIST_ID}/socials?history=abc`],
   ])("returns 400 for %s", async (_, id, path) => {
     const res = (await validateGetArtistSocialsRequest(makeRequest(path), id)) as NextResponse;
     expect(res.status).toBe(400);
@@ -68,5 +71,16 @@ describe("validateGetArtistSocialsRequest", () => {
       page: 3,
       limit: 50,
     });
+  });
+
+  it("parses history as a day count and leaves it undefined when omitted", async () => {
+    const withHistory = await validateGetArtistSocialsRequest(
+      makeRequest(`/api/artists/${ARTIST_ID}/socials?history=14`),
+      ARTIST_ID,
+    );
+    expect(withHistory).toMatchObject({ artist_account_id: ARTIST_ID, history: 14 });
+    const without = await validateGetArtistSocialsRequest(makeRequest(), ARTIST_ID);
+    expect(without).toMatchObject({ artist_account_id: ARTIST_ID });
+    expect((without as { history?: number }).history).toBeUndefined();
   });
 });

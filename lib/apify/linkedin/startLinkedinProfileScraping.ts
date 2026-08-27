@@ -1,7 +1,7 @@
 import apifyClient from "@/lib/apify/client";
 import { getApifyWebhooks } from "@/lib/apify/getApifyWebhooks";
 import { OUTSTANDING_ERROR } from "@/lib/apify/errors";
-import { ApifyRunInfo } from "@/lib/apify/types";
+import { ApifyRunInfo, ApifyRunLineage } from "@/lib/apify/types";
 
 /**
  * Starts a LinkedIn scrape via the harvestapi actors.
@@ -21,6 +21,7 @@ import { ApifyRunInfo } from "@/lib/apify/types";
 const startLinkedinProfileScraping = async (
   handle: string,
   posts?: number,
+  lineage: ApifyRunLineage = { origin: "artist" },
 ): Promise<ApifyRunInfo | null> => {
   const cleanHandle = handle.trim().replace(/^@/, "");
   // Legacy rows stored the LinkedIn path prefix ("in") as the username — never
@@ -41,7 +42,9 @@ const startLinkedinProfileScraping = async (
     posts === undefined ? { urls: [targetUrl] } : { targetUrls: [targetUrl], maxPosts: posts };
 
   try {
-    const run = await apifyClient.actor(actorId).start(input, { webhooks: getApifyWebhooks() });
+    const run = await apifyClient
+      .actor(actorId)
+      .start(input, { webhooks: getApifyWebhooks(lineage) });
 
     if (!run?.id || !run?.defaultDatasetId) {
       console.error("Failed to start LinkedIn profile scraping for handle:", handle);
