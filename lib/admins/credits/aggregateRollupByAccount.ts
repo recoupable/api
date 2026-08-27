@@ -1,4 +1,4 @@
-import type { UsageEventRow } from "@/lib/supabase/usage_events/usageEventRow";
+import type { Tables } from "@/types/database.types";
 
 export interface RollupAggregateRow {
   account_id: string;
@@ -15,7 +15,7 @@ export interface RollupAggregateRow {
  * @param events - Raw usage_events rows in the period.
  * @returns Aggregated rows sorted by total credits DESC, account_id ASC.
  */
-export function aggregateRollupByAccount(events: UsageEventRow[]): RollupAggregateRow[] {
+export function aggregateRollupByAccount(events: Tables<"usage_events">[]): RollupAggregateRow[] {
   const byAccount = new Map<string, { total: number; count: number }>();
   for (const event of events) {
     const existing = byAccount.get(event.account_id) ?? { total: 0, count: 0 };
