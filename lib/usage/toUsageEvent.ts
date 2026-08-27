@@ -17,6 +17,8 @@ export interface UsageEventItem {
   credits_deducted: number;
   /** The same charge formatted as USD with two decimals. */
   usd: string;
+  /** App-relative link to what produced the charge; null for plain API calls. */
+  resource_url: string | null;
 }
 
 /**
@@ -41,5 +43,6 @@ export function toUsageEvent(row: Tables<"usage_events">): UsageEventItem {
     tool_call_count: row.tool_call_count,
     credits_deducted: row.credits_deducted,
     usd: formatCentsAsUsd(row.credits_deducted),
+    resource_url: row.resource_url,
   };
 }

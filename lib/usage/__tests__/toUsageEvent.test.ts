@@ -15,6 +15,7 @@ const row: Tables<"usage_events"> = {
   tool_call_count: 0,
   created_at: "2026-08-27T11:56:58.000+00:00",
   credits_deducted: 20000,
+  resource_url: null,
 };
 
 describe("toUsageEvent", () => {
@@ -32,6 +33,7 @@ describe("toUsageEvent", () => {
       tool_call_count: 0,
       credits_deducted: 20000,
       usd: "$0.02",
+      resource_url: null,
     });
   });
 
@@ -39,5 +41,12 @@ describe("toUsageEvent", () => {
     const item = toUsageEvent({ ...row, credits_deducted: 2000 });
     expect(item.credits_deducted).toBe(2000);
     expect(item.usd).toBe("$0.00");
+  });
+
+  it("exposes resource_url, null when the row has none", () => {
+    expect(toUsageEvent({ ...row, resource_url: "/music/gen-1" }).resource_url).toBe(
+      "/music/gen-1",
+    );
+    expect(toUsageEvent(row).resource_url).toBeNull();
   });
 });

@@ -16,6 +16,8 @@ export interface DeductCreditsAuditEvent {
   cached_input_tokens?: number;
   output_tokens?: number;
   tool_call_count?: number;
+  /** App-relative link to what produced the charge (a chat, a song); omitted for plain API calls. */
+  resource_url?: string;
 }
 
 export interface DeductCreditsWithAuditResult {

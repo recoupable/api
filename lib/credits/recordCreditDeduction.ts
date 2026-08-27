@@ -12,6 +12,8 @@ interface RecordCreditDeductionParams {
   cachedInputTokens?: number;
   outputTokens?: number;
   toolCallCount?: number;
+  /** App-relative link to what produced the charge, stored as `usage_events.resource_url`. */
+  resourceUrl?: string;
 }
 
 interface RecordCreditDeductionResult {
@@ -50,6 +52,7 @@ export const recordCreditDeduction = async (
         cached_input_tokens: params.cachedInputTokens ?? 0,
         output_tokens: params.outputTokens ?? 0,
         tool_call_count: params.toolCallCount ?? 0,
+        ...(params.resourceUrl ? { resource_url: params.resourceUrl } : {}),
       },
     });
 

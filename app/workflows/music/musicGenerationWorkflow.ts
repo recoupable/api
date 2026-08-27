@@ -88,6 +88,7 @@ export async function musicGenerationWorkflow(generationId: string, params: Musi
         source: "api",
         provider: "fal",
         modelId: MUSIC_MODEL,
+        resourceUrl: `/music/${generationId}`,
       });
     }
 

@@ -40,6 +40,7 @@ describe("handleChatCredits", () => {
         usage: USAGE,
         model: "gpt-4",
         accountId: "account-123",
+        resourceUrl: "/sessions/session-1/chats/chat-1",
       });
 
       expect(mockGetCreditUsage).toHaveBeenCalledWith(USAGE, "gpt-4", undefined);
@@ -51,6 +52,7 @@ describe("handleChatCredits", () => {
         inputTokens: 1000,
         outputTokens: 500,
         cachedInputTokens: 0,
+        resourceUrl: "/sessions/session-1/chats/chat-1",
       });
     });
 
