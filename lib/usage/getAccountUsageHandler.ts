@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAccountCreditsParams } from "@/lib/credits/validateAccountCreditsParams";
-import { mapToAccountCreditsError } from "@/lib/credits/mapToAccountCreditsError";
 import { formatCentsAsUsd } from "@/lib/credits/formatCentsAsUsd";
 import { validateGetAccountUsageQuery } from "@/lib/usage/validateGetAccountUsageQuery";
 import { selectUsageEvents } from "@/lib/supabase/usage_events/selectUsageEvents";
@@ -21,15 +19,11 @@ export async function getAccountUsageHandler(
 ): Promise<NextResponse> {
   try {
     const { id } = await params;
-    const accountId = await validateAccountCreditsParams(request, id);
-    if (accountId instanceof NextResponse) {
-      return mapToAccountCreditsError(accountId);
-    }
-
-    const query = validateGetAccountUsageQuery(request);
+    const query = await validateGetAccountUsageQuery(request, id);
     if (query instanceof NextResponse) {
       return query;
     }
+    const { accountId } = query;
 
     const period = { from: query.from, to: query.to };
     // The page ends at the cursor when one is given and it falls inside the

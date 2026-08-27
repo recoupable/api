@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountUsageHandler } from "@/lib/usage/getAccountUsageHandler";
-import { validateAccountCreditsParams } from "@/lib/credits/validateAccountCreditsParams";
+import { validateGetAccountUsageQuery } from "@/lib/usage/validateGetAccountUsageQuery";
 import { selectUsageEvents } from "@/lib/supabase/usage_events/selectUsageEvents";
 import { selectAllUsageEvents } from "@/lib/admins/credits/selectAllUsageEvents";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
-vi.mock("@/lib/credits/validateAccountCreditsParams", () => ({
-  validateAccountCreditsParams: vi.fn(),
+vi.mock("@/lib/usage/validateGetAccountUsageQuery", () => ({
+  validateGetAccountUsageQuery: vi.fn(),
 }));
 vi.mock("@/lib/supabase/usage_events/selectUsageEvents", () => ({
   selectUsageEvents: vi.fn(),
@@ -42,7 +42,13 @@ const row = (id: string, created_at: string, cents: number) => ({
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => undefined);
-  vi.mocked(validateAccountCreditsParams).mockResolvedValue(ACCOUNT_ID);
+  vi.mocked(validateGetAccountUsageQuery).mockResolvedValue({
+    accountId: ACCOUNT_ID,
+    limit: 2,
+    cursor: undefined,
+    from: "2026-08-01T00:00:00.000Z",
+    to: "2026-08-27T00:00:00.000Z",
+  });
   vi.mocked(selectAllUsageEvents).mockResolvedValue([
     row("c", "2026-08-25T10:00:00+00:00", 40000),
     row("b", "2026-08-20T10:00:00+00:00", 20000),
@@ -89,10 +95,14 @@ describe("getAccountUsageHandler", () => {
 
   it("pages with the cursor as the upper bound when it is inside the period", async () => {
     vi.mocked(selectUsageEvents).mockResolvedValue([] as never);
-    await getAccountUsageHandler(
-      req("?limit=5&to=2026-08-27T00:00:00Z&cursor=2026-08-20T10:00:00Z"),
-      params,
-    );
+    vi.mocked(validateGetAccountUsageQuery).mockResolvedValue({
+      accountId: ACCOUNT_ID,
+      limit: 5,
+      cursor: "2026-08-20T10:00:00.000Z",
+      from: "2026-08-01T00:00:00.000Z",
+      to: "2026-08-27T00:00:00.000Z",
+    });
+    await getAccountUsageHandler(req(), params);
     expect(selectUsageEvents).toHaveBeenCalledWith(
       expect.objectContaining({ createdBefore: "2026-08-20T10:00:00.000Z", from: 0, to: 4 }),
     );
@@ -111,20 +121,13 @@ describe("getAccountUsageHandler", () => {
     expect(body.total_usd).toBe("$0.00");
   });
 
-  it("forwards the auth short-circuit as { error } with its status", async () => {
-    vi.mocked(validateAccountCreditsParams).mockResolvedValue(
-      NextResponse.json({ message: "Forbidden" }, { status: 403 }),
-    );
+  it("returns the validator's response untouched without touching the database", async () => {
+    const short = NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    vi.mocked(validateGetAccountUsageQuery).mockResolvedValue(short);
     const res = await getAccountUsageHandler(req(), params);
-    expect(res.status).toBe(403);
-    await expect(res.json()).resolves.toEqual({ error: "Forbidden" });
+    expect(res).toBe(short);
     expect(selectUsageEvents).not.toHaveBeenCalled();
-  });
-
-  it("returns 400 from the query validator without touching the database", async () => {
-    const res = await getAccountUsageHandler(req("?limit=0"), params);
-    expect(res.status).toBe(400);
-    expect(selectUsageEvents).not.toHaveBeenCalled();
+    expect(selectAllUsageEvents).not.toHaveBeenCalled();
   });
 
   it("masks database failures as a 500 { error }", async () => {
