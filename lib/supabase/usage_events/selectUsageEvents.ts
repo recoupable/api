@@ -7,6 +7,10 @@ interface SelectUsageEventsParams {
   createdAfter?: string;
   /** Upper bound on `created_at` (ISO string), exclusive. Omit for no bound. */
   createdBefore?: string;
+  /** Sort column, descending; `id` desc breaks ties either way. Default `created_at`. */
+  orderBy?: "created_at" | "credits_deducted";
+  /** Keyset for cost paging: rows strictly after this `(credits_deducted, id)` pair. */
+  costBefore?: { creditsDeducted: number; id: string };
   /** Inclusive zero-indexed range start. */
   from: number;
   /** Inclusive zero-indexed range end. */
@@ -26,13 +30,19 @@ export async function selectUsageEvents(
   let query = supabase
     .from("usage_events")
     .select("*")
-    .order("created_at", { ascending: false })
+    .order(params.orderBy ?? "created_at", { ascending: false })
     .order("id", { ascending: false })
     .range(params.from, params.to);
 
   if (params.accountId) query = query.eq("account_id", params.accountId);
   if (params.createdAfter) query = query.gte("created_at", params.createdAfter);
   if (params.createdBefore) query = query.lt("created_at", params.createdBefore);
+  if (params.costBefore) {
+    const { creditsDeducted, id } = params.costBefore;
+    query = query.or(
+      `credits_deducted.lt.${creditsDeducted},and(credits_deducted.eq.${creditsDeducted},id.lt.${id})`,
+    );
+  }
 
   const { data, error } = await query;
   if (error) {

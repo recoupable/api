@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountUsageHandler } from "@/lib/usage/getAccountUsageHandler";
 import { validateGetAccountUsageQuery } from "@/lib/usage/validateGetAccountUsageQuery";
-import { selectUsageEvents } from "@/lib/supabase/usage_events/selectUsageEvents";
+import { selectUsagePage } from "@/lib/usage/selectUsagePage";
 import { selectAllUsageEvents } from "@/lib/admins/credits/selectAllUsageEvents";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -11,8 +11,8 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 vi.mock("@/lib/usage/validateGetAccountUsageQuery", () => ({
   validateGetAccountUsageQuery: vi.fn(),
 }));
-vi.mock("@/lib/supabase/usage_events/selectUsageEvents", () => ({
-  selectUsageEvents: vi.fn(),
+vi.mock("@/lib/usage/selectUsagePage", () => ({
+  selectUsagePage: vi.fn(),
 }));
 vi.mock("@/lib/admins/credits/selectAllUsageEvents", () => ({
   selectAllUsageEvents: vi.fn(),
@@ -45,6 +45,7 @@ beforeEach(() => {
   vi.mocked(validateGetAccountUsageQuery).mockResolvedValue({
     accountId: ACCOUNT_ID,
     limit: 2,
+    sort: "created_at",
     cursor: undefined,
     from: "2026-08-01T00:00:00.000Z",
     to: "2026-08-27T00:00:00.000Z",
@@ -58,7 +59,7 @@ beforeEach(() => {
 
 describe("getAccountUsageHandler", () => {
   it("returns the period, the aggregate total and the page with a cursor when full", async () => {
-    vi.mocked(selectUsageEvents).mockResolvedValue([
+    vi.mocked(selectUsagePage).mockResolvedValue([
       row("b", "2026-08-20T10:00:00+00:00", 20000),
       row("a", "2026-08-10T10:00:00+00:00", 10000),
     ] as never);
@@ -94,27 +95,29 @@ describe("getAccountUsageHandler", () => {
       createdAfter: "2026-08-01T00:00:00.000Z",
       createdBefore: "2026-08-27T00:00:00.000Z",
     });
-    expect(selectUsageEvents).toHaveBeenCalledWith({
+    expect(selectUsagePage).toHaveBeenCalledWith({
       accountId: ACCOUNT_ID,
-      createdAfter: "2026-08-01T00:00:00.000Z",
-      createdBefore: "2026-08-27T00:00:00.000Z",
-      from: 0,
-      to: 1,
+      from: "2026-08-01T00:00:00.000Z",
+      to: "2026-08-27T00:00:00.000Z",
+      sort: "created_at",
+      cursor: undefined,
+      limit: 2,
     });
   });
 
   it("pages with the cursor as the upper bound when it is inside the period", async () => {
-    vi.mocked(selectUsageEvents).mockResolvedValue([] as never);
+    vi.mocked(selectUsagePage).mockResolvedValue([] as never);
     vi.mocked(validateGetAccountUsageQuery).mockResolvedValue({
       accountId: ACCOUNT_ID,
       limit: 5,
-      cursor: "2026-08-20T10:00:00.000Z",
+      sort: "created_at",
+      cursor: { createdAt: "2026-08-20T10:00:00.000Z" },
       from: "2026-08-01T00:00:00.000Z",
       to: "2026-08-27T00:00:00.000Z",
     });
     await getAccountUsageHandler(req(), params);
-    expect(selectUsageEvents).toHaveBeenCalledWith(
-      expect.objectContaining({ createdBefore: "2026-08-20T10:00:00.000Z", from: 0, to: 4 }),
+    expect(selectUsagePage).toHaveBeenCalledWith(
+      expect.objectContaining({ cursor: { createdAt: "2026-08-20T10:00:00.000Z" }, limit: 5 }),
     );
     expect(selectAllUsageEvents).toHaveBeenCalledWith(
       expect.objectContaining({ createdBefore: "2026-08-27T00:00:00.000Z" }),
@@ -122,11 +125,12 @@ describe("getAccountUsageHandler", () => {
   });
 
   it("omits the series on cursor pages", async () => {
-    vi.mocked(selectUsageEvents).mockResolvedValue([] as never);
+    vi.mocked(selectUsagePage).mockResolvedValue([] as never);
     vi.mocked(validateGetAccountUsageQuery).mockResolvedValue({
       accountId: ACCOUNT_ID,
       limit: 5,
-      cursor: "2026-08-20T10:00:00.000Z",
+      sort: "created_at",
+      cursor: { createdAt: "2026-08-20T10:00:00.000Z" },
       from: "2026-08-01T00:00:00.000Z",
       to: "2026-08-27T00:00:00.000Z",
     });
@@ -137,7 +141,7 @@ describe("getAccountUsageHandler", () => {
   });
 
   it("returns next_cursor null on a short page and total 0 for an empty period", async () => {
-    vi.mocked(selectUsageEvents).mockResolvedValue([] as never);
+    vi.mocked(selectUsagePage).mockResolvedValue([] as never);
     vi.mocked(selectAllUsageEvents).mockResolvedValue([] as never);
     const body = await (await getAccountUsageHandler(req(), params)).json();
     expect(body.events).toEqual([]);
@@ -151,14 +155,32 @@ describe("getAccountUsageHandler", () => {
     vi.mocked(validateGetAccountUsageQuery).mockResolvedValue(short);
     const res = await getAccountUsageHandler(req(), params);
     expect(res).toBe(short);
-    expect(selectUsageEvents).not.toHaveBeenCalled();
+    expect(selectUsagePage).not.toHaveBeenCalled();
     expect(selectAllUsageEvents).not.toHaveBeenCalled();
   });
 
   it("masks database failures as a 500 { error }", async () => {
-    vi.mocked(selectUsageEvents).mockRejectedValue(new Error("db down"));
+    vi.mocked(selectUsagePage).mockRejectedValue(new Error("db down"));
     const res = await getAccountUsageHandler(req(), params);
     expect(res.status).toBe(500);
     await expect(res.json()).resolves.toEqual({ error: "Internal server error" });
+  });
+
+  it("encodes next_cursor as credits_deducted:id when sorting by cost", async () => {
+    vi.mocked(validateGetAccountUsageQuery).mockResolvedValue({
+      accountId: ACCOUNT_ID,
+      limit: 2,
+      sort: "cost",
+      cursor: undefined,
+      from: "2026-08-01T00:00:00.000Z",
+      to: "2026-08-27T00:00:00.000Z",
+    });
+    vi.mocked(selectUsagePage).mockResolvedValue([
+      row("big", "2026-08-10T10:00:00+00:00", 40000),
+      row("mid", "2026-08-20T10:00:00+00:00", 20000),
+    ] as never);
+    const body = await (await getAccountUsageHandler(req("?sort=cost"), params)).json();
+    expect(body.events.map((e: { id: string }) => e.id)).toEqual(["big", "mid"]);
+    expect(body.next_cursor).toBe("20000:mid");
   });
 });

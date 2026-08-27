@@ -3,12 +3,17 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAccountCreditsParams } from "@/lib/credits/validateAccountCreditsParams";
 import { mapToAccountCreditsError } from "@/lib/credits/mapToAccountCreditsError";
+import { decodeUsageCursor } from "@/lib/usage/decodeUsageCursor";
+import type { UsageCursor, UsageSort } from "@/lib/usage/usageSort";
+import { startOfCurrentUtcMonth } from "@/lib/usage/startOfCurrentUtcMonth";
+import { invalidCursorMessage } from "@/lib/usage/invalidCursorMessage";
 
 const iso = z.string().datetime({ offset: true });
 
 const querySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
-  cursor: iso.optional(),
+  sort: z.enum(["created_at", "cost"]).default("created_at"),
+  cursor: z.string().min(1).optional(),
   from: iso.optional(),
   to: iso.optional(),
 });
@@ -17,16 +22,14 @@ export interface GetAccountUsageQuery {
   /** The account whose charges are listed; the caller is that account or has org access to it. */
   accountId: string;
   limit: number;
-  /** `created_at` of the last item on the previous page; items strictly older are returned. */
-  cursor: string | undefined;
+  /** Sort order, both descending: by time (default) or by charge. */
+  sort: UsageSort;
+  /** Keyset of the last item on the previous page, decoded for `sort`. */
+  cursor: UsageCursor | undefined;
   /** Inclusive lower bound on `created_at`, ISO 8601 UTC. */
   from: string;
   /** Exclusive upper bound on `created_at`, ISO 8601 UTC. */
   to: string;
-}
-
-function startOfCurrentUtcMonth(now: Date): string {
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 }
 
 /**
@@ -60,6 +63,15 @@ export async function validateGetAccountUsageQuery(
     );
   }
 
+  const cursor = parsed.data.cursor
+    ? decodeUsageCursor(parsed.data.sort, parsed.data.cursor)
+    : undefined;
+  if (cursor === null) {
+    return NextResponse.json(
+      { error: invalidCursorMessage(parsed.data.sort) },
+      { status: 400, headers: getCorsHeaders() },
+    );
+  }
   const now = new Date();
   const from = parsed.data.from
     ? new Date(parsed.data.from).toISOString()
@@ -75,7 +87,8 @@ export async function validateGetAccountUsageQuery(
   return {
     accountId,
     limit: parsed.data.limit,
-    cursor: parsed.data.cursor ? new Date(parsed.data.cursor).toISOString() : undefined,
+    sort: parsed.data.sort,
+    cursor,
     from,
     to,
   };

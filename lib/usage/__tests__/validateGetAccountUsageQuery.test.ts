@@ -47,6 +47,7 @@ describe("validateGetAccountUsageQuery", () => {
     expect(result).toEqual({
       accountId: ACCOUNT_ID,
       limit: 20,
+      sort: "created_at",
       cursor: undefined,
       from: "2026-08-01T00:00:00.000Z",
       to: "2026-08-27T12:00:00.000Z",
@@ -63,7 +64,8 @@ describe("validateGetAccountUsageQuery", () => {
     expect(result).toEqual({
       accountId: ACCOUNT_ID,
       limit: 5,
-      cursor: "2026-08-15T10:00:00.000Z",
+      sort: "created_at",
+      cursor: { createdAt: "2026-08-15T10:00:00.000Z" },
       from: "2026-08-09T22:00:00.000Z",
       to: "2026-08-20T00:00:00.000Z",
     });
@@ -90,5 +92,28 @@ describe("validateGetAccountUsageQuery", () => {
     )) as NextResponse;
     expect(cursor.status).toBe(400);
     await expect(cursor.json()).resolves.toEqual({ error: expect.stringMatching(/^cursor: /) });
+  });
+
+  it("accepts sort=cost with a credits_deducted:id cursor", async () => {
+    const result = await validateGetAccountUsageQuery(
+      req("?sort=cost&cursor=50000:abc"),
+      ACCOUNT_ID,
+    );
+    expect(result).toMatchObject({ sort: "cost", cursor: { creditsDeducted: 50000, id: "abc" } });
+  });
+
+  it("rejects a cursor that does not fit the sort, and an unknown sort", async () => {
+    const wrong = (await validateGetAccountUsageQuery(
+      req("?sort=cost&cursor=2026-08-15T10:00:00Z"),
+      ACCOUNT_ID,
+    )) as NextResponse;
+    expect(wrong.status).toBe(400);
+    await expect(wrong.json()).resolves.toEqual({ error: expect.stringMatching(/^cursor: /) });
+    const unknown = (await validateGetAccountUsageQuery(
+      req("?sort=price"),
+      ACCOUNT_ID,
+    )) as NextResponse;
+    expect(unknown.status).toBe(400);
+    await expect(unknown.json()).resolves.toEqual({ error: expect.stringMatching(/^sort: /) });
   });
 });
