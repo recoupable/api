@@ -3,6 +3,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { handleResearch } from "@/lib/research/handleResearch";
 import { validateGetResearchSearchRequest } from "@/lib/research/validateGetResearchSearchRequest";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * GET /api/research/search
@@ -26,6 +27,7 @@ export async function getResearchSearchHandler(request: NextRequest): Promise<Ne
 
     const result = await handleResearch({
       accountId: validated.accountId,
+      modelId: endpointModelId(request, "/api/research"),
       path: "/search",
       query,
     });

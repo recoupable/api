@@ -1,5 +1,5 @@
 import apifyClient from "@/lib/apify/client";
-import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
+import { upsertSocialsWithSnapshot } from "@/lib/socials/upsertSocialsWithSnapshot";
 import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
 import { persistPostsForSocial } from "@/lib/apify/persistPostsForSocial";
 import { filterNewPostUrls } from "@/lib/socials/filterNewPostUrls";
@@ -16,6 +16,10 @@ type TweetItem = {
   isReply?: boolean;
   url?: string;
   createdAt?: string;
+  viewCount?: number;
+  likeCount?: number;
+  replyCount?: number;
+  retweetCount?: number;
   author?: {
     userName?: string;
     url?: string;
@@ -24,6 +28,7 @@ type TweetItem = {
     location?: string;
     followers?: number;
     following?: number;
+    statusesCount?: number;
   };
 };
 
@@ -48,8 +53,9 @@ export async function handleTwitterProfileScraperResults(parsed: ApifyWebhookPay
     followerCount: author.followers ?? null,
     followingCount: author.following ?? null,
     region: author.location || null,
+    postCount: author.statusesCount ?? null,
   };
-  await upsertSocials([social]);
+  await upsertSocialsWithSnapshot([social]);
 
   // Tweet URLs keep the author's display casing — the path segment is the
   // case-sensitive status id's context, and unlike profile keys they are
@@ -58,7 +64,16 @@ export async function handleTwitterProfileScraperResults(parsed: ApifyWebhookPay
   // and stats, replies are conversation (chat#1855).
   const postRows: TablesInsert<"posts">[] = (items as TweetItem[]).flatMap(item =>
     item.url && isOriginalTweet(item)
-      ? [{ post_url: item.url, updated_at: toIsoDate(item.createdAt) }]
+      ? [
+          {
+            post_url: item.url,
+            updated_at: toIsoDate(item.createdAt),
+            views: item.viewCount ?? null,
+            likes: item.likeCount ?? null,
+            comments: item.replyCount ?? null,
+            reposts: item.retweetCount ?? null,
+          },
+        ]
       : [],
   );
   // Diff before persisting so the digest can report genuinely new posts (chat#1855).

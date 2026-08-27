@@ -40,7 +40,7 @@ export async function getTrackHistoricStatsApifyFirst(
   const remainingSources = spotifyRequested ? sources.filter(s => s !== "spotify") : sources;
 
   if (spotifyStat && remainingSources.length === 0) {
-    await deductCredits(params.accountId);
+    await deductCredits(params.accountId, params.modelId);
     return { data: { result: "success", stats: [spotifyStat] } };
   }
 

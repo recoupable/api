@@ -1,5 +1,5 @@
 import apifyClient from "@/lib/apify/client";
-import { ApifyRunInfo } from "@/lib/apify/types";
+import { ApifyRunInfo, ApifyRunLineage } from "@/lib/apify/types";
 import { getApifyWebhooks } from "@/lib/apify/getApifyWebhooks";
 
 /**
@@ -9,11 +9,13 @@ import { getApifyWebhooks } from "@/lib/apify/getApifyWebhooks";
  *
  * @param postUrls - Array of Instagram post URLs to fetch comments for.
  * @param resultsLimit - Optional max comments per post (default 100).
+ * @param lineage - The artist lineage of the profile run that found these posts.
  * @returns ApifyRunInfo with runId + datasetId, or null on failure.
  */
 export async function startInstagramCommentsScraping(
   postUrls: string[],
   resultsLimit = 100,
+  lineage: ApifyRunLineage = { origin: "artist" },
 ): Promise<ApifyRunInfo | null> {
   const urls = (postUrls ?? []).filter(Boolean);
 
@@ -26,7 +28,7 @@ export async function startInstagramCommentsScraping(
       directUrls: urls,
       resultsLimit,
     },
-    { webhooks: getApifyWebhooks() },
+    { webhooks: getApifyWebhooks(lineage) },
   );
 
   if (!run?.id || !run?.defaultDatasetId) {

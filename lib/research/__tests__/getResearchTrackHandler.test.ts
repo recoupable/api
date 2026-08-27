@@ -52,6 +52,7 @@ describe("getResearchTrackHandler", () => {
     expect(body.id).toBe(15194376);
     expect(handleResearch).toHaveBeenCalledTimes(1);
     expect(handleResearch).toHaveBeenCalledWith({
+      modelId: "GET /api/research/track",
       accountId: "test-id",
       path: "/track/15194376",
     });

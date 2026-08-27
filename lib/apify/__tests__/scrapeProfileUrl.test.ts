@@ -26,12 +26,12 @@ beforeEach(() => {
 describe("scrapeProfileUrl", () => {
   it("dispatches linkedin.com to the LinkedIn scraper", async () => {
     const r = await scrapeProfileUrl("https://www.linkedin.com/in/drew-thurlow", "drew-thurlow");
-    expect(li).toHaveBeenCalledWith("drew-thurlow", undefined);
+    expect(li).toHaveBeenCalledWith("drew-thurlow", undefined, { origin: "artist" });
     expect(r).toMatchObject({ supported: true, runId: "li-run", datasetId: "li-ds" });
   });
   it("forwards posts to the platform scraper", async () => {
     await scrapeProfileUrl("https://www.linkedin.com/in/drew-thurlow", "drew-thurlow", 20);
-    expect(li).toHaveBeenCalledWith("drew-thurlow", 20);
+    expect(li).toHaveBeenCalledWith("drew-thurlow", 20, { origin: "artist" });
   });
   it("returns null for an unsupported platform (spotify)", async () => {
     const r = await scrapeProfileUrl("https://open.spotify.com/artist/x", "x");

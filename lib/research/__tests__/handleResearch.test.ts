@@ -86,4 +86,21 @@ describe("handleResearch", () => {
       source: "api",
     });
   });
+
+  it("forwards modelId so the billing endpoint lands on the usage event", async () => {
+    vi.mocked(fetchSongstatsResearch).mockResolvedValue({
+      status: 200,
+      data: { ok: true },
+    } as never);
+    vi.mocked(recordCreditDeduction).mockResolvedValue(undefined as never);
+    await handleResearch({
+      accountId: "acct",
+      path: "/search",
+      query: {},
+      modelId: "GET /api/research",
+    });
+    expect(recordCreditDeduction).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: "acct", modelId: "GET /api/research" }),
+    );
+  });
 });

@@ -3,6 +3,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { handleResearch } from "@/lib/research/handleResearch";
 import { validateGetResearchAlbumsRequest } from "@/lib/research/validateGetResearchAlbumsRequest";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * GET /api/research/albums
@@ -22,6 +23,7 @@ export async function getResearchAlbumsHandler(request: NextRequest): Promise<Ne
     if (validated.offset !== undefined) query.offset = validated.offset;
     const result = await handleResearch({
       accountId: validated.accountId,
+      modelId: endpointModelId(request, "/api/research/albums"),
       path: `/artist/${validated.artistId}/albums`,
       query,
     });

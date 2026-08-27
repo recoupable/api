@@ -4,6 +4,7 @@ import { validateArtistRequest } from "@/lib/research/validateArtistRequest";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { successResponse } from "@/lib/networking/successResponse";
 import { errorResponse } from "@/lib/networking/errorResponse";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * GET /api/research/audience
@@ -23,6 +24,7 @@ export async function getResearchAudienceHandler(request: NextRequest): Promise<
     const { searchParams } = new URL(request.url);
     const platform = searchParams.get("platform") || "instagram";
     const result = await handleArtistResearch({
+      modelId: endpointModelId(request, "/api/research/audience"),
       ...validated,
       path: cmId => `/artist/${cmId}/${platform}-audience-stats`,
     });

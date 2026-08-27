@@ -4,6 +4,7 @@ import { successResponse } from "@/lib/networking/successResponse";
 import { handleResearch } from "@/lib/research/handleResearch";
 import { resolveTrack } from "@/lib/research/resolveTrack";
 import { validateGetResearchTrackPlaylistsRequest } from "@/lib/research/validateGetResearchTrackPlaylistsRequest";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * GET /api/research/track/playlists
@@ -23,12 +24,18 @@ export async function getResearchTrackPlaylistsHandler(
 
     let trackId = validated.id;
     if (!trackId) {
-      const resolved = await resolveTrack(validated.q!, validated.artist, validated.accountId);
+      const resolved = await resolveTrack(
+        validated.q!,
+        validated.artist,
+        validated.accountId,
+        endpointModelId(request, "/api/research/track/playlists"),
+      );
       if (resolved.error) return errorResponse(resolved.error, 404);
       trackId = resolved.id;
     }
     const result = await handleResearch({
       accountId: validated.accountId,
+      modelId: endpointModelId(request, "/api/research/track/playlists"),
       path: `/track/${trackId}/${validated.platform}/${validated.status}/playlists`,
       query: { ...validated.pagination, ...validated.filters },
     });

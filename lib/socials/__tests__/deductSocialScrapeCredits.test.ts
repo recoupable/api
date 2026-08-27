@@ -25,4 +25,15 @@ describe("deductSocialScrapeCredits", () => {
     vi.mocked(recordCreditDeduction).mockRejectedValue(new Error("db down"));
     await expect(deductSocialScrapeCredits(ACCOUNT_ID, 50_000)).resolves.toBeUndefined();
   });
+
+  it("forwards modelId so the billing endpoint lands on the usage event", async () => {
+    await deductSocialScrapeCredits("acct", 150_000, "POST /api/artist/socials/scrape");
+    expect(recordCreditDeduction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: "acct",
+        creditsToDeduct: 150_000,
+        modelId: "POST /api/artist/socials/scrape",
+      }),
+    );
+  });
 });

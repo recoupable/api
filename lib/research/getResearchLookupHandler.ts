@@ -3,6 +3,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { handleResearch } from "@/lib/research/handleResearch";
 import { validateGetResearchLookupRequest } from "@/lib/research/validateGetResearchLookupRequest";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * GET /api/research/lookup
@@ -18,6 +19,7 @@ export async function getResearchLookupHandler(request: NextRequest): Promise<Ne
     if (validated instanceof NextResponse) return validated;
     const result = await handleResearch({
       accountId: validated.accountId,
+      modelId: endpointModelId(request, "/api/research/lookup"),
       path: `/artist/spotify/${validated.spotifyId}/get-ids`,
     });
 

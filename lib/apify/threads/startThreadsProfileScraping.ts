@@ -1,9 +1,13 @@
-import { ApifyRunInfo } from "@/lib/apify/types";
+import { ApifyRunInfo, ApifyRunLineage } from "@/lib/apify/types";
 import apifyClient from "@/lib/apify/client";
 import { getApifyWebhooks } from "@/lib/apify/getApifyWebhooks";
 import { OUTSTANDING_ERROR } from "@/lib/apify/errors";
 
-const startThreadsProfileScraping = async (handle: string): Promise<ApifyRunInfo | null> => {
+const startThreadsProfileScraping = async (
+  handle: string,
+  _posts?: number,
+  lineage: ApifyRunLineage = { origin: "artist" },
+): Promise<ApifyRunInfo | null> => {
   const cleanHandle = handle.trim().replace(/^@/, "");
 
   if (!cleanHandle) {
@@ -14,7 +18,7 @@ const startThreadsProfileScraping = async (handle: string): Promise<ApifyRunInfo
     {
       usernames: [cleanHandle],
     },
-    { webhooks: getApifyWebhooks() },
+    { webhooks: getApifyWebhooks(lineage) },
   );
 
   if (!run?.id || !run?.defaultDatasetId) {
