@@ -4,6 +4,7 @@ import { getOrCreatePostsForComments } from "@/lib/apify/instagram/getOrCreatePo
 import { getOrCreateSocialsForComments } from "@/lib/apify/instagram/getOrCreateSocialsForComments";
 import { startInstagramProfileScraping } from "@/lib/apify/instagram/startInstagramProfileScraping";
 import { registerSpawnedApifyRun } from "@/lib/apify/registerSpawnedApifyRun";
+import { guardApifyRunBudget } from "@/lib/apify/guardApifyRunBudget";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 import type { ApifyInstagramComment } from "@/lib/apify/types";
 import type { TablesInsert } from "@/types/database.types";
@@ -56,6 +57,10 @@ export async function handleInstagramCommentsScraper(parsed: ApifyWebhookPayload
   if (fanHandles.length > 0) {
     try {
       const parentRunId = parsed.resource.id;
+      if (parentRunId) {
+        const verdict = await guardApifyRunBudget({ parentRunId, platform: "instagram" });
+        if (!verdict.allowed) return { comments, processedPostUrls };
+      }
       const run = await startInstagramProfileScraping(fanHandles, { origin: "fan", parentRunId });
       if (run && parentRunId) {
         await registerSpawnedApifyRun({

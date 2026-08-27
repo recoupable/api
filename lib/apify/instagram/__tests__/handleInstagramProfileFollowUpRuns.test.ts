@@ -3,11 +3,13 @@ import { handleInstagramProfileFollowUpRuns } from "../handleInstagramProfileFol
 import { startInstagramCommentsScraping } from "../startInstagramCommentsScraping";
 import { getPosts } from "@/lib/supabase/posts/getPosts";
 import { registerSpawnedApifyRun } from "@/lib/apify/registerSpawnedApifyRun";
+import { guardApifyRunBudget } from "@/lib/apify/guardApifyRunBudget";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 
 vi.mock("../startInstagramCommentsScraping", () => ({ startInstagramCommentsScraping: vi.fn() }));
 vi.mock("@/lib/supabase/posts/getPosts", () => ({ getPosts: vi.fn() }));
 vi.mock("@/lib/apify/registerSpawnedApifyRun", () => ({ registerSpawnedApifyRun: vi.fn() }));
+vi.mock("@/lib/apify/guardApifyRunBudget", () => ({ guardApifyRunBudget: vi.fn() }));
 
 const lineage = { origin: "artist" as const, parentRunId: "run-parent" };
 const baseProfile = {
@@ -23,6 +25,37 @@ describe("handleInstagramProfileFollowUpRuns", () => {
       runId: "run-c",
       datasetId: "ds-c",
     });
+    vi.mocked(guardApifyRunBudget).mockResolvedValue({ allowed: true });
+  });
+
+  it("starts nothing when the run budget guard blocks", async () => {
+    vi.mocked(getPosts).mockResolvedValue([]);
+    vi.mocked(guardApifyRunBudget).mockResolvedValue({ allowed: false, reason: "per_scrape_cap" });
+    await handleInstagramProfileFollowUpRuns(
+      {
+        ...baseProfile,
+        latestPosts: [{ url: "https://instagram.com/p/1" }],
+      } as ApifyInstagramProfileResult,
+      lineage,
+    );
+    expect(guardApifyRunBudget).toHaveBeenCalledWith({
+      parentRunId: "run-parent",
+      platform: "instagram",
+    });
+    expect(startInstagramCommentsScraping).not.toHaveBeenCalled();
+  });
+
+  it("starts nothing without a parent run id to attribute the spawn to", async () => {
+    vi.mocked(getPosts).mockResolvedValue([]);
+    await handleInstagramProfileFollowUpRuns(
+      {
+        ...baseProfile,
+        latestPosts: [{ url: "https://instagram.com/p/1" }],
+      } as ApifyInstagramProfileResult,
+      { origin: "artist" },
+    );
+    expect(guardApifyRunBudget).not.toHaveBeenCalled();
+    expect(startInstagramCommentsScraping).not.toHaveBeenCalled();
   });
 
   it("does nothing when latestPosts is empty", async () => {
@@ -73,5 +106,7 @@ describe("handleInstagramProfileFollowUpRuns", () => {
     expect(startInstagramCommentsScraping).toHaveBeenCalledWith([url1], 1, lineage);
     expect(startInstagramCommentsScraping).toHaveBeenCalledWith([url2], undefined, lineage);
     expect(registerSpawnedApifyRun).toHaveBeenCalledTimes(2);
+    // the budget is consulted before EACH spawn, not once per fan-out
+    expect(guardApifyRunBudget).toHaveBeenCalledTimes(2);
   });
 });

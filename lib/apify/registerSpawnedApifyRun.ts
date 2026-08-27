@@ -26,7 +26,7 @@ export async function registerSpawnedApifyRun({
   platform,
 }: RegisterSpawnedApifyRunParams): Promise<void> {
   try {
-    const parent = await selectApifyScraperRun(parentRunId);
+    const [parent] = await selectApifyScraperRun({ runId: parentRunId });
     await upsertApifyScraperRuns([
       {
         run_id: runId,

@@ -6,6 +6,7 @@ import { getOrCreatePostsForComments } from "../getOrCreatePostsForComments";
 import { getOrCreateSocialsForComments } from "../getOrCreateSocialsForComments";
 import { startInstagramProfileScraping } from "../startInstagramProfileScraping";
 import { registerSpawnedApifyRun } from "@/lib/apify/registerSpawnedApifyRun";
+import { guardApifyRunBudget } from "@/lib/apify/guardApifyRunBudget";
 
 vi.mock("@/lib/apify/client", () => ({ default: { dataset: vi.fn() } }));
 vi.mock("@/lib/supabase/post_comments/upsertPostComments", () => ({
@@ -17,6 +18,9 @@ vi.mock("../startInstagramProfileScraping", () => ({
   startInstagramProfileScraping: vi.fn(),
 }));
 vi.mock("@/lib/apify/registerSpawnedApifyRun", () => ({ registerSpawnedApifyRun: vi.fn() }));
+vi.mock("@/lib/apify/guardApifyRunBudget", () => ({
+  guardApifyRunBudget: vi.fn(async () => ({ allowed: true })),
+}));
 
 const mockDataset = (items: unknown[]) =>
   vi
@@ -97,6 +101,38 @@ describe("handleInstagramCommentsScraper", () => {
     });
     expect(result.comments).toHaveLength(3);
     expect(new Set(result.processedPostUrls)).toEqual(new Set(["u1", "u2"]));
+  });
+
+  it("persists the comments but starts no fan batch when the run budget guard blocks", async () => {
+    mockDataset([
+      {
+        id: "c1",
+        text: "hi",
+        timestamp: "t",
+        ownerUsername: "alice",
+        ownerProfilePicUrl: "",
+        postUrl: "u1",
+      },
+    ]);
+    vi.mocked(getOrCreatePostsForComments).mockResolvedValue(
+      new Map([["u1", { id: "p1" }]]) as never,
+    );
+    vi.mocked(getOrCreateSocialsForComments).mockResolvedValue(
+      new Map([["alice", { id: "s1" }]]) as never,
+    );
+    vi.mocked(guardApifyRunBudget).mockResolvedValueOnce({
+      allowed: false,
+      reason: "per_account_hourly_cap",
+    });
+
+    await handleInstagramCommentsScraper(payload);
+
+    expect(upsertPostComments).toHaveBeenCalledOnce();
+    expect(guardApifyRunBudget).toHaveBeenCalledWith({
+      parentRunId: "run-comments",
+      platform: "instagram",
+    });
+    expect(startInstagramProfileScraping).not.toHaveBeenCalled();
   });
 
   it("skips persistence when the dataset is empty", async () => {
