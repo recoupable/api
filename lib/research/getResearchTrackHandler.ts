@@ -3,6 +3,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { handleResearch } from "@/lib/research/handleResearch";
 import { validateGetResearchTrackRequest } from "@/lib/research/validateGetResearchTrackRequest";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * GET /api/research/track
@@ -19,6 +20,7 @@ export async function getResearchTrackHandler(request: NextRequest): Promise<Nex
     if (validated instanceof NextResponse) return validated;
     const result = await handleResearch({
       accountId: validated.accountId,
+      modelId: endpointModelId(request, "/api/research/track"),
       path: `/track/${validated.id}`,
     });
 

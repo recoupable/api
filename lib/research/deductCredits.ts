@@ -10,13 +10,15 @@ const RESEARCH_CREDIT_COST = usdToCredits(PRICES_USD.research);
  * thrown — a billing hiccup must not fail a response we already have.
  *
  * @param accountId - The account to charge
+ * @param modelId - `usage_events.model_id`: the billing endpoint (`METHOD /route`)
  */
-export async function deductCredits(accountId: string): Promise<void> {
+export async function deductCredits(accountId: string, modelId?: string): Promise<void> {
   try {
     await recordCreditDeduction({
       accountId,
       creditsToDeduct: RESEARCH_CREDIT_COST,
       source: "api",
+      modelId,
     });
   } catch (error) {
     console.error("[research] credit deduction failed:", error);

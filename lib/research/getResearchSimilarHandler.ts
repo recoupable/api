@@ -4,6 +4,7 @@ import { validateGetResearchSimilarRequest } from "@/lib/research/validateGetRes
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { successResponse } from "@/lib/networking/successResponse";
 import { errorResponse } from "@/lib/networking/errorResponse";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * GET /api/research/similar
@@ -30,6 +31,7 @@ export async function getResearchSimilarHandler(request: NextRequest): Promise<N
     };
     if (limit) query.limit = limit;
     const result = await handleArtistResearch({
+      modelId: endpointModelId(request, "/api/research/similar"),
       ...rest,
       path: cmId => `/artist/${cmId}/similar-artists/by-configurations`,
       query,

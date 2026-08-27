@@ -48,7 +48,7 @@ describe("getTrackHistoricStatsApifyFirst", () => {
 
     expect(getResearchTrackHistoricStats).not.toHaveBeenCalled();
     expect(upsertSongstatsBackfillQueue).not.toHaveBeenCalled();
-    expect(deductCredits).toHaveBeenCalledWith("acc_1");
+    expect(deductCredits).toHaveBeenCalledWith("acc_1", undefined);
     const data = (result as { data: { stats: Array<{ data: { history: unknown[] } }> } }).data;
     expect(data.stats[0].data.history).toEqual([
       { date: "2024-01-01", streams_total: 900000000, data_source: "songstats" },

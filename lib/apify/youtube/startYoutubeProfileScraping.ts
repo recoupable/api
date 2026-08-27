@@ -1,6 +1,6 @@
 import apifyClient from "@/lib/apify/client";
 import { getApifyWebhooks } from "@/lib/apify/getApifyWebhooks";
-import { ApifyRunInfo } from "@/lib/apify/types";
+import { ApifyRunInfo, ApifyRunLineage } from "@/lib/apify/types";
 
 const DEFAULT_INPUT = {
   downloadSubtitles: false,
@@ -27,6 +27,7 @@ const DEFAULT_INPUT = {
 const startYoutubeProfileScraping = async (
   handle: string,
   posts?: number,
+  lineage: ApifyRunLineage = { origin: "artist" },
 ): Promise<ApifyRunInfo | null> => {
   const cleanHandle = handle.trim().replace(/^@/, "");
 
@@ -46,7 +47,7 @@ const startYoutubeProfileScraping = async (
 
   const run = await apifyClient
     .actor("streamers/youtube-scraper")
-    .start(input, { webhooks: getApifyWebhooks() });
+    .start(input, { webhooks: getApifyWebhooks(lineage) });
 
   return {
     runId: run.id,

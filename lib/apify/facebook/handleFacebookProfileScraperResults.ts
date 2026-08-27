@@ -1,5 +1,5 @@
 import apifyClient from "@/lib/apify/client";
-import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
+import { upsertSocialsWithSnapshot } from "@/lib/socials/upsertSocialsWithSnapshot";
 import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 
@@ -25,6 +25,6 @@ export async function handleFacebookProfileScraperResults(parsed: ApifyWebhookPa
     avatar: first?.profilePictureUrl ?? null,
     followerCount: first?.followers ?? null,
   };
-  await upsertSocials([social]);
+  await upsertSocialsWithSnapshot([social]);
   return { social };
 }

@@ -4,6 +4,7 @@ import { validateGetResearchPlaylistsRequest } from "@/lib/research/validateGetR
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { successResponse } from "@/lib/networking/successResponse";
 import { errorResponse } from "@/lib/networking/errorResponse";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * Playlists handler — returns the playlists an artist currently appears on for
@@ -25,6 +26,7 @@ export async function getResearchPlaylistsHandler(request: NextRequest): Promise
 
     const { platform, status, ...rest } = validated;
     const result = await handleArtistResearch({
+      modelId: endpointModelId(request, "/api/research/playlists"),
       ...rest,
       path: cmId => `/artist/${cmId}/${platform}/${status}/playlists`,
       query,

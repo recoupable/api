@@ -4,12 +4,13 @@ import {
   flattenAccountSocials,
   type AccountSocialResponse,
 } from "@/lib/account/flattenAccountSocials";
+import { attachSocialHistory, type SocialHistoryPoint } from "@/lib/socials/attachSocialHistory";
 import type { GetArtistSocialsParams } from "@/lib/artist/validateGetArtistSocialsRequest";
 
 export interface GetArtistSocialsResponse {
   status: "success" | "error";
   message?: string;
-  socials: AccountSocialResponse[];
+  socials: (AccountSocialResponse & { history?: SocialHistoryPoint[] })[];
   pagination: {
     total_count: number;
     page: number;
@@ -28,7 +29,7 @@ export const getArtistSocials = async (
   params: GetArtistSocialsParams,
 ): Promise<GetArtistSocialsResponse> => {
   try {
-    const { artist_account_id, page, limit } = params;
+    const { artist_account_id, page, limit, history } = params;
 
     // Ensure limit is within reasonable bounds
     const validatedLimit = Math.min(Math.max(1, limit), 100);
@@ -59,7 +60,8 @@ export const getArtistSocials = async (
     });
 
     // Transform data to match the expected response format
-    const socials = flattenAccountSocials(accountSocials);
+    const flattened = flattenAccountSocials(accountSocials);
+    const socials = history ? await attachSocialHistory(flattened, history) : flattened;
 
     // Calculate pagination metadata
     const totalPages = Math.ceil(count / validatedLimit);

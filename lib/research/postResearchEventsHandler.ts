@@ -9,6 +9,7 @@ import { validatePostResearchEventsRequest } from "@/lib/research/validatePostRe
 import { isApifyCapacityError } from "@/lib/apify/isApifyCapacityError";
 import { usdToCredits } from "@/lib/credits/usdToCredits";
 import { PRICES_USD } from "@/lib/credits/pricesUsd";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * Returned when the artist is reachable but has no Bandsintown profile
@@ -70,6 +71,7 @@ export async function postResearchEventsHandler(request: NextRequest): Promise<N
         accountId: validated.accountId,
         creditsToDeduct: usdToCredits(PRICES_USD.researchEvents),
         source: "api",
+        modelId: endpointModelId(request, "/api/research/events"),
       });
     } catch {
       // Credit deduction failed but data was fetched — don't block the response

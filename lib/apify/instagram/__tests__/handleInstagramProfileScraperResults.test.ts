@@ -4,18 +4,13 @@ import apifyClient from "@/lib/apify/client";
 import { upsertPosts } from "@/lib/supabase/posts/upsertPosts";
 import { getPosts } from "@/lib/supabase/posts/getPosts";
 import { handleInstagramProfileFollowUpRuns } from "../handleInstagramProfileFollowUpRuns";
-import { sendEmailWithResend } from "@/lib/emails/sendEmail";
-import { upsertSocials } from "@/lib/supabase/socials/upsertSocials";
-import { selectSocials } from "@/lib/supabase/socials/selectSocials";
+import { upsertSocialsWithSnapshot } from "@/lib/socials/upsertSocialsWithSnapshot";
 import { upsertSocialPosts } from "@/lib/supabase/social_posts/upsertSocialPosts";
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
-import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
-import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { uploadLinkToArweave } from "@/lib/arweave/uploadLinkToArweave";
 import { filterNewPostUrls } from "@/lib/socials/filterNewPostUrls";
 
 vi.mock("@/lib/apify/client", () => ({ default: { dataset: vi.fn() } }));
-
 const mockDataset = (items: unknown[]) =>
   vi
     .mocked(apifyClient.dataset)
@@ -26,134 +21,167 @@ vi.mock("@/lib/supabase/posts/getPosts", () => ({ getPosts: vi.fn() }));
 vi.mock("../handleInstagramProfileFollowUpRuns", () => ({
   handleInstagramProfileFollowUpRuns: vi.fn(),
 }));
-vi.mock("@/lib/emails/sendEmail", () => ({ sendEmailWithResend: vi.fn(async () => null) }));
 vi.mock("@/lib/socials/filterNewPostUrls", () => ({ filterNewPostUrls: vi.fn() }));
-vi.mock("@/lib/supabase/socials/upsertSocials", () => ({ upsertSocials: vi.fn() }));
-vi.mock("@/lib/supabase/socials/selectSocials", () => ({
-  selectSocials: vi.fn(),
-}));
+vi.mock("@/lib/socials/upsertSocialsWithSnapshot", () => ({ upsertSocialsWithSnapshot: vi.fn() }));
 vi.mock("@/lib/supabase/social_posts/upsertSocialPosts", () => ({ upsertSocialPosts: vi.fn() }));
 vi.mock("@/lib/supabase/account_socials/selectAccountSocials", () => ({
   selectAccountSocials: vi.fn(),
 }));
-vi.mock("@/lib/supabase/account_artist_ids/getAccountArtistIds", () => ({
-  getAccountArtistIds: vi.fn(),
-}));
-vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
-  default: vi.fn(),
-}));
 vi.mock("@/lib/arweave/uploadLinkToArweave", () => ({ uploadLinkToArweave: vi.fn() }));
 
-const payload = {
-  userId: "u",
-  createdAt: "2026-01-01T00:00:00Z",
-  eventType: "ACTOR.RUN.SUCCEEDED",
+// Trimmed from real run If5ejeh2vftXWObwa (2026-08-27, a commenter profile).
+const profile = (username: string, extra: Record<string, unknown> = {}) => ({
+  username,
+  url: `https://www.instagram.com/${username}`,
+  biography: `bio of ${username}`,
+  followersCount: 597,
+  followsCount: 6577,
+  postsCount: 236,
+  profilePicUrl: `https://cdn/${username}.jpg`,
+  profilePicUrlHD: `https://cdn/${username}-hd.jpg`,
+  latestPosts: [
+    {
+      url: `https://www.instagram.com/p/${username}1`,
+      timestamp: "2026-08-20T00:00:00.000Z",
+      likesCount: 10,
+      commentsCount: 2,
+    },
+  ],
+  ...extra,
+});
+
+const artistPayload = {
   eventData: { actorId: "dSCLg0C3YEZ83HzYX" },
-  resource: { defaultDatasetId: "ds_1" },
+  resource: { id: "run-1", defaultDatasetId: "ds_1" },
+  origin: "artist",
+} as never;
+const fanPayload = { ...(artistPayload as object), origin: "fan" } as never;
+const legacyPayload = {
+  eventData: { actorId: "dSCLg0C3YEZ83HzYX" },
+  resource: { id: "run-0", defaultDatasetId: "ds_0" },
 } as never;
 
 describe("handleInstagramProfileScraperResults", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // default: everything scraped counts as new (per-test overrides below)
     vi.mocked(filterNewPostUrls).mockImplementation(async urls => urls);
+    vi.mocked(upsertSocialsWithSnapshot).mockImplementation(
+      async rows =>
+        rows.map((r, i) => ({
+          id: i === 0 ? "s1" : `s${i + 1}`,
+          profile_url: r.profile_url,
+        })) as never,
+    );
+    vi.mocked(upsertPosts).mockResolvedValue({ data: null, error: null } as never);
+    vi.mocked(getPosts).mockResolvedValue([]);
+    vi.mocked(uploadLinkToArweave).mockResolvedValue(null);
+    vi.mocked(selectAccountSocials).mockResolvedValue([{ account_id: "a1" }] as never);
   });
 
-  it("short-circuits when the dataset has no latest posts", async () => {
-    mockDataset([{ username: "alice" }]);
+  it("short-circuits on an empty dataset", async () => {
+    mockDataset([]);
+    expect(await handleInstagramProfileScraperResults(artistPayload)).toEqual({
+      posts: [],
+      social: null,
+    });
+    expect(upsertSocialsWithSnapshot).not.toHaveBeenCalled();
+  });
 
-    const result = await handleInstagramProfileScraperResults(payload);
+  it("fan batch: enriches EVERY profile in the dataset (avatar, bio, counts) and is terminal — no posts, no follow-ups, no Arweave", async () => {
+    const names = Array.from({ length: 12 }, (_, i) => `fan${i}`);
+    mockDataset(names.map(n => profile(n)));
 
-    expect(result).toMatchObject({ posts: [], social: null });
+    const result = await handleInstagramProfileScraperResults(fanPayload);
+
+    expect(upsertSocialsWithSnapshot).toHaveBeenCalledOnce();
+    const [rows] = vi.mocked(upsertSocialsWithSnapshot).mock.calls[0];
+    expect(rows).toHaveLength(12);
+    expect(rows[3]).toEqual({
+      username: "fan3",
+      profile_url: "instagram.com/fan3",
+      avatar: "https://cdn/fan3.jpg",
+      bio: "bio of fan3",
+      followerCount: 597,
+      followingCount: 6577,
+      postCount: 236,
+    });
+    expect(uploadLinkToArweave).not.toHaveBeenCalled();
+    expect(upsertPosts).not.toHaveBeenCalled();
+    expect(handleInstagramProfileFollowUpRuns).not.toHaveBeenCalled();
+    expect(result).toEqual({ posts: [], social: null, socials: 12 });
+  });
+
+  it("recursion fixture: a fan run whose dataset is ONE profile with posts still schedules nothing", async () => {
+    mockDataset([profile("xxmeechie53xx")]);
+    await handleInstagramProfileScraperResults(fanPayload);
+    expect(handleInstagramProfileFollowUpRuns).not.toHaveBeenCalled();
     expect(upsertPosts).not.toHaveBeenCalled();
   });
 
-  it("persists posts, links social_posts, and fires follow-up runs + email", async () => {
-    const posts = [{ id: "p1", post_url: "u1", updated_at: "t" }] as never;
-    mockDataset([
-      {
-        latestPosts: [{ url: "u1", timestamp: "t" }],
-        username: "alice",
-        url: "instagram.com/alice",
-        profilePicUrl: "https://a",
-        fullName: "Alice",
-      },
-    ]);
-    vi.mocked(upsertPosts).mockResolvedValue({ data: null, error: null } as never);
+  it("legacy payload without origin (a run started before lineage shipped) is treated as terminal", async () => {
+    mockDataset([profile("alice")]);
+    await handleInstagramProfileScraperResults(legacyPayload);
+    expect(upsertSocialsWithSnapshot).toHaveBeenCalledOnce();
+    expect(handleInstagramProfileFollowUpRuns).not.toHaveBeenCalled();
+    expect(upsertPosts).not.toHaveBeenCalled();
+  });
+
+  it("artist run linked to an account: Arweave avatar, posts with engagement, social_posts, follow-ups with lineage", async () => {
+    const p = profile("alice");
+    mockDataset([p]);
+    vi.mocked(uploadLinkToArweave).mockResolvedValue("tx123");
+    const posts = [
+      { id: "p1", post_url: "https://www.instagram.com/p/alice1", updated_at: "t" },
+    ] as never;
     vi.mocked(getPosts).mockResolvedValue(posts);
-    vi.mocked(uploadLinkToArweave).mockResolvedValue(null);
-    vi.mocked(upsertSocials).mockResolvedValue([] as never);
-    vi.mocked(selectSocials).mockResolvedValue([{ id: "s1" }] as never);
-    vi.mocked(selectAccountSocials).mockResolvedValue([{ account_id: "a1" }] as never);
-    vi.mocked(getAccountArtistIds).mockResolvedValue([{ account_id: "a1" }] as never);
-    vi.mocked(selectAccountEmails).mockResolvedValue([{ email: "x@y.com" }] as never);
 
-    const result = await handleInstagramProfileScraperResults(payload);
+    const result = await handleInstagramProfileScraperResults(artistPayload);
 
-    expect(upsertPosts).toHaveBeenCalledOnce();
-    expect(upsertSocialPosts).toHaveBeenCalledOnce();
-    // chat#1955: scraping must persist posts and send nothing.
-    expect(sendEmailWithResend).not.toHaveBeenCalled();
-    expect(handleInstagramProfileFollowUpRuns).toHaveBeenCalledOnce();
-    expect(result.social).toEqual({ id: "s1" });
-    expect(result.posts).toEqual(posts);
-  });
-
-  it("skips the alert email when no scraped post is genuinely new (chat#1855)", async () => {
-    mockDataset([
+    expect(uploadLinkToArweave).toHaveBeenCalledWith("https://cdn/alice-hd.jpg");
+    const [rows] = vi.mocked(upsertSocialsWithSnapshot).mock.calls[0];
+    expect(rows[0]).toMatchObject({
+      profile_url: "instagram.com/alice",
+      avatar: expect.stringContaining("tx123"),
+    });
+    expect(upsertPosts).toHaveBeenCalledWith([
       {
-        latestPosts: [{ url: "u1", timestamp: "t" }],
-        username: "alice",
-        url: "instagram.com/alice",
-        profilePicUrl: "https://a",
-        fullName: "Alice",
+        post_url: "https://www.instagram.com/p/alice1",
+        updated_at: "2026-08-20T00:00:00.000Z",
+        likes: 10,
+        comments: 2,
       },
     ]);
-    vi.mocked(filterNewPostUrls).mockResolvedValue([]); // all already stored
-    vi.mocked(upsertPosts).mockResolvedValue({ data: null, error: null } as never);
-    vi.mocked(getPosts).mockResolvedValue([{ id: "p1", post_url: "u1" }] as never);
-    vi.mocked(uploadLinkToArweave).mockResolvedValue(null);
-    vi.mocked(upsertSocials).mockResolvedValue([] as never);
-    vi.mocked(selectSocials).mockResolvedValue([{ id: "s1" }] as never);
-    vi.mocked(selectAccountSocials).mockResolvedValue([{ account_id: "a1" }] as never);
-    vi.mocked(getAccountArtistIds).mockResolvedValue([{ account_id: "a1" }] as never);
-    vi.mocked(selectAccountEmails).mockResolvedValue([{ email: "x@y.com" }] as never);
-
-    const result = await handleInstagramProfileScraperResults(payload);
-
-    expect(sendEmailWithResend).not.toHaveBeenCalled();
-    // persistence is unaffected — only the notification is gated
-    expect(upsertPosts).toHaveBeenCalledOnce();
-    expect(upsertSocialPosts).toHaveBeenCalledOnce();
-    expect(handleInstagramProfileFollowUpRuns).toHaveBeenCalledOnce();
-    expect(result.social).toEqual({ id: "s1" });
+    expect(upsertSocialPosts).toHaveBeenCalledWith([
+      { post_id: "p1", updated_at: "t", social_id: "s1" },
+    ]);
+    expect(handleInstagramProfileFollowUpRuns).toHaveBeenCalledWith(
+      expect.objectContaining({ username: "alice" }),
+      { origin: "artist", parentRunId: "run-1" },
+    );
+    expect(result).toMatchObject({
+      social: { id: "s1" },
+      posts,
+      newPostUrls: ["https://www.instagram.com/p/alice1"],
+    });
   });
 
-  it("sends nothing even when the scrape finds new posts", async () => {
-    mockDataset([
-      {
-        latestPosts: [{ url: "u-new", timestamp: "t" }],
-        username: "alice",
-        url: "instagram.com/alice",
-        profilePicUrl: "https://a",
-        fullName: "Alice",
-      },
-    ]);
-    vi.mocked(upsertPosts).mockResolvedValue({ data: null, error: null } as never);
-    vi.mocked(getPosts).mockResolvedValue([{ id: "p1", post_url: "u-new" }] as never);
-    vi.mocked(uploadLinkToArweave).mockResolvedValue(null);
-    vi.mocked(upsertSocials).mockResolvedValue([] as never);
-    vi.mocked(selectSocials).mockResolvedValue([{ id: "s1" }] as never);
-    vi.mocked(selectAccountSocials).mockResolvedValue([{ account_id: "a1" }] as never);
-    vi.mocked(getAccountArtistIds).mockResolvedValue([{ account_id: "a1" }] as never);
-    vi.mocked(selectAccountEmails).mockResolvedValue([{ email: "x@y.com" }] as never);
+  it("artist run whose profile is linked to NO account: persists posts but schedules no follow-ups", async () => {
+    mockDataset([profile("orphan")]);
+    vi.mocked(selectAccountSocials).mockResolvedValue([]);
+    vi.mocked(getPosts).mockResolvedValue([{ id: "p1", post_url: "u", updated_at: "t" }] as never);
 
-    const result = await handleInstagramProfileScraperResults({
-      ...(payload as Record<string, unknown>),
-      resource: { defaultDatasetId: "ds_1", id: "run-1" },
-    } as never);
+    await handleInstagramProfileScraperResults(artistPayload);
 
-    expect(sendEmailWithResend).not.toHaveBeenCalled();
-    expect(result.newPostUrls).toEqual(["u-new"]);
+    expect(upsertPosts).toHaveBeenCalledOnce();
+    expect(handleInstagramProfileFollowUpRuns).not.toHaveBeenCalled();
+  });
+
+  it("follow-up failure is logged, never thrown", async () => {
+    mockDataset([profile("alice")]);
+    vi.mocked(getPosts).mockResolvedValue([{ id: "p1", post_url: "u", updated_at: "t" }] as never);
+    vi.mocked(handleInstagramProfileFollowUpRuns).mockRejectedValue(new Error("apify down"));
+    await expect(handleInstagramProfileScraperResults(artistPayload)).resolves.toMatchObject({
+      social: { id: "s1" },
+    });
   });
 });

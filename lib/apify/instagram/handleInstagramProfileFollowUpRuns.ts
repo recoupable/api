@@ -1,41 +1,53 @@
 import { startInstagramCommentsScraping } from "@/lib/apify/instagram/startInstagramCommentsScraping";
+import { registerSpawnedApifyRun } from "@/lib/apify/registerSpawnedApifyRun";
+import { guardApifyRunBudget } from "@/lib/apify/guardApifyRunBudget";
 import { getPosts } from "@/lib/supabase/posts/getPosts";
-import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
+import type { ApifyInstagramProfileResult, ApifyRunLineage } from "@/lib/apify/types";
 
 /**
- * Kicks off a comments-scraper run for the newly-seen posts on a
- * profile. Posts already present in `post_comments` use a
- * `resultsLimit=1` run (cheap refresh); fully-unseen posts use the
- * default `resultsLimit` to backfill.
+ * Kicks off comments-scraper runs for an artist profile's latest posts.
+ * Posts already present in `post_comments` use a `resultsLimit=1` run
+ * (cheap refresh); fully-unseen posts use the default `resultsLimit` to
+ * backfill. Each spawned run carries the artist lineage and is registered
+ * under the profile run that found the posts.
  *
- * Only runs when the dataset contains a single profile — multi-profile
- * runs are fan lookups and should not trigger comment scraping.
+ * The caller decides whether the profile is eligible for follow-ups at all
+ * (artist origin + account link, app#2018). This function fans out under
+ * the run budget: it consults `guardApifyRunBudget` immediately before
+ * each spawn and starts nothing without a parent run id to attribute to.
  *
- * @param dataset - Raw Apify dataset for the profile scrape.
- * @param firstResult - First row of the dataset.
+ * @param profile - The artist's profile item.
+ * @param lineage - Artist lineage; `parentRunId` is the profile run.
  */
 export async function handleInstagramProfileFollowUpRuns(
-  dataset: unknown[],
-  firstResult: ApifyInstagramProfileResult,
+  profile: ApifyInstagramProfileResult,
+  lineage: ApifyRunLineage,
 ): Promise<void> {
-  if (dataset.length !== 1) return;
-  if (!firstResult.latestPosts || firstResult.latestPosts.length === 0) return;
-
   const postUrls = Array.from(
-    new Set(firstResult.latestPosts.flatMap(p => (p.url ? [p.url] : []))),
+    new Set((profile.latestPosts ?? []).flatMap(p => (p.url ? [p.url] : []))),
   );
-  if (postUrls.length === 0) return;
+  const parentRunId = lineage.parentRunId;
+  if (postUrls.length === 0 || !parentRunId) return;
+
+  const start = async (urls: string[], resultsLimit?: number) => {
+    const verdict = await guardApifyRunBudget({ parentRunId, platform: "instagram" });
+    if (!verdict.allowed) return;
+    const run = await startInstagramCommentsScraping(urls, resultsLimit, lineage);
+    if (run) {
+      await registerSpawnedApifyRun({
+        runId: run.runId,
+        parentRunId,
+        origin: lineage.origin,
+        platform: "instagram",
+      });
+    }
+  };
 
   const posts = await getPosts({ postUrls });
-  if (posts.length === 0) {
-    await startInstagramCommentsScraping(postUrls);
-    return;
-  }
-
   const withComments = posts.filter(p => p.post_comments?.length).map(p => p.post_url);
   const withSet = new Set(withComments);
   const withoutComments = postUrls.filter(url => !withSet.has(url));
 
-  if (withComments.length > 0) await startInstagramCommentsScraping(withComments, 1);
-  if (withoutComments.length > 0) await startInstagramCommentsScraping(withoutComments);
+  if (withComments.length > 0) await start(withComments, 1);
+  if (withoutComments.length > 0) await start(withoutComments);
 }

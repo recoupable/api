@@ -3,6 +3,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { getPlaycountDeltas } from "@/lib/research/playcounts/getPlaycountDeltas";
 import { validateGetPlaycountDeltasRequest } from "@/lib/research/playcounts/validateGetPlaycountDeltasRequest";
+import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
  * GET /api/research/track/playcount-deltas
@@ -19,7 +20,10 @@ export async function getPlaycountDeltasHandler(request: NextRequest): Promise<N
     const validated = await validateGetPlaycountDeltasRequest(request);
     if (validated instanceof NextResponse) return validated;
 
-    const result = await getPlaycountDeltas(validated);
+    const result = await getPlaycountDeltas({
+      ...validated,
+      modelId: endpointModelId(request, "/api/research/track/playcount-deltas"),
+    });
     if ("error" in result) return errorResponse(result.error, result.status);
 
     return successResponse(result.data as Record<string, unknown>);

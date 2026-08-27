@@ -6,6 +6,7 @@ import { validatePostSocialScrapeRequest } from "../validatePostSocialScrapeRequ
 import { selectSocials } from "@/lib/supabase/socials/selectSocials";
 import { scrapeProfileUrl } from "@/lib/apify/scrapeProfileUrl";
 import { deductSocialScrapeCredits } from "../deductSocialScrapeCredits";
+import { upsertApifyScraperRuns } from "@/lib/supabase/apify_scraper_runs/upsertApifyScraperRuns";
 
 vi.mock("../validatePostSocialScrapeRequest", () => ({
   validatePostSocialScrapeRequest: vi.fn(),
@@ -14,6 +15,9 @@ vi.mock("@/lib/supabase/socials/selectSocials", () => ({ selectSocials: vi.fn() 
 vi.mock("@/lib/apify/scrapeProfileUrl", () => ({ scrapeProfileUrl: vi.fn() }));
 vi.mock("../deductSocialScrapeCredits", () => ({ deductSocialScrapeCredits: vi.fn() }));
 vi.mock("@/lib/networking/getCorsHeaders", () => ({ getCorsHeaders: () => ({}) }));
+vi.mock("@/lib/supabase/apify_scraper_runs/upsertApifyScraperRuns", () => ({
+  upsertApifyScraperRuns: vi.fn(async () => ({ data: null, error: null })),
+}));
 
 const SOCIAL_ID = "550e8400-e29b-41d4-a716-446655440000";
 const ACCOUNT_ID = "770e8400-e29b-41d4-a716-446655440000";
@@ -49,7 +53,21 @@ describe("postSocialScrapeHandler", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ runId: "r1", datasetId: "d1" });
     expect(scrapeProfileUrl).toHaveBeenCalledWith(social.profile_url, social.username, undefined);
-    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 50_000);
+    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(
+      ACCOUNT_ID,
+      50_000,
+      "POST /api/socials/[id]/scrape",
+    );
+    // The root of the chain: registered so spawned runs can inherit the account (app#2018).
+    expect(upsertApifyScraperRuns).toHaveBeenCalledWith([
+      {
+        run_id: "r1",
+        account_id: ACCOUNT_ID,
+        social_id: SOCIAL_ID,
+        platform: "twitter",
+        origin: "artist",
+      },
+    ]);
   });
 
   it("forwards validated posts to scrapeProfileUrl and deducts $0.05 + $0.01 per post", async () => {
@@ -61,7 +79,11 @@ describe("postSocialScrapeHandler", () => {
     vi.mocked(scrapeProfileUrl).mockResolvedValue({ runId: "r1", datasetId: "d1" } as never);
     await postSocialScrapeHandler(request, SOCIAL_ID);
     expect(scrapeProfileUrl).toHaveBeenCalledWith(social.profile_url, social.username, 20);
-    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 250_000);
+    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(
+      ACCOUNT_ID,
+      250_000,
+      "POST /api/socials/[id]/scrape",
+    );
   });
 
   it("does not deduct credits when the scrape fails to start", async () => {
