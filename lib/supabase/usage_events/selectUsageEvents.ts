@@ -3,8 +3,10 @@ import type { Tables } from "@/types/database.types";
 
 interface SelectUsageEventsParams {
   accountId?: string;
-  /** Lower bound on `created_at` (ISO string). Omit to fetch all-time. */
+  /** Lower bound on `created_at` (ISO string), inclusive. Omit for all-time. */
   createdAfter?: string;
+  /** Upper bound on `created_at` (ISO string), exclusive. Omit for no bound. */
+  createdBefore?: string;
   /** Inclusive zero-indexed range start. */
   from: number;
   /** Inclusive zero-indexed range end. */
@@ -30,6 +32,7 @@ export async function selectUsageEvents(
 
   if (params.accountId) query = query.eq("account_id", params.accountId);
   if (params.createdAfter) query = query.gte("created_at", params.createdAfter);
+  if (params.createdBefore) query = query.lt("created_at", params.createdBefore);
 
   const { data, error } = await query;
   if (error) {

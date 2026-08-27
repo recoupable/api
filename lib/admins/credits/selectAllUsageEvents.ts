@@ -5,6 +5,7 @@ interface SelectAllUsageEventsParams {
   accountId?: string;
   /** Lower bound on `created_at` (ISO string). Omit to fetch all-time. */
   createdAfter?: string;
+  createdBefore?: string;
 }
 
 const BATCH_SIZE = 1000;
@@ -26,6 +27,7 @@ export async function selectAllUsageEvents(
     const batch = await selectUsageEvents({
       accountId: params.accountId,
       createdAfter: params.createdAfter,
+      createdBefore: params.createdBefore,
       from: offset,
       to: offset + BATCH_SIZE - 1,
     });
