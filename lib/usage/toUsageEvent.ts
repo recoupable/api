@@ -39,7 +39,7 @@ export function toUsageEvent(row: Tables<"usage_events">): UsageEventItem {
     cached_input_tokens: row.cached_input_tokens,
     output_tokens: row.output_tokens,
     tool_call_count: row.tool_call_count,
-    credits_deducted: row.credits_deducted_cents,
-    usd: formatCentsAsUsd(row.credits_deducted_cents),
+    credits_deducted: row.credits_deducted,
+    usd: formatCentsAsUsd(row.credits_deducted),
   };
 }

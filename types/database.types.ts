@@ -3744,7 +3744,7 @@ export type Database = {
           agent_type: string;
           cached_input_tokens: number;
           created_at: string;
-          credits_deducted_cents: number;
+          credits_deducted: number;
           id: string;
           input_tokens: number;
           model_id: string | null;
@@ -3758,7 +3758,7 @@ export type Database = {
           agent_type?: string;
           cached_input_tokens?: number;
           created_at?: string;
-          credits_deducted_cents?: number;
+          credits_deducted?: number;
           id: string;
           input_tokens?: number;
           model_id?: string | null;
@@ -3772,7 +3772,7 @@ export type Database = {
           agent_type?: string;
           cached_input_tokens?: number;
           created_at?: string;
-          credits_deducted_cents?: number;
+          credits_deducted?: number;
           id?: string;
           input_tokens?: number;
           model_id?: string | null;

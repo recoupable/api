@@ -36,7 +36,7 @@ const row = (id: string, created_at: string, cents: number) => ({
   output_tokens: 0,
   tool_call_count: 0,
   created_at,
-  credits_deducted_cents: cents,
+  credits_deducted: cents,
 });
 
 beforeEach(() => {

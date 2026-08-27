@@ -26,7 +26,7 @@ describe("sumUsageEventsByAccount", () => {
     const q = chain({ data: [{ sum: 70000 }], error: null });
     const total = await sumUsageEventsByAccount(params);
     expect(supabase.from).toHaveBeenCalledWith("usage_events");
-    expect(q.select).toHaveBeenCalledWith("credits_deducted_cents.sum()");
+    expect(q.select).toHaveBeenCalledWith("credits_deducted.sum()");
     expect(q.eq).toHaveBeenCalledWith("account_id", ACCOUNT_ID);
     expect(q.gte).toHaveBeenCalledWith("created_at", params.from);
     expect(q.lt).toHaveBeenCalledWith("created_at", params.to);

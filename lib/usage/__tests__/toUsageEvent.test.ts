@@ -14,7 +14,7 @@ const row: Tables<"usage_events"> = {
   output_tokens: 0,
   tool_call_count: 0,
   created_at: "2026-08-27T11:56:58.000+00:00",
-  credits_deducted_cents: 20000,
+  credits_deducted: 20000,
 };
 
 describe("toUsageEvent", () => {
@@ -33,11 +33,11 @@ describe("toUsageEvent", () => {
       credits_deducted: 20000,
       usd: "$0.02",
     });
-    expect(toUsageEvent(row)).not.toHaveProperty("credits_deducted_cents");
+    expect(toUsageEvent(row)).not.toHaveProperty("credits_deducted");
   });
 
   it("formats a sub-cent charge as $0.00 and keeps the exact integer", () => {
-    const item = toUsageEvent({ ...row, credits_deducted_cents: 2000 });
+    const item = toUsageEvent({ ...row, credits_deducted: 2000 });
     expect(item.credits_deducted).toBe(2000);
     expect(item.usd).toBe("$0.00");
   });

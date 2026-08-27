@@ -14,14 +14,14 @@ interface SumUsageEventsByAccountParams {
  * pagination.
  *
  * @param params - Account and period bounds.
- * @returns The sum of `credits_deducted_cents`, 0 when there are no events.
+ * @returns The sum of `credits_deducted`, 0 when there are no events.
  */
 export async function sumUsageEventsByAccount(
   params: SumUsageEventsByAccountParams,
 ): Promise<number> {
   const { data, error } = await supabase
     .from("usage_events")
-    .select("credits_deducted_cents.sum()")
+    .select("credits_deducted.sum()")
     .eq("account_id", params.accountId)
     .gte("created_at", params.from)
     .lt("created_at", params.to);
