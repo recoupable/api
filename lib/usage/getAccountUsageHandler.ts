@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { formatCentsAsUsd } from "@/lib/credits/formatCentsAsUsd";
 import { validateGetAccountUsageQuery } from "@/lib/usage/validateGetAccountUsageQuery";
-import { selectUsageEvents } from "@/lib/supabase/usage_events/selectUsageEvents";
+import { selectUsagePage } from "@/lib/usage/selectUsagePage";
+import { encodeUsageCursor } from "@/lib/usage/encodeUsageCursor";
 import { selectAllUsageEvents } from "@/lib/admins/credits/selectAllUsageEvents";
 import { sumCreditsDeducted } from "@/lib/usage/sumCreditsDeducted";
 import { pickSeriesBucket } from "@/lib/usage/pickSeriesBucket";
@@ -28,17 +29,14 @@ export async function getAccountUsageHandler(
     const { accountId } = query;
 
     const period = { from: query.from, to: query.to };
-    // The page ends at the cursor when one is given and it falls inside the
-    // period; the total always covers the whole period.
-    const pageBefore =
-      query.cursor && new Date(query.cursor) < new Date(query.to) ? query.cursor : query.to;
     const [rows, periodRows] = await Promise.all([
-      selectUsageEvents({
+      selectUsagePage({
         accountId,
-        createdAfter: query.from,
-        createdBefore: pageBefore,
-        from: 0,
-        to: query.limit - 1,
+        from: query.from,
+        to: query.to,
+        sort: query.sort,
+        cursor: query.cursor,
+        limit: query.limit,
       }),
       selectAllUsageEvents({ accountId, createdAfter: query.from, createdBefore: query.to }),
     ]);
@@ -59,7 +57,8 @@ export async function getAccountUsageHandler(
         total_credits_deducted: total,
         total_usd: formatCentsAsUsd(total),
         events,
-        next_cursor: events.length === query.limit && last ? last.created_at : null,
+        next_cursor:
+          events.length === query.limit && last ? encodeUsageCursor(query.sort, last) : null,
         ...series,
       },
       { status: 200, headers: getCorsHeaders() },
