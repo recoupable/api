@@ -79,10 +79,10 @@ describe("validatePostSocialScrapeRequest", () => {
       posts: undefined,
       account_id: ACCOUNT_ID,
     });
-    expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 5);
+    expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 50_000);
   });
 
-  it("parses a valid posts query param and gates on 5 + posts credits", async () => {
+  it("parses a valid posts query param and gates on $0.05 + $0.01 per post", async () => {
     const req = new NextRequest(`http://localhost/api/socials/${SOCIAL_ID}/scrape?posts=20`, {
       method: "POST",
       headers: { "x-api-key": "k" },
@@ -92,7 +92,7 @@ describe("validatePostSocialScrapeRequest", () => {
       posts: 20,
       account_id: ACCOUNT_ID,
     });
-    expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 25);
+    expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 250_000);
   });
 
   it("short-circuits with the 402 when credits are insufficient", async () => {

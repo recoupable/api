@@ -1,7 +1,9 @@
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 /** Credits charged per read-only research call (artist & non-artist). */
-const RESEARCH_CREDIT_COST = 5;
+const RESEARCH_CREDIT_COST = usdToCredits(PRICES_USD.research);
 
 /**
  * Per-route credit gate for the read-only research family. Each successful

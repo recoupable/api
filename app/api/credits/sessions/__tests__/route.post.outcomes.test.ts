@@ -14,7 +14,7 @@ const makeReq = () => new NextRequest(URL, { method: "POST", body: "{}" });
 const validated = {
   accountId: ACCOUNT,
   successUrl: "https://chat.recoupable.com/ok",
-  credits: 250,
+  credits: 2_500_000,
 };
 
 describe("POST /api/credits/sessions (handler outcomes)", () => {
@@ -43,7 +43,7 @@ describe("POST /api/credits/sessions (handler outcomes)", () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({
       paymentIntentId: "pi_ok",
-      creditsPurchased: 250,
+      creditsPurchased: 2_500_000,
       totalCents: 289,
     });
   });

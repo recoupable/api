@@ -20,5 +20,5 @@ export const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
 export const validated = {
   accountId: ACCOUNT,
   successUrl: "https://chat.recoupable.com/ok",
-  credits: 250,
+  credits: 2_500_000,
 };

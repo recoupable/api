@@ -8,6 +8,8 @@ import { getMessages } from "@/lib/messages/getMessages";
 import convertToUiMessages from "@/lib/messages/convertToUiMessages";
 import { setupConversation } from "@/lib/chat/setupConversation";
 import { validateMessages } from "@/lib/chat/validateMessages";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 export const chatRequestSchema = z
   .object({
@@ -99,7 +101,7 @@ export async function validateChatRequest(
   // billing; nothing is charged and no Stripe object is created.
   const short = await ensureCreditsOrShortCircuit({
     accountId,
-    creditsToDeduct: 1,
+    creditsToDeduct: usdToCredits(PRICES_USD.chatMinimum),
   });
   if (short) return short;
 

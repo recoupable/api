@@ -373,7 +373,7 @@ describe("Chat Integration Tests", () => {
       expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
         expect.objectContaining({
           accountId: "account-123",
-          creditsToDeduct: 50, // 0.5 * 100
+          creditsToDeduct: 500_000, // $0.50 in micro-dollars
           source: "web",
         }),
       );
@@ -431,7 +431,7 @@ describe("Chat Integration Tests", () => {
       expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
         expect.objectContaining({
           accountId: "account-123",
-          creditsToDeduct: 1, // Math.max(1, Math.round(0.001 * 100))
+          creditsToDeduct: 1_000, // $0.001 in micro-dollars
           source: "web",
         }),
       );

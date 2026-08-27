@@ -1,4 +1,6 @@
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 /**
  * Credits charged per artist-events call. Priced at 1 like web search rather
@@ -7,7 +9,7 @@ import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortC
  * sweeps viable — a caller fanning out across a label roster makes one call per
  * artist (chat#1954).
  */
-const EVENTS_RESEARCH_CREDIT_COST = 1;
+const EVENTS_RESEARCH_CREDIT_COST = usdToCredits(PRICES_USD.researchEvents);
 
 /**
  * Per-route credit gate for `POST /api/research/events`. Returns a 402

@@ -174,7 +174,7 @@ describe("postResearchEventsHandler", () => {
 
     expect(recordCreditDeduction).toHaveBeenCalledWith({
       accountId: "acct-1",
-      creditsToDeduct: 1,
+      creditsToDeduct: 10_000,
       source: "api",
     });
   });

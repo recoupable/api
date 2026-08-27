@@ -1,5 +1,7 @@
 import { fetchSongstatsResearch } from "@/lib/research/songstats/fetchSongstatsResearch";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 export type HandleResearchParams = {
   accountId: string;
@@ -23,7 +25,7 @@ export type HandleResearchResult = { data: unknown } | { error: string; status: 
  * @returns `{ data }` on success, `{ error, status }` on upstream failure.
  */
 export async function handleResearch(params: HandleResearchParams): Promise<HandleResearchResult> {
-  const { accountId, path, query, credits = 5 } = params;
+  const { accountId, path, query, credits = usdToCredits(PRICES_USD.research) } = params;
 
   const result = await fetchSongstatsResearch(path, query);
   if (result.status !== 200) {

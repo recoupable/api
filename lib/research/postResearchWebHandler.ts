@@ -5,6 +5,8 @@ import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 import { searchPerplexity } from "@/lib/perplexity/searchPerplexity";
 import { formatSearchResultsAsMarkdown } from "@/lib/perplexity/formatSearchResultsAsMarkdown";
 import { validatePostResearchWebRequest } from "@/lib/research/validatePostResearchWebRequest";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 /**
  * Web search handler — queries Perplexity for real-time web results with formatted markdown output.
@@ -28,7 +30,7 @@ export async function postResearchWebHandler(request: NextRequest): Promise<Next
     try {
       await recordCreditDeduction({
         accountId: validated.accountId,
-        creditsToDeduct: 1,
+        creditsToDeduct: usdToCredits(PRICES_USD.researchWeb),
         source: "api",
       });
     } catch {
