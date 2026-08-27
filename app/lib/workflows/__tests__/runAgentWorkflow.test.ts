@@ -286,6 +286,7 @@ describe("runAgentWorkflow", () => {
       accountId: "acc-1",
       model: "anthropic/claude-haiku-4.5",
       source: "api",
+      resourceUrl: "/sessions/session-1/chats/chat-1",
       gatewayCostUsd: 0.07,
       usage: {
         inputTokens: 100,

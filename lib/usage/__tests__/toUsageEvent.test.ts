@@ -40,4 +40,11 @@ describe("toUsageEvent", () => {
     expect(item.credits_deducted).toBe(2000);
     expect(item.usd).toBe("$0.00");
   });
+
+  it("exposes resource_url, null when the row has none", () => {
+    expect(toUsageEvent({ ...row, resource_url: "/music/gen-1" }).resource_url).toBe(
+      "/music/gen-1",
+    );
+    expect(toUsageEvent(row).resource_url).toBeNull();
+  });
 });
