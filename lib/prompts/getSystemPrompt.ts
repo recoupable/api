@@ -110,21 +110,21 @@ ${accountWithDetails.instruction}`;
   if (artistInstruction) {
     systemPrompt = `${systemPrompt}
 
------SELECTED ARTIST/WORKSPACE CONTEXT-----
-This is information about the artist/workspace the user is currently working with:
+-----SELECTED ARTIST CONTEXT-----
+This is information about the artist the user is currently working with:
 
 Custom Instructions for this Artist:
 ${artistInstruction}
------END ARTIST/WORKSPACE CONTEXT-----`;
+-----END ARTIST CONTEXT-----`;
   }
 
   if (knowledgeBaseText) {
     systemPrompt = `${systemPrompt}
 
------ARTIST/WORKSPACE KNOWLEDGE BASE-----
-Additional context and knowledge for the selected artist/workspace:
+-----ARTIST KNOWLEDGE BASE-----
+Additional context and knowledge for the selected artist:
 ${knowledgeBaseText}
------END ARTIST/WORKSPACE KNOWLEDGE BASE-----`;
+-----END ARTIST KNOWLEDGE BASE-----`;
   }
 
   return systemPrompt;

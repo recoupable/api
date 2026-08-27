@@ -142,9 +142,9 @@ export async function selectTableName({
 
 ### Terminology
 
-Use **"account"** terminology, never "entity" or "user". All entities in the system (individuals, artists, workspaces, organizations) are "accounts". When referring to specific types, use the specific name:
+Use **"account"** terminology, never "entity" or "user". All entities in the system (individuals, artists, organizations) are "accounts". When referring to specific types, use the specific name:
 
-- ✅ `account_id`, "artist", "workspace", "organization"
+- ✅ `account_id`, "artist", "organization"
 - ❌ `entity_id`, "entity", "user"
 
 ### API Response Shapes

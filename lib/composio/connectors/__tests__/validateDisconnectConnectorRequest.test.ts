@@ -108,25 +108,6 @@ describe("validateDisconnectConnectorRequest", () => {
     });
   });
 
-  it("should check account access when account_id provided (workspace)", async () => {
-    const mockTargetAccountId = "550e8400-e29b-41d4-a716-446655440000";
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: "account-123",
-      orgId: null,
-      authToken: "test-token",
-    });
-    vi.mocked(checkConnectorAuthority).mockResolvedValue(true);
-
-    const request = new NextRequest("http://localhost/api/connectors", {
-      method: "DELETE",
-      body: JSON.stringify({ connected_account_id: "ca_123", account_id: mockTargetAccountId }),
-    });
-    const result = await validateDisconnectConnectorRequest(request);
-
-    expect(checkConnectorAuthority).toHaveBeenCalledWith("account-123", mockTargetAccountId);
-    expect(result).not.toBeInstanceOf(NextResponse);
-  });
-
   it("should return 403 when account access denied", async () => {
     const mockTargetAccountId = "550e8400-e29b-41d4-a716-446655440000";
     vi.mocked(validateAuthContext).mockResolvedValue({
