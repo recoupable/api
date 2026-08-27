@@ -3,6 +3,8 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { deductCredits } from "@/lib/credits/deductCredits";
 import { validatePostResearchDeepRequest } from "@/lib/research/validatePostResearchDeepRequest";
 import { chatWithPerplexity } from "@/lib/perplexity/chatWithPerplexity";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 /**
  * Deep research handler — performs comprehensive research via Perplexity sonar-deep-research with citations.
@@ -22,7 +24,7 @@ export async function postResearchDeepHandler(request: NextRequest): Promise<Nex
     );
 
     try {
-      await deductCredits({ accountId, creditsToDeduct: 25 });
+      await deductCredits({ accountId, creditsToDeduct: usdToCredits(PRICES_USD.researchDeep) });
     } catch {
       // Credit deduction failed but data was fetched — log but don't block
     }

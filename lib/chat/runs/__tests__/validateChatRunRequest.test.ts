@@ -95,3 +95,25 @@ describe("validateChatRunRequest", () => {
     );
   });
 });
+
+describe("validateChatRunRequest trigger_run_id (chat#2006)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+  });
+
+  it("passes trigger_run_id through as triggerRunId", async () => {
+    const result = await validateChatRunRequest(
+      req({ prompt: "go", trigger_run_id: "run_06g3i0e3logru439uh9e1m8801" }),
+    );
+    expect(result).not.toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) return;
+    expect(result.triggerRunId).toBe("run_06g3i0e3logru439uh9e1m8801");
+  });
+
+  it("leaves triggerRunId undefined when the field is absent", async () => {
+    const result = await validateChatRunRequest(req({ prompt: "go" }));
+    if (result instanceof NextResponse) throw new Error("unexpected");
+    expect(result.triggerRunId).toBeUndefined();
+  });
+});

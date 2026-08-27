@@ -101,4 +101,29 @@ describe("validateCreateMusicBody", () => {
 
     expect(result).toBe(authErr);
   });
+
+  it("rejects an unknown field instead of silently dropping it", async () => {
+    // Zod strips unknown keys by default, so this used to return 200 with the
+    // song filed under the caller's personal account and no indication the
+    // field was ignored. chat#1994 shipped sending organization_id and had to
+    // be caught by inspection, because nothing failed.
+    const res = await validateCreateMusicBody(
+      makeRequest({ prompt: "p", lyrics: "l", organization_id: orgId }),
+    );
+
+    expect(res).toBeInstanceOf(NextResponse);
+    const body = await (res as NextResponse).json();
+    expect((res as NextResponse).status).toBe(400);
+    expect(body.error).toContain("organization_id");
+  });
+
+  it("names the offending field so the caller can fix it", async () => {
+    const res = await validateCreateMusicBody(
+      makeRequest({ prompt: "p", lyrics: "l", tempo: 120 }),
+    );
+
+    const body = await (res as NextResponse).json();
+    expect((res as NextResponse).status).toBe(400);
+    expect(body.error).toContain("tempo");
+  });
 });

@@ -2,7 +2,6 @@ import { RECOUP_ORG_ID } from "@/lib/const";
 import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 import { selectArtistOrganizationIds } from "@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds";
 import { selectAccountOrganizationIds } from "@/lib/supabase/account_organization_ids/selectAccountOrganizationIds";
-import { selectAccountWorkspaceId } from "@/lib/supabase/account_workspace_ids/selectAccountWorkspaceId";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
 
 /**
@@ -17,8 +16,7 @@ import { validateOrganizationAccess } from "@/lib/organizations/validateOrganiza
  * 1. Target is the caller itself, OR
  * 2. Caller is a RECOUP_ORG member (admin bypass), OR
  * 3. Caller shares an organization with the target artist, OR
- * 4. Target is a workspace the caller owns, OR
- * 5. Target is an organization the caller belongs to
+ * 4. Target is an organization the caller belongs to
  *
  * Fails closed: any database error results in denied authority.
  *
@@ -47,11 +45,7 @@ export async function checkConnectorAuthority(
     }
   }
 
-  // 4. Workspace owned by the caller
-  const isWorkspace = await selectAccountWorkspaceId(callerAccountId, targetAccountId);
-  if (isWorkspace) return true;
-
-  // 5. Organization the caller belongs to
+  // 4. Organization the caller belongs to
   return validateOrganizationAccess({
     accountId: callerAccountId,
     organizationId: targetAccountId,

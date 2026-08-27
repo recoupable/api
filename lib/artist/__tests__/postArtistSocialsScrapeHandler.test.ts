@@ -74,7 +74,7 @@ describe("postArtistSocialsScrapeHandler", () => {
     expect(scrapeProfileUrlBatch).not.toHaveBeenCalled();
   });
 
-  it("gates on (5 + posts) × profiles credits and short-circuits with the 402", async () => {
+  it("gates on ($0.05 + $0.01 × posts) × profiles and short-circuits with the 402", async () => {
     const short = NextResponse.json({}, { status: 402 });
     vi.mocked(ensureSocialScrapeCredits).mockResolvedValue(short);
     expect(
@@ -82,14 +82,14 @@ describe("postArtistSocialsScrapeHandler", () => {
         makeRequest({ artist_account_id: ARTIST_ID, posts: 20 }),
       ),
     ).toBe(short);
-    expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 50);
+    expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 500_000);
     expect(scrapeProfileUrlBatch).not.toHaveBeenCalled();
   });
 
-  it("scrapes without a posts depth by default and deducts 5 credits per scraped profile", async () => {
+  it("scrapes without a posts depth by default and deducts $0.05 per scraped profile", async () => {
     const res = await postArtistSocialsScrapeHandler(makeRequest({ artist_account_id: ARTIST_ID }));
     expect(res.status).toBe(200);
-    expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 10);
+    expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 100_000);
     expect(scrapeProfileUrlBatch).toHaveBeenCalledWith(
       [
         { profileUrl: "https://x.com/a", username: "a" },
@@ -97,17 +97,17 @@ describe("postArtistSocialsScrapeHandler", () => {
       ],
       undefined,
     );
-    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 10);
+    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 100_000);
   });
 
-  it("forwards posts and deducts (5 + posts) per profile actually scraped", async () => {
+  it("forwards posts and deducts ($0.05 + $0.01 × posts) per profile actually scraped", async () => {
     vi.mocked(scrapeProfileUrlBatch).mockResolvedValue([
       { runId: "r1", datasetId: "d1", error: null, profileUrl: null },
     ]);
     await postArtistSocialsScrapeHandler(makeRequest({ artist_account_id: ARTIST_ID, posts: 20 }));
-    expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 50);
+    expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 500_000);
     expect(scrapeProfileUrlBatch).toHaveBeenCalledWith(expect.any(Array), 20);
-    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 25);
+    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 250_000);
   });
 
   it("returns [] and charges nothing when the artist has no socials", async () => {

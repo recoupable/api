@@ -4,6 +4,8 @@ import { successResponse } from "@/lib/networking/successResponse";
 import { deductCredits } from "@/lib/credits/deductCredits";
 import { extractUrl } from "@/lib/parallel/extractUrl";
 import { validatePostResearchExtractRequest } from "@/lib/research/validatePostResearchExtractRequest";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 /**
  * POST /api/research/extract
@@ -19,7 +21,7 @@ export async function postResearchExtractHandler(request: NextRequest): Promise<
     const validated = await validatePostResearchExtractRequest(request);
     if (validated instanceof NextResponse) return validated;
 
-    const creditCost = 5 * validated.urls.length;
+    const creditCost = usdToCredits(PRICES_USD.researchExtractPerUrl) * validated.urls.length;
     const result = await extractUrl(validated.urls, validated.objective, validated.full_content);
 
     try {

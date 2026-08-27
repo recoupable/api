@@ -154,7 +154,7 @@ describe("checkAndResetCredits", () => {
   });
 
   it("reports isPro=true without refilling when sub is active but neither refill trigger fires", async () => {
-    const row = baseRow({ timestamp: "2026-05-01T00:00:00.000Z", remaining_credits: 800 });
+    const row = baseRow({ timestamp: "2026-05-01T00:00:00.000Z", remaining_credits: 8_000_000 });
     vi.mocked(selectCreditsUsage).mockResolvedValue([row]);
     vi.mocked(getAccountSubscriptionState).mockResolvedValue(proStateFromAccount);
 
@@ -186,7 +186,10 @@ describe("checkAndResetCredits", () => {
     });
 
     it("leaves a balance ABOVE the plan total untouched, and still advances the timestamp", async () => {
-      const row = baseRow({ timestamp: "2026-03-01T00:00:00.000Z", remaining_credits: 9999 });
+      const row = baseRow({
+        timestamp: "2026-03-01T00:00:00.000Z",
+        remaining_credits: PRO_CREDITS,
+      });
       vi.mocked(selectCreditsUsage).mockResolvedValue([row]);
       vi.mocked(updateCreditsUsage).mockResolvedValue({
         ...row,
@@ -196,13 +199,13 @@ describe("checkAndResetCredits", () => {
 
       const result = await checkAndResetCredits(ACCOUNT);
 
-      // remaining_credits is absent from the update, not set to 9999: a stale
+      // remaining_credits is absent from the update, not set to PRO_CREDITS: a stale
       // read must not resurrect credits a concurrent deduction just spent.
       expect(updateCreditsUsage).toHaveBeenCalledWith({
         account_id: ACCOUNT,
         updates: { timestamp: "2026-05-11T12:00:00.000Z" },
       });
-      expect(result.creditsUsage?.remaining_credits).toBe(9999);
+      expect(result.creditsUsage?.remaining_credits).toBe(PRO_CREDITS);
     });
 
     it("writes only the timestamp when the balance is exactly the plan total", async () => {
@@ -226,7 +229,10 @@ describe("checkAndResetCredits", () => {
     });
 
     it("does not cut a pro account holding more than PRO_CREDITS", async () => {
-      const row = baseRow({ timestamp: "2026-03-01T00:00:00.000Z", remaining_credits: 25000 });
+      const row = baseRow({
+        timestamp: "2026-03-01T00:00:00.000Z",
+        remaining_credits: PRO_CREDITS + 1,
+      });
       vi.mocked(selectCreditsUsage).mockResolvedValue([row]);
       vi.mocked(updateCreditsUsage).mockResolvedValue({
         ...row,
@@ -240,13 +246,16 @@ describe("checkAndResetCredits", () => {
         account_id: ACCOUNT,
         updates: { timestamp: "2026-05-11T12:00:00.000Z" },
       });
-      expect(result.creditsUsage?.remaining_credits).toBe(25000);
+      expect(result.creditsUsage?.remaining_credits).toBe(PRO_CREDITS + 1);
     });
 
     it("protects an admin grant on a free account without knowing it is a grant", async () => {
       // 9,999 granted to a free-tier account: no provenance is consulted, the
       // floor rule alone keeps it.
-      const row = baseRow({ timestamp: "2026-03-01T00:00:00.000Z", remaining_credits: 9999 });
+      const row = baseRow({
+        timestamp: "2026-03-01T00:00:00.000Z",
+        remaining_credits: PRO_CREDITS,
+      });
       vi.mocked(selectCreditsUsage).mockResolvedValue([row]);
       vi.mocked(updateCreditsUsage).mockResolvedValue({
         ...row,
@@ -258,12 +267,15 @@ describe("checkAndResetCredits", () => {
 
       const [{ updates }] = vi.mocked(updateCreditsUsage).mock.calls[0];
       expect(updates).not.toHaveProperty("remaining_credits");
-      expect(result.creditsUsage?.remaining_credits).toBe(9999);
+      expect(result.creditsUsage?.remaining_credits).toBe(PRO_CREDITS);
       expect(result.creditsUsage?.remaining_credits).not.toBe(DEFAULT_CREDITS);
     });
 
     it("treats a newly-subscribed refill as a floor too (does not cut a topped-up balance)", async () => {
-      const row = baseRow({ timestamp: "2026-05-05T00:00:00.000Z", remaining_credits: 12000 });
+      const row = baseRow({
+        timestamp: "2026-05-05T00:00:00.000Z",
+        remaining_credits: PRO_CREDITS + 2_001_000,
+      });
       vi.mocked(selectCreditsUsage).mockResolvedValue([row]);
       vi.mocked(updateCreditsUsage).mockResolvedValue({
         ...row,
@@ -277,7 +289,7 @@ describe("checkAndResetCredits", () => {
         account_id: ACCOUNT,
         updates: { timestamp: "2026-05-11T12:00:00.000Z" },
       });
-      expect(result.creditsUsage?.remaining_credits).toBe(12000);
+      expect(result.creditsUsage?.remaining_credits).toBe(PRO_CREDITS + 2_001_000);
     });
   });
 });

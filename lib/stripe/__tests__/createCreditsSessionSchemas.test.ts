@@ -3,14 +3,14 @@ import { createCreditsSessionBodySchema } from "@/lib/stripe/createCreditsSessio
 
 describe("createCreditsSessionBodySchema", () => {
   it("requires successUrl", () => {
-    const r = createCreditsSessionBodySchema.safeParse({ credits: 100 });
+    const r = createCreditsSessionBodySchema.safeParse({ credits: 1_000_000 });
     expect(r.success).toBe(false);
   });
 
   it("rejects invalid URL", () => {
     const r = createCreditsSessionBodySchema.safeParse({
       successUrl: "not-a-url",
-      credits: 100,
+      credits: 1_000_000,
     });
     expect(r.success).toBe(false);
   });
@@ -26,6 +26,15 @@ describe("createCreditsSessionBodySchema", () => {
     const r = createCreditsSessionBodySchema.safeParse({
       successUrl: "https://chat.recoupable.com/done",
       credits: 12.5,
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects credits that are not a whole number of cents", () => {
+    // Stripe bills whole cents: at six decimals a cent is 10,000 credits.
+    const r = createCreditsSessionBodySchema.safeParse({
+      successUrl: "https://chat.recoupable.com/done",
+      credits: 250,
     });
     expect(r.success).toBe(false);
   });
@@ -49,13 +58,13 @@ describe("createCreditsSessionBodySchema", () => {
   it("accepts successUrl + credits", () => {
     const r = createCreditsSessionBodySchema.safeParse({
       successUrl: "https://chat.recoupable.com/done",
-      credits: 250,
+      credits: 2_500_000,
     });
     expect(r.success).toBe(true);
     if (r.success) {
       expect(r.data).toEqual({
         successUrl: "https://chat.recoupable.com/done",
-        credits: 250,
+        credits: 2_500_000,
       });
     }
   });
@@ -63,7 +72,7 @@ describe("createCreditsSessionBodySchema", () => {
   it("accepts optional accountId UUID", () => {
     const r = createCreditsSessionBodySchema.safeParse({
       successUrl: "https://chat.recoupable.com/done",
-      credits: 250,
+      credits: 2_500_000,
       accountId: "123e4567-e89b-12d3-a456-426614174000",
     });
     expect(r.success).toBe(true);
@@ -72,7 +81,7 @@ describe("createCreditsSessionBodySchema", () => {
   it("rejects malformed accountId", () => {
     const r = createCreditsSessionBodySchema.safeParse({
       successUrl: "https://chat.recoupable.com/done",
-      credits: 250,
+      credits: 2_500_000,
       accountId: "not-a-uuid",
     });
     expect(r.success).toBe(false);
@@ -81,7 +90,7 @@ describe("createCreditsSessionBodySchema", () => {
   it("rejects unknown keys (strict)", () => {
     const r = createCreditsSessionBodySchema.safeParse({
       successUrl: "https://chat.recoupable.com/done",
-      credits: 250,
+      credits: 2_500_000,
       extra: true,
     });
     expect(r.success).toBe(false);

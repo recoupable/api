@@ -1,3 +1,5 @@
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+
 /**
  * Converts a price string to the number of credits required.
  * 1 credit = $0.01, rounded up to the nearest credit.
@@ -11,6 +13,5 @@ export function getCreditsForPrice(price: string): number {
   if (isNaN(priceNumber) || priceNumber <= 0) {
     throw new Error(`Invalid price string: ${price}`);
   }
-  const credits = Math.ceil(priceNumber / 0.01);
-  return credits;
+  return usdToCredits(priceNumber);
 }

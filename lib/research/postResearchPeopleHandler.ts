@@ -4,6 +4,8 @@ import { successResponse } from "@/lib/networking/successResponse";
 import { deductCredits } from "@/lib/credits/deductCredits";
 import { searchPeople } from "@/lib/exa/searchPeople";
 import { validatePostResearchPeopleRequest } from "@/lib/research/validatePostResearchPeopleRequest";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 /**
  * POST /api/research/people
@@ -22,7 +24,10 @@ export async function postResearchPeopleHandler(request: NextRequest): Promise<N
     const result = await searchPeople(validated.query, validated.num_results ?? 10);
 
     try {
-      await deductCredits({ accountId: validated.accountId, creditsToDeduct: 5 });
+      await deductCredits({
+        accountId: validated.accountId,
+        creditsToDeduct: usdToCredits(PRICES_USD.researchPeople),
+      });
     } catch {
       // Credit deduction failed but data was fetched — log but don't block
     }

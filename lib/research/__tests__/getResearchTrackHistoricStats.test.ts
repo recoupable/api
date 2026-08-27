@@ -34,7 +34,7 @@ describe("getResearchTrackHistoricStats", () => {
     expect(result).toEqual({ data: payload });
     expect(recordCreditDeduction).toHaveBeenCalledWith({
       accountId: "acc_1",
-      creditsToDeduct: 5,
+      creditsToDeduct: 50_000,
       source: "api",
     });
   });

@@ -1,4 +1,4 @@
-import { CREDITS_PER_USD } from "@/lib/credits/creditUnit";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
 
 /**
  * Monthly credit allotment for free-tier accounts, as dollars.
@@ -7,7 +7,7 @@ import { CREDITS_PER_USD } from "@/lib/credits/creditUnit";
 export const DEFAULT_CREDITS_USD = 3.33;
 
 /** Free-tier allotment in credits. Derived, so it survives a unit change. */
-export const DEFAULT_CREDITS = Math.round(DEFAULT_CREDITS_USD * CREDITS_PER_USD);
+export const DEFAULT_CREDITS = usdToCredits(DEFAULT_CREDITS_USD);
 
 /**
  * Monthly credit allotment for accounts on a pro plan (directly, via an
@@ -17,7 +17,7 @@ export const DEFAULT_CREDITS = Math.round(DEFAULT_CREDITS_USD * CREDITS_PER_USD)
 export const PRO_CREDITS_USD = 99.99;
 
 /** Pro allotment in credits. Derived, so it survives a unit change. */
-export const PRO_CREDITS = Math.round(PRO_CREDITS_USD * CREDITS_PER_USD);
+export const PRO_CREDITS = usdToCredits(PRO_CREDITS_USD);
 
 /**
  * Where a caller that ran out of credits is pointed. A constant, so a 402

@@ -3,6 +3,8 @@ import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
 import { errorResponse } from "@/lib/networking/errorResponse";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 const bodySchema = z.object({
   input: z.string().min(1, "input is required"),
@@ -33,8 +35,13 @@ export async function validatePostResearchEnrichRequest(
     return errorResponse(parsed.error.issues[0]?.message ?? "Invalid request body", 400);
   }
 
-  const creditCost =
-    parsed.data.processor === "ultra" ? 25 : parsed.data.processor === "core" ? 10 : 5;
+  const creditCost = usdToCredits(
+    parsed.data.processor === "ultra"
+      ? PRICES_USD.researchEnrich.ultra
+      : parsed.data.processor === "core"
+        ? PRICES_USD.researchEnrich.core
+        : PRICES_USD.researchEnrich.base,
+  );
   const short = await ensureCreditsOrShortCircuit({
     accountId: authResult.accountId,
     creditsToDeduct: creditCost,

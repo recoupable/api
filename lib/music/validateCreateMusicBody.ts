@@ -8,7 +8,15 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 // Ranges mirror the fal minimax/music-3 form, except the duration floor: fal
 // allows 1 second, we floor at 10 because a shorter request costs a full
 // workflow run and cannot produce a usable song.
-export const createMusicBodySchema = z.object({
+/**
+ * Strict on purpose. Zod drops unknown keys by default, which meant a body
+ * carrying `organization_id` returned 200 with the song filed under the
+ * caller's personal account and nothing to say the field was ignored —
+ * chat#1994 shipped exactly that and it had to be found by inspection. A
+ * misspelled or imagined field should fail loudly rather than quietly change
+ * where the song lands.
+ */
+export const createMusicBodySchema = z.strictObject({
   prompt: z.string().min(1),
   lyrics: z.string().min(1),
   duration: z.number().min(10).max(300).default(60),
@@ -41,8 +49,21 @@ export async function validateCreateMusicBody(
 
   if (!result.success) {
     const firstError = result.error.issues[0];
+    // An unrecognized key is reported with an empty `path` and the offending
+    // names under `keys`, so the default message would not tell the caller
+    // which field to remove.
+    const unknownKeys =
+      firstError.code === "unrecognized_keys" ? (firstError as { keys: string[] }).keys : [];
+    const error = unknownKeys.length
+      ? `Unrecognized field(s): ${unknownKeys.join(", ")}`
+      : firstError.message;
+
     return NextResponse.json(
-      { status: "error", missing_fields: firstError.path, error: firstError.message },
+      {
+        status: "error",
+        missing_fields: unknownKeys.length ? unknownKeys : firstError.path,
+        error,
+      },
       { status: 400, headers: getCorsHeaders() },
     );
   }

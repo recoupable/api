@@ -7,6 +7,8 @@ import { getArtistBandsintownId } from "@/lib/research/getArtistBandsintownId";
 import { fetchBandsintownEvents } from "@/lib/apify/bandsintown/fetchBandsintownEvents";
 import { validatePostResearchEventsRequest } from "@/lib/research/validatePostResearchEventsRequest";
 import { isApifyCapacityError } from "@/lib/apify/isApifyCapacityError";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { PRICES_USD } from "@/lib/credits/pricesUsd";
 
 /**
  * Returned when the artist is reachable but has no Bandsintown profile
@@ -66,7 +68,7 @@ export async function postResearchEventsHandler(request: NextRequest): Promise<N
     try {
       await recordCreditDeduction({
         accountId: validated.accountId,
-        creditsToDeduct: 1,
+        creditsToDeduct: usdToCredits(PRICES_USD.researchEvents),
         source: "api",
       });
     } catch {

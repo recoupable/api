@@ -391,42 +391,6 @@ export type Database = {
           },
         ];
       };
-      account_workspace_ids: {
-        Row: {
-          account_id: string | null;
-          id: string;
-          updated_at: string | null;
-          workspace_id: string | null;
-        };
-        Insert: {
-          account_id?: string | null;
-          id?: string;
-          updated_at?: string | null;
-          workspace_id?: string | null;
-        };
-        Update: {
-          account_id?: string | null;
-          id?: string;
-          updated_at?: string | null;
-          workspace_id?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "account_workspace_ids_account_id_fkey";
-            columns: ["account_id"];
-            isOneToOne: false;
-            referencedRelation: "accounts";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "account_workspace_ids_workspace_id_fkey";
-            columns: ["workspace_id"];
-            isOneToOne: false;
-            referencedRelation: "accounts";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       accounts: {
         Row: {
           id: string;
@@ -1017,6 +981,50 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "songs";
             referencedColumns: ["isrc"];
+          },
+        ];
+      };
+      catalog_valuations: {
+        Row: {
+          catalog_id: string;
+          created_at: string;
+          high: number;
+          id: string;
+          low: number;
+          measured_at: string;
+          measured_song_count: number;
+          mid: number;
+          total_streams: number;
+        };
+        Insert: {
+          catalog_id: string;
+          created_at?: string;
+          high: number;
+          id?: string;
+          low: number;
+          measured_at?: string;
+          measured_song_count: number;
+          mid: number;
+          total_streams: number;
+        };
+        Update: {
+          catalog_id?: string;
+          created_at?: string;
+          high?: number;
+          id?: string;
+          low?: number;
+          measured_at?: string;
+          measured_song_count?: number;
+          mid?: number;
+          total_streams?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "catalog_valuations_catalog_id_fkey";
+            columns: ["catalog_id"];
+            isOneToOne: false;
+            referencedRelation: "catalogs";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -2799,9 +2807,7 @@ export type Database = {
           created_at: string | null;
           enabled: boolean | null;
           id: string;
-          last_run: string | null;
           model: string | null;
-          next_run: string | null;
           prompt: string;
           schedule: string;
           title: string;
@@ -2814,9 +2820,7 @@ export type Database = {
           created_at?: string | null;
           enabled?: boolean | null;
           id?: string;
-          last_run?: string | null;
           model?: string | null;
-          next_run?: string | null;
           prompt: string;
           schedule: string;
           title: string;
@@ -2829,9 +2833,7 @@ export type Database = {
           created_at?: string | null;
           enabled?: boolean | null;
           id?: string;
-          last_run?: string | null;
           model?: string | null;
-          next_run?: string | null;
           prompt?: string;
           schedule?: string;
           title?: string;
@@ -3874,6 +3876,33 @@ export type Database = {
           },
         ];
       };
+      zz_probe_cleanup_20260805: {
+        Row: {
+          artist_id: string | null;
+          captured_at: string;
+          created_at: string | null;
+          id: string | null;
+          organization_id: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          artist_id?: string | null;
+          captured_at?: string;
+          created_at?: string | null;
+          id?: string | null;
+          organization_id?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          artist_id?: string | null;
+          captured_at?: string;
+          created_at?: string | null;
+          id?: string | null;
+          organization_id?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -3964,15 +3993,6 @@ export type Database = {
           p_event_id: string;
         };
         Returns: undefined;
-      };
-      grant_credits_with_audit: {
-        Args: {
-          p_account_id: string;
-          p_granted_by: string;
-          p_reason: string;
-          p_remaining_credits: number;
-        };
-        Returns: Database["public"]["Tables"]["credit_grants"]["Row"];
       };
       extract_domain: { Args: { email: string }; Returns: string };
       get_account_invitations: {
@@ -4076,6 +4096,29 @@ export type Database = {
         }[];
       };
       get_upper_system_role: { Args: never; Returns: string };
+      grant_credits_with_audit: {
+        Args: {
+          p_account_id: string;
+          p_granted_by: string;
+          p_reason: string;
+          p_remaining_credits: number;
+        };
+        Returns: {
+          account_id: string;
+          created_at: string;
+          granted_by: string;
+          id: string;
+          previous_credits: number | null;
+          reason: string;
+          remaining_credits: number;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "credit_grants";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       has_active_subscription: {
         Args: { target_account_id: string };
         Returns: boolean;
