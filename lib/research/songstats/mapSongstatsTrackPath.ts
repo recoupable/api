@@ -1,8 +1,10 @@
 import type { ProxyResult } from "@/lib/research/ProxyResult";
-import { extractList } from "@/lib/research/songstats/extractList";
+import { mapLegacyPlaylistScope } from "@/lib/research/songstats/mapLegacyPlaylistScope";
 import { mapSongstatsResult } from "@/lib/research/songstats/mapSongstatsResult";
+import { normalizeTopPlaylists } from "@/lib/research/songstats/normalizeTopPlaylists";
 import { normalizeTrackLookupObject } from "@/lib/research/songstats/normalizeTrackLookupObject";
 import { normalizeTrackObject } from "@/lib/research/songstats/normalizeTrackObject";
+import { pickTopPlaylistsQuery } from "@/lib/research/songstats/pickTopPlaylistsQuery";
 
 export function mapSongstatsTrackPath(
   path: string,
@@ -34,14 +36,14 @@ export function mapSongstatsTrackPath(
   match = path.match(/^\/track\/([^/]+)\/([^/]+)\/(current|past)\/playlists$/);
   if (match) {
     return mapSongstatsResult(
-      "/tracks/activities",
+      "/tracks/top_playlists",
       {
         songstats_track_id: match[1],
         source: match[2],
-        status: match[3],
-        ...query,
+        scope: mapLegacyPlaylistScope(match[3] as "current" | "past"),
+        ...pickTopPlaylistsQuery(query),
       },
-      data => extractList(data, ["playlists", "activities", "results", "data", "items"]),
+      normalizeTopPlaylists,
     );
   }
 
