@@ -22,7 +22,7 @@ describe("hasActiveSubscriptionForEmail", () => {
   it("returns false when no customer carries the email", async () => {
     customersListMock.mockResolvedValue({ data: [] });
     expect(await hasActiveSubscriptionForEmail("nobody@example.com")).toBe(false);
-    expect(customersListMock).toHaveBeenCalledWith({ email: "nobody@example.com", limit: 10 });
+    expect(customersListMock).toHaveBeenCalledWith({ email: "nobody@example.com", limit: 100 });
     expect(subscriptionsListMock).not.toHaveBeenCalled();
   });
 
@@ -36,7 +36,7 @@ describe("hasActiveSubscriptionForEmail", () => {
     expect(subscriptionsListMock).toHaveBeenCalledWith({
       customer: "cus_a",
       status: "all",
-      limit: 10,
+      limit: 100,
     });
   });
 
@@ -52,5 +52,6 @@ describe("hasActiveSubscriptionForEmail", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     customersListMock.mockRejectedValue(new Error("stripe down"));
     expect(await hasActiveSubscriptionForEmail("fan@example.com")).toBe(false);
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain("fan@example.com");
   });
 });

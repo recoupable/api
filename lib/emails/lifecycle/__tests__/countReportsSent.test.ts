@@ -12,9 +12,11 @@ describe("countReportsSent", () => {
     selectLogMock.mockResolvedValue([
       { raw_body: '{"to":"a@x.com","subject":"Weekly"}' },
       { raw_body: '{"type":"welcome_email","to":"a@x.com"}' },
+      { raw_body: '{"type":"valuation_report","snapshot_id":"s1"}' },
+      { raw_body: '{"type":"trial_ending_email","subscription_id":"sub_1"}' },
       { raw_body: null },
     ]);
-    expect(await countReportsSent("acc_1", "2026-08-01T00:00:00Z")).toBe(2);
+    expect(await countReportsSent("acc_1", "2026-08-01T00:00:00Z")).toBe(3);
     expect(selectLogMock).toHaveBeenCalledWith({
       accountId: "acc_1",
       status: "sent",

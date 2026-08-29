@@ -37,6 +37,30 @@ describe("sumCreditsDeducted", () => {
     expect(total).toBe(1_750_000);
   });
 
+  it("pages through every row before totalling", async () => {
+    const full = Array.from({ length: 1000 }, () => ({ credits_deducted: 1 }));
+    const builder: Record<string, ReturnType<typeof vi.fn>> & {
+      then?: (resolve: (v: unknown) => void) => void;
+    } = {} as never;
+    for (const m of ["select", "eq", "gte", "lt"]) builder[m] = vi.fn().mockReturnValue(builder);
+    builder.range = vi
+      .fn()
+      .mockReturnValueOnce({ then: (r: (v: unknown) => void) => r({ data: full, error: null }) })
+      .mockReturnValueOnce({
+        then: (r: (v: unknown) => void) => r({ data: [{ credits_deducted: 5 }], error: null }),
+      });
+    vi.mocked(supabase.from).mockReturnValue(builder as never);
+
+    const total = await sumCreditsDeducted({
+      accountId: "acc_1",
+      createdAfter: "2026-08-01T00:00:00Z",
+    });
+
+    expect(builder.range).toHaveBeenNthCalledWith(1, 0, 999);
+    expect(builder.range).toHaveBeenNthCalledWith(2, 1000, 1999);
+    expect(total).toBe(1005);
+  });
+
   it("returns 0 on a query error", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     mockBuilder({ data: null, error: { message: "boom" } });
