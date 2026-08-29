@@ -6,3 +6,6 @@ export const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? "";
 // the customer covers the processing fee.
 export const STRIPE_CARD_FEE_PERCENTAGE = 0.029;
 export const STRIPE_CARD_FEE_FIXED_CENTS = 30;
+
+/** Stripe price id for the $19/mo Starter plan; empty until configured in the environment. */
+export const STRIPE_STARTER_PRICE_ID = process.env.STRIPE_STARTER_PRICE_ID ?? "";

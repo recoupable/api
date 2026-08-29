@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { notifyCreditsTopupSession } from "@/lib/stripe/notifyCreditsTopupSession";
+import { processCheckoutSubscriptionCompleted } from "@/lib/stripe/checkout/processCheckoutSubscriptionCompleted";
 import { processCheckoutSessionExpired } from "@/lib/stripe/processCheckoutSessionExpired";
 import { processCreditsTopupPaymentIntent } from "@/lib/stripe/processCreditsTopupPaymentIntent";
 import { processCreditsTopupSession } from "@/lib/stripe/processCreditsTopupSession";
@@ -23,6 +24,7 @@ export async function stripeWebhookHandler(request: NextRequest): Promise<NextRe
   try {
     if (event.type === "checkout.session.completed") {
       await processCreditsTopupSession(event.data.object as Stripe.Checkout.Session);
+      await processCheckoutSubscriptionCompleted(event.data.object as Stripe.Checkout.Session);
       await notifyCreditsTopupSession(event.data.object as Stripe.Checkout.Session);
     } else if (event.type === "checkout.session.expired") {
       await processCheckoutSessionExpired(event.data.object as Stripe.Checkout.Session);
