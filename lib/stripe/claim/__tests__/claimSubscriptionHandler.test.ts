@@ -48,7 +48,9 @@ describe("claimSubscriptionHandler", () => {
     validateAuthContextMock.mockResolvedValue(
       NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 }),
     );
-    expect((await claimSubscriptionHandler(req({ session_id: "cs_1" }))).status).toBe(401);
+    const unauth = await claimSubscriptionHandler(req({ session_id: "cs_1" }));
+    expect(unauth.status).toBe(401);
+    await expect(unauth.json()).resolves.toEqual({ status: "error", error: "Unauthorized" });
   });
 
   it("returns 500 when the claim throws", async () => {
