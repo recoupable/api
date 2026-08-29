@@ -20,7 +20,7 @@ describe("createCheckoutSession", () => {
     resolveCustomerMock.mockResolvedValue("cus_1");
   });
 
-  it("mints an anonymous session that creates a customer and carries the plan in metadata", async () => {
+  it("mints an anonymous session with no customer (Stripe creates one) and the plan in metadata", async () => {
     await createCheckoutSession({
       accountId: null,
       plan: "pro",
@@ -33,7 +33,6 @@ describe("createCheckoutSession", () => {
     expect(createMock).toHaveBeenCalledWith({
       mode: "subscription",
       line_items: [{ price: "price_pro", quantity: 1 }],
-      customer_creation: "always",
       metadata: { plan: "pro", source: "checkout_unauth" },
       subscription_data: {
         metadata: { plan: "pro", source: "checkout_unauth" },
@@ -58,7 +57,6 @@ describe("createCheckoutSession", () => {
     expect(params.client_reference_id).toBe("acc_1");
     expect(params.metadata).toEqual({ accountId: "acc_1", plan: "starter" });
     expect(params.subscription_data).toEqual({ metadata: { accountId: "acc_1", plan: "starter" } });
-    expect(params).not.toHaveProperty("customer_creation");
     expect(params).not.toHaveProperty("cancel_url");
   });
 });
