@@ -60,6 +60,7 @@ describe("validateCreateContentBody", () => {
         template: "artist-caption-bedroom",
         lipsync: true,
         captionLength: "none",
+        dsp: "none",
         upscale: false,
         batch: 1,
       });
@@ -120,6 +121,48 @@ describe("validateCreateContentBody", () => {
       expect(result.status).toBe(400);
       const body = await result.json();
       expect(body.error).toContain("Unsupported template");
+    }
+  });
+
+  it("accepts dsp parameter and includes it in validated output", async () => {
+    const request = createRequest({
+      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
+      template: "artist-release-editorial",
+      dsp: "spotify",
+    });
+
+    const result = await validateCreateContentBody(request);
+
+    expect(result).not.toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) {
+      expect(result.dsp).toBe("spotify");
+    }
+  });
+
+  it("defaults dsp to none when omitted", async () => {
+    const request = createRequest({
+      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
+    });
+
+    const result = await validateCreateContentBody(request);
+
+    expect(result).not.toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) {
+      expect(result.dsp).toBe("none");
+    }
+  });
+
+  it("returns 400 when dsp is invalid", async () => {
+    const request = createRequest({
+      artist_account_id: "550e8400-e29b-41d4-a716-446655440000",
+      dsp: "tidal",
+    });
+
+    const result = await validateCreateContentBody(request);
+
+    expect(result).toBeInstanceOf(NextResponse);
+    if (result instanceof NextResponse) {
+      expect(result.status).toBe(400);
     }
   });
 
