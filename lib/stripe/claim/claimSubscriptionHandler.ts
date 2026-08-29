@@ -3,6 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { claimSubscription } from "@/lib/stripe/claim/claimSubscription";
 import { claimSubscriptionBodySchema } from "@/lib/stripe/claim/claimSubscriptionSchemas";
+import { mapToClaimError } from "@/lib/stripe/claim/mapToClaimError";
 
 const ERROR_STATUS = {
   session_not_found: 404,
@@ -31,7 +32,7 @@ export async function claimSubscriptionHandler(request: NextRequest): Promise<Ne
     }
 
     const auth = await validateAuthContext(request, {});
-    if (auth instanceof NextResponse) return auth;
+    if (auth instanceof NextResponse) return mapToClaimError(auth);
 
     const result = await claimSubscription({
       sessionId: parsed.data.session_id,
