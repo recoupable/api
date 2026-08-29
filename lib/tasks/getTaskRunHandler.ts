@@ -41,6 +41,17 @@ export async function getTaskRunHandler(request: NextRequest): Promise<NextRespo
       );
     }
 
+    const tags = Array.isArray((result as { tags?: unknown }).tags)
+      ? ((result as { tags?: unknown[] }).tags ?? [])
+      : [];
+    const hasAccountAccess = tags.includes(`account:${validatedQuery.accountId}`);
+    if (!hasAccountAccess) {
+      return NextResponse.json(
+        { status: "error", error: "Task run not found" },
+        { status: 404, headers: getCorsHeaders() },
+      );
+    }
+
     return NextResponse.json(
       { status: "success", runs: [result] },
       { status: 200, headers: getCorsHeaders() },

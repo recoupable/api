@@ -20,7 +20,7 @@ const getTaskRunQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
-export type ValidatedRetrieveQuery = { mode: "retrieve"; runId: string };
+export type ValidatedRetrieveQuery = { mode: "retrieve"; runId: string; accountId: string };
 export type ValidatedListQuery = { mode: "list"; accountId: string; limit: number };
 export type GetTaskRunQuery = ValidatedRetrieveQuery | ValidatedListQuery;
 
@@ -28,7 +28,7 @@ export type GetTaskRunQuery = ValidatedRetrieveQuery | ValidatedListQuery;
  * Validates auth context and query parameters for GET /api/tasks/runs.
  *
  * Returns a discriminated union:
- * - `{ mode: "retrieve", runId }` when runId is provided
+ * - `{ mode: "retrieve", runId, accountId }` when runId is provided
  * - `{ mode: "list", accountId, limit }` when runId is omitted
  *
  * When account_id is provided:
@@ -68,10 +68,6 @@ export async function validateGetTaskRunQuery(
     );
   }
 
-  if (result.data.runId) {
-    return { mode: "retrieve", runId: result.data.runId };
-  }
-
   // Resolve the target account ID
   let targetAccountId = authResult.accountId;
 
@@ -93,6 +89,10 @@ export async function validateGetTaskRunQuery(
 
       targetAccountId = overrideResult.accountId;
     }
+  }
+
+  if (result.data.runId) {
+    return { mode: "retrieve", runId: result.data.runId, accountId: targetAccountId };
   }
 
   return { mode: "list", accountId: targetAccountId, limit: result.data.limit };
