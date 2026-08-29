@@ -33,6 +33,16 @@ describe("processCheckoutSessionExpired", () => {
     ]);
   });
 
+  it("logs the run id with the session id so the run can be found later", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await processCheckoutSessionExpired(session({}));
+    expect(log).toHaveBeenCalledWith("[processCheckoutSessionExpired] workflow started", {
+      sessionId: "cs_1",
+      runId: "run_1",
+    });
+    log.mockRestore();
+  });
+
   it("defaults the plan to pro when the session carries none", async () => {
     await processCheckoutSessionExpired(session({ metadata: {} }));
     expect(startMock.mock.calls[0][1][0].plan).toBe("pro");

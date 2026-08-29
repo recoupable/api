@@ -20,5 +20,9 @@ export async function processCheckoutSessionExpired(
 
   const plan: AbandonedCheckoutPlan = session.metadata?.plan === "starter" ? "starter" : "pro";
 
-  await start(abandonedCheckoutWorkflow, [{ sessionId: session.id, email, plan }]);
+  const run = await start(abandonedCheckoutWorkflow, [{ sessionId: session.id, email, plan }]);
+  console.log("[processCheckoutSessionExpired] workflow started", {
+    sessionId: session.id,
+    runId: run.runId,
+  });
 }
