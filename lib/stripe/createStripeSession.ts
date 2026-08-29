@@ -4,6 +4,7 @@ import {
   STRIPE_SUBSCRIPTION_PRICE_ID,
   STRIPE_SUBSCRIPTION_TRIAL_PERIOD_DAYS,
 } from "@/lib/stripe/config";
+import { cardlessTrialParams } from "@/lib/stripe/checkout/cardlessTrialParams";
 import { resolveStripeCustomerForAccount } from "@/lib/stripe/resolveStripeCustomerForAccount";
 
 export async function createStripeSession(
@@ -13,7 +14,9 @@ export async function createStripeSession(
   const metadata = { accountId };
   const customer = await resolveStripeCustomerForAccount(accountId);
 
+  const cardless = cardlessTrialParams(STRIPE_SUBSCRIPTION_TRIAL_PERIOD_DAYS);
   const sessionData: Stripe.Checkout.SessionCreateParams = {
+    ...cardless,
     customer,
     line_items: [
       {
@@ -25,6 +28,7 @@ export async function createStripeSession(
     client_reference_id: accountId,
     metadata,
     subscription_data: {
+      ...cardless.subscription_data,
       metadata,
       trial_period_days: STRIPE_SUBSCRIPTION_TRIAL_PERIOD_DAYS,
     },

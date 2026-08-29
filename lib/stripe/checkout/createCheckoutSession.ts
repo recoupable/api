@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 import stripeClient from "@/lib/stripe/client";
 import type { CheckoutPlan } from "@/lib/stripe/checkout/checkoutPlan";
 import type { CheckoutPrice } from "@/lib/stripe/checkout/resolveCheckoutPrice";
+import { cardlessTrialParams } from "@/lib/stripe/checkout/cardlessTrialParams";
 import { CHECKOUT_UNAUTH_SOURCE } from "@/lib/stripe/checkout/checkoutUnauthSource";
 import { resolveStripeCustomerForAccount } from "@/lib/stripe/resolveStripeCustomerForAccount";
 
@@ -29,11 +30,14 @@ export async function createCheckoutSession(
   const { accountId, plan, price, successUrl, cancelUrl } = args;
   const metadata = accountId ? { accountId, plan } : { plan, source: CHECKOUT_UNAUTH_SOURCE };
 
+  const cardless = cardlessTrialParams(price.trialPeriodDays);
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",
     line_items: [{ price: price.price, quantity: 1 }],
     metadata,
+    ...cardless,
     subscription_data: {
+      ...cardless.subscription_data,
       metadata,
       ...(price.trialPeriodDays ? { trial_period_days: price.trialPeriodDays } : {}),
     },

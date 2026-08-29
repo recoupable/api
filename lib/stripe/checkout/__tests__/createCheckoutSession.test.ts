@@ -60,3 +60,22 @@ describe("createCheckoutSession", () => {
     expect(params).not.toHaveProperty("cancel_url");
   });
 });
+
+describe("createCheckoutSession with STRIPE_CARDLESS_TRIAL", () => {
+  it("collects the card only if required and cancels a card-less trial at its end", async () => {
+    vi.stubEnv("STRIPE_CARDLESS_TRIAL", "true");
+    await createCheckoutSession({
+      accountId: null,
+      plan: "pro",
+      price: { price: "price_pro", trialPeriodDays: 30 },
+      successUrl: "https://app/",
+    });
+    const params = createMock.mock.calls.at(-1)![0];
+    expect(params.payment_method_collection).toBe("if_required");
+    expect(params.subscription_data.trial_settings).toEqual({
+      end_behavior: { missing_payment_method: "cancel" },
+    });
+    expect(params.subscription_data.trial_period_days).toBe(30);
+    vi.unstubAllEnvs();
+  });
+});
