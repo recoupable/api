@@ -16,8 +16,10 @@ export type CreateCheckoutSessionArgs = {
 /**
  * Mints the Stripe Checkout for a plan. Authenticated: the account's
  * customer and `accountId` metadata, exactly like `createStripeSession`.
- * Anonymous: Stripe creates the customer from the typed email and the
- * `checkout.session.completed` webhook links or creates the account.
+ * Anonymous: no `customer` is passed; in subscription mode Stripe always
+ * creates one from the typed email (`customer_creation` is a payment-mode
+ * option and is rejected here), and the `checkout.session.completed`
+ * webhook links or creates the account.
  * Metadata is mirrored onto `subscription_data` so the subscription itself
  * carries the plan.
  */
@@ -42,8 +44,6 @@ export async function createCheckoutSession(
   if (accountId) {
     params.customer = await resolveStripeCustomerForAccount(accountId);
     params.client_reference_id = accountId;
-  } else {
-    params.customer_creation = "always";
   }
 
   return stripeClient.checkout.sessions.create(params);
