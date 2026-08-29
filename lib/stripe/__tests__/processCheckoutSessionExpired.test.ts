@@ -15,7 +15,7 @@ const session = (overrides: Partial<Stripe.Checkout.Session>) =>
   ({
     id: "cs_1",
     mode: "subscription",
-    customer_details: { email: "fan@example.com" },
+    customer_details: { email: "Fan@Example.com" },
     metadata: { plan: "starter" },
     ...overrides,
   }) as unknown as Stripe.Checkout.Session;

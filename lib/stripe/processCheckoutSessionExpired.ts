@@ -15,7 +15,7 @@ export async function processCheckoutSessionExpired(
 ): Promise<void> {
   if (session.mode !== "subscription") return;
 
-  const email = session.customer_details?.email ?? session.customer_email ?? null;
+  const email = (session.customer_details?.email ?? session.customer_email)?.toLowerCase() ?? null;
   if (!email) return;
 
   const plan: AbandonedCheckoutPlan = session.metadata?.plan === "starter" ? "starter" : "pro";

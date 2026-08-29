@@ -40,6 +40,14 @@ describe("hasActiveSubscriptionForEmail", () => {
     });
   });
 
+  it("treats active and past_due as live subscriptions", async () => {
+    customersListMock.mockResolvedValue({ data: [{ id: "cus_a" }] });
+    subscriptionsListMock.mockResolvedValueOnce({ data: [{ status: "active" }] });
+    expect(await hasActiveSubscriptionForEmail("fan@example.com")).toBe(true);
+    subscriptionsListMock.mockResolvedValueOnce({ data: [{ status: "past_due" }] });
+    expect(await hasActiveSubscriptionForEmail("fan@example.com")).toBe(true);
+  });
+
   it("returns false when every subscription is inactive", async () => {
     customersListMock.mockResolvedValue({ data: [{ id: "cus_a" }] });
     subscriptionsListMock.mockResolvedValue({

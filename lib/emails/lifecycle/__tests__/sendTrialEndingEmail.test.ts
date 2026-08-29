@@ -129,6 +129,13 @@ describe("sendTrialEndingEmail", () => {
     expect(sendMock.mock.calls[0][0].to).toEqual(["second@example.com"]);
   });
 
+  it("links the app root when the billing portal cannot be minted", async () => {
+    portalMock.mockRejectedValue(new Error("stripe"));
+    await sendTrialEndingEmail(subscription);
+    expect(buildMock.mock.calls[0][0].portalUrl).toBe(CHAT_APP_URL);
+    expect(sendMock).toHaveBeenCalledTimes(1);
+  });
+
   it("never throws when a dependency fails", async () => {
     sumCreditsMock.mockRejectedValue(new Error("db"));
     await expect(sendTrialEndingEmail(subscription)).resolves.toBeUndefined();

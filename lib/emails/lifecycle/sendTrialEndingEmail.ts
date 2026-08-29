@@ -14,6 +14,21 @@ import { selectEmailSendLog } from "@/lib/supabase/email_send_log/selectEmailSen
 import { sumCreditsDeducted } from "@/lib/supabase/usage_events/sumCreditsDeducted";
 
 /**
+ * Billing-portal link for the cancel CTA; the app root (where the account
+ * modal manages billing) when Stripe cannot mint one, so a portal hiccup
+ * never drops the email.
+ */
+async function resolvePortalUrl(customerId: string): Promise<string> {
+  try {
+    const portal = await createBillingPortalSession(customerId, CHAT_APP_URL);
+    return portal.url;
+  } catch (error) {
+    console.error("sendTrialEndingEmail: portal session failed, linking the app instead:", error);
+    return CHAT_APP_URL;
+  }
+}
+
+/**
  * Sends the customer the trial-ending summary when Stripe fires
  * `trial_will_end`. Numbers come from the account's own rows since
  * `trial_start`; the cancel link is a fresh billing-portal session.
@@ -42,10 +57,10 @@ export async function sendTrialEndingEmail(subscription: Stripe.Subscription): P
         ? `${formatUsd(price.unit_amount)}/${price.recurring.interval}`
         : "your plan price";
 
-    const [reportsSent, creditsUsed, portal] = await Promise.all([
+    const [reportsSent, creditsUsed, portalUrl] = await Promise.all([
       countReportsSent(accountId, trialStart.toISOString()),
       sumCreditsDeducted({ accountId, createdAfter: trialStart.toISOString() }),
-      createBillingPortalSession(customerId, CHAT_APP_URL),
+      resolvePortalUrl(customerId),
     ]);
 
     const { subject, html } = buildTrialEndingEmail({
@@ -53,7 +68,7 @@ export async function sendTrialEndingEmail(subscription: Stripe.Subscription): P
       creditsUsedUsd: creditsToUsd(creditsUsed),
       trialEndsOn: formatStripeTimestamp(subscription.trial_end ?? subscription.current_period_end),
       priceLine,
-      portalUrl: portal.url,
+      portalUrl,
     });
     const rawBody = JSON.stringify({
       type: TRIAL_ENDING_EMAIL_LOG_TYPE,

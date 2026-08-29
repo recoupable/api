@@ -18,8 +18,8 @@ vi.mock("@/lib/supabase/email_send_log/selectEmailSendLog", () => ({
 vi.mock("@/lib/stripe/hasActiveSubscriptionForEmail", () => ({
   hasActiveSubscriptionForEmail: hasActiveSubMock,
 }));
-vi.mock("@/lib/supabase/account_emails/selectAccountByEmail", () => ({
-  selectAccountByEmail: selectAccountByEmailMock,
+vi.mock("@/lib/supabase/account_emails/selectAccountByEmailIlike", () => ({
+  selectAccountByEmailIlike: selectAccountByEmailMock,
 }));
 vi.mock("@/lib/emails/lifecycle/buildAbandonedCheckoutEmail", () => ({
   buildAbandonedCheckoutEmail: buildMock,
