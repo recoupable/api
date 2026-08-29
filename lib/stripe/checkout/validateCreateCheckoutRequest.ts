@@ -37,7 +37,7 @@ export async function validateCreateCheckoutRequest(
     return NextResponse.json({ error: first.message }, { status: 400, headers: getCorsHeaders() });
   }
 
-  const hasAuth = !!request.headers.get("x-api-key") || !!request.headers.get("authorization");
+  const hasAuth = request.headers.has("x-api-key") || request.headers.has("authorization");
   if (!hasAuth) {
     return { ...parsed.data, accountId: null };
   }

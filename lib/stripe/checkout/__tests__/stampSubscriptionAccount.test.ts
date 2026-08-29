@@ -24,6 +24,18 @@ describe("stampSubscriptionAccount", () => {
       metadata: { accountId: "acc_1", created_by: "stripe_webhook" },
     });
     expect(cusUpdateMock).toHaveBeenCalledWith("cus_1", { metadata: { accountId: "acc_1" } });
+    expect(cusUpdateMock).toHaveBeenCalledBefore(subUpdateMock);
+  });
+
+  it("skips the customer write when the session carried no customer", async () => {
+    await stampSubscriptionAccount({
+      subscriptionId: "sub_1",
+      customerId: null,
+      accountId: "acc_1",
+      createdBy: "",
+    });
+    expect(cusUpdateMock).not.toHaveBeenCalled();
+    expect(subUpdateMock).toHaveBeenCalledTimes(1);
   });
 
   it("clears the marker on a claim", async () => {

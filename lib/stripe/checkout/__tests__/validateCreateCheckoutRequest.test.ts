@@ -30,6 +30,14 @@ describe("validateCreateCheckoutRequest", () => {
     expect(result).toMatchObject({ accountId: "acc_1" });
   });
 
+  it("treats an empty auth header as supplied, not anonymous", async () => {
+    validateAuthContextMock.mockResolvedValue(
+      NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 }),
+    );
+    const result = await validateCreateCheckoutRequest(req(body, { "x-api-key": "" }));
+    expect((result as NextResponse).status).toBe(401);
+  });
+
   it("returns 401 in the sessions error shape when a supplied auth header is invalid", async () => {
     validateAuthContextMock.mockResolvedValue(
       NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 }),

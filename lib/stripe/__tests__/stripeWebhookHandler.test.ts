@@ -169,7 +169,8 @@ describe("stripeWebhookHandler", () => {
     verifyStripeWebhookEventMock.mockResolvedValue({
       event: event("checkout.session.completed", session),
     });
-    await stripeWebhookHandler(makeReq());
+    const res = await stripeWebhookHandler(makeReq());
+    expect(res.status).toBe(200);
     expect(processCheckoutSubscriptionCompletedMock).toHaveBeenCalledWith(session);
   });
 

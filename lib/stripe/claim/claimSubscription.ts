@@ -39,15 +39,19 @@ export async function claimSubscription(args: {
 
   const plan = resolvePlanFromPriceId(subscription.items?.data?.[0]?.price?.id);
   const owner = subscription.metadata?.accountId;
-  if (owner === accountId) return { status: "success", subscription_id: subscription.id, plan };
-  if (owner && subscription.metadata?.created_by !== WEBHOOK_CREATED_BY) {
+  const placeholder = subscription.metadata?.created_by === WEBHOOK_CREATED_BY;
+  // Already the caller's and no marker to clear: nothing to write.
+  if (owner === accountId && !placeholder) {
+    return { status: "success", subscription_id: subscription.id, plan };
+  }
+  if (owner && owner !== accountId && !placeholder) {
     return { status: "error", error: "already_claimed" };
   }
 
   const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
   await stampSubscriptionAccount({
     subscriptionId: subscription.id,
-    customerId: customerId ?? "",
+    customerId: customerId ?? null,
     accountId,
     createdBy: "",
   });

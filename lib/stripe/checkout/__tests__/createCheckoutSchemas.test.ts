@@ -12,6 +12,20 @@ describe("createCheckoutBodySchema", () => {
     ).toBe(true);
   });
 
+  it("rejects non-http schemes on both redirect fields", () => {
+    expect(
+      createCheckoutBodySchema.safeParse({ plan: "pro", successUrl: "javascript:alert(1)" })
+        .success,
+    ).toBe(false);
+    expect(
+      createCheckoutBodySchema.safeParse({
+        plan: "pro",
+        successUrl: "https://x.com",
+        cancelUrl: "ftp://x.com",
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects unknown plans, missing successUrl, and extra keys", () => {
     expect(
       createCheckoutBodySchema.safeParse({ plan: "gold", successUrl: "https://x.com" }).success,
