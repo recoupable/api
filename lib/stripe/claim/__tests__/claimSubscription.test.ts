@@ -49,6 +49,18 @@ describe("claimSubscription", () => {
     expect(result).toEqual({ status: "success", subscription_id: "sub_1", plan: "starter" });
   });
 
+  it("clears the placeholder marker when the caller already owns the webhook-created account", async () => {
+    retrieveMock.mockResolvedValue(
+      sessionWith({ accountId: "acc_me", created_by: "stripe_webhook" }),
+    );
+    expect(await claimSubscription({ sessionId: "cs_1", accountId: "acc_me" })).toMatchObject({
+      status: "success",
+    });
+    expect(stampMock).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: "acc_me", createdBy: "" }),
+    );
+  });
+
   it("is idempotent when the caller already owns it and refuses another signed-in owner", async () => {
     retrieveMock.mockResolvedValue(sessionWith({ accountId: "acc_me" }));
     expect(await claimSubscription({ sessionId: "cs_1", accountId: "acc_me" })).toMatchObject({

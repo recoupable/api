@@ -54,7 +54,9 @@ describe("claimSubscriptionHandler", () => {
   });
 
   it("returns 500 when the claim throws", async () => {
-    claimMock.mockRejectedValue(new Error("stripe"));
-    expect((await claimSubscriptionHandler(req({ session_id: "cs_1" }))).status).toBe(500);
+    claimMock.mockRejectedValue(new Error("stripe secret detail"));
+    const res = await claimSubscriptionHandler(req({ session_id: "cs_1" }));
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({ status: "error", error: "Internal server error" });
   });
 });

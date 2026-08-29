@@ -5,8 +5,8 @@ const { selectByEmailMock, getOrCreateMock, welcomeMock } = vi.hoisted(() => ({
   getOrCreateMock: vi.fn(),
   welcomeMock: vi.fn(),
 }));
-vi.mock("@/lib/supabase/account_emails/selectAccountByEmail", () => ({
-  selectAccountByEmail: selectByEmailMock,
+vi.mock("@/lib/supabase/account_emails/selectAccountByEmailIlike", () => ({
+  selectAccountByEmailIlike: selectByEmailMock,
 }));
 vi.mock("@/lib/accounts/getOrCreateAccountByEmail", () => ({
   getOrCreateAccountByEmail: getOrCreateMock,
