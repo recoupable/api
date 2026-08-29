@@ -3,16 +3,21 @@ import isActiveSubscription from "@/lib/stripe/isActiveSubscription";
 import { getActiveSubscriptionDetails } from "@/lib/stripe/getActiveSubscriptionDetails";
 import { getOrgSubscription } from "@/lib/stripe/getOrgSubscription";
 import { isEnterpriseAccount } from "@/lib/enterprise/isEnterpriseAccount";
+import { resolvePlan } from "@/lib/plans/resolvePlan";
+import type { Plan } from "@/lib/plans/types";
 
 export interface AccountSubscriptionState {
+  /** True only on Pro: Starter keeps the free-tier gates on roster scrape, recipients, and API keys. */
   isPro: boolean;
+  plan: Plan;
   activeSubscription: Stripe.Subscription | null;
 }
 
 /**
  * Single source of truth for "what's this account's plan?" — checks the
  * account-level subscription, any org membership, and enterprise email-domain
- * status in parallel. `isPro` is true if any of the three match; the active
+ * status in parallel. `plan` comes from `resolvePlan` (Starter price, any other
+ * paid source, or nothing); `isPro` is `plan === "pro"`; the active
  * subscription resolves with account-wins-on-tie precedence.
  *
  * `activeSubscription` stays Stripe-only on purpose: it feeds
@@ -30,8 +35,10 @@ export async function getAccountSubscriptionState(
   ]);
   const hasAccountSub = isActiveSubscription(accountSub);
   const hasOrgSub = isActiveSubscription(orgSub);
+  const plan = resolvePlan({ accountSub, orgSub, isEnterprise });
   return {
-    isPro: hasAccountSub || hasOrgSub || isEnterprise,
+    isPro: plan === "pro",
+    plan,
     activeSubscription: hasAccountSub ? accountSub : hasOrgSub ? orgSub : null,
   };
 }

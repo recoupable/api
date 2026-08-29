@@ -6,6 +6,7 @@ import {
   type UpdateTaskPersistInput,
 } from "@/lib/tasks/updateTaskSchemas";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
+import { assertTaskWithinPlan } from "@/lib/plans/assertTaskWithinPlan";
 import type { Tables, TablesUpdate } from "@/types/database.types";
 
 /** Thrown when the row exists but `resolvedAccountId` cannot access `scheduled_actions.account_id`. */
@@ -39,6 +40,18 @@ export async function updateTask(
   });
   if (!allowed) {
     throw new Error(TASK_ACCESS_DENIED_MESSAGE);
+  }
+
+  // The plan gate: re-enabling takes a slot, a new cron is cadence-checked;
+  // title/prompt/model edits never touch it. Owner's plan, not the caller's.
+  const takesSlot = enabled === true && existingTask.enabled === false;
+  if (takesSlot || schedule !== undefined) {
+    await assertTaskWithinPlan({
+      accountId: existingTask.account_id,
+      schedule,
+      countsTowardLimit: takesSlot,
+      excludeTaskId: id,
+    });
   }
 
   const updateData = Object.fromEntries(

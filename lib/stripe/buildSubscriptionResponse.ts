@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import isActiveSubscription from "@/lib/stripe/isActiveSubscription";
 import { toStatus, type SubscriptionStatus } from "@/lib/stripe/toStatus";
+import { resolvePlan } from "@/lib/plans/resolvePlan";
 
 export type SubscriptionSource = "account" | "organization";
 export type { SubscriptionStatus };
@@ -21,17 +22,19 @@ const inactive: SubscriptionResponse = {
 
 /**
  * Maps the account- and organization-level subscriptions into the documented response shape.
- * Account subscription wins when both are active.
+ * Account subscription wins when both are active; `plan` follows `resolvePlan`, so a Starter
+ * price reports `starter` with `isPro` false.
  */
 export function buildSubscriptionResponse(args: {
   account: Stripe.Subscription | null;
   organization: Stripe.Subscription | null;
 }): SubscriptionResponse {
   if (isActiveSubscription(args.account) && args.account) {
+    const plan = resolvePlan({ accountSub: args.account, orgSub: null, isEnterprise: false });
     return {
-      isPro: true,
+      isPro: plan === "pro",
       status: toStatus(args.account.status),
-      plan: "pro",
+      plan,
       source: "account",
     };
   }

@@ -4,11 +4,14 @@ import {
 } from "@/lib/supabase/credits_usage/selectCreditsUsage";
 import { updateCreditsUsage } from "@/lib/supabase/credits_usage/updateCreditsUsage";
 import { getAccountSubscriptionState } from "@/lib/credits/getAccountSubscriptionState";
-import { DEFAULT_CREDITS, PRO_CREDITS } from "@/lib/credits/const";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
+import { getPlanEntitlements } from "@/lib/plans/getPlanEntitlements";
+import type { Plan } from "@/lib/plans/types";
 
 export interface CheckAndResetCreditsResult {
   creditsUsage: CreditsUsage | null;
   isPro: boolean;
+  plan: Plan;
 }
 
 /**
@@ -20,22 +23,22 @@ export interface CheckAndResetCreditsResult {
  * a top-up or an admin grant above the plan total survives every refill
  * without the read path needing to know where the balance came from.
  *
- * Also returns `isPro` so callers don't need to repeat the subscription lookup.
+ * Also returns `plan` and `isPro` so callers don't need to repeat the subscription lookup.
  */
 export async function checkAndResetCredits(accountId: string): Promise<CheckAndResetCreditsResult> {
-  const [rows, { isPro, activeSubscription }] = await Promise.all([
+  const [rows, { isPro, plan, activeSubscription }] = await Promise.all([
     selectCreditsUsage({ account_id: accountId }),
     getAccountSubscriptionState(accountId),
   ]);
 
   if (!rows || rows.length === 0) {
-    return { creditsUsage: null, isPro };
+    return { creditsUsage: null, isPro, plan };
   }
 
   const creditsUsage = rows[0];
 
   if (!creditsUsage.timestamp) {
-    return { creditsUsage, isPro };
+    return { creditsUsage, isPro, plan };
   }
 
   const lastUpdated = new Date(creditsUsage.timestamp);
@@ -52,10 +55,10 @@ export async function checkAndResetCredits(accountId: string): Promise<CheckAndR
   const shouldRefill = isMonthlyRefill || isSubscriptionStartedAfterLastUpdate;
 
   if (!shouldRefill) {
-    return { creditsUsage, isPro };
+    return { creditsUsage, isPro, plan };
   }
 
-  const planTotal = isPro ? PRO_CREDITS : DEFAULT_CREDITS;
+  const planTotal = usdToCredits(getPlanEntitlements(plan).credits_usd);
   const remaining = creditsUsage.remaining_credits ?? 0;
 
   // The timestamp advances on every due refill, including the no-op ones —
@@ -70,5 +73,5 @@ export async function checkAndResetCredits(accountId: string): Promise<CheckAndR
 
   const refilled = await updateCreditsUsage({ account_id: accountId, updates });
 
-  return { creditsUsage: refilled, isPro };
+  return { creditsUsage: refilled, isPro, plan };
 }

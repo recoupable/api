@@ -10,11 +10,21 @@ export const DEFAULT_CREDITS_USD = 3.33;
 export const DEFAULT_CREDITS = usdToCredits(DEFAULT_CREDITS_USD);
 
 /**
- * Monthly credit allotment for accounts on a pro plan (directly, via an
- * organization, or via an enterprise email domain). Effectively "don't think
- * about credits" for paying customers.
+ * Monthly credit allotment for the $19 Starter plan, as dollars: a little
+ * more than the price, so the first paid rung feels like a gain.
  */
-export const PRO_CREDITS_USD = 99.99;
+export const STARTER_CREDITS_USD = 20;
+
+/** Starter allotment in credits. Derived, so it survives a unit change. */
+export const STARTER_CREDITS = usdToCredits(STARTER_CREDITS_USD);
+
+/**
+ * Monthly credit allotment for accounts on a pro plan (directly, via an
+ * organization, or via an enterprise email domain): three times the $99 price,
+ * chosen against a p99 monthly spend of $71 (app#2044). Raise when a Pro
+ * account approaches it.
+ */
+export const PRO_CREDITS_USD = 300;
 
 /** Pro allotment in credits. Derived, so it survives a unit change. */
 export const PRO_CREDITS = usdToCredits(PRO_CREDITS_USD);

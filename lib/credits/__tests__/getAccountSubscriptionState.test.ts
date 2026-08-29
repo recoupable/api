@@ -31,7 +31,7 @@ describe("getAccountSubscriptionState", () => {
 
     const result = await getAccountSubscriptionState(ACCOUNT);
 
-    expect(result).toEqual({ isPro: false, activeSubscription: null });
+    expect(result).toEqual({ isPro: false, plan: "free", activeSubscription: null });
   });
 
   it("returns isPro=true and prefers the account subscription when both are active", async () => {
@@ -46,7 +46,7 @@ describe("getAccountSubscriptionState", () => {
 
     const result = await getAccountSubscriptionState(ACCOUNT);
 
-    expect(result).toEqual({ isPro: true, activeSubscription: accountSub });
+    expect(result).toEqual({ isPro: true, plan: "pro", activeSubscription: accountSub });
   });
 
   it("falls back to the org subscription when only it is active", async () => {
@@ -60,7 +60,7 @@ describe("getAccountSubscriptionState", () => {
 
     const result = await getAccountSubscriptionState(ACCOUNT);
 
-    expect(result).toEqual({ isPro: true, activeSubscription: orgSub });
+    expect(result).toEqual({ isPro: true, plan: "pro", activeSubscription: orgSub });
   });
 
   it("returns isPro=false when the account subscription exists but is canceled trialing", async () => {
@@ -73,7 +73,7 @@ describe("getAccountSubscriptionState", () => {
 
     const result = await getAccountSubscriptionState(ACCOUNT);
 
-    expect(result).toEqual({ isPro: false, activeSubscription: null });
+    expect(result).toEqual({ isPro: false, plan: "free", activeSubscription: null });
   });
 
   it("returns isPro=true with activeSubscription=null for an enterprise account without Stripe", async () => {
@@ -83,7 +83,7 @@ describe("getAccountSubscriptionState", () => {
 
     const result = await getAccountSubscriptionState(ACCOUNT);
 
-    expect(result).toEqual({ isPro: true, activeSubscription: null });
+    expect(result).toEqual({ isPro: true, plan: "pro", activeSubscription: null });
     expect(isEnterpriseAccount).toHaveBeenCalledWith(ACCOUNT);
   });
 
@@ -99,6 +99,6 @@ describe("getAccountSubscriptionState", () => {
 
     const result = await getAccountSubscriptionState(ACCOUNT);
 
-    expect(result).toEqual({ isPro: true, activeSubscription: accountSub });
+    expect(result).toEqual({ isPro: true, plan: "pro", activeSubscription: accountSub });
   });
 });

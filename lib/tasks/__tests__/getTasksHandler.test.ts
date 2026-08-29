@@ -5,6 +5,7 @@ import { validateGetTasksQuery } from "@/lib/tasks/validateGetTasksQuery";
 import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
 import { enrichTasks } from "@/lib/tasks/enrichTasks";
 
+vi.mock("@/lib/plans/getTaskRunBlock", () => ({ getTaskRunBlock: vi.fn() }));
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
