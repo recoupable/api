@@ -1,0 +1,32 @@
+import { describe, expect, it } from "vitest";
+
+import { shouldIncludeCatalogItem } from "../shouldIncludeCatalogItem";
+
+describe("shouldIncludeCatalogItem", () => {
+  it("includes all records when non-primary catalog is requested", () => {
+    expect(shouldIncludeCatalogItem({ title: "Remix feat. Guest" }, true)).toBe(true);
+  });
+
+  it("excludes remix and feature titles for primary-only catalog", () => {
+    expect(shouldIncludeCatalogItem({ title: "God's Plan" }, false)).toBe(true);
+    expect(shouldIncludeCatalogItem({ title: "Hotline Bling (Remix)" }, false)).toBe(false);
+    expect(shouldIncludeCatalogItem({ title: "Nice For What feat. Lil Wayne" }, false)).toBe(false);
+  });
+
+  it("excludes platform shells without title or track id", () => {
+    const shell = { source: "spotify", metric_options: ["popularity"] };
+    expect(shouldIncludeCatalogItem(shell, false)).toBe(false);
+    expect(shouldIncludeCatalogItem(shell, true)).toBe(false);
+  });
+
+  it("excludes secondary roles with feat or ft abbreviations", () => {
+    expect(shouldIncludeCatalogItem({ title: "Track", role: "feat" }, false)).toBe(false);
+    expect(shouldIncludeCatalogItem({ title: "Track", artist_role: "ft" }, false)).toBe(false);
+    expect(shouldIncludeCatalogItem({ title: "Track", role: "main" }, false)).toBe(true);
+  });
+
+  it("excludes rows flagged as remix or feature by the provider", () => {
+    expect(shouldIncludeCatalogItem({ title: "Track", is_remix: true }, false)).toBe(false);
+    expect(shouldIncludeCatalogItem({ title: "Track", is_feature: "true" }, false)).toBe(false);
+  });
+});

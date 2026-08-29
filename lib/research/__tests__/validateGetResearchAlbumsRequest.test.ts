@@ -78,6 +78,13 @@ describe("validateGetResearchAlbumsRequest", () => {
     });
   });
 
+  it("treats empty is_primary as default true", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
+    const req = new NextRequest("http://localhost/api/research/albums?artist_id=3380&is_primary=");
+    const res = await validateGetResearchAlbumsRequest(req);
+    expect(res).toMatchObject({ isPrimary: "true" });
+  });
+
   it("accepts is_primary=false to include features/compilations", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(okAuth);
     const req = new NextRequest(
