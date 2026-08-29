@@ -51,12 +51,12 @@ export async function sendAbandonedCheckoutEmail(
   const account = await selectAccountByEmail(email);
   const accountId = account?.account_id ?? null;
 
-  const result = await sendEmailWithResend({
-    from: FOUNDER_FROM_EMAIL,
-    to: [email],
-    subject,
-    html,
-  });
+  // Resend dedupes on the key for 24h, so a retried webhook that started a
+  // second workflow run cannot produce two emails.
+  const result = await sendEmailWithResend(
+    { from: FOUNDER_FROM_EMAIL, to: [email], subject, html },
+    { idempotencyKey: `${ABANDONED_CHECKOUT_EMAIL_LOG_TYPE}/${sessionId}` },
+  );
   if (result instanceof NextResponse) {
     await logEmailAttempt({ rawBody, status: "send_failed", accountId });
     return { sent: false, reason: "send_failed" };

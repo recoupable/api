@@ -45,12 +45,15 @@ describe("sendAbandonedCheckoutEmail", () => {
   it("sends the founder email and logs a sent row keyed on the session", async () => {
     const result = await sendAbandonedCheckoutEmail(args);
 
-    expect(sendMock).toHaveBeenCalledWith({
-      from: FOUNDER_FROM_EMAIL,
-      to: ["fan@example.com"],
-      subject: "Want a hand?",
-      html: "<p>hi</p>",
-    });
+    expect(sendMock).toHaveBeenCalledWith(
+      {
+        from: FOUNDER_FROM_EMAIL,
+        to: ["fan@example.com"],
+        subject: "Want a hand?",
+        html: "<p>hi</p>",
+      },
+      { idempotencyKey: "abandoned_checkout_email/cs_test_1" },
+    );
     const attempt = logMock.mock.calls[0][0];
     expect(attempt.status).toBe("sent");
     expect(attempt.accountId).toBe("acc_1");

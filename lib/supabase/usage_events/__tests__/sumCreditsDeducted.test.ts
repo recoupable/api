@@ -61,11 +61,11 @@ describe("sumCreditsDeducted", () => {
     expect(total).toBe(1005);
   });
 
-  it("returns 0 on a query error", async () => {
+  it("throws on a query error so a caller never reports zero as fact", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     mockBuilder({ data: null, error: { message: "boom" } });
-    expect(
-      await sumCreditsDeducted({ accountId: "acc_1", createdAfter: "2026-08-01T00:00:00Z" }),
-    ).toBe(0);
+    await expect(
+      sumCreditsDeducted({ accountId: "acc_1", createdAfter: "2026-08-01T00:00:00Z" }),
+    ).rejects.toEqual({ message: "boom" });
   });
 });

@@ -84,12 +84,10 @@ describe("sendTrialEndingEmail", () => {
       priceLine: "$99.00/month",
       portalUrl: "https://billing.stripe.com/p/x",
     });
-    expect(sendMock).toHaveBeenCalledWith({
-      from: RECOUP_FROM_EMAIL,
-      to: ["fan@example.com"],
-      subject: "Trial ends",
-      html: "<p>x</p>",
-    });
+    expect(sendMock).toHaveBeenCalledWith(
+      { from: RECOUP_FROM_EMAIL, to: ["fan@example.com"], subject: "Trial ends", html: "<p>x</p>" },
+      { idempotencyKey: "trial_ending_email/sub_1" },
+    );
     const attempt = logMock.mock.calls[0][0];
     expect(attempt.status).toBe("sent");
     expect(attempt.accountId).toBe("acc_1");
@@ -112,6 +110,23 @@ describe("sendTrialEndingEmail", () => {
     selectAccountEmailsMock.mockResolvedValue([]);
     await sendTrialEndingEmail(subscription);
     expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("falls back to start_date and current_period_end and skips null email rows", async () => {
+    selectAccountEmailsMock.mockResolvedValue([{ email: null }, { email: "second@example.com" }]);
+    await sendTrialEndingEmail({
+      ...subscription,
+      trial_start: null,
+      trial_end: null,
+      start_date: 1780000000,
+      current_period_end: 1782592000,
+    } as unknown as Stripe.Subscription);
+
+    expect(sumCreditsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ createdAfter: new Date(1780000000 * 1000).toISOString() }),
+    );
+    expect(buildMock.mock.calls[0][0].trialEndsOn).toBe("2026-06-27");
+    expect(sendMock.mock.calls[0][0].to).toEqual(["second@example.com"]);
   });
 
   it("never throws when a dependency fails", async () => {

@@ -8,7 +8,8 @@ const PAGE_SIZE = 1000;
  *
  * @param params.accountId - Account to total.
  * @param params.createdAfter - Inclusive ISO lower bound on `created_at`.
- * @returns Credits (ledger units), 0 on error.
+ * @returns Credits (ledger units).
+ * @throws When the query fails, so a caller never reports a partial or zero total as fact.
  */
 export async function sumCreditsDeducted(params: {
   accountId: string;
@@ -25,7 +26,7 @@ export async function sumCreditsDeducted(params: {
 
     if (error) {
       console.error("Error summing usage_events.credits_deducted:", error);
-      return 0;
+      throw error;
     }
     const rows = data ?? [];
     total += rows.reduce((sum, row) => sum + (row.credits_deducted ?? 0), 0);

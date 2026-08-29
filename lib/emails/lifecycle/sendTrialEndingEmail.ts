@@ -29,8 +29,8 @@ export async function sendTrialEndingEmail(subscription: Stripe.Subscription): P
     const alreadySent = await selectEmailSendLog({ status: "sent", rawBodyLike: marker, limit: 1 });
     if (alreadySent.length > 0) return;
 
-    const [emailRow] = await selectAccountEmails({ accountIds: accountId });
-    const email = emailRow?.email;
+    const emailRows = await selectAccountEmails({ accountIds: accountId });
+    const email = emailRows.find(row => row.email)?.email;
     if (!email) return;
 
     const trialStart = new Date((subscription.trial_start ?? subscription.start_date) * 1000);
@@ -62,12 +62,12 @@ export async function sendTrialEndingEmail(subscription: Stripe.Subscription): P
       subject,
     });
 
-    const result = await sendEmailWithResend({
-      from: RECOUP_FROM_EMAIL,
-      to: [email],
-      subject,
-      html,
-    });
+    // Resend dedupes on the key for 24h, so overlapping webhook deliveries
+    // cannot produce two emails even if both pass the log check.
+    const result = await sendEmailWithResend(
+      { from: RECOUP_FROM_EMAIL, to: [email], subject, html },
+      { idempotencyKey: `${TRIAL_ENDING_EMAIL_LOG_TYPE}/${subscription.id}` },
+    );
     if (result instanceof NextResponse) {
       await logEmailAttempt({ rawBody, status: "send_failed", accountId });
       return;
