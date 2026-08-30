@@ -28,9 +28,7 @@ describe("assertTaskWithinPlan", () => {
 
   it("counts null-enabled tasks toward the limit (Trigger treats null as enabled)", async () => {
     vi.mocked(getAccountSubscriptionState).mockResolvedValue(state("free"));
-    vi.mocked(selectScheduledActions).mockResolvedValue([
-      { id: "t1", enabled: null },
-    ] as never);
+    vi.mocked(selectScheduledActions).mockResolvedValue([{ id: "t1", enabled: null }] as never);
     const err = await assertTaskWithinPlan({ accountId: "acc", schedule: "0 9 * * 1" }).catch(
       e => e,
     );
