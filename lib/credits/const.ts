@@ -38,3 +38,9 @@ export const PRO_CREDITS = usdToCredits(PRO_CREDITS_USD);
  * card is saved, and the app can move that without changing this contract.
  */
 export const CREDIT_BILLING_URL = "https://app.recoupable.dev";
+
+/**
+ * Where a caller that hit a plan task cap or cadence floor is pointed.
+ * `/plan` is the page that upgrades Free → Starter / Pro.
+ */
+export const PLAN_BILLING_URL = "https://app.recoupable.dev/plan";

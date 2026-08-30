@@ -1,4 +1,4 @@
-import { CREDIT_BILLING_URL } from "@/lib/credits/const";
+import { PLAN_BILLING_URL } from "@/lib/credits/const";
 import { getPlanEntitlements } from "@/lib/plans/getPlanEntitlements";
 import type { Plan, PlanLimit } from "@/lib/plans/types";
 
@@ -29,8 +29,8 @@ const MESSAGES: Record<PlanLimit, Record<Plan, string>> = {
 
 /**
  * Shapes the 402 `plan_limit` body documented on POST and PATCH /api/tasks.
- * `billingUrl` is the same constant the credits gate returns: retrying
- * creates nothing, so unattended callers are safe to leave running.
+ * `billingUrl` points at `/plan` so the human can upgrade; retrying creates
+ * nothing, so unattended callers are safe to leave running.
  */
 export function buildPlanLimitBody(args: {
   plan: Plan;
@@ -48,6 +48,6 @@ export function buildPlanLimitBody(args: {
     task_limit,
     min_cadence_minutes,
     current_task_count: currentTaskCount,
-    billingUrl: CREDIT_BILLING_URL,
+    billingUrl: PLAN_BILLING_URL,
   };
 }

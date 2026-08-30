@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildPlanLimitBody } from "@/lib/plans/buildPlanLimitBody";
-import { CREDIT_BILLING_URL } from "@/lib/credits/const";
+import { PLAN_BILLING_URL } from "@/lib/credits/const";
 
 describe("buildPlanLimitBody", () => {
   it("shapes the documented task_count body", () => {
@@ -13,7 +13,7 @@ describe("buildPlanLimitBody", () => {
       task_limit: 1,
       min_cadence_minutes: 10080,
       current_task_count: 1,
-      billingUrl: CREDIT_BILLING_URL,
+      billingUrl: PLAN_BILLING_URL,
     });
   });
 
@@ -41,5 +41,12 @@ describe("buildPlanLimitBody", () => {
     expect(
       buildPlanLimitBody({ plan: "starter", limit: "task_count", currentTaskCount: 3 }).message,
     ).toBe("Starter includes 3 tasks. Pro is unlimited.");
+  });
+
+  it("points billingUrl at /plan, not the app root", () => {
+    expect(PLAN_BILLING_URL).toBe("https://app.recoupable.dev/plan");
+    expect(
+      buildPlanLimitBody({ plan: "free", limit: "task_count", currentTaskCount: 1 }).billingUrl,
+    ).toBe("https://app.recoupable.dev/plan");
   });
 });
