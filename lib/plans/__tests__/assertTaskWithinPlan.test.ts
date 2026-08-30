@@ -23,7 +23,19 @@ describe("assertTaskWithinPlan", () => {
     await expect(
       assertTaskWithinPlan({ accountId: "acc", schedule: "0 9 * * 1", excludeTaskId: "t1" }),
     ).resolves.toBeUndefined();
-    expect(selectScheduledActions).toHaveBeenCalledWith({ account_id: "acc", enabled: true });
+    expect(selectScheduledActions).toHaveBeenCalledWith({ account_id: "acc" });
+  });
+
+  it("counts null-enabled tasks toward the limit (Trigger treats null as enabled)", async () => {
+    vi.mocked(getAccountSubscriptionState).mockResolvedValue(state("free"));
+    vi.mocked(selectScheduledActions).mockResolvedValue([
+      { id: "t1", enabled: null },
+    ] as never);
+    const err = await assertTaskWithinPlan({ accountId: "acc", schedule: "0 9 * * 1" }).catch(
+      e => e,
+    );
+    expect(err).toBeInstanceOf(PlanLimitError);
+    expect((err as PlanLimitError).body.limit).toBe("task_count");
   });
 
   it("throws PlanLimitError carrying the documented body on a second free task", async () => {

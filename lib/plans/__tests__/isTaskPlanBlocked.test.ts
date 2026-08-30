@@ -26,6 +26,13 @@ describe("isTaskPlanBlocked", () => {
     expect(isTaskPlanBlocked({ task: b, plan: "free", enabledTasks: [b, a] })).toBe("task_count");
   });
 
+  it("breaks created_at ties by id so the oldest-slot winner is stable", () => {
+    const a = task("a", "0 9 * * 1", NEW);
+    const b = task("b", "0 9 * * 1", NEW);
+    expect(isTaskPlanBlocked({ task: a, plan: "free", enabledTasks: [b, a] })).toBeNull();
+    expect(isTaskPlanBlocked({ task: b, plan: "free", enabledTasks: [a, b] })).toBe("task_count");
+  });
+
   it("a disabled task is never reported", () => {
     const t = task("t1", "* * * * *", NEW, false);
     expect(isTaskPlanBlocked({ task: t, plan: "free", enabledTasks: [] })).toBeNull();

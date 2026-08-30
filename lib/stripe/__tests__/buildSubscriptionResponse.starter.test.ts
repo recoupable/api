@@ -18,4 +18,23 @@ describe("buildSubscriptionResponse starter", () => {
       source: "account",
     });
   });
+
+  it("reports organization Pro when a Starter account also has an active org Pro sub", () => {
+    const account = {
+      status: "active",
+      canceled_at: null,
+      items: { data: [{ price: { id: "price_starter" } }] },
+    } as never;
+    const organization = {
+      status: "active",
+      canceled_at: null,
+      items: { data: [{ price: { id: "price_pro" } }] },
+    } as never;
+    expect(buildSubscriptionResponse({ account, organization })).toEqual({
+      isPro: true,
+      status: "active",
+      plan: "pro",
+      source: "organization",
+    });
+  });
 });

@@ -42,13 +42,14 @@ export async function updateTask(
     throw new Error(TASK_ACCESS_DENIED_MESSAGE);
   }
 
-  // The plan gate: re-enabling takes a slot, a new cron is cadence-checked;
-  // title/prompt/model edits never touch it. Owner's plan, not the caller's.
+  // The plan gate: re-enabling takes a slot and must still pass the stored
+  // cadence; a new cron is cadence-checked alone. title/prompt/model edits
+  // never touch it. Owner's plan, not the caller's.
   const takesSlot = enabled === true && existingTask.enabled === false;
   if (takesSlot || schedule !== undefined) {
     await assertTaskWithinPlan({
       accountId: existingTask.account_id,
-      schedule,
+      schedule: schedule ?? existingTask.schedule ?? undefined,
       countsTowardLimit: takesSlot,
       excludeTaskId: id,
     });

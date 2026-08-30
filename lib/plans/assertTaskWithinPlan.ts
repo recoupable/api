@@ -22,10 +22,12 @@ export async function assertTaskWithinPlan(args: {
   excludeTaskId?: string;
 }): Promise<void> {
   const { accountId, schedule, countsTowardLimit = true, excludeTaskId } = args;
-  const [{ plan }, enabledTasks] = await Promise.all([
+  const [{ plan }, accountTasks] = await Promise.all([
     getAccountSubscriptionState(accountId),
-    selectScheduledActions({ account_id: accountId, enabled: true }),
+    selectScheduledActions({ account_id: accountId }),
   ]);
+  // Trigger treats `enabled = null` as on; count those toward the limit too.
+  const enabledTasks = accountTasks.filter(task => task.enabled !== false);
   const enabledTaskCount = enabledTasks.filter(task => task.id !== excludeTaskId).length;
 
   const limit = findTaskPlanViolation({ plan, enabledTaskCount, schedule, countsTowardLimit });

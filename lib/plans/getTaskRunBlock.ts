@@ -13,10 +13,12 @@ export async function getTaskRunBlock(
   task: Tables<"scheduled_actions">,
 ): Promise<PlanLimitBody | null> {
   if (task.enabled === false) return null;
-  const [{ plan }, enabledTasks] = await Promise.all([
+  const [{ plan }, accountTasks] = await Promise.all([
     getAccountSubscriptionState(task.account_id),
-    selectScheduledActions({ account_id: task.account_id, enabled: true }),
+    selectScheduledActions({ account_id: task.account_id }),
   ]);
+  // Trigger treats `enabled = null` as on; include those in the slot ranking.
+  const enabledTasks = accountTasks.filter(candidate => candidate.enabled !== false);
   const limit = isTaskPlanBlocked({ task, plan, enabledTasks });
   if (!limit) return null;
   const currentTaskCount = enabledTasks.filter(candidate => candidate.id !== task.id).length;

@@ -55,4 +55,21 @@ describe("getAccountSubscriptionState plan", () => {
       activeSubscription: s,
     });
   });
+
+  it("Starter account + org Pro: plan pro, activeSubscription is the org sub", async () => {
+    const accountSub = sub("price_starter");
+    const orgSub = {
+      id: "sub_org",
+      status: "active",
+      canceled_at: null,
+      items: { data: [{ price: { id: "price_pro" } }] },
+    } as never;
+    vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(accountSub);
+    vi.mocked(getOrgSubscription).mockResolvedValue(orgSub);
+    expect(await getAccountSubscriptionState("acc")).toEqual({
+      isPro: true,
+      plan: "pro",
+      activeSubscription: orgSub,
+    });
+  });
 });

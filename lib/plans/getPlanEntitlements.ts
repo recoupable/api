@@ -18,7 +18,7 @@ const ENTITLEMENTS: Record<Plan, PlanEntitlements> = {
 /**
  * The entitlements table: Free is one weekly task, Starter is three daily
  * tasks, Pro is uncapped at an hourly floor (per minute would spend the whole
- * Pro allotment in about two hours at $0.77 a run). Credits per plan live in
+ * Pro allotment in about 6.5 hours at $0.77 a run). Credits per plan live in
  * `lib/credits/const.ts` so the marketing page and the ledger agree.
  */
 export function getPlanEntitlements(plan: Plan): PlanEntitlements {

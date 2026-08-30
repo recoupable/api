@@ -40,11 +40,24 @@ describe("updateTask plan gate", () => {
     expect(assertTaskWithinPlan).not.toHaveBeenCalled();
   });
 
-  it("enabling a disabled task counts toward the owner's limit, excluding itself", async () => {
+  it("enabling a disabled task counts toward the owner's limit and checks the stored cadence", async () => {
     await updateTask({ id: ID, enabled: true, resolvedAccountId: OWNER });
     expect(assertTaskWithinPlan).toHaveBeenCalledWith({
       accountId: OWNER,
-      schedule: undefined,
+      schedule: "0 9 * * 1",
+      countsTowardLimit: true,
+      excludeTaskId: ID,
+    });
+  });
+
+  it("re-enabling an hourly task on free fails the cadence check via the stored schedule", async () => {
+    vi.mocked(selectScheduledActions).mockResolvedValue([
+      { ...existing, schedule: "0 * * * *" },
+    ] as never);
+    await updateTask({ id: ID, enabled: true, resolvedAccountId: OWNER });
+    expect(assertTaskWithinPlan).toHaveBeenCalledWith({
+      accountId: OWNER,
+      schedule: "0 * * * *",
       countsTowardLimit: true,
       excludeTaskId: ID,
     });

@@ -24,7 +24,10 @@ export function isTaskPlanBlocked(args: {
 
   if (task_limit === null) return null;
   const rank = [...enabledTasks]
-    .sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""))
+    .sort((a, b) => {
+      const byCreated = (a.created_at ?? "").localeCompare(b.created_at ?? "");
+      return byCreated !== 0 ? byCreated : a.id.localeCompare(b.id);
+    })
     .findIndex(candidate => candidate.id === task.id);
   return rank >= task_limit ? "task_count" : null;
 }

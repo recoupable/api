@@ -28,7 +28,7 @@ describe("getTaskRunBlock", () => {
   it("returns null when nothing blocks the task", async () => {
     vi.mocked(isTaskPlanBlocked).mockReturnValue(null);
     expect(await getTaskRunBlock(task)).toBeNull();
-    expect(selectScheduledActions).toHaveBeenCalledWith({ account_id: "acc", enabled: true });
+    expect(selectScheduledActions).toHaveBeenCalledWith({ account_id: "acc" });
   });
 
   it("returns the 402 body with the count excluding the task itself", async () => {
