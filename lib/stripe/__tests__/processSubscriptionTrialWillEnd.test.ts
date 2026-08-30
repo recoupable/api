@@ -26,7 +26,7 @@ describe("processSubscriptionTrialWillEnd", () => {
     });
   });
 
-  it("notifies that the trial is ending with the conversion date", async () => {
+  it("notifies sales on Telegram that the trial is ending with the conversion date", async () => {
     await processSubscriptionTrialWillEnd({
       id: "sub_1",
       trial_end: 1783415103,
@@ -39,5 +39,14 @@ describe("processSubscriptionTrialWillEnd", () => {
     expect(text).toContain("reach out now");
     expect(text).toContain("Trial ends: 2026-07-07");
     expect(text).toContain("Lifetime value: $0.00");
+  });
+
+  it("does not send a customer-facing trial-ending email", async () => {
+    await processSubscriptionTrialWillEnd({
+      id: "sub_2",
+      trial_end: 1783415103,
+    } as unknown as Stripe.Subscription);
+
+    expect(sendMock).toHaveBeenCalledTimes(1);
   });
 });

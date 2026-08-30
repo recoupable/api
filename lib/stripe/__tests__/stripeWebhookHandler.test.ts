@@ -12,6 +12,7 @@ const {
   processSubscriptionDeletedMock,
   processInvoicePaidMock,
   notifyCreditsTopupSessionMock,
+  processCheckoutSessionExpiredMock,
 } = vi.hoisted(() => ({
   verifyStripeWebhookEventMock: vi.fn(),
   processCreditsTopupSessionMock: vi.fn(),
@@ -22,6 +23,7 @@ const {
   processSubscriptionDeletedMock: vi.fn(),
   processInvoicePaidMock: vi.fn(),
   notifyCreditsTopupSessionMock: vi.fn(),
+  processCheckoutSessionExpiredMock: vi.fn(),
 }));
 
 vi.mock("@/lib/stripe/verifyStripeWebhookEvent", () => ({
@@ -50,6 +52,9 @@ vi.mock("@/lib/stripe/processInvoicePaid", () => ({
 }));
 vi.mock("@/lib/stripe/notifyCreditsTopupSession", () => ({
   notifyCreditsTopupSession: notifyCreditsTopupSessionMock,
+}));
+vi.mock("@/lib/stripe/processCheckoutSessionExpired", () => ({
+  processCheckoutSessionExpired: processCheckoutSessionExpiredMock,
 }));
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -152,6 +157,17 @@ describe("stripeWebhookHandler", () => {
     const res = await stripeWebhookHandler(makeReq());
     expect(res.status).toBe(200);
     expect(processSubscriptionDeletedMock).toHaveBeenCalledWith(sub);
+  });
+
+  it("delegates checkout.session.expired to processCheckoutSessionExpired", async () => {
+    const session = { id: "cs_expired", mode: "subscription" };
+    verifyStripeWebhookEventMock.mockResolvedValue({
+      event: event("checkout.session.expired", session),
+    });
+    const res = await stripeWebhookHandler(makeReq());
+    expect(res.status).toBe(200);
+    expect(processCheckoutSessionExpiredMock).toHaveBeenCalledWith(session);
+    expect(processCreditsTopupSessionMock).not.toHaveBeenCalled();
   });
 
   it("delegates invoice.paid to processInvoicePaid", async () => {
