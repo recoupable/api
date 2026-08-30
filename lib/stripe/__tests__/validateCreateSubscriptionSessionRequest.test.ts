@@ -92,6 +92,7 @@ describe("validateCreateSubscriptionSessionRequest", () => {
     expect(out).toEqual({
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/done",
+      plan: "pro",
     });
     expect(validateAuthContext).toHaveBeenCalledWith(req, {});
   });

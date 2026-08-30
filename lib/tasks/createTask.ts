@@ -2,10 +2,12 @@ import { insertScheduledAction } from "@/lib/supabase/scheduled_actions/insertSc
 import { updateScheduledAction } from "@/lib/supabase/scheduled_actions/updateScheduledAction";
 import { createSchedule } from "@/lib/trigger/createSchedule";
 import { createTaskPayloadSchema, type CreateTaskBody } from "@/lib/tasks/createTaskSchemas";
+import { assertTaskWithinPlan } from "@/lib/plans/assertTaskWithinPlan";
 import type { Tables } from "@/types/database.types";
 
 /**
- * Creates a new task (scheduled action) in the system.
+ * Creates a new task (scheduled action) in the system, after the owner's plan
+ * allows one more task at this cadence (throws `PlanLimitError` otherwise).
  * Also creates the corresponding Trigger.dev schedule.
  *
  * @param input - The task data to create (validated against createTaskPayloadSchema)
@@ -18,6 +20,8 @@ export async function createTask(input: CreateTaskBody): Promise<Tables<"schedul
   // stays in the insert (it's a real column) and is also used below.
   const { timezone, ...scheduledActionInput } = validatedInput;
   const { schedule } = validatedInput;
+
+  await assertTaskWithinPlan({ accountId: validatedInput.account_id, schedule });
 
   // Insert the task into the database
   const tasks = await insertScheduledAction(scheduledActionInput);

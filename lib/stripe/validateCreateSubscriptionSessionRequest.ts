@@ -7,6 +7,7 @@ import { mapToSubscriptionSessionError } from "@/lib/stripe/mapToSubscriptionSes
 export type ValidatedCreateSubscriptionSessionRequest = {
   accountId: string;
   successUrl: string;
+  plan: "starter" | "pro";
 };
 
 export async function validateCreateSubscriptionSessionRequest(
@@ -36,5 +37,6 @@ export async function validateCreateSubscriptionSessionRequest(
   return {
     accountId: authContext.accountId,
     successUrl: parsed.data.successUrl,
+    plan: parsed.data.plan,
   };
 }

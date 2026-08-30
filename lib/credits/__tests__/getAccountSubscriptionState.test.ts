@@ -25,16 +25,16 @@ describe("getAccountSubscriptionState", () => {
     vi.mocked(isEnterpriseAccount).mockResolvedValue(false);
   });
 
-  it("returns isPro=false / activeSubscription=null when neither subscription is active", async () => {
+  it("returns plan free / activeSubscription=null when neither subscription is active", async () => {
     vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(null);
     vi.mocked(getOrgSubscription).mockResolvedValue(null);
 
     const result = await getAccountSubscriptionState(ACCOUNT);
 
-    expect(result).toEqual({ isPro: false, activeSubscription: null });
+    expect(result).toEqual({ plan: "free", activeSubscription: null });
   });
 
-  it("returns isPro=true and prefers the account subscription when both are active", async () => {
+  it("prefers the account subscription when both are active Pro", async () => {
     const accountSub = {
       id: "sub_account",
       status: "active",
@@ -46,7 +46,7 @@ describe("getAccountSubscriptionState", () => {
 
     const result = await getAccountSubscriptionState(ACCOUNT);
 
-    expect(result).toEqual({ isPro: true, activeSubscription: accountSub });
+    expect(result).toEqual({ plan: "pro", activeSubscription: accountSub });
   });
 
   it("falls back to the org subscription when only it is active", async () => {
@@ -60,10 +60,10 @@ describe("getAccountSubscriptionState", () => {
 
     const result = await getAccountSubscriptionState(ACCOUNT);
 
-    expect(result).toEqual({ isPro: true, activeSubscription: orgSub });
+    expect(result).toEqual({ plan: "pro", activeSubscription: orgSub });
   });
 
-  it("returns isPro=false when the account subscription exists but is canceled trialing", async () => {
+  it("returns plan free when the account subscription exists but is canceled trialing", async () => {
     vi.mocked(getActiveSubscriptionDetails).mockResolvedValue({
       id: "sub_account",
       status: "trialing",
@@ -73,17 +73,17 @@ describe("getAccountSubscriptionState", () => {
 
     const result = await getAccountSubscriptionState(ACCOUNT);
 
-    expect(result).toEqual({ isPro: false, activeSubscription: null });
+    expect(result).toEqual({ plan: "free", activeSubscription: null });
   });
 
-  it("returns isPro=true with activeSubscription=null for an enterprise account without Stripe", async () => {
+  it("returns plan pro with activeSubscription=null for an enterprise account without Stripe", async () => {
     vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(null);
     vi.mocked(getOrgSubscription).mockResolvedValue(null);
     vi.mocked(isEnterpriseAccount).mockResolvedValue(true);
 
     const result = await getAccountSubscriptionState(ACCOUNT);
 
-    expect(result).toEqual({ isPro: true, activeSubscription: null });
+    expect(result).toEqual({ plan: "pro", activeSubscription: null });
     expect(isEnterpriseAccount).toHaveBeenCalledWith(ACCOUNT);
   });
 
@@ -99,6 +99,6 @@ describe("getAccountSubscriptionState", () => {
 
     const result = await getAccountSubscriptionState(ACCOUNT);
 
-    expect(result).toEqual({ isPro: true, activeSubscription: accountSub });
+    expect(result).toEqual({ plan: "pro", activeSubscription: accountSub });
   });
 });

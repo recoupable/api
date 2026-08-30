@@ -22,7 +22,7 @@ export async function getAccountCreditsHandler(
       return mapToAccountCreditsError(validated);
     }
 
-    const { creditsUsage, isPro } = await checkAndResetCredits(validated);
+    const { creditsUsage, plan } = await checkAndResetCredits(validated);
 
     if (!creditsUsage) {
       return NextResponse.json(
@@ -31,7 +31,7 @@ export async function getAccountCreditsHandler(
       );
     }
 
-    return NextResponse.json(buildAccountCreditsResponse({ creditsUsage, isPro }), {
+    return NextResponse.json(buildAccountCreditsResponse({ creditsUsage, plan }), {
       status: 200,
       headers: getCorsHeaders(),
     });

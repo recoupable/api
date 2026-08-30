@@ -26,7 +26,7 @@ describe("createSubscriptionSessionBodySchema", () => {
     });
     expect(r.success).toBe(true);
     if (r.success) {
-      expect(r.data).toEqual({ successUrl: "https://chat.recoupable.com/done" });
+      expect(r.data).toEqual({ successUrl: "https://chat.recoupable.com/done", plan: "pro" });
     }
   });
 });
