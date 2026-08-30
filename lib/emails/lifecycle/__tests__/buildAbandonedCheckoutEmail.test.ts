@@ -1,15 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { CHAT_APP_URL } from "@/lib/const";
 import { buildAbandonedCheckoutEmail } from "../buildAbandonedCheckoutEmail";
 
 describe("buildAbandonedCheckoutEmail", () => {
-  it("returns plain text that offers help setting up the first report", () => {
+  it("asks what outcome they wanted, as plain text", () => {
     const { subject, text } = buildAbandonedCheckoutEmail({ plan: "pro" });
 
-    expect(subject).toBe("Want a hand setting up your first report?");
+    expect(subject).toBe("What outcome were you hoping Recoup would help with?");
+    expect(text).toContain("checkout");
     expect(text).toContain("Pro");
-    expect(text).toContain("first report");
-    expect(text).toContain(CHAT_APP_URL);
+    expect(text).not.toMatch(/started Pro/i);
+    expect(text).toContain("https://www.linkedin.com/in/sweetmantech");
+    expect(text).toContain("https://recoupable.dev");
+    expect(text).not.toContain("chat.recoupable.dev");
     expect(text).toMatch(/reply/i);
     expect(text).not.toMatch(/<[^>]+>/);
   });
@@ -17,7 +19,7 @@ describe("buildAbandonedCheckoutEmail", () => {
   it("names the Starter plan when that checkout was abandoned", () => {
     const { text } = buildAbandonedCheckoutEmail({ plan: "starter" });
     expect(text).toContain("Starter");
-    expect(text).not.toContain("Pro plan");
+    expect(text).toContain("checkout");
   });
 
   it("never uses em or en dashes in the copy", () => {
