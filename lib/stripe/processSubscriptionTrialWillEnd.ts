@@ -2,13 +2,12 @@ import type Stripe from "stripe";
 import { buildSubscriptionSalesContext } from "@/lib/stripe/buildSubscriptionSalesContext";
 import { formatStripeTimestamp } from "@/lib/stripe/formatStripeTimestamp";
 import { sendSalesNotification } from "@/lib/telegram/sendSalesNotification";
-import { sendTrialEndingEmail } from "@/lib/emails/lifecycle/sendTrialEndingEmail";
 
 /**
  * Webhook processor for `customer.subscription.trial_will_end` (Stripe
- * fires it 3 days before the trial converts): the proactive-outreach
- * window before the customer decides whether to keep paying. Two sends:
- * the sales note to Telegram and the customer-facing summary email.
+ * fires it 3 days before the trial converts). Sales-only: Telegram note
+ * so the team can reach out. No customer email — a cancel-forward notice
+ * invites churn, and Stripe's charge receipt covers the conversion.
  */
 export async function processSubscriptionTrialWillEnd(
   subscription: Stripe.Subscription,
@@ -21,8 +20,5 @@ export async function processSubscriptionTrialWillEnd(
   }
   lines.push(ctx.lifetimeLine);
 
-  await Promise.all([
-    sendSalesNotification({ email: ctx.email, text: lines.join("\n") }),
-    sendTrialEndingEmail(subscription),
-  ]);
+  await sendSalesNotification({ email: ctx.email, text: lines.join("\n") });
 }

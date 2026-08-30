@@ -10,7 +10,6 @@ vi.mock("@/lib/stripe/buildSubscriptionSalesContext", () => ({
   buildSubscriptionSalesContext: buildContextMock,
 }));
 vi.mock("@/lib/telegram/sendSalesNotification", () => ({ sendSalesNotification: sendMock }));
-vi.mock("@/lib/emails/lifecycle/sendTrialEndingEmail", () => ({ sendTrialEndingEmail: vi.fn() }));
 
 const { processSubscriptionTrialWillEnd } = await import(
   "@/lib/stripe/processSubscriptionTrialWillEnd"
@@ -27,7 +26,7 @@ describe("processSubscriptionTrialWillEnd", () => {
     });
   });
 
-  it("notifies that the trial is ending with the conversion date", async () => {
+  it("notifies sales on Telegram that the trial is ending with the conversion date", async () => {
     await processSubscriptionTrialWillEnd({
       id: "sub_1",
       trial_end: 1783415103,
@@ -41,13 +40,13 @@ describe("processSubscriptionTrialWillEnd", () => {
     expect(text).toContain("Trial ends: 2026-07-07");
     expect(text).toContain("Lifetime value: $0.00");
   });
-});
 
-describe("processSubscriptionTrialWillEnd customer email", () => {
-  it("also sends the customer-facing trial-ending email", async () => {
-    const { sendTrialEndingEmail } = await import("@/lib/emails/lifecycle/sendTrialEndingEmail");
-    const subscription = { id: "sub_2", trial_end: 1783415103 } as unknown as Stripe.Subscription;
-    await processSubscriptionTrialWillEnd(subscription);
-    expect(sendTrialEndingEmail).toHaveBeenCalledWith(subscription);
+  it("does not send a customer-facing trial-ending email", async () => {
+    await processSubscriptionTrialWillEnd({
+      id: "sub_2",
+      trial_end: 1783415103,
+    } as unknown as Stripe.Subscription);
+
+    expect(sendMock).toHaveBeenCalledTimes(1);
   });
 });

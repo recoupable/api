@@ -56,9 +56,6 @@ export const ABANDONED_CHECKOUT_EMAIL_LOG_TYPE = "abandoned_checkout_email";
 /** Delay between a Stripe checkout session expiring and the follow-up email. */
 export const ABANDONED_CHECKOUT_EMAIL_DELAY_MS = 24 * 60 * 60 * 1000;
 
-/** Marker in email_send_log.raw_body for the customer-facing trial-ending email. */
-export const TRIAL_ENDING_EMAIL_LOG_TYPE = "trial_ending_email";
-
 /**
  * Generic message returned for every POST /api/agents/signup response,
  * regardless of which branch (new agent+, existing account, new normal
