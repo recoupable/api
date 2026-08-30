@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createStripeSession } from "@/lib/stripe/createStripeSession";
+import { resolveCheckoutPrice } from "@/lib/stripe/checkout/resolveCheckoutPrice";
 import { validateCreateSubscriptionSessionRequest } from "@/lib/stripe/validateCreateSubscriptionSessionRequest";
-import { StarterUnavailableError } from "@/lib/stripe/StarterUnavailableError";
 
+/**
+ * `POST /api/subscriptions/sessions`: Stripe Checkout for Starter or Pro.
+ * Auth optional — anonymous sessions are linked on `checkout.session.completed`.
+ */
 export async function createSubscriptionSessionHandler(
   request: NextRequest,
 ): Promise<NextResponse> {
@@ -13,11 +17,15 @@ export async function createSubscriptionSessionHandler(
       return validated;
     }
 
-    const session = await createStripeSession(
-      validated.accountId,
-      validated.successUrl,
-      validated.plan,
-    );
+    const price = resolveCheckoutPrice(validated.plan);
+    if (!price) {
+      return NextResponse.json(
+        { error: "starter_unavailable" },
+        { status: 400, headers: getCorsHeaders() },
+      );
+    }
+
+    const session = await createStripeSession({ ...validated, price });
     if (!session.url) {
       return NextResponse.json(
         { error: "Checkout session URL missing" },
@@ -30,12 +38,6 @@ export async function createSubscriptionSessionHandler(
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {
-    if (error instanceof StarterUnavailableError) {
-      return NextResponse.json(
-        { error: "starter_unavailable" },
-        { status: 400, headers: getCorsHeaders() },
-      );
-    }
     console.error("[createSubscriptionSessionHandler]", error);
     return NextResponse.json(
       { error: "Internal server error" },

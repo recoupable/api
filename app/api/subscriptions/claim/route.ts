@@ -13,7 +13,7 @@ export async function OPTIONS() {
 
 /**
  * POST /api/subscriptions/claim: attaches a subscription bought through
- * `/api/subscriptions/checkout` to the authenticated account when the
+ * `/api/subscriptions/sessions` to the authenticated account when the
  * sign-in email differs from the billing email.
  *
  * @param request - The incoming HTTP request.
