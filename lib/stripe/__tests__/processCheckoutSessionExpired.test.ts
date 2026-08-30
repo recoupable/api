@@ -3,7 +3,7 @@ import type Stripe from "stripe";
 
 const { startMock } = vi.hoisted(() => ({ startMock: vi.fn() }));
 vi.mock("workflow/api", () => ({ start: startMock }));
-vi.mock("@/app/workflows/abandonedCheckoutWorkflow", () => ({
+vi.mock("@/app/workflows/checkout/abandonedCheckoutWorkflow", () => ({
   abandonedCheckoutWorkflow: "abandonedCheckoutWorkflow",
 }));
 

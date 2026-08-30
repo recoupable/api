@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import { start } from "workflow/api";
-import { abandonedCheckoutWorkflow } from "@/app/workflows/abandonedCheckoutWorkflow";
+import { abandonedCheckoutWorkflow } from "@/app/workflows/checkout/abandonedCheckoutWorkflow";
 import type { AbandonedCheckoutPlan } from "@/lib/emails/lifecycle/buildAbandonedCheckoutEmail";
 
 /**
