@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { ABANDONED_CHECKOUT_EMAIL_LOG_TYPE, FOUNDER_FROM_EMAIL } from "@/lib/const";
+import {
+  ABANDONED_CHECKOUT_EMAIL_LOG_TYPE,
+  FOUNDER_FROM_EMAIL,
+  FOUNDER_REPLY_TO_EMAIL,
+} from "@/lib/const";
 import {
   buildAbandonedCheckoutEmail,
   type AbandonedCheckoutPlan,
@@ -41,7 +45,7 @@ export async function sendAbandonedCheckoutEmail(
 
   if (await hasActiveSubscriptionForEmail(email)) return { sent: false, reason: "subscribed" };
 
-  const { subject, html } = buildAbandonedCheckoutEmail({ plan });
+  const { subject, text } = buildAbandonedCheckoutEmail({ plan });
   const rawBody = JSON.stringify({
     type: ABANDONED_CHECKOUT_EMAIL_LOG_TYPE,
     session_id: sessionId,
@@ -54,7 +58,13 @@ export async function sendAbandonedCheckoutEmail(
   // Resend dedupes on the key for 24h, so a retried webhook that started a
   // second workflow run cannot produce two emails.
   const result = await sendEmailWithResend(
-    { from: FOUNDER_FROM_EMAIL, to: [email], subject, html },
+    {
+      from: FOUNDER_FROM_EMAIL,
+      replyTo: FOUNDER_REPLY_TO_EMAIL,
+      to: [email],
+      subject,
+      text,
+    },
     { idempotencyKey: `${ABANDONED_CHECKOUT_EMAIL_LOG_TYPE}/${sessionId}` },
   );
   if (result instanceof NextResponse) {

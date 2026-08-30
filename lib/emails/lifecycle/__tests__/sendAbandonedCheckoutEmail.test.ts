@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextResponse } from "next/server";
-import { ABANDONED_CHECKOUT_EMAIL_LOG_TYPE, FOUNDER_FROM_EMAIL } from "@/lib/const";
+import {
+  ABANDONED_CHECKOUT_EMAIL_LOG_TYPE,
+  FOUNDER_FROM_EMAIL,
+  FOUNDER_REPLY_TO_EMAIL,
+} from "@/lib/const";
 
 const { selectLogMock, hasActiveSubMock, selectAccountByEmailMock, buildMock, sendMock, logMock } =
   vi.hoisted(() => ({
@@ -38,19 +42,20 @@ describe("sendAbandonedCheckoutEmail", () => {
     selectLogMock.mockResolvedValue([]);
     hasActiveSubMock.mockResolvedValue(false);
     selectAccountByEmailMock.mockResolvedValue({ account_id: "acc_1" });
-    buildMock.mockReturnValue({ subject: "Want a hand?", html: "<p>hi</p>" });
+    buildMock.mockReturnValue({ subject: "Want a hand?", text: "hi" });
     sendMock.mockResolvedValue({ id: "re_1" });
   });
 
-  it("sends the founder email and logs a sent row keyed on the session", async () => {
+  it("sends a plain-text founder email from sweetman@ with reply_to Gmail", async () => {
     const result = await sendAbandonedCheckoutEmail(args);
 
     expect(sendMock).toHaveBeenCalledWith(
       {
         from: FOUNDER_FROM_EMAIL,
+        replyTo: FOUNDER_REPLY_TO_EMAIL,
         to: ["fan@example.com"],
         subject: "Want a hand?",
-        html: "<p>hi</p>",
+        text: "hi",
       },
       { idempotencyKey: "abandoned_checkout_email/cs_test_1" },
     );
