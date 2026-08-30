@@ -3,7 +3,7 @@ import supabase from "../../serverClient";
 
 vi.mock("../../serverClient", () => ({ default: { from: vi.fn() } }));
 
-const { selectAccountByEmailIlike } = await import("../selectAccountByEmailIlike");
+const { selectAccountEmail } = await import("../selectAccountEmail");
 
 function mockBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, ReturnType<typeof vi.fn>> & {
@@ -15,7 +15,7 @@ function mockBuilder(result: { data: unknown; error: unknown }) {
   return builder;
 }
 
-describe("selectAccountByEmailIlike", () => {
+describe("selectAccountEmail", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("matches case-insensitively with LIKE wildcards escaped", async () => {
@@ -23,7 +23,7 @@ describe("selectAccountByEmailIlike", () => {
       data: [{ account_id: "acc_1", email: "Fan@Example.com" }],
       error: null,
     });
-    const row = await selectAccountByEmailIlike("fan_x@example.com");
+    const row = await selectAccountEmail("fan_x@example.com");
     expect(builder.ilike).toHaveBeenCalledWith("email", "fan\\_x@example.com");
     expect(row?.account_id).toBe("acc_1");
   });
@@ -31,8 +31,8 @@ describe("selectAccountByEmailIlike", () => {
   it("returns null on no match or error", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     mockBuilder({ data: [], error: null });
-    expect(await selectAccountByEmailIlike("a@b.co")).toBeNull();
+    expect(await selectAccountEmail("a@b.co")).toBeNull();
     mockBuilder({ data: null, error: { message: "x" } });
-    expect(await selectAccountByEmailIlike("a@b.co")).toBeNull();
+    expect(await selectAccountEmail("a@b.co")).toBeNull();
   });
 });

@@ -11,7 +11,7 @@ import {
 import { logEmailAttempt } from "@/lib/emails/logEmailAttempt";
 import { sendEmailWithResend } from "@/lib/emails/sendEmail";
 import { hasActiveSubscriptionForEmail } from "@/lib/stripe/hasActiveSubscriptionForEmail";
-import { selectAccountByEmailIlike } from "@/lib/supabase/account_emails/selectAccountByEmailIlike";
+import { selectAccountEmail } from "@/lib/supabase/account_emails/selectAccountEmail";
 import { selectEmailSendLog } from "@/lib/supabase/email_send_log/selectEmailSendLog";
 
 export type AbandonedCheckoutEmailArgs = {
@@ -52,7 +52,7 @@ export async function sendAbandonedCheckoutEmail(
     to: email,
     plan,
   });
-  const account = await selectAccountByEmailIlike(email);
+  const account = await selectAccountEmail(email);
   const accountId = account?.account_id ?? null;
 
   // Resend dedupes on the key for 24h, so a retried webhook that started a
