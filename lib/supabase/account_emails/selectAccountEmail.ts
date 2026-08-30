@@ -9,9 +9,7 @@ const escapeLike = (value: string) => value.replace(/[%_\\]/g, ch => `\\${ch}`);
  * so the match stays exact apart from case. Returns the first match, null on
  * error or no match.
  */
-export async function selectAccountEmail(
-  email: string,
-): Promise<Tables<"account_emails"> | null> {
+export async function selectAccountEmail(email: string): Promise<Tables<"account_emails"> | null> {
   const { data, error } = await supabase
     .from("account_emails")
     .select("*")
