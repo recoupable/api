@@ -22,7 +22,6 @@ describe("initializeAccountCredits", () => {
 
   it("seeds DEFAULT_CREDITS for a free-tier account", async () => {
     vi.mocked(getAccountSubscriptionState).mockResolvedValue({
-      isPro: false,
       plan: "free",
       activeSubscription: null,
     });
@@ -42,7 +41,6 @@ describe("initializeAccountCredits", () => {
 
   it("seeds PRO_CREDITS when the account already has an active subscription", async () => {
     vi.mocked(getAccountSubscriptionState).mockResolvedValue({
-      isPro: true,
       plan: "pro",
       activeSubscription: {
         id: "sub_1",
@@ -66,7 +64,6 @@ describe("initializeAccountCredits", () => {
 
   it("returns null when the underlying insert fails", async () => {
     vi.mocked(getAccountSubscriptionState).mockResolvedValue({
-      isPro: false,
       plan: "free",
       activeSubscription: null,
     });

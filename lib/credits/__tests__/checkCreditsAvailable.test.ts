@@ -36,7 +36,6 @@ beforeEach(() => {
   // Default: no refill due — the row comes back unchanged.
   checkAndResetCreditsMock.mockImplementation(async () => ({
     creditsUsage: { remaining_credits: 0 },
-    isPro: false,
   }));
 });
 
@@ -51,7 +50,6 @@ describe("checkCreditsAvailable", () => {
     selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 2 }]);
     checkAndResetCreditsMock.mockResolvedValue({
       creditsUsage: { remaining_credits: 2 },
-      isPro: false,
     });
 
     expect(await checkCreditsAvailable(params)).toEqual({
@@ -81,7 +79,7 @@ describe("checkCreditsAvailable", () => {
 
   it("treats an empty credits_usage row as a zero balance", async () => {
     selectCreditsUsageMock.mockResolvedValue([]);
-    checkAndResetCreditsMock.mockResolvedValue({ creditsUsage: null, isPro: false });
+    checkAndResetCreditsMock.mockResolvedValue({ creditsUsage: null });
 
     expect(await checkCreditsAvailable({ ...params, creditsToDeduct: 1 })).toEqual({
       kind: "insufficient_credits",
@@ -101,7 +99,6 @@ describe("checkCreditsAvailable", () => {
       selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 0 }]);
       checkAndResetCreditsMock.mockResolvedValue({
         creditsUsage: { remaining_credits: 333 },
-        isPro: false,
       });
 
       expect(await checkCreditsAvailable(params)).toEqual({ kind: "available" });
@@ -112,7 +109,6 @@ describe("checkCreditsAvailable", () => {
       selectCreditsUsageMock.mockResolvedValue([{ remaining_credits: 0 }]);
       checkAndResetCreditsMock.mockResolvedValue({
         creditsUsage: { remaining_credits: 3 },
-        isPro: false,
       });
 
       expect(await checkCreditsAvailable(params)).toEqual({
@@ -132,7 +128,7 @@ describe("checkCreditsAvailable", () => {
 
     it("treats a missing row from the refill check as a zero balance", async () => {
       selectCreditsUsageMock.mockResolvedValue([]);
-      checkAndResetCreditsMock.mockResolvedValue({ creditsUsage: null, isPro: false });
+      checkAndResetCreditsMock.mockResolvedValue({ creditsUsage: null });
 
       expect(await checkCreditsAvailable({ ...params, creditsToDeduct: 1 })).toEqual({
         kind: "insufficient_credits",

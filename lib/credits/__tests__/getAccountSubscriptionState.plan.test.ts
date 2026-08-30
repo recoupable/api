@@ -27,30 +27,27 @@ describe("getAccountSubscriptionState plan", () => {
     vi.mocked(getOrgSubscription).mockResolvedValue(null);
   });
 
-  it("free: plan free, isPro false", async () => {
+  it("free: plan free", async () => {
     vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(null);
     expect(await getAccountSubscriptionState("acc")).toEqual({
-      isPro: false,
       plan: "free",
       activeSubscription: null,
     });
   });
 
-  it("starter: plan starter, isPro false, the starter sub is the active one", async () => {
+  it("starter: plan starter, the starter sub is the active one", async () => {
     const s = sub("price_starter");
     vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(s);
     expect(await getAccountSubscriptionState("acc")).toEqual({
-      isPro: false,
       plan: "starter",
       activeSubscription: s,
     });
   });
 
-  it("pro: plan pro, isPro true", async () => {
+  it("pro: plan pro", async () => {
     const s = sub("price_pro");
     vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(s);
     expect(await getAccountSubscriptionState("acc")).toEqual({
-      isPro: true,
       plan: "pro",
       activeSubscription: s,
     });
@@ -67,7 +64,6 @@ describe("getAccountSubscriptionState plan", () => {
     vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(accountSub);
     vi.mocked(getOrgSubscription).mockResolvedValue(orgSub);
     expect(await getAccountSubscriptionState("acc")).toEqual({
-      isPro: true,
       plan: "pro",
       activeSubscription: orgSub,
     });

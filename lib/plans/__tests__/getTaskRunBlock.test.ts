@@ -19,7 +19,6 @@ describe("getTaskRunBlock", () => {
     vi.clearAllMocks();
     vi.mocked(getAccountSubscriptionState).mockResolvedValue({
       plan: "free",
-      isPro: false,
       activeSubscription: null,
     });
     vi.mocked(selectScheduledActions).mockResolvedValue([task, { id: "t2" }] as never);

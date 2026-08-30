@@ -26,7 +26,6 @@ describe("checkAndResetCredits plan", () => {
     vi.mocked(selectCreditsUsage).mockResolvedValue([row]);
     vi.mocked(updateCreditsUsage).mockResolvedValue(refilled);
     vi.mocked(getAccountSubscriptionState).mockResolvedValue({
-      isPro: false,
       plan: "starter",
       activeSubscription: null,
     });
@@ -36,19 +35,17 @@ describe("checkAndResetCredits plan", () => {
     expect(vi.mocked(updateCreditsUsage).mock.calls[0][0].updates.remaining_credits).toBe(
       STARTER_CREDITS,
     );
-    expect(result).toEqual({ creditsUsage: refilled, isPro: false, plan: "starter" });
+    expect(result).toEqual({ creditsUsage: refilled, plan: "starter" });
   });
 
   it("returns plan free with no row", async () => {
     vi.mocked(selectCreditsUsage).mockResolvedValue([]);
     vi.mocked(getAccountSubscriptionState).mockResolvedValue({
-      isPro: false,
       plan: "free",
       activeSubscription: null,
     });
     expect(await checkAndResetCredits("acc")).toEqual({
       creditsUsage: null,
-      isPro: false,
       plan: "free",
     });
   });

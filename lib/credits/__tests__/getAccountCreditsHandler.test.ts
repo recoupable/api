@@ -51,7 +51,6 @@ describe("getAccountCreditsHandler", () => {
     vi.mocked(validateAccountCreditsParams).mockResolvedValue(ACCOUNT);
     vi.mocked(checkAndResetCredits).mockResolvedValue({
       creditsUsage: null,
-      isPro: false,
       plan: "free",
     });
 
@@ -69,7 +68,6 @@ describe("getAccountCreditsHandler", () => {
         remaining_credits: 250,
         timestamp: "2026-05-01T12:00:00.000Z",
       },
-      isPro: false,
       plan: "free",
     });
 
@@ -97,7 +95,6 @@ describe("getAccountCreditsHandler", () => {
         remaining_credits: PRO_CREDITS,
         timestamp: "2026-05-11T12:00:00.000Z",
       },
-      isPro: true,
       plan: "pro",
     });
 

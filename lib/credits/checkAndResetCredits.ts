@@ -10,7 +10,6 @@ import type { Plan } from "@/lib/plans/types";
 
 export interface CheckAndResetCreditsResult {
   creditsUsage: CreditsUsage | null;
-  isPro: boolean;
   plan: Plan;
 }
 
@@ -23,22 +22,22 @@ export interface CheckAndResetCreditsResult {
  * a top-up or an admin grant above the plan total survives every refill
  * without the read path needing to know where the balance came from.
  *
- * Also returns `plan` and `isPro` so callers don't need to repeat the subscription lookup.
+ * Also returns `plan` so callers don't need to repeat the subscription lookup.
  */
 export async function checkAndResetCredits(accountId: string): Promise<CheckAndResetCreditsResult> {
-  const [rows, { isPro, plan, activeSubscription }] = await Promise.all([
+  const [rows, { plan, activeSubscription }] = await Promise.all([
     selectCreditsUsage({ account_id: accountId }),
     getAccountSubscriptionState(accountId),
   ]);
 
   if (!rows || rows.length === 0) {
-    return { creditsUsage: null, isPro, plan };
+    return { creditsUsage: null, plan };
   }
 
   const creditsUsage = rows[0];
 
   if (!creditsUsage.timestamp) {
-    return { creditsUsage, isPro, plan };
+    return { creditsUsage, plan };
   }
 
   const lastUpdated = new Date(creditsUsage.timestamp);
@@ -55,7 +54,7 @@ export async function checkAndResetCredits(accountId: string): Promise<CheckAndR
   const shouldRefill = isMonthlyRefill || isSubscriptionStartedAfterLastUpdate;
 
   if (!shouldRefill) {
-    return { creditsUsage, isPro, plan };
+    return { creditsUsage, plan };
   }
 
   const planTotal = usdToCredits(getPlanEntitlements(plan).credits_usd);
@@ -73,5 +72,5 @@ export async function checkAndResetCredits(accountId: string): Promise<CheckAndR
 
   const refilled = await updateCreditsUsage({ account_id: accountId, updates });
 
-  return { creditsUsage: refilled, isPro, plan };
+  return { creditsUsage: refilled, plan };
 }

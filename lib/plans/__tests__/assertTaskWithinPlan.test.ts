@@ -12,7 +12,7 @@ vi.mock("@/lib/supabase/scheduled_actions/selectScheduledActions", () => ({
 }));
 
 const state = (plan: "free" | "starter" | "pro") =>
-  ({ plan, isPro: plan === "pro", activeSubscription: null }) as never;
+  ({ plan, activeSubscription: null }) as never;
 
 describe("assertTaskWithinPlan", () => {
   beforeEach(() => vi.clearAllMocks());

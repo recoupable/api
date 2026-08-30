@@ -14,7 +14,6 @@ describe("initializeAccountCredits starter", () => {
 
   it("seeds STARTER_CREDITS for a starter account", async () => {
     vi.mocked(getAccountSubscriptionState).mockResolvedValue({
-      isPro: false,
       plan: "starter",
       activeSubscription: null,
     });
