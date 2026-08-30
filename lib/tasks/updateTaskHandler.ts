@@ -3,6 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { enrichTasks } from "@/lib/tasks/enrichTasks";
 import { validateUpdateTaskRequest } from "@/lib/tasks/validateUpdateTaskRequest";
 import { TASK_ACCESS_DENIED_MESSAGE, updateTask } from "@/lib/tasks/updateTask";
+import { PlanLimitError } from "@/lib/plans/PlanLimitError";
 
 /**
  * Updates an existing task (scheduled action).
@@ -37,6 +38,9 @@ export async function updateTaskHandler(request: NextRequest): Promise<NextRespo
       },
     );
   } catch (error) {
+    if (error instanceof PlanLimitError) {
+      return NextResponse.json(error.body, { status: 402, headers: getCorsHeaders() });
+    }
     console.error("Error updating task:", error);
 
     if (error instanceof Error && error.message === "Task not found") {

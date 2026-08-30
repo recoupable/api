@@ -5,6 +5,7 @@ import { insertScheduledAction } from "@/lib/supabase/scheduled_actions/insertSc
 import { updateScheduledAction } from "@/lib/supabase/scheduled_actions/updateScheduledAction";
 import { createSchedule } from "@/lib/trigger/createSchedule";
 
+vi.mock("@/lib/plans/assertTaskWithinPlan", () => ({ assertTaskWithinPlan: vi.fn() }));
 vi.mock("@/lib/supabase/scheduled_actions/insertScheduledAction", () => ({
   insertScheduledAction: vi.fn(),
 }));

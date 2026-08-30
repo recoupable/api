@@ -20,9 +20,9 @@ vi.mock("@/lib/credits/getAccountSubscriptionState", () => ({
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
 
-const freeState = { isPro: false, activeSubscription: null };
+const freeState = { plan: "free" as const, activeSubscription: null };
 const proStateFromAccount = {
-  isPro: true,
+  plan: "pro" as const,
   activeSubscription: {
     id: "sub_1",
     status: "active",
@@ -31,7 +31,7 @@ const proStateFromAccount = {
   } as never,
 };
 const proStateFromOrgNewlySubscribed = {
-  isPro: true,
+  plan: "pro" as const,
   activeSubscription: {
     id: "sub_org",
     status: "active",
@@ -57,13 +57,13 @@ describe("checkAndResetCredits", () => {
     vi.setSystemTime(new Date("2026-05-11T12:00:00.000Z"));
   });
 
-  it("returns { creditsUsage: null, isPro: false } when no credits row exists", async () => {
+  it("returns null creditsUsage and plan free when no credits row exists", async () => {
     vi.mocked(selectCreditsUsage).mockResolvedValue([]);
     vi.mocked(getAccountSubscriptionState).mockResolvedValue(freeState);
 
     const result = await checkAndResetCredits(ACCOUNT);
 
-    expect(result).toEqual({ creditsUsage: null, isPro: false });
+    expect(result).toEqual({ creditsUsage: null, plan: "free" });
     expect(updateCreditsUsage).not.toHaveBeenCalled();
   });
 
@@ -74,7 +74,7 @@ describe("checkAndResetCredits", () => {
 
     const result = await checkAndResetCredits(ACCOUNT);
 
-    expect(result).toEqual({ creditsUsage: row, isPro: false });
+    expect(result).toEqual({ creditsUsage: row, plan: "free" });
     expect(updateCreditsUsage).not.toHaveBeenCalled();
   });
 
@@ -85,7 +85,7 @@ describe("checkAndResetCredits", () => {
 
     const result = await checkAndResetCredits(ACCOUNT);
 
-    expect(result).toEqual({ creditsUsage: row, isPro: false });
+    expect(result).toEqual({ creditsUsage: row, plan: "free" });
     expect(updateCreditsUsage).not.toHaveBeenCalled();
   });
 
@@ -109,7 +109,7 @@ describe("checkAndResetCredits", () => {
         timestamp: "2026-05-11T12:00:00.000Z",
       },
     });
-    expect(result).toEqual({ creditsUsage: refilled, isPro: false });
+    expect(result).toEqual({ creditsUsage: refilled, plan: "free" });
   });
 
   it("refills to PRO_CREDITS when the caller has an active account subscription", async () => {
@@ -132,7 +132,7 @@ describe("checkAndResetCredits", () => {
         timestamp: "2026-05-11T12:00:00.000Z",
       },
     });
-    expect(result).toEqual({ creditsUsage: refilled, isPro: true });
+    expect(result).toEqual({ creditsUsage: refilled, plan: "pro" });
   });
 
   it("refills when an active subscription started AFTER the last credits update (newly subscribed)", async () => {
@@ -149,11 +149,11 @@ describe("checkAndResetCredits", () => {
     const result = await checkAndResetCredits(ACCOUNT);
 
     expect(updateCreditsUsage).toHaveBeenCalledTimes(1);
-    expect(result.isPro).toBe(true);
+    expect(result.plan).toBe("pro");
     expect(result.creditsUsage).toEqual(refilled);
   });
 
-  it("reports isPro=true without refilling when sub is active but neither refill trigger fires", async () => {
+  it("reports plan pro without refilling when sub is active but neither refill trigger fires", async () => {
     const row = baseRow({ timestamp: "2026-05-01T00:00:00.000Z", remaining_credits: 8_000_000 });
     vi.mocked(selectCreditsUsage).mockResolvedValue([row]);
     vi.mocked(getAccountSubscriptionState).mockResolvedValue(proStateFromAccount);
@@ -161,7 +161,7 @@ describe("checkAndResetCredits", () => {
     const result = await checkAndResetCredits(ACCOUNT);
 
     expect(updateCreditsUsage).not.toHaveBeenCalled();
-    expect(result).toEqual({ creditsUsage: row, isPro: true });
+    expect(result).toEqual({ creditsUsage: row, plan: "pro" });
   });
   describe("the refill is a floor, not an assignment", () => {
     it("raises a balance BELOW the plan total up to it (free tier)", async () => {

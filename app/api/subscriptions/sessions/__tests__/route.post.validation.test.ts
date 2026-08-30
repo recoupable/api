@@ -58,10 +58,36 @@ describe("POST /api/subscriptions/sessions (validation)", () => {
     expect(createStripeSession).not.toHaveBeenCalled();
   });
 
-  it("returns 401 when not authenticated", async () => {
+  it("allows anonymous requests with no auth header", async () => {
+    vi.mocked(validateCreateSubscriptionSessionRequest).mockImplementationOnce(
+      await loadRealValidate(),
+    );
+    vi.mocked(createStripeSession).mockResolvedValueOnce({
+      id: "cs_anon",
+      url: "https://checkout.stripe.com/pay/cs_anon",
+    } as Awaited<ReturnType<typeof createStripeSession>>);
+    const res = await POST(
+      new NextRequest("http://localhost/api/subscriptions/sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ successUrl: "https://chat.recoupable.com/ok" }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({
+      id: "cs_anon",
+      url: "https://checkout.stripe.com/pay/cs_anon",
+    });
+    expect(validateAuthContext).not.toHaveBeenCalled();
+    expect(createStripeSession).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: null, plan: "pro" }),
+    );
+  });
+
+  it("returns 401 when an invalid auth header is present", async () => {
     vi.mocked(validateAuthContext).mockResolvedValueOnce(
       NextResponse.json(
-        { status: "error", error: "Exactly one of x-api-key or Authorization must be provided" },
+        { status: "error", error: "Failed to verify authentication token" },
         { status: 401 },
       ),
     );
@@ -71,13 +97,16 @@ describe("POST /api/subscriptions/sessions (validation)", () => {
     const res = await POST(
       new NextRequest("http://localhost/api/subscriptions/sessions", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer not-a-real-token",
+        },
         body: JSON.stringify({ successUrl: "https://chat.recoupable.com/ok" }),
       }),
     );
     expect(res.status).toBe(401);
     await expect(res.json()).resolves.toEqual({
-      error: "Exactly one of x-api-key or Authorization must be provided",
+      error: "Failed to verify authentication token",
     });
     expect(createStripeSession).not.toHaveBeenCalled();
   });

@@ -34,6 +34,7 @@ describe("POST /api/subscriptions/sessions (handler outcomes)", () => {
     vi.mocked(validateCreateSubscriptionSessionRequest).mockResolvedValue({
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/ok",
+      plan: "pro",
     });
     vi.mocked(createStripeSession).mockResolvedValue({
       id: "cs_test_abc",
@@ -57,6 +58,7 @@ describe("POST /api/subscriptions/sessions (handler outcomes)", () => {
     vi.mocked(validateCreateSubscriptionSessionRequest).mockResolvedValue({
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/ok",
+      plan: "pro",
     });
     vi.mocked(createStripeSession).mockResolvedValue({
       id: "cs_test_abc",
@@ -77,6 +79,7 @@ describe("POST /api/subscriptions/sessions (handler outcomes)", () => {
     vi.mocked(validateCreateSubscriptionSessionRequest).mockResolvedValue({
       accountId: ACCOUNT,
       successUrl: "https://chat.recoupable.com/ok",
+      plan: "pro",
     });
     vi.mocked(createStripeSession).mockRejectedValue(new Error("Stripe down"));
 

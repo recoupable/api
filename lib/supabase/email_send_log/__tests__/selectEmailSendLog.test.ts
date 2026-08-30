@@ -11,7 +11,8 @@ function mockBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, ReturnType<typeof vi.fn>> & {
     then?: (resolve: (v: unknown) => void) => void;
   } = {} as never;
-  for (const m of ["select", "eq", "like", "limit"]) builder[m] = vi.fn().mockReturnValue(builder);
+  for (const m of ["select", "eq", "like", "gte", "limit"])
+    builder[m] = vi.fn().mockReturnValue(builder);
   builder.then = resolve => resolve(result);
   vi.mocked(supabase.from).mockReturnValue(builder as never);
   return builder;
@@ -37,6 +38,12 @@ describe("selectEmailSendLog", () => {
     expect(builder.like).toHaveBeenCalledWith("raw_body", '%"snapshot_id":"snap_1"%');
     expect(builder.limit).toHaveBeenCalledWith(1);
     expect(result).toEqual(rows);
+  });
+
+  it("applies the createdAfter lower bound", async () => {
+    const builder = mockBuilder({ data: [], error: null });
+    await selectEmailSendLog({ createdAfter: "2026-08-01T00:00:00Z" });
+    expect(builder.gte).toHaveBeenCalledWith("created_at", "2026-08-01T00:00:00Z");
   });
 
   it("skips filters that aren't provided", async () => {

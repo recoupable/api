@@ -6,6 +6,7 @@ import { updateScheduledAction } from "@/lib/supabase/scheduled_actions/updateSc
 import { syncTriggerSchedule } from "@/lib/trigger/syncTriggerSchedule";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
+vi.mock("@/lib/plans/assertTaskWithinPlan", () => ({ assertTaskWithinPlan: vi.fn() }));
 vi.mock("@/lib/supabase/scheduled_actions/selectScheduledActions", () => ({
   selectScheduledActions: vi.fn(),
 }));

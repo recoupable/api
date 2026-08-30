@@ -44,6 +44,18 @@ export const RECOUP_FROM_EMAIL = `Agent by Recoup <agent${OUTBOUND_EMAIL_DOMAIN}
 /** Marker stored in email_send_log.raw_body to identify welcome-email sends. */
 export const WELCOME_EMAIL_LOG_TYPE = "welcome_email";
 
+/** Founder-voiced from address for lifecycle outreach (abandoned checkout). */
+export const FOUNDER_FROM_EMAIL = `Patrick from Recoup <sweetman${OUTBOUND_EMAIL_DOMAIN}>`;
+
+/** Where Reply lands for founder-voiced outreach (personal inbox). */
+export const FOUNDER_REPLY_TO_EMAIL = "sweetmantech@gmail.com";
+
+/** Marker in email_send_log.raw_body for the abandoned-checkout follow-up. */
+export const ABANDONED_CHECKOUT_EMAIL_LOG_TYPE = "abandoned_checkout_email";
+
+/** Delay between a Stripe checkout session expiring and the follow-up email. */
+export const ABANDONED_CHECKOUT_EMAIL_DELAY_MS = 24 * 60 * 60 * 1000;
+
 /**
  * Generic message returned for every POST /api/agents/signup response,
  * regardless of which branch (new agent+, existing account, new normal
