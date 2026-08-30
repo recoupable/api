@@ -5,8 +5,9 @@ import { sendSalesNotification } from "@/lib/telegram/sendSalesNotification";
 
 /**
  * Webhook processor for `customer.subscription.trial_will_end` (Stripe
- * fires it 3 days before the trial converts): the proactive-outreach
- * window before the customer decides whether to keep paying.
+ * fires it 3 days before the trial converts). Sales-only: Telegram note
+ * so the team can reach out. No customer email — a cancel-forward notice
+ * invites churn, and Stripe's charge receipt covers the conversion.
  */
 export async function processSubscriptionTrialWillEnd(
   subscription: Stripe.Subscription,

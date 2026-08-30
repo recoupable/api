@@ -12,6 +12,8 @@ const {
   processSubscriptionDeletedMock,
   processInvoicePaidMock,
   notifyCreditsTopupSessionMock,
+  processCheckoutSessionExpiredMock,
+  processCheckoutSubscriptionCompletedMock,
 } = vi.hoisted(() => ({
   verifyStripeWebhookEventMock: vi.fn(),
   processCreditsTopupSessionMock: vi.fn(),
@@ -22,6 +24,8 @@ const {
   processSubscriptionDeletedMock: vi.fn(),
   processInvoicePaidMock: vi.fn(),
   notifyCreditsTopupSessionMock: vi.fn(),
+  processCheckoutSessionExpiredMock: vi.fn(),
+  processCheckoutSubscriptionCompletedMock: vi.fn(),
 }));
 
 vi.mock("@/lib/stripe/verifyStripeWebhookEvent", () => ({
@@ -50,6 +54,12 @@ vi.mock("@/lib/stripe/processInvoicePaid", () => ({
 }));
 vi.mock("@/lib/stripe/notifyCreditsTopupSession", () => ({
   notifyCreditsTopupSession: notifyCreditsTopupSessionMock,
+}));
+vi.mock("@/lib/stripe/processCheckoutSessionExpired", () => ({
+  processCheckoutSessionExpired: processCheckoutSessionExpiredMock,
+}));
+vi.mock("@/lib/stripe/checkout/processCheckoutSubscriptionCompleted", () => ({
+  processCheckoutSubscriptionCompleted: processCheckoutSubscriptionCompletedMock,
 }));
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -152,6 +162,27 @@ describe("stripeWebhookHandler", () => {
     const res = await stripeWebhookHandler(makeReq());
     expect(res.status).toBe(200);
     expect(processSubscriptionDeletedMock).toHaveBeenCalledWith(sub);
+  });
+
+  it("also hands checkout.session.completed to the subscription account linker", async () => {
+    const session = { id: "cs_sub", mode: "subscription" };
+    verifyStripeWebhookEventMock.mockResolvedValue({
+      event: event("checkout.session.completed", session),
+    });
+    const res = await stripeWebhookHandler(makeReq());
+    expect(res.status).toBe(200);
+    expect(processCheckoutSubscriptionCompletedMock).toHaveBeenCalledWith(session);
+  });
+
+  it("delegates checkout.session.expired to processCheckoutSessionExpired", async () => {
+    const session = { id: "cs_expired", mode: "subscription" };
+    verifyStripeWebhookEventMock.mockResolvedValue({
+      event: event("checkout.session.expired", session),
+    });
+    const res = await stripeWebhookHandler(makeReq());
+    expect(res.status).toBe(200);
+    expect(processCheckoutSessionExpiredMock).toHaveBeenCalledWith(session);
+    expect(processCreditsTopupSessionMock).not.toHaveBeenCalled();
   });
 
   it("delegates invoice.paid to processInvoicePaid", async () => {

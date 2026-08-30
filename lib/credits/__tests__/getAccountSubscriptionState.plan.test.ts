@@ -1,0 +1,71 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/lib/stripe/getActiveSubscriptionDetails", () => ({
+  getActiveSubscriptionDetails: vi.fn(),
+}));
+vi.mock("@/lib/stripe/getOrgSubscription", () => ({ getOrgSubscription: vi.fn() }));
+vi.mock("@/lib/enterprise/isEnterpriseAccount", () => ({ isEnterpriseAccount: vi.fn() }));
+vi.mock("@/lib/stripe/config", () => ({ STRIPE_STARTER_PRICE_ID: "price_starter" }));
+
+const { getAccountSubscriptionState } = await import("@/lib/credits/getAccountSubscriptionState");
+const { getActiveSubscriptionDetails } = await import("@/lib/stripe/getActiveSubscriptionDetails");
+const { getOrgSubscription } = await import("@/lib/stripe/getOrgSubscription");
+const { isEnterpriseAccount } = await import("@/lib/enterprise/isEnterpriseAccount");
+
+const sub = (priceId: string) =>
+  ({
+    id: "sub_1",
+    status: "active",
+    canceled_at: null,
+    items: { data: [{ price: { id: priceId } }] },
+  }) as never;
+
+describe("getAccountSubscriptionState plan", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(isEnterpriseAccount).mockResolvedValue(false);
+    vi.mocked(getOrgSubscription).mockResolvedValue(null);
+  });
+
+  it("free: plan free", async () => {
+    vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(null);
+    expect(await getAccountSubscriptionState("acc")).toEqual({
+      plan: "free",
+      activeSubscription: null,
+    });
+  });
+
+  it("starter: plan starter, the starter sub is the active one", async () => {
+    const s = sub("price_starter");
+    vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(s);
+    expect(await getAccountSubscriptionState("acc")).toEqual({
+      plan: "starter",
+      activeSubscription: s,
+    });
+  });
+
+  it("pro: plan pro", async () => {
+    const s = sub("price_pro");
+    vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(s);
+    expect(await getAccountSubscriptionState("acc")).toEqual({
+      plan: "pro",
+      activeSubscription: s,
+    });
+  });
+
+  it("Starter account + org Pro: plan pro, activeSubscription is the org sub", async () => {
+    const accountSub = sub("price_starter");
+    const orgSub = {
+      id: "sub_org",
+      status: "active",
+      canceled_at: null,
+      items: { data: [{ price: { id: "price_pro" } }] },
+    } as never;
+    vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(accountSub);
+    vi.mocked(getOrgSubscription).mockResolvedValue(orgSub);
+    expect(await getAccountSubscriptionState("acc")).toEqual({
+      plan: "pro",
+      activeSubscription: orgSub,
+    });
+  });
+});

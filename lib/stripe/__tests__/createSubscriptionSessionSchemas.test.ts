@@ -20,13 +20,32 @@ describe("createSubscriptionSessionBodySchema", () => {
     expect(r.success).toBe(false);
   });
 
-  it("accepts successUrl only", () => {
+  it("defaults plan to pro when omitted", () => {
     const r = createSubscriptionSessionBodySchema.safeParse({
       successUrl: "https://chat.recoupable.com/done",
     });
     expect(r.success).toBe(true);
     if (r.success) {
-      expect(r.data).toEqual({ successUrl: "https://chat.recoupable.com/done" });
+      expect(r.data).toEqual({
+        plan: "pro",
+        successUrl: "https://chat.recoupable.com/done",
+      });
+    }
+  });
+
+  it("accepts plan, successUrl, and optional cancelUrl", () => {
+    const r = createSubscriptionSessionBodySchema.safeParse({
+      plan: "starter",
+      successUrl: "https://chat.recoupable.com/done",
+      cancelUrl: "https://recoupable.dev/pricing",
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data).toEqual({
+        plan: "starter",
+        successUrl: "https://chat.recoupable.com/done",
+        cancelUrl: "https://recoupable.dev/pricing",
+      });
     }
   });
 });
