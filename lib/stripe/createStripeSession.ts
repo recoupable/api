@@ -1,49 +1,46 @@
 import type Stripe from "stripe";
 import stripeClient from "@/lib/stripe/client";
-import {
-  STRIPE_STARTER_PRICE_ID,
-  STRIPE_SUBSCRIPTION_PRICE_ID,
-  STRIPE_SUBSCRIPTION_TRIAL_PERIOD_DAYS,
-} from "@/lib/stripe/config";
+import type { CheckoutPlan } from "@/lib/stripe/checkout/checkoutPlan";
+import type { CheckoutPrice } from "@/lib/stripe/checkout/resolveCheckoutPrice";
+import { CHECKOUT_UNAUTH_SOURCE } from "@/lib/stripe/checkout/checkoutUnauthSource";
 import { resolveStripeCustomerForAccount } from "@/lib/stripe/resolveStripeCustomerForAccount";
-import { StarterUnavailableError } from "@/lib/stripe/StarterUnavailableError";
 
-export type CheckoutPlan = "starter" | "pro";
+export type CreateStripeSessionArgs = {
+  accountId: string | null;
+  plan: CheckoutPlan;
+  price: CheckoutPrice;
+  successUrl: string;
+  cancelUrl?: string;
+};
 
 /**
- * Mints the subscription Checkout Session for an account. Pro carries the
- * 30-day trial; Starter is charged at checkout and needs the Starter price to
- * be configured. `plan` is stamped on the session and the subscription so the
- * webhook and sales notes can read it without a price lookup.
+ * Mints a Stripe Checkout session for Starter or Pro. Authenticated: the
+ * account's customer and `accountId` metadata. Anonymous: no `customer`
+ * (Stripe creates one from the typed email in subscription mode); the
+ * `checkout.session.completed` webhook links or creates the account.
  */
 export async function createStripeSession(
-  accountId: string,
-  successUrl: string,
-  plan: CheckoutPlan = "pro",
+  args: CreateStripeSessionArgs,
 ): Promise<Stripe.Checkout.Session> {
-  if (plan === "starter" && !STRIPE_STARTER_PRICE_ID) {
-    throw new StarterUnavailableError();
-  }
-  const metadata = { accountId, plan };
-  const customer = await resolveStripeCustomerForAccount(accountId);
+  const { accountId, plan, price, successUrl, cancelUrl } = args;
+  const metadata = accountId ? { accountId, plan } : { plan, source: CHECKOUT_UNAUTH_SOURCE };
 
-  const sessionData: Stripe.Checkout.SessionCreateParams = {
-    customer,
-    line_items: [
-      {
-        price: plan === "starter" ? STRIPE_STARTER_PRICE_ID : STRIPE_SUBSCRIPTION_PRICE_ID,
-        quantity: 1,
-      },
-    ],
+  const params: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",
-    client_reference_id: accountId,
+    line_items: [{ price: price.price, quantity: 1 }],
     metadata,
-    subscription_data:
-      plan === "starter"
-        ? { metadata }
-        : { metadata, trial_period_days: STRIPE_SUBSCRIPTION_TRIAL_PERIOD_DAYS },
+    subscription_data: {
+      metadata,
+      ...(price.trialPeriodDays ? { trial_period_days: price.trialPeriodDays } : {}),
+    },
     success_url: successUrl,
+    ...(cancelUrl ? { cancel_url: cancelUrl } : {}),
   };
 
-  return stripeClient.checkout.sessions.create(sessionData);
+  if (accountId) {
+    params.customer = await resolveStripeCustomerForAccount(accountId);
+    params.client_reference_id = accountId;
+  }
+
+  return stripeClient.checkout.sessions.create(params);
 }

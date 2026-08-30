@@ -1,8 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  STRIPE_SUBSCRIPTION_PRICE_ID,
-  STRIPE_SUBSCRIPTION_TRIAL_PERIOD_DAYS,
-} from "@/lib/stripe/config";
 
 const { checkoutSessionsCreate, resolveStripeCustomerForAccountMock } = vi.hoisted(() => ({
   checkoutSessionsCreate: vi.fn(),
@@ -28,36 +24,45 @@ describe("createStripeSession", () => {
     resolveStripeCustomerForAccountMock.mockResolvedValue("cus_acc1");
   });
 
-  it("resolves the Customer for the account before creating the Checkout session", async () => {
-    await createStripeSession("acc-1", "https://example.com/success");
-    expect(resolveStripeCustomerForAccountMock).toHaveBeenCalledWith("acc-1");
-    expect(resolveStripeCustomerForAccountMock).toHaveBeenCalledBefore(checkoutSessionsCreate);
-  });
+  it("mints an anonymous session with no customer and the plan in metadata", async () => {
+    await createStripeSession({
+      accountId: null,
+      plan: "pro",
+      price: { price: "price_pro", trialPeriodDays: 30 },
+      successUrl: "https://app/?s={CHECKOUT_SESSION_ID}",
+      cancelUrl: "https://site/pricing",
+    });
 
-  it("passes the resolved customer plus the expected params to Stripe", async () => {
-    await createStripeSession("acc-1", "https://example.com/success");
-
+    expect(resolveStripeCustomerForAccountMock).not.toHaveBeenCalled();
     expect(checkoutSessionsCreate).toHaveBeenCalledWith({
-      customer: "cus_acc1",
-      line_items: [{ price: STRIPE_SUBSCRIPTION_PRICE_ID, quantity: 1 }],
       mode: "subscription",
-      client_reference_id: "acc-1",
-      metadata: { accountId: "acc-1", plan: "pro" },
+      line_items: [{ price: "price_pro", quantity: 1 }],
+      metadata: { plan: "pro", source: "checkout_unauth" },
       subscription_data: {
-        metadata: { accountId: "acc-1", plan: "pro" },
-        trial_period_days: STRIPE_SUBSCRIPTION_TRIAL_PERIOD_DAYS,
+        metadata: { plan: "pro", source: "checkout_unauth" },
+        trial_period_days: 30,
       },
-      success_url: "https://example.com/success",
+      success_url: "https://app/?s={CHECKOUT_SESSION_ID}",
+      cancel_url: "https://site/pricing",
     });
   });
 
-  it("does not set cancel_url, customer_email, promo or billing-collection fields", async () => {
-    await createStripeSession("acc-1", "https://example.com/success");
-    const params = checkoutSessionsCreate.mock.calls[0][0] as Record<string, unknown>;
-    expect(params).not.toHaveProperty("cancel_url");
-    expect(params).not.toHaveProperty("customer_email");
-    expect(params).not.toHaveProperty("allow_promotion_codes");
-    expect(params).not.toHaveProperty("billing_address_collection");
+  it("attaches the account customer and accountId metadata when authenticated", async () => {
+    await createStripeSession({
+      accountId: "acc-1",
+      plan: "starter",
+      price: { price: "price_starter" },
+      successUrl: "https://example.com/success",
+    });
+
+    expect(resolveStripeCustomerForAccountMock).toHaveBeenCalledWith("acc-1");
+    const params = checkoutSessionsCreate.mock.calls[0][0];
+    expect(params.customer).toBe("cus_acc1");
     expect(params.client_reference_id).toBe("acc-1");
+    expect(params.metadata).toEqual({ accountId: "acc-1", plan: "starter" });
+    expect(params.subscription_data).toEqual({
+      metadata: { accountId: "acc-1", plan: "starter" },
+    });
+    expect(params).not.toHaveProperty("cancel_url");
   });
 });

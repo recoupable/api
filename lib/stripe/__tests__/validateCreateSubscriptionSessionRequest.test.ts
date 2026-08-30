@@ -12,88 +12,63 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 }));
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
+const body = { plan: "pro", successUrl: "https://chat.recoupable.dev/done" };
+
+const req = (payload: unknown, headers: Record<string, string> = {}) =>
+  new NextRequest("http://localhost/api/subscriptions/sessions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: typeof payload === "string" ? payload : JSON.stringify(payload),
+  });
 
 describe("validateCreateSubscriptionSessionRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns 400 { error } for invalid JSON", async () => {
-    const req = new NextRequest("http://localhost/api/subscriptions/sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": "k" },
-      body: "not-json",
-    });
-    const res = await validateCreateSubscriptionSessionRequest(req);
-    expect(res).toBeInstanceOf(NextResponse);
-    expect((res as NextResponse).status).toBe(400);
-    await expect((res as NextResponse).json()).resolves.toEqual({ error: "Invalid JSON body" });
+  it("returns a null accountId for an anonymous request without touching auth", async () => {
+    const out = await validateCreateSubscriptionSessionRequest(req(body));
+    expect(out).toEqual({ ...body, cancelUrl: undefined, accountId: null });
     expect(validateAuthContext).not.toHaveBeenCalled();
   });
 
-  it("returns 400 { error } when successUrl is missing", async () => {
-    const req = new NextRequest("http://localhost/api/subscriptions/sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": "k" },
-      body: JSON.stringify({}),
-    });
-    const res = await validateCreateSubscriptionSessionRequest(req);
-    expect((res as NextResponse).status).toBe(400);
-    const j = await (res as NextResponse).json();
-    expect(j).toEqual({ error: expect.stringMatching(/successUrl|Invalid input/i) });
-  });
-
-  it("returns 400 { error } for unknown body keys (strict)", async () => {
-    const req = new NextRequest("http://localhost/api/subscriptions/sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": "k" },
-      body: JSON.stringify({
-        successUrl: "https://chat.recoupable.com/done",
-        extra: true,
-      }),
-    });
-    const res = await validateCreateSubscriptionSessionRequest(req);
-    expect((res as NextResponse).status).toBe(400);
-  });
-
-  it("maps auth failure to { error } and preserves status", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue(
-      NextResponse.json(
-        { status: "error", error: "Exactly one of x-api-key or Authorization must be provided" },
-        { status: 401 },
-      ),
+  it("defaults plan to pro when omitted", async () => {
+    const out = await validateCreateSubscriptionSessionRequest(
+      req({ successUrl: "https://chat.recoupable.dev/done" }),
     );
-    const req = new NextRequest("http://localhost/api/subscriptions/sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ successUrl: "https://chat.recoupable.com/done" }),
-    });
-    const res = await validateCreateSubscriptionSessionRequest(req);
-    expect((res as NextResponse).status).toBe(401);
-    await expect((res as NextResponse).json()).resolves.toEqual({
-      error: "Exactly one of x-api-key or Authorization must be provided",
-    });
+    expect(out).toMatchObject({ plan: "pro", accountId: null });
   });
 
-  it("returns accountId and successUrl when auth succeeds", async () => {
+  it("resolves the account when an auth header is present", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue({
       accountId: ACCOUNT,
       orgId: null,
       authToken: "t",
     });
-    const req = new NextRequest("http://localhost/api/subscriptions/sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": "k" },
-      body: JSON.stringify({
-        successUrl: "https://chat.recoupable.com/done",
-      }),
-    });
-    const out = await validateCreateSubscriptionSessionRequest(req);
-    expect(out).toEqual({
-      accountId: ACCOUNT,
-      successUrl: "https://chat.recoupable.com/done",
-      plan: "pro",
-    });
-    expect(validateAuthContext).toHaveBeenCalledWith(req, {});
+    const out = await validateCreateSubscriptionSessionRequest(
+      req(body, { authorization: "Bearer t" }),
+    );
+    expect(out).toMatchObject({ accountId: ACCOUNT, plan: "pro" });
+  });
+
+  it("returns 400 { error } for invalid JSON", async () => {
+    const res = await validateCreateSubscriptionSessionRequest(req("not-json"));
+    expect(res).toBeInstanceOf(NextResponse);
+    expect((res as NextResponse).status).toBe(400);
+    await expect((res as NextResponse).json()).resolves.toEqual({ error: "Invalid JSON body" });
+  });
+
+  it("returns 400 when successUrl is missing", async () => {
+    const res = await validateCreateSubscriptionSessionRequest(req({ plan: "pro" }));
+    expect((res as NextResponse).status).toBe(400);
+  });
+
+  it("maps auth failure to { error } when a header is supplied", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue(
+      NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
+    );
+    const res = await validateCreateSubscriptionSessionRequest(req(body, { "x-api-key": "bad" }));
+    expect((res as NextResponse).status).toBe(401);
+    await expect((res as NextResponse).json()).resolves.toEqual({ error: "Unauthorized" });
   });
 });
