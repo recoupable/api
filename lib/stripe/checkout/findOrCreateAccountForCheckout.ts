@@ -1,6 +1,6 @@
 import { getOrCreateAccountByEmail } from "@/lib/accounts/getOrCreateAccountByEmail";
 import { sendWelcomeEmail } from "@/lib/emails/sendWelcomeEmail";
-import { selectAccountByEmailIlike } from "@/lib/supabase/account_emails/selectAccountByEmailIlike";
+import { selectAccountEmail } from "@/lib/supabase/account_emails/selectAccountEmail";
 
 /**
  * The account a Stripe billing email belongs to (matched case-insensitively,
@@ -11,7 +11,7 @@ import { selectAccountByEmailIlike } from "@/lib/supabase/account_emails/selectA
 export async function findOrCreateAccountForCheckout(
   email: string,
 ): Promise<{ accountId: string; created: boolean }> {
-  const existing = await selectAccountByEmailIlike(email);
+  const existing = await selectAccountEmail(email);
   if (existing?.account_id) return { accountId: existing.account_id, created: false };
 
   const accountId = await getOrCreateAccountByEmail(email);
