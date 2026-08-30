@@ -13,7 +13,7 @@ describe("buildAccountCreditsResponse", () => {
         remaining_credits: 300,
         timestamp: "2026-05-01T12:00:00.000Z",
       },
-      isPro: false,
+      plan: "free",
     });
 
     expect(result).toEqual({
@@ -22,6 +22,9 @@ describe("buildAccountCreditsResponse", () => {
       total_credits: DEFAULT_CREDITS,
       used_credits: DEFAULT_CREDITS - 300,
       is_pro: false,
+      plan: "free",
+      task_limit: 1,
+      min_cadence_minutes: 10080,
       timestamp: "2026-05-01T12:00:00.000Z",
     });
   });
@@ -34,7 +37,7 @@ describe("buildAccountCreditsResponse", () => {
         remaining_credits: 800,
         timestamp: "2026-05-01T12:00:00.000Z",
       },
-      isPro: true,
+      plan: "pro",
     });
 
     expect(result).toEqual({
@@ -43,6 +46,9 @@ describe("buildAccountCreditsResponse", () => {
       total_credits: PRO_CREDITS,
       used_credits: PRO_CREDITS - 800,
       is_pro: true,
+      plan: "pro",
+      task_limit: null,
+      min_cadence_minutes: 60,
       timestamp: "2026-05-01T12:00:00.000Z",
     });
   });
@@ -55,7 +61,7 @@ describe("buildAccountCreditsResponse", () => {
         remaining_credits: DEFAULT_CREDITS + 50,
         timestamp: null,
       },
-      isPro: false,
+      plan: "free",
     });
 
     expect(result.used_credits).toBe(0);
@@ -69,7 +75,7 @@ describe("buildAccountCreditsResponse", () => {
         remaining_credits: DEFAULT_CREDITS,
         timestamp: null,
       },
-      isPro: false,
+      plan: "free",
     });
 
     expect(result.timestamp).toBeNull();

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateTaskRequest } from "@/lib/tasks/validateCreateTaskRequest";
 import { createTask } from "@/lib/tasks/createTask";
+import { PlanLimitError } from "@/lib/plans/PlanLimitError";
 
 /**
  * Creates a new task (scheduled action)
@@ -39,6 +40,9 @@ export async function createTaskHandler(request: NextRequest): Promise<NextRespo
       },
     );
   } catch (error) {
+    if (error instanceof PlanLimitError) {
+      return NextResponse.json(error.body, { status: 402, headers: getCorsHeaders() });
+    }
     console.error("Error creating task:", error);
     return NextResponse.json(
       {

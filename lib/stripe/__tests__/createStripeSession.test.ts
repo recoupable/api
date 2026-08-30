@@ -42,9 +42,9 @@ describe("createStripeSession", () => {
       line_items: [{ price: STRIPE_SUBSCRIPTION_PRICE_ID, quantity: 1 }],
       mode: "subscription",
       client_reference_id: "acc-1",
-      metadata: { accountId: "acc-1" },
+      metadata: { accountId: "acc-1", plan: "pro" },
       subscription_data: {
-        metadata: { accountId: "acc-1" },
+        metadata: { accountId: "acc-1", plan: "pro" },
         trial_period_days: STRIPE_SUBSCRIPTION_TRIAL_PERIOD_DAYS,
       },
       success_url: "https://example.com/success",

@@ -49,7 +49,10 @@ describe("getAccountCreditsHandler", () => {
 
   it("returns 404 with { error } when no credits row exists for the account", async () => {
     vi.mocked(validateAccountCreditsParams).mockResolvedValue(ACCOUNT);
-    vi.mocked(checkAndResetCredits).mockResolvedValue({ creditsUsage: null, isPro: false });
+    vi.mocked(checkAndResetCredits).mockResolvedValue({
+      creditsUsage: null,
+      plan: "free",
+    });
 
     const res = await getAccountCreditsHandler(buildRequest(), buildParams());
     expect(res.status).toBe(404);
@@ -65,7 +68,7 @@ describe("getAccountCreditsHandler", () => {
         remaining_credits: 250,
         timestamp: "2026-05-01T12:00:00.000Z",
       },
-      isPro: false,
+      plan: "free",
     });
 
     const res = await getAccountCreditsHandler(buildRequest(), buildParams());
@@ -76,6 +79,9 @@ describe("getAccountCreditsHandler", () => {
       total_credits: DEFAULT_CREDITS,
       used_credits: DEFAULT_CREDITS - 250,
       is_pro: false,
+      plan: "free",
+      task_limit: 1,
+      min_cadence_minutes: 10080,
       timestamp: "2026-05-01T12:00:00.000Z",
     });
   });
@@ -89,7 +95,7 @@ describe("getAccountCreditsHandler", () => {
         remaining_credits: PRO_CREDITS,
         timestamp: "2026-05-11T12:00:00.000Z",
       },
-      isPro: true,
+      plan: "pro",
     });
 
     const res = await getAccountCreditsHandler(buildRequest(), buildParams());
@@ -100,6 +106,9 @@ describe("getAccountCreditsHandler", () => {
       total_credits: PRO_CREDITS,
       used_credits: 0,
       is_pro: true,
+      plan: "pro",
+      task_limit: null,
+      min_cadence_minutes: 60,
       timestamp: "2026-05-11T12:00:00.000Z",
     });
   });
