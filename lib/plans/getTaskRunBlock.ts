@@ -17,7 +17,7 @@ export async function getTaskRunBlock(
     getAccountSubscriptionState(task.account_id),
     selectScheduledActions({ account_id: task.account_id, enabled: true }),
   ]);
-  const limit = isTaskPlanBlocked({ task, plan, enabledTasks, now: new Date() });
+  const limit = isTaskPlanBlocked({ task, plan, enabledTasks });
   if (!limit) return null;
   const currentTaskCount = enabledTasks.filter(candidate => candidate.id !== task.id).length;
   return buildPlanLimitBody({ plan, limit, currentTaskCount });
