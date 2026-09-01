@@ -1,9 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { requireProjectAccess } from "@/lib/projects/requireProjectAccess";
+import { requireUuidParam } from "@/lib/projects/requireUuidParam";
 import { selectProjectTask } from "@/lib/supabase/project_tasks/selectProjectTask";
 import { selectProjectTaskComments } from "@/lib/supabase/project_task_comments/selectProjectTaskComments";
 import { selectProjectCollaborators } from "@/lib/supabase/project_collaborators/selectProjectCollaborators";
@@ -22,13 +22,9 @@ export async function getProjectTaskHandler(
   taskId: string,
 ): Promise<NextResponse> {
   // Both segments are UUID columns, so both get the guard. `taskId` is the one
-  // a client can mistype out of a link, and unguarded it 500s.
-  if (!z.string().uuid().safeParse(projectId).success) {
-    return errorResponse("projectId must be a valid UUID", 400);
-  }
-  if (!z.string().uuid().safeParse(taskId).success) {
-    return errorResponse("taskId must be a valid UUID", 400);
-  }
+  // a client can mistype out of a link.
+  const invalidId = requireUuidParam(projectId, "projectId") ?? requireUuidParam(taskId, "taskId");
+  if (invalidId) return invalidId;
 
   const access = await requireProjectAccess(request, projectId);
   if (access instanceof NextResponse) return access;
