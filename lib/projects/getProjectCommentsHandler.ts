@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
-import { requireProjectAccess } from "@/lib/projects/requireProjectAccess";
+import { validateProjectTaskRequest } from "@/lib/projects/validateProjectTaskRequest";
 import { selectProjectTask } from "@/lib/supabase/project_tasks/selectProjectTask";
 import { selectProjectTaskComments } from "@/lib/supabase/project_task_comments/selectProjectTaskComments";
 import { toProjectComment } from "@/lib/projects/toProjectComment";
@@ -22,7 +22,7 @@ export async function getProjectCommentsHandler(
   projectId: string,
   taskId: string,
 ): Promise<NextResponse> {
-  const access = await requireProjectAccess(request, projectId);
+  const access = await validateProjectTaskRequest(request, projectId, taskId);
   if (access instanceof NextResponse) return access;
 
   try {
@@ -32,7 +32,7 @@ export async function getProjectCommentsHandler(
     const task = await selectProjectTask(projectId, taskId);
     if (!task) return errorResponse("Task not found", 404);
 
-    const comments = await selectProjectTaskComments(taskId);
+    const comments = await selectProjectTaskComments([taskId]);
     return successResponse({ comments: comments.map(toProjectComment) });
   } catch (error) {
     console.error("Error fetching project task comments:", error);

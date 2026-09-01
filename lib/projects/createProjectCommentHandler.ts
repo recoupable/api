@@ -2,8 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { requireProjectAccess } from "@/lib/projects/requireProjectAccess";
-import { validateCreateProjectCommentBody } from "@/lib/projects/validateCreateProjectCommentBody";
+import { validateCreateProjectCommentRequest } from "@/lib/projects/validateCreateProjectCommentRequest";
 import { selectProjectTask } from "@/lib/supabase/project_tasks/selectProjectTask";
 import { insertProjectTaskComment } from "@/lib/supabase/project_task_comments/insertProjectTaskComment";
 import { toProjectComment } from "@/lib/projects/toProjectComment";
@@ -24,18 +23,15 @@ export async function createProjectCommentHandler(
   projectId: string,
   taskId: string,
 ): Promise<NextResponse> {
-  const access = await requireProjectAccess(request, projectId);
-  if (access instanceof NextResponse) return access;
-
-  const body = await request.json().catch(() => null);
-  const validated = validateCreateProjectCommentBody(body);
+  const validated = await validateCreateProjectCommentRequest(request, projectId, taskId);
   if (validated instanceof NextResponse) return validated;
+  const { accountId, body } = validated;
 
   try {
     const task = await selectProjectTask(projectId, taskId);
     if (!task) return errorResponse("Task not found", 404);
 
-    const comment = await insertProjectTaskComment(taskId, access, validated.body);
+    const comment = await insertProjectTaskComment(taskId, accountId, body.body);
 
     return NextResponse.json(
       { status: "success", comment: toProjectComment(comment) },
