@@ -2533,6 +2533,157 @@ export type Database = {
         };
         Relationships: [];
       };
+      project_collaborators: {
+        Row: {
+          account_id: string;
+          id: string;
+          project_id: string;
+        };
+        Insert: {
+          account_id: string;
+          id?: string;
+          project_id: string;
+        };
+        Update: {
+          account_id?: string;
+          id?: string;
+          project_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "project_collaborators_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_collaborators_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      project_task_comments: {
+        Row: {
+          account_id: string;
+          body: string;
+          created_at: string;
+          id: string;
+          task_id: string;
+        };
+        Insert: {
+          account_id: string;
+          body: string;
+          created_at?: string;
+          id?: string;
+          task_id: string;
+        };
+        Update: {
+          account_id?: string;
+          body?: string;
+          created_at?: string;
+          id?: string;
+          task_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "project_task_comments_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_task_comments_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "project_tasks";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      project_tasks: {
+        Row: {
+          assignee_account_id: string | null;
+          completed_at: string | null;
+          completed_by: string | null;
+          created_at: string;
+          description: string | null;
+          due_date: string | null;
+          id: string;
+          project_id: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          assignee_account_id?: string | null;
+          completed_at?: string | null;
+          completed_by?: string | null;
+          created_at?: string;
+          description?: string | null;
+          due_date?: string | null;
+          id?: string;
+          project_id: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          assignee_account_id?: string | null;
+          completed_at?: string | null;
+          completed_by?: string | null;
+          created_at?: string;
+          description?: string | null;
+          due_date?: string | null;
+          id?: string;
+          project_id?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "project_tasks_assignee_account_id_fkey";
+            columns: ["assignee_account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_tasks_completed_by_fkey";
+            columns: ["completed_by"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_tasks_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      projects: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string;
+        };
+        Relationships: [];
+      };
       pulse_accounts: {
         Row: {
           account_id: string;
