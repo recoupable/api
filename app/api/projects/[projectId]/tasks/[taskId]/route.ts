@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getProjectTaskHandler } from "@/lib/projects/getProjectTaskHandler";
+import { updateProjectTaskHandler } from "@/lib/projects/updateProjectTaskHandler";
+import { deleteProjectTaskHandler } from "@/lib/projects/deleteProjectTaskHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -29,6 +31,44 @@ export async function GET(
 ): Promise<NextResponse> {
   const { projectId, taskId } = await params;
   return getProjectTaskHandler(request, projectId, taskId);
+}
+
+/**
+ * PATCH /api/projects/{projectId}/tasks/{taskId}
+ *
+ * Update a task, including the completion toggle (app#2048).
+ *
+ * @param request - The incoming request, carrying the Bearer credential.
+ * @param root0 - The route context.
+ * @param root0.params - The resolved `projectId` and `taskId` parameters.
+ * @returns 200 with the updated task; 400 on a bad body; 401 unauthenticated;
+ *   404 when the caller is not a collaborator or no such task exists; 500.
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ projectId: string; taskId: string }> },
+): Promise<NextResponse> {
+  const { projectId, taskId } = await params;
+  return updateProjectTaskHandler(request, projectId, taskId);
+}
+
+/**
+ * DELETE /api/projects/{projectId}/tasks/{taskId}
+ *
+ * Delete a task and its comments (app#2048).
+ *
+ * @param request - The incoming request, carrying the Bearer credential.
+ * @param root0 - The route context.
+ * @param root0.params - The resolved `projectId` and `taskId` parameters.
+ * @returns 200 with the deleted id; 401 unauthenticated; 404 when the caller is
+ *   not a collaborator or no such task exists; 500 on a database failure.
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ projectId: string; taskId: string }> },
+): Promise<NextResponse> {
+  const { projectId, taskId } = await params;
+  return deleteProjectTaskHandler(request, projectId, taskId);
 }
 
 export const dynamic = "force-dynamic";
