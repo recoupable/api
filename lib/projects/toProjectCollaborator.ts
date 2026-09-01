@@ -1,4 +1,6 @@
-import type { ProjectCollaboratorRow } from "@/lib/supabase/project_collaborators/selectProjectCollaborators";
+import type { selectProjectCollaborators } from "@/lib/supabase/project_collaborators/selectProjectCollaborators";
+
+type ProjectCollaboratorRow = Awaited<ReturnType<typeof selectProjectCollaborators>>[number];
 
 export interface ProjectCollaboratorPayload {
   account_id: string;

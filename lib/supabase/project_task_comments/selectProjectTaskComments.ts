@@ -1,23 +1,18 @@
 import supabase from "../serverClient";
 
-export interface ProjectTaskCommentRow {
-  id: string;
-  task_id: string;
-  account_id: string;
-  body: string;
-  created_at: string;
-  accounts: { name: string | null } | null;
-}
-
 /**
- * A task's comments, oldest first, each carrying its author's account name so
- * the feed renders without a call per row.
+ * Comments on these tasks, oldest first, each carrying its author's account
+ * name so a feed renders without a call per row.
+ *
+ * Takes a list rather than one id so the project page counts every task's
+ * comments in a single query instead of one per task; the task page passes a
+ * single id.
  */
-export async function selectProjectTaskComments(taskId: string): Promise<ProjectTaskCommentRow[]> {
+export async function selectProjectTaskComments(taskIds: string[]) {
   const { data, error } = await supabase
     .from("project_task_comments")
     .select("id, task_id, account_id, body, created_at, accounts(name)")
-    .eq("task_id", taskId)
+    .in("task_id", taskIds)
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
 
@@ -25,5 +20,5 @@ export async function selectProjectTaskComments(taskId: string): Promise<Project
     throw new Error(`Failed to fetch project_task_comments: ${error.message}`);
   }
 
-  return (data ?? []) as unknown as ProjectTaskCommentRow[];
+  return data ?? [];
 }
