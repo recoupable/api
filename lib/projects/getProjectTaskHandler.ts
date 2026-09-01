@@ -28,7 +28,7 @@ export async function getProjectTaskHandler(
     if (!task) return errorResponse("Task not found", 404);
 
     const [comments, collaborators] = await Promise.all([
-      selectProjectTaskComments(taskId),
+      selectProjectTaskComments([taskId]),
       selectProjectCollaborators(projectId),
     ]);
 

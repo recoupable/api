@@ -1,4 +1,4 @@
-import { selectProjectTaskCommentTaskIds } from "@/lib/supabase/project_task_comments/selectProjectTaskCommentTaskIds";
+import { selectProjectTaskComments } from "@/lib/supabase/project_task_comments/selectProjectTaskComments";
 
 /**
  * How many comments each of these tasks has, keyed by task id.
@@ -9,10 +9,10 @@ import { selectProjectTaskCommentTaskIds } from "@/lib/supabase/project_task_com
 export async function countProjectTaskComments(taskIds: string[]): Promise<Record<string, number>> {
   if (!taskIds.length) return {};
 
-  const rows = await selectProjectTaskCommentTaskIds(taskIds);
+  const comments = await selectProjectTaskComments(taskIds);
 
-  return rows.reduce<Record<string, number>>((counts, row) => {
-    counts[row.task_id] = (counts[row.task_id] ?? 0) + 1;
+  return comments.reduce<Record<string, number>>((counts, comment) => {
+    counts[comment.task_id] = (counts[comment.task_id] ?? 0) + 1;
     return counts;
   }, {});
 }

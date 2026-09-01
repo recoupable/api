@@ -1,14 +1,18 @@
 import supabase from "../serverClient";
 
 /**
- * A task's comments, oldest first, each carrying its author's account name so
- * the feed renders without a call per row.
+ * Comments on these tasks, oldest first, each carrying its author's account
+ * name so a feed renders without a call per row.
+ *
+ * Takes a list rather than one id so the project page counts every task's
+ * comments in a single query instead of one per task; the task page passes a
+ * single id.
  */
-export async function selectProjectTaskComments(taskId: string) {
+export async function selectProjectTaskComments(taskIds: string[]) {
   const { data, error } = await supabase
     .from("project_task_comments")
     .select("id, task_id, account_id, body, created_at, accounts(name)")
-    .eq("task_id", taskId)
+    .in("task_id", taskIds)
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
 
