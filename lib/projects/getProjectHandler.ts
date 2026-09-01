@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { requireProjectAccess } from "@/lib/projects/requireProjectAccess";
@@ -20,6 +21,15 @@ export async function getProjectHandler(
   request: NextRequest,
   projectId: string,
 ): Promise<NextResponse> {
+  // Mirrors getMusicGenerationHandler: a malformed path parameter is answered
+  // before auth or the database. Unguarded it reaches Postgres as `invalid
+  // input syntax for type uuid`, and the catch below turns a URL typo into a
+  // 500. A 400 discloses nothing — it says the id is not an id, not whether
+  // any project by that id exists.
+  if (!z.string().uuid().safeParse(projectId).success) {
+    return errorResponse("projectId must be a valid UUID", 400);
+  }
+
   const access = await requireProjectAccess(request, projectId);
   if (access instanceof NextResponse) return access;
 
