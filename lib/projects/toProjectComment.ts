@@ -1,4 +1,6 @@
-import type { ProjectTaskCommentRow } from "@/lib/supabase/project_task_comments/selectProjectTaskComments";
+import type { selectProjectTaskComments } from "@/lib/supabase/project_task_comments/selectProjectTaskComments";
+
+type ProjectTaskCommentRow = Awaited<ReturnType<typeof selectProjectTaskComments>>[number];
 
 export interface ProjectCommentPayload {
   id: string;

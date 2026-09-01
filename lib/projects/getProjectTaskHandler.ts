@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
-import { requireProjectAccess } from "@/lib/projects/requireProjectAccess";
+import { validateProjectTaskRequest } from "@/lib/projects/validateProjectTaskRequest";
 import { selectProjectTask } from "@/lib/supabase/project_tasks/selectProjectTask";
 import { selectProjectTaskComments } from "@/lib/supabase/project_task_comments/selectProjectTaskComments";
 import { selectProjectCollaborators } from "@/lib/supabase/project_collaborators/selectProjectCollaborators";
@@ -20,7 +20,7 @@ export async function getProjectTaskHandler(
   projectId: string,
   taskId: string,
 ): Promise<NextResponse> {
-  const access = await requireProjectAccess(request, projectId);
+  const access = await validateProjectTaskRequest(request, projectId, taskId);
   if (access instanceof NextResponse) return access;
 
   try {
@@ -28,7 +28,7 @@ export async function getProjectTaskHandler(
     if (!task) return errorResponse("Task not found", 404);
 
     const [comments, collaborators] = await Promise.all([
-      selectProjectTaskComments(taskId),
+      selectProjectTaskComments([taskId]),
       selectProjectCollaborators(projectId),
     ]);
 
