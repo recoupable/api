@@ -2,8 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
-import { requireProjectAccess } from "@/lib/projects/requireProjectAccess";
-import { validateUpdateProjectTaskBody } from "@/lib/projects/validateUpdateProjectTaskBody";
+import { validateUpdateProjectTaskRequest } from "@/lib/projects/validateUpdateProjectTaskRequest";
 import { toTaskUpdates } from "@/lib/projects/toTaskUpdates";
 import { updateProjectTask } from "@/lib/supabase/project_tasks/updateProjectTask";
 
@@ -24,15 +23,12 @@ export async function updateProjectTaskHandler(
   projectId: string,
   taskId: string,
 ): Promise<NextResponse> {
-  const access = await requireProjectAccess(request, projectId);
-  if (access instanceof NextResponse) return access;
-
-  const body = await request.json().catch(() => null);
-  const validated = validateUpdateProjectTaskBody(body);
+  const validated = await validateUpdateProjectTaskRequest(request, projectId, taskId);
   if (validated instanceof NextResponse) return validated;
+  const { accountId, body } = validated;
 
   try {
-    const task = await updateProjectTask(projectId, taskId, toTaskUpdates(validated, access));
+    const task = await updateProjectTask(projectId, taskId, toTaskUpdates(body, accountId));
     if (!task) return errorResponse("Task not found", 404);
 
     return successResponse({ task });

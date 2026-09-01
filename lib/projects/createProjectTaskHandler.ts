@@ -2,8 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { requireProjectAccess } from "@/lib/projects/requireProjectAccess";
-import { validateCreateProjectTaskBody } from "@/lib/projects/validateCreateProjectTaskBody";
+import { validateCreateProjectTaskRequest } from "@/lib/projects/validateCreateProjectTaskRequest";
 import { insertProjectTask } from "@/lib/supabase/project_tasks/insertProjectTask";
 
 /**
@@ -21,20 +20,17 @@ export async function createProjectTaskHandler(
   request: NextRequest,
   projectId: string,
 ): Promise<NextResponse> {
-  const access = await requireProjectAccess(request, projectId);
-  if (access instanceof NextResponse) return access;
-
-  const body = await request.json().catch(() => null);
-  const validated = validateCreateProjectTaskBody(body);
+  const validated = await validateCreateProjectTaskRequest(request, projectId);
   if (validated instanceof NextResponse) return validated;
+  const { body } = validated;
 
   try {
     const task = await insertProjectTask({
       project_id: projectId,
-      title: validated.title,
-      description: validated.description ?? null,
-      due_date: validated.due_date ?? null,
-      assignee_account_id: validated.assignee_account_id ?? null,
+      title: body.title,
+      description: body.description ?? null,
+      due_date: body.due_date ?? null,
+      assignee_account_id: body.assignee_account_id ?? null,
     });
 
     return NextResponse.json(

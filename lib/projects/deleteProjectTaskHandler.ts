@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
-import { requireProjectAccess } from "@/lib/projects/requireProjectAccess";
+import { validateProjectTaskRequest } from "@/lib/projects/validateProjectTaskRequest";
 import { deleteProjectTask } from "@/lib/supabase/project_tasks/deleteProjectTask";
 
 /**
@@ -21,7 +21,7 @@ export async function deleteProjectTaskHandler(
   projectId: string,
   taskId: string,
 ): Promise<NextResponse> {
-  const access = await requireProjectAccess(request, projectId);
+  const access = await validateProjectTaskRequest(request, projectId, taskId);
   if (access instanceof NextResponse) return access;
 
   try {
