@@ -2,12 +2,11 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
-import { requireProjectAccess } from "@/lib/projects/requireProjectAccess";
-import { requireUuidParam } from "@/lib/projects/requireUuidParam";
+import { validateProjectRequest } from "@/lib/projects/validateProjectRequest";
 import { selectProject } from "@/lib/supabase/projects/selectProject";
 import { selectProjectTasks } from "@/lib/supabase/project_tasks/selectProjectTasks";
 import { selectProjectCollaborators } from "@/lib/supabase/project_collaborators/selectProjectCollaborators";
-import { countProjectTaskComments } from "@/lib/supabase/project_task_comments/countProjectTaskComments";
+import { countProjectTaskComments } from "@/lib/projects/countProjectTaskComments";
 import { toProjectTask } from "@/lib/projects/toProjectTask";
 import { toProjectCollaborator } from "@/lib/projects/toProjectCollaborator";
 
@@ -21,10 +20,7 @@ export async function getProjectHandler(
   request: NextRequest,
   projectId: string,
 ): Promise<NextResponse> {
-  const invalidProjectId = requireUuidParam(projectId, "projectId");
-  if (invalidProjectId) return invalidProjectId;
-
-  const access = await requireProjectAccess(request, projectId);
+  const access = await validateProjectRequest(request, projectId);
   if (access instanceof NextResponse) return access;
 
   try {

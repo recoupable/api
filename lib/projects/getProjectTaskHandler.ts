@@ -2,8 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
-import { requireProjectAccess } from "@/lib/projects/requireProjectAccess";
-import { requireUuidParam } from "@/lib/projects/requireUuidParam";
+import { validateProjectTaskRequest } from "@/lib/projects/validateProjectTaskRequest";
 import { selectProjectTask } from "@/lib/supabase/project_tasks/selectProjectTask";
 import { selectProjectTaskComments } from "@/lib/supabase/project_task_comments/selectProjectTaskComments";
 import { selectProjectCollaborators } from "@/lib/supabase/project_collaborators/selectProjectCollaborators";
@@ -21,12 +20,7 @@ export async function getProjectTaskHandler(
   projectId: string,
   taskId: string,
 ): Promise<NextResponse> {
-  // Both segments are UUID columns, so both get the guard. `taskId` is the one
-  // a client can mistype out of a link.
-  const invalidId = requireUuidParam(projectId, "projectId") ?? requireUuidParam(taskId, "taskId");
-  if (invalidId) return invalidId;
-
-  const access = await requireProjectAccess(request, projectId);
+  const access = await validateProjectTaskRequest(request, projectId, taskId);
   if (access instanceof NextResponse) return access;
 
   try {
