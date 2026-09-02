@@ -35,13 +35,17 @@ describe("createImageBodySchema", () => {
     expect(createImageBodySchema.safeParse({}).success).toBe(true);
   });
 
-  it("accepts custom model", () => {
+  // The model is pinned server-side: an arbitrary caller-supplied model ran on
+  // our production FAL_KEY at our expense (recoupable/app#2052).
+  it("does not carry a caller-supplied model", () => {
     const result = createImageBodySchema.safeParse({
       prompt: "test",
       model: "fal-ai/some-other-model",
     });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.model).toBe("fal-ai/some-other-model");
+    if (result.success) {
+      expect("model" in result.data).toBe(false);
+    }
   });
 });
 

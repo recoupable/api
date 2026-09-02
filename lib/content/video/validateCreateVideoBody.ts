@@ -19,7 +19,6 @@ export const createVideoBodySchema = z.object({
   resolution: z.enum(["720p", "1080p", "4k"]).optional().default("720p"),
   negative_prompt: z.string().optional(),
   generate_audio: z.boolean().optional().default(false),
-  model: z.string().optional(),
 });
 
 export type ValidatedCreateVideoBody = { accountId: string } & z.infer<

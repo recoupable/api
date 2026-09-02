@@ -2,8 +2,12 @@ import type { z } from "zod";
 import type { createImageBodySchema } from "./validateCreateImageBody";
 import { loadTemplate } from "@/lib/content/templates";
 
-const DEFAULT_T2I_MODEL = "fal-ai/nano-banana-2";
-const DEFAULT_EDIT_MODEL = "fal-ai/nano-banana-2/edit";
+// Owner ruling 2026-09-01: Muse Image is the house still model. $0.01 an
+// image against Nano Banana 2's $0.08 — and NB2 billed 2K at 1.5x ($0.12),
+// which is what this file was actually set to. Ids verified against fal
+// 2026-09-02; the bare `meta/muse-image` 404s.
+const T2I_MODEL = "meta/muse-image/text-to-image";
+const EDIT_MODEL = "meta/muse-image/edit";
 
 type ImageParams = z.infer<typeof createImageBodySchema>;
 
@@ -50,13 +54,13 @@ export function buildImageInput(validated: ImageParams): ImageInput {
   let model: string;
 
   if (hasReferenceImages) {
-    model = validated.model ?? DEFAULT_EDIT_MODEL;
+    model = EDIT_MODEL;
     const imageUrls: string[] = [];
     if (refImageUrl) imageUrls.push(refImageUrl);
     if (validated.images) imageUrls.push(...validated.images);
     input.image_urls = imageUrls;
   } else {
-    model = validated.model ?? DEFAULT_T2I_MODEL;
+    model = T2I_MODEL;
   }
 
   return { model, input };

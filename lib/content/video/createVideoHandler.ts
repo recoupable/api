@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateVideoBody } from "./validateCreateVideoBody";
 import { generateVideo } from "./generateVideo";
+import { inferMode } from "./inferMode";
+import { ensureVideoCredits } from "@/lib/content/ensureContentCredits";
+import { parseDurationSeconds } from "@/lib/content/parseDurationSeconds";
 
 /**
  * POST /api/content/video
@@ -13,6 +16,16 @@ import { generateVideo } from "./generateVideo";
 export async function createVideoHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateCreateVideoBody(request);
   if (validated instanceof NextResponse) return validated;
+
+  // Price on the same mode the generator will resolve, so the charge and the
+  // model can never disagree.
+  const mode = validated.mode ?? inferMode(validated);
+  const short = await ensureVideoCredits(
+    validated.accountId,
+    parseDurationSeconds(validated.duration),
+    mode,
+  );
+  if (short) return short;
 
   try {
     const result = await generateVideo(validated);

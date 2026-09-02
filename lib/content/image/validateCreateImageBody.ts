@@ -33,7 +33,6 @@ export const createImageBodySchema = z.object({
     .optional()
     .default("auto"),
   resolution: z.enum(["0.5K", "1K", "2K", "4K"]).optional().default("1K"),
-  model: z.string().optional(),
 });
 
 export type ValidatedCreateImageBody = { accountId: string } & z.infer<

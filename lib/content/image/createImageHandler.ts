@@ -4,6 +4,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import fal from "@/lib/fal/server";
 import { validateCreateImageBody } from "./validateCreateImageBody";
 import { buildImageInput } from "./buildImageInput";
+import { ensureImageCredits } from "@/lib/content/ensureContentCredits";
 
 /**
  * POST /api/content/image
@@ -14,6 +15,9 @@ import { buildImageInput } from "./buildImageInput";
 export async function createImageHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateCreateImageBody(request);
   if (validated instanceof NextResponse) return validated;
+
+  const short = await ensureImageCredits(validated.accountId, validated.num_images);
+  if (short) return short;
 
   try {
     const { model, input } = buildImageInput(validated);

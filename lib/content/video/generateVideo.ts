@@ -5,13 +5,19 @@ import { loadTemplate } from "@/lib/content/templates";
 import { inferMode } from "./inferMode";
 import { buildFalInput } from "./buildFalInput";
 
+// Owner ruling 2026-08-31: MiniMax H3 Max is the house image-to-video model;
+// lipsync goes to OmniHuman, which is the only one that syncs a mouth to real
+// audio. Ids verified against fal 2026-09-02. Not caller-overridable — cost is
+// only predictable if the model is ours (recoupable/app#2052).
+const HOUSE_I2V_MODEL = "minimax/h3-max/image-to-video";
+
 const MODELS: Record<string, string> = {
-  prompt: "fal-ai/veo3.1/fast/image-to-video",
-  animate: "fal-ai/veo3.1/fast/image-to-video",
-  reference: "fal-ai/veo3.1/fast/image-to-video",
-  extend: "fal-ai/veo3.1/fast/image-to-video",
-  "first-last": "fal-ai/veo3.1/fast/image-to-video",
-  lipsync: "fal-ai/ltx-2-19b/audio-to-video",
+  prompt: HOUSE_I2V_MODEL,
+  animate: HOUSE_I2V_MODEL,
+  reference: HOUSE_I2V_MODEL,
+  extend: HOUSE_I2V_MODEL,
+  "first-last": HOUSE_I2V_MODEL,
+  lipsync: "fal-ai/bytedance/omnihuman/v1.5",
 };
 
 type VideoParams = z.infer<typeof createVideoBodySchema>;
@@ -44,7 +50,7 @@ export async function generateVideo(validated: VideoParams): Promise<GenerateVid
   }
 
   const mode = validated.mode ?? inferMode(validated);
-  const model = validated.model ?? MODELS[mode] ?? MODELS.prompt;
+  const model = MODELS[mode] ?? MODELS.prompt;
   const input = buildFalInput(mode, { ...validated, prompt: promptOverride ?? validated.prompt });
 
   const result = await fal.subscribe(model, { input });
