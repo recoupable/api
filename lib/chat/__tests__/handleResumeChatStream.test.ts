@@ -47,22 +47,28 @@ beforeEach(() => {
 });
 
 describe("handleResumeChatStream", () => {
-  it("returns 204 when the chat has no active stream", async () => {
+  // A bare 204 does not terminate the client's resume loop — it is `ok` and,
+  // cross-origin, arrives with a non-null empty body, so the loop neither
+  // throws nor finishes and re-requests forever (recoupable/app#2052). Say
+  // "finished" in the protocol instead.
+  it("returns a terminal finish stream when the chat has no active stream", async () => {
     withChat(null);
 
     const res = await handleResumeChatStream(request(), CHAT_ID);
 
-    expect(res.status).toBe(204);
+    expect(res.status).toBe(200);
+    await expect(new Response(res.body).text()).resolves.toContain('"type":"finish"');
     expect(getRun).not.toHaveBeenCalled();
   });
 
-  it("returns 204 and clears the stale id when the run is already terminal", async () => {
+  it("returns a terminal finish stream and clears the stale id when the run is already terminal", async () => {
     withChat(RUN_ID);
     withRun("completed");
 
     const res = await handleResumeChatStream(request(), CHAT_ID);
 
-    expect(res.status).toBe(204);
+    expect(res.status).toBe(200);
+    await expect(new Response(res.body).text()).resolves.toContain('"type":"finish"');
     expect(compareAndSetChatActiveStreamId).toHaveBeenCalledWith(CHAT_ID, RUN_ID, null);
   });
 
