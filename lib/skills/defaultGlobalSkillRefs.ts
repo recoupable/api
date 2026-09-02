@@ -21,4 +21,7 @@ export const DEFAULT_GLOBAL_SKILL_REFS: readonly GlobalSkillRef[] = [
   { source: "recoupable/skills", skillName: "recoup-roster-add-artist" },
   { source: "recoupable/skills", skillName: "recoup-roster-list-artists" },
   { source: "recoupable/skills", skillName: "recoup-roster-manage-artist" },
+  // Music video: generate the song, then build the film around it. Needs
+  // ffmpeg in the sandbox base image (recoupable/app#2052).
+  { source: "recoupable/skills", skillName: "recoup-music-video" },
 ];
