@@ -14,11 +14,14 @@
  *   - bun            (curl -fsSL https://bun.sh/install | sudo BUN_INSTALL=/usr/local bash)
  *   - agent-browser  (sudo npm install -g agent-browser)
  *   - code-server    (curl -fsSL https://code-server.dev/install.sh | sudo sh)
+ *   - ffmpeg/ffprobe (static build — see scripts/build-base-snapshot.sh)
  *
- * To refresh: provision a clean sandbox with the @vercel/sandbox SDK,
- * run the install commands above (plus any new ones), snapshot it via
- * `vercel sandbox snapshot <id> --stop`, and update the constant
- * below with the new id.
+ * To refresh: run `scripts/build-base-snapshot.sh`, which prints the exact
+ * provisioning commands, then update the constant below with the new id.
+ *
+ * Tooling note: ffmpeg comes from a static build, not dnf — Amazon Linux
+ * 2023 carries no ffmpeg package. It is required by the music-video pipeline,
+ * which muxes audio onto a render inside the sandbox (recoupable/app#2052).
  *
  * Tooling note: chromium is intentionally NOT in this base — Amazon
  * Linux 2023's default repo doesn't carry it, and `agent-browser`
