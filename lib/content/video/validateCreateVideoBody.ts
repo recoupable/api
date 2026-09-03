@@ -4,22 +4,17 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { TEMPLATE_IDS } from "@/lib/content/templates";
 
 export const createVideoBodySchema = z.object({
-  template: z.enum(TEMPLATE_IDS).optional(),
-  mode: z.enum(["prompt", "animate", "reference", "extend", "first-last", "lipsync"]).optional(),
-  prompt: z.string().optional(),
+  prompt: z.string().min(1).max(50000),
+  prompt_expansion_mode: z.enum(["balanced", "quality"]).optional().default("balanced"),
   image_url: z.string().url().optional(),
   end_image_url: z.string().url().optional(),
-  video_url: z.string().url().optional(),
-  audio_url: z.string().url().optional(),
-  aspect_ratio: z.enum(["auto", "16:9", "9:16"]).optional().default("auto"),
-  duration: z.enum(["4s", "6s", "7s", "8s"]).optional().default("8s"),
-  resolution: z.enum(["720p", "1080p", "4k"]).optional().default("720p"),
-  negative_prompt: z.string().optional(),
-  generate_audio: z.boolean().optional().default(false),
-  model: z.string().optional(),
+  duration: z.number().int().min(5).max(15).optional().default(5),
+  resolution: z.enum(["480P", "768P"]).optional().default("768P"),
+  seed: z.number().int().optional(),
+  enable_safety_checker: z.boolean().optional().default(true),
+  sync_mode: z.boolean().optional().default(false),
 });
 
 export type ValidatedCreateVideoBody = { accountId: string } & z.infer<

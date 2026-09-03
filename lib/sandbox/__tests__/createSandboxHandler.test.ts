@@ -9,8 +9,10 @@ import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import { installSessionGlobalSkills } from "@/lib/sandbox/installSessionGlobalSkills";
 import { findOrgSnapshot } from "@/lib/sandbox/findOrgSnapshot";
 import { kickBuildOrgSnapshotWorkflow } from "@/lib/sandbox/kickBuildOrgSnapshotWorkflow";
+import { getOrgSnapshotName } from "@/lib/sandbox/getOrgSnapshotName";
 import { kickSandboxLifecycleWorkflow } from "@/lib/sandbox/kickSandboxLifecycleWorkflow";
 import { resolveGitUser } from "@/lib/sandbox/resolveGitUser";
+import { DEFAULT_SANDBOX_BASE_SNAPSHOT_ID } from "@/lib/sandbox/defaultBaseSnapshotId";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
@@ -253,7 +255,7 @@ describe("createSandboxHandler", () => {
 
     await createSandboxHandler(makeReq());
 
-    expect(findOrgSnapshot).toHaveBeenCalledWith("org-acme-xyz");
+    expect(findOrgSnapshot).toHaveBeenCalledWith(getOrgSnapshotName("org-acme-xyz"));
     const arg = vi.mocked(connectSandbox).mock.calls[0]?.[0];
     if (!arg || !("options" in arg)) throw new Error("expected new-API config shape");
     if (!("state" in arg)) throw new Error("expected new-API state shape");
@@ -262,7 +264,7 @@ describe("createSandboxHandler", () => {
     expect((arg.state as any).source.prebuilt).toBe(true);
   });
 
-  it("skips the snapshot lookup entirely for non-recoupable repos", async () => {
+  it("skips the org snapshot lookup for non-recoupable repos, but still uses the default tooling base", async () => {
     vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce({
       body: {
         repoUrl: "https://github.com/someoneelse/repo",
@@ -276,10 +278,10 @@ describe("createSandboxHandler", () => {
     expect(findOrgSnapshot).not.toHaveBeenCalled();
     const arg = vi.mocked(connectSandbox).mock.calls[0]?.[0];
     if (!arg || !("options" in arg)) throw new Error("expected new-API config shape");
-    expect(arg.options?.baseSnapshotId).toBeUndefined();
+    expect(arg.options?.baseSnapshotId).toBe(DEFAULT_SANDBOX_BASE_SNAPSHOT_ID);
   });
 
-  it("does not pass baseSnapshotId when the org snapshot lookup misses", async () => {
+  it("falls back to the default tooling base snapshot when the org snapshot lookup misses", async () => {
     vi.mocked(validateCreateSandboxBody).mockResolvedValueOnce({
       body: {
         repoUrl: "https://github.com/recoupable/org-no-snap-yet",
@@ -291,11 +293,15 @@ describe("createSandboxHandler", () => {
 
     await createSandboxHandler(makeReq());
 
-    expect(findOrgSnapshot).toHaveBeenCalledWith("org-no-snap-yet");
+    expect(findOrgSnapshot).toHaveBeenCalledWith(getOrgSnapshotName("org-no-snap-yet"));
     const arg = vi.mocked(connectSandbox).mock.calls[0]?.[0];
     if (!arg || !("options" in arg)) throw new Error("expected new-API config shape");
     if (!("state" in arg)) throw new Error("expected new-API state shape");
-    expect(arg.options?.baseSnapshotId).toBeUndefined();
+    // Without this, the sandbox for *this* request boots completely bare —
+    // no ffmpeg, jq, bun, agent-browser, code-server — even though the
+    // kicked-off background rebuild only benefits the *next* session
+    // (recoupable/app#2052).
+    expect(arg.options?.baseSnapshotId).toBe(DEFAULT_SANDBOX_BASE_SNAPSHOT_ID);
 
     expect((arg.state as any).source.prebuilt).toBe(false);
   });
@@ -314,7 +320,7 @@ describe("createSandboxHandler", () => {
 
     expect(kickBuildOrgSnapshotWorkflow).toHaveBeenCalledWith({
       cloneUrl: "https://github.com/recoupable/org-no-snap-yet",
-      sandboxName: "org-no-snap-yet",
+      sandboxName: getOrgSnapshotName("org-no-snap-yet"),
     });
   });
 

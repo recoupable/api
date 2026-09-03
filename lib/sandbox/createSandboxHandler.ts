@@ -12,6 +12,8 @@ import { kickBuildOrgSnapshotWorkflow } from "@/lib/sandbox/kickBuildOrgSnapshot
 import { kickSandboxLifecycleWorkflow } from "@/lib/sandbox/kickSandboxLifecycleWorkflow";
 import { resolveGitUser } from "@/lib/sandbox/resolveGitUser";
 import { extractOrgRepoName } from "@/lib/recoupable/extractOrgRepoName";
+import { getOrgSnapshotName } from "@/lib/sandbox/getOrgSnapshotName";
+import { DEFAULT_SANDBOX_BASE_SNAPSHOT_ID } from "@/lib/sandbox/defaultBaseSnapshotId";
 import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
 import type { Json, Tables } from "@/types/database.types";
 
@@ -68,16 +70,19 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
   // for the case where it can pay off. A miss falls through to default
   // sandbox provisioning; an error is logged and treated as a miss.
   const orgRepoName = extractOrgRepoName(body.repoUrl);
-  const orgSnapshotId = orgRepoName ? await findOrgSnapshot(orgRepoName) : null;
+  // Named per base, so a new base (e.g. one that adds ffmpeg) is a miss for
+  // every org until its snapshot is rebuilt on it.
+  const orgSnapshotName = orgRepoName ? getOrgSnapshotName(orgRepoName) : null;
+  const orgSnapshotId = orgSnapshotName ? await findOrgSnapshot(orgSnapshotName) : null;
 
   // Miss: kick a background workflow to build a snapshot for this org so
   // the *next* session warm-boots from it. This request still pays the
   // full-clone cold-start path — the workflow runs durably outside the
   // request lifecycle.
-  if (orgRepoName && !orgSnapshotId) {
+  if (orgSnapshotName && !orgSnapshotId) {
     kickBuildOrgSnapshotWorkflow({
       cloneUrl: body.repoUrl,
-      sandboxName: orgRepoName,
+      sandboxName: orgSnapshotName,
     });
   }
 
@@ -108,7 +113,12 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
         ports: DEFAULT_PORTS,
         githubToken: getServiceGithubToken(),
         gitUser,
-        ...(orgSnapshotId ? { baseSnapshotId: orgSnapshotId } : {}),
+        // A miss still needs the standard tooling base (ffmpeg, jq, bun,
+        // agent-browser, code-server) — omitting baseSnapshotId here would
+        // boot this request's own sandbox completely bare, even though the
+        // org-snapshot rebuild kicked off above only benefits the *next*
+        // session (recoupable/app#2052).
+        baseSnapshotId: orgSnapshotId ?? DEFAULT_SANDBOX_BASE_SNAPSHOT_ID,
         persistent: !!sandboxName,
         resume: !!sandboxName,
         createIfMissing: !!sandboxName,
