@@ -315,7 +315,7 @@ describe("createSandboxHandler", () => {
 
     expect(kickBuildOrgSnapshotWorkflow).toHaveBeenCalledWith({
       cloneUrl: "https://github.com/recoupable/org-no-snap-yet",
-      sandboxName: "org-no-snap-yet",
+      sandboxName: getOrgSnapshotName("org-no-snap-yet"),
     });
   });
 
