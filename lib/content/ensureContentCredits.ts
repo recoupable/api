@@ -1,11 +1,17 @@
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
-import { creditCostForImages, creditCostForVideoSeconds } from "@/lib/content/creditCostForContent";
+import {
+  creditCostForImageUnits,
+  creditCostForVideoUnits,
+  estimateVideoUnits,
+} from "@/lib/content/creditCostForContent";
 
 /**
- * Credit gate for image generation.
+ * Pre-flight credit gate for image generation.
  *
- * Checked before fal is called, so an account without credits never spends our
- * money. These routes carried no gate at all until recoupable/app#2052.
+ * Checked before fal is called, so an account without credits never spends
+ * our money. These routes carried no gate at all until recoupable/app#2052.
+ * `imageCount` is already the exact billable unit count — one image is one
+ * unit, unaffected by resolution or aspect ratio.
  *
  * @param accountId - Account being charged.
  * @param imageCount - Images requested (`num_images`).
@@ -14,18 +20,25 @@ import { creditCostForImages, creditCostForVideoSeconds } from "@/lib/content/cr
 export const ensureImageCredits = (accountId: string, imageCount: number) =>
   ensureCreditsOrShortCircuit({
     accountId,
-    creditsToDeduct: creditCostForImages(imageCount),
+    creditsToDeduct: creditCostForImageUnits(imageCount),
   });
 
 /**
- * Credit gate for video generation.
+ * Pre-flight credit gate for video generation, on our own estimate — the
+ * real fal-reported unit count isn't known until after generation, when the
+ * actual deduction happens (`createVideoHandler.ts`).
  *
  * @param accountId - Account being charged.
- * @param seconds - Duration requested.
+ * @param durationSeconds - Requested `duration`.
+ * @param resolution - Requested `resolution`.
  * @returns A 402 NextResponse the handler returns directly, or null to proceed.
  */
-export const ensureVideoCredits = (accountId: string, seconds: number) =>
+export const ensureVideoCredits = (
+  accountId: string,
+  durationSeconds: number,
+  resolution: "480P" | "768P",
+) =>
   ensureCreditsOrShortCircuit({
     accountId,
-    creditsToDeduct: creditCostForVideoSeconds(seconds),
+    creditsToDeduct: creditCostForVideoUnits(estimateVideoUnits(durationSeconds, resolution)),
   });
