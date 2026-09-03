@@ -10,7 +10,7 @@ import { usdToCredits } from "@/lib/credits/usdToCredits";
 export const FAL_IMAGE_USD_PER_IMAGE = 0.01;
 
 /**
- * fal's rate for the house image-to-video model (MiniMax H3 Max) at 768p.
+ * fal's rate for the house video model (MiniMax H3 Max) at 768p.
  *
  * NOTE: fal is running a launch promotion at $0.02/s that **ends 2026-09-07**,
  * after which the rate returns to this value. We deliberately charge the
@@ -18,9 +18,6 @@ export const FAL_IMAGE_USD_PER_IMAGE = 0.01;
  * for customers on the day it expires.
  */
 export const FAL_VIDEO_USD_PER_SECOND = 0.08;
-
-/** fal's rate for OmniHuman 1.5, which is what `lipsync` mode runs. */
-export const FAL_LIPSYNC_USD_PER_SECOND = 0.16;
 
 /**
  * Credits to charge for a set of generated images.
@@ -37,12 +34,9 @@ export function creditCostForImages(count: number): number {
  * Credits to charge for generated video.
  *
  * @param seconds - Duration requested.
- * @param mode - The video mode; `lipsync` runs a different, dearer model.
  * @returns Whole credits; zero for a non-positive duration.
  */
-export function creditCostForVideoSeconds(seconds: number, mode: string): number {
+export function creditCostForVideoSeconds(seconds: number): number {
   if (seconds <= 0) return 0;
-  const rate =
-    mode === "lipsync" ? FAL_LIPSYNC_USD_PER_SECOND : FAL_VIDEO_USD_PER_SECOND;
-  return usdToCredits(seconds * rate);
+  return usdToCredits(seconds * FAL_VIDEO_USD_PER_SECOND);
 }

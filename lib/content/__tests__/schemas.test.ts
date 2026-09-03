@@ -22,35 +22,70 @@ describe("createImageBodySchema", () => {
     ).toBe(true);
   });
 
-  it("parses valid payload with reference image", () => {
+  it("parses valid payload with reference images to edit", () => {
     expect(
       createImageBodySchema.safeParse({
         prompt: "portrait photo",
-        reference_image_url: "https://example.com/ref.png",
+        image_urls: ["https://example.com/ref.png"],
       }).success,
     ).toBe(true);
+  });
+
+  it("rejects more than 10 reference images — Muse Image's real cap", () => {
+    const urls = Array.from({ length: 11 }, (_, i) => `https://example.com/${i}.png`);
+    expect(createImageBodySchema.safeParse({ image_urls: urls }).success).toBe(false);
   });
 
   it("parses empty payload (all fields optional)", () => {
     expect(createImageBodySchema.safeParse({}).success).toBe(true);
   });
 
-  // The model is pinned server-side: an arbitrary caller-supplied model ran on
-  // our production FAL_KEY at our expense (recoupable/app#2052).
-  it("does not carry a caller-supplied model", () => {
+  it("accepts output_format and sync_mode — real Muse Image params", () => {
     const result = createImageBodySchema.safeParse({
       prompt: "test",
+      output_format: "png",
+      sync_mode: true,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.output_format).toBe("png");
+      expect(result.data.sync_mode).toBe(true);
+    }
+  });
+
+  it("defaults output_format to webp and sync_mode to false", () => {
+    const result = createImageBodySchema.safeParse({ prompt: "test" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.output_format).toBe("webp");
+      expect(result.data.sync_mode).toBe(false);
+    }
+  });
+
+  it("rejects an aspect_ratio Muse Image does not support", () => {
+    expect(createImageBodySchema.safeParse({ prompt: "test", aspect_ratio: "5:4" }).success).toBe(
+      false,
+    );
+  });
+
+  it("does not carry template, resolution, or a caller-supplied model — dropped params", () => {
+    const result = createImageBodySchema.safeParse({
+      prompt: "test",
+      template: "artist-caption-bedroom",
+      resolution: "2K",
       model: "fal-ai/some-other-model",
     });
     expect(result.success).toBe(true);
     if (result.success) {
+      expect("template" in result.data).toBe(false);
+      expect("resolution" in result.data).toBe(false);
       expect("model" in result.data).toBe(false);
     }
   });
 });
 
 describe("createVideoBodySchema", () => {
-  it("parses prompt-only payload", () => {
+  it("parses prompt-only payload (text-to-video, image_url omitted)", () => {
     expect(
       createVideoBodySchema.safeParse({
         prompt: "a calm ocean",
@@ -58,66 +93,81 @@ describe("createVideoBodySchema", () => {
     ).toBe(true);
   });
 
-  it("parses animate mode with image", () => {
-    expect(
-      createVideoBodySchema.safeParse({
-        mode: "animate",
-        image_url: "https://example.com/img.png",
-        prompt: "make it move",
-      }).success,
-    ).toBe(true);
+  it("rejects a missing prompt — H3 Max requires it", () => {
+    expect(createVideoBodySchema.safeParse({}).success).toBe(false);
   });
 
-  it("parses extend mode with video", () => {
+  it("parses image-to-video with an end frame", () => {
     expect(
       createVideoBodySchema.safeParse({
-        mode: "extend",
-        video_url: "https://example.com/clip.mp4",
-        prompt: "continue the scene",
-      }).success,
-    ).toBe(true);
-  });
-
-  it("parses first-last mode with two images", () => {
-    expect(
-      createVideoBodySchema.safeParse({
-        mode: "first-last",
+        prompt: "transition between these",
         image_url: "https://example.com/start.png",
         end_image_url: "https://example.com/end.png",
-        prompt: "transition between these",
       }).success,
     ).toBe(true);
   });
 
-  it("parses lipsync mode", () => {
-    expect(
-      createVideoBodySchema.safeParse({
-        mode: "lipsync",
-        image_url: "https://example.com/face.png",
-        audio_url: "https://example.com/audio.mp3",
-      }).success,
-    ).toBe(true);
-  });
-
-  it("defaults duration to 8s", () => {
+  it("defaults prompt_expansion_mode to balanced", () => {
     const result = createVideoBodySchema.safeParse({ prompt: "test" });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.duration).toBe("8s");
+    if (result.success) expect(result.data.prompt_expansion_mode).toBe("balanced");
   });
 
-  it("defaults generate_audio to false", () => {
+  it("defaults duration to 5 seconds and resolution to 768P — H3 Max's real defaults", () => {
     const result = createVideoBodySchema.safeParse({ prompt: "test" });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.generate_audio).toBe(false);
+    if (result.success) {
+      expect(result.data.duration).toBe(5);
+      expect(result.data.resolution).toBe("768P");
+    }
   });
 
-  it("parses video with template", () => {
-    expect(
-      createVideoBodySchema.safeParse({
-        template: "artist-caption-bedroom",
-        prompt: "subtle motion",
-      }).success,
-    ).toBe(true);
+  it("rejects a duration outside H3 Max's 5-15s range", () => {
+    expect(createVideoBodySchema.safeParse({ prompt: "test", duration: 20 }).success).toBe(false);
+    expect(createVideoBodySchema.safeParse({ prompt: "test", duration: 3 }).success).toBe(false);
+  });
+
+  it("rejects a resolution H3 Max does not support", () => {
+    expect(createVideoBodySchema.safeParse({ prompt: "test", resolution: "1080p" }).success).toBe(
+      false,
+    );
+  });
+
+  it("accepts seed, enable_safety_checker, and sync_mode — real H3 Max params", () => {
+    const result = createVideoBodySchema.safeParse({
+      prompt: "test",
+      seed: 123,
+      enable_safety_checker: false,
+      sync_mode: true,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("does not carry mode, template, video_url, audio_url, aspect_ratio, negative_prompt, or generate_audio — dropped params", () => {
+    const result = createVideoBodySchema.safeParse({
+      prompt: "test",
+      mode: "lipsync",
+      template: "artist-caption-bedroom",
+      video_url: "https://example.com/clip.mp4",
+      audio_url: "https://example.com/audio.mp3",
+      aspect_ratio: "16:9",
+      negative_prompt: "no text",
+      generate_audio: true,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      for (const key of [
+        "mode",
+        "template",
+        "video_url",
+        "audio_url",
+        "aspect_ratio",
+        "negative_prompt",
+        "generate_audio",
+      ]) {
+        expect(key in result.data).toBe(false);
+      }
+    }
   });
 });
 

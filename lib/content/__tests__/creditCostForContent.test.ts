@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  creditCostForImages,
-  creditCostForVideoSeconds,
-} from "@/lib/content/creditCostForContent";
+import { creditCostForImages, creditCostForVideoSeconds } from "@/lib/content/creditCostForContent";
 import { usdToCredits } from "@/lib/credits/usdToCredits";
 
 describe("creditCostForImages", () => {
@@ -18,20 +15,15 @@ describe("creditCostForImages", () => {
 });
 
 describe("creditCostForVideoSeconds", () => {
-  // Lipsync runs OmniHuman, which costs twice the house image-to-video rate.
-  it("prices lipsync higher than every other mode", () => {
-    expect(creditCostForVideoSeconds(10, "lipsync")).toBe(usdToCredits(1.6));
-    expect(creditCostForVideoSeconds(10, "animate")).toBe(usdToCredits(0.8));
-    expect(creditCostForVideoSeconds(10, "prompt")).toBe(usdToCredits(0.8));
+  // H3 Max is the only video model now — lipsync/OmniHuman is out of scope
+  // (recoupable/app#2052, docs#328).
+  it("prices per second at the house video rate", () => {
+    expect(creditCostForVideoSeconds(10)).toBe(usdToCredits(0.8));
+    expect(creditCostForVideoSeconds(5)).toBe(usdToCredits(0.4));
   });
 
   it("is zero for a non-positive duration", () => {
-    expect(creditCostForVideoSeconds(0, "prompt")).toBe(0);
-  });
-
-  it("charges lipsync strictly more than the default mode for the same length", () => {
-    expect(creditCostForVideoSeconds(8, "lipsync")).toBeGreaterThan(
-      creditCostForVideoSeconds(8, "animate"),
-    );
+    expect(creditCostForVideoSeconds(0)).toBe(0);
+    expect(creditCostForVideoSeconds(-1)).toBe(0);
   });
 });

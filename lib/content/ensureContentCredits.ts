@@ -1,8 +1,5 @@
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
-import {
-  creditCostForImages,
-  creditCostForVideoSeconds,
-} from "@/lib/content/creditCostForContent";
+import { creditCostForImages, creditCostForVideoSeconds } from "@/lib/content/creditCostForContent";
 
 /**
  * Credit gate for image generation.
@@ -25,11 +22,10 @@ export const ensureImageCredits = (accountId: string, imageCount: number) =>
  *
  * @param accountId - Account being charged.
  * @param seconds - Duration requested.
- * @param mode - The video mode; `lipsync` is priced at the dearer rate.
  * @returns A 402 NextResponse the handler returns directly, or null to proceed.
  */
-export const ensureVideoCredits = (accountId: string, seconds: number, mode: string) =>
+export const ensureVideoCredits = (accountId: string, seconds: number) =>
   ensureCreditsOrShortCircuit({
     accountId,
-    creditsToDeduct: creditCostForVideoSeconds(seconds, mode),
+    creditsToDeduct: creditCostForVideoSeconds(seconds),
   });
