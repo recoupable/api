@@ -7,6 +7,7 @@ import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatAct
 import { wrapWorkflowStreamWatcher } from "@/lib/chat/wrapWorkflowStreamWatcher";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { createNothingToResumeResponse } from "@/lib/chat/createNothingToResumeResponse";
 
 const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set(["completed", "cancelled", "failed"]);
 
@@ -20,13 +21,13 @@ const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set(["completed", "cancel
  * recovery needs a full page load (chat#1923). This is the resume path,
  * and `startIndex` is what makes it gap-free.
  *
- * Contract (docs#286): 200 SSE + `x-workflow-run-id`, 204 when there is
+ * Contract (docs#286): 200 SSE + `x-workflow-run-id`. When there is
  * nothing to resume, 400 malformed `startIndex`, 401/403/404 from auth
  * and ownership.
  *
  * @param request - The incoming request.
  * @param chatId - Chat id from the route params.
- * @returns The resumed stream, 204, or an error response.
+ * @returns The resumed stream, a terminal `finish`-only stream when there is\n *   nothing to resume, or an error response.
  */
 export async function handleResumeChatStream(
   request: NextRequest,
@@ -39,7 +40,7 @@ export async function handleResumeChatStream(
   if (startIndex instanceof NextResponse) return startIndex;
 
   const activeStreamId = validated.chat.active_stream_id;
-  if (!activeStreamId) return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
+  if (!activeStreamId) return createNothingToResumeResponse();
 
   const run = getRun(activeStreamId);
 
@@ -63,7 +64,7 @@ export async function handleResumeChatStream(
     if ("error" in cleared) {
       console.error("[handleResumeChatStream] failed to clear stale active_stream_id:", cleared);
     }
-    return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
+    return createNothingToResumeResponse();
   }
 
   const readable = run.getReadable<UIMessageChunk>({ startIndex });
