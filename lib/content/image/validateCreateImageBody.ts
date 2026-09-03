@@ -6,7 +6,7 @@ import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 export const createImageBodySchema = z.object({
-  prompt: z.string().optional(),
+  prompt: z.string().min(1).optional(),
   image_urls: z.array(z.string().url()).min(1).max(10).optional(),
   num_images: z.number().int().min(1).max(4).optional().default(1),
   aspect_ratio: z

@@ -3,9 +3,10 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateVideoBody } from "./validateCreateVideoBody";
 import { generateVideo, HOUSE_VIDEO_MODEL } from "./generateVideo";
-import { ensureVideoCredits } from "@/lib/content/ensureContentCredits";
+import { ensureVideoCredits } from "@/lib/content/ensureVideoCredits";
 import { chargeForGeneration } from "@/lib/content/chargeForGeneration";
-import { creditCostForVideoUnits, estimateVideoUnits } from "@/lib/content/creditCostForContent";
+import { creditCostForVideoUnits } from "@/lib/content/creditCostForVideoUnits";
+import { estimateVideoUnits } from "@/lib/content/estimateVideoUnits";
 
 /**
  * POST /api/content/video
@@ -17,14 +18,14 @@ export async function createVideoHandler(request: NextRequest): Promise<NextResp
   const validated = await validateCreateVideoBody(request);
   if (validated instanceof NextResponse) return validated;
 
-  const short = await ensureVideoCredits(
-    validated.accountId,
-    validated.duration,
-    validated.resolution,
-  );
-  if (short) return short;
-
   try {
+    const short = await ensureVideoCredits(
+      validated.accountId,
+      validated.duration,
+      validated.resolution,
+    );
+    if (short) return short;
+
     const { videoUrl, requestId } = await generateVideo(validated);
 
     await chargeForGeneration({
