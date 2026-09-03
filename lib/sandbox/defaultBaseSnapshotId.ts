@@ -14,10 +14,11 @@
  *   - bun            (curl -fsSL https://bun.sh/install | sudo BUN_INSTALL=/usr/local bash)
  *   - agent-browser  (sudo npm install -g agent-browser)
  *   - code-server    (curl -fsSL https://code-server.dev/install.sh | sudo sh)
- *   - ffmpeg/ffprobe (static build — see scripts/build-base-snapshot.sh)
+ *   - ffmpeg/ffprobe (7.0.2 static build — see scripts/build-base-snapshot.ts)
  *
- * To refresh: run `scripts/build-base-snapshot.sh`, which prints the exact
- * provisioning commands, then update the constant below with the new id.
+ * To refresh: `pnpm dlx tsx scripts/build-base-snapshot.ts` restores this
+ * snapshot, layers the tooling on top, verifies every binary, snapshots with
+ * no expiry and prints the new id; paste it below.
  *
  * Tooling note: ffmpeg comes from a static build, not dnf — Amazon Linux
  * 2023 carries no ffmpeg package. It is required by the music-video pipeline,
@@ -28,4 +29,4 @@
  * fetches a managed Playwright browser on first use anyway.
  */
 export const DEFAULT_SANDBOX_BASE_SNAPSHOT_ID =
-  process.env.VERCEL_SANDBOX_BASE_SNAPSHOT_ID ?? "snap_RgVtpDO4y1BJHQiUbptMwS3Rt2EQ";
+  process.env.VERCEL_SANDBOX_BASE_SNAPSHOT_ID ?? "snap_tbpR2eFlVENexiRoMEcK5yl6WEbs";
