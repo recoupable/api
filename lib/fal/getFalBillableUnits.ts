@@ -1,5 +1,7 @@
 const FAL_KEY = process.env.FAL_KEY as string;
 
+const REQUEST_TIMEOUT_MS = 5000;
+
 /**
  * Reads the exact quantity fal billed for a completed request straight off
  * the result response header — the same number fal's own billing-events API
@@ -25,6 +27,7 @@ export async function getFalBillableUnits(
   try {
     const response = await fetch(`https://queue.fal.run/${owner}/${alias}/requests/${requestId}`, {
       headers: { Authorization: `Key ${FAL_KEY}` },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     if (!response.ok) return null;
 

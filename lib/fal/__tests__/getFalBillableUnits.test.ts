@@ -46,4 +46,19 @@ describe("getFalBillableUnits", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
     expect(await getFalBillableUnits("meta/muse-image/text-to-image", "req-5")).toBeNull();
   });
+
+  it("bounds the request with a timeout signal, so a hung fetch can't block the caller forever", async () => {
+    const fetchMock = mockFetch({ "x-fal-billable-units": "1" });
+    vi.stubGlobal("fetch", fetchMock);
+    await getFalBillableUnits("meta/muse-image/text-to-image", "req-6");
+    expect(fetchMock.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("returns null when the request times out rather than hanging", async () => {
+    const abortError = Object.assign(new Error("The operation was aborted"), {
+      name: "AbortError",
+    });
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(abortError));
+    expect(await getFalBillableUnits("meta/muse-image/text-to-image", "req-7")).toBeNull();
+  });
 });
