@@ -4,36 +4,16 @@ import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { TEMPLATE_IDS } from "@/lib/content/templates";
 
 export const createImageBodySchema = z.object({
-  template: z.enum(TEMPLATE_IDS).optional(),
-  prompt: z.string().optional(),
-  reference_image_url: z.string().url().optional(),
-  images: z.array(z.string().url()).optional(),
+  prompt: z.string().min(1).optional(),
+  image_urls: z.array(z.string().url()).min(1).max(10).optional(),
   num_images: z.number().int().min(1).max(4).optional().default(1),
   aspect_ratio: z
-    .enum([
-      "auto",
-      "21:9",
-      "16:9",
-      "3:2",
-      "4:3",
-      "5:4",
-      "1:1",
-      "4:5",
-      "3:4",
-      "2:3",
-      "9:16",
-      "4:1",
-      "1:4",
-      "8:1",
-      "1:8",
-    ])
-    .optional()
-    .default("auto"),
-  resolution: z.enum(["0.5K", "1K", "2K", "4K"]).optional().default("1K"),
-  model: z.string().optional(),
+    .enum(["21:9", "16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16", "9:21"])
+    .optional(),
+  output_format: z.enum(["jpeg", "png", "webp"]).optional().default("webp"),
+  sync_mode: z.boolean().optional().default(false),
 });
 
 export type ValidatedCreateImageBody = { accountId: string } & z.infer<

@@ -1,9 +1,10 @@
 import type { z } from "zod";
 import type { createImageBodySchema } from "./validateCreateImageBody";
-import { loadTemplate } from "@/lib/content/templates";
 
-const DEFAULT_T2I_MODEL = "fal-ai/nano-banana-2";
-const DEFAULT_EDIT_MODEL = "fal-ai/nano-banana-2/edit";
+// Owner ruling 2026-09-01: Muse Image is the house still model. Ids verified
+// against fal 2026-09-02; the bare `meta/muse-image` 404s.
+const T2I_MODEL = "meta/muse-image/text-to-image";
+const EDIT_MODEL = "meta/muse-image/edit";
 
 type ImageParams = z.infer<typeof createImageBodySchema>;
 
@@ -13,50 +14,35 @@ interface ImageInput {
 }
 
 /**
- * Build the fal model name and input payload from validated image params.
+ * Maps the validated request body to Muse Image's real fal input shape.
  *
- * @param validated - Validated image generation parameters.
- * @returns Object with model name and input payload for fal.subscribe.
+ * Every field here is one Muse Image actually accepts (verified against
+ * fal's OpenAPI schema for `meta/muse-image/text-to-image` and `.../edit`,
+ * recoupable/app#2052) — no `resolution`, `safety_tolerance`,
+ * `enable_web_search`, or `thinking_level`, none of which exist on this
+ * model; those were leftover Nano Banana 2 fields.
+ *
+ * @param validated - The validated request body.
+ * @returns The fal model id and input for the resolved mode.
  */
 export function buildImageInput(validated: ImageParams): ImageInput {
-  const tpl = validated.template ? loadTemplate(validated.template) : null;
-
-  const prompt = validated.prompt ?? tpl?.image.prompt ?? "portrait photo, natural lighting";
-
-  const refImageUrl =
-    validated.reference_image_url ??
-    (tpl?.image.reference_images.length
-      ? tpl.image.reference_images[Math.floor(Math.random() * tpl.image.reference_images.length)]
-      : undefined);
-
-  const hasReferenceImages = refImageUrl || (validated.images && validated.images.length > 0);
+  const prompt = validated.prompt ?? "portrait photo, natural lighting";
+  const hasReferenceImages = !!validated.image_urls?.length;
 
   const input: Record<string, unknown> = {
-    prompt: tpl?.image.style_rules
-      ? `${prompt}\n\nStyle rules: ${Object.entries(tpl.image.style_rules)
-          .map(([k, v]) => `${k}: ${Object.values(v).join(", ")}`)
-          .join(". ")}`
-      : prompt,
+    prompt,
     num_images: validated.num_images,
-    aspect_ratio: validated.aspect_ratio,
-    resolution: validated.resolution,
-    output_format: "png",
-    safety_tolerance: "6",
-    enable_web_search: true,
-    thinking_level: "high",
-    limit_generations: true,
+    output_format: validated.output_format,
+    sync_mode: validated.sync_mode,
+    ...(validated.aspect_ratio && { aspect_ratio: validated.aspect_ratio }),
   };
 
   let model: string;
-
   if (hasReferenceImages) {
-    model = validated.model ?? DEFAULT_EDIT_MODEL;
-    const imageUrls: string[] = [];
-    if (refImageUrl) imageUrls.push(refImageUrl);
-    if (validated.images) imageUrls.push(...validated.images);
-    input.image_urls = imageUrls;
+    model = EDIT_MODEL;
+    input.image_urls = validated.image_urls;
   } else {
-    model = validated.model ?? DEFAULT_T2I_MODEL;
+    model = T2I_MODEL;
   }
 
   return { model, input };

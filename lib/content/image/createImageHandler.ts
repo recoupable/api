@@ -4,6 +4,9 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import fal from "@/lib/fal/server";
 import { validateCreateImageBody } from "./validateCreateImageBody";
 import { buildImageInput } from "./buildImageInput";
+import { ensureImageCredits } from "@/lib/content/ensureImageCredits";
+import { chargeForGeneration } from "@/lib/content/chargeForGeneration";
+import { creditCostForImageUnits } from "@/lib/content/creditCostForImageUnits";
 
 /**
  * POST /api/content/image
@@ -16,6 +19,9 @@ export async function createImageHandler(request: NextRequest): Promise<NextResp
   if (validated instanceof NextResponse) return validated;
 
   try {
+    const short = await ensureImageCredits(validated.accountId, validated.num_images);
+    if (short) return short;
+
     const { model, input } = buildImageInput(validated);
     const result = await fal.subscribe(model, { input });
 
@@ -30,6 +36,16 @@ export async function createImageHandler(request: NextRequest): Promise<NextResp
     }
 
     const urls = imageList.map(img => img.url as string).filter(Boolean);
+
+    // One image is one billable unit, unaffected by resolution or aspect
+    // ratio, so num_images is an exact fallback if the header read fails.
+    await chargeForGeneration({
+      accountId: validated.accountId,
+      endpointId: model,
+      requestId: result.requestId,
+      fallbackUnits: validated.num_images,
+      creditsForUnits: creditCostForImageUnits,
+    });
 
     return NextResponse.json(
       { imageUrl: urls[0], images: urls },

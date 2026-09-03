@@ -2,7 +2,11 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateVideoBody } from "./validateCreateVideoBody";
-import { generateVideo } from "./generateVideo";
+import { generateVideo, HOUSE_VIDEO_MODEL } from "./generateVideo";
+import { ensureVideoCredits } from "@/lib/content/ensureVideoCredits";
+import { chargeForGeneration } from "@/lib/content/chargeForGeneration";
+import { creditCostForVideoUnits } from "@/lib/content/creditCostForVideoUnits";
+import { estimateVideoUnits } from "@/lib/content/estimateVideoUnits";
 
 /**
  * POST /api/content/video
@@ -15,8 +19,24 @@ export async function createVideoHandler(request: NextRequest): Promise<NextResp
   if (validated instanceof NextResponse) return validated;
 
   try {
-    const result = await generateVideo(validated);
-    return NextResponse.json(result, { status: 200, headers: getCorsHeaders() });
+    const short = await ensureVideoCredits(
+      validated.accountId,
+      validated.duration,
+      validated.resolution,
+    );
+    if (short) return short;
+
+    const { videoUrl, requestId } = await generateVideo(validated);
+
+    await chargeForGeneration({
+      accountId: validated.accountId,
+      endpointId: HOUSE_VIDEO_MODEL,
+      requestId,
+      fallbackUnits: estimateVideoUnits(validated.duration, validated.resolution),
+      creditsForUnits: creditCostForVideoUnits,
+    });
+
+    return NextResponse.json({ videoUrl }, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
     console.error("Video generation error:", error);
     const message = error instanceof Error ? error.message : "Video generation failed";
