@@ -13,6 +13,7 @@ import { kickSandboxLifecycleWorkflow } from "@/lib/sandbox/kickSandboxLifecycle
 import { resolveGitUser } from "@/lib/sandbox/resolveGitUser";
 import { extractOrgRepoName } from "@/lib/recoupable/extractOrgRepoName";
 import { getOrgSnapshotName } from "@/lib/sandbox/getOrgSnapshotName";
+import { DEFAULT_SANDBOX_BASE_SNAPSHOT_ID } from "@/lib/sandbox/defaultBaseSnapshotId";
 import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
 import type { Json, Tables } from "@/types/database.types";
 
@@ -112,7 +113,12 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
         ports: DEFAULT_PORTS,
         githubToken: getServiceGithubToken(),
         gitUser,
-        ...(orgSnapshotId ? { baseSnapshotId: orgSnapshotId } : {}),
+        // A miss still needs the standard tooling base (ffmpeg, jq, bun,
+        // agent-browser, code-server) — omitting baseSnapshotId here would
+        // boot this request's own sandbox completely bare, even though the
+        // org-snapshot rebuild kicked off above only benefits the *next*
+        // session (recoupable/app#2052).
+        baseSnapshotId: orgSnapshotId ?? DEFAULT_SANDBOX_BASE_SNAPSHOT_ID,
         persistent: !!sandboxName,
         resume: !!sandboxName,
         createIfMissing: !!sandboxName,
