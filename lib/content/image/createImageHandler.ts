@@ -5,8 +5,7 @@ import fal from "@/lib/fal/server";
 import { validateCreateImageBody } from "./validateCreateImageBody";
 import { buildImageInput } from "./buildImageInput";
 import { ensureImageCredits } from "@/lib/content/ensureContentCredits";
-import { getFalBillableUnits } from "@/lib/fal/getFalBillableUnits";
-import { deductCredits } from "@/lib/credits/deductCredits";
+import { chargeForGeneration } from "@/lib/content/chargeForGeneration";
 import { creditCostForImageUnits } from "@/lib/content/creditCostForContent";
 
 /**
@@ -38,22 +37,15 @@ export async function createImageHandler(request: NextRequest): Promise<NextResp
 
     const urls = imageList.map(img => img.url as string).filter(Boolean);
 
-    // fal has already been paid at this point — a failure below must not
-    // turn a successful generation into an error response. One image is one
-    // billable unit, unaffected by resolution or aspect ratio, so
-    // num_images is an exact fallback if the header read fails.
-    const units = (await getFalBillableUnits(model, result.requestId)) ?? validated.num_images;
-    try {
-      await deductCredits({
-        accountId: validated.accountId,
-        creditsToDeduct: creditCostForImageUnits(units),
-      });
-    } catch (error) {
-      console.error(
-        `[createImageHandler] deductCredits failed for request ${result.requestId}:`,
-        error,
-      );
-    }
+    // One image is one billable unit, unaffected by resolution or aspect
+    // ratio, so num_images is an exact fallback if the header read fails.
+    await chargeForGeneration({
+      accountId: validated.accountId,
+      endpointId: model,
+      requestId: result.requestId,
+      fallbackUnits: validated.num_images,
+      creditsForUnits: creditCostForImageUnits,
+    });
 
     return NextResponse.json(
       { imageUrl: urls[0], images: urls },
