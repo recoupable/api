@@ -1,4 +1,5 @@
 import { isAgentContext } from "@/lib/agent/tools/isAgentContext";
+import { getRecoupApiUrl } from "@/lib/agent/tools/getRecoupApiUrl";
 
 /**
  * Build a per-invocation env override carrying Recoupable sandbox context
@@ -6,6 +7,11 @@ import { isAgentContext } from "@/lib/agent/tools/isAgentContext";
  * scope requests correctly without any state persisting on the sandbox.
  *
  * Injects:
+ *   - `RECOUP_API` — the api base this sandbox belongs to. Always set, so a
+ *     skill never has to hardcode `api.recoupable.dev`: a preview's Privy
+ *     token is rejected by production with a 401, which made every in-sandbox
+ *     API call in the music-video skill unauthenticatable off prod
+ *     (recoupable/app#2052).
  *   - `RECOUP_ORG_ID` — public organization UUID. Always safe.
  *   - `RECOUP_ACCESS_TOKEN` — the short-lived credential from
  *     `AgentContext.recoupAccessToken`, which the `recoup-api` skill sends as
@@ -26,7 +32,7 @@ export function buildRecoupExecEnv(
 ): Record<string, string> | undefined {
   if (!isAgentContext(experimental_context)) return undefined;
 
-  const env: Record<string, string> = {};
+  const env: Record<string, string> = { RECOUP_API: getRecoupApiUrl() };
   if (experimental_context.recoupOrgId) {
     env.RECOUP_ORG_ID = experimental_context.recoupOrgId;
   }

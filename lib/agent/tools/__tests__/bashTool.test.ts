@@ -112,7 +112,8 @@ describe("bashTool.execute", () => {
       experimental_context: { ...baseContext, recoupOrgId: "org-uuid" },
     } as never);
     const opts = sandbox.exec.mock.calls[0]?.[3] as { env?: Record<string, string> };
-    expect(opts.env).toEqual({ RECOUP_ORG_ID: "org-uuid" });
+    // RECOUP_API rides along on every exec so skills never hardcode a host.
+    expect(opts.env).toMatchObject({ RECOUP_ORG_ID: "org-uuid" });
   });
 
   it("returns the detached commandId when called with detached:true", async () => {

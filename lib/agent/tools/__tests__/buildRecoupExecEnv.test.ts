@@ -10,18 +10,23 @@ describe("buildRecoupExecEnv", () => {
     expect(buildRecoupExecEnv("not-a-context")).toBeUndefined();
   });
 
-  it("returns undefined when context has no recoupOrgId", () => {
-    expect(buildRecoupExecEnv({ sandbox: baseSandbox })).toBeUndefined();
+  // A valid context always carries the api base: the sandbox has to know
+  // which deployment spawned it, or the skills fall back to guessing prod —
+  // which 401s from a preview (recoupable/app#2052).
+  it("injects RECOUP_API even when there is no org or token", () => {
+    expect(buildRecoupExecEnv({ sandbox: baseSandbox })).toEqual({
+      RECOUP_API: "https://api.recoupable.dev",
+    });
   });
 
   it("injects RECOUP_ORG_ID when present in context", () => {
     const env = buildRecoupExecEnv({ sandbox: baseSandbox, recoupOrgId: "org-uuid" });
-    expect(env).toEqual({ RECOUP_ORG_ID: "org-uuid" });
+    expect(env).toMatchObject({ RECOUP_ORG_ID: "org-uuid" });
   });
 
   it("ignores empty-string recoupOrgId", () => {
     const env = buildRecoupExecEnv({ sandbox: baseSandbox, recoupOrgId: "" });
-    expect(env).toBeUndefined();
+    expect(env).not.toHaveProperty("RECOUP_ORG_ID");
   });
 
   it("returns undefined when the input is not a valid AgentContext shape", () => {
@@ -43,12 +48,12 @@ describe("buildRecoupExecEnv", () => {
       sandbox: baseSandbox,
       recoupAccessToken: "eyJhbGciOiJFUzI1NiI.test.jwt",
     });
-    expect(env).toEqual({ RECOUP_ACCESS_TOKEN: "eyJhbGciOiJFUzI1NiI.test.jwt" });
+    expect(env).toMatchObject({ RECOUP_ACCESS_TOKEN: "eyJhbGciOiJFUzI1NiI.test.jwt" });
   });
 
   it("ignores empty-string recoupAccessToken", () => {
     const env = buildRecoupExecEnv({ sandbox: baseSandbox, recoupAccessToken: "" });
-    expect(env).toBeUndefined();
+    expect(env).not.toHaveProperty("RECOUP_ACCESS_TOKEN");
   });
 
   it("injects BOTH RECOUP_ORG_ID and RECOUP_ACCESS_TOKEN when both are set", () => {
@@ -57,7 +62,7 @@ describe("buildRecoupExecEnv", () => {
       recoupOrgId: "org-uuid",
       recoupAccessToken: "jwt.value",
     });
-    expect(env).toEqual({
+    expect(env).toMatchObject({
       RECOUP_ORG_ID: "org-uuid",
       RECOUP_ACCESS_TOKEN: "jwt.value",
     });
@@ -72,7 +77,7 @@ describe("buildRecoupExecEnv", () => {
       sandbox: baseSandbox,
       recoupAccessToken: "recoup_sk_abc123",
     });
-    expect(env).toEqual({ RECOUP_ACCESS_TOKEN: "recoup_sk_abc123" });
+    expect(env).toMatchObject({ RECOUP_ACCESS_TOKEN: "recoup_sk_abc123" });
   });
 
   it("injects RECOUP_ORG_ID alongside a recoup_sk_ key", () => {
@@ -81,6 +86,6 @@ describe("buildRecoupExecEnv", () => {
       recoupOrgId: "org-uuid",
       recoupAccessToken: "recoup_sk_xyz",
     });
-    expect(env).toEqual({ RECOUP_ORG_ID: "org-uuid", RECOUP_ACCESS_TOKEN: "recoup_sk_xyz" });
+    expect(env).toMatchObject({ RECOUP_ORG_ID: "org-uuid", RECOUP_ACCESS_TOKEN: "recoup_sk_xyz" });
   });
 });
