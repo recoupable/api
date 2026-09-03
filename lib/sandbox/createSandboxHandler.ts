@@ -12,6 +12,7 @@ import { kickBuildOrgSnapshotWorkflow } from "@/lib/sandbox/kickBuildOrgSnapshot
 import { kickSandboxLifecycleWorkflow } from "@/lib/sandbox/kickSandboxLifecycleWorkflow";
 import { resolveGitUser } from "@/lib/sandbox/resolveGitUser";
 import { extractOrgRepoName } from "@/lib/recoupable/extractOrgRepoName";
+import { getOrgSnapshotName } from "@/lib/sandbox/getOrgSnapshotName";
 import { getServiceGithubToken } from "@/lib/github/getServiceGithubToken";
 import type { Json, Tables } from "@/types/database.types";
 
@@ -68,16 +69,19 @@ export async function createSandboxHandler(request: NextRequest): Promise<NextRe
   // for the case where it can pay off. A miss falls through to default
   // sandbox provisioning; an error is logged and treated as a miss.
   const orgRepoName = extractOrgRepoName(body.repoUrl);
-  const orgSnapshotId = orgRepoName ? await findOrgSnapshot(orgRepoName) : null;
+  // Named per base, so a new base (e.g. one that adds ffmpeg) is a miss for
+  // every org until its snapshot is rebuilt on it.
+  const orgSnapshotName = orgRepoName ? getOrgSnapshotName(orgRepoName) : null;
+  const orgSnapshotId = orgSnapshotName ? await findOrgSnapshot(orgSnapshotName) : null;
 
   // Miss: kick a background workflow to build a snapshot for this org so
   // the *next* session warm-boots from it. This request still pays the
   // full-clone cold-start path — the workflow runs durably outside the
   // request lifecycle.
-  if (orgRepoName && !orgSnapshotId) {
+  if (orgSnapshotName && !orgSnapshotId) {
     kickBuildOrgSnapshotWorkflow({
       cloneUrl: body.repoUrl,
-      sandboxName: orgRepoName,
+      sandboxName: orgSnapshotName,
     });
   }
 

@@ -9,6 +9,7 @@ import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import { installSessionGlobalSkills } from "@/lib/sandbox/installSessionGlobalSkills";
 import { findOrgSnapshot } from "@/lib/sandbox/findOrgSnapshot";
 import { kickBuildOrgSnapshotWorkflow } from "@/lib/sandbox/kickBuildOrgSnapshotWorkflow";
+import { getOrgSnapshotName } from "@/lib/sandbox/getOrgSnapshotName";
 import { kickSandboxLifecycleWorkflow } from "@/lib/sandbox/kickSandboxLifecycleWorkflow";
 import { resolveGitUser } from "@/lib/sandbox/resolveGitUser";
 
@@ -253,7 +254,7 @@ describe("createSandboxHandler", () => {
 
     await createSandboxHandler(makeReq());
 
-    expect(findOrgSnapshot).toHaveBeenCalledWith("org-acme-xyz");
+    expect(findOrgSnapshot).toHaveBeenCalledWith(getOrgSnapshotName("org-acme-xyz"));
     const arg = vi.mocked(connectSandbox).mock.calls[0]?.[0];
     if (!arg || !("options" in arg)) throw new Error("expected new-API config shape");
     if (!("state" in arg)) throw new Error("expected new-API state shape");
@@ -291,7 +292,7 @@ describe("createSandboxHandler", () => {
 
     await createSandboxHandler(makeReq());
 
-    expect(findOrgSnapshot).toHaveBeenCalledWith("org-no-snap-yet");
+    expect(findOrgSnapshot).toHaveBeenCalledWith(getOrgSnapshotName("org-no-snap-yet"));
     const arg = vi.mocked(connectSandbox).mock.calls[0]?.[0];
     if (!arg || !("options" in arg)) throw new Error("expected new-API config shape");
     if (!("state" in arg)) throw new Error("expected new-API state shape");
@@ -314,7 +315,7 @@ describe("createSandboxHandler", () => {
 
     expect(kickBuildOrgSnapshotWorkflow).toHaveBeenCalledWith({
       cloneUrl: "https://github.com/recoupable/org-no-snap-yet",
-      sandboxName: "org-no-snap-yet",
+      sandboxName: getOrgSnapshotName("org-no-snap-yet"),
     });
   });
 
