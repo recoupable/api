@@ -2,9 +2,9 @@
  * Rebuild the sandbox base snapshot referenced by
  * lib/sandbox/defaultBaseSnapshotId.ts, then print the new id.
  *
- * Restores the current base, layers ffmpeg/ffprobe on top (static build:
- * Amazon Linux 2023 carries no ffmpeg package), verifies every binary the
- * base promises, and only then snapshots. The snapshot never expires
+ * Restores the current base, layers ffmpeg/ffprobe on top (static build,
+ * pinned by checksum: Amazon Linux 2023 carries no ffmpeg package), verifies
+ * every binary the base promises, and only then snapshots. The snapshot never expires
  * (`expiration: 0`), unlike the org snapshots the workflow mints.
  *
  * Run from a checkout with the Recoup team credentials in the environment:
@@ -15,12 +15,18 @@
 import { Sandbox } from "@vercel/sandbox";
 import { DEFAULT_SANDBOX_BASE_SNAPSHOT_ID } from "../lib/sandbox/defaultBaseSnapshotId";
 
+// The vendor serves only a mutable "latest" archive, so the build is pinned
+// by its published md5 (and the version is asserted after install). When
+// upstream moves on, the checksum fails and the pin is updated on purpose.
+const FFMPEG_VERSION = "7.0.2";
+const FFMPEG_MD5 = "7fa72b652e19bf84c9461e332ea1cdf3";
 const FFMPEG_STATIC_URL =
   "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz";
 
 const INSTALL = [
   "sudo dnf install -y -q tar xz",
   `curl -fsSL -o /tmp/ffmpeg.tar.xz ${FFMPEG_STATIC_URL}`,
+  `cd /tmp && echo "${FFMPEG_MD5}  ffmpeg.tar.xz" | md5sum -c -`,
   "tar -xJf /tmp/ffmpeg.tar.xz -C /tmp",
   "sudo install -m 0755 /tmp/ffmpeg-*-amd64-static/ffmpeg /usr/local/bin/ffmpeg",
   "sudo install -m 0755 /tmp/ffmpeg-*-amd64-static/ffprobe /usr/local/bin/ffprobe",
@@ -29,8 +35,8 @@ const INSTALL = [
 
 // A snapshot missing any of these is worse than no refresh at all.
 const VERIFY = [
-  "ffmpeg -version | head -1",
-  "ffprobe -version | head -1",
+  `ffmpeg -version | head -1 | grep -F "ffmpeg version ${FFMPEG_VERSION}"`,
+  `ffprobe -version | head -1 | grep -F "ffprobe version ${FFMPEG_VERSION}"`,
   "jq --version",
   "bun --version",
   "agent-browser --version",
@@ -54,7 +60,8 @@ async function main() {
   });
   try {
     for (const command of [...INSTALL, ...VERIFY]) {
-      const result = await sandbox.runCommand("bash", ["-lc", command]);
+      // pipefail: a missing binary must not hide behind the `head` on its right.
+      const result = await sandbox.runCommand("bash", ["-o", "pipefail", "-lc", command]);
       const stdout = (await result.stdout()).trim();
       const stderr = (await result.stderr()).trim();
       console.log(`$ ${command}\n${stdout}${stderr ? `\n${stderr}` : ""}`);

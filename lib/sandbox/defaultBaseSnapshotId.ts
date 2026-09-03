@@ -29,4 +29,4 @@
  * fetches a managed Playwright browser on first use anyway.
  */
 export const DEFAULT_SANDBOX_BASE_SNAPSHOT_ID =
-  process.env.VERCEL_SANDBOX_BASE_SNAPSHOT_ID ?? "snap_tbpR2eFlVENexiRoMEcK5yl6WEbs";
+  process.env.VERCEL_SANDBOX_BASE_SNAPSHOT_ID ?? "snap_UC10ph15QRPY54Gxg9OTaNqU0Gvl";
