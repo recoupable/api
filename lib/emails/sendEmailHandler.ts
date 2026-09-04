@@ -56,7 +56,11 @@ export async function sendEmailHandler(request: NextRequest): Promise<NextRespon
     }
   } else {
     response = validated.error;
-    attempt = { status: "rejected" };
+    // Carry the account through: dropping it here made every account-scoped
+    // email_send_log audit under-report, so the six rejections in the
+    // 2026-07-27 scheduled-run incident were findable only by filtering
+    // raw_body on the recipient (chat#1889).
+    attempt = { status: "rejected", accountId: validated.accountId };
   }
 
   await logEmailAttempt({ rawBody: validated.rawBody, ...attempt });

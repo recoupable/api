@@ -62,6 +62,22 @@ describe("validateSendEmailBody", () => {
       }
     });
 
+    // Without the account on the rejected result, an account-scoped
+    // email_send_log audit misses this send entirely (chat#1889 row 26).
+    it("carries the authenticated account on the rejected result", async () => {
+      mockAssertRecipientsAllowed.mockResolvedValue({
+        allowed: false,
+        disallowed: ["stranger@example.com"],
+      });
+      const request = createRequest(
+        { to: ["stranger@example.com"], subject: "Hi", text: "body" },
+        { "x-api-key": "test-api-key" },
+      );
+      const result = await validateSendEmailBody(request);
+
+      expect("error" in result && result.accountId).toBe("account-123");
+    });
+
     it("checks to + cc together against the authenticated account", async () => {
       const request = createRequest(
         { to: ["a@example.com"], cc: ["b@example.com"], subject: "Hi", text: "body" },
