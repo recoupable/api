@@ -1,0 +1,36 @@
+name: Deploy Modal
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "modal/**"
+      - ".github/workflows/deploy-modal.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: modal-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+      MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+      MODAL_ENVIRONMENT: main
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Modal
+        run: pip install modal
+
+      - name: Deploy music-flamingo
+        run: modal deploy modal/serve_music_flamingo.py
