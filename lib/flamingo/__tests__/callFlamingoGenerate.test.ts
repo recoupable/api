@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { callFlamingoGenerate } from "../callFlamingoGenerate";
 
 // Mock global fetch
@@ -8,6 +8,42 @@ vi.stubGlobal("fetch", mockFetch);
 describe("callFlamingoGenerate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("sends Modal proxy auth headers when the env vars are set", async () => {
+    vi.stubEnv("MODAL_PROXY_TOKEN_ID", "wk-test-id");
+    vi.stubEnv("MODAL_PROXY_TOKEN_SECRET", "ws-test-secret");
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ response: "test", elapsed_seconds: 1.0 }),
+    });
+
+    await callFlamingoGenerate({ prompt: "Describe this track." });
+
+    const [, options] = mockFetch.mock.calls[0];
+    expect(options.headers).toEqual({
+      "Content-Type": "application/json",
+      "Modal-Key": "wk-test-id",
+      "Modal-Secret": "ws-test-secret",
+    });
+  });
+
+  it("sends only Content-Type when the proxy auth env vars are unset", async () => {
+    vi.stubEnv("MODAL_PROXY_TOKEN_ID", "");
+    vi.stubEnv("MODAL_PROXY_TOKEN_SECRET", "");
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ response: "test", elapsed_seconds: 1.0 }),
+    });
+
+    await callFlamingoGenerate({ prompt: "Describe this track." });
+
+    const [, options] = mockFetch.mock.calls[0];
+    expect(options.headers).toEqual({ "Content-Type": "application/json" });
   });
 
   it("returns model response on successful call", async () => {
