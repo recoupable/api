@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 import type Stripe from "stripe";
 import { verifyStripeWebhookEvent } from "@/lib/stripe/verifyStripeWebhookEvent";
 import { processCreditsTopupSession } from "@/lib/stripe/processCreditsTopupSession";
+import { processCheckoutSetupCompleted } from "@/lib/stripe/processCheckoutSetupCompleted";
 import { processCreditsTopupPaymentIntent } from "@/lib/stripe/processCreditsTopupPaymentIntent";
 
 const { POST } = await import("../route");
@@ -39,6 +40,16 @@ describe("POST /api/webhooks/stripe (handler outcomes)", () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ received: true });
     expect(processCreditsTopupSession).toHaveBeenCalledWith(session);
+  });
+
+  it("delegates setup-mode checkout.session.completed events to processCheckoutSetupCompleted", async () => {
+    const session = { id: "cs_setup_1", mode: "setup", customer: "cus_x", setup_intent: "seti_1" };
+    vi.mocked(verifyStripeWebhookEvent).mockResolvedValue({ event: sessionEvent(session) });
+    vi.mocked(processCheckoutSetupCompleted).mockResolvedValue(undefined);
+
+    const res = await POST(makeReq());
+    expect(res.status).toBe(200);
+    expect(processCheckoutSetupCompleted).toHaveBeenCalledWith(session);
   });
 
   it("delegates payment_intent.succeeded events to processCreditsTopupPaymentIntent", async () => {
