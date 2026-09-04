@@ -33,13 +33,56 @@ describe("canAccessAccount", () => {
     });
   });
 
+  describe("org account itself", () => {
+    it("returns true when targetAccountId is an org the caller belongs to", async () => {
+      vi.mocked(getAccountOrganizations).mockResolvedValue([
+        {
+          id: "membership-org-789",
+          account_id: "account-123",
+          organization_id: "org-789",
+          updated_at: "2026-09-04T00:00:00Z",
+          organization: null,
+        },
+      ]);
+
+      const result = await canAccessAccount({
+        currentAccountId: "account-123",
+        targetAccountId: "org-789",
+      });
+
+      expect(result).toBe(true);
+      expect(selectAccountOrganizationIds).not.toHaveBeenCalled();
+    });
+
+    it("returns false when targetAccountId is an org the caller does not belong to", async () => {
+      vi.mocked(getAccountOrganizations).mockResolvedValue([
+        {
+          id: "membership-org-789",
+          account_id: "account-123",
+          organization_id: "org-789",
+          updated_at: "2026-09-04T00:00:00Z",
+          organization: null,
+        },
+      ]);
+      vi.mocked(selectAccountOrganizationIds).mockResolvedValue([]);
+
+      const result = await canAccessAccount({
+        currentAccountId: "account-123",
+        targetAccountId: "other-org-000",
+      });
+
+      expect(result).toBe(false);
+    });
+  });
+
   describe("shared org membership", () => {
     it("returns true when accounts share an org", async () => {
       vi.mocked(getAccountOrganizations).mockResolvedValue([
         {
+          id: "membership-shared-org",
           account_id: "account-123",
           organization_id: "shared-org",
-          created_at: new Date().toISOString(),
+          updated_at: "2026-09-04T00:00:00Z",
           organization: null,
         },
       ]);
@@ -62,9 +105,10 @@ describe("canAccessAccount", () => {
     it("returns false when accounts do not share an org", async () => {
       vi.mocked(getAccountOrganizations).mockResolvedValue([
         {
+          id: "membership-org-A",
           account_id: "account-123",
           organization_id: "org-A",
-          created_at: new Date().toISOString(),
+          updated_at: "2026-09-04T00:00:00Z",
           organization: null,
         },
       ]);
@@ -95,9 +139,10 @@ describe("canAccessAccount", () => {
     it("returns true when currentAccountId is in RECOUP_ORG", async () => {
       vi.mocked(getAccountOrganizations).mockResolvedValue([
         {
+          id: "membership-recoup-admin-org-id",
           account_id: "admin-account",
           organization_id: "recoup-admin-org-id",
-          created_at: new Date().toISOString(),
+          updated_at: "2026-09-04T00:00:00Z",
           organization: null,
         },
       ]);

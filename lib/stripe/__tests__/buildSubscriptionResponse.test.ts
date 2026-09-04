@@ -1,9 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type Stripe from "stripe";
 import { buildSubscriptionResponse } from "@/lib/stripe/buildSubscriptionResponse";
-
-const activeSub = (status: Stripe.Subscription.Status = "active") =>
-  ({ status, canceled_at: null }) as unknown as Stripe.Subscription;
+import { activeSub, nullDetails, proDetails } from "./subscriptionResponseFixtures";
 
 describe("buildSubscriptionResponse", () => {
   it("returns isPro:false / none / null / null when neither subscription is active", () => {
@@ -12,6 +10,7 @@ describe("buildSubscriptionResponse", () => {
       status: "none",
       plan: null,
       source: null,
+      ...nullDetails,
     });
   });
 
@@ -26,6 +25,7 @@ describe("buildSubscriptionResponse", () => {
       status: "active",
       plan: "pro",
       source: "account",
+      ...proDetails,
     });
   });
 
@@ -40,6 +40,7 @@ describe("buildSubscriptionResponse", () => {
       status: "trialing",
       plan: "pro",
       source: "organization",
+      ...proDetails,
     });
   });
 
@@ -54,6 +55,7 @@ describe("buildSubscriptionResponse", () => {
       status: "none",
       plan: null,
       source: null,
+      ...nullDetails,
     });
   });
 
@@ -64,6 +66,7 @@ describe("buildSubscriptionResponse", () => {
       status: "none",
       plan: null,
       source: null,
+      ...nullDetails,
     });
   });
 });
