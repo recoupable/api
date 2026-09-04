@@ -33,13 +33,50 @@ describe("canAccessAccount", () => {
     });
   });
 
+  describe("org account itself", () => {
+    it("returns true when targetAccountId is an org the caller belongs to", async () => {
+      vi.mocked(getAccountOrganizations).mockResolvedValue([
+        {
+          account_id: "account-123",
+          organization_id: "org-789",
+          organization: null,
+        },
+      ]);
+
+      const result = await canAccessAccount({
+        currentAccountId: "account-123",
+        targetAccountId: "org-789",
+      });
+
+      expect(result).toBe(true);
+      expect(selectAccountOrganizationIds).not.toHaveBeenCalled();
+    });
+
+    it("returns false when targetAccountId is an org the caller does not belong to", async () => {
+      vi.mocked(getAccountOrganizations).mockResolvedValue([
+        {
+          account_id: "account-123",
+          organization_id: "org-789",
+          organization: null,
+        },
+      ]);
+      vi.mocked(selectAccountOrganizationIds).mockResolvedValue([]);
+
+      const result = await canAccessAccount({
+        currentAccountId: "account-123",
+        targetAccountId: "other-org-000",
+      });
+
+      expect(result).toBe(false);
+    });
+  });
+
   describe("shared org membership", () => {
     it("returns true when accounts share an org", async () => {
       vi.mocked(getAccountOrganizations).mockResolvedValue([
         {
           account_id: "account-123",
           organization_id: "shared-org",
-          created_at: new Date().toISOString(),
           organization: null,
         },
       ]);
@@ -64,7 +101,6 @@ describe("canAccessAccount", () => {
         {
           account_id: "account-123",
           organization_id: "org-A",
-          created_at: new Date().toISOString(),
           organization: null,
         },
       ]);
@@ -97,7 +133,6 @@ describe("canAccessAccount", () => {
         {
           account_id: "admin-account",
           organization_id: "recoup-admin-org-id",
-          created_at: new Date().toISOString(),
           organization: null,
         },
       ]);
