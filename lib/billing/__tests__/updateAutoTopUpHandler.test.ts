@@ -5,6 +5,7 @@ import { validateAutoTopUpParams } from "@/lib/billing/validateAutoTopUpParams";
 import { validateUpdateAutoTopUpBody } from "@/lib/billing/validateUpdateAutoTopUpBody";
 import { accountHasPaymentMethod } from "@/lib/stripe/accountHasPaymentMethod";
 import { updateAutoTopUp } from "@/lib/supabase/credits_usage/updateAutoTopUp";
+import { initializeAccountCredits } from "@/lib/credits/initializeAccountCredits";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -15,6 +16,9 @@ vi.mock("@/lib/billing/validateUpdateAutoTopUpBody", () => ({
 }));
 vi.mock("@/lib/stripe/accountHasPaymentMethod", () => ({ accountHasPaymentMethod: vi.fn() }));
 vi.mock("@/lib/supabase/credits_usage/updateAutoTopUp", () => ({ updateAutoTopUp: vi.fn() }));
+vi.mock("@/lib/credits/initializeAccountCredits", () => ({
+  initializeAccountCredits: vi.fn(),
+}));
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
 const buildRequest = () =>
@@ -133,7 +137,30 @@ describe("updateAutoTopUpHandler", () => {
     expect(updateAutoTopUp).not.toHaveBeenCalled();
   });
 
-  it("404s when the account has no credits_usage row to update", async () => {
+  it("creates the credits row for an account without one (organizations) and then saves", async () => {
+    vi.mocked(validateAutoTopUpParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(validateUpdateAutoTopUpBody).mockResolvedValue({
+      enabled: false,
+      amountCents: 5000,
+      thresholdCents: 250,
+    });
+    vi.mocked(updateAutoTopUp).mockResolvedValueOnce(null).mockResolvedValueOnce({
+      auto_topup_enabled: false,
+      auto_topup_amount: 50_000_000,
+      auto_topup_threshold: 2_500_000,
+      auto_topup_last_run_at: null,
+      auto_topup_last_error: null,
+    });
+    vi.mocked(initializeAccountCredits).mockResolvedValue({} as never);
+
+    const res = await updateAutoTopUpHandler(buildRequest(), buildParams());
+
+    expect(res.status).toBe(200);
+    expect(initializeAccountCredits).toHaveBeenCalledWith(ACCOUNT);
+    expect(updateAutoTopUp).toHaveBeenCalledTimes(2);
+  });
+
+  it("404s when the row cannot be created either", async () => {
     vi.mocked(validateAutoTopUpParams).mockResolvedValue(ACCOUNT);
     vi.mocked(validateUpdateAutoTopUpBody).mockResolvedValue({
       enabled: false,
@@ -141,6 +168,7 @@ describe("updateAutoTopUpHandler", () => {
       thresholdCents: 250,
     });
     vi.mocked(updateAutoTopUp).mockResolvedValue(null);
+    vi.mocked(initializeAccountCredits).mockResolvedValue(null);
 
     const res = await updateAutoTopUpHandler(buildRequest(), buildParams());
 

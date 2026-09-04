@@ -4,6 +4,7 @@ import { validateAutoTopUpParams } from "@/lib/billing/validateAutoTopUpParams";
 import { validateUpdateAutoTopUpBody } from "@/lib/billing/validateUpdateAutoTopUpBody";
 import { accountHasPaymentMethod } from "@/lib/stripe/accountHasPaymentMethod";
 import { updateAutoTopUp } from "@/lib/supabase/credits_usage/updateAutoTopUp";
+import { initializeAccountCredits } from "@/lib/credits/initializeAccountCredits";
 import { centsToCredits } from "@/lib/billing/centsToCredits";
 import { buildAutoTopUpResponse } from "@/lib/billing/buildAutoTopUpResponse";
 import { mapToPaymentMethodError } from "@/lib/billing/mapToPaymentMethodError";
@@ -40,12 +41,19 @@ export async function updateAutoTopUpHandler(
       );
     }
 
-    const row = await updateAutoTopUp({
+    const settings = {
       accountId: validated,
       enabled: body.enabled,
       amountCredits: centsToCredits(body.amountCents),
       thresholdCredits: centsToCredits(body.thresholdCents),
-    });
+    };
+    let row = await updateAutoTopUp(settings);
+    if (!row) {
+      // Organizations have no credits_usage row until something creates one;
+      // give the account its plan-derived row, then save the settings on it.
+      const created = await initializeAccountCredits(validated);
+      row = created ? await updateAutoTopUp(settings) : null;
+    }
     if (!row) {
       return NextResponse.json(
         { error: "Account not found" },
