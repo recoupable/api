@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { deductCreditsWithAudit } from "@/lib/supabase/credits_usage/deductCreditsWithAudit";
+import { maybeAutoTopUp } from "@/lib/credits/maybeAutoTopUp";
 
 interface RecordCreditDeductionParams {
   accountId: string;
@@ -59,6 +60,15 @@ export const recordCreditDeduction = async (
     if (!result.ok) {
       console.error("[recordCreditDeduction] atomic debit failed:", result.error);
       return { success: false };
+    }
+    // Awaited, not fire-and-forget: this runs inside a workflow step or a
+    // serverless function, where a dangling promise is dropped at return.
+    // maybeAutoTopUp never throws and only reaches Stripe when the balance
+    // crossed the account's threshold, so the common path adds one read.
+    try {
+      await maybeAutoTopUp({ accountId: params.accountId });
+    } catch (error) {
+      console.error("[recordCreditDeduction] auto top-up check failed:", error);
     }
     return { success: true };
   } catch (error) {

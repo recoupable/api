@@ -6,6 +6,8 @@ interface ChargeParams {
   customer: string;
   totalCents: number;
   metadata: { accountId: string; credits: string; purpose: string };
+  /** Stripe idempotency key; omitted for interactive top-ups so repeat buys stay distinct. */
+  idempotencyKey?: string;
 }
 
 export type DeclineReason = {
@@ -32,6 +34,7 @@ export async function chargeCustomerOffSession({
   customer,
   totalCents,
   metadata,
+  idempotencyKey,
 }: ChargeParams): Promise<OffSessionChargeResult> {
   const paymentMethodId = await findDefaultPaymentMethodForCustomer(customer);
   if (!paymentMethodId) {
@@ -49,7 +52,9 @@ export async function chargeCustomerOffSession({
   };
 
   try {
-    const pi = await stripeClient.paymentIntents.create(params);
+    const pi = idempotencyKey
+      ? await stripeClient.paymentIntents.create(params, { idempotencyKey })
+      : await stripeClient.paymentIntents.create(params);
     if (pi.status === "succeeded") {
       return { kind: "charged", paymentIntentId: pi.id };
     }

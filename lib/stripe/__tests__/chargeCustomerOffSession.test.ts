@@ -64,6 +64,15 @@ describe("chargeCustomerOffSession", () => {
     });
   });
 
+  it("passes the idempotency key as Stripe request options when one is given", async () => {
+    findDefaultPmMock.mockResolvedValue("pm_card");
+    paymentIntentsCreate.mockResolvedValue({ id: "pi_idem", status: "succeeded" });
+
+    await chargeCustomerOffSession({ ...params, idempotencyKey: "autotopup:a:2026" });
+
+    expect(paymentIntentsCreate.mock.calls[0][1]).toEqual({ idempotencyKey: "autotopup:a:2026" });
+  });
+
   it("does NOT pass an idempotency key so same-amount top-ups produce distinct PaymentIntents", async () => {
     findDefaultPmMock.mockResolvedValue("pm_card");
     paymentIntentsCreate.mockResolvedValue({ id: "pi_a", status: "succeeded" });

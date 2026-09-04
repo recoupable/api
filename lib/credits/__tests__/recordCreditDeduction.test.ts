@@ -9,11 +9,46 @@ vi.mock("@/lib/supabase/credits_usage/deductCreditsWithAudit", () => ({
   deductCreditsWithAudit: deductCreditsWithAuditMock,
 }));
 
+const { maybeAutoTopUpMock } = vi.hoisted(() => ({ maybeAutoTopUpMock: vi.fn() }));
+vi.mock("@/lib/credits/maybeAutoTopUp", () => ({ maybeAutoTopUp: maybeAutoTopUpMock }));
+
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
 
 describe("recordCreditDeduction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    maybeAutoTopUpMock.mockResolvedValue({ kind: "skipped" });
+  });
+
+  it("runs the auto top-up check after a successful debit", async () => {
+    deductCreditsWithAuditMock.mockResolvedValue({ ok: true });
+
+    await recordCreditDeduction({ accountId: ACCOUNT, creditsToDeduct: 1, source: "api" });
+
+    expect(maybeAutoTopUpMock).toHaveBeenCalledWith({ accountId: ACCOUNT });
+  });
+
+  it("does not run the auto top-up check when the debit failed", async () => {
+    deductCreditsWithAuditMock.mockResolvedValue({ ok: false, error: "no" });
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await recordCreditDeduction({ accountId: ACCOUNT, creditsToDeduct: 1, source: "api" });
+
+    expect(maybeAutoTopUpMock).not.toHaveBeenCalled();
+  });
+
+  it("still reports success when the auto top-up check throws", async () => {
+    deductCreditsWithAuditMock.mockResolvedValue({ ok: true });
+    maybeAutoTopUpMock.mockRejectedValue(new Error("boom"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const result = await recordCreditDeduction({
+      accountId: ACCOUNT,
+      creditsToDeduct: 1,
+      source: "api",
+    });
+
+    expect(result).toEqual({ success: true });
   });
 
   it("calls the atomic RPC with cents + event payload carrying token detail", async () => {
