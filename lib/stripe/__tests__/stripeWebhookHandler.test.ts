@@ -58,6 +58,9 @@ vi.mock("@/lib/stripe/notifyCreditsTopupSession", () => ({
 vi.mock("@/lib/stripe/processCheckoutSessionExpired", () => ({
   processCheckoutSessionExpired: processCheckoutSessionExpiredMock,
 }));
+vi.mock("@/lib/stripe/processCheckoutSetupCompleted", () => ({
+  processCheckoutSetupCompleted: vi.fn(),
+}));
 vi.mock("@/lib/stripe/checkout/processCheckoutSubscriptionCompleted", () => ({
   processCheckoutSubscriptionCompleted: processCheckoutSubscriptionCompletedMock,
 }));
