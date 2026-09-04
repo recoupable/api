@@ -1313,6 +1313,8 @@ export type Database = {
           raw_body: string | null;
           resend_id: string | null;
           status: string;
+          subject: string | null;
+          trigger_run_id: string | null;
         };
         Insert: {
           account_id?: string | null;
@@ -1322,6 +1324,8 @@ export type Database = {
           raw_body?: string | null;
           resend_id?: string | null;
           status: string;
+          subject?: string | null;
+          trigger_run_id?: string | null;
         };
         Update: {
           account_id?: string | null;
@@ -1331,6 +1335,8 @@ export type Database = {
           raw_body?: string | null;
           resend_id?: string | null;
           status?: string;
+          subject?: string | null;
+          trigger_run_id?: string | null;
         };
         Relationships: [];
       };
