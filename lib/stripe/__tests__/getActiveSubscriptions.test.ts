@@ -17,14 +17,6 @@ const list = () => vi.mocked(stripeClient.subscriptions.list);
 describe("getActiveSubscriptions", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("expands the price's product so a plan name is available when the price has no nickname", async () => {
-    list().mockResolvedValueOnce(apiList([sub("sub_1", ACC)], false));
-    await getActiveSubscriptions(ACC);
-    expect(list().mock.calls[0][0]).toMatchObject({
-      expand: ["data.items.data.price.product"],
-    });
-  });
-
   it("walks pages until a batch matches accountId", async () => {
     list()
       .mockResolvedValueOnce(apiList([sub("sub_x", "other")], true))

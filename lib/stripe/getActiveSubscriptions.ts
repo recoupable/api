@@ -19,9 +19,6 @@ export const getActiveSubscriptions = async (accountId: string) => {
       const listParams: Stripe.SubscriptionListParams = {
         limit: PAGE_LIMIT,
         current_period_end: { gt: now },
-        // The plan name falls back to the product name when the price has no
-        // nickname; Stripe returns price.product as an id unless expanded.
-        expand: ["data.items.data.price.product"],
       };
       if (startingAfter) {
         listParams.starting_after = startingAfter;
