@@ -133,7 +133,7 @@ class MusicFlamingo:
 
         print("Model loaded with SDPA attention!")
 
-    @modal.fastapi_endpoint(method="GET", docs=True)
+    @modal.fastapi_endpoint(method="GET", docs=True, requires_proxy_auth=True)
     def health(self):
         """
         Quick health check — returns instantly if the container is alive
@@ -143,7 +143,7 @@ class MusicFlamingo:
         """
         return {"status": "ok", "model": MODEL_ID}
 
-    @modal.fastapi_endpoint(method="POST", docs=True)
+    @modal.fastapi_endpoint(method="POST", docs=True, requires_proxy_auth=True)
     def generate(self, request: dict):
         """
         Main API endpoint for music understanding.

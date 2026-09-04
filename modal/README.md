@@ -22,5 +22,14 @@ workspace settings.
 `MAX_CONTAINERS` is 4 (workspace GPU cap is 10). Recoup `full_report`
 fans out 13 HTTP calls; they only run in parallel if this cap is >1.
 
-The generate HTTP URL is unauthenticated. Recoup API is the auth
-boundary. Do not point clients at the Modal URL.
+## Auth
+
+Both web endpoints (`generate`, `health`) require Modal proxy auth
+(`requires_proxy_auth=True`): requests must carry `Modal-Key` and
+`Modal-Secret` headers from a proxy auth token minted in the
+`shared-78369` workspace settings. Recoup API sends them from the
+`MODAL_PROXY_TOKEN_ID` / `MODAL_PROXY_TOKEN_SECRET` Vercel env vars
+(`lib/flamingo/getModalProxyAuthHeaders.ts`). Requests without them get
+`401 missing credentials for proxy authorization` before a GPU is
+touched. Recoup API is the billing boundary; do not point clients at the
+Modal URL.
