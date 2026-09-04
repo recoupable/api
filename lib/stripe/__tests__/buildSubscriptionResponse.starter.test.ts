@@ -9,13 +9,33 @@ describe("buildSubscriptionResponse starter", () => {
     const account = {
       status: "active",
       canceled_at: null,
-      items: { data: [{ price: { id: "price_starter" } }] },
+      collection_method: "charge_automatically",
+      current_period_end: 1790380800,
+      items: {
+        data: [
+          {
+            price: {
+              id: "price_starter",
+              nickname: "Starter",
+              unit_amount: 2900,
+              currency: "usd",
+              recurring: { interval: "month" },
+            },
+          },
+        ],
+      },
     } as never;
     expect(buildSubscriptionResponse({ account, organization: null })).toEqual({
       isPro: false,
       status: "active",
       plan: "starter",
       source: "account",
+      name: "Starter",
+      amountCents: 2900,
+      currency: "usd",
+      interval: "month",
+      collectionMethod: "charge_automatically",
+      currentPeriodEnd: "2026-09-26T00:00:00.000Z",
     });
   });
 
@@ -28,13 +48,34 @@ describe("buildSubscriptionResponse starter", () => {
     const organization = {
       status: "active",
       canceled_at: null,
-      items: { data: [{ price: { id: "price_pro" } }] },
+      collection_method: "send_invoice",
+      current_period_end: 1790380800,
+      items: {
+        data: [
+          {
+            price: {
+              id: "price_pro",
+              nickname: null,
+              unit_amount: 500000,
+              currency: "usd",
+              recurring: { interval: "month" },
+              product: { id: "prod_org", name: "Seeker Music" },
+            },
+          },
+        ],
+      },
     } as never;
     expect(buildSubscriptionResponse({ account, organization })).toEqual({
       isPro: true,
       status: "active",
       plan: "pro",
       source: "organization",
+      name: "Seeker Music",
+      amountCents: 500000,
+      currency: "usd",
+      interval: "month",
+      collectionMethod: "send_invoice",
+      currentPeriodEnd: "2026-09-26T00:00:00.000Z",
     });
   });
 });
