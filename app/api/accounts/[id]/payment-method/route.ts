@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getPaymentMethodHandler } from "@/lib/billing/getPaymentMethodHandler";
+import { createPaymentMethodSessionHandler } from "@/lib/billing/createPaymentMethodSessionHandler";
+import { deletePaymentMethodHandler } from "@/lib/billing/deletePaymentMethodHandler";
 
 /**
  * OPTIONS handler for CORS preflight requests.
@@ -34,6 +36,36 @@ export async function OPTIONS() {
  */
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   return getPaymentMethodHandler(request, context.params);
+}
+
+/**
+ * POST /api/accounts/[id]/payment-method
+ *
+ * Mints a $0 Stripe `setup` Checkout session that saves a card for the
+ * account; the saved card becomes the customer's default via the
+ * `checkout.session.completed` webhook. Body: `{ successUrl }`.
+ *
+ * @param request - Incoming request; auth from headers, body `{ successUrl }`.
+ * @param context - Route context from Next.js.
+ * @param context.params - Promise resolving to `{ id }`, the account UUID.
+ * @returns A 200 NextResponse with `{ id, url }`, or 4xx/5xx with `{ error }`.
+ */
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  return createPaymentMethodSessionHandler(request, context.params);
+}
+
+/**
+ * DELETE /api/accounts/[id]/payment-method
+ *
+ * Detaches the account's default card. Invoiced subscriptions are unaffected.
+ *
+ * @param request - Incoming request; auth is read from headers.
+ * @param context - Route context from Next.js.
+ * @param context.params - Promise resolving to `{ id }`, the account UUID.
+ * @returns A 204 NextResponse, or 404 `{ error }` when no card is on file.
+ */
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  return deletePaymentMethodHandler(request, context.params);
 }
 
 export const dynamic = "force-dynamic";
