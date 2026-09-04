@@ -62,7 +62,7 @@ def download_model_weights():
 image = (
     modal.Image.debian_slim(python_version="3.11")
     # System libraries for audio processing
-    .apt_install("ffmpeg", "libsndfile1", "git")
+    .apt_install("ffmpeg", "libsndfile1")
     # Python dependencies: PyTorch, audio tools, web framework
     .pip_install(
         "torch>=2.1.0",
@@ -73,10 +73,9 @@ image = (
         "requests",
         "fastapi[standard]",
         "huggingface_hub",
-    )
-    # Custom transformers fork with Music Flamingo support
-    .pip_install(
-        "git+https://github.com/lashahub/transformers@modular-mf",
+        # Music Flamingo is upstream since transformers 5.6.0
+        # (huggingface/transformers#43538); pinned for reproducible builds.
+        "transformers==5.16.1",
     )
     # Download model weights at build time (the big optimization!)
     .run_function(download_model_weights)
@@ -127,7 +126,7 @@ class MusicFlamingo:
         self.model = MusicFlamingoForConditionalGeneration.from_pretrained(
             model_path,
             device_map="auto",
-            torch_dtype=torch.bfloat16,
+            dtype=torch.bfloat16,
             attn_implementation="sdpa",
             low_cpu_mem_usage=True,
         )
