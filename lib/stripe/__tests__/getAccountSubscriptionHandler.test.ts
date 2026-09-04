@@ -28,6 +28,39 @@ const buildRequest = () => new NextRequest(`http://localhost/api/accounts/${ACCO
 
 const buildParams = () => Promise.resolve({ id: ACCOUNT });
 
+const priceItems = {
+  data: [
+    {
+      price: {
+        id: "price_pro",
+        nickname: "Pro",
+        unit_amount: 9900,
+        currency: "usd",
+        recurring: { interval: "month" },
+        product: "prod_pro",
+      },
+    },
+  ],
+};
+
+const proDetails = {
+  name: "Pro",
+  amountCents: 9900,
+  currency: "usd",
+  interval: "month",
+  collectionMethod: "charge_automatically",
+  currentPeriodEnd: "2026-09-26T00:00:00.000Z",
+};
+
+const nullDetails = {
+  name: null,
+  amountCents: null,
+  currency: null,
+  interval: null,
+  collectionMethod: null,
+  currentPeriodEnd: null,
+};
+
 describe("getAccountSubscriptionHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -49,6 +82,9 @@ describe("getAccountSubscriptionHandler", () => {
       id: "sub_1",
       status: "active",
       canceled_at: null,
+      collection_method: "charge_automatically",
+      current_period_end: 1790380800,
+      items: priceItems,
     } as never);
     vi.mocked(getOrgSubscription).mockResolvedValue(null);
 
@@ -59,6 +95,7 @@ describe("getAccountSubscriptionHandler", () => {
       status: "active",
       plan: "pro",
       source: "account",
+      ...proDetails,
     });
   });
 
@@ -69,6 +106,9 @@ describe("getAccountSubscriptionHandler", () => {
       id: "sub_org",
       status: "trialing",
       canceled_at: null,
+      collection_method: "charge_automatically",
+      current_period_end: 1790380800,
+      items: priceItems,
     } as never);
 
     const res = await getAccountSubscriptionHandler(buildRequest(), buildParams());
@@ -78,6 +118,7 @@ describe("getAccountSubscriptionHandler", () => {
       status: "trialing",
       plan: "pro",
       source: "organization",
+      ...proDetails,
     });
   });
 
@@ -93,6 +134,7 @@ describe("getAccountSubscriptionHandler", () => {
       status: "none",
       plan: null,
       source: null,
+      ...nullDetails,
     });
   });
 });
