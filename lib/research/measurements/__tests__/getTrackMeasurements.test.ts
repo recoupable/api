@@ -38,7 +38,7 @@ const rows = [
     metric: "m",
     value: 100,
     captured_at: "2025-06-12T00:00:00+00:00",
-    data_source: "songstats",
+    data_source: "granted_analytics",
   },
 ];
 
@@ -74,7 +74,7 @@ describe("getTrackMeasurements", () => {
         platform: "spotify",
         metric: "platform_displayed_play_count",
         series: [
-          { date: "2025-06-12", value: 100, data_source: "songstats" },
+          { date: "2025-06-12", value: 100, data_source: "granted_analytics" },
           { date: "2026-06-12", value: 300, data_source: "apify_spotify_playcount" },
         ],
       },

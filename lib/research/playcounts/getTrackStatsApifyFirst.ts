@@ -1,53 +1,36 @@
-import {
-  getResearchTrackStats,
-  GetResearchTrackStatsParams,
-  GetResearchTrackStatsResult,
-} from "@/lib/research/getResearchTrackStats";
 import { getSpotifyStatFromStore } from "@/lib/research/playcounts/getSpotifyStatFromStore";
-import { trackStatsPayloadSchema } from "@/lib/research/playcounts/trackStatsPayloadSchema";
-import { labelSongstatsProvenance } from "@/lib/research/labelSongstatsProvenance";
+import type { SpotifyStoreStat } from "@/lib/research/playcounts/toStat";
 import { deductCredits } from "@/lib/research/deductCredits";
 
+export type GetTrackStatsParams = {
+  accountId: string;
+  isrc: string;
+  /** Billing endpoint label written to `usage_events.model_id`. */
+  modelId?: string;
+};
+
+export type GetTrackStatsResult =
+  | { data: { result: "success"; stats: SpotifyStoreStat[] } }
+  | { error: string; status: number };
+
+export const NO_STORED_CAPTURE_ERROR =
+  "No stored capture for this ISRC — create a current measurement job first";
+
 /**
- * Apify-first routing for per-track current stats (recoupable/chat#1791),
- * layered over the untouched Songstats passthrough. When the request carries
- * an `isrc` and asks for `spotify`, that entry is served from the measurement
- * store; {@link getResearchTrackStats} covers the remaining sources and is
- * the automatic fallback when the store can't answer. The Songstats payload
- * is zod-validated once here — downstream transforms are fully typed — and a
- * non-conforming payload (shape drift) passes through unlabeled rather than
- * failing the response. Every stat entry carries `data_source` provenance per
- * the contract (docs#238).
+ * Per-track current Spotify stats served from the Apify-backed measurement
+ * store (recoupable/chat#1791). A fresh capture is returned as-is; a stale or
+ * missing one is refreshed through the album actor inside
+ * {@link getSpotifyStatFromStore}. Credits are deducted only when the store
+ * answers.
+ *
+ * @param params - The account, the recording's ISRC and the billing label
  */
 export async function getTrackStatsApifyFirst(
-  params: GetResearchTrackStatsParams,
-): Promise<GetResearchTrackStatsResult> {
-  const { isrc, source = "" } = params.params;
-  const sources = source.split(",").map(s => s.trim());
+  params: GetTrackStatsParams,
+): Promise<GetTrackStatsResult> {
+  const stat = await getSpotifyStatFromStore(params.isrc);
+  if (!stat) return { error: NO_STORED_CAPTURE_ERROR, status: 404 };
 
-  const storeStat =
-    isrc && sources.includes("spotify") ? await getSpotifyStatFromStore(isrc) : null;
-
-  const remainingSources = storeStat ? sources.filter(s => s !== "spotify") : sources;
-
-  if (storeStat && remainingSources.length === 0) {
-    await deductCredits(params.accountId, params.modelId);
-    return { data: { result: "success", stats: [storeStat] } };
-  }
-
-  const result = await getResearchTrackStats({
-    ...params,
-    params: { ...params.params, source: remainingSources.join(",") },
-  });
-  if ("error" in result) return result;
-
-  const parsed = trackStatsPayloadSchema.safeParse(result.data);
-  if (!parsed.success) {
-    console.warn("[research] unexpected Songstats stats payload shape:", parsed.error.message);
-    return result;
-  }
-
-  const labeled = labelSongstatsProvenance(parsed.data);
-  if (!storeStat) return { data: labeled };
-  return { data: { ...labeled, stats: [...(labeled.stats ?? []), storeStat] } };
+  await deductCredits(params.accountId, params.modelId);
+  return { data: { result: "success", stats: [stat] } };
 }

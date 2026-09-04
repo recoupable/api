@@ -35,7 +35,7 @@ describe("getResearchTrackHistoricStatsHandler", () => {
   it("returns 200 with the historic stats envelope on success", async () => {
     vi.mocked(validateGetResearchTrackHistoricStatsRequest).mockResolvedValue({
       accountId: "acc_1",
-      params: { isrc: "USQY51771120", source: "spotify" },
+      isrc: "USQY51771120",
     });
     vi.mocked(getTrackHistoricStatsApifyFirst).mockResolvedValue({
       data: {
@@ -59,7 +59,7 @@ describe("getResearchTrackHistoricStatsHandler", () => {
   it("maps an upstream error result to an error response", async () => {
     vi.mocked(validateGetResearchTrackHistoricStatsRequest).mockResolvedValue({
       accountId: "acc_1",
-      params: { isrc: "BADISRC", source: "spotify" },
+      isrc: "BADISRC",
     });
     vi.mocked(getTrackHistoricStatsApifyFirst).mockResolvedValue({
       error: "Request failed with status 404",

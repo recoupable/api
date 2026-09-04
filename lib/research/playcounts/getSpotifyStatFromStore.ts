@@ -13,7 +13,7 @@ const DATA_SOURCE = "apify_spotify_playcount";
  * store. Fresh capture → serve it. Stale/missing → refresh the whole album
  * via one actor call (pricing is per album URL) and write every sibling track
  * that has an identifier mapping. Actor failure degrades to the stale capture,
- * or returns null when nothing is stored — the caller falls back to Songstats.
+ * or returns null when nothing is stored — the caller answers 404.
  *
  * @param isrc - The recording's ISRC
  * @returns A labeled stat entry, or null when the store can't answer
