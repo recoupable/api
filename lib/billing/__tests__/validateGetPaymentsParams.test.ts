@@ -24,6 +24,7 @@ describe("validateGetPaymentsParams", () => {
     expect(res).toBeInstanceOf(NextResponse);
     expect((res as NextResponse).status).toBe(400);
     await expect((res as NextResponse).json()).resolves.toEqual({
+      status: "error",
       error: "id must be a valid UUID",
     });
     expect(validateAuthContext).not.toHaveBeenCalled();
@@ -33,6 +34,7 @@ describe("validateGetPaymentsParams", () => {
     const res = await validateGetPaymentsParams(req("?limit=0"), ACCOUNT);
     expect((res as NextResponse).status).toBe(400);
     await expect((res as NextResponse).json()).resolves.toEqual({
+      status: "error",
       error: "limit must be between 1 and 100",
     });
     expect(validateAuthContext).not.toHaveBeenCalled();

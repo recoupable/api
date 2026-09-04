@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 const idSchema = z.string().uuid("id must be a valid UUID");
@@ -28,13 +28,13 @@ export async function validateGetPaymentsParams(
 ): Promise<GetPaymentsParams | NextResponse> {
   const parsedId = idSchema.safeParse(id);
   if (!parsedId.success) {
-    return badRequest(parsedId.error.issues[0].message);
+    return errorResponse(parsedId.error.issues[0].message, 400);
   }
 
   const rawLimit = request.nextUrl.searchParams.get("limit");
   const parsedLimit = limitSchema.safeParse(rawLimit ?? undefined);
   if (!parsedLimit.success) {
-    return badRequest("limit must be between 1 and 100");
+    return errorResponse("limit must be between 1 and 100", 400);
   }
 
   const auth = await validateAuthContext(request, { accountId: parsedId.data });
@@ -44,8 +44,4 @@ export async function validateGetPaymentsParams(
 
   const startingAfter = request.nextUrl.searchParams.get("startingAfter") ?? undefined;
   return { accountId: parsedId.data, limit: parsedLimit.data, startingAfter };
-}
-
-function badRequest(message: string): NextResponse {
-  return NextResponse.json({ error: message }, { status: 400, headers: getCorsHeaders() });
 }

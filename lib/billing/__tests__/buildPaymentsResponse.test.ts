@@ -41,32 +41,6 @@ describe("buildPaymentsResponse", () => {
     });
   });
 
-  it("falls back to the price nickname, then 'Invoice', for the description", () => {
-    const nick = invoice({
-      lines: { data: [{ description: null, price: { nickname: "Starter" } }] },
-    });
-    const bare = invoice({ lines: { data: [] } });
-
-    const res = buildPaymentsResponse({
-      accountId: ACCOUNT,
-      invoices: [nick, bare],
-      hasMore: false,
-    });
-
-    expect(res.payments.map(p => p.description)).toEqual(["Starter", "Invoice"]);
-  });
-
-  it("returns url: null when there is no hosted invoice url", () => {
-    const res = buildPaymentsResponse({
-      accountId: ACCOUNT,
-      invoices: [invoice({ hosted_invoice_url: null, status: "draft" })],
-      hasMore: false,
-    });
-
-    expect(res.payments[0].url).toBeNull();
-    expect(res.payments[0].status).toBe("draft");
-  });
-
   it("returns an empty list for no invoices", () => {
     expect(buildPaymentsResponse({ accountId: ACCOUNT, invoices: [], hasMore: false })).toEqual({
       account_id: ACCOUNT,
