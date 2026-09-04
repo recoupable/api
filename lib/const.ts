@@ -78,7 +78,7 @@ export const RECOUP_API_KEY = process.env.RECOUP_API_KEY || "";
 
 /** Music Flamingo model inference endpoint (Modal) */
 export const FLAMINGO_GENERATE_URL =
-  "https://sidney-78147--music-flamingo-musicflamingo-generate.modal.run";
+  "https://shared-78369--music-flamingo-musicflamingo-generate.modal.run";
 
 /** Snapshot expiration duration (7 days) */
 export const SNAPSHOT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
