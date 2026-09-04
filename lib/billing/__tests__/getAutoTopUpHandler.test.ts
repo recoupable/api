@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getAutoTopUpHandler } from "@/lib/billing/getAutoTopUpHandler";
-import { validateAutoTopUpParams } from "@/lib/billing/validateAutoTopUpParams";
+import { validateGetPaymentMethodParams } from "@/lib/billing/validateGetPaymentMethodParams";
 import { selectAutoTopUp } from "@/lib/supabase/credits_usage/selectAutoTopUp";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
-vi.mock("@/lib/billing/validateAutoTopUpParams", () => ({ validateAutoTopUpParams: vi.fn() }));
+vi.mock("@/lib/billing/validateGetPaymentMethodParams", () => ({
+  validateGetPaymentMethodParams: vi.fn(),
+}));
 vi.mock("@/lib/supabase/credits_usage/selectAutoTopUp", () => ({ selectAutoTopUp: vi.fn() }));
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
@@ -18,7 +20,7 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("getAutoTopUpHandler", () => {
   it("returns 200 with defaults when the account has no credits_usage row", async () => {
-    vi.mocked(validateAutoTopUpParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
     vi.mocked(selectAutoTopUp).mockResolvedValue(null);
 
     const res = await getAutoTopUpHandler(buildRequest(), buildParams());
@@ -36,7 +38,7 @@ describe("getAutoTopUpHandler", () => {
   });
 
   it("returns 200 with the stored settings in cents", async () => {
-    vi.mocked(validateAutoTopUpParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
     vi.mocked(selectAutoTopUp).mockResolvedValue({
       account_id: ACCOUNT,
       auto_topup_enabled: true,
@@ -57,7 +59,7 @@ describe("getAutoTopUpHandler", () => {
   });
 
   it("forwards validation/auth failures as { error } with their status", async () => {
-    vi.mocked(validateAutoTopUpParams).mockResolvedValue(
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(
       NextResponse.json(
         { status: "error", error: "Access denied to specified account_id" },
         { status: 403 },
@@ -72,7 +74,8 @@ describe("getAutoTopUpHandler", () => {
   });
 
   it("returns 500 when the read throws", async () => {
-    vi.mocked(validateAutoTopUpParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.mocked(selectAutoTopUp).mockRejectedValue(new Error("db down"));
 
     const res = await getAutoTopUpHandler(buildRequest(), buildParams());

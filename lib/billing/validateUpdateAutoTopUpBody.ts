@@ -48,7 +48,9 @@ export async function validateUpdateAutoTopUpBody(
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const message =
-      issue.code === "invalid_type" && issue.message.startsWith("Invalid input")
+      issue.code === "invalid_type" &&
+      issue.path.length > 0 &&
+      issue.message.startsWith("Invalid input")
         ? `${issue.path.join(".")} is required`
         : issue.message;
     return NextResponse.json({ error: message }, { status: 400, headers: getCorsHeaders() });

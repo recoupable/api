@@ -11,7 +11,7 @@ const idSchema = z.string().uuid("id must be a valid UUID");
  * organization membership). Returns the validated UUID, or the upstream
  * auth/validation NextResponse to forward.
  */
-export async function validateAutoTopUpParams(
+export async function validateGetPaymentMethodParams(
   request: NextRequest,
   id: string,
 ): Promise<string | NextResponse> {

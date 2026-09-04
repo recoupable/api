@@ -1,5 +1,5 @@
 import { creditsToCents } from "@/lib/billing/creditsToCents";
-import type { AutoTopUpRow } from "@/lib/supabase/credits_usage/autoTopUpColumns";
+import type { AutoTopUpRow } from "@/lib/supabase/credits_usage/pickAutoTopUpRow";
 
 export interface AutoTopUpResponse {
   account_id: string;

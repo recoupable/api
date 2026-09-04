@@ -3,7 +3,7 @@ import {
   AUTO_TOP_UP_COLUMNS,
   pickAutoTopUpRow,
   type AutoTopUpRow,
-} from "@/lib/supabase/credits_usage/autoTopUpColumns";
+} from "@/lib/supabase/credits_usage/pickAutoTopUpRow";
 
 interface UpdateAutoTopUpParams {
   accountId: string;
@@ -35,7 +35,7 @@ export async function updateAutoTopUp({
 
   const { data, error } = await serverClient
     .from("credits_usage")
-    // Cast until `pnpm update-types` picks up database#69 (see autoTopUpColumns.ts).
+    // Cast until `pnpm update-types` picks up database#69 (see pickAutoTopUpRow.ts).
     .update(updates as never)
     .eq("account_id", accountId)
     .select(AUTO_TOP_UP_COLUMNS as "*")

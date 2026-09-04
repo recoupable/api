@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAutoTopUpParams } from "@/lib/billing/validateAutoTopUpParams";
+import { validateGetPaymentMethodParams } from "@/lib/billing/validateGetPaymentMethodParams";
 import { validateUpdateAutoTopUpBody } from "@/lib/billing/validateUpdateAutoTopUpBody";
 import { accountHasPaymentMethod } from "@/lib/stripe/accountHasPaymentMethod";
 import { updateAutoTopUp } from "@/lib/supabase/credits_usage/updateAutoTopUp";
@@ -24,7 +24,7 @@ export async function updateAutoTopUpHandler(
 ): Promise<NextResponse> {
   try {
     const { id } = await params;
-    const validated = await validateAutoTopUpParams(request, id);
+    const validated = await validateGetPaymentMethodParams(request, id);
     if (validated instanceof NextResponse) {
       return mapToPaymentMethodError(validated);
     }
@@ -51,8 +51,9 @@ export async function updateAutoTopUpHandler(
     if (!row) {
       // Organizations have no credits_usage row until something creates one;
       // give the account its plan-derived row, then save the settings on it.
-      const created = await initializeAccountCredits(validated);
-      row = created ? await updateAutoTopUp(settings) : null;
+      // A concurrent request may win the insert; retry the update either way.
+      await initializeAccountCredits(validated);
+      row = await updateAutoTopUp(settings);
     }
     if (!row) {
       return NextResponse.json(

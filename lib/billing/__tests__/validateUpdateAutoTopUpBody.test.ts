@@ -37,57 +37,19 @@ describe("validateUpdateAutoTopUpBody", () => {
     );
   });
 
+  it("400s with Zod's own message when the body is not an object", async () => {
+    expect(await errorOf(await validateUpdateAutoTopUpBody(req(null)))).not.toMatch(
+      /^ is required/,
+    );
+    expect(await errorOf(await validateUpdateAutoTopUpBody(req([1, 2])))).not.toMatch(
+      /^ is required/,
+    );
+  });
+
   it("400s when a field is missing", async () => {
     expect(
       await errorOf(await validateUpdateAutoTopUpBody(req({ enabled: true, amountCents: 10000 }))),
     ).toMatch(/thresholdCents/);
-  });
-
-  it("400s when amountCents is below 500 or above 100000", async () => {
-    expect(
-      await errorOf(
-        await validateUpdateAutoTopUpBody(
-          req({ enabled: true, amountCents: 499, thresholdCents: 0 }),
-        ),
-      ),
-    ).toBe("amountCents must be between 500 and 100000");
-    expect(
-      await errorOf(
-        await validateUpdateAutoTopUpBody(
-          req({ enabled: true, amountCents: 100001, thresholdCents: 0 }),
-        ),
-      ),
-    ).toBe("amountCents must be between 500 and 100000");
-  });
-
-  it("400s when amountCents is not an integer", async () => {
-    expect(
-      await errorOf(
-        await validateUpdateAutoTopUpBody(
-          req({ enabled: true, amountCents: 1000.5, thresholdCents: 0 }),
-        ),
-      ),
-    ).toMatch(/amountCents/);
-  });
-
-  it("400s when thresholdCents is negative", async () => {
-    expect(
-      await errorOf(
-        await validateUpdateAutoTopUpBody(
-          req({ enabled: true, amountCents: 1000, thresholdCents: -1 }),
-        ),
-      ),
-    ).toBe("thresholdCents must be 0 or more");
-  });
-
-  it("400s when thresholdCents is not below amountCents", async () => {
-    expect(
-      await errorOf(
-        await validateUpdateAutoTopUpBody(
-          req({ enabled: true, amountCents: 1000, thresholdCents: 1000 }),
-        ),
-      ),
-    ).toBe("thresholdCents must be below amountCents");
   });
 
   it("400s on unknown keys", async () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { updateAutoTopUpHandler } from "@/lib/billing/updateAutoTopUpHandler";
-import { validateAutoTopUpParams } from "@/lib/billing/validateAutoTopUpParams";
+import { validateGetPaymentMethodParams } from "@/lib/billing/validateGetPaymentMethodParams";
 import { validateUpdateAutoTopUpBody } from "@/lib/billing/validateUpdateAutoTopUpBody";
 import { accountHasPaymentMethod } from "@/lib/stripe/accountHasPaymentMethod";
 import { updateAutoTopUp } from "@/lib/supabase/credits_usage/updateAutoTopUp";
@@ -10,7 +10,9 @@ import { initializeAccountCredits } from "@/lib/credits/initializeAccountCredits
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
-vi.mock("@/lib/billing/validateAutoTopUpParams", () => ({ validateAutoTopUpParams: vi.fn() }));
+vi.mock("@/lib/billing/validateGetPaymentMethodParams", () => ({
+  validateGetPaymentMethodParams: vi.fn(),
+}));
 vi.mock("@/lib/billing/validateUpdateAutoTopUpBody", () => ({
   validateUpdateAutoTopUpBody: vi.fn(),
 }));
@@ -37,7 +39,7 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("updateAutoTopUpHandler", () => {
   it("saves enabled settings when a card is on file and returns them in cents", async () => {
-    vi.mocked(validateAutoTopUpParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
     vi.mocked(validateUpdateAutoTopUpBody).mockResolvedValue({
       enabled: true,
       amountCents: 10000,
@@ -66,7 +68,7 @@ describe("updateAutoTopUpHandler", () => {
   });
 
   it("400s when enabling without a card on file and does not write", async () => {
-    vi.mocked(validateAutoTopUpParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
     vi.mocked(validateUpdateAutoTopUpBody).mockResolvedValue({
       enabled: true,
       amountCents: 10000,
@@ -84,7 +86,7 @@ describe("updateAutoTopUpHandler", () => {
   });
 
   it("skips the card check when disabling and still stores the amounts", async () => {
-    vi.mocked(validateAutoTopUpParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
     vi.mocked(validateUpdateAutoTopUpBody).mockResolvedValue({
       enabled: false,
       amountCents: 5000,
@@ -111,7 +113,7 @@ describe("updateAutoTopUpHandler", () => {
   });
 
   it("forwards param/auth failures and never reads the body", async () => {
-    vi.mocked(validateAutoTopUpParams).mockResolvedValue(
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(
       NextResponse.json({ error: "id must be a valid UUID" }, { status: 400 }),
     );
 
@@ -123,7 +125,7 @@ describe("updateAutoTopUpHandler", () => {
   });
 
   it("forwards body validation failures", async () => {
-    vi.mocked(validateAutoTopUpParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
     vi.mocked(validateUpdateAutoTopUpBody).mockResolvedValue(
       NextResponse.json({ error: "thresholdCents must be below amountCents" }, { status: 400 }),
     );
@@ -138,7 +140,7 @@ describe("updateAutoTopUpHandler", () => {
   });
 
   it("creates the credits row for an account without one (organizations) and then saves", async () => {
-    vi.mocked(validateAutoTopUpParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
     vi.mocked(validateUpdateAutoTopUpBody).mockResolvedValue({
       enabled: false,
       amountCents: 5000,
@@ -161,8 +163,30 @@ describe("updateAutoTopUpHandler", () => {
     expect(updateAutoTopUp).toHaveBeenCalledTimes(2);
   });
 
+  it("still saves when a concurrent request created the row first (insert returns null)", async () => {
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(validateUpdateAutoTopUpBody).mockResolvedValue({
+      enabled: false,
+      amountCents: 5000,
+      thresholdCents: 250,
+    });
+    vi.mocked(updateAutoTopUp).mockResolvedValueOnce(null).mockResolvedValueOnce({
+      account_id: ACCOUNT,
+      auto_topup_enabled: false,
+      auto_topup_amount: 50_000_000,
+      auto_topup_threshold: 2_500_000,
+      auto_topup_last_run_at: null,
+      auto_topup_last_error: null,
+    });
+    vi.mocked(initializeAccountCredits).mockResolvedValue(null);
+
+    const res = await updateAutoTopUpHandler(buildRequest(), buildParams());
+
+    expect(res.status).toBe(200);
+  });
+
   it("404s when the row cannot be created either", async () => {
-    vi.mocked(validateAutoTopUpParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
     vi.mocked(validateUpdateAutoTopUpBody).mockResolvedValue({
       enabled: false,
       amountCents: 5000,
@@ -178,7 +202,7 @@ describe("updateAutoTopUpHandler", () => {
   });
 
   it("returns 500 when the write throws", async () => {
-    vi.mocked(validateAutoTopUpParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
     vi.mocked(validateUpdateAutoTopUpBody).mockResolvedValue({
       enabled: false,
       amountCents: 5000,

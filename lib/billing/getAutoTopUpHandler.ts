@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateAutoTopUpParams } from "@/lib/billing/validateAutoTopUpParams";
+import { validateGetPaymentMethodParams } from "@/lib/billing/validateGetPaymentMethodParams";
 import { selectAutoTopUp } from "@/lib/supabase/credits_usage/selectAutoTopUp";
 import { buildAutoTopUpResponse } from "@/lib/billing/buildAutoTopUpResponse";
 import { mapToPaymentMethodError } from "@/lib/billing/mapToPaymentMethodError";
@@ -17,7 +17,7 @@ export async function getAutoTopUpHandler(
 ): Promise<NextResponse> {
   try {
     const { id } = await params;
-    const validated = await validateAutoTopUpParams(request, id);
+    const validated = await validateGetPaymentMethodParams(request, id);
     if (validated instanceof NextResponse) {
       return mapToPaymentMethodError(validated);
     }
