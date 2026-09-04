@@ -1,12 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type Stripe from "stripe";
 
-const { setupIntentsRetrieve, setDefaultPaymentMethodMock } = vi.hoisted(() => ({
-  setupIntentsRetrieve: vi.fn(),
-  setDefaultPaymentMethodMock: vi.fn(),
-}));
+const { setupIntentsRetrieve, setDefaultPaymentMethodMock, isNewerPaymentMethodMock } = vi.hoisted(
+  () => ({
+    setupIntentsRetrieve: vi.fn(),
+    setDefaultPaymentMethodMock: vi.fn(),
+    isNewerPaymentMethodMock: vi.fn(),
+  }),
+);
 vi.mock("@/lib/stripe/client", () => ({
   default: { setupIntents: { retrieve: setupIntentsRetrieve } },
+}));
+vi.mock("@/lib/stripe/isNewerPaymentMethod", () => ({
+  isNewerPaymentMethod: isNewerPaymentMethodMock,
 }));
 vi.mock("@/lib/stripe/setDefaultPaymentMethod", () => ({
   setDefaultPaymentMethod: setDefaultPaymentMethodMock,
@@ -26,7 +32,20 @@ const session = (overrides: Partial<Stripe.Checkout.Session> = {}): Stripe.Check
   }) as Stripe.Checkout.Session;
 
 describe("processCheckoutSetupCompleted", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    isNewerPaymentMethodMock.mockResolvedValue(true);
+  });
+
+  it("skips the update when the current default is newer than the saved card (out-of-order events)", async () => {
+    setupIntentsRetrieve.mockResolvedValue({ id: "seti_1", payment_method: "pm_old" });
+    isNewerPaymentMethodMock.mockResolvedValue(false);
+
+    await processCheckoutSetupCompleted(session());
+
+    expect(isNewerPaymentMethodMock).toHaveBeenCalledWith("cus_x", "pm_old");
+    expect(setDefaultPaymentMethodMock).not.toHaveBeenCalled();
+  });
 
   it("makes the saved card the customer's invoice default", async () => {
     setupIntentsRetrieve.mockResolvedValue({ id: "seti_1", payment_method: "pm_new" });

@@ -34,17 +34,23 @@ describe("/api/accounts/[id]/payment-method route", () => {
     const out = NextResponse.json({});
     vi.mocked(getPaymentMethodHandler).mockResolvedValue(out);
     expect(await GET(req("GET"), ctx)).toBe(out);
+    expect(getPaymentMethodHandler).toHaveBeenCalledWith(expect.any(NextRequest), ctx.params);
   });
 
   it("POST delegates to createPaymentMethodSessionHandler", async () => {
     const out = NextResponse.json({});
     vi.mocked(createPaymentMethodSessionHandler).mockResolvedValue(out);
     expect(await POST(req("POST"), ctx)).toBe(out);
+    expect(createPaymentMethodSessionHandler).toHaveBeenCalledWith(
+      expect.any(NextRequest),
+      ctx.params,
+    );
   });
 
   it("DELETE delegates to deletePaymentMethodHandler", async () => {
     const out = new NextResponse(null, { status: 204 });
     vi.mocked(deletePaymentMethodHandler).mockResolvedValue(out);
     expect(await DELETE(req("DELETE"), ctx)).toBe(out);
+    expect(deletePaymentMethodHandler).toHaveBeenCalledWith(expect.any(NextRequest), ctx.params);
   });
 });

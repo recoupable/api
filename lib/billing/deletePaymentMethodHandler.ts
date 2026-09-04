@@ -3,7 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetPaymentMethodParams } from "@/lib/billing/validateGetPaymentMethodParams";
 import { mapToPaymentMethodError } from "@/lib/billing/mapToPaymentMethodError";
 import { findStripeCustomerForAccount } from "@/lib/stripe/findStripeCustomerForAccount";
-import { findDefaultPaymentMethodForCustomer } from "@/lib/stripe/findDefaultPaymentMethodForCustomer";
+import { findDefaultCardForCustomer } from "@/lib/stripe/findDefaultCardForCustomer";
 import { detachPaymentMethod } from "@/lib/stripe/detachPaymentMethod";
 
 /**
@@ -22,7 +22,7 @@ export async function deletePaymentMethodHandler(
     }
 
     const customer = await findStripeCustomerForAccount(validated);
-    const paymentMethodId = customer ? await findDefaultPaymentMethodForCustomer(customer) : null;
+    const paymentMethodId = customer ? await findDefaultCardForCustomer(customer) : null;
     if (!paymentMethodId) {
       return NextResponse.json(
         { error: "No payment method on file" },

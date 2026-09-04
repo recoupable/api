@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import stripeClient from "@/lib/stripe/client";
 import { setDefaultPaymentMethod } from "@/lib/stripe/setDefaultPaymentMethod";
+import { isNewerPaymentMethod } from "@/lib/stripe/isNewerPaymentMethod";
 
 const idOf = (ref: string | { id: string } | null | undefined) =>
   typeof ref === "string" ? ref : (ref?.id ?? null);
@@ -22,6 +23,10 @@ export async function processCheckoutSetupCompleted(
   const setupIntent = await stripeClient.setupIntents.retrieve(setupIntentId);
   const paymentMethodId = idOf(setupIntent.payment_method);
   if (!paymentMethodId) return;
+
+  // Events for two setup sessions can arrive out of order; never let an
+  // older card overwrite a newer default.
+  if (!(await isNewerPaymentMethod(customerId, paymentMethodId))) return;
 
   await setDefaultPaymentMethod(customerId, paymentMethodId);
 }

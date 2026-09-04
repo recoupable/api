@@ -42,6 +42,10 @@ describe("createPaymentMethodSessionHandler", () => {
       url: "https://checkout.stripe.com/c/pay/cs_setup",
     });
     expect(createCardOnFileSession).toHaveBeenCalledWith(ACCOUNT, SUCCESS_URL);
+    expect(validateCreatePaymentMethodSessionRequest).toHaveBeenCalledWith(
+      expect.any(NextRequest),
+      ACCOUNT,
+    );
   });
 
   it("returns the validation response unchanged", async () => {

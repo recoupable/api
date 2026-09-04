@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { deletePaymentMethodHandler } from "@/lib/billing/deletePaymentMethodHandler";
 import { validateGetPaymentMethodParams } from "@/lib/billing/validateGetPaymentMethodParams";
 import { findStripeCustomerForAccount } from "@/lib/stripe/findStripeCustomerForAccount";
-import { findDefaultPaymentMethodForCustomer } from "@/lib/stripe/findDefaultPaymentMethodForCustomer";
+import { findDefaultCardForCustomer } from "@/lib/stripe/findDefaultCardForCustomer";
 import { detachPaymentMethod } from "@/lib/stripe/detachPaymentMethod";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -15,8 +15,8 @@ vi.mock("@/lib/billing/validateGetPaymentMethodParams", () => ({
 vi.mock("@/lib/stripe/findStripeCustomerForAccount", () => ({
   findStripeCustomerForAccount: vi.fn(),
 }));
-vi.mock("@/lib/stripe/findDefaultPaymentMethodForCustomer", () => ({
-  findDefaultPaymentMethodForCustomer: vi.fn(),
+vi.mock("@/lib/stripe/findDefaultCardForCustomer", () => ({
+  findDefaultCardForCustomer: vi.fn(),
 }));
 vi.mock("@/lib/stripe/detachPaymentMethod", () => ({ detachPaymentMethod: vi.fn() }));
 
@@ -36,7 +36,7 @@ describe("deletePaymentMethodHandler", () => {
   it("detaches the default card and returns 204 with no body", async () => {
     vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
     vi.mocked(findStripeCustomerForAccount).mockResolvedValue("cus_x");
-    vi.mocked(findDefaultPaymentMethodForCustomer).mockResolvedValue("pm_1");
+    vi.mocked(findDefaultCardForCustomer).mockResolvedValue("pm_1");
     vi.mocked(detachPaymentMethod).mockResolvedValue(undefined);
 
     const res = await deletePaymentMethodHandler(buildRequest(), buildParams());
@@ -57,10 +57,10 @@ describe("deletePaymentMethodHandler", () => {
     expect(detachPaymentMethod).not.toHaveBeenCalled();
   });
 
-  it("returns 404 when the customer has no default card", async () => {
+  it("returns 404 when the customer has no default card (a non-card default counts as none)", async () => {
     vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
     vi.mocked(findStripeCustomerForAccount).mockResolvedValue("cus_x");
-    vi.mocked(findDefaultPaymentMethodForCustomer).mockResolvedValue(null);
+    vi.mocked(findDefaultCardForCustomer).mockResolvedValue(null);
 
     const res = await deletePaymentMethodHandler(buildRequest(), buildParams());
 

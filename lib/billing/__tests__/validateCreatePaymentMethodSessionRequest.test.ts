@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateCreatePaymentMethodSessionRequest } from "@/lib/billing/validateCreatePaymentMethodSessionRequest";
-import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { validateGetPaymentMethodParams } from "@/lib/billing/validateGetPaymentMethodParams";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
-vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
+vi.mock("@/lib/billing/validateGetPaymentMethodParams", () => ({
+  validateGetPaymentMethodParams: vi.fn(),
+}));
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
 const SUCCESS_URL = "https://app.recoupable.dev/billing";
@@ -15,60 +17,62 @@ const req = (body: unknown) =>
     method: "POST",
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
+const errorBody = async (res: NextResponse) => {
+  const body = await res.json();
+  expect(typeof body.error).toBe("string");
+  return body;
+};
 
 beforeEach(() => vi.clearAllMocks());
 
 describe("validateCreatePaymentMethodSessionRequest", () => {
-  it("returns the path account id and successUrl on a valid request", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue({
-      accountId: ACCOUNT,
-      orgId: null,
-      authToken: "t",
-    });
-    const result = await validateCreatePaymentMethodSessionRequest(
-      req({ successUrl: SUCCESS_URL }),
-      ACCOUNT,
-    );
+  it("delegates the path id and auth to validateGetPaymentMethodParams, then parses the body", async () => {
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
+    const request = req({ successUrl: SUCCESS_URL });
+    const result = await validateCreatePaymentMethodSessionRequest(request, ACCOUNT);
     expect(result).toEqual({ accountId: ACCOUNT, successUrl: SUCCESS_URL });
-    expect(validateAuthContext).toHaveBeenCalledWith(expect.anything(), { accountId: ACCOUNT });
+    expect(validateGetPaymentMethodParams).toHaveBeenCalledWith(request, ACCOUNT);
   });
 
-  it("returns 400 for a non-UUID id before touching auth", async () => {
-    const result = await validateCreatePaymentMethodSessionRequest(
+  it("returns the shared 400 { error } for a non-UUID id", async () => {
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(
+      NextResponse.json({ error: "id must be a valid UUID" }, { status: 400 }),
+    );
+    const result = (await validateCreatePaymentMethodSessionRequest(
       req({ successUrl: SUCCESS_URL }),
       "nope",
-    );
-    expect(result).toBeInstanceOf(NextResponse);
-    expect((result as NextResponse).status).toBe(400);
-    expect(validateAuthContext).not.toHaveBeenCalled();
+    )) as NextResponse;
+    expect(result.status).toBe(400);
+    await expect(errorBody(result)).resolves.toEqual({ error: "id must be a valid UUID" });
   });
 
   it("returns 400 with the documented message for an invalid successUrl", async () => {
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
     const result = (await validateCreatePaymentMethodSessionRequest(
       req({ successUrl: "not a url" }),
       ACCOUNT,
     )) as NextResponse;
     expect(result.status).toBe(400);
-    await expect(result.json()).resolves.toEqual({ error: "successUrl must be a valid URL" });
+    await expect(errorBody(result)).resolves.toEqual({ error: "successUrl must be a valid URL" });
   });
 
-  it("returns 400 when the body carries an unknown key (strict)", async () => {
+  it("returns 400 { error } when the body carries an unknown key (strict)", async () => {
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(ACCOUNT);
     const result = (await validateCreatePaymentMethodSessionRequest(
       req({ successUrl: SUCCESS_URL, accountId: ACCOUNT }),
       ACCOUNT,
     )) as NextResponse;
     expect(result.status).toBe(400);
+    await errorBody(result);
   });
 
-  it("maps an auth denial to { error } with the same status", async () => {
-    vi.mocked(validateAuthContext).mockResolvedValue(
-      NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 }),
-    );
-    const result = (await validateCreatePaymentMethodSessionRequest(
+  it("passes an auth denial through unchanged", async () => {
+    const denial = NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    vi.mocked(validateGetPaymentMethodParams).mockResolvedValue(denial);
+    const result = await validateCreatePaymentMethodSessionRequest(
       req({ successUrl: SUCCESS_URL }),
       ACCOUNT,
-    )) as NextResponse;
-    expect(result.status).toBe(403);
-    await expect(result.json()).resolves.toEqual({ error: "Forbidden" });
+    );
+    expect(result).toBe(denial);
   });
 });
