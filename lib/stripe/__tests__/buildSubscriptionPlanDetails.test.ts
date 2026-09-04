@@ -58,7 +58,7 @@ describe("buildSubscriptionPlanDetails", () => {
     ).toBe("send_invoice");
   });
 
-  it("returns all nulls for a subscription with no items", () => {
+  it("nulls the price-derived fields for a subscription with no items and keeps the subscription-level ones", () => {
     expect(buildSubscriptionPlanDetails(sub({ items: { data: [] } }))).toEqual({
       name: null,
       amountCents: null,

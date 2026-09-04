@@ -1,46 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type Stripe from "stripe";
 import { buildSubscriptionResponse } from "@/lib/stripe/buildSubscriptionResponse";
-
-const activeSub = (status: Stripe.Subscription.Status = "active") =>
-  ({
-    status,
-    canceled_at: null,
-    collection_method: "charge_automatically",
-    current_period_end: 1790380800,
-    items: {
-      data: [
-        {
-          price: {
-            id: "price_pro",
-            nickname: "Pro",
-            unit_amount: 9900,
-            currency: "usd",
-            recurring: { interval: "month" },
-            product: "prod_pro",
-          },
-        },
-      ],
-    },
-  }) as unknown as Stripe.Subscription;
-
-const nullDetails = {
-  name: null,
-  amountCents: null,
-  currency: null,
-  interval: null,
-  collectionMethod: null,
-  currentPeriodEnd: null,
-};
-
-const proDetails = {
-  name: "Pro",
-  amountCents: 9900,
-  currency: "usd",
-  interval: "month",
-  collectionMethod: "charge_automatically",
-  currentPeriodEnd: "2026-09-26T00:00:00.000Z",
-};
+import { activeSub, nullDetails, proDetails } from "./subscriptionResponseFixtures";
 
 describe("buildSubscriptionResponse", () => {
   it("returns isPro:false / none / null / null when neither subscription is active", () => {
