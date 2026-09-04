@@ -145,6 +145,7 @@ describe("updateAutoTopUpHandler", () => {
       thresholdCents: 250,
     });
     vi.mocked(updateAutoTopUp).mockResolvedValueOnce(null).mockResolvedValueOnce({
+      account_id: ACCOUNT,
       auto_topup_enabled: false,
       auto_topup_amount: 50_000_000,
       auto_topup_threshold: 2_500_000,
