@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import type Stripe from "stripe";
 
 const {
+  processCheckoutSetupCompletedMock,
   verifyStripeWebhookEventMock,
   processCreditsTopupSessionMock,
   processCreditsTopupPaymentIntentMock,
@@ -15,6 +16,7 @@ const {
   processCheckoutSessionExpiredMock,
   processCheckoutSubscriptionCompletedMock,
 } = vi.hoisted(() => ({
+  processCheckoutSetupCompletedMock: vi.fn(),
   verifyStripeWebhookEventMock: vi.fn(),
   processCreditsTopupSessionMock: vi.fn(),
   processCreditsTopupPaymentIntentMock: vi.fn(),
@@ -58,6 +60,9 @@ vi.mock("@/lib/stripe/notifyCreditsTopupSession", () => ({
 vi.mock("@/lib/stripe/processCheckoutSessionExpired", () => ({
   processCheckoutSessionExpired: processCheckoutSessionExpiredMock,
 }));
+vi.mock("@/lib/stripe/processCheckoutSetupCompleted", () => ({
+  processCheckoutSetupCompleted: processCheckoutSetupCompletedMock,
+}));
 vi.mock("@/lib/stripe/checkout/processCheckoutSubscriptionCompleted", () => ({
   processCheckoutSubscriptionCompleted: processCheckoutSubscriptionCompletedMock,
 }));
@@ -97,6 +102,16 @@ describe("stripeWebhookHandler", () => {
     expect(res.status).toBe(200);
     expect(processCreditsTopupSessionMock).toHaveBeenCalledWith(session);
     expect(processCreditsTopupPaymentIntentMock).not.toHaveBeenCalled();
+  });
+
+  it("passes a setup-mode checkout.session.completed to processCheckoutSetupCompleted", async () => {
+    const session = { id: "cs_setup_1", mode: "setup", setup_intent: "seti_1" };
+    verifyStripeWebhookEventMock.mockResolvedValue({
+      event: event("checkout.session.completed", session),
+    });
+    const res = await stripeWebhookHandler(makeReq());
+    expect(res.status).toBe(200);
+    expect(processCheckoutSetupCompletedMock).toHaveBeenCalledWith(session);
   });
 
   it("delegates payment_intent.succeeded to processCreditsTopupPaymentIntent", async () => {
