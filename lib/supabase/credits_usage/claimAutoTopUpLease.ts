@@ -24,9 +24,9 @@ export async function claimAutoTopUpLease({
   const { data, error } = await serverClient
     .from("credits_usage")
     // Cast until `pnpm update-types` picks up database#69 (see autoTopUpColumns.ts).
-    .update({ auto_topup_last_run_at: stamp } as never)
+    .update({ auto_topup_last_run_at: stamp })
     .eq("account_id", accountId)
-    .eq("auto_topup_enabled" as never, true as never)
+    .eq("auto_topup_enabled" as never, true)
     .or(`auto_topup_last_run_at.is.null,auto_topup_last_run_at.lt.${cutoff}`)
     .select("account_id")
     .maybeSingle();

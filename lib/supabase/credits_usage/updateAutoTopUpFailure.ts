@@ -17,7 +17,7 @@ export async function updateAutoTopUpFailure({
   const { error } = await serverClient
     .from("credits_usage")
     // Cast until `pnpm update-types` picks up database#69 (see autoTopUpColumns.ts).
-    .update({ auto_topup_enabled: false, auto_topup_last_error: message } as never)
+    .update({ auto_topup_enabled: false, auto_topup_last_error: message })
     .eq("account_id", accountId);
 
   if (error) {

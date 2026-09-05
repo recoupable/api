@@ -1,4 +1,4 @@
-import { selectAutoTopUp } from "@/lib/supabase/credits_usage/selectAutoTopUp";
+import { readAutoTopUpSettings } from "@/lib/billing/readAutoTopUpSettings";
 import { selectCreditsUsage } from "@/lib/supabase/credits_usage/selectCreditsUsage";
 import { claimAutoTopUpLease } from "@/lib/supabase/credits_usage/claimAutoTopUpLease";
 import { updateAutoTopUpFailure } from "@/lib/supabase/credits_usage/updateAutoTopUpFailure";
@@ -7,7 +7,7 @@ import { chargeCustomerOffSession } from "@/lib/stripe/chargeCustomerOffSession"
 import { shouldAutoTopUp } from "@/lib/credits/shouldAutoTopUp";
 import { grantAutoTopUpCredits } from "@/lib/credits/grantAutoTopUpCredits";
 import { sendAutoTopUpEmail } from "@/lib/credits/sendAutoTopUpEmail";
-import { creditsToCents } from "@/lib/billing/creditsToCents";
+import { creditsToStripeCents } from "@/lib/credits/creditsToStripeCents";
 import { AUTO_TOPUP_PURPOSE } from "@/lib/credits/autoTopUpPurpose";
 
 interface MaybeAutoTopUpParams {
@@ -35,7 +35,7 @@ export async function maybeAutoTopUp({
   now = new Date(),
 }: MaybeAutoTopUpParams): Promise<AutoTopUpOutcome> {
   try {
-    const settings = await selectAutoTopUp(accountId);
+    const settings = await readAutoTopUpSettings(accountId);
     if (!settings?.auto_topup_enabled) return { kind: "skipped" };
 
     const [usage] = await selectCreditsUsage({ account_id: accountId });
@@ -56,7 +56,7 @@ export async function maybeAutoTopUp({
     const lease = await claimAutoTopUpLease({ accountId, now });
     if (!lease) return { kind: "skipped" };
 
-    const amountCents = creditsToCents(amountCredits) ?? 0;
+    const amountCents = creditsToStripeCents(amountCredits);
     const customer = await findStripeCustomerForAccount(accountId);
     if (!customer) return disable(accountId, amountCents, NO_CARD);
 

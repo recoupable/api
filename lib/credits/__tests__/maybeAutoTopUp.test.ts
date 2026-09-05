@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { maybeAutoTopUp } from "@/lib/credits/maybeAutoTopUp";
 
 const m = vi.hoisted(() => ({
-  selectAutoTopUp: vi.fn(),
+  readAutoTopUpSettings: vi.fn(),
   selectCreditsUsage: vi.fn(),
   claimLease: vi.fn(),
   findCustomer: vi.fn(),
@@ -12,8 +12,8 @@ const m = vi.hoisted(() => ({
   email: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/credits_usage/selectAutoTopUp", () => ({
-  selectAutoTopUp: m.selectAutoTopUp,
+vi.mock("@/lib/billing/readAutoTopUpSettings", () => ({
+  readAutoTopUpSettings: m.readAutoTopUpSettings,
 }));
 vi.mock("@/lib/supabase/credits_usage/selectCreditsUsage", () => ({
   selectCreditsUsage: m.selectCreditsUsage,
@@ -47,7 +47,7 @@ const settings = {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => undefined);
-  m.selectAutoTopUp.mockResolvedValue(settings);
+  m.readAutoTopUpSettings.mockResolvedValue(settings);
   m.selectCreditsUsage.mockResolvedValue([{ account_id: ACCOUNT, remaining_credits: 500_000 }]);
   m.claimLease.mockResolvedValue(LEASE);
   m.findCustomer.mockResolvedValue("cus_x");
@@ -83,14 +83,14 @@ describe("maybeAutoTopUp", () => {
   });
 
   it("skips without touching Stripe when auto top-up is off", async () => {
-    m.selectAutoTopUp.mockResolvedValue({ ...settings, auto_topup_enabled: false });
+    m.readAutoTopUpSettings.mockResolvedValue({ ...settings, auto_topup_enabled: false });
     expect(await maybeAutoTopUp({ accountId: ACCOUNT, now: NOW })).toEqual({ kind: "skipped" });
     expect(m.claimLease).not.toHaveBeenCalled();
     expect(m.charge).not.toHaveBeenCalled();
   });
 
   it("skips when the account has no settings row", async () => {
-    m.selectAutoTopUp.mockResolvedValue(null);
+    m.readAutoTopUpSettings.mockResolvedValue(null);
     expect(await maybeAutoTopUp({ accountId: ACCOUNT, now: NOW })).toEqual({ kind: "skipped" });
   });
 
