@@ -5,8 +5,25 @@ import { RECOUP_FROM_EMAIL } from "@/lib/const";
 import { CREDIT_BILLING_URL } from "@/lib/credits/const";
 
 type AutoTopUpEmail =
-  | { accountId: string; kind: "receipt"; amountCents: number }
-  | { accountId: string; kind: "declined"; amountCents: number; message: string };
+  | { accountId: string; kind: "receipt"; amountCents: number; card?: ChargedCard }
+  | {
+      accountId: string;
+      kind: "declined";
+      amountCents: number;
+      message: string;
+      card?: ChargedCard;
+    };
+
+export interface ChargedCard {
+  brand: string;
+  last4: string;
+}
+
+/** "your Mastercard ending in 3800", or "the card on file" when unknown. */
+const describeCard = (card?: ChargedCard): string =>
+  card
+    ? `your ${card.brand.charAt(0).toUpperCase()}${card.brand.slice(1)} ending in ${escapeHtml(card.last4)}`
+    : "the card on file";
 
 const BILLING_URL = `${CREDIT_BILLING_URL}/billing`;
 
@@ -34,11 +51,11 @@ export async function sendAutoTopUpEmail(params: AutoTopUpEmail): Promise<void> 
     params.kind === "receipt"
       ? {
           subject: `Recoup receipt: ${amount} credits top-up`,
-          html: `<p>Your balance dropped below the threshold you set, so we charged the card on file ${amount}. The credits will appear on your balance shortly.</p><p>Change the amount or turn auto top-up off any time at <a href="${BILLING_URL}">${BILLING_URL}</a>.</p>`,
+          html: `<p>Your balance dropped below the threshold you set, so we charged ${describeCard(params.card)} ${amount}. The credits will appear on your balance shortly.</p><p>Change the amount or turn auto top-up off any time at <a href="${BILLING_URL}">${BILLING_URL}</a>.</p>`,
         }
       : {
           subject: "Recoup auto top-up turned off",
-          html: `<p>We tried to charge the card on file ${amount} for an auto top-up and it did not go through: ${escapeHtml(params.message)}</p><p>Auto top-up is now turned off so the card is not retried. Update the card and turn it back on at <a href="${BILLING_URL}">${BILLING_URL}</a>.</p>`,
+          html: `<p>We tried to charge ${describeCard(params.card)} ${amount} for an auto top-up and it did not go through: ${escapeHtml(params.message)}</p><p>Auto top-up is now turned off so the card is not retried. Update the card and turn it back on at <a href="${BILLING_URL}">${BILLING_URL}</a>.</p>`,
         };
 
   await sendEmailWithResend({ from: RECOUP_FROM_EMAIL, to, subject, html });

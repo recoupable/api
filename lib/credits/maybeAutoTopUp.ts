@@ -2,6 +2,7 @@ import { decideAutoTopUp } from "@/lib/credits/decideAutoTopUp";
 import { updateCreditsUsage } from "@/lib/supabase/credits_usage/updateCreditsUsage";
 import { findStripeCustomerForAccount } from "@/lib/stripe/findStripeCustomerForAccount";
 import { chargeCustomerOffSession } from "@/lib/stripe/chargeCustomerOffSession";
+import { getDefaultPaymentMethodDetails } from "@/lib/stripe/getDefaultPaymentMethodDetails";
 import { sendAutoTopUpEmail } from "@/lib/credits/sendAutoTopUpEmail";
 import { disableAutoTopUpAfterFailure } from "@/lib/credits/disableAutoTopUpAfterFailure";
 import { creditsToStripeCents } from "@/lib/credits/creditsToStripeCents";
@@ -59,7 +60,9 @@ export async function maybeAutoTopUp({
       idempotencyKey: `autotopup:${accountId}:${decision.previousRunAt ?? "first"}`,
     });
     if (charge.kind === "charged") {
-      await sendAutoTopUpEmail({ accountId, kind: "receipt", amountCents });
+      const saved = await getDefaultPaymentMethodDetails(customer);
+      const card = saved ? { brand: saved.brand, last4: saved.last4 } : undefined;
+      await sendAutoTopUpEmail({ accountId, kind: "receipt", amountCents, card });
       return charge;
     }
     if (charge.kind === "pending") return charge;

@@ -31,6 +31,18 @@ describe("sendAutoTopUpEmail", () => {
     expect(payload.html).not.toContain("—");
   });
 
+  it("names the card that was charged when the caller passes it", async () => {
+    await sendAutoTopUpEmail({
+      accountId: ACCOUNT,
+      kind: "receipt",
+      amountCents: 500,
+      card: { brand: "mastercard", last4: "3800" },
+    });
+    const html = sendMock.mock.calls[0][0].html as string;
+    expect(html).toContain("your Mastercard ending in 3800");
+    expect(html).toContain("$5.00");
+  });
+
   it("sends a decline notice that says auto top-up is now off and carries Stripe's message", async () => {
     await sendAutoTopUpEmail({
       accountId: ACCOUNT,

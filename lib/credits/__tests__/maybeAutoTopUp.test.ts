@@ -6,6 +6,7 @@ const m = vi.hoisted(() => ({
   usage: vi.fn(),
   update: vi.fn(),
   customer: vi.fn(),
+  card: vi.fn(),
   charge: vi.fn(),
   email: vi.fn(),
   disable: vi.fn(),
@@ -19,6 +20,9 @@ vi.mock("@/lib/stripe/findStripeCustomerForAccount", () => ({
   findStripeCustomerForAccount: m.customer,
 }));
 vi.mock("@/lib/stripe/chargeCustomerOffSession", () => ({ chargeCustomerOffSession: m.charge }));
+vi.mock("@/lib/stripe/getDefaultPaymentMethodDetails", () => ({
+  getDefaultPaymentMethodDetails: m.card,
+}));
 vi.mock("@/lib/credits/sendAutoTopUpEmail", () => ({ sendAutoTopUpEmail: m.email }));
 vi.mock("@/lib/credits/disableAutoTopUpAfterFailure", () => ({
   disableAutoTopUpAfterFailure: m.disable,
@@ -44,6 +48,13 @@ describe("maybeAutoTopUp", () => {
     m.update.mockResolvedValue({});
     m.customer.mockResolvedValue("cus_1");
     m.charge.mockResolvedValue({ kind: "charged", paymentIntentId: "pi_1" });
+    m.card.mockResolvedValue({
+      brand: "mastercard",
+      last4: "3800",
+      exp_month: 2,
+      exp_year: 2029,
+      funding: "credit",
+    });
   });
   afterEach(() => vi.restoreAllMocks());
 
@@ -65,7 +76,12 @@ describe("maybeAutoTopUp", () => {
       },
       idempotencyKey: `autotopup:${ACCOUNT}:first`,
     });
-    expect(m.email).toHaveBeenCalledWith({ accountId: ACCOUNT, kind: "receipt", amountCents: 500 });
+    expect(m.email).toHaveBeenCalledWith({
+      accountId: ACCOUNT,
+      kind: "receipt",
+      amountCents: 500,
+      card: { brand: "mastercard", last4: "3800" },
+    });
     expect(out).toEqual({ kind: "charged", paymentIntentId: "pi_1" });
   });
 
