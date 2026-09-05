@@ -16,6 +16,9 @@ vi.mock("@/lib/stripe/findStripeCustomerForAccount", () => ({
   findStripeCustomerForAccount: vi.fn(),
 }));
 vi.mock("@/lib/stripe/chargeCustomerOffSession", () => ({ chargeCustomerOffSession: m.charge }));
+vi.mock("@/lib/stripe/getDefaultPaymentMethodDetails", () => ({
+  getDefaultPaymentMethodDetails: vi.fn().mockResolvedValue(null),
+}));
 vi.mock("@/lib/credits/sendAutoTopUpEmail", () => ({ sendAutoTopUpEmail: vi.fn() }));
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";

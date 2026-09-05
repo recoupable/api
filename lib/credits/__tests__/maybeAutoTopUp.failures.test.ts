@@ -19,6 +19,9 @@ vi.mock("@/lib/stripe/findStripeCustomerForAccount", () => ({
   findStripeCustomerForAccount: m.customer,
 }));
 vi.mock("@/lib/stripe/chargeCustomerOffSession", () => ({ chargeCustomerOffSession: m.charge }));
+vi.mock("@/lib/stripe/getDefaultPaymentMethodDetails", () => ({
+  getDefaultPaymentMethodDetails: vi.fn().mockResolvedValue(null),
+}));
 vi.mock("@/lib/credits/sendAutoTopUpEmail", () => ({ sendAutoTopUpEmail: m.email }));
 vi.mock("@/lib/credits/disableAutoTopUpAfterFailure", () => ({
   disableAutoTopUpAfterFailure: m.disable,
