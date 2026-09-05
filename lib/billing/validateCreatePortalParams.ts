@@ -8,7 +8,11 @@ const idSchema = z.string().uuid("id must be a valid UUID");
 
 const bodySchema = z
   .object({
-    returnUrl: z.string().min(1, "returnUrl is required").url("returnUrl must be a valid URL"),
+    returnUrl: z
+      .string()
+      .min(1, "returnUrl is required")
+      .url("returnUrl must be a valid URL")
+      .refine(url => /^https?:\/\//i.test(url), "returnUrl must be an http or https URL"),
   })
   .strict();
 

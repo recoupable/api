@@ -58,6 +58,17 @@ describe("validateCreatePortalParams", () => {
     });
   });
 
+  it("returns 400 when returnUrl is not http or https", async () => {
+    for (const returnUrl of ["javascript:alert(1)", "ftp://example.com/x"]) {
+      const res = await validateCreatePortalParams(post(JSON.stringify({ returnUrl })), ACCOUNT);
+      expect(res).toBeInstanceOf(NextResponse);
+      expect((res as NextResponse).status).toBe(400);
+      await expect((res as NextResponse).json()).resolves.toEqual({
+        error: "returnUrl must be an http or https URL",
+      });
+    }
+  });
+
   it("maps auth failure to { error } and preserves status", async () => {
     vi.mocked(validateAuthContext).mockResolvedValue(
       NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 }),

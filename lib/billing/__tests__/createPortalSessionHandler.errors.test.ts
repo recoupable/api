@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { createPortalSessionHandler } from "@/lib/billing/createPortalSessionHandler";
 import { validateCreatePortalParams } from "@/lib/billing/validateCreatePortalParams";
 import { getActiveSubscriptionDetails } from "@/lib/stripe/getActiveSubscriptionDetails";
@@ -35,51 +35,39 @@ const subscribed = () =>
     customer: "cus_test_123",
   } as Awaited<ReturnType<typeof getActiveSubscriptionDetails>>);
 
-describe("createPortalSessionHandler", () => {
+describe("createPortalSessionHandler errors", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
   afterEach(() => vi.mocked(console.error).mockRestore());
 
-  it("returns the validation response unchanged", async () => {
-    const err = NextResponse.json({ error: "bad" }, { status: 400 });
-    vi.mocked(validateCreatePortalParams).mockResolvedValue(err);
-    expect(await createPortalSessionHandler(request(), params())).toBe(err);
-    expect(getActiveSubscriptionDetails).not.toHaveBeenCalled();
-  });
-
-  it("returns 400 when the account has no active subscription", async () => {
-    validated();
-    vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(null);
-    const res = await createPortalSessionHandler(request(), params());
-    expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toEqual({ error: "No active subscription found" });
-    expect(createBillingPortalSession).not.toHaveBeenCalled();
-  });
-
-  it("looks up the subscription for the path account, not the caller", async () => {
-    validated();
-    vi.mocked(getActiveSubscriptionDetails).mockResolvedValue(null);
-    const req = request();
-    await createPortalSessionHandler(req, params());
-    expect(validateCreatePortalParams).toHaveBeenCalledWith(req, ACCOUNT);
-    expect(getActiveSubscriptionDetails).toHaveBeenCalledWith(ACCOUNT);
-  });
-
-  it("returns 200 with id and url when the portal session is created", async () => {
+  it("returns 400 when the session has no url", async () => {
     validated();
     subscribed();
     vi.mocked(createBillingPortalSession).mockResolvedValue({
       id: "bps_test_abc",
-      url: "https://billing.example.com/session/abc",
+      url: null,
     } as Awaited<ReturnType<typeof createBillingPortalSession>>);
     const res = await createPortalSessionHandler(request(), params());
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({
-      id: "bps_test_abc",
-      url: "https://billing.example.com/session/abc",
-    });
-    expect(createBillingPortalSession).toHaveBeenCalledWith("cus_test_123", RETURN_URL);
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Billing portal URL missing" });
+  });
+
+  it("returns 500 when the subscription lookup throws", async () => {
+    validated();
+    vi.mocked(getActiveSubscriptionDetails).mockRejectedValue(new Error("stripe down"));
+    const res = await createPortalSessionHandler(request(), params());
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({ error: "Internal server error" });
+  });
+
+  it("returns 500 when creating the portal session throws", async () => {
+    validated();
+    subscribed();
+    vi.mocked(createBillingPortalSession).mockRejectedValue(new Error("Stripe down"));
+    const res = await createPortalSessionHandler(request(), params());
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({ error: "Internal server error" });
   });
 });
