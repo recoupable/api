@@ -5,7 +5,7 @@ import { findDefaultPaymentMethodForCustomer } from "@/lib/stripe/findDefaultPay
 interface ChargeParams {
   customer: string;
   totalCents: number;
-  metadata: { accountId: string; credits: string; purpose: string };
+  metadata: { accountId: string; credits: string; purpose: string; trigger?: string };
   /** Stripe idempotency key; omitted for interactive top-ups so repeat buys stay distinct. */
   idempotencyKey?: string;
 }

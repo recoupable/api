@@ -46,6 +46,35 @@ describe("sendAutoTopUpEmail", () => {
     expect(payload.html).toContain("/billing");
   });
 
+  it("escapes markup in Stripe's decline message and links to the billing page", async () => {
+    await sendAutoTopUpEmail({
+      accountId: ACCOUNT,
+      kind: "declined",
+      amountCents: 500,
+      message: "<img src=x onerror=alert(1)> & done",
+    });
+    const html = sendMock.mock.calls[0][0].html as string;
+    expect(html).not.toContain("<img");
+    expect(html).toContain("&lt;img src=x onerror=alert(1)&gt; &amp; done");
+    expect(html).toContain("https://app.recoupable.dev/billing");
+  });
+
+  it("picks the most recently updated non-empty email when the account has several rows", async () => {
+    selectEmailsMock.mockResolvedValue([
+      { account_id: ACCOUNT, email: null, updated_at: "2026-09-05T00:00:00Z" },
+      { account_id: ACCOUNT, email: "old@example.com", updated_at: "2026-01-01T00:00:00Z" },
+      { account_id: ACCOUNT, email: "new@example.com", updated_at: "2026-08-01T00:00:00Z" },
+    ]);
+    await sendAutoTopUpEmail({ accountId: ACCOUNT, kind: "receipt", amountCents: 500 });
+    expect(sendMock.mock.calls[0][0].to).toBe("new@example.com");
+  });
+
+  it("says the credits arrive via the webhook shortly, not that they were added", async () => {
+    await sendAutoTopUpEmail({ accountId: ACCOUNT, kind: "receipt", amountCents: 10000 });
+    const html = sendMock.mock.calls[0][0].html as string;
+    expect(html.toLowerCase()).toContain("shortly");
+  });
+
   it("does nothing when the account has no email", async () => {
     selectEmailsMock.mockResolvedValue([]);
     vi.spyOn(console, "warn").mockImplementation(() => undefined);

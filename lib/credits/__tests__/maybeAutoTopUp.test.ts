@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { maybeAutoTopUp } from "@/lib/credits/maybeAutoTopUp";
 
 const m = vi.hoisted(() => ({
@@ -7,7 +7,6 @@ const m = vi.hoisted(() => ({
   claimLease: vi.fn(),
   findCustomer: vi.fn(),
   charge: vi.fn(),
-  grant: vi.fn(),
   failure: vi.fn(),
   email: vi.fn(),
 }));
@@ -25,7 +24,6 @@ vi.mock("@/lib/stripe/findStripeCustomerForAccount", () => ({
   findStripeCustomerForAccount: m.findCustomer,
 }));
 vi.mock("@/lib/stripe/chargeCustomerOffSession", () => ({ chargeCustomerOffSession: m.charge }));
-vi.mock("@/lib/credits/grantAutoTopUpCredits", () => ({ grantAutoTopUpCredits: m.grant }));
 vi.mock("@/lib/supabase/credits_usage/updateAutoTopUpFailure", () => ({
   updateAutoTopUpFailure: m.failure,
 }));
@@ -33,7 +31,8 @@ vi.mock("@/lib/credits/sendAutoTopUpEmail", () => ({ sendAutoTopUpEmail: m.email
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
 const NOW = new Date("2026-09-04T15:00:00Z");
-const LEASE = "2026-09-04T15:00:00.000Z";
+const STAMP = "2026-09-04T15:00:00.000Z";
+const LEASE = { stamp: STAMP, amountCredits: 100_000_000 };
 
 const settings = {
   account_id: ACCOUNT,
@@ -44,6 +43,8 @@ const settings = {
   auto_topup_last_error: null,
 };
 
+afterEach(() => vi.restoreAllMocks());
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -52,27 +53,31 @@ beforeEach(() => {
   m.claimLease.mockResolvedValue(LEASE);
   m.findCustomer.mockResolvedValue("cus_x");
   m.charge.mockResolvedValue({ kind: "charged", paymentIntentId: "pi_1" });
-  m.grant.mockResolvedValue(undefined);
   m.failure.mockResolvedValue(undefined);
   m.email.mockResolvedValue(undefined);
 });
 
 describe("maybeAutoTopUp", () => {
-  it("charges the card for the amount with an idempotency key, grants the credits, and emails a receipt", async () => {
+  it("claims the lease with the settings it read, charges as a credits_topup so the webhook grants, and emails a receipt", async () => {
     const result = await maybeAutoTopUp({ accountId: ACCOUNT, now: NOW });
 
     expect(result).toEqual({ kind: "charged", paymentIntentId: "pi_1" });
-    expect(m.claimLease).toHaveBeenCalledWith({ accountId: ACCOUNT, now: NOW });
+    expect(m.claimLease).toHaveBeenCalledWith({
+      accountId: ACCOUNT,
+      now: NOW,
+      amountCredits: 100_000_000,
+      thresholdCredits: 1_000_000,
+    });
     expect(m.charge).toHaveBeenCalledWith({
       customer: "cus_x",
       totalCents: 10000,
-      metadata: { accountId: ACCOUNT, credits: "100000000", purpose: "credits_auto_topup" },
-      idempotencyKey: `autotopup:${ACCOUNT}:${LEASE}`,
-    });
-    expect(m.grant).toHaveBeenCalledWith({
-      accountId: ACCOUNT,
-      credits: 100_000_000,
-      paymentIntentId: "pi_1",
+      metadata: {
+        accountId: ACCOUNT,
+        credits: "100000000",
+        purpose: "credits_topup",
+        trigger: "auto_topup",
+      },
+      idempotencyKey: `autotopup:${ACCOUNT}:${STAMP}`,
     });
     expect(m.email).toHaveBeenCalledWith({
       accountId: ACCOUNT,
@@ -106,6 +111,17 @@ describe("maybeAutoTopUp", () => {
     expect(m.charge).not.toHaveBeenCalled();
   });
 
+  it("charges the amount the lease locked, not the amount it first read", async () => {
+    m.claimLease.mockResolvedValue({ stamp: STAMP, amountCredits: 50_000_000 });
+    await maybeAutoTopUp({ accountId: ACCOUNT, now: NOW });
+    expect(m.charge).toHaveBeenCalledWith(
+      expect.objectContaining({
+        totalCents: 5000,
+        metadata: expect.objectContaining({ credits: "50000000" }),
+      }),
+    );
+  });
+
   it("on a decline: turns auto top-up off with the message, emails, and does not grant", async () => {
     m.charge.mockResolvedValue({
       kind: "requires_action",
@@ -125,7 +141,6 @@ describe("maybeAutoTopUp", () => {
       amountCents: 10000,
       message: "Your card was declined.",
     });
-    expect(m.grant).not.toHaveBeenCalled();
   });
 
   it("on no card on file: turns auto top-up off and emails", async () => {
@@ -133,7 +148,6 @@ describe("maybeAutoTopUp", () => {
     const result = await maybeAutoTopUp({ accountId: ACCOUNT, now: NOW });
     expect(result).toEqual({ kind: "disabled", message: "No card on file" });
     expect(m.failure).toHaveBeenCalledWith({ accountId: ACCOUNT, message: "No card on file" });
-    expect(m.grant).not.toHaveBeenCalled();
   });
 
   it("on no Stripe customer: turns auto top-up off without calling Stripe", async () => {

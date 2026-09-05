@@ -1,4 +1,4 @@
-import { AUTO_TOPUP_LEASE_MS } from "@/lib/credits/autoTopUpPurpose";
+import { AUTO_TOPUP_LEASE_MS } from "@/lib/credits/autoTopUpLease";
 
 interface ShouldAutoTopUpParams {
   enabled: boolean;

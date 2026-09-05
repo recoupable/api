@@ -1,14 +1,13 @@
 import { readAutoTopUpSettings } from "@/lib/billing/readAutoTopUpSettings";
 import { selectCreditsUsage } from "@/lib/supabase/credits_usage/selectCreditsUsage";
 import { claimAutoTopUpLease } from "@/lib/supabase/credits_usage/claimAutoTopUpLease";
-import { updateAutoTopUpFailure } from "@/lib/supabase/credits_usage/updateAutoTopUpFailure";
 import { findStripeCustomerForAccount } from "@/lib/stripe/findStripeCustomerForAccount";
 import { chargeCustomerOffSession } from "@/lib/stripe/chargeCustomerOffSession";
 import { shouldAutoTopUp } from "@/lib/credits/shouldAutoTopUp";
-import { grantAutoTopUpCredits } from "@/lib/credits/grantAutoTopUpCredits";
 import { sendAutoTopUpEmail } from "@/lib/credits/sendAutoTopUpEmail";
+import { disableAutoTopUpAfterFailure } from "@/lib/credits/disableAutoTopUpAfterFailure";
 import { creditsToStripeCents } from "@/lib/credits/creditsToStripeCents";
-import { AUTO_TOPUP_PURPOSE } from "@/lib/credits/autoTopUpPurpose";
+import { CREDIT_TOPUP_PURPOSE } from "@/lib/stripe/creditsTopupPurpose";
 
 interface MaybeAutoTopUpParams {
   accountId: string;
@@ -51,28 +50,38 @@ export async function maybeAutoTopUp({
         remainingCredits: usage.remaining_credits,
         now,
       });
-    if (!shouldRun || amountCredits === null) return { kind: "skipped" };
+    if (!shouldRun || amountCredits === null || settings.auto_topup_threshold === null) {
+      return { kind: "skipped" };
+    }
 
-    const lease = await claimAutoTopUpLease({ accountId, now });
+    const lease = await claimAutoTopUpLease({
+      accountId,
+      now,
+      amountCredits,
+      thresholdCredits: settings.auto_topup_threshold,
+    });
     if (!lease) return { kind: "skipped" };
 
-    const amountCents = creditsToStripeCents(amountCredits);
+    const amountCents = creditsToStripeCents(lease.amountCredits);
     const customer = await findStripeCustomerForAccount(accountId);
-    if (!customer) return disable(accountId, amountCents, NO_CARD);
+    if (!customer) return disableAutoTopUpAfterFailure(accountId, amountCents, NO_CARD);
 
+    // Same purpose as an interactive off-session credit purchase, so the
+    // payment_intent.succeeded webhook grants the credits idempotently and
+    // Stripe retries the event until the grant lands. Nothing is granted here.
     const charge = await chargeCustomerOffSession({
       customer,
       totalCents: amountCents,
-      metadata: { accountId, credits: String(amountCredits), purpose: AUTO_TOPUP_PURPOSE },
-      idempotencyKey: `autotopup:${accountId}:${lease}`,
+      metadata: {
+        accountId,
+        credits: String(lease.amountCredits),
+        purpose: CREDIT_TOPUP_PURPOSE,
+        trigger: "auto_topup",
+      },
+      idempotencyKey: `autotopup:${accountId}:${lease.stamp}`,
     });
 
     if (charge.kind === "charged") {
-      await grantAutoTopUpCredits({
-        accountId,
-        credits: amountCredits,
-        paymentIntentId: charge.paymentIntentId,
-      });
       await sendAutoTopUpEmail({ accountId, kind: "receipt", amountCents });
       return { kind: "charged", paymentIntentId: charge.paymentIntentId };
     }
@@ -81,19 +90,9 @@ export async function maybeAutoTopUp({
       charge.kind === "no_payment_method"
         ? NO_CARD
         : (charge.declineReason?.message ?? "The card could not be charged");
-    return disable(accountId, amountCents, message);
+    return disableAutoTopUpAfterFailure(accountId, amountCents, message);
   } catch (error) {
     console.error(`[maybeAutoTopUp] failed for account ${accountId}:`, error);
     return { kind: "error" };
   }
-}
-
-async function disable(
-  accountId: string,
-  amountCents: number,
-  message: string,
-): Promise<AutoTopUpOutcome> {
-  await updateAutoTopUpFailure({ accountId, message });
-  await sendAutoTopUpEmail({ accountId, kind: "declined", amountCents, message });
-  return { kind: "disabled", message };
 }
