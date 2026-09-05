@@ -8,6 +8,7 @@ const m = vi.hoisted(() => ({
   customer: vi.fn(),
   charge: vi.fn(),
   email: vi.fn(),
+  disable: vi.fn(),
 }));
 vi.mock("@/lib/billing/readAutoTopUpSettings", () => ({ readAutoTopUpSettings: m.settings }));
 vi.mock("@/lib/supabase/credits_usage/selectCreditsUsage", () => ({ selectCreditsUsage: m.usage }));
@@ -19,6 +20,9 @@ vi.mock("@/lib/stripe/findStripeCustomerForAccount", () => ({
 }));
 vi.mock("@/lib/stripe/chargeCustomerOffSession", () => ({ chargeCustomerOffSession: m.charge }));
 vi.mock("@/lib/credits/sendAutoTopUpEmail", () => ({ sendAutoTopUpEmail: m.email }));
+vi.mock("@/lib/credits/disableAutoTopUpAfterFailure", () => ({
+  disableAutoTopUpAfterFailure: m.disable,
+}));
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
 const NOW = new Date("2026-09-05T12:00:00.000Z");
@@ -73,31 +77,41 @@ describe("maybeAutoTopUp", () => {
     );
   });
 
-  it("disables and emails on a decline, without charging again", async () => {
+  it("hands a decline to disableAutoTopUpAfterFailure with the stamp it wrote", async () => {
     m.settings.mockResolvedValue(settings());
     m.charge.mockResolvedValue({
       kind: "requires_action",
       declineReason: { message: "Your card was declined." },
     });
+    m.disable.mockResolvedValue({ kind: "disabled", message: "Your card was declined." });
     const out = await maybeAutoTopUp({ accountId: ACCOUNT, now: NOW });
-    expect(m.update).toHaveBeenLastCalledWith({
-      account_id: ACCOUNT,
-      updates: { auto_topup_enabled: false, auto_topup_last_error: "Your card was declined." },
-    });
-    expect(m.email).toHaveBeenCalledWith({
+    expect(m.disable).toHaveBeenCalledWith({
       accountId: ACCOUNT,
-      kind: "declined",
       amountCents: 500,
       message: "Your card was declined.",
+      stamp: NOW.toISOString(),
     });
     expect(out).toEqual({ kind: "disabled", message: "Your card was declined." });
+  });
+
+  it("reports pending without disabling when Stripe is still processing the charge", async () => {
+    m.settings.mockResolvedValue(settings());
+    m.charge.mockResolvedValue({ kind: "pending", paymentIntentId: "pi_p" });
+    const out = await maybeAutoTopUp({ accountId: ACCOUNT, now: NOW });
+    expect(out).toEqual({ kind: "pending", paymentIntentId: "pi_p" });
+    expect(m.update).toHaveBeenCalledTimes(1);
+    expect(m.email).not.toHaveBeenCalled();
   });
 
   it("disables when the account has no Stripe customer", async () => {
     m.settings.mockResolvedValue(settings());
     m.customer.mockResolvedValue(null);
+    m.disable.mockResolvedValue({ kind: "disabled", message: "No card on file" });
     const out = await maybeAutoTopUp({ accountId: ACCOUNT, now: NOW });
     expect(m.charge).not.toHaveBeenCalled();
+    expect(m.disable).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "No card on file", stamp: NOW.toISOString() }),
+    );
     expect(out).toEqual({ kind: "disabled", message: "No card on file" });
   });
 

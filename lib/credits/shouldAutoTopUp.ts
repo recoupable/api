@@ -25,8 +25,10 @@ export function shouldAutoTopUp({
 }: ShouldAutoTopUpParams): boolean {
   if (!enabled || amountCredits === null || thresholdCredits === null) return false;
   if (remainingCredits >= thresholdCredits) return false;
-  if (lastRunAt && now.getTime() - new Date(lastRunAt).getTime() < AUTO_TOPUP_LEASE_MS) {
-    return false;
+  if (lastRunAt !== null) {
+    const last = new Date(lastRunAt).getTime();
+    // Fail closed on a malformed or empty stamp rather than charging.
+    if (Number.isNaN(last) || now.getTime() - last < AUTO_TOPUP_LEASE_MS) return false;
   }
   return true;
 }

@@ -34,6 +34,11 @@ describe("shouldAutoTopUp", () => {
     expect(shouldAutoTopUp({ ...base, lastRunAt: "2026-09-04T14:51:00Z" })).toBe(false);
   });
 
+  it("fails closed for a malformed or empty lastRunAt", () => {
+    expect(shouldAutoTopUp({ ...base, lastRunAt: "not-a-date" })).toBe(false);
+    expect(shouldAutoTopUp({ ...base, lastRunAt: "" })).toBe(false);
+  });
+
   it("is true when the last run was more than 10 minutes ago", () => {
     expect(shouldAutoTopUp({ ...base, lastRunAt: "2026-09-04T14:49:59Z" })).toBe(true);
   });

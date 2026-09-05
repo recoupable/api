@@ -1,9 +1,7 @@
-import { readAutoTopUpSettings } from "@/lib/billing/readAutoTopUpSettings";
-import { selectCreditsUsage } from "@/lib/supabase/credits_usage/selectCreditsUsage";
+import { decideAutoTopUp } from "@/lib/credits/decideAutoTopUp";
 import { updateCreditsUsage } from "@/lib/supabase/credits_usage/updateCreditsUsage";
 import { findStripeCustomerForAccount } from "@/lib/stripe/findStripeCustomerForAccount";
 import { chargeCustomerOffSession } from "@/lib/stripe/chargeCustomerOffSession";
-import { shouldAutoTopUp } from "@/lib/credits/shouldAutoTopUp";
 import { sendAutoTopUpEmail } from "@/lib/credits/sendAutoTopUpEmail";
 import { disableAutoTopUpAfterFailure } from "@/lib/credits/disableAutoTopUpAfterFailure";
 import { creditsToStripeCents } from "@/lib/credits/creditsToStripeCents";
@@ -17,6 +15,7 @@ interface MaybeAutoTopUpParams {
 export type AutoTopUpOutcome =
   | { kind: "skipped" }
   | { kind: "charged"; paymentIntentId: string }
+  | { kind: "pending"; paymentIntentId: string }
   | { kind: "disabled"; message: string }
   | { kind: "error" };
 
@@ -38,51 +37,37 @@ export async function maybeAutoTopUp({
   now = new Date(),
 }: MaybeAutoTopUpParams): Promise<AutoTopUpOutcome> {
   try {
-    const settings = await readAutoTopUpSettings(accountId);
-    if (!settings?.auto_topup_enabled) return { kind: "skipped" };
-    const [usage] = await selectCreditsUsage({ account_id: accountId });
-    const amountCredits = settings.auto_topup_amount;
-    const shouldRun =
-      usage !== undefined &&
-      amountCredits !== null &&
-      shouldAutoTopUp({
-        enabled: settings.auto_topup_enabled,
-        amountCredits,
-        thresholdCredits: settings.auto_topup_threshold,
-        lastRunAt: settings.auto_topup_last_run_at,
-        remainingCredits: usage.remaining_credits,
-        now,
-      });
-    if (!shouldRun || amountCredits === null) return { kind: "skipped" };
+    const decision = await decideAutoTopUp(accountId, now);
+    if (!decision) return { kind: "skipped" };
+    const stamp = now.toISOString();
+    await updateCreditsUsage({ account_id: accountId, updates: { auto_topup_last_run_at: stamp } });
+    const amountCents = creditsToStripeCents(decision.amountCredits);
+    const fail = (message: string) =>
+      disableAutoTopUpAfterFailure({ accountId, amountCents, message, stamp });
 
-    await updateCreditsUsage({
-      account_id: accountId,
-      updates: { auto_topup_last_run_at: now.toISOString() },
-    });
-    const amountCents = creditsToStripeCents(amountCredits);
     const customer = await findStripeCustomerForAccount(accountId);
-    if (!customer) return disableAutoTopUpAfterFailure(accountId, amountCents, NO_CARD);
-
+    if (!customer) return fail(NO_CARD);
     const charge = await chargeCustomerOffSession({
       customer,
       totalCents: amountCents,
       metadata: {
         accountId,
-        credits: String(amountCredits),
+        credits: String(decision.amountCredits),
         purpose: CREDIT_TOPUP_PURPOSE,
         trigger: "auto_topup",
       },
-      idempotencyKey: `autotopup:${accountId}:${settings.auto_topup_last_run_at ?? "first"}`,
+      idempotencyKey: `autotopup:${accountId}:${decision.previousRunAt ?? "first"}`,
     });
     if (charge.kind === "charged") {
       await sendAutoTopUpEmail({ accountId, kind: "receipt", amountCents });
-      return { kind: "charged", paymentIntentId: charge.paymentIntentId };
+      return charge;
     }
-    const message =
+    if (charge.kind === "pending") return charge;
+    return fail(
       charge.kind === "no_payment_method"
         ? NO_CARD
-        : (charge.declineReason?.message ?? "The card could not be charged");
-    return disableAutoTopUpAfterFailure(accountId, amountCents, message);
+        : (charge.declineReason?.message ?? "The card could not be charged"),
+    );
   } catch (error) {
     console.error(`[maybeAutoTopUp] failed for account ${accountId}:`, error);
     return { kind: "error" };

@@ -22,6 +22,7 @@ export type DeclineReason = {
 export type OffSessionChargeResult =
   | { kind: "charged"; paymentIntentId: string }
   | { kind: "requires_action"; declineReason?: DeclineReason }
+  | { kind: "pending"; paymentIntentId: string }
   | { kind: "no_payment_method" };
 
 /**
@@ -57,6 +58,11 @@ export async function chargeCustomerOffSession({
       : await stripeClient.paymentIntents.create(params);
     if (pi.status === "succeeded") {
       return { kind: "charged", paymentIntentId: pi.id };
+    }
+    if (pi.status === "processing") {
+      // Stripe is still settling; the payment_intent.succeeded webhook will
+      // grant the credits if it completes. Not a decline.
+      return { kind: "pending", paymentIntentId: pi.id };
     }
     if (pi.status !== "requires_action") {
       console.warn(`[chargeCustomerOffSession] unexpected PI status: ${pi.status}`);
