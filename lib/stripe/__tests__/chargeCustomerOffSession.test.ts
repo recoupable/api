@@ -64,6 +64,15 @@ describe("chargeCustomerOffSession", () => {
     });
   });
 
+  it("passes the idempotency key as Stripe request options when one is given", async () => {
+    findDefaultPmMock.mockResolvedValue("pm_card");
+    paymentIntentsCreate.mockResolvedValue({ id: "pi_idem", status: "succeeded" });
+
+    await chargeCustomerOffSession({ ...params, idempotencyKey: "autotopup:a:2026" });
+
+    expect(paymentIntentsCreate.mock.calls[0][1]).toEqual({ idempotencyKey: "autotopup:a:2026" });
+  });
+
   it("does NOT pass an idempotency key so same-amount top-ups produce distinct PaymentIntents", async () => {
     findDefaultPmMock.mockResolvedValue("pm_card");
     paymentIntentsCreate.mockResolvedValue({ id: "pi_a", status: "succeeded" });
@@ -157,16 +166,21 @@ describe("chargeCustomerOffSession", () => {
     findDefaultPmMock.mockResolvedValue("pm_card");
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    for (const status of [
-      "processing",
-      "requires_capture",
-      "canceled",
-      "requires_payment_method",
-    ]) {
+    for (const status of ["requires_capture", "canceled", "requires_payment_method"]) {
       paymentIntentsCreate.mockResolvedValue({ id: `pi_${status}`, status });
       const result = await chargeCustomerOffSession(params);
       expect(result).toEqual({ kind: "requires_action" });
     }
+  });
+
+  it("returns pending with the PaymentIntent id when Stripe reports processing", async () => {
+    paymentIntentsCreate.mockResolvedValue({ id: "pi_processing", status: "processing" });
+    const result = await chargeCustomerOffSession({
+      customer: "cus_1",
+      totalCents: 500,
+      metadata: { accountId: "acc", credits: "5000000", purpose: "credits_topup" },
+    });
+    expect(result).toEqual({ kind: "pending", paymentIntentId: "pi_processing" });
   });
 
   it("rethrows on unexpected hard errors", async () => {
