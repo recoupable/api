@@ -5,7 +5,9 @@ import { findDefaultPaymentMethodForCustomer } from "@/lib/stripe/findDefaultPay
 interface ChargeParams {
   customer: string;
   totalCents: number;
-  metadata: { accountId: string; credits: string; purpose: string };
+  metadata: { accountId: string; credits: string; purpose: string; trigger?: string };
+  /** Stripe idempotency key; omitted for interactive top-ups so repeat buys stay distinct. */
+  idempotencyKey?: string;
 }
 
 export type DeclineReason = {
@@ -20,6 +22,7 @@ export type DeclineReason = {
 export type OffSessionChargeResult =
   | { kind: "charged"; paymentIntentId: string }
   | { kind: "requires_action"; declineReason?: DeclineReason }
+  | { kind: "pending"; paymentIntentId: string }
   | { kind: "no_payment_method" };
 
 /**
@@ -32,6 +35,7 @@ export async function chargeCustomerOffSession({
   customer,
   totalCents,
   metadata,
+  idempotencyKey,
 }: ChargeParams): Promise<OffSessionChargeResult> {
   const paymentMethodId = await findDefaultPaymentMethodForCustomer(customer);
   if (!paymentMethodId) {
@@ -49,9 +53,16 @@ export async function chargeCustomerOffSession({
   };
 
   try {
-    const pi = await stripeClient.paymentIntents.create(params);
+    const pi = idempotencyKey
+      ? await stripeClient.paymentIntents.create(params, { idempotencyKey })
+      : await stripeClient.paymentIntents.create(params);
     if (pi.status === "succeeded") {
       return { kind: "charged", paymentIntentId: pi.id };
+    }
+    if (pi.status === "processing") {
+      // Stripe is still settling; the payment_intent.succeeded webhook will
+      // grant the credits if it completes. Not a decline.
+      return { kind: "pending", paymentIntentId: pi.id };
     }
     if (pi.status !== "requires_action") {
       console.warn(`[chargeCustomerOffSession] unexpected PI status: ${pi.status}`);
