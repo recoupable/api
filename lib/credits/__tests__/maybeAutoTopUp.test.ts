@@ -94,6 +94,25 @@ describe("maybeAutoTopUp", () => {
     expect(out).toEqual({ kind: "disabled", message: "Your card was declined." });
   });
 
+  it("uses the fallback message when a decline carries none", async () => {
+    m.settings.mockResolvedValue(settings());
+    m.charge.mockResolvedValue({ kind: "requires_action" });
+    m.disable.mockResolvedValue({ kind: "disabled", message: "The card could not be charged" });
+    await maybeAutoTopUp({ accountId: ACCOUNT, now: NOW });
+    expect(m.disable).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "The card could not be charged" }),
+    );
+  });
+
+  it("maps no_payment_method from Stripe to the no-card outcome", async () => {
+    m.settings.mockResolvedValue(settings());
+    m.charge.mockResolvedValue({ kind: "no_payment_method" });
+    m.disable.mockResolvedValue({ kind: "disabled", message: "No card on file" });
+    const out = await maybeAutoTopUp({ accountId: ACCOUNT, now: NOW });
+    expect(m.disable).toHaveBeenCalledWith(expect.objectContaining({ message: "No card on file" }));
+    expect(out).toEqual({ kind: "disabled", message: "No card on file" });
+  });
+
   it("reports pending without disabling when Stripe is still processing the charge", async () => {
     m.settings.mockResolvedValue(settings());
     m.charge.mockResolvedValue({ kind: "pending", paymentIntentId: "pi_p" });
