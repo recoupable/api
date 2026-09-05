@@ -14,7 +14,10 @@ export interface CanAccessAccountParams {
  *
  * Access rules:
  * 1. If currentAccountId is in RECOUP_ORG, grants universal admin access
- * 2. Otherwise, checks if both accounts share at least one org
+ * 2. If targetAccountId is an organization the caller belongs to, grants access
+ *    (organizations are accounts; org-scoped billing reads and writes use the
+ *    org id as the target)
+ * 3. Otherwise, checks if both accounts share at least one org
  *
  * @param params - The validation parameters
  * @returns true if access is allowed, false otherwise
@@ -43,6 +46,10 @@ export async function canAccessAccount(params: CanAccessAccountParams): Promise<
   }
 
   const orgIds = currentOrgs.map(m => m.organization_id);
+  if (orgIds.includes(targetAccountId)) {
+    return true;
+  }
+
   const shared = await selectAccountOrganizationIds(targetAccountId, orgIds);
 
   return Array.isArray(shared) && shared.length > 0;

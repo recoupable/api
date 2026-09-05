@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { getActiveSubscriptionDetails } from "@/lib/stripe/getActiveSubscriptionDetails";
 import { getOrgSubscription } from "@/lib/stripe/getOrgSubscription";
+import { expandSubscriptionProduct } from "@/lib/stripe/expandSubscriptionProduct";
 import { validateAccountSubscriptionParams } from "@/lib/stripe/validateAccountSubscriptionParams";
 import { buildSubscriptionResponse } from "@/lib/stripe/buildSubscriptionResponse";
 import { mapToSubscriptionSessionError } from "@/lib/stripe/mapToSubscriptionSessionError";
@@ -23,9 +24,13 @@ export async function getAccountSubscriptionHandler(
       return mapToSubscriptionSessionError(validated);
     }
 
-    const [account, organization] = await Promise.all([
+    const [accountRaw, organizationRaw] = await Promise.all([
       getActiveSubscriptionDetails(validated),
       getOrgSubscription(validated),
+    ]);
+    const [account, organization] = await Promise.all([
+      expandSubscriptionProduct(accountRaw),
+      expandSubscriptionProduct(organizationRaw),
     ]);
 
     return NextResponse.json(buildSubscriptionResponse({ account, organization }), {
