@@ -5,7 +5,7 @@ import { validateUpdateAutoTopUpBody } from "@/lib/billing/validateUpdateAutoTop
 import { accountHasPaymentMethod } from "@/lib/stripe/accountHasPaymentMethod";
 import { updateAutoTopUp } from "@/lib/supabase/credits_usage/updateAutoTopUp";
 import { initializeAccountCredits } from "@/lib/credits/initializeAccountCredits";
-import { centsToCredits } from "@/lib/billing/centsToCredits";
+import { usdToCredits } from "@/lib/credits/usdToCredits";
 import { buildAutoTopUpResponse } from "@/lib/billing/buildAutoTopUpResponse";
 import { mapToPaymentMethodError } from "@/lib/billing/mapToPaymentMethodError";
 
@@ -44,8 +44,8 @@ export async function updateAutoTopUpHandler(
     const settings = {
       accountId: validated,
       enabled: body.enabled,
-      amountCredits: centsToCredits(body.amountCents),
-      thresholdCredits: centsToCredits(body.thresholdCents),
+      amountCredits: usdToCredits(body.amountCents / 100),
+      thresholdCredits: usdToCredits(body.thresholdCents / 100),
     };
     let row = await updateAutoTopUp(settings);
     if (!row) {

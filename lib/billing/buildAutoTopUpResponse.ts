@@ -1,4 +1,4 @@
-import { creditsToCents } from "@/lib/billing/creditsToCents";
+import { creditsToStripeCents } from "@/lib/credits/creditsToStripeCents";
 import type { AutoTopUpRow } from "@/lib/supabase/credits_usage/pickAutoTopUpRow";
 
 export interface AutoTopUpResponse {
@@ -32,8 +32,10 @@ export function buildAutoTopUpResponse(args: {
   return {
     account_id: accountId,
     enabled: row.auto_topup_enabled,
-    amountCents: creditsToCents(row.auto_topup_amount),
-    thresholdCents: creditsToCents(row.auto_topup_threshold),
+    amountCents:
+      row.auto_topup_amount === null ? null : creditsToStripeCents(row.auto_topup_amount),
+    thresholdCents:
+      row.auto_topup_threshold === null ? null : creditsToStripeCents(row.auto_topup_threshold),
     lastRunAt: row.auto_topup_last_run_at,
     lastError: row.auto_topup_last_error,
   };
