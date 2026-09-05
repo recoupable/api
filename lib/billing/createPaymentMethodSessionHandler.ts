@@ -1,25 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createCardOnFileSession } from "@/lib/stripe/createCardOnFileSession";
-import { validateCreateCardOnFileSessionRequest } from "@/lib/stripe/validateCreateCardOnFileSessionRequest";
+import { validateCreatePaymentMethodSessionRequest } from "@/lib/billing/validateCreatePaymentMethodSessionRequest";
 
 /**
- * Handle a card-on-file session request: validate, then mint a $0 Stripe
- * `setup` session that saves a card for the authenticated account.
- *
- * @param request - The incoming HTTP request.
- * @returns A NextResponse with session `id` and `url`, or an error body.
+ * `POST /api/accounts/{id}/payment-method`: mint a $0 Stripe `setup` Checkout
+ * session that saves a card for the account (or member organization) in the path.
  */
-export async function createCardOnFileSessionHandler(request: NextRequest): Promise<NextResponse> {
+export async function createPaymentMethodSessionHandler(
+  request: NextRequest,
+  params: Promise<{ id: string }>,
+): Promise<NextResponse> {
   try {
-    const validated = await validateCreateCardOnFileSessionRequest(request);
+    const { id } = await params;
+    const validated = await validateCreatePaymentMethodSessionRequest(request, id);
     if (validated instanceof NextResponse) {
       return validated;
     }
 
     const session = await createCardOnFileSession(validated.accountId, validated.successUrl);
-    // The caller cannot correct a session Stripe returned without a URL, so
-    // this is a 500 rather than the sibling subscription route's 400.
     if (!session.url) {
       return NextResponse.json(
         { error: "Checkout session URL missing" },
@@ -32,7 +31,7 @@ export async function createCardOnFileSessionHandler(request: NextRequest): Prom
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {
-    console.error("[createCardOnFileSessionHandler]", error);
+    console.error("[createPaymentMethodSessionHandler]", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
