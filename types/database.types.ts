@@ -1257,18 +1257,33 @@ export type Database = {
       credits_usage: {
         Row: {
           account_id: string;
+          auto_topup_amount: number | null;
+          auto_topup_enabled: boolean;
+          auto_topup_last_error: string | null;
+          auto_topup_last_run_at: string | null;
+          auto_topup_threshold: number | null;
           id: number;
           remaining_credits: number;
           timestamp: string | null;
         };
         Insert: {
           account_id: string;
+          auto_topup_amount?: number | null;
+          auto_topup_enabled?: boolean;
+          auto_topup_last_error?: string | null;
+          auto_topup_last_run_at?: string | null;
+          auto_topup_threshold?: number | null;
           id?: number;
           remaining_credits?: number;
           timestamp?: string | null;
         };
         Update: {
           account_id?: string;
+          auto_topup_amount?: number | null;
+          auto_topup_enabled?: boolean;
+          auto_topup_last_error?: string | null;
+          auto_topup_last_run_at?: string | null;
+          auto_topup_threshold?: number | null;
           id?: number;
           remaining_credits?: number;
           timestamp?: string | null;
