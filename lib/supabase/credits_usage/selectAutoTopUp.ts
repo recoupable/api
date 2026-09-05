@@ -3,7 +3,7 @@ import {
   AUTO_TOP_UP_COLUMNS,
   pickAutoTopUpRow,
   type AutoTopUpRow,
-} from "@/lib/supabase/credits_usage/pickAutoTopUpRow";
+} from "@/lib/billing/pickAutoTopUpRow";
 
 /**
  * Reads the auto top-up settings for an account. Null when the account has no
