@@ -52,6 +52,20 @@ describe("saveAutoTopUpSettings", () => {
     expect(out?.account_id).toBe(ACCOUNT);
   });
 
+  it("treats PostgREST's no-rows error (PGRST116) as a missing row too", async () => {
+    vi.mocked(updateCreditsUsage)
+      .mockRejectedValueOnce(
+        Object.assign(new Error("JSON object requested, multiple (or no) rows returned"), {
+          code: "PGRST116",
+        }),
+      )
+      .mockResolvedValueOnce(row);
+    vi.mocked(initializeAccountCredits).mockResolvedValue(null);
+    const out = await saveAutoTopUpSettings({ ...settings, enabled: false });
+    expect(initializeAccountCredits).toHaveBeenCalledWith(ACCOUNT);
+    expect(out?.account_id).toBe(ACCOUNT);
+  });
+
   it("rethrows errors that are not the missing-row case", async () => {
     vi.mocked(updateCreditsUsage).mockRejectedValue(new Error("db down"));
     await expect(saveAutoTopUpSettings(settings)).rejects.toThrow("db down");

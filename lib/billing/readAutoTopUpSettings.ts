@@ -8,6 +8,5 @@ import { pickAutoTopUpRow, type AutoTopUpRow } from "@/lib/billing/pickAutoTopUp
 export async function readAutoTopUpSettings(accountId: string): Promise<AutoTopUpRow | null> {
   const rows = await selectCreditsUsage({ account_id: accountId });
   const row = rows[0];
-  // Cast until `pnpm update-types` picks up database#69 (see pickAutoTopUpRow.ts).
-  return row ? pickAutoTopUpRow(row as unknown as Record<string, unknown>) : null;
+  return row ? pickAutoTopUpRow(row) : null;
 }
