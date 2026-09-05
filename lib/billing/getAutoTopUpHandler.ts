@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetPaymentMethodParams } from "@/lib/billing/validateGetPaymentMethodParams";
-import { selectAutoTopUp } from "@/lib/supabase/credits_usage/selectAutoTopUp";
+import { readAutoTopUpSettings } from "@/lib/billing/readAutoTopUpSettings";
 import { buildAutoTopUpResponse } from "@/lib/billing/buildAutoTopUpResponse";
 import { mapToPaymentMethodError } from "@/lib/billing/mapToPaymentMethodError";
 
@@ -22,7 +22,7 @@ export async function getAutoTopUpHandler(
       return mapToPaymentMethodError(validated);
     }
 
-    const row = await selectAutoTopUp(validated);
+    const row = await readAutoTopUpSettings(validated);
     return NextResponse.json(buildAutoTopUpResponse({ accountId: validated, row }), {
       status: 200,
       headers: getCorsHeaders(),

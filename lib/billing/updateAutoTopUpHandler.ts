@@ -3,8 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetPaymentMethodParams } from "@/lib/billing/validateGetPaymentMethodParams";
 import { validateUpdateAutoTopUpBody } from "@/lib/billing/validateUpdateAutoTopUpBody";
 import { accountHasPaymentMethod } from "@/lib/stripe/accountHasPaymentMethod";
-import { updateAutoTopUp } from "@/lib/supabase/credits_usage/updateAutoTopUp";
-import { initializeAccountCredits } from "@/lib/credits/initializeAccountCredits";
+import { saveAutoTopUpSettings } from "@/lib/billing/saveAutoTopUpSettings";
 import { usdToCredits } from "@/lib/credits/usdToCredits";
 import { buildAutoTopUpResponse } from "@/lib/billing/buildAutoTopUpResponse";
 import { mapToPaymentMethodError } from "@/lib/billing/mapToPaymentMethodError";
@@ -41,20 +40,12 @@ export async function updateAutoTopUpHandler(
       );
     }
 
-    const settings = {
+    const row = await saveAutoTopUpSettings({
       accountId: validated,
       enabled: body.enabled,
       amountCredits: usdToCredits(body.amountCents / 100),
       thresholdCredits: usdToCredits(body.thresholdCents / 100),
-    };
-    let row = await updateAutoTopUp(settings);
-    if (!row) {
-      // Organizations have no credits_usage row until something creates one;
-      // give the account its plan-derived row, then save the settings on it.
-      // A concurrent request may win the insert; retry the update either way.
-      await initializeAccountCredits(validated);
-      row = await updateAutoTopUp(settings);
-    }
+    });
     if (!row) {
       return NextResponse.json(
         { error: "Account not found" },
