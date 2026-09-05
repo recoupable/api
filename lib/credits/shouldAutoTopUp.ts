@@ -12,7 +12,7 @@ interface ShouldAutoTopUpParams {
 /**
  * Pure decision: an auto top-up runs only when the account opted in with both
  * settings, the balance is below the threshold, and no attempt ran in the last
- * ten minutes. The lease itself is claimed atomically in `claimAutoTopUpLease`;
+ * ten minutes. The stamp is written by `maybeAutoTopUp` before charging;
  * this check just avoids a write when nothing could run.
  */
 export function shouldAutoTopUp({
