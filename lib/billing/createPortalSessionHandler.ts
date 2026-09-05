@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { createBillingPortalSession } from "@/lib/stripe/createBillingPortalSession";
+import { validateCreatePortalParams } from "@/lib/billing/validateCreatePortalParams";
 import { getActiveSubscriptionDetails } from "@/lib/stripe/getActiveSubscriptionDetails";
-import { validateCreateSubscriptionPortalBody } from "@/lib/stripe/validateCreateSubscriptionPortalBody";
+import { createBillingPortalSession } from "@/lib/stripe/createBillingPortalSession";
 
-export async function createSubscriptionPortalHandler(request: NextRequest): Promise<NextResponse> {
+/**
+ * POST /api/accounts/{id}/portal: opens a Stripe Customer Portal session for
+ * the account in the path (own account or a member organization). The
+ * customer is the one on the account's active subscription; accounts with
+ * no subscription get a 400 rather than a portal for an empty customer.
+ */
+export async function createPortalSessionHandler(
+  request: NextRequest,
+  params: Promise<{ id: string }>,
+): Promise<NextResponse> {
   try {
-    const validated = await validateCreateSubscriptionPortalBody(request);
+    const { id } = await params;
+    const validated = await validateCreatePortalParams(request, id);
     if (validated instanceof NextResponse) {
       return validated;
     }
@@ -35,7 +45,7 @@ export async function createSubscriptionPortalHandler(request: NextRequest): Pro
       { status: 200, headers: getCorsHeaders() },
     );
   } catch (error) {
-    console.error("[createSubscriptionPortalHandler]", error);
+    console.error("[createPortalSessionHandler]", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
