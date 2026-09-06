@@ -47,12 +47,10 @@ describe("getAccountCreditsHandler", () => {
     await expect(res.json()).resolves.toEqual({ error: "Forbidden" });
   });
 
-  it("returns 404 with { error } when no credits row exists for the account", async () => {
+  it("returns 404 with { error } only when no row exists and none could be seeded", async () => {
+    // checkAndResetCredits seeds a missing row itself; null here means the insert failed too.
     vi.mocked(validateAccountCreditsParams).mockResolvedValue(ACCOUNT);
-    vi.mocked(checkAndResetCredits).mockResolvedValue({
-      creditsUsage: null,
-      plan: "free",
-    });
+    vi.mocked(checkAndResetCredits).mockResolvedValue({ creditsUsage: null, plan: "free" });
 
     const res = await getAccountCreditsHandler(buildRequest(), buildParams());
     expect(res.status).toBe(404);
@@ -67,6 +65,11 @@ describe("getAccountCreditsHandler", () => {
         account_id: ACCOUNT,
         remaining_credits: 250,
         timestamp: "2026-05-01T12:00:00.000Z",
+        auto_topup_enabled: false,
+        auto_topup_amount: null,
+        auto_topup_threshold: null,
+        auto_topup_last_run_at: null,
+        auto_topup_last_error: null,
       },
       plan: "free",
     });
@@ -94,6 +97,11 @@ describe("getAccountCreditsHandler", () => {
         account_id: ACCOUNT,
         remaining_credits: PRO_CREDITS,
         timestamp: "2026-05-11T12:00:00.000Z",
+        auto_topup_enabled: false,
+        auto_topup_amount: null,
+        auto_topup_threshold: null,
+        auto_topup_last_run_at: null,
+        auto_topup_last_error: null,
       },
       plan: "pro",
     });
