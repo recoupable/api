@@ -50,7 +50,7 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
   } catch (err) {
     console.error("[postFlamingoGenerateHandler] credit gate failed:", err);
     return NextResponse.json(
-      { status: "error", error: "Credit check failed" },
+      { status: "error", error: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
     );
   }

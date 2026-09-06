@@ -37,7 +37,7 @@ describe("postFlamingoGenerateHandler — gate failures", () => {
 
     expect(res.status).toBe(500);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
-    expect(await res.json()).toEqual({ status: "error", error: "Credit check failed" });
+    expect(await res.json()).toEqual({ status: "error", error: "Internal server error" });
     expect(processAnalyzeMusicRequest).not.toHaveBeenCalled();
     errorSpy.mockRestore();
   });
