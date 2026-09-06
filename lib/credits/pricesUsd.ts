@@ -8,6 +8,7 @@
  */
 export const PRICES_USD = {
   chatMinimum: 0.01,
+  flamingoMinimum: 0.01,
   research: 0.05,
   researchPeople: 0.05,
   researchWeb: 0.01,

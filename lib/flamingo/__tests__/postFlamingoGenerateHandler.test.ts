@@ -17,6 +17,14 @@ vi.mock("@/lib/flamingo/callFlamingoGenerate", () => ({
   callFlamingoGenerate: vi.fn(),
 }));
 
+vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
+  ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock("@/lib/flamingo/chargeForFlamingoCall", () => ({
+  chargeForFlamingoCall: vi.fn().mockResolvedValue(undefined),
+}));
+
 /**
  * Creates a mock NextRequest with a JSON body.
  *

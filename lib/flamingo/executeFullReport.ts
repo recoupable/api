@@ -1,6 +1,7 @@
 import { callFlamingoGenerate } from "@/lib/flamingo/callFlamingoGenerate";
 import { getPreset } from "@/lib/flamingo/presets";
 import { FULL_REPORT_SECTIONS } from "@/lib/flamingo/presets/fullReport";
+import { chargeForFlamingoCall } from "@/lib/flamingo/chargeForFlamingoCall";
 
 /**
  * Result from a single preset within the full report.
@@ -22,10 +23,18 @@ interface SectionResult {
  * the Modal endpoint concurrently, and the results are combined into
  * a single report object in narrative order.
  *
+ * Each section that returns is charged to `accountId` on its own seconds,
+ * so the usage page shows one row per section; a section that fails costs
+ * nothing (recoupable/app#2061).
+ *
  * @param audioUrl - Public URL to the audio file
+ * @param accountId - The account the section calls are charged to
  * @returns Combined report object with all sections + total elapsed time
  */
-export async function executeFullReport(audioUrl: string): Promise<{
+export async function executeFullReport(
+  audioUrl: string,
+  accountId: string,
+): Promise<{
   report: Record<string, unknown>;
   elapsed_seconds: number;
 }> {
@@ -44,6 +53,12 @@ export async function executeFullReport(audioUrl: string): Promise<{
         temperature: preset.params.temperature,
         top_p: 1.0,
         do_sample: preset.params.do_sample,
+      });
+
+      await chargeForFlamingoCall({
+        accountId,
+        elapsedSeconds: result.elapsed_seconds,
+        audioUrl,
       });
 
       // Apply post-processing if the preset defines one

@@ -17,6 +17,12 @@ vi.mock("@/lib/flamingo/executeFullReport", () => ({
   executeFullReport: (...args: unknown[]) => mockExecuteFullReport(...args),
 }));
 
+vi.mock("@/lib/flamingo/chargeForFlamingoCall", () => ({
+  chargeForFlamingoCall: vi.fn().mockResolvedValue(undefined),
+}));
+
+const CTX = { accountId: "acc_test" };
+
 describe("processAnalyzeMusicRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -29,14 +35,17 @@ describe("processAnalyzeMusicRequest", () => {
         elapsed_seconds: 1.5,
       });
 
-      const result = await processAnalyzeMusicRequest({
-        prompt: "What genre is this?",
-        audio_url: "https://example.com/song.mp3",
-        max_new_tokens: 512,
-        temperature: 1.0,
-        top_p: 1.0,
-        do_sample: false,
-      });
+      const result = await processAnalyzeMusicRequest(
+        {
+          prompt: "What genre is this?",
+          audio_url: "https://example.com/song.mp3",
+          max_new_tokens: 512,
+          temperature: 1.0,
+          top_p: 1.0,
+          do_sample: false,
+        },
+        CTX,
+      );
 
       expect(result).toEqual({
         type: "success",
@@ -61,14 +70,17 @@ describe("processAnalyzeMusicRequest", () => {
         elapsed_seconds: 30.5,
       });
 
-      const result = await processAnalyzeMusicRequest({
-        preset: "full_report",
-        audio_url: "https://example.com/song.mp3",
-        max_new_tokens: 512,
-        temperature: 1.0,
-        top_p: 1.0,
-        do_sample: false,
-      });
+      const result = await processAnalyzeMusicRequest(
+        {
+          preset: "full_report",
+          audio_url: "https://example.com/song.mp3",
+          max_new_tokens: 512,
+          temperature: 1.0,
+          top_p: 1.0,
+          do_sample: false,
+        },
+        CTX,
+      );
 
       expect(result).toEqual({
         type: "success",
@@ -76,17 +88,23 @@ describe("processAnalyzeMusicRequest", () => {
         report: { metadata: { title: "Song" } },
         elapsed_seconds: 30.5,
       });
-      expect(mockExecuteFullReport).toHaveBeenCalledWith("https://example.com/song.mp3");
+      expect(mockExecuteFullReport).toHaveBeenCalledWith(
+        "https://example.com/song.mp3",
+        "acc_test",
+      );
     });
 
     it("returns error when full_report preset has no audio_url", async () => {
-      const result = await processAnalyzeMusicRequest({
-        preset: "full_report",
-        max_new_tokens: 512,
-        temperature: 1.0,
-        top_p: 1.0,
-        do_sample: false,
-      });
+      const result = await processAnalyzeMusicRequest(
+        {
+          preset: "full_report",
+          max_new_tokens: 512,
+          temperature: 1.0,
+          top_p: 1.0,
+          do_sample: false,
+        },
+        CTX,
+      );
 
       expect(result).toEqual({
         type: "error",
@@ -113,14 +131,17 @@ describe("processAnalyzeMusicRequest", () => {
         elapsed_seconds: 2.0,
       });
 
-      const result = await processAnalyzeMusicRequest({
-        preset: "mood_tags",
-        audio_url: "https://example.com/song.mp3",
-        max_new_tokens: 512,
-        temperature: 1.0,
-        top_p: 1.0,
-        do_sample: false,
-      });
+      const result = await processAnalyzeMusicRequest(
+        {
+          preset: "mood_tags",
+          audio_url: "https://example.com/song.mp3",
+          max_new_tokens: 512,
+          temperature: 1.0,
+          top_p: 1.0,
+          do_sample: false,
+        },
+        CTX,
+      );
 
       expect(result).toEqual({
         type: "success",
@@ -141,14 +162,17 @@ describe("processAnalyzeMusicRequest", () => {
     it("returns error for an unknown preset", async () => {
       mockGetPreset.mockReturnValue(undefined);
 
-      const result = await processAnalyzeMusicRequest({
-        preset: "nonexistent_preset",
-        audio_url: "https://example.com/song.mp3",
-        max_new_tokens: 512,
-        temperature: 1.0,
-        top_p: 1.0,
-        do_sample: false,
-      });
+      const result = await processAnalyzeMusicRequest(
+        {
+          preset: "nonexistent_preset",
+          audio_url: "https://example.com/song.mp3",
+          max_new_tokens: 512,
+          temperature: 1.0,
+          top_p: 1.0,
+          do_sample: false,
+        },
+        CTX,
+      );
 
       expect(result).toEqual({
         type: "error",
@@ -164,13 +188,16 @@ describe("processAnalyzeMusicRequest", () => {
         params: { max_new_tokens: 256, temperature: 0.7, do_sample: true },
       });
 
-      const result = await processAnalyzeMusicRequest({
-        preset: "mood_tags",
-        max_new_tokens: 512,
-        temperature: 1.0,
-        top_p: 1.0,
-        do_sample: false,
-      });
+      const result = await processAnalyzeMusicRequest(
+        {
+          preset: "mood_tags",
+          max_new_tokens: 512,
+          temperature: 1.0,
+          top_p: 1.0,
+          do_sample: false,
+        },
+        CTX,
+      );
 
       expect(result).toEqual({
         type: "error",
@@ -193,13 +220,16 @@ describe("processAnalyzeMusicRequest", () => {
         elapsed_seconds: 1.0,
       });
 
-      const result = await processAnalyzeMusicRequest({
-        preset: "mood_tags",
-        max_new_tokens: 512,
-        temperature: 1.0,
-        top_p: 1.0,
-        do_sample: false,
-      });
+      const result = await processAnalyzeMusicRequest(
+        {
+          preset: "mood_tags",
+          max_new_tokens: 512,
+          temperature: 1.0,
+          top_p: 1.0,
+          do_sample: false,
+        },
+        CTX,
+      );
 
       expect(result).toEqual({
         type: "success",
@@ -215,14 +245,17 @@ describe("processAnalyzeMusicRequest", () => {
       mockCallFlamingoGenerate.mockRejectedValue(new Error("Modal returned 503"));
 
       await expect(
-        processAnalyzeMusicRequest({
-          prompt: "What genre?",
-          audio_url: "https://example.com/song.mp3",
-          max_new_tokens: 512,
-          temperature: 1.0,
-          top_p: 1.0,
-          do_sample: false,
-        }),
+        processAnalyzeMusicRequest(
+          {
+            prompt: "What genre?",
+            audio_url: "https://example.com/song.mp3",
+            max_new_tokens: 512,
+            temperature: 1.0,
+            top_p: 1.0,
+            do_sample: false,
+          },
+          CTX,
+        ),
       ).rejects.toThrow("Modal returned 503");
     });
   });

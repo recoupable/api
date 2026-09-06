@@ -2,6 +2,7 @@ import { callFlamingoGenerate } from "@/lib/flamingo/callFlamingoGenerate";
 import { getPreset } from "@/lib/flamingo/presets";
 import { FULL_REPORT_PRESET_NAME } from "@/lib/flamingo/presets/fullReport";
 import { executeFullReport } from "@/lib/flamingo/executeFullReport";
+import { chargeForFlamingoCall } from "@/lib/flamingo/chargeForFlamingoCall";
 import type { FlamingoGenerateBody } from "@/lib/flamingo/validateFlamingoGenerateBody";
 
 /** Successful result with a full report. */
@@ -28,15 +29,27 @@ interface AnalysisError {
 
 export type AnalyzeMusicResult = FullReportSuccess | AnalysisSuccess | AnalysisError;
 
+/** Who pays for the model calls this request makes. */
+export interface AnalyzeMusicContext {
+  accountId: string;
+}
+
 /**
  * Shared business logic for music analysis.
  * Used by both POST /api/songs/analyze and the analyze_music MCP tool.
  *
+ * Every successful model call is charged to `context.accountId` after it
+ * returns, priced on the seconds the model reported (recoupable/app#2061).
+ * Callers gate the balance before calling this; see
+ * `minimumCreditsForAnalyzeRequest`.
+ *
  * @param params - Validated request parameters.
+ * @param context - The account the model calls are charged to.
  * @returns Discriminated union with type "success" or "error".
  */
 export async function processAnalyzeMusicRequest(
   params: FlamingoGenerateBody,
+  context: AnalyzeMusicContext,
 ): Promise<AnalyzeMusicResult> {
   // Handle full_report preset
   if (params.preset === FULL_REPORT_PRESET_NAME) {
@@ -46,7 +59,10 @@ export async function processAnalyzeMusicRequest(
         error: "audio_url is required for the full_report preset",
       };
     }
-    const { report, elapsed_seconds } = await executeFullReport(params.audio_url);
+    const { report, elapsed_seconds } = await executeFullReport(
+      params.audio_url,
+      context.accountId,
+    );
     return { type: "success", preset: "full_report", report, elapsed_seconds };
   }
 
@@ -87,6 +103,12 @@ export async function processAnalyzeMusicRequest(
     temperature,
     top_p: topP,
     do_sample: doSample,
+  });
+
+  await chargeForFlamingoCall({
+    accountId: context.accountId,
+    elapsedSeconds: result.elapsed_seconds,
+    audioUrl: params.audio_url,
   });
 
   // Apply post-processing if the preset defines one
