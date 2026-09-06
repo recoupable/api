@@ -5,6 +5,7 @@ import { getAccountCreditsHandler } from "@/lib/credits/getAccountCreditsHandler
 import { validateAccountCreditsParams } from "@/lib/credits/validateAccountCreditsParams";
 import { checkAndResetCredits } from "@/lib/credits/checkAndResetCredits";
 import { initializeAccountCredits } from "@/lib/credits/initializeAccountCredits";
+import { selectCreditsUsage } from "@/lib/supabase/credits_usage/selectCreditsUsage";
 import { DEFAULT_CREDITS, PRO_CREDITS } from "@/lib/credits/const";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -21,6 +22,10 @@ vi.mock("@/lib/credits/checkAndResetCredits", () => ({
 
 vi.mock("@/lib/credits/initializeAccountCredits", () => ({
   initializeAccountCredits: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/credits_usage/selectCreditsUsage", () => ({
+  selectCreditsUsage: vi.fn(async () => []),
 }));
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
@@ -71,13 +76,36 @@ describe("getAccountCreditsHandler", () => {
 
     const res = await getAccountCreditsHandler(buildRequest(), buildParams());
     expect(res.status).toBe(200);
-    expect(initializeAccountCredits).toHaveBeenCalledWith(ACCOUNT);
+    expect(initializeAccountCredits).toHaveBeenCalledWith(ACCOUNT, "free");
     await expect(res.json()).resolves.toMatchObject({
       account_id: ACCOUNT,
       remaining_credits: DEFAULT_CREDITS,
       used_credits: 0,
       plan: "free",
     });
+  });
+
+  it("reads the winner's row when a racing first read created it first", async () => {
+    vi.mocked(validateAccountCreditsParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(checkAndResetCredits).mockResolvedValue({ creditsUsage: null, plan: "free" });
+    vi.mocked(initializeAccountCredits).mockResolvedValue(null);
+    vi.mocked(selectCreditsUsage).mockResolvedValueOnce([
+      {
+        id: 8,
+        account_id: ACCOUNT,
+        remaining_credits: DEFAULT_CREDITS,
+        timestamp: "2026-09-06T00:00:00.000Z",
+        auto_topup_enabled: false,
+        auto_topup_amount: null,
+        auto_topup_threshold: null,
+        auto_topup_last_run_at: null,
+        auto_topup_last_error: null,
+      },
+    ]);
+
+    const res = await getAccountCreditsHandler(buildRequest(), buildParams());
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toMatchObject({ remaining_credits: DEFAULT_CREDITS });
   });
 
   it("returns 404 only when the row cannot be created either", async () => {
@@ -130,6 +158,11 @@ describe("getAccountCreditsHandler", () => {
         account_id: ACCOUNT,
         remaining_credits: PRO_CREDITS,
         timestamp: "2026-05-11T12:00:00.000Z",
+        auto_topup_enabled: false,
+        auto_topup_amount: null,
+        auto_topup_threshold: null,
+        auto_topup_last_run_at: null,
+        auto_topup_last_error: null,
       },
       plan: "pro",
     });

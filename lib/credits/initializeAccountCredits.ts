@@ -3,6 +3,7 @@ import { insertCreditsUsage } from "@/lib/supabase/credits_usage/insertCreditsUs
 import { getAccountSubscriptionState } from "@/lib/credits/getAccountSubscriptionState";
 import { usdToCredits } from "@/lib/credits/usdToCredits";
 import { getPlanEntitlements } from "@/lib/plans/getPlanEntitlements";
+import type { Plan } from "@/lib/plans/types";
 
 /**
  * Seeds a brand-new `credits_usage` row for an account with the plan-aware
@@ -11,10 +12,12 @@ import { getPlanEntitlements } from "@/lib/plans/getPlanEntitlements";
  *
  * Use this from any account-creation path. Do not call `insertCreditsUsage`
  * directly with a hard-coded number — let this function pick the right value.
+ * A caller that already resolved the plan passes it so both agree.
  */
 export async function initializeAccountCredits(
   accountId: string,
+  plan?: Plan,
 ): Promise<Tables<"credits_usage"> | null> {
-  const { plan } = await getAccountSubscriptionState(accountId);
-  return insertCreditsUsage(accountId, usdToCredits(getPlanEntitlements(plan).credits_usd));
+  const resolved = plan ?? (await getAccountSubscriptionState(accountId)).plan;
+  return insertCreditsUsage(accountId, usdToCredits(getPlanEntitlements(resolved).credits_usd));
 }

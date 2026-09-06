@@ -5,6 +5,7 @@ import { checkAndResetCredits } from "@/lib/credits/checkAndResetCredits";
 import { buildAccountCreditsResponse } from "@/lib/credits/buildAccountCreditsResponse";
 import { mapToAccountCreditsError } from "@/lib/credits/mapToAccountCreditsError";
 import { initializeAccountCredits } from "@/lib/credits/initializeAccountCredits";
+import { selectCreditsUsage } from "@/lib/supabase/credits_usage/selectCreditsUsage";
 
 /**
  * GET /api/accounts/[id]/credits
@@ -27,7 +28,12 @@ export async function getAccountCreditsHandler(
 
     const reset = await checkAndResetCredits(validated);
     const { plan } = reset;
-    const creditsUsage = reset.creditsUsage ?? (await initializeAccountCredits(validated));
+    // Two first reads can race: if this insert loses, the winner's row is read back.
+    const creditsUsage =
+      reset.creditsUsage ??
+      (await initializeAccountCredits(validated, plan)) ??
+      (await selectCreditsUsage({ account_id: validated }))[0] ??
+      null;
 
     if (!creditsUsage) {
       return NextResponse.json(
