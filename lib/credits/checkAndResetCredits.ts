@@ -35,7 +35,7 @@ export async function checkAndResetCredits(accountId: string): Promise<CheckAndR
   if (!rows || rows.length === 0) {
     // A fresh row needs no refill. If two first reads race, the loser reads the winner's row.
     const seeded =
-      (await initializeAccountCredits(accountId, plan)) ??
+      (await initializeAccountCredits(accountId)) ??
       (await selectCreditsUsage({ account_id: accountId }))?.[0] ??
       null;
     return { creditsUsage: seeded, plan };

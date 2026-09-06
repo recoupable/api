@@ -77,7 +77,7 @@ describe("checkAndResetCredits", () => {
 
     const result = await checkAndResetCredits(ACCOUNT);
 
-    expect(initializeAccountCredits).toHaveBeenCalledWith(ACCOUNT, "free");
+    expect(initializeAccountCredits).toHaveBeenCalledWith(ACCOUNT);
     expect(result).toEqual({ creditsUsage: seeded, plan: "free" });
     expect(updateCreditsUsage).not.toHaveBeenCalled();
   });

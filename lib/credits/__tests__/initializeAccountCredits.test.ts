@@ -30,11 +30,6 @@ describe("initializeAccountCredits", () => {
       account_id: ACCOUNT,
       remaining_credits: DEFAULT_CREDITS,
       timestamp: null,
-      auto_topup_enabled: false,
-      auto_topup_amount: null,
-      auto_topup_threshold: null,
-      auto_topup_last_run_at: null,
-      auto_topup_last_error: null,
     };
     vi.mocked(insertCreditsUsage).mockResolvedValue(inserted);
 
@@ -58,11 +53,6 @@ describe("initializeAccountCredits", () => {
       account_id: ACCOUNT,
       remaining_credits: PRO_CREDITS,
       timestamp: null,
-      auto_topup_enabled: false,
-      auto_topup_amount: null,
-      auto_topup_threshold: null,
-      auto_topup_last_run_at: null,
-      auto_topup_last_error: null,
     };
     vi.mocked(insertCreditsUsage).mockResolvedValue(inserted);
 
