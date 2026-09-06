@@ -108,7 +108,6 @@ export async function processAnalyzeMusicRequest(
   await chargeForFlamingoCall({
     accountId: context.accountId,
     elapsedSeconds: result.elapsed_seconds,
-    costUsd: result.cost_usd,
     audioUrl: params.audio_url,
   });
 

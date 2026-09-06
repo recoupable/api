@@ -153,17 +153,3 @@ describe("callFlamingoGenerate", () => {
     );
   });
 });
-
-describe("isFlamingoGenerateResult — cost_usd", () => {
-  it("accepts a response that carries Modal's cost for the call", async () => {
-    const { isFlamingoGenerateResult } = await import("../isFlamingoGenerateResult");
-    expect(
-      isFlamingoGenerateResult({ response: "x", elapsed_seconds: 1.2, cost_usd: 0.0007 }),
-    ).toBe(true);
-  });
-
-  it("still accepts the older shape without cost_usd", async () => {
-    const { isFlamingoGenerateResult } = await import("../isFlamingoGenerateResult");
-    expect(isFlamingoGenerateResult({ response: "x", elapsed_seconds: 1.2 })).toBe(true);
-  });
-});

@@ -62,7 +62,6 @@ export async function executeFullReport(
       await chargeForFlamingoCall({
         accountId,
         elapsedSeconds: result.elapsed_seconds,
-        costUsd: result.cost_usd,
         audioUrl,
       });
 

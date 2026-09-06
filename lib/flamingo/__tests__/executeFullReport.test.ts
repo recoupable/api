@@ -26,10 +26,10 @@ describe("executeFullReport — credits", () => {
 
   it("charges one deduction per section, each on that section's own seconds", async () => {
     let n = 0;
-    vi.mocked(callFlamingoGenerate).mockImplementation(async () => {
-      n += 1;
-      return { response: "ok", elapsed_seconds: n, cost_usd: n * 0.000583 };
-    });
+    vi.mocked(callFlamingoGenerate).mockImplementation(async () => ({
+      response: "ok",
+      elapsed_seconds: ++n,
+    }));
 
     const { report } = await executeFullReport(AUDIO, "acc_1");
 
@@ -42,7 +42,6 @@ describe("executeFullReport — credits", () => {
     expect(seconds).toEqual(FULL_REPORT_SECTIONS.map((_, i) => i + 1));
     for (const [args] of vi.mocked(chargeForFlamingoCall).mock.calls) {
       expect(args).toMatchObject({ accountId: "acc_1", audioUrl: AUDIO });
-      expect(args.costUsd).toBeCloseTo(args.elapsedSeconds * 0.000583, 9);
     }
   });
 
