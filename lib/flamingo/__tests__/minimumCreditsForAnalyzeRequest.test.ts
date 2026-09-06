@@ -3,13 +3,13 @@ import { minimumCreditsForAnalyzeRequest } from "../minimumCreditsForAnalyzeRequ
 import { FULL_REPORT_SECTIONS } from "@/lib/flamingo/presets/fullReport";
 
 describe("minimumCreditsForAnalyzeRequest", () => {
-  // The gate asks for the least the request can possibly cost: one floor per
+  // The gate asks for the least the request can possibly cost: one base fee per
   // model call. It never tries to guess elapsed seconds up front.
-  it("requires one floor for a custom prompt", () => {
+  it("requires one base fee for a custom prompt", () => {
     expect(minimumCreditsForAnalyzeRequest({ prompt: "What key is this in?" })).toBe(10_000);
   });
 
-  it("requires one floor for a single preset", () => {
+  it("requires one base fee for a single preset", () => {
     expect(
       minimumCreditsForAnalyzeRequest({
         preset: "mood_tags",
@@ -18,7 +18,7 @@ describe("minimumCreditsForAnalyzeRequest", () => {
     ).toBe(10_000);
   });
 
-  it("requires one floor per section for full_report", () => {
+  it("requires one base fee per section for full_report", () => {
     expect(FULL_REPORT_SECTIONS).toHaveLength(13);
     expect(
       minimumCreditsForAnalyzeRequest({

@@ -22,7 +22,7 @@ describe("chargeForFlamingoCall", () => {
 
     expect(recordCreditDeduction).toHaveBeenCalledWith({
       accountId: "acc_1",
-      creditsToDeduct: 34_980,
+      creditsToDeduct: 44_980,
       source: "api",
       provider: "modal",
       modelId: "nvidia/music-flamingo-2601-hf",
@@ -30,14 +30,15 @@ describe("chargeForFlamingoCall", () => {
     });
   });
 
-  it("charges the floor and omits resource_url for a prompt with no audio", async () => {
+  it("charges base plus seconds and omits resource_url for a prompt with no audio", async () => {
     vi.mocked(recordCreditDeduction).mockResolvedValue({ success: true });
 
     await chargeForFlamingoCall({ accountId: "acc_1", elapsedSeconds: 1.8 });
 
+    // 1.8 × 0.001166 = $0.0020988 → 2,099 + the 10,000 base.
     expect(recordCreditDeduction).toHaveBeenCalledWith({
       accountId: "acc_1",
-      creditsToDeduct: 10_000,
+      creditsToDeduct: 12_099,
       source: "api",
       provider: "modal",
       modelId: "nvidia/music-flamingo-2601-hf",

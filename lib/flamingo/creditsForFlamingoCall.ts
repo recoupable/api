@@ -9,33 +9,38 @@ import { PRICES_USD } from "@/lib/credits/pricesUsd";
 export const MODAL_A100_USD_PER_SECOND = 0.000583;
 
 /**
- * Price over compute. Decided on recoupable/app#2061: charge twice what the
- * call cost us, so margin stays fixed however long the prompt or a cold
- * start runs.
+ * Price over compute. Decided on recoupable/app#2061: charge twice what a
+ * second of inference costs us, so margin stays fixed however long the prompt
+ * or a cold start runs. Internal: the docs state the resulting rate
+ * ($0.001166/s), never the multiplier.
  */
 export const FLAMINGO_MARKUP = 2;
 
-/**
- * The least one model call ever costs, in credits: the one-cent floor that
- * absorbs the idle and scale-down time a per-call `elapsed_seconds` cannot
- * see. Also what the pre-flight gate requires per call.
- */
-export const FLAMINGO_MINIMUM_CREDITS = usdToCredits(PRICES_USD.flamingoMinimum);
+/** What the customer pays per second of inference, in dollars. */
+export const FLAMINGO_USD_PER_SECOND = FLAMINGO_MARKUP * MODAL_A100_USD_PER_SECOND;
 
 /**
- * Credits to charge for one Music Flamingo model call: 2x the A100 time the
- * call reported, floored at one cent. At the micro-dollar unit a 30 s call
- * is 34,980 credits ($0.03498); a 2 s warm call is the 10,000-credit floor.
+ * The base price of one model call, in credits: a cent, owed for every call
+ * on top of the metered seconds. Covers the idle and scale-down time a
+ * per-call `elapsed_seconds` cannot see, and is what the pre-flight gate
+ * requires per call.
+ */
+export const FLAMINGO_BASE_CREDITS = usdToCredits(PRICES_USD.flamingoBase);
+
+/**
+ * Credits to charge for one Music Flamingo model call: the one-cent base plus
+ * $0.001166 per reported second. At the micro-dollar unit a 30 s call is
+ * 44,980 credits ($0.04498); a 2 s warm call is 12,332.
  *
- * A non-finite duration (the response guard only checks `typeof`) is priced
- * at the floor rather than thrown: the call ran, so the floor is owed.
+ * A non-positive or non-finite duration (the response guard only checks
+ * `typeof`) is priced at the base rather than thrown: the call ran, so the
+ * base is owed.
  *
  * @param elapsedSeconds - `elapsed_seconds` from the Modal response.
- * @returns Whole credits, never below `FLAMINGO_MINIMUM_CREDITS`.
+ * @returns Whole credits, never below `FLAMINGO_BASE_CREDITS`.
  */
 export function creditsForFlamingoCall(elapsedSeconds: number): number {
-  if (!Number.isFinite(elapsedSeconds)) return FLAMINGO_MINIMUM_CREDITS;
+  if (!Number.isFinite(elapsedSeconds) || elapsedSeconds <= 0) return FLAMINGO_BASE_CREDITS;
 
-  const metered = usdToCredits(FLAMINGO_MARKUP * elapsedSeconds * MODAL_A100_USD_PER_SECOND);
-  return Math.max(FLAMINGO_MINIMUM_CREDITS, metered);
+  return FLAMINGO_BASE_CREDITS + usdToCredits(elapsedSeconds * FLAMINGO_USD_PER_SECOND);
 }

@@ -11,7 +11,7 @@ import { minimumCreditsForAnalyzeRequest } from "@/lib/flamingo/minimumCreditsFo
  * Handler for POST /api/songs/analyze.
  *
  * Authenticates the request, validates the body, gates the balance on the
- * least the request can cost (402 when short), then delegates to the shared
+ * base price of the request (402 when short), then delegates to the shared
  * processAnalyzeMusicRequest domain function, which charges per model call.
  *
  * @param request - The incoming request with a JSON body.
@@ -40,7 +40,7 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
     return validated;
   }
 
-  // 3. Gate on the smallest possible charge before any model call
+  // 3. Gate on the base price before any model call
   let short: NextResponse | null;
   try {
     short = await ensureCreditsOrShortCircuit({
