@@ -4,7 +4,7 @@ import { creditsForFlamingoCall } from "@/lib/flamingo/creditsForFlamingoCall";
 
 interface ChargeForFlamingoCallParams {
   accountId: string;
-  /** `elapsed_seconds` from the Modal response, for the log line when the cost is missing. */
+  /** `elapsed_seconds` from the Modal response for this one model call. */
   elapsedSeconds: number;
   /** `cost_usd` from the same response: what the call cost us on Modal, when reported. */
   costUsd?: number;
@@ -27,15 +27,10 @@ export async function chargeForFlamingoCall({
   costUsd,
   audioUrl,
 }: ChargeForFlamingoCallParams): Promise<void> {
-  if (costUsd === undefined || !Number.isFinite(costUsd) || costUsd <= 0) {
-    console.warn(
-      `[chargeForFlamingoCall] no cost_usd on the Modal response (elapsed ${elapsedSeconds}s); charging the base only for account ${accountId}`,
-    );
-  }
   try {
     const result = await recordCreditDeduction({
       accountId,
-      creditsToDeduct: creditsForFlamingoCall({ costUsd }),
+      creditsToDeduct: creditsForFlamingoCall({ elapsedSeconds, costUsd }),
       source: "api",
       provider: "modal",
       modelId: FLAMINGO_MODEL_ID,
