@@ -5,6 +5,10 @@ import { updateCreditsUsage } from "@/lib/supabase/credits_usage/updateCreditsUs
 import { getAccountSubscriptionState } from "@/lib/credits/getAccountSubscriptionState";
 import { STARTER_CREDITS } from "@/lib/credits/const";
 
+vi.mock("@/lib/credits/initializeAccountCredits", () => ({
+  initializeAccountCredits: vi.fn(),
+}));
+
 vi.mock("@/lib/supabase/credits_usage/selectCreditsUsage", () => ({ selectCreditsUsage: vi.fn() }));
 vi.mock("@/lib/supabase/credits_usage/updateCreditsUsage", () => ({ updateCreditsUsage: vi.fn() }));
 vi.mock("@/lib/credits/getAccountSubscriptionState", () => ({

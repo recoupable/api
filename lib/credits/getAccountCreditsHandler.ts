@@ -4,16 +4,13 @@ import { validateAccountCreditsParams } from "@/lib/credits/validateAccountCredi
 import { checkAndResetCredits } from "@/lib/credits/checkAndResetCredits";
 import { buildAccountCreditsResponse } from "@/lib/credits/buildAccountCreditsResponse";
 import { mapToAccountCreditsError } from "@/lib/credits/mapToAccountCreditsError";
-import { initializeAccountCredits } from "@/lib/credits/initializeAccountCredits";
-import { selectCreditsUsage } from "@/lib/supabase/credits_usage/selectCreditsUsage";
 
 /**
  * GET /api/accounts/[id]/credits
  *
  * Returns the documented credits resource for an account. Runs the monthly refill
- * check on read so the returned `remaining_credits` reflects any due top-up. An
- * account with no credits row yet (an org that has never spent) gets one seeded
- * with its plan's allotment, the same way account creation and auto top-up do.
+ * check on read so the returned `remaining_credits` reflects any due top-up
+ * (and seeds the row for an account that has none yet).
  */
 export async function getAccountCreditsHandler(
   request: NextRequest,
@@ -26,14 +23,7 @@ export async function getAccountCreditsHandler(
       return mapToAccountCreditsError(validated);
     }
 
-    const reset = await checkAndResetCredits(validated);
-    const { plan } = reset;
-    // Two first reads can race: if this insert loses, the winner's row is read back.
-    const creditsUsage =
-      reset.creditsUsage ??
-      (await initializeAccountCredits(validated, plan)) ??
-      (await selectCreditsUsage({ account_id: validated }))[0] ??
-      null;
+    const { creditsUsage, plan } = await checkAndResetCredits(validated);
 
     if (!creditsUsage) {
       return NextResponse.json(
