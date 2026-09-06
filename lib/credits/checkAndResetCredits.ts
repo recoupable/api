@@ -6,6 +6,7 @@ import { updateCreditsUsage } from "@/lib/supabase/credits_usage/updateCreditsUs
 import { getAccountSubscriptionState } from "@/lib/credits/getAccountSubscriptionState";
 import { usdToCredits } from "@/lib/credits/usdToCredits";
 import { getPlanEntitlements } from "@/lib/plans/getPlanEntitlements";
+import { initializeAccountCredits } from "@/lib/credits/initializeAccountCredits";
 import type { Plan } from "@/lib/plans/types";
 
 export interface CheckAndResetCreditsResult {
@@ -14,7 +15,8 @@ export interface CheckAndResetCreditsResult {
 }
 
 /**
- * Reads the credits_usage row for an account and, if a monthly refill is due
+ * Reads the credits_usage row for an account, seeding one with the plan's
+ * allotment when none exists yet (an org that has never spent), and, if a monthly refill is due
  * (≥1 month since the last update, or an active subscription started after it),
  * raises `remaining_credits` up to the plan total and bumps the timestamp.
  *
@@ -31,7 +33,12 @@ export async function checkAndResetCredits(accountId: string): Promise<CheckAndR
   ]);
 
   if (!rows || rows.length === 0) {
-    return { creditsUsage: null, plan };
+    // A fresh row needs no refill. If two first reads race, the loser reads the winner's row.
+    const seeded =
+      (await initializeAccountCredits(accountId)) ??
+      (await selectCreditsUsage({ account_id: accountId }))?.[0] ??
+      null;
+    return { creditsUsage: seeded, plan };
   }
 
   const creditsUsage = rows[0];

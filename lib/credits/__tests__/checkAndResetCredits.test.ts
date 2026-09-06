@@ -4,6 +4,7 @@ import { checkAndResetCredits } from "@/lib/credits/checkAndResetCredits";
 import { selectCreditsUsage } from "@/lib/supabase/credits_usage/selectCreditsUsage";
 import { updateCreditsUsage } from "@/lib/supabase/credits_usage/updateCreditsUsage";
 import { getAccountSubscriptionState } from "@/lib/credits/getAccountSubscriptionState";
+import { initializeAccountCredits } from "@/lib/credits/initializeAccountCredits";
 import { DEFAULT_CREDITS, PRO_CREDITS } from "@/lib/credits/const";
 
 vi.mock("@/lib/supabase/credits_usage/selectCreditsUsage", () => ({
@@ -12,6 +13,10 @@ vi.mock("@/lib/supabase/credits_usage/selectCreditsUsage", () => ({
 
 vi.mock("@/lib/supabase/credits_usage/updateCreditsUsage", () => ({
   updateCreditsUsage: vi.fn(),
+}));
+
+vi.mock("@/lib/credits/initializeAccountCredits", () => ({
+  initializeAccountCredits: vi.fn(),
 }));
 
 vi.mock("@/lib/credits/getAccountSubscriptionState", () => ({
@@ -47,6 +52,11 @@ const baseRow = (
   account_id: ACCOUNT,
   remaining_credits: 100,
   timestamp: "2026-05-01T00:00:00.000Z",
+  auto_topup_enabled: false,
+  auto_topup_amount: null,
+  auto_topup_threshold: null,
+  auto_topup_last_run_at: null,
+  auto_topup_last_error: null,
   ...overrides,
 });
 
@@ -57,14 +67,40 @@ describe("checkAndResetCredits", () => {
     vi.setSystemTime(new Date("2026-05-11T12:00:00.000Z"));
   });
 
-  it("returns null creditsUsage and plan free when no credits row exists", async () => {
+  it("seeds the row with the plan allotment when no credits row exists", async () => {
+    // An org that has never spent (Seeker) has no row; the read creates it so
+    // the billing page and the paid-request gate agree on the balance.
     vi.mocked(selectCreditsUsage).mockResolvedValue([]);
     vi.mocked(getAccountSubscriptionState).mockResolvedValue(freeState);
+    const seeded = baseRow({ remaining_credits: DEFAULT_CREDITS, timestamp: null });
+    vi.mocked(initializeAccountCredits).mockResolvedValue(seeded);
+
+    const result = await checkAndResetCredits(ACCOUNT);
+
+    expect(initializeAccountCredits).toHaveBeenCalledWith(ACCOUNT);
+    expect(result).toEqual({ creditsUsage: seeded, plan: "free" });
+    expect(updateCreditsUsage).not.toHaveBeenCalled();
+  });
+
+  it("reads the winner's row when the seed loses a race", async () => {
+    const winner = baseRow({ remaining_credits: DEFAULT_CREDITS });
+    vi.mocked(selectCreditsUsage).mockResolvedValueOnce([]).mockResolvedValueOnce([winner]);
+    vi.mocked(getAccountSubscriptionState).mockResolvedValue(freeState);
+    vi.mocked(initializeAccountCredits).mockResolvedValue(null);
+
+    const result = await checkAndResetCredits(ACCOUNT);
+
+    expect(result).toEqual({ creditsUsage: winner, plan: "free" });
+  });
+
+  it("returns null creditsUsage only when the seed and the re-read both fail", async () => {
+    vi.mocked(selectCreditsUsage).mockResolvedValue([]);
+    vi.mocked(getAccountSubscriptionState).mockResolvedValue(freeState);
+    vi.mocked(initializeAccountCredits).mockResolvedValue(null);
 
     const result = await checkAndResetCredits(ACCOUNT);
 
     expect(result).toEqual({ creditsUsage: null, plan: "free" });
-    expect(updateCreditsUsage).not.toHaveBeenCalled();
   });
 
   it("returns the row unchanged when it has no timestamp (never refilled)", async () => {
