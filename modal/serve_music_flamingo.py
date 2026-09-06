@@ -23,9 +23,9 @@ import modal
 MODEL_ID = "nvidia/music-flamingo-2601-hf"
 GPU_TYPE = "A100"              # A100 40GB — enough VRAM for the 8B model in BF16
 GPU_RATE_KEY = "gpu_hour_cost_a100_40gb"  # the GPU_TYPE's key in `modal billing rates`
-# Used only if the workspace price list cannot be read at container start
-# (https://modal.com/pricing, 2026-09-06). Must match
-# MODAL_A100_USD_PER_SECOND in api/lib/flamingo/creditsForFlamingoCall.ts.
+# The only pinned price anywhere: used if the workspace price list cannot be
+# read at container start (https://modal.com/pricing, 2026-09-06). The api
+# never prices on a rate of its own; it bills on the cost_usd returned here.
 FALLBACK_GPU_USD_PER_SECOND = 0.000583
 SCALEDOWN_WINDOW = 300   # 5 min — keeps container warm longer between requests
 # Workspace GPU cap is 10; keep this at 4 so a runaway queue cannot
