@@ -9,7 +9,8 @@ import { mapToAccountCreditsError } from "@/lib/credits/mapToAccountCreditsError
  * GET /api/accounts/[id]/credits
  *
  * Returns the documented credits resource for an account. Runs the monthly refill
- * check on read so the returned `remaining_credits` reflects any due top-up.
+ * check on read so the returned `remaining_credits` reflects any due top-up
+ * (and seeds the row for an account that has none yet).
  */
 export async function getAccountCreditsHandler(
   request: NextRequest,
