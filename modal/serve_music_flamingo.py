@@ -22,6 +22,11 @@ import modal
 # ---------------------------------------------------------------------------
 MODEL_ID = "nvidia/music-flamingo-2601-hf"
 GPU_TYPE = "A100"              # A100 40GB — enough VRAM for the 8B model in BF16
+GPU_RATE_KEY = "gpu_hour_cost_a100_40gb"  # the GPU_TYPE's key in `modal billing rates`
+# Used only if the workspace price list cannot be read at container start
+# (https://modal.com/pricing, 2026-09-06). Must match
+# MODAL_A100_USD_PER_SECOND in api/lib/flamingo/creditsForFlamingoCall.ts.
+FALLBACK_GPU_USD_PER_SECOND = 0.000583
 SCALEDOWN_WINDOW = 300   # 5 min — keeps container warm longer between requests
 # Workspace GPU cap is 10; keep this at 4 so a runaway queue cannot
 # burn the $100 Modal usage limit (~$8.64/hour vs ~$21.60 at 10 GPUs).
@@ -133,15 +138,34 @@ class MusicFlamingo:
 
         print("Model loaded with SDPA attention!")
 
+        # Read what Modal charges for this GPU right now, so every response can
+        # carry the cost of the call (recoupable/app#2061: the api bills on it
+        # instead of a hard-coded rate). One call per container start.
+        try:
+            rates = modal.Workspace.from_context().billing.rates()
+            self.gpu_usd_per_second = float(rates[GPU_RATE_KEY]) / 3600
+            self.rate_source = "modal_rates"
+        except Exception as e:  # noqa: BLE001 — pricing must never take the model down
+            print(f"[WARN] Could not read Modal billing rates ({type(e).__name__}: {e}); "
+                  f"using fallback ${FALLBACK_GPU_USD_PER_SECOND}/s")
+            self.gpu_usd_per_second = FALLBACK_GPU_USD_PER_SECOND
+            self.rate_source = "fallback"
+        print(f"GPU rate: ${self.gpu_usd_per_second:.9f}/s ({self.rate_source})")
+
     @modal.fastapi_endpoint(method="GET", docs=True, requires_proxy_auth=True)
     def health(self):
         """
         Quick health check — returns instantly if the container is alive
         and the model is loaded. Useful for monitoring or pre-warming.
 
-        GET /health → {"status": "ok", "model": "nvidia/music-flamingo-2601-hf"}
+        GET /health → {"status": "ok", "model": "...", "gpu_usd_per_second": 0.000583, "rate_source": "modal_rates"}
         """
-        return {"status": "ok", "model": MODEL_ID}
+        return {
+            "status": "ok",
+            "model": MODEL_ID,
+            "gpu_usd_per_second": self.gpu_usd_per_second,
+            "rate_source": self.rate_source,
+        }
 
     @modal.fastapi_endpoint(method="POST", docs=True, requires_proxy_auth=True)
     def generate(self, request: dict):
@@ -161,7 +185,10 @@ class MusicFlamingo:
         Returns:
         {
             "response": "...",
-            "elapsed_seconds": 3.21
+            "elapsed_seconds": 3.21,
+            "cost_usd": 0.00187,          (elapsed_seconds × the live GPU rate)
+            "gpu_usd_per_second": 0.000583,
+            "rate_source": "modal_rates"  (or "fallback")
         }
         """
         import requests as http_requests
@@ -247,6 +274,11 @@ class MusicFlamingo:
         return {
             "response": decoded[0],
             "elapsed_seconds": elapsed,
+            # What this call cost us: GPU time at the workspace's live rate.
+            # CPU and memory are ~1% on top and are covered by the api's base fee.
+            "cost_usd": round(elapsed * self.gpu_usd_per_second, 8),
+            "gpu_usd_per_second": self.gpu_usd_per_second,
+            "rate_source": self.rate_source,
         }
 
 

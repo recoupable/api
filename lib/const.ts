@@ -83,8 +83,12 @@ export const RECOUP_API_KEY = process.env.RECOUP_API_KEY || "";
  */
 export const FLAMINGO_MODEL_ID = "nvidia/music-flamingo-2601-hf";
 
-/** Music Flamingo model inference endpoint (Modal) */
+/**
+ * Music Flamingo model inference endpoint (Modal). Overridable so a preview
+ * can point at a Modal deployment in another environment of the workspace.
+ */
 export const FLAMINGO_GENERATE_URL =
+  process.env.FLAMINGO_GENERATE_URL ||
   "https://shared-78369--music-flamingo-musicflamingo-generate.modal.run";
 
 /** Snapshot expiration duration (7 days) */

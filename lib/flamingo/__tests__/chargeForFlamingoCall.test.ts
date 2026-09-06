@@ -17,12 +17,14 @@ describe("chargeForFlamingoCall", () => {
     await chargeForFlamingoCall({
       accountId: "acc_1",
       elapsedSeconds: 30,
+      costUsd: 0.02,
       audioUrl: "https://example.com/song.mp3",
     });
 
+    // Modal's own cost wins over the seconds: 2 × $0.02 → 40,000 + the base.
     expect(recordCreditDeduction).toHaveBeenCalledWith({
       accountId: "acc_1",
-      creditsToDeduct: 44_980,
+      creditsToDeduct: 50_000,
       source: "api",
       provider: "modal",
       modelId: "nvidia/music-flamingo-2601-hf",

@@ -17,7 +17,11 @@ describe("processAnalyzeMusicRequest — credits", () => {
   });
 
   it("charges the account once for a single model call, on the model's own seconds", async () => {
-    vi.mocked(callFlamingoGenerate).mockResolvedValue({ response: "jazz", elapsed_seconds: 2.4 });
+    vi.mocked(callFlamingoGenerate).mockResolvedValue({
+      response: "jazz",
+      elapsed_seconds: 2.4,
+      cost_usd: 0.0014,
+    });
 
     const result = await processAnalyzeMusicRequest(
       { ...base, prompt: "Genre?", audio_url: "https://example.com/song.mp3" },
@@ -29,6 +33,7 @@ describe("processAnalyzeMusicRequest — credits", () => {
     expect(chargeForFlamingoCall).toHaveBeenCalledWith({
       accountId: "acc_1",
       elapsedSeconds: 2.4,
+      costUsd: 0.0014,
       audioUrl: "https://example.com/song.mp3",
     });
   });

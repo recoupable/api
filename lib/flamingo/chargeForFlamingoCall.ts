@@ -6,6 +6,8 @@ interface ChargeForFlamingoCallParams {
   accountId: string;
   /** `elapsed_seconds` from the Modal response for this one model call. */
   elapsedSeconds: number;
+  /** `cost_usd` from the same response: what the call cost us on Modal, when reported. */
+  costUsd?: number;
   /** The audio analyzed, stored as `usage_events.resource_url` when present. */
   audioUrl?: string;
 }
@@ -22,12 +24,13 @@ interface ChargeForFlamingoCallParams {
 export async function chargeForFlamingoCall({
   accountId,
   elapsedSeconds,
+  costUsd,
   audioUrl,
 }: ChargeForFlamingoCallParams): Promise<void> {
   try {
     const result = await recordCreditDeduction({
       accountId,
-      creditsToDeduct: creditsForFlamingoCall(elapsedSeconds),
+      creditsToDeduct: creditsForFlamingoCall({ elapsedSeconds, costUsd }),
       source: "api",
       provider: "modal",
       modelId: FLAMINGO_MODEL_ID,
