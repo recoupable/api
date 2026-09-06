@@ -27,10 +27,15 @@ export const FLAMINGO_MINIMUM_CREDITS = usdToCredits(PRICES_USD.flamingoMinimum)
  * call reported, floored at one cent. At the micro-dollar unit a 30 s call
  * is 34,980 credits ($0.03498); a 2 s warm call is the 10,000-credit floor.
  *
+ * A non-finite duration (the response guard only checks `typeof`) is priced
+ * at the floor rather than thrown: the call ran, so the floor is owed.
+ *
  * @param elapsedSeconds - `elapsed_seconds` from the Modal response.
  * @returns Whole credits, never below `FLAMINGO_MINIMUM_CREDITS`.
  */
 export function creditsForFlamingoCall(elapsedSeconds: number): number {
+  if (!Number.isFinite(elapsedSeconds)) return FLAMINGO_MINIMUM_CREDITS;
+
   const metered = usdToCredits(FLAMINGO_MARKUP * elapsedSeconds * MODAL_A100_USD_PER_SECOND);
   return Math.max(FLAMINGO_MINIMUM_CREDITS, metered);
 }

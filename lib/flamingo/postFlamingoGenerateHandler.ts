@@ -41,10 +41,19 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
   }
 
   // 3. Gate on the smallest possible charge before any model call
-  const short = await ensureCreditsOrShortCircuit({
-    accountId: authResult.accountId,
-    creditsToDeduct: minimumCreditsForAnalyzeRequest(validated),
-  });
+  let short: NextResponse | null;
+  try {
+    short = await ensureCreditsOrShortCircuit({
+      accountId: authResult.accountId,
+      creditsToDeduct: minimumCreditsForAnalyzeRequest(validated),
+    });
+  } catch (err) {
+    console.error("[postFlamingoGenerateHandler] credit gate failed:", err);
+    return NextResponse.json(
+      { status: "error", error: "Credit check failed" },
+      { status: 500, headers: getCorsHeaders() },
+    );
+  }
   if (short) return short;
 
   // 4. Process the analysis request

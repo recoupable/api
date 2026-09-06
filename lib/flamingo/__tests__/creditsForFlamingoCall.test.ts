@@ -28,3 +28,12 @@ describe("creditsForFlamingoCall", () => {
     expect(creditsForFlamingoCall(-1)).toBe(10_000);
   });
 });
+
+describe("creditsForFlamingoCall — malformed durations", () => {
+  it("charges the floor, not a thrown error, when the provider reports a non-finite duration", () => {
+    // `isFlamingoGenerateResult` only checks `typeof === "number"`, so NaN and
+    // Infinity get through; the call still ran, so the floor is owed.
+    expect(creditsForFlamingoCall(Number.NaN)).toBe(10_000);
+    expect(creditsForFlamingoCall(Number.POSITIVE_INFINITY)).toBe(10_000);
+  });
+});

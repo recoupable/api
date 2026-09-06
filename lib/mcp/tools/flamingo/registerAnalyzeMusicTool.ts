@@ -48,10 +48,16 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
         return getToolResultError("Failed to resolve account ID");
       }
 
-      const gate = await checkCreditsAvailable({
-        accountId,
-        creditsToDeduct: minimumCreditsForAnalyzeRequest(args),
-      });
+      let gate;
+      try {
+        gate = await checkCreditsAvailable({
+          accountId,
+          creditsToDeduct: minimumCreditsForAnalyzeRequest(args),
+        });
+      } catch (err) {
+        console.error("[analyze_music] credit gate failed:", err);
+        return getToolResultError("Credit check failed");
+      }
       if (gate.kind === "insufficient_credits") {
         return getToolResultError(
           `Insufficient credits: ${gate.remainingCredits} remaining, ${gate.requiredCredits} required`,

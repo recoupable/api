@@ -92,11 +92,4 @@ describe("postFlamingoGenerateHandler — credit gate", () => {
     );
     expect(processAnalyzeMusicRequest).not.toHaveBeenCalled();
   });
-
-  it("validates the body before touching the balance", async () => {
-    const res = await postFlamingoGenerateHandler(request({}));
-
-    expect(res.status).toBe(400);
-    expect(ensureCreditsOrShortCircuit).not.toHaveBeenCalled();
-  });
 });

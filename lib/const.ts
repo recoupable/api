@@ -76,7 +76,6 @@ export const RECOUP_ORG_ID = "04e3aba9-c130-4fb8-8b92-34e95d43e66b";
 
 export const RECOUP_API_KEY = process.env.RECOUP_API_KEY || "";
 
-/** Music Flamingo model inference endpoint (Modal) */
 /**
  * The Hugging Face id of the model behind `POST /api/songs/analyze`, written
  * on every `usage_events.model_id` the endpoint records (recoupable/app#2061).
@@ -84,6 +83,7 @@ export const RECOUP_API_KEY = process.env.RECOUP_API_KEY || "";
  */
 export const FLAMINGO_MODEL_ID = "nvidia/music-flamingo-2601-hf";
 
+/** Music Flamingo model inference endpoint (Modal) */
 export const FLAMINGO_GENERATE_URL =
   "https://shared-78369--music-flamingo-musicflamingo-generate.modal.run";
 

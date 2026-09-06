@@ -55,14 +55,15 @@ export async function executeFullReport(
         do_sample: preset.params.do_sample,
       });
 
+      // Apply post-processing if the preset defines one. A parse failure
+      // lands in the catch below as a failed section, so charge only after it.
+      const data = preset.parseResponse ? preset.parseResponse(result.response) : result.response;
+
       await chargeForFlamingoCall({
         accountId,
         elapsedSeconds: result.elapsed_seconds,
         audioUrl,
       });
-
-      // Apply post-processing if the preset defines one
-      const data = preset.parseResponse ? preset.parseResponse(result.response) : result.response;
 
       return {
         reportKey: section.reportKey,
