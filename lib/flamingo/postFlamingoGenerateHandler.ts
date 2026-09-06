@@ -4,12 +4,15 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { validateFlamingoGenerateBody } from "@/lib/flamingo/validateFlamingoGenerateBody";
 import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRequest";
+import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
+import { minimumCreditsForAnalyzeRequest } from "@/lib/flamingo/minimumCreditsForAnalyzeRequest";
 
 /**
  * Handler for POST /api/songs/analyze.
  *
- * Authenticates the request, validates the body, then delegates to
- * the shared processAnalyzeMusicRequest domain function.
+ * Authenticates the request, validates the body, gates the balance on the
+ * base price of the request (402 when short), then delegates to the shared
+ * processAnalyzeMusicRequest domain function, which charges per model call.
  *
  * @param request - The incoming request with a JSON body.
  * @returns A NextResponse with the model output or an error.
@@ -37,10 +40,26 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
     return validated;
   }
 
-  // 3. Process the analysis request
+  // 3. Gate on the base price before any model call
+  let short: NextResponse | null;
+  try {
+    short = await ensureCreditsOrShortCircuit({
+      accountId: authResult.accountId,
+      creditsToDeduct: minimumCreditsForAnalyzeRequest(validated),
+    });
+  } catch (err) {
+    console.error("[postFlamingoGenerateHandler] credit gate failed:", err);
+    return NextResponse.json(
+      { status: "error", error: "Internal server error" },
+      { status: 500, headers: getCorsHeaders() },
+    );
+  }
+  if (short) return short;
+
+  // 4. Process the analysis request
   let result;
   try {
-    result = await processAnalyzeMusicRequest(validated);
+    result = await processAnalyzeMusicRequest(validated, { accountId: authResult.accountId });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Music analysis failed";
     return NextResponse.json(
@@ -56,7 +75,7 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
     );
   }
 
-  // 4. Return flat response
+  // 5. Return flat response
   const { type: _, ...data } = result;
   return NextResponse.json(
     { status: "success", ...data },
