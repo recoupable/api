@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAccountCreditsHandler } from "@/lib/credits/getAccountCreditsHandler";
 import { validateAccountCreditsParams } from "@/lib/credits/validateAccountCreditsParams";
 import { checkAndResetCredits } from "@/lib/credits/checkAndResetCredits";
+import { initializeAccountCredits } from "@/lib/credits/initializeAccountCredits";
 import { DEFAULT_CREDITS, PRO_CREDITS } from "@/lib/credits/const";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -16,6 +17,10 @@ vi.mock("@/lib/credits/validateAccountCreditsParams", () => ({
 
 vi.mock("@/lib/credits/checkAndResetCredits", () => ({
   checkAndResetCredits: vi.fn(),
+}));
+
+vi.mock("@/lib/credits/initializeAccountCredits", () => ({
+  initializeAccountCredits: vi.fn(),
 }));
 
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
@@ -47,12 +52,38 @@ describe("getAccountCreditsHandler", () => {
     await expect(res.json()).resolves.toEqual({ error: "Forbidden" });
   });
 
-  it("returns 404 with { error } when no credits row exists for the account", async () => {
+  it("creates the credits row on first read instead of answering 404", async () => {
+    // An org that has never spent credits (Seeker) used to get 404 here, which
+    // the billing page retried three times while showing a skeleton.
     vi.mocked(validateAccountCreditsParams).mockResolvedValue(ACCOUNT);
-    vi.mocked(checkAndResetCredits).mockResolvedValue({
-      creditsUsage: null,
+    vi.mocked(checkAndResetCredits).mockResolvedValue({ creditsUsage: null, plan: "free" });
+    vi.mocked(initializeAccountCredits).mockResolvedValue({
+      id: 7,
+      account_id: ACCOUNT,
+      remaining_credits: DEFAULT_CREDITS,
+      timestamp: "2026-09-06T00:00:00.000Z",
+      auto_topup_enabled: false,
+      auto_topup_amount: null,
+      auto_topup_threshold: null,
+      auto_topup_last_run_at: null,
+      auto_topup_last_error: null,
+    });
+
+    const res = await getAccountCreditsHandler(buildRequest(), buildParams());
+    expect(res.status).toBe(200);
+    expect(initializeAccountCredits).toHaveBeenCalledWith(ACCOUNT);
+    await expect(res.json()).resolves.toMatchObject({
+      account_id: ACCOUNT,
+      remaining_credits: DEFAULT_CREDITS,
+      used_credits: 0,
       plan: "free",
     });
+  });
+
+  it("returns 404 only when the row cannot be created either", async () => {
+    vi.mocked(validateAccountCreditsParams).mockResolvedValue(ACCOUNT);
+    vi.mocked(checkAndResetCredits).mockResolvedValue({ creditsUsage: null, plan: "free" });
+    vi.mocked(initializeAccountCredits).mockResolvedValue(null);
 
     const res = await getAccountCreditsHandler(buildRequest(), buildParams());
     expect(res.status).toBe(404);
@@ -67,6 +98,11 @@ describe("getAccountCreditsHandler", () => {
         account_id: ACCOUNT,
         remaining_credits: 250,
         timestamp: "2026-05-01T12:00:00.000Z",
+        auto_topup_enabled: false,
+        auto_topup_amount: null,
+        auto_topup_threshold: null,
+        auto_topup_last_run_at: null,
+        auto_topup_last_error: null,
       },
       plan: "free",
     });
