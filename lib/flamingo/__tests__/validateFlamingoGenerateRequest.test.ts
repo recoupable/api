@@ -83,7 +83,7 @@ describe("validateFlamingoGenerateRequest", () => {
     });
   });
 
-  describe("order: JSON, auth, body, audio", () => {
+  describe("order: JSON parse, auth, body rules, audio", () => {
     it("returns 400 for malformed JSON before auth", async () => {
       const result = await validateFlamingoGenerateRequest({
         headers: new Headers(),
@@ -100,7 +100,7 @@ describe("validateFlamingoGenerateRequest", () => {
       expect(validateAuthContext).not.toHaveBeenCalled();
     });
 
-    it("returns the auth failure before reading the body", async () => {
+    it("returns the auth failure before validating the body", async () => {
       const denied = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       vi.mocked(validateAuthContext).mockResolvedValue(denied);
 
