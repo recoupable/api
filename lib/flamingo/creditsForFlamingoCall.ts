@@ -20,17 +20,18 @@ export const FLAMINGO_MARKUP = 2;
 export const FLAMINGO_USD_PER_SECOND = FLAMINGO_MARKUP * MODAL_A100_USD_PER_SECOND;
 
 /**
- * The base price of one model call, in credits: a cent, owed for every call
- * on top of the metered seconds. Covers the idle and scale-down time a
- * per-call `elapsed_seconds` cannot see, and is what the pre-flight gate
- * requires per call.
+ * The base price of one model call, in credits: five cents, owed for every
+ * call on top of the metered seconds. Pays for what a per-call
+ * `elapsed_seconds` cannot see: the ~26 s container start and the
+ * scale-down tail Modal bills per container (measured 2026-09-06,
+ * recoupable/app#2061). Also what the pre-flight gate requires per call.
  */
 export const FLAMINGO_BASE_CREDITS = usdToCredits(PRICES_USD.flamingoBase);
 
 /**
- * Credits to charge for one Music Flamingo model call: the one-cent base plus
- * $0.001166 per reported second. At the micro-dollar unit a 30 s call is
- * 44,980 credits ($0.04498); a 2 s warm call is 12,332.
+ * Credits to charge for one Music Flamingo model call: the five-cent base
+ * plus $0.001166 per reported second. At the micro-dollar unit a 30 s call is
+ * 84,980 credits ($0.08498); a 2 s warm call is 52,332.
  *
  * A non-positive or non-finite duration (the response guard only checks
  * `typeof`) is priced at the base rather than thrown: the call ran, so the

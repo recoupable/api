@@ -22,7 +22,9 @@ import modal
 # ---------------------------------------------------------------------------
 MODEL_ID = "nvidia/music-flamingo-2601-hf"
 GPU_TYPE = "A100"              # A100 40GB — enough VRAM for the 8B model in BF16
-SCALEDOWN_WINDOW = 300   # 5 min — keeps container warm longer between requests
+SCALEDOWN_WINDOW = 60    # 1 min idle before a container stops. Modal bills the whole
+                         # window per container; 300 s cost ~5x the inference time on
+                         # bursty traffic (recoupable/app#2061, measured 2026-09-06).
 # Workspace GPU cap is 10; keep this at 4 so a runaway queue cannot
 # burn the $100 Modal usage limit (~$8.64/hour vs ~$21.60 at 10 GPUs).
 MAX_CONTAINERS = 4
