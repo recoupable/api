@@ -1,3 +1,6 @@
+import { isAudioContentType } from "@/lib/flamingo/isAudioContentType";
+import { probeAudioUrl } from "@/lib/flamingo/probeAudioUrl";
+
 /** How long the whole check may take, HEAD and fallback GET together. */
 export const AUDIO_URL_TIMEOUT_MS = 10_000;
 
@@ -7,21 +10,6 @@ export type AudioUrlError = "audio_url_unreachable" | "audio_url_not_audio";
 export type AudioUrlVerification =
   | { ok: true; contentType: string }
   | { ok: false; error: AudioUrlError; message: string };
-
-const ACCEPTED_CONTENT_TYPES = ["application/octet-stream"];
-
-function isAudioContentType(contentType: string): boolean {
-  return contentType.startsWith("audio/") || ACCEPTED_CONTENT_TYPES.includes(contentType);
-}
-
-function probe(url: string, method: "HEAD" | "GET", deadline: number): Promise<Response> {
-  const remaining = Math.max(1, deadline - Date.now());
-  return fetch(url, {
-    method,
-    signal: AbortSignal.timeout(remaining),
-    ...(method === "GET" ? { headers: { Range: "bytes=0-0" } } : {}),
-  });
-}
 
 /**
  * Checks that `audio_url` points at audio before any Modal container starts
@@ -37,9 +25,9 @@ export async function verifyAudioUrl(url: string): Promise<AudioUrlVerification>
   const deadline = Date.now() + AUDIO_URL_TIMEOUT_MS;
   let response: Response;
   try {
-    response = await probe(url, "HEAD", deadline);
+    response = await probeAudioUrl(url, "HEAD", deadline);
     if (!response.ok) {
-      response = await probe(url, "GET", deadline);
+      response = await probeAudioUrl(url, "GET", deadline);
       await response.body?.cancel();
     }
   } catch (error) {

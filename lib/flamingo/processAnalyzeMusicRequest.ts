@@ -3,7 +3,7 @@ import { getPreset } from "@/lib/flamingo/presets";
 import { FULL_REPORT_PRESET_NAME } from "@/lib/flamingo/presets/fullReport";
 import { executeFullReport } from "@/lib/flamingo/executeFullReport";
 import { chargeForFlamingoCall } from "@/lib/flamingo/chargeForFlamingoCall";
-import type { FlamingoGenerateBody } from "@/lib/flamingo/validateFlamingoGenerateBody";
+import type { FlamingoGenerateBody } from "@/lib/flamingo/flamingoGenerateBodySchema";
 
 /** Successful result with a full report. */
 interface FullReportSuccess {

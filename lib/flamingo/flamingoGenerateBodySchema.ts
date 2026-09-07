@@ -1,10 +1,9 @@
-import { NextResponse } from "next/server";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { z } from "zod";
 import { PRESET_NAMES } from "@/lib/flamingo/presets";
 
 /**
- * Zod schema for the POST /api/songs/analyze request body.
+ * Zod schema for the POST /api/songs/analyze body, shared with the
+ * `analyze_music` MCP tool's input schema.
  *
  * Callers must provide either a "preset" name OR a custom "prompt" — not both —
  * and always an "audio_url": the model is only useful with audio, and a
@@ -40,30 +39,3 @@ export const flamingoGenerateBodySchema = z
 
 /** Inferred TypeScript type from the Zod schema. */
 export type FlamingoGenerateBody = z.infer<typeof flamingoGenerateBodySchema>;
-
-/**
- * Validates the request body for POST /api/songs/analyze.
- *
- * @param body - The raw request body (parsed JSON).
- * @returns A NextResponse with an error if validation fails, or the validated body if it passes.
- */
-export function validateFlamingoGenerateBody(body: unknown): NextResponse | FlamingoGenerateBody {
-  const result = flamingoGenerateBodySchema.safeParse(body);
-
-  if (!result.success) {
-    const firstError = result.error.issues[0];
-    return NextResponse.json(
-      {
-        status: "error",
-        missing_fields: firstError.path,
-        error: firstError.message,
-      },
-      {
-        status: 400,
-        headers: getCorsHeaders(),
-      },
-    );
-  }
-
-  return result.data;
-}

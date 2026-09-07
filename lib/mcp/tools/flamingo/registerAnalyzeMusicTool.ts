@@ -8,7 +8,7 @@ import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import {
   flamingoGenerateBodySchema,
   type FlamingoGenerateBody,
-} from "@/lib/flamingo/validateFlamingoGenerateBody";
+} from "@/lib/flamingo/flamingoGenerateBodySchema";
 import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRequest";
 import { checkCreditsAvailable } from "@/lib/credits/checkCreditsAvailable";
 import { minimumCreditsForAnalyzeRequest } from "@/lib/flamingo/minimumCreditsForAnalyzeRequest";
