@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import {
   flamingoGenerateBodySchema,
@@ -11,10 +11,6 @@ import { verifyAudioUrl } from "@/lib/flamingo/verifyAudioUrl";
 export interface ValidatedFlamingoGenerateRequest {
   accountId: string;
   body: FlamingoGenerateBody;
-}
-
-function reject(body: Record<string, unknown>, status: number): NextResponse {
-  return NextResponse.json({ status: "error", ...body }, { status, headers: getCorsHeaders() });
 }
 
 /**
@@ -35,7 +31,7 @@ export async function validateFlamingoGenerateRequest(
   try {
     raw = await request.json();
   } catch {
-    return reject({ error: "Request body must be valid JSON" }, 400);
+    return errorResponse("Request body must be valid JSON", 400);
   }
 
   const authResult = await validateAuthContext(request);
@@ -44,12 +40,12 @@ export async function validateFlamingoGenerateRequest(
   const parsed = flamingoGenerateBodySchema.safeParse(raw);
   if (!parsed.success) {
     const firstError = parsed.error.issues[0];
-    return reject({ missing_fields: firstError.path, error: firstError.message }, 400);
+    return errorResponse(firstError.message, 400, { missing_fields: firstError.path });
   }
 
   const audio = await verifyAudioUrl(parsed.data.audio_url);
   if (audio.ok === false) {
-    return reject({ error: audio.error, message: audio.message }, 422);
+    return errorResponse(audio.error, 422, { message: audio.message });
   }
 
   return { accountId: authResult.accountId, body: parsed.data };
