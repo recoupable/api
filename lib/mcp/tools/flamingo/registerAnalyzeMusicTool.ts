@@ -57,16 +57,22 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
         return getToolResultError(audio.message);
       }
 
-      let gate;
       try {
         await assertAnalyzeWithinPlan({ accountId, audioUrl: args.audio_url });
+      } catch (err) {
+        if (err instanceof PlanLimitError) return getToolResultError(err.message);
+        console.error("[analyze_music] plan gate failed:", err);
+        return getToolResultError("Plan check failed");
+      }
+
+      let gate;
+      try {
         gate = await checkCreditsAvailable({
           accountId,
           creditsToDeduct: minimumCreditsForAnalyzeRequest(args),
         });
       } catch (err) {
-        if (err instanceof PlanLimitError) return getToolResultError(err.message);
-        console.error("[analyze_music] plan or credit gate failed:", err);
+        console.error("[analyze_music] credit gate failed:", err);
         return getToolResultError("Credit check failed");
       }
       if (gate.kind === "insufficient_credits") {

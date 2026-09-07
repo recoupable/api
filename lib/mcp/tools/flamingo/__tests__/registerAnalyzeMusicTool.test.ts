@@ -102,4 +102,19 @@ describe("registerAnalyzeMusicTool — audio_url guard", () => {
     expect(checkCreditsAvailable).not.toHaveBeenCalled();
     expect(processAnalyzeMusicRequest).not.toHaveBeenCalled();
   });
+
+  it("names the plan lookup, not the balance, when the plan gate itself throws", async () => {
+    vi.mocked(verifyAudioUrl).mockResolvedValue({ ok: true, contentType: "audio/mpeg" });
+    vi.mocked(assertAnalyzeWithinPlan).mockRejectedValue(new Error("stripe down"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await handler({ preset: "mood_tags", audio_url: AUDIO }, extra);
+
+    expect(JSON.parse(result.content[0].text)).toEqual({
+      success: false,
+      message: "Plan check failed",
+    });
+    expect(checkCreditsAvailable).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
 });

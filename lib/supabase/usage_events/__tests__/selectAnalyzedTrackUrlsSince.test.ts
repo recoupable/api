@@ -6,7 +6,7 @@ vi.mock("@/lib/supabase/serverClient", () => ({ default: { from: vi.fn() } }));
 
 function chain(result: { data: unknown; error: unknown }) {
   const q: Record<string, unknown> = {};
-  for (const m of ["select", "eq", "gte", "not"]) q[m] = vi.fn(() => q);
+  for (const m of ["select", "eq", "gte", "not", "order"]) q[m] = vi.fn(() => q);
   q.then = (resolve: (v: unknown) => unknown) => Promise.resolve(result).then(resolve);
   return q as Record<string, ReturnType<typeof vi.fn>> & { then: unknown };
 }
@@ -37,6 +37,8 @@ describe("selectAnalyzedTrackUrlsSince", () => {
     expect(q.eq).toHaveBeenCalledWith("provider", "modal");
     expect(q.gte).toHaveBeenCalledWith("created_at", "2026-09-01T00:00:00.000Z");
     expect(q.not).toHaveBeenCalledWith("resource_url", "is", null);
+    expect(q.order).toHaveBeenNthCalledWith(1, "created_at", { ascending: true });
+    expect(q.order).toHaveBeenNthCalledWith(2, "id", { ascending: true });
   });
 
   it("returns an empty list when there are no rows", async () => {

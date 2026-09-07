@@ -26,7 +26,9 @@ export async function selectAnalyzedTrackUrlsSince(
     .eq("account_id", params.accountId)
     .eq("provider", "modal")
     .gte("created_at", params.since)
-    .not("resource_url", "is", null);
+    .not("resource_url", "is", null)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
 
   if (error) {
     console.error("Error selecting analyzed tracks:", error);

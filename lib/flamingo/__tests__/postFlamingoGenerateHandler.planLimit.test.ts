@@ -66,6 +66,7 @@ describe("postFlamingoGenerateHandler — plan gate", () => {
     );
 
     expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ status: "error", error: "Internal server error" });
     expect(processAnalyzeMusicRequest).not.toHaveBeenCalled();
     errorSpy.mockRestore();
   });
