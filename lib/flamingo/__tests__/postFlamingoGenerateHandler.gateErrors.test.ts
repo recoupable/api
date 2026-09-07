@@ -8,6 +8,10 @@ import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRe
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
+vi.mock("@/lib/flamingo/verifyAudioUrl", () => ({
+  verifyAudioUrl: vi.fn().mockResolvedValue({ ok: true, contentType: "audio/mpeg" }),
+}));
+
 vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
 vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
   ensureCreditsOrShortCircuit: vi.fn(),
@@ -32,7 +36,7 @@ describe("postFlamingoGenerateHandler — gate failures", () => {
 
     const res = await postFlamingoGenerateHandler({
       headers: new Headers({ "x-api-key": "k" }),
-      json: async () => ({ prompt: "Genre?" }),
+      json: async () => ({ prompt: "Genre?", audio_url: "https://example.com/song.mp3" }),
     } as unknown as NextRequest);
 
     expect(res.status).toBe(500);

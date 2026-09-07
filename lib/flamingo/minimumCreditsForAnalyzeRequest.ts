@@ -1,6 +1,6 @@
 import { FLAMINGO_BASE_CREDITS } from "@/lib/flamingo/creditsForFlamingoCall";
 import { FULL_REPORT_PRESET_NAME, FULL_REPORT_SECTIONS } from "@/lib/flamingo/presets/fullReport";
-import type { FlamingoGenerateBody } from "@/lib/flamingo/validateFlamingoGenerateBody";
+import type { FlamingoGenerateBody } from "@/lib/flamingo/flamingoGenerateBodySchema";
 
 /**
  * The base price of an analyze request, for the pre-flight credit gate: one

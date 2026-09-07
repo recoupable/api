@@ -1,6 +1,6 @@
 import { FLAMINGO_GENERATE_URL } from "@/lib/const";
 import { getModalProxyAuthHeaders } from "@/lib/flamingo/getModalProxyAuthHeaders";
-import type { FlamingoGenerateBody } from "@/lib/flamingo/validateFlamingoGenerateBody";
+import type { FlamingoGenerateBody } from "@/lib/flamingo/flamingoGenerateBodySchema";
 import {
   isFlamingoGenerateResult,
   type FlamingoGenerateResult,

@@ -39,14 +39,17 @@ describe("processAnalyzeMusicRequest — credits", () => {
     );
 
     await expect(
-      processAnalyzeMusicRequest({ ...base, prompt: "Genre?" }, { accountId: "acc_1" }),
+      processAnalyzeMusicRequest(
+        { ...base, prompt: "Genre?", audio_url: "https://example.com/song.mp3" },
+        { accountId: "acc_1" },
+      ),
     ).rejects.toThrow();
     expect(chargeForFlamingoCall).not.toHaveBeenCalled();
   });
 
   it("charges nothing for a validation error that never reaches the model", async () => {
     const result = await processAnalyzeMusicRequest(
-      { ...base, preset: "full_report" },
+      { ...base, preset: "not_a_preset", audio_url: "https://example.com/song.mp3" },
       { accountId: "acc_1" },
     );
 

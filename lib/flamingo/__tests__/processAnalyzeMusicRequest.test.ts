@@ -93,24 +93,6 @@ describe("processAnalyzeMusicRequest", () => {
         "acc_test",
       );
     });
-
-    it("returns error when full_report preset has no audio_url", async () => {
-      const result = await processAnalyzeMusicRequest(
-        {
-          preset: "full_report",
-          max_new_tokens: 512,
-          temperature: 1.0,
-          top_p: 1.0,
-          do_sample: false,
-        },
-        CTX,
-      );
-
-      expect(result).toEqual({
-        type: "error",
-        error: "audio_url is required for the full_report preset",
-      });
-    });
   });
 
   describe("individual preset", () => {
@@ -180,31 +162,6 @@ describe("processAnalyzeMusicRequest", () => {
       });
     });
 
-    it("returns error when preset requires audio but none provided", async () => {
-      mockGetPreset.mockReturnValue({
-        name: "mood_tags",
-        prompt: "Describe the mood",
-        requiresAudio: true,
-        params: { max_new_tokens: 256, temperature: 0.7, do_sample: true },
-      });
-
-      const result = await processAnalyzeMusicRequest(
-        {
-          preset: "mood_tags",
-          max_new_tokens: 512,
-          temperature: 1.0,
-          top_p: 1.0,
-          do_sample: false,
-        },
-        CTX,
-      );
-
-      expect(result).toEqual({
-        type: "error",
-        error: 'The "mood_tags" preset requires an audio_url',
-      });
-    });
-
     it("falls back to raw response when parseResponse throws", async () => {
       mockGetPreset.mockReturnValue({
         name: "mood_tags",
@@ -223,6 +180,7 @@ describe("processAnalyzeMusicRequest", () => {
       const result = await processAnalyzeMusicRequest(
         {
           preset: "mood_tags",
+          audio_url: "https://example.com/song.mp3",
           max_new_tokens: 512,
           temperature: 1.0,
           top_p: 1.0,
