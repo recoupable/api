@@ -135,7 +135,7 @@ describe("getArtistPublicProfile", () => {
         {
           id: "cat_1",
           name: "Brauxelion Catalog",
-          song_count: 24,
+          song_count: 2,
           updated_at: "2026-08-01",
           songs: expect.any(Array),
         },
@@ -219,11 +219,20 @@ describe("getArtistPublicProfile", () => {
     });
   });
 
-  it("defaults a missing song count to 0", async () => {
-    countCatalogSongsMock.mockResolvedValue({});
+  it("reports zero returned songs when credited song metadata is missing", async () => {
+    selectSongsMock.mockResolvedValue([]);
 
     const profile = await getArtistPublicProfile(ARTIST);
     expect(profile?.catalogs[0].song_count).toBe(0);
+  });
+
+  it("counts the artist contribution instead of the 105-song shared catalog", async () => {
+    countCatalogSongsMock.mockResolvedValue({ cat_1: 105 });
+    getCatalogSongsMock.mockResolvedValue([{ catalog: "cat_1", song: "ISRC1" }]);
+    const profile = await getArtistPublicProfile(ARTIST);
+    expect(profile?.catalogs[0].song_count).toBe(1);
+    expect(profile?.catalogs[0].songs.map(song => song.isrc)).toEqual(["ISRC1"]);
+    expect(countCatalogSongsMock).not.toHaveBeenCalled();
   });
 
   describe("v2: songs and valuation", () => {

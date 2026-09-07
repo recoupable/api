@@ -1,7 +1,6 @@
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
 import { selectSongArtists } from "@/lib/supabase/song_artists/selectSongArtists";
 import { selectCatalogsBySongs } from "@/lib/supabase/catalog_songs/selectCatalogsBySongs";
-import { countCatalogSongs } from "@/lib/supabase/catalog_songs/countCatalogSongs";
 import { getCatalogSongs } from "@/lib/songs/getCatalogSongs";
 import { selectSongs } from "@/lib/supabase/songs/selectSongs";
 import { selectLatestSongPlays } from "@/lib/songs/selectLatestSongPlays";
@@ -62,7 +61,6 @@ export async function getArtistPublicProfile(
   }
   const isrcs = [...new Set(songRows.map(row => row.song))];
   const catalogRows = await selectCatalogsBySongs(isrcs);
-  const counts = await countCatalogSongs(catalogRows.map(c => c.id));
 
   const [catalogSongRows, songRecords, plays] = await Promise.all([
     getCatalogSongs(isrcs),
@@ -100,7 +98,7 @@ export async function getArtistPublicProfile(
   const catalogs = catalogRows.map(c => ({
     id: c.id,
     name: c.name,
-    song_count: counts[c.id] ?? 0,
+    song_count: songsByCatalog[c.id]?.length ?? 0,
     updated_at: c.updated_at,
     songs: songsByCatalog[c.id] ?? [],
   }));

@@ -42,8 +42,8 @@ describe("buildProfileSongs", () => {
     expect(songsByCatalog.cat_1[1].artwork_url).toBeNull();
   });
 
-  it("caps each catalog at the top 50 by plays", () => {
-    const many = Array.from({ length: 60 }, (_, i) => `S${i}`);
+  it("retains all 64 artist recordings sorted by plays", () => {
+    const many = Array.from({ length: 64 }, (_, i) => `S${i}`);
     const { songsByCatalog } = buildProfileSongs({
       catalogSongRows: many.map(s => ({ catalog: "cat_1", song: s })),
       songs: many.map(s => songRow(s, `Song ${s}`)),
@@ -52,9 +52,9 @@ describe("buildProfileSongs", () => {
       earliestReleaseDates: {},
     });
 
-    expect(songsByCatalog.cat_1).toHaveLength(50);
+    expect(songsByCatalog.cat_1).toHaveLength(64);
     expect(songsByCatalog.cat_1[0].plays).toBe(1000);
-    expect(songsByCatalog.cat_1[49].plays).toBe(951);
+    expect(songsByCatalog.cat_1[63].plays).toBe(937);
   });
 
   it("computes the artist-level band across all songs, using the earliest release date", () => {
