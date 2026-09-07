@@ -26,7 +26,7 @@ beforeEach(() => {
 describe("getArtistProfileSongs", () => {
   it("accepts artistId and returns credited recordings without catalog queries", async () => {
     const songs = await getArtistProfileSongs(artistId);
-    expect(selectSongArtists).toHaveBeenCalledWith({ artists: [artistId] });
+    expect(selectSongArtists).toHaveBeenCalledWith({ artists: [artistId], paginate: true });
     expect(selectSongs).toHaveBeenCalledWith(["A", "B"]);
     expect(songs.map(s => s.isrc)).toEqual(["B", "A"]);
     expect(songs[0]).toEqual({
@@ -35,7 +35,6 @@ describe("getArtistProfileSongs", () => {
       album: null,
       artwork_url: "https://resolved/b.png",
       plays: 9,
-      est_value_usd: expect.any(Number),
     });
     expect(resolveSongArtwork).toHaveBeenCalledWith(["B"]);
   });
@@ -52,11 +51,11 @@ describe("getArtistProfileSongs", () => {
     ] as never);
     expect((await getArtistProfileSongs(artistId)).map(s => s.isrc)).toEqual(["B"]);
   });
-  it("returns unmeasured songs with zero estimates and tolerates missing metadata", async () => {
+  it("returns unmeasured songs with zero plays and tolerates missing metadata", async () => {
     vi.mocked(selectLatestSongPlays).mockResolvedValue({});
     vi.mocked(selectSongs).mockResolvedValue([{ isrc: "A", name: "Solo" }] as never);
     expect(await getArtistProfileSongs(artistId)).toEqual([
-      { isrc: "A", name: "Solo", album: null, artwork_url: null, plays: 0, est_value_usd: 0 },
+      { isrc: "A", name: "Solo", album: null, artwork_url: null, plays: 0 },
     ]);
   });
   it("propagates credit lookup failure so the profile can degrade explicitly", async () => {

@@ -2,7 +2,6 @@ import { selectSongArtists } from "@/lib/supabase/song_artists/selectSongArtists
 import { selectSongs } from "@/lib/supabase/songs/selectSongs";
 import { selectLatestSongPlays } from "@/lib/songs/selectLatestSongPlays";
 import { resolveSongArtwork } from "./resolveSongArtwork";
-import { computeValuationBand } from "@/lib/catalog/computeValuationBand";
 import type { ProfileSong } from "./buildProfileSongs";
 
 const CHUNK_SIZE = 200;
@@ -10,10 +9,11 @@ const PROFILE_SONG_LIMIT = 1000;
 
 /**
  * Resolve public recordings directly from artist credits, without catalog membership.
- * Song release dates are not stored, so row estimates use the model's default age.
  */
-export async function getArtistProfileSongs(artistId: string): Promise<ProfileSong[]> {
-  const credits = await selectSongArtists({ artists: [artistId] });
+export async function getArtistProfileSongs(
+  artistId: string,
+): Promise<Array<Omit<ProfileSong, "est_value_usd">>> {
+  const credits = await selectSongArtists({ artists: [artistId], paginate: true });
   const isrcs = [...new Set(credits.map(row => row.song))];
   if (!isrcs.length) return [];
 
@@ -41,10 +41,6 @@ export async function getArtistProfileSongs(artistId: string): Promise<ProfileSo
         album: song.album ?? null,
         artwork_url: artwork[song.isrc] ?? song.artwork_url ?? null,
         plays: count,
-        est_value_usd:
-          count > 0
-            ? computeValuationBand({ totalStreams: count, earliestReleaseDate: null }).valuation.mid
-            : 0,
       };
     })
     .sort((a, b) => b.plays - a.plays || a.isrc.localeCompare(b.isrc))

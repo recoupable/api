@@ -173,7 +173,7 @@ describe("getArtistPublicProfile", () => {
   it("resolves catalogs through the artist's credited songs, not catalog ownership", async () => {
     await getArtistPublicProfile(ARTIST);
 
-    expect(selectSongArtistsMock).toHaveBeenCalledWith({ artists: [ARTIST] });
+    expect(selectSongArtistsMock).toHaveBeenCalledWith({ artists: [ARTIST], paginate: true });
     expect(selectCatalogsBySongsMock).toHaveBeenCalledWith(["ISRC1", "ISRC2"]);
   });
 
@@ -265,6 +265,24 @@ describe("getArtistPublicProfile", () => {
     expect(profile?.catalogs).toEqual([]);
     expect(profile?.songs.map(s => s.isrc)).toEqual(["ISRC1", "ISRC2"]);
     expect(profile?.song_count).toBe(2);
+  });
+
+  it("keeps catalog rows when one optional release-date lookup fails", async () => {
+    getCatalogEarliestReleaseDateMock.mockRejectedValueOnce(new Error("date unavailable"));
+    const profile = await getArtistPublicProfile(ARTIST);
+    expect(profile?.catalogs).toHaveLength(1);
+    expect(profile?.songs).toHaveLength(2);
+  });
+
+  it("uses the artist valuation age consistently for individual song estimates", async () => {
+    getCatalogEarliestReleaseDateMock.mockResolvedValue("2000-01-01");
+    const profile = await getArtistPublicProfile(ARTIST);
+    const sum = profile!.songs.reduce((total, song) => total + song.est_value_usd, 0);
+    expect(sum).toBeCloseTo(profile!.valuation!.mid, 6);
+    expect(profile!.songs[0].est_value_usd).toBeCloseTo(
+      profile!.catalogs[0].songs[0].est_value_usd,
+      6,
+    );
   });
 
   describe("v2: songs and valuation", () => {

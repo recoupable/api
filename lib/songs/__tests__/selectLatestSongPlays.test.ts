@@ -35,6 +35,18 @@ describe("selectLatestSongPlays", () => {
     );
   });
 
+  it("continues past a page of one song's history to find another song's latest count", async () => {
+    selectSongMeasurementsMock
+      .mockResolvedValueOnce(
+        Array.from({ length: 1000 }, (_, i) => ({ song: "A", value: 1000 - i })),
+      )
+      .mockResolvedValueOnce([{ song: "B", value: 42 }]);
+    expect(await selectLatestSongPlays(["A", "B"])).toEqual({ A: 1000, B: 42 });
+    expect(selectSongMeasurementsMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ offset: 1000, limit: 1000 }),
+    );
+  });
+
   it("chunks large ISRC lists", async () => {
     selectSongMeasurementsMock.mockResolvedValue([]);
     const isrcs = Array.from({ length: 401 }, (_, i) => `I${i}`);

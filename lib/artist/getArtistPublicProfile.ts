@@ -35,7 +35,7 @@ export async function getArtistPublicProfile(
   if (!artist) return null;
 
   const info = artist.account_info?.[0];
-  let songs: ProfileSong[] = [];
+  let songs: Awaited<ReturnType<typeof getArtistProfileSongs>> = [];
   try {
     songs = await getArtistProfileSongs(artistId);
   } catch (error) {
@@ -69,7 +69,12 @@ export async function getArtistPublicProfile(
     name: artist.name ?? null,
     image: info?.image || null,
     socials,
-    songs,
+    songs: songs.map(song => ({
+      ...song,
+      // Share the artist band's age assumption; catalog membership never gates a song.
+      est_value_usd:
+        valuation && totalStreams > 0 ? (valuation.mid * song.plays) / totalStreams : 0,
+    })),
     song_count: songs.length,
     catalogs,
     valuation,

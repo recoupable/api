@@ -4,7 +4,7 @@ import { getCatalogEarliestReleaseDate } from "@/lib/catalog/getCatalogEarliestR
 import { buildProfileSongs, type ProfileSong } from "./buildProfileSongs";
 
 /** Optional catalog metadata for existing profile consumers; never selects artist songs. */
-export async function getArtistProfileCatalogs(songs: ProfileSong[]) {
+export async function getArtistProfileCatalogs(songs: Array<Omit<ProfileSong, "est_value_usd">>) {
   const isrcs = songs.map(song => song.isrc);
   const [catalogRows, catalogSongRows] = await Promise.all([
     selectCatalogsBySongs(isrcs),
@@ -12,7 +12,8 @@ export async function getArtistProfileCatalogs(songs: ProfileSong[]) {
   ]);
   const earliestEntries = await Promise.all(
     catalogRows.map(
-      async catalog => [catalog.id, await getCatalogEarliestReleaseDate(catalog.id)] as const,
+      async catalog =>
+        [catalog.id, await getCatalogEarliestReleaseDate(catalog.id).catch(() => null)] as const,
     ),
   );
   const { songsByCatalog, valuation } = buildProfileSongs({
