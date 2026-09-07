@@ -45,7 +45,7 @@ describe("postFlamingoGenerateHandler — credit gate", () => {
     expect(res.status).toBe(200);
     expect(ensureCreditsOrShortCircuit).toHaveBeenCalledWith({
       accountId: "acc_1",
-      creditsToDeduct: 10_000,
+      creditsToDeduct: 50_000,
     });
     expect(processAnalyzeMusicRequest).toHaveBeenCalledWith(
       expect.objectContaining({ prompt: "Genre?" }),
@@ -68,7 +68,7 @@ describe("postFlamingoGenerateHandler — credit gate", () => {
 
     expect(ensureCreditsOrShortCircuit).toHaveBeenCalledWith({
       accountId: "acc_1",
-      creditsToDeduct: 130_000,
+      creditsToDeduct: 650_000,
     });
   });
 
@@ -77,7 +77,7 @@ describe("postFlamingoGenerateHandler — credit gate", () => {
       {
         error: "insufficient_credits",
         remaining_credits: 0,
-        required_credits: 10_000,
+        required_credits: 50_000,
         billingUrl: "https://app.recoupable.dev",
       },
       { status: 402 },
@@ -88,7 +88,7 @@ describe("postFlamingoGenerateHandler — credit gate", () => {
 
     expect(res.status).toBe(402);
     expect(await res.json()).toEqual(
-      expect.objectContaining({ error: "insufficient_credits", required_credits: 10_000 }),
+      expect.objectContaining({ error: "insufficient_credits", required_credits: 50_000 }),
     );
     expect(processAnalyzeMusicRequest).not.toHaveBeenCalled();
   });

@@ -22,7 +22,7 @@ describe("chargeForFlamingoCall", () => {
 
     expect(recordCreditDeduction).toHaveBeenCalledWith({
       accountId: "acc_1",
-      creditsToDeduct: 44_980,
+      creditsToDeduct: 84_980,
       source: "api",
       provider: "modal",
       modelId: "nvidia/music-flamingo-2601-hf",
@@ -35,10 +35,10 @@ describe("chargeForFlamingoCall", () => {
 
     await chargeForFlamingoCall({ accountId: "acc_1", elapsedSeconds: 1.8 });
 
-    // 1.8 × 0.001166 = $0.0020988 → 2,099 + the 10,000 base.
+    // 1.8 × 0.001166 = $0.0020988 → 2,099 + the 50,000 base.
     expect(recordCreditDeduction).toHaveBeenCalledWith({
       accountId: "acc_1",
-      creditsToDeduct: 12_099,
+      creditsToDeduct: 52_099,
       source: "api",
       provider: "modal",
       modelId: "nvidia/music-flamingo-2601-hf",
