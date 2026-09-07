@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { countAnalyzedTracksSince } from "@/lib/supabase/usage_events/countAnalyzedTracksSince";
+import { selectAnalyzedTrackUrlsSince } from "@/lib/supabase/usage_events/selectAnalyzedTrackUrlsSince";
 import supabase from "@/lib/supabase/serverClient";
 
 vi.mock("@/lib/supabase/serverClient", () => ({ default: { from: vi.fn() } }));
@@ -13,8 +13,8 @@ function chain(result: { data: unknown; error: unknown }) {
 
 beforeEach(() => vi.clearAllMocks());
 
-describe("countAnalyzedTracksSince", () => {
-  it("counts distinct resource_url among the account's Modal rows since the bound", async () => {
+describe("selectAnalyzedTrackUrlsSince", () => {
+  it("returns the distinct resource_urls among the account's Modal rows since the bound", async () => {
     const q = chain({
       data: [
         { resource_url: "https://a/1.mp3" },
@@ -25,12 +25,12 @@ describe("countAnalyzedTracksSince", () => {
     });
     vi.mocked(supabase.from).mockReturnValue(q as never);
 
-    const count = await countAnalyzedTracksSince({
+    const urls = await selectAnalyzedTrackUrlsSince({
       accountId: "acc",
       since: "2026-09-01T00:00:00.000Z",
     });
 
-    expect(count).toBe(2);
+    expect(urls).toEqual(["https://a/1.mp3", "https://a/2.mp3"]);
     expect(supabase.from).toHaveBeenCalledWith("usage_events");
     expect(q.select).toHaveBeenCalledWith("resource_url");
     expect(q.eq).toHaveBeenCalledWith("account_id", "acc");
@@ -39,9 +39,9 @@ describe("countAnalyzedTracksSince", () => {
     expect(q.not).toHaveBeenCalledWith("resource_url", "is", null);
   });
 
-  it("returns 0 when there are no rows", async () => {
+  it("returns an empty list when there are no rows", async () => {
     vi.mocked(supabase.from).mockReturnValue(chain({ data: [], error: null }) as never);
-    expect(await countAnalyzedTracksSince({ accountId: "acc", since: "x" })).toBe(0);
+    expect(await selectAnalyzedTrackUrlsSince({ accountId: "acc", since: "x" })).toEqual([]);
   });
 
   it("throws on a query error", async () => {
@@ -49,7 +49,9 @@ describe("countAnalyzedTracksSince", () => {
       chain({ data: null, error: { message: "boom" } }) as never,
     );
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    await expect(countAnalyzedTracksSince({ accountId: "acc", since: "x" })).rejects.toBeTruthy();
+    await expect(
+      selectAnalyzedTrackUrlsSince({ accountId: "acc", since: "x" }),
+    ).rejects.toBeTruthy();
     errorSpy.mockRestore();
   });
 });

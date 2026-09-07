@@ -27,7 +27,7 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
 
   let short: NextResponse | null;
   try {
-    await assertAnalyzeWithinPlan({ accountId });
+    await assertAnalyzeWithinPlan({ accountId, audioUrl: body.audio_url });
     short = await ensureCreditsOrShortCircuit({
       accountId,
       creditsToDeduct: minimumCreditsForAnalyzeRequest(body),

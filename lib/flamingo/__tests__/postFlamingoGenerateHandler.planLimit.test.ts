@@ -52,7 +52,7 @@ describe("postFlamingoGenerateHandler — plan gate", () => {
     expect(res.status).toBe(402);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
     expect(await res.json()).toEqual(body);
-    expect(assertAnalyzeWithinPlan).toHaveBeenCalledWith({ accountId: "acc_1" });
+    expect(assertAnalyzeWithinPlan).toHaveBeenCalledWith({ accountId: "acc_1", audioUrl: AUDIO });
     expect(ensureCreditsOrShortCircuit).not.toHaveBeenCalled();
     expect(processAnalyzeMusicRequest).not.toHaveBeenCalled();
   });

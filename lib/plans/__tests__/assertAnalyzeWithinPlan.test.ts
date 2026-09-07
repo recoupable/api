@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { assertAnalyzeWithinPlan } from "@/lib/plans/assertAnalyzeWithinPlan";
 import { PlanLimitError } from "@/lib/plans/PlanLimitError";
 import { getAccountSubscriptionState } from "@/lib/credits/getAccountSubscriptionState";
-import { countAnalyzedTracksSince } from "@/lib/supabase/usage_events/countAnalyzedTracksSince";
+import { selectAnalyzedTrackUrlsSince } from "@/lib/supabase/usage_events/selectAnalyzedTrackUrlsSince";
 import { getCalendarMonthStart } from "@/lib/plans/getCalendarMonthStart";
 
 vi.mock("@/lib/credits/getAccountSubscriptionState", () => ({
   getAccountSubscriptionState: vi.fn(),
 }));
-vi.mock("@/lib/supabase/usage_events/countAnalyzedTracksSince", () => ({
-  countAnalyzedTracksSince: vi.fn(),
+vi.mock("@/lib/supabase/usage_events/selectAnalyzedTrackUrlsSince", () => ({
+  selectAnalyzedTrackUrlsSince: vi.fn(),
 }));
 vi.mock("@/lib/plans/getCalendarMonthStart", () => ({
   getCalendarMonthStart: vi.fn(() => "2026-09-01T00:00:00.000Z"),
@@ -20,23 +20,40 @@ const state = (plan: "free" | "starter" | "pro") => ({ plan, activeSubscription:
 describe("assertAnalyzeWithinPlan", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  const four = ["https://a/1.mp3", "https://a/2.mp3", "https://a/3.mp3", "https://a/4.mp3"];
+  const five = [...four, "https://a/5.mp3"];
+
   it("lets a free account through under the cap, counting since the month start", async () => {
     vi.mocked(getAccountSubscriptionState).mockResolvedValue(state("free"));
-    vi.mocked(countAnalyzedTracksSince).mockResolvedValue(4);
+    vi.mocked(selectAnalyzedTrackUrlsSince).mockResolvedValue(four);
 
-    await expect(assertAnalyzeWithinPlan({ accountId: "acc" })).resolves.toBeUndefined();
+    await expect(
+      assertAnalyzeWithinPlan({ accountId: "acc", audioUrl: "https://a/new.mp3" }),
+    ).resolves.toBeUndefined();
     expect(getCalendarMonthStart).toHaveBeenCalled();
-    expect(countAnalyzedTracksSince).toHaveBeenCalledWith({
+    expect(selectAnalyzedTrackUrlsSince).toHaveBeenCalledWith({
       accountId: "acc",
       since: "2026-09-01T00:00:00.000Z",
     });
   });
 
-  it("throws PlanLimitError with the documented body at the cap", async () => {
+  it("lets a repeat of an already-analyzed track through at the cap", async () => {
     vi.mocked(getAccountSubscriptionState).mockResolvedValue(state("free"));
-    vi.mocked(countAnalyzedTracksSince).mockResolvedValue(5);
+    vi.mocked(selectAnalyzedTrackUrlsSince).mockResolvedValue(five);
 
-    const err = await assertAnalyzeWithinPlan({ accountId: "acc" }).catch(e => e);
+    await expect(
+      assertAnalyzeWithinPlan({ accountId: "acc", audioUrl: "https://a/3.mp3" }),
+    ).resolves.toBeUndefined();
+  });
+
+  it("throws PlanLimitError with the documented body for a new track at the cap", async () => {
+    vi.mocked(getAccountSubscriptionState).mockResolvedValue(state("free"));
+    vi.mocked(selectAnalyzedTrackUrlsSince).mockResolvedValue(five);
+
+    const err = await assertAnalyzeWithinPlan({
+      accountId: "acc",
+      audioUrl: "https://a/6.mp3",
+    }).catch(e => e);
 
     expect(err).toBeInstanceOf(PlanLimitError);
     expect((err as PlanLimitError).body).toMatchObject({
@@ -54,7 +71,9 @@ describe("assertAnalyzeWithinPlan", () => {
   it.each(["starter", "pro"] as const)("never counts for %s (uncapped)", async plan => {
     vi.mocked(getAccountSubscriptionState).mockResolvedValue(state(plan));
 
-    await expect(assertAnalyzeWithinPlan({ accountId: "acc" })).resolves.toBeUndefined();
-    expect(countAnalyzedTracksSince).not.toHaveBeenCalled();
+    await expect(
+      assertAnalyzeWithinPlan({ accountId: "acc", audioUrl: "https://a/1.mp3" }),
+    ).resolves.toBeUndefined();
+    expect(selectAnalyzedTrackUrlsSince).not.toHaveBeenCalled();
   });
 });

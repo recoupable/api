@@ -59,7 +59,7 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
 
       let gate;
       try {
-        await assertAnalyzeWithinPlan({ accountId });
+        await assertAnalyzeWithinPlan({ accountId, audioUrl: args.audio_url });
         gate = await checkCreditsAvailable({
           accountId,
           creditsToDeduct: minimumCreditsForAnalyzeRequest(args),

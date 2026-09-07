@@ -98,6 +98,7 @@ describe("registerAnalyzeMusicTool — audio_url guard", () => {
       success: false,
       message: "Free includes 5 tracks analyzed a month. Starter and Pro are unlimited.",
     });
+    expect(assertAnalyzeWithinPlan).toHaveBeenCalledWith({ accountId: "acc_1", audioUrl: AUDIO });
     expect(checkCreditsAvailable).not.toHaveBeenCalled();
     expect(processAnalyzeMusicRequest).not.toHaveBeenCalled();
   });
