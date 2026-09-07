@@ -1,5 +1,5 @@
 import { selectSocials } from "@/lib/supabase/socials/selectSocials";
-import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
+import { getSocialAccountIds } from "@/lib/artist/getSocialAccountIds";
 
 function spotifyArtistId(profileUrl: string): string | null {
   try {
@@ -32,8 +32,8 @@ export async function resolveProfileArtistIds(
         // The database substring filter only finds candidates; exact URL parsing
         // prevents ID prefixes, query parameters and lookalike hosts from joining.
         if (spotifyArtistId(social.profile_url ?? "") !== id) continue;
-        const links = await selectAccountSocials({ socialId: social.id });
-        for (const link of links) if (link.account_id) accountIds.add(link.account_id);
+        const linkedIds = await getSocialAccountIds(social.id);
+        for (const accountId of linkedIds) accountIds.add(accountId);
       }
     } catch (error) {
       console.error("Error resolving public artist song identity:", error);

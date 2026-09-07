@@ -17,10 +17,30 @@ describe("resolveProfileArtistIds", () => {
       { id: "a", profile_url: `open.spotify.com/artist/${id}` },
       { id: "b", profile_url: `https://open.spotify.com/artist/${id}?si=test` },
     ]);
-    links.mockResolvedValue([{ account_id: "current" }, { account_id: "canonical" }]);
+    links.mockImplementation(async ({ socialId }) =>
+      socialId === "a"
+        ? [{ account_id: "current" }, { account_id: "canonical" }]
+        : [{ account_id: "canonical" }, { account_id: "second" }],
+    );
     expect(
       await resolveProfileArtistIds("current", [`https://open.spotify.com/artist/${id}`]),
-    ).toEqual(["current", "canonical"]);
+    ).toEqual(["current", "canonical", "second"]);
+    expect(links).toHaveBeenCalledWith(expect.objectContaining({ socialId: "a" }));
+    expect(links).toHaveBeenCalledWith(expect.objectContaining({ socialId: "b" }));
+  });
+  it("resolves credit accounts beyond the first page of a shared social", async () => {
+    socials.mockResolvedValue([{ id: "a", profile_url: `https://open.spotify.com/artist/${id}` }]);
+    links.mockImplementation(async ({ offset = 0 }) =>
+      offset === 0
+        ? Array.from({ length: 100 }, (_, i) => ({ account_id: `account-${i}` }))
+        : [{ account_id: "last-account" }],
+    );
+    const resolved = await resolveProfileArtistIds("current", [
+      `https://open.spotify.com/artist/${id}`,
+    ]);
+    expect(resolved).toHaveLength(102);
+    expect(resolved).toContain("last-account");
+    expect(links).toHaveBeenCalledWith({ socialId: "a", offset: 100, limit: 100 });
   });
   it("rejects foreign hosts, tracks, ID prefixes and IDs only present in query strings", async () => {
     socials.mockResolvedValue([

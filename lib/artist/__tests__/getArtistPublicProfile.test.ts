@@ -323,6 +323,30 @@ describe("measured recordings independent of saved catalogs", () => {
     ]);
   });
 
+  it("chunks large measurement timestamp lookups and uses the newest capture", async () => {
+    const ids = Array.from({ length: 401 }, (_, i) => `ISRC${i}`);
+    selectSongArtistsMock.mockResolvedValue(ids.map(song => ({ song, artist: ARTIST })));
+    selectCatalogsBySongsMock.mockResolvedValue([]);
+    getCatalogSongsMock.mockResolvedValue([]);
+    selectSongsMock.mockResolvedValue(ids.map(isrc => ({ isrc, name: isrc, album: null })));
+    selectLatestSongPlaysMock.mockResolvedValue(Object.fromEntries(ids.map(id => [id, 1000])));
+    selectSongMeasurementsMock.mockImplementation(async ({ songs }) => {
+      if (songs.length > 200) throw new Error("request URI too long");
+      return [
+        {
+          captured_at: songs.includes("ISRC200") ? "2026-09-07T17:28:22Z" : "2026-09-01T00:00:00Z",
+        },
+      ];
+    });
+    const profile = await getArtistPublicProfile(ARTIST);
+    expect(profile?.catalogs[0]).toMatchObject({
+      song_count: 401,
+      updated_at: "2026-09-07T17:28:22Z",
+    });
+    expect(profile?.catalogs[0].songs).toHaveLength(401);
+    expect(selectSongMeasurementsMock).toHaveBeenCalledTimes(3);
+  });
+
   it("keeps the existing catalog when the optional measurement timestamp lookup rejects", async () => {
     getCatalogSongsMock.mockResolvedValue([{ catalog: "cat_1", song: "ISRC1" }]);
     selectSongMeasurementsMock.mockRejectedValue(new Error("measurement lookup failed"));

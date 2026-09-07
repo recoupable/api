@@ -1,5 +1,5 @@
 import { resolveProfileArtistIds } from "@/lib/artist/resolveProfileArtistIds";
-import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
+import { getRecordedSongsGroup } from "@/lib/artist/getRecordedSongsGroup";
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
 import { selectSongArtists } from "@/lib/supabase/song_artists/selectSongArtists";
 import { selectCatalogsBySongs } from "@/lib/supabase/catalog_songs/selectCatalogsBySongs";
@@ -89,37 +89,14 @@ export async function getArtistPublicProfile(
   const earliestEntries = await Promise.all(
     catalogRows.map(async c => [c.id, await getCatalogEarliestReleaseDate(c.id)] as const),
   );
-  // Measurements can exist before anyone saves a catalog. Keep those public
-  // recordings visible without manufacturing catalog ownership or persisting a
-  // catalog. Only an actual measurement (including zero) qualifies for this group.
-  const cataloged = new Set(catalogSongRows.map(row => row.song));
-  const recorded = new Set(songRecords.map(song => song.isrc));
-  const ungrouped = isrcs.filter(
-    isrc => !cataloged.has(isrc) && recorded.has(isrc) && isrc in plays,
-  );
-  let recordedGroup: { id: string; name: string; song_count: number; updated_at: string } | null =
-    null;
-  if (ungrouped.length) {
-    try {
-      const [latest] = await selectSongMeasurements({
-        songs: ungrouped,
-        platform: "spotify",
-        metric: "platform_displayed_play_count",
-        limit: 1,
-      });
-      if (latest) {
-        recordedGroup = {
-          id: artistId,
-          name: "Recorded songs",
-          song_count: ungrouped.length,
-          updated_at: latest.captured_at,
-        };
-        catalogSongRows.push(...ungrouped.map(song => ({ catalog: artistId, song })));
-      }
-    } catch (error) {
-      console.error("Error loading recorded songs for public profile:", error);
-    }
-  }
+  const recordedGroup = await getRecordedSongsGroup({
+    artistId,
+    isrcs,
+    catalogSongRows,
+    songRecords,
+    plays,
+  });
+  if (recordedGroup) catalogSongRows.push(...recordedGroup.catalogSongRows);
   const { songsByCatalog, valuation } = buildProfileSongs({
     catalogSongRows,
     songs: songsWithArt,
@@ -144,7 +121,14 @@ export async function getArtistPublicProfile(
     songs: songsByCatalog[c.id] ?? [],
   }));
 
-  if (recordedGroup) catalogs.push({ ...recordedGroup, songs: songsByCatalog[artistId] ?? [] });
+  if (recordedGroup)
+    catalogs.push({
+      id: recordedGroup.id,
+      name: recordedGroup.name,
+      song_count: recordedGroup.song_count,
+      updated_at: recordedGroup.updated_at,
+      songs: songsByCatalog[artistId] ?? [],
+    });
 
   return {
     id: artistId,
