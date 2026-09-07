@@ -7,6 +7,10 @@ import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortC
 import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRequest";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({ getCorsHeaders: vi.fn(() => ({})) }));
+vi.mock("@/lib/flamingo/verifyAudioUrl", () => ({
+  verifyAudioUrl: vi.fn().mockResolvedValue({ ok: true, contentType: "audio/mpeg" }),
+}));
+
 vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
 vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
   ensureCreditsOrShortCircuit: vi.fn(),
@@ -40,7 +44,9 @@ describe("postFlamingoGenerateHandler — credit gate", () => {
       elapsed_seconds: 2,
     });
 
-    const res = await postFlamingoGenerateHandler(request({ prompt: "Genre?" }));
+    const res = await postFlamingoGenerateHandler(
+      request({ prompt: "Genre?", audio_url: "https://example.com/song.mp3" }),
+    );
 
     expect(res.status).toBe(200);
     expect(ensureCreditsOrShortCircuit).toHaveBeenCalledWith({
@@ -84,7 +90,9 @@ describe("postFlamingoGenerateHandler — credit gate", () => {
     );
     vi.mocked(ensureCreditsOrShortCircuit).mockResolvedValue(short);
 
-    const res = await postFlamingoGenerateHandler(request({ prompt: "Genre?" }));
+    const res = await postFlamingoGenerateHandler(
+      request({ prompt: "Genre?", audio_url: "https://example.com/song.mp3" }),
+    );
 
     expect(res.status).toBe(402);
     expect(await res.json()).toEqual(

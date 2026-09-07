@@ -6,13 +6,16 @@ import { validateFlamingoGenerateBody } from "@/lib/flamingo/validateFlamingoGen
 import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRequest";
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
 import { minimumCreditsForAnalyzeRequest } from "@/lib/flamingo/minimumCreditsForAnalyzeRequest";
+import { verifyAudioUrl } from "@/lib/flamingo/verifyAudioUrl";
 
 /**
  * Handler for POST /api/songs/analyze.
  *
- * Authenticates the request, validates the body, gates the balance on the
- * base price of the request (402 when short), then delegates to the shared
- * processAnalyzeMusicRequest domain function, which charges per model call.
+ * Authenticates the request, validates the body, verifies the audio URL
+ * (422 when it is not reachable audio, so no Modal container starts for
+ * nothing), gates the balance on the base price of the request (402 when
+ * short), then delegates to the shared processAnalyzeMusicRequest domain
+ * function, which charges per model call.
  *
  * @param request - The incoming request with a JSON body.
  * @returns A NextResponse with the model output or an error.
@@ -40,7 +43,16 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
     return validated;
   }
 
-  // 3. Gate on the base price before any model call
+  // 3. Verify the audio before spending anything on it; full_report checks once
+  const audio = await verifyAudioUrl(validated.audio_url);
+  if (audio.ok === false) {
+    return NextResponse.json(
+      { status: "error", error: audio.error, message: audio.message },
+      { status: 422, headers: getCorsHeaders() },
+    );
+  }
+
+  // 4. Gate on the base price before any model call
   let short: NextResponse | null;
   try {
     short = await ensureCreditsOrShortCircuit({
@@ -56,7 +68,7 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
   }
   if (short) return short;
 
-  // 4. Process the analysis request
+  // 5. Process the analysis request
   let result;
   try {
     result = await processAnalyzeMusicRequest(validated, { accountId: authResult.accountId });
@@ -75,7 +87,7 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
     );
   }
 
-  // 5. Return flat response
+  // 6. Return flat response
   const { type: _, ...data } = result;
   return NextResponse.json(
     { status: "success", ...data },

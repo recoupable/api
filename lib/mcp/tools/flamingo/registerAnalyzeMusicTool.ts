@@ -12,6 +12,7 @@ import {
 import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRequest";
 import { checkCreditsAvailable } from "@/lib/credits/checkCreditsAvailable";
 import { minimumCreditsForAnalyzeRequest } from "@/lib/flamingo/minimumCreditsForAnalyzeRequest";
+import { verifyAudioUrl } from "@/lib/flamingo/verifyAudioUrl";
 
 /**
  * Registers the analyze_music MCP tool on the server.
@@ -26,8 +27,9 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
       description:
         "Analyze music or answer music questions using Recoupable's Audio Language Model. " +
         "Accepts either a 'preset' name for structured analysis (e.g. 'catalog_metadata', 'mood_tags', 'sync_brief_match', 'full_report') " +
-        "or a custom 'prompt' for free-form questions. " +
-        "Most presets require an audio_url. Audio files can be up to 20 minutes (MP3, WAV, FLAC).",
+        "or a custom 'prompt' for free-form questions about the audio. " +
+        "audio_url is required in every mode and must be a public URL to an audio file " +
+        "(MP3, WAV, FLAC; up to 20 minutes); it is checked before the model runs.",
       inputSchema: flamingoGenerateBodySchema,
     },
     async (
@@ -46,6 +48,11 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
 
       if (!accountId) {
         return getToolResultError("Failed to resolve account ID");
+      }
+
+      const audio = await verifyAudioUrl(args.audio_url);
+      if (audio.ok === false) {
+        return getToolResultError(audio.message);
       }
 
       let gate;

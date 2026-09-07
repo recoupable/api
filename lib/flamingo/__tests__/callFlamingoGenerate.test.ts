@@ -22,7 +22,10 @@ describe("callFlamingoGenerate", () => {
       json: async () => ({ response: "test", elapsed_seconds: 1.0 }),
     });
 
-    await callFlamingoGenerate({ prompt: "Describe this track." });
+    await callFlamingoGenerate({
+      prompt: "Describe this track.",
+      audio_url: "https://example.com/song.mp3",
+    });
 
     const [, options] = mockFetch.mock.calls[0];
     expect(options.headers).toEqual({
@@ -40,7 +43,10 @@ describe("callFlamingoGenerate", () => {
       json: async () => ({ response: "test", elapsed_seconds: 1.0 }),
     });
 
-    await callFlamingoGenerate({ prompt: "Describe this track." });
+    await callFlamingoGenerate({
+      prompt: "Describe this track.",
+      audio_url: "https://example.com/song.mp3",
+    });
 
     const [, options] = mockFetch.mock.calls[0];
     expect(options.headers).toEqual({ "Content-Type": "application/json" });
@@ -103,12 +109,15 @@ describe("callFlamingoGenerate", () => {
       json: async () => ({ response: "test", elapsed_seconds: 1.0 }),
     });
 
-    await callFlamingoGenerate({ prompt: "Describe jazz." });
+    await callFlamingoGenerate({
+      prompt: "Describe jazz.",
+      audio_url: "https://example.com/song.mp3",
+    });
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body).toEqual({
       prompt: "Describe jazz.",
-      audio_url: null,
+      audio_url: "https://example.com/song.mp3",
       max_new_tokens: 512,
       temperature: 1.0,
       top_p: 1.0,
@@ -123,9 +132,9 @@ describe("callFlamingoGenerate", () => {
       text: async () => "Service Unavailable",
     });
 
-    await expect(callFlamingoGenerate({ prompt: "Describe this." })).rejects.toThrow(
-      "Music analysis failed (status 503)",
-    );
+    await expect(
+      callFlamingoGenerate({ prompt: "Describe this.", audio_url: "https://example.com/song.mp3" }),
+    ).rejects.toThrow("Music analysis failed (status 503)");
   });
 
   it("throws error with fallback message when error text cannot be read", async () => {
@@ -137,9 +146,9 @@ describe("callFlamingoGenerate", () => {
       },
     });
 
-    await expect(callFlamingoGenerate({ prompt: "Describe this." })).rejects.toThrow(
-      "Music analysis failed (status 500)",
-    );
+    await expect(
+      callFlamingoGenerate({ prompt: "Describe this.", audio_url: "https://example.com/song.mp3" }),
+    ).rejects.toThrow("Music analysis failed (status 500)");
   });
 
   it("throws when response shape is invalid", async () => {
@@ -148,8 +157,8 @@ describe("callFlamingoGenerate", () => {
       json: async () => ({ response: 42 }),
     });
 
-    await expect(callFlamingoGenerate({ prompt: "Describe this." })).rejects.toThrow(
-      "Audio model returned an unexpected response shape",
-    );
+    await expect(
+      callFlamingoGenerate({ prompt: "Describe this.", audio_url: "https://example.com/song.mp3" }),
+    ).rejects.toThrow("Audio model returned an unexpected response shape");
   });
 });

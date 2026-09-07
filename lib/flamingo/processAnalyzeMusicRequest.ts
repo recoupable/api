@@ -40,8 +40,8 @@ export interface AnalyzeMusicContext {
  *
  * Every successful model call is charged to `context.accountId` after it
  * returns, priced on the seconds the model reported (recoupable/app#2061).
- * Callers gate the balance before calling this; see
- * `minimumCreditsForAnalyzeRequest`.
+ * Callers verify `params.audio_url` (`verifyAudioUrl`) and gate the balance
+ * (`minimumCreditsForAnalyzeRequest`) before calling this.
  *
  * @param params - Validated request parameters.
  * @param context - The account the model calls are charged to.
@@ -53,12 +53,6 @@ export async function processAnalyzeMusicRequest(
 ): Promise<AnalyzeMusicResult> {
   // Handle full_report preset
   if (params.preset === FULL_REPORT_PRESET_NAME) {
-    if (!params.audio_url) {
-      return {
-        type: "error",
-        error: "audio_url is required for the full_report preset",
-      };
-    }
     const { report, elapsed_seconds } = await executeFullReport(
       params.audio_url,
       context.accountId,
@@ -79,12 +73,6 @@ export async function processAnalyzeMusicRequest(
     const preset = getPreset(params.preset);
     if (!preset) {
       return { type: "error", error: `Unknown preset: ${params.preset}` };
-    }
-    if (preset.requiresAudio && !params.audio_url) {
-      return {
-        type: "error",
-        error: `The "${preset.name}" preset requires an audio_url`,
-      };
     }
     prompt = preset.prompt;
     maxNewTokens = preset.params.max_new_tokens;

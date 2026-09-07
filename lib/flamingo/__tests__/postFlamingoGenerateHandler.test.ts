@@ -9,6 +9,10 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
+vi.mock("@/lib/flamingo/verifyAudioUrl", () => ({
+  verifyAudioUrl: vi.fn().mockResolvedValue({ ok: true, contentType: "audio/mpeg" }),
+}));
+
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(),
 }));
@@ -57,6 +61,7 @@ describe("postFlamingoGenerateHandler", () => {
 
       const request = createMockRequest({
         prompt: "Describe this track.",
+        audio_url: "https://example.com/song.mp3",
       });
       const result = await postFlamingoGenerateHandler(request);
       const body = await result.json();
@@ -105,7 +110,10 @@ describe("postFlamingoGenerateHandler", () => {
         NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
       );
 
-      const request = createMockRequest({ prompt: "test" });
+      const request = createMockRequest({
+        prompt: "test",
+        audio_url: "https://example.com/song.mp3",
+      });
       const result = await postFlamingoGenerateHandler(request);
 
       expect(result.status).toBe(401);
@@ -118,7 +126,7 @@ describe("postFlamingoGenerateHandler", () => {
         authToken: "test-key",
       });
 
-      const request = createMockRequest({});
+      const request = createMockRequest({ audio_url: "https://example.com/song.mp3" });
       const result = await postFlamingoGenerateHandler(request);
       const body = await result.json();
 
@@ -143,6 +151,7 @@ describe("postFlamingoGenerateHandler", () => {
 
       const request = createMockRequest({
         prompt: "Describe this track.",
+        audio_url: "https://example.com/song.mp3",
       });
       const result = await postFlamingoGenerateHandler(request);
       const body = await result.json();
