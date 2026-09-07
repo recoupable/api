@@ -13,6 +13,8 @@ import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRe
 import { checkCreditsAvailable } from "@/lib/credits/checkCreditsAvailable";
 import { minimumCreditsForAnalyzeRequest } from "@/lib/flamingo/minimumCreditsForAnalyzeRequest";
 import { verifyAudioUrl } from "@/lib/flamingo/verifyAudioUrl";
+import { assertAnalyzeWithinPlan } from "@/lib/plans/assertAnalyzeWithinPlan";
+import { PlanLimitError } from "@/lib/plans/PlanLimitError";
 
 /**
  * Registers the analyze_music MCP tool on the server.
@@ -57,12 +59,14 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
 
       let gate;
       try {
+        await assertAnalyzeWithinPlan({ accountId });
         gate = await checkCreditsAvailable({
           accountId,
           creditsToDeduct: minimumCreditsForAnalyzeRequest(args),
         });
       } catch (err) {
-        console.error("[analyze_music] credit gate failed:", err);
+        if (err instanceof PlanLimitError) return getToolResultError(err.message);
+        console.error("[analyze_music] plan or credit gate failed:", err);
         return getToolResultError("Credit check failed");
       }
       if (gate.kind === "insufficient_credits") {

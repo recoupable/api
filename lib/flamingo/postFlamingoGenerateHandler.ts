@@ -5,13 +5,16 @@ import { validateFlamingoGenerateRequest } from "@/lib/flamingo/validateFlamingo
 import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRequest";
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
 import { minimumCreditsForAnalyzeRequest } from "@/lib/flamingo/minimumCreditsForAnalyzeRequest";
+import { assertAnalyzeWithinPlan } from "@/lib/plans/assertAnalyzeWithinPlan";
+import { PlanLimitError } from "@/lib/plans/PlanLimitError";
 
 /**
  * Handler for POST /api/songs/analyze.
  *
  * Validates the request (JSON, auth, body, audio URL: see
- * `validateFlamingoGenerateRequest`), gates the balance on the base price
- * of the request (402 when short), then delegates to the shared
+ * `validateFlamingoGenerateRequest`), gates the plan's monthly analyze cap
+ * (402 `plan_limit`), gates the balance on the base price of the request
+ * (402 `insufficient_credits`), then delegates to the shared
  * processAnalyzeMusicRequest domain function, which charges per model call.
  *
  * @param request - The incoming request with a JSON body.
@@ -24,12 +27,16 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
 
   let short: NextResponse | null;
   try {
+    await assertAnalyzeWithinPlan({ accountId });
     short = await ensureCreditsOrShortCircuit({
       accountId,
       creditsToDeduct: minimumCreditsForAnalyzeRequest(body),
     });
   } catch (err) {
-    console.error("[postFlamingoGenerateHandler] credit gate failed:", err);
+    if (err instanceof PlanLimitError) {
+      return NextResponse.json(err.body, { status: 402, headers: getCorsHeaders() });
+    }
+    console.error("[postFlamingoGenerateHandler] plan or credit gate failed:", err);
     return NextResponse.json(
       { status: "error", error: "Internal server error" },
       { status: 500, headers: getCorsHeaders() },
