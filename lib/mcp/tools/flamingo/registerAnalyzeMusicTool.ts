@@ -10,11 +10,8 @@ import {
   type FlamingoGenerateBody,
 } from "@/lib/flamingo/flamingoGenerateBodySchema";
 import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRequest";
-import { checkCreditsAvailable } from "@/lib/credits/checkCreditsAvailable";
-import { minimumCreditsForAnalyzeRequest } from "@/lib/flamingo/minimumCreditsForAnalyzeRequest";
 import { verifyAudioUrl } from "@/lib/flamingo/verifyAudioUrl";
-import { assertAnalyzeWithinPlan } from "@/lib/plans/assertAnalyzeWithinPlan";
-import { PlanLimitError } from "@/lib/plans/PlanLimitError";
+import { gateAnalyzeForTool } from "@/lib/mcp/tools/flamingo/gateAnalyzeForTool";
 
 /**
  * Registers the analyze_music MCP tool on the server.
@@ -57,29 +54,8 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
         return getToolResultError(audio.message);
       }
 
-      try {
-        await assertAnalyzeWithinPlan({ accountId, audioUrl: args.audio_url });
-      } catch (err) {
-        if (err instanceof PlanLimitError) return getToolResultError(err.message);
-        console.error("[analyze_music] plan gate failed:", err);
-        return getToolResultError("Plan check failed");
-      }
-
-      let gate;
-      try {
-        gate = await checkCreditsAvailable({
-          accountId,
-          creditsToDeduct: minimumCreditsForAnalyzeRequest(args),
-        });
-      } catch (err) {
-        console.error("[analyze_music] credit gate failed:", err);
-        return getToolResultError("Credit check failed");
-      }
-      if (gate.kind === "insufficient_credits") {
-        return getToolResultError(
-          `Insufficient credits: ${gate.remainingCredits} remaining, ${gate.requiredCredits} required`,
-        );
-      }
+      const gated = await gateAnalyzeForTool(accountId, args);
+      if (gated) return gated;
 
       let result;
       try {
