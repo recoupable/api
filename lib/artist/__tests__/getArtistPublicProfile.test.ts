@@ -131,6 +131,8 @@ describe("getArtistPublicProfile", () => {
           profile_url: "https://instagram.com/brauxelion",
         },
       ],
+      songs: expect.any(Array),
+      song_count: 2,
       catalogs: [
         {
           id: "cat_1",
@@ -215,6 +217,8 @@ describe("getArtistPublicProfile", () => {
       image: null,
       socials: [],
       catalogs: [],
+      songs: [],
+      song_count: 0,
       valuation: null,
     });
   });
@@ -233,6 +237,34 @@ describe("getArtistPublicProfile", () => {
     expect(profile?.catalogs[0].song_count).toBe(1);
     expect(profile?.catalogs[0].songs.map(song => song.isrc)).toEqual(["ISRC1"]);
     expect(countCatalogSongsMock).not.toHaveBeenCalled();
+  });
+
+  it("returns all 64 credited recordings without a saved catalog", async () => {
+    const records = Array.from({ length: 64 }, (_, i) => ({
+      isrc: `S${i}`,
+      name: `Song ${i}`,
+      album: null,
+      artwork_url: null,
+    }));
+    selectSongArtistsMock.mockResolvedValue(records.map(s => ({ artist: ARTIST, song: s.isrc })));
+    selectSongsMock.mockResolvedValue(records);
+    selectLatestSongPlaysMock.mockResolvedValue(
+      Object.fromEntries(records.map((s, i) => [s.isrc, 1000 - i])),
+    );
+    selectCatalogsBySongsMock.mockResolvedValue([]);
+    getCatalogSongsMock.mockResolvedValue([]);
+    const profile = await getArtistPublicProfile(ARTIST);
+    expect(profile?.catalogs).toEqual([]);
+    expect(profile?.song_count).toBe(64);
+    expect(profile?.songs.map(s => s.isrc)).toEqual(records.map(s => s.isrc));
+  });
+
+  it("retains artist songs when optional catalog enrichment fails", async () => {
+    selectCatalogsBySongsMock.mockRejectedValueOnce(new Error("catalog query failed"));
+    const profile = await getArtistPublicProfile(ARTIST);
+    expect(profile?.catalogs).toEqual([]);
+    expect(profile?.songs.map(s => s.isrc)).toEqual(["ISRC1", "ISRC2"]);
+    expect(profile?.song_count).toBe(2);
   });
 
   describe("v2: songs and valuation", () => {
