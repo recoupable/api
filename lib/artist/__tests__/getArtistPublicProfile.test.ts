@@ -323,6 +323,17 @@ describe("measured recordings independent of saved catalogs", () => {
     ]);
   });
 
+  it("keeps the existing catalog when the optional measurement timestamp lookup rejects", async () => {
+    getCatalogSongsMock.mockResolvedValue([{ catalog: "cat_1", song: "ISRC1" }]);
+    selectSongMeasurementsMock.mockRejectedValue(new Error("measurement lookup failed"));
+
+    const profile = await getArtistPublicProfile(ARTIST);
+
+    expect(profile?.id).toBe(ARTIST);
+    expect(profile?.catalogs).toHaveLength(1);
+    expect(profile?.catalogs[0].songs.map(song => song.isrc)).toEqual(["ISRC1"]);
+  });
+
   it("does not invent a measured group for songs with no measurement", async () => {
     selectCatalogsBySongsMock.mockResolvedValue([]);
     getCatalogSongsMock.mockResolvedValue([]);

@@ -100,20 +100,24 @@ export async function getArtistPublicProfile(
   let recordedGroup: { id: string; name: string; song_count: number; updated_at: string } | null =
     null;
   if (ungrouped.length) {
-    const [latest] = await selectSongMeasurements({
-      songs: ungrouped,
-      platform: "spotify",
-      metric: "platform_displayed_play_count",
-      limit: 1,
-    });
-    if (latest) {
-      recordedGroup = {
-        id: artistId,
-        name: "Recorded songs",
-        song_count: ungrouped.length,
-        updated_at: latest.captured_at,
-      };
-      catalogSongRows.push(...ungrouped.map(song => ({ catalog: artistId, song })));
+    try {
+      const [latest] = await selectSongMeasurements({
+        songs: ungrouped,
+        platform: "spotify",
+        metric: "platform_displayed_play_count",
+        limit: 1,
+      });
+      if (latest) {
+        recordedGroup = {
+          id: artistId,
+          name: "Recorded songs",
+          song_count: ungrouped.length,
+          updated_at: latest.captured_at,
+        };
+        catalogSongRows.push(...ungrouped.map(song => ({ catalog: artistId, song })));
+      }
+    } catch (error) {
+      console.error("Error loading recorded songs for public profile:", error);
     }
   }
   const { songsByCatalog, valuation } = buildProfileSongs({
