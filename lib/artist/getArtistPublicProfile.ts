@@ -1,3 +1,5 @@
+import { resolveProfileArtistIds } from "@/lib/artist/resolveProfileArtistIds";
+import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
 import { selectSongArtists } from "@/lib/supabase/song_artists/selectSongArtists";
 import { selectCatalogsBySongs } from "@/lib/supabase/catalog_songs/selectCatalogsBySongs";
@@ -28,7 +30,7 @@ export type ArtistPublicProfile = {
 
 /**
  * The public subset of an artist's data: name, image, connected socials and
- * linked catalogs. Backs the unauthenticated artist page, so the response is
+ * linked catalogs and measured uncataloged songs. Backs the unauthenticated artist page, so the response is
  * built field-by-field as an allowlist — a database row is never spread into
  * it, and `account_info`'s private fields (instruction, knowledges, label)
  * stay out by construction.
@@ -52,11 +54,17 @@ export async function getArtistPublicProfile(
   if (!artist) return null;
 
   const info = artist.account_info?.[0];
+  const creditArtistIds = await resolveProfileArtistIds(
+    artistId,
+    (artist.account_socials ?? []).flatMap(row =>
+      row.social?.profile_url ? [row.social.profile_url] : [],
+    ),
+  );
   // Degrade, don't fail: a songs-graph query error costs the catalog list,
   // never the whole unauthenticated page (selectSongArtists throws, chat#1965).
   let songRows: Awaited<ReturnType<typeof selectSongArtists>> = [];
   try {
-    songRows = await selectSongArtists({ artists: [artistId] });
+    songRows = await selectSongArtists({ artists: creditArtistIds });
   } catch (error) {
     console.error("Error resolving credited songs for public profile:", error);
   }
@@ -81,6 +89,33 @@ export async function getArtistPublicProfile(
   const earliestEntries = await Promise.all(
     catalogRows.map(async c => [c.id, await getCatalogEarliestReleaseDate(c.id)] as const),
   );
+  // Measurements can exist before anyone saves a catalog. Keep those public
+  // recordings visible without manufacturing catalog ownership or persisting a
+  // catalog. Only an actual measurement (including zero) qualifies for this group.
+  const cataloged = new Set(catalogSongRows.map(row => row.song));
+  const recorded = new Set(songRecords.map(song => song.isrc));
+  const ungrouped = isrcs.filter(
+    isrc => !cataloged.has(isrc) && recorded.has(isrc) && isrc in plays,
+  );
+  let recordedGroup: { id: string; name: string; song_count: number; updated_at: string } | null =
+    null;
+  if (ungrouped.length) {
+    const [latest] = await selectSongMeasurements({
+      songs: ungrouped,
+      platform: "spotify",
+      metric: "platform_displayed_play_count",
+      limit: 1,
+    });
+    if (latest) {
+      recordedGroup = {
+        id: artistId,
+        name: "Recorded songs",
+        song_count: ungrouped.length,
+        updated_at: latest.captured_at,
+      };
+      catalogSongRows.push(...ungrouped.map(song => ({ catalog: artistId, song })));
+    }
+  }
   const { songsByCatalog, valuation } = buildProfileSongs({
     catalogSongRows,
     songs: songsWithArt,
@@ -104,6 +139,8 @@ export async function getArtistPublicProfile(
     updated_at: c.updated_at,
     songs: songsByCatalog[c.id] ?? [],
   }));
+
+  if (recordedGroup) catalogs.push({ ...recordedGroup, songs: songsByCatalog[artistId] ?? [] });
 
   return {
     id: artistId,

@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const {
+  resolveProfileArtistIdsMock,
+  selectSongMeasurementsMock,
   getAccountArtistIdsMock,
   selectSongArtistsMock,
   selectCatalogsBySongsMock,
@@ -11,6 +13,8 @@ const {
   resolveSongArtworkMock,
   getCatalogEarliestReleaseDateMock,
 } = vi.hoisted(() => ({
+  resolveProfileArtistIdsMock: vi.fn(),
+  selectSongMeasurementsMock: vi.fn(),
   getAccountArtistIdsMock: vi.fn(),
   selectSongArtistsMock: vi.fn(),
   selectCatalogsBySongsMock: vi.fn(),
@@ -22,6 +26,12 @@ const {
   getCatalogEarliestReleaseDateMock: vi.fn(),
 }));
 
+vi.mock("@/lib/artist/resolveProfileArtistIds", () => ({
+  resolveProfileArtistIds: resolveProfileArtistIdsMock,
+}));
+vi.mock("@/lib/supabase/song_measurements/selectSongMeasurements", () => ({
+  selectSongMeasurements: selectSongMeasurementsMock,
+}));
 vi.mock("@/lib/supabase/account_artist_ids/getAccountArtistIds", () => ({
   getAccountArtistIds: getAccountArtistIdsMock,
 }));
@@ -87,6 +97,8 @@ const rosterRow = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resolveProfileArtistIdsMock.mockResolvedValue([ARTIST]);
+  selectSongMeasurementsMock.mockResolvedValue([{ captured_at: "2026-09-07T17:28:22Z" }]);
   vi.spyOn(console, "error").mockImplementation(() => undefined);
   getAccountArtistIdsMock.mockResolvedValue([rosterRow]);
   selectSongArtistsMock.mockResolvedValue([
@@ -270,5 +282,52 @@ describe("getArtistPublicProfile", () => {
       const profile = await getArtistPublicProfile(ARTIST);
       expect(profile?.valuation).toBeNull();
     });
+  });
+});
+
+describe("measured recordings independent of saved catalogs", () => {
+  it("resolves song credits through the exact Spotify identity aliases", async () => {
+    resolveProfileArtistIdsMock.mockResolvedValue([ARTIST, "canonical-song-artist"]);
+    await getArtistPublicProfile(ARTIST);
+    expect(selectSongArtistsMock).toHaveBeenCalledWith({
+      artists: [ARTIST, "canonical-song-artist"],
+    });
+  });
+
+  it("shows all 64 measured songs when no catalog has been saved, including zero counts", async () => {
+    const ids = Array.from({ length: 64 }, (_, i) => `ISRC${i}`);
+    selectSongArtistsMock.mockResolvedValue(ids.map(song => ({ song, artist: ARTIST })));
+    selectCatalogsBySongsMock.mockResolvedValue([]);
+    getCatalogSongsMock.mockResolvedValue([]);
+    selectSongsMock.mockResolvedValue(ids.map(isrc => ({ isrc, name: isrc, album: null })));
+    selectLatestSongPlaysMock.mockResolvedValue(Object.fromEntries(ids.map((id, i) => [id, i])));
+    const profile = await getArtistPublicProfile(ARTIST);
+    expect(profile?.catalogs).toHaveLength(1);
+    expect(profile?.catalogs[0]).toMatchObject({
+      id: ARTIST,
+      name: "Recorded songs",
+      song_count: 64,
+      updated_at: "2026-09-07T17:28:22Z",
+    });
+    expect(profile?.catalogs[0].songs).toHaveLength(64);
+    expect(profile?.catalogs[0].songs[63]).toMatchObject({ isrc: "ISRC0", plays: 0 });
+  });
+
+  it("adds only uncataloged measured ISRCs without duplicating existing catalog rows", async () => {
+    getCatalogSongsMock.mockResolvedValue([{ catalog: "cat_1", song: "ISRC1" }]);
+    const profile = await getArtistPublicProfile(ARTIST);
+    expect(profile?.catalogs).toHaveLength(2);
+    expect(profile?.catalogs.find(c => c.id === ARTIST)?.songs.map(s => s.isrc)).toEqual(["ISRC2"]);
+    expect(profile?.catalogs.find(c => c.id === "cat_1")?.songs.map(s => s.isrc)).toEqual([
+      "ISRC1",
+    ]);
+  });
+
+  it("does not invent a measured group for songs with no measurement", async () => {
+    selectCatalogsBySongsMock.mockResolvedValue([]);
+    getCatalogSongsMock.mockResolvedValue([]);
+    selectLatestSongPlaysMock.mockResolvedValue({});
+    const profile = await getArtistPublicProfile(ARTIST);
+    expect(profile?.catalogs).toEqual([]);
   });
 });
