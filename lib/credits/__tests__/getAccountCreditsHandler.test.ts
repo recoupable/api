@@ -85,6 +85,7 @@ describe("getAccountCreditsHandler", () => {
       plan: "free",
       task_limit: 1,
       min_cadence_minutes: 10080,
+      analyze_limit: 5,
       timestamp: "2026-05-01T12:00:00.000Z",
     });
   });
@@ -117,6 +118,7 @@ describe("getAccountCreditsHandler", () => {
       plan: "pro",
       task_limit: null,
       min_cadence_minutes: 60,
+      analyze_limit: null,
       timestamp: "2026-05-11T12:00:00.000Z",
     });
   });

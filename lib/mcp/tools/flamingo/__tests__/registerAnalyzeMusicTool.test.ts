@@ -4,6 +4,9 @@ import { registerAnalyzeMusicTool } from "../registerAnalyzeMusicTool";
 import { checkCreditsAvailable } from "@/lib/credits/checkCreditsAvailable";
 import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRequest";
 import { verifyAudioUrl } from "@/lib/flamingo/verifyAudioUrl";
+import { assertAnalyzeWithinPlan } from "@/lib/plans/assertAnalyzeWithinPlan";
+import { PlanLimitError } from "@/lib/plans/PlanLimitError";
+import { buildAnalyzePlanLimitBody } from "@/lib/plans/buildAnalyzePlanLimitBody";
 
 vi.mock("@/lib/mcp/resolveAccountId", () => ({
   resolveAccountId: vi.fn().mockResolvedValue({ accountId: "acc_1", error: null }),
@@ -13,6 +16,7 @@ vi.mock("@/lib/flamingo/processAnalyzeMusicRequest", () => ({
   processAnalyzeMusicRequest: vi.fn(),
 }));
 vi.mock("@/lib/flamingo/verifyAudioUrl", () => ({ verifyAudioUrl: vi.fn() }));
+vi.mock("@/lib/plans/assertAnalyzeWithinPlan", () => ({ assertAnalyzeWithinPlan: vi.fn() }));
 
 const AUDIO = "https://cdn.example.com/track.mp3";
 const extra = { authInfo: { extra: { accountId: "acc_1", orgId: null } } };
@@ -27,6 +31,7 @@ describe("registerAnalyzeMusicTool — audio_url guard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(checkCreditsAvailable).mockResolvedValue({ kind: "ok" } as never);
+    vi.mocked(assertAnalyzeWithinPlan).mockResolvedValue(undefined);
     const server = {
       registerTool: vi.fn((_name, schema, fn) => {
         registered = schema;
@@ -79,5 +84,37 @@ describe("registerAnalyzeMusicTool — audio_url guard", () => {
       expect.objectContaining({ preset: "mood_tags", audio_url: AUDIO }),
       { accountId: "acc_1" },
     );
+  });
+
+  it("returns the plan-limit message as a tool error before the credit gate", async () => {
+    vi.mocked(verifyAudioUrl).mockResolvedValue({ ok: true, contentType: "audio/mpeg" });
+    vi.mocked(assertAnalyzeWithinPlan).mockRejectedValue(
+      new PlanLimitError(buildAnalyzePlanLimitBody({ plan: "free", currentAnalyzeCount: 5 })),
+    );
+
+    const result = await handler({ preset: "mood_tags", audio_url: AUDIO }, extra);
+
+    expect(JSON.parse(result.content[0].text)).toEqual({
+      success: false,
+      message: "Free includes 5 tracks analyzed a month. Starter and Pro are unlimited.",
+    });
+    expect(assertAnalyzeWithinPlan).toHaveBeenCalledWith({ accountId: "acc_1", audioUrl: AUDIO });
+    expect(checkCreditsAvailable).not.toHaveBeenCalled();
+    expect(processAnalyzeMusicRequest).not.toHaveBeenCalled();
+  });
+
+  it("names the plan lookup, not the balance, when the plan gate itself throws", async () => {
+    vi.mocked(verifyAudioUrl).mockResolvedValue({ ok: true, contentType: "audio/mpeg" });
+    vi.mocked(assertAnalyzeWithinPlan).mockRejectedValue(new Error("stripe down"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await handler({ preset: "mood_tags", audio_url: AUDIO }, extra);
+
+    expect(JSON.parse(result.content[0].text)).toEqual({
+      success: false,
+      message: "Plan check failed",
+    });
+    expect(checkCreditsAvailable).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 });
