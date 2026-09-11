@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetPaymentsParams } from "@/lib/billing/validateGetPaymentsParams";
-import { findStripeCustomerForAccount } from "@/lib/stripe/findStripeCustomerForAccount";
+import { listStripeCustomersForAccount } from "@/lib/stripe/listStripeCustomersForAccount";
 import { listAccountInvoices } from "@/lib/billing/listAccountInvoices";
 import { buildPaymentsResponse } from "@/lib/billing/buildPaymentsResponse";
 import { mapToPaymentMethodError } from "@/lib/billing/mapToPaymentMethodError";
@@ -10,9 +10,10 @@ import { mapToPaymentMethodError } from "@/lib/billing/mapToPaymentMethodError";
  * GET /api/accounts/[id]/payments
  *
  * The account's Stripe invoices, newest first: subscription renewals, credit
- * purchases and invoiced enterprise plans alike. An account with no Stripe
- * customer yet gets an empty list, never a 404, so the billing page's empty
- * state is an ordinary response. Read-only: never creates a customer.
+ * purchases and invoiced enterprise plans alike, merged across every Stripe
+ * customer tagged with the account. An account with no Stripe customer yet
+ * gets an empty list, never a 404, so the billing page's empty state is an
+ * ordinary response. Read-only: never creates a customer.
  */
 export async function getPaymentsHandler(
   request: NextRequest,
@@ -25,14 +26,15 @@ export async function getPaymentsHandler(
       return mapToPaymentMethodError(validated);
     }
 
-    const customer = await findStripeCustomerForAccount(validated.accountId);
-    const page = customer
-      ? await listAccountInvoices({
-          customerId: customer,
-          limit: validated.limit,
-          startingAfter: validated.startingAfter,
-        })
-      : { invoices: [], hasMore: false };
+    const customers = await listStripeCustomersForAccount(validated.accountId);
+    const page =
+      customers.length > 0
+        ? await listAccountInvoices({
+            customerIds: customers.map(customer => customer.id),
+            limit: validated.limit,
+            startingAfter: validated.startingAfter,
+          })
+        : { invoices: [], hasMore: false };
 
     return NextResponse.json(buildPaymentsResponse({ accountId: validated.accountId, ...page }), {
       status: 200,

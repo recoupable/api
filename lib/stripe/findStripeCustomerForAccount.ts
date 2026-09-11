@@ -1,9 +1,10 @@
-import stripeClient from "@/lib/stripe/client";
+import { listStripeCustomersForAccount } from "@/lib/stripe/listStripeCustomersForAccount";
+import { pickPrimaryStripeCustomer } from "@/lib/stripe/pickPrimaryStripeCustomer";
 
 /**
- * Read-only counterpart to `resolveStripeCustomerForAccount`. Searches for an
- * existing Stripe Customer by `metadata.accountId` and returns its id — or
- * null when none exists yet.
+ * Read-only counterpart to `resolveStripeCustomerForAccount`. Returns the id
+ * of the account's primary Stripe Customer — the tagged Customer holding a
+ * default card, else the newest tagged one — or null when none exists yet.
  *
  * Use this from GET endpoints (`/payment-method`, etc.) so a read never has
  * the side-effect of creating a Customer row in Stripe. Mutating callers
@@ -16,9 +17,6 @@ import stripeClient from "@/lib/stripe/client";
  *   (or its equivalent zod schema) for this reason.
  */
 export async function findStripeCustomerForAccount(accountId: string): Promise<string | null> {
-  const search = await stripeClient.customers.search({
-    query: `metadata['accountId']:'${accountId}'`,
-    limit: 1,
-  });
-  return search.data[0]?.id ?? null;
+  const customers = await listStripeCustomersForAccount(accountId);
+  return pickPrimaryStripeCustomer(customers)?.id ?? null;
 }

@@ -1,9 +1,12 @@
 import stripeClient from "@/lib/stripe/client";
+import { listStripeCustomersForAccount } from "@/lib/stripe/listStripeCustomersForAccount";
+import { pickPrimaryStripeCustomer } from "@/lib/stripe/pickPrimaryStripeCustomer";
 
 /**
  * Finds the Stripe Customer for an account or creates one.
  *
- * Looks up by `metadata.accountId` via Stripe Customer Search; if no match,
+ * Looks up every Customer tagged `metadata.accountId` and returns the primary
+ * one (the Customer holding a default card, else the newest); if no match,
  * creates a new Customer with `metadata.accountId` stamped so subsequent
  * lookups for the same account succeed.
  *
@@ -14,12 +17,7 @@ import stripeClient from "@/lib/stripe/client";
  * within its 24-hour idempotency window.
  */
 export async function resolveStripeCustomerForAccount(accountId: string): Promise<string> {
-  const search = await stripeClient.customers.search({
-    query: `metadata['accountId']:'${accountId}'`,
-    limit: 1,
-  });
-
-  const existing = search.data[0];
+  const existing = pickPrimaryStripeCustomer(await listStripeCustomersForAccount(accountId));
   if (existing) {
     return existing.id;
   }
