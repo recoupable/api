@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getPaymentsHandler } from "@/lib/billing/getPaymentsHandler";
 import { validateGetPaymentsParams } from "@/lib/billing/validateGetPaymentsParams";
-import { findStripeCustomerForAccount } from "@/lib/stripe/findStripeCustomerForAccount";
+import { listStripeCustomersForAccount } from "@/lib/stripe/listStripeCustomersForAccount";
 import { listAccountInvoices } from "@/lib/billing/listAccountInvoices";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
@@ -12,8 +12,8 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 vi.mock("@/lib/billing/validateGetPaymentsParams", () => ({
   validateGetPaymentsParams: vi.fn(),
 }));
-vi.mock("@/lib/stripe/findStripeCustomerForAccount", () => ({
-  findStripeCustomerForAccount: vi.fn(),
+vi.mock("@/lib/stripe/listStripeCustomersForAccount", () => ({
+  listStripeCustomersForAccount: vi.fn(),
 }));
 vi.mock("@/lib/billing/listAccountInvoices", () => ({
   listAccountInvoices: vi.fn(),
@@ -26,13 +26,16 @@ const buildParams = () => Promise.resolve({ id: ACCOUNT });
 beforeEach(() => vi.clearAllMocks());
 
 describe("getPaymentsHandler", () => {
-  it("returns 200 with mapped invoices when the account has a customer", async () => {
+  it("returns 200 with invoices merged across every tagged customer", async () => {
     vi.mocked(validateGetPaymentsParams).mockResolvedValue({
       accountId: ACCOUNT,
       limit: 20,
       startingAfter: undefined,
     });
-    vi.mocked(findStripeCustomerForAccount).mockResolvedValue("cus_x");
+    vi.mocked(listStripeCustomersForAccount).mockResolvedValue([
+      { id: "cus_x" },
+      { id: "cus_y" },
+    ] as never);
     vi.mocked(listAccountInvoices).mockResolvedValue({
       invoices: [
         {
@@ -57,7 +60,7 @@ describe("getPaymentsHandler", () => {
     expect(body.payments[0].id).toBe("in_1");
     expect(body.hasMore).toBe(false);
     expect(listAccountInvoices).toHaveBeenCalledWith({
-      customerId: "cus_x",
+      customerIds: ["cus_x", "cus_y"],
       limit: 20,
       startingAfter: undefined,
     });
@@ -69,7 +72,7 @@ describe("getPaymentsHandler", () => {
       limit: 20,
       startingAfter: undefined,
     });
-    vi.mocked(findStripeCustomerForAccount).mockResolvedValue(null);
+    vi.mocked(listStripeCustomersForAccount).mockResolvedValue([]);
 
     const res = await getPaymentsHandler(buildRequest(), buildParams());
 
@@ -91,7 +94,7 @@ describe("getPaymentsHandler", () => {
 
     expect(res.status).toBe(403);
     await expect(res.json()).resolves.toEqual({ error: "Forbidden" });
-    expect(findStripeCustomerForAccount).not.toHaveBeenCalled();
+    expect(listStripeCustomersForAccount).not.toHaveBeenCalled();
   });
 
   it("returns 500 with a generic message when Stripe throws", async () => {
@@ -100,7 +103,7 @@ describe("getPaymentsHandler", () => {
       limit: 20,
       startingAfter: undefined,
     });
-    vi.mocked(findStripeCustomerForAccount).mockResolvedValue("cus_x");
+    vi.mocked(listStripeCustomersForAccount).mockResolvedValue([{ id: "cus_x" }] as never);
     vi.mocked(listAccountInvoices).mockRejectedValue(new Error("boom"));
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
 
