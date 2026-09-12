@@ -63,7 +63,7 @@ USAGE:
       "--max-time",
       String(Math.ceil(FETCH_TIMEOUT_MS / 1000)),
       "-o",
-      `>(head -c ${MAX_BODY_LENGTH} >&3)`,
+      '"$tmp"',
       "-w",
       shellEscape("%{http_code}"),
     ];
@@ -78,15 +78,20 @@ USAGE:
     }
     args.push(shellEscape(url));
 
-    // Use fd 3 to split curl's response body (truncated by `head -c`) from
-    // the status code written via `-w`. The body goes to stdout via fd 3
-    // → fd 1, then we append the status code on its own newline.
+    // Write the body to a temp file rather than a process substitution: `>(…)`
+    // is a bash-ism that does not expand in the sandbox's exec shell, so curl
+    // wrote to a file literally named `>(head -c … >&3)`, failed, and exited 23
+    // with an empty body — which the old exit-23 branch reported as a truncated
+    // success (chat#1918). stdout contract: `status\nbyteSize\n<body>`, so the
+    // real size is known even though the body itself is capped for context.
     const command = [
-      "exec 3>&1",
+      "tmp=$(mktemp)",
       `status=$(${args.join(" ")})`,
       "curlExit=$?",
-      "exec 3>&-",
-      "printf '\\n%s' \"$status\"",
+      'size=$(wc -c < "$tmp" | tr -d " ")',
+      'printf \'%s\\n%s\\n\' "$status" "$size"',
+      `head -c ${MAX_BODY_LENGTH} "$tmp"`,
+      'rm -f "$tmp"',
       "exit $curlExit",
     ].join("\n");
 
@@ -96,25 +101,34 @@ USAGE:
         ...(recoupEnv ? { env: recoupEnv } : {}),
       });
 
-      // exit 23 = curl wrote partial output (`head -c` cut it off — expected for large responses).
-      if (result.exitCode !== 0 && result.exitCode !== 23) {
+      const output = result.stdout ?? "";
+      const firstNewline = output.indexOf("\n");
+      const secondNewline = output.indexOf("\n", firstNewline + 1);
+      const statusText = firstNewline === -1 ? "" : output.slice(0, firstNewline).trim();
+      const sizeText =
+        secondNewline === -1 ? "" : output.slice(firstNewline + 1, secondNewline).trim();
+      const responseBody = secondNewline === -1 ? "" : output.slice(secondNewline + 1);
+      const status = /^\d+$/.test(statusText) && statusText !== "000" ? Number(statusText) : null;
+      const size = /^\d+$/.test(sizeText) ? Number(sizeText) : responseBody.length;
+
+      // A nonzero exit that produced no bytes is a hard failure. Reporting it as
+      // an empty-bodied 200 is what made agents conclude the whole web was
+      // unreachable; surface it so they retry or report instead.
+      if (result.exitCode !== 0 && size === 0) {
         return {
           success: false,
-          error: `Fetch failed: ${result.stderr || result.stdout || "Unknown error"}`,
+          error: `Fetch failed (exit ${result.exitCode}): ${
+            result.stderr || "no response body written"
+          }`,
         };
       }
-
-      const output = result.stdout ?? "";
-      const lastNewline = output.lastIndexOf("\n");
-      const statusText = lastNewline !== -1 ? output.slice(lastNewline + 1).trim() : "";
-      const responseBody = lastNewline !== -1 ? output.slice(0, lastNewline) : output;
-      const status = /^\d+$/.test(statusText) ? parseInt(statusText, 10) : null;
 
       return {
         success: true,
         status,
         body: responseBody,
-        truncated: result.exitCode === 23,
+        // Truncation is a property of the response size, not of curl's exit code.
+        truncated: size > MAX_BODY_LENGTH,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
