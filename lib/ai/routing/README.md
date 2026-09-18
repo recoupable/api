@@ -11,7 +11,7 @@ call. Jev evaluates recent conversation text via Vercel AI Gateway and picks fro
 | --- | --- |
 | Fast | `google/gemini-3.5-flash-lite` |
 | Balanced | `moonshotai/kimi-k3` |
-| Frontier | `anthropic/claude-opus-4.8` |
+| Frontier | `openai/gpt-6-astra` (medium reasoning) |
 
 Confidence below 0.7 escalates to frontier. Attachments also use frontier without
 sending their contents to Jev. Only the last eight user/assistant messages' text

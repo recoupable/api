@@ -34,7 +34,7 @@ describe("selectChatModel", () => {
   it.each([
     ["fast", "google/gemini-3.5-flash-lite"],
     ["balanced", "moonshotai/kimi-k3"],
-    ["frontier", "anthropic/claude-opus-4.8"],
+    ["frontier", "openai/gpt-6-astra"],
   ])("routes %s to an allowlisted model", async (tier, modelId) => {
     mockChoice(tier);
     expect(await selectChatModel("auto", messages)).toMatchObject({

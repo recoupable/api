@@ -1,7 +1,7 @@
 export const ROUTING_MODELS = {
   fast: "google/gemini-3.5-flash-lite",
   balanced: "moonshotai/kimi-k3",
-  frontier: "anthropic/claude-opus-4.8",
+  frontier: "openai/gpt-6-astra",
 } as const;
 
 export type RoutingTier = keyof typeof ROUTING_MODELS;
