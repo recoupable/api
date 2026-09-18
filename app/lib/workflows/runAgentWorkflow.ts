@@ -131,9 +131,16 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
   let streamFinished = false;
 
   try {
+    const savedMetadata = pendingAssistantResponse.metadata as AgentMessageMetadata | undefined;
+    const savedRouting =
+      savedMetadata?.selectedModelId === "auto" && savedMetadata.routing?.status === "selected"
+        ? savedMetadata.routing
+        : undefined;
     const selection =
       input.modelId === "auto"
-        ? await routeChatModelStep(input.messages, writable)
+        ? savedRouting
+          ? { modelId: savedRouting.modelId, routing: savedRouting }
+          : await routeChatModelStep(input.messages, writable)
         : { modelId: input.modelId };
     if ("metadata" in selection) {
       pendingAssistantResponse = {

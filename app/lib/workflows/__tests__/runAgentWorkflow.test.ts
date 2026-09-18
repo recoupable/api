@@ -535,3 +535,39 @@ it("routes Auto once, seeds persisted metadata, and bills the actual model", asy
     expect.objectContaining({ model: metadata.modelId }),
   );
 });
+
+it("reuses a resumed Auto decision and preserves accumulated cost", async () => {
+  const metadata = {
+    selectedModelId: "auto",
+    modelId: "openai/gpt-6-astra",
+    totalMessageCost: 0.42,
+    routing: {
+      status: "selected" as const,
+      source: "jev" as const,
+      tier: "frontier" as const,
+      modelId: "openai/gpt-6-astra",
+      reasoningEffort: "low" as const,
+      reason: "Saved decision",
+    },
+  };
+  const assistant = { id: "saved", role: "assistant" as const, parts: [], metadata };
+  vi.mocked(runAgentStep).mockResolvedValue({
+    finishReason: "stop",
+    aborted: false,
+    responseMessages: [],
+    responseMessage: assistant,
+  });
+  await runAgentWorkflow({
+    ...baseInput,
+    modelId: "auto",
+    messages: [...baseInput.messages, assistant],
+  });
+  expect(routeChatModelStep).not.toHaveBeenCalled();
+  expect(runAgentStep).toHaveBeenCalledWith(
+    expect.objectContaining({
+      modelId: metadata.modelId,
+      reasoningEffort: "low",
+      originalMessages: [expect.objectContaining({ metadata })],
+    }),
+  );
+});
