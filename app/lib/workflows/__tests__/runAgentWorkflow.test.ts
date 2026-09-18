@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { routeChatModelStep } from "../routeChatModelStep";
+import { persistAssistantMessageStep } from "../persistAssistantMessageStep";
 import { runAgentWorkflow } from "@/app/lib/workflows/runAgentWorkflow";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
@@ -9,6 +11,7 @@ import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
 import { deleteEphemeralKeyStep } from "@/app/lib/workflows/deleteEphemeralKeyStep";
 
+vi.mock("@/app/lib/workflows/routeChatModelStep", () => ({ routeChatModelStep: vi.fn() }));
 vi.mock("@/app/lib/workflows/deleteEphemeralKeyStep", () => ({
   deleteEphemeralKeyStep: vi.fn(),
 }));
@@ -489,4 +492,44 @@ describe("runAgentWorkflow", () => {
       expect(closeChatStream).toHaveBeenCalledTimes(1);
     });
   });
+});
+
+it("routes Auto once, seeds persisted metadata, and bills the actual model", async () => {
+  const metadata = {
+    selectedModelId: "auto",
+    modelId: "google/gemini-3.5-flash-lite",
+    routing: {
+      status: "selected" as const,
+      source: "jev" as const,
+      tier: "fast" as const,
+      modelId: "google/gemini-3.5-flash-lite",
+      reason: "Simple task",
+    },
+  };
+  vi.mocked(routeChatModelStep).mockResolvedValue({
+    modelId: metadata.modelId,
+    routing: metadata.routing,
+    metadata,
+  });
+  vi.mocked(runAgentStep).mockResolvedValue({
+    finishReason: "stop",
+    aborted: false,
+    responseMessages: [],
+    responseMessage: responseMessageWithMetadata,
+  });
+  await runAgentWorkflow({ ...baseInput, modelId: "auto" });
+  expect(routeChatModelStep).toHaveBeenCalledTimes(1);
+  expect(persistAssistantMessageStep).toHaveBeenCalledWith(
+    "chat-1",
+    expect.objectContaining({ metadata }),
+  );
+  expect(runAgentStep).toHaveBeenCalledWith(
+    expect.objectContaining({
+      modelId: metadata.modelId,
+      originalMessages: [expect.objectContaining({ metadata })],
+    }),
+  );
+  expect(handleChatCredits).toHaveBeenCalledWith(
+    expect.objectContaining({ model: metadata.modelId }),
+  );
 });

@@ -2,6 +2,7 @@ import { getWorkflowMetadata, getWritable } from "workflow";
 import type { LanguageModelUsage, UIMessage, UIMessageChunk } from "ai";
 import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
 import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistantMessageId";
+import { routeChatModelStep } from "@/app/lib/workflows/routeChatModelStep";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { convertMessagesStep } from "@/app/lib/workflows/convertMessagesStep";
 import { sendStreamStart } from "@/app/lib/workflows/sendStreamStart";
@@ -130,6 +131,20 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
   let streamFinished = false;
 
   try {
+    const selection =
+      input.modelId === "auto"
+        ? await routeChatModelStep(input.messages, writable)
+        : { modelId: input.modelId };
+    if ("metadata" in selection) {
+      pendingAssistantResponse = {
+        ...pendingAssistantResponse,
+        metadata: {
+          ...(pendingAssistantResponse.metadata as AgentMessageMetadata | undefined),
+          ...selection.metadata,
+        },
+      };
+      await persistAssistantMessageStep(input.chatId, pendingAssistantResponse);
+    }
     let result: Awaited<ReturnType<typeof runAgentStep>> | undefined;
 
     // The agent loop lives HERE, in the workflow body, with one journaled
@@ -145,7 +160,7 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
         // call, unaffected by later appends.
         modelMessages: [...modelMessages],
         originalMessages: [pendingAssistantResponse],
-        modelId: input.modelId,
+        modelId: selection.modelId,
         accountId: input.accountId,
         artistId: input.artistId,
         interactive: input.interactive,
@@ -192,7 +207,7 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
       const metadata = pendingAssistantResponse.metadata as AgentMessageMetadata | undefined;
       await handleChatCredits({
         accountId: input.accountId,
-        model: input.modelId,
+        model: selection.modelId,
         source: "api",
         resourceUrl: `/sessions/${input.sessionId}/chats/${input.chatId}`,
         gatewayCostUsd: metadata?.totalMessageCost,

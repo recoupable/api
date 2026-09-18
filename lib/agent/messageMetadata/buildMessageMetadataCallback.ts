@@ -29,7 +29,10 @@ export function buildMessageMetadataCallback(opts: {
    * this iteration's numbers and under-report the turn. Pass the in-progress
    * assistant message's metadata to keep the totals cumulative.
    */
-  seed?: Pick<AgentMessageMetadata, "totalMessageUsage" | "totalMessageCost" | "stepFinishReasons">;
+  seed?: Pick<
+    AgentMessageMetadata,
+    "totalMessageUsage" | "totalMessageCost" | "stepFinishReasons" | "selectedModelId" | "routing"
+  >;
 }) {
   let lastStepUsage: LanguageModelUsage | undefined;
   let totalMessageUsage: LanguageModelUsage | undefined = opts.seed?.totalMessageUsage;
@@ -75,10 +78,8 @@ export function buildMessageMetadataCallback(opts: {
     }
 
     return {
-      // `selectedModelId` and `modelId` are equal in api today (no
-      // gateway fallback routing exposed) — emit both for shape
-      // parity with open-agents' WebAgentMessageMetadata.
-      selectedModelId: opts.modelId,
+      selectedModelId: opts.seed?.selectedModelId ?? opts.modelId,
+      ...(opts.seed?.routing ? { routing: opts.seed.routing } : {}),
       modelId: opts.modelId,
       lastStepUsage,
       totalMessageUsage,
