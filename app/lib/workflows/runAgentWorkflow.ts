@@ -161,6 +161,7 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
         modelMessages: [...modelMessages],
         originalMessages: [pendingAssistantResponse],
         modelId: selection.modelId,
+        reasoningEffort: "routing" in selection ? selection.routing?.reasoningEffort : undefined,
         accountId: input.accountId,
         artistId: input.artistId,
         interactive: input.interactive,

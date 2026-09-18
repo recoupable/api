@@ -30,6 +30,7 @@ export type RunAgentStepInput = {
    */
   originalMessages: UIMessage[];
   modelId: string;
+  reasoningEffort?: "low" | "medium" | "high";
   writable: WritableStream<UIMessageChunk>;
   /**
    * The JSON-serializable agent context that survives the durable
@@ -163,7 +164,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     model: callModel,
     // Set explicitly on every Astra call, including follow-up tool iterations.
     ...(input.modelId === "openai/gpt-6-astra"
-      ? { providerOptions: { openai: { reasoningEffort: "medium" } } }
+      ? { providerOptions: { openai: { reasoningEffort: input.reasoningEffort ?? "medium" } } }
       : {}),
     system: systemPrompt,
     messages: addCacheControlToMessages({ messages: input.modelMessages, model: input.modelId }),

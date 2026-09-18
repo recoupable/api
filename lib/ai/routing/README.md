@@ -11,7 +11,7 @@ call. Jev evaluates recent conversation text via Vercel AI Gateway and picks fro
 | --- | --- |
 | Fast | `google/gemini-3.5-flash-lite` |
 | Balanced | `moonshotai/kimi-k3` |
-| Frontier | `openai/gpt-6-astra` (medium reasoning) |
+| Frontier | `openai/gpt-6-astra` (Jev selects low, medium, or high reasoning) |
 
 Confidence below 0.7 escalates to frontier. Attachments also use frontier without
 sending their contents to Jev. Only the last eight user/assistant messages' text
@@ -54,3 +54,10 @@ workload evaluations before changing the default.
 Sources:
 - https://vercel.com/docs/ai-gateway/modalities/evaluation
 - https://docs.typesafe.ai/introduction/quickstart
+
+Jev evaluates model tier and Astra reasoning effort in one call. The effort is
+fixed for the turn and carried to every tool-loop iteration. Missing, malformed,
+or low-confidence (<0.7) effort decisions use high reasoning, as do uncertain
+tier decisions and attachment bypasses. Manual Astra stays at medium. Gemini
+and Kimi provider settings are unchanged. The persisted badge shows effort and
+its classification confidence separately from model-tier confidence.

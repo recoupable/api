@@ -15,6 +15,7 @@ const mockChoice = (choice: string, confidence = 0.9) => {
   mock.mockReset();
   mock.mockResolvedValue({
     answers: {
+      reasoning: { choice: "medium", probabilities: { low: 0, medium: 1, high: 0 } },
       tier: {
         choice,
         probabilities: { fast: 0.05, balanced: 0.05, frontier: 0.05, [choice]: confidence },
@@ -104,4 +105,44 @@ describe("selectChatModel", () => {
       routing: { tier: "frontier", confidence: 0.5, costUsd: 0.00002 },
     });
   });
+});
+
+it.each(["low", "medium", "high"])("routes Astra with %s reasoning", async effort => {
+  const mock = mockChoice("frontier");
+  mock.mockResolvedValue({
+    answers: {
+      tier: { choice: "frontier", probabilities: { fast: 0, balanced: 0, frontier: 1 } },
+      reasoning: { choice: effort, probabilities: { low: 0, medium: 0, high: 0, [effort]: 1 } },
+    },
+  } as never);
+  expect(await selectChatModel("auto", messages)).toMatchObject({
+    routing: { reasoningEffort: effort },
+  });
+});
+it("uses high reasoning when the effort decision is missing", async () => {
+  mockChoice("frontier").mockResolvedValue({
+    answers: { tier: { choice: "frontier", probabilities: { fast: 0, balanced: 0, frontier: 1 } } },
+  } as never);
+  expect(await selectChatModel("auto", messages)).toMatchObject({
+    routing: { reasoningEffort: "high", source: "fallback" },
+  });
+});
+
+it.each([undefined, "invalid", "low"])(
+  "uses high effort for uncertain or invalid reasoning: %s",
+  async choice => {
+    mockChoice("frontier").mockResolvedValue({
+      answers: {
+        tier: { choice: "frontier", probabilities: { fast: 0, balanced: 0, frontier: 1 } },
+        reasoning: { choice, probabilities: { low: 0.4, medium: 0.3, high: 0.3 } },
+      },
+    } as never);
+    expect(await selectChatModel("auto", messages)).toMatchObject({
+      routing: { reasoningEffort: "high", source: "fallback" },
+    });
+  },
+);
+it("does not add Astra reasoning to the fast tier", async () => {
+  mockChoice("fast");
+  expect((await selectChatModel("auto", messages)).routing).not.toHaveProperty("reasoningEffort");
 });

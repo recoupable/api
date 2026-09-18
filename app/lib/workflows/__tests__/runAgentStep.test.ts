@@ -365,3 +365,21 @@ describe("runAgentStep", () => {
     });
   });
 });
+
+it.each(["low", "medium", "high"])(
+  "passes selected %s reasoning into the actual model call",
+  async reasoningEffort => {
+    vi.mocked(streamText).mockClear();
+    vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+    const { stream } = makeWritable();
+    await runAgentStep({
+      ...baseInput,
+      modelId: "openai/gpt-6-astra",
+      reasoningEffort,
+      writable: stream,
+    } as never);
+    expect(vi.mocked(streamText).mock.calls[0]?.[0].providerOptions).toEqual({
+      openai: { reasoningEffort },
+    });
+  },
+);

@@ -497,13 +497,14 @@ describe("runAgentWorkflow", () => {
 it("routes Auto once, seeds persisted metadata, and bills the actual model", async () => {
   const metadata = {
     selectedModelId: "auto",
-    modelId: "google/gemini-3.5-flash-lite",
+    modelId: "openai/gpt-6-astra",
     routing: {
       status: "selected" as const,
       source: "jev" as const,
-      tier: "fast" as const,
-      modelId: "google/gemini-3.5-flash-lite",
-      reason: "Simple task",
+      tier: "frontier" as const,
+      modelId: "openai/gpt-6-astra",
+      reason: "Complex task",
+      reasoningEffort: "high" as const,
     },
   };
   vi.mocked(routeChatModelStep).mockResolvedValue({
@@ -526,6 +527,7 @@ it("routes Auto once, seeds persisted metadata, and bills the actual model", asy
   expect(runAgentStep).toHaveBeenCalledWith(
     expect.objectContaining({
       modelId: metadata.modelId,
+      reasoningEffort: "high",
       originalMessages: [expect.objectContaining({ metadata })],
     }),
   );
