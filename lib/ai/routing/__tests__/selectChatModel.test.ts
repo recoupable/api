@@ -148,7 +148,7 @@ it("does not add Astra reasoning to the fast tier", async () => {
 });
 
 it.each([
-  [0.69, "frontier", "high"],
+  [0.69, "frontier", "medium"],
   [0.7, "balanced", undefined],
 ])("applies the quality threshold at %s", async (confidence, tier, effort) => {
   mockChoice("balanced", confidence);
@@ -156,17 +156,20 @@ it.each([
   expect(result.routing?.tier).toBe(tier);
   expect(result.routing?.reasoningEffort).toBe(effort);
 });
-it("favors high effort when tier confidence is low even if low effort is confident", async () => {
-  mockChoice("balanced").mockResolvedValue({
-    answers: {
-      tier: { choice: "balanced", probabilities: { fast: 0.1, balanced: 0.6, frontier: 0.3 } },
-      reasoning: { choice: "low", probabilities: { low: 0.99, medium: 0.01, high: 0 } },
-    },
-  } as never);
-  expect(await selectChatModel("auto", messages)).toMatchObject({
-    routing: { tier: "frontier", reasoningEffort: "high", source: "fallback" },
-  });
-});
+it.each(["low", "medium"])(
+  "preserves confident %s effort when the tier escalates",
+  async effort => {
+    mockChoice("balanced").mockResolvedValue({
+      answers: {
+        tier: { choice: "balanced", probabilities: { fast: 0.1, balanced: 0.6, frontier: 0.3 } },
+        reasoning: { choice: effort, probabilities: { low: 0, medium: 0, high: 0, [effort]: 1 } },
+      },
+    } as never);
+    expect(await selectChatModel("auto", messages)).toMatchObject({
+      routing: { tier: "frontier", reasoningEffort: effort, source: "fallback" },
+    });
+  },
+);
 it("uses reported effort confidence instead of the choice probability", async () => {
   mockChoice("frontier").mockResolvedValue({
     answers: {

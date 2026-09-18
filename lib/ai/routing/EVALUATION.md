@@ -1,5 +1,8 @@
 # Routing verification — 2026-09-18
 
+The first sections document the original policy. See **Independent-confidence
+refinement** below for the current implementation and latest results.
+
 Synthetic live checks against the actual `selectChatModel` implementation and
 Vercel AI Gateway. These are targeted smoke evaluations, not a calibrated accuracy
 benchmark or proof of output quality/cost savings. No customer data was used.
@@ -94,3 +97,55 @@ $0.001263. These exclude execution costs.
   distinct from low-confidence classification, which escalates to Astra high.
 - More representative evaluation is needed before claiming optimal model choices,
   reliable low-effort selection, or quantified savings.
+
+## Independent-confidence refinement
+
+Tier confidence and effort confidence now escalate independently. Tier uncertainty
+still selects Astra, but a confident low/medium effort decision is preserved.
+Effort uncertainty still selects high. Criteria now distinguish obvious localized
+fixes and supplied-note planning from unknown-root-cause debugging and complex
+systems work. No confidence thresholds were lowered.
+
+Repeated the same 40 tier checks: **40/40 matched**, up from 38/40. The planning
+case now chose balanced with 0.99 confidence in both runs. No changes were made
+to expected labels. These reused cases are tuning/regression data, not held-out
+accuracy evidence.
+
+The 12 exploratory coding/reasoning probes changed from nine Astra-high and three
+Astra-medium choices to one fast, four balanced, one Astra-low, five Astra-medium,
+and one Astra-high. The bounded induction proof selected Astra-low: tier confidence
+0.65 caused model escalation while effort confidence 0.99 preserved low effort.
+
+### Held-out answer comparison
+
+Five new synthetic prompts were written after the criteria edit and were not used
+to tune it. Each ran once through Auto and once through fixed Astra medium, with
+execution order alternated. Checks covered exact extraction, owner/day/dependency
+ordering, two required synthetic artist-stat tool calls and correct aggregation,
+statement-row grouping and totals, and the impossibility of exactly-once external
+charges without idempotency or a shared transaction. Both crash explanations were
+also read for crash ambiguity and duplicate-versus-omission reasoning; both passed.
+
+Both paths passed **5/5**. The tool pair was repeated to collect total cost across
+all model steps; it passed again and the corrected totals are used below.
+
+| Task | Auto choice | Auto total ms | Astra-medium ms | Auto cost incl. routing | Astra-medium cost |
+| --- | --- | ---: | ---: | ---: | ---: |
+| release-extraction | google/gemini-3.5-flash-lite  | 1051 | 1662 | $0.000128 | $0.001440 |
+| release-plan | openai/gpt-6-astra low | 3671 | 2518 | $0.005460 | $0.005430 |
+| artist-metrics | openai/gpt-6-astra low | 7309 | 3161 | $0.005959 | $0.005930 |
+| royalty-reconciliation | google/gemini-3.5-flash-lite  | 1047 | 2352 | $0.000296 | $0.003950 |
+| crash-boundary | openai/gpt-6-astra high | 4933 | 2613 | $0.010841 | $0.005660 |
+
+Costs are Gateway-reported sample costs in USD; Auto includes Jev. Latency is
+wall-clock routing plus execution to completion, not time to first token. Cache
+and service variation are uncontrolled. This sample does **not** establish an
+overall savings or latency win. Auto saved on extraction and grouping, but the
+high-effort crash analysis cost more; ambiguous structured-plan/tool prompts still
+escalated to Astra low and incurred routing overhead.
+
+These comparisons use direct SDK calls with isolated synthetic tools, not the full
+Recoup system prompt and production tool catalog. Broader production-like tasks,
+repeats, and independent human grading remain necessary. The policy was not retuned
+after inspecting these held-out results. All 69 focused API regression tests pass,
+including independent confidence escalation and actual provider-option forwarding.

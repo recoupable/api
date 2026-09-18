@@ -57,7 +57,8 @@ Sources:
 
 Jev evaluates model tier and Astra reasoning effort in one call. The effort is
 fixed for the turn and carried to every tool-loop iteration. Missing, malformed,
-or low-confidence (<0.7) effort decisions use high reasoning, as do uncertain
-tier decisions and attachment bypasses. Manual Astra stays at medium. Gemini
+or low-confidence (<0.7) effort decisions use high reasoning, as do attachment
+bypasses. Tier uncertainty escalates to Astra independently: a confident low or
+medium effort choice is preserved. Manual Astra stays at medium. Gemini
 and Kimi provider settings are unchanged. The persisted badge shows effort and
 its classification confidence separately from model-tier confidence.
