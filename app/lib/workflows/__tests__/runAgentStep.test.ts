@@ -107,6 +107,17 @@ const baseInput = {
 describe("runAgentStep", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it.each([
+    ["openai/gpt-6-astra", { openai: { reasoningEffort: "medium" } }],
+    ["moonshotai/kimi-k3", undefined],
+    ["google/gemini-3.5-flash-lite", undefined],
+  ])("sets reasoning options for %s", async (modelId, providerOptions) => {
+    vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+    const { stream } = makeWritable();
+    await runAgentStep({ ...baseInput, modelId, writable: stream } as never);
+    expect(vi.mocked(streamText).mock.calls[0]?.[0].providerOptions).toEqual(providerOptions);
+  });
+
   it("wires a messageMetadata callback into toUIMessageStream", async () => {
     const captured: unknown[] = [];
     vi.mocked(streamText).mockReturnValue(makeStreamResult({ metadataCalls: captured }) as never);
@@ -354,3 +365,21 @@ describe("runAgentStep", () => {
     });
   });
 });
+
+it.each(["low", "medium", "high"])(
+  "passes selected %s reasoning into the actual model call",
+  async reasoningEffort => {
+    vi.mocked(streamText).mockClear();
+    vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
+    const { stream } = makeWritable();
+    await runAgentStep({
+      ...baseInput,
+      modelId: "openai/gpt-6-astra",
+      reasoningEffort,
+      writable: stream,
+    } as never);
+    expect(vi.mocked(streamText).mock.calls[0]?.[0].providerOptions).toEqual({
+      openai: { reasoningEffort },
+    });
+  },
+);

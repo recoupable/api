@@ -1,3 +1,4 @@
+import type { ModelRouting } from "@/lib/ai/routing/selectChatModel";
 import type { FinishReason, LanguageModelUsage } from "ai";
 import type { AgentStepFinishMetadata } from "@/lib/agent/messageMetadata/AgentStepFinishMetadata";
 
@@ -13,6 +14,7 @@ import type { AgentStepFinishMetadata } from "@/lib/agent/messageMetadata/AgentS
 export type AgentMessageMetadata = {
   /** Model the client requested (e.g. user selection in the UI). */
   selectedModelId?: string;
+  routing?: ModelRouting & { status: "selected" };
   /** Model actually used for the call (may differ from selected under gateway fallback). */
   modelId?: string;
   /** Usage from the most recent `finish-step`. */

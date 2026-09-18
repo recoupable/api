@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { routeChatModelStep } from "../routeChatModelStep";
+import { persistAssistantMessageStep } from "../persistAssistantMessageStep";
 import { runAgentWorkflow } from "@/app/lib/workflows/runAgentWorkflow";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
@@ -9,6 +11,7 @@ import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
 import { deleteEphemeralKeyStep } from "@/app/lib/workflows/deleteEphemeralKeyStep";
 
+vi.mock("@/app/lib/workflows/routeChatModelStep", () => ({ routeChatModelStep: vi.fn() }));
 vi.mock("@/app/lib/workflows/deleteEphemeralKeyStep", () => ({
   deleteEphemeralKeyStep: vi.fn(),
 }));
@@ -489,4 +492,82 @@ describe("runAgentWorkflow", () => {
       expect(closeChatStream).toHaveBeenCalledTimes(1);
     });
   });
+});
+
+it("routes Auto once, seeds persisted metadata, and bills the actual model", async () => {
+  const metadata = {
+    selectedModelId: "auto",
+    modelId: "openai/gpt-6-astra",
+    routing: {
+      status: "selected" as const,
+      source: "jev" as const,
+      tier: "frontier" as const,
+      modelId: "openai/gpt-6-astra",
+      reason: "Complex task",
+      reasoningEffort: "high" as const,
+    },
+  };
+  vi.mocked(routeChatModelStep).mockResolvedValue({
+    modelId: metadata.modelId,
+    routing: metadata.routing,
+    metadata,
+  });
+  vi.mocked(runAgentStep).mockResolvedValue({
+    finishReason: "stop",
+    aborted: false,
+    responseMessages: [],
+    responseMessage: responseMessageWithMetadata,
+  });
+  await runAgentWorkflow({ ...baseInput, modelId: "auto" });
+  expect(routeChatModelStep).toHaveBeenCalledTimes(1);
+  expect(persistAssistantMessageStep).toHaveBeenCalledWith(
+    "chat-1",
+    expect.objectContaining({ metadata }),
+  );
+  expect(runAgentStep).toHaveBeenCalledWith(
+    expect.objectContaining({
+      modelId: metadata.modelId,
+      reasoningEffort: "high",
+      originalMessages: [expect.objectContaining({ metadata })],
+    }),
+  );
+  expect(handleChatCredits).toHaveBeenCalledWith(
+    expect.objectContaining({ model: metadata.modelId }),
+  );
+});
+
+it("reuses a resumed Auto decision and preserves accumulated cost", async () => {
+  const metadata = {
+    selectedModelId: "auto",
+    modelId: "openai/gpt-6-astra",
+    totalMessageCost: 0.42,
+    routing: {
+      status: "selected" as const,
+      source: "jev" as const,
+      tier: "frontier" as const,
+      modelId: "openai/gpt-6-astra",
+      reasoningEffort: "low" as const,
+      reason: "Saved decision",
+    },
+  };
+  const assistant = { id: "saved", role: "assistant" as const, parts: [], metadata };
+  vi.mocked(runAgentStep).mockResolvedValue({
+    finishReason: "stop",
+    aborted: false,
+    responseMessages: [],
+    responseMessage: assistant,
+  });
+  await runAgentWorkflow({
+    ...baseInput,
+    modelId: "auto",
+    messages: [...baseInput.messages, assistant],
+  });
+  expect(routeChatModelStep).not.toHaveBeenCalled();
+  expect(runAgentStep).toHaveBeenCalledWith(
+    expect.objectContaining({
+      modelId: metadata.modelId,
+      reasoningEffort: "low",
+      originalMessages: [expect.objectContaining({ metadata })],
+    }),
+  );
 });
