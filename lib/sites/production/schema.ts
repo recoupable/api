@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { experienceContractSchema } from "./experienceContract";
 export const directionSchema = z.object({
   candidates: z
     .array(
@@ -12,6 +13,7 @@ export const directionSchema = z.object({
     .min(2)
     .max(3),
   selectedIndex: z.number().int().min(0).max(2),
+  contract: experienceContractSchema,
   concept: z.string(),
   journey: z.array(z.string()).min(3).max(8),
   evidence: z.array(z.string()).max(12),
@@ -42,7 +44,14 @@ export const reviewSchema = z.object({
   summary: z.string(),
 });
 export type CreativeDirection = z.infer<typeof directionSchema>;
-export type CreativeReview = z.infer<typeof reviewSchema>;
+export type CreativeReview = z.infer<typeof reviewSchema> & {
+  verification?: {
+    scope: "generated-experience";
+    nativeShareDelivery: "not-tested";
+    spotifyAuthentication: "not-tested";
+    viewports: { name: string; journeyPassed?: boolean; errors: string[]; overflow: boolean }[];
+  };
+};
 export type ReleaseContext = {
   release: {
     url: string;
