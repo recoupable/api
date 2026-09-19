@@ -23,5 +23,8 @@ export async function processPublicSite(id: string, input?: unknown) {
     );
     return { success: true };
   }
-  return { snapshot: site.published };
+  // Internal creative guidance can contain customer instructions; never publish it.
+  const snapshot = { ...site.published };
+  delete snapshot.brandWorld;
+  return { snapshot };
 }

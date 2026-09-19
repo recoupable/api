@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 import { generateSite } from "../generateSite";
+import { brandWorldSchema } from "../brandWorld/schema";
 import { designSchema, type Site } from "../schema";
 // Explicit opt-in: normal test runs must never spend model credits.
 it.skipIf(process.env.SITES_LIVE_TEST !== "1")(
@@ -15,8 +16,10 @@ it.skipIf(process.env.SITES_LIVE_TEST !== "1")(
     } as unknown as Site;
     const result = await generateSite(site, site.brief);
     expect(designSchema.safeParse(result.design).success).toBe(true);
+    expect(brandWorldSchema.safeParse(result.brandWorld?.specification).success).toBe(true);
+    expect(result.brandWorld?.specification.evidenceMode).toBe("brief-only");
     expect(result.design.headline.length).toBeGreaterThan(0);
     expect(result.name).toBe("Night Garden");
   },
-  110000,
+  300000,
 );

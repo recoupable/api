@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { BrandWorld } from "./brandWorld/schema";
 
 export const httpsUrl = z
   .string()
@@ -68,6 +69,7 @@ export type SiteSnapshot = {
   releaseUrl: string;
   assets: SiteAsset[];
   design: SiteDesign;
+  brandWorld?: { version: 1; model: string; sourceAssets: SiteAsset[]; specification: BrandWorld };
 };
 export type Site = {
   id: string;

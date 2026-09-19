@@ -37,3 +37,10 @@ it("records consent against the published name", async () => {
     "I agree to receive email updates from Public.",
   );
 });
+
+it("does not expose private brand-world guidance in public snapshots", async () => {
+  m.select.mockResolvedValue({
+    published: { name: "Public", brandWorld: { privateBrief: "customer notes" } },
+  });
+  expect(await processPublicSite(id)).toEqual({ snapshot: { name: "Public" } });
+});
