@@ -1,3 +1,4 @@
+import { registerAllSitesTools } from "./sites";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerGetApiKeyTool } from "./registerGetApiKeyTool";
 import { registerGetLocalTimeTool } from "./registerGetLocalTimeTool";
@@ -31,6 +32,7 @@ import { registerAllPulseTools } from "./pulse";
  * @param server - The MCP server instance to register tools on.
  */
 export const registerAllTools = (server: McpServer): void => {
+  registerAllSitesTools(server);
   registerAllArtistTools(server);
   registerAllArtistSocialsTools(server);
   registerAllCatalogTools(server);
