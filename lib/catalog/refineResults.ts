@@ -4,8 +4,8 @@ import { type CatalogSongWithArtists } from "@/lib/supabase/catalog_songs/select
 const MAX_RESULTS = 1000;
 
 /**
- * Recursively filters song selection until results are under MAX_RESULTS
- * Single Responsibility: Ensure result count stays within LLM context limits
+ * Filters every song against the criteria once, then caps the matching results.
+ * Preserves catalog order; the cap is not a global relevance ranking.
  *
  * @param songs - The songs to refine
  * @param criteria - The criteria to use to refine the songs
@@ -15,11 +15,11 @@ export async function refineResults(
   songs: CatalogSongWithArtists[],
   criteria: string,
 ): Promise<CatalogSongWithArtists[]> {
-  if (songs.length <= MAX_RESULTS) return songs;
+  if (songs.length === 0) return [];
 
-  // Process in parallel batches - AI naturally selects best matches from whatever set it's given
   const filtered = await processBatchesInParallel(songs, criteria);
 
-  // Recursively refine if still too many
-  return refineResults(filtered, criteria);
+  // A broad brief may match every song. Limit in code rather than asking the
+  // model to repeatedly reject valid matches with no guarantee of progress.
+  return filtered.slice(0, MAX_RESULTS);
 }
