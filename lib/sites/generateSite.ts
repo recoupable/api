@@ -6,7 +6,6 @@ export async function generateSite(site: Site, instruction: string): Promise<Sit
     model: process.env.SITES_MODEL || "openai/gpt-6-astra",
     maxRetries: 0,
     schema: designSchema.extend({ experience: experienceSchema }),
-    abortSignal: AbortSignal.timeout(240000),
     system: `Build a complete working music fan experience from the user's brief, not a description of one.
 Return real HTML body markup, CSS, and vanilla JavaScript in experience. No Markdown fences, external scripts, imports, frameworks, network requests, forms, iframes, navigation, storage, or authentication code.
 For games: implement playable mechanics, keyboard AND touch controls, a start button, score, win/loss, pause, and restart. Never substitute landing-page copy for gameplay. Make the game responsive and fit a phone. Use requestAnimationFrame or controlled timers; pause when hidden. Include concise instructions and accessible labels. Use original graphics drawn with CSS/canvas/SVG or supplied assets. Do not promise nonexistent features.
