@@ -2,6 +2,9 @@ import { registerAllTools } from "@/lib/mcp/tools";
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { verifyBearerToken } from "@/lib/mcp/verifyApiKey";
 
+// Site generation can take several minutes, matching the HTTP generation route.
+export const maxDuration = 300;
+
 const baseHandler = createMcpHandler(
   server => {
     registerAllTools(server);
