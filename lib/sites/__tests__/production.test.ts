@@ -70,4 +70,6 @@ it("reconsiders direction and assets when the concept fails review", async () =>
   expect(m.direct).toHaveBeenCalledTimes(2);
   expect(m.assets).toHaveBeenCalledTimes(2);
   expect(m.direct.mock.calls[1][1]).toContain("No fan payoff");
+  expect(m.direct.mock.calls[1][0].draft.production.direction.concept).toBe("A listening garden");
+  expect(m.direct.mock.calls[1][0].draft.design.headline).toBe("Garden");
 });

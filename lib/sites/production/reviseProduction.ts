@@ -17,16 +17,29 @@ export async function reviseProduction(
   const feedback = JSON.stringify(review.issues);
   const reviseDirection = review.issues.some(i => i.module === "direction");
   const reviseAssets = reviseDirection || review.issues.some(i => i.module === "assets");
+  const currentSite = {
+    ...site,
+    draft: {
+      ...snapshot,
+      production: {
+        version: 1 as const,
+        context,
+        direction,
+        reviews: [review],
+        status: "needs-review" as const,
+      },
+    },
+  };
   const nextDirection = reviseDirection
     ? await directExperience(
-        site,
+        currentSite,
         `${instruction}\nAddress these review findings: ${feedback}`,
         context,
         accountId,
       )
     : direction;
   const nextAssets = reviseAssets
-    ? await produceAssets(site, nextDirection, accountId, feedback)
+    ? await produceAssets(currentSite, nextDirection, accountId, feedback)
     : assets;
   const next = await buildExperience(
     site,
