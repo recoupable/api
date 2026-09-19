@@ -6,10 +6,15 @@ import { worldGuidance } from "./worldGuidance";
 import { qualityGuidance } from "./qualityGuidance";
 
 /** Extract visual evidence and compile an inspectable art direction before code generation. */
-export async function generateBrandWorld(site: Site, instruction: string, model: string) {
+export async function generateBrandWorld(
+  site: Site,
+  instruction: string,
+  model: string,
+  accountId?: string,
+) {
   const sources = site.assets.map((asset, sourceIndex) => ({ ...asset, sourceIndex }));
   const images = sources.filter(asset => asset.type === "image");
-  const { object } = await generateObject({
+  const { object, usage } = await generateObject({
     model,
     maxRetries: 0,
     schema: brandWorldSchema,
@@ -38,6 +43,16 @@ export async function generateBrandWorld(site: Site, instruction: string, model:
       },
     ],
   });
+  if (accountId)
+    await (
+      await import("@/lib/credits/handleChatCredits")
+    ).handleChatCredits({
+      usage,
+      model,
+      accountId,
+      source: "api",
+      resourceUrl: `/sites/${site.id}`,
+    });
   const specification = brandWorldSchema.parse(object);
   if (specification.evidenceMode !== (images.length ? "artwork" : "brief-only"))
     throw new Error("Brand-world evidence does not match supplied artwork");

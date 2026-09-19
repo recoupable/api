@@ -17,7 +17,11 @@ const operations: Record<SiteOperation, [string, string]> = {
   ],
   generate: [
     "generate_site",
-    "Generate or revise an interactive site draft with GPT-6 Astra. Pass the latest revision and instruction. Does not publish.",
+    "Start background creative production from the release URL and optional instruction. Returns a generation token; poll get_site_generation. Includes research, audio analysis when available, creative direction, image assets, build and visual review. Uses credits and does not publish.",
+  ],
+  generation: [
+    "get_site_generation",
+    "Poll the token returned by generate_site until completed or failed. Requires the same authenticated account and site id.",
   ],
   publish: [
     "publish_site",
@@ -40,7 +44,7 @@ export function registerAllSitesTools(server: McpServer) {
         description,
         inputSchema: siteOperationSchemas[operation],
         annotations: {
-          readOnlyHint: ["list", "get", "signups"].includes(operation),
+          readOnlyHint: ["list", "get", "signups", "generation"].includes(operation),
           destructiveHint: ["publish", "unpublish"].includes(operation),
           openWorldHint: true,
         },

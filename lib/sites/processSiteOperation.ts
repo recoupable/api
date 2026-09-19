@@ -8,7 +8,9 @@ import { selectSites } from "@/lib/supabase/sites/selectSites";
 import { selectSignups } from "@/lib/supabase/sites/selectSignups";
 import { insertSite } from "@/lib/supabase/sites/insertSite";
 import { updateSite } from "@/lib/supabase/sites/updateSite";
-import { generateSite } from "./generateSite";
+import { startSiteProduction } from "./production/startSiteProduction";
+import { getSiteProduction } from "./production/getSiteProduction";
+import { produceSite } from "./production/produceSite";
 import { resolveSpotifyRelease } from "./resolveSpotifyRelease";
 import { validateSiteAssets } from "./validateSiteAssets";
 /** Shared authenticated operations for HTTP and MCP. Never accepts a caller identity in input. */
@@ -65,7 +67,7 @@ export async function processSiteOperation(
       name: input.name || release!.title.slice(0, 120),
       brief:
         input.brief ||
-        "Create an original, playable fan game inspired by this release and its artwork. Choose the concept, visual direction, and mechanics. Keep it easy to learn on a phone.",
+        "Create a distinctive fan experience inspired by this release, its music, artwork and artist. Choose the strongest concept and format; it does not have to be a game. Make it worth sharing and easy to use on a phone.",
       release_url: release?.url || input.releaseUrl,
       assets,
     });
@@ -76,14 +78,23 @@ export async function processSiteOperation(
   if (!site) throw new SiteError(404, "Site not found");
   await authorizeSiteWorkspace(accountId, site.owner_id);
   if (operation === "get") return { site };
+  if (operation === "generation" && "token" in input)
+    return getSiteProduction(String(input.token), site.id, accountId);
   if (operation === "signups") return { signups: await selectSignups(site.id) };
   if (!("revision" in input) || input.revision !== site.revision)
     throw new SiteError(409, "This site changed. Reload before editing.");
   if (operation === "publish" && !site.draft)
     throw new SiteError(400, "Generate a preview before publishing");
+  if (
+    operation === "generate" &&
+    "background" in input &&
+    input.background &&
+    "instruction" in input
+  )
+    return startSiteProduction(site, String(input.instruction || site.brief), accountId);
   const changes =
     operation === "generate" && "instruction" in input
-      ? { draft: await generateSite(site, String(input.instruction)) }
+      ? { draft: await produceSite(site, String(input.instruction), accountId) }
       : operation === "publish"
         ? { published: site.draft, published_at: new Date().toISOString() }
         : { published: null, published_at: null };

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ReleaseContext, CreativeDirection, CreativeReview } from "./production/schema";
 import type { BrandWorld } from "./brandWorld/schema";
 
 export const httpsUrl = z
@@ -42,11 +43,13 @@ export const siteInputSchema = z
     message: "Add a Spotify link, or a name and brief.",
   });
 export const actionSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("generation"), token: z.string().min(1).max(3000) }).strict(),
   z
     .object({
       action: z.literal("generate"),
       revision: z.number().int().nonnegative(),
-      instruction: z.string().trim().min(1).max(6000),
+      instruction: z.string().trim().max(6000).default(""),
+      background: z.boolean().default(true),
     })
     .strict(),
   z
@@ -69,6 +72,13 @@ export type SiteSnapshot = {
   releaseUrl: string;
   assets: SiteAsset[];
   design: SiteDesign;
+  production?: {
+    version: 1;
+    context: ReleaseContext;
+    direction: CreativeDirection;
+    reviews: CreativeReview[];
+    status: "reviewed" | "needs-review";
+  };
   brandWorld?: { version: 1; model: string; sourceAssets: SiteAsset[]; specification: BrandWorld };
 };
 export type Site = {

@@ -7,7 +7,15 @@ export const siteOperationSchemas = {
   get: z.object({ id }).strict(),
   signups: z.object({ id }).strict(),
   create: siteInputSchema,
-  generate: z.object({ id, revision, instruction: z.string().trim().min(1).max(6000) }).strict(),
+  generate: z
+    .object({
+      id,
+      revision,
+      instruction: z.string().trim().max(6000).default(""),
+      background: z.boolean().default(true),
+    })
+    .strict(),
+  generation: z.object({ id, token: z.string().min(1).max(3000) }).strict(),
   publish: z.object({ id, revision }).strict(),
   unpublish: z.object({ id, revision }).strict(),
 };

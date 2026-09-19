@@ -24,7 +24,9 @@ vi.mock("@/lib/supabase/sites/selectSites", () => ({ selectSites: m.list }));
 vi.mock("@/lib/supabase/sites/insertSite", () => ({ insertSite: m.insert }));
 vi.mock("@/lib/supabase/sites/updateSite", () => ({ updateSite: m.update }));
 vi.mock("@/lib/supabase/sites/selectSignups", () => ({ selectSignups: m.signups }));
-vi.mock("../generateSite", () => ({ generateSite: m.generate }));
+vi.mock("../production/produceSite", () => ({ produceSite: m.generate }));
+vi.mock("../production/startSiteProduction", () => ({ startSiteProduction: m.generate }));
+vi.mock("../production/getSiteProduction", () => ({ getSiteProduction: vi.fn() }));
 vi.mock("../resolveSpotifyRelease", () => ({ resolveSpotifyRelease: m.resolve }));
 const id = "11111111-1111-4111-8111-111111111111";
 const account = "22222222-2222-4222-8222-222222222222";
@@ -97,7 +99,12 @@ it("reports concurrent writes after generation", async () => {
   m.generate.mockResolvedValue(draft);
   m.update.mockResolvedValue(null);
   await expect(
-    processSiteOperation(account, "generate", { id, revision: 2, instruction: "change" }),
+    processSiteOperation(account, "generate", {
+      id,
+      revision: 2,
+      instruction: "change",
+      background: false,
+    }),
   ).rejects.toMatchObject({ status: 409 });
 });
 it("publishes only saved draft and can unpublish", async () => {

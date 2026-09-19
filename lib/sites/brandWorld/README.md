@@ -5,7 +5,7 @@
 1. `generateBrandWorld` reads all supplied images and the brief, validates structured output and source references, and returns a versioned creative specification.
 2. `generateSite` gives that specification, original assets and the previous design to the implementation model. It validates the design and parses JavaScript before returning a replacement draft.
 
-Both use `SITES_MODEL` (default `openai/gpt-6-astra`) with no SDK retries. Either failure leaves persistence to the existing operation boundary: no replacement draft is returned, and compare-and-swap still protects concurrent edits. There is no new automatic publish step or generation timeout. Two calls increase latency and token use; hosting limits remain. The existing billing work in #2105 must account for both calls before paid release.
+Both use `SITES_MODEL` (default `openai/gpt-6-astra`) with no SDK retries. Either failure leaves persistence to the existing operation boundary: no replacement draft is returned, and compare-and-swap still protects concurrent edits. There is no new automatic publish step or generation timeout. Two calls increase latency and token use; hosting limits remain. Both model calls use the existing chat usage-credit accounting.
 
 ## Modules
 
@@ -19,7 +19,7 @@ Both use `SITES_MODEL` (default `openai/gpt-6-astra`) with no SDK retries. Eithe
 
 ## Asset capability boundary
 
-The planner names each needed asset and chooses supplied, procedural or defer. Supplied references must exist. Procedural work means graphics the current HTML/CSS/canvas/SVG generator can actually produce. Defer records a need and a usable fallback, not a queued asset job or permission to invent a file. Adding an image-production stage later should materialize approved assets before implementation and replace deferred entries with real validated sources.
+The planner names each needed asset and chooses supplied, procedural or defer. Supplied references must exist. Procedural work means graphics the current HTML/CSS/canvas/SVG generator can actually produce. Defer records a need and a usable fallback, not a queued asset job or permission to invent a file. The surrounding production pipeline now materializes generated images before this module runs; those images become validated supplied assets.
 
 Complex artwork is not made better by more CSS instructions. A plan should simplify honestly when finished art is missing. The system must not quietly turn a photographic cover into a cartoon, or a typographic cover into a generic dashboard.
 
@@ -40,4 +40,4 @@ Use this matrix when evaluating prompt/model revisions. Do not treat a schema pa
 
 Ask: with the cover hidden, what specific source-derived signatures remain? Are the assets finished enough for the chosen direction? Does the first view explain the activity without art-direction copy? Do completion, error and player states belong to the same world?
 
-Current review is prompt self-review. Automated rendered screenshot critique, asset generation and a visual-quality benchmark are not implemented by this module. Manual preview inspection remains necessary; #2094 tracks the broader loop.
+The surrounding `../production/` pipeline generates assets, renders mobile and desktop screenshots, critiques them, and makes at most one revision. This module remains the reusable artwork-to-design implementation stage. Full gameplay and artist approval still require human review.
