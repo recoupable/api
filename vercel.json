@@ -8,6 +8,10 @@
     {
       "path": "/api/internal/playcount-maintenance",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/internal/context-guest-maintenance",
+      "schedule": "0 8 * * *"
     }
   ]
 }
