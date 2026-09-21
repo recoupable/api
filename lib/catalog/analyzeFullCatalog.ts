@@ -43,7 +43,7 @@ export async function analyzeFullCatalog({
   const allPages = await Promise.all(pagePromises);
   const allSongs = allPages.flat();
 
-  // Recursively filter and refine until results are under MAX_RESULTS
+  // Apply criteria to every batch once before limiting the matching results.
   const results = await refineResults(allSongs, criteria);
 
   return {
