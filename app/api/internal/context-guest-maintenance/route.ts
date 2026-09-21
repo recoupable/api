@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { start } from "workflow/api";
 import { purgeGuestWorkflow } from "@/app/workflows/contextGuest/purgeGuestWorkflow";
+/**
+ * Start scheduled cleanup of expired guest context.
+ *
+ * @param request - Authenticated cron request.
+ * @returns Cleanup dispatch status.
+ */
 export async function GET(request: NextRequest) {
   if (
     !process.env.CRON_SECRET ||
