@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { fetchSongstats } from "@/lib/songstats/fetchSongstats";
 const spotifyId = z.string().regex(/^[A-Za-z0-9]{22}$/);
-const schema = z.union([
+export const songstatsContextSchema = z.union([
   z.strictObject({
     kind: z.literal("recording"),
     isrc: z
@@ -14,10 +14,10 @@ const schema = z.union([
 ]);
 /** One aggregator lookup using Recoup's existing client. Caller owns authorization and any spend approval. */
 export async function lookupSongstatsContext(
-  input: z.input<typeof schema>,
+  input: z.input<typeof songstatsContextSchema>,
   fetcher?: typeof fetchSongstats,
 ) {
-  const args = schema.parse(input);
+  const args = songstatsContextSchema.parse(input);
   const path = args.kind === "artist" ? "/artists/info" : "/tracks/info";
   const query: Record<string, string> =
     "isrc" in args
