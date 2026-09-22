@@ -1,3 +1,6 @@
+import { z } from "zod";
+import { collectContextCatalogEstimate } from "../enrichment/collectContextCatalogEstimate";
+import { collectContextCatalogValuation } from "../providers/collectContextCatalogValuation";
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -53,7 +56,10 @@ it.skipIf(process.env.CONTEXT_LOCAL_DATABASE_TEST !== "1")(
         pending = { marker, resolve, reject };
         child.stdin.write(sql + "\n\\echo " + marker + "\n");
       });
-    const quote = (value: unknown) => "'" + String(value).replaceAll("'", "''") + "'";
+    const quote = (value: unknown) =>
+      "'" +
+      (typeof value === "object" ? JSON.stringify(value) : String(value)).replaceAll("'", "''") +
+      "'";
     try {
       const root = resolve("../../database/context-provider-evidence/supabase/migrations");
       const read = (name: string) => readFileSync(resolve(root, name), "utf8");
@@ -65,6 +71,9 @@ it.skipIf(process.env.CONTEXT_LOCAL_DATABASE_TEST !== "1")(
           read("20250129222308_updated_at_trigger_function.sql").split("alter table")[0] +
           read("20251005212508_create_catalogs_table.sql") +
           read("20251005214926_create_account_catalogs_table.sql") +
+          read("20260922060000_context_provider_evidence.sql")
+            .replace("begin;\n", "")
+            .replace(/commit;\s*$/, "") +
           catalogMigration +
           "\ncreate temporary table rpc_output(value jsonb) on commit drop;",
       );
@@ -76,12 +85,24 @@ it.skipIf(process.env.CONTEXT_LOCAL_DATABASE_TEST !== "1")(
         `insert into public.catalogs(id,name) values(${quote(catalog)},'Fixture catalog'),(${quote(other)},'Other fixture');insert into public.account_catalogs(account,catalog) values(${quote(owner)},${quote(catalog)}),(${quote(owner)},${quote(other)});`,
       );
       const rpc = async (name: string, args: Record<string, unknown>) => {
-        if (name !== "create_catalog_context_request") throw new Error("Unexpected RPC");
-        const params = ["p_owner", "p_actor", "p_catalog", "p_key"]
-          .map(k => quote(args[k]))
+        if (
+          ![
+            "create_catalog_context_request",
+            "resolve_context_catalog",
+            "claim_context_enrichment",
+            "complete_context_enrichment",
+            "fail_context_enrichment",
+          ].includes(name)
+        )
+          throw new Error("Unexpected RPC");
+        const params = Object.entries(args)
+          .map(([key, value]) => {
+            if (!/^p_[a-z]+$/.test(key)) throw new Error("Unexpected parameter");
+            return key + " => " + quote(value);
+          })
           .join(",");
         const raw = await query(
-          `do $rpc$ begin begin insert into rpc_output select public.create_catalog_context_request(${params});exception when others then insert into rpc_output values(jsonb_build_object('testError',SQLERRM));end;end $rpc$;select value from rpc_output;truncate rpc_output;`,
+          `do $rpc$ begin begin insert into rpc_output select public.${name}(${params});exception when others then insert into rpc_output values(jsonb_build_object('testError',SQLERRM));end;end $rpc$;select value from rpc_output;truncate rpc_output;`,
         );
         const value = JSON.parse(raw);
         if (value.testError) throw new Error(value.testError);
@@ -100,10 +121,48 @@ it.skipIf(process.env.CONTEXT_LOCAL_DATABASE_TEST !== "1")(
       await expect(
         processContextOperation(owner, { ...input, catalog_id: other }, deps),
       ).rejects.toThrow("different input");
+      if (!("request" in first)) throw new Error("Missing request");
+      const request = z
+        .object({ id: z.uuid(), output: z.object({ subjectIds: z.array(z.uuid()).min(1) }) })
+        .parse(first.request);
+      const collect = vi.fn(async () =>
+        collectContextCatalogValuation(owner, catalog, {
+          authorize: async () => {},
+          aggregate: async () => ({ measuredSongCount: 1, totalStreams: 100 }),
+          songCount: async () => 3,
+          earliestDate: async () => null,
+        }),
+      );
+      const valuationInput = {
+        subjectId: request.output.subjectIds[0],
+        collectionVersion: "fixture-v1",
+      };
+      const saved = await collectContextCatalogEstimate(owner, owner, request.id, valuationInput, {
+        ...deps,
+        collect,
+      });
+      expect(saved).toHaveProperty("state", "saved");
+      expect(
+        await collectContextCatalogEstimate(owner, owner, request.id, valuationInput, {
+          ...deps,
+          collect,
+        }),
+      ).toHaveProperty("state", "reused");
+      expect(collect).toHaveBeenCalledOnce();
+      const kind = await query(
+        `select evidence_kind from public.context_results where subject_id=${quote(valuationInput.subjectId)} and topic='catalog_valuation';`,
+      );
+      expect(kind).toBe("estimate");
       await query(
         `delete from public.account_catalogs where account=${quote(owner)} and catalog=${quote(catalog)};`,
       );
       await expect(processContextOperation(owner, input, deps)).rejects.toThrow("not accessible");
+      await expect(
+        collectContextCatalogEstimate(owner, owner, request.id, valuationInput, {
+          ...deps,
+          collect,
+        }),
+      ).rejects.toThrow("not accessible");
       expect(deps.dispatch).not.toHaveBeenCalled();
     } finally {
       if (child.exitCode === null) {
