@@ -9,6 +9,9 @@ import { verifyAudioUrl } from "@/lib/flamingo/verifyAudioUrl";
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
+vi.mock("@/lib/plans/assertAnalyzeWithinPlan", () => ({
+  assertAnalyzeWithinPlan: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
 vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
   ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
