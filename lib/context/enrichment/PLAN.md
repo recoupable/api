@@ -19,3 +19,5 @@ The current pilot `claim_context_enrichment` accepts only `catalog_metadata`, `l
 The claim also requires the subject to appear in a completed or partial metadata request. The current authenticated ingestion path only resolves Spotify tracks. Company, campaign, songwriter and standalone catalog inputs need their own validated identity/request path before their modules can use this persistence boundary.
 
 These are integration requirements, not resolved by the fixture RPC tests. Next integration work must cover topic validation, evidence kinds, missing/ambiguous source results, ownership/access checks, and real database round-trip tests before enabling provider dispatch.
+
+A candidate database migration `20260922060000_context_provider_evidence.sql` now adds the six provider topics and validates their evidence kinds. Local rollback-only SQL tests pass for save/reuse, invalid kinds, unknown topics, and legacy defaults. It has not been applied to production. Registry sources use the existing `provider_metadata` source kind.

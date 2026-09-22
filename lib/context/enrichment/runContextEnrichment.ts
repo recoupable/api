@@ -6,6 +6,8 @@ export interface ContextEnrichmentModule {
   subjectId: string;
   provider: string;
   model: string;
+  /** Provider facts and estimates require matching database topic support. Omitted means interpretation. */
+  evidenceKind?: "observation" | "estimate" | "interpretation";
   input: unknown;
   sources: Array<{ url: string; kind: string; content: unknown }>;
 }
