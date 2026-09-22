@@ -12,6 +12,7 @@ const track = {
   album: {
     id: "abcdefghijklmnopqrstuv",
     name: "Release",
+    album_type: "single",
     images: [{ url: "https://i.scdn.co/image/art" }],
     release_date: "2026-09-01",
     release_date_precision: "day",
@@ -28,6 +29,8 @@ describe("Spotify context extraction", () => {
     expect(result.artists[0].id).toBe(track.artists[0].id);
     expect(result.previewUrl).toBeNull();
     expect(result.raw).toEqual(track);
+    expect(result.release).toMatchObject({ id: track.album.id, providerType: "single" });
+    expect(result.release.id).not.toBe(result.trackId);
   });
   it("rejects wrong recording instead of silently accepting relinking", async () => {
     await expect(
