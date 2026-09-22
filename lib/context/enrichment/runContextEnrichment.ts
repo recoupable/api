@@ -15,6 +15,17 @@ const resultSchema = z.object({
   content: z.unknown().refine(v => v !== undefined && v !== null),
   coverage: z.enum(["full", "partial", "unknown"]),
   trace: z.unknown(),
+  observedSources: z
+    .array(
+      z.object({
+        url: z.string().url(),
+        kind: z.string().min(1),
+        content: z.unknown().refine(v => v !== undefined && v !== null),
+      }),
+    )
+    .min(1)
+    .max(100)
+    .optional(),
   costUsd: z.number().nonnegative().finite().nullable(),
   costStatus: z.enum(["unknown", "estimated", "confirmed"]),
 });
@@ -46,6 +57,15 @@ export async function runContextEnrichment(
     throw new Error("Paid attempt requires reconciliation before retry");
   try {
     const result = resultSchema.parse(await deps.call(module));
+    if (
+      result.observedSources?.some(
+        source =>
+          !module.sources.some(
+            declared => declared.url === source.url && declared.kind === source.kind,
+          ),
+      )
+    )
+      throw new Error("Observed source was not declared by this module");
     await deps.authorize(actor, owner);
     return await deps.rpc("complete_context_enrichment", {
       p_owner: owner,

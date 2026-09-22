@@ -50,6 +50,17 @@ export async function collectContextMusicBrainz(
           content: { ...result, identityConfirmed: false },
           coverage: result.status === "not_found" ? "unknown" : "partial",
           trace: result.trace,
+          observedSources: [
+            {
+              url,
+              kind: "provider_metadata",
+              content: {
+                httpStatus: result.trace.httpStatus,
+                observedAt: result.trace.startedAt,
+                payload: "rawResponse" in result.trace ? result.trace.rawResponse : null,
+              },
+            },
+          ],
           costUsd: null,
           costStatus: "unknown",
         };

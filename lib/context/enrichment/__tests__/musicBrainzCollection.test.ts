@@ -38,6 +38,12 @@ it("persists a no-match observation with unknown coverage and exact source respo
         coverage: "unknown",
         content: expect.objectContaining({ status: "not_found" }),
         trace: expect.objectContaining({ httpStatus: 404 }),
+        observedSources: [
+          expect.objectContaining({
+            kind: "provider_metadata",
+            content: expect.objectContaining({ httpStatus: 404 }),
+          }),
+        ],
       }),
     }),
   );
