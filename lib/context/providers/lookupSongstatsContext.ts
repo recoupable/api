@@ -22,9 +22,11 @@ export async function lookupSongstatsContext(
   const query: Record<string, string> =
     "isrc" in args
       ? { isrc: args.isrc }
-      : args.kind === "artist"
-        ? { spotify_artist_id: args.spotifyId }
-        : { spotify_track_id: args.spotifyId };
+      : "spotifyId" in args
+        ? args.kind === "artist"
+          ? { spotify_artist_id: args.spotifyId }
+          : { spotify_track_id: args.spotifyId }
+        : {};
   const call = fetcher ?? (await import("@/lib/songstats/fetchSongstats")).fetchSongstats;
   const startedAt = new Date().toISOString(),
     start = Date.now();
