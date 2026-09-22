@@ -21,3 +21,9 @@ The claim also requires the subject to appear in a completed or partial metadata
 These are integration requirements, not resolved by the fixture RPC tests. Next integration work must cover topic validation, evidence kinds, missing/ambiguous source results, ownership/access checks, and real database round-trip tests before enabling provider dispatch.
 
 A candidate database migration `20260922060000_context_provider_evidence.sql` now adds the six provider topics and validates their evidence kinds. Local rollback-only SQL tests pass for save/reuse, invalid kinds, unknown topics, and legacy defaults. It has not been applied to production. Registry sources use the existing `provider_metadata` source kind.
+
+## MusicBrainz collector
+
+`collectContextMusicBrainz` connects the ISRC adapter to the authorized claim/complete runner. Its module includes observation evidence type and a server-supplied collection version in the reuse fingerprint. A reused result skips the provider and rate-limit permit. A 404 is saved as unknown-coverage evidence; candidates remain partial and identity unconfirmed. Source links retain request provenance; the exact returned payload is in the result trace (not a separately versioned response-source row).
+
+Requires database PR74 before runtime use. A shared provider limiter and entry dispatch remain caller responsibilities. The collection version must come from collection policy, not a random retry token. Wrapper tests currently use fixture persistence; they do not establish a live end-to-end database round trip.
