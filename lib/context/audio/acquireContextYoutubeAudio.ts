@@ -1,3 +1,4 @@
+import { normalizeContextAudio } from "./normalizeContextAudio";
 import { searchYoutubeRecording } from "./searchYoutubeRecording";
 import { matchYoutubeRecording } from "./matchYoutubeRecording";
 import { downloadYoutubeAudio } from "./downloadYoutubeAudio";
@@ -8,7 +9,10 @@ export async function acquireContextYoutubeAudio(
   deps: {
     search?: typeof searchYoutubeRecording;
     download?: typeof downloadYoutubeAudio;
-    save: (asset: Awaited<ReturnType<typeof downloadYoutubeAudio>>) => Promise<{ assetId: string }>;
+    normalize?: typeof normalizeContextAudio;
+    save: (
+      asset: Awaited<ReturnType<typeof normalizeContextAudio>>,
+    ) => Promise<{ assetId: string }>;
   },
 ) {
   const steps: Array<{ name: string; status: string; result: unknown }> = [];
@@ -26,8 +30,14 @@ export async function acquireContextYoutubeAudio(
       recording.durationSeconds,
     );
     steps.push({ name: stage, status: "complete", result: downloaded.trace });
+    stage = "Normalize audio to WAV";
+    const normalized = await (deps.normalize ?? normalizeContextAudio)(
+      downloaded.bytes,
+      downloaded.trace.durationSeconds,
+    );
+    steps.push({ name: stage, status: "complete", result: normalized.trace });
     stage = "Save audio";
-    const asset = await deps.save(downloaded);
+    const asset = await deps.save(normalized);
     steps.push({ name: stage, status: "complete", result: asset });
     return { status: "acquired", asset, steps };
   } catch (error) {
