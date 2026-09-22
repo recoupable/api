@@ -131,11 +131,13 @@ describe("getArtistPublicProfile", () => {
           profile_url: "https://instagram.com/brauxelion",
         },
       ],
+      songs: expect.any(Array),
+      song_count: 2,
       catalogs: [
         {
           id: "cat_1",
           name: "Brauxelion Catalog",
-          song_count: 24,
+          song_count: 2,
           updated_at: "2026-08-01",
           songs: expect.any(Array),
         },
@@ -171,7 +173,7 @@ describe("getArtistPublicProfile", () => {
   it("resolves catalogs through the artist's credited songs, not catalog ownership", async () => {
     await getArtistPublicProfile(ARTIST);
 
-    expect(selectSongArtistsMock).toHaveBeenCalledWith({ artists: [ARTIST] });
+    expect(selectSongArtistsMock).toHaveBeenCalledWith({ artists: [ARTIST], paginate: true });
     expect(selectCatalogsBySongsMock).toHaveBeenCalledWith(["ISRC1", "ISRC2"]);
   });
 
@@ -215,15 +217,72 @@ describe("getArtistPublicProfile", () => {
       image: null,
       socials: [],
       catalogs: [],
+      songs: [],
+      song_count: 0,
       valuation: null,
     });
   });
 
-  it("defaults a missing song count to 0", async () => {
-    countCatalogSongsMock.mockResolvedValue({});
+  it("reports zero returned songs when credited song metadata is missing", async () => {
+    selectSongsMock.mockResolvedValue([]);
 
     const profile = await getArtistPublicProfile(ARTIST);
     expect(profile?.catalogs[0].song_count).toBe(0);
+  });
+
+  it("counts the artist contribution instead of the 105-song shared catalog", async () => {
+    countCatalogSongsMock.mockResolvedValue({ cat_1: 105 });
+    getCatalogSongsMock.mockResolvedValue([{ catalog: "cat_1", song: "ISRC1" }]);
+    const profile = await getArtistPublicProfile(ARTIST);
+    expect(profile?.catalogs[0].song_count).toBe(1);
+    expect(profile?.catalogs[0].songs.map(song => song.isrc)).toEqual(["ISRC1"]);
+    expect(countCatalogSongsMock).not.toHaveBeenCalled();
+  });
+
+  it("returns all 64 credited recordings without a saved catalog", async () => {
+    const records = Array.from({ length: 64 }, (_, i) => ({
+      isrc: `S${i}`,
+      name: `Song ${i}`,
+      album: null,
+      artwork_url: null,
+    }));
+    selectSongArtistsMock.mockResolvedValue(records.map(s => ({ artist: ARTIST, song: s.isrc })));
+    selectSongsMock.mockResolvedValue(records);
+    selectLatestSongPlaysMock.mockResolvedValue(
+      Object.fromEntries(records.map((s, i) => [s.isrc, 1000 - i])),
+    );
+    selectCatalogsBySongsMock.mockResolvedValue([]);
+    getCatalogSongsMock.mockResolvedValue([]);
+    const profile = await getArtistPublicProfile(ARTIST);
+    expect(profile?.catalogs).toEqual([]);
+    expect(profile?.song_count).toBe(64);
+    expect(profile?.songs.map(s => s.isrc)).toEqual(records.map(s => s.isrc));
+  });
+
+  it("retains artist songs when optional catalog enrichment fails", async () => {
+    selectCatalogsBySongsMock.mockRejectedValueOnce(new Error("catalog query failed"));
+    const profile = await getArtistPublicProfile(ARTIST);
+    expect(profile?.catalogs).toEqual([]);
+    expect(profile?.songs.map(s => s.isrc)).toEqual(["ISRC1", "ISRC2"]);
+    expect(profile?.song_count).toBe(2);
+  });
+
+  it("keeps catalog rows when one optional release-date lookup fails", async () => {
+    getCatalogEarliestReleaseDateMock.mockRejectedValueOnce(new Error("date unavailable"));
+    const profile = await getArtistPublicProfile(ARTIST);
+    expect(profile?.catalogs).toHaveLength(1);
+    expect(profile?.songs).toHaveLength(2);
+  });
+
+  it("uses the artist valuation age consistently for individual song estimates", async () => {
+    getCatalogEarliestReleaseDateMock.mockResolvedValue("2000-01-01");
+    const profile = await getArtistPublicProfile(ARTIST);
+    const sum = profile!.songs.reduce((total, song) => total + song.est_value_usd, 0);
+    expect(sum).toBeCloseTo(profile!.valuation!.mid, 6);
+    expect(profile!.songs[0].est_value_usd).toBeCloseTo(
+      profile!.catalogs[0].songs[0].est_value_usd,
+      6,
+    );
   });
 
   describe("v2: songs and valuation", () => {

@@ -13,6 +13,7 @@ const CHUNK_SIZE = 200;
  *
  * @param params.songs - Song ISRCs to match on the `song` column
  * @param params.artists - Artist account IDs to match on the `artist` column
+ * @param params.paginate - Read all result pages before caller-side ranking/capping
  * @returns The matching rows
  * @throws Error on query error — an empty array always means "no rows",
  *   never "the query failed" (chat#1965)
@@ -20,6 +21,7 @@ const CHUNK_SIZE = 200;
 export async function selectSongArtists(params: {
   songs?: string[];
   artists?: string[];
+  paginate?: boolean;
 }): Promise<Tables<"song_artists">[]> {
   const { songs, artists } = params;
   const column = songs ? "song" : artists ? "artist" : null;
@@ -33,13 +35,17 @@ export async function selectSongArtists(params: {
   const rows: Tables<"song_artists">[] = [];
   for (let i = 0; i < values.length; i += CHUNK_SIZE) {
     const chunk = values.slice(i, i + CHUNK_SIZE);
-    const { data, error } = await supabase.from("song_artists").select("*").in(column, chunk);
-
-    if (error) {
-      throw new Error(`Failed to fetch song_artists: ${error.message}`);
+    let offset = 0;
+    while (true) {
+      let query = supabase.from("song_artists").select("*").in(column, chunk);
+      if (params.paginate)
+        query = query.order("id", { ascending: true }).range(offset, offset + 999);
+      const { data, error } = await query;
+      if (error) throw new Error(`Failed to fetch song_artists: ${error.message}`);
+      rows.push(...(data ?? []));
+      if (!params.paginate || (data?.length ?? 0) < 1000) break;
+      offset += 1000;
     }
-
-    rows.push(...(data ?? []));
   }
 
   return rows;

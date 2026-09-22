@@ -1,7 +1,7 @@
 import { computeValuationBand, type ValuationBand } from "@/lib/catalog/computeValuationBand";
 
 /** A public unauthenticated endpoint gets a fixed cap, not pagination. */
-const SONGS_PER_CATALOG_CAP = 50;
+const SONGS_PER_CATALOG_CAP = 1000;
 
 export type ProfileSong = {
   isrc: string;
@@ -28,7 +28,7 @@ type BuildProfileSongsParams = {
  * the model over all credited plays with the earliest release date across
  * catalogs.
  *
- * Songs sort by plays descending and cap at the top 50 per catalog.
+ * Songs sort by plays descending and cap at the top 1,000 per catalog.
  */
 export function buildProfileSongs(params: BuildProfileSongsParams): {
   songsByCatalog: Record<string, ProfileSong[]>;

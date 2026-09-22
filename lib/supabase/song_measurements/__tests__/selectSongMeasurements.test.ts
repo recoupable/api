@@ -14,7 +14,7 @@ function mockBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, ReturnType<typeof vi.fn>> & {
     then?: (resolve: (v: unknown) => void) => void;
   } = {} as never;
-  for (const method of ["select", "eq", "in", "order", "limit"]) {
+  for (const method of ["select", "eq", "in", "order", "limit", "range"]) {
     builder[method] = vi.fn().mockReturnValue(builder);
   }
   builder.then = resolve => resolve(result);
@@ -53,6 +53,14 @@ describe("selectSongMeasurements", () => {
     expect(builder.order).toHaveBeenCalledWith("captured_at", { ascending: false });
     expect(builder.limit).toHaveBeenCalledWith(1);
     expect(result).toEqual([ROW]);
+  });
+
+  it("supports deterministic result pages for latest-per-song batch lookup", async () => {
+    const builder = mockBuilder({ data: [ROW], error: null });
+    await selectSongMeasurements({ songs: ["USA2P2015959"], offset: 1000, limit: 1000 });
+    expect(builder.order).toHaveBeenCalledWith("id", { ascending: false });
+    expect(builder.range).toHaveBeenCalledWith(1000, 1999);
+    expect(builder.limit).not.toHaveBeenCalled();
   });
 
   it("omits limit for full-series reads", async () => {
