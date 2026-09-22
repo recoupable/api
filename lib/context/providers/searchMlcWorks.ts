@@ -9,17 +9,17 @@ const writer = z
       .optional(),
   })
   .refine(value => Object.values(value).some(Boolean), "Writer name or IPI required");
-const inputSchema = z.strictObject({
+export const mlcWorkSearchSchema = z.strictObject({
   title: z.string().trim().min(1).max(500),
   writers: z.array(writer).min(1).max(30).optional(),
 });
 /** Search public MLC work candidates. A result never confirms identity, rights or roster membership. */
 export async function searchMlcWorks(
-  input: z.input<typeof inputSchema>,
+  input: z.input<typeof mlcWorkSearchSchema>,
   accessToken: string,
   fetcher: typeof fetch = fetch,
 ) {
-  const query = inputSchema.parse(input);
+  const query = mlcWorkSearchSchema.parse(input);
   z.string().min(1).parse(accessToken);
   const sourceUrl = "https://public-api.themlc.com/search/songcode";
   const startedAt = new Date().toISOString(),
