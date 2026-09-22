@@ -7,6 +7,12 @@ import { selectContextDocuments, type ContextBriefDocument } from "./selectConte
 import type { ContextRequestRecord } from "./runContextRequest";
 
 export const contextOperationSchema = z.discriminatedUnion("action", [
+  z.strictObject({
+    action: z.literal("ingest_catalog"),
+    catalog_id: z.string().uuid(),
+    organization_id: z.string().uuid().optional(),
+    idempotency_key: contextIngestSchema.shape.idempotency_key,
+  }),
   contextIngestSchema.extend({ action: z.literal("ingest") }),
   z.strictObject({
     action: z.literal("read"),
@@ -37,6 +43,15 @@ export async function processContextOperation(
     accountId,
     args.organization_id,
   );
+  if (args.action === "ingest_catalog") {
+    const request = (await deps.rpc("create_catalog_context_request", {
+      p_owner: ownerId,
+      p_actor: accountId,
+      p_catalog: args.catalog_id,
+      p_key: args.idempotency_key,
+    })) as Omit<ContextRequestRecord, "input"> & { input: { kind: "catalog"; catalogId: string } };
+    return { request };
+  }
   if (args.action === "ingest") {
     const resource = parseContextUrl(args.url);
     if (resource.provider !== "spotify")
