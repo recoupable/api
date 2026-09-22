@@ -16,6 +16,7 @@ export async function callContextRpc(
     "context_guest_worker_scope",
     "purge_expired_context_guests",
     "create_context_request",
+    "create_catalog_context_request",
     "read_context_request",
     "claim_context_request",
     "commit_spotify_context",
