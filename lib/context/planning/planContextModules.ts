@@ -21,6 +21,7 @@ const moduleId = z.enum([
   "company_research",
   "campaign_context",
   "release_expansion",
+  "spotify_release",
   "material_extraction",
   "songwriter_research",
 ]);
@@ -111,6 +112,12 @@ const definitions: Record<
   },
   company_research: { kinds: ["company"], fields: [], implemented: false, executor: null },
   campaign_context: { kinds: ["campaign"], fields: [], implemented: false, executor: null },
+  spotify_release: {
+    kinds: ["release"],
+    fields: [["spotify_id"]],
+    implemented: true,
+    executor: "collectContextSpotifyRelease",
+  },
   release_expansion: { kinds: ["release"], fields: [], implemented: false, executor: null },
   material_extraction: { kinds: ["material"], fields: [], implemented: false, executor: null },
   songwriter_research: { kinds: ["songwriter"], fields: [], implemented: false, executor: null },

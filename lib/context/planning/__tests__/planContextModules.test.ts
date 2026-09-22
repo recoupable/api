@@ -188,3 +188,24 @@ it("records a planning-only review across all eight entry types", async () => {
       ),
     );
 });
+
+it("plans saved release enrichment separately from unbuilt standalone release ingestion", () => {
+  const result = planContextModules({
+    entry: "release",
+    targets: [
+      {
+        subjectId: id,
+        kind: "release",
+        identityConfirmed: true,
+        availableFields: ["spotify_id"],
+        reusableModules: [],
+      },
+    ],
+    requested: [
+      { subjectId: id, module: "spotify_release" },
+      { subjectId: id, module: "release_expansion" },
+    ],
+    permittedModules: ["spotify_release"],
+  });
+  expect(result.map(item => item.state)).toEqual(["ready_for_dispatch", "not_implemented"]);
+});
