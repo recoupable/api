@@ -1,15 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { start } from "workflow/api";
 import { validateCronRequest } from "@/lib/internal/validateCronRequest";
-import { songstatsBackfillWorkflow } from "@/app/workflows/songstatsBackfillWorkflow";
 import { startDueMonthlySnapshots } from "@/lib/research/playcounts/startDueMonthlySnapshots";
-import { reclaimStaleSongstatsBackfillRows } from "@/lib/supabase/songstats_backfill_queue/updateSongstatsBackfillQueue";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 
 /**
  * GET /api/internal/playcount-maintenance — daily Vercel Cron entrypoint:
- * starts the Songstats backfill drain workflow and re-runs due monthly
- * snapshot series. Cron-only (CRON_SECRET bearer).
+ * re-runs due monthly snapshot series. Cron-only (CRON_SECRET bearer).
  *
  * @param request - The incoming HTTP request.
  * @returns The JSON response.
@@ -19,19 +15,9 @@ export async function playcountMaintenanceHandler(request: NextRequest): Promise
   if (denied) return denied;
 
   try {
-    // Return transiently-failed / orphaned rows to `pending` before draining, so
-    // tracks that 429'd in a prior run get retried instead of being stranded.
-    const reclaimed = await reclaimStaleSongstatsBackfillRows();
-    const run = await start(songstatsBackfillWorkflow);
     const monthlyStarted = await startDueMonthlySnapshots();
-
     return NextResponse.json(
-      {
-        status: "success",
-        reclaimed,
-        backfill_run_id: run.runId,
-        monthly_snapshots_started: monthlyStarted,
-      },
+      { status: "success", monthly_snapshots_started: monthlyStarted },
       { status: 202, headers: getCorsHeaders() },
     );
   } catch (error) {

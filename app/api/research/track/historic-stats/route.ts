@@ -14,10 +14,9 @@ export async function OPTIONS() {
 }
 
 /**
- * GET /api/research/track/historic-stats — Historic per-track, per-source stats
- * (daily time-series incl. cumulative `streams_total`) by `isrc` /
- * `songstats_track_id` / `spotify_track_id` / `apple_music_track_id`. Requires a
- * track identifier and `?source=`.
+ * GET /api/research/track/historic-stats — Historic per-track Spotify stats
+ * (one cumulative `streams_total` point per capture date) by `isrc`, from the
+ * measurement store. Optional `start_date` / `end_date` window.
  *
  * @param request - must include one track identifier and a `source` query param
  * @returns JSON historic per-track stats or error

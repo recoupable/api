@@ -15,8 +15,7 @@ export async function OPTIONS() {
 
 /**
  * POST /api/research/measurement-jobs — create an async ingest job.
- * `source:"current"` captures present counts; `source:"historical"` enqueues
- * Songstats deep backfill. Body: `{ scope, source, platforms? }`.
+ * `source:"current"` captures present counts. Body: `{ scope, source, platforms? }`.
  *
  * @param request - body: scope (one of catalog_id/album_ids/isrcs) + source
  * @returns 202 JSON job payload or error
