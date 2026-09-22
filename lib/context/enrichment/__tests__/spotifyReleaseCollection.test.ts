@@ -17,9 +17,11 @@ function deps() {
     fetcher: vi.fn<typeof fetch>(async () => Response.json(album)),
     rpc: vi.fn(
       async (name: string): Promise<unknown> =>
-        name === "claim_context_enrichment"
-          ? { state: "claimed", attemptId: "attempt" }
-          : { state: "saved" },
+        name === "resolve_context_spotify_release"
+          ? { releaseId: input.releaseId }
+          : name === "claim_context_enrichment"
+            ? { state: "claimed", attemptId: "attempt" }
+            : { state: "saved" },
     ),
   };
 }
@@ -53,7 +55,11 @@ it("saves raw album pages as a partial observation, never as rights evidence", a
 });
 it("reuses without a token and blocks unauthorized token acquisition", async () => {
   const d = deps();
-  d.rpc.mockResolvedValue({ state: "reused" });
+  d.rpc.mockImplementation(async name =>
+    name === "resolve_context_spotify_release"
+      ? { releaseId: input.releaseId }
+      : { state: "reused" },
+  );
   await collectContextSpotifyRelease("actor", "owner", "request", input, d);
   expect(d.getAccessToken).not.toHaveBeenCalled();
   d.authorize.mockRejectedValueOnce(new Error("denied"));
@@ -90,4 +96,33 @@ it("persists incomplete pagination with its actual provider failure status", asy
     }),
   );
   expect(d.fetcher).toHaveBeenCalledTimes(2);
+});
+
+it("rejects mismatched release IDs before fetching credentials or claiming work", async () => {
+  const d = deps();
+  d.rpc.mockResolvedValue({ releaseId: "1QzqrU2lmiW9l1mSvliVoM" });
+  await expect(collectContextSpotifyRelease("actor", "owner", "request", input, d)).rejects.toThrow(
+    "does not match",
+  );
+  expect(d.getAccessToken).not.toHaveBeenCalled();
+  expect(d.rpc.mock.calls.some(([name]) => name === "claim_context_enrichment")).toBe(false);
+});
+it("rechecks the release association before saving provider output", async () => {
+  const d = deps();
+  let resolutions = 0;
+  d.rpc.mockImplementation(async name => {
+    if (name === "resolve_context_spotify_release") {
+      resolutions++;
+      if (resolutions === 3) throw new Error("release removed from request");
+      return { releaseId: input.releaseId };
+    }
+    return name === "claim_context_enrichment"
+      ? { state: "claimed", attemptId: "attempt" }
+      : { state: "saved" };
+  });
+  await expect(collectContextSpotifyRelease("actor", "owner", "request", input, d)).rejects.toThrow(
+    "removed",
+  );
+  expect(d.fetcher).toHaveBeenCalledOnce();
+  expect(d.rpc.mock.calls.some(([name]) => name === "complete_context_enrichment")).toBe(false);
 });

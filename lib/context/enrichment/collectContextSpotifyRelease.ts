@@ -15,7 +15,7 @@ type Dependencies = Omit<Parameters<typeof runContextEnrichment>[4], "call"> & {
   getAccessToken: () => Promise<string>;
   fetcher?: typeof fetch;
 };
-/** Persist a paginated provider observation. Server caller must bind releaseId to this request's release subject. */
+/** Persist provider evidence only after resolving the selected request release identity. */
 export async function collectContextSpotifyRelease(
   actor: string,
   owner: string,
@@ -24,6 +24,21 @@ export async function collectContextSpotifyRelease(
   deps: Dependencies,
 ) {
   const args = schema.parse(input);
+  const authorizeRelease = async () => {
+    await deps.authorize(actor, owner);
+    const resolved = z
+      .object({ releaseId: z.string().regex(/^[A-Za-z0-9]{22}$/) })
+      .parse(
+        await deps.rpc("resolve_context_spotify_release", {
+          p_owner: owner,
+          p_request: requestId,
+          p_subject: args.subjectId,
+        }),
+      );
+    if (resolved.releaseId !== args.releaseId)
+      throw new Error("Spotify release does not match the context subject");
+  };
+  await authorizeRelease();
   const url = new URL(`https://api.spotify.com/v1/albums/${args.releaseId}`);
   if (args.market) url.searchParams.set("market", args.market);
   return runContextEnrichment(
@@ -44,6 +59,7 @@ export async function collectContextSpotifyRelease(
     },
     {
       ...deps,
+      authorize: authorizeRelease,
       call: async () => {
         const token = await deps.getAccessToken();
         const result = await collectSpotifyReleaseContext(
