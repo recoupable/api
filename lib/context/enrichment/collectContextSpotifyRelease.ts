@@ -26,15 +26,13 @@ export async function collectContextSpotifyRelease(
   const args = schema.parse(input);
   const authorizeRelease = async () => {
     await deps.authorize(actor, owner);
-    const resolved = z
-      .object({ releaseId: z.string().regex(/^[A-Za-z0-9]{22}$/) })
-      .parse(
-        await deps.rpc("resolve_context_spotify_release", {
-          p_owner: owner,
-          p_request: requestId,
-          p_subject: args.subjectId,
-        }),
-      );
+    const resolved = z.object({ releaseId: z.string().regex(/^[A-Za-z0-9]{22}$/) }).parse(
+      await deps.rpc("resolve_context_spotify_release", {
+        p_owner: owner,
+        p_request: requestId,
+        p_subject: args.subjectId,
+      }),
+    );
     if (resolved.releaseId !== args.releaseId)
       throw new Error("Spotify release does not match the context subject");
   };
