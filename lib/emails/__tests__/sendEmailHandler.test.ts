@@ -104,4 +104,34 @@ describe("sendEmailHandler", () => {
       expect.objectContaining({ status: "send_failed" }),
     );
   });
+  // sendEmailHandler dropped the account on the rejected branch, so every
+  // account-scoped email_send_log audit under-reported: the six rejections in
+  // the 2026-07-27 scheduled-run incident were findable only by filtering
+  // raw_body on the recipient (chat#1889 row 26).
+  it("records the account on a rejected attempt when validation resolved one", async () => {
+    mockValidateSendEmailBody.mockResolvedValue({
+      rawBody: '{"account_id":"account-123"}',
+      accountId: "account-123",
+      error: NextResponse.json({ status: "error" }, { status: 403 }),
+    });
+
+    await sendEmailHandler(createRequest());
+
+    expect(mockLogEmailAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "rejected", accountId: "account-123" }),
+    );
+  });
+
+  it("still logs a rejected attempt when no account could be resolved", async () => {
+    mockValidateSendEmailBody.mockResolvedValue({
+      rawBody: "{}",
+      error: NextResponse.json({ status: "error" }, { status: 400 }),
+    });
+
+    await sendEmailHandler(createRequest());
+
+    expect(mockLogEmailAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "rejected", accountId: undefined }),
+    );
+  });
 });
