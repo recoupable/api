@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import { lookupMusicBrainzIsrc } from "../../providers/lookupMusicBrainzIsrc";
 import { describe, expect, it, vi } from "vitest";
 import type { ContextEnrichmentResult } from "../runContextEnrichment";
@@ -161,4 +162,63 @@ describe("enrichment dependency plan", () => {
     );
     expect(fetcher).toHaveBeenCalledOnce();
   });
+});
+
+it("starts a ready dependent while an unrelated slow module is still running", async () => {
+  const d = deps();
+  const events: string[] = [];
+  let releaseSlow!: () => void;
+  const slowGate = new Promise<void>(resolve => {
+    releaseSlow = resolve;
+  });
+  d.call.mockImplementation(async (m?: ReturnType<typeof moduleFor>) => {
+    events.push(`start:${m!.key}`);
+    if (m!.key === "slow") await slowGate;
+    if (m!.key === "dependent") releaseSlow();
+    events.push(`end:${m!.key}`);
+    return { content: {}, coverage: "partial", trace: {}, costUsd: null, costStatus: "unknown" };
+  });
+  // The dependent releases the slow provider: a batch-barrier implementation deadlocks here.
+  const result = await runContextEnrichmentPlan(
+    "a",
+    "o",
+    "r",
+    [node("slow"), node("fast"), node("dependent", ["fast"])],
+    d,
+    2,
+  );
+  expect(events.indexOf("start:dependent")).toBeLessThan(events.indexOf("end:slow"));
+  expect(result.map(r => r.key)).toEqual(["slow", "fast", "dependent"]);
+  expect(result.every(r => r.status === "saved")).toBe(true);
+  if (process.env.CONTEXT_PLAN_TRACE_PATH) {
+    await writeFile(
+      process.env.CONTEXT_PLAN_TRACE_PATH,
+      JSON.stringify(
+        {
+          id: "scenario-023",
+          kind: "scenario",
+          label: "Test run 23 · dependency scheduling",
+          title: "Ready modules start without waiting for unrelated providers",
+          startedAt: result[0].startedAt,
+          environment:
+            "Real in-process coordinator; fixture authorization, providers and persistence",
+          outcome: "passed",
+          notes:
+            "Recorded fixture execution. No external provider calls or database writes. Slow and fast start together; dependent starts after fast saves, before slow ends. Not a production workflow.",
+          events,
+          steps: result.map(r => ({
+            id: r.key,
+            title: r.key,
+            status: "passed",
+            input: { dependsOn: r.key === "dependent" ? ["fast"] : [] },
+            output: r,
+            model: "none",
+            costUsd: 0,
+          })),
+        },
+        null,
+        2,
+      ),
+    );
+  }
 });

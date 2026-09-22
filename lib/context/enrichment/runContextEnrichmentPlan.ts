@@ -45,10 +45,13 @@ export async function runContextEnrichmentPlan(
   }
   await deps.authorize(actor, owner);
   const outcomes = new Map<string, Outcome>();
+  const running = new Map<string, Promise<void>>();
   while (outcomes.size < plan.length) {
-    const ready = plan.filter(n => !outcomes.has(n.key) && n.dependsOn.every(k => outcomes.has(k)));
-    await Promise.all(
-      ready.slice(0, concurrency).map(async node => {
+    const ready = plan.filter(
+      n => !outcomes.has(n.key) && !running.has(n.key) && n.dependsOn.every(k => outcomes.has(k)),
+    );
+    for (const node of ready.slice(0, concurrency - running.size)) {
+      const task = (async () => {
         const blockedBy = node.dependsOn.filter(k =>
           ["failed", "blocked"].includes(outcomes.get(k)!.status),
         );
@@ -91,8 +94,11 @@ export async function runContextEnrichmentPlan(
             elapsedMs: Date.now() - start,
           });
         }
-      }),
-    );
+      })();
+      running.set(node.key, task);
+      void task.finally(() => running.delete(node.key));
+    }
+    if (running.size) await Promise.race(running.values());
   }
   return plan.map(n => outcomes.get(n.key)!);
 }
