@@ -11,3 +11,11 @@
 - `saved` means persisted successfully, not complete coverage. Store missing data as an explicit source gap and preserve `partial`/`unknown` coverage.
 
 Provider dispatch, rate-limit provisioning, authenticated entry planning, durable hosting and live end-to-end integration remain outstanding. Current tests use fixture authorization/persistence and one fixture MusicBrainz response; they do not prove deployed behavior.
+
+## Database integration prerequisites (source audit, 2026-09-22)
+
+The current pilot `claim_context_enrichment` accepts only `catalog_metadata`, `lyrics`, `song_summary`, `artwork_branding`, and `artist_research`. New provider topics must not be relabeled to bypass that list. `complete_context_enrichment` currently sets `evidence_kind='interpretation'` for every result. Registry observations and modeled valuation estimates need explicit evidence kinds supported by a reviewed migration before production persistence.
+
+The claim also requires the subject to appear in a completed or partial metadata request. The current authenticated ingestion path only resolves Spotify tracks. Company, campaign, songwriter and standalone catalog inputs need their own validated identity/request path before their modules can use this persistence boundary.
+
+These are integration requirements, not resolved by the fixture RPC tests. Next integration work must cover topic validation, evidence kinds, missing/ambiguous source results, ownership/access checks, and real database round-trip tests before enabling provider dispatch.
