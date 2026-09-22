@@ -5,6 +5,7 @@ type Dependencies = {
   aggregate: (
     catalogId: string,
   ) => Promise<{ measuredSongCount: number; totalStreams: number } | null>;
+  songCount: (catalogId: string) => Promise<number>;
   earliestDate: (catalogId: string) => Promise<string | null>;
 };
 /** Account must come from validated auth. Reads existing measurements; does not refresh or purchase data. */
@@ -31,6 +32,10 @@ export async function collectContextCatalogValuation(
       );
       return selectCatalogMeasurementsAggregate({ catalogId: catalog });
     },
+    songCount: async (catalog: string) => {
+      const { countCatalogSongs } = await import("@/lib/supabase/catalog_songs/countCatalogSongs");
+      return (await countCatalogSongs([catalog], { strict: true }))[catalog];
+    },
     earliestDate: async (catalog: string) => {
       const { getCatalogEarliestReleaseDate } = await import(
         "@/lib/catalog/getCatalogEarliestReleaseDate"
@@ -41,15 +46,23 @@ export async function collectContextCatalogValuation(
   await dependencies.authorize(accountId, catalogId);
   const startedAt = new Date().toISOString(),
     start = Date.now();
-  const [aggregate, earliestReleaseDate] = await Promise.all([
+  const [aggregate, earliestReleaseDate, totalSongCount] = await Promise.all([
     dependencies.aggregate(catalogId),
     dependencies.earliestDate(catalogId),
+    dependencies.songCount(catalogId),
   ]);
   if (!aggregate) throw new Error("Catalog measurements unavailable");
   z.object({
     measuredSongCount: z.number().int().nonnegative(),
     totalStreams: z.number().finite().nonnegative(),
   }).parse(aggregate);
+  z.number().int().nonnegative().parse(totalSongCount);
+  if (aggregate.measuredSongCount > totalSongCount)
+    throw new Error("Measured count exceeds catalog size; recollect a consistent snapshot");
+  const ageSource =
+    earliestReleaseDate && Number.isFinite(Date.parse(earliestReleaseDate))
+      ? "release_date"
+      : "model_default";
   const modeled = aggregate.measuredSongCount
     ? computeValuationBand({ totalStreams: aggregate.totalStreams, earliestReleaseDate })
     : null;
@@ -58,6 +71,17 @@ export async function collectContextCatalogValuation(
     scope: "workspace_private",
     catalogId,
     measuredSongCount: aggregate.measuredSongCount,
+    measurementCoverage: {
+      totalSongCount,
+      measuredSongCount: aggregate.measuredSongCount,
+      unmeasuredSongCount: totalSongCount - aggregate.measuredSongCount,
+      extent: !aggregate.measuredSongCount
+        ? "unavailable"
+        : aggregate.measuredSongCount === totalSongCount
+          ? "full"
+          : "partial",
+    },
+    ageSource: modeled ? ageSource : null,
     valuation: modeled?.valuation ?? null,
     catalogAgeYears: modeled?.catalogAgeYears ?? null,
     ageFlooredToOneYear: modeled?.ageFlooredToOneYear ?? null,

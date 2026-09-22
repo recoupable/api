@@ -39,4 +39,10 @@ describe("countCatalogSongs", () => {
 
     expect(await countCatalogSongs(["cat_1"])).toEqual({ cat_1: 0 });
   });
+  it("rejects failed or absent counts in strict context mode", async () => {
+    eqMock.mockResolvedValueOnce({ count: null, error: { message: "boom" } });
+    await expect(countCatalogSongs(["cat_1"], { strict: true })).rejects.toThrow("count");
+    eqMock.mockResolvedValueOnce({ count: null, error: null });
+    await expect(countCatalogSongs(["cat_1"], { strict: true })).rejects.toThrow("count");
+  });
 });
