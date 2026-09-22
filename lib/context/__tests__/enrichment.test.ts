@@ -74,4 +74,33 @@ describe("independent paid context modules", () => {
       expect.objectContaining({ p_attempt: "attempt" }),
     );
   });
+  it("rejects response snapshots from undeclared sources before saving", async () => {
+    const rpc = vi.fn(async (name: string) =>
+      name === "claim_context_enrichment"
+        ? { state: "claimed", attemptId: "attempt" }
+        : { saved: true },
+    );
+    await expect(
+      runContextEnrichment("actor", "owner", "request", module, {
+        authorize: vi.fn(),
+        rpc,
+        call: async () => ({
+          content: { value: "fixture" },
+          coverage: "unknown",
+          trace: {},
+          costUsd: null,
+          costStatus: "unknown",
+          observedSources: [
+            {
+              url: "https://unrelated.example/source",
+              kind: "provider_metadata",
+              content: { value: "unrelated" },
+            },
+          ],
+        }),
+      }),
+    ).rejects.toThrow("not declared");
+    expect(rpc.mock.calls.map(c => c[0])).not.toContain("complete_context_enrichment");
+    expect(rpc.mock.calls.map(c => c[0])).toContain("fail_context_enrichment");
+  });
 });

@@ -6,9 +6,13 @@ import supabase from "../serverClient";
  * a missing number should never take a whole profile read down.
  *
  * @param catalogIds - Catalog ids to count songs for
+ * @param options.strict - Throw on failed/absent counts for evidence collection; legacy profile reads keep their fallback.
  * @returns Record of catalog id → song count
  */
-export async function countCatalogSongs(catalogIds: string[]): Promise<Record<string, number>> {
+export async function countCatalogSongs(
+  catalogIds: string[],
+  options: { strict?: boolean } = {},
+): Promise<Record<string, number>> {
   if (!catalogIds.length) return {};
 
   const counts = await Promise.all(
@@ -18,6 +22,8 @@ export async function countCatalogSongs(catalogIds: string[]): Promise<Record<st
         .select("*", { count: "exact", head: true })
         .eq("catalog", catalogId);
 
+      if (options.strict && (error || count === null))
+        throw new Error("Catalog song count unavailable");
       if (error) {
         console.error("Error counting catalog_songs:", error);
         return [catalogId, 0] as const;
