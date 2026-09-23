@@ -1,3 +1,4 @@
+import { ContextNodeNeedsReconciliation } from "./ContextNodeNeedsReconciliation";
 import { z } from "zod";
 const nodeSchema = z.looseObject({
   key: z.string().min(1),
@@ -81,7 +82,8 @@ export async function runPlannedContextModules(
             if (!["saved", "reused"].includes(receipt.state))
               throw new Error("Collector did not return a saved or reused receipt");
             outcome = { key: node.key, status: receipt.state as "saved" | "reused", receipt };
-          } catch {
+          } catch (error) {
+            if (error instanceof ContextNodeNeedsReconciliation) throw error;
             outcome = { key: node.key, status: "failed", failureStage };
           }
         }

@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { createContextExecution } from "@/lib/supabase/context_requests/createContextExecution";
+import { claimContextExecutionNode } from "@/lib/supabase/context_requests/claimContextExecutionNode";
+import { ContextNodeNeedsReconciliation } from "./ContextNodeNeedsReconciliation";
 import { saveContextExecutionOutcome } from "@/lib/supabase/context_requests/saveContextExecutionOutcome";
 import { runPlannedContextModules } from "./runPlannedContextModules";
 
@@ -10,6 +12,7 @@ interface Dependencies {
   authorizeNode: Scheduler["authorize"];
   dispatch: Scheduler["dispatch"];
   createExecution?: typeof createContextExecution;
+  claimNode?: typeof claimContextExecutionNode;
   saveOutcome?: (owner: string, executionId: string, outcome: Outcome) => Promise<unknown>;
 }
 
@@ -44,7 +47,21 @@ export async function runRecordedContextModules(
   );
   if (!execution.created) throw new Error("Execution replay requires reconciliation");
   return runPlannedContextModules(input.plan, {
-    authorize: deps.authorizeNode,
+    authorize: async node => {
+      await deps.authorizeNode(node);
+      let claim: Awaited<ReturnType<typeof claimContextExecutionNode>>;
+      try {
+        claim = await (deps.claimNode ?? claimContextExecutionNode)(
+          ids.owner,
+          ids.executionId,
+          node.key,
+        );
+      } catch {
+        // The database may have accepted the claim before its response was lost.
+        throw new ContextNodeNeedsReconciliation();
+      }
+      if (claim.state !== "claimed") throw new ContextNodeNeedsReconciliation();
+    },
     dispatch: deps.dispatch,
     persistOutcome: outcome =>
       (deps.saveOutcome ?? saveContextExecutionOutcome)(ids.owner, ids.executionId, outcome),

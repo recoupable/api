@@ -1,5 +1,8 @@
 import { expect, it, vi } from "vitest";
 import { runRecordedContextModules } from "../runRecordedContextModules";
+vi.mock("@/lib/supabase/context_requests/claimContextExecutionNode", () => ({
+  claimContextExecutionNode: vi.fn(),
+}));
 vi.mock("@/lib/supabase/context_requests/createContextExecution", () => ({
   createContextExecution: vi.fn(),
 }));
@@ -34,6 +37,10 @@ it("creates a fresh execution before dispatch and saves its result pointer", asy
       order.push("create execution");
       return { id: executionId, created: true };
     }),
+    claimNode: vi.fn(async () => {
+      order.push("claim node");
+      return { state: "claimed" as const, claimId: resultId };
+    }),
     dispatch: vi.fn(async () => {
       order.push("dispatch");
       return { state: "saved", resultId };
@@ -48,6 +55,7 @@ it("creates a fresh execution before dispatch and saves its result pointer", asy
     "authorize execution",
     "create execution",
     "authorize node",
+    "claim node",
     "dispatch",
     "save outcome",
   ]);
@@ -63,12 +71,34 @@ it("refuses replay before any provider dispatch", async () => {
     authorizeExecution: vi.fn(async () => undefined),
     authorizeNode: vi.fn(async () => undefined),
     createExecution: vi.fn(async () => ({ id: executionId, created: false })),
+    claimNode: vi.fn(async () => ({ state: "claimed" as const, claimId: resultId })),
     dispatch: vi.fn(async () => ({ state: "saved", resultId })),
     saveOutcome: vi.fn(async () => undefined),
   };
   await expect(runRecordedContextModules(input, deps)).rejects.toThrow(
     "Execution replay requires reconciliation",
   );
+  expect(deps.claimNode).not.toHaveBeenCalled();
   expect(deps.dispatch).not.toHaveBeenCalled();
   expect(deps.saveOutcome).not.toHaveBeenCalled();
 });
+
+it.each(["unknown", "storage_error"] as const)(
+  "stops an %s node claim without persisting a false failure",
+  async state => {
+    const deps = {
+      authorizeExecution: vi.fn(async () => undefined),
+      authorizeNode: vi.fn(async () => undefined),
+      createExecution: vi.fn(async () => ({ id: executionId, created: true })),
+      claimNode: vi.fn(async () => {
+        if (state === "storage_error") throw new Error("claim response lost");
+        return { state: "unknown" as const };
+      }),
+      dispatch: vi.fn(async () => ({ state: "saved", resultId })),
+      saveOutcome: vi.fn(async () => undefined),
+    };
+    await expect(runRecordedContextModules(input, deps)).rejects.toThrow("reconciliation");
+    expect(deps.dispatch).not.toHaveBeenCalled();
+    expect(deps.saveOutcome).not.toHaveBeenCalled();
+  },
+);
