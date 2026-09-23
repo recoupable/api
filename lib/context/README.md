@@ -59,3 +59,9 @@ API configuration: `CONTEXT_GUEST_ENABLED=true`, `CONTEXT_GUEST_ORIGINS` with th
 Guest admission is capped at 100 new workspaces/day globally, metadata only. Unclaimed records expire after seven days and are purged daily. Claimed payloads are removed after expiry while a small receipt remains for claim retries. Failed claimed jobs report failure to the account and retry through the original guest job. This is a limited pilot, not a complete anti-abuse system or production availability claim.
 
 Still outside this addition: automatic paid enrichment/credit settlement, Sites creation from saved context, signup completion email delivery, cross-device claim links, and a UI organization destination picker. Do not promise an emailed or generated experience from this metadata screen.
+
+### Read an execution trace
+
+The shared HTTP/MCP context operation accepts `{ "action": "read_execution", "execution_id": "<uuid>" }`, with optional `organization_id`. Workspace authorization resolves the owner before the service-only `read_context_execution` database call. The response is `{ execution }`, including its immutable plan, policy version and node outcomes. Reading does not dispatch providers or retry work; cancelled runs remain inspectable.
+
+Requires database PR77 (`20260923080000_context_execution_records.sql`). No automatic execution creation or inspector integration is enabled by this read operation. Evidence dispatch additionally requires the completion-scope migration from database PR76 and collection/spending policy integration.

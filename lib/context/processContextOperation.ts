@@ -8,6 +8,11 @@ import type { ContextRequestRecord } from "./runContextRequest";
 
 export const contextOperationSchema = z.discriminatedUnion("action", [
   z.strictObject({
+    action: z.literal("read_execution"),
+    execution_id: z.string().uuid(),
+    organization_id: z.string().uuid().optional(),
+  }),
+  z.strictObject({
     action: z.literal("ingest_catalog"),
     catalog_id: z.string().uuid(),
     organization_id: z.string().uuid().optional(),
@@ -43,6 +48,13 @@ export async function processContextOperation(
     accountId,
     args.organization_id,
   );
+  if (args.action === "read_execution") {
+    const execution = await deps.rpc("read_context_execution", {
+      p_owner: ownerId,
+      p_execution: args.execution_id,
+    });
+    return { execution };
+  }
   if (args.action === "ingest_catalog") {
     const request = (await deps.rpc("create_catalog_context_request", {
       p_owner: ownerId,
