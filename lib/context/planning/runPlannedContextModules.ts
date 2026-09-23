@@ -2,6 +2,7 @@ import { z } from "zod";
 const nodeSchema = z.looseObject({
   key: z.string().min(1),
   dependsOn: z.array(z.string().min(1)),
+  reasons: z.array(z.string().min(1).max(500)).max(100).default([]),
   state: z.enum(["ready_for_dispatch", "reuse_candidate", "blocked", "not_implemented"]),
 });
 type Node = z.infer<typeof nodeSchema>;
@@ -9,6 +10,8 @@ interface Outcome {
   key: string;
   status: "saved" | "reused" | "failed" | "blocked";
   blockedBy?: string[];
+  blockReason?: "plan_blocked" | "not_implemented" | "dependency_failed";
+  reasons?: string[];
   failureStage?: "authorize" | "dispatch";
   receipt?: unknown;
 }
@@ -54,7 +57,18 @@ export async function runPlannedContextModules(
         );
         let outcome: Outcome;
         if (blockedBy.length || ["blocked", "not_implemented"].includes(node.state)) {
-          outcome = { key: node.key, status: "blocked", blockedBy };
+          outcome = {
+            key: node.key,
+            status: "blocked",
+            blockedBy,
+            blockReason: blockedBy.length
+              ? "dependency_failed"
+              : node.state === "not_implemented"
+                ? "not_implemented"
+                : "plan_blocked",
+            // Planner explanations are server-owned; provider exceptions remain excluded.
+            reasons: node.reasons,
+          };
         } else {
           let failureStage: Outcome["failureStage"] = "authorize";
           try {

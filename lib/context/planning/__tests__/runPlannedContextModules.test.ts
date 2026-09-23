@@ -125,3 +125,31 @@ it("does not treat an ambiguous collector receipt as a completed dependency", as
   expect(results.map(result => result.status)).toEqual(["failed", "blocked"]);
   expect(d.dispatch).toHaveBeenCalledTimes(1);
 });
+it("persists why work was skipped without losing planner or dependency distinctions", async () => {
+  const d = deps();
+  d.dispatch.mockRejectedValue(new Error("provider secret"));
+  const results = await runPlannedContextModules(
+    [
+      { ...node("missing", [], "blocked"), reasons: ["Missing isrc"] },
+      {
+        ...node("future", [], "not_implemented"),
+        reasons: ["Context collector is not implemented"],
+      },
+      node("failed"),
+      node("dependent", ["failed"]),
+    ],
+    d,
+  );
+  expect(results[0]).toMatchObject({ blockReason: "plan_blocked", reasons: ["Missing isrc"] });
+  expect(results[1]).toMatchObject({
+    blockReason: "not_implemented",
+    reasons: ["Context collector is not implemented"],
+  });
+  expect(results[3]).toMatchObject({
+    blockReason: "dependency_failed",
+    blockedBy: ["failed"],
+    reasons: [],
+  });
+  for (const result of results) expect(d.persistOutcome).toHaveBeenCalledWith(result);
+  expect(JSON.stringify(results)).not.toContain("provider secret");
+});
