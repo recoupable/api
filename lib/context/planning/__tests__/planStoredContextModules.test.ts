@@ -102,7 +102,7 @@ it("rejects an unready or unsupported saved request", async () => {
   expect(targets).not.toHaveBeenCalled();
 });
 
-it("shows catalog valuation as blocked while catalog account evidence is unresolved", async () => {
+it("shows a verified catalog as blocked until server policy permits collection", async () => {
   rpc.mockResolvedValue({
     id: requestId,
     owner_id: owner,
@@ -113,8 +113,8 @@ it("shows catalog valuation as blocked while catalog account evidence is unresol
     {
       subjectId: recording,
       kind: "catalog",
-      identityConfirmed: false,
-      availableFields: [],
+      identityConfirmed: true,
+      availableFields: ["catalog_account_link"],
       reusableModules: [],
     },
   ]);
@@ -124,7 +124,7 @@ it("shows catalog valuation as blocked while catalog account evidence is unresol
     {
       module: "catalog_valuation",
       state: "blocked",
-      reasons: expect.arrayContaining(["Confirm the target identity before attaching evidence"]),
+      reasons: expect.arrayContaining(["Server collection policy has not permitted this module"]),
     },
   ]);
   expect(result.collectionPermitted).toBe(false);
