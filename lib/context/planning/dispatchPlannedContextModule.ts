@@ -22,7 +22,7 @@ interface Dependencies {
   rpc: (name: string, params: Record<string, unknown>) => Promise<unknown>;
   resolveRecording?: (owner: string, requestId: string, subjectId: string) => Promise<string>;
   acquireMusicBrainzPermit: () => Promise<void>;
-  getMlcToken: () => Promise<string>;
+  getMlcToken?: () => Promise<string>;
   getSpotifyToken: () => Promise<string>;
   fetcher?: typeof fetch;
 }
@@ -102,7 +102,9 @@ export async function dispatchPlannedContextModule(
           ...deps,
           getAccessToken: async () => {
             await authorizeProvider();
-            return deps.getMlcToken();
+            return deps.getMlcToken
+              ? deps.getMlcToken()
+              : (await import("../providers/getRecoupMlcAccessToken")).getRecoupMlcAccessToken();
           },
         },
       );
