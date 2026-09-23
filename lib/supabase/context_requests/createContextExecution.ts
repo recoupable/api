@@ -37,11 +37,12 @@ export async function createContextExecution(
     if (!ready.length) throw new Error("Invalid context execution dependencies");
     ready.forEach(node => visited.add(node.key));
   }
-  return callContextRpc("create_context_execution", {
+  const result = await callContextRpc("create_context_execution", {
     p_owner: owner,
     p_request: requestId,
     p_execution: executionId,
     p_policy_version: policyVersion,
     p_plan: plan,
   });
+  return z.object({ id: z.uuid(), created: z.boolean() }).parse(result);
 }

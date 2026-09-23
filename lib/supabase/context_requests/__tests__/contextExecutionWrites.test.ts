@@ -18,8 +18,10 @@ const plan = [
 beforeEach(() => vi.clearAllMocks());
 
 it("creates a server-owned execution and saves a real MLC evidence receipt", async () => {
-  rpc.mockResolvedValue({ data: { id: executionId }, error: null });
-  await createContextExecution(owner, requestId, executionId, "context-v1", plan);
+  rpc.mockResolvedValue({ data: { id: executionId, created: true }, error: null });
+  await expect(
+    createContextExecution(owner, requestId, executionId, "context-v1", plan),
+  ).resolves.toMatchObject({ created: true });
   await saveContextExecutionOutcome(owner, executionId, {
     key,
     status: "saved",
@@ -38,6 +40,13 @@ it("creates a server-owned execution and saves a real MLC evidence receipt", asy
     p_node_key: key,
     p_outcome: { key, status: "saved", receipt: { state: "saved", resultId } },
   });
+});
+
+it("returns an explicit replay signal instead of dispatching an existing execution", async () => {
+  rpc.mockResolvedValue({ data: { id: executionId, created: false }, error: null });
+  await expect(
+    createContextExecution(owner, requestId, executionId, "context-v1", plan),
+  ).resolves.toMatchObject({ created: false });
 });
 
 it("rejects false success before calling storage", async () => {
