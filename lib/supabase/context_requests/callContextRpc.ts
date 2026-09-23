@@ -20,6 +20,7 @@ export async function callContextRpc(
     "read_context_request",
     "read_context_execution",
     "create_context_execution",
+    "claim_context_execution_node",
     "save_context_execution_outcome",
     "claim_context_request",
     "commit_spotify_context",
