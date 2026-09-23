@@ -9,6 +9,7 @@ const node = (module = "musicbrainz", state = "ready_for_dispatch") => ({
 });
 function deps() {
   return {
+    collectionVersion: "v1",
     authorize: vi.fn(async () => undefined),
     authorizeProvider: vi.fn(async () => undefined),
     loadInput: vi.fn(

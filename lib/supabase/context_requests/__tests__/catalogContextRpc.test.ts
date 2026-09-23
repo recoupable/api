@@ -42,3 +42,11 @@ it("continues rejecting operations outside the context allowlist", async () => {
   );
   expect(rpc).not.toHaveBeenCalled();
 });
+it("allows the scoped release identity lookup without widening to arbitrary operations", async () => {
+  rpc.mockResolvedValue({ data: { releaseId: "3vX9jU6Ix8t7XsAWLoZs10" }, error: null });
+  const params = { p_owner: account, p_request: catalog, p_subject: catalog };
+  await expect(callContextRpc("resolve_context_spotify_release", params)).resolves.toEqual({
+    releaseId: "3vX9jU6Ix8t7XsAWLoZs10",
+  });
+  expect(rpc).toHaveBeenCalledWith("resolve_context_spotify_release", params);
+});

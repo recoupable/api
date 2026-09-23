@@ -17,7 +17,8 @@ interface Dependencies {
     requestId: string,
     module: Node["module"],
   ) => Promise<unknown>;
-  loadInput: (owner: string, requestId: string, node: Node) => Promise<unknown>;
+  collectionVersion: string;
+  loadInput?: (owner: string, requestId: string, node: Node) => Promise<unknown>;
   rpc: (name: string, params: Record<string, unknown>) => Promise<unknown>;
   resolveRecording?: (owner: string, requestId: string, subjectId: string) => Promise<string>;
   acquireMusicBrainzPermit: () => Promise<void>;
@@ -37,7 +38,12 @@ export async function dispatchPlannedContextModule(
   if (node.key !== `${node.subjectId}:${node.module}`)
     throw new Error("Module key does not match target");
   await deps.authorize(actor, owner);
-  const values = await deps.loadInput(owner, requestId, node);
+  const version = z.string().min(1).max(100).parse(deps.collectionVersion);
+  const values = deps.loadInput
+    ? await deps.loadInput(owner, requestId, node)
+    : await (
+        await import("@/lib/supabase/context_requests/getContextModuleInput")
+      ).getContextModuleInput(owner, requestId, node, version);
   const authorizeProvider = async () => {
     await deps.authorize(actor, owner);
     await deps.authorizeProvider(actor, owner, requestId, node.module);
