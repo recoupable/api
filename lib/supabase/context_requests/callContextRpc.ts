@@ -19,6 +19,8 @@ export async function callContextRpc(
     "create_catalog_context_request",
     "read_context_request",
     "read_context_execution",
+    "create_context_execution",
+    "save_context_execution_outcome",
     "claim_context_request",
     "commit_spotify_context",
     "fail_context_request",
