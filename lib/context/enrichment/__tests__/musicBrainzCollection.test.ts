@@ -8,6 +8,7 @@ const input = {
 function dependencies() {
   return {
     authorize: vi.fn(async () => undefined),
+    resolveRecording: vi.fn(async () => "USAT22103065"),
     rpc: vi.fn(
       async (name: string): Promise<unknown> =>
         name === "claim_context_enrichment"
@@ -93,4 +94,28 @@ it("preserves ambiguous candidates as partial and prevents calls when access is 
       }),
     }),
   );
+});
+
+it("rejects a mismatched recording before claim, reuse or provider lookup", async () => {
+  const d = dependencies();
+  d.resolveRecording.mockResolvedValue("USAT22199999");
+  d.rpc.mockResolvedValue({ state: "reused" });
+  await expect(collectContextMusicBrainz("actor", "owner", "request", input, d)).rejects.toThrow(
+    "ISRC does not match",
+  );
+  expect(d.rpc).not.toHaveBeenCalled();
+  expect(d.fetcher).not.toHaveBeenCalled();
+  expect(d.acquirePermit).not.toHaveBeenCalled();
+});
+it("rechecks recording access after lookup and refuses to save detached evidence", async () => {
+  const d = dependencies();
+  d.fetcher.mockImplementation(async () => {
+    d.resolveRecording.mockRejectedValue(new Error("Recording no longer attached"));
+    return new Response(null, { status: 404 });
+  });
+  await expect(collectContextMusicBrainz("actor", "owner", "request", input, d)).rejects.toThrow(
+    "Recording no longer attached",
+  );
+  expect(d.rpc.mock.calls.some(([name]) => name === "complete_context_enrichment")).toBe(false);
+  expect(d.rpc).toHaveBeenCalledWith("fail_context_enrichment", expect.anything());
 });
