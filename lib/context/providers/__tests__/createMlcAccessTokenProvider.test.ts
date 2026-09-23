@@ -43,3 +43,9 @@ it("rejects malformed authentication bodies without exposing them", async () => 
   const token = createMlcAccessTokenProvider({ username: "user", password: "password", fetcher });
   await expect(token()).rejects.toThrow("MLC authentication returned an invalid response");
 });
+
+it("rejects an access token without the ID token used by MLC data routes", async () => {
+  const fetcher = vi.fn(async () => Response.json({ accessToken: "wrong-token" }));
+  const token = createMlcAccessTokenProvider({ username: "user", password: "password", fetcher });
+  await expect(token()).rejects.toThrow("MLC authentication returned no ID token");
+});

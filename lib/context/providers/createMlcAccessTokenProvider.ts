@@ -2,7 +2,6 @@ import { z } from "zod";
 
 const responseSchema = z.object({
   idToken: z.string().min(1).optional(),
-  accessToken: z.string().min(1).optional(),
   expiresIn: z.union([z.number(), z.string()]).optional(),
 });
 
@@ -41,8 +40,8 @@ export function createMlcAccessTokenProvider({
         throw new Error("MLC authentication returned an invalid response");
       }
       const parsed = responseSchema.safeParse(body);
-      const token = parsed.success && (parsed.data.idToken ?? parsed.data.accessToken);
-      if (!token) throw new Error("MLC authentication returned no token");
+      const token = parsed.success && parsed.data.idToken;
+      if (!token) throw new Error("MLC authentication returned no ID token");
       const expires = Number(parsed.data.expiresIn ?? 3600);
       const ttl = Number.isFinite(expires) && expires > 0 ? expires : 3600;
       cached = { token, expiresAt: now() + Math.max(0, ttl - 60) * 1000 };
