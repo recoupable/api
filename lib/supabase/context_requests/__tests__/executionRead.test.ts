@@ -17,7 +17,15 @@ beforeEach(() => {
   authorize.mockResolvedValue({ accountId: actor, ownerId: org, organizationId: org });
 });
 it("reads saved executions through the shared authorized operation and real RPC adapter", async () => {
-  const data = { id: execution, owner_id: org, plan: [], outcomes: [] };
+  const data = {
+    id: execution,
+    owner_id: org,
+    plan: [],
+    outcomes: [],
+    claims: [
+      { nodeKey: `${actor}:mlc_recording`, state: "unknown", claimedAt: "2026-09-23T21:00:00Z" },
+    ],
+  };
   rpc.mockResolvedValue({ data, error: null });
   await expect(run()).resolves.toEqual({ execution: data });
   expect(authorize).toHaveBeenCalledWith(actor, org);
