@@ -58,9 +58,24 @@ describe("captureLead", () => {
     expect(text).toContain("https://app.attio.com/recoup/person/rec-1/overview");
   });
 
-  it("creates no note for a plain subscribe", async () => {
-    await captureLead({ kind: "subscribe", email: "a@b.com", source: "blog-cta" });
-    expect(createNote).not.toHaveBeenCalled();
+  it("attaches signup attribution without replacing the person's acquisition source", async () => {
+    await captureLead({
+      kind: "subscribe",
+      email: "a@b.com",
+      source: "/blog",
+      utm_source: "linkedin",
+      utm_medium: "social",
+      utm_campaign: "music-ops",
+    });
+    expect(assertPersonByEmail).toHaveBeenCalledWith({
+      email_addresses: [{ email_address: "a@b.com" }],
+    });
+    expect(createNote).toHaveBeenCalledWith({
+      parentObject: "people",
+      parentRecordId: "rec-1",
+      title: "Website Signup",
+      content: "Source: /blog\nUTM source: linkedin\nUTM medium: social\nUTM campaign: music-ops",
+    });
     expect(sendSalesNotification).toHaveBeenCalled();
   });
 

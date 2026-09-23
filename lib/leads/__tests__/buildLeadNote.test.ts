@@ -64,7 +64,31 @@ describe("buildLeadNote", () => {
     expect(note?.content).toContain("yearlySavings: 93012");
   });
 
-  it("returns null for a plain subscribe — a newsletter signup needs no note", () => {
-    expect(buildLeadNote({ kind: "subscribe", email: "a@b.com", source: "blog-cta" })).toBeNull();
+  it("retains the source of a plain signup without inventing attribution", () => {
+    const note = buildLeadNote({ kind: "subscribe", email: "a@b.com", source: "/blog" });
+    expect(note).toEqual({ title: "Website Signup", content: "Source: /blog" });
+  });
+
+  it.each([
+    { source: "/podcast" },
+    { source: "/audit", audit_score: 0, audit_answers: { role: "label-owner" } },
+    { source: "/roi", roi_inputs: { artists: 15 }, roi_results: { yearlySavings: 100 } },
+  ])("preserves campaign attribution on $source submissions", payload => {
+    const note = buildLeadNote({
+      kind: "subscribe",
+      email: "a@b.com",
+      company: "Example Music",
+      ...payload,
+      utm_source: "linkedin",
+      utm_medium: "social",
+      utm_campaign: "music-ops",
+      source_post_slug: "catalog-reporting",
+    });
+    expect(note?.content).toContain(`Source: ${payload.source}`);
+    expect(note?.content).toContain("Company: Example Music");
+    expect(note?.content).toContain("UTM source: linkedin");
+    expect(note?.content).toContain("UTM medium: social");
+    expect(note?.content).toContain("UTM campaign: music-ops");
+    expect(note?.content).toContain("Source post: catalog-reporting");
   });
 });
