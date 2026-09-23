@@ -13,6 +13,11 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
     organization_id: z.string().uuid().optional(),
   }),
   z.strictObject({
+    action: z.literal("list_executions"),
+    request_id: z.string().uuid(),
+    organization_id: z.string().uuid().optional(),
+  }),
+  z.strictObject({
     action: z.literal("read_execution"),
     execution_id: z.string().uuid(),
     organization_id: z.string().uuid().optional(),
@@ -56,6 +61,12 @@ export async function processContextOperation(
   if (args.action === "plan") {
     const { planStoredContextModules } = await import("./planning/planStoredContextModules");
     return planStoredContextModules(accountId, ownerId, args.request_id);
+  }
+  if (args.action === "list_executions") {
+    const { listContextRequestExecutions } = await import(
+      "@/lib/supabase/context_requests/listContextRequestExecutions"
+    );
+    return { executions: await listContextRequestExecutions(ownerId, args.request_id) };
   }
   if (args.action === "read_execution") {
     const execution = await deps.rpc("read_context_execution", {
