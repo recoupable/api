@@ -8,6 +8,11 @@ import type { ContextRequestRecord } from "./runContextRequest";
 
 export const contextOperationSchema = z.discriminatedUnion("action", [
   z.strictObject({
+    action: z.literal("plan"),
+    request_id: z.string().uuid(),
+    organization_id: z.string().uuid().optional(),
+  }),
+  z.strictObject({
     action: z.literal("read_execution"),
     execution_id: z.string().uuid(),
     organization_id: z.string().uuid().optional(),
@@ -48,6 +53,10 @@ export async function processContextOperation(
     accountId,
     args.organization_id,
   );
+  if (args.action === "plan") {
+    const { planStoredContextModules } = await import("./planning/planStoredContextModules");
+    return planStoredContextModules(accountId, ownerId, args.request_id);
+  }
   if (args.action === "read_execution") {
     const execution = await deps.rpc("read_context_execution", {
       p_owner: ownerId,

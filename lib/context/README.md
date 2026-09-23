@@ -8,6 +8,7 @@ Part of recoupable/app#2116. Spotify metadata now flows through shared authentic
 
 - `ingest`: provide `url`, client-generated `idempotency_key`, optional `organization_id` and topics. Returns a saved request with HTTP 202. Retry the same input/key after dispatch failure. A changed input/key pair is rejected.
 - `read`: provide `request_id` and the same optional organization scope. Returns progress, subject IDs, gaps and error state.
+- `plan`: provide a saved `request_id` and optional organization scope. Returns a read-only module plan for confirmed Spotify track or catalog subjects, with blocked reasons; it never grants provider collection or spends credits. Requires database PR77 to be deployed before use.
 - `brief`: provide `request_id`, `purpose` (`creative_direction` or `playlist_pitch`), optional organization scope and `max_characters` (1000–32000). Returns attributed current documents, result/version references, missing topics and readiness. This selects evidence; it does not write a creative concept or playlist pitch.
 
 Account identity always comes from authentication. Both transports use the same authorization. Background execution rechecks access before acceptance. Private context never becomes public Site content automatically.
