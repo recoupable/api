@@ -157,6 +157,36 @@ it("shows a submitted release locator as unverified and blocked", async () => {
   expect(result.collectionPermitted).toBe(false);
 });
 
+it("keeps a submitted songwriter name unresolved and blocks research", async () => {
+  rpc.mockImplementation(async name =>
+    name === "read_context_request"
+      ? { id: requestId, owner_id: owner, status: "partial", input: { kind: "songwriter" } }
+      : {
+          subjectId: artist,
+          kind: "songwriter",
+          identityConfirmed: false,
+          availableFields: ["submitted_name"],
+          reusableModules: [],
+        },
+  );
+  const result = await planStoredContextModules(actor, owner, requestId);
+  expect(rpc).toHaveBeenCalledWith("list_context_songwriter_request_target", {
+    p_owner: owner,
+    p_request: requestId,
+  });
+  expect(targets).not.toHaveBeenCalled();
+  expect(result.entry).toBe("songwriter");
+  expect(result.plan).toMatchObject([
+    {
+      module: "songwriter_research",
+      state: "not_implemented",
+      targetKind: "songwriter",
+      executionStarted: false,
+    },
+  ]);
+  expect(result.collectionPermitted).toBe(false);
+});
+
 it("shows a verified catalog as blocked until server policy permits collection", async () => {
   rpc.mockResolvedValue({
     id: requestId,

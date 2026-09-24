@@ -87,6 +87,12 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
     idempotency_key: contextIngestSchema.shape.idempotency_key,
   }),
   z.strictObject({
+    action: z.literal("ingest_songwriter_name"),
+    name: z.string().trim().min(2).max(200),
+    organization_id: z.uuid().optional(),
+    idempotency_key: contextIngestSchema.shape.idempotency_key,
+  }),
+  z.strictObject({
     action: z.literal("ingest_release"),
     url: z.url().max(2048),
     organization_id: z.uuid().optional(),
@@ -277,6 +283,17 @@ export async function processContextOperation(
       p_artist: args.artist_id,
       p_key: args.idempotency_key,
     })) as Omit<ContextRequestRecord, "input"> & { input: { kind: "artist"; artistId: string } };
+    return { request };
+  }
+  if (args.action === "ingest_songwriter_name") {
+    const request = (await deps.rpc("create_context_songwriter_name_request", {
+      p_owner: ownerId,
+      p_actor: accountId,
+      p_name: args.name,
+      p_key: args.idempotency_key,
+    })) as Omit<ContextRequestRecord, "input"> & {
+      input: { kind: "songwriter"; name: string; identityConfirmed: false };
+    };
     return { request };
   }
   if (args.action === "ingest_release") {

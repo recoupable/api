@@ -51,6 +51,7 @@ const schema = z.strictObject({
             "mlc_work_code",
             "artist_account_link",
             "catalog_account_link",
+            "submitted_name",
           ]),
         ),
         reusableModules: z.array(moduleId),
