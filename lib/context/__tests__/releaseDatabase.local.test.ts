@@ -11,7 +11,7 @@ vi.mock("@/lib/supabase/context_requests/callContextRpc", () => ({ callContextRp
 // Explicit opt-in against a disposable PostgreSQL fixture with DB PR77 staged.
 // The whole test shares one transaction and rolls it back, including failures.
 it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
-  "saves an album locator through the authenticated API operation and real SQL",
+  "saves release and track evidence through authenticated operations and real SQL",
   async () => {
     const child = spawn(
       "/opt/homebrew/opt/postgresql@17/bin/psql",
@@ -324,6 +324,86 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
         ),
       );
       expect(trackEvidence).toEqual({ status: "saved", observed: 1, missing: 1, sourceCount: 3 });
+
+      const partialAlbum = "7vX9jU6Ix8t7XsAWLoZs10";
+      const partialEntry = await processContextOperation(
+        owner,
+        {
+          action: "ingest_release",
+          url: `https://open.spotify.com/album/${partialAlbum}`,
+          idempotency_key: `${key}-partial-track-lookup`,
+        },
+        deps,
+      );
+      if (!("request" in partialEntry)) throw new Error("Missing partial release request");
+      const partialTarget = (await rpc("list_context_release_request_target", {
+        p_owner: owner,
+        p_request: partialEntry.request.id,
+      })) as { subjectId: string };
+      const partialAlbumRun = await runReleaseVerification(owner, owner, partialEntry.request.id, {
+        authorize: deps.authorize,
+        rpc,
+        record,
+        getSpotifyToken: async () => "fixture-token",
+        fetcher: async () =>
+          Response.json({
+            id: partialAlbum,
+            name: "Partial fixture release",
+            tracks: {
+              items: [
+                { id: "5vX9jU6Ix8t7XsAWLoZs10", type: "track", disc_number: 1, track_number: 1 },
+                { id: "6vX9jU6Ix8t7XsAWLoZs10", type: "track", disc_number: 1, track_number: 2 },
+              ],
+              offset: 0,
+              total: 2,
+              next: null,
+            },
+          }),
+      });
+      expect(partialAlbumRun.outcomes).toMatchObject([{ status: "saved" }]);
+      const partialTrackFetcher = vi.fn<typeof fetch>(async input =>
+        String(input).endsWith("5vX9jU6Ix8t7XsAWLoZs10")
+          ? new Response(null, { status: 429 })
+          : Response.json({
+              id: "6vX9jU6Ix8t7XsAWLoZs10",
+              external_ids: { isrc: "USABC2600002" },
+            }),
+      );
+      const partialTrackVerification = () =>
+        runRecordedReleaseTrackIsrcs(
+          owner,
+          owner,
+          partialEntry.request.id,
+          partialTarget.subjectId,
+          {
+            authorize: deps.authorize,
+            rpc,
+            record,
+            getSpotifyToken: async () => "fixture-token",
+            fetcher: partialTrackFetcher,
+          },
+        );
+      const partialTrackRun = await partialTrackVerification();
+      expect(partialTrackRun.outcomes).toMatchObject([{ status: "saved" }]);
+      const partialEvidence = JSON.parse(
+        await query(
+          `select jsonb_build_object('coverage',r.normalized_response->>'coverage',` +
+            `'observed',r.normalized_response->'observedIsrcCount',` +
+            `'failed',r.normalized_response->'failedLookupCount',` +
+            `'sourceCount',(select count(*) from public.context_result_sources rs where rs.result_id=r.id))` +
+            ` from public.context_execution_outcomes o` +
+            ` join public.context_results r on r.id=(o.outcome->'receipt'->>'resultId')::uuid` +
+            ` where o.execution_id=${quote(partialTrackRun.executionId)} and o.owner_id=${quote(owner)};`,
+        ),
+      );
+      expect(partialEvidence).toEqual({
+        coverage: "partial",
+        observed: 1,
+        failed: 1,
+        sourceCount: 2,
+      });
+      await expect(partialTrackVerification()).rejects.toThrow("reconciliation");
+      expect(partialTrackFetcher).toHaveBeenCalledTimes(2);
 
       const failedAlbum = "4vX9jU6Ix8t7XsAWLoZs10";
       const failedInput = {
