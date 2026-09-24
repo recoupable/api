@@ -35,6 +35,12 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
     limit: z.number().int().min(1).max(100).default(100),
   }),
   z.strictObject({
+    action: z.literal("read_release_track_observations"),
+    request_id: z.uuid(),
+    subject_id: z.uuid(),
+    organization_id: z.uuid().optional(),
+  }),
+  z.strictObject({
     action: z.literal("verify_release_tracks"),
     request_id: z.uuid(),
     subject_id: z.uuid(),
@@ -155,6 +161,19 @@ export async function processContextOperation(
         p_after_slot: args.after_slot,
         p_limit: args.limit,
       }),
+    };
+  }
+  if (args.action === "read_release_track_observations") {
+    const { readReleaseTrackObservations } = await import(
+      "./planning/readReleaseTrackObservations"
+    );
+    return {
+      observation: await readReleaseTrackObservations(
+        ownerId,
+        args.request_id,
+        args.subject_id,
+        deps.rpc,
+      ),
     };
   }
   if (args.action === "verify_release_tracks") {

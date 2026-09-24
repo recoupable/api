@@ -126,3 +126,26 @@ it("does not queue track lookups while the server policy is off", async () => {
   expect(rpc).not.toHaveBeenCalled();
   expect(dispatchReleaseTracks).not.toHaveBeenCalled();
 });
+
+it("checks workspace access before reading saved track observations", async () => {
+  const rpc = vi.fn();
+  await expect(
+    processContextOperation(
+      actor,
+      {
+        action: "read_release_track_observations",
+        request_id: requestId,
+        subject_id: subjectId,
+        organization_id: owner,
+      },
+      {
+        authorize: async () => {
+          throw new Error("No workspace access");
+        },
+        rpc,
+        dispatch: vi.fn(),
+      },
+    ),
+  ).rejects.toThrow("No workspace access");
+  expect(rpc).not.toHaveBeenCalled();
+});
