@@ -94,12 +94,38 @@ it("rejects an unready or unsupported saved request", async () => {
     id: requestId,
     owner_id: owner,
     status: "completed",
-    input: { kind: "artist" },
+    input: { kind: "company" },
   });
   await expect(planStoredContextModules(actor, owner, requestId)).rejects.toThrow(
     "Unsupported saved context entry",
   );
   expect(targets).not.toHaveBeenCalled();
+});
+
+it("plans a verified existing artist without starting providers", async () => {
+  rpc.mockImplementation(async name =>
+    name === "read_context_request"
+      ? { id: requestId, owner_id: owner, status: "partial", input: { kind: "artist" } }
+      : {
+          subjectId: artist,
+          kind: "artist",
+          identityConfirmed: true,
+          availableFields: ["artist_account_link"],
+          reusableModules: [],
+        },
+  );
+  const result = await planStoredContextModules(actor, owner, requestId);
+  expect(rpc).toHaveBeenCalledWith("list_context_artist_request_target", {
+    p_owner: owner,
+    p_request: requestId,
+  });
+  expect(targets).not.toHaveBeenCalled();
+  expect(result.entry).toBe("artist");
+  expect(result.plan.map(node => [node.module, node.state])).toEqual([
+    ["songstats", "blocked"],
+    ["saved_socials", "blocked"],
+  ]);
+  expect(result.collectionPermitted).toBe(false);
 });
 
 it("shows a verified catalog as blocked until server policy permits collection", async () => {

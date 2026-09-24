@@ -53,6 +53,12 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
     organization_id: z.string().uuid().optional(),
     idempotency_key: contextIngestSchema.shape.idempotency_key,
   }),
+  z.strictObject({
+    action: z.literal("ingest_artist"),
+    artist_id: z.uuid(),
+    organization_id: z.uuid().optional(),
+    idempotency_key: contextIngestSchema.shape.idempotency_key,
+  }),
   contextIngestSchema.extend({ action: z.literal("ingest") }),
   z.strictObject({
     action: z.literal("read"),
@@ -161,6 +167,15 @@ export async function processContextOperation(
       p_catalog: args.catalog_id,
       p_key: args.idempotency_key,
     })) as Omit<ContextRequestRecord, "input"> & { input: { kind: "catalog"; catalogId: string } };
+    return { request };
+  }
+  if (args.action === "ingest_artist") {
+    const request = (await deps.rpc("create_context_artist_request", {
+      p_owner: ownerId,
+      p_actor: accountId,
+      p_artist: args.artist_id,
+      p_key: args.idempotency_key,
+    })) as Omit<ContextRequestRecord, "input"> & { input: { kind: "artist"; artistId: string } };
     return { request };
   }
   if (args.action === "ingest") {
