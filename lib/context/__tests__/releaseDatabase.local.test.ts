@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { expect, it, vi } from "vitest";
-import { collectContextSpotifyRelease } from "../enrichment/collectContextSpotifyRelease";
+import { runRecordedContextModules } from "../planning/runRecordedContextModules";
+import { runReleaseVerification } from "../planning/runReleaseVerification";
 import { processContextOperation } from "../processContextOperation";
 vi.mock("../authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));
+vi.mock("@/lib/supabase/context_requests/callContextRpc", () => ({ callContextRpc: vi.fn() }));
 
 // Explicit opt-in against a disposable PostgreSQL fixture with DB PR77 staged.
 // The whole test shares one transaction and rolls it back, including failures.
@@ -72,12 +74,15 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
             "claim_context_enrichment",
             "complete_context_enrichment",
             "fail_context_enrichment",
+            "create_context_execution",
+            "claim_context_execution_node",
+            "save_context_execution_outcome",
           ].includes(name)
         )
           throw new Error("Unexpected fixture RPC");
         const params = Object.entries(args)
           .map(([field, value]) => {
-            if (!/^p_[a-z]+$/.test(field)) throw new Error("Unexpected RPC parameter");
+            if (!/^p_[a-z_]+$/.test(field)) throw new Error("Unexpected RPC parameter");
             return `${field} => ${quote(value)}`;
           })
           .join(",");
@@ -136,14 +141,62 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
           tracks: { items: [], offset: 0, total: 0, next: null },
         }),
       );
-      const receipt = await collectContextSpotifyRelease(
+      vi.stubEnv("CONTEXT_SPOTIFY_RELEASE_VERIFY_ENABLED", "true");
+      const record: typeof runRecordedContextModules = (execution, callbacks) =>
+        runRecordedContextModules(execution, {
+          ...callbacks,
+          createExecution: async (
+            selectedOwner,
+            selectedRequest,
+            executionId,
+            policyVersion,
+            plan,
+          ) =>
+            (await rpc("create_context_execution", {
+              p_owner: selectedOwner,
+              p_request: selectedRequest,
+              p_execution: executionId,
+              p_policy_version: policyVersion,
+              p_plan: plan,
+            })) as { id: string; created: boolean },
+          claimNode: async (selectedOwner, executionId, nodeKey) =>
+            (await rpc("claim_context_execution_node", {
+              p_owner: selectedOwner,
+              p_execution: executionId,
+              p_node_key: nodeKey,
+            })) as { state: "claimed"; claimId: string },
+          saveOutcome: (selectedOwner, executionId, outcome) =>
+            rpc("save_context_execution_outcome", {
+              p_owner: selectedOwner,
+              p_execution: executionId,
+              p_node_key: outcome.key,
+              p_outcome: outcome,
+            }),
+        });
+      const verification = () =>
+        runReleaseVerification(owner, owner, first.request.id, {
+          authorize: deps.authorize,
+          rpc,
+          record,
+          getSpotifyToken: async () => "fixture-token",
+          fetcher,
+        });
+      let run: Awaited<ReturnType<typeof runReleaseVerification>> | undefined;
+      const queued = await processContextOperation(
         owner,
-        owner,
-        first.request.id,
-        { subjectId: target.subjectId, releaseId: album, collectionVersion: "local-fixture-v1" },
-        { authorize: deps.authorize, rpc, getAccessToken: async () => "fixture-token", fetcher },
+        { action: "verify_release", request_id: first.request.id },
+        {
+          ...deps,
+          dispatchRelease: async () => {
+            run = await verification();
+          },
+        },
       );
-      expect(receipt).toMatchObject({ state: "saved" });
+      expect(queued).toEqual({ request_id: first.request.id, verificationQueued: true });
+      if (!run) throw new Error("Release verification did not execute in the fixture");
+      expect(run.outcomes).toMatchObject([{ status: "saved" }]);
+      expect(fetcher).toHaveBeenCalledOnce();
+      await expect(verification()).rejects.toThrow("reconciliation");
       expect(fetcher).toHaveBeenCalledOnce();
       const evidence = JSON.parse(
         await query(
@@ -155,7 +208,16 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
         ),
       );
       expect(evidence).toMatchObject({ kind: "observation", album, sourceCount: 1 });
+      const recorded = JSON.parse(
+        await query(
+          `select jsonb_build_object('status',outcome->>'status','resultId',outcome->'receipt'->>'resultId')` +
+            ` from public.context_execution_outcomes where execution_id=${quote(run.executionId)}` +
+            ` and owner_id=${quote(owner)} and node_key=${quote(`${target.subjectId}:spotify_release`)};`,
+        ),
+      );
+      expect(recorded).toMatchObject({ status: "saved", resultId: expect.any(String) });
     } finally {
+      vi.unstubAllEnvs();
       if (child.exitCode === null) {
         await query("rollback;");
         child.stdin.end("\\q\n");

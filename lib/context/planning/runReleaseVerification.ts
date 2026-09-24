@@ -21,6 +21,7 @@ type Dependencies = {
   record?: typeof runRecordedContextModules;
   dispatch?: typeof dispatchPlannedContextModule;
   getSpotifyToken?: () => Promise<string>;
+  fetcher?: typeof fetch;
 };
 
 /** Explicit, server-gated collection of one submitted Spotify album locator. */
@@ -95,10 +96,30 @@ export async function runReleaseVerification(
           },
           collectionVersion: policyVersion,
           rpc,
+          loadInput: async (selectedOwner, selectedRequest, node) => {
+            if (
+              selectedOwner !== owner ||
+              selectedRequest !== requestId ||
+              node.module !== "spotify_release" ||
+              node.subjectId !== target.subjectId
+            )
+              throw new Error("Unsupported release verification input");
+            const resolved = z
+              .strictObject({ releaseId: z.string().regex(/^[A-Za-z0-9]{22}$/) })
+              .parse(
+                await rpc("resolve_context_spotify_release", {
+                  p_owner: owner,
+                  p_request: requestId,
+                  p_subject: target.subjectId,
+                }),
+              );
+            return { releaseId: resolved.releaseId, collectionVersion: policyVersion };
+          },
           acquireMusicBrainzPermit: async () => {
             throw new Error("MusicBrainz is outside release verification");
           },
           getSpotifyToken,
+          fetcher: deps.fetcher,
         }),
     },
   );
