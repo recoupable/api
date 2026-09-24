@@ -65,7 +65,9 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
         `begin;create temporary table rpc_output(value jsonb) on commit drop;` +
           `insert into public.accounts(id,name) values(${quote(owner)},'Owner'),(${quote(outsider)},'Other workspace');`,
       );
+      const rpcCalls: string[] = [];
       const rpc = async (name: string, args: Record<string, unknown>) => {
+        rpcCalls.push(name);
         if (
           ![
             "create_context_release_request",
@@ -86,6 +88,14 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
             return `${field} => ${quote(value)}`;
           })
           .join(",");
+        // A direct statement keeps this status change visible inside the shared fixture transaction.
+        if (name === "fail_context_enrichment") {
+          const value = JSON.parse(
+            await query(`select to_jsonb(public.fail_context_enrichment(${params}));`),
+          );
+          expect(value).toBe(true);
+          return value;
+        }
         const raw = await query(
           `do $rpc$ begin begin insert into rpc_output select public.${name}(${params});` +
             `exception when others then insert into rpc_output values(jsonb_build_object('testError',SQLERRM));` +
@@ -216,6 +226,43 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
         ),
       );
       expect(recorded).toMatchObject({ status: "saved", resultId: expect.any(String) });
+
+      const failedAlbum = "4vX9jU6Ix8t7XsAWLoZs10";
+      const failedInput = {
+        action: "ingest_release",
+        url: `https://open.spotify.com/album/${failedAlbum}`,
+        idempotency_key: `${key}-provider-failure`,
+      };
+      const failedEntry = await processContextOperation(owner, failedInput, deps);
+      if (!("request" in failedEntry)) throw new Error("Missing failed release request");
+      const failedFetcher = vi.fn<typeof fetch>(async () => {
+        throw new Error("Fixture provider connection ended without a response");
+      });
+      const failedVerification = () =>
+        runReleaseVerification(owner, owner, failedEntry.request.id, {
+          authorize: deps.authorize,
+          rpc,
+          record,
+          getSpotifyToken: async () => "fixture-token",
+          fetcher: failedFetcher,
+        });
+      const failedRun = await failedVerification();
+      expect(failedRun.outcomes).toMatchObject([{ status: "failed", failureStage: "dispatch" }]);
+      expect(rpcCalls).toContain("fail_context_enrichment");
+      expect(failedFetcher).toHaveBeenCalledOnce();
+      await expect(failedVerification()).rejects.toThrow("reconciliation");
+      expect(failedFetcher).toHaveBeenCalledOnce();
+      const failure = JSON.parse(
+        await query(
+          `select jsonb_build_object('outcome',o.outcome->>'status','attempt',a.status,` +
+            `'evidenceCount',(select count(*) from public.context_results r where r.attempt_id=a.id))` +
+            ` from public.context_execution_outcomes o` +
+            ` join public.context_executions e on e.id=o.execution_id` +
+            ` join public.context_attempts a on a.request_id=e.request_id and a.provider='spotify'` +
+            ` where o.execution_id=${quote(failedRun.executionId)} and o.owner_id=${quote(owner)} limit 1;`,
+        ),
+      );
+      expect(failure).toMatchObject({ outcome: "failed", attempt: "unknown", evidenceCount: 0 });
     } finally {
       vi.unstubAllEnvs();
       if (child.exitCode === null) {
