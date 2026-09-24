@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { expect, it, vi } from "vitest";
 import { runRecordedContextModules } from "../planning/runRecordedContextModules";
+import { runRecordedReleaseTrackIsrcs } from "../planning/runRecordedReleaseTrackIsrcs";
 import { runReleaseVerification } from "../planning/runReleaseVerification";
 import { processContextOperation } from "../processContextOperation";
 vi.mock("../authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));
@@ -81,6 +82,8 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
             "create_context_execution",
             "claim_context_execution_node",
             "save_context_execution_outcome",
+            "claim_context_release_track_isrcs",
+            "complete_context_release_track_isrcs",
           ].includes(name)
         )
           throw new Error("Unexpected fixture RPC");
@@ -267,6 +270,60 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
           ],
         },
       });
+
+      vi.stubEnv("CONTEXT_SPOTIFY_RELEASE_TRACK_ISRC_ENABLED", "true");
+      const trackFetcher = vi.fn<typeof fetch>(async input => {
+        const id = String(input).split("/").at(-1);
+        return Response.json({
+          id,
+          external_ids: id === "5vX9jU6Ix8t7XsAWLoZs10" ? { isrc: "USABC2600001" } : {},
+        });
+      });
+      const trackVerification = () =>
+        runRecordedReleaseTrackIsrcs(owner, owner, first.request.id, target.subjectId, {
+          authorize: deps.authorize,
+          rpc,
+          record,
+          getSpotifyToken: async () => "fixture-token",
+          fetcher: trackFetcher,
+        });
+      let trackRun: Awaited<ReturnType<typeof runRecordedReleaseTrackIsrcs>> | undefined;
+      const queuedTracks = await processContextOperation(
+        owner,
+        {
+          action: "verify_release_tracks",
+          request_id: first.request.id,
+          subject_id: target.subjectId,
+        },
+        {
+          ...deps,
+          dispatchReleaseTracks: async () => {
+            trackRun = await trackVerification();
+          },
+        },
+      );
+      expect(queuedTracks).toEqual({
+        request_id: first.request.id,
+        subject_id: target.subjectId,
+        lookupQueued: true,
+      });
+      if (!trackRun) throw new Error("Release track lookup did not execute in the fixture");
+      expect(trackRun.outcomes).toMatchObject([{ status: "saved" }]);
+      expect(trackFetcher).toHaveBeenCalledTimes(2);
+      await expect(trackVerification()).rejects.toThrow("reconciliation");
+      expect(trackFetcher).toHaveBeenCalledTimes(2);
+      const trackEvidence = JSON.parse(
+        await query(
+          `select jsonb_build_object('status',o.outcome->>'status',` +
+            `'observed',r.normalized_response->'observedIsrcCount',` +
+            `'missing',r.normalized_response->'missingIsrcCount',` +
+            `'sourceCount',(select count(*) from public.context_result_sources rs where rs.result_id=r.id))` +
+            ` from public.context_execution_outcomes o` +
+            ` join public.context_results r on r.id=(o.outcome->'receipt'->>'resultId')::uuid` +
+            ` where o.execution_id=${quote(trackRun.executionId)} and o.owner_id=${quote(owner)};`,
+        ),
+      );
+      expect(trackEvidence).toEqual({ status: "saved", observed: 1, missing: 1, sourceCount: 3 });
 
       const failedAlbum = "4vX9jU6Ix8t7XsAWLoZs10";
       const failedInput = {

@@ -14,6 +14,8 @@ type Dependencies = {
   rpc?: (name: string, params: Record<string, unknown>) => Promise<unknown>;
   record?: typeof runRecordedContextModules;
   collect?: typeof runReleaseTrackIsrcs;
+  getSpotifyToken?: () => Promise<string>;
+  fetcher?: typeof fetch;
 };
 
 /** One recorded node for the exact current release result. Never replay a claimed node. */
@@ -83,7 +85,7 @@ export async function runRecordedReleaseTrackIsrcs(
           owner,
           requestId,
           subjectId,
-          { authorize, rpc },
+          { authorize, rpc, getSpotifyToken: deps.getSpotifyToken, fetcher: deps.fetcher },
         );
         if (receipt.state === "unknown") throw new ContextNodeNeedsReconciliation();
         return receipt;
