@@ -66,6 +66,11 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
     organization_id: z.uuid().optional(),
     idempotency_key: contextIngestSchema.shape.idempotency_key,
   }),
+  z.strictObject({
+    action: z.literal("verify_release"),
+    request_id: z.uuid(),
+    organization_id: z.uuid().optional(),
+  }),
   contextIngestSchema.extend({ action: z.literal("ingest") }),
   z.strictObject({
     action: z.literal("read"),
@@ -83,6 +88,7 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
 export interface ContextOperationDependencies {
   rpc: (name: string, params: Record<string, unknown>) => Promise<unknown>;
   dispatch: (actor: string, owner: string, requestId: string) => Promise<unknown>;
+  dispatchRelease?: (actor: string, owner: string, requestId: string) => Promise<unknown>;
   authorize?: typeof authorizeContextOwner;
 }
 /** Single authenticated operation surface used by HTTP, MCP and integration tests. */
@@ -196,6 +202,28 @@ export async function processContextOperation(
       input: { kind: "release"; url: string; releaseId: string };
     };
     return { request };
+  }
+  if (args.action === "verify_release") {
+    if (process.env.CONTEXT_SPOTIFY_RELEASE_VERIFY_ENABLED !== "true")
+      throw new Error("Spotify release verification is not enabled");
+    const target = z
+      .strictObject({
+        subjectId: z.uuid(),
+        kind: z.literal("release"),
+        identityConfirmed: z.literal(false),
+        availableFields: z.array(z.literal("spotify_id")).length(1),
+        reusableModules: z.array(z.string()),
+      })
+      .parse(
+        await deps.rpc("list_context_release_request_target", {
+          p_owner: ownerId,
+          p_request: args.request_id,
+        }),
+      );
+    if (!target.subjectId || !deps.dispatchRelease)
+      throw new Error("Release verification dispatcher unavailable");
+    await deps.dispatchRelease(accountId, ownerId, args.request_id);
+    return { request_id: args.request_id, verificationQueued: true };
   }
   if (args.action === "ingest") {
     const resource = parseContextUrl(args.url);

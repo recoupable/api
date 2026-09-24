@@ -9,6 +9,7 @@ import {
 } from "@/lib/context/processContextOperation";
 import { callContextRpc } from "@/lib/supabase/context_requests/callContextRpc";
 import { dispatchContextRequest } from "@/lib/context/dispatchContextRequest";
+import { dispatchContextReleaseVerification } from "@/lib/context/dispatchContextReleaseVerification";
 /** Same domain operations and ownership rules as POST /api/context. */
 export function registerContextTool(server: McpServer) {
   server.registerTool(
@@ -29,6 +30,7 @@ export function registerContextTool(server: McpServer) {
           await processContextOperation(accountId, args, {
             rpc: callContextRpc,
             dispatch: dispatchContextRequest,
+            dispatchRelease: dispatchContextReleaseVerification,
           }),
         );
       } catch {
