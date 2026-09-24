@@ -18,6 +18,14 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
     organization_id: z.string().uuid().optional(),
   }),
   z.strictObject({
+    action: z.literal("list_catalog_members"),
+    request_id: z.string().uuid(),
+    subject_id: z.string().uuid(),
+    organization_id: z.string().uuid().optional(),
+    after_isrc: z.string().min(1).max(100).optional(),
+    limit: z.number().int().min(1).max(100).default(100),
+  }),
+  z.strictObject({
     action: z.literal("read_execution"),
     execution_id: z.string().uuid(),
     organization_id: z.string().uuid().optional(),
@@ -67,6 +75,20 @@ export async function processContextOperation(
       "@/lib/supabase/context_requests/listContextRequestExecutions"
     );
     return { executions: await listContextRequestExecutions(ownerId, args.request_id) };
+  }
+  if (args.action === "list_catalog_members") {
+    const { listContextCatalogMembers } = await import(
+      "@/lib/supabase/context_requests/listContextCatalogMembers"
+    );
+    return {
+      page: await listContextCatalogMembers(
+        ownerId,
+        args.request_id,
+        args.subject_id,
+        args.after_isrc,
+        args.limit,
+      ),
+    };
   }
   if (args.action === "read_execution") {
     const execution = await deps.rpc("read_context_execution", {

@@ -19,6 +19,7 @@ export async function callContextRpc(
     "create_catalog_context_request",
     "read_context_request",
     "list_context_request_targets",
+    "list_context_catalog_members",
     "list_context_request_executions",
     "read_context_execution",
     "create_context_execution",
