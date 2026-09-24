@@ -39,7 +39,7 @@ export async function collectContextSpotifyRelease(
   await authorizeRelease();
   const url = new URL(`https://api.spotify.com/v1/albums/${args.releaseId}`);
   if (args.market) url.searchParams.set("market", args.market);
-  return runContextEnrichment(
+  const receipt = await runContextEnrichment(
     actor,
     owner,
     requestId,
@@ -82,4 +82,19 @@ export async function collectContextSpotifyRelease(
       },
     },
   );
+  if (
+    typeof receipt === "object" &&
+    receipt !== null &&
+    "state" in receipt &&
+    receipt.state === "saved"
+  ) {
+    const { resultId } = z.object({ resultId: z.uuid() }).parse(receipt);
+    await deps.rpc("save_context_spotify_release_track_slots", {
+      p_owner: owner,
+      p_request: requestId,
+      p_subject: args.subjectId,
+      p_result: resultId,
+    });
+  }
+  return receipt;
 }

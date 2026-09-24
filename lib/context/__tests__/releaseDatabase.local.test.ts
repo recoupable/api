@@ -76,6 +76,7 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
             "claim_context_enrichment",
             "complete_context_enrichment",
             "fail_context_enrichment",
+            "save_context_spotify_release_track_slots",
             "create_context_execution",
             "claim_context_execution_node",
             "save_context_execution_outcome",
@@ -148,7 +149,15 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
         Response.json({
           id: album,
           name: "Fixture release",
-          tracks: { items: [], offset: 0, total: 0, next: null },
+          tracks: {
+            items: [
+              { id: "5vX9jU6Ix8t7XsAWLoZs10", type: "track", disc_number: 1, track_number: 1 },
+              { id: "6vX9jU6Ix8t7XsAWLoZs10", type: "track", disc_number: 1, track_number: 2 },
+            ],
+            offset: 0,
+            total: 2,
+            next: null,
+          },
         }),
       );
       vi.stubEnv("CONTEXT_SPOTIFY_RELEASE_VERIFY_ENABLED", "true");
@@ -226,6 +235,18 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
         ),
       );
       expect(recorded).toMatchObject({ status: "saved", resultId: expect.any(String) });
+      const slots = JSON.parse(
+        await query(
+          `select jsonb_agg(jsonb_build_object('slot',s.slot_index,'trackId',r.provider_id) order by s.slot_index)` +
+            ` from public.context_release_track_slots s join public.context_resources r on r.id=s.track_resource_id` +
+            ` where s.owner_id=${quote(owner)} and s.release_subject_id=${quote(target.subjectId)}` +
+            ` and s.source_result_id=${quote(recorded.resultId)};`,
+        ),
+      );
+      expect(slots).toEqual([
+        { slot: 0, trackId: "5vX9jU6Ix8t7XsAWLoZs10" },
+        { slot: 1, trackId: "6vX9jU6Ix8t7XsAWLoZs10" },
+      ]);
 
       const failedAlbum = "4vX9jU6Ix8t7XsAWLoZs10";
       const failedInput = {

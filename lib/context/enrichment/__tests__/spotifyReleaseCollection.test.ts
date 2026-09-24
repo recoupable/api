@@ -5,6 +5,7 @@ const input = {
   releaseId: "3vX9jU6Ix8t7XsAWLoZs10",
   collectionVersion: "fixture-v1",
 };
+const resultId = "00000000-0000-4000-8000-000000000005";
 const album = {
   id: input.releaseId,
   name: "Fixture release",
@@ -21,7 +22,7 @@ function deps() {
           ? { releaseId: input.releaseId }
           : name === "claim_context_enrichment"
             ? { state: "claimed", attemptId: "attempt" }
-            : { state: "saved" },
+            : { state: "saved", resultId },
     ),
   };
 }
@@ -52,6 +53,12 @@ it("saves raw album pages as a partial observation, never as rights evidence", a
     }),
   );
   expect(JSON.stringify(d.rpc.mock.calls)).not.toContain("fixture-secret");
+  expect(d.rpc).toHaveBeenCalledWith("save_context_spotify_release_track_slots", {
+    p_owner: "owner",
+    p_request: "request",
+    p_subject: input.subjectId,
+    p_result: resultId,
+  });
 });
 it("reuses without a token and blocks unauthorized token acquisition", async () => {
   const d = deps();
@@ -62,6 +69,9 @@ it("reuses without a token and blocks unauthorized token acquisition", async () 
   );
   await collectContextSpotifyRelease("actor", "owner", "request", input, d);
   expect(d.getAccessToken).not.toHaveBeenCalled();
+  expect(
+    d.rpc.mock.calls.some(([name]) => name === "save_context_spotify_release_track_slots"),
+  ).toBe(false);
   d.authorize.mockRejectedValueOnce(new Error("denied"));
   await expect(collectContextSpotifyRelease("actor", "owner", "request", input, d)).rejects.toThrow(
     "denied",
@@ -118,7 +128,7 @@ it("rechecks the release association before saving provider output", async () =>
     }
     return name === "claim_context_enrichment"
       ? { state: "claimed", attemptId: "attempt" }
-      : { state: "saved" };
+      : { state: "saved", resultId };
   });
   await expect(collectContextSpotifyRelease("actor", "owner", "request", input, d)).rejects.toThrow(
     "removed",
