@@ -31,12 +31,16 @@ export async function loadCurrentReleaseTrackSlots(
   requestId: string,
   subjectId: string,
   deps: {
-    authorize: (actor: string, owner: string) => Promise<unknown>;
+    authorize: (actor: string, owner: string) => Promise<{ ownerId: string }>;
     rpc: (name: string, params: Record<string, unknown>) => Promise<unknown>;
   },
 ) {
   for (const value of [actor, owner, requestId, subjectId]) z.uuid().parse(value);
-  await deps.authorize(actor, owner);
+  const authorizeSelection = async () => {
+    const access = await deps.authorize(actor, owner);
+    if (access.ownerId !== owner) throw new Error("Access denied to selected context owner");
+  };
+  await authorizeSelection();
   const read = (afterSlot: number) =>
     deps.rpc("list_context_release_track_slots", {
       p_owner: owner,
@@ -82,7 +86,7 @@ export async function loadCurrentReleaseTrackSlots(
   const slots = pages.flatMap(page => page.slots);
   if (slots.length !== first.linkedSlots)
     throw new Error("Release track position count changed during pagination");
-  await deps.authorize(actor, owner);
+  await authorizeSelection();
   const fresh = pageSchema.parse(await read(-1));
   if (
     fresh.sourceResultId !== first.sourceResultId ||

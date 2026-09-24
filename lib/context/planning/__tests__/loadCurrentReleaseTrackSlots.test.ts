@@ -48,7 +48,7 @@ const second = {
 };
 
 it("combines stable request-bound pages and rechecks the current result", async () => {
-  const authorize = vi.fn(async () => undefined);
+  const authorize = vi.fn(async () => ({ ownerId: owner }));
   const rpc = vi
     .fn()
     .mockResolvedValueOnce(first)
@@ -71,7 +71,7 @@ it("stops if a later page belongs to a different saved source result", async () 
     .mockResolvedValueOnce({ ...second, sourceResultId: subjectId });
   await expect(
     loadCurrentReleaseTrackSlots(actor, owner, requestId, subjectId, {
-      authorize: async () => undefined,
+      authorize: async () => ({ ownerId: owner }),
       rpc,
     }),
   ).rejects.toThrow("source changed");
@@ -86,7 +86,7 @@ it("stops if the current result changes after the final page", async () => {
     .mockResolvedValueOnce({ ...first, sourceResultId: subjectId });
   await expect(
     loadCurrentReleaseTrackSlots(actor, owner, requestId, subjectId, {
-      authorize: async () => undefined,
+      authorize: async () => ({ ownerId: owner }),
       rpc,
     }),
   ).rejects.toThrow("source changed");
@@ -96,7 +96,7 @@ it("rejects missing or incomplete source evidence before any provider handoff", 
   const rpc = vi.fn(async () => ({ state: "needs_reconciliation", slots: [] }));
   await expect(
     loadCurrentReleaseTrackSlots(actor, owner, requestId, subjectId, {
-      authorize: async () => undefined,
+      authorize: async () => ({ ownerId: owner }),
       rpc,
     }),
   ).rejects.toThrow();
@@ -120,9 +120,32 @@ it("rejects a cursor that does not match the last observed position", async () =
   const rpc = vi.fn(async () => ({ ...first, nextCursor: 12 }));
   await expect(
     loadCurrentReleaseTrackSlots(actor, owner, requestId, subjectId, {
-      authorize: async () => undefined,
+      authorize: async () => ({ ownerId: owner }),
       rpc,
     }),
   ).rejects.toThrow("invalid cursor");
   expect(rpc).toHaveBeenCalledTimes(1);
+});
+
+it("rejects a different authorized workspace before reading the selected owner", async () => {
+  const rpc = vi.fn();
+  await expect(
+    loadCurrentReleaseTrackSlots(actor, owner, requestId, subjectId, {
+      authorize: async () => ({ ownerId: actor }),
+      rpc,
+    }),
+  ).rejects.toThrow("selected context owner");
+  expect(rpc).not.toHaveBeenCalled();
+});
+
+it("stops if workspace access changes before the final source recheck", async () => {
+  const authorize = vi
+    .fn()
+    .mockResolvedValueOnce({ ownerId: owner })
+    .mockResolvedValueOnce({ ownerId: actor });
+  const rpc = vi.fn().mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+  await expect(
+    loadCurrentReleaseTrackSlots(actor, owner, requestId, subjectId, { authorize, rpc }),
+  ).rejects.toThrow("selected context owner");
+  expect(rpc).toHaveBeenCalledTimes(2);
 });
