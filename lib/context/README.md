@@ -73,6 +73,13 @@ rights, or permission to call enrichment providers. Member edges are stored outs
 request's capped subject list, which remains unchanged. Automatic member planning and
 provider collection are still unconnected.
 
+Authenticated `action: plan_catalog_members` takes the same request, catalog subject,
+optional cursor and page limit, plus one module (`musicbrainz`, `mlc_recording`, or
+`songstats`). It returns only expanded recordings still present in the selected
+workspace's catalog and a review-only plan for that page. Every new collection node
+remains blocked until a server spending policy permits it. Removed catalog members
+and members not yet expanded are not offered as current planning targets.
+
 ### Read an execution trace
 
 The shared HTTP/MCP context operation accepts `{ "action": "read_execution", "execution_id": "<uuid>" }`, with optional `organization_id`. Workspace authorization resolves the owner before the service-only `read_context_execution` database call. The response is `{ execution }`, including its immutable plan, policy version, node outcomes and claim states. A claimed node without an outcome reads as `unknown` and requires reconciliation; reading never retries it. Reading does not dispatch providers or retry work; cancelled runs remain inspectable. The in-process recorded runner now claims each runnable node before dispatch. An existing or uncertain claim stops the runner for reconciliation without saving a false failure. This runner is not yet called by the durable workflow, and a claim is not a spending grant.

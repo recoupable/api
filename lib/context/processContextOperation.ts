@@ -34,6 +34,15 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
     limit: z.number().int().min(1).max(100).default(100),
   }),
   z.strictObject({
+    action: z.literal("plan_catalog_members"),
+    request_id: z.string().uuid(),
+    subject_id: z.string().uuid(),
+    organization_id: z.string().uuid().optional(),
+    after_isrc: z.string().min(1).max(100).optional(),
+    limit: z.number().int().min(1).max(100).default(100),
+    module: z.enum(["musicbrainz", "mlc_recording", "songstats"]),
+  }),
+  z.strictObject({
     action: z.literal("read_execution"),
     execution_id: z.string().uuid(),
     organization_id: z.string().uuid().optional(),
@@ -111,6 +120,32 @@ export async function processContextOperation(
         args.limit,
       ),
     };
+  }
+  if (args.action === "plan_catalog_members") {
+    const { listContextCatalogMemberTargets } = await import(
+      "@/lib/supabase/context_requests/listContextCatalogMemberTargets"
+    );
+    const { planContextModules } = await import("./planning/planContextModules");
+    const page = await listContextCatalogMemberTargets(
+      ownerId,
+      args.request_id,
+      args.subject_id,
+      args.after_isrc,
+      args.limit,
+    );
+    const plan = planContextModules({
+      entry: "catalog",
+      targets: page.members.map(member => ({
+        subjectId: member.subjectId,
+        kind: "recording" as const,
+        identityConfirmed: true,
+        availableFields: ["isrc" as const],
+        reusableModules: [],
+      })),
+      requested: page.members.map(member => ({ subjectId: member.subjectId, module: args.module })),
+      permittedModules: [],
+    });
+    return { page, plan, collectionPermitted: false };
   }
   if (args.action === "read_execution") {
     const execution = await deps.rpc("read_context_execution", {
