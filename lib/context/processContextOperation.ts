@@ -26,6 +26,14 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
     limit: z.number().int().min(1).max(100).default(100),
   }),
   z.strictObject({
+    action: z.literal("expand_catalog_members"),
+    request_id: z.string().uuid(),
+    subject_id: z.string().uuid(),
+    organization_id: z.string().uuid().optional(),
+    after_isrc: z.string().min(1).max(100).optional(),
+    limit: z.number().int().min(1).max(100).default(100),
+  }),
+  z.strictObject({
     action: z.literal("read_execution"),
     execution_id: z.string().uuid(),
     organization_id: z.string().uuid().optional(),
@@ -82,6 +90,20 @@ export async function processContextOperation(
     );
     return {
       page: await listContextCatalogMembers(
+        ownerId,
+        args.request_id,
+        args.subject_id,
+        args.after_isrc,
+        args.limit,
+      ),
+    };
+  }
+  if (args.action === "expand_catalog_members") {
+    const { expandContextCatalogMembers } = await import(
+      "@/lib/supabase/context_requests/expandContextCatalogMembers"
+    );
+    return {
+      page: await expandContextCatalogMembers(
         ownerId,
         args.request_id,
         args.subject_id,
