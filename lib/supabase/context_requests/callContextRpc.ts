@@ -19,6 +19,7 @@ export async function callContextRpc(
     "create_catalog_context_request",
     "read_context_request",
     "list_context_request_targets",
+    "resolve_context_recording_isrc",
     "resolve_context_songstats_lookup",
     "list_context_catalog_members",
     "expand_context_catalog_members",
