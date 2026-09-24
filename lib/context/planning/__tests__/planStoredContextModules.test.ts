@@ -94,7 +94,7 @@ it("rejects an unready or unsupported saved request", async () => {
     id: requestId,
     owner_id: owner,
     status: "completed",
-    input: { kind: "company" },
+    input: { kind: "campaign" },
   });
   await expect(planStoredContextModules(actor, owner, requestId)).rejects.toThrow(
     "Unsupported saved context entry",
@@ -181,6 +181,36 @@ it("keeps a submitted songwriter name unresolved and blocks research", async () 
       module: "songwriter_research",
       state: "not_implemented",
       targetKind: "songwriter",
+      executionStarted: false,
+    },
+  ]);
+  expect(result.collectionPermitted).toBe(false);
+});
+
+it("keeps a submitted company name separate from workspace identity", async () => {
+  rpc.mockImplementation(async name =>
+    name === "read_context_request"
+      ? { id: requestId, owner_id: owner, status: "partial", input: { kind: "company" } }
+      : {
+          subjectId: artist,
+          kind: "company",
+          identityConfirmed: false,
+          availableFields: ["submitted_name"],
+          reusableModules: [],
+        },
+  );
+  const result = await planStoredContextModules(actor, owner, requestId);
+  expect(rpc).toHaveBeenCalledWith("list_context_company_request_target", {
+    p_owner: owner,
+    p_request: requestId,
+  });
+  expect(targets).not.toHaveBeenCalled();
+  expect(result.entry).toBe("company");
+  expect(result.plan).toMatchObject([
+    {
+      module: "company_research",
+      state: "not_implemented",
+      targetKind: "company",
       executionStarted: false,
     },
   ]);

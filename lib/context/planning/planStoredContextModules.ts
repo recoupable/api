@@ -30,10 +30,11 @@ export async function planStoredContextModules(actor: string, owner: string, req
   const input = z
     .object({ kind: z.string().optional(), url: z.string().optional() })
     .parse(request.input);
-  let entry: "song" | "catalog" | "artist" | "songwriter" | "release";
+  let entry: "song" | "catalog" | "artist" | "songwriter" | "company" | "release";
   if (input.kind === "catalog") entry = "catalog";
   else if (input.kind === "artist") entry = "artist";
   else if (input.kind === "songwriter") entry = "songwriter";
+  else if (input.kind === "company") entry = "company";
   else if (input.kind === "release") entry = "release";
   else if (input.url) {
     const resource = parseContextUrl(input.url);
@@ -77,24 +78,41 @@ export async function planStoredContextModules(actor: string, owner: string, req
                 }),
               ),
           ]
-        : entry === "artist"
+        : entry === "company"
           ? [
               z
                 .strictObject({
                   subjectId: z.uuid(),
-                  kind: z.literal("artist"),
-                  identityConfirmed: z.literal(true),
-                  availableFields: z.array(z.enum(["artist_account_link", "spotify_id"])),
+                  kind: z.literal("company"),
+                  identityConfirmed: z.literal(false),
+                  availableFields: z.array(z.literal("submitted_name")).length(1),
                   reusableModules: z.array(z.string()),
                 })
                 .parse(
-                  await callContextRpc("list_context_artist_request_target", {
+                  await callContextRpc("list_context_company_request_target", {
                     p_owner: owner,
                     p_request: requestId,
                   }),
                 ),
             ]
-          : await listContextRequestTargets(owner, requestId);
+          : entry === "artist"
+            ? [
+                z
+                  .strictObject({
+                    subjectId: z.uuid(),
+                    kind: z.literal("artist"),
+                    identityConfirmed: z.literal(true),
+                    availableFields: z.array(z.enum(["artist_account_link", "spotify_id"])),
+                    reusableModules: z.array(z.string()),
+                  })
+                  .parse(
+                    await callContextRpc("list_context_artist_request_target", {
+                      p_owner: owner,
+                      p_request: requestId,
+                    }),
+                  ),
+              ]
+            : await listContextRequestTargets(owner, requestId);
   const requested: {
     subjectId: string;
     module:
@@ -104,7 +122,8 @@ export async function planStoredContextModules(actor: string, owner: string, req
       | "spotify_release"
       | "saved_socials"
       | "catalog_valuation"
-      | "songwriter_research";
+      | "songwriter_research"
+      | "company_research";
   }[] = [];
   for (const target of targets) {
     const modules =
@@ -116,21 +135,25 @@ export async function planStoredContextModules(actor: string, owner: string, req
           ? target.kind === "songwriter"
             ? (["songwriter_research"] as const)
             : []
-          : entry === "artist"
-            ? target.kind === "artist"
-              ? (["songstats", "saved_socials"] as const)
+          : entry === "company"
+            ? target.kind === "company"
+              ? (["company_research"] as const)
               : []
-            : entry === "catalog"
-              ? target.kind === "catalog"
-                ? (["catalog_valuation"] as const)
+            : entry === "artist"
+              ? target.kind === "artist"
+                ? (["songstats", "saved_socials"] as const)
                 : []
-              : target.kind === "recording"
-                ? (["musicbrainz", "mlc_recording", "songstats"] as const)
-                : target.kind === "release"
-                  ? (["spotify_release"] as const)
-                  : target.kind === "artist"
-                    ? (["songstats", "saved_socials"] as const)
-                    : [];
+              : entry === "catalog"
+                ? target.kind === "catalog"
+                  ? (["catalog_valuation"] as const)
+                  : []
+                : target.kind === "recording"
+                  ? (["musicbrainz", "mlc_recording", "songstats"] as const)
+                  : target.kind === "release"
+                    ? (["spotify_release"] as const)
+                    : target.kind === "artist"
+                      ? (["songstats", "saved_socials"] as const)
+                      : [];
     for (const module of modules) requested.push({ subjectId: target.subjectId, module });
   }
   if (!requested.length) throw new Error("No supported subjects in saved context request");
