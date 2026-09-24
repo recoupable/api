@@ -3,6 +3,7 @@ import { z } from "zod";
 import { authorizeContextOwner } from "./authorizeContextOwner";
 import { contextIngestSchema } from "./schema";
 import { parseContextUrl } from "./parseContextUrl";
+import { parseContextReleaseUrl } from "./parseContextReleaseUrl";
 import { selectContextDocuments, type ContextBriefDocument } from "./selectContextDocuments";
 import type { ContextRequestRecord } from "./runContextRequest";
 
@@ -56,6 +57,12 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
   z.strictObject({
     action: z.literal("ingest_artist"),
     artist_id: z.uuid(),
+    organization_id: z.uuid().optional(),
+    idempotency_key: contextIngestSchema.shape.idempotency_key,
+  }),
+  z.strictObject({
+    action: z.literal("ingest_release"),
+    url: z.url().max(2048),
     organization_id: z.uuid().optional(),
     idempotency_key: contextIngestSchema.shape.idempotency_key,
   }),
@@ -176,6 +183,18 @@ export async function processContextOperation(
       p_artist: args.artist_id,
       p_key: args.idempotency_key,
     })) as Omit<ContextRequestRecord, "input"> & { input: { kind: "artist"; artistId: string } };
+    return { request };
+  }
+  if (args.action === "ingest_release") {
+    const release = parseContextReleaseUrl(args.url);
+    const request = (await deps.rpc("create_context_release_request", {
+      p_owner: ownerId,
+      p_actor: accountId,
+      p_album: release.id,
+      p_key: args.idempotency_key,
+    })) as Omit<ContextRequestRecord, "input"> & {
+      input: { kind: "release"; url: string; releaseId: string };
+    };
     return { request };
   }
   if (args.action === "ingest") {

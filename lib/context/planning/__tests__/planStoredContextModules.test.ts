@@ -128,6 +128,35 @@ it("plans a verified existing artist without starting providers", async () => {
   expect(result.collectionPermitted).toBe(false);
 });
 
+it("shows a submitted release locator as unverified and blocked", async () => {
+  rpc.mockImplementation(async name =>
+    name === "read_context_request"
+      ? { id: requestId, owner_id: owner, status: "partial", input: { kind: "release" } }
+      : {
+          subjectId: release,
+          kind: "release",
+          identityConfirmed: false,
+          availableFields: ["spotify_id"],
+          reusableModules: [],
+        },
+  );
+  const result = await planStoredContextModules(actor, owner, requestId);
+  expect(rpc).toHaveBeenCalledWith("list_context_release_request_target", {
+    p_owner: owner,
+    p_request: requestId,
+  });
+  expect(targets).not.toHaveBeenCalled();
+  expect(result.entry).toBe("release");
+  expect(result.plan).toMatchObject([
+    {
+      module: "spotify_release",
+      state: "blocked",
+      reasons: expect.arrayContaining(["Confirm the target identity before attaching evidence"]),
+    },
+  ]);
+  expect(result.collectionPermitted).toBe(false);
+});
+
 it("shows a verified catalog as blocked until server policy permits collection", async () => {
   rpc.mockResolvedValue({
     id: requestId,

@@ -51,6 +51,31 @@ it("passes a linked artist entry through the scoped RPC without dispatching prov
   expect("request" in result && result.request?.status).toBe("partial");
   expect(dispatch).not.toHaveBeenCalled();
 });
+it("passes a Spotify album entry through the scoped RPC without dispatching a track worker", async () => {
+  const album = "3vX9jU6Ix8t7XsAWLoZs10";
+  rpc.mockResolvedValue({ data: { id: "release-request", status: "partial" }, error: null });
+  const result = await processContextOperation(
+    account,
+    {
+      action: "ingest_release",
+      url: `https://open.spotify.com/album/${album}`,
+      idempotency_key: "release-test",
+    },
+    {
+      authorize: async () => ({ accountId: account, ownerId: account, organizationId: null }),
+      rpc: callContextRpc,
+      dispatch,
+    },
+  );
+  expect(rpc).toHaveBeenCalledWith("create_context_release_request", {
+    p_owner: account,
+    p_actor: account,
+    p_album: album,
+    p_key: "release-test",
+  });
+  expect("request" in result && result.request?.status).toBe("partial");
+  expect(dispatch).not.toHaveBeenCalled();
+});
 it("propagates database permission failures without dispatching work", async () => {
   rpc.mockResolvedValue({ data: null, error: { message: "Catalog access denied" } });
   await expect(ingest()).rejects.toThrow("Context storage operation failed: Catalog access denied");
