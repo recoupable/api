@@ -1,4 +1,4 @@
-import { runReleaseTrackIsrcs } from "@/lib/context/planning/runReleaseTrackIsrcs";
+import { runRecordedReleaseTrackIsrcs } from "@/lib/context/planning/runRecordedReleaseTrackIsrcs";
 
 /** A repeated step must reconcile its prior database attempt before calling Spotify again. */
 export async function runReleaseTrackIsrcStep(
@@ -8,5 +8,5 @@ export async function runReleaseTrackIsrcStep(
   subjectId: string,
 ) {
   "use step";
-  return runReleaseTrackIsrcs(actor, owner, requestId, subjectId);
+  return runRecordedReleaseTrackIsrcs(actor, owner, requestId, subjectId);
 }
