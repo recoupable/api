@@ -149,3 +149,31 @@ it("checks workspace access before reading saved track observations", async () =
   ).rejects.toThrow("No workspace access");
   expect(rpc).not.toHaveBeenCalled();
 });
+
+it("reviews only the selected workspace's release-track identity candidates", async () => {
+  const authorize = vi.fn(async () => ({
+    accountId: actor,
+    ownerId: owner,
+    organizationId: owner,
+  }));
+  const review = { state: "ready", candidates: [{ mappingState: "unmapped" }] };
+  const rpc = vi.fn(async () => review);
+  await expect(
+    processContextOperation(
+      actor,
+      {
+        action: "review_release_track_identities",
+        request_id: requestId,
+        subject_id: subjectId,
+        organization_id: owner,
+      },
+      { authorize, rpc, dispatch: vi.fn() },
+    ),
+  ).resolves.toEqual({ review });
+  expect(authorize).toHaveBeenCalledWith(actor, owner);
+  expect(rpc).toHaveBeenCalledWith("review_context_release_track_identities", {
+    p_owner: owner,
+    p_request: requestId,
+    p_subject: subjectId,
+  });
+});

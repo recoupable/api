@@ -41,6 +41,7 @@ export async function callContextRpc(
     "list_context_release_track_slots",
     "claim_context_release_track_isrcs",
     "complete_context_release_track_isrcs",
+    "review_context_release_track_identities",
     "claim_context_request",
     "commit_spotify_context",
     "fail_context_request",

@@ -41,6 +41,12 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
     organization_id: z.uuid().optional(),
   }),
   z.strictObject({
+    action: z.literal("review_release_track_identities"),
+    request_id: z.uuid(),
+    subject_id: z.uuid(),
+    organization_id: z.uuid().optional(),
+  }),
+  z.strictObject({
     action: z.literal("verify_release_tracks"),
     request_id: z.uuid(),
     subject_id: z.uuid(),
@@ -174,6 +180,15 @@ export async function processContextOperation(
         args.subject_id,
         deps.rpc,
       ),
+    };
+  }
+  if (args.action === "review_release_track_identities") {
+    return {
+      review: await deps.rpc("review_context_release_track_identities", {
+        p_owner: ownerId,
+        p_request: args.request_id,
+        p_subject: args.subject_id,
+      }),
     };
   }
   if (args.action === "verify_release_tracks") {

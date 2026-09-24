@@ -64,6 +64,8 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
       const key = `release-local-${randomUUID()}`;
       await query(
         `begin;create temporary table rpc_output(value jsonb) on commit drop;` +
+          `create table if not exists public.songs(isrc text primary key,name text not null,album text not null,lyrics text not null);` +
+          `create table if not exists public.song_identifiers(song text not null references public.songs(isrc),platform text not null,identifier_type text not null,value text not null);` +
           `insert into public.accounts(id,name) values(${quote(owner)},'Owner'),(${quote(outsider)},'Other workspace');`,
       );
       const rpcCalls: string[] = [];
@@ -84,6 +86,7 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
             "save_context_execution_outcome",
             "claim_context_release_track_isrcs",
             "complete_context_release_track_isrcs",
+            "review_context_release_track_identities",
           ].includes(name)
         )
           throw new Error("Unexpected fixture RPC");
@@ -324,6 +327,50 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
         ),
       );
       expect(trackEvidence).toEqual({ status: "saved", observed: 1, missing: 1, sourceCount: 3 });
+      const identityReview = () =>
+        processContextOperation(
+          owner,
+          {
+            action: "review_release_track_identities",
+            request_id: first.request.id,
+            subject_id: target.subjectId,
+          },
+          deps,
+        );
+      expect(await identityReview()).toMatchObject({
+        review: {
+          state: "ready",
+          candidates: [
+            { observationState: "observed", isrc: "USABC2600001", mappingState: "unmapped" },
+            { observationState: "missing_isrc", isrc: null, mappingState: "unresolved" },
+          ],
+        },
+      });
+      expect(await query("select count(*) from public.song_identifiers;")).toBe("0");
+      await query(
+        `insert into public.songs(isrc) values('USABC2600001');` +
+          `insert into public.song_identifiers(song,platform,identifier_type,value)` +
+          ` values('USABC2600001','spotify','track_id','5vX9jU6Ix8t7XsAWLoZs10');`,
+      );
+      expect(await identityReview()).toMatchObject({
+        review: { candidates: [{ mappingState: "existing_identifier_match" }, {}] },
+      });
+      await query(
+        `insert into public.songs(isrc) values('USABC2600003');` +
+          `update public.song_identifiers set song='USABC2600003'` +
+          ` where platform='spotify' and identifier_type='track_id' and value='5vX9jU6Ix8t7XsAWLoZs10';`,
+      );
+      expect(await identityReview()).toMatchObject({
+        review: { candidates: [{ mappingState: "conflict" }, {}] },
+      });
+      expect(await query("select count(*) from public.song_identifiers;")).toBe("1");
+      await expect(
+        rpc("review_context_release_track_identities", {
+          p_owner: outsider,
+          p_request: first.request.id,
+          p_subject: target.subjectId,
+        }),
+      ).rejects.toThrow();
 
       const partialAlbum = "7vX9jU6Ix8t7XsAWLoZs10";
       const partialEntry = await processContextOperation(
@@ -404,6 +451,11 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
       });
       await expect(partialTrackVerification()).rejects.toThrow("reconciliation");
       expect(partialTrackFetcher).toHaveBeenCalledTimes(2);
+      await query(
+        `update public.context_sources set withdrawn_at=now() where owner_id=${quote(owner)}` +
+          ` and source_url='https://api.spotify.com/v1/tracks/5vX9jU6Ix8t7XsAWLoZs10';`,
+      );
+      expect(await identityReview()).toMatchObject({ review: { state: "not_collected" } });
 
       const failedAlbum = "4vX9jU6Ix8t7XsAWLoZs10";
       const failedInput = {

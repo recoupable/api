@@ -95,7 +95,7 @@ it("allows the scoped release identity lookup without widening to arbitrary oper
   });
   expect(rpc).toHaveBeenCalledWith("resolve_context_spotify_release", params);
 });
-it("allows the exact enrichment lifecycle and release-slot RPCs", async () => {
+it("allows the exact enrichment lifecycle and release review RPCs", async () => {
   rpc.mockResolvedValue({ data: {}, error: null });
   const names = [
     "claim_context_enrichment",
@@ -103,6 +103,7 @@ it("allows the exact enrichment lifecycle and release-slot RPCs", async () => {
     "fail_context_enrichment",
     "save_context_spotify_release_track_slots",
     "list_context_release_track_slots",
+    "review_context_release_track_identities",
   ];
   for (const name of names) await callContextRpc(name, { p_owner: account });
   expect(rpc.mock.calls.map(([name]) => name)).toEqual(names);
