@@ -79,6 +79,10 @@ optional cursor and page limit, plus one module (`musicbrainz`, `mlc_recording`,
 workspace's catalog and a review-only plan for that page. Every new collection node
 remains blocked until a server spending policy permits it. Removed catalog members
 and members not yet expanded are not offered as current planning targets.
+The server also has a read-only resolver for one expanded recording's ISRC. It
+rechecks current membership and access, but the existing enrichment claim still
+requires a top-level request subject. Catalog member collection is therefore
+not enabled by this resolver or by the review plan.
 
 ### Read an execution trace
 
