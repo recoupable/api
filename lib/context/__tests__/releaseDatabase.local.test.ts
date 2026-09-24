@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { expect, it, vi } from "vitest";
+import { collectContextSpotifyRelease } from "../enrichment/collectContextSpotifyRelease";
 import { processContextOperation } from "../processContextOperation";
 vi.mock("../authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));
 
@@ -64,7 +65,14 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
       );
       const rpc = async (name: string, args: Record<string, unknown>) => {
         if (
-          !["create_context_release_request", "list_context_release_request_target"].includes(name)
+          ![
+            "create_context_release_request",
+            "list_context_release_request_target",
+            "resolve_context_spotify_release",
+            "claim_context_enrichment",
+            "complete_context_enrichment",
+            "fail_context_enrichment",
+          ].includes(name)
         )
           throw new Error("Unexpected fixture RPC");
         const params = Object.entries(args)
@@ -102,7 +110,12 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
       const target = (await rpc("list_context_release_request_target", {
         p_owner: owner,
         p_request: first.request.id,
-      })) as { kind: string; identityConfirmed: boolean; availableFields: string[] };
+      })) as {
+        subjectId: string;
+        kind: string;
+        identityConfirmed: boolean;
+        availableFields: string[];
+      };
       expect(target).toMatchObject({
         kind: "release",
         identityConfirmed: false,
@@ -115,6 +128,33 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
         }),
       ).rejects.toThrow();
       expect(dispatch).not.toHaveBeenCalled();
+
+      const fetcher = vi.fn<typeof fetch>(async () =>
+        Response.json({
+          id: album,
+          name: "Fixture release",
+          tracks: { items: [], offset: 0, total: 0, next: null },
+        }),
+      );
+      const receipt = await collectContextSpotifyRelease(
+        owner,
+        owner,
+        first.request.id,
+        { subjectId: target.subjectId, releaseId: album, collectionVersion: "local-fixture-v1" },
+        { authorize: deps.authorize, rpc, getAccessToken: async () => "fixture-token", fetcher },
+      );
+      expect(receipt).toMatchObject({ state: "saved" });
+      expect(fetcher).toHaveBeenCalledOnce();
+      const evidence = JSON.parse(
+        await query(
+          `select jsonb_build_object('kind',r.evidence_kind,'album',r.normalized_response->'album'->>'id',` +
+            `'sourceCount',(select count(*) from public.context_result_sources rs where rs.result_id=r.id))` +
+            ` from public.context_results r where r.owner_id=${quote(owner)}` +
+            ` and r.subject_id=${quote(target.subjectId)} and r.topic='spotify_release_context'` +
+            ` and r.status='accepted' order by r.created_at desc limit 1;`,
+        ),
+      );
+      expect(evidence).toMatchObject({ kind: "observation", album, sourceCount: 1 });
     } finally {
       if (child.exitCode === null) {
         await query("rollback;");
