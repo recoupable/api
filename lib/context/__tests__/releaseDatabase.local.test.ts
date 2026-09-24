@@ -77,6 +77,7 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
             "complete_context_enrichment",
             "fail_context_enrichment",
             "save_context_spotify_release_track_slots",
+            "list_context_release_track_slots",
             "create_context_execution",
             "claim_context_execution_node",
             "save_context_execution_outcome",
@@ -247,6 +248,25 @@ it.skipIf(process.env.CONTEXT_LOCAL_RELEASE_DATABASE_TEST !== "1")(
         { slot: 0, trackId: "5vX9jU6Ix8t7XsAWLoZs10" },
         { slot: 1, trackId: "6vX9jU6Ix8t7XsAWLoZs10" },
       ]);
+      const trackPage = await processContextOperation(
+        owner,
+        {
+          action: "list_release_tracks",
+          request_id: first.request.id,
+          subject_id: target.subjectId,
+        },
+        deps,
+      );
+      expect(trackPage).toMatchObject({
+        page: {
+          state: "ready",
+          linkedSlots: 2,
+          slots: [
+            { slotIndex: 0, spotifyTrackId: "5vX9jU6Ix8t7XsAWLoZs10" },
+            { slotIndex: 1, spotifyTrackId: "6vX9jU6Ix8t7XsAWLoZs10" },
+          ],
+        },
+      });
 
       const failedAlbum = "4vX9jU6Ix8t7XsAWLoZs10";
       const failedInput = {

@@ -27,6 +27,14 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
     limit: z.number().int().min(1).max(100).default(100),
   }),
   z.strictObject({
+    action: z.literal("list_release_tracks"),
+    request_id: z.uuid(),
+    subject_id: z.uuid(),
+    organization_id: z.uuid().optional(),
+    after_slot: z.number().int().min(-1).default(-1),
+    limit: z.number().int().min(1).max(100).default(100),
+  }),
+  z.strictObject({
     action: z.literal("expand_catalog_members"),
     request_id: z.string().uuid(),
     subject_id: z.string().uuid(),
@@ -124,6 +132,17 @@ export async function processContextOperation(
         args.after_isrc,
         args.limit,
       ),
+    };
+  }
+  if (args.action === "list_release_tracks") {
+    return {
+      page: await deps.rpc("list_context_release_track_slots", {
+        p_owner: ownerId,
+        p_request: args.request_id,
+        p_subject: args.subject_id,
+        p_after_slot: args.after_slot,
+        p_limit: args.limit,
+      }),
     };
   }
   if (args.action === "expand_catalog_members") {
