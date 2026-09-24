@@ -151,7 +151,7 @@ it("shows a submitted release locator as unverified and blocked", async () => {
     {
       module: "spotify_release",
       state: "blocked",
-      reasons: expect.arrayContaining(["Confirm the target identity before attaching evidence"]),
+      reasons: ["Server collection policy has not permitted this module"],
     },
   ]);
   expect(result.collectionPermitted).toBe(false);

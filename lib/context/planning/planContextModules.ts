@@ -151,7 +151,9 @@ export function planContextModules(input: z.input<typeof schema>) {
         !alternatives.some(field => target.availableFields.some(value => value === field)),
     );
     const reasons: string[] = [];
-    if (!target.identityConfirmed)
+    // A submitted album locator is enough to request Spotify verification;
+    // the collector still binds it to the saved request before any provider call.
+    if (!target.identityConfirmed && request.module !== "spotify_release")
       reasons.push("Confirm the target identity before attaching evidence");
     if (!definition.implemented) reasons.push("Context collector is not implemented");
     // Reuse means server-checked suitable evidence; do not require fresh provider credentials.
