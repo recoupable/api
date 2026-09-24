@@ -99,6 +99,22 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
     idempotency_key: contextIngestSchema.shape.idempotency_key,
   }),
   z.strictObject({
+    action: z.literal("ingest_campaign_brief"),
+    brief: z
+      .strictObject({
+        name: z.string().trim().min(2).max(200),
+        goal: z.string().trim().min(2).max(2000),
+        audience: z.string().trim().max(500).optional(),
+        start_date: z.iso.date().optional(),
+        end_date: z.iso.date().optional(),
+      })
+      .refine(value => !value.start_date || !value.end_date || value.end_date >= value.start_date, {
+        message: "Campaign end date must not precede start date",
+      }),
+    organization_id: z.uuid().optional(),
+    idempotency_key: contextIngestSchema.shape.idempotency_key,
+  }),
+  z.strictObject({
     action: z.literal("ingest_release"),
     url: z.url().max(2048),
     organization_id: z.uuid().optional(),
@@ -310,6 +326,17 @@ export async function processContextOperation(
       p_key: args.idempotency_key,
     })) as Omit<ContextRequestRecord, "input"> & {
       input: { kind: "company"; name: string; identityConfirmed: false };
+    };
+    return { request };
+  }
+  if (args.action === "ingest_campaign_brief") {
+    const request = (await deps.rpc("create_context_campaign_brief_request", {
+      p_owner: ownerId,
+      p_actor: accountId,
+      p_brief: args.brief,
+      p_key: args.idempotency_key,
+    })) as Omit<ContextRequestRecord, "input"> & {
+      input: { kind: "campaign"; brief: typeof args.brief; identityConfirmed: false };
     };
     return { request };
   }
