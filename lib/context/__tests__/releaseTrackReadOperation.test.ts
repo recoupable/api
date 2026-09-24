@@ -17,7 +17,11 @@ const input = {
 };
 
 it("reads only the selected workspace's request-bound release page", async () => {
-  const authorize = vi.fn(async () => ({ ownerId: owner }));
+  const authorize = vi.fn(async () => ({
+    accountId: actor,
+    ownerId: owner,
+    organizationId: owner,
+  }));
   const rpc = vi.fn(async () => ({ state: "ready", slots: [], hasMore: false }));
   const dispatch = vi.fn();
   await expect(
@@ -60,4 +64,65 @@ it("rejects an invalid page before authorization or storage", async () => {
   ).rejects.toThrow();
   expect(authorize).not.toHaveBeenCalled();
   expect(rpc).not.toHaveBeenCalled();
+});
+
+it("authorizes the exact workspace before starting the gated track lookup", async () => {
+  process.env.CONTEXT_SPOTIFY_RELEASE_TRACK_ISRC_ENABLED = "true";
+  const authorize = vi.fn(async () => ({
+    accountId: actor,
+    ownerId: owner,
+    organizationId: owner,
+  }));
+  const dispatchReleaseTracks = vi.fn(async () => ({ id: "queued" }));
+  const rpc = vi.fn(async () => ({ state: "ready", linkedSlots: 1, hasMore: false }));
+  await expect(
+    processContextOperation(
+      actor,
+      {
+        action: "verify_release_tracks",
+        request_id: requestId,
+        subject_id: subjectId,
+        organization_id: owner,
+      },
+      { authorize, rpc, dispatch: vi.fn(), dispatchReleaseTracks },
+    ),
+  ).resolves.toEqual({
+    request_id: requestId,
+    subject_id: subjectId,
+    lookupQueued: true,
+  });
+  expect(authorize).toHaveBeenCalledWith(actor, owner);
+  expect(dispatchReleaseTracks).toHaveBeenCalledWith(actor, owner, requestId, subjectId);
+  expect(rpc).toHaveBeenCalledWith("list_context_release_track_slots", {
+    p_owner: owner,
+    p_request: requestId,
+    p_subject: subjectId,
+    p_after_slot: -1,
+    p_limit: 100,
+  });
+  delete process.env.CONTEXT_SPOTIFY_RELEASE_TRACK_ISRC_ENABLED;
+});
+
+it("does not queue track lookups while the server policy is off", async () => {
+  delete process.env.CONTEXT_SPOTIFY_RELEASE_TRACK_ISRC_ENABLED;
+  const rpc = vi.fn();
+  const dispatchReleaseTracks = vi.fn();
+  await expect(
+    processContextOperation(
+      actor,
+      {
+        action: "verify_release_tracks",
+        request_id: requestId,
+        subject_id: subjectId,
+      },
+      {
+        authorize: async () => ({ ownerId: actor, accountId: actor, organizationId: null }),
+        rpc,
+        dispatch: vi.fn(),
+        dispatchReleaseTracks,
+      },
+    ),
+  ).rejects.toThrow("not enabled");
+  expect(rpc).not.toHaveBeenCalled();
+  expect(dispatchReleaseTracks).not.toHaveBeenCalled();
 });

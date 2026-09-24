@@ -6,6 +6,7 @@ import { validateContextOperationBody } from "./validateContextOperationBody";
 import { callContextRpc } from "@/lib/supabase/context_requests/callContextRpc";
 import { dispatchContextRequest } from "./dispatchContextRequest";
 import { dispatchContextReleaseVerification } from "./dispatchContextReleaseVerification";
+import { dispatchContextReleaseTrackIsrcs } from "./dispatchContextReleaseTrackIsrcs";
 /** POST /api/context: authenticated ingestion, progress, and task-specific context selection. */
 export async function contextOperationHandler(request: NextRequest) {
   const parsed = validateContextOperationBody(await request.json().catch(() => null));
@@ -17,9 +18,12 @@ export async function contextOperationHandler(request: NextRequest) {
       rpc: callContextRpc,
       dispatch: dispatchContextRequest,
       dispatchRelease: dispatchContextReleaseVerification,
+      dispatchReleaseTracks: dispatchContextReleaseTrackIsrcs,
     });
     return NextResponse.json(result, {
-      status: ["ingest", "verify_release"].includes(parsed.action) ? 202 : 200,
+      status: ["ingest", "verify_release", "verify_release_tracks"].includes(parsed.action)
+        ? 202
+        : 200,
       headers: getCorsHeaders(),
     });
   } catch {

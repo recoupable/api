@@ -35,6 +35,12 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
     limit: z.number().int().min(1).max(100).default(100),
   }),
   z.strictObject({
+    action: z.literal("verify_release_tracks"),
+    request_id: z.uuid(),
+    subject_id: z.uuid(),
+    organization_id: z.uuid().optional(),
+  }),
+  z.strictObject({
     action: z.literal("expand_catalog_members"),
     request_id: z.string().uuid(),
     subject_id: z.string().uuid(),
@@ -97,6 +103,12 @@ export interface ContextOperationDependencies {
   rpc: (name: string, params: Record<string, unknown>) => Promise<unknown>;
   dispatch: (actor: string, owner: string, requestId: string) => Promise<unknown>;
   dispatchRelease?: (actor: string, owner: string, requestId: string) => Promise<unknown>;
+  dispatchReleaseTracks?: (
+    actor: string,
+    owner: string,
+    requestId: string,
+    subjectId: string,
+  ) => Promise<unknown>;
   authorize?: typeof authorizeContextOwner;
 }
 /** Single authenticated operation surface used by HTTP, MCP and integration tests. */
@@ -144,6 +156,29 @@ export async function processContextOperation(
         p_limit: args.limit,
       }),
     };
+  }
+  if (args.action === "verify_release_tracks") {
+    if (process.env.CONTEXT_SPOTIFY_RELEASE_TRACK_ISRC_ENABLED !== "true")
+      throw new Error("Spotify release track lookup is not enabled");
+    const page = z
+      .object({
+        state: z.literal("ready"),
+        linkedSlots: z.number().int().min(1).max(100),
+        hasMore: z.literal(false),
+      })
+      .parse(
+        await deps.rpc("list_context_release_track_slots", {
+          p_owner: ownerId,
+          p_request: args.request_id,
+          p_subject: args.subject_id,
+          p_after_slot: -1,
+          p_limit: 100,
+        }),
+      );
+    if (!page || !deps.dispatchReleaseTracks)
+      throw new Error("Release track dispatcher unavailable");
+    await deps.dispatchReleaseTracks(accountId, ownerId, args.request_id, args.subject_id);
+    return { request_id: args.request_id, subject_id: args.subject_id, lookupQueued: true };
   }
   if (args.action === "expand_catalog_members") {
     const { expandContextCatalogMembers } = await import(
