@@ -53,6 +53,7 @@ const schema = z.strictObject({
             "catalog_account_link",
             "submitted_name",
             "campaign_brief",
+            "submitted_text",
           ]),
         ),
         reusableModules: z.array(moduleId),

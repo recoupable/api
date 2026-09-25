@@ -115,6 +115,13 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
     idempotency_key: contextIngestSchema.shape.idempotency_key,
   }),
   z.strictObject({
+    action: z.literal("ingest_supporting_text"),
+    title: z.string().trim().min(2).max(200),
+    text: z.string().min(1).max(20000),
+    organization_id: z.uuid().optional(),
+    idempotency_key: contextIngestSchema.shape.idempotency_key,
+  }),
+  z.strictObject({
     action: z.literal("ingest_release"),
     url: z.url().max(2048),
     organization_id: z.uuid().optional(),
@@ -337,6 +344,18 @@ export async function processContextOperation(
       p_key: args.idempotency_key,
     })) as Omit<ContextRequestRecord, "input"> & {
       input: { kind: "campaign"; brief: typeof args.brief; identityConfirmed: false };
+    };
+    return { request };
+  }
+  if (args.action === "ingest_supporting_text") {
+    const request = (await deps.rpc("create_context_supporting_text_request", {
+      p_owner: ownerId,
+      p_actor: accountId,
+      p_title: args.title,
+      p_text: args.text,
+      p_key: args.idempotency_key,
+    })) as Omit<ContextRequestRecord, "input"> & {
+      input: { kind: "material"; materialType: "text"; title: string; contentHash: string };
     };
     return { request };
   }

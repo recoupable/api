@@ -94,7 +94,7 @@ it("rejects an unready or unsupported saved request", async () => {
     id: requestId,
     owner_id: owner,
     status: "completed",
-    input: { kind: "material" },
+    input: { kind: "composition" },
   });
   await expect(planStoredContextModules(actor, owner, requestId)).rejects.toThrow(
     "Unsupported saved context entry",
@@ -241,6 +241,36 @@ it("keeps a campaign brief separate from promoted subject links", async () => {
       module: "campaign_context",
       state: "not_implemented",
       targetKind: "campaign",
+      executionStarted: false,
+    },
+  ]);
+  expect(result.collectionPermitted).toBe(false);
+});
+
+it("shows supporting text as saved but extraction and subject association as unfinished", async () => {
+  rpc.mockImplementation(async name =>
+    name === "read_context_request"
+      ? { id: requestId, owner_id: owner, status: "partial", input: { kind: "material" } }
+      : {
+          subjectId: artist,
+          kind: "material",
+          identityConfirmed: false,
+          availableFields: ["submitted_text"],
+          reusableModules: [],
+        },
+  );
+  const result = await planStoredContextModules(actor, owner, requestId);
+  expect(rpc).toHaveBeenCalledWith("list_context_material_request_target", {
+    p_owner: owner,
+    p_request: requestId,
+  });
+  expect(targets).not.toHaveBeenCalled();
+  expect(result.entry).toBe("material");
+  expect(result.plan).toMatchObject([
+    {
+      module: "material_extraction",
+      state: "not_implemented",
+      targetKind: "material",
       executionStarted: false,
     },
   ]);
