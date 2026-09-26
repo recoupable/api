@@ -80,6 +80,7 @@ describe("shared context operations", () => {
       "lyrics",
       "artwork_branding",
       "artist_research",
+      "recording_metadata",
       "release_metadata",
       "artist_metadata",
     ];

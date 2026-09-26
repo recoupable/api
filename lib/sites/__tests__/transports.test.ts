@@ -63,7 +63,7 @@ it("MCP registers all operations and fails closed without auth", async () => {
   expect(m.process).not.toHaveBeenCalled();
 });
 it("MCP and HTTP call the same generation operation and authenticated identity", async () => {
-  const input = { id, revision: 1, instruction: "make a game" };
+  const input = { id, revision: 1, instruction: "make a game", contextBriefId: id };
   await tools().generate_site.run(input, { authInfo: { extra: { accountId: id } } });
   await siteOperationHandler(new NextRequest("https://api.test/api/sites"), "generate", input);
   expect(m.process.mock.calls).toEqual([

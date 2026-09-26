@@ -50,6 +50,7 @@ export const actionSchema = z.discriminatedUnion("action", [
       revision: z.number().int().nonnegative(),
       instruction: z.string().trim().max(6000).default(""),
       background: z.boolean().default(true),
+      contextBriefId: z.string().uuid().optional(),
     })
     .strict(),
   z

@@ -1,3 +1,4 @@
+import { readSiteContextBrief } from "./production/readSiteContextBrief";
 import { selectArtistOrganizationIds } from "@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds";
 import { siteOperationSchemas, type SiteOperation } from "./siteOperationSchemas";
 import { authorizeSiteWorkspace } from "./authorizeSiteWorkspace";
@@ -85,19 +86,33 @@ export async function processSiteOperation(
     throw new SiteError(409, "This site changed. Reload before editing.");
   if (operation === "publish" && !site.draft)
     throw new SiteError(400, "Generate a preview before publishing");
+  const contextBriefId =
+    "contextBriefId" in input ? (input.contextBriefId as string | undefined) : undefined;
+  const selectedBrief = contextBriefId ?? site.draft?.production?.context.engine?.briefId;
+  if ((operation === "generate" || operation === "publish") && selectedBrief)
+    await readSiteContextBrief(site, accountId, selectedBrief);
   if (
     operation === "generate" &&
     "background" in input &&
     input.background &&
     "instruction" in input
   )
-    return startSiteProduction(site, String(input.instruction || site.brief), accountId);
+    return startSiteProduction(
+      site,
+      String(input.instruction || site.brief),
+      accountId,
+      contextBriefId,
+    );
   const changes =
     operation === "generate" && "instruction" in input
-      ? { draft: await produceSite(site, String(input.instruction), accountId) }
+      ? { draft: await produceSite(site, String(input.instruction), accountId, contextBriefId) }
       : operation === "publish"
         ? { published: site.draft, published_at: new Date().toISOString() }
         : { published: null, published_at: null };
+  if (operation === "generate" && selectedBrief) {
+    await readSiteContextBrief(site, accountId, selectedBrief);
+    await authorizeSiteWorkspace(accountId, site.owner_id);
+  }
   const updated = await updateSite(site.id, site.owner_id, site.revision, changes);
   if (!updated)
     throw new SiteError(409, "This site changed while you were editing. Reload before editing.");

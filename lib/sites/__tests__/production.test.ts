@@ -23,8 +23,8 @@ beforeEach(() => {
   m.review.mockResolvedValue({ verdict: "pass", issues: [] });
 });
 it("runs research, direction, real assets, implementation and review in order", async () => {
-  const result = await produceSite(site, "", "account");
-  expect(m.collect).toHaveBeenCalledWith(site, "account");
+  const result = await produceSite(site, "", "account", "saved-brief");
+  expect(m.collect).toHaveBeenCalledWith(site, "account", "saved-brief");
   expect(m.build.mock.calls[0][3]).toEqual([]);
   expect(result.production.reviews).toHaveLength(1);
   expect(result.production.status).toBe("reviewed");
@@ -34,14 +34,14 @@ it("revises once with concrete review feedback and keeps both reviews", async ()
     verdict: "revise",
     issues: [{ detail: "Mobile start button clipped" }],
   });
-  const result = await produceSite(site, "", "account");
+  const result = await produceSite(site, "", "account", "saved-brief");
   expect(m.build).toHaveBeenCalledTimes(2);
   expect(JSON.stringify(m.build.mock.calls[1])).toContain("Mobile start button clipped");
   expect(result.production.reviews).toHaveLength(2);
 });
 it("does not endlessly spend or label a failed review as approved", async () => {
   m.review.mockResolvedValue({ verdict: "revise", issues: [{ detail: "Unreadable" }] });
-  const result = await produceSite(site, "", "account");
+  const result = await produceSite(site, "", "account", "saved-brief");
   expect(m.build).toHaveBeenCalledTimes(2);
   expect(result.production.status).toBe("needs-review");
 });

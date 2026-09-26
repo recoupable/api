@@ -7,10 +7,15 @@ import { buildStep } from "./buildStep";
 import { reviewStep } from "./reviewStep";
 import { saveSiteStep } from "./saveSiteStep";
 /** Completed stages are durable; a browser disconnect does not discard production. */
-export async function siteProductionWorkflow(site: Site, instruction: string, accountId: string) {
+export async function siteProductionWorkflow(
+  site: Site,
+  instruction: string,
+  accountId: string,
+  contextBriefId?: string,
+) {
   "use workflow";
   try {
-    const context = await collectContextStep(site, accountId);
+    const context = await collectContextStep(site, accountId, contextBriefId);
     let direction = await directionStep(site, instruction, context, accountId);
     let assets = await assetsStep(site, direction, accountId);
     let snapshot = await buildStep(

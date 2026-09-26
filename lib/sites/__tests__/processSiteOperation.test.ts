@@ -5,6 +5,7 @@ vi.mock("@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds", ()
 }));
 const m = vi.hoisted(() => ({
   access: vi.fn(),
+  brief: vi.fn(),
   artistOrgs: vi.fn(),
   artist: vi.fn(),
   select: vi.fn(),
@@ -24,6 +25,7 @@ vi.mock("@/lib/supabase/sites/selectSites", () => ({ selectSites: m.list }));
 vi.mock("@/lib/supabase/sites/insertSite", () => ({ insertSite: m.insert }));
 vi.mock("@/lib/supabase/sites/updateSite", () => ({ updateSite: m.update }));
 vi.mock("@/lib/supabase/sites/selectSignups", () => ({ selectSignups: m.signups }));
+vi.mock("../production/readSiteContextBrief", () => ({ readSiteContextBrief: m.brief }));
 vi.mock("../production/produceSite", () => ({ produceSite: m.generate }));
 vi.mock("../production/startSiteProduction", () => ({ startSiteProduction: m.generate }));
 vi.mock("../production/getSiteProduction", () => ({ getSiteProduction: vi.fn() }));
@@ -35,7 +37,14 @@ const draft = { name: "Release" };
 beforeEach(() => {
   vi.resetAllMocks();
   m.artistOrgs.mockResolvedValue([]);
-  m.select.mockResolvedValue({ id, owner_id: account, revision: 2, draft, published: null });
+  m.select.mockResolvedValue({
+    id,
+    owner_id: account,
+    revision: 2,
+    brief: "",
+    draft,
+    published: null,
+  });
   m.access.mockResolvedValue(false);
   m.update.mockResolvedValue({ id, revision: 3 });
   m.list.mockResolvedValue([]);
@@ -151,4 +160,27 @@ it("permits organization API keys to attach their own roster artist", async () =
     brief: "y",
   });
   expect(m.insert).toHaveBeenCalledWith(expect.objectContaining({ owner_id: org, artist_id: id }));
+});
+
+it("passes the selected brief to background generation after validation", async () => {
+  await processSiteOperation(account, "generate", { id, revision: 2, contextBriefId: org });
+  expect(m.brief).toHaveBeenCalledWith(expect.objectContaining({ id }), account, org);
+  expect(m.generate).toHaveBeenCalledWith(expect.objectContaining({ id }), "", account, org);
+});
+it("does not generate or publish from an unavailable saved brief", async () => {
+  m.select.mockResolvedValue({
+    id,
+    owner_id: account,
+    revision: 2,
+    draft: { production: { context: { engine: { briefId: org } } } },
+  });
+  m.brief.mockRejectedValue(new Error("Evidence withdrawn"));
+  await expect(processSiteOperation(account, "generate", { id, revision: 2 })).rejects.toThrow(
+    "withdrawn",
+  );
+  await expect(processSiteOperation(account, "publish", { id, revision: 2 })).rejects.toThrow(
+    "withdrawn",
+  );
+  expect(m.generate).not.toHaveBeenCalled();
+  expect(m.update).not.toHaveBeenCalled();
 });
