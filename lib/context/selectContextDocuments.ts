@@ -1,5 +1,6 @@
 export interface ContextBriefDocument {
   id: string;
+  resultId?: string;
   ownerId: string;
   subjectId: string;
   topic: string;

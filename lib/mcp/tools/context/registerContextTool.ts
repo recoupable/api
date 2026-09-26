@@ -17,7 +17,7 @@ export function registerContextTool(server: McpServer) {
     "context",
     {
       description:
-        "Save reusable context from a Spotify track URL, read request progress, or select a creative-direction/playlist-pitch brief. Use a stable idempotency_key for retries. Metadata pilot: inspect gaps; audio, lyrics, artwork analysis and research may be unavailable. Never treat partial context as full song understanding.",
+        "Save reusable context from a Spotify track URL, read request progress, or compile a creative-direction/playlist-pitch evidence brief. For a brief, use request_id and optional additional_request_ids from the same workspace to combine saved song context without recollection. Returns bounded text, per-request coverage and an input-version manifest. Use a stable idempotency_key for ingestion retries. Inspect gaps; audio, lyrics, artwork analysis and research may be unavailable. Never treat partial context as full song understanding.",
       inputSchema: contextOperationSchema,
     },
     async (args, extra) => {

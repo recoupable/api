@@ -43,7 +43,12 @@ describe("shared context operations", () => {
   it("reports missing analysis rather than presenting metadata as a ready creative brief", async () => {
     const rpc = vi.fn(async (name: string) =>
       name === "read_context_request"
-        ? { id: requestId, output: { subjectIds: ["subject"] } }
+        ? {
+            id: requestId,
+            owner_id: actor,
+            status: "completed",
+            output: { subjectIds: ["subject"] },
+          }
         : [
             {
               id: "doc",
@@ -82,6 +87,8 @@ describe("shared context operations", () => {
       name === "read_context_request"
         ? {
             id: requestId,
+            owner_id: actor,
+            status: "completed",
             output: { subjectIds: ["subject"], gaps: [{ topic: "lyrics", status: "unavailable" }] },
           }
         : topics.map(topic => ({
@@ -117,4 +124,77 @@ describe("shared context operations", () => {
       ),
     ).rejects.toThrow();
   });
+  it("combines authorized requests without recollection or duplicate request reads", async () => {
+    const second = "33333333-3333-4333-8333-333333333333";
+    const rpc = vi.fn(async (name: string, params: Record<string, unknown>) => {
+      expect(params.p_owner).toBe(actor);
+      return name === "read_context_request"
+        ? {
+            id: params.p_request,
+            owner_id: actor,
+            status: "completed",
+            output: { subjectIds: [String(params.p_request)] },
+          }
+        : [
+            {
+              id: String(params.p_request),
+              ownerId: actor,
+              subjectId: String(params.p_request),
+              topic: "song_summary",
+              version: 1,
+              status: "accepted",
+              evidenceKind: "observation",
+              text: "Saved song analysis",
+              sourceVersionIds: ["source"],
+              coverage: "partial",
+            },
+          ];
+    });
+    const dispatch = vi.fn();
+    const brief = await processContextOperation(
+      actor,
+      {
+        action: "brief",
+        request_id: requestId,
+        additional_request_ids: [second, requestId, second],
+        purpose: "playlist_pitch",
+      },
+      { rpc, dispatch },
+    );
+    expect(brief).toMatchObject({
+      request_ids: [requestId, second],
+      documents: [{ subjectId: requestId }, { subjectId: second }],
+    });
+    expect(rpc.mock.calls.filter(([name]) => name === "read_context_request")).toHaveLength(2);
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+  it.each(["wrong_owner", "cancelled"])(
+    "rejects an additional request that is %s",
+    async reason => {
+      const second = "33333333-3333-4333-8333-333333333333";
+      const rpc = vi.fn(async (name: string, params: Record<string, unknown>) =>
+        name === "read_context_request"
+          ? {
+              id: params.p_request,
+              owner_id: params.p_request === second && reason === "wrong_owner" ? second : actor,
+              status:
+                params.p_request === second && reason === "cancelled" ? "cancelled" : "completed",
+              output: { subjectIds: ["subject"] },
+            }
+          : [],
+      );
+      await expect(
+        processContextOperation(
+          actor,
+          {
+            action: "brief",
+            request_id: requestId,
+            additional_request_ids: [second],
+            purpose: "playlist_pitch",
+          },
+          { rpc, dispatch: vi.fn() },
+        ),
+      ).rejects.toThrow();
+    },
+  );
 });
