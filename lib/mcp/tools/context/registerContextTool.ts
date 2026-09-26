@@ -10,6 +10,7 @@ import {
 import { callContextRpc } from "@/lib/supabase/context_requests/callContextRpc";
 import { dispatchContextRequest } from "@/lib/context/dispatchContextRequest";
 import { dispatchContextReleaseVerification } from "@/lib/context/dispatchContextReleaseVerification";
+import { dispatchContextReleaseTrackIsrcs } from "@/lib/context/dispatchContextReleaseTrackIsrcs";
 /** Same domain operations and ownership rules as POST /api/context. */
 export function registerContextTool(server: McpServer) {
   server.registerTool(
@@ -31,6 +32,7 @@ export function registerContextTool(server: McpServer) {
             rpc: callContextRpc,
             dispatch: dispatchContextRequest,
             dispatchRelease: dispatchContextReleaseVerification,
+            dispatchReleaseTracks: dispatchContextReleaseTrackIsrcs,
           }),
         );
       } catch {
