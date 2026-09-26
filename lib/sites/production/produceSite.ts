@@ -1,3 +1,4 @@
+import { conceptPitchSchema, type ConceptPitch } from "@/lib/sites/production/conceptSchema";
 import { reviseProduction } from "./reviseProduction";
 import type { Site } from "../schema";
 import { collectReleaseContext } from "./collectReleaseContext";
@@ -11,9 +12,11 @@ export async function produceSite(
   instruction: string,
   accountId: string,
   contextBriefId?: string,
+  approvedConcept?: ConceptPitch,
 ) {
+  conceptPitchSchema.parse(approvedConcept);
   const context = await collectReleaseContext(site, accountId, contextBriefId);
-  let direction = await directExperience(site, instruction, context, accountId);
+  let direction = await directExperience(site, instruction, context, accountId, approvedConcept);
   let assets = await produceAssets(site, direction, accountId);
   let snapshot = await buildExperience(
     site,
@@ -23,7 +26,10 @@ export async function produceSite(
     accountId,
   );
   const reviews = [await reviewExperience(snapshot, direction, accountId, site.id)];
-  if (reviews[0].verdict === "revise") {
+  if (
+    reviews[0].verdict === "revise" &&
+    !reviews[0].issues.some(issue => issue.module === "direction")
+  ) {
     ({ snapshot, direction, assets } = await reviseProduction(
       site,
       instruction,

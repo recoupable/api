@@ -1,3 +1,4 @@
+import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
 import { startSiteProduction } from "../production/startSiteProduction";
 import { getSiteProduction } from "../production/getSiteProduction";
@@ -23,15 +24,15 @@ beforeEach(() => {
   m.start.mockResolvedValue({ runId: "run" });
 });
 it("claims the expected revision before starting billable work", async () => {
-  await startSiteProduction(site, "", "account");
+  await startSiteProduction(site, "", "account", undefined, approvedConcept);
   expect(m.update).toHaveBeenCalledWith("site", "workspace", 3, {});
   expect(m.start.mock.calls[0][1][0].revision).toBe(4);
 });
 it("rejects a duplicate generation without starting another workflow", async () => {
   m.update.mockResolvedValue(null);
-  await expect(startSiteProduction(site, "", "account")).rejects.toThrow(
-    "Generation already started",
-  );
+  await expect(
+    startSiteProduction(site, "", "account", undefined, approvedConcept),
+  ).rejects.toThrow("Generation already started");
   expect(m.start).not.toHaveBeenCalled();
 });
 it("does not inspect another account's generation", async () => {

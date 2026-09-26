@@ -1,3 +1,4 @@
+import { conceptPitchSchema, type ConceptPitch } from "@/lib/sites/production/conceptSchema";
 import { readSiteContextBrief } from "./readSiteContextBrief";
 import { updateSite } from "@/lib/supabase/sites/updateSite";
 import { SiteError } from "../SiteError";
@@ -11,7 +12,9 @@ export async function startSiteProduction(
   instruction: string,
   accountId: string,
   contextBriefId?: string,
+  approvedConcept?: ConceptPitch,
 ) {
+  conceptPitchSchema.parse(approvedConcept);
   const selectedBrief = contextBriefId ?? site.draft?.production?.context.engine?.briefId;
   if (selectedBrief) await readSiteContextBrief(site, accountId, selectedBrief);
   await requireCredits(accountId);
@@ -28,6 +31,7 @@ export async function startSiteProduction(
     instruction,
     accountId,
     contextBriefId,
+    approvedConcept,
   ]);
   return {
     generation: {

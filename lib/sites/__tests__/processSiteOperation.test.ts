@@ -1,10 +1,17 @@
+import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
 import { processSiteOperation } from "../processSiteOperation";
+vi.mock("../production/collectReleaseContext", () => ({ collectReleaseContext: m.collect }));
+vi.mock("../production/proposeExperienceConcepts", () => ({
+  proposeExperienceConcepts: m.propose,
+}));
 vi.mock("@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds", () => ({
   selectArtistOrganizationIds: m.artistOrgs,
 }));
 const m = vi.hoisted(() => ({
   access: vi.fn(),
+  collect: vi.fn(),
+  propose: vi.fn(),
   brief: vi.fn(),
   artistOrgs: vi.fn(),
   artist: vi.fn(),
@@ -100,7 +107,12 @@ it("blocks inaccessible artist association", async () => {
 });
 it("rejects stale revision before generating", async () => {
   await expect(
-    processSiteOperation(account, "generate", { id, revision: 1, instruction: "change" }),
+    processSiteOperation(account, "generate", {
+      approvedConcept,
+      id,
+      revision: 1,
+      instruction: "change",
+    }),
   ).rejects.toMatchObject({ status: 409 });
   expect(m.generate).not.toHaveBeenCalled();
 });
@@ -109,6 +121,7 @@ it("reports concurrent writes after generation", async () => {
   m.update.mockResolvedValue(null);
   await expect(
     processSiteOperation(account, "generate", {
+      approvedConcept,
       id,
       revision: 2,
       instruction: "change",
@@ -163,9 +176,20 @@ it("permits organization API keys to attach their own roster artist", async () =
 });
 
 it("passes the selected brief to background generation after validation", async () => {
-  await processSiteOperation(account, "generate", { id, revision: 2, contextBriefId: org });
+  await processSiteOperation(account, "generate", {
+    approvedConcept,
+    id,
+    revision: 2,
+    contextBriefId: org,
+  });
   expect(m.brief).toHaveBeenCalledWith(expect.objectContaining({ id }), account, org);
-  expect(m.generate).toHaveBeenCalledWith(expect.objectContaining({ id }), "", account, org);
+  expect(m.generate).toHaveBeenCalledWith(
+    expect.objectContaining({ id }),
+    "",
+    account,
+    org,
+    approvedConcept,
+  );
 });
 it("does not generate or publish from an unavailable saved brief", async () => {
   m.select.mockResolvedValue({
@@ -175,12 +199,26 @@ it("does not generate or publish from an unavailable saved brief", async () => {
     draft: { production: { context: { engine: { briefId: org } } } },
   });
   m.brief.mockRejectedValue(new Error("Evidence withdrawn"));
-  await expect(processSiteOperation(account, "generate", { id, revision: 2 })).rejects.toThrow(
-    "withdrawn",
-  );
+  await expect(
+    processSiteOperation(account, "generate", { approvedConcept, id, revision: 2 }),
+  ).rejects.toThrow("withdrawn");
   await expect(processSiteOperation(account, "publish", { id, revision: 2 })).rejects.toThrow(
     "withdrawn",
   );
+  expect(m.generate).not.toHaveBeenCalled();
+  expect(m.update).not.toHaveBeenCalled();
+});
+
+it("returns pitches without starting production or overwriting the draft", async () => {
+  m.collect.mockResolvedValue({});
+  m.propose.mockResolvedValue({ status: "ready", candidates: [approvedConcept], reason: "" });
+  const result = await processSiteOperation(account, "concepts", { id, revision: 2 });
+  expect(result).toMatchObject({ concepts: { candidates: [approvedConcept] }, revision: 2 });
+  expect(m.generate).not.toHaveBeenCalled();
+  expect(m.update).not.toHaveBeenCalled();
+});
+it("rejects generation without selection before any provider or workflow", async () => {
+  await expect(processSiteOperation(account, "generate", { id, revision: 2 })).rejects.toThrow();
   expect(m.generate).not.toHaveBeenCalled();
   expect(m.update).not.toHaveBeenCalled();
 });

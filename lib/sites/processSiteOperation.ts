@@ -1,3 +1,5 @@
+import { collectReleaseContext } from "./production/collectReleaseContext";
+import { proposeExperienceConcepts } from "./production/proposeExperienceConcepts";
 import { readSiteContextBrief } from "./production/readSiteContextBrief";
 import { selectArtistOrganizationIds } from "@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds";
 import { siteOperationSchemas, type SiteOperation } from "./siteOperationSchemas";
@@ -68,7 +70,7 @@ export async function processSiteOperation(
       name: input.name || release!.title.slice(0, 120),
       brief:
         input.brief ||
-        "Create a distinctive fan experience inspired by this release, its music, artwork and artist. Choose the strongest concept and format; it does not have to be a game. Make it worth sharing and easy to use on a phone.",
+        "Create a distinctive fan experience inspired by this release, its music, artwork and artist. Start with what fans would enjoy doing and let the customer choose a concept before building. Make the activity clear and worthwhile on a phone.",
       release_url: release?.url || input.releaseUrl,
       assets,
     });
@@ -88,6 +90,23 @@ export async function processSiteOperation(
     throw new SiteError(400, "Generate a preview before publishing");
   const contextBriefId =
     "contextBriefId" in input ? (input.contextBriefId as string | undefined) : undefined;
+  if (operation === "concepts" && "instruction" in input) {
+    const context = await collectReleaseContext(site, accountId, contextBriefId);
+    const concepts = await proposeExperienceConcepts(
+      site,
+      String(input.instruction),
+      context,
+      accountId,
+    );
+    await authorizeSiteWorkspace(accountId, site.owner_id);
+    if (context.engine?.briefId)
+      await readSiteContextBrief(site, accountId, context.engine.briefId);
+    return { concepts, revision: site.revision };
+  }
+  const approvedConcept =
+    operation === "generate"
+      ? siteOperationSchemas.generate.parse(input).approvedConcept
+      : undefined;
   const selectedBrief = contextBriefId ?? site.draft?.production?.context.engine?.briefId;
   if ((operation === "generate" || operation === "publish") && selectedBrief)
     await readSiteContextBrief(site, accountId, selectedBrief);
@@ -95,17 +114,27 @@ export async function processSiteOperation(
     operation === "generate" &&
     "background" in input &&
     input.background &&
-    "instruction" in input
+    "instruction" in input &&
+    "approvedConcept" in input
   )
     return startSiteProduction(
       site,
       String(input.instruction || site.brief),
       accountId,
       contextBriefId,
+      approvedConcept,
     );
   const changes =
-    operation === "generate" && "instruction" in input
-      ? { draft: await produceSite(site, String(input.instruction), accountId, contextBriefId) }
+    operation === "generate" && "instruction" in input && "approvedConcept" in input
+      ? {
+          draft: await produceSite(
+            site,
+            String(input.instruction),
+            accountId,
+            contextBriefId,
+            approvedConcept,
+          ),
+        }
       : operation === "publish"
         ? { published: site.draft, published_at: new Date().toISOString() }
         : { published: null, published_at: null };

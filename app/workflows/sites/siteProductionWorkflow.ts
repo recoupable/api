@@ -1,3 +1,4 @@
+import { conceptPitchSchema, type ConceptPitch } from "@/lib/sites/production/conceptSchema";
 import { reviseStep } from "./reviseStep";
 import type { Site } from "@/lib/sites/schema";
 import { collectContextStep } from "./collectContextStep";
@@ -12,11 +13,13 @@ export async function siteProductionWorkflow(
   instruction: string,
   accountId: string,
   contextBriefId?: string,
+  approvedConcept?: ConceptPitch,
 ) {
   "use workflow";
   try {
+    conceptPitchSchema.parse(approvedConcept);
     const context = await collectContextStep(site, accountId, contextBriefId);
-    let direction = await directionStep(site, instruction, context, accountId);
+    let direction = await directionStep(site, instruction, context, accountId, approvedConcept);
     let assets = await assetsStep(site, direction, accountId);
     let snapshot = await buildStep(
       site,
@@ -26,7 +29,10 @@ export async function siteProductionWorkflow(
       accountId,
     );
     const reviews = [await reviewStep(snapshot, direction, accountId, site.id)];
-    if (reviews[0].verdict === "revise") {
+    if (
+      reviews[0].verdict === "revise" &&
+      !reviews[0].issues.some(issue => issue.module === "direction")
+    ) {
       ({ snapshot, direction, assets } = await reviseStep(
         site,
         instruction,

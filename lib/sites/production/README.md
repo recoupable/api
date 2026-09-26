@@ -1,14 +1,14 @@
 # Release-to-experience production
 
-UI, HTTP and MCP use the same production stages. A Spotify URL is sufficient; a customer prompt is optional.
+HTTP and MCP separate concept pitches from production. A Spotify URL starts context collection; a customer-selected concept is required before building. Clients must show pitches and pass the chosen `approvedConcept` to generation. Older clients that omit selection receive a validation error.
 
 1. Resolve the release and artwork. Track metadata can supply an official preview.
 2. Collect sourced artist research and analyze available audio through existing Recoup services. Missing evidence is recorded explicitly; previews are not full-song analysis.
-3. Choose among distinct concepts with a specific release connection, credible fan motivation, concrete payoff and executable journey. An independent concept review rejects arbitrary or unsupported ideas before asset spending. Failure stops the job; no automatic paid brainstorming loop.
+3. Propose up to three short pitches starting with fan motivation. Metadata and cover details alone return `needs-context` without a concept model call. The model may also return `no-good-concept`. Show candidates to the customer and wait for a choice. Generation develops only the explicitly selected pitch, then independently checks that the plan preserves it and has real appeal. No automatic paid brainstorming loop.
 4. Produce up to two finished images with the existing image service and store normalized assets in the workspace.
 5. Pass context and real asset URLs through the reusable brand-world and implementation modules.
 6. Render mobile and desktop in an isolated Vercel Sandbox. Execute the complete structured journey using accessible controls, verify expected visible outcomes, capture initial/final states, runtime errors and horizontal overflow. Reopen downloaded/shared image bytes in a separate page, reject blank/invalid outputs and include the actual artifact in visual review.
-7. Critique screenshots. Route one revision to direction, assets or implementation, then review again.
+7. Critique screenshots. A direction failure saves needs-review and returns to customer concept selection; it never silently changes the chosen activity. Asset/implementation fixes retain one bounded revision and review.
 8. Save a private draft with evidence and reviews. Persistent issues are marked needs-review. Publishing remains a separate customer action.
 
 ## Execution and billing
@@ -42,7 +42,15 @@ Initial public-output scope is release/artist metadata, song summaries and artwo
 Example HTTP body for `PATCH /api/sites/{id}`:
 
 ```json
-{"action":"generate","revision":0,"contextBriefId":"SAVED_BRIEF_UUID","background":true}
+{"action":"concepts","revision":0,"contextBriefId":"SAVED_BRIEF_UUID"}
 ```
 
 The saved draft retains internal evidence for review. Public responses already strip the entire production context and brand-world specification. Normal Sites credit checks, asset limits, concept gate and rendered review remain in force.
+
+## Concept selection contract
+
+PATCH `/api/sites/{id}` with `action: "concepts"`, current `revision`, optional `instruction` and `contextBriefId`; MCP uses `propose_site_concepts`. This may spend on context collection and one pitch call, but creates no assets, implementation or draft changes. Response: `{ concepts: { status, candidates, reason }, revision }`. Status is `ready`, `needs-context`, or `no-good-concept`.
+
+Each candidate contains `name`, `activity`, `fanMotivation`, `songOrArtistConnection`, and `friendHook`. Show these short pitches to the customer. After selection, call `generate` / `generate_site` with that full object as `approvedConcept`, latest revision and the same context brief. Explicitly customer-authored pitches are also accepted; this is a caller-confirmed choice, not a signed approval receipt. Do not select on the customer's behalf. Generation without the object is rejected before paid work. Without a saved brief, context may be collected again during generation.
+
+The existing local artwork-only Hate U evidence is insufficient for new pitches. Restore usable song analysis or gather sourced artist context first; do not turn a recognizable cover detail into a contrived activity to fill the gap.

@@ -1,6 +1,5 @@
 import type { Site, SiteAsset, SiteSnapshot } from "../schema";
 import type { ReleaseContext, CreativeDirection, CreativeReview } from "./schema";
-import { directExperience } from "./directExperience";
 import { produceAssets } from "./produceAssets";
 import { buildExperience } from "./buildExperience";
 /** Route concrete review findings to the module responsible, with a single bounded pass. */
@@ -30,14 +29,8 @@ export async function reviseProduction(
       },
     },
   };
-  const nextDirection = reviseDirection
-    ? await directExperience(
-        currentSite,
-        `${instruction}\nAddress these review findings: ${feedback}`,
-        context,
-        accountId,
-      )
-    : direction;
+  if (reviseDirection) return { direction, assets, snapshot };
+  const nextDirection = direction;
   const nextAssets = reviseAssets
     ? await produceAssets(currentSite, nextDirection, accountId, feedback)
     : assets;

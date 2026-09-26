@@ -1,3 +1,4 @@
+import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
 import { analyzeReleaseMusic } from "../production/analyzeReleaseMusic";
 import { researchArtist } from "../production/researchArtist";
@@ -89,6 +90,6 @@ it("marks research outages as unavailable", async () => {
 it("rejects a nonexistent selected concept", async () => {
   m.generate.mockResolvedValue({ selectedIndex: 2, candidates: [{}] });
   await expect(
-    directExperience(site, "", { release } as ReleaseContext, "account"),
+    directExperience(site, "", { release } as ReleaseContext, "account", approvedConcept),
   ).rejects.toThrow("unavailable concept");
 });

@@ -10,7 +10,7 @@ export const directionSchema = z.object({
         fanPayoff: z.string(),
       }),
     )
-    .min(2)
+    .min(1)
     .max(3),
   selectedIndex: z.number().int().min(0).max(2),
   contract: experienceContractSchema,
