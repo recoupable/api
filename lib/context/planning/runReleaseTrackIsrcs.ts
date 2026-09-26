@@ -90,14 +90,17 @@ export async function runReleaseTrackIsrcs(
   );
   if (claim.state === "unknown")
     return { state: "unknown" as const, attemptId: claim.attemptId, reason: claim.reason };
-  try {
+  const authorizeBatch = async () => {
     if (!enabled()) throw new Error("Spotify release track lookup is not enabled");
     const current = await read();
+    if (!enabled()) throw new Error("Spotify release track lookup is not enabled");
     if (
       current.sourceResultId !== release.sourceResultId ||
       JSON.stringify(current.slots) !== JSON.stringify(release.slots)
     )
       throw new Error("Release track positions changed before provider lookup");
+  };
+  try {
     const collected = await collectSpotifyReleaseTrackIsrcs(
       release.slots.map(slot => ({
         slotIndex: slot.slotIndex,
@@ -105,6 +108,7 @@ export async function runReleaseTrackIsrcs(
       })),
       token,
       deps.fetcher,
+      authorizeBatch,
     );
     if (collected.observations.every(observation => observation.state === "failed"))
       throw new Error("No verified Spotify track response; review the attempt before retrying");

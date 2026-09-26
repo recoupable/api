@@ -18,6 +18,7 @@ export async function collectSpotifyReleaseTrackIsrcs(
   slots: z.input<typeof inputSchema>,
   accessToken: string,
   fetcher: typeof fetch = fetch,
+  authorizeBatch?: () => Promise<void>,
 ) {
   const input = inputSchema.parse(slots);
   if (new Set(input.map(slot => slot.slotIndex)).size !== input.length)
@@ -36,56 +37,57 @@ export async function collectSpotifyReleaseTrackIsrcs(
       gap: string | null;
     }
   >();
-  let cursor = 0;
-  const worker = async () => {
-    while (cursor < ids.length) {
-      const id = ids[cursor++];
-      const sourceUrl = `https://api.spotify.com/v1/tracks/${id}`;
-      const retrievedAt = new Date().toISOString();
-      const start = Date.now();
-      let httpStatus: number | null = null;
-      try {
-        const response = await fetcher(sourceUrl, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-          redirect: "error",
-          signal: AbortSignal.timeout(20000),
-        });
-        httpStatus = response.status;
-        if (!response.ok) throw new Error(`Spotify HTTP ${response.status}`);
-        const raw: unknown = await response.json();
-        const track = trackSchema.parse(raw);
-        if (track.id !== id) throw new Error("Spotify track identity mismatch");
-        const candidate = track.external_ids?.isrc;
-        const verified =
-          candidate && isrc.safeParse(candidate).success ? candidate.toUpperCase() : null;
-        observations.set(id, {
-          state: verified ? "observed" : "missing_isrc",
-          isrc: verified,
-          sourceUrl,
-          retrievedAt,
-          elapsedMs: Date.now() - start,
-          httpStatus,
-          raw,
-          gap: verified ? null : "Spotify did not supply a valid ISRC for this track",
-        });
-      } catch (error) {
-        observations.set(id, {
-          state: "failed",
-          isrc: null,
-          sourceUrl,
-          retrievedAt,
-          elapsedMs: Date.now() - start,
-          httpStatus,
-          raw: null,
-          gap:
-            error instanceof Error && /^Spotify HTTP [0-9]{3}$/.test(error.message)
-              ? error.message
-              : "Spotify track response could not be verified",
-        });
-      }
+  const lookup = async (id: string) => {
+    const sourceUrl = `https://api.spotify.com/v1/tracks/${id}`;
+    const retrievedAt = new Date().toISOString();
+    const start = Date.now();
+    let httpStatus: number | null = null;
+    try {
+      const response = await fetcher(sourceUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        redirect: "error",
+        signal: AbortSignal.timeout(20000),
+      });
+      httpStatus = response.status;
+      if (!response.ok) throw new Error(`Spotify HTTP ${response.status}`);
+      const raw: unknown = await response.json();
+      const track = trackSchema.parse(raw);
+      if (track.id !== id) throw new Error("Spotify track identity mismatch");
+      const candidate = track.external_ids?.isrc;
+      const verified =
+        candidate && isrc.safeParse(candidate).success ? candidate.toUpperCase() : null;
+      observations.set(id, {
+        state: verified ? "observed" : "missing_isrc",
+        isrc: verified,
+        sourceUrl,
+        retrievedAt,
+        elapsedMs: Date.now() - start,
+        httpStatus,
+        raw,
+        gap: verified ? null : "Spotify did not supply a valid ISRC for this track",
+      });
+    } catch (error) {
+      observations.set(id, {
+        state: "failed",
+        isrc: null,
+        sourceUrl,
+        retrievedAt,
+        elapsedMs: Date.now() - start,
+        httpStatus,
+        raw: null,
+        gap:
+          error instanceof Error && /^Spotify HTTP [0-9]{3}$/.test(error.message)
+            ? error.message
+            : "Spotify track response could not be verified",
+      });
     }
   };
-  await Promise.all(Array.from({ length: Math.min(5, ids.length) }, () => worker()));
+  for (let offset = 0; offset < ids.length; offset += 5) {
+    // Keep policy failures outside the per-track catch: denied work is not a source gap.
+    // Settle the whole batch before rechecking, so rejection leaves no background requests.
+    await authorizeBatch?.();
+    await Promise.all(ids.slice(offset, offset + 5).map(lookup));
+  }
   return {
     observations: ids.map(id => ({ spotifyTrackId: id, ...observations.get(id)! })),
     slots: input.map(slot => ({

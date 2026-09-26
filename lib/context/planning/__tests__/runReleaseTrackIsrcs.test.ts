@@ -151,3 +151,65 @@ it("marks an all-failed lookup unknown instead of saving invented evidence", asy
     false,
   );
 });
+
+it.each(["policy", "workspace", "source", "request"])(
+  "stops queued lookups when %s permission changes during collection",
+  async change => {
+    process.env.CONTEXT_SPOTIFY_RELEASE_TRACK_ISRC_ENABLED = "true";
+    const slots = Array.from({ length: 7 }, (_, index) => ({
+      ...page.slots[0],
+      slotIndex: index,
+      spotifyTrackId: String(index).padStart(22, "A"),
+      trackNumber: index + 1,
+    }));
+    const release = { ...page, slots, linkedSlots: 7, collectedSlots: 7, reportedTotal: 7 };
+    let started = false;
+    const rpc = vi.fn(async (name: string) => {
+      if (name === "list_context_release_track_slots") {
+        if (started && change === "request") throw new Error("Request cancelled");
+        return started && change === "source"
+          ? {
+              ...release,
+              sourceResultId: resultId,
+              slots: slots.map(slot => ({ ...slot, sourceResultId: resultId })),
+            }
+          : release;
+      }
+      if (name === "claim_context_release_track_isrcs") return { state: "claimed", attemptId };
+      if (name === "fail_context_enrichment") return { state: "unknown" };
+      if (name === "complete_context_release_track_isrcs")
+        return {
+          state: "saved",
+          resultId,
+          observedIsrcCount: 7,
+          missingIsrcCount: 0,
+          failedLookupCount: 0,
+        };
+      throw new Error(`Unexpected RPC ${name}`);
+    });
+    const fetcher = vi.fn(async (url: string | URL | Request) => {
+      started = true;
+      if (change === "policy") process.env.CONTEXT_SPOTIFY_RELEASE_TRACK_ISRC_ENABLED = "false";
+      return Response.json({
+        id: String(url).split("/").at(-1),
+        external_ids: { isrc: "USABC2600001" },
+      });
+    });
+    await expect(
+      runReleaseTrackIsrcs(actor, owner, requestId, subjectId, {
+        authorize: async () => ({ ownerId: started && change === "workspace" ? actor : owner }),
+        rpc,
+        getSpotifyToken: async () => "fixture-token",
+        fetcher,
+      }),
+    ).rejects.toThrow();
+    expect(fetcher).toHaveBeenCalledTimes(5);
+    expect(rpc).toHaveBeenCalledWith("fail_context_enrichment", {
+      p_owner: owner,
+      p_attempt: attemptId,
+    });
+    expect(rpc.mock.calls.some(([name]) => name === "complete_context_release_track_isrcs")).toBe(
+      false,
+    );
+  },
+);

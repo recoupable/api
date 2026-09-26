@@ -4,6 +4,56 @@ import { collectSpotifyReleaseTrackIsrcs } from "../collectSpotifyReleaseTrackIs
 const a = "AAAAAAAAAAAAAAAAAAAAAA";
 const b = "BBBBBBBBBBBBBBBBBBBBBB";
 
+it("does not turn a denied batch into a provider failure or start any lookup", async () => {
+  const fetcher = vi.fn();
+  await expect(
+    collectSpotifyReleaseTrackIsrcs(
+      [{ slotIndex: 0, spotifyTrackId: a }],
+      "fixture-token",
+      fetcher,
+      async () => {
+        throw new Error("Collection no longer permitted");
+      },
+    ),
+  ).rejects.toThrow("Collection no longer permitted");
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+it("checks each bounded batch after previous lookups settle", async () => {
+  const slots = Array.from({ length: 7 }, (_, slotIndex) => ({
+    slotIndex,
+    spotifyTrackId: String(slotIndex).padStart(22, "A"),
+  }));
+  let active = 0,
+    maximum = 0,
+    completed = 0;
+  const checkpoints: number[] = [];
+  const fetcher = vi.fn(async (url: string | URL | Request) => {
+    active++;
+    maximum = Math.max(maximum, active);
+    await Promise.resolve();
+    active--;
+    completed++;
+    return Response.json({
+      id: String(url).split("/").at(-1),
+      external_ids: { isrc: "USABC2600001" },
+    });
+  });
+  const result = await collectSpotifyReleaseTrackIsrcs(
+    slots,
+    "fixture-token",
+    fetcher,
+    async () => {
+      expect(active).toBe(0);
+      checkpoints.push(completed);
+    },
+  );
+  expect(checkpoints).toEqual([0, 5]);
+  expect(maximum).toBe(5);
+  expect(result.observations).toHaveLength(7);
+  expect(fetcher).toHaveBeenCalledTimes(7);
+});
+
 it("looks up each distinct track once while preserving repeated release positions", async () => {
   const fetcher = vi.fn(
     async (url: string) =>
