@@ -98,6 +98,8 @@ it("allows the scoped release identity lookup without widening to arbitrary oper
 it("allows the exact enrichment lifecycle and release review RPCs", async () => {
   rpc.mockResolvedValue({ data: {}, error: null });
   const names = [
+    "save_context_brief",
+    "read_context_brief",
     "claim_context_enrichment",
     "complete_context_enrichment",
     "fail_context_enrichment",

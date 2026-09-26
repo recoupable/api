@@ -84,9 +84,31 @@ whole to fit the limit; evidence is never cut mid-claim. A missing topic may mea
 absent, ineligible or over-budget evidence.
 
 These are attributed evidence briefs for downstream work, not generated creative
-proposals or finished outreach. The response includes its manifest but is not stored
-as an immutable server-side brief snapshot yet. Save the response externally if an
-exact historical copy is needed; recompiling can reflect newer accepted evidence.
+proposals or finished outreach. `brief` is read-only and recompilation can reflect
+newer accepted evidence. Use `save_brief` to preserve exact output and its manifest:
+
+```json
+{
+  "action": "save_brief",
+  "request_id": "11111111-1111-4111-8111-111111111111",
+  "purpose": "playlist_pitch",
+  "idempotency_key": "release-pitch-v1"
+}
+```
+
+It takes the same input fields as `brief` plus a required idempotency key. The server
+compiles the output; callers cannot submit a snapshot body. Returns `{ snapshot }`
+with `id`, `created_at`, `purpose`, `state`, `superseded`, and the exact `brief`.
+Use `{ "action": "read_brief", "brief_id": "<snapshot UUID>" }` to retrieve it,
+with `organization_id` when applicable. Reading does not recompile or collect.
+
+Exact saved-output retries reuse the snapshot; changed output under the same key
+is a conflict, including when context updates cause recompilation to differ. Use
+the saved ID for historical readback and a new key for a new version. A newer
+document revision marks the snapshot `superseded: true` without rewriting it.
+Withdrawn/unavailable evidence, cancelled requests, or removed subject scope return
+`state: unavailable` and `brief: null`. Another workspace cannot read the record.
+Apply `20260926170000_context_brief_snapshots.sql` before using these two actions.
 
 Connect independently persisted paid analysis/research modules with bounded spend and recoverable settlement; then review fully enriched two-song/two-brief output. Reuse the Music Flamingo catalog/lyric presets, distinguish preview from full-song coverage, and keep artwork observations separate from creative proposals. Sites integration and YouTube follow their existing epic dependencies.
 

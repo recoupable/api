@@ -8,7 +8,29 @@ import type { ContextBriefDocument } from "./selectContextDocuments";
 import { compileContextBrief } from "./compileContextBrief";
 import type { ContextRequestRecord } from "./runContextRequest";
 
+const briefFields = {
+  request_id: z.uuid(),
+  additional_request_ids: z.array(z.uuid()).max(9).default([]),
+  organization_id: z.uuid().optional(),
+  purpose: z.enum(["creative_direction", "playlist_pitch"]),
+  max_characters: z.number().int().min(1000).max(32000).default(12000),
+};
+
 export const contextOperationSchema = z.discriminatedUnion("action", [
+  z.strictObject({
+    action: z.literal("save_brief"),
+    ...briefFields,
+    idempotency_key: z
+      .string()
+      .min(1)
+      .max(128)
+      .regex(/^[A-Za-z0-9._:-]+$/),
+  }),
+  z.strictObject({
+    action: z.literal("read_brief"),
+    brief_id: z.uuid(),
+    organization_id: z.uuid().optional(),
+  }),
   z.strictObject({
     action: z.literal("plan"),
     request_id: z.string().uuid(),
@@ -141,11 +163,7 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
   }),
   z.strictObject({
     action: z.literal("brief"),
-    request_id: z.string().uuid(),
-    additional_request_ids: z.array(z.uuid()).max(9).default([]),
-    organization_id: z.string().uuid().optional(),
-    purpose: z.enum(["creative_direction", "playlist_pitch"]),
-    max_characters: z.number().int().min(1000).max(32000).default(12000),
+    ...briefFields,
   }),
 ]);
 export interface ContextOperationDependencies {
@@ -171,6 +189,10 @@ export async function processContextOperation(
     accountId,
     args.organization_id,
   );
+  if (args.action === "read_brief")
+    return {
+      snapshot: await deps.rpc("read_context_brief", { p_owner: ownerId, p_brief: args.brief_id }),
+    };
   if (args.action === "plan") {
     const { planStoredContextModules } = await import("./planning/planStoredContextModules");
     return planStoredContextModules(accountId, ownerId, args.request_id);
@@ -460,11 +482,20 @@ export async function processContextOperation(
       }),
     ),
   );
-  return compileContextBrief({
+  const brief = compileContextBrief({
     ownerId,
     requests: requests.map(saved => ({ id: saved.id, subjectIds: saved.output?.subjectIds ?? [] })),
     documents: documentSets.flat() as ContextBriefDocument[],
     purpose: args.purpose,
     maxCharacters: args.max_characters,
   });
+  if (args.action === "save_brief")
+    return {
+      snapshot: await deps.rpc("save_context_brief", {
+        p_owner: ownerId,
+        p_key: args.idempotency_key,
+        p_snapshot: brief,
+      }),
+    };
+  return brief;
 }
