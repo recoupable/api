@@ -44,6 +44,7 @@ it("records a source-specific node and accepts only its saved receipt", async ()
   const collect = vi.fn(async () => ({
     state: "saved" as const,
     resultId,
+    releaseSourceResultId: sourceResultId,
     observedIsrcCount: 1,
     missingIsrcCount: 0,
     failedLookupCount: 0,
@@ -75,8 +76,94 @@ it("records a source-specific node and accepts only its saved receipt", async ()
   });
   expect(result.outcomes[0]).toMatchObject({ status: "saved", receipt: { resultId } });
   expect(collect).toHaveBeenCalledTimes(1);
+  expect(collect).toHaveBeenCalledWith(
+    actor,
+    owner,
+    requestId,
+    subjectId,
+    expect.objectContaining({ expectedSourceResultId: sourceResultId }),
+  );
   expect(record).toHaveBeenCalledTimes(1);
 });
+
+it("stops before credentials or collection when the source changes after node authorization", async () => {
+  process.env.CONTEXT_SPOTIFY_RELEASE_TRACK_ISRC_ENABLED = "true";
+  let currentPage = page;
+  const rpc = vi.fn(async (name: string) => {
+    if (name === "list_context_release_track_slots") return currentPage;
+    if (name === "claim_context_release_track_isrcs")
+      return { state: "claimed", attemptId: resultId };
+    if (name === "complete_context_release_track_isrcs")
+      return {
+        state: "saved",
+        resultId,
+        observedIsrcCount: 1,
+        missingIsrcCount: 0,
+        failedLookupCount: 0,
+      };
+    throw new Error(`Unexpected RPC ${name}`);
+  });
+  const getSpotifyToken = vi.fn(async () => "fixture-token");
+  const fetcher = vi.fn(async () =>
+    Response.json({ id: page.slots[0].spotifyTrackId, external_ids: { isrc: "USABC2600001" } }),
+  );
+  const record: typeof import("../runRecordedContextModules").runRecordedContextModules = async (
+    input,
+    callbacks,
+  ) => {
+    const node = (input.plan as Array<{ key: string }>)[0];
+    await callbacks.authorizeExecution(actor, owner, requestId);
+    await callbacks.authorizeNode(node as never);
+    // A different accepted result becomes current after the recorded node is authorized.
+    currentPage = {
+      ...page,
+      sourceResultId: resultId,
+      slots: page.slots.map(slot => ({ ...slot, sourceResultId: resultId })),
+    };
+    await callbacks.dispatch(node as never, {});
+    return [];
+  };
+  await expect(
+    runRecordedReleaseTrackIsrcs(actor, owner, requestId, subjectId, {
+      authorize,
+      rpc,
+      record,
+      getSpotifyToken,
+      fetcher,
+    }),
+  ).rejects.toThrow("Release track evidence changed since execution planning");
+  expect(getSpotifyToken).not.toHaveBeenCalled();
+  expect(fetcher).not.toHaveBeenCalled();
+  expect(rpc.mock.calls.every(([name]) => name === "list_context_release_track_slots")).toBe(true);
+});
+
+it.each([undefined, "77777777-7777-4777-8777-777777777777"])(
+  "requires reconciliation for a saved receipt with source %s outside the recorded plan",
+  async releaseSourceResultId => {
+    process.env.CONTEXT_SPOTIFY_RELEASE_TRACK_ISRC_ENABLED = "true";
+    const collect = vi.fn(async () => ({
+      state: "saved" as const,
+      resultId,
+      releaseSourceResultId,
+    }));
+    const record: typeof import("../runRecordedContextModules").runRecordedContextModules = async (
+      input,
+      callbacks,
+    ) => {
+      const node = (input.plan as Array<{ key: string }>)[0];
+      await callbacks.dispatch(node as never, {});
+      return [];
+    };
+    await expect(
+      runRecordedReleaseTrackIsrcs(actor, owner, requestId, subjectId, {
+        authorize,
+        rpc: async () => page,
+        collect: collect as never,
+        record,
+      }),
+    ).rejects.toBeInstanceOf(ContextNodeNeedsReconciliation);
+  },
+);
 
 it("leaves an ambiguous prior attempt for reconciliation", async () => {
   process.env.CONTEXT_SPOTIFY_RELEASE_TRACK_ISRC_ENABLED = "true";

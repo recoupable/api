@@ -91,10 +91,16 @@ it("claims current album positions once and saves the exact provider response", 
   const result = await runReleaseTrackIsrcs(actor, owner, requestId, subjectId, {
     authorize,
     rpc,
+    expectedSourceResultId: sourceResultId,
     getSpotifyToken: async () => "fixture-token",
     fetcher: fetcher as typeof fetch,
   });
-  expect(result).toMatchObject({ state: "saved", resultId, observedIsrcCount: 1 });
+  expect(result).toMatchObject({
+    state: "saved",
+    resultId,
+    observedIsrcCount: 1,
+    releaseSourceResultId: sourceResultId,
+  });
   expect(fetcher).toHaveBeenCalledTimes(1);
   expect(
     rpc.mock.calls.filter(([name]) => name === "claim_context_release_track_isrcs"),

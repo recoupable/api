@@ -85,9 +85,19 @@ export async function runRecordedReleaseTrackIsrcs(
           owner,
           requestId,
           subjectId,
-          { authorize, rpc, getSpotifyToken: deps.getSpotifyToken, fetcher: deps.fetcher },
+          {
+            authorize,
+            rpc,
+            expectedSourceResultId: release.sourceResultId,
+            getSpotifyToken: deps.getSpotifyToken,
+            fetcher: deps.fetcher,
+          },
         );
         if (receipt.state === "unknown") throw new ContextNodeNeedsReconciliation();
+        // Evidence may already be saved: an inconsistent receipt must not look like success
+        // or trigger another provider attempt under this execution.
+        if (receipt.releaseSourceResultId !== release.sourceResultId)
+          throw new ContextNodeNeedsReconciliation();
         return receipt;
       },
     },

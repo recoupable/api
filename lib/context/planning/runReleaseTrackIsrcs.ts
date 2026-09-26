@@ -18,6 +18,8 @@ const receiptSchema = z.object({
 });
 
 type Dependencies = {
+  /** Recorded executions must collect against the exact source used to build their plan. */
+  expectedSourceResultId?: string;
   authorize?: (actor: string, owner: string) => Promise<{ ownerId: string }>;
   rpc?: (name: string, params: Record<string, unknown>) => Promise<unknown>;
   getSpotifyToken?: () => Promise<string>;
@@ -33,6 +35,7 @@ export async function runReleaseTrackIsrcs(
   deps: Dependencies = {},
 ) {
   for (const value of [actor, owner, requestId, subjectId]) z.uuid().parse(value);
+  const expectedSourceResultId = z.uuid().optional().parse(deps.expectedSourceResultId);
   const enabled = () => process.env.CONTEXT_SPOTIFY_RELEASE_TRACK_ISRC_ENABLED === "true";
   if (!enabled()) throw new Error("Spotify release track lookup is not enabled");
   const authorize =
@@ -49,6 +52,8 @@ export async function runReleaseTrackIsrcs(
   const read = () =>
     loadCurrentReleaseTrackSlots(actor, owner, requestId, subjectId, { authorize, rpc });
   const release = await read();
+  if (expectedSourceResultId && release.sourceResultId !== expectedSourceResultId)
+    throw new Error("Release track evidence changed since execution planning");
   if (release.slots.length < 1 || release.slots.length > 100)
     throw new Error("Release track lookup currently supports 1–100 positions");
   const fingerprint = createHash("sha256")
