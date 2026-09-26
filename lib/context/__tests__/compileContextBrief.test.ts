@@ -20,9 +20,14 @@ const requests = [
 ];
 const documents = [
   ...["song-a", "song-b"].flatMap(song =>
-    ["song_summary", "catalog_metadata", "lyrics", "artwork_branding", "release_metadata"].map(
-      topic => document(song, topic),
-    ),
+    [
+      "song_summary",
+      "catalog_metadata",
+      "lyrics",
+      "artwork_branding",
+      "recording_metadata",
+      "release_metadata",
+    ].map(topic => document(song, topic)),
   ),
   document("artist", "artist_research"),
   document("artist", "artist_metadata"),

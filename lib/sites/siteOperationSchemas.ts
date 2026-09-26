@@ -13,6 +13,7 @@ export const siteOperationSchemas = {
       revision,
       instruction: z.string().trim().max(6000).default(""),
       background: z.boolean().default(true),
+      contextBriefId: z.string().uuid().optional(),
     })
     .strict(),
   generation: z.object({ id, token: z.string().min(1).max(3000) }).strict(),

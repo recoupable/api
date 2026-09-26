@@ -17,7 +17,7 @@ const operations: Record<SiteOperation, [string, string]> = {
   ],
   generate: [
     "generate_site",
-    "Start background creative production from the release URL and optional instruction. Returns a generation token; poll get_site_generation. Includes research, audio analysis when available, creative direction, image assets, build and visual review. Uses credits and does not publish.",
+    "Start background creative production from the release URL and optional instruction. Returns a generation token; poll get_site_generation. Includes research, audio analysis when available, creative direction, image assets, build and visual review. Accepts contextBriefId to use a current saved single-song creative-direction brief from this workspace instead of collecting again. Uses credits and does not publish.",
   ],
   generation: [
     "get_site_generation",

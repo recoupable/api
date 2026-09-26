@@ -53,6 +53,23 @@ export type CreativeReview = z.infer<typeof reviewSchema> & {
   };
 };
 export type ReleaseContext = {
+  engine?: {
+    briefId: string;
+    requestIds: string[];
+    documents: {
+      id: string;
+      resultId: string;
+      subjectId: string;
+      topic: string;
+      version: number;
+      evidenceKind: string;
+      text: string;
+      coverage: string;
+      sourceVersionIds: string[];
+    }[];
+    missingTopics: string[];
+    guidance: string;
+  };
   release: {
     url: string;
     title: string;
@@ -63,8 +80,8 @@ export type ReleaseContext = {
     previewUrl: string | null;
   };
   music: {
-    status: "analyzed" | "unavailable";
-    coverage: "provided-audio" | "preview" | "none";
+    status: "analyzed" | "saved-analysis" | "unavailable";
+    coverage: "provided-audio" | "preview" | "source-defined" | "none";
     analysis: string;
     reason?: string;
   };

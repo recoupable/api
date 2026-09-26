@@ -30,3 +30,19 @@ Run focused tests with `pnpm exec vitest run lib/sites/__tests__`. The isolated-
 `experienceContract.ts` is the shared production capability registry. The director and builder receive the same limits. Supported: local browser interactions, production-time image assets, real image exports, and native image-file sharing with a download fallback. Visitor-time AI image/video/music generation, hosted personalized result URLs, and server-backed scores are not wired into the generated runtime and must not be promised. Add a capability only alongside its working runtime implementation and journey verification. No model-written test code is executed: the runner supports bounded click, fill, keypress, download and share actions.
 
 The concept gate assesses release relevance, fan value, feasibility and journey completeness; this is a fallible model judgment, not proof of artistic value. Screenshot review also judges the actual exported artifact. A reviewed result establishes only the recorded test scope, never artist endorsement.
+
+## Saved Context Engine handoff
+
+Pass `contextBriefId` to the HTTP generate action or MCP `generate_site`. Save a `creative_direction` brief through `/api/context` first. Sites reads the snapshot server-side in the site's workspace, matches its Spotify track, and forwards accepted evidence with document/result/source versions, coverage and missing topics to the director, independent concept review, brand-world planner and implementation generator. Both direct and durable generation use this path. It skips fresh music/research collection. Revisions reuse the draft's brief unless another ID is supplied.
+
+Unavailable, superseded, wrong-purpose, multi-request or mismatched-song snapshots stop generation. Access and evidence are rechecked before the durable draft save and before publishing; immediate generation also rechecks before saving. This does not retract previously published output automatically after a later withdrawal.
+
+Initial public-output scope is release/artist metadata, song summaries and artwork observations attributed entirely to public Spotify track/artist, cover or preview URLs. Raw lyrics, customer assertions, private uploads and arbitrary web research are excluded. Missing/excluded topics remain explicit gaps. This is deliberately narrower than the full internal brief; it does not grant publication rights to private context. Models must distinguish stored analysis from fresh listening and creative proposals from facts.
+
+Example HTTP body for `PATCH /api/sites/{id}`:
+
+```json
+{"action":"generate","revision":0,"contextBriefId":"SAVED_BRIEF_UUID","background":true}
+```
+
+The saved draft retains internal evidence for review. Public responses already strip the entire production context and brand-world specification. Normal Sites credit checks, asset limits, concept gate and rendered review remain in force.

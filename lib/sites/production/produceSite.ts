@@ -6,8 +6,13 @@ import { produceAssets } from "./produceAssets";
 import { buildExperience } from "./buildExperience";
 import { reviewExperience } from "./reviewExperience";
 /** Bounded creative production; no persistence until a complete candidate exists. */
-export async function produceSite(site: Site, instruction: string, accountId: string) {
-  const context = await collectReleaseContext(site, accountId);
+export async function produceSite(
+  site: Site,
+  instruction: string,
+  accountId: string,
+  contextBriefId?: string,
+) {
+  const context = await collectReleaseContext(site, accountId, contextBriefId);
   let direction = await directExperience(site, instruction, context, accountId);
   let assets = await produceAssets(site, direction, accountId);
   let snapshot = await buildExperience(
