@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { conceptPitchSchema } from "./production/conceptSchema";
 import type { ReleaseContext, CreativeDirection, CreativeReview } from "./production/schema";
 import type { BrandWorld } from "./brandWorld/schema";
 
@@ -43,10 +44,19 @@ export const siteInputSchema = z
     message: "Add a Spotify link, or a name and brief.",
   });
 export const actionSchema = z.discriminatedUnion("action", [
+  z
+    .object({
+      action: z.literal("concepts"),
+      revision: z.number().int().nonnegative(),
+      instruction: z.string().trim().max(6000).default(""),
+      contextBriefId: z.string().uuid().optional(),
+    })
+    .strict(),
   z.object({ action: z.literal("generation"), token: z.string().min(1).max(3000) }).strict(),
   z
     .object({
       action: z.literal("generate"),
+      approvedConcept: conceptPitchSchema,
       revision: z.number().int().nonnegative(),
       instruction: z.string().trim().max(6000).default(""),
       background: z.boolean().default(true),

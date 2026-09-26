@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { conceptPitchSchema } from "./production/conceptSchema";
 import { siteInputSchema } from "./schema";
 const id = z.string().uuid();
 const revision = z.number().int().nonnegative();
@@ -7,11 +8,20 @@ export const siteOperationSchemas = {
   get: z.object({ id }).strict(),
   signups: z.object({ id }).strict(),
   create: siteInputSchema,
+  concepts: z
+    .object({
+      id,
+      revision,
+      instruction: z.string().trim().max(6000).default(""),
+      contextBriefId: id.optional(),
+    })
+    .strict(),
   generate: z
     .object({
       id,
       revision,
       instruction: z.string().trim().max(6000).default(""),
+      approvedConcept: conceptPitchSchema,
       background: z.boolean().default(true),
       contextBriefId: z.string().uuid().optional(),
     })
