@@ -4,6 +4,7 @@ const base = { subjectId: "00000000-0000-4000-8000-000000000001", collectionVers
 function deps() {
   return {
     authorize: vi.fn(async () => undefined),
+    resolveRecording: vi.fn(async () => "USAT22103065"),
     rpc: vi.fn(
       async (name: string): Promise<unknown> =>
         name === "claim_context_enrichment"
@@ -84,4 +85,28 @@ it("persists recording source gaps with unknown coverage and preserves search ca
       }),
     }),
   );
+});
+
+it("rejects an ISRC belonging to another recording before reuse or credentials", async () => {
+  const d = deps();
+  d.resolveRecording.mockResolvedValue("USAT22199999");
+  d.rpc.mockResolvedValue({ state: "reused" });
+  await expect(
+    collectContextMlc("a", "o", "r", { ...base, operation: "recording", isrc: "USAT22103065" }, d),
+  ).rejects.toThrow("ISRC does not match");
+  expect(d.rpc).not.toHaveBeenCalled();
+  expect(d.getAccessToken).not.toHaveBeenCalled();
+  expect(d.fetcher).not.toHaveBeenCalled();
+});
+it("refuses to complete recording evidence when request membership changes during lookup", async () => {
+  const d = deps();
+  d.fetcher.mockImplementation(async () => {
+    d.resolveRecording.mockRejectedValue(new Error("Recording removed"));
+    return Response.json([]);
+  });
+  await expect(
+    collectContextMlc("a", "o", "r", { ...base, operation: "recording", isrc: "USAT22103065" }, d),
+  ).rejects.toThrow("Recording removed");
+  expect(d.rpc.mock.calls.some(([name]) => name === "complete_context_enrichment")).toBe(false);
+  expect(d.rpc).toHaveBeenCalledWith("fail_context_enrichment", expect.anything());
 });

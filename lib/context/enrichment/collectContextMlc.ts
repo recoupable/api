@@ -21,6 +21,7 @@ const schema = z.discriminatedUnion("operation", [
   mlcWorkSearchSchema.extend({ ...base, operation: z.literal("search") }),
 ]);
 type Dependencies = Omit<Parameters<typeof runContextEnrichment>[4], "call"> & {
+  resolveRecording?: (owner: string, requestId: string, subjectId: string) => Promise<string>;
   getAccessToken: () => Promise<string>;
   fetcher?: typeof fetch;
 };
@@ -33,6 +34,17 @@ export async function collectContextMlc(
   deps: Dependencies,
 ) {
   const args = schema.parse(input);
+  const authorizeInput = async () => {
+    await deps.authorize(actor, owner);
+    if (args.operation === "recording") {
+      const resolve =
+        deps.resolveRecording ??
+        (await import("@/lib/supabase/context_requests/getContextRecordingIsrc"))
+          .getContextRecordingIsrc;
+      if ((await resolve(owner, requestId, args.subjectId)) !== args.isrc)
+        throw new Error("ISRC does not match the context recording");
+    }
+  };
   const url =
     args.operation === "recording"
       ? "https://public-api.themlc.com/search/recordings"
@@ -61,6 +73,7 @@ export async function collectContextMlc(
     },
     {
       ...deps,
+      authorize: authorizeInput,
       call: async () => {
         const token = await deps.getAccessToken();
         const result =

@@ -13,6 +13,9 @@ vi.mock("@/lib/mcp/resolveAccountId", () => ({
 }));
 vi.mock("@/lib/supabase/context_requests/callContextRpc", () => ({ callContextRpc: vi.fn() }));
 vi.mock("../dispatchContextRequest", () => ({ dispatchContextRequest: vi.fn() }));
+vi.mock("../dispatchContextReleaseVerification", () => ({
+  dispatchContextReleaseVerification: vi.fn(),
+}));
 vi.mock("../authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));
 vi.mock("../processContextOperation", async importOriginal => ({
   ...(await importOriginal<typeof import("../processContextOperation")>()),
@@ -42,6 +45,18 @@ describe("Context transports", () => {
       }),
     );
     expect(result.status).toBe(400);
+  });
+  it("HTTP acknowledges an explicit release verification request as queued", async () => {
+    const result = await contextOperationHandler(
+      new NextRequest("http://localhost/api/context", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "verify_release",
+          request_id: "00000000-0000-4000-8000-000000000001",
+        }),
+      }),
+    );
+    expect(result.status).toBe(202);
   });
   it("HTTP requires authentication", async () => {
     vi.mocked(validateAuthContext).mockResolvedValueOnce(
