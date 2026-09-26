@@ -7,8 +7,8 @@ function recordLines(record: Record<string, unknown> | undefined): string[] {
 }
 
 /**
- * Formats a captured lead as the Attio note a human actually reads, or null
- * when there is nothing worth a note (a plain newsletter signup).
+ * Formats every captured lead as an Attio activity note, including plain
+ * signups whose source and campaign tags would otherwise be discarded.
  *
  * The "Advisory Inquiry" title prefix is what the CRM is searched by, so it
  * must stay stable — ported from marketing#68 (recoupable/chat#1800). The
@@ -16,9 +16,9 @@ function recordLines(record: Record<string, unknown> | undefined): string[] {
  * strip (superseded marketing#71).
  *
  * @param lead - The validated lead.
- * @returns The note title and content, or null when no note applies.
+ * @returns The note title and content.
  */
-export function buildLeadNote(lead: PostLeadsBody): { title: string; content: string } | null {
+export function buildLeadNote(lead: PostLeadsBody): { title: string; content: string } {
   if (lead.kind === "booking") {
     const label = packageLabel(lead.package);
     const content = [
@@ -35,13 +35,23 @@ export function buildLeadNote(lead: PostLeadsBody): { title: string; content: st
     return { title: `Advisory Inquiry: ${label}`, content };
   }
 
+  // Record this submission's attribution as history, never as a replacement
+  // for an existing person's acquisition source or commercial status.
+  const attribution = [
+    `Source: ${lead.source}`,
+    lead.utm_source && `UTM source: ${lead.utm_source}`,
+    lead.utm_medium && `UTM medium: ${lead.utm_medium}`,
+    lead.utm_campaign && `UTM campaign: ${lead.utm_campaign}`,
+    lead.source_post_slug && `Source post: ${lead.source_post_slug}`,
+  ].filter(Boolean);
+
   if (lead.audit_score !== undefined || lead.audit_answers) {
     const content = [
       `🧮 AI Readiness Audit`,
       lead.audit_score !== undefined && `Score: ${lead.audit_score}`,
       lead.company && `Company: ${lead.company}`,
       ...recordLines(lead.audit_answers),
-      `Source: ${lead.source}`,
+      ...attribution,
     ]
       .filter(Boolean)
       .join("\n");
@@ -58,12 +68,17 @@ export function buildLeadNote(lead: PostLeadsBody): { title: string; content: st
       lead.company && `Company: ${lead.company}`,
       ...recordLines(lead.roi_inputs),
       ...recordLines(lead.roi_results),
-      `Source: ${lead.source}`,
+      ...attribution,
     ]
       .filter(Boolean)
       .join("\n");
     return { title: "ROI Calculator", content };
   }
 
-  return null;
+  return {
+    title: "Website Signup",
+    content: [lead.company && `Company: ${lead.company}`, ...attribution]
+      .filter(Boolean)
+      .join("\n"),
+  };
 }
