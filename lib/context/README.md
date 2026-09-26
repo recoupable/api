@@ -52,6 +52,42 @@ The live test does not verify deployed Supabase, HTTP credentials, MCP transport
 
 ## Next milestone
 
+### Compile task-specific evidence briefs
+
+The shared HTTP/MCP `brief` action accepts one `request_id` and up to nine
+`additional_request_ids`, all in the selected workspace. Duplicate IDs are read once.
+Only completed or partial requests are eligible. The compiler reuses saved evidence;
+it does not dispatch collection, charge credits, or invoke a model.
+
+```json
+{
+  "action": "brief",
+  "request_id": "11111111-1111-4111-8111-111111111111",
+  "additional_request_ids": ["22222222-2222-4222-8222-222222222222"],
+  "purpose": "creative_direction",
+  "max_characters": 12000
+}
+```
+
+Use `playlist_pitch` for the second consumer. Creative direction prioritizes song
+summary, lyrics and artwork; playlist pitching prioritizes catalog/audio metadata
+and song summary. Both include relevant artist/release evidence. Shared subjects
+are included once. Each request has its own missing-topic/partial-coverage report,
+so evidence for one song cannot make another request look complete.
+
+The response retains `documents`, `characters`, `missingTopics`, `gaps`, `guidance`
+and `readiness`, and adds bounded Markdown `text`, `text_characters`, `request_ids`,
+`request_coverage`, and `input_manifest` with compiler, document, result and source
+versions. `max_characters` independently bounds evidence JSON and rendered text;
+it is not a cap on the entire response including metadata. Documents are omitted
+whole to fit the limit; evidence is never cut mid-claim. A missing topic may mean
+absent, ineligible or over-budget evidence.
+
+These are attributed evidence briefs for downstream work, not generated creative
+proposals or finished outreach. The response includes its manifest but is not stored
+as an immutable server-side brief snapshot yet. Save the response externally if an
+exact historical copy is needed; recompiling can reflect newer accepted evidence.
+
 Connect independently persisted paid analysis/research modules with bounded spend and recoverable settlement; then review fully enriched two-song/two-brief output. Reuse the Music Flamingo catalog/lyric presets, distinguish preview from full-song coverage, and keep artwork observations separate from creative proposals. Sites integration and YouTube follow their existing epic dependencies.
 
 ## Approved paid enrichment pilot
