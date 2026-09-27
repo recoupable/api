@@ -61,3 +61,24 @@ Flamingo and structured extraction and is reported as unknown rather than as onl
 the extractor's cost. Provider or extraction failures require reconciliation, not
 an implicit paid retry. This server collector does not itself schedule a job or
 expose a public route; callers must supply authenticated actor/workspace context.
+
+## Lyric transcription
+
+`analyzeSavedContextLyrics` uses the same saved-audio authorization, file verification,
+short-lived URL and reuse path, but sends `preset: "lyric_transcription"` to the
+production endpoint. It stores the returned text directly under the separate
+`lyrics` topic with `transcriptionStatus: "machine-generated; unverified"`.
+It does not parse the text as JSON or send it through the summary normalizer.
+Coverage remains unknown because supplying a full recording does not establish
+transcription completeness. The endpoint owns the preset's text postprocessing.
+
+To run manually from the API checkout with the server environment configured:
+
+```sh
+npx tsx --env-file=.env.local scripts/analyzeContextLyrics.ts <request-id> <recording-subject-id> [workspace-owner-id]
+```
+
+The actor is resolved from `RECOUP_API_KEY`; workspace overrides require access.
+The command prints only state/result ID. Read the private `lyrics` document through
+the existing authenticated Context Engine document reader. A compatible accepted
+result is reused without another paid call. No new migration is needed.

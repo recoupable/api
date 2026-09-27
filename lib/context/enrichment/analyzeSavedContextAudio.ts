@@ -24,6 +24,7 @@ export async function analyzeSavedContextAudio(
   subjectId: string,
   apiKey: string,
   deps: Dependencies,
+  mode: "summary" | "lyrics" = "summary",
 ) {
   z.uuid().parse(subjectId);
   await deps.authorize(actor, owner);
@@ -60,16 +61,16 @@ export async function analyzeSavedContextAudio(
     owner,
     requestId,
     {
-      key: "saved-audio-summary-themes-v2",
-      topic: "song_summary",
+      key: mode === "lyrics" ? "saved-audio-lyrics-v1" : "saved-audio-summary-themes-v2",
+      topic: mode === "lyrics" ? "lyrics" : "song_summary",
       subjectId,
       provider: "recoup-production",
       model: "nvidia/music-flamingo-2601-hf",
       input: {
         audioSourceResultId: document.resultId,
         sha256: asset.sha256,
-        prompt,
-        normalization: "grounded-structured-extraction-v1",
+        ...(mode === "lyrics" ? { preset: "lyric_transcription" } : { prompt }),
+        normalization: mode === "lyrics" ? "provider-text-v1" : "grounded-structured-extraction-v1",
       },
       sources: [
         {
@@ -107,7 +108,11 @@ export async function analyzeSavedContextAudio(
           {
             method: "POST",
             headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
-            body: JSON.stringify({ audio_url: url, prompt, max_new_tokens: 1200 }),
+            body: JSON.stringify(
+              mode === "lyrics"
+                ? { audio_url: url, preset: "lyric_transcription" }
+                : { audio_url: url, prompt, max_new_tokens: 1200 },
+            ),
             redirect: "error",
             signal: AbortSignal.timeout(300000),
           },
@@ -120,6 +125,32 @@ export async function analyzeSavedContextAudio(
             elapsed_seconds: z.number().optional(),
           })
           .parse(await response.json());
+        if (mode === "lyrics") {
+          return {
+            content: {
+              transcription: raw.response,
+              transcriptionStatus: "machine-generated; unverified",
+              preset: "lyric_transcription",
+              audioSourceResultId: document.resultId,
+              audioSha256: asset.sha256,
+              durationSeconds: asset.durationSeconds,
+              inputScope: "complete saved WAV",
+              uncertainties: [
+                "Words, speaker attribution and section labels may be inaccurate or incomplete.",
+              ],
+            },
+            coverage: "unknown",
+            costUsd: null,
+            costStatus: "unknown",
+            trace: {
+              preset: "lyric_transcription",
+              rawResponse: raw,
+              elapsedMs: Date.now() - started,
+              billing: "Production audio endpoint; no duplicate local debit",
+              promptProvenance: "Production resolves preset name; resolved prompt is not returned.",
+            },
+          };
+        }
         const normalized = await (deps.normalize ?? generateContextObject)({
           schema,
           system:
