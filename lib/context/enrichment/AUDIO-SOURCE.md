@@ -42,3 +42,22 @@ public endpoint. Never accept caller-supplied waveform scores as trusted evidenc
 Missing previews or poor matches require review; do not silently substitute title
 similarity for waveform verification. File storage and audio interpretations remain
 separate modules, so changing an analysis prompt does not require downloading again.
+
+## Analyze a saved source
+
+`analyzeSavedContextAudio(actor, owner, requestId, subjectId, apiKey, deps)` loads
+an accepted `audio_source` document from the authorized request, verifies the
+private WAV checksum and duration, and signs a fresh 15-minute URL. It calls the
+production Music Flamingo endpoint once for musical description and paraphrased
+themes. Flamingo's response is treated as text, including Python-style dictionaries
+and prose, rather than parsed as JSON. `generateContextObject` extracts validated
+`musicalSummary`, `lyricalThemes`, and `uncertainties` fields without adding claims.
+The original response and normalization trace remain in private result provenance;
+the signed URL and API key are excluded.
+
+The result is saved as `song_summary`, keyed to the audio result, checksum and
+recipe. Accepted compatible results skip both paid calls. Total cost includes
+Flamingo and structured extraction and is reported as unknown rather than as only
+the extractor's cost. Provider or extraction failures require reconciliation, not
+an implicit paid retry. This server collector does not itself schedule a job or
+expose a public route; callers must supply authenticated actor/workspace context.
