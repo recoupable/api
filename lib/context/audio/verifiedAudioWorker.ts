@@ -33,11 +33,14 @@ def pcm(path):
 y=pcm('preview.mp3'); y=y-y.mean()
 if len(y)<30000 or np.dot(y,y)<1e-8: raise ValueError('Insufficient preview for waveform match')
 stage='YouTube search'
-search=json.loads(yt(['--flat-playlist','--skip-download','--dump-single-json','--','ytsearch5:'+r['title']+' '+' '.join(r['artists'])+' audio']))
+search=json.loads(yt(['--flat-playlist','--skip-download','--dump-single-json','--','ytsearch5:'+r['title']+' '+r['artists'][0]+' audio']))
 def matches_metadata(candidate, recording):
     title=norm(re.sub(r'\s*\((?:feat\.?|ft\.?).*?\)','',recording['title'],flags=re.I))
     text=norm(candidate.get('title','')+' '+(candidate.get('channel') or ''))
-    if title not in text or abs((candidate.get('duration') or 0)-recording['durationSeconds'])>2: return False
+    # Upload titles often censor a word while the provider spells it out.
+    words=re.findall(r'[\w*]+',candidate.get('title','').lower())
+    if not all(any(re.fullmatch(re.escape(word).replace(r'\*',r'\w*'), expected) for word in words) for expected in title.split()): return False
+    if abs((candidate.get('duration') or 0)-recording['durationSeconds'])>2: return False
     # Featured credits may have renamed since release (e.g. GOLDN / Joshua Golden).
     # Lead-artist metadata screens candidates; the waveform establishes recording identity.
     if norm(recording['artists'][0]).replace(' ','') not in text.replace(' ',''): return False
@@ -48,7 +51,7 @@ for c in search.get('entries',[])[:5]:
     vid=c.get('id','')
     if not re.fullmatch(r'[A-Za-z0-9_-]{11}',vid): continue
     if not matches_metadata(c,r):
-        decisions.append({'videoId':vid,'rejected':'metadata'})
+        decisions.append({'videoId':vid,'rejected':'metadata','title':c.get('title','')[:300],'duration':c.get('duration')})
         continue
     path=pathlib.Path('candidate.m4a');path.unlink(missing_ok=True)
     try:
