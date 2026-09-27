@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { getAccountIdByApiKey } from "../lib/auth/getAccountIdByApiKey";
 import { authorizeContextOwner } from "../lib/context/authorizeContextOwner";
 import { analyzeSavedContextLyrics } from "../lib/context/enrichment/analyzeSavedContextLyrics";
 import { callContextRpc } from "../lib/supabase/context_requests/callContextRpc";
@@ -14,8 +13,16 @@ if (!requestArg || !subjectArg) {
 const requestId = z.uuid().parse(requestArg);
 const subjectId = z.uuid().parse(subjectArg);
 const apiKey = z.string().min(1).parse(process.env.RECOUP_API_KEY);
-const actor = await getAccountIdByApiKey(apiKey);
-if (!actor) throw new Error("Invalid account API key");
+const identityResponse = await fetch("https://api.recoupable.dev/api/accounts/id", {
+  headers: { "x-api-key": apiKey },
+  redirect: "error",
+  signal: AbortSignal.timeout(30000),
+});
+if (!identityResponse.ok)
+  throw new Error(`Account authentication failed HTTP ${identityResponse.status}`);
+const { accountId: actor } = z
+  .object({ status: z.literal("success"), accountId: z.uuid() })
+  .parse(await identityResponse.json());
 const owner = ownerArg ? z.uuid().parse(ownerArg) : actor;
 const authorize = (account: string, workspace: string) =>
   authorizeContextOwner(account, workspace === account ? undefined : workspace);
