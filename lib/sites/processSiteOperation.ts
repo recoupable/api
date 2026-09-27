@@ -70,7 +70,7 @@ export async function processSiteOperation(
       name: input.name || release!.title.slice(0, 120),
       brief:
         input.brief ||
-        "Create a distinctive fan experience inspired by this release, its music, artwork and artist. Start with what fans would enjoy doing and let the customer choose a concept before building. Make the activity clear and worthwhile on a phone.",
+        "Create a distinctive fan experience inspired by this release, its music, artwork and artist. Start with what fans would enjoy doing and select the strongest clear, worthwhile activity. Make the activity clear and worthwhile on a phone.",
       release_url: release?.url || input.releaseUrl,
       assets,
     });
@@ -114,8 +114,7 @@ export async function processSiteOperation(
     operation === "generate" &&
     "background" in input &&
     input.background &&
-    "instruction" in input &&
-    "approvedConcept" in input
+    "instruction" in input
   )
     return startSiteProduction(
       site,
@@ -125,7 +124,7 @@ export async function processSiteOperation(
       approvedConcept,
     );
   const changes =
-    operation === "generate" && "instruction" in input && "approvedConcept" in input
+    operation === "generate" && "instruction" in input
       ? {
           draft: await produceSite(
             site,

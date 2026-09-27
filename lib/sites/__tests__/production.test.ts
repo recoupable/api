@@ -1,7 +1,11 @@
 import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
+import { selectExperienceConcept } from "../production/selectExperienceConcept";
 import { produceSite } from "../production/produceSite";
 import type { Site } from "../schema";
+vi.mock("../production/selectExperienceConcept", () => ({
+  selectExperienceConcept: vi.fn().mockResolvedValue({ name: "Selected" }),
+}));
 const m = vi.hoisted(() => ({
   collect: vi.fn(),
   direct: vi.fn(),
@@ -17,6 +21,7 @@ vi.mock("../production/reviewExperience", () => ({ reviewExperience: m.review })
 const site = { id: "site", assets: [], draft: null } as unknown as Site;
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(selectExperienceConcept).mockResolvedValue(approvedConcept);
   m.collect.mockResolvedValue({ music: { status: "unavailable" } });
   m.direct.mockResolvedValue({ concept: "A listening garden" });
   m.assets.mockResolvedValue([]);
@@ -77,7 +82,8 @@ it("keeps the selected activity and stops paid repair when concept review fails"
   expect(m.review).toHaveBeenCalledTimes(1);
   expect(result.production.status).toBe("needs-review");
 });
-it("does not start collection or production without a selected concept", async () => {
-  await expect(produceSite(site, "", "account")).rejects.toThrow();
-  expect(m.collect).not.toHaveBeenCalled();
+it("selects a concept inside production when the client omits it", async () => {
+  await produceSite(site, "", "account");
+  expect(m.collect).toHaveBeenCalledOnce();
+  expect(m.direct).toHaveBeenCalledWith(site, "", expect.anything(), "account", expect.anything());
 });

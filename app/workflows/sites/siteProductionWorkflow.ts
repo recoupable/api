@@ -1,4 +1,10 @@
+import { metadataStep } from "./metadataStep";
+import { audioSourceStep } from "./audioSourceStep";
+import { audioAnalysisStep } from "./audioAnalysisStep";
+import { enrichContextStep } from "./enrichContextStep";
+import { contextBriefStep } from "./contextBriefStep";
 import { conceptPitchSchema, type ConceptPitch } from "@/lib/sites/production/conceptSchema";
+import { selectConceptStep } from "./selectConceptStep";
 import { reviseStep } from "./reviseStep";
 import type { Site } from "@/lib/sites/schema";
 import { collectContextStep } from "./collectContextStep";
@@ -16,11 +22,35 @@ export async function siteProductionWorkflow(
   approvedConcept?: ConceptPitch,
 ) {
   "use workflow";
+  let stage = "context";
   try {
-    conceptPitchSchema.parse(approvedConcept);
-    const context = await collectContextStep(site, accountId, contextBriefId);
-    let direction = await directionStep(site, instruction, context, accountId, approvedConcept);
+    if (approvedConcept) conceptPitchSchema.parse(approvedConcept);
+    const selectedBrief = contextBriefId ?? site.draft?.production?.context.engine?.briefId;
+    let context;
+    if (!selectedBrief && /^https:\/\/open\.spotify\.com\/track\//.test(site.release_url)) {
+      stage = "metadata";
+      const saved = await metadataStep(site, accountId);
+      stage = "audio acquisition";
+      await audioSourceStep(site, accountId, saved);
+      stage = "lyrics";
+      await audioAnalysisStep(site, accountId, saved, "lyrics");
+      stage = "audio analysis";
+      await audioAnalysisStep(site, accountId, saved, "summary");
+      stage = "artwork analysis";
+      await enrichContextStep(site, accountId, saved, "artwork_branding");
+      stage = "artist research";
+      await enrichContextStep(site, accountId, saved, "artist_research");
+      stage = "context brief";
+      context = await contextBriefStep(site, accountId, saved);
+    } else context = await collectContextStep(site, accountId, selectedBrief);
+    stage = "concept";
+    const selected =
+      approvedConcept ?? (await selectConceptStep(site, instruction, context, accountId));
+    stage = "direction";
+    let direction = await directionStep(site, instruction, context, accountId, selected);
+    stage = "assets";
     let assets = await assetsStep(site, direction, accountId);
+    stage = "build";
     let snapshot = await buildStep(
       site,
       instruction,
@@ -28,6 +58,7 @@ export async function siteProductionWorkflow(
       assets,
       accountId,
     );
+    stage = "review";
     const reviews = [await reviewStep(snapshot, direction, accountId, site.id)];
     if (
       reviews[0].verdict === "revise" &&
@@ -45,6 +76,7 @@ export async function siteProductionWorkflow(
       ));
       reviews.push(await reviewStep(snapshot, direction, accountId, site.id));
     }
+    stage = "save";
     return await saveSiteStep(
       site,
       {
@@ -61,7 +93,7 @@ export async function siteProductionWorkflow(
     );
   } catch {
     return {
-      error: "Production stopped before a draft could be saved. Your existing draft is unchanged.",
+      error: `Site production stopped during ${stage}. Your existing draft is unchanged.`,
     };
   }
 }

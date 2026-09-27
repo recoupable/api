@@ -6,15 +6,15 @@ import { generateProductionObject } from "../production/generateProductionObject
 import type { Site } from "../schema";
 import type { ReleaseContext } from "../production/schema";
 vi.mock("../production/generateProductionObject", () => ({ generateProductionObject: vi.fn() }));
-it("requires an explicitly selected concept on both generation transports", () => {
+it("accepts automatic concept selection on both generation transports", () => {
   const input = { revision: 0 };
-  expect(actionSchema.safeParse({ ...input, action: "generate" }).success).toBe(false);
+  expect(actionSchema.safeParse({ ...input, action: "generate" }).success).toBe(true);
   expect(
     siteOperationSchemas.generate.safeParse({
       ...input,
       id: "11111111-1111-4111-8111-111111111111",
     }).success,
-  ).toBe(false);
+  ).toBe(true);
 });
 it("returns no concepts without song understanding or artist context and does not spend", async () => {
   vi.mocked(generateProductionObject).mockClear();
