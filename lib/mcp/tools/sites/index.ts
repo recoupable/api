@@ -21,7 +21,7 @@ const operations: Record<SiteOperation, [string, string]> = {
   ],
   generate: [
     "generate_site",
-    "Build the customer-selected approvedConcept. First show propose_site_concepts pitches and ask the customer to choose; never choose or approve on their behalf. Requires approvedConcept and latest revision. Returns a token to poll get_site_generation. Optional contextBriefId reuses saved evidence. Uses credits; does not publish.",
+    "Build a site from the saved release. Omit approvedConcept for automatic context collection and concept selection, or pass a customer-selected concept to preserve that choice. Requires latest revision. Returns a token to poll get_site_generation. Optional contextBriefId reuses saved evidence. Uses credits; does not publish.",
   ],
   generation: [
     "get_site_generation",

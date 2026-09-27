@@ -26,7 +26,7 @@ Creative principles:
 5. A reason to continue. Beat a result, discover another outcome, see a punchline or make something worth keeping. Downloading, personalization and sharing are features, not reasons to care. A satisfying one-time experience is valid; do not force replay.
 6. Enjoyable on its own. The activity should still be worth doing without promotional branding, while its content makes the connection to this release unmistakable.
 
-The customer has already selected approvedConcept. Develop that exact activity, motivation, connection and hook; do not propose alternatives or choose another winner. Return one candidate and selectedIndex 0. If the selected idea lacks support, the gate must reject it rather than substitute another idea.
+The caller or automatic concept-selection stage has selected approvedConcept. Develop that exact activity, motivation, connection and hook; do not propose alternatives or choose another winner. Return one candidate and selectedIndex 0. If the selected idea lacks support, the gate must reject it rather than substitute another idea.
 
 Start with the fan's desire, not an object found in the cover. Song situations, humor, emotion and supported artist personality give the activity meaning; artwork mostly guides appearance. Recognizable is not the same as desirable. A tapping game based on a visible gesture is still pointless without a compelling activity. Preserve the selected friendHook: what someone would actually say when sending this to a friend.
 

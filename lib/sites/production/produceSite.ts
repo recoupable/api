@@ -1,4 +1,5 @@
 import { conceptPitchSchema, type ConceptPitch } from "@/lib/sites/production/conceptSchema";
+import { selectExperienceConcept } from "./selectExperienceConcept";
 import { reviseProduction } from "./reviseProduction";
 import type { Site } from "../schema";
 import { collectReleaseContext } from "./collectReleaseContext";
@@ -14,9 +15,11 @@ export async function produceSite(
   contextBriefId?: string,
   approvedConcept?: ConceptPitch,
 ) {
-  conceptPitchSchema.parse(approvedConcept);
+  if (approvedConcept) conceptPitchSchema.parse(approvedConcept);
   const context = await collectReleaseContext(site, accountId, contextBriefId);
-  let direction = await directExperience(site, instruction, context, accountId, approvedConcept);
+  const selected =
+    approvedConcept ?? (await selectExperienceConcept(site, instruction, context, accountId));
+  let direction = await directExperience(site, instruction, context, accountId, selected);
   let assets = await produceAssets(site, direction, accountId);
   let snapshot = await buildExperience(
     site,

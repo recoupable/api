@@ -1,6 +1,6 @@
 # YouTube audio acquisition
 
-Worker modules, not yet wired into the deployed Context Engine scheduler.
+Legacy worker helpers plus the Sites production acquisition adapter. `acquireVerifiedAudioInSandbox` is called by the Sites durable audio stage.
 
 1. Search using confirmed recording title and credited artists.
 2. Screen candidate metadata: title, all artists, duration within three seconds, alternate versions, ambiguity.
@@ -12,4 +12,8 @@ Runtime requires current yt-dlp (with its YouTube JavaScript components), Node, 
 
 The matcher is a conservative metadata screen, not an acoustic fingerprint. It does not prove official channel identity or the exact clean/explicit master. Source channel and selection reasons remain visible. Multiple plausible candidates stop for review. No automatic fallback to previews and no provider retries.
 
-Production integration still needs: authorized existing-audio lookup, worker deployment, private asset persistence and signed analysis URLs, fingerprint/stronger version verification, durable scheduling and Music Flamingo handoff. Do not pass this asset to the existing preview-only Music Flamingo adapter without explicitly handling coverage. No production wiring or successful download is implied by unit tests.
+The legacy helpers below do not provide: authorized existing-audio lookup, worker deployment, private asset persistence and signed analysis URLs, fingerprint/stronger version verification, durable scheduling and Music Flamingo handoff. Do not pass this asset to the existing preview-only Music Flamingo adapter without explicitly handling coverage. The hosted Sites adapter described below owns production wiring; unit tests do not establish a successful hosted download.
+
+## Sites hosted adapter
+
+`acquireVerifiedAudioInSandbox` uses an isolated Vercel Sandbox, bounded candidate search and normalized waveform correlation against the Spotify preview. It emits the 16 kHz PCM16 WAV required by `collectContextAudioSource`. The older 24 kHz helpers above are not used for that path. Failure to verify a match stops the workflow; metadata similarity alone is insufficient. The Sites caller owns authorization and private storage.

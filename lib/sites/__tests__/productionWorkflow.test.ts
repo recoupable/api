@@ -2,7 +2,23 @@ import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
 import { siteProductionWorkflow } from "@/app/workflows/sites/siteProductionWorkflow";
 import type { Site } from "../schema";
-const m = vi.hoisted(() => ({ build: vi.fn(), save: vi.fn(), revise: vi.fn() }));
+const m = vi.hoisted(() => ({
+  build: vi.fn(),
+  save: vi.fn(),
+  revise: vi.fn(),
+  metadata: vi.fn(),
+  audio: vi.fn(),
+  analyze: vi.fn(),
+  enrich: vi.fn(),
+  brief: vi.fn(),
+  select: vi.fn(),
+}));
+vi.mock("@/app/workflows/sites/metadataStep", () => ({ metadataStep: m.metadata }));
+vi.mock("@/app/workflows/sites/audioSourceStep", () => ({ audioSourceStep: m.audio }));
+vi.mock("@/app/workflows/sites/audioAnalysisStep", () => ({ audioAnalysisStep: m.analyze }));
+vi.mock("@/app/workflows/sites/enrichContextStep", () => ({ enrichContextStep: m.enrich }));
+vi.mock("@/app/workflows/sites/contextBriefStep", () => ({ contextBriefStep: m.brief }));
+vi.mock("@/app/workflows/sites/selectConceptStep", () => ({ selectConceptStep: m.select }));
 vi.mock("@/app/workflows/sites/collectContextStep", () => ({
   collectContextStep: vi.fn().mockResolvedValue({}),
 }));
@@ -18,6 +34,10 @@ vi.mock("@/app/workflows/sites/reviseStep", () => ({ reviseStep: m.revise }));
 vi.mock("@/app/workflows/sites/saveSiteStep", () => ({ saveSiteStep: m.save }));
 beforeEach(() => {
   vi.clearAllMocks();
+  m.metadata.mockResolvedValue({ requestId: "request" });
+  m.audio.mockResolvedValue({});
+  m.brief.mockResolvedValue({});
+  m.select.mockResolvedValue(approvedConcept);
   m.build.mockResolvedValue({});
   m.save.mockResolvedValue({ site: {} });
 });
@@ -44,4 +64,33 @@ it("reports a save conflict without leaving the job running", async () => {
   expect(
     await siteProductionWorkflow({ id: "site" } as Site, "", "account", undefined, approvedConcept),
   ).toHaveProperty("error");
+});
+
+it("runs the entire saved-context path from a Spotify URL without caller selection", async () => {
+  const site = {
+    id: "site",
+    release_url: "https://open.spotify.com/track/4bbDlzPasNSFI1l69mx2zx",
+  } as Site;
+  await siteProductionWorkflow(site, "", "account");
+  expect(m.metadata).toHaveBeenCalledOnce();
+  expect(m.audio).toHaveBeenCalledOnce();
+  expect(m.analyze.mock.calls.map(c => c[3])).toEqual(["lyrics", "summary"]);
+  expect(m.enrich.mock.calls.map(c => c[3])).toEqual(["artwork_branding", "artist_research"]);
+  expect(m.brief).toHaveBeenCalledOnce();
+  expect(m.select).toHaveBeenCalledOnce();
+  expect(m.save).toHaveBeenCalledOnce();
+  expect(m.audio.mock.invocationCallOrder[0]).toBeLessThan(m.analyze.mock.invocationCallOrder[0]);
+});
+it("names the failed context stage and never starts creative work after acquisition failure", async () => {
+  m.audio.mockRejectedValueOnce(new Error("No verified source"));
+  const result = await siteProductionWorkflow(
+    { id: "site", release_url: "https://open.spotify.com/track/4bbDlzPasNSFI1l69mx2zx" } as Site,
+    "",
+    "account",
+  );
+  expect(result).toMatchObject({ error: expect.stringContaining("audio acquisition") });
+  expect(m.analyze).not.toHaveBeenCalled();
+  expect(m.select).not.toHaveBeenCalled();
+  expect(m.build).not.toHaveBeenCalled();
+  expect(m.save).not.toHaveBeenCalled();
 });

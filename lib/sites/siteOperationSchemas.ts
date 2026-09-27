@@ -21,7 +21,7 @@ export const siteOperationSchemas = {
       id,
       revision,
       instruction: z.string().trim().max(6000).default(""),
-      approvedConcept: conceptPitchSchema,
+      approvedConcept: conceptPitchSchema.optional(),
       background: z.boolean().default(true),
       contextBriefId: z.string().uuid().optional(),
     })

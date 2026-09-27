@@ -1,10 +1,10 @@
 # Release-to-experience production
 
-HTTP and MCP separate concept pitches from production. A Spotify URL starts context collection; a customer-selected concept is required before building. Clients must show pitches and pass the chosen `approvedConcept` to generation. Older clients that omit selection receive a validation error.
+HTTP and MCP accept URL-only generation. Omit `approvedConcept` to let the durable engine collect context and select a concept automatically. Passing an explicit concept preserves that choice. No assistant-side stage execution is required.
 
-1. Resolve the release and artwork. Track metadata can supply an official preview.
-2. Collect sourced artist research and analyze available audio through existing Recoup services. Missing evidence is recorded explicitly; previews are not full-song analysis.
-3. Propose up to three short pitches starting with fan motivation. Metadata and cover details alone return `needs-context` without a concept model call. The model may also return `no-good-concept`. Show candidates to the customer and wait for a choice. Generation develops only the explicitly selected pitch, then independently checks that the plan preserves it and has real appeal. No automatic paid brainstorming loop.
+1. For Spotify tracks, create/reuse a saved Context Engine metadata request and its confirmed recording subject.
+2. Acquire full audio in an isolated worker and verify it against the Spotify preview (at least 15 seconds, correlation >= 0.95, duration within two seconds). Persist private mono 16 kHz WAV, run and save the lyric preset, run and save musical analysis and transcript-informed paraphrased themes, and save artwork observations and public artist research. Each operation is a durable stage. Missing preview or failed source matching stops explicitly; no preview is passed off as full audio.
+3. Propose up to three short pitches starting with fan motivation. Metadata and cover details alone return `needs-context` without a concept model call. The model may also return `no-good-concept`. An automatic selection stage picks a candidate unless the caller supplies one. Generation develops only that selected pitch, then independently checks that the plan preserves it and has real appeal. No automatic paid brainstorming loop.
 4. Produce up to two finished images with the existing image service and store normalized assets in the workspace.
 5. Pass context and real asset URLs through the reusable brand-world and implementation modules.
 6. Render mobile and desktop in an isolated Vercel Sandbox. Execute the complete structured journey using accessible controls, verify expected visible outcomes, capture initial/final states, runtime errors and horizontal overflow. Reopen downloaded/shared image bytes in a separate page, reject blank/invalid outputs and include the actual artifact in visual review.
@@ -21,7 +21,7 @@ SITES_JOB_SECRET can provide a dedicated job-signing key; otherwise SUPABASE_KEY
 
 ## Limits
 
-No full-track Spotify/YouTube download resolver. Audio analysis requires the existing Music Flamingo service credentials. Albums/playlists currently receive basic metadata rather than per-track audio analysis. Research is sourced search evidence, not verified biography. Rendering checks the planned generated-experience journey, not Spotify authentication, every game branch, or real native OS sharing. Native sharing is intercepted to validate the actual image File payload. Missing or failed journeys force needs-review even if the visual critic says pass. Verification evidence and limitations are stored with each review. The trusted login/player components retain their existing theme contract. Screenshot review is bounded feedback, not a guarantee of artist approval.
+Full-track acquisition requires an available Spotify verification preview and a matching YouTube recording. Audio analysis requires the existing Music Flamingo service credentials. Albums/playlists currently receive basic metadata rather than per-track audio analysis. Research is sourced search evidence, not verified biography. Rendering checks the planned generated-experience journey, not Spotify authentication, every game branch, or real native OS sharing. Native sharing is intercepted to validate the actual image File payload. Missing or failed journeys force needs-review even if the visual critic says pass. Verification evidence and limitations are stored with each review. The trusted login/player components retain their existing theme contract. Screenshot review is bounded feedback, not a guarantee of artist approval.
 
 Run focused tests with `pnpm exec vitest run lib/sites/__tests__`. The isolated-browser smoke test is opt-in via SITES_RENDER_LIVE_TEST=1 and incurs a sandbox run.
 
@@ -37,7 +37,7 @@ Pass `contextBriefId` to the HTTP generate action or MCP `generate_site`. Save a
 
 Unavailable, superseded, wrong-purpose, multi-request or mismatched-song snapshots stop generation. Access and evidence are rechecked before the durable draft save and before publishing; immediate generation also rechecks before saving. This does not retract previously published output automatically after a later withdrawal.
 
-Initial public-output scope is release/artist metadata, song summaries and artwork observations attributed entirely to public Spotify track/artist, cover or preview URLs. Raw lyrics, customer assertions, private uploads and arbitrary web research are excluded. Missing/excluded topics remain explicit gaps. This is deliberately narrower than the full internal brief; it does not grant publication rights to private context. Models must distinguish stored analysis from fresh listening and creative proposals from facts.
+Public-output scope is release/artist metadata, song summaries, artwork observations and saved public-search artist research. Audio summaries retain their public YouTube provenance; research retains public citations in its content. Raw lyrics, customer assertions and private uploads are excluded. Missing/excluded topics remain explicit gaps. This is deliberately narrower than the full internal brief; it does not grant publication rights to private context. Models must distinguish stored analysis from fresh listening and creative proposals from facts.
 
 Example HTTP body for `PATCH /api/sites/{id}`:
 
@@ -51,6 +51,14 @@ The saved draft retains internal evidence for review. Public responses already s
 
 PATCH `/api/sites/{id}` with `action: "concepts"`, current `revision`, optional `instruction` and `contextBriefId`; MCP uses `propose_site_concepts`. This may spend on context collection and one pitch call, but creates no assets, implementation or draft changes. Response: `{ concepts: { status, candidates, reason }, revision }`. Status is `ready`, `needs-context`, or `no-good-concept`.
 
-Each candidate contains `name`, `activity`, `fanMotivation`, `songOrArtistConnection`, and `friendHook`. Show these short pitches to the customer. After selection, call `generate` / `generate_site` with that full object as `approvedConcept`, latest revision and the same context brief. Explicitly customer-authored pitches are also accepted; this is a caller-confirmed choice, not a signed approval receipt. Do not select on the customer's behalf. Generation without the object is rejected before paid work. Without a saved brief, context may be collected again during generation.
+Each candidate contains `name`, `activity`, `fanMotivation`, `songOrArtistConnection`, and `friendHook`. Show these short pitches to the customer. After selection, call `generate` / `generate_site` with that full object as `approvedConcept`, latest revision and the same context brief. Explicitly customer-authored pitches are also accepted; this is a caller-confirmed choice, not a signed approval receipt. Omit the object for automatic selection inside production. Without a saved brief, context may be collected again during generation.
 
-The existing local artwork-only Hate U evidence is insufficient for new pitches. Restore usable song analysis or gather sourced artist context first; do not turn a recognizable cover detail into a contrived activity to fill the gap.
+Metadata and artwork alone do not establish a worthwhile fan activity; generation collects usable song analysis and sourced artist context before proposing concepts.
+
+## Automatic full-context execution
+
+The Sites workflow runs metadata, hosted acquisition, lyrics, summary, artwork, research, brief, concept, direction, assets, build, review, and save as durable stages. The direct server path uses the same domain collectors. Full audio is limited to 20 minutes and 40 MB. The disposable worker installs pinned yt-dlp, numpy and imageio-ffmpeg, receives only metadata and a public verification preview, and is stopped in a finally block. Application credentials remain outside the worker.
+
+The lyric result remains private and unverified. Summary normalization consumes only a transcript with the matching audio checksum; its result ID is part of the cache key. Sites receives the summary's paraphrased themes, artwork observations and public-search research through a saved brief. Raw lyrics and signed file URLs are not included in the public site payload.
+
+Workflow failures name the stage. No automatic provider retry occurs after an ambiguous failure; completed accepted enrichment remains reusable. A failed reviewed concept does not trigger paid automatic brainstorming.

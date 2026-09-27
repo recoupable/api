@@ -39,11 +39,12 @@ const topics = [
   "release_metadata",
   "artist_metadata",
   "song_summary",
+  "artist_research",
   "artwork_branding",
 ];
 
-// Initial publication boundary: only evidence attributed entirely to public Spotify media.
-// Customer files, arbitrary web research and raw lyrics require a separate publication policy.
+// Only public Spotify/YouTube source URLs; storage references never enter the creative brief.
+// Raw lyrics remain private; the summary carries paraphrased, uncertainty-labeled themes.
 function publicSource(value: string | null) {
   if (!value) return false;
   try {
@@ -53,7 +54,11 @@ function publicSource(value: string | null) {
       !url.username &&
       !url.password &&
       !url.port &&
-      ((url.hostname === "open.spotify.com" && !url.search) ||
+      ((url.hostname === "www.youtube.com" &&
+        url.pathname === "/watch" &&
+        /^[A-Za-z0-9_-]{11}$/.test(url.searchParams.get("v") ?? "") &&
+        [...url.searchParams.keys()].every(key => key === "v")) ||
+        (url.hostname === "open.spotify.com" && !url.search) ||
         (url.hostname === "i.scdn.co" && !url.search && url.pathname.startsWith("/image/")) ||
         (url.hostname === "p.scdn.co" &&
           url.pathname.startsWith("/mp3-preview/") &&
@@ -120,6 +125,27 @@ export async function readSiteContextBrief(
     throw new SiteError(409, "The saved brief must describe this site's Spotify track.");
   const release = metadata.data;
   const summary = documents.find(doc => doc.topic === "song_summary");
+  const researchDoc = documents.find(doc => doc.topic === "artist_research");
+  let research: ReleaseContext["research"] = {
+    status: "unavailable",
+    sources: [],
+    reason: "No saved public artist research",
+  };
+  if (researchDoc) {
+    try {
+      const value = z
+        .object({
+          status: z.enum(["available", "unavailable"]),
+          sources: z.array(
+            z.object({ title: z.string(), url: z.string().url(), snippet: z.string() }),
+          ),
+        })
+        .parse(JSON.parse(researchDoc.text));
+      research = { ...value, sources: value.sources.filter(s => s.url.startsWith("https://")) };
+    } catch {
+      /* Keep unavailable for malformed research. */
+    }
+  }
   return {
     release: {
       url: `https://open.spotify.com/track/${trackId}`,
@@ -136,11 +162,7 @@ export async function readSiteContextBrief(
       analysis: summary?.text ?? "",
       reason: "Use the attributed Context Engine evidence below; no new listening was performed.",
     },
-    research: {
-      status: "unavailable",
-      sources: [],
-      reason: "Private and unreviewed research is excluded from site generation.",
-    },
+    research,
     engine: {
       briefId,
       requestIds: parsed.data.brief.request_ids,

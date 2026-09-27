@@ -14,7 +14,7 @@ export async function startSiteProduction(
   contextBriefId?: string,
   approvedConcept?: ConceptPitch,
 ) {
-  conceptPitchSchema.parse(approvedConcept);
+  if (approvedConcept) conceptPitchSchema.parse(approvedConcept);
   const selectedBrief = contextBriefId ?? site.draft?.production?.context.engine?.briefId;
   if (selectedBrief) await readSiteContextBrief(site, accountId, selectedBrief);
   await requireCredits(accountId);

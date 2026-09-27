@@ -217,8 +217,13 @@ it("returns pitches without starting production or overwriting the draft", async
   expect(m.generate).not.toHaveBeenCalled();
   expect(m.update).not.toHaveBeenCalled();
 });
-it("rejects generation without selection before any provider or workflow", async () => {
-  await expect(processSiteOperation(account, "generate", { id, revision: 2 })).rejects.toThrow();
-  expect(m.generate).not.toHaveBeenCalled();
-  expect(m.update).not.toHaveBeenCalled();
+it("starts URL-only generation without requiring a caller-selected concept", async () => {
+  await processSiteOperation(account, "generate", { id, revision: 2 });
+  expect(m.generate).toHaveBeenCalledWith(
+    expect.objectContaining({ id }),
+    "",
+    account,
+    undefined,
+    undefined,
+  );
 });

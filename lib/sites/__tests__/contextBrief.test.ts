@@ -2,6 +2,11 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { readSiteContextBrief } from "../production/readSiteContextBrief";
 import { collectReleaseContext } from "../production/collectReleaseContext";
 import type { Site } from "../schema";
+vi.mock("../production/prepareSiteContext", () => ({ prepareSiteContext: vi.fn() }));
+vi.mock("../production/acquireSiteContextAudio", () => ({ acquireSiteContextAudio: vi.fn() }));
+vi.mock("../production/analyzeSiteContextAudio", () => ({ analyzeSiteContextAudio: vi.fn() }));
+vi.mock("../production/enrichSiteContext", () => ({ enrichSiteContext: vi.fn() }));
+vi.mock("../production/saveSiteContextBrief", () => ({ saveSiteContextBrief: vi.fn() }));
 const m = vi.hoisted(() => ({
   rpc: vi.fn(),
   access: vi.fn(),
@@ -129,4 +134,15 @@ it("joins separate recording and release evidence without conflating identities"
   expect(context.release.title).toBe("Hate U");
   expect(context.release.artists).toEqual(["chillpill"]);
   expect(context.release.date).toBe("2021-06-25");
+});
+
+it("admits saved YouTube audio interpretation but never private storage or raw lyrics", async () => {
+  snapshot.brief.documents[1].sources = [
+    { versionId: source, url: "https://www.youtube.com/watch?v=YlV6qsP-J1c" },
+  ];
+  expect((await readSiteContextBrief(site, id, id)).music.status).toBe("saved-analysis");
+  snapshot.brief.documents[1].sources = [
+    { versionId: source, url: "https://www.youtube.com/watch?v=YlV6qsP-J1c&token=private" },
+  ];
+  expect((await readSiteContextBrief(site, id, id)).music.status).toBe("unavailable");
 });

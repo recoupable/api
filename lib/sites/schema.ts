@@ -56,7 +56,7 @@ export const actionSchema = z.discriminatedUnion("action", [
   z
     .object({
       action: z.literal("generate"),
-      approvedConcept: conceptPitchSchema,
+      approvedConcept: conceptPitchSchema.optional(),
       revision: z.number().int().nonnegative(),
       instruction: z.string().trim().max(6000).default(""),
       background: z.boolean().default(true),

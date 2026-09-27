@@ -89,3 +89,38 @@ it("calls the lyric preset and saves text separately without normalization", asy
   expect(complete?.[1].p_result.content.transcriptionStatus).toBe("machine-generated; unverified");
   expect(JSON.stringify(deps.rpc.mock.calls)).not.toContain("secret=x");
 });
+
+it.each([true, false])(
+  "uses only lyrics from the same audio artifact (matching: %s)",
+  async matching => {
+    const deps = setup();
+    const rpc = deps.rpc;
+    deps.rpc = vi.fn(async (name: string, ...params: Record<string, any>[]) => {
+      const result = await rpc(name, ...params);
+      return name === "read_context_documents"
+        ? [
+            ...(result as any[]),
+            {
+              topic: "lyrics",
+              status: "accepted",
+              subjectId: id,
+              resultId: id,
+              text: JSON.stringify({
+                transcription: "Synthetic test transcript",
+                audioSha256: matching ? asset.sha256 : "b".repeat(64),
+              }),
+            },
+          ]
+        : result;
+    });
+    const analyze = vi.fn().mockResolvedValue({ status: "success", response: "Processed vocals" });
+    await analyzeSavedContextAudio(id, id, id, id, "", { ...deps, analyze });
+    expect(analyze).toHaveBeenCalledOnce();
+    expect(deps.fetcher).not.toHaveBeenCalled();
+    expect(deps.normalize.mock.calls[0][0].input.unverifiedTranscript).toBe(
+      matching ? "Synthetic test transcript" : undefined,
+    );
+    const complete = deps.rpc.mock.calls.find(c => c[0] === "complete_context_enrichment");
+    expect(complete?.[1].p_result.content.lyricResultId).toBe(matching ? id : null);
+  },
+);
