@@ -57,8 +57,11 @@ export async function acquireVerifiedAudioInSandbox(input: z.input<typeof inputS
       args: ["acquire.py"],
       env: { PYTHONPATH: "/tmp/audio-packages" },
     });
-    if (run.exitCode !== 0)
+    if (run.exitCode !== 0) {
+      const diagnostic = (await run.stderr()).slice(-4000);
+      console.error("[sites:audio-worker]", diagnostic);
       throw new Error("Full audio acquisition or waveform verification failed");
+    }
     const [file, manifest] = await Promise.all([
       sandbox.readFileToBuffer({ path: "audio.wav" }),
       sandbox.readFileToBuffer({ path: "result.json" }),
