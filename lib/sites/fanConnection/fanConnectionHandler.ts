@@ -1,3 +1,6 @@
+import { selectSiteActivity } from "@/lib/supabase/site_activity_events/selectSiteActivity";
+import { limitSiteRequest } from "../activity/limitSiteRequest";
+import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
@@ -14,16 +17,19 @@ import { requireFanEntitlement } from "./requireFanEntitlement";
 export async function fanConnectionHandler(
   request: NextRequest,
   id: string,
-  operation: "get" | "configure" | "fans",
+  operation: "get" | "configure" | "fans" | "activity",
 ) {
   const auth = await validateAuthContext(request);
   if (auth instanceof NextResponse) return auth;
-  const headers = { "Cache-Control": "private, no-store" };
+  const headers = { ...getCorsHeaders(), "Cache-Control": "private, no-store" };
   try {
     z.string().uuid().parse(id);
     const site = await selectSite(id);
     if (!site) throw new SiteError(404, "Site not found");
     await authorizeSiteWorkspace(auth.accountId, site.owner_id);
+    await limitSiteRequest(id, `private:${auth.accountId}`, 120);
+    if (operation === "activity")
+      return NextResponse.json(await selectSiteActivity(id), { headers });
     if (operation === "fans") {
       const query = fanQuerySchema.parse(Object.fromEntries(request.nextUrl.searchParams));
       return NextResponse.json(await selectSiteFans(id, query.offset, query.limit), { headers });

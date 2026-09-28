@@ -2,6 +2,12 @@ import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
 import { siteProductionWorkflow } from "@/app/workflows/sites/siteProductionWorkflow";
 import type { Site } from "../schema";
+vi.mock("@/app/workflows/sites/prepareSkillStep", () => ({
+  prepareSkillStep: vi.fn(async () => ({
+    name: "recoup-content-build-sites",
+    referenceIds: [1, 2],
+  })),
+}));
 const m = vi.hoisted(() => ({
   build: vi.fn(),
   save: vi.fn(),

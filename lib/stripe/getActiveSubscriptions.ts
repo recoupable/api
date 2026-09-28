@@ -5,10 +5,13 @@ const PAGE_LIMIT = 100;
 
 /**
  * Lists active subscriptions whose `metadata.accountId` matches.
- * Stops after the first page that yields a match (callers only need one).
+ * Stops after the first page that yields an eligible match (callers only need one).
  * Paginates until Stripe reports no more pages (no fixed page cap — avoids missing matches deep in the list).
  */
-export const getActiveSubscriptions = async (accountId: string) => {
+export const getActiveSubscriptions = async (
+  accountId: string,
+  eligible: (subscription: Stripe.Subscription) => boolean = () => true,
+) => {
   try {
     const now = Math.floor(Date.now() / 1000);
     const activeSubscriptions: Stripe.Subscription[] = [];
@@ -27,7 +30,9 @@ export const getActiveSubscriptions = async (accountId: string) => {
       const page = await stripeClient.subscriptions.list(listParams);
 
       activeSubscriptions.push(
-        ...page.data.filter((s: Stripe.Subscription) => s.metadata?.accountId === accountId),
+        ...page.data.filter(
+          (s: Stripe.Subscription) => s.metadata?.accountId === accountId && eligible(s),
+        ),
       );
 
       if (activeSubscriptions.length > 0) {

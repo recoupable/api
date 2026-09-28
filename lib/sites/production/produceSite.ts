@@ -1,3 +1,4 @@
+import { prepareSiteSkill } from "../skills/prepareSiteSkill";
 import { conceptPitchSchema, type ConceptPitch } from "@/lib/sites/production/conceptSchema";
 import { selectExperienceConcept } from "./selectExperienceConcept";
 import { reviseProduction } from "./reviseProduction";
@@ -17,6 +18,11 @@ export async function produceSite(
 ) {
   if (approvedConcept) conceptPitchSchema.parse(approvedConcept);
   const context = await collectReleaseContext(site, accountId, contextBriefId);
+  context.siteSkill = await prepareSiteSkill(
+    { instruction, context, approvedConcept },
+    accountId,
+    site.id,
+  );
   const selected =
     approvedConcept ?? (await selectExperienceConcept(site, instruction, context, accountId));
   let direction = await directExperience(site, instruction, context, accountId, selected);
@@ -28,10 +34,13 @@ export async function produceSite(
     assets,
     accountId,
   );
-  const reviews = [await reviewExperience(snapshot, direction, accountId, site.id)];
-  if (
-    reviews[0].verdict === "revise" &&
-    !reviews[0].issues.some(issue => issue.module === "direction")
+  const reviews = [
+    await reviewExperience(snapshot, direction, accountId, site.id, context.siteSkill),
+  ];
+  while (
+    reviews.length < 4 &&
+    reviews.at(-1)!.verdict === "revise" &&
+    !reviews.at(-1)!.issues.some(issue => issue.module === "direction")
   ) {
     ({ snapshot, direction, assets } = await reviseProduction(
       site,
@@ -40,10 +49,12 @@ export async function produceSite(
       direction,
       assets,
       snapshot,
-      reviews[0],
+      reviews.at(-1)!,
       accountId,
     ));
-    reviews.push(await reviewExperience(snapshot, direction, accountId, site.id));
+    reviews.push(
+      await reviewExperience(snapshot, direction, accountId, site.id, context.siteSkill),
+    );
   }
   return {
     ...snapshot,

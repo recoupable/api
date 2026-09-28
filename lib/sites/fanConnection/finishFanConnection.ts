@@ -79,7 +79,7 @@ export async function finishFanConnection(request: NextRequest) {
       outcome = "connected";
     }
   } catch {
-    /* Provider codes, tokens and personal data must not be logged or reflected. */
+    console.error("[sites:fan-connection] Callback failed; no fan connection confirmed");
   }
   const response = returnUrl
     ? (() => {

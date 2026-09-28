@@ -1,10 +1,17 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { startFanConnection } from "../startFanConnection";
 import { finishFanConnection } from "../finishFanConnection";
 import { fanConnectionHandler } from "../fanConnectionHandler";
 import { hashFanValue } from "../hashFanValue";
 import { SiteError } from "../../SiteError";
+vi.mock("@/lib/supabase/site_fan_connections/cleanupFanSessions", () => ({
+  cleanupFanSessions: vi.fn(async () => {}),
+}));
+vi.mock("../../activity/limitSiteRequest", () => ({ limitSiteRequest: vi.fn(async () => {}) }));
+vi.mock("@/lib/supabase/site_activity_events/selectSiteActivity", () => ({
+  selectSiteActivity: vi.fn(),
+}));
 const m = vi.hoisted(() => ({
   auth: vi.fn(),
   site: vi.fn(),
@@ -90,8 +97,11 @@ it("shows one explicit agreement and starts only with the bound form", async () 
   const html = await page.text();
   expect(html).toContain("Agree and connect with Spotify");
   expect(html).toContain("Artist &lt;script&gt;");
-  const csrfName = `__Host-recoup-fan-form-${id}`;
-  const csrf = page.cookies.get(csrfName)!.value;
+  const csrfCookie = page.cookies
+    .getAll()
+    .find(cookie => cookie.name.startsWith("__Host-recoup-fan-form-"))!;
+  const csrfName = csrfCookie.name;
+  const csrf = csrfCookie.value;
   const response = await startFanConnection(
     new NextRequest(url, {
       method: "POST",
@@ -116,7 +126,7 @@ it("shows one explicit agreement and starts only with the bound form", async () 
 });
 it("rejects a forged form and changed consent revision", async () => {
   const csrf = "a".repeat(64);
-  const cookie = `__Host-recoup-fan-form-${id}=${csrf}`;
+  const cookie = `__Host-recoup-fan-form-${hashFanValue(csrf).slice(0, 16)}=${csrf}`;
   const forged = await startFanConnection(
     new NextRequest(url, {
       method: "POST",
@@ -210,4 +220,15 @@ it("does not record partial Spotify grants as complete", async () => {
     "recoup_spotify=failed",
   );
   expect(m.complete).not.toHaveBeenCalled();
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
+
+it("keeps concurrently opened agreement pages independent", async () => {
+  const first = await startFanConnection(new NextRequest(url), id);
+  const second = await startFanConnection(new NextRequest(url), id);
+  expect(first.cookies.getAll()[0].name).not.toBe(second.cookies.getAll()[0].name);
 });

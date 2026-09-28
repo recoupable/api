@@ -1,3 +1,5 @@
+import { cleanupFanSessions } from "@/lib/supabase/site_fan_connections/cleanupFanSessions";
+import { limitSiteRequest } from "../activity/limitSiteRequest";
 import { randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
@@ -13,21 +15,23 @@ import { renderFanConnectPage } from "./renderFanConnectPage";
 export async function startFanConnection(request: NextRequest, id: string) {
   const headers = {
     "Cache-Control": "no-store",
+    "X-Robots-Tag": "noindex",
     "Referrer-Policy": "no-referrer",
     "Content-Security-Policy":
       "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
   };
   try {
     z.string().uuid().parse(id);
+    await limitSiteRequest(id, "connect", 60);
     const oauth = getFanOAuthConfig();
     const site = await selectSite(id);
     const config = await selectFanConfig(id);
     if (!site?.artist_id || !config?.enabled)
       throw new SiteError(404, "This fan connection is unavailable");
-    await requireFanEntitlement(site.owner_id);
-    const csrfName = `__Host-recoup-fan-form-${id}`;
+    if (request.method !== "GET") await requireFanEntitlement(site.owner_id);
     if (request.method === "GET") {
       const csrf = randomBytes(32).toString("hex");
+      const csrfName = `__Host-recoup-fan-form-${hashFanValue(csrf).slice(0, 16)}`;
       const response = new NextResponse(
         renderFanConnectPage({
           name: site.name,
@@ -57,10 +61,12 @@ export async function startFanConnection(request: NextRequest, id: string) {
       })
       .strict()
       .parse(Object.fromEntries(await request.formData()));
+    const csrfName = `__Host-recoup-fan-form-${hashFanValue(form.csrf).slice(0, 16)}`;
     if (form.csrf !== request.cookies.get(csrfName)?.value)
       throw new SiteError(403, "Connection page expired. Open it again.");
     if (form.revision !== config.revision)
       throw new SiteError(409, "Connection details changed. Reload and review them.");
+    await cleanupFanSessions();
     const state = randomBytes(32).toString("hex");
     const browser = randomBytes(32).toString("hex");
     const verifier = randomBytes(48).toString("base64url");

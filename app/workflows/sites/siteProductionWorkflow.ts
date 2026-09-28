@@ -1,3 +1,4 @@
+import { prepareSkillStep } from "./prepareSkillStep";
 import { metadataStep } from "./metadataStep";
 import { audioSourceStep } from "./audioSourceStep";
 import { audioAnalysisStep } from "./audioAnalysisStep";
@@ -43,6 +44,12 @@ export async function siteProductionWorkflow(
       stage = "context brief";
       context = await contextBriefStep(site, accountId, saved);
     } else context = await collectContextStep(site, accountId, selectedBrief);
+    stage = "site skill";
+    context.siteSkill = await prepareSkillStep(
+      { instruction, context, approvedConcept },
+      accountId,
+      site.id,
+    );
     stage = "concept";
     const selected =
       approvedConcept ?? (await selectConceptStep(site, instruction, context, accountId));
@@ -59,10 +66,11 @@ export async function siteProductionWorkflow(
       accountId,
     );
     stage = "review";
-    const reviews = [await reviewStep(snapshot, direction, accountId, site.id)];
-    if (
-      reviews[0].verdict === "revise" &&
-      !reviews[0].issues.some(issue => issue.module === "direction")
+    const reviews = [await reviewStep(snapshot, direction, accountId, site.id, context.siteSkill)];
+    while (
+      reviews.length < 4 &&
+      reviews.at(-1)!.verdict === "revise" &&
+      !reviews.at(-1)!.issues.some(issue => issue.module === "direction")
     ) {
       ({ snapshot, direction, assets } = await reviseStep(
         site,
@@ -71,10 +79,10 @@ export async function siteProductionWorkflow(
         direction,
         assets,
         snapshot,
-        reviews[0],
+        reviews.at(-1)!,
         accountId,
       ));
-      reviews.push(await reviewStep(snapshot, direction, accountId, site.id));
+      reviews.push(await reviewStep(snapshot, direction, accountId, site.id, context.siteSkill));
     }
     stage = "save";
     return await saveSiteStep(

@@ -15,7 +15,19 @@ const {
 const list = () => vi.mocked(stripeClient.subscriptions.list);
 
 describe("getActiveSubscriptions", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => vi.resetAllMocks());
+
+  it("continues beyond an account match that fails the requested eligibility", async () => {
+    list()
+      .mockResolvedValueOnce(apiList([sub("sub_old", ACC)], true))
+      .mockResolvedValueOnce(apiList([sub("sub_paid", ACC)], false));
+    const result = await getActiveSubscriptions(
+      ACC,
+      subscription => subscription.id === "sub_paid",
+    );
+    expect(result.map(s => s.id)).toEqual(["sub_paid"]);
+    expect(list()).toHaveBeenCalledTimes(2);
+  });
 
   it("walks pages until a batch matches accountId", async () => {
     list()

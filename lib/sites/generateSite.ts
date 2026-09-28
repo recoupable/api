@@ -1,3 +1,4 @@
+import { loadSiteSkill } from "./skills/loadSiteSkill";
 import { Script } from "node:vm";
 import { generateObject } from "ai";
 import { designSchema, experienceSchema, type Site, type SiteSnapshot } from "./schema";
@@ -16,7 +17,7 @@ export async function generateSite(
     model,
     maxRetries: 0,
     schema: designSchema.extend({ experience: experienceSchema }),
-    system: implementationGuidance,
+    system: `${implementationGuidance}\n\n${loadSiteSkill().skill}\n${loadSiteSkill().buildAndReview}`,
     messages: [
       {
         role: "user",

@@ -42,6 +42,8 @@ for(const [name,width,height] of [['mobile',390,844],['desktop',1440,900]]){
   }catch(e){errors.push('Step '+(index+1)+' '+step.target+': '+e.message.slice(0,300));steps.push({index,checkpoint:step.checkpoint,passed:false});break;}
  }
  if(!plan?.steps?.length)errors.push('No complete fan journey contract');
+ const activity=await ui.locator('body').evaluate(()=>window.__recoupEvents||[]);
+ if(plan?.steps?.some(s=>s.checkpoint==='result')&&!activity.includes('complete'))errors.push('Result completed without reporting window.recoup.track(\"complete\")');
  await page.screenshot({path:name+'-active.png'});
- results.push({name,errors,interacted,changed:before!==await ui.locator('body').innerText(),journeyPassed:!!plan?.steps?.length&&steps.length===plan.steps.length&&steps.every(s=>s.passed),steps,artifacts,overflow:await ui.locator('body').evaluate(()=>document.documentElement.scrollWidth>innerWidth),text:(await ui.locator('body').innerText()).slice(0,4000)});await page.close();
+ results.push({name,errors,activity,interacted,changed:before!==await ui.locator('body').innerText(),journeyPassed:!!plan?.steps?.length&&steps.length===plan.steps.length&&steps.every(s=>s.passed),steps,artifacts,overflow:await ui.locator('body').evaluate(()=>document.documentElement.scrollWidth>innerWidth),text:(await ui.locator('body').innerText()).slice(0,4000)});await page.close();
 }await browser.close();fs.writeFileSync('review.json',JSON.stringify(results));})().catch(e=>{console.error(e);process.exit(1)});`;

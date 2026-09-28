@@ -1,3 +1,4 @@
+import { loadSiteSkill } from "../skills/loadSiteSkill";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
@@ -18,7 +19,7 @@ export async function generateProductionObject<T extends Record<string, unknown>
     output: "object",
     schema: schema as z.ZodType<Record<string, unknown>>,
     maxRetries: 0,
-    system,
+    system: `${system}\n\n${loadSiteSkill().skill}\n${loadSiteSkill().principles}\n${loadSiteSkill().buildAndReview}`,
     messages: [
       {
         role: "user",

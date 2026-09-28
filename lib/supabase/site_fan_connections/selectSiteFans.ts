@@ -8,6 +8,7 @@ export async function selectSiteFans(siteId: string, offset: number, limit: numb
     )
     .eq("site_id", siteId)
     .order("last_connected_at", { ascending: false })
+    .order("id", { ascending: false })
     .range(offset, offset + limit - 1);
   if (error) throw new Error("Could not load site fans");
   return { fans: data ?? [], total: count ?? 0, offset, limit };

@@ -1,19 +1,18 @@
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { NextRequest } from "next/server";
 import { fanConnectionHandler } from "@/lib/sites/fanConnection/fanConnectionHandler";
+import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 /**
- * List Spotify-connected fans and their grants in the authorized workspace.
+ * Reports activity only after checking the customer's workspace access.
  *
- * @param request - HTTP request.
+ * @param request - Incoming site request.
  * @param root0 - Route context.
- * @param root0.params - Site route parameters.
+ * @param root0.params - Site identifier.
  * @returns HTTP response.
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  return fanConnectionHandler(request, (await params).id, "fans");
+  return fanConnectionHandler(request, (await params).id, "activity");
 }
-
-/** Browser preflight for the authenticated customer dashboard.
+/** Browser preflight for customer activity reports.
  *
  * @returns HTTP response.
  */

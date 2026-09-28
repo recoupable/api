@@ -53,7 +53,7 @@ export async function renderExperience(snapshot: SiteSnapshot, contract?: Experi
     ];
     await sandbox.updateNetworkPolicy({ allow: hosts });
     const experience = snapshot.design.experience!;
-    const source = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src https: data:; font-src data:; connect-src 'none'; media-src 'none'; form-action 'none'; frame-src 'none'; base-uri 'none'"><style>${experience.css.replace(/<\/style/gi, "<\\/style")}</style></head><body>${experience.html}<script>${experience.javascript.replace(/<\/script/gi, "<\\/script")}</script></body></html>`;
+    const source = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src https: data:; font-src data:; connect-src 'none'; media-src 'none'; form-action 'none'; frame-src 'none'; base-uri 'none'"><style>${experience.css.replace(/<\/style/gi, "<\\/style")}</style></head><body>${experience.html}<script>window.__recoupEvents=[];window.recoup={track:event=>window.__recoupEvents.push(event),join:()=>window.__recoupEvents.push("join")};</script><script>${experience.javascript.replace(/<\/script/gi, "<\\/script")}</script></body></html>`;
     await sandbox.writeFiles([
       { path: "experience.html", content: Buffer.from(source) },
       { path: "journey.json", content: Buffer.from(JSON.stringify(contract ?? null)) },
