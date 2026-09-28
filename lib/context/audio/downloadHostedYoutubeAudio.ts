@@ -15,7 +15,8 @@ export async function downloadHostedYoutubeAudio(
     .parse(videoId);
   const token = process.env.APIFY_TOKEN;
   if (!token) throw new Error("Hosted audio provider is not configured");
-  const maxCostUsd = 0.3;
+  // Apify rejects run limits below its $0.50 minimum. Actual usage is billed below.
+  const maxCostUsd = 0.5;
   await requireCredits(accountId, usdToCredits(maxCostUsd));
   // Never retry an ambiguous paid start. No service credentials are sent to the audio sandbox.
   const client = new ApifyClient({ token, maxRetries: 0 });
