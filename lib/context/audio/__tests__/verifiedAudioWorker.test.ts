@@ -12,6 +12,9 @@ exec(compile(helpers,'worker','exec'))
 recording={'title':'FUCK THE CLUB (feat. GOLDN)','artists':['chillpill','Joshua Golden'],'durationSeconds':154.79}
 candidate={'title':'chillpill - FUCK THE CLUB (feat. GOLDN)','duration':155}
 assert matches_metadata(candidate,recording)
+assert matches_metadata({**candidate,'title':'chillpill - F*ck The Club (ft. GOLDN)'},recording)
+assert matches_metadata({**candidate,'title':'chillpill - F**k The Club'},recording)
+assert not matches_metadata({**candidate,'title':'chillpill - Leave The Club'},recording)
 assert not matches_metadata({**candidate,'title':'Someone else - FUCK THE CLUB'},recording)
 assert not matches_metadata({**candidate,'duration':180},recording)
 assert not matches_metadata({**candidate,'title':candidate['title']+' sped up'},recording)
