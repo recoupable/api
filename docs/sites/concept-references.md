@@ -2,6 +2,10 @@
 
 Status: research candidates, not customer-approved examples. Reviewed 2026-09-28 from the linked creators' pages. Historical case studies are not evidence that their original interactive sites still work. No reference has been copied or implemented here.
 
+## Expanded research library
+
+The [60-reference digital experience library](references/index.html) broadens this initial shortlist beyond music to games, creative tools, brand campaigns, personal artifacts, interactive stories and collective work. See the [research synthesis](references/README.md) and [structured source data](references/library.json). These remain research candidates; no approval or production integration is implied.
+
 ## Working recommendation
 
 Start with references before locking in templates. Separate the quality of a core interaction from its visual treatment and from its fit to a particular song. A template can stabilize controls, layout and rendering; it cannot supply a good joke, artist connection or reason to participate.
