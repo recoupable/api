@@ -25,7 +25,12 @@ export const experienceContractSchema = z.object({
         action: z.enum(["click", "fill", "press", "download", "share"]),
         target: z.string().min(1).max(100),
         value: z.string().max(200),
-        expected: z.string().max(300),
+        expected: z
+          .string()
+          .max(300)
+          .describe(
+            "Literal visible text after this action, never a description of expected behavior.",
+          ),
         checkpoint: z.enum(["participate", "result", "delivery"]),
       }),
     )
