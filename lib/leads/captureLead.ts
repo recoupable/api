@@ -40,7 +40,7 @@ export async function captureLead(lead: PostLeadsBody): Promise<CaptureLeadResul
   if (lead.kind === "subscribe" && lead.newsletter_consent) {
     const { enrollResearchSubscriber } = await import("@/lib/newsletter/enrollResearchSubscriber");
     const enrollment = await enrollResearchSubscriber(lead.email);
-    if (!enrollment.success) return enrollment;
+    if (enrollment.success === false) return enrollment;
   }
 
   const name = buildAttioName(lead.name);
