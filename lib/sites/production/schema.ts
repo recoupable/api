@@ -49,6 +49,7 @@ export type CreativeReview = z.infer<typeof reviewSchema> & {
     scope: "generated-experience";
     nativeShareDelivery: "not-tested";
     spotifyAuthentication: "not-tested";
+    journey?: z.infer<typeof experienceContractSchema>;
     viewports: { name: string; journeyPassed?: boolean; errors: string[]; overflow: boolean }[];
   };
 };
