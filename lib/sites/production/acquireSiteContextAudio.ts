@@ -1,3 +1,4 @@
+import { downloadHostedYoutubeAudio } from "@/lib/context/audio/downloadHostedYoutubeAudio";
 import { randomUUID } from "node:crypto";
 import { callContextRpc } from "@/lib/supabase/context_requests/callContextRpc";
 import { uploadFileByKey } from "@/lib/supabase/storage/uploadFileByKey";
@@ -26,12 +27,15 @@ export async function acquireSiteContextAudio(
     return;
   if (!context.metadata.previewUrl)
     throw new Error("Spotify preview unavailable for recording verification");
-  const audio = await acquireVerifiedAudioInSandbox({
-    title: context.metadata.title,
-    artists: context.release.artists,
-    durationSeconds: context.metadata.durationSeconds,
-    previewUrl: context.metadata.previewUrl,
-  });
+  const audio = await acquireVerifiedAudioInSandbox(
+    {
+      title: context.metadata.title,
+      artists: context.release.artists,
+      durationSeconds: context.metadata.durationSeconds,
+      previewUrl: context.metadata.previewUrl,
+    },
+    videoId => downloadHostedYoutubeAudio(videoId, accountId, site.id),
+  );
   await authorizeSiteWorkspace(accountId, site.owner_id);
   const key = `${site.owner_id}/context-audio/${randomUUID()}.wav`;
   await uploadFileByKey(key, new Blob([new Uint8Array(audio.file)]), {

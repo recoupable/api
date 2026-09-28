@@ -13,6 +13,7 @@ def diagnostic(kind, value, tb):
     print(json.dumps({'stage':stage,'error':kind.__name__,'message':message,'candidates':decisions}),file=sys.stderr)
 sys.excepthook=diagnostic
 r=json.load(open('input.json'))
+mode=sys.argv[1]
 ffmpeg=imageio_ffmpeg.get_ffmpeg_exe()
 def run(args,timeout=90):
     return subprocess.check_output(args,timeout=timeout,stderr=subprocess.PIPE)
@@ -24,16 +25,17 @@ preview=r['previewUrl']
 # Preview URL has already been validated by the caller; disallow redirects here.
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self,*args,**kwargs): return None
-with urllib.request.build_opener(NoRedirect).open(preview,timeout=25) as response:
-    data=response.read(4000001)
-    if len(data)>4000000: raise ValueError('Preview exceeds size limit')
-pathlib.Path('preview.mp3').write_bytes(data)
+if mode=='discover':
+    with urllib.request.build_opener(NoRedirect).open(preview,timeout=25) as response:
+        data=response.read(4000001)
+        if len(data)>4000000: raise ValueError('Preview exceeds size limit')
+    pathlib.Path('preview.mp3').write_bytes(data)
 def pcm(path):
     return np.frombuffer(run([ffmpeg,'-v','error','-i',str(path),'-t','1200','-ac','1','-ar','2000','-f','f32le','-']),dtype='<f4').astype(np.float64)
 y=pcm('preview.mp3'); y=y-y.mean()
 if len(y)<30000 or np.dot(y,y)<1e-8: raise ValueError('Insufficient preview for waveform match')
 stage='YouTube search'
-search=json.loads(yt(['--flat-playlist','--skip-download','--dump-single-json','--','ytsearch5:'+r['title']+' '+r['artists'][0]+' audio']))
+search=json.loads(yt(['--flat-playlist','--skip-download','--dump-single-json','--','ytsearch5:'+r['title']+' '+r['artists'][0]+' audio'])) if mode=='discover' else {'entries':[json.load(open('candidate.json'))]}
 def matches_metadata(candidate, recording):
     title=norm(re.sub(r'\s*\((?:feat\.?|ft\.?).*?\)','',recording['title'],flags=re.I))
     text=norm(candidate.get('title','')+' '+(candidate.get('channel') or ''))
@@ -47,16 +49,14 @@ def matches_metadata(candidate, recording):
     alternatives=['live','remix','acoustic','instrumental','karaoke','cover','sped up','slowed','clean']
     return not any((' '+v+' ') in (' '+text+' ') and (' '+v+' ') not in (' '+norm(recording['title'])+' ') for v in alternatives)
 stage='candidate matching'
-for c in search.get('entries',[])[:5]:
-    vid=c.get('id','')
-    if not re.fullmatch(r'[A-Za-z0-9_-]{11}',vid): continue
-    if not matches_metadata(c,r):
-        decisions.append({'videoId':vid,'rejected':'metadata','title':c.get('title','')[:300],'duration':c.get('duration')})
-        continue
-    path=pathlib.Path('candidate.m4a');path.unlink(missing_ok=True)
+candidates=[c for c in search.get('entries',[])[:5] if re.fullmatch(r'[A-Za-z0-9_-]{11}',c.get('id','')) and matches_metadata(c,r)]
+if mode=='discover':
+    json.dump(candidates[:3],open('candidates.json','w'))
+    sys.exit(0)
+for c in candidates:
+    vid=c['id']
+    path=pathlib.Path('candidate.mp3')
     try:
-        stage='candidate download'
-        yt(['--no-playlist','--no-progress','--max-filesize','40M','--match-filter','duration <= 1200','-f','bestaudio[ext=m4a]','-o',str(path),'--','https://www.youtube.com/watch?v='+vid])
         if path.stat().st_size>40000000: raise ValueError('Audio exceeds size limit')
         stage='waveform verification'
         x=pcm(path)

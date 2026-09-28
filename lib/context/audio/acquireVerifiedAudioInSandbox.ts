@@ -8,7 +8,10 @@ const inputSchema = z.object({
   previewUrl: z.string().url(),
 });
 /** Bounded hosted acquisition and waveform verification. No application secrets enter the worker. */
-export async function acquireVerifiedAudioInSandbox(input: z.input<typeof inputSchema>) {
+export async function acquireVerifiedAudioInSandbox(
+  input: z.input<typeof inputSchema>,
+  download: (videoId: string) => Promise<Buffer | null>,
+) {
   const data = inputSchema.parse(input);
   const preview = new URL(data.previewUrl);
   if (
@@ -52,16 +55,47 @@ export async function acquireVerifiedAudioInSandbox(input: z.input<typeof inputS
       { path: "input.json", content: Buffer.from(JSON.stringify(data)) },
       { path: "acquire.py", content: Buffer.from(verifiedAudioWorker) },
     ]);
-    const run = await sandbox.runCommand({
+    const discovery = await sandbox.runCommand({
       cmd: "python3.11",
-      args: ["acquire.py"],
+      args: ["acquire.py", "discover"],
       env: { PYTHONPATH: "/tmp/audio-packages" },
     });
-    if (run.exitCode !== 0) {
-      const diagnostic = (await run.stderr()).slice(-4000);
-      console.error("[sites:audio-worker]", diagnostic);
-      throw new Error("Full audio acquisition or waveform verification failed");
+    if (discovery.exitCode !== 0) {
+      console.error("[sites:audio-worker]", (await discovery.stderr()).slice(-4000));
+      throw new Error("Audio candidate discovery failed");
     }
+    const candidatesFile = await sandbox.readFileToBuffer({ path: "candidates.json" });
+    const candidates = z
+      .array(
+        z.object({
+          id: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
+          title: z.string().max(500),
+          duration: z.number().positive().max(1202),
+          channel: z.string().nullable().optional(),
+        }),
+      )
+      .max(3)
+      .parse(JSON.parse(candidatesFile?.toString() ?? "[]"));
+    let matched = false;
+    for (const candidate of candidates) {
+      const source = await download(candidate.id);
+      if (!source) continue;
+      await sandbox.writeFiles([
+        { path: "candidate.mp3", content: source },
+        { path: "candidate.json", content: Buffer.from(JSON.stringify(candidate)) },
+      ]);
+      const verification = await sandbox.runCommand({
+        cmd: "python3.11",
+        args: ["acquire.py", "verify"],
+        env: { PYTHONPATH: "/tmp/audio-packages" },
+      });
+      if (verification.exitCode === 0) {
+        matched = true;
+        break;
+      }
+      console.error("[sites:audio-worker]", (await verification.stderr()).slice(-4000));
+    }
+    if (!matched) throw new Error("No hosted audio passed recording verification");
     const [file, manifest] = await Promise.all([
       sandbox.readFileToBuffer({ path: "audio.wav" }),
       sandbox.readFileToBuffer({ path: "result.json" }),
