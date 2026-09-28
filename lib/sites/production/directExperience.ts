@@ -1,3 +1,4 @@
+import { fanExperienceQuality } from "./fanExperienceQuality";
 import { conceptPitchSchema, type ConceptPitch } from "./conceptSchema";
 import { z } from "zod";
 import { experienceCapabilities } from "./experienceContract";
@@ -17,6 +18,8 @@ export async function directExperience(
   const direction = await generateProductionObject(
     directionSchema,
     `You are the creative director for a song or artist fan experience. Make something immediately understandable and worth doing on a phone. Keep the idea simple; do not write an elaborate rationale to make a weak activity sound interesting.
+
+${fanExperienceQuality}
 
 Creative principles:
 1. Obvious connection. The fan should recognize why this belongs to this song or artist without an explanation. Use a supported song situation, recognizable artist character, signature joke, or distinctive part of their world. Colors, bubble shapes, textures, a title pun or pasted-on credits are not enough.
