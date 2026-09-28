@@ -47,7 +47,7 @@ it("caps provider spend, disables retries and charges actual reported cost", asy
       storeInKVStore: true,
       transcriptionAndSubtitle: "NONE",
     }),
-    expect.objectContaining({ maxTotalChargeUsd: 0.3, restartOnError: false, timeout: 180 }),
+    expect.objectContaining({ maxTotalChargeUsd: 0.5, restartOnError: false, timeout: 180 }),
   );
   expect(mocks.charge).toHaveBeenCalledWith(
     expect.objectContaining({
