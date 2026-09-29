@@ -1,3 +1,4 @@
+import { getPreviewFanConfig } from "../preview/getPreviewFanConfig";
 import { cleanupFanSessions } from "@/lib/supabase/site_fan_connections/cleanupFanSessions";
 import { limitSiteRequest } from "../activity/limitSiteRequest";
 import { randomBytes } from "node:crypto";
@@ -25,16 +26,21 @@ export async function startFanConnection(request: NextRequest, id: string) {
     await limitSiteRequest(id, "connect", 60);
     const oauth = getFanOAuthConfig();
     const site = await selectSite(id);
-    const config = await selectFanConfig(id);
-    if (!site?.artist_id || !config?.enabled)
+    const previewToken = request.nextUrl.searchParams.get("preview");
+    const config =
+      site && previewToken
+        ? await getPreviewFanConfig(site, previewToken)
+        : await selectFanConfig(id);
+    if (!site || (!previewToken && !site.artist_id) || !config?.enabled)
       throw new SiteError(404, "This fan connection is unavailable");
-    if (request.method !== "GET") await requireFanEntitlement(site.owner_id);
+    if (request.method !== "GET" && !previewToken) await requireFanEntitlement(site.owner_id);
     if (request.method === "GET") {
       const csrf = randomBytes(32).toString("hex");
       const csrfName = `__Host-recoup-fan-form-${hashFanValue(csrf).slice(0, 16)}`;
       const response = new NextResponse(
         renderFanConnectPage({
           name: site.name,
+          preview: !!previewToken,
           returnUrl: config.return_url,
           marketingText: config.marketing_text,
           revision: config.revision,

@@ -11,6 +11,10 @@ import { ZodError } from "zod";
 const operations: Record<SiteOperation, [string, string]> = {
   list: ["list_sites", "List Sites in your personal workspace or an organization you can access."],
   get: ["get_site", "Read a site's draft, published snapshot and revision before editing."],
+  preview: [
+    "get_site_preview",
+    "Get a short-lived owner-only Spotify preview permission and verified draft audio. Does not publish or add test users to the live audience.",
+  ],
   create: [
     "create_site",
     "Create a private site draft from a Spotify release URL and optional brief/assets. Then call propose_site_concepts and ask the customer to select a pitch. Does not publish.",
@@ -48,7 +52,7 @@ export function registerAllSitesTools(server: McpServer) {
         description,
         inputSchema: siteOperationSchemas[operation],
         annotations: {
-          readOnlyHint: ["list", "get", "signups", "generation"].includes(operation),
+          readOnlyHint: ["list", "get", "preview", "signups", "generation"].includes(operation),
           destructiveHint: ["publish", "unpublish"].includes(operation),
           openWorldHint: true,
         },

@@ -1,11 +1,13 @@
 import { z } from "zod";
 import { callContextRpc } from "@/lib/supabase/context_requests/callContextRpc";
 import { createSignedFileUrlByKey } from "@/lib/supabase/storage/createSignedFileUrlByKey";
-import type { Site } from "./schema";
+import type { Site, SiteSnapshot } from "./schema";
 
-/** Publish a short-lived link only to the verified recording of this published site. */
-export async function getSitePlaybackAudio(site: Site): Promise<string | null> {
-  const published = site.published;
+/** Publish a short-lived link only to the verified recording of this authorized snapshot. */
+export async function getSitePlaybackAudio(
+  site: Site,
+  published: SiteSnapshot | null = site.published,
+): Promise<string | null> {
   const requestId = published?.production?.context.engine?.requestIds[0];
   if (!published || !requestId) return null;
   try {

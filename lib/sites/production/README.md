@@ -62,3 +62,7 @@ The Sites workflow runs metadata, hosted acquisition, lyrics, summary, artwork, 
 The lyric result remains private and unverified. Summary normalization consumes only a transcript with the matching audio checksum; its result ID is part of the cache key. Sites receives the summary's paraphrased themes, artwork observations and public-search research through a saved brief. Raw lyrics and signed file URLs are not included in the public site payload.
 
 Workflow failures name the stage. No automatic provider retry occurs after an ambiguous failure; completed accepted enrichment remains reusable. A failed reviewed concept does not trigger paid automatic brainstorming.
+
+### Private player preview
+
+`GET /api/sites/:id/preview` (or `get_site_preview`) requires existing workspace authorization and a saved draft. It returns `previewToken` (30-minute, site/account-bound capability) and `playbackAudioUrl` for the verified draft recording. The trusted app player passes the token to the existing fan OAuth entry via `?preview=...`. Start and callback both recheck workspace access. The signed preview marker persists in the OAuth session return URL and is removed on redirect back to the editor. Real Spotify identity/scopes are verified; preview connections do not call the fan/marketing persistence transaction or change public connection settings. Preview is available before subscribing; paid publishing enforcement is unchanged. Do not expose the grant to generated site code or include preview sessions in public analytics.
