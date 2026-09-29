@@ -127,3 +127,11 @@ it("rejects invalid JavaScript without returning a replacement draft", async () 
     });
   await expect(generateSite(site, "Build")).rejects.toThrow();
 });
+
+it("leaves room for code after reasoning without reducing art-direction effort", async () => {
+  await generateSite(site, "Build it");
+  const [planning, implementation] = ai.generateObject.mock.calls.map(call => call[0]);
+  expect(planning.providerOptions.anthropic.effort).toBe("high");
+  expect(implementation.providerOptions.anthropic.effort).toBe("low");
+  expect(implementation.maxOutputTokens).toBe(65536);
+});

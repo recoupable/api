@@ -171,3 +171,19 @@ it("commissions an explicit art revision without changing the existing game cont
   expect(assetsStep).toHaveBeenCalledWith(site, { ...direction, assets: revisedAssets }, "account");
   expect(m.build.mock.calls[0][2].direction.contract).toEqual(direction.contract);
 });
+
+it("explains build output exhaustion without exposing provider content or saving", async () => {
+  m.build.mockRejectedValue(new Error("SITE_BUILD_OUTPUT_LIMIT"));
+  const result = await siteProductionWorkflow(
+    { id: "site" } as Site,
+    "",
+    "account",
+    undefined,
+    approvedConcept,
+  );
+  expect(result).toHaveProperty(
+    "error",
+    "The site builder reached its generation limit before finishing the code. Your saved draft is unchanged.",
+  );
+  expect(m.save).not.toHaveBeenCalled();
+});
