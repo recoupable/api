@@ -1,9 +1,9 @@
-vi.mock("../fanConnection/prepareSiteFanConnection", () => ({
-  prepareSiteFanConnection: m.fanSetup,
-}));
 import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
 import { processSiteOperation } from "../processSiteOperation";
+vi.mock("../fanConnection/prepareSiteFanConnection", () => ({
+  prepareSiteFanConnection: m.fanSetup,
+}));
 vi.mock("../production/resolveSiteArtist", () => ({
   resolveSiteArtist: vi.fn(async site => site.artist_id ?? null),
 }));
