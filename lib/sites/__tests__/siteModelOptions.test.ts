@@ -13,3 +13,11 @@ it("preserves an explicit alternate model without incompatible provider options"
   vi.stubEnv("SITES_MODEL", "openai/gpt-6-astra");
   expect(getSiteModelOptions()).toEqual({ model: "openai/gpt-6-astra" });
 });
+it("allows implementation to use medium effort without changing creative planning", () => {
+  expect(
+    getSiteModelOptions("anthropic/claude-opus-5.5", "medium").providerOptions?.anthropic.effort,
+  ).toBe("medium");
+  expect(getSiteModelOptions("anthropic/claude-opus-5.5").providerOptions?.anthropic.effort).toBe(
+    "high",
+  );
+});
