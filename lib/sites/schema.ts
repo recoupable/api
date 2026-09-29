@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { conceptPitchSchema } from "./production/conceptSchema";
+import { returnUrlSchema } from "./fanConnection/schema";
 import type { ReleaseContext, CreativeDirection, CreativeReview } from "./production/schema";
 import type { BrandWorld } from "./brandWorld/schema";
 
@@ -76,6 +77,7 @@ export const actionSchema = z.discriminatedUnion("action", [
     .object({
       action: z.literal("publish"),
       revision: z.number().int().nonnegative(),
+      returnUrl: returnUrlSchema.optional(),
     })
     .strict(),
   z
