@@ -120,7 +120,12 @@ export async function siteProductionWorkflow(
       },
       accountId,
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "SITE_BUILD_OUTPUT_LIMIT")
+      return {
+        error:
+          "The site builder reached its generation limit before finishing the code. Your saved draft is unchanged.",
+      };
     return {
       error: `Site production stopped during ${stage}. Your existing draft is unchanged.`,
     };

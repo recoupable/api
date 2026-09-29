@@ -22,6 +22,8 @@ export function getGenerationFailure(error: unknown) {
     name: error.name,
     finishReason: error.finishReason,
     outputTokens: error.usage?.outputTokens,
+    reasoningTokens: error.usage?.outputTokenDetails?.reasoningTokens,
+    textTokens: error.usage?.outputTokenDetails?.textTokens,
     responseLength: error.text?.length,
     issues,
   };

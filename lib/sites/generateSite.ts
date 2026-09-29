@@ -12,7 +12,7 @@ export async function generateSite(
   accountId?: string,
 ): Promise<SiteSnapshot> {
   if (accountId) await (await import("./production/requireCredits")).requireCredits(accountId);
-  const modelOptions = getSiteModelOptions(undefined, "medium");
+  const modelOptions = getSiteModelOptions(undefined, "low", 65536);
   const { model } = modelOptions;
   const brandWorld = await generateBrandWorld(site, instruction, model, accountId);
   if (accountId) await (await import("./production/requireCredits")).requireCredits(accountId);
