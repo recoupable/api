@@ -64,6 +64,11 @@ export async function siteProductionWorkflow(
     if (site.draft?.production && !approvedConcept) {
       direction = site.draft.production.direction;
       assets = site.draft.assets;
+      if (context.siteSkill.assetRevision !== undefined) {
+        direction = { ...direction, assets: context.siteSkill.assetRevision };
+        stage = "assets";
+        assets = await assetsStep(site, direction, accountId);
+      }
     } else {
       stage = "concept";
       const selected =

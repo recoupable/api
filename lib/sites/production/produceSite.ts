@@ -29,10 +29,21 @@ export async function produceSite(
     accountId,
     site.id,
   );
-  const selected =
-    approvedConcept ?? (await selectExperienceConcept(site, instruction, context, accountId));
-  let direction = await directExperience(site, instruction, context, accountId, selected);
-  let assets = await produceAssets(site, direction, accountId);
+  let direction;
+  let assets;
+  if (site.draft?.production && !approvedConcept) {
+    direction = site.draft.production.direction;
+    assets = site.draft.assets;
+    if (context.siteSkill.assetRevision !== undefined) {
+      direction = { ...direction, assets: context.siteSkill.assetRevision };
+      assets = await produceAssets(site, direction, accountId);
+    }
+  } else {
+    const selected =
+      approvedConcept ?? (await selectExperienceConcept(site, instruction, context, accountId));
+    direction = await directExperience(site, instruction, context, accountId, selected);
+    assets = await produceAssets(site, direction, accountId);
+  }
   let snapshot = await buildExperience(
     site,
     instruction,

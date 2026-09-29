@@ -144,3 +144,30 @@ it("uses an explicitly selected new concept even when a draft exists", async () 
   );
   expect(assetsStep).toHaveBeenCalledOnce();
 });
+
+it("commissions an explicit art revision without changing the existing game contract", async () => {
+  const direction = {
+    concept: "Existing moonwalk",
+    contract: { activity: "choreograph" },
+    assets: [],
+  };
+  const revisedAssets = [
+    {
+      name: "stage",
+      prompt: "tactile moon",
+      purpose: "stage",
+      aspectRatio: "16:9",
+      production: { model: "nano-banana-pro", rationale: "Tactile character artwork" },
+    },
+  ];
+  vi.mocked(prepareSkillStep).mockResolvedValueOnce({ assetRevision: revisedAssets } as never);
+  const site = {
+    id: "site",
+    draft: { assets: [], production: { context: {}, direction } },
+  } as unknown as Site;
+  await siteProductionWorkflow(site, "Replace the art", "account");
+  expect(m.select).not.toHaveBeenCalled();
+  expect(directionStep).not.toHaveBeenCalled();
+  expect(assetsStep).toHaveBeenCalledWith(site, { ...direction, assets: revisedAssets }, "account");
+  expect(m.build.mock.calls[0][2].direction.contract).toEqual(direction.contract);
+});
