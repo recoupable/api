@@ -97,3 +97,21 @@ it("stops after a second invalid keyboard plan instead of sending it to the brow
   await expect(compileJourney(snapshot, contract, "account", "site")).rejects.toThrow("keyboard");
   expect(generateProductionObject).toHaveBeenCalledTimes(2);
 });
+it("retries a malformed model response once, but not provider failures", async () => {
+  const malformed = Object.assign(new Error("Could not parse response"), {
+    name: "AI_NoObjectGeneratedError",
+  });
+  vi.mocked(generateProductionObject)
+    .mockReset()
+    .mockRejectedValueOnce(malformed)
+    .mockResolvedValueOnce({ steps: contract.steps });
+  await expect(compileJourney(snapshot, contract, "account", "site")).resolves.toEqual(contract);
+  expect(generateProductionObject).toHaveBeenCalledTimes(2);
+  vi.mocked(generateProductionObject)
+    .mockReset()
+    .mockRejectedValue(new Error("Provider unavailable"));
+  await expect(compileJourney(snapshot, contract, "account", "site")).rejects.toThrow(
+    "Provider unavailable",
+  );
+  expect(generateProductionObject).toHaveBeenCalledOnce();
+});
