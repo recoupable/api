@@ -34,9 +34,15 @@ it("enables connection with artist agreement and the actual published destinatio
     0,
   );
 });
-it("does not enable a paid feature for an unpaid workspace", async () => {
+it("rejects publishing for an unpaid workspace before configuring Spotify", async () => {
   m.paid.mockResolvedValue(false);
-  expect(await prepareSiteFanConnection(site)).toBe("subscription-required");
+  await expect(prepareSiteFanConnection(site)).rejects.toMatchObject({
+    status: 402,
+    message:
+      "An active paid Recoup subscription is required to publish a site. Subscribe in this site’s workspace, then publish again.",
+  });
+  expect(m.oauth).not.toHaveBeenCalled();
+  expect(m.config).not.toHaveBeenCalled();
   expect(m.save).not.toHaveBeenCalled();
 });
 it("blocks paid publishing with an actionable attribution error", async () => {

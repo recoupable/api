@@ -5,12 +5,16 @@ import { hasPaidSiteSubscription } from "./hasPaidSiteSubscription";
 import { getFanOAuthConfig } from "./getFanOAuthConfig";
 import { returnUrlSchema } from "./schema";
 import { SiteError } from "../SiteError";
-/** Called only after workspace authorization, before making a draft public. */
+/** Publishing requires a paid workspace and automatically includes Spotify fan connection. */
 export async function prepareSiteFanConnection(
   site: { id: string; owner_id: string; artist_id: string | null },
   returnUrl?: string,
 ) {
-  if (!(await hasPaidSiteSubscription(site.owner_id))) return "subscription-required" as const;
+  if (!(await hasPaidSiteSubscription(site.owner_id)))
+    throw new SiteError(
+      402,
+      "An active paid Recoup subscription is required to publish a site. Subscribe in this site’s workspace, then publish again.",
+    );
   getFanOAuthConfig();
   if (!site.artist_id)
     throw new SiteError(
