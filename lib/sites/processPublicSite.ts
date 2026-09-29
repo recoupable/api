@@ -28,6 +28,8 @@ export async function processPublicSite(id: string, input?: unknown) {
   }
   // Internal creative guidance can contain customer instructions; never publish it.
   const snapshot = { ...site.published };
+  snapshot.artistName =
+    site.published.production?.context?.release?.artists?.join(", ") || snapshot.artistName;
   delete snapshot.brandWorld;
   delete snapshot.production;
   const config = await selectFanConfig(id);

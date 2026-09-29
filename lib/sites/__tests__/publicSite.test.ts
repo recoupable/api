@@ -51,11 +51,16 @@ it("does not expose private brand-world guidance in public snapshots", async () 
     published: {
       name: "Public",
       brandWorld: { privateBrief: "customer notes" },
-      production: { context: "private research" },
+      production: {
+        context: {
+          release: { artists: ["chillpill", "YBN Nahmir"] },
+          research: "private research",
+        },
+      },
     },
   });
   expect(await processPublicSite(id)).toEqual({
-    snapshot: { name: "Public" },
+    snapshot: { name: "Public", artistName: "chillpill, YBN Nahmir" },
     fanConnectUrl: null,
     playbackAudioUrl: null,
   });
