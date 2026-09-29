@@ -27,7 +27,7 @@ for(const [name,width,height] of [['mobile',390,844],['desktop',1440,900]]){
  for(const [index,step] of (plan?.steps||[]).entries()){
   try{
    if(step.action==='fill') await ui.getByLabel(step.target,{exact:true}).fill(step.value,{timeout:5000});
-   else if(step.action==='press') await ui.getByLabel(step.target,{exact:true}).press(step.value,{timeout:5000});
+   else if(step.action==='press') await ui.getByLabel(step.target,{exact:true}).press(step.value,{timeout:8000,delay:step.holdMs||0});
    else if(step.action==='download'){
     const [download]=await Promise.all([page.waitForEvent('download',{timeout:8000}),ui.getByRole('button',{name:step.target,exact:true}).click({timeout:5000})]);
     if(await download.failure())throw Error('Download failed');await verifyImage(fs.readFileSync(await download.path()),'download');
@@ -36,6 +36,7 @@ for(const [name,width,height] of [['mobile',390,844],['desktop',1440,900]]){
     for(let n=0;n<40&&shares.length===count;n++)await page.waitForTimeout(100);
     const share=shares[count];if(!share?.files?.length)throw Error('Share did not deliver an image File');await verifyImage(share.files[0].bytes,'share payload (OS delivery not tested)');
    }else await ui.getByRole('button',{name:step.target,exact:true}).click({timeout:5000});
+   if(step.waitMs)await page.waitForTimeout(step.waitMs);
    interacted=true;
    if(step.expected)await ui.getByText(step.expected,{exact:false}).first().waitFor({state:'visible',timeout:5000});
    steps.push({index,checkpoint:step.checkpoint,passed:true});

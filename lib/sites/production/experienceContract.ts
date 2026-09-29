@@ -25,6 +25,20 @@ export const experienceContractSchema = z.object({
         action: z.enum(["click", "fill", "press", "download", "share"]),
         target: z.string().min(1).max(100),
         value: z.string().max(200),
+        holdMs: z
+          .number()
+          .int()
+          .min(0)
+          .max(2000)
+          .optional()
+          .describe("Milliseconds to hold a press key before releasing; zero for a tap."),
+        waitMs: z
+          .number()
+          .int()
+          .min(0)
+          .max(20000)
+          .optional()
+          .describe("Milliseconds after the action before checking expected text."),
         expected: z
           .string()
           .max(300)
