@@ -1,3 +1,4 @@
+import { assetProductionSchema } from "../assets/catalog";
 import { z } from "zod";
 import { experienceContractSchema } from "./experienceContract";
 export const directionSchema = z.object({
@@ -21,6 +22,11 @@ export const directionSchema = z.object({
     .array(
       z.object({
         name: z.string().max(100),
+        production: assetProductionSchema
+          .optional()
+          .describe(
+            "Required for new asset plans: choose the model and explain why it fits this asset.",
+          ),
         purpose: z.string(),
         prompt: z.string().max(4000),
         aspectRatio: z.enum(["16:9", "1:1", "9:16"]),

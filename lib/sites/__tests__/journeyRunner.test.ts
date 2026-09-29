@@ -5,6 +5,7 @@ it("captures the earned result before delivery resets the page", async () => {
   let visible = "Start";
   const captures: Record<string, string> = {};
   const body = {
+    evaluateAll: async () => [],
     waitFor: async () => {},
     innerText: async () => visible,
     evaluate: async (fn: () => unknown) =>

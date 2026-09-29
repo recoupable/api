@@ -8,7 +8,7 @@ for(const [name,width,height] of [['mobile',390,844],['desktop',1440,900]]){
  const shares=[];
  await page.exposeFunction('__recordShare',payload=>shares.push(payload));
  await page.addInitScript(()=>{Object.defineProperty(navigator,'canShare',{value:()=>true,configurable:true});Object.defineProperty(navigator,'share',{value:async data=>{const files=[];for(const f of data.files||[]){files.push({name:f.name,type:f.type,bytes:Array.from(new Uint8Array(await f.arrayBuffer()))});}await window.__recordShare({files});},configurable:true});});
- await page.route('**/*',r=>r.request().resourceType()==='image'?r.continue():r.abort());
+ await page.route('**/*',r=>['image','media'].includes(r.request().resourceType())?r.continue():r.abort());
  // setContent does not run addInitScript, so navigate to the local document first.
  await page.goto('about:blank');
  const content=fs.readFileSync('experience.html','utf8');
@@ -44,8 +44,11 @@ for(const [name,width,height] of [['mobile',390,844],['desktop',1440,900]]){
   }catch(e){errors.push('Step '+(index+1)+' '+step.target+': '+e.message.slice(0,300));steps.push({index,checkpoint:step.checkpoint,passed:false});break;}
  }
  if(!plan?.steps?.length)errors.push('No complete fan journey contract');
+ const media=await ui.locator('video').evaluateAll(nodes=>nodes.map(v=>({src:v.currentSrc,ready:v.readyState,error:v.error?.code||null,paused:v.paused,time:v.currentTime,muted:v.muted})));
+ if(media.some(v=>v.error||v.ready<2))errors.push('Video asset did not load usable frames');
+ if(media.some(v=>!v.muted))errors.push('Production video must be muted so it does not compete with the release player');
  const activity=await ui.locator('body').evaluate(()=>window.__recoupEvents||[]);
  if(plan?.steps?.some(s=>s.checkpoint==='result')&&!activity.includes('complete'))errors.push('Result completed without reporting window.recoup.track(\"complete\")');
  await page.screenshot({path:name+'-active.png'});
- results.push({name,errors,activity,interacted,changed:before!==await ui.locator('body').innerText(),journeyPassed:!!plan?.steps?.length&&steps.length===plan.steps.length&&steps.every(s=>s.passed),steps,artifacts,overflow:await ui.locator('body').evaluate(()=>document.documentElement.scrollWidth>innerWidth),text:(await ui.locator('body').innerText()).slice(0,4000)});await page.close();
+ results.push({name,errors,media,activity,interacted,changed:before!==await ui.locator('body').innerText(),journeyPassed:!!plan?.steps?.length&&steps.length===plan.steps.length&&steps.every(s=>s.passed),steps,artifacts,overflow:await ui.locator('body').evaluate(()=>document.documentElement.scrollWidth>innerWidth),text:(await ui.locator('body').innerText()).slice(0,4000)});await page.close();
 }await browser.close();fs.writeFileSync('review.json',JSON.stringify(results));})().catch(e=>{console.error(e);process.exit(1)});`;

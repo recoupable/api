@@ -5,7 +5,11 @@ import { generateProductionObject } from "../production/generateProductionObject
 import type { Site } from "../schema";
 import type { ReleaseContext } from "../production/schema";
 vi.mock("../production/generateProductionObject", () => ({ generateProductionObject: vi.fn() }));
+vi.mock("@/lib/supabase/sites/selectSiteAssetOutcomes", () => ({
+  selectSiteAssetOutcomes: vi.fn(async () => []),
+}));
 const direction = {
+  assets: [],
   candidates: [{ name: "One" }],
   selectedIndex: 0,
   contract: {
