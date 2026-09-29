@@ -1,3 +1,4 @@
+import { getSitePlaybackAudio } from "./getSitePlaybackAudio";
 import { selectFanConfig } from "@/lib/supabase/site_fan_connections/selectFanConfig";
 import { getFanOAuthConfig } from "./fanConnection/getFanOAuthConfig";
 import { z } from "zod";
@@ -33,5 +34,5 @@ export async function processPublicSite(id: string, input?: unknown) {
   const fanConnectUrl = config?.enabled
     ? `${getFanOAuthConfig().origin}/api/sites/public/${id}/spotify`
     : null;
-  return { snapshot, fanConnectUrl };
+  return { snapshot, fanConnectUrl, playbackAudioUrl: await getSitePlaybackAudio(site) };
 }

@@ -6,6 +6,7 @@ vi.mock("@/lib/supabase/site_fan_connections/selectFanConfig", () => ({
 const m = vi.hoisted(() => ({ select: vi.fn(), insert: vi.fn() }));
 vi.mock("@/lib/supabase/sites/selectSite", () => ({ selectSite: m.select }));
 vi.mock("@/lib/supabase/sites/insertSignup", () => ({ insertSignup: m.insert }));
+vi.mock("../getSitePlaybackAudio", () => ({ getSitePlaybackAudio: vi.fn(async () => null) }));
 const id = "11111111-1111-4111-8111-111111111111";
 beforeEach(() => vi.resetAllMocks());
 it("returns only the published snapshot, never drafts or ownership", async () => {
@@ -17,6 +18,7 @@ it("returns only the published snapshot, never drafts or ownership", async () =>
   expect(await processPublicSite(id)).toEqual({
     snapshot: { name: "Public" },
     fanConnectUrl: null,
+    playbackAudioUrl: null,
   });
 });
 it("refuses unpublished sites and their signups", async () => {
@@ -55,5 +57,6 @@ it("does not expose private brand-world guidance in public snapshots", async () 
   expect(await processPublicSite(id)).toEqual({
     snapshot: { name: "Public" },
     fanConnectUrl: null,
+    playbackAudioUrl: null,
   });
 });
