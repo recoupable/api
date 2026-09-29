@@ -1,3 +1,4 @@
+import { getSiteModelOptions } from "../getSiteModelOptions";
 import { loadSiteSkill } from "../skills/loadSiteSkill";
 import { generateObject } from "ai";
 import { z } from "zod";
@@ -13,9 +14,10 @@ export async function generateProductionObject<T extends Record<string, unknown>
   siteId: string,
 ) {
   await requireCredits(accountId);
-  const model = process.env.SITES_MODEL || "openai/gpt-6-astra";
+  const modelOptions = getSiteModelOptions();
+  const { model } = modelOptions;
   const result = await generateObject({
-    model,
+    ...modelOptions,
     output: "object",
     schema: schema as z.ZodType<Record<string, unknown>>,
     maxRetries: 0,

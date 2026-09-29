@@ -1,3 +1,4 @@
+import { getSiteModelOptions } from "../getSiteModelOptions";
 import { generateObject } from "ai";
 import type { Site } from "../schema";
 import { brandWorldSchema } from "./schema";
@@ -15,7 +16,7 @@ export async function generateBrandWorld(
   const sources = site.assets.map((asset, sourceIndex) => ({ ...asset, sourceIndex }));
   const images = sources.filter(asset => asset.type === "image");
   const { object, usage } = await generateObject({
-    model,
+    ...getSiteModelOptions(model),
     maxRetries: 0,
     schema: brandWorldSchema,
     system: [

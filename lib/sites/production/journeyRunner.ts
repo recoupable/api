@@ -3,7 +3,7 @@ export const journeyRunner = `const fs=require('node:fs');const {chromium:pw}=re
 (async()=>{const browser=await pw.launch({executablePath:await chromium.executablePath(),args:chromium.args.filter(a=>!["--disable-web-security","--allow-running-insecure-content","--single-process"].includes(a)),headless:true});const results=[];
 const plan=JSON.parse(fs.readFileSync('journey.json','utf8'));
 for(const [name,width,height] of [['mobile',390,844],['desktop',1440,900]]){
- const page=await browser.newPage({viewport:{width,height},reducedMotion:'reduce',acceptDownloads:true});const errors=[];const steps=[];const artifacts=[];
+ const page=await browser.newPage({viewport:{width,height},reducedMotion:'no-preference',acceptDownloads:true});const errors=[];const steps=[];const artifacts=[];
  page.on('pageerror',e=>errors.push(e.message.slice(0,300)));
  const shares=[];
  await page.exposeFunction('__recordShare',payload=>shares.push(payload));

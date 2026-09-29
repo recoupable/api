@@ -11,6 +11,9 @@ export const assetSchema = z.object({
   url: httpsUrl,
   name: z.string().max(200),
   type: z.enum(["image", "audio"]),
+  generation: z
+    .object({ provider: z.enum(["higgsfield", "fal"]), model: z.string(), requestId: z.string() })
+    .optional(),
 });
 export const experienceSchema = z.object({
   html: z.string().min(1).max(60000),

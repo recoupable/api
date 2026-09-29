@@ -24,6 +24,12 @@ export const directionSchema = z.object({
         purpose: z.string(),
         prompt: z.string().max(4000),
         aspectRatio: z.enum(["16:9", "1:1", "9:16"]),
+        style: z
+          .enum(["illustration", "photographic"])
+          .optional()
+          .describe(
+            "Use illustration for drawn, graphic or crafted worlds; photographic for editorial photography. Match the selected visual references.",
+          ),
       }),
     )
     .max(2),

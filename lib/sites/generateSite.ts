@@ -1,3 +1,4 @@
+import { getSiteModelOptions } from "./getSiteModelOptions";
 import { loadSiteSkill } from "./skills/loadSiteSkill";
 import { Script } from "node:vm";
 import { generateObject } from "ai";
@@ -10,11 +11,12 @@ export async function generateSite(
   accountId?: string,
 ): Promise<SiteSnapshot> {
   if (accountId) await (await import("./production/requireCredits")).requireCredits(accountId);
-  const model = process.env.SITES_MODEL || "openai/gpt-6-astra";
+  const modelOptions = getSiteModelOptions();
+  const { model } = modelOptions;
   const brandWorld = await generateBrandWorld(site, instruction, model, accountId);
   if (accountId) await (await import("./production/requireCredits")).requireCredits(accountId);
   const { object, usage } = await generateObject({
-    model,
+    ...modelOptions,
     maxRetries: 0,
     schema: designSchema.extend({ experience: experienceSchema }),
     system: `${implementationGuidance}\n\n${loadSiteSkill().skill}\n${loadSiteSkill().buildAndReview}`,
