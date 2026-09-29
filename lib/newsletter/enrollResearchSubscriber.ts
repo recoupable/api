@@ -3,9 +3,9 @@ import { Resend } from "resend";
 /** Add an explicitly opted-in reader without resetting an existing unsubscribe.
  * Segment-entry automation owns welcome delivery; broadcasts own unsubscribe links.
  */
-export async function enrollResearchSubscriber(email: string): Promise<
-  { success: true } | { success: false; error: string }
-> {
+export async function enrollResearchSubscriber(
+  email: string,
+): Promise<{ success: true } | { success: false; error: string }> {
   const key = process.env.RESEND_API_KEY;
   const segmentId = process.env.RESEND_RESEARCH_SEGMENT_ID;
   if (!key || !segmentId || process.env.RESEND_RESEARCH_READY !== "true") {

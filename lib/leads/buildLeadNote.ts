@@ -66,15 +66,20 @@ export function buildLeadNote(lead: PostLeadsBody): { title: string; content: st
   }
 
   if (lead.newsletter_consent) {
-    return { title: "Recoup Research subscription", content: [
-      `Consent: ${lead.newsletter_consent}`,
-      `Recorded at: ${new Date().toISOString()}`,
-      `Source: ${lead.source}`,
-      ...["utm_source", "utm_medium", "utm_campaign", "utm_id", "source_post_slug"].map(key => {
-        const value = lead[key as keyof typeof lead];
-        return value ? `${key}: ${value}` : null;
-      }),
-    ].filter(Boolean).join("\n") };
+    return {
+      title: "Recoup Research subscription",
+      content: [
+        `Consent: ${lead.newsletter_consent}`,
+        `Recorded at: ${new Date().toISOString()}`,
+        `Source: ${lead.source}`,
+        ...["utm_source", "utm_medium", "utm_campaign", "utm_id", "source_post_slug"].map(key => {
+          const value = lead[key as keyof typeof lead];
+          return value ? `${key}: ${value}` : null;
+        }),
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    };
   }
   return null;
 }

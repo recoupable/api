@@ -40,8 +40,13 @@ export async function postLeadsHandler(request: NextRequest): Promise<NextRespon
   }
 
   return NextResponse.json(
-    { status: "success", notified: result.notified, record_url: result.recordUrl,
-      ...(validated.kind === "subscribe" && validated.newsletter_consent ? { newsletter_enrolled: true } : {}),
+    {
+      status: "success",
+      notified: result.notified,
+      record_url: result.recordUrl,
+      ...(validated.kind === "subscribe" && validated.newsletter_consent
+        ? { newsletter_enrolled: true }
+        : {}),
     },
     { status: 200, headers: getCorsHeaders() },
   );

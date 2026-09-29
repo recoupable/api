@@ -1,9 +1,11 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn(), add: vi.fn() }));
-vi.mock("resend", () => ({ Resend: class {
-  contacts = { get: mocks.get, create: mocks.create, segments: { add: mocks.add } };
-} }));
 import { enrollResearchSubscriber } from "../enrollResearchSubscriber";
+const mocks = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn(), add: vi.fn() }));
+vi.mock("resend", () => ({
+  Resend: class {
+    contacts = { get: mocks.get, create: mocks.create, segments: { add: mocks.add } };
+  },
+}));
 
 describe("research enrollment", () => {
   beforeEach(() => {
