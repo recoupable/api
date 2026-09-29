@@ -3,6 +3,7 @@ import { captureLead } from "@/lib/leads/captureLead";
 import { assertPersonByEmail } from "@/lib/attio/assertPersonByEmail";
 import { createNote } from "@/lib/attio/createNote";
 import { sendSalesNotification } from "@/lib/telegram/sendSalesNotification";
+import { enrollResearchSubscriber } from "@/lib/newsletter/enrollResearchSubscriber";
 
 vi.mock("@/lib/attio/assertPersonByEmail", () => ({
   assertPersonByEmail: vi.fn().mockResolvedValue({ recordId: "rec-1" }),
@@ -12,6 +13,10 @@ vi.mock("@/lib/attio/createNote", () => ({
 }));
 vi.mock("@/lib/telegram/sendSalesNotification", () => ({
   sendSalesNotification: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/lib/newsletter/enrollResearchSubscriber", () => ({
+  enrollResearchSubscriber: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 const booking = {
@@ -26,12 +31,49 @@ const booking = {
 describe("captureLead", () => {
   beforeEach(() => {
     vi.stubEnv("ATTIO_API_KEY", "test-key");
+    vi.mocked(enrollResearchSubscriber).mockClear().mockResolvedValue({ success: true });
     vi.mocked(assertPersonByEmail).mockClear().mockResolvedValue({ recordId: "rec-1" });
     vi.mocked(createNote).mockClear();
     vi.mocked(sendSalesNotification).mockClear().mockResolvedValue(undefined);
   });
   afterEach(() => {
     vi.unstubAllEnvs();
+  });
+
+  it("does not enroll legacy contact captures", async () => {
+    await captureLead({ kind: "subscribe", email: "a@b.com", source: "footer" });
+    expect(enrollResearchSubscriber).not.toHaveBeenCalled();
+  });
+
+  it("fails without paging sales when explicit enrollment fails", async () => {
+    vi.mocked(enrollResearchSubscriber).mockResolvedValueOnce({
+      success: false,
+      error: "unavailable",
+    });
+    const result = await captureLead({
+      kind: "subscribe",
+      email: "a@b.com",
+      source: "/research",
+      newsletter_consent: "recoup-research-v1",
+    });
+    expect(result.success).toBe(false);
+    expect(assertPersonByEmail).not.toHaveBeenCalled();
+    expect(sendSalesNotification).not.toHaveBeenCalled();
+  });
+
+  it("records consent and edition attribution on successful explicit signup", async () => {
+    const result = await captureLead({
+      kind: "subscribe",
+      email: "a@b.com",
+      source: "/research",
+      newsletter_consent: "recoup-research-v1",
+      utm_id: "edition-one",
+    });
+    expect(result.success).toBe(true);
+    expect(enrollResearchSubscriber).toHaveBeenCalledWith("a@b.com");
+    expect(createNote).toHaveBeenCalledWith(
+      expect.objectContaining({ content: expect.stringContaining("utm_id: edition-one") }),
+    );
   });
 
   it("asserts the person with the full three-part name shape", async () => {

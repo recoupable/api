@@ -27,6 +27,8 @@ const subscribeSchema = z.object({
   kind: z.literal("subscribe"),
   ...commonFields,
   name: z.string().optional(),
+  newsletter_consent: z.literal("recoup-research-v1").optional(),
+  utm_id: z.string().max(200).optional(),
   utm_source: z.string().optional(),
   utm_medium: z.string().optional(),
   utm_campaign: z.string().optional(),
