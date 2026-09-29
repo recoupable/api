@@ -4,7 +4,10 @@ import type { Site } from "../schema";
 import { brandWorldSchema } from "../brandWorld/schema";
 import { worldFixture } from "./worldFixture";
 const ai = vi.hoisted(() => ({ generateObject: vi.fn() }));
-vi.mock("ai", () => ai);
+vi.mock("ai", async importOriginal => ({
+  ...(await importOriginal<typeof import("ai")>()),
+  ...ai,
+}));
 const site = {
   name: "Release",
   brief: "Build a fan experience",
