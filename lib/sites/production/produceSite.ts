@@ -19,7 +19,13 @@ export async function produceSite(
   if (approvedConcept) conceptPitchSchema.parse(approvedConcept);
   const context = await collectReleaseContext(site, accountId, contextBriefId);
   context.siteSkill = await prepareSiteSkill(
-    { instruction, context, approvedConcept },
+    {
+      instruction,
+      context,
+      approvedConcept,
+      currentExperience: approvedConcept ? null : site.draft?.production?.direction,
+      currentVisualWorld: site.draft?.brandWorld?.specification,
+    },
     accountId,
     site.id,
   );

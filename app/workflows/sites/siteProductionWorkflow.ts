@@ -48,7 +48,13 @@ export async function siteProductionWorkflow(
     } else context = await collectContextStep(site, accountId, selectedBrief);
     stage = "site skill";
     context.siteSkill = await prepareSkillStep(
-      { instruction, context, approvedConcept },
+      {
+        instruction,
+        context,
+        approvedConcept,
+        currentExperience: approvedConcept ? null : site.draft?.production?.direction,
+        currentVisualWorld: site.draft?.brandWorld?.specification,
+      },
       accountId,
       site.id,
     );

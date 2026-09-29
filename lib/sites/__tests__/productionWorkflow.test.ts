@@ -1,3 +1,4 @@
+import { prepareSkillStep } from "@/app/workflows/sites/prepareSkillStep";
 import { directionStep } from "@/app/workflows/sites/directionStep";
 import { assetsStep } from "@/app/workflows/sites/assetsStep";
 import { approvedConcept } from "./conceptFixture";
@@ -111,6 +112,11 @@ it("repairs an existing draft without restarting concept selection or asset gene
     draft: { assets, production: { context: {}, direction } },
   } as unknown as Site;
   await siteProductionWorkflow(site, "Repair the replay", "account");
+  expect(prepareSkillStep).toHaveBeenCalledWith(
+    expect.objectContaining({ currentExperience: direction }),
+    "account",
+    "site",
+  );
   expect(m.select).not.toHaveBeenCalled();
   expect(directionStep).not.toHaveBeenCalled();
   expect(assetsStep).not.toHaveBeenCalled();
