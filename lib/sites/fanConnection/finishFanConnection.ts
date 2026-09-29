@@ -1,3 +1,4 @@
+import { getPreviewFanConfig } from "../preview/getPreviewFanConfig";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { consumeFanSession } from "@/lib/supabase/site_fan_connections/consumeFanSession";
@@ -27,13 +28,24 @@ export async function finishFanConnection(request: NextRequest) {
     const session = await consumeFanSession(stateHash, hashFanValue(browser));
     if (!session) throw new Error("Invalid connection session");
     const site = await selectSite(session.site_id);
-    const config = await selectFanConfig(session.site_id);
-    if (!site?.artist_id || !config?.enabled || config.revision !== session.config_revision)
+    const previewToken = new URL(session.return_url).searchParams.get("recoup_preview");
+    const config =
+      site && previewToken
+        ? await getPreviewFanConfig(site, previewToken)
+        : await selectFanConfig(session.site_id);
+    if (
+      !site ||
+      (!previewToken && !site.artist_id) ||
+      !config?.enabled ||
+      config.revision !== session.config_revision
+    )
       throw new Error("Connection settings changed");
     returnUrl = new URL(session.return_url);
+    returnUrl.searchParams.delete("recoup_preview");
+    if (previewToken) returnUrl.searchParams.set("preview_connection", "1");
     if (request.nextUrl.searchParams.has("error")) outcome = "cancelled";
     else {
-      await requireFanEntitlement(site.owner_id);
+      if (!previewToken) await requireFanEntitlement(site.owner_id);
       const code = z.string().min(1).max(2048).parse(request.nextUrl.searchParams.get("code"));
       const oauth = getFanOAuthConfig();
       const response = await fetch("https://accounts.spotify.com/api/token", {
@@ -69,13 +81,14 @@ export async function finishFanConnection(request: NextRequest) {
           email: z.string().email().max(254).nullish(),
         })
         .parse(await profileResponse.json());
-      await completeFanConnection({
-        stateHash,
-        spotifyId: profile.id,
-        displayName: profile.display_name ?? null,
-        email: profile.email ?? null,
-        scopes,
-      });
+      if (!previewToken)
+        await completeFanConnection({
+          stateHash,
+          spotifyId: profile.id,
+          displayName: profile.display_name ?? null,
+          email: profile.email ?? null,
+          scopes,
+        });
       outcome = "connected";
     }
   } catch {

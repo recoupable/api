@@ -7,6 +7,7 @@ const revision = z.number().int().nonnegative();
 export const siteOperationSchemas = {
   list: z.object({ organizationId: id.nullable().optional(), artistId: id.optional() }).strict(),
   get: z.object({ id }).strict(),
+  preview: z.object({ id }).strict(),
   signups: z.object({ id }).strict(),
   create: siteInputSchema,
   concepts: z

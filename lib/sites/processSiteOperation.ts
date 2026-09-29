@@ -83,6 +83,10 @@ export async function processSiteOperation(
   if (!site) throw new SiteError(404, "Site not found");
   await authorizeSiteWorkspace(accountId, site.owner_id);
   if (operation === "get") return { site };
+  if (operation === "preview") {
+    const { getSitePreview } = await import("./preview/getSitePreview");
+    return getSitePreview(site, accountId);
+  }
   if (operation === "generation" && "token" in input)
     return getSiteProduction(String(input.token), site.id, accountId);
   if (operation === "signups") return { signups: await selectSignups(site.id) };

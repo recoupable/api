@@ -1,3 +1,4 @@
+import { signSitePreview } from "../../preview/signSitePreview";
 import { resolveSiteArtist } from "../../production/resolveSiteArtist";
 import { updateSite } from "@/lib/supabase/sites/updateSite";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -261,4 +262,52 @@ it("attributes a URL-only saved draft before enabling fan capture", async () => 
   expect(response.status).toBe(200);
   expect(updateSite).toHaveBeenCalledWith(id, "owner", 2, { artist_id: "artist" });
   expect((await response.json()).artistId).toBe("artist");
+});
+
+it("allows an owner preview without paid public fan configuration", async () => {
+  vi.stubEnv("SITES_JOB_SECRET", "preview-test");
+  m.config.mockResolvedValue(null);
+  const token = signSitePreview(id, "owner");
+  const response = await startFanConnection(new NextRequest(`${url}?preview=${token}`), id);
+  expect(response.status).toBe(200);
+  expect(await response.text()).toContain("private preview");
+  expect(m.authorize).toHaveBeenCalledWith("owner", "owner");
+  expect(m.entitlement).not.toHaveBeenCalled();
+});
+it("verifies Spotify in preview without recording a real fan", async () => {
+  vi.stubEnv("SITES_JOB_SECRET", "preview-test");
+  const token = signSitePreview(id, "owner");
+  m.config.mockResolvedValue(null);
+  m.consume.mockResolvedValue({
+    site_id: id,
+    return_url: `https://app.recoupable.dev/sites/${id}?recoup_preview=${token}`,
+    config_revision: 0,
+    verifier: "verifier",
+    scopes: ["user-read-email", "user-read-private"],
+  });
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(
+      Response.json({ access_token: "private-token", scope: "user-read-email user-read-private" }),
+    )
+    .mockResolvedValueOnce(Response.json({ id: "preview-user", email: "preview@example.com" }));
+  vi.stubGlobal("fetch", fetch);
+  const response = await finishFanConnection(callbackRequest());
+  expect(fetch).toHaveBeenCalledTimes(2);
+  expect(m.complete).not.toHaveBeenCalled();
+  expect(m.entitlement).not.toHaveBeenCalled();
+  expect(response.headers.get("location")).toContain(
+    "preview_connection=1&recoup_spotify=connected",
+  );
+  expect(response.headers.get("location")).not.toContain(token);
+});
+it("rejects a preview when the initiating account lost workspace access", async () => {
+  vi.stubEnv("SITES_JOB_SECRET", "preview-test");
+  m.authorize.mockRejectedValue(new SiteError(403, "No access"));
+  const response = await startFanConnection(
+    new NextRequest(`${url}?preview=${signSitePreview(id, "owner")}`),
+    id,
+  );
+  expect(response.status).toBe(403);
+  expect(m.insert).not.toHaveBeenCalled();
 });
