@@ -1,3 +1,4 @@
+import { getAssetFailure } from "./getAssetFailure";
 import { generateSiteImage } from "@/lib/higgsfield/generateSiteImage";
 import { deductCredits } from "@/lib/credits/deductCredits";
 import { usdToCredits } from "@/lib/credits/usdToCredits";
@@ -81,7 +82,10 @@ export async function produceAssets(
         output_format: "webp",
         sync_mode: false,
       });
-      const result = await fal.subscribe(model, { input });
+      const result = await fal.subscribe(model, { input }).catch(error => {
+        console.error("[sites:asset-validation]", { model, ...getAssetFailure(error) });
+        throw error;
+      });
       await chargeForGeneration({
         accountId,
         endpointId: model,
