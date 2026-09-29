@@ -1,3 +1,6 @@
+vi.mock("../fanConnection/prepareSiteFanConnection", () => ({
+  prepareSiteFanConnection: m.fanSetup,
+}));
 import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
 import { processSiteOperation } from "../processSiteOperation";
@@ -12,6 +15,7 @@ vi.mock("@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds", ()
   selectArtistOrganizationIds: m.artistOrgs,
 }));
 const m = vi.hoisted(() => ({
+  fanSetup: vi.fn().mockResolvedValue("enabled"),
   access: vi.fn(),
   collect: vi.fn(),
   propose: vi.fn(),
@@ -229,4 +233,30 @@ it("starts URL-only generation without requiring a caller-selected concept", asy
     undefined,
     undefined,
   );
+});
+
+it("prepares paid fan connection before publishing and reports its status", async () => {
+  m.select.mockResolvedValue({ id, owner_id: account, revision: 2, draft: { name: "Draft" } });
+  m.fanSetup.mockResolvedValue("enabled");
+  const result = await processSiteOperation(account, "publish", {
+    id,
+    revision: 2,
+    returnUrl: "https://app.test/s/site",
+  });
+  expect(m.fanSetup).toHaveBeenCalledWith(
+    expect.objectContaining({ id }),
+    "https://app.test/s/site",
+  );
+  expect(m.fanSetup.mock.invocationCallOrder.at(-1)).toBeLessThan(
+    m.update.mock.invocationCallOrder.at(-1)!,
+  );
+  expect(result).toHaveProperty("fanConnection", "enabled");
+});
+it("keeps the existing publication unchanged when automatic setup fails", async () => {
+  m.select.mockResolvedValue({ id, owner_id: account, revision: 2, draft: { name: "Draft" } });
+  m.fanSetup.mockRejectedValueOnce(new Error("Spotify configuration unavailable"));
+  await expect(processSiteOperation(account, "publish", { id, revision: 2 })).rejects.toThrow(
+    "configuration unavailable",
+  );
+  expect(m.update).not.toHaveBeenCalled();
 });

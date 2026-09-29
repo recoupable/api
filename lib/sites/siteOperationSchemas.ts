@@ -1,3 +1,4 @@
+import { returnUrlSchema } from "./fanConnection/schema";
 import { z } from "zod";
 import { conceptPitchSchema } from "./production/conceptSchema";
 import { siteInputSchema } from "./schema";
@@ -27,7 +28,7 @@ export const siteOperationSchemas = {
     })
     .strict(),
   generation: z.object({ id, token: z.string().min(1).max(3000) }).strict(),
-  publish: z.object({ id, revision }).strict(),
+  publish: z.object({ id, revision, returnUrl: returnUrlSchema.optional() }).strict(),
   unpublish: z.object({ id, revision }).strict(),
 };
 export type SiteOperation = keyof typeof siteOperationSchemas;

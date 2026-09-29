@@ -1,3 +1,4 @@
+import { prepareSiteFanConnection } from "./fanConnection/prepareSiteFanConnection";
 import { resolveSiteArtist } from "./production/resolveSiteArtist";
 import { collectReleaseContext } from "./production/collectReleaseContext";
 import { proposeExperienceConcepts } from "./production/proposeExperienceConcepts";
@@ -124,6 +125,10 @@ export async function processSiteOperation(
       contextBriefId,
       approvedConcept,
     );
+  const fanConnection =
+    operation === "publish"
+      ? await prepareSiteFanConnection(site, siteOperationSchemas.publish.parse(input).returnUrl)
+      : undefined;
   const changes =
     operation === "generate" && "instruction" in input
       ? {
@@ -150,5 +155,5 @@ export async function processSiteOperation(
   });
   if (!updated)
     throw new SiteError(409, "This site changed while you were editing. Reload before editing.");
-  return { site: updated };
+  return { site: updated, ...(fanConnection ? { fanConnection } : {}) };
 }
