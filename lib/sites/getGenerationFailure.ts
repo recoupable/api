@@ -3,7 +3,7 @@ import { NoObjectGeneratedError } from "ai";
 export function getGenerationFailure(error: unknown) {
   if (!NoObjectGeneratedError.isInstance(error))
     return { name: error instanceof Error ? error.name : "UnknownError" };
-  const issues: { path: string; code: string }[] = [];
+  const issues: { path: string; code: string; maximum?: number }[] = [];
   let cause: unknown = error.cause;
   for (let depth = 0; depth < 5 && cause && typeof cause === "object"; depth++) {
     if ("issues" in cause && Array.isArray(cause.issues)) {
@@ -12,6 +12,7 @@ export function getGenerationFailure(error: unknown) {
           issues.push({
             path: Array.isArray(issue.path) ? issue.path.join(".").slice(0, 160) : "",
             code: String(issue.code).slice(0, 80),
+            ...(typeof issue.maximum === "number" ? { maximum: issue.maximum } : {}),
           });
       }
     }
