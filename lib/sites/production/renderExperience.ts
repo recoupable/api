@@ -48,12 +48,18 @@ export async function renderExperience(snapshot: SiteSnapshot, contract?: Experi
     ]);
     if (install.exitCode !== 0) throw new Error("Review browser installation failed");
     // Only known supplied/generated image hosts are available while untrusted code executes.
-    const hosts = [
-      ...new Set(snapshot.assets.filter(a => a.type === "image").map(a => new URL(a.url).hostname)),
-    ];
+    const hosts = [...new Set(snapshot.assets.map(a => new URL(a.url).hostname))];
     await sandbox.updateNetworkPolicy({ allow: hosts });
+    const mediaOrigins =
+      [
+        ...new Set(
+          snapshot.assets
+            .filter(a => a.type === "video" || a.type === "audio")
+            .map(a => new URL(a.url).origin),
+        ),
+      ].join(" ") || "'none'";
     const experience = snapshot.design.experience!;
-    const source = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src https: data:; font-src data:; connect-src 'none'; media-src 'none'; form-action 'none'; frame-src 'none'; base-uri 'none'"><style>${experience.css.replace(/<\/style/gi, "<\\/style")}</style></head><body>${experience.html}<script>${experience.javascript.replace(/<\/script/gi, "<\\/script")}</script></body></html>`;
+    const source = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src https: data:; font-src data:; connect-src 'none'; media-src ${mediaOrigins}; form-action 'none'; frame-src 'none'; base-uri 'none'"><style>${experience.css.replace(/<\/style/gi, "<\\/style")}</style></head><body>${experience.html}<script>window.__recoupEvents=[];window.recoup={track:event=>window.__recoupEvents.push(event),join:()=>window.__recoupEvents.push("join")};</script><script>${experience.javascript.replace(/<\/script/gi, "<\\/script")}</script></body></html>`;
     await sandbox.writeFiles([
       { path: "experience.html", content: Buffer.from(source) },
       { path: "journey.json", content: Buffer.from(JSON.stringify(contract ?? null)) },
@@ -71,6 +77,12 @@ export async function renderExperience(snapshot: SiteSnapshot, contract?: Experi
       images.push(`data:image/png;base64,${bytes.toString("base64")}`);
     }
     for (const name of ["mobile", "desktop"]) {
+      for (const checkpoint of ["participate", "result", "delivery"]) {
+        const bytes = await sandbox.readFileToBuffer({
+          path: `${name}-checkpoint-${checkpoint}.png`,
+        });
+        if (bytes) images.push(`data:image/png;base64,${bytes.toString("base64")}`);
+      }
       const resultImage = await sandbox.readFileToBuffer({ path: `${name}-result.png` });
       if (resultImage) images.push(`data:image/png;base64,${resultImage.toString("base64")}`);
     }

@@ -3,6 +3,13 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { selectExperienceConcept } from "../production/selectExperienceConcept";
 import { produceSite } from "../production/produceSite";
 import type { Site } from "../schema";
+vi.mock("../skills/prepareSiteSkill", () => ({
+  prepareSiteSkill: vi.fn(async () => ({
+    name: "recoup-content-build-sites",
+    revision: "pinned",
+    referenceIds: [1, 2],
+  })),
+}));
 vi.mock("../production/selectExperienceConcept", () => ({
   selectExperienceConcept: vi.fn().mockResolvedValue({ name: "Selected" }),
 }));
@@ -49,7 +56,8 @@ it("revises once with concrete review feedback and keeps both reviews", async ()
 it("does not endlessly spend or label a failed review as approved", async () => {
   m.review.mockResolvedValue({ verdict: "revise", issues: [{ detail: "Unreadable" }] });
   const result = await produceSite(site, "", "account", "saved-brief", approvedConcept);
-  expect(m.build).toHaveBeenCalledTimes(2);
+  expect(m.build).toHaveBeenCalledTimes(4);
+  expect(result.production.context.siteSkill?.referenceIds).toEqual([1, 2]);
   expect(result.production.status).toBe("needs-review");
 });
 it("asset failures stop before code generation rather than inventing asset URLs", async () => {

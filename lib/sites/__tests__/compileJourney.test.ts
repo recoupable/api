@@ -66,3 +66,52 @@ it("rejects a compiled plan that drops a required download", async () => {
     ),
   ).rejects.toThrow("Missing actual download test");
 });
+
+it("repairs prose keyboard instructions before executing a browser journey", async () => {
+  const invalid = contract.steps.map((step, i) =>
+    i === 0
+      ? {
+          ...step,
+          action: "press",
+          target: "Dance floor",
+          value: "ArrowLeft; hold for one second, then release.",
+        }
+      : step,
+  );
+  const fixed = invalid.map((step, i) =>
+    i === 0 ? { ...step, value: "ArrowLeft", holdMs: 1000, waitMs: 9000 } : step,
+  );
+  vi.mocked(generateProductionObject)
+    .mockReset()
+    .mockResolvedValueOnce({ steps: invalid })
+    .mockResolvedValueOnce({ steps: fixed });
+  const result = await compileJourney(snapshot, contract, "account", "site");
+  expect(result.steps[0]).toMatchObject({ value: "ArrowLeft", holdMs: 1000, waitMs: 9000 });
+  expect(generateProductionObject).toHaveBeenCalledTimes(2);
+});
+it("stops after a second invalid keyboard plan instead of sending it to the browser", async () => {
+  const invalid = contract.steps.map((step, i) =>
+    i === 0 ? { ...step, action: "press", value: "Hold left for a while" } : step,
+  );
+  vi.mocked(generateProductionObject).mockReset().mockResolvedValue({ steps: invalid });
+  await expect(compileJourney(snapshot, contract, "account", "site")).rejects.toThrow("keyboard");
+  expect(generateProductionObject).toHaveBeenCalledTimes(2);
+});
+it("retries a malformed model response once, but not provider failures", async () => {
+  const malformed = Object.assign(new Error("Could not parse response"), {
+    name: "AI_NoObjectGeneratedError",
+  });
+  vi.mocked(generateProductionObject)
+    .mockReset()
+    .mockRejectedValueOnce(malformed)
+    .mockResolvedValueOnce({ steps: contract.steps });
+  await expect(compileJourney(snapshot, contract, "account", "site")).resolves.toEqual(contract);
+  expect(generateProductionObject).toHaveBeenCalledTimes(2);
+  vi.mocked(generateProductionObject)
+    .mockReset()
+    .mockRejectedValue(new Error("Provider unavailable"));
+  await expect(compileJourney(snapshot, contract, "account", "site")).rejects.toThrow(
+    "Provider unavailable",
+  );
+  expect(generateProductionObject).toHaveBeenCalledOnce();
+});

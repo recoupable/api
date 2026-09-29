@@ -4,7 +4,21 @@ import type { Site } from "../schema";
 import { brandWorldSchema } from "../brandWorld/schema";
 import { worldFixture } from "./worldFixture";
 const ai = vi.hoisted(() => ({ generateObject: vi.fn() }));
-vi.mock("ai", () => ai);
+vi.mock("ai", async importOriginal => ({
+  ...(await importOriginal<typeof import("ai")>()),
+  ...ai,
+  streamObject: (options: unknown) => {
+    const result = ai.generateObject(options);
+    return {
+      fullStream: (async function* () {
+        await result;
+        yield { type: "finish" };
+      })(),
+      object: result.then(value => value.object),
+      usage: result.then(value => value.usage),
+    };
+  },
+}));
 const site = {
   name: "Release",
   brief: "Build a fan experience",

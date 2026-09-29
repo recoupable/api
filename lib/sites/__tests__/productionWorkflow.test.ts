@@ -1,7 +1,16 @@
+import { prepareSkillStep } from "@/app/workflows/sites/prepareSkillStep";
+import { directionStep } from "@/app/workflows/sites/directionStep";
+import { assetsStep } from "@/app/workflows/sites/assetsStep";
 import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
 import { siteProductionWorkflow } from "@/app/workflows/sites/siteProductionWorkflow";
 import type { Site } from "../schema";
+vi.mock("@/app/workflows/sites/prepareSkillStep", () => ({
+  prepareSkillStep: vi.fn(async () => ({
+    name: "recoup-content-build-sites",
+    referenceIds: [1, 2],
+  })),
+}));
 const m = vi.hoisted(() => ({
   build: vi.fn(),
   save: vi.fn(),
@@ -93,4 +102,72 @@ it("names the failed context stage and never starts creative work after acquisit
   expect(m.select).not.toHaveBeenCalled();
   expect(m.build).not.toHaveBeenCalled();
   expect(m.save).not.toHaveBeenCalled();
+});
+
+it("repairs an existing draft without restarting concept selection or asset generation", async () => {
+  const direction = { concept: "Existing moonwalk" };
+  const assets = [{ url: "https://example.com/art.png" }];
+  const site = {
+    id: "site",
+    draft: { assets, production: { context: {}, direction } },
+  } as unknown as Site;
+  await siteProductionWorkflow(site, "Repair the replay", "account");
+  expect(prepareSkillStep).toHaveBeenCalledWith(
+    expect.objectContaining({ currentExperience: direction }),
+    "account",
+    "site",
+  );
+  expect(m.select).not.toHaveBeenCalled();
+  expect(directionStep).not.toHaveBeenCalled();
+  expect(assetsStep).not.toHaveBeenCalled();
+  expect(m.build).toHaveBeenCalledWith(
+    site,
+    "Repair the replay",
+    expect.objectContaining({ direction }),
+    assets,
+    "account",
+  );
+  expect(m.save.mock.calls[0][1].production.direction).toEqual(direction);
+});
+it("uses an explicitly selected new concept even when a draft exists", async () => {
+  const site = {
+    id: "site",
+    draft: { assets: [], production: { context: {}, direction: { concept: "Old" } } },
+  } as unknown as Site;
+  await siteProductionWorkflow(site, "Change concept", "account", undefined, approvedConcept);
+  expect(directionStep).toHaveBeenCalledWith(
+    site,
+    "Change concept",
+    expect.anything(),
+    "account",
+    approvedConcept,
+  );
+  expect(assetsStep).toHaveBeenCalledOnce();
+});
+
+it("commissions an explicit art revision without changing the existing game contract", async () => {
+  const direction = {
+    concept: "Existing moonwalk",
+    contract: { activity: "choreograph" },
+    assets: [],
+  };
+  const revisedAssets = [
+    {
+      name: "stage",
+      prompt: "tactile moon",
+      purpose: "stage",
+      aspectRatio: "16:9",
+      production: { model: "nano-banana-pro", rationale: "Tactile character artwork" },
+    },
+  ];
+  vi.mocked(prepareSkillStep).mockResolvedValueOnce({ assetRevision: revisedAssets } as never);
+  const site = {
+    id: "site",
+    draft: { assets: [], production: { context: {}, direction } },
+  } as unknown as Site;
+  await siteProductionWorkflow(site, "Replace the art", "account");
+  expect(m.select).not.toHaveBeenCalled();
+  expect(directionStep).not.toHaveBeenCalled();
+  expect(assetsStep).toHaveBeenCalledWith(site, { ...direction, assets: revisedAssets }, "account");
+  expect(m.build.mock.calls[0][2].direction.contract).toEqual(direction.contract);
 });

@@ -1,3 +1,5 @@
+import { prepareSiteFanConnection } from "./fanConnection/prepareSiteFanConnection";
+import { resolveSiteArtist } from "./production/resolveSiteArtist";
 import { collectReleaseContext } from "./production/collectReleaseContext";
 import { proposeExperienceConcepts } from "./production/proposeExperienceConcepts";
 import { readSiteContextBrief } from "./production/readSiteContextBrief";
@@ -123,6 +125,10 @@ export async function processSiteOperation(
       contextBriefId,
       approvedConcept,
     );
+  const fanConnection =
+    operation === "publish"
+      ? await prepareSiteFanConnection(site, siteOperationSchemas.publish.parse(input).returnUrl)
+      : undefined;
   const changes =
     operation === "generate" && "instruction" in input
       ? {
@@ -141,8 +147,13 @@ export async function processSiteOperation(
     await readSiteContextBrief(site, accountId, selectedBrief);
     await authorizeSiteWorkspace(accountId, site.owner_id);
   }
-  const updated = await updateSite(site.id, site.owner_id, site.revision, changes);
+  const updated = await updateSite(site.id, site.owner_id, site.revision, {
+    ...changes,
+    ...("draft" in changes && changes.draft
+      ? { artist_id: await resolveSiteArtist(site, changes.draft) }
+      : {}),
+  });
   if (!updated)
     throw new SiteError(409, "This site changed while you were editing. Reload before editing.");
-  return { site: updated };
+  return { site: updated, ...(fanConnection ? { fanConnection } : {}) };
 }

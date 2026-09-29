@@ -1,5 +1,8 @@
+import { getGenerationFailure } from "./getGenerationFailure";
+import { getSiteModelOptions } from "./getSiteModelOptions";
+import { loadSiteSkill } from "./skills/loadSiteSkill";
 import { Script } from "node:vm";
-import { generateObject } from "ai";
+import { generateSiteObject } from "./generateSiteObject";
 import { designSchema, experienceSchema, type Site, type SiteSnapshot } from "./schema";
 import { generateBrandWorld } from "./brandWorld/generateBrandWorld";
 import { implementationGuidance } from "./brandWorld/implementationGuidance";
@@ -9,39 +12,48 @@ export async function generateSite(
   accountId?: string,
 ): Promise<SiteSnapshot> {
   if (accountId) await (await import("./production/requireCredits")).requireCredits(accountId);
-  const model = process.env.SITES_MODEL || "openai/gpt-6-astra";
+  const modelOptions = getSiteModelOptions(undefined, "medium");
+  const { model } = modelOptions;
   const brandWorld = await generateBrandWorld(site, instruction, model, accountId);
   if (accountId) await (await import("./production/requireCredits")).requireCredits(accountId);
-  const { object, usage } = await generateObject({
-    model,
-    maxRetries: 0,
-    schema: designSchema.extend({ experience: experienceSchema }),
-    system: implementationGuidance,
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({
-              name: site.name,
-              brief: site.brief,
-              releaseUrl: site.release_url,
-              assets: site.assets,
-              brandWorld: brandWorld.specification,
-              currentDesign: site.draft?.design ?? null,
-              instruction,
-            }),
-          },
-          ...site.assets
-            .filter(asset => asset.type === "image")
-            .map(asset => ({
-              type: "image" as const,
-              image: new URL(asset.url),
-            })),
-        ],
-      },
-    ],
+  const { object, usage } = await generateSiteObject(
+    {
+      ...modelOptions,
+      maxRetries: 0,
+      schema: designSchema.extend({ experience: experienceSchema }),
+      system: `${implementationGuidance}\n\n${loadSiteSkill().skill}\n${loadSiteSkill().buildAndReview}`,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                name: site.name,
+                brief: site.brief,
+                releaseUrl: site.release_url,
+                assets: site.assets,
+                brandWorld: brandWorld.specification,
+                currentDesign: site.draft?.design ?? null,
+                instruction,
+              }),
+            },
+            ...site.assets
+              .filter(asset => asset.type === "image")
+              .map(asset => ({
+                type: "image" as const,
+                image: new URL(asset.url),
+              })),
+          ],
+        },
+      ],
+    },
+    accountId,
+    site.id,
+    true,
+  ).catch(error => {
+    console.error("[sites:implementation]", getGenerationFailure(error));
+    throw error;
   });
   if (accountId)
     await (
