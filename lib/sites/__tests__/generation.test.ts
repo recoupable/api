@@ -7,6 +7,17 @@ const ai = vi.hoisted(() => ({ generateObject: vi.fn() }));
 vi.mock("ai", async importOriginal => ({
   ...(await importOriginal<typeof import("ai")>()),
   ...ai,
+  streamObject: (options: unknown) => {
+    const result = ai.generateObject(options);
+    return {
+      fullStream: (async function* () {
+        await result;
+        yield { type: "finish" };
+      })(),
+      object: result.then(value => value.object),
+      usage: result.then(value => value.usage),
+    };
+  },
 }));
 const site = {
   name: "Release",

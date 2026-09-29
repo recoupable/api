@@ -50,6 +50,7 @@ export async function generateSite(
     },
     accountId,
     site.id,
+    true,
   ).catch(error => {
     console.error("[sites:implementation]", getGenerationFailure(error));
     throw error;

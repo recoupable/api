@@ -1,4 +1,4 @@
-import { generateObject, NoObjectGeneratedError } from "ai";
+import { generateObject, streamObject, NoObjectGeneratedError } from "ai";
 import type { z } from "zod";
 import { getGenerationFailure } from "./getGenerationFailure";
 
@@ -7,9 +7,22 @@ export async function generateSiteObject<T extends Record<string, unknown>>(
   options: Parameters<typeof generateObject<z.ZodType<T>, "object", T>>[0],
   accountId?: string,
   siteId?: string,
+  streaming = false,
 ) {
+  const run = async (input: typeof options) => {
+    if (!streaming) return generateObject<z.ZodType<T>, "object", T>({ ...input, maxRetries: 0 });
+    const result = streamObject<z.ZodType<T>, "object", T>({ ...input, maxRetries: 0 });
+    // Observe rejection immediately, then drain the stream to resolve final validation.
+    const completed = Promise.all([result.object, result.usage]);
+    void completed.catch(() => {});
+    for await (const part of result.fullStream) {
+      if (part.type === "error") throw part.error;
+    }
+    const [object, usage] = await completed;
+    return { object, usage };
+  };
   try {
-    return await generateObject<z.ZodType<T>, "object", T>({ ...options, maxRetries: 0 });
+    return await run(options);
   } catch (error) {
     if (!NoObjectGeneratedError.isInstance(error) || !error.text || error.text.length > 200000)
       throw error;
@@ -32,7 +45,7 @@ export async function generateSiteObject<T extends Record<string, unknown>>(
     const originalMessages =
       messages ??
       (typeof prompt === "string" ? [{ role: "user" as const, content: prompt }] : (prompt ?? []));
-    return generateObject<z.ZodType<T>, "object", T>({
+    return run({
       ...base,
       messages: [...originalMessages, { role: "user", content: repair }],
       maxRetries: 0,
