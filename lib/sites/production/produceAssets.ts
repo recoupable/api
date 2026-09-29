@@ -36,7 +36,7 @@ export async function produceAssets(
     }
     let url: string | undefined;
     let generation: NonNullable<SiteAsset["generation"]>;
-    if (process.env.HF_CREDENTIALS) {
+    if (process.env.HF_CREDENTIALS && process.env.SITES_ASSET_PROVIDER !== "fal") {
       const style = asset.style ?? "illustration";
       await requireCredits(accountId, usdToCredits(style === "photographic" ? 0.0057 : 0.035));
       const generated = await generateSiteImage(
