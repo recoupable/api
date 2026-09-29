@@ -6,6 +6,7 @@ export function getSiteModelOptions(
     model,
     ...(model.startsWith("anthropic/claude-opus-")
       ? {
+          maxOutputTokens: 32768,
           providerOptions: {
             anthropic: { thinking: { type: "adaptive" as const }, effort: "high" as const },
           },

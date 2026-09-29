@@ -5,6 +5,7 @@ it("uses Opus 5.5 with high adaptive thinking for the Sites experiment", () => {
   vi.stubEnv("SITES_MODEL", "");
   expect(getSiteModelOptions()).toEqual({
     model: "anthropic/claude-opus-5.5",
+    maxOutputTokens: 32768,
     providerOptions: { anthropic: { thinking: { type: "adaptive" }, effort: "high" } },
   });
 });

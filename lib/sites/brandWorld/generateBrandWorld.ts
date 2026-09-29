@@ -1,3 +1,4 @@
+import { getGenerationFailure } from "../getGenerationFailure";
 import { getSiteModelOptions } from "../getSiteModelOptions";
 import { generateObject } from "ai";
 import type { Site } from "../schema";
@@ -43,6 +44,9 @@ export async function generateBrandWorld(
         ],
       },
     ],
+  }).catch(error => {
+    console.error("[sites:brand-world]", getGenerationFailure(error));
+    throw error;
   });
   if (accountId)
     await (

@@ -1,3 +1,4 @@
+import { getGenerationFailure } from "./getGenerationFailure";
 import { getSiteModelOptions } from "./getSiteModelOptions";
 import { loadSiteSkill } from "./skills/loadSiteSkill";
 import { Script } from "node:vm";
@@ -45,6 +46,9 @@ export async function generateSite(
         ],
       },
     ],
+  }).catch(error => {
+    console.error("[sites:implementation]", getGenerationFailure(error));
+    throw error;
   });
   if (accountId)
     await (
