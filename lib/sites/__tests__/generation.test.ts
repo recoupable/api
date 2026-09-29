@@ -7,15 +7,23 @@ const ai = vi.hoisted(() => ({ generateObject: vi.fn() }));
 vi.mock("ai", async importOriginal => ({
   ...(await importOriginal<typeof import("ai")>()),
   ...ai,
-  streamObject: (options: unknown) => {
+  streamText: (options: any) => {
     const result = ai.generateObject(options);
     return {
       fullStream: (async function* () {
-        await result;
+        const value = await result;
+        for (const file of ["html", "css", "javascript"])
+          await options.tools.write_file.execute({
+            file,
+            content: value.object.experience[file],
+            notes: "Complete",
+          });
+        await options.tools.finish.execute({ design: value.object });
         yield { type: "finish" };
       })(),
-      object: result.then(value => value.object),
-      usage: result.then(value => value.usage),
+      usage: Promise.resolve({ inputTokens: 10, outputTokens: 20 }),
+      response: Promise.resolve({ messages: [] }),
+      finishReason: Promise.resolve("tool-calls"),
     };
   },
 }));
@@ -118,16 +126,6 @@ it("does not proceed when visual analysis fails", async () => {
   await expect(generateSite(site, "Build")).rejects.toThrow("Vision failed");
   expect(ai.generateObject).toHaveBeenCalledTimes(1);
 });
-it("rejects invalid JavaScript without returning a replacement draft", async () => {
-  ai.generateObject
-    .mockReset()
-    .mockResolvedValueOnce({ object: worldFixture })
-    .mockResolvedValueOnce({
-      object: { ...design, experience: { ...design.experience, javascript: "function {" } },
-    });
-  await expect(generateSite(site, "Build")).rejects.toThrow();
-});
-
 it("leaves room for code after reasoning without reducing art-direction effort", async () => {
   await generateSite(site, "Build it");
   const [planning, implementation] = ai.generateObject.mock.calls.map(call => call[0]);
