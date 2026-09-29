@@ -1,3 +1,4 @@
+import { SiteError } from "../SiteError";
 import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
 import { processSiteOperation } from "../processSiteOperation";
@@ -259,4 +260,22 @@ it("keeps the existing publication unchanged when automatic setup fails", async 
     "configuration unavailable",
   );
   expect(m.update).not.toHaveBeenCalled();
+});
+
+it.each([null, { name: "Existing publication" }])(
+  "does not publish or republish without a paid subscription (%j)",
+  async published => {
+    m.select.mockResolvedValue({ id, owner_id: account, revision: 2, draft, published });
+    m.fanSetup.mockRejectedValue(new SiteError(402, "Paid subscription required to publish"));
+    await expect(
+      processSiteOperation(account, "publish", { id, revision: 2 }),
+    ).rejects.toMatchObject({ status: 402 });
+    expect(m.update).not.toHaveBeenCalled();
+  },
+);
+it("allows unpaid workspaces to unpublish without checking paid setup", async () => {
+  m.fanSetup.mockRejectedValue(new SiteError(402, "Paid subscription required"));
+  await processSiteOperation(account, "unpublish", { id, revision: 2 });
+  expect(m.fanSetup).not.toHaveBeenCalled();
+  expect(m.update).toHaveBeenCalledWith(id, account, 2, { published: null, published_at: null });
 });
