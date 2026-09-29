@@ -1,3 +1,5 @@
+import { directionStep } from "@/app/workflows/sites/directionStep";
+import { assetsStep } from "@/app/workflows/sites/assetsStep";
 import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
 import { siteProductionWorkflow } from "@/app/workflows/sites/siteProductionWorkflow";
@@ -99,4 +101,40 @@ it("names the failed context stage and never starts creative work after acquisit
   expect(m.select).not.toHaveBeenCalled();
   expect(m.build).not.toHaveBeenCalled();
   expect(m.save).not.toHaveBeenCalled();
+});
+
+it("repairs an existing draft without restarting concept selection or asset generation", async () => {
+  const direction = { concept: "Existing moonwalk" };
+  const assets = [{ url: "https://example.com/art.png" }];
+  const site = {
+    id: "site",
+    draft: { assets, production: { context: {}, direction } },
+  } as unknown as Site;
+  await siteProductionWorkflow(site, "Repair the replay", "account");
+  expect(m.select).not.toHaveBeenCalled();
+  expect(directionStep).not.toHaveBeenCalled();
+  expect(assetsStep).not.toHaveBeenCalled();
+  expect(m.build).toHaveBeenCalledWith(
+    site,
+    "Repair the replay",
+    expect.objectContaining({ direction }),
+    assets,
+    "account",
+  );
+  expect(m.save.mock.calls[0][1].production.direction).toEqual(direction);
+});
+it("uses an explicitly selected new concept even when a draft exists", async () => {
+  const site = {
+    id: "site",
+    draft: { assets: [], production: { context: {}, direction: { concept: "Old" } } },
+  } as unknown as Site;
+  await siteProductionWorkflow(site, "Change concept", "account", undefined, approvedConcept);
+  expect(directionStep).toHaveBeenCalledWith(
+    site,
+    "Change concept",
+    expect.anything(),
+    "account",
+    approvedConcept,
+  );
+  expect(assetsStep).toHaveBeenCalledOnce();
 });

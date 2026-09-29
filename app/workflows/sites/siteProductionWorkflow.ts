@@ -7,6 +7,8 @@ import { contextBriefStep } from "./contextBriefStep";
 import { conceptPitchSchema, type ConceptPitch } from "@/lib/sites/production/conceptSchema";
 import { selectConceptStep } from "./selectConceptStep";
 import { reviseStep } from "./reviseStep";
+import type { CreativeDirection } from "@/lib/sites/production/schema";
+import type { SiteAsset } from "@/lib/sites/schema";
 import type { Site } from "@/lib/sites/schema";
 import { collectContextStep } from "./collectContextStep";
 import { directionStep } from "./directionStep";
@@ -50,13 +52,21 @@ export async function siteProductionWorkflow(
       accountId,
       site.id,
     );
-    stage = "concept";
-    const selected =
-      approvedConcept ?? (await selectConceptStep(site, instruction, context, accountId));
-    stage = "direction";
-    let direction = await directionStep(site, instruction, context, accountId, selected);
-    stage = "assets";
-    let assets = await assetsStep(site, direction, accountId);
+    let direction: CreativeDirection;
+    let assets: SiteAsset[];
+    // Ordinary draft edits retain the selected concept; explicit selection starts a new one.
+    if (site.draft?.production && !approvedConcept) {
+      direction = site.draft.production.direction;
+      assets = site.draft.assets;
+    } else {
+      stage = "concept";
+      const selected =
+        approvedConcept ?? (await selectConceptStep(site, instruction, context, accountId));
+      stage = "direction";
+      direction = await directionStep(site, instruction, context, accountId, selected);
+      stage = "assets";
+      assets = await assetsStep(site, direction, accountId);
+    }
     stage = "build";
     let snapshot = await buildStep(
       site,
