@@ -1,3 +1,5 @@
+import { resolveSiteArtist } from "../../production/resolveSiteArtist";
+import { updateSite } from "@/lib/supabase/sites/updateSite";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { startFanConnection } from "../startFanConnection";
@@ -5,6 +7,10 @@ import { finishFanConnection } from "../finishFanConnection";
 import { fanConnectionHandler } from "../fanConnectionHandler";
 import { hashFanValue } from "../hashFanValue";
 import { SiteError } from "../../SiteError";
+vi.mock("../../production/resolveSiteArtist", () => ({
+  resolveSiteArtist: vi.fn(async () => null),
+}));
+vi.mock("@/lib/supabase/sites/updateSite", () => ({ updateSite: vi.fn() }));
 vi.mock("@/lib/supabase/site_fan_connections/cleanupFanSessions", () => ({
   cleanupFanSessions: vi.fn(async () => {}),
 }));
@@ -231,4 +237,28 @@ it("keeps concurrently opened agreement pages independent", async () => {
   const first = await startFanConnection(new NextRequest(url), id);
   const second = await startFanConnection(new NextRequest(url), id);
   expect(first.cookies.getAll()[0].name).not.toBe(second.cookies.getAll()[0].name);
+});
+
+it("attributes a URL-only saved draft before enabling fan capture", async () => {
+  const saved = { id, owner_id: "owner", artist_id: null, revision: 2, draft: {} };
+  m.site.mockResolvedValue(saved);
+  vi.mocked(resolveSiteArtist).mockResolvedValue("artist");
+  vi.mocked(updateSite).mockResolvedValue({ ...saved, artist_id: "artist", revision: 3 } as never);
+  m.saveConfig.mockResolvedValue(config);
+  const response = await fanConnectionHandler(
+    new NextRequest(`${origin}/api/sites/${id}/fan-connection`, {
+      method: "PUT",
+      body: JSON.stringify({
+        returnUrl: config.return_url,
+        marketingText: config.marketing_text,
+        enabled: true,
+        revision: 0,
+      }),
+    }),
+    id,
+    "configure",
+  );
+  expect(response.status).toBe(200);
+  expect(updateSite).toHaveBeenCalledWith(id, "owner", 2, { artist_id: "artist" });
+  expect((await response.json()).artistId).toBe("artist");
 });

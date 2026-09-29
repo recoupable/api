@@ -1,6 +1,9 @@
 import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
 import { processSiteOperation } from "../processSiteOperation";
+vi.mock("../production/resolveSiteArtist", () => ({
+  resolveSiteArtist: vi.fn(async site => site.artist_id ?? null),
+}));
 vi.mock("../production/collectReleaseContext", () => ({ collectReleaseContext: m.collect }));
 vi.mock("../production/proposeExperienceConcepts", () => ({
   proposeExperienceConcepts: m.propose,

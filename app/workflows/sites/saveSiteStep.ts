@@ -1,3 +1,4 @@
+import { resolveSiteArtist } from "@/lib/sites/production/resolveSiteArtist";
 import { readSiteContextBrief } from "@/lib/sites/production/readSiteContextBrief";
 import { updateSite } from "@/lib/supabase/sites/updateSite";
 import { authorizeSiteWorkspace } from "@/lib/sites/authorizeSiteWorkspace";
@@ -8,7 +9,10 @@ export async function saveSiteStep(site: Site, draft: SiteSnapshot, accountId: s
   await authorizeSiteWorkspace(accountId, site.owner_id);
   const briefId = draft.production?.context.engine?.briefId;
   if (briefId) await readSiteContextBrief(site, accountId, briefId);
-  const updated = await updateSite(site.id, site.owner_id, site.revision, { draft });
+  const updated = await updateSite(site.id, site.owner_id, site.revision, {
+    draft,
+    artist_id: await resolveSiteArtist(site, draft),
+  });
   if (!updated)
     throw new FatalError("Site changed during generation. The newer draft was preserved.");
   return { site: updated };

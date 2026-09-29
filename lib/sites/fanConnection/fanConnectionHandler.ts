@@ -1,3 +1,5 @@
+import { resolveSiteArtist } from "../production/resolveSiteArtist";
+import { updateSite } from "@/lib/supabase/sites/updateSite";
 import { selectSiteActivity } from "@/lib/supabase/site_activity_events/selectSiteActivity";
 import { limitSiteRequest } from "../activity/limitSiteRequest";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
@@ -24,7 +26,7 @@ export async function fanConnectionHandler(
   const headers = { ...getCorsHeaders(), "Cache-Control": "private, no-store" };
   try {
     z.string().uuid().parse(id);
-    const site = await selectSite(id);
+    let site = await selectSite(id);
     if (!site) throw new SiteError(404, "Site not found");
     await authorizeSiteWorkspace(auth.accountId, site.owner_id);
     await limitSiteRequest(id, `private:${auth.accountId}`, 120);
@@ -38,10 +40,21 @@ export async function fanConnectionHandler(
     if (operation === "configure") {
       const input = configInputSchema.parse(await request.json());
       if (input.enabled) {
-        if (!site.artist_id)
-          throw new SiteError(400, "Assign an artist to the site before enabling fan connection");
         getFanOAuthConfig();
         await requireFanEntitlement(site.owner_id);
+        if (!site.artist_id && site.draft) {
+          const artistId = await resolveSiteArtist(site, site.draft);
+          if (artistId) {
+            const assigned = await updateSite(site.id, site.owner_id, site.revision, {
+              artist_id: artistId,
+            });
+            if (!assigned)
+              throw new SiteError(409, "Site changed. Reload before enabling fan connection");
+            site = assigned;
+          }
+        }
+        if (!site.artist_id)
+          throw new SiteError(400, "Assign an artist to the site before enabling fan connection");
       }
       config = await updateFanConfig(
         {
