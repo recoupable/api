@@ -39,6 +39,7 @@ for(const [name,width,height] of [['mobile',390,844],['desktop',1440,900]]){
    if(step.waitMs)await page.waitForTimeout(step.waitMs);
    interacted=true;
    if(step.expected)await ui.getByText(step.expected,{exact:false}).first().waitFor({state:'visible',timeout:5000});
+   await page.screenshot({path:name+'-checkpoint-'+step.checkpoint+'.png'});
    steps.push({index,checkpoint:step.checkpoint,passed:true});
   }catch(e){errors.push('Step '+(index+1)+' '+step.target+': '+e.message.slice(0,300));steps.push({index,checkpoint:step.checkpoint,passed:false});break;}
  }

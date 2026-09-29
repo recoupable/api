@@ -71,6 +71,12 @@ export async function renderExperience(snapshot: SiteSnapshot, contract?: Experi
       images.push(`data:image/png;base64,${bytes.toString("base64")}`);
     }
     for (const name of ["mobile", "desktop"]) {
+      for (const checkpoint of ["participate", "result", "delivery"]) {
+        const bytes = await sandbox.readFileToBuffer({
+          path: `${name}-checkpoint-${checkpoint}.png`,
+        });
+        if (bytes) images.push(`data:image/png;base64,${bytes.toString("base64")}`);
+      }
       const resultImage = await sandbox.readFileToBuffer({ path: `${name}-result.png` });
       if (resultImage) images.push(`data:image/png;base64,${resultImage.toString("base64")}`);
     }
