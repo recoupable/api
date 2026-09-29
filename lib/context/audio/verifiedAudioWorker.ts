@@ -30,8 +30,25 @@ if mode=='discover':
         data=response.read(4000001)
         if len(data)>4000000: raise ValueError('Preview exceeds size limit')
     pathlib.Path('preview.mp3').write_bytes(data)
-def pcm(path):
-    return np.frombuffer(run([ffmpeg,'-v','error','-i',str(path),'-t','1200','-ac','1','-ar','2000','-f','f32le','-']),dtype='<f4').astype(np.float64)
+def pcm(path, rate=2000):
+    return np.frombuffer(run([ffmpeg,'-v','error','-i',str(path),'-t','1200','-ac','1','-ar',str(rate),'-f','f32le','-']),dtype='<f4').astype(np.float64)
+def waveform_match(x,y):
+    y=y-y.mean()
+    n=len(y)
+    if len(x)<n or n<2 or np.dot(y,y)<1e-8: raise ValueError('Insufficient waveform for match')
+    L=1<<(len(x)+n-2).bit_length()
+    corr=np.fft.irfft(np.fft.rfft(x,L)*np.fft.rfft(y[::-1],L),L)[n-1:len(x)]
+    sums=np.concatenate(([0.],np.cumsum(x)));squares=np.concatenate(([0.],np.cumsum(x*x)))
+    energy=np.maximum(squares[n:]-squares[:-n]-(sums[n:]-sums[:-n])**2/n,0)
+    score=corr/np.sqrt(np.maximum(energy*np.dot(y,y),1e-20))
+    offset=int(np.argmax(score))
+    return offset,float(np.clip(score[offset],-1,1))
+def refine_match(x,y,coarse_seconds,rate=16000):
+    # Search a small neighborhood at higher resolution; keep the same whole-preview threshold.
+    start=max(0,int(coarse_seconds*rate)-32)
+    end=min(len(x),int(coarse_seconds*rate)+len(y)+33)
+    offset,confidence=waveform_match(x[start:end],y)
+    return (start+offset)/rate,confidence
 y=pcm('preview.mp3'); y=y-y.mean()
 if len(y)<30000 or np.dot(y,y)<1e-8: raise ValueError('Insufficient preview for waveform match')
 stage='YouTube search'
@@ -61,19 +78,20 @@ for c in candidates:
         stage='waveform verification'
         x=pcm(path)
         if len(x)<len(y) or abs(len(x)/2000-r['durationSeconds'])>2: continue
-        n=len(y); L=1<<(len(x)+n-2).bit_length()
-        corr=np.fft.irfft(np.fft.rfft(x,L)*np.fft.rfft(y[::-1],L),L)[n-1:len(x)]
-        sums=np.concatenate(([0.],np.cumsum(x)));squares=np.concatenate(([0.],np.cumsum(x*x)))
-        energy=np.maximum(squares[n:]-squares[:-n]-(sums[n:]-sums[:-n])**2/n,0)
-        score=corr/np.sqrt(np.maximum(energy*np.dot(y,y),1e-20))
-        offset=int(np.argmax(score)); confidence=float(np.clip(score[offset],-1,1))
+        n=len(y)
+        offset,confidence=waveform_match(x,y)
+        offset_seconds=offset/2000
+        if confidence<0.95:
+            precise_y=pcm('preview.mp3',16000)
+            precise_x=pcm(path,16000)
+            offset_seconds,confidence=refine_match(precise_x,precise_y,offset_seconds)
         decisions.append({'videoId':vid,'correlation':confidence})
         if confidence<0.95: continue
         run([ffmpeg,'-v','error','-y','-i',str(path),'-t','1200','-ac','1','-ar','16000','-c:a','pcm_s16le','audio.wav'])
         with wave.open('audio.wav','rb') as w: seconds=w.getnframes()/w.getframerate()
         if abs(seconds-r['durationSeconds'])>2: raise ValueError('Normalized duration mismatch')
         b=pathlib.Path('audio.wav').read_bytes()
-        json.dump({'youtubeUrl':'https://www.youtube.com/watch?v='+vid,'sha256':hashlib.sha256(b).hexdigest(),'durationSeconds':seconds,'verification':{'method':'waveform-cross-correlation','correlation':confidence,'previewSeconds':n/2000,'offsetSeconds':offset/2000},'decisions':decisions},open('result.json','w'))
+        json.dump({'youtubeUrl':'https://www.youtube.com/watch?v='+vid,'sha256':hashlib.sha256(b).hexdigest(),'durationSeconds':seconds,'verification':{'method':'waveform-cross-correlation','correlation':confidence,'previewSeconds':n/2000,'offsetSeconds':offset_seconds},'decisions':decisions},open('result.json','w'))
         break
     except (subprocess.SubprocessError,OSError,ValueError) as error:
         detail=(error.stderr or b'').decode('utf-8','replace') if isinstance(error,subprocess.CalledProcessError) else str(error)

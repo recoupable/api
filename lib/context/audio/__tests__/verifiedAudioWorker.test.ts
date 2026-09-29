@@ -26,3 +26,16 @@ assert not matches_metadata({**candidate,'title':candidate['title']+' sped up'},
   expect(result.stderr).toBe("");
   expect(result.status).toBe(0);
 });
+
+// The deployed audio worker installs NumPy. Exercise its numerical code locally where available.
+it.skipIf(spawnSync("python3", ["-c", "import numpy"]).status !== 0)(
+  "refines fractional sample alignment without accepting unrelated audio",
+  () => {
+    const result = spawnSync("python3", ["lib/context/audio/__tests__/verifyAudioAlignment.py"], {
+      encoding: "utf8",
+    });
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout).aligned_correlation).toBeGreaterThan(0.95);
+  },
+);
