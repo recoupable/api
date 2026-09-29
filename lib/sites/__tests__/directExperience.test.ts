@@ -28,15 +28,28 @@ const direction = {
   },
 };
 beforeEach(() => vi.resetAllMocks());
+const rejected = {
+  followsSelection: true,
+  releaseConnection: false,
+  fanValue: false,
+  feasible: true,
+  completeJourney: true,
+  reason: "Arbitrary reward unrelated to song",
+};
+
 it("rejects a director rationale that the independent reviewer finds arbitrary", async () => {
-  vi.mocked(generateProductionObject).mockResolvedValueOnce(direction).mockResolvedValueOnce({
-    followsSelection: true,
-    releaseConnection: false,
-    fanValue: false,
-    feasible: true,
-    completeJourney: true,
-    reason: "Arbitrary reward unrelated to song",
-  });
+  vi.mocked(generateProductionObject)
+    .mockResolvedValueOnce(direction)
+    .mockResolvedValueOnce({
+      followsSelection: true,
+      releaseConnection: false,
+      fanValue: false,
+      feasible: true,
+      completeJourney: true,
+      reason: "Arbitrary reward unrelated to song",
+    })
+    .mockResolvedValueOnce(direction)
+    .mockResolvedValueOnce(rejected);
   await expect(
     directExperience(
       { id: "site", assets: [] } as unknown as Site,
@@ -68,14 +81,22 @@ it("returns the original direction only after all concept checks pass", async ()
 });
 
 it("rejects a plan that replaces the customer-selected activity", async () => {
-  vi.mocked(generateProductionObject).mockResolvedValueOnce(direction).mockResolvedValueOnce({
-    followsSelection: false,
-    releaseConnection: true,
-    fanValue: true,
-    feasible: true,
-    completeJourney: true,
-    reason: "Changed the selected activity",
-  });
+  vi.mocked(generateProductionObject)
+    .mockResolvedValueOnce(direction)
+    .mockResolvedValueOnce({
+      followsSelection: false,
+      releaseConnection: true,
+      fanValue: true,
+      feasible: true,
+      completeJourney: true,
+      reason: "Changed the selected activity",
+    })
+    .mockResolvedValueOnce(direction)
+    .mockResolvedValueOnce({
+      ...rejected,
+      followsSelection: false,
+      reason: "Changed the selected activity",
+    });
   await expect(
     directExperience(
       { id: "site", assets: [] } as unknown as Site,
@@ -85,4 +106,29 @@ it("rejects a plan that replaces the customer-selected activity", async () => {
       approvedConcept,
     ),
   ).rejects.toThrow("Changed the selected activity");
+});
+
+it("revises a rejected plan using reviewer feedback and independently checks it again", async () => {
+  const passed = {
+    ...rejected,
+    releaseConnection: true,
+    fanValue: true,
+    reason: "Grounded and playable",
+  };
+  vi.mocked(generateProductionObject)
+    .mockResolvedValueOnce(direction)
+    .mockResolvedValueOnce(rejected)
+    .mockResolvedValueOnce(direction)
+    .mockResolvedValueOnce(passed);
+  await directExperience(
+    { id: "site", assets: [] } as unknown as Site,
+    "",
+    {} as ReleaseContext,
+    "account",
+    approvedConcept,
+  );
+  expect(generateProductionObject).toHaveBeenCalledTimes(4);
+  expect(vi.mocked(generateProductionObject).mock.calls[2][2]).toMatchObject({
+    revision: { assessment: rejected, direction },
+  });
 });
