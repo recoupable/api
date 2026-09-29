@@ -51,6 +51,7 @@ function response(action: (options: any) => Promise<void>, reason = "tool-calls"
 beforeEach(() => vi.clearAllMocks());
 it("keeps completed file writes across an output limit and finishes on the next turn", async () => {
   response(async o => {
+    await o.tools.read_visual_mechanisms.execute({ patternIds: ["release-momentum"] });
     await o.tools.write_file.execute({
       file: "html",
       content: "<main>Dance</main>",
@@ -91,6 +92,7 @@ it("compacts oversized history while retaining exact files, task and working not
 });
 it("rejects invalid JavaScript at finish and lets the agent repair it", async () => {
   response(async o => {
+    await o.tools.read_visual_mechanisms.execute({ patternIds: ["release-momentum"] });
     await o.tools.write_file.execute({ file: "html", content: "<main>Dance</main>", notes: "" });
     await o.tools.write_file.execute({
       file: "javascript",
@@ -162,4 +164,25 @@ it("compacts a provider context rejection without discarding source files", asyn
   expect(next.messages).toEqual([]);
   expect(next.files).toEqual(state.files);
   expect(next.compactions).toBe(1);
+});
+
+it("lets the builder inspect the skill directly and keeps that evidence across turns", async () => {
+  response(async o => {
+    const guidance = await o.tools.read_visual_mechanisms.execute({
+      patternIds: ["release-momentum"],
+    });
+    expect(guidance.patterns[0].check).toContain("pointercancel");
+  });
+  const next = await advanceSiteBuild(initial(), "account");
+  expect(next.visualMechanismReads?.[0]).toMatchObject({ patternIds: ["release-momentum"] });
+  expect(JSON.stringify(mock.stream.mock.calls[0][0].messages)).toContain("visualMechanismCatalog");
+});
+
+it("cannot finish without reading a concrete implementation mechanism", async () => {
+  response(async o => {
+    const result = await o.tools.finish.execute({ design: metadata });
+    expect(result).toMatchObject({ success: false });
+    expect(result.error).toContain("read_visual_mechanisms");
+  });
+  expect((await advanceSiteBuild(initial(), "account")).snapshot).toBeUndefined();
 });

@@ -12,6 +12,7 @@ vi.mock("ai", async importOriginal => ({
     return {
       fullStream: (async function* () {
         const value = await result;
+        await options.tools.read_visual_mechanisms.execute({ patternIds: ["release-momentum"] });
         for (const file of ["html", "css", "javascript"])
           await options.tools.write_file.execute({
             file,

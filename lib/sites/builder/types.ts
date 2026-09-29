@@ -6,6 +6,7 @@ export type SiteBuildState = {
   brandWorld: NonNullable<SiteSnapshot["brandWorld"]>;
   files: { html: string; css: string; javascript: string };
   notes: string;
+  visualMechanismReads?: { sourceHash: string; patternIds: string[] }[];
   messages: ModelMessage[];
   inputTokens: number;
   turns: number;
