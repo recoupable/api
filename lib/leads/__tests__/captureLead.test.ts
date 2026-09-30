@@ -91,7 +91,10 @@ describe("captureLead", () => {
 
   it("rejects capture when the full inquiry note was not stored", async () => {
     vi.mocked(createNote).mockResolvedValueOnce(false);
-    expect(await captureLead(booking)).toMatchObject({ success: false });
+    expect(await captureLead(booking)).toEqual({
+      success: false,
+      error: "Could not save lead details",
+    });
     expect(sendSalesNotification).not.toHaveBeenCalled();
   });
 
@@ -104,7 +107,7 @@ describe("captureLead", () => {
 
   it("rejects a person assertion without a record id", async () => {
     vi.mocked(assertPersonByEmail).mockResolvedValueOnce({});
-    expect(await captureLead(booking)).toMatchObject({ success: false });
+    expect(await captureLead(booking)).toEqual({ success: false, error: "Missing CRM record id" });
     expect(createNote).not.toHaveBeenCalled();
     expect(sendSalesNotification).not.toHaveBeenCalled();
   });
