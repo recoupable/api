@@ -1,10 +1,26 @@
+import { SiteError } from "../SiteError";
+import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
 import { processSiteOperation } from "../processSiteOperation";
+vi.mock("../fanConnection/prepareSiteFanConnection", () => ({
+  prepareSiteFanConnection: m.fanSetup,
+}));
+vi.mock("../production/resolveSiteArtist", () => ({
+  resolveSiteArtist: vi.fn(async site => site.artist_id ?? null),
+}));
+vi.mock("../production/collectReleaseContext", () => ({ collectReleaseContext: m.collect }));
+vi.mock("../production/proposeExperienceConcepts", () => ({
+  proposeExperienceConcepts: m.propose,
+}));
 vi.mock("@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds", () => ({
   selectArtistOrganizationIds: m.artistOrgs,
 }));
 const m = vi.hoisted(() => ({
+  fanSetup: vi.fn().mockResolvedValue("enabled"),
   access: vi.fn(),
+  collect: vi.fn(),
+  propose: vi.fn(),
+  brief: vi.fn(),
   artistOrgs: vi.fn(),
   artist: vi.fn(),
   select: vi.fn(),
@@ -24,6 +40,7 @@ vi.mock("@/lib/supabase/sites/selectSites", () => ({ selectSites: m.list }));
 vi.mock("@/lib/supabase/sites/insertSite", () => ({ insertSite: m.insert }));
 vi.mock("@/lib/supabase/sites/updateSite", () => ({ updateSite: m.update }));
 vi.mock("@/lib/supabase/sites/selectSignups", () => ({ selectSignups: m.signups }));
+vi.mock("../production/readSiteContextBrief", () => ({ readSiteContextBrief: m.brief }));
 vi.mock("../production/produceSite", () => ({ produceSite: m.generate }));
 vi.mock("../production/startSiteProduction", () => ({ startSiteProduction: m.generate }));
 vi.mock("../production/getSiteProduction", () => ({ getSiteProduction: vi.fn() }));
@@ -35,7 +52,14 @@ const draft = { name: "Release" };
 beforeEach(() => {
   vi.resetAllMocks();
   m.artistOrgs.mockResolvedValue([]);
-  m.select.mockResolvedValue({ id, owner_id: account, revision: 2, draft, published: null });
+  m.select.mockResolvedValue({
+    id,
+    owner_id: account,
+    revision: 2,
+    brief: "",
+    draft,
+    published: null,
+  });
   m.access.mockResolvedValue(false);
   m.update.mockResolvedValue({ id, revision: 3 });
   m.list.mockResolvedValue([]);
@@ -91,7 +115,12 @@ it("blocks inaccessible artist association", async () => {
 });
 it("rejects stale revision before generating", async () => {
   await expect(
-    processSiteOperation(account, "generate", { id, revision: 1, instruction: "change" }),
+    processSiteOperation(account, "generate", {
+      approvedConcept,
+      id,
+      revision: 1,
+      instruction: "change",
+    }),
   ).rejects.toMatchObject({ status: 409 });
   expect(m.generate).not.toHaveBeenCalled();
 });
@@ -100,6 +129,7 @@ it("reports concurrent writes after generation", async () => {
   m.update.mockResolvedValue(null);
   await expect(
     processSiteOperation(account, "generate", {
+      approvedConcept,
       id,
       revision: 2,
       instruction: "change",
@@ -151,4 +181,101 @@ it("permits organization API keys to attach their own roster artist", async () =
     brief: "y",
   });
   expect(m.insert).toHaveBeenCalledWith(expect.objectContaining({ owner_id: org, artist_id: id }));
+});
+
+it("passes the selected brief to background generation after validation", async () => {
+  await processSiteOperation(account, "generate", {
+    approvedConcept,
+    id,
+    revision: 2,
+    contextBriefId: org,
+  });
+  expect(m.brief).toHaveBeenCalledWith(expect.objectContaining({ id }), account, org);
+  expect(m.generate).toHaveBeenCalledWith(
+    expect.objectContaining({ id }),
+    "",
+    account,
+    org,
+    approvedConcept,
+  );
+});
+it("does not generate or publish from an unavailable saved brief", async () => {
+  m.select.mockResolvedValue({
+    id,
+    owner_id: account,
+    revision: 2,
+    draft: { production: { context: { engine: { briefId: org } } } },
+  });
+  m.brief.mockRejectedValue(new Error("Evidence withdrawn"));
+  await expect(
+    processSiteOperation(account, "generate", { approvedConcept, id, revision: 2 }),
+  ).rejects.toThrow("withdrawn");
+  await expect(processSiteOperation(account, "publish", { id, revision: 2 })).rejects.toThrow(
+    "withdrawn",
+  );
+  expect(m.generate).not.toHaveBeenCalled();
+  expect(m.update).not.toHaveBeenCalled();
+});
+
+it("returns pitches without starting production or overwriting the draft", async () => {
+  m.collect.mockResolvedValue({});
+  m.propose.mockResolvedValue({ status: "ready", candidates: [approvedConcept], reason: "" });
+  const result = await processSiteOperation(account, "concepts", { id, revision: 2 });
+  expect(result).toMatchObject({ concepts: { candidates: [approvedConcept] }, revision: 2 });
+  expect(m.generate).not.toHaveBeenCalled();
+  expect(m.update).not.toHaveBeenCalled();
+});
+it("starts URL-only generation without requiring a caller-selected concept", async () => {
+  await processSiteOperation(account, "generate", { id, revision: 2 });
+  expect(m.generate).toHaveBeenCalledWith(
+    expect.objectContaining({ id }),
+    "",
+    account,
+    undefined,
+    undefined,
+  );
+});
+
+it("prepares paid fan connection before publishing and reports its status", async () => {
+  m.select.mockResolvedValue({ id, owner_id: account, revision: 2, draft: { name: "Draft" } });
+  m.fanSetup.mockResolvedValue("enabled");
+  const result = await processSiteOperation(account, "publish", {
+    id,
+    revision: 2,
+    returnUrl: "https://app.test/s/site",
+  });
+  expect(m.fanSetup).toHaveBeenCalledWith(
+    expect.objectContaining({ id }),
+    "https://app.test/s/site",
+  );
+  expect(m.fanSetup.mock.invocationCallOrder.at(-1)).toBeLessThan(
+    m.update.mock.invocationCallOrder.at(-1)!,
+  );
+  expect(result).toHaveProperty("fanConnection", "enabled");
+});
+it("keeps the existing publication unchanged when automatic setup fails", async () => {
+  m.select.mockResolvedValue({ id, owner_id: account, revision: 2, draft: { name: "Draft" } });
+  m.fanSetup.mockRejectedValueOnce(new Error("Spotify configuration unavailable"));
+  await expect(processSiteOperation(account, "publish", { id, revision: 2 })).rejects.toThrow(
+    "configuration unavailable",
+  );
+  expect(m.update).not.toHaveBeenCalled();
+});
+
+it.each([null, { name: "Existing publication" }])(
+  "does not publish or republish without a paid subscription (%j)",
+  async published => {
+    m.select.mockResolvedValue({ id, owner_id: account, revision: 2, draft, published });
+    m.fanSetup.mockRejectedValue(new SiteError(402, "Paid subscription required to publish"));
+    await expect(
+      processSiteOperation(account, "publish", { id, revision: 2 }),
+    ).rejects.toMatchObject({ status: 402 });
+    expect(m.update).not.toHaveBeenCalled();
+  },
+);
+it("allows unpaid workspaces to unpublish without checking paid setup", async () => {
+  m.fanSetup.mockRejectedValue(new SiteError(402, "Paid subscription required"));
+  await processSiteOperation(account, "unpublish", { id, revision: 2 });
+  expect(m.fanSetup).not.toHaveBeenCalled();
+  expect(m.update).toHaveBeenCalledWith(id, account, 2, { published: null, published_at: null });
 });

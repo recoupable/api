@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { conceptPitchSchema } from "./production/conceptSchema";
+import { returnUrlSchema } from "./fanConnection/schema";
 import type { ReleaseContext, CreativeDirection, CreativeReview } from "./production/schema";
 import type { BrandWorld } from "./brandWorld/schema";
 
@@ -9,7 +11,16 @@ export const httpsUrl = z
 export const assetSchema = z.object({
   url: httpsUrl,
   name: z.string().max(200),
-  type: z.enum(["image", "audio"]),
+  type: z.enum(["image", "audio", "video"]),
+  generation: z
+    .object({
+      provider: z.enum(["higgsfield", "fal", "gateway"]),
+      model: z.string(),
+      requestId: z.string(),
+      rationale: z.string().optional(),
+      durationMs: z.number().optional(),
+    })
+    .optional(),
 });
 export const experienceSchema = z.object({
   html: z.string().min(1).max(60000),
@@ -43,19 +54,30 @@ export const siteInputSchema = z
     message: "Add a Spotify link, or a name and brief.",
   });
 export const actionSchema = z.discriminatedUnion("action", [
+  z
+    .object({
+      action: z.literal("concepts"),
+      revision: z.number().int().nonnegative(),
+      instruction: z.string().trim().max(6000).default(""),
+      contextBriefId: z.string().uuid().optional(),
+    })
+    .strict(),
   z.object({ action: z.literal("generation"), token: z.string().min(1).max(3000) }).strict(),
   z
     .object({
       action: z.literal("generate"),
+      approvedConcept: conceptPitchSchema.optional(),
       revision: z.number().int().nonnegative(),
       instruction: z.string().trim().max(6000).default(""),
       background: z.boolean().default(true),
+      contextBriefId: z.string().uuid().optional(),
     })
     .strict(),
   z
     .object({
       action: z.literal("publish"),
       revision: z.number().int().nonnegative(),
+      returnUrl: returnUrlSchema.optional(),
     })
     .strict(),
   z
@@ -68,6 +90,7 @@ export const actionSchema = z.discriminatedUnion("action", [
 export type SiteDesign = z.infer<typeof designSchema>;
 export type SiteAsset = z.infer<typeof assetSchema>;
 export type SiteSnapshot = {
+  artistName?: string;
   name: string;
   releaseUrl: string;
   assets: SiteAsset[];

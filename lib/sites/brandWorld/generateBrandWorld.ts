@@ -1,4 +1,6 @@
-import { generateObject } from "ai";
+import { getGenerationFailure } from "../getGenerationFailure";
+import { getSiteModelOptions } from "../getSiteModelOptions";
+import { generateSiteObject } from "../generateSiteObject";
 import type { Site } from "../schema";
 import { brandWorldSchema } from "./schema";
 import { artworkGuidance } from "./artworkGuidance";
@@ -14,34 +16,41 @@ export async function generateBrandWorld(
 ) {
   const sources = site.assets.map((asset, sourceIndex) => ({ ...asset, sourceIndex }));
   const images = sources.filter(asset => asset.type === "image");
-  const { object, usage } = await generateObject({
-    model,
-    maxRetries: 0,
-    schema: brandWorldSchema,
-    system: [
-      "You are an art director planning a complete release-specific fan website. Return a concrete brand-world specification, not website code or generic design advice.",
-      artworkGuidance,
-      worldGuidance,
-      qualityGuidance,
-    ].join("\n\n"),
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({
-              name: site.name,
-              brief: site.brief,
-              instruction,
-              sources,
-              previousWorld: site.draft?.brandWorld ?? null,
-            }),
-          },
-          ...images.map(asset => ({ type: "image" as const, image: new URL(asset.url) })),
-        ],
-      },
-    ],
+  const { object, usage } = await generateSiteObject(
+    {
+      ...getSiteModelOptions(model),
+      maxRetries: 0,
+      schema: brandWorldSchema,
+      system: [
+        "You are an art director planning a complete release-specific fan website. Return a concrete brand-world specification, not website code or generic design advice. Every descriptive string must fit within 1,200 characters, including system.motion. Use concise, specific instructions; do not repeat the full brief inside individual fields.",
+        artworkGuidance,
+        worldGuidance,
+        qualityGuidance,
+      ].join("\n\n"),
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                name: site.name,
+                brief: site.brief,
+                instruction,
+                sources,
+                previousWorld: site.draft?.brandWorld ?? null,
+              }),
+            },
+            ...images.map(asset => ({ type: "image" as const, image: new URL(asset.url) })),
+          ],
+        },
+      ],
+    },
+    accountId,
+    site.id,
+  ).catch(error => {
+    console.error("[sites:brand-world]", getGenerationFailure(error));
+    throw error;
   });
   if (accountId)
     await (

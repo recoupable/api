@@ -36,16 +36,21 @@ export async function collectContextSocials(
   const start = Date.now(),
     startedAt = new Date().toISOString(),
     limit = 50;
-  const [profiles, result] = await Promise.all([
+  const [profileRead, postRead] = await Promise.allSettled([
     d.profiles({ accountId: artistId, offset: (page - 1) * limit, limit }),
     d.posts({ artistAccountId: artistId, page, limit }),
   ]);
+  const profiles = profileRead.status === "fulfilled" ? profileRead.value : [];
+  const result = postRead.status === "fulfilled" ? postRead.value : { posts: [], totalCount: null };
   const gaps = [
     "Post images, videos and captions are not returned by this stored-metrics query.",
     "Linked profiles are not independently verified as official.",
   ];
-  if (!profiles.length && page === 1) gaps.push("No linked social profiles");
-  if (!result.totalCount) gaps.push("No saved post metrics");
+  if (profileRead.status === "rejected") gaps.push("Saved social profiles could not be read");
+  if (postRead.status === "rejected") gaps.push("Saved post metrics could not be read");
+  if (profileRead.status === "fulfilled" && !profiles.length && page === 1)
+    gaps.push("No linked social profiles");
+  if (result.totalCount === 0) gaps.push("No saved post metrics");
   return {
     artistId,
     scope: "workspace_private",
@@ -54,7 +59,7 @@ export async function collectContextSocials(
     posts: result.posts,
     totalPosts: result.totalCount,
     page,
-    nextPostsPage: page * limit < result.totalCount ? page + 1 : null,
+    nextPostsPage: result.totalCount !== null && page * limit < result.totalCount ? page + 1 : null,
     nextProfilesPage: profiles.length === limit ? page + 1 : null,
     gaps,
     trace: {

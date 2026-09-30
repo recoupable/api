@@ -2,6 +2,7 @@ import { z } from "zod";
 import { lookupMusicBrainzIsrc } from "../providers/lookupMusicBrainzIsrc";
 import { runContextEnrichment } from "./runContextEnrichment";
 type Dependencies = Omit<Parameters<typeof runContextEnrichment>[4], "call"> & {
+  resolveRecording?: (owner: string, requestId: string, subjectId: string) => Promise<string>;
   acquirePermit: () => Promise<void>;
   fetcher?: typeof fetch;
 };
@@ -20,6 +21,15 @@ export async function collectContextMusicBrainz(
     .parse(input.isrc.replace(/-/g, "").toUpperCase());
   // Supplied by the server's collection policy, never a random automatic retry token.
   const collectionVersion = z.string().min(1).max(100).parse(input.collectionVersion);
+  const authorizeRecording = async () => {
+    await deps.authorize(actor, owner);
+    const resolve =
+      deps.resolveRecording ??
+      (await import("@/lib/supabase/context_requests/getContextRecordingIsrc"))
+        .getContextRecordingIsrc;
+    if ((await resolve(owner, requestId, recordingSubjectId)) !== isrc)
+      throw new Error("ISRC does not match the context recording");
+  };
   const url = `https://musicbrainz.org/ws/2/isrc/${isrc}?fmt=json&inc=artist-credits+releases`;
   return runContextEnrichment(
     actor,
@@ -44,6 +54,7 @@ export async function collectContextMusicBrainz(
     },
     {
       ...deps,
+      authorize: authorizeRecording,
       call: async () => {
         const result = await lookupMusicBrainzIsrc(isrc, deps.acquirePermit, deps.fetcher);
         return {

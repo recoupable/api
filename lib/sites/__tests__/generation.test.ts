@@ -4,7 +4,30 @@ import type { Site } from "../schema";
 import { brandWorldSchema } from "../brandWorld/schema";
 import { worldFixture } from "./worldFixture";
 const ai = vi.hoisted(() => ({ generateObject: vi.fn() }));
-vi.mock("ai", () => ai);
+vi.mock("ai", async importOriginal => ({
+  ...(await importOriginal<typeof import("ai")>()),
+  ...ai,
+  streamText: (options: any) => {
+    const result = ai.generateObject(options);
+    return {
+      fullStream: (async function* () {
+        const value = await result;
+        await options.tools.read_visual_mechanisms.execute({ patternIds: ["release-momentum"] });
+        for (const file of ["html", "css", "javascript"])
+          await options.tools.write_file.execute({
+            file,
+            content: value.object.experience[file],
+            notes: "Complete",
+          });
+        await options.tools.finish.execute({ design: value.object });
+        yield { type: "finish" };
+      })(),
+      usage: Promise.resolve({ inputTokens: 10, outputTokens: 20 }),
+      response: Promise.resolve({ messages: [] }),
+      finishReason: Promise.resolve("tool-calls"),
+    };
+  },
+}));
 const site = {
   name: "Release",
   brief: "Build a fan experience",
@@ -104,12 +127,10 @@ it("does not proceed when visual analysis fails", async () => {
   await expect(generateSite(site, "Build")).rejects.toThrow("Vision failed");
   expect(ai.generateObject).toHaveBeenCalledTimes(1);
 });
-it("rejects invalid JavaScript without returning a replacement draft", async () => {
-  ai.generateObject
-    .mockReset()
-    .mockResolvedValueOnce({ object: worldFixture })
-    .mockResolvedValueOnce({
-      object: { ...design, experience: { ...design.experience, javascript: "function {" } },
-    });
-  await expect(generateSite(site, "Build")).rejects.toThrow();
+it("leaves room for code after reasoning without reducing art-direction effort", async () => {
+  await generateSite(site, "Build it");
+  const [planning, implementation] = ai.generateObject.mock.calls.map(call => call[0]);
+  expect(planning.providerOptions.anthropic.effort).toBe("high");
+  expect(implementation.providerOptions.anthropic.effort).toBe("low");
+  expect(implementation.maxOutputTokens).toBe(65536);
 });

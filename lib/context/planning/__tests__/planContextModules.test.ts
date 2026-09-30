@@ -209,3 +209,27 @@ it("plans saved release enrichment separately from unbuilt standalone release in
   });
   expect(result.map(item => item.state)).toEqual(["ready_for_dispatch", "not_implemented"]);
 });
+
+it("allows a submitted Spotify album locator to be verified only when collection is permitted", () => {
+  const input = {
+    entry: "release" as const,
+    targets: [
+      {
+        subjectId: id,
+        kind: "release" as const,
+        identityConfirmed: false,
+        availableFields: ["spotify_id" as const],
+        reusableModules: [],
+      },
+    ],
+    requested: [{ subjectId: id, module: "spotify_release" as const }],
+  };
+  expect(planContextModules({ ...input, permittedModules: [] })[0]).toMatchObject({
+    state: "blocked",
+    reasons: ["Server collection policy has not permitted this module"],
+  });
+  expect(planContextModules({ ...input, permittedModules: ["spotify_release"] })[0]).toMatchObject({
+    state: "ready_for_dispatch",
+    reasons: [],
+  });
+});

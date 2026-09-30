@@ -1,18 +1,8 @@
-import { buildExperience } from "@/lib/sites/production/buildExperience";
-import { FatalError } from "workflow";
-export async function buildStep(...args: Parameters<typeof buildExperience>) {
-  "use step";
-  try {
-    return await buildExperience(...args);
-  } catch (error) {
-    console.error(
-      "[sites:buildStep]",
-      error instanceof Error
-        ? { name: error.name, message: error.message.slice(0, 1200) }
-        : "Unknown failure",
-    );
-    throw new FatalError(
-      "Site production buildStep failed. No automatic provider retry was attempted.",
-    );
-  }
+import { initializeBuildStep } from "./initializeBuildStep";
+import { buildTurnStep } from "./buildTurnStep";
+/** Workflow-level loop: each completed model turn is persisted independently. */
+export async function buildStep(...args: Parameters<typeof initializeBuildStep>) {
+  let state = await initializeBuildStep(...args);
+  while (!state.snapshot) state = await buildTurnStep(state, args[4]);
+  return state.snapshot;
 }

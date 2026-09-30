@@ -3,12 +3,12 @@ export const journeyRunner = `const fs=require('node:fs');const {chromium:pw}=re
 (async()=>{const browser=await pw.launch({executablePath:await chromium.executablePath(),args:chromium.args.filter(a=>!["--disable-web-security","--allow-running-insecure-content","--single-process"].includes(a)),headless:true});const results=[];
 const plan=JSON.parse(fs.readFileSync('journey.json','utf8'));
 for(const [name,width,height] of [['mobile',390,844],['desktop',1440,900]]){
- const page=await browser.newPage({viewport:{width,height},reducedMotion:'reduce',acceptDownloads:true});const errors=[];const steps=[];const artifacts=[];
+ const page=await browser.newPage({viewport:{width,height},reducedMotion:'no-preference',acceptDownloads:true});const errors=[];const steps=[];const artifacts=[];
  page.on('pageerror',e=>errors.push(e.message.slice(0,300)));
  const shares=[];
  await page.exposeFunction('__recordShare',payload=>shares.push(payload));
  await page.addInitScript(()=>{Object.defineProperty(navigator,'canShare',{value:()=>true,configurable:true});Object.defineProperty(navigator,'share',{value:async data=>{const files=[];for(const f of data.files||[]){files.push({name:f.name,type:f.type,bytes:Array.from(new Uint8Array(await f.arrayBuffer()))});}await window.__recordShare({files});},configurable:true});});
- await page.route('**/*',r=>r.request().resourceType()==='image'?r.continue():r.abort());
+ await page.route('**/*',r=>['image','media'].includes(r.request().resourceType())?r.continue():r.abort());
  // setContent does not run addInitScript, so navigate to the local document first.
  await page.goto('about:blank');
  const content=fs.readFileSync('experience.html','utf8');
@@ -27,7 +27,7 @@ for(const [name,width,height] of [['mobile',390,844],['desktop',1440,900]]){
  for(const [index,step] of (plan?.steps||[]).entries()){
   try{
    if(step.action==='fill') await ui.getByLabel(step.target,{exact:true}).fill(step.value,{timeout:5000});
-   else if(step.action==='press') await ui.getByLabel(step.target,{exact:true}).press(step.value,{timeout:5000});
+   else if(step.action==='press') await ui.getByLabel(step.target,{exact:true}).press(step.value,{timeout:8000,delay:step.holdMs||0});
    else if(step.action==='download'){
     const [download]=await Promise.all([page.waitForEvent('download',{timeout:8000}),ui.getByRole('button',{name:step.target,exact:true}).click({timeout:5000})]);
     if(await download.failure())throw Error('Download failed');await verifyImage(fs.readFileSync(await download.path()),'download');
@@ -36,12 +36,19 @@ for(const [name,width,height] of [['mobile',390,844],['desktop',1440,900]]){
     for(let n=0;n<40&&shares.length===count;n++)await page.waitForTimeout(100);
     const share=shares[count];if(!share?.files?.length)throw Error('Share did not deliver an image File');await verifyImage(share.files[0].bytes,'share payload (OS delivery not tested)');
    }else await ui.getByRole('button',{name:step.target,exact:true}).click({timeout:5000});
+   if(step.waitMs)await page.waitForTimeout(step.waitMs);
    interacted=true;
    if(step.expected)await ui.getByText(step.expected,{exact:false}).first().waitFor({state:'visible',timeout:5000});
+   await page.screenshot({path:name+'-checkpoint-'+step.checkpoint+'.png'});
    steps.push({index,checkpoint:step.checkpoint,passed:true});
   }catch(e){errors.push('Step '+(index+1)+' '+step.target+': '+e.message.slice(0,300));steps.push({index,checkpoint:step.checkpoint,passed:false});break;}
  }
  if(!plan?.steps?.length)errors.push('No complete fan journey contract');
+ const media=await ui.locator('video').evaluateAll(nodes=>nodes.map(v=>({src:v.currentSrc,ready:v.readyState,error:v.error?.code||null,paused:v.paused,time:v.currentTime,muted:v.muted})));
+ if(media.some(v=>v.error||v.ready<2))errors.push('Video asset did not load usable frames');
+ if(media.some(v=>!v.muted))errors.push('Production video must be muted so it does not compete with the release player');
+ const activity=await ui.locator('body').evaluate(()=>window.__recoupEvents||[]);
+ if(plan?.steps?.some(s=>s.checkpoint==='result')&&!activity.includes('complete'))errors.push('Result completed without reporting window.recoup.track(\"complete\")');
  await page.screenshot({path:name+'-active.png'});
- results.push({name,errors,interacted,changed:before!==await ui.locator('body').innerText(),journeyPassed:!!plan?.steps?.length&&steps.length===plan.steps.length&&steps.every(s=>s.passed),steps,artifacts,overflow:await ui.locator('body').evaluate(()=>document.documentElement.scrollWidth>innerWidth),text:(await ui.locator('body').innerText()).slice(0,4000)});await page.close();
+ results.push({name,errors,media,activity,interacted,changed:before!==await ui.locator('body').innerText(),journeyPassed:!!plan?.steps?.length&&steps.length===plan.steps.length&&steps.every(s=>s.passed),steps,artifacts,overflow:await ui.locator('body').evaluate(()=>document.documentElement.scrollWidth>innerWidth),text:(await ui.locator('body').innerText()).slice(0,4000)});await page.close();
 }await browser.close();fs.writeFileSync('review.json',JSON.stringify(results));})().catch(e=>{console.error(e);process.exit(1)});`;

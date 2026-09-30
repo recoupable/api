@@ -91,6 +91,16 @@ it("saves partial coverage for a music-only summary", async () => {
     },
     deps,
   );
+  const claimed = deps.rpc.mock.calls.find(([name]) => name === "claim_context_enrichment");
+  expect(claimed?.[1].p_module).toMatchObject({
+    sources: [
+      {
+        url: "urn:recoup:context-result:result",
+        kind: "provider_metadata",
+        content: { resultId: "result", coverage: "full" },
+      },
+    ],
+  });
   const completed = deps.rpc.mock.calls.find(([name]) => name === "complete_context_enrichment");
   expect(completed?.[1].p_result).toMatchObject({ coverage: "partial", costUsd: null });
 });

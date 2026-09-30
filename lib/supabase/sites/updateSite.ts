@@ -5,7 +5,7 @@ export async function updateSite(
   id: string,
   ownerId: string,
   revision: number,
-  changes: Partial<Pick<Site, "draft" | "published" | "published_at">>,
+  changes: Partial<Pick<Site, "draft" | "published" | "published_at" | "artist_id">>,
 ) {
   const { data, error } = await siteTable()
     .update({

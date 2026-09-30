@@ -1,3 +1,8 @@
+import { prepareSiteFanConnection } from "./fanConnection/prepareSiteFanConnection";
+import { resolveSiteArtist } from "./production/resolveSiteArtist";
+import { collectReleaseContext } from "./production/collectReleaseContext";
+import { proposeExperienceConcepts } from "./production/proposeExperienceConcepts";
+import { readSiteContextBrief } from "./production/readSiteContextBrief";
 import { selectArtistOrganizationIds } from "@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds";
 import { siteOperationSchemas, type SiteOperation } from "./siteOperationSchemas";
 import { authorizeSiteWorkspace } from "./authorizeSiteWorkspace";
@@ -67,7 +72,7 @@ export async function processSiteOperation(
       name: input.name || release!.title.slice(0, 120),
       brief:
         input.brief ||
-        "Create a distinctive fan experience inspired by this release, its music, artwork and artist. Choose the strongest concept and format; it does not have to be a game. Make it worth sharing and easy to use on a phone.",
+        "Create a distinctive fan experience inspired by this release, its music, artwork and artist. Start with what fans would enjoy doing and select the strongest clear, worthwhile activity. Make the activity clear and worthwhile on a phone.",
       release_url: release?.url || input.releaseUrl,
       assets,
     });
@@ -85,21 +90,70 @@ export async function processSiteOperation(
     throw new SiteError(409, "This site changed. Reload before editing.");
   if (operation === "publish" && !site.draft)
     throw new SiteError(400, "Generate a preview before publishing");
+  const contextBriefId =
+    "contextBriefId" in input ? (input.contextBriefId as string | undefined) : undefined;
+  if (operation === "concepts" && "instruction" in input) {
+    const context = await collectReleaseContext(site, accountId, contextBriefId);
+    const concepts = await proposeExperienceConcepts(
+      site,
+      String(input.instruction),
+      context,
+      accountId,
+    );
+    await authorizeSiteWorkspace(accountId, site.owner_id);
+    if (context.engine?.briefId)
+      await readSiteContextBrief(site, accountId, context.engine.briefId);
+    return { concepts, revision: site.revision };
+  }
+  const approvedConcept =
+    operation === "generate"
+      ? siteOperationSchemas.generate.parse(input).approvedConcept
+      : undefined;
+  const selectedBrief = contextBriefId ?? site.draft?.production?.context.engine?.briefId;
+  if ((operation === "generate" || operation === "publish") && selectedBrief)
+    await readSiteContextBrief(site, accountId, selectedBrief);
   if (
     operation === "generate" &&
     "background" in input &&
     input.background &&
     "instruction" in input
   )
-    return startSiteProduction(site, String(input.instruction || site.brief), accountId);
+    return startSiteProduction(
+      site,
+      String(input.instruction || site.brief),
+      accountId,
+      contextBriefId,
+      approvedConcept,
+    );
+  const fanConnection =
+    operation === "publish"
+      ? await prepareSiteFanConnection(site, siteOperationSchemas.publish.parse(input).returnUrl)
+      : undefined;
   const changes =
     operation === "generate" && "instruction" in input
-      ? { draft: await produceSite(site, String(input.instruction), accountId) }
+      ? {
+          draft: await produceSite(
+            site,
+            String(input.instruction),
+            accountId,
+            contextBriefId,
+            approvedConcept,
+          ),
+        }
       : operation === "publish"
         ? { published: site.draft, published_at: new Date().toISOString() }
         : { published: null, published_at: null };
-  const updated = await updateSite(site.id, site.owner_id, site.revision, changes);
+  if (operation === "generate" && selectedBrief) {
+    await readSiteContextBrief(site, accountId, selectedBrief);
+    await authorizeSiteWorkspace(accountId, site.owner_id);
+  }
+  const updated = await updateSite(site.id, site.owner_id, site.revision, {
+    ...changes,
+    ...("draft" in changes && changes.draft
+      ? { artist_id: await resolveSiteArtist(site, changes.draft) }
+      : {}),
+  });
   if (!updated)
     throw new SiteError(409, "This site changed while you were editing. Reload before editing.");
-  return { site: updated };
+  return { site: updated, ...(fanConnection ? { fanConnection } : {}) };
 }

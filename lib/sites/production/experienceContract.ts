@@ -5,7 +5,7 @@ export const experienceCapabilities = {
   "browser-interaction":
     "Working local game, instrument, story or interaction using HTML/CSS/JS. No server state or leaderboard.",
   "production-artwork":
-    "Up to two images generated before publication through Recoup image generation. Real asset URLs are supplied to the builder. This is NOT visitor-time personalized AI generation.",
+    "Up to two production media assets (images or at most one short silent video) generated before publication through supported model adapters. Real asset URLs are supplied to the builder. This is NOT visitor-time personalized AI generation.",
   "image-download":
     "Create a real PNG/JPEG/WebP with canvas or composition of supplied CORS-enabled assets. Export nonempty bytes and provide a download. Test by reopening the exported image. No fake generation delay.",
   "file-share":
@@ -25,7 +25,26 @@ export const experienceContractSchema = z.object({
         action: z.enum(["click", "fill", "press", "download", "share"]),
         target: z.string().min(1).max(100),
         value: z.string().max(200),
-        expected: z.string().max(300),
+        holdMs: z
+          .number()
+          .int()
+          .min(0)
+          .max(2000)
+          .optional()
+          .describe("Milliseconds to hold a press key before releasing; zero for a tap."),
+        waitMs: z
+          .number()
+          .int()
+          .min(0)
+          .max(20000)
+          .optional()
+          .describe("Milliseconds after the action before checking expected text."),
+        expected: z
+          .string()
+          .max(300)
+          .describe(
+            "Literal visible text after this action, never a description of expected behavior.",
+          ),
         checkpoint: z.enum(["participate", "result", "delivery"]),
       }),
     )

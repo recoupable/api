@@ -1,3 +1,4 @@
+import { assetProductionSchema } from "../assets/catalog";
 import { z } from "zod";
 import { experienceContractSchema } from "./experienceContract";
 export const directionSchema = z.object({
@@ -10,7 +11,7 @@ export const directionSchema = z.object({
         fanPayoff: z.string(),
       }),
     )
-    .min(2)
+    .min(1)
     .max(3),
   selectedIndex: z.number().int().min(0).max(2),
   contract: experienceContractSchema,
@@ -21,9 +22,20 @@ export const directionSchema = z.object({
     .array(
       z.object({
         name: z.string().max(100),
+        production: assetProductionSchema
+          .optional()
+          .describe(
+            "Required for new asset plans: choose the model and explain why it fits this asset.",
+          ),
         purpose: z.string(),
         prompt: z.string().max(4000),
         aspectRatio: z.enum(["16:9", "1:1", "9:16"]),
+        style: z
+          .enum(["illustration", "photographic"])
+          .optional()
+          .describe(
+            "Use illustration for drawn, graphic or crafted worlds; photographic for editorial photography. Match the selected visual references.",
+          ),
       }),
     )
     .max(2),
@@ -49,10 +61,29 @@ export type CreativeReview = z.infer<typeof reviewSchema> & {
     scope: "generated-experience";
     nativeShareDelivery: "not-tested";
     spotifyAuthentication: "not-tested";
+    journey?: z.infer<typeof experienceContractSchema>;
     viewports: { name: string; journeyPassed?: boolean; errors: string[]; overflow: boolean }[];
   };
 };
 export type ReleaseContext = {
+  siteSkill?: Awaited<ReturnType<typeof import("../skills/prepareSiteSkill").prepareSiteSkill>>;
+  engine?: {
+    briefId: string;
+    requestIds: string[];
+    documents: {
+      id: string;
+      resultId: string;
+      subjectId: string;
+      topic: string;
+      version: number;
+      evidenceKind: string;
+      text: string;
+      coverage: string;
+      sourceVersionIds: string[];
+    }[];
+    missingTopics: string[];
+    guidance: string;
+  };
   release: {
     url: string;
     title: string;
@@ -63,8 +94,8 @@ export type ReleaseContext = {
     previewUrl: string | null;
   };
   music: {
-    status: "analyzed" | "unavailable";
-    coverage: "provided-audio" | "preview" | "none";
+    status: "analyzed" | "saved-analysis" | "unavailable";
+    coverage: "provided-audio" | "preview" | "source-defined" | "none";
     analysis: string;
     reason?: string;
   };

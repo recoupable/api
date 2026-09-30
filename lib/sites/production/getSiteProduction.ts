@@ -1,3 +1,4 @@
+import { readSiteBuildProgress } from "./readSiteBuildProgress";
 import { getRun } from "workflow/api";
 import { verifyGenerationJob } from "./verifyGenerationJob";
 import type { Site } from "../schema";
@@ -17,5 +18,7 @@ export async function getSiteProduction(token: string, siteId: string, accountId
       error:
         "Production stopped. Your saved draft is unchanged. Check generation logs before retrying.",
     };
-  return { generation: { status: "running" as const } };
+  // Progress is supplementary: an observability outage must not stop a healthy build.
+  const progress = await readSiteBuildProgress(job.runId).catch(() => undefined);
+  return { generation: { status: "running" as const, ...(progress ? { progress } : {}) } };
 }

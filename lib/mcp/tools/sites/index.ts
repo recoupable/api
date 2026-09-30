@@ -13,11 +13,15 @@ const operations: Record<SiteOperation, [string, string]> = {
   get: ["get_site", "Read a site's draft, published snapshot and revision before editing."],
   create: [
     "create_site",
-    "Create a private site draft from a Spotify release URL and optional brief/assets. Then call generate_site. Does not publish.",
+    "Create a private site draft from a Spotify release URL and optional brief/assets. Then call propose_site_concepts and ask the customer to select a pitch. Does not publish.",
+  ],
+  concepts: [
+    "propose_site_concepts",
+    "Return short fan-motivation-first pitches or missing context. Show the pitches to the customer and wait for their selection before generate_site. Uses credits for context/pitching; does not build assets, code or overwrite the draft.",
   ],
   generate: [
     "generate_site",
-    "Start background creative production from the release URL and optional instruction. Returns a generation token; poll get_site_generation. Includes research, audio analysis when available, creative direction, image assets, build and visual review. Uses credits and does not publish.",
+    "Build a site from the saved release. Omit approvedConcept for automatic context collection and concept selection, or pass a customer-selected concept to preserve that choice. Requires latest revision. Returns a token to poll get_site_generation. Optional contextBriefId reuses saved evidence. Uses credits; does not publish.",
   ],
   generation: [
     "get_site_generation",

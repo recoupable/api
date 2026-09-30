@@ -18,3 +18,16 @@ it("preserves pagination and distinguishes cached metrics from imagery", async (
   expect(r.gaps).toContain("No linked social profiles");
   expect(r.trace.freshness).toContain("unknown");
 });
+it("retains profile results when the independent post query fails", async () => {
+  const result = await collectContextSocials(id, id, 1, {
+    access: async () => true,
+    profiles: async () => [],
+    posts: async () => {
+      throw new Error("private database error");
+    },
+  });
+  expect(result.totalPosts).toBeNull();
+  expect(result.gaps).toContain("Saved post metrics could not be read");
+  expect(result.gaps).not.toContain("No saved post metrics");
+  expect(JSON.stringify(result)).not.toContain("private database error");
+});

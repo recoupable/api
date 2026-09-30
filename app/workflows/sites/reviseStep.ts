@@ -1,16 +1,27 @@
-import { reviseProduction } from "@/lib/sites/production/reviseProduction";
-import { FatalError } from "workflow";
+import type { reviseProduction } from "@/lib/sites/production/reviseProduction";
+import { assetsStep } from "./assetsStep";
+import { buildStep } from "./buildStep";
+/** Revision code generation uses the same durable, compacting turn loop as first builds. */
 export async function reviseStep(...args: Parameters<typeof reviseProduction>) {
-  "use step";
-  try {
-    return await reviseProduction(...args);
-  } catch (error) {
-    console.error(
-      "[sites:reviseStep]",
-      error instanceof Error
-        ? { name: error.name, message: error.message.slice(0, 1200) }
-        : "Unknown failure",
-    );
-    throw new FatalError("Site revision failed. No automatic provider retry was attempted.");
-  }
+  const [site, instruction, context, direction, assets, snapshot, review, accountId] = args;
+  if (review.issues.some(issue => issue.module === "direction"))
+    return { direction, assets, snapshot };
+  const nextAssets = review.issues.some(issue => issue.module === "assets")
+    ? await assetsStep(
+        { ...site, draft: snapshot },
+        direction,
+        accountId,
+        JSON.stringify(review.issues),
+      )
+    : assets;
+  const next = await buildStep(
+    site,
+    instruction,
+    { release: context, direction },
+    nextAssets,
+    accountId,
+    snapshot,
+    review,
+  );
+  return { direction, assets: nextAssets, snapshot: next };
 }

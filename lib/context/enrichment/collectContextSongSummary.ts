@@ -49,7 +49,13 @@ export async function collectContextSongSummary(
       provider: "ai-gateway",
       model: "openai/gpt-6-astra",
       input: { ...input, system },
-      sources: [],
+      sources: [input.audio, input.lyrics]
+        .filter(evidence => evidence !== null)
+        .map(evidence => ({
+          url: `urn:recoup:context-result:${evidence.resultId}`,
+          kind: "provider_metadata",
+          content: evidence,
+        })),
     },
     {
       ...deps,
