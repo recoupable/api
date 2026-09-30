@@ -8,7 +8,7 @@ vi.mock("@/lib/attio/assertPersonByEmail", () => ({
   assertPersonByEmail: vi.fn().mockResolvedValue({ recordId: "rec-1" }),
 }));
 vi.mock("@/lib/attio/createNote", () => ({
-  createNote: vi.fn().mockResolvedValue(undefined),
+  createNote: vi.fn().mockResolvedValue(true),
 }));
 vi.mock("@/lib/telegram/sendSalesNotification", () => ({
   sendSalesNotification: vi.fn().mockResolvedValue(undefined),
@@ -27,7 +27,7 @@ describe("captureLead", () => {
   beforeEach(() => {
     vi.stubEnv("ATTIO_API_KEY", "test-key");
     vi.mocked(assertPersonByEmail).mockClear().mockResolvedValue({ recordId: "rec-1" });
-    vi.mocked(createNote).mockClear();
+    vi.mocked(createNote).mockReset().mockResolvedValue(true);
     vi.mocked(sendSalesNotification).mockClear().mockResolvedValue(undefined);
   });
   afterEach(() => {
@@ -85,6 +85,26 @@ describe("captureLead", () => {
     vi.mocked(assertPersonByEmail).mockResolvedValueOnce({ error: "assert failed: 400" });
     const result = await captureLead(booking);
     expect(result.success).toBe(false);
+    expect(createNote).not.toHaveBeenCalled();
+    expect(sendSalesNotification).not.toHaveBeenCalled();
+  });
+
+  it("rejects capture when the full inquiry note was not stored", async () => {
+    vi.mocked(createNote).mockResolvedValueOnce(false);
+    expect(await captureLead(booking)).toMatchObject({ success: false });
+    expect(sendSalesNotification).not.toHaveBeenCalled();
+  });
+
+  it("returns a safe failure when the note transport rejects", async () => {
+    vi.mocked(createNote).mockRejectedValueOnce(new Error("private provider detail"));
+    const result = await captureLead(booking);
+    expect(result).toEqual({ success: false, error: "Could not save lead details" });
+    expect(sendSalesNotification).not.toHaveBeenCalled();
+  });
+
+  it("rejects a person assertion without a record id", async () => {
+    vi.mocked(assertPersonByEmail).mockResolvedValueOnce({});
+    expect(await captureLead(booking)).toMatchObject({ success: false });
     expect(createNote).not.toHaveBeenCalled();
     expect(sendSalesNotification).not.toHaveBeenCalled();
   });
