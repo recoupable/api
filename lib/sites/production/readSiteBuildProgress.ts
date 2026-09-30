@@ -1,4 +1,6 @@
-import { hydrateResourceIO, observabilityRevivers } from "workflow/observability";
+import { observabilityRevivers } from "workflow/observability";
+import { hydrateDataWithKey, isEncryptedData } from "@workflow/core/serialization-format";
+import { importKey } from "@workflow/core/encryption";
 import { buildRevealSchema } from "./buildReveal";
 import { getWorld } from "workflow/runtime";
 
@@ -45,7 +47,17 @@ export async function readSiteBuildProgress(runId: string) {
   if (milestone?.stepId) {
     try {
       const resource = await getWorld().steps.get(runId, milestone.stepId, { resolveData: "all" });
-      reveal = buildRevealSchema.parse(hydrateResourceIO(resource, observabilityRevivers).output);
+      let key;
+      if (isEncryptedData(resource.output)) {
+        const world = getWorld();
+        const run = await world.runs.get(runId);
+        const rawKey = await world.getEncryptionKeyForRun?.(run);
+        if (!rawKey) throw new Error("Reveal encryption key unavailable");
+        key = await importKey(rawKey);
+      }
+      reveal = buildRevealSchema.parse(
+        await hydrateDataWithKey(resource.output, observabilityRevivers, key),
+      );
     } catch {
       /* Milestones are supplementary; stage progress remains available. */
     }
