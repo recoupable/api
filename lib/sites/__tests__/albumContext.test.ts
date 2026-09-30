@@ -60,3 +60,43 @@ it("combines attributed per-track analysis without treating one song as the albu
   expect(result.music.reason).toContain("Track 2 unavailable");
   expect(result.engine).toBeUndefined();
 });
+
+it("preserves missing audio and lyrics alongside usable album tracks", () => {
+  const release = {
+    url: site.release_url,
+    title: "Album",
+    artists: ["Artist"],
+    artwork: null,
+    date: null,
+    isrc: null,
+    previewUrl: null,
+  };
+  const missing: ReleaseContext = {
+    release: { ...release, title: "Missing song", url: "https://open.spotify.com/track/missing" },
+    music: { status: "unavailable", coverage: "none", analysis: "", reason: "Verification failed" },
+    research: { status: "unavailable", sources: [] },
+    gaps: [
+      {
+        trackUrl: "https://open.spotify.com/track/missing",
+        topic: "audio_source",
+        reason: "Verification failed",
+      },
+    ],
+  };
+  const available: ReleaseContext = {
+    ...missing,
+    release: { ...release, title: "Available song" },
+    music: {
+      status: "saved-analysis",
+      coverage: "source-defined",
+      analysis: "Verified music analysis",
+    },
+    gaps: [],
+  };
+  const result = combineAlbumContext({ release, tracks: [], gaps: [] }, [missing, available]);
+  expect(result.music.status).toBe("saved-analysis");
+  expect(result.tracks).toHaveLength(2);
+  expect(result.gaps).toEqual(missing.gaps);
+  expect(result.music.reason).toContain("Missing song: audio_source unavailable");
+  expect(result.music.analysis).toContain("Verified music analysis");
+});

@@ -48,17 +48,40 @@ export async function siteProductionWorkflow(
         stage = "metadata";
         const saved = await metadataStep(trackSite, accountId, Boolean(album));
         stage = "audio acquisition";
-        await audioSourceStep(trackSite, accountId, saved);
-        stage = "lyrics";
-        await audioAnalysisStep(trackSite, accountId, saved, "lyrics");
-        stage = "audio analysis";
-        await audioAnalysisStep(trackSite, accountId, saved, "summary");
+        const audio = await audioSourceStep(trackSite, accountId, saved, Boolean(album));
+        if (audio.status === "available") {
+          stage = "lyrics";
+          await audioAnalysisStep(trackSite, accountId, saved, "lyrics");
+          stage = "audio analysis";
+          await audioAnalysisStep(trackSite, accountId, saved, "summary");
+        }
         stage = "artwork analysis";
         await enrichContextStep(trackSite, accountId, saved, "artwork_branding");
         stage = "artist research";
         await enrichContextStep(trackSite, accountId, saved, "artist_research");
         stage = "context brief";
         const trackContext = await contextBriefStep(trackSite, accountId, saved);
+        if (audio.status === "unavailable") {
+          trackContext.gaps = [
+            { trackUrl: saved.release.url, topic: "audio_source", reason: audio.reason },
+            {
+              trackUrl: saved.release.url,
+              topic: "lyrics",
+              reason: "Not analyzed: verified audio unavailable",
+            },
+            {
+              trackUrl: saved.release.url,
+              topic: "song_summary",
+              reason: "Not analyzed: verified audio unavailable",
+            },
+          ];
+          trackContext.music = {
+            status: "unavailable",
+            coverage: "none",
+            analysis: "",
+            reason: audio.reason,
+          };
+        }
         contexts.push(trackContext);
       }
       context = album ? combineAlbumContext(album, contexts) : contexts[0];

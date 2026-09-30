@@ -8,6 +8,7 @@ export function combineAlbumContext(
   return {
     release: album.release,
     tracks,
+    gaps: tracks.flatMap(track => track.gaps ?? []),
     music: {
       status: tracks.some(track => track.music.status !== "unavailable")
         ? "saved-analysis"
@@ -22,6 +23,12 @@ export function combineAlbumContext(
       reason: [
         `Recording-by-recording evidence; do not generalize one song to the whole album. Lyrics are saved per recording and inform paraphrased themes.`,
         ...album.gaps,
+        ...tracks.flatMap(track =>
+          (track.gaps ?? []).map(
+            gap => `${track.release.title}: ${gap.topic} unavailable — ${gap.reason}`,
+          ),
+        ),
+        "Continue using verified tracks and metadata. Do not invent missing lyrics, musical qualities or playback assets. Do not make unavailable track audio essential to the experience.",
       ].join("\n"),
     },
     research: tracks.find(track => track.research.status === "available")?.research ?? {
