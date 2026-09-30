@@ -2,7 +2,7 @@ import type { Site, SiteAsset, SiteSnapshot } from "../schema";
 import type { ReleaseContext, CreativeDirection, CreativeReview } from "./schema";
 import { produceAssets } from "./produceAssets";
 import { buildExperience } from "./buildExperience";
-/** Route concrete review findings to the module responsible, with a single bounded pass. */
+/** Route concrete review findings to the module responsible, for the next repair pass. */
 export async function reviseProduction(
   site: Site,
   instruction: string,

@@ -1,3 +1,4 @@
+import { reviewStep } from "@/app/workflows/sites/reviewStep";
 import { prepareSkillStep } from "@/app/workflows/sites/prepareSkillStep";
 import { directionStep } from "@/app/workflows/sites/directionStep";
 import { assetsStep } from "@/app/workflows/sites/assetsStep";
@@ -43,6 +44,9 @@ vi.mock("@/app/workflows/sites/reviseStep", () => ({ reviseStep: m.revise }));
 vi.mock("@/app/workflows/sites/saveSiteStep", () => ({ saveSiteStep: m.save }));
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(reviewStep)
+    .mockReset()
+    .mockResolvedValue({ verdict: "pass", issues: [] } as never);
   m.metadata.mockResolvedValue({ requestId: "request" });
   m.audio.mockResolvedValue({});
   m.brief.mockResolvedValue({});
@@ -185,5 +189,40 @@ it("explains build output exhaustion without exposing provider content or saving
     "error",
     "The site builder reached its generation limit before finishing the code. Your saved draft is unchanged.",
   );
+  expect(m.save).not.toHaveBeenCalled();
+});
+
+it("continues durable repairs beyond four reviews and saves only after passing", async () => {
+  for (let i = 0; i < 6; i++)
+    vi.mocked(reviewStep).mockResolvedValueOnce({
+      verdict: "revise",
+      issues: [{ module: "implementation", detail: `Fix ${i}` }],
+    } as never);
+  m.revise.mockResolvedValue({ snapshot: {}, direction: {}, assets: [] });
+  await siteProductionWorkflow({ id: "site" } as Site, "", "account", undefined, approvedConcept);
+  expect(m.revise).toHaveBeenCalledTimes(6);
+  expect(reviewStep).toHaveBeenCalledTimes(7);
+  expect(m.save).toHaveBeenCalledOnce();
+  expect(m.save.mock.calls[0][1].production.status).toBe("reviewed");
+  expect(m.save.mock.calls[0][1].production.reviews).toHaveLength(7);
+  for (let i = 0; i < 6; i++) expect(m.revise.mock.calls[i][6].issues[0].detail).toBe(`Fix ${i}`);
+});
+it("reports a repair failure without saving an unfinished candidate", async () => {
+  vi.mocked(reviewStep).mockResolvedValueOnce({
+    verdict: "revise",
+    issues: [{ module: "implementation", detail: "Font missing" }],
+  } as never);
+  m.revise.mockRejectedValueOnce(new Error("Provider unavailable"));
+  const result = await siteProductionWorkflow(
+    { id: "site" } as Site,
+    "",
+    "account",
+    undefined,
+    approvedConcept,
+  );
+  expect(result).toEqual({
+    error:
+      "Site production stopped during implementation repair. Your existing draft is unchanged.",
+  });
   expect(m.save).not.toHaveBeenCalled();
 });

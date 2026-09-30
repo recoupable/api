@@ -89,10 +89,10 @@ export async function siteProductionWorkflow(
     stage = "review";
     const reviews = [await reviewStep(snapshot, direction, accountId, site.id, context.siteSkill)];
     while (
-      reviews.length < 4 &&
       reviews.at(-1)!.verdict === "revise" &&
       !reviews.at(-1)!.issues.some(issue => issue.module === "direction")
     ) {
+      stage = "implementation repair";
       ({ snapshot, direction, assets } = await reviseStep(
         site,
         instruction,
@@ -103,6 +103,7 @@ export async function siteProductionWorkflow(
         reviews.at(-1)!,
         accountId,
       ));
+      stage = "review";
       reviews.push(await reviewStep(snapshot, direction, accountId, site.id, context.siteSkill));
     }
     stage = "save";

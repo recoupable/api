@@ -53,12 +53,21 @@ it("revises once with concrete review feedback and keeps both reviews", async ()
   expect(JSON.stringify(m.build.mock.calls[1])).toContain("Mobile start button clipped");
   expect(result.production.reviews).toHaveLength(2);
 });
-it("does not endlessly spend or label a failed review as approved", async () => {
-  m.review.mockResolvedValue({ verdict: "revise", issues: [{ detail: "Unreadable" }] });
+it("keeps repairing beyond four reviews until the implementation passes", async () => {
+  for (let i = 0; i < 6; i++)
+    m.review.mockResolvedValueOnce({
+      verdict: "revise",
+      issues: [{ module: "implementation", detail: `Fix ${i}` }],
+    });
   const result = await produceSite(site, "", "account", "saved-brief", approvedConcept);
-  expect(m.build).toHaveBeenCalledTimes(4);
-  expect(result.production.context.siteSkill?.referenceIds).toEqual([1, 2]);
-  expect(result.production.status).toBe("needs-review");
+  expect(m.build).toHaveBeenCalledTimes(7);
+  expect(result.production.reviews).toHaveLength(7);
+  expect(result.production.status).toBe("reviewed");
+  expect(m.direct).toHaveBeenCalledTimes(1);
+  for (let i = 0; i < 6; i++)
+    expect(m.build.mock.calls[i + 1][6]).toEqual(
+      expect.objectContaining({ issues: [{ module: "implementation", detail: `Fix ${i}` }] }),
+    );
 });
 it("asset failures stop before code generation rather than inventing asset URLs", async () => {
   m.assets.mockRejectedValue(new Error("Image provider unavailable"));
