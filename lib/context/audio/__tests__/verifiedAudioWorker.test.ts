@@ -39,3 +39,33 @@ it.skipIf(spawnSync("python3", ["-c", "import numpy"]).status !== 0)(
     expect(JSON.parse(result.stdout).aligned_correlation).toBeGreaterThan(0.95);
   },
 );
+
+it("uses exact artist/title discovery and broadens only when no eligible result exists", () => {
+  const script = `
+import ast, re, sys, json
+module=ast.parse(sys.stdin.read())
+helpers=ast.Module(body=[n for n in module.body if isinstance(n,ast.FunctionDef) and n.name in ('norm','matches_metadata','discover_candidates')],type_ignores=[])
+exec(compile(helpers,'worker','exec'))
+recording={'title':'Butterflies','artists':['Gatsby Grace'],'durationSeconds':139.919}
+correct={'id':'oV1uMjEw5qU','title':'Butterflies','channel':'Gatsby Grace - Topic','duration':140}
+unrelated={'id':'Te11UaHOHMQ','title':'Young and Beautiful','channel':'Lana Del Rey','duration':236}
+queries=[]
+responses=[{'entries':[correct]}]
+def yt(args):
+    queries.append(args[-1]); return json.dumps(responses.pop(0))
+assert discover_candidates(recording)==[correct]
+assert len(queries)==1 and '"Gatsby Grace"' in queries[0] and '"Butterflies"' in queries[0]
+queries.clear(); responses=[{'entries':[unrelated]},{'entries':[correct]}]
+assert discover_candidates(recording)==[correct]
+assert len(queries)==2
+queries.clear(); responses=[{'entries':[unrelated]},{'entries':[unrelated]}]
+assert discover_candidates(recording)==[]
+assert len(queries)==2
+`;
+  const result = spawnSync("python3", ["-c", script], {
+    input: verifiedAudioWorker,
+    encoding: "utf8",
+  });
+  expect(result.stderr).toBe("");
+  expect(result.status).toBe(0);
+});

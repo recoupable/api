@@ -76,6 +76,8 @@ export async function acquireVerifiedAudioInSandbox(
       )
       .max(3)
       .parse(JSON.parse(candidatesFile?.toString() ?? "[]"));
+    if (!candidates.length)
+      throw new Error("No matching YouTube recording found after exact and broad searches");
     let matched = false;
     for (const candidate of candidates) {
       const source = await download(candidate.id);

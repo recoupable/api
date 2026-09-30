@@ -51,8 +51,6 @@ def refine_match(x,y,coarse_seconds,rate=16000):
     return (start+offset)/rate,confidence
 y=pcm('preview.mp3'); y=y-y.mean()
 if len(y)<30000 or np.dot(y,y)<1e-8: raise ValueError('Insufficient preview for waveform match')
-stage='YouTube search'
-search=json.loads(yt(['--flat-playlist','--skip-download','--dump-single-json','--','ytsearch5:'+r['title']+' '+r['artists'][0]+' audio'])) if mode=='discover' else {'entries':[json.load(open('candidate.json'))]}
 def matches_metadata(candidate, recording):
     title=norm(re.sub(r'\s*\((?:feat\.?|ft\.?).*?\)','',recording['title'],flags=re.I))
     text=norm(candidate.get('title','')+' '+(candidate.get('channel') or ''))
@@ -65,11 +63,22 @@ def matches_metadata(candidate, recording):
     if norm(recording['artists'][0]).replace(' ','') not in text.replace(' ',''): return False
     alternatives=['live','remix','acoustic','instrumental','karaoke','cover','sped up','slowed','clean']
     return not any((' '+v+' ') in (' '+text+' ') and (' '+v+' ') not in (' '+norm(recording['title'])+' ') for v in alternatives)
-stage='candidate matching'
-candidates=[c for c in search.get('entries',[])[:5] if re.fullmatch(r'[A-Za-z0-9_-]{11}',c.get('id','')) and matches_metadata(c,r)]
+def discover_candidates(recording):
+    # Exact names prevent the search engine from substituting popular unrelated artists.
+    artist=recording['artists'][0].replace('"',' ').strip()
+    title=recording['title'].replace('"',' ').strip()
+    queries=['"'+artist+'" "'+title+'"',title+' '+artist+' audio']
+    for query in queries:
+        search=json.loads(yt(['--flat-playlist','--skip-download','--dump-single-json','--','ytsearch10:'+query]))
+        eligible=[c for c in (search.get('entries') or [])[:10] if c and re.fullmatch(r'[A-Za-z0-9_-]{11}',c.get('id','')) and matches_metadata(c,recording)]
+        if eligible: return eligible[:3]
+    return []
+stage='YouTube search' if mode=='discover' else 'candidate matching'
 if mode=='discover':
-    json.dump(candidates[:3],open('candidates.json','w'))
+    json.dump(discover_candidates(r),open('candidates.json','w'))
     sys.exit(0)
+candidate=json.load(open('candidate.json'))
+candidates=[candidate] if matches_metadata(candidate,r) else []
 for c in candidates:
     vid=c['id']
     path=pathlib.Path('candidate.mp3')
