@@ -7,7 +7,8 @@ import type { SiteSnapshot } from "../schema";
 export async function renderExperience(snapshot: SiteSnapshot, contract?: ExperienceContract) {
   const sandbox = await Sandbox.create({
     runtime: "node22",
-    timeout: 180000,
+    // Browser installation and two complete device journeys share this lifetime.
+    timeout: 600000,
     ...(process.env.VERCEL_TOKEN && process.env.VERCEL_PROJECT_ID && process.env.VERCEL_TEAM_ID
       ? {
           token: process.env.VERCEL_TOKEN,
@@ -16,6 +17,7 @@ export async function renderExperience(snapshot: SiteSnapshot, contract?: Experi
         }
       : {}),
   });
+  let stage = "dependency installation";
   try {
     const dependencies = await sandbox.runCommand({
       cmd: "dnf",
@@ -38,6 +40,7 @@ export async function renderExperience(snapshot: SiteSnapshot, contract?: Experi
       sudo: true,
     });
     if (dependencies.exitCode !== 0) throw new Error("Review browser dependencies failed");
+    stage = "browser installation";
     const install = await sandbox.runCommand("npm", [
       "install",
       "--ignore-scripts",
@@ -47,6 +50,9 @@ export async function renderExperience(snapshot: SiteSnapshot, contract?: Experi
       "@sparticuz/chromium@138.0.2",
     ]);
     if (install.exitCode !== 0) throw new Error("Review browser installation failed");
+    stage = "browser setup";
+    // Setup must not consume the time reserved for the actual review.
+    await sandbox.extendTimeout(600000);
     // Only known supplied/generated image hosts are available while untrusted code executes.
     const hosts = [...new Set(snapshot.assets.map(a => new URL(a.url).hostname))];
     await sandbox.updateNetworkPolicy({ allow: hosts });
@@ -65,9 +71,11 @@ export async function renderExperience(snapshot: SiteSnapshot, contract?: Experi
       { path: "journey.json", content: Buffer.from(JSON.stringify(contract ?? null)) },
       { path: "review.cjs", content: Buffer.from(journeyRunner) },
     ]);
+    stage = "browser playthrough";
     const run = await sandbox.runCommand("node", ["review.cjs"]);
     if (run.exitCode !== 0)
       throw new Error(`Rendered review did not complete: ${(await run.stderr()).slice(-2500)}`);
+    stage = "evidence collection";
     const report = await sandbox.readFileToBuffer({ path: "review.json" });
     if (!report) throw new Error("Rendered review produced no evidence");
     const images: string[] = [];
@@ -100,7 +108,18 @@ export async function renderExperience(snapshot: SiteSnapshot, contract?: Experi
       }[],
       images,
     };
+  } catch (error) {
+    throw new Error(
+      `Site review ${stage} failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      { cause: error },
+    );
   } finally {
-    await sandbox.stop();
+    // An expired VM can return 410 here; cleanup must not replace the original failure
+    // or discard evidence already collected from a successful review.
+    try {
+      await sandbox.stop();
+    } catch {
+      console.warn("[sites:review-cleanup] Sandbox stop failed; its lifetime remains bounded.");
+    }
   }
 }
