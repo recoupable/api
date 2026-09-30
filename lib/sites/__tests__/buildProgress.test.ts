@@ -1,12 +1,14 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { readSiteBuildProgress } from "../production/readSiteBuildProgress";
+import { encrypt, importKey } from "@workflow/core/encryption";
+import { encodeWithFormatPrefix } from "@workflow/core/serialization-format";
+const runGet = vi.hoisted(() => vi.fn());
+const keyGet = vi.hoisted(() => vi.fn());
 const list = vi.hoisted(() => vi.fn());
 const get = vi.hoisted(() => vi.fn());
-vi.mock("workflow/observability", () => ({
-  hydrateResourceIO: (value: unknown) => value,
-  observabilityRevivers: {},
+vi.mock("workflow/runtime", () => ({
+  getWorld: () => ({ steps: { list, get }, runs: { get: runGet }, getEncryptionKeyForRun: keyGet }),
 }));
-vi.mock("workflow/runtime", () => ({ getWorld: () => ({ steps: { list, get } }) }));
 const step = (name: string, time: number) => ({
   stepName: `step//path//${name}`,
   status: "completed",
@@ -72,4 +74,29 @@ it("keeps reporting progress when a reveal cannot be read", async () => {
   });
   get.mockRejectedValue(new Error("Unavailable"));
   expect(await readSiteBuildProgress("run")).toMatchObject({ phase: "review", reviewPass: 1 });
+});
+
+it("decrypts production reveal output using its run key and strips private fields", async () => {
+  const rawKey = crypto.getRandomValues(new Uint8Array(32));
+  const key = await importKey(rawKey);
+  const serialized = new TextEncoder().encode(
+    '[{"concept":1,"assets":2,"secret":3},"Make a letter",[],"private"]',
+  );
+  const output = encodeWithFormatPrefix(
+    "encr",
+    await encrypt(key, encodeWithFormatPrefix("devl", serialized)),
+  );
+  list.mockResolvedValue({
+    data: [{ ...step("revealBuildStep", 3), stepId: "safe" }, step("reviewStep", 4)],
+    hasMore: false,
+  });
+  get.mockResolvedValue({ stepId: "safe", output });
+  const run = { runId: "run", executionContext: { deploymentId: "original" } };
+  runGet.mockResolvedValue(run);
+  keyGet.mockResolvedValue(rawKey);
+  expect((await readSiteBuildProgress("run")).reveal).toEqual({
+    concept: "Make a letter",
+    assets: [],
+  });
+  expect(keyGet).toHaveBeenCalledWith(run);
 });
