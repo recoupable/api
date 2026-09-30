@@ -1,3 +1,5 @@
+import { hydrateResourceIO, observabilityRevivers } from "workflow/observability";
+import { buildRevealSchema } from "./buildReveal";
 import { getWorld } from "workflow/runtime";
 
 const stages: Record<string, { phase: string; detail: string }> = {
@@ -20,9 +22,9 @@ const stages: Record<string, { phase: string; detail: string }> = {
   saveSiteStep: { phase: "review", detail: "Saving your preview" },
 };
 
-/** Read only step metadata: never fetch model inputs, outputs, credentials, or prompts. */
+/** Read only step metadata: fetch output only for the explicit customer-facing reveal step. */
 export async function readSiteBuildProgress(runId: string) {
-  const steps: { stepName: string; status: string; createdAt: Date }[] = [];
+  const steps: { stepId?: string; stepName: string; status: string; createdAt: Date }[] = [];
   let cursor: string | undefined;
   do {
     const page = await getWorld().steps.list({
@@ -35,6 +37,18 @@ export async function readSiteBuildProgress(runId: string) {
   } while (cursor);
   steps.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   const name = (step: { stepName: string }) => step.stepName.split("//").at(-1)!;
+  const milestone = steps.find(
+    step => name(step) === "revealBuildStep" && step.status === "completed",
+  );
+  let reveal;
+  if (milestone?.stepId) {
+    try {
+      const resource = await getWorld().steps.get(runId, milestone.stepId, { resolveData: "all" });
+      reveal = buildRevealSchema.parse(hydrateResourceIO(resource, observabilityRevivers).output);
+    } catch {
+      /* Milestones are supplementary; stage progress remains available. */
+    }
+  }
   const current = steps.find(step => stages[name(step)]);
   if (!current)
     return { phase: "queued", detail: "Waiting for the builder to start", reviewPass: 0 };
@@ -45,5 +59,6 @@ export async function readSiteBuildProgress(runId: string) {
     phase: refining ? "review" : stage.phase,
     detail: refining ? "Refining the experience after review" : stage.detail,
     reviewPass: reviews.length,
+    ...(reveal ? { reveal } : {}),
   };
 }

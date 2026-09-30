@@ -1,3 +1,4 @@
+vi.mock("@/app/workflows/sites/revealBuildStep", () => ({ revealBuildStep: vi.fn() }));
 import { reviewStep } from "@/app/workflows/sites/reviewStep";
 import { prepareSkillStep } from "@/app/workflows/sites/prepareSkillStep";
 import { directionStep } from "@/app/workflows/sites/directionStep";
