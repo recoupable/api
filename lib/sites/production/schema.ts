@@ -69,6 +69,7 @@ export type CreativeReview = z.infer<typeof reviewSchema> & {
   };
 };
 export type ReleaseContext = {
+  gaps?: { trackUrl: string; topic: string; reason: string }[];
   tracks?: ReleaseContext[];
   siteSkill?: Awaited<ReturnType<typeof import("../skills/prepareSiteSkill").prepareSiteSkill>>;
   engine?: {
