@@ -1,4 +1,3 @@
-vi.mock("@/app/workflows/sites/revealBuildStep", () => ({ revealBuildStep: vi.fn() }));
 import { reviewStep } from "@/app/workflows/sites/reviewStep";
 import { prepareSkillStep } from "@/app/workflows/sites/prepareSkillStep";
 import { directionStep } from "@/app/workflows/sites/directionStep";
@@ -7,6 +6,7 @@ import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
 import { siteProductionWorkflow } from "@/app/workflows/sites/siteProductionWorkflow";
 import type { Site } from "../schema";
+vi.mock("@/app/workflows/sites/revealBuildStep", () => ({ revealBuildStep: vi.fn() }));
 vi.mock("@/app/workflows/sites/prepareSkillStep", () => ({
   prepareSkillStep: vi.fn(async () => ({
     name: "recoup-content-build-sites",
