@@ -8,7 +8,7 @@ vi.mock("@/lib/attio/assertPersonByEmail", () => ({
   assertPersonByEmail: vi.fn().mockResolvedValue({ recordId: "rec-1" }),
 }));
 vi.mock("@/lib/attio/createNote", () => ({
-  createNote: vi.fn().mockResolvedValue(undefined),
+  createNote: vi.fn().mockResolvedValue(true),
 }));
 vi.mock("@/lib/telegram/sendSalesNotification", () => ({
   sendSalesNotification: vi.fn().mockResolvedValue(undefined),
@@ -27,7 +27,7 @@ describe("captureLead", () => {
   beforeEach(() => {
     vi.stubEnv("ATTIO_API_KEY", "test-key");
     vi.mocked(assertPersonByEmail).mockClear().mockResolvedValue({ recordId: "rec-1" });
-    vi.mocked(createNote).mockClear();
+    vi.mocked(createNote).mockReset().mockResolvedValue(true);
     vi.mocked(sendSalesNotification).mockClear().mockResolvedValue(undefined);
   });
   afterEach(() => {
@@ -58,9 +58,24 @@ describe("captureLead", () => {
     expect(text).toContain("https://app.attio.com/recoup/person/rec-1/overview");
   });
 
-  it("creates no note for a plain subscribe", async () => {
-    await captureLead({ kind: "subscribe", email: "a@b.com", source: "blog-cta" });
-    expect(createNote).not.toHaveBeenCalled();
+  it("attaches signup attribution without replacing the person's acquisition source", async () => {
+    await captureLead({
+      kind: "subscribe",
+      email: "a@b.com",
+      source: "/blog",
+      utm_source: "linkedin",
+      utm_medium: "social",
+      utm_campaign: "music-ops",
+    });
+    expect(assertPersonByEmail).toHaveBeenCalledWith({
+      email_addresses: [{ email_address: "a@b.com" }],
+    });
+    expect(createNote).toHaveBeenCalledWith({
+      parentObject: "people",
+      parentRecordId: "rec-1",
+      title: "Website Signup",
+      content: "Source: /blog\nUTM source: linkedin\nUTM medium: social\nUTM campaign: music-ops",
+    });
     expect(sendSalesNotification).toHaveBeenCalled();
   });
 
@@ -70,6 +85,29 @@ describe("captureLead", () => {
     vi.mocked(assertPersonByEmail).mockResolvedValueOnce({ error: "assert failed: 400" });
     const result = await captureLead(booking);
     expect(result.success).toBe(false);
+    expect(createNote).not.toHaveBeenCalled();
+    expect(sendSalesNotification).not.toHaveBeenCalled();
+  });
+
+  it("rejects capture when the full inquiry note was not stored", async () => {
+    vi.mocked(createNote).mockResolvedValueOnce(false);
+    expect(await captureLead(booking)).toEqual({
+      success: false,
+      error: "Could not save lead details",
+    });
+    expect(sendSalesNotification).not.toHaveBeenCalled();
+  });
+
+  it("returns a safe failure when the note transport rejects", async () => {
+    vi.mocked(createNote).mockRejectedValueOnce(new Error("private provider detail"));
+    const result = await captureLead(booking);
+    expect(result).toEqual({ success: false, error: "Could not save lead details" });
+    expect(sendSalesNotification).not.toHaveBeenCalled();
+  });
+
+  it("rejects a person assertion without a record id", async () => {
+    vi.mocked(assertPersonByEmail).mockResolvedValueOnce({});
+    expect(await captureLead(booking)).toEqual({ success: false, error: "Missing CRM record id" });
     expect(createNote).not.toHaveBeenCalled();
     expect(sendSalesNotification).not.toHaveBeenCalled();
   });

@@ -22,7 +22,7 @@ export type CaptureLeadResult =
  * Storage is the success criterion and **fails loudly**: an Attio failure
  * returns an error (the route turns it into a 502) and pages nobody — a
  * notification about a lead that was not stored would be a false alarm. The
- * note and the Telegram ping are best-effort once the person exists.
+ * full note is also required; Telegram remains best-effort after it is stored.
  *
  * The package labels a $5,000/mo enquiry; buildLeadNotification carries the
  * triage fields and the Attio deep link so the channel can open the lead in
@@ -42,20 +42,23 @@ export async function captureLead(lead: PostLeadsBody): Promise<CaptureLeadResul
     email_addresses: [{ email_address: lead.email }],
     ...(name && { name }),
   });
-  if (error) return { success: false, error };
+  if (error || !recordId) return { success: false, error: error || "Missing CRM record id" };
 
-  const recordUrl = recordId
-    ? `https://app.attio.com/${ATTIO_WORKSPACE}/person/${recordId}/overview`
-    : undefined;
+  const recordUrl = `https://app.attio.com/${ATTIO_WORKSPACE}/person/${recordId}/overview`;
 
   const note = buildLeadNote(lead);
-  if (note && recordId) {
-    await createNote({
-      parentObject: "people",
-      parentRecordId: recordId,
-      title: note.title,
-      content: note.content,
-    });
+  if (note) {
+    try {
+      const stored = await createNote({
+        parentObject: "people",
+        parentRecordId: recordId,
+        title: note.title,
+        content: note.content,
+      });
+      if (!stored) return { success: false, error: "Could not save lead details" };
+    } catch {
+      return { success: false, error: "Could not save lead details" };
+    }
   }
 
   // sendSalesNotification applies the isTestEmail filter itself and never
