@@ -1,15 +1,16 @@
 import { attioFetch } from "@/lib/attio/request";
 
 /**
- * Attach a markdown note to a record. Best-effort — logs on failure and never
- * throws, so a notes outage can't break the caller's flow.
+ * Attach a markdown note and report whether the provider accepted it.
+ * HTTP failures return false; transport errors may reject. Callers decide
+ * whether note persistence is required for their success criterion.
  */
 export async function createNote(note: {
   parentObject: string;
   parentRecordId: string;
   title: string;
   content: string;
-}): Promise<void> {
+}): Promise<boolean> {
   const res = await attioFetch("/notes", {
     method: "POST",
     body: JSON.stringify({
@@ -23,6 +24,8 @@ export async function createNote(note: {
     }),
   });
   if (!res.ok) {
-    console.error(`[attio] note create failed: ${res.status} — ${await res.text()}`);
+    console.error(`[attio] note create failed: ${res.status}`);
+    return false;
   }
+  return true;
 }

@@ -19,7 +19,7 @@ describe("createNote", () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await createNote(note);
+    expect(await createNote(note)).toBe(true);
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(String(url)).toBe("https://api.attio.com/v2/notes");
@@ -35,7 +35,7 @@ describe("createNote", () => {
   it("logs but does not throw on failure", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("bad", { status: 500 })));
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    await expect(createNote(note)).resolves.toBeUndefined();
+    await expect(createNote(note)).resolves.toBe(false);
     expect(errSpy).toHaveBeenCalled();
     errSpy.mockRestore();
   });
