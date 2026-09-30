@@ -1,3 +1,4 @@
+import { openingSequencePrinciples, openingSequenceSchema } from "./openingSequence";
 import { assetModelCatalog, assetSelectionGuidance } from "../assets/catalog";
 import { creativeCriteria } from "./creativeCriteria";
 import { conceptPitchSchema, type ConceptPitch } from "./conceptSchema";
@@ -29,8 +30,11 @@ export async function directExperience(
     | undefined;
   for (let attempt = 0; attempt < 2; attempt++) {
     const direction = await generateProductionObject(
-      directionSchema,
+      directionSchema.extend({ opening: openingSequenceSchema }),
       `${creativeCriteria}
+${openingSequencePrinciples}
+
+Return the opening specification and include its first real action and visible response in the journey contract.
 
 You are the creative director for a song or artist fan experience. Make something immediately understandable and worth doing on a phone. Keep the idea simple; do not write an elaborate rationale to make a weak activity sound interesting.
 

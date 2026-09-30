@@ -136,3 +136,29 @@ it("revises a rejected plan using reviewer feedback and independently checks it 
     revision: { assessment: rejected, direction },
   });
 });
+
+it("requires an opening plan in newly generated directions", async () => {
+  vi.mocked(generateProductionObject).mockResolvedValueOnce(direction).mockResolvedValueOnce({
+    followsSelection: true,
+    releaseConnection: true,
+    fanValue: true,
+    feasible: true,
+    completeJourney: true,
+    reason: "Playable",
+  });
+  await directExperience(
+    { id: "site", assets: [] } as unknown as Site,
+    "",
+    {} as ReleaseContext,
+    "account",
+    approvedConcept,
+  );
+  const schema = vi.mocked(generateProductionObject).mock.calls[0][0];
+  expect(schema.safeParse(direction).success).toBe(false);
+  // The opening field itself must be required even though saved legacy directions may omit it.
+  expect(
+    (schema as typeof import("../production/schema").directionSchema).shape.opening.safeParse(
+      undefined,
+    ).success,
+  ).toBe(false);
+});

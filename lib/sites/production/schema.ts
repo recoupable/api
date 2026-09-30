@@ -1,3 +1,4 @@
+import { openingSequenceSchema } from "./openingSequence";
 import { assetProductionSchema } from "../assets/catalog";
 import { z } from "zod";
 import { experienceContractSchema } from "./experienceContract";
@@ -15,6 +16,7 @@ export const directionSchema = z.object({
     .max(3),
   selectedIndex: z.number().int().min(0).max(2),
   contract: experienceContractSchema,
+  opening: openingSequenceSchema.optional(),
   concept: z.string(),
   journey: z.array(z.string()).min(3).max(8),
   evidence: z.array(z.string()).max(12),
@@ -61,6 +63,7 @@ export type CreativeReview = z.infer<typeof reviewSchema> & {
     scope: "generated-experience";
     nativeShareDelivery: "not-tested";
     spotifyAuthentication: "not-tested";
+    opening?: Awaited<ReturnType<typeof import("./reviewOpeningSequence").reviewOpeningSequence>>;
     journey?: z.infer<typeof experienceContractSchema>;
     viewports: { name: string; journeyPassed?: boolean; errors: string[]; overflow: boolean }[];
   };

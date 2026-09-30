@@ -24,6 +24,7 @@ export function prepareBuildInput(
       requiredCorrections: review ?? null,
       assetManifest: assets,
       capabilities: experienceCapabilities,
+      openingSequence: context.direction.opening ?? null,
       fanJourneyContract: context.direction.contract,
       fanRuntime:
         "The host provides window.recoup.track(event) for start, complete, replay and share, plus window.recoup.join() to reveal trusted signup controls. You must call complete after the real payoff, replay when restarting, share only after a real share/export. Keep all email inputs and Spotify credentials outside this generated frame. Offer a Join the artist call to action at the satisfying ending via window.recoup.join(). Guard these optional host calls with window.recoup?. so independent previews remain playable.",

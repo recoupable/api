@@ -94,7 +94,17 @@ export async function renderExperience(snapshot: SiteSnapshot, contract?: Experi
       const resultImage = await sandbox.readFileToBuffer({ path: `${name}-result.png` });
       if (resultImage) images.push(`data:image/png;base64,${resultImage.toString("base64")}`);
     }
+    const firstActionImages: { viewport: string; image: string }[] = [];
+    for (const name of ["mobile", "desktop"]) {
+      const bytes = await sandbox.readFileToBuffer({ path: `${name}-first-action.png` });
+      if (bytes)
+        firstActionImages.push({
+          viewport: name,
+          image: `data:image/png;base64,${bytes.toString("base64")}`,
+        });
+    }
     return {
+      firstActionImages,
       report: JSON.parse(report.toString()) as {
         name: string;
         errors: string[];
