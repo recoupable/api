@@ -54,7 +54,7 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({ verdict: "pass", issues: [] } as never);
   m.metadata.mockResolvedValue({ requestId: "request" });
-  m.audio.mockResolvedValue({});
+  m.audio.mockResolvedValue({ status: "available" });
   m.brief.mockResolvedValue({});
   m.select.mockResolvedValue(approvedConcept);
   m.build.mockResolvedValue({});
