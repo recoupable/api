@@ -1,3 +1,4 @@
+import { albumMetadataStep } from "@/app/workflows/sites/albumMetadataStep";
 import { revealBuildStep } from "@/app/workflows/sites/revealBuildStep";
 import { reviewStep } from "@/app/workflows/sites/reviewStep";
 import { prepareSkillStep } from "@/app/workflows/sites/prepareSkillStep";
@@ -16,6 +17,7 @@ vi.mock("@/app/workflows/sites/prepareSkillStep", () => ({
     referenceIds: [1, 2],
   })),
 }));
+vi.mock("@/app/workflows/sites/albumMetadataStep", () => ({ albumMetadataStep: vi.fn() }));
 const m = vi.hoisted(() => ({
   build: vi.fn(),
   save: vi.fn(),
@@ -235,4 +237,50 @@ it("keeps building when a customer-facing milestone fails", async () => {
   vi.mocked(revealBuildStep).mockRejectedValueOnce(new Error("Milestone unavailable"));
   await siteProductionWorkflow({ id: "site" } as Site, "", "account", undefined, approvedConcept);
   expect(m.save).toHaveBeenCalledOnce();
+});
+
+it("analyzes every album track with durable steps and hands album evidence to the builder", async () => {
+  const release = {
+    url: "https://open.spotify.com/album/3Mqw7mOaxxoxCA7e7oBtil",
+    title: "Album",
+    artists: ["Artist"],
+    artwork: null,
+    date: null,
+    isrc: null,
+    previewUrl: null,
+  };
+  const urls = [
+    "https://open.spotify.com/track/0I0XxqOsh8fEUP6Q5kii2f",
+    "https://open.spotify.com/track/4bbDlzPasNSFI1l69mx2zx",
+  ];
+  vi.mocked(albumMetadataStep).mockResolvedValue({
+    release,
+    tracks: urls.map((url, i) => ({
+      url,
+      id: url.split("/").at(-1)!,
+      name: `Song ${i}`,
+      disc_number: 1,
+      track_number: i + 1,
+    })),
+    gaps: [],
+  });
+  m.brief.mockImplementation(async (trackSite: Site) => ({
+    release: { ...release, url: trackSite.release_url },
+    music: { status: "saved-analysis", analysis: "Verified sound" },
+    research: { status: "unavailable", sources: [] },
+  }));
+  await siteProductionWorkflow({ id: "site", release_url: release.url } as Site, "", "account");
+  expect(m.metadata.mock.calls.map(call => [call[0].release_url, call[2]])).toEqual(
+    urls.map(url => [url, true]),
+  );
+  expect(m.audio).toHaveBeenCalledTimes(2);
+  expect(m.analyze.mock.calls.map(call => [call[0].release_url, call[3]])).toEqual(
+    urls.flatMap(url => [
+      [url, "lyrics"],
+      [url, "summary"],
+    ]),
+  );
+  expect(m.brief).toHaveBeenCalledTimes(2);
+  expect(m.build.mock.calls[0][2].release.release.url).toBe(release.url);
+  expect(m.build.mock.calls[0][2].release.tracks).toHaveLength(2);
 });

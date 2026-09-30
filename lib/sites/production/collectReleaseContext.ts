@@ -1,3 +1,6 @@
+import { loadSiteAlbum } from "./loadSiteAlbum";
+import { combineAlbumContext } from "./combineAlbumContext";
+import type { ReleaseContext } from "./schema";
 import { prepareSiteContext } from "./prepareSiteContext";
 import { acquireSiteContextAudio } from "./acquireSiteContextAudio";
 import { analyzeSiteContextAudio } from "./analyzeSiteContextAudio";
@@ -12,11 +15,27 @@ export async function collectReleaseContext(
   site: Site,
   accountId: string,
   contextBriefId?: string,
-) {
+  albumTrack = false,
+): Promise<ReleaseContext> {
   const selectedBrief = contextBriefId ?? site.draft?.production?.context.engine?.briefId;
   if (selectedBrief) return readSiteContextBrief(site, accountId, selectedBrief);
+  if (/^https:\/\/open\.spotify\.com\/album\//.test(site.release_url)) {
+    const album = await loadSiteAlbum(site, accountId);
+    const tracks: ReleaseContext[] = [];
+    for (const track of album.tracks) {
+      tracks.push(
+        await collectReleaseContext(
+          { ...site, release_url: track.url, draft: null },
+          accountId,
+          undefined,
+          true,
+        ),
+      );
+    }
+    return combineAlbumContext(album, tracks);
+  }
   if (/^https:\/\/open\.spotify\.com\/track\//.test(site.release_url)) {
-    const saved = await prepareSiteContext(site, accountId);
+    const saved = await prepareSiteContext(site, accountId, albumTrack);
     await acquireSiteContextAudio(site, accountId, saved);
     await analyzeSiteContextAudio(site, accountId, saved, "lyrics");
     await analyzeSiteContextAudio(site, accountId, saved, "summary");

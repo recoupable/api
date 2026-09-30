@@ -1,3 +1,6 @@
+import { albumMetadataStep } from "./albumMetadataStep";
+import { combineAlbumContext } from "@/lib/sites/production/combineAlbumContext";
+import type { ReleaseContext } from "@/lib/sites/production/schema";
 import { revealBuildStep } from "./revealBuildStep";
 import { prepareSkillStep } from "./prepareSkillStep";
 import { metadataStep } from "./metadataStep";
@@ -31,21 +34,34 @@ export async function siteProductionWorkflow(
     if (approvedConcept) conceptPitchSchema.parse(approvedConcept);
     const selectedBrief = contextBriefId ?? site.draft?.production?.context.engine?.briefId;
     let context;
-    if (!selectedBrief && /^https:\/\/open\.spotify\.com\/track\//.test(site.release_url)) {
-      stage = "metadata";
-      const saved = await metadataStep(site, accountId);
-      stage = "audio acquisition";
-      await audioSourceStep(site, accountId, saved);
-      stage = "lyrics";
-      await audioAnalysisStep(site, accountId, saved, "lyrics");
-      stage = "audio analysis";
-      await audioAnalysisStep(site, accountId, saved, "summary");
-      stage = "artwork analysis";
-      await enrichContextStep(site, accountId, saved, "artwork_branding");
-      stage = "artist research";
-      await enrichContextStep(site, accountId, saved, "artist_research");
-      stage = "context brief";
-      context = await contextBriefStep(site, accountId, saved);
+    const isAlbum = /^https:\/\/open\.spotify\.com\/album\//.test(site.release_url);
+    if (!selectedBrief && /^https:\/\/open\.spotify\.com\/(track|album)\//.test(site.release_url)) {
+      stage = "album metadata";
+      const album = isAlbum ? await albumMetadataStep(site, accountId) : undefined;
+      const recordings = album?.tracks.map(track => ({
+        ...site,
+        release_url: track.url,
+        draft: null,
+      })) ?? [site];
+      const contexts: ReleaseContext[] = [];
+      for (const trackSite of recordings) {
+        stage = "metadata";
+        const saved = await metadataStep(trackSite, accountId, Boolean(album));
+        stage = "audio acquisition";
+        await audioSourceStep(trackSite, accountId, saved);
+        stage = "lyrics";
+        await audioAnalysisStep(trackSite, accountId, saved, "lyrics");
+        stage = "audio analysis";
+        await audioAnalysisStep(trackSite, accountId, saved, "summary");
+        stage = "artwork analysis";
+        await enrichContextStep(trackSite, accountId, saved, "artwork_branding");
+        stage = "artist research";
+        await enrichContextStep(trackSite, accountId, saved, "artist_research");
+        stage = "context brief";
+        const trackContext = await contextBriefStep(trackSite, accountId, saved);
+        contexts.push(trackContext);
+      }
+      context = album ? combineAlbumContext(album, contexts) : contexts[0];
     } else context = await collectContextStep(site, accountId, selectedBrief);
     stage = "site skill";
     context.siteSkill = await prepareSkillStep(

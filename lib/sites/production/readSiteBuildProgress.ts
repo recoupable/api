@@ -3,6 +3,7 @@ import { buildRevealSchema } from "./buildReveal";
 import { getWorld } from "workflow/runtime";
 
 const stages: Record<string, { phase: string; detail: string }> = {
+  albumMetadataStep: { phase: "research", detail: "Reading the album and its complete track list" },
   metadataStep: { phase: "research", detail: "Reading the release and artist details" },
   audioSourceStep: { phase: "research", detail: "Finding and verifying the recording" },
   audioAnalysisStep: { phase: "research", detail: "Analyzing the audio and lyrics" },
