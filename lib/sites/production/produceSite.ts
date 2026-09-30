@@ -8,7 +8,7 @@ import { directExperience } from "./directExperience";
 import { produceAssets } from "./produceAssets";
 import { buildExperience } from "./buildExperience";
 import { reviewExperience } from "./reviewExperience";
-/** Bounded creative production; no persistence until a complete candidate exists. */
+/** Review-driven creative production; no persistence until a complete candidate exists. */
 export async function produceSite(
   site: Site,
   instruction: string,
@@ -55,7 +55,6 @@ export async function produceSite(
     await reviewExperience(snapshot, direction, accountId, site.id, context.siteSkill),
   ];
   while (
-    reviews.length < 4 &&
     reviews.at(-1)!.verdict === "revise" &&
     !reviews.at(-1)!.issues.some(issue => issue.module === "direction")
   ) {
