@@ -76,11 +76,11 @@ export async function siteProductionWorkflow(
         approvedConcept ?? (await selectConceptStep(site, instruction, context, accountId));
       stage = "direction";
       direction = await directionStep(site, instruction, context, accountId, selected);
-      await revealBuildStep(direction.concept, []);
+      await revealBuildStep(direction.concept, []).catch(() => undefined);
       stage = "assets";
       assets = await assetsStep(site, direction, accountId);
     }
-    await revealBuildStep(direction.concept, assets);
+    await revealBuildStep(direction.concept, assets).catch(() => undefined);
     stage = "build";
     let snapshot = await buildStep(
       site,
@@ -89,14 +89,19 @@ export async function siteProductionWorkflow(
       assets,
       accountId,
     );
-    await revealBuildStep(direction.concept, assets, snapshot);
+    await revealBuildStep(direction.concept, assets, snapshot).catch(() => undefined);
     stage = "review";
     const reviews = [await reviewStep(snapshot, direction, accountId, site.id, context.siteSkill)];
     while (
       reviews.at(-1)!.verdict === "revise" &&
       !reviews.at(-1)!.issues.some(issue => issue.module === "direction")
     ) {
-      await revealBuildStep(direction.concept, assets, snapshot, reviews.at(-1)!.issues[0]?.fix);
+      await revealBuildStep(
+        direction.concept,
+        assets,
+        snapshot,
+        reviews.at(-1)!.issues[0]?.fix,
+      ).catch(() => undefined);
       stage = "implementation repair";
       ({ snapshot, direction, assets } = await reviseStep(
         site,
@@ -108,7 +113,7 @@ export async function siteProductionWorkflow(
         reviews.at(-1)!,
         accountId,
       ));
-      await revealBuildStep(direction.concept, assets, snapshot);
+      await revealBuildStep(direction.concept, assets, snapshot).catch(() => undefined);
       stage = "review";
       reviews.push(await reviewStep(snapshot, direction, accountId, site.id, context.siteSkill));
     }

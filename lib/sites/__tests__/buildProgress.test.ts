@@ -58,8 +58,9 @@ it("reads only the latest completed explicit reveal and strips extra fields", as
     hasMore: false,
   });
   get.mockResolvedValue({ output: { concept: "Make a letter", assets: [], secret: "private" } });
-  expect(await readSiteBuildProgress("run")).toMatchObject({
-    reveal: { concept: "Make a letter", assets: [] },
+  expect((await readSiteBuildProgress("run")).reveal).toEqual({
+    concept: "Make a letter",
+    assets: [],
   });
   expect(get).toHaveBeenCalledOnce();
   expect(get).toHaveBeenCalledWith("run", "safe", { resolveData: "all" });

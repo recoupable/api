@@ -40,7 +40,7 @@ export async function readSiteBuildProgress(runId: string) {
   const milestone = steps.find(
     step => name(step) === "revealBuildStep" && step.status === "completed",
   );
-  let reveal;
+  let reveal: ReturnType<typeof buildRevealSchema.parse> | undefined;
   if (milestone?.stepId) {
     try {
       const resource = await getWorld().steps.get(runId, milestone.stepId, { resolveData: "all" });
