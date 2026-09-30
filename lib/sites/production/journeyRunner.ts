@@ -36,6 +36,7 @@ for(const [name,width,height] of [['mobile',390,844],['desktop',1440,900]]){
     for(let n=0;n<40&&shares.length===count;n++)await page.waitForTimeout(100);
     const share=shares[count];if(!share?.files?.length)throw Error('Share did not deliver an image File');await verifyImage(share.files[0].bytes,'share payload (OS delivery not tested)');
    }else await ui.getByRole('button',{name:step.target,exact:true}).click({timeout:5000});
+   if(index===0)await page.screenshot({path:name+'-first-action.png'});
    if(step.waitMs)await page.waitForTimeout(step.waitMs);
    interacted=true;
    if(step.expected)await ui.getByText(step.expected,{exact:false}).first().waitFor({state:'visible',timeout:5000});

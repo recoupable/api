@@ -65,6 +65,7 @@ it("captures the earned result before delivery resets the page", async () => {
     },
   });
   for (const name of ["mobile", "desktop"]) {
+    expect(captures[name + "-first-action.png"]).toBe("Playing");
     expect(captures[name + "-checkpoint-result.png"]).toBe("Your earned result");
     expect(captures[name + "-active.png"]).toBe("Start");
   }
