@@ -9,7 +9,9 @@ const m = vi.hoisted(() => ({
   start: vi.fn(),
   getRun: vi.fn(),
   credits: vi.fn(),
+  progress: vi.fn(),
 }));
+vi.mock("../production/readSiteBuildProgress", () => ({ readSiteBuildProgress: m.progress }));
 vi.mock("@/lib/supabase/sites/updateSite", () => ({ updateSite: m.update }));
 vi.mock("workflow/api", () => ({ start: m.start, getRun: m.getRun }));
 vi.mock("@/app/workflows/sites/siteProductionWorkflow", () => ({
@@ -62,4 +64,12 @@ it("surfaces a caught stage failure instead of reporting a completed draft", asy
     generation: { status: "failed" },
     error: "Build stopped",
   });
+});
+
+it("keeps a healthy job running when progress metadata is unavailable", async () => {
+  m.getRun.mockReturnValue({ status: Promise.resolve("running") });
+  m.progress.mockRejectedValue(new Error("observability unavailable"));
+  expect(
+    await getSiteProduction(signGenerationJob("run", "site", "account"), "site", "account"),
+  ).toEqual({ generation: { status: "running" } });
 });

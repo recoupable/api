@@ -62,3 +62,7 @@ The Sites workflow runs metadata, hosted acquisition, lyrics, summary, artwork, 
 The lyric result remains private and unverified. Summary normalization consumes only a transcript with the matching audio checksum; its result ID is part of the cache key. Sites receives the summary's paraphrased themes, artwork observations and public-search research through a saved brief. Raw lyrics and signed file URLs are not included in the public site payload.
 
 Workflow failures name the stage. No automatic provider retry occurs after an ambiguous failure; completed accepted enrichment remains reusable. A failed reviewed concept does not trigger paid automatic brainstorming.
+
+### Build progress
+
+Authenticated generation polling may include `generation.progress` with `phase` (`queued`, `research`, `design`, `assets`, `build`, `review`), `detail`, and `reviewPass`. This additive field comes from workflow step metadata with `resolveData: "none"`; no prompts, inputs, or outputs are exposed. Revisions remain in `review` with a refinement message. Phase milestones describe the current workflow position, not percentages or time estimates. Missing progress is nonfatal; clients should keep observing the job. Existing in-flight workflows are supported without restarting them.
