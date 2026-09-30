@@ -19,7 +19,7 @@ export async function saveSiteContextBrief(
       organization_id: site.owner_id,
       purpose: "creative_direction",
       max_characters: 32000,
-      idempotency_key: `sites:${site.id}:${site.revision}:brief-v2`,
+      idempotency_key: `sites:${site.id}:${site.revision}:${context.requestId}:brief-v3`,
     },
     { rpc: callContextRpc, dispatch: runStoredContextRequest },
   );

@@ -66,6 +66,7 @@ export type CreativeReview = z.infer<typeof reviewSchema> & {
   };
 };
 export type ReleaseContext = {
+  tracks?: ReleaseContext[];
   siteSkill?: Awaited<ReturnType<typeof import("../skills/prepareSiteSkill").prepareSiteSkill>>;
   engine?: {
     briefId: string;

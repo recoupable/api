@@ -5,7 +5,7 @@ import { callContextRpc } from "@/lib/supabase/context_requests/callContextRpc";
 import { authorizeSiteWorkspace } from "../authorizeSiteWorkspace";
 import type { Site } from "../schema";
 /** Creates/reuses one saved metadata request per site; subsequent modules use its recording identity. */
-export async function prepareSiteContext(site: Site, accountId: string) {
+export async function prepareSiteContext(site: Site, accountId: string, albumTrack = false) {
   await authorizeSiteWorkspace(accountId, site.owner_id);
   const result = await processContextOperation(
     accountId,
@@ -13,7 +13,9 @@ export async function prepareSiteContext(site: Site, accountId: string) {
       action: "ingest",
       url: site.release_url,
       organization_id: site.owner_id,
-      idempotency_key: `sites:${site.id}:context-v1`,
+      idempotency_key: albumTrack
+        ? `sites:${site.id}:track:${new URL(site.release_url).pathname.split("/").at(-1)}:context-v1`
+        : `sites:${site.id}:context-v1`,
     },
     { rpc: callContextRpc, dispatch: runStoredContextRequest },
   );
