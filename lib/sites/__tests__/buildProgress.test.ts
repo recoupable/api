@@ -1,7 +1,12 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { readSiteBuildProgress } from "../production/readSiteBuildProgress";
 const list = vi.hoisted(() => vi.fn());
-vi.mock("workflow/runtime", () => ({ getWorld: () => ({ steps: { list } }) }));
+const get = vi.hoisted(() => vi.fn());
+vi.mock("workflow/observability", () => ({
+  hydrateResourceIO: (value: unknown) => value,
+  observabilityRevivers: {},
+}));
+vi.mock("workflow/runtime", () => ({ getWorld: () => ({ steps: { list, get } }) }));
 const step = (name: string, time: number) => ({
   stepName: `step//path//${name}`,
   status: "completed",
@@ -42,4 +47,29 @@ it("reports saving instead of falsely claiming a ready preview", async () => {
     hasMore: false,
   });
   expect((await readSiteBuildProgress("run")).detail).toBe("Saving your preview");
+});
+
+it("reads only the latest completed explicit reveal and strips extra fields", async () => {
+  list.mockResolvedValue({
+    data: [
+      { ...step("revealBuildStep", 3), stepId: "safe" },
+      { ...step("buildTurnStep", 2), stepId: "private" },
+    ],
+    hasMore: false,
+  });
+  get.mockResolvedValue({ output: { concept: "Make a letter", assets: [], secret: "private" } });
+  expect((await readSiteBuildProgress("run")).reveal).toEqual({
+    concept: "Make a letter",
+    assets: [],
+  });
+  expect(get).toHaveBeenCalledOnce();
+  expect(get).toHaveBeenCalledWith("run", "safe", { resolveData: "all" });
+});
+it("keeps reporting progress when a reveal cannot be read", async () => {
+  list.mockResolvedValue({
+    data: [{ ...step("revealBuildStep", 3), stepId: "safe" }, step("reviewStep", 4)],
+    hasMore: false,
+  });
+  get.mockRejectedValue(new Error("Unavailable"));
+  expect(await readSiteBuildProgress("run")).toMatchObject({ phase: "review", reviewPass: 1 });
 });

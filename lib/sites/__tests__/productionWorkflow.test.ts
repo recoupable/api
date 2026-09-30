@@ -1,3 +1,4 @@
+import { revealBuildStep } from "@/app/workflows/sites/revealBuildStep";
 import { reviewStep } from "@/app/workflows/sites/reviewStep";
 import { prepareSkillStep } from "@/app/workflows/sites/prepareSkillStep";
 import { directionStep } from "@/app/workflows/sites/directionStep";
@@ -6,6 +7,9 @@ import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
 import { siteProductionWorkflow } from "@/app/workflows/sites/siteProductionWorkflow";
 import type { Site } from "../schema";
+vi.mock("@/app/workflows/sites/revealBuildStep", () => ({
+  revealBuildStep: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@/app/workflows/sites/prepareSkillStep", () => ({
   prepareSkillStep: vi.fn(async () => ({
     name: "recoup-content-build-sites",
@@ -225,4 +229,10 @@ it("reports a repair failure without saving an unfinished candidate", async () =
       "Site production stopped during implementation repair. Your existing draft is unchanged.",
   });
   expect(m.save).not.toHaveBeenCalled();
+});
+
+it("keeps building when a customer-facing milestone fails", async () => {
+  vi.mocked(revealBuildStep).mockRejectedValueOnce(new Error("Milestone unavailable"));
+  await siteProductionWorkflow({ id: "site" } as Site, "", "account", undefined, approvedConcept);
+  expect(m.save).toHaveBeenCalledOnce();
 });
