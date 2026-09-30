@@ -8,8 +8,8 @@ HTTP and MCP accept URL-only generation. Omit `approvedConcept` to let the durab
 4. Choose up to two production assets by purpose: GPT Image 2 (Gateway), Nano Banana Pro (Fal), or one silent 4–6 second Seedance 2.5 clip (Higgsfield). Store normalized images or bounded MP4 in workspace storage with model/rationale/request provenance. Existing-draft art revisions can replace the asset plan through the skill agent while preserving the game contract.
 5. Pass context and real asset URLs through the reusable brand-world and implementation modules.
 6. Render mobile and desktop in an isolated Vercel Sandbox. Execute the complete structured journey using accessible controls, verify expected visible outcomes, capture initial/final states, runtime errors and horizontal overflow. Reopen downloaded/shared image bytes in a separate page, reject blank/invalid outputs and include the actual artifact in visual review.
-7. Critique screenshots. A direction failure saves needs-review and returns to customer concept selection; it never silently changes the chosen activity. Asset/implementation fixes retain one bounded revision and review.
-8. Save a private draft with evidence and reviews. Persistent issues are marked needs-review. Publishing remains a separate customer action.
+7. Critique screenshots. A direction failure saves needs-review and returns to customer concept selection; it never silently changes the chosen activity. Asset/implementation fixes repeat build and rendered review until they pass; there is no fixed review-count cutoff. Each repair receives the current candidate and latest concrete review. Provider failures still stop production, and a rejected concept requires customer selection rather than silently replacing the activity.
+8. Save a private draft with evidence and reviews. Rejected concepts are marked needs-review; implementation findings remain in the automatic repair loop. Publishing remains a separate customer action.
 
 ## Execution and billing
 
