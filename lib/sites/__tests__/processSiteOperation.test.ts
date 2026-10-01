@@ -2,6 +2,7 @@ import { SiteError } from "../SiteError";
 import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
 import { processSiteOperation } from "../processSiteOperation";
+vi.mock("../production/cancelSiteProduction", () => ({ cancelSiteProduction: m.cancel }));
 vi.mock("../fanConnection/prepareSiteFanConnection", () => ({
   prepareSiteFanConnection: m.fanSetup,
 }));
@@ -27,6 +28,8 @@ const m = vi.hoisted(() => ({
   list: vi.fn(),
   insert: vi.fn(),
   update: vi.fn(),
+  remove: vi.fn(),
+  cancel: vi.fn(),
   generate: vi.fn(),
   resolve: vi.fn(),
   signups: vi.fn(),
@@ -45,6 +48,7 @@ vi.mock("../production/produceSite", () => ({ produceSite: m.generate }));
 vi.mock("../production/startSiteProduction", () => ({ startSiteProduction: m.generate }));
 vi.mock("../production/getSiteProduction", () => ({ getSiteProduction: vi.fn() }));
 vi.mock("../resolveSpotifyRelease", () => ({ resolveSpotifyRelease: m.resolve }));
+vi.mock("@/lib/supabase/sites/deleteSite", () => ({ deleteSite: m.remove }));
 const id = "11111111-1111-4111-8111-111111111111";
 const account = "22222222-2222-4222-8222-222222222222";
 const org = "33333333-3333-4333-8333-333333333333";
@@ -278,4 +282,46 @@ it("allows unpaid workspaces to unpublish without checking paid setup", async ()
   await processSiteOperation(account, "unpublish", { id, revision: 2 });
   expect(m.fanSetup).not.toHaveBeenCalled();
   expect(m.update).toHaveBeenCalledWith(id, account, 2, { published: null, published_at: null });
+});
+
+it("deletes only the authorized revision and never generates", async () => {
+  m.remove.mockResolvedValue(true);
+  expect(await processSiteOperation(account, "delete", { id, revision: 2 })).toEqual({
+    deleted: true,
+    id,
+  });
+  expect(m.remove).toHaveBeenCalledWith(id, account, 2);
+  expect(m.generate).not.toHaveBeenCalled();
+});
+it("rejects deletion from a foreign workspace", async () => {
+  m.select.mockResolvedValue({ id, owner_id: org, revision: 2 });
+  await expect(processSiteOperation(account, "delete", { id, revision: 2 })).rejects.toMatchObject({
+    status: 403,
+  });
+  expect(m.remove).not.toHaveBeenCalled();
+});
+it("rejects stale deletion and a race with a build save", async () => {
+  await expect(processSiteOperation(account, "delete", { id, revision: 1 })).rejects.toMatchObject({
+    status: 409,
+  });
+  expect(m.remove).not.toHaveBeenCalled();
+  m.remove.mockResolvedValue(false);
+  await expect(processSiteOperation(account, "delete", { id, revision: 2 })).rejects.toMatchObject({
+    status: 409,
+  });
+});
+
+it("cancels the signed active build before deletion", async () => {
+  m.remove.mockResolvedValue(true);
+  await processSiteOperation(account, "delete", { id, revision: 2, generationToken: "job" });
+  expect(m.cancel).toHaveBeenCalledWith("job", id, account);
+  expect(m.cancel.mock.invocationCallOrder[0]).toBeLessThan(m.remove.mock.invocationCallOrder[0]);
+});
+
+it("does not delete when active-build cancellation fails", async () => {
+  m.cancel.mockRejectedValueOnce(new Error("Cancellation unavailable"));
+  await expect(
+    processSiteOperation(account, "delete", { id, revision: 2, generationToken: "job" }),
+  ).rejects.toThrow("Cancellation unavailable");
+  expect(m.remove).not.toHaveBeenCalled();
 });

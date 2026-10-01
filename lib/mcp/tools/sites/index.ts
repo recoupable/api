@@ -31,6 +31,10 @@ const operations: Record<SiteOperation, [string, string]> = {
     "publish_site",
     "Publish the saved draft to the public web. Only use when the account explicitly asks to publish. Requires latest revision.",
   ],
+  delete: [
+    "delete_site",
+    "Permanently delete a site, its fan records and activity. Takes the public page offline. Only use after explicit customer authorization. Requires the latest revision; pass generationToken when available to cancel its active build.",
+  ],
   unpublish: [
     "unpublish_site",
     "Remove a site's published snapshot from public access. Retains its draft. Requires latest revision.",
@@ -49,7 +53,7 @@ export function registerAllSitesTools(server: McpServer) {
         inputSchema: siteOperationSchemas[operation],
         annotations: {
           readOnlyHint: ["list", "get", "signups", "generation"].includes(operation),
-          destructiveHint: ["publish", "unpublish"].includes(operation),
+          destructiveHint: ["publish", "unpublish", "delete"].includes(operation),
           openWorldHint: true,
         },
       },
