@@ -1,5 +1,8 @@
+import { gameplayCriteria } from "./gameplayCriteria";
 /** Shared by proposal, selection, direction and review so their standards cannot contradict. */
-export const creativeCriteria = `Judge the actual fan experience with these same criteria at every stage:
+export const creativeCriteria = `${gameplayCriteria}
+
+Judge the actual fan experience with these same criteria at every stage:
 - Clear: a visitor understands the action in one short sentence.
 - Worth doing: the first action delivers satisfying movement, humor, discovery, skill or expression; the result reflects what the visitor did.
 - Obvious connection: the core activity can directly enact the release title, a supplied lyric/theme, an audible musical quality, recognizable artwork or the artist's world. One strong recognizable anchor is sufficient. A literal, playful interpretation is valid; it does not need a deeper explanation, exclusive association with this artist, or proof that the artist intended the activity.

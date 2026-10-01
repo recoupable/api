@@ -1,3 +1,4 @@
+import { gameplayCriteria } from "./gameplayCriteria";
 import { experienceCapabilities } from "./experienceContract";
 import type { Site, SiteAsset, SiteSnapshot } from "../schema";
 import type { CreativeDirection, CreativeReview, ReleaseContext } from "./schema";
@@ -20,6 +21,7 @@ export function prepareBuildInput(
     site: productionSite,
     instruction: JSON.stringify({
       customerInstruction: instruction,
+      gameplayCriteria,
       creativeContext: context,
       requiredCorrections: review ?? null,
       assetManifest: assets,
