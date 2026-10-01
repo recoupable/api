@@ -21,6 +21,7 @@ vi.mock("../production/requireCredits", () => ({ requireCredits: m.credits }));
 const site = { id: "site", owner_id: "workspace", revision: 3 } as Site;
 beforeEach(() => {
   vi.resetAllMocks();
+  m.progress.mockResolvedValue(undefined);
   vi.stubEnv("SITES_JOB_SECRET", "test-only");
   m.update.mockResolvedValue({ ...site, revision: 4 });
   m.start.mockResolvedValue({ runId: "run" });
@@ -73,3 +74,26 @@ it("keeps a healthy job running when progress metadata is unavailable", async ()
     await getSiteProduction(signGenerationJob("run", "site", "account"), "site", "account"),
   ).toEqual({ generation: { status: "running" } });
 });
+
+it.each(["completed", "failed", "cancelled"])(
+  "preserves reveal evidence when a %s workflow stops",
+  async status => {
+    const progress = {
+      phase: "review",
+      detail: "Testing",
+      reviewPass: 4,
+      reveal: { concept: "Make a note", assets: [], preview: { name: "Draft" } },
+    };
+    m.progress.mockResolvedValue(progress);
+    m.getRun.mockReturnValue({
+      status: Promise.resolve(status),
+      returnValue: Promise.resolve({ error: "Review stopped" }),
+    });
+    const result = await getSiteProduction(
+      signGenerationJob("run", "site", "account"),
+      "site",
+      "account",
+    );
+    expect(result.generation).toMatchObject({ status: "failed", progress });
+  },
+);
