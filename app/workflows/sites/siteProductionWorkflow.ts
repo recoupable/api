@@ -31,7 +31,6 @@ export async function siteProductionWorkflow(
 ) {
   "use workflow";
   let stage = "context";
-  await ensureSiteExistsStep(site.id);
   try {
     await ensureSiteExistsStep(site.id);
     if (approvedConcept) conceptPitchSchema.parse(approvedConcept);

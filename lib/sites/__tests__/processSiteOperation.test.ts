@@ -317,3 +317,11 @@ it("cancels the signed active build before deletion", async () => {
   expect(m.cancel).toHaveBeenCalledWith("job", id, account);
   expect(m.cancel.mock.invocationCallOrder[0]).toBeLessThan(m.remove.mock.invocationCallOrder[0]);
 });
+
+it("does not delete when active-build cancellation fails", async () => {
+  m.cancel.mockRejectedValueOnce(new Error("Cancellation unavailable"));
+  await expect(
+    processSiteOperation(account, "delete", { id, revision: 2, generationToken: "job" }),
+  ).rejects.toThrow("Cancellation unavailable");
+  expect(m.remove).not.toHaveBeenCalled();
+});

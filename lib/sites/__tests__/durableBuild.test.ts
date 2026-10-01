@@ -1,3 +1,4 @@
+import { ensureSiteExistsStep } from "@/app/workflows/sites/ensureSiteExistsStep";
 import { expect, it, vi } from "vitest";
 import { buildStep } from "@/app/workflows/sites/buildStep";
 vi.mock("@/app/workflows/sites/ensureSiteExistsStep", () => ({
@@ -17,4 +18,25 @@ it("checkpoints and resumes each model turn without an arbitrary turn-count cuto
   expect(result).toEqual({ name: "Complete" });
   expect(m.turn).toHaveBeenCalledTimes(12);
   expect(m.turn.mock.calls[11][0]).toMatchObject({ turns: 11, files: { html: "saved" } });
+});
+
+it("stops before initialization when the site has been deleted", async () => {
+  m.initialize.mockClear();
+  m.turn.mockClear();
+  vi.mocked(ensureSiteExistsStep).mockRejectedValueOnce(new Error("Site deleted"));
+  await expect(buildStep({ id: "site" } as any, "Build", {} as any, [], "account")).rejects.toThrow(
+    "Site deleted",
+  );
+  expect(m.initialize).not.toHaveBeenCalled();
+  expect(m.turn).not.toHaveBeenCalled();
+});
+it("does not run another model turn after deletion", async () => {
+  m.turn.mockClear();
+  vi.mocked(ensureSiteExistsStep)
+    .mockResolvedValueOnce(undefined)
+    .mockRejectedValueOnce(new Error("Site deleted"));
+  await expect(buildStep({ id: "site" } as any, "Build", {} as any, [], "account")).rejects.toThrow(
+    "Site deleted",
+  );
+  expect(m.turn).not.toHaveBeenCalled();
 });

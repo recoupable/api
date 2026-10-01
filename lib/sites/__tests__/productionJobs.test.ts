@@ -4,9 +4,6 @@ import { startSiteProduction } from "../production/startSiteProduction";
 import { getSiteProduction } from "../production/getSiteProduction";
 import { signGenerationJob } from "../production/signGenerationJob";
 import type { Site } from "../schema";
-vi.mock("@/app/workflows/sites/ensureSiteExistsStep", () => ({
-  ensureSiteExistsStep: vi.fn().mockResolvedValue(undefined),
-}));
 const m = vi.hoisted(() => ({
   update: vi.fn(),
   start: vi.fn(),

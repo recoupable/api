@@ -94,6 +94,7 @@ export async function processSiteOperation(
     const deletion = siteOperationSchemas.delete.parse(input);
     if (deletion.generationToken)
       await cancelSiteProduction(deletion.generationToken, site.id, accountId);
+    await authorizeSiteWorkspace(accountId, site.owner_id);
     if (!(await deleteSite(site.id, site.owner_id, site.revision)))
       throw new SiteError(409, "This site changed. Reload before deleting.");
     return { deleted: true, id: site.id };

@@ -95,7 +95,7 @@ it("exposes valid schemas through a real MCP client and rejects anonymous calls"
   await client.connect(clientTransport);
   try {
     const result = await client.listTools();
-    expect(result.tools).toHaveLength(10);
+    expect(result.tools).toHaveLength(11);
     expect(result.tools.find(t => t.name === "create_site")?.inputSchema.properties).toHaveProperty(
       "releaseUrl",
     );
