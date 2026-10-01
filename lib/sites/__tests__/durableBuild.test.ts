@@ -1,5 +1,8 @@
 import { expect, it, vi } from "vitest";
 import { buildStep } from "@/app/workflows/sites/buildStep";
+vi.mock("@/app/workflows/sites/ensureSiteExistsStep", () => ({
+  ensureSiteExistsStep: vi.fn().mockResolvedValue(undefined),
+}));
 const m = vi.hoisted(() => ({ initialize: vi.fn(), turn: vi.fn() }));
 vi.mock("@/app/workflows/sites/initializeBuildStep", () => ({ initializeBuildStep: m.initialize }));
 vi.mock("@/app/workflows/sites/buildTurnStep", () => ({ buildTurnStep: m.turn }));

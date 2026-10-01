@@ -29,6 +29,9 @@ export const siteOperationSchemas = {
     .strict(),
   generation: z.object({ id, token: z.string().min(1).max(3000) }).strict(),
   publish: z.object({ id, revision, returnUrl: returnUrlSchema.optional() }).strict(),
+  delete: z
+    .object({ id, revision, generationToken: z.string().min(1).max(3000).optional() })
+    .strict(),
   unpublish: z.object({ id, revision }).strict(),
 };
 export type SiteOperation = keyof typeof siteOperationSchemas;

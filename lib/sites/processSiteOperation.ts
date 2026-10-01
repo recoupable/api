@@ -1,3 +1,5 @@
+import { cancelSiteProduction } from "./production/cancelSiteProduction";
+import { deleteSite } from "@/lib/supabase/sites/deleteSite";
 import { prepareSiteFanConnection } from "./fanConnection/prepareSiteFanConnection";
 import { resolveSiteArtist } from "./production/resolveSiteArtist";
 import { collectReleaseContext } from "./production/collectReleaseContext";
@@ -88,6 +90,14 @@ export async function processSiteOperation(
   if (operation === "signups") return { signups: await selectSignups(site.id) };
   if (!("revision" in input) || input.revision !== site.revision)
     throw new SiteError(409, "This site changed. Reload before editing.");
+  if (operation === "delete") {
+    const deletion = siteOperationSchemas.delete.parse(input);
+    if (deletion.generationToken)
+      await cancelSiteProduction(deletion.generationToken, site.id, accountId);
+    if (!(await deleteSite(site.id, site.owner_id, site.revision)))
+      throw new SiteError(409, "This site changed. Reload before deleting.");
+    return { deleted: true, id: site.id };
+  }
   if (operation === "publish" && !site.draft)
     throw new SiteError(400, "Generate a preview before publishing");
   const contextBriefId =

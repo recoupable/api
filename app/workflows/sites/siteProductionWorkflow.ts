@@ -1,3 +1,4 @@
+import { ensureSiteExistsStep } from "./ensureSiteExistsStep";
 import { albumMetadataStep } from "./albumMetadataStep";
 import { combineAlbumContext } from "@/lib/sites/production/combineAlbumContext";
 import type { ReleaseContext } from "@/lib/sites/production/schema";
@@ -30,13 +31,16 @@ export async function siteProductionWorkflow(
 ) {
   "use workflow";
   let stage = "context";
+  await ensureSiteExistsStep(site.id);
   try {
+    await ensureSiteExistsStep(site.id);
     if (approvedConcept) conceptPitchSchema.parse(approvedConcept);
     const selectedBrief = contextBriefId ?? site.draft?.production?.context.engine?.briefId;
     let context;
     const isAlbum = /^https:\/\/open\.spotify\.com\/album\//.test(site.release_url);
     if (!selectedBrief && /^https:\/\/open\.spotify\.com\/(track|album)\//.test(site.release_url)) {
       stage = "album metadata";
+      await ensureSiteExistsStep(site.id);
       const album = isAlbum ? await albumMetadataStep(site, accountId) : undefined;
       const recordings = album?.tracks.map(track => ({
         ...site,
@@ -46,20 +50,27 @@ export async function siteProductionWorkflow(
       const contexts: ReleaseContext[] = [];
       for (const trackSite of recordings) {
         stage = "metadata";
+        await ensureSiteExistsStep(site.id);
         const saved = await metadataStep(trackSite, accountId, Boolean(album));
         stage = "audio acquisition";
+        await ensureSiteExistsStep(site.id);
         const audio = await audioSourceStep(trackSite, accountId, saved, Boolean(album));
         if (audio.status === "available") {
           stage = "lyrics";
+          await ensureSiteExistsStep(site.id);
           await audioAnalysisStep(trackSite, accountId, saved, "lyrics");
           stage = "audio analysis";
+          await ensureSiteExistsStep(site.id);
           await audioAnalysisStep(trackSite, accountId, saved, "summary");
         }
         stage = "artwork analysis";
+        await ensureSiteExistsStep(site.id);
         await enrichContextStep(trackSite, accountId, saved, "artwork_branding");
         stage = "artist research";
+        await ensureSiteExistsStep(site.id);
         await enrichContextStep(trackSite, accountId, saved, "artist_research");
         stage = "context brief";
+        await ensureSiteExistsStep(site.id);
         const trackContext = await contextBriefStep(trackSite, accountId, saved);
         if (audio.status === "unavailable") {
           trackContext.gaps = [
@@ -87,6 +98,7 @@ export async function siteProductionWorkflow(
       context = album ? combineAlbumContext(album, contexts) : contexts[0];
     } else context = await collectContextStep(site, accountId, selectedBrief);
     stage = "site skill";
+    await ensureSiteExistsStep(site.id);
     context.siteSkill = await prepareSkillStep(
       {
         instruction,
@@ -107,20 +119,25 @@ export async function siteProductionWorkflow(
       if (context.siteSkill.assetRevision !== undefined) {
         direction = { ...direction, assets: context.siteSkill.assetRevision };
         stage = "assets";
+        await ensureSiteExistsStep(site.id);
         assets = await assetsStep(site, direction, accountId);
       }
     } else {
       stage = "concept";
+      await ensureSiteExistsStep(site.id);
       const selected =
         approvedConcept ?? (await selectConceptStep(site, instruction, context, accountId));
       stage = "direction";
+      await ensureSiteExistsStep(site.id);
       direction = await directionStep(site, instruction, context, accountId, selected);
       await revealBuildStep(direction.concept, []).catch(() => undefined);
       stage = "assets";
+      await ensureSiteExistsStep(site.id);
       assets = await assetsStep(site, direction, accountId);
     }
     await revealBuildStep(direction.concept, assets).catch(() => undefined);
     stage = "build";
+    await ensureSiteExistsStep(site.id);
     let snapshot = await buildStep(
       site,
       instruction,
@@ -130,6 +147,7 @@ export async function siteProductionWorkflow(
     );
     await revealBuildStep(direction.concept, assets, snapshot).catch(() => undefined);
     stage = "review";
+    await ensureSiteExistsStep(site.id);
     const reviews = [await reviewStep(snapshot, direction, accountId, site.id, context.siteSkill)];
     while (
       reviews.at(-1)!.verdict === "revise" &&
@@ -142,6 +160,7 @@ export async function siteProductionWorkflow(
         reviews.at(-1)!.issues[0]?.fix,
       ).catch(() => undefined);
       stage = "implementation repair";
+      await ensureSiteExistsStep(site.id);
       ({ snapshot, direction, assets } = await reviseStep(
         site,
         instruction,
@@ -154,9 +173,11 @@ export async function siteProductionWorkflow(
       ));
       await revealBuildStep(direction.concept, assets, snapshot).catch(() => undefined);
       stage = "review";
+      await ensureSiteExistsStep(site.id);
       reviews.push(await reviewStep(snapshot, direction, accountId, site.id, context.siteSkill));
     }
     stage = "save";
+    await ensureSiteExistsStep(site.id);
     return await saveSiteStep(
       site,
       {

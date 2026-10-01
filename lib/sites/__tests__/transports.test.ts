@@ -55,6 +55,7 @@ it("MCP registers all operations and fails closed without auth", async () => {
       "generate_site",
       "publish_site",
       "unpublish_site",
+      "delete_site",
       "get_site_signups",
       "upload_site_asset",
     ]),

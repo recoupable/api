@@ -8,6 +8,9 @@ import { approvedConcept } from "./conceptFixture";
 import { beforeEach, expect, it, vi } from "vitest";
 import { siteProductionWorkflow } from "@/app/workflows/sites/siteProductionWorkflow";
 import type { Site } from "../schema";
+vi.mock("@/app/workflows/sites/ensureSiteExistsStep", () => ({
+  ensureSiteExistsStep: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@/app/workflows/sites/revealBuildStep", () => ({
   revealBuildStep: vi.fn().mockResolvedValue(undefined),
 }));

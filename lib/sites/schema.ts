@@ -62,6 +62,13 @@ export const actionSchema = z.discriminatedUnion("action", [
       contextBriefId: z.string().uuid().optional(),
     })
     .strict(),
+  z
+    .object({
+      action: z.literal("delete"),
+      revision: z.number().int().nonnegative(),
+      generationToken: z.string().min(1).max(3000).optional(),
+    })
+    .strict(),
   z.object({ action: z.literal("generation"), token: z.string().min(1).max(3000) }).strict(),
   z
     .object({

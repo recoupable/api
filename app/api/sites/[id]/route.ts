@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, context: Context) {
   return siteOperationHandler(request, "get", await context.params);
 }
 /**
- * Generate, publish or unpublish using an expected revision.
+ * Generate, publish, unpublish or permanently delete using an expected revision.
  *
  * @param request - Request or route context.
  * @param context - Request or route context.

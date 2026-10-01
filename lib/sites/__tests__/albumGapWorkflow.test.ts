@@ -1,6 +1,9 @@
 import { it, expect, vi } from "vitest";
 import { siteProductionWorkflow } from "@/app/workflows/sites/siteProductionWorkflow";
 import type { Site } from "../schema";
+vi.mock("@/app/workflows/sites/ensureSiteExistsStep", () => ({
+  ensureSiteExistsStep: vi.fn().mockResolvedValue(undefined),
+}));
 const m = vi.hoisted(() => ({
   albumMetadataStep: vi.fn(),
   metadataStep: vi.fn(),
