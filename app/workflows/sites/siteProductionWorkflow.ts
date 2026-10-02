@@ -150,6 +150,7 @@ export async function siteProductionWorkflow(
     const reviews = [await reviewStep(snapshot, direction, accountId, site.id, context.siteSkill)];
     while (
       reviews.at(-1)!.verdict === "revise" &&
+      !reviews.at(-1)!.blocked &&
       !reviews.at(-1)!.issues.some(issue => issue.module === "direction")
     ) {
       await revealBuildStep(

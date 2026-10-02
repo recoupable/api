@@ -22,3 +22,15 @@ it("does not retry an authorization failure", async () => {
     FatalError,
   );
 });
+it("preserves a credit-blocked review as unfinished rather than discarding the build", async () => {
+  const { SiteError } = await import("../SiteError");
+  review.mockRejectedValueOnce(
+    new SiteError(402, "Not enough credits to continue site production."),
+  );
+  await expect(reviewStep({} as never, {} as never, "account", "site")).resolves.toMatchObject({
+    verdict: "revise",
+    blocked: "credits",
+    issues: [],
+    summary: expect.stringContaining("credits"),
+  });
+});
