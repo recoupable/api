@@ -287,3 +287,32 @@ it("analyzes every album track with durable steps and hands album evidence to th
   expect(m.build.mock.calls[0][2].release.release.url).toBe(release.url);
   expect(m.build.mock.calls[0][2].release.tracks).toHaveLength(2);
 });
+
+it("saves a credit-blocked review as an unfinished draft without starting paid repairs", async () => {
+  const review = {
+    verdict: "revise" as const,
+    blocked: "credits" as const,
+    issues: [],
+    summary: "Add credits to finish review.",
+  };
+  vi.mocked(reviewStep).mockResolvedValue(review);
+  m.build.mockResolvedValue({ name: "Saved game" });
+  m.save.mockResolvedValue({ site: { id: "site" } });
+  const result = await siteProductionWorkflow(
+    { id: "site" } as Site,
+    "",
+    "account",
+    undefined,
+    approvedConcept,
+  );
+  expect(result).toHaveProperty("site");
+  expect(m.revise).not.toHaveBeenCalled();
+  expect(m.save).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({
+      name: "Saved game",
+      production: expect.objectContaining({ status: "needs-review", reviews: [review] }),
+    }),
+    "account",
+  );
+});

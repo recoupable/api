@@ -59,6 +59,7 @@ export const reviewSchema = z.object({
 });
 export type CreativeDirection = z.infer<typeof directionSchema>;
 export type CreativeReview = z.infer<typeof reviewSchema> & {
+  blocked?: "credits";
   verification?: {
     scope: "generated-experience";
     nativeShareDelivery: "not-tested";
