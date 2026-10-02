@@ -1,3 +1,5 @@
+import { readPublishableBuild } from "./production/readPublishableBuild";
+import { updateSitePublication } from "@/lib/supabase/sites/updateSitePublication";
 import { cancelSiteProduction } from "./production/cancelSiteProduction";
 import { deleteSite } from "@/lib/supabase/sites/deleteSite";
 import { prepareSiteFanConnection } from "./fanConnection/prepareSiteFanConnection";
@@ -99,8 +101,29 @@ export async function processSiteOperation(
       throw new SiteError(409, "This site changed. Reload before deleting.");
     return { deleted: true, id: site.id };
   }
-  if (operation === "publish" && !site.draft)
-    throw new SiteError(400, "Generate a preview before publishing");
+  if (operation === "publish" || operation === "unpublish") {
+    const publication =
+      operation === "publish" ? siteOperationSchemas.publish.parse(input) : undefined;
+    const snapshot = publication?.generationToken
+      ? await readPublishableBuild(publication.generationToken, site, accountId)
+      : site.draft;
+    if (publication && !snapshot) throw new SiteError(400, "Generate a preview before publishing");
+    const briefId = snapshot?.production?.context.engine?.briefId;
+    if (publication && briefId) await readSiteContextBrief(site, accountId, briefId);
+    const artistId =
+      publication && snapshot ? await resolveSiteArtist(site, snapshot) : site.artist_id;
+    const fanConnection = publication
+      ? await prepareSiteFanConnection({ ...site, artist_id: artistId }, publication.returnUrl)
+      : undefined;
+    await authorizeSiteWorkspace(accountId, site.owner_id);
+    const updated = await updateSitePublication(site, {
+      published: publication ? snapshot : null,
+      published_at: publication ? new Date().toISOString() : null,
+      artist_id: artistId,
+    });
+    if (!updated) throw new SiteError(409, "The build changed. Reload before publishing.");
+    return { site: updated, ...(fanConnection ? { fanConnection } : {}) };
+  }
   const contextBriefId =
     "contextBriefId" in input ? (input.contextBriefId as string | undefined) : undefined;
   if (operation === "concepts" && "instruction" in input) {
@@ -121,7 +144,7 @@ export async function processSiteOperation(
       ? siteOperationSchemas.generate.parse(input).approvedConcept
       : undefined;
   const selectedBrief = contextBriefId ?? site.draft?.production?.context.engine?.briefId;
-  if ((operation === "generate" || operation === "publish") && selectedBrief)
+  if (operation === "generate" && selectedBrief)
     await readSiteContextBrief(site, accountId, selectedBrief);
   if (
     operation === "generate" &&
@@ -136,10 +159,6 @@ export async function processSiteOperation(
       contextBriefId,
       approvedConcept,
     );
-  const fanConnection =
-    operation === "publish"
-      ? await prepareSiteFanConnection(site, siteOperationSchemas.publish.parse(input).returnUrl)
-      : undefined;
   const changes =
     operation === "generate" && "instruction" in input
       ? {
@@ -151,9 +170,7 @@ export async function processSiteOperation(
             approvedConcept,
           ),
         }
-      : operation === "publish"
-        ? { published: site.draft, published_at: new Date().toISOString() }
-        : { published: null, published_at: null };
+      : { published: null, published_at: null };
   if (operation === "generate" && selectedBrief) {
     await readSiteContextBrief(site, accountId, selectedBrief);
     await authorizeSiteWorkspace(accountId, site.owner_id);
@@ -166,5 +183,5 @@ export async function processSiteOperation(
   });
   if (!updated)
     throw new SiteError(409, "This site changed while you were editing. Reload before editing.");
-  return { site: updated, ...(fanConnection ? { fanConnection } : {}) };
+  return { site: updated };
 }

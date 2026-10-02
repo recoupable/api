@@ -28,7 +28,14 @@ export const siteOperationSchemas = {
     })
     .strict(),
   generation: z.object({ id, token: z.string().min(1).max(3000) }).strict(),
-  publish: z.object({ id, revision, returnUrl: returnUrlSchema.optional() }).strict(),
+  publish: z
+    .object({
+      id,
+      revision,
+      generationToken: z.string().min(1).max(3000).optional(),
+      returnUrl: returnUrlSchema.optional(),
+    })
+    .strict(),
   delete: z
     .object({ id, revision, generationToken: z.string().min(1).max(3000).optional() })
     .strict(),

@@ -83,6 +83,7 @@ export const actionSchema = z.discriminatedUnion("action", [
   z
     .object({
       action: z.literal("publish"),
+      generationToken: z.string().min(1).max(3000).optional(),
       revision: z.number().int().nonnegative(),
       returnUrl: returnUrlSchema.optional(),
     })

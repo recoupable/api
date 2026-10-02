@@ -17,6 +17,8 @@ vi.mock("@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds", ()
   selectArtistOrganizationIds: m.artistOrgs,
 }));
 const m = vi.hoisted(() => ({
+  publication: vi.fn(),
+  savedBuild: vi.fn(),
   fanSetup: vi.fn().mockResolvedValue("enabled"),
   access: vi.fn(),
   collect: vi.fn(),
@@ -49,6 +51,10 @@ vi.mock("../production/startSiteProduction", () => ({ startSiteProduction: m.gen
 vi.mock("../production/getSiteProduction", () => ({ getSiteProduction: vi.fn() }));
 vi.mock("../resolveSpotifyRelease", () => ({ resolveSpotifyRelease: m.resolve }));
 vi.mock("@/lib/supabase/sites/deleteSite", () => ({ deleteSite: m.remove }));
+vi.mock("@/lib/supabase/sites/updateSitePublication", () => ({
+  updateSitePublication: m.publication,
+}));
+vi.mock("../production/readPublishableBuild", () => ({ readPublishableBuild: m.savedBuild }));
 const id = "11111111-1111-4111-8111-111111111111";
 const account = "22222222-2222-4222-8222-222222222222";
 const org = "33333333-3333-4333-8333-333333333333";
@@ -66,6 +72,7 @@ beforeEach(() => {
   });
   m.access.mockResolvedValue(false);
   m.update.mockResolvedValue({ id, revision: 3 });
+  m.publication.mockResolvedValue({ id, revision: 2 });
   m.list.mockResolvedValue([]);
 });
 it("rejects missing authentication before reading data", async () => {
@@ -143,14 +150,13 @@ it("reports concurrent writes after generation", async () => {
 });
 it("publishes only saved draft and can unpublish", async () => {
   await processSiteOperation(account, "publish", { id, revision: 2 });
-  expect(m.update).toHaveBeenCalledWith(
-    id,
-    account,
-    2,
+  expect(m.publication).toHaveBeenCalledWith(
+    expect.objectContaining({ id, revision: 2 }),
     expect.objectContaining({ published: draft }),
   );
   await processSiteOperation(account, "unpublish", { id, revision: 2 });
-  expect(m.update).toHaveBeenLastCalledWith(id, account, 2, {
+  expect(m.publication).toHaveBeenLastCalledWith(expect.objectContaining({ id }), {
+    artist_id: undefined,
     published: null,
     published_at: null,
   });
@@ -253,7 +259,7 @@ it("prepares paid fan connection before publishing and reports its status", asyn
     "https://app.test/s/site",
   );
   expect(m.fanSetup.mock.invocationCallOrder.at(-1)).toBeLessThan(
-    m.update.mock.invocationCallOrder.at(-1)!,
+    m.publication.mock.invocationCallOrder.at(-1)!,
   );
   expect(result).toHaveProperty("fanConnection", "enabled");
 });
@@ -281,7 +287,11 @@ it("allows unpaid workspaces to unpublish without checking paid setup", async ()
   m.fanSetup.mockRejectedValue(new SiteError(402, "Paid subscription required"));
   await processSiteOperation(account, "unpublish", { id, revision: 2 });
   expect(m.fanSetup).not.toHaveBeenCalled();
-  expect(m.update).toHaveBeenCalledWith(id, account, 2, { published: null, published_at: null });
+  expect(m.publication).toHaveBeenCalledWith(expect.objectContaining({ id }), {
+    published: null,
+    published_at: null,
+    artist_id: undefined,
+  });
 });
 
 it("deletes only the authorized revision and never generates", async () => {
@@ -324,4 +334,16 @@ it("does not delete when active-build cancellation fails", async () => {
     processSiteOperation(account, "delete", { id, revision: 2, generationToken: "job" }),
   ).rejects.toThrow("Cancellation unavailable");
   expect(m.remove).not.toHaveBeenCalled();
+});
+
+it("publishes an interrupted working build without a finalized draft", async () => {
+  m.select.mockResolvedValue({ id, owner_id: account, revision: 2, draft: null });
+  m.savedBuild.mockResolvedValue(draft);
+  await processSiteOperation(account, "publish", { id, revision: 2, generationToken: "signed" });
+  expect(m.savedBuild).toHaveBeenCalledWith("signed", expect.objectContaining({ id }), account);
+  expect(m.publication).toHaveBeenCalledWith(
+    expect.objectContaining({ id }),
+    expect.objectContaining({ published: draft }),
+  );
+  expect(m.update).not.toHaveBeenCalled();
 });

@@ -7,9 +7,14 @@ describe("publish request contract", () => {
     const { action, ...input } = actionSchema.parse({
       action: "publish",
       revision: 2,
+      generationToken: "signed-build",
       returnUrl: "https://app.recoupable.dev/s/afdd53d0-ee16-4e7f-94f8-ae02f27a0315",
     });
     expect(action).toBe("publish");
+    expect(
+      siteOperationSchemas.publish.parse({ id: "afdd53d0-ee16-4e7f-94f8-ae02f27a0315", ...input })
+        .generationToken,
+    ).toBe("signed-build");
     expect(
       siteOperationSchemas.publish.parse({
         id: "afdd53d0-ee16-4e7f-94f8-ae02f27a0315",
