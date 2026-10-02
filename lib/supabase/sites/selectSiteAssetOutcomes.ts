@@ -12,7 +12,7 @@ export async function selectSiteAssetOutcomes(ownerId: string) {
     .flatMap(row => {
       const draft = row.draft as SiteSnapshot | null;
       const review = draft?.production?.reviews.at(-1);
-      if (!draft || !review) return [];
+      if (!draft || !review || review.blocked) return [];
       return draft.assets
         .filter(asset => asset.generation)
         .map(asset => ({

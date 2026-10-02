@@ -35,3 +35,23 @@ it("restricts feedback to the requested workspace and reads the last completed r
     { model: "fal-ai/nano-banana-pro", siteVerdict: "pass", assetIssues: [] },
   ]);
 });
+it("excludes credit-blocked output from model quality evidence", async () => {
+  m.eq.mockReturnValue({ order: () => ({ limit: m.limit }) });
+  m.limit.mockResolvedValue({
+    data: [
+      {
+        draft: {
+          assets: [{ generation: { model: "model" } }],
+          production: {
+            reviews: [
+              { verdict: "pass", issues: [] },
+              { verdict: "revise", blocked: "credits", issues: [] },
+            ],
+          },
+        },
+      },
+    ],
+    error: null,
+  });
+  expect(await selectSiteAssetOutcomes("workspace-1")).toEqual([]);
+});
