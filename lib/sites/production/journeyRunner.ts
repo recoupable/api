@@ -16,6 +16,11 @@ for(const [name,width,height] of [['mobile',390,844],['desktop',1440,900]]){
  await page.locator('iframe').evaluate((frame,content)=>new Promise(resolve=>{frame.onload=()=>resolve();frame.srcdoc=content;}),content);
  const ui=page.frameLocator('iframe');await ui.locator('body').waitFor();
  await page.screenshot({path:name+'.png'});const before=await ui.locator('body').innerText();let interacted=false;
+ async function checkHidden(){
+  const visible=await ui.locator('[hidden]:not([hidden="until-found"])').evaluateAll(nodes=>nodes.filter(el=>{const style=getComputedStyle(el);return style.display!=='none'&&style.visibility!=='hidden'&&style.visibility!=='collapse'&&Array.from(el.getClientRects()).some(r=>r.width>0&&r.height>0);}).map(el=>el.id||el.tagName).slice(0,10));
+  if(visible.length){const message='Hidden elements remain visible: '+visible.join(', ');if(!errors.includes(message))errors.push(message);}
+ }
+ await checkHidden();
  async function verifyImage(bytes,label){
   if(bytes.length<100 || bytes.length>20000000)throw Error(label+': empty or oversized image');
   const encoded=Buffer.from(bytes).toString('base64');
@@ -39,6 +44,7 @@ for(const [name,width,height] of [['mobile',390,844],['desktop',1440,900]]){
    if(index===0)await page.screenshot({path:name+'-first-action.png'});
    if(step.waitMs)await page.waitForTimeout(step.waitMs);
    interacted=true;
+   await checkHidden();
    if(step.expected)await ui.getByText(step.expected,{exact:false}).first().waitFor({state:'visible',timeout:5000});
    await page.screenshot({path:name+'-checkpoint-'+step.checkpoint+'.png'});
    steps.push({index,checkpoint:step.checkpoint,passed:true});

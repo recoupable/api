@@ -51,3 +51,44 @@ it("routes an unclear opening into implementation repair even when art and scrip
   expect(result.issues).toContainEqual(opening.issues[0]);
   expect(result.verification?.opening).toEqual(opening);
 });
+
+it("does not allow model approval to override a visible hidden-element failure", async () => {
+  vi.mocked(renderReviewedJourney).mockResolvedValue({
+    journey: {},
+    rendered: {
+      images: ["m", "ma", "d", "da"],
+      report: ["mobile", "desktop"].map(name => ({
+        name,
+        journeyPassed: true,
+        errors: ["Hidden elements remain visible: hint"],
+        overflow: false,
+      })),
+    },
+  } as never);
+  vi.mocked(reviewOpeningSequence).mockResolvedValue({
+    verdict: "pass",
+    observations: [],
+    issues: [],
+    summary: "Clear",
+  } as never);
+  vi.mocked(generateProductionObject).mockResolvedValue({
+    verdict: "pass",
+    issues: [],
+    summary: "Looks good",
+  });
+  const result = await reviewExperience(
+    {} as SiteSnapshot,
+    { contract: {} } as CreativeDirection,
+    "account",
+    "site",
+  );
+  expect(result.verdict).toBe("revise");
+  expect(result.issues).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        module: "implementation",
+        detail: expect.stringContaining("Hidden elements remain visible: hint"),
+      }),
+    ]),
+  );
+});
