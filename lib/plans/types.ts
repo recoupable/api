@@ -9,7 +9,12 @@ export interface PlanEntitlements {
   task_limit: number | null;
   /** Shortest allowed gap between two consecutive runs of a task, in minutes. */
   min_cadence_minutes: number;
+  /** Tracks `POST /api/songs/analyze` may analyze per UTC calendar month; null means uncapped. */
+  analyze_limit: number | null;
 }
 
 /** Which entitlement a task request violated. */
 export type PlanLimit = "task_count" | "min_cadence";
+
+/** The one entitlement an analyze request can violate. */
+export type AnalyzePlanLimit = "analyze_count";

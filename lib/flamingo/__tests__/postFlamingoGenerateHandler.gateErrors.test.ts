@@ -12,6 +12,9 @@ vi.mock("@/lib/flamingo/verifyAudioUrl", () => ({
   verifyAudioUrl: vi.fn().mockResolvedValue({ ok: true, contentType: "audio/mpeg" }),
 }));
 
+vi.mock("@/lib/plans/assertAnalyzeWithinPlan", () => ({
+  assertAnalyzeWithinPlan: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
 vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
   ensureCreditsOrShortCircuit: vi.fn(),

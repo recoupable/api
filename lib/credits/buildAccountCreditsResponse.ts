@@ -12,13 +12,14 @@ export interface AccountCreditsResponse {
   plan: Plan;
   task_limit: number | null;
   min_cadence_minutes: number;
+  analyze_limit: number | null;
   timestamp: string | null;
 }
 
 /**
  * Shapes a `credits_usage` row + plan into the public response documented at
- * `GET /api/accounts/{id}/credits`. Derives `total_credits` and the task
- * entitlements from the plan and
+ * `GET /api/accounts/{id}/credits`. Derives `total_credits`, the task
+ * entitlements and the analyze cap from the plan and
  * clamps `used_credits` to a non-negative value when a manual top-up has put the
  * balance above the plan total.
  */
@@ -27,7 +28,7 @@ export function buildAccountCreditsResponse(args: {
   plan: Plan;
 }): AccountCreditsResponse {
   const { creditsUsage, plan } = args;
-  const { credits_usd, task_limit, min_cadence_minutes } = getPlanEntitlements(plan);
+  const { credits_usd, task_limit, min_cadence_minutes, analyze_limit } = getPlanEntitlements(plan);
   const total_credits = usdToCredits(credits_usd);
   const used_credits = Math.max(0, total_credits - creditsUsage.remaining_credits);
   return {
@@ -39,6 +40,7 @@ export function buildAccountCreditsResponse(args: {
     plan,
     task_limit,
     min_cadence_minutes,
+    analyze_limit,
     timestamp: creditsUsage.timestamp,
   };
 }
