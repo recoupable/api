@@ -1,5 +1,4 @@
 import { createSnapshot } from "@/lib/research/playcounts/createSnapshot";
-import { enqueueHistoricalBackfill } from "./enqueueHistoricalBackfill";
 import type { ValidatedCreateMeasurementJobRequest } from "./validateCreateMeasurementJobRequest";
 
 export type CreateMeasurementJobResult = { data: unknown } | { error: string; status: number };
@@ -14,9 +13,9 @@ type SnapshotData = {
 };
 
 /**
- * Dispatch a measurement job by `source`. `historical` enqueues Songstats deep
- * backfill; `current` reuses the snapshot capture pipeline (replacing
- * `POST /api/research/snapshots`) and maps `snapshot_id` to the resource's `id`.
+ * Create a `current` measurement job: reuses the snapshot capture pipeline
+ * (replacing `POST /api/research/snapshots`) and maps `snapshot_id` to the
+ * resource's `id`.
  *
  * @param req - The validated create request (accountId + body)
  */
@@ -24,10 +23,6 @@ export async function createMeasurementJob(
   req: ValidatedCreateMeasurementJobRequest,
 ): Promise<CreateMeasurementJobResult> {
   const { accountId, body } = req;
-
-  if (body.source === "historical") {
-    return enqueueHistoricalBackfill(body.scope);
-  }
 
   const result = await createSnapshot({
     accountId,

@@ -1,62 +1,50 @@
-import {
-  getResearchTrackHistoricStats,
-  GetResearchTrackHistoricStatsParams,
-  GetResearchTrackHistoricStatsResult,
-} from "@/lib/research/getResearchTrackHistoricStats";
 import { selectSongMeasurements } from "@/lib/supabase/song_measurements/selectSongMeasurements";
-import { upsertSongstatsBackfillQueue } from "@/lib/supabase/songstats_backfill_queue/upsertSongstatsBackfillQueue";
-import { buildSpotifyHistoricStat } from "@/lib/research/playcounts/buildSpotifyHistoricStat";
-import { historicStatsPayloadSchema } from "@/lib/research/playcounts/historicStatsPayloadSchema";
-import { labelSongstatsHistoricProvenance } from "@/lib/research/labelSongstatsHistoricProvenance";
+import {
+  buildSpotifyHistoricStat,
+  type SpotifyHistoricStat,
+} from "@/lib/research/playcounts/buildSpotifyHistoricStat";
 import { deductCredits } from "@/lib/research/deductCredits";
 
 const METRIC = "platform_displayed_play_count";
 
+export type GetTrackHistoricStatsParams = {
+  accountId: string;
+  isrc: string;
+  startDate?: string;
+  endDate?: string;
+  /** Billing endpoint label written to `usage_events.model_id`. */
+  modelId?: string;
+};
+
+export type GetTrackHistoricStatsResult =
+  | { data: { result: "success"; stats: SpotifyHistoricStat[] } }
+  | { error: string; status: number };
+
+export const NO_MEASUREMENTS_ERROR =
+  "No measurements for this track yet — create a current measurement job to capture it";
+
 /**
- * Stitched historic series for per-track stats (recoupable/chat#1791),
- * layered over the untouched Songstats passthrough. Spotify history is served
- * **from the measurement store only** — Apify snapshot captures plus
- * Songstats-backfilled points, labeled per point — and never burns Songstats
- * quota in the request path. Tracks without backfilled history return their
- * snapshot-only series and are enqueued for the backfill worker (the request
- * never blocks). Other sources delegate to {@link getResearchTrackHistoricStats}.
+ * Historic Spotify series for one recording, served from the measurement
+ * store only (recoupable/chat#1791): every capture the store holds, one point
+ * per date, optionally bounded by the request's date window. Credits are
+ * deducted only when at least one measurement exists.
+ *
+ * @param params - The account, the recording's ISRC, the window and the billing label
  */
 export async function getTrackHistoricStatsApifyFirst(
-  params: GetResearchTrackHistoricStatsParams,
-): Promise<GetResearchTrackHistoricStatsResult> {
-  const { isrc, source = "", start_date, end_date } = params.params;
-  const sources = source.split(",").map(s => s.trim());
-  const spotifyRequested = Boolean(isrc) && sources.includes("spotify");
-
-  let spotifyStat = null;
-  if (spotifyRequested) {
-    const rows = await selectSongMeasurements({ song: isrc, platform: "spotify", metric: METRIC });
-    spotifyStat = buildSpotifyHistoricStat(rows, { startDate: start_date, endDate: end_date });
-    if (!rows.some(row => row.data_source === "songstats")) {
-      await upsertSongstatsBackfillQueue({ song: isrc, rank_score: rows[0]?.value ?? 0 });
-    }
-  }
-
-  const remainingSources = spotifyRequested ? sources.filter(s => s !== "spotify") : sources;
-
-  if (spotifyStat && remainingSources.length === 0) {
-    await deductCredits(params.accountId, params.modelId);
-    return { data: { result: "success", stats: [spotifyStat] } };
-  }
-
-  const result = await getResearchTrackHistoricStats({
-    ...params,
-    params: { ...params.params, source: remainingSources.join(",") },
+  params: GetTrackHistoricStatsParams,
+): Promise<GetTrackHistoricStatsResult> {
+  const rows = await selectSongMeasurements({
+    song: params.isrc,
+    platform: "spotify",
+    metric: METRIC,
   });
-  if ("error" in result) return result;
+  if (rows.length === 0) return { error: NO_MEASUREMENTS_ERROR, status: 404 };
 
-  const parsed = historicStatsPayloadSchema.safeParse(result.data);
-  if (!parsed.success) {
-    console.warn("[research] unexpected Songstats historic payload shape:", parsed.error.message);
-    return result;
-  }
-
-  const labeled = labelSongstatsHistoricProvenance(parsed.data);
-  if (!spotifyStat) return { data: labeled };
-  return { data: { ...labeled, stats: [...(labeled.stats ?? []), spotifyStat] } };
+  const stat = buildSpotifyHistoricStat(rows, {
+    startDate: params.startDate,
+    endDate: params.endDate,
+  });
+  await deductCredits(params.accountId, params.modelId);
+  return { data: { result: "success", stats: [stat] } };
 }

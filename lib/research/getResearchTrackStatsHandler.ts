@@ -8,11 +8,8 @@ import { endpointModelId } from "@/lib/credits/endpointModelId";
 /**
  * GET /api/research/track/stats
  *
- * Per-track, per-source current stats (including absolute `streams_total`) by
- * `isrc` / `songstats_track_id` / `spotify_track_id` / `apple_music_track_id`.
- * Apify-first for Spotify via the measurement store, Songstats for the
- * remaining sources; mirrors the `stats[].data` envelope of
- * `GET /api/research/metrics`, scoped to a single recording.
+ * Current Spotify play count for one recording by `isrc`, served from the
+ * measurement store as a single `stats[]` entry.
  *
  * @param request - The incoming HTTP request.
  * @returns The JSON response.

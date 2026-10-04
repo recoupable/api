@@ -2,7 +2,6 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { errorResponse } from "@/lib/networking/errorResponse";
-import { ensureSongstatsPaymentMethod } from "@/lib/research/measurement_jobs/ensureSongstatsPaymentMethod";
 
 const scopeSchema = z
   .object({
@@ -16,7 +15,7 @@ const scopeSchema = z
 
 export const createMeasurementJobBodySchema = z.object({
   scope: scopeSchema,
-  source: z.enum(["current", "historical"], { message: "source must be current or historical" }),
+  source: z.enum(["current"], { message: "source must be current" }),
   platforms: z.array(z.enum(["spotify"])).default(["spotify"]),
 });
 
@@ -30,7 +29,7 @@ export type ValidatedCreateMeasurementJobRequest = {
 /**
  * Validates `POST /api/research/measurement-jobs` — auth + body: a `scope`
  * (exactly one of `catalog_id` / `album_ids` / `isrcs`) and a `source`
- * (`current` = Apify capture, `historical` = Songstats backfill).
+ * (`current` = Apify capture).
  *
  * @param request - The incoming HTTP request.
  */
@@ -44,13 +43,6 @@ export async function validateCreateMeasurementJobRequest(
   const result = createMeasurementJobBodySchema.safeParse(raw);
   if (!result.success) {
     return errorResponse(result.error.issues[0].message, 400);
-  }
-
-  // `historical` spends Songstats quota → require a card on file (402 + free-tier
-  // checkout link if absent). `current` is Apify-only, so it's exempt.
-  if (result.data.source === "historical") {
-    const short = await ensureSongstatsPaymentMethod(authResult.accountId);
-    if (short) return short;
   }
 
   return { accountId: authResult.accountId, body: result.data };
