@@ -4,12 +4,16 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetTaskRunQuery } from "./validateGetTaskRunQuery";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
 import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
+import { attachRunTitles } from "./attachRunTitles";
+import { attachRunEmailSubjects } from "./attachRunEmailSubjects";
 
 /**
  * Handles GET /api/tasks/runs requests.
  * Always returns { status: "success", runs: [...] }.
  * When runId is provided, runs contains a single element.
- * When omitted, runs contains recent runs for the authenticated account.
+ * When omitted, runs contains recent runs for the authenticated account,
+ * each annotated with the originating scheduled task's title (null when
+ * the run cannot be mapped to a scheduled task).
  *
  * @param request - The NextRequest object
  * @returns A NextResponse with the runs array
@@ -26,8 +30,16 @@ export async function getTaskRunHandler(request: NextRequest): Promise<NextRespo
         { "filter[tag]": `account:${validatedQuery.accountId}` },
         validatedQuery.limit,
       );
+      const runsWithTitles = await attachRunTitles(
+        runs,
+        validatedQuery.accountId,
+        validatedQuery.limit,
+      );
+      // email_subject outranks title in display (chat#1958): a run that sent
+      // an email is named by that email's subject.
+      const runsWithNames = await attachRunEmailSubjects(runsWithTitles);
       return NextResponse.json(
-        { status: "success", runs },
+        { status: "success", runs: runsWithNames },
         { status: 200, headers: getCorsHeaders() },
       );
     }
