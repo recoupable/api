@@ -18,13 +18,18 @@ export async function selectLatestSongPlays(isrcs: string[]): Promise<Record<str
   for (let i = 0; i < isrcs.length; i += CHUNK_SIZE) {
     const chunk = isrcs.slice(i, i + CHUNK_SIZE);
     try {
-      const rows = await selectSongMeasurements({
-        songs: chunk,
-        platform: "spotify",
-        metric: "platform_displayed_play_count",
-      });
-      for (const row of rows ?? []) {
-        if (!(row.song in plays)) plays[row.song] = row.value;
+      for (let offset = 0; ; offset += 1000) {
+        const rows = await selectSongMeasurements({
+          songs: chunk,
+          platform: "spotify",
+          metric: "platform_displayed_play_count",
+          offset,
+          limit: 1000,
+        });
+        for (const row of rows ?? []) {
+          if (!(row.song in plays)) plays[row.song] = row.value;
+        }
+        if ((rows?.length ?? 0) < 1000 || chunk.every(isrc => isrc in plays)) break;
       }
     } catch (error) {
       console.error("Error fetching latest song plays:", error);

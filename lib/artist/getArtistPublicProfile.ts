@@ -1,21 +1,17 @@
 import { getAccountArtistIds } from "@/lib/supabase/account_artist_ids/getAccountArtistIds";
-import { selectSongArtists } from "@/lib/supabase/song_artists/selectSongArtists";
-import { selectCatalogsBySongs } from "@/lib/supabase/catalog_songs/selectCatalogsBySongs";
-import { countCatalogSongs } from "@/lib/supabase/catalog_songs/countCatalogSongs";
-import { getCatalogSongs } from "@/lib/songs/getCatalogSongs";
-import { selectSongs } from "@/lib/supabase/songs/selectSongs";
-import { selectLatestSongPlays } from "@/lib/songs/selectLatestSongPlays";
-import { resolveSongArtwork } from "@/lib/artist/resolveSongArtwork";
-import { buildProfileSongs, type ProfileSong } from "@/lib/artist/buildProfileSongs";
-import { getCatalogEarliestReleaseDate } from "@/lib/catalog/getCatalogEarliestReleaseDate";
+import { getArtistProfileSongs } from "./getArtistProfileSongs";
+import { getArtistProfileCatalogs } from "./getArtistProfileCatalogs";
+import type { ProfileSong } from "./buildProfileSongs";
 import { getSocialPlatformByLink } from "@/lib/artists/getSocialPlatformByLink";
-import type { ValuationBand } from "@/lib/catalog/computeValuationBand";
+import { computeValuationBand, type ValuationBand } from "@/lib/catalog/computeValuationBand";
 
 export type ArtistPublicProfile = {
   id: string;
   name: string | null;
   image: string | null;
   socials: Array<{ type: string; username: string | null; profile_url: string }>;
+  songs: ProfileSong[];
+  song_count: number;
   catalogs: Array<{
     id: string;
     name: string;
@@ -27,22 +23,9 @@ export type ArtistPublicProfile = {
 };
 
 /**
- * The public subset of an artist's data: name, image, connected socials and
- * linked catalogs. Backs the unauthenticated artist page, so the response is
- * built field-by-field as an allowlist — a database row is never spread into
- * it, and `account_info`'s private fields (instruction, knowledges, label)
- * stay out by construction.
- *
- * An account qualifies as an artist iff it appears as `artist_id` on at least
- * one roster (`account_artist_ids`); other accounts return `null`, which the
- * handler turns into the same 404 as an unknown id.
- *
- * Catalogs resolve through the songs graph — `song_artists` (the artist's
- * credited ISRCs) into `catalog_songs` — because `account_catalogs` links a
- * catalog to its owner account, not to the artists whose songs it holds.
- *
- * @param artistId - The artist's account id.
- * @returns The public profile, or null when the id is not an artist.
+ * Public allowlist for the unauthenticated artist profile. Artist credits are
+ * the song source of truth; saved catalogs only enrich legacy metadata.
+ * Accounts not on a roster as an artist return null (the route responds 404).
  */
 export async function getArtistPublicProfile(
   artistId: string,
@@ -52,42 +35,26 @@ export async function getArtistPublicProfile(
   if (!artist) return null;
 
   const info = artist.account_info?.[0];
-  // Degrade, don't fail: a songs-graph query error costs the catalog list,
-  // never the whole unauthenticated page (selectSongArtists throws, chat#1965).
-  let songRows: Awaited<ReturnType<typeof selectSongArtists>> = [];
+  let songs: Awaited<ReturnType<typeof getArtistProfileSongs>> = [];
   try {
-    songRows = await selectSongArtists({ artists: [artistId] });
+    songs = await getArtistProfileSongs(artistId);
   } catch (error) {
     console.error("Error resolving credited songs for public profile:", error);
   }
-  const isrcs = [...new Set(songRows.map(row => row.song))];
-  const catalogRows = await selectCatalogsBySongs(isrcs);
-  const counts = await countCatalogSongs(catalogRows.map(c => c.id));
 
-  const [catalogSongRows, songRecords, plays] = await Promise.all([
-    getCatalogSongs(isrcs),
-    selectSongs(isrcs),
-    selectLatestSongPlays(isrcs),
-  ]);
-  const songsWithArt = songRecords.map(song => ({
-    isrc: song.isrc,
-    name: song.name,
-    album: song.album,
-    artwork_url: song.artwork_url,
-  }));
-  const missingArtwork = songsWithArt.filter(s => !s.artwork_url).map(s => s.isrc);
-  const artwork = await resolveSongArtwork(missingArtwork);
-
-  const earliestEntries = await Promise.all(
-    catalogRows.map(async c => [c.id, await getCatalogEarliestReleaseDate(c.id)] as const),
-  );
-  const { songsByCatalog, valuation } = buildProfileSongs({
-    catalogSongRows,
-    songs: songsWithArt,
-    plays,
-    artwork,
-    earliestReleaseDates: Object.fromEntries(earliestEntries),
-  });
+  const totalStreams = songs.reduce((total, song) => total + song.plays, 0);
+  let valuation =
+    totalStreams > 0
+      ? computeValuationBand({ totalStreams, earliestReleaseDate: null }).valuation
+      : null;
+  let catalogs: ArtistPublicProfile["catalogs"] = [];
+  try {
+    const enrichment = await getArtistProfileCatalogs(songs);
+    catalogs = enrichment.catalogs;
+    valuation = enrichment.valuation;
+  } catch (error) {
+    console.error("Error enriching public profile catalogs:", error);
+  }
 
   const socials = (artist.account_socials ?? [])
     .filter(row => row.social?.profile_url)
@@ -97,19 +64,18 @@ export async function getArtistPublicProfile(
       profile_url: row.social?.profile_url ?? "",
     }));
 
-  const catalogs = catalogRows.map(c => ({
-    id: c.id,
-    name: c.name,
-    song_count: counts[c.id] ?? 0,
-    updated_at: c.updated_at,
-    songs: songsByCatalog[c.id] ?? [],
-  }));
-
   return {
     id: artistId,
     name: artist.name ?? null,
     image: info?.image || null,
     socials,
+    songs: songs.map(song => ({
+      ...song,
+      // Share the artist band's age assumption; catalog membership never gates a song.
+      est_value_usd:
+        valuation && totalStreams > 0 ? (valuation.mid * song.plays) / totalStreams : 0,
+    })),
+    song_count: songs.length,
     catalogs,
     valuation,
   };
