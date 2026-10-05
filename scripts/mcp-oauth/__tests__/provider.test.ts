@@ -95,6 +95,27 @@ describe("OAuth provider compatibility spike (synthetic identity, isolated MCP t
     expect(JSON.stringify(result)).not.toContain(token.body.access_token);
   });
 
+  it("accepts case-insensitive bearer schemes and rejects an absent scheme", async () => {
+    const { lab, authorize, exchange } = await setup();
+    const callback = await authorize();
+    const token = await exchange(callback.searchParams.get("code")!);
+    for (const scheme of ["bearer", "bEaReR"]) {
+      const response = await fetch(lab.resource, {
+        method: "POST",
+        headers: {
+          Authorization: `${scheme} ${token.body.access_token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+        },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+      });
+      expect(response.status).toBe(200);
+    }
+    expect(
+      (await fetch(lab.resource, { headers: { Authorization: token.body.access_token } })).status,
+    ).toBe(401);
+  });
+
   it("denies writes for a read-only grant without changing the fixture", async () => {
     const { lab, authorize, exchange } = await setup();
     const callback = await authorize({ scope: "mcp:read" });
@@ -143,6 +164,7 @@ describe("OAuth provider compatibility spike (synthetic identity, isolated MCP t
   it("rejects an unregistered callback without redirecting to it", async () => {
     const { authorize, lab } = await setup();
     const result = await authorize({ redirect_uri: "https://attacker.example/callback" });
+    expect(result.status).toBe(400);
     expect(result.origin).toBe(lab.issuer);
     expect(result.searchParams.get("code")).toBeNull();
   });
@@ -154,6 +176,8 @@ describe("OAuth provider compatibility spike (synthetic identity, isolated MCP t
   ])("rejects invalid authorization parameters %j", async overrides => {
     const { authorize } = await setup();
     const result = await authorize(overrides);
+    expect(result.status).toBe(303);
+    expect(result.searchParams.get("error")).toBeTruthy();
     expect(result.searchParams.get("code")).toBeNull();
   });
 
@@ -226,10 +250,8 @@ describe("OAuth provider compatibility spike (synthetic identity, isolated MCP t
       redirect_uris: ["https://agent.example/callback"],
       token_endpoint_auth_method: "none",
     });
-    expect((await authorize({ client_id: clientId })).searchParams.get("code")).toBeNull();
-    expect(
-      (await authorize({ client_id: "https://127.0.0.1/client.json" })).searchParams.get("code"),
-    ).toBeNull();
+    expect((await authorize({ client_id: clientId })).status).toBe(400);
+    expect((await authorize({ client_id: "https://127.0.0.1/client.json" })).status).toBe(400);
   });
 
   it("supports a pre-registered client without dynamic registration", async () => {

@@ -34,7 +34,7 @@ export async function startOAuthLab() {
         return;
       }
       if (req.url === "/mcp") {
-        const tokenString = req.headers.authorization?.replace(/^Bearer /, "");
+        const tokenString = req.headers.authorization?.match(/^Bearer +([^\s]+)$/i)?.[1];
         const token = tokenString ? await provider.AccessToken.find(tokenString) : undefined;
         const grant = token?.grantId ? await provider.Grant.find(token.grantId) : undefined;
         if (!token || token.isExpired || token.aud !== resource || !grant || grant.isExpired) {
@@ -124,9 +124,9 @@ export async function startOAuthLab() {
       if (response.status >= 500)
         throw new Error(`OAuth lab server failed with ${response.status}`);
       const location = response.headers.get("location");
-      if (!location) return next;
+      if (!location) return Object.assign(next, { status: response.status });
       next = new URL(location, issuer);
-      if (next.origin !== issuer) return next;
+      if (next.origin !== issuer) return Object.assign(next, { status: response.status });
     }
     throw new Error("Fixture authorization exceeded redirect limit");
   };

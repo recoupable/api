@@ -3,6 +3,7 @@ import { resolve, relative } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import inventory from "../tool-policy.json";
+import { assertDirectRegistrations } from "../assertDirectRegistrations";
 
 // Deliberately inspects source, not runtime imports: inventory must never initialize providers
 // or contact production services. New registration patterns fail instead of silently disappearing.
@@ -25,6 +26,7 @@ describe("MCP OAuth tool authorization inventory", () => {
         ts.ScriptTarget.Latest,
         true,
       );
+      assertDirectRegistrations(source);
       const siteNames: string[] = [];
       const collect = (node: ts.Node) => {
         if (
