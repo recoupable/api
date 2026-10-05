@@ -1,20 +1,18 @@
 import { generateBrandWorld } from "../brandWorld/generateBrandWorld";
 import { getSiteModelOptions } from "../getSiteModelOptions";
-import type { Site } from "../schema";
+import type { Site, SiteSnapshot } from "../schema";
 import type { SiteBuildState } from "./types";
 /** Persist the original task and art direction separately from disposable conversation. */
 export async function initializeSiteBuild(
   site: Site,
   instruction: string,
   accountId?: string,
+  existingWorld?: SiteSnapshot["brandWorld"],
 ): Promise<SiteBuildState> {
   if (accountId) await (await import("../production/requireCredits")).requireCredits(accountId);
-  const brandWorld = await generateBrandWorld(
-    site,
-    instruction,
-    getSiteModelOptions().model,
-    accountId,
-  );
+  const brandWorld =
+    existingWorld ??
+    (await generateBrandWorld(site, instruction, getSiteModelOptions().model, accountId));
   return {
     site,
     instruction,
