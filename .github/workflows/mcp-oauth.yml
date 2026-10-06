@@ -1,0 +1,29 @@
+name: MCP OAuth compatibility
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck:mcp-oauth
+      - run: sudo apt-get update && sudo apt-get install -y redis-server
+      - run: pnpm test:mcp-oauth
+        env:
+          OAUTH_TEST_REDIS_SERVER: /usr/bin/redis-server

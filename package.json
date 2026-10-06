@@ -15,7 +15,9 @@
     "test:watch": "vitest",
     "update-types": "npx supabase gen types typescript --project-id godremdqwajrwazhbrue --schema public > types/database.types.ts",
     "backfill:rooms-to-sessions": "npx tsx scripts/backfillRoomsToSessions.ts",
-    "eval": "braintrust eval --external-packages playwright playwright-core chromium-bidi @browserbasehq/stagehand @composio/core @composio/vercel"
+    "eval": "braintrust eval --external-packages playwright playwright-core chromium-bidi @browserbasehq/stagehand @composio/core @composio/vercel",
+    "test:mcp-oauth": "vitest run --config vitest.oauth.config.ts",
+    "typecheck:mcp-oauth": "tsc --noEmit --project tsconfig.oauth.json"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.78",
@@ -55,6 +57,7 @@
     "nanoid": "^5.1.11",
     "next": "16.3.0",
     "node-telegram-bot-api": "^0.66.0",
+    "oidc-provider": "9.12.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "resend": "^6.6.0",
@@ -72,6 +75,7 @@
     "@eslint/js": "^9.24.0",
     "@types/ms": "^2.1.0",
     "@types/node": "^20",
+    "@types/oidc-provider": "9.12.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/uuid": "^11.0.0",

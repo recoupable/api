@@ -14,6 +14,14 @@ const nextConfig: NextConfig = {
   typescript: {
     tsconfigPath: "tsconfig.build.json",
   },
+  async rewrites() {
+    return [
+      {
+        source: "/.well-known/oauth-authorization-server/api/oauth",
+        destination: "/api/oauth-discovery",
+      },
+    ];
+  },
   async headers() {
     return [
       {
