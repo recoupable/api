@@ -22,4 +22,4 @@ The test runs actual HTTP through the installed Next Pages `apiResolver`, regist
 
 ## Remaining integration
 
-Wire stable provider configuration, route/discovery/CORS/registration controls, CSRF-bound browser login and consent, account/organization grant selection, tool authorization and Connected Apps. Keep production OAuth disabled until real login, customer-resource isolation and named-client journeys are verified. All test execution remains the implementation agent's responsibility.
+The opt-in Pages route now mounts the stable provider and browser-bound consent handler. See [runtime configuration](mcp-oauth-runtime.md). Organization grant selection, production discovery/registration controls, tool authorization and Connected Apps remain unfinished. Keep production OAuth disabled until real login, customer-resource isolation and named-client journeys are verified.

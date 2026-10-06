@@ -4,6 +4,7 @@
     "incremental": false
   },
   "include": [
+    "pages/api/oauth/**/*.ts",
     "scripts/mcp-oauth/**/*.ts",
     "vitest.oauth.config.ts",
     "lib/oauth/**/*.ts",

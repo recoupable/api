@@ -10,6 +10,7 @@ it("calls only the immutable existing-account resolver", async () => {
     verifiedEmails: ["alice@example.test"],
   };
   expect(await getOAuthAccountIdentity(identity)).toBe("00000000-0000-4000-8000-000000000001");
+  expect(rpc).toHaveBeenCalledTimes(1);
   expect(rpc).toHaveBeenCalledWith("resolve_oauth_account", {
     p_app_id: "app",
     p_subject: "did:privy:subject",
