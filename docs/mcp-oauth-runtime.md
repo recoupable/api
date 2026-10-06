@@ -24,7 +24,7 @@ Before runtime initialization, every enabled request consumes atomic shared Supa
 
 Peer identity uses the socket address, never caller-controlled forwarded headers. Behind a platform proxy, unrelated clients may share that peer budget. Validate deployment behavior and configure edge per-client limits before public launch; do not blindly trust X-Forwarded-For to increase capacity. These conservative application budgets protect storage work but do not replace edge DDoS controls.
 
-The service-only `consume_oauth_rate_limit` RPC checks and increments all applicable budgets in one transaction. Identifiers are HMAC hashes. Counters expire after one minute; each request removes expired rows for its issuer using an expiry index. Transaction-scoped issuer locks prevent concurrent oversubscription. Rejected requests do not consume another budget or create peer rows. The database repository tests concurrency, expiry cleanup, isolation, validation, and role permissions against disposable PostgreSQL. OAuth has no Redis dependency.
+The service-only `consume_oauth_rate_limit` RPC checks and increments all applicable budgets in one transaction. Identifiers are HMAC hashes. Counters expire after one minute; each request removes expired rows for its issuer using an expiry index. Transaction-scoped issuer locks prevent concurrent oversubscription. Rejected requests do not consume another budget or create peer rows. The database repository tests concurrency, expiry cleanup, isolation, validation, and role permissions against disposable PostgreSQL. OAuth has no Redis dependency. Counter RPCs have a two-second deadline and abort on timeout.
 
 ## Browser journey
 
@@ -59,7 +59,7 @@ Every tool execution revalidates the token, active grant, account, audience and 
 
 ## Release sequence and outstanding live proof
 
-1. Review and merge database PR #81 (four migrations), API PR #963, and app PR #2163 through the normal release workflow. Apply database migrations to the verified Recoup production project before enabling the API gate.
+1. Review and merge database PR #81 (four migrations), API PR #963, and app PR #2163 through the normal release workflow. Also merge database PR #82 (`20261006190000_oauth_rate_limits.sql`) before API PR #964. Verify all five migrations in production before enabling the API gate.
 2. Configure stable API secrets above, `OAUTH_ISSUER=https://api.recoupable.dev/api/oauth`, and consent URL on **app.recoupable.dev**. Do not rotate the stable index key casually. Configure the app's `OAUTH_ISSUER` and `OAUTH_CONSENT_ENABLED`; enable `OAUTH_ENABLED` only for the coordinated release.
 3. Verify actual deployed metadata, canonical challenge, database/proxy request budgets and existing-account Privy login. Existing local protocol/browser tests use synthetic identities and data.
 4. Connect available named clients, perform a clearly labeled reversible personal artist create/update, inspect Connected Agents, revoke, and verify old/refresh credentials fail. Record each surface separately; callback registration acceptance alone is not interoperability evidence.
