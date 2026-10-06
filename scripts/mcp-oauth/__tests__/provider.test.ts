@@ -2,13 +2,17 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createHash, randomBytes } from "node:crypto";
 import { startOAuthLab } from "../fixtures/startOAuthLab";
 
+import { createPostgresTestAdapter } from "../fixtures/createPostgresTestAdapter";
+
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => {
   for (const close of cleanup.splice(0)) await close();
 });
 
 async function setup() {
-  const lab = await startOAuthLab();
+  const lab = await startOAuthLab(
+    process.env.OAUTH_TEST_PG_SOCKET ? createPostgresTestAdapter : undefined,
+  );
   cleanup.push(lab.close);
   const discovery = await fetch(`${lab.issuer}/.well-known/openid-configuration`).then(r =>
     r.json(),
@@ -30,6 +34,7 @@ async function setup() {
   };
   const { response, client } = await register();
   expect(response.status).toBe(201);
+  expect(client.registration_access_token).toBeUndefined();
   const verifier = randomBytes(32).toString("base64url");
   const challenge = createHash("sha256").update(verifier).digest("base64url");
   const authorize = async (overrides: Record<string, string> = {}) => {

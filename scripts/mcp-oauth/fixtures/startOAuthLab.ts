@@ -1,3 +1,4 @@
+import type { AdapterFactory } from "oidc-provider";
 import { createServer } from "node:http";
 import { once } from "node:events";
 import type { AddressInfo } from "node:net";
@@ -9,14 +10,14 @@ import { z } from "zod";
 import { createLabProvider } from "../createLabProvider";
 
 /** Start an isolated real-HTTP OAuth/MCP fixture. All identity and data are synthetic. */
-export async function startOAuthLab() {
+export async function startOAuthLab(createAdapter?: (issuer: string) => AdapterFactory) {
   const http = createServer();
   http.listen(0, "127.0.0.1");
   await once(http, "listening");
   const issuer = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
   const resource = `${issuer}/mcp`;
   const metadataDocuments = new Map<string, Record<string, unknown>>();
-  const provider = createLabProvider(issuer, metadataDocuments);
+  const provider = createLabProvider(issuer, metadataDocuments, createAdapter?.(issuer));
   const providerHandler = provider.callback();
   let value = "initial";
   let consentAllowed = true;

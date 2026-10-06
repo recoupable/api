@@ -1,9 +1,10 @@
 import { generateKeyPairSync, randomBytes } from "node:crypto";
-import { Provider, errors } from "oidc-provider";
+import { Provider, errors, type AdapterFactory } from "oidc-provider";
 
 /**
  * Test-only OAuth implementation spike. Never mount this factory in an application route:
- * it uses ephemeral signing keys and the provider's in-memory adapter.
+ * it uses ephemeral signing keys and synthetic consent. Storage defaults to in-memory;
+ * the integration suite injects an encrypted adapter backed by disposable PostgreSQL.
  *
  * @param issuer - Loopback HTTP issuer of the isolated fixture.
  * @returns Provider configured to exercise the required protocol features.
@@ -11,6 +12,7 @@ import { Provider, errors } from "oidc-provider";
 export function createLabProvider(
   issuer: string,
   metadataDocuments: Map<string, Record<string, unknown>> = new Map(),
+  adapter?: AdapterFactory,
 ) {
   const url = new URL(issuer);
   if (url.protocol !== "http:" || url.hostname !== "127.0.0.1") {
@@ -19,6 +21,7 @@ export function createLabProvider(
   const resource = `${issuer}/mcp`;
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   return new Provider(issuer, {
+    adapter,
     jwks: {
       keys: [
         { ...privateKey.export({ format: "jwk" }), kid: "lab-only", use: "sig", alg: "RS256" },
@@ -45,7 +48,7 @@ export function createLabProvider(
     pkce: { required: () => true },
     features: {
       devInteractions: { enabled: false },
-      registration: { enabled: true },
+      registration: { enabled: true, issueRegistrationAccessToken: false },
       revocation: { enabled: true },
       clientIdMetadataDocument: {
         enabled: true,

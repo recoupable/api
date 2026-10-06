@@ -1,6 +1,13 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": { "incremental": false },
-  "include": ["scripts/mcp-oauth/**/*.ts", "vitest.oauth.config.ts"],
+  "compilerOptions": {
+    "incremental": false
+  },
+  "include": [
+    "scripts/mcp-oauth/**/*.ts",
+    "vitest.oauth.config.ts",
+    "lib/oauth/**/*.ts",
+    "lib/supabase/oauth_provider_artifacts/**/*.ts"
+  ],
   "exclude": ["node_modules"]
 }

@@ -8,6 +8,8 @@ Use `oidc-provider` as the candidate authorization server, retaining Privy for R
 
 The executable spike exercises discovery, DCR, PKCE, issuer identification, registered callbacks, code exchange, scopes, refresh rotation/replay, and revocation over real loopback HTTP. A generic MCP SDK client reads and updates a synthetic record and reads it back through Streamable HTTP. CIMD resolution uses an explicitly supplied synthetic HTTPS-document response; this proves provider parsing/exchange, **not** real HTTPS retrieval or SSRF protection. These are protocol tests, not Claude/Codex/ChatGPT/Cursor or Privy integration tests.
 
+The [encrypted storage implementation](mcp-oauth-storage.md) now passes the protocol suite against isolated PostgreSQL. Production configuration, identity and deployment integration are still outstanding.
+
 ### Alternatives considered
 
 | Approach | Fit and cost |
@@ -121,7 +123,7 @@ The lab intentionally has no access to Privy, Supabase, real Recoup records, ema
 
 Before this design becomes a runtime integration:
 
-1. #209: prove durable multi-instance consumption/refresh, real Next/Vercel Node mounting, stable key configuration, existing-account Privy mapping and a real login handoff.
+1. #209: extend the locally verified encrypted storage/atomic consumption to deployed multi-instance operation, real Next/Vercel Node mounting, stable key configuration, existing-account Privy mapping and a real login handoff.
 2. #210: test real HTTPS CIMD fetch behavior, bounded registration abuse protection, browser endpoint CORS, issuer and callback rules in the deployed environment.
 3. #211/#213: real signed-out/already-signed-in/wrong-account/denied consent and Connected Apps ownership/revocation journeys, including CSRF and cookie behavior in a browser.
 4. #212/#214: implement and review every tool's authorization work, role constraints, billing checks, token non-disclosure, write idempotency, and failure/redaction paths.
