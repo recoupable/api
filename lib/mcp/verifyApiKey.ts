@@ -1,9 +1,12 @@
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { getOrCreateAccountIdByAuthToken } from "@/lib/privy/getOrCreateAccountIdByAuthToken";
 import { getApiKeyDetails } from "@/lib/keys/getApiKeyDetails";
+import { verifyOAuthBearer } from "@/lib/oauth/verifyOAuthBearer";
+import type { OAuthAccess } from "@/lib/oauth/resolveOAuthAccess";
 
 export interface McpAuthInfoExtra extends Record<string, unknown> {
   accountId: string;
+  oauth?: OAuthAccess;
 }
 
 export interface McpAuthInfo extends AuthInfo {
@@ -25,6 +28,19 @@ export async function verifyBearerToken(
 ): Promise<McpAuthInfo | undefined> {
   if (!bearerToken) {
     return undefined;
+  }
+  try {
+    const oauth = await verifyOAuthBearer(bearerToken);
+    if (oauth)
+      return {
+        token: bearerToken,
+        scopes: oauth.scopes,
+        clientId: oauth.clientId,
+        expiresAt: oauth.expiresAt,
+        extra: { accountId: oauth.accountId, oauth },
+      };
+  } catch {
+    // Storage failure never grants delegated access; legacy credentials still validate independently.
   }
 
   // Try Privy JWT first

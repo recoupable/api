@@ -17,13 +17,22 @@ export async function approveOAuthInteraction(
   grant.addOIDCScope(requested);
   const grantId = await grant.save();
   try {
+    const client = await provider.Client.find(clientId);
     await adapter("RecoupGrant").upsert(
       grantId,
       {
         accountId,
         clientId,
         grantId,
-        extra: { subject, context: "personal", scopes, persistent: true },
+        extra: {
+          subject,
+          context: "personal",
+          scopes,
+          persistent: true,
+          clientName: client?.clientName ?? "Unnamed agent",
+          createdAt: Math.floor(Date.now() / 1000),
+          expiresAt: grant.exp,
+        },
       },
       30 * 86400,
     );

@@ -4,7 +4,11 @@
     "incremental": false
   },
   "include": [
+    "lib/mcp/oauth/**/*.ts",
     "pages/api/oauth/**/*.ts",
+    "pages/api/oauth-discovery.ts",
+    "app/.well-known/oauth-protected-resource/**/*.ts",
+    "app/mcp/route.ts",
     "scripts/mcp-oauth/**/*.ts",
     "vitest.oauth.config.ts",
     "lib/oauth/**/*.ts",

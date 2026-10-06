@@ -18,7 +18,7 @@ export default async function oauth(req: NextApiRequest, res: NextApiResponse) {
       return;
     }
     const { getOAuthRuntime } = await import("../../../lib/oauth/getOAuthRuntime");
-    await getOAuthRuntime()(req, res);
+    await getOAuthRuntime().handler(req, res);
   } catch {
     console.error("OAuth request unavailable", { event: "oauth_unavailable" });
     if (!res.headersSent) res.status(503).json({ error: "oauth_unavailable" });

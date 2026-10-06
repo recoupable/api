@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { hashOAuthIdentifier } from "./hashOAuthIdentifier";
 import type { AdapterFactory, AdapterPayload } from "oidc-provider";
 import type { OAuthStore } from "./OAuthStore";
 import type { createOAuthCipher } from "./createOAuthCipher";
@@ -15,10 +15,7 @@ export function createOAuthAdapter(options: {
   const indexKey = Buffer.from(options.indexKey);
   if (!namespace || namespace.length > 512 || indexKey.length !== 32)
     throw new Error("Invalid OAuth adapter configuration");
-  const hash = (value: string) =>
-    createHmac("sha256", indexKey)
-      .update(JSON.stringify([namespace, value]))
-      .digest("hex");
+  const hash = (value: string) => hashOAuthIdentifier(namespace, indexKey, value);
   const safe = async <T>(operation: () => Promise<T>): Promise<T> => {
     try {
       return await operation();
@@ -70,6 +67,9 @@ export function createOAuthAdapter(options: {
               model === "Grant" ? recordKey.idHash : payload.grantId ? hash(payload.grantId) : null,
             uidHash: payload.uid ? hash(payload.uid) : null,
             userCodeHash: payload.userCode ? hash(payload.userCode) : null,
+            ...(model === "RecoupGrant" && payload.accountId
+              ? { accountHash: hash(payload.accountId) }
+              : {}),
           }),
         );
       },

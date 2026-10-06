@@ -1,4 +1,4 @@
-import { oauthScopes } from "../oauthScopes";
+import { oauthLaunchScopes } from "../oauthLaunchScopes";
 
 /** Derive permissions only from the provider's validated, stored request. */
 export function getOAuthConsentRequest(params: Record<string, unknown>, resource: string) {
@@ -10,13 +10,17 @@ export function getOAuthConsentRequest(params: Record<string, unknown>, resource
   if (
     requested.some(
       scope =>
-        !Object.hasOwn(oauthScopes, scope) && scope !== "openid" && scope !== "offline_access",
+        !Object.hasOwn(oauthLaunchScopes, scope) &&
+        scope !== "openid" &&
+        scope !== "offline_access",
     )
   )
     throw new Error("Invalid consent scope");
+  if (!requested.some(scope => Object.hasOwn(oauthLaunchScopes, scope)))
+    throw new Error("No supported permissions requested");
   return {
     clientId: params.client_id,
     requested,
-    scopes: requested.filter(scope => Object.hasOwn(oauthScopes, scope)),
+    scopes: requested.filter(scope => Object.hasOwn(oauthLaunchScopes, scope)),
   };
 }

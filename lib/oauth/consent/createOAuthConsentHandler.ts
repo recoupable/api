@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AdapterFactory, Provider } from "oidc-provider";
 import type { OAuthRuntimeConfig } from "../loadOAuthConfig";
-import { oauthScopes } from "../oauthScopes";
+import { oauthLaunchScopes } from "../oauthLaunchScopes";
 import { createOAuthConsentTickets } from "./createOAuthConsentTickets";
 import { readOAuthConsentBody } from "./readOAuthConsentBody";
 import { getOAuthConsentRequest } from "./getOAuthConsentRequest";
@@ -75,7 +75,7 @@ export function createOAuthConsentHandler(options: {
           accessDurationDays: 30,
           permissions: scopes.map(scope => ({
             scope,
-            description: oauthScopes[scope as keyof typeof oauthScopes],
+            description: oauthLaunchScopes[scope as keyof typeof oauthLaunchScopes],
           })),
         });
         return;

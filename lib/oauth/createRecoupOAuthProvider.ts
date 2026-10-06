@@ -1,6 +1,6 @@
 import { Provider, errors, type AdapterFactory } from "oidc-provider";
 import type { OAuthRuntimeConfig } from "./loadOAuthConfig";
-import { oauthScopes } from "./oauthScopes";
+import { oauthLaunchScopes } from "./oauthLaunchScopes";
 
 /** Real-account provider; all secrets and durable storage are supplied explicitly. */
 export function createRecoupOAuthProvider(
@@ -18,7 +18,7 @@ export function createRecoupOAuthProvider(
     fetch: async () => {
       throw new Error("Remote OAuth metadata is not enabled");
     },
-    scopes: ["openid", "offline_access", ...Object.keys(oauthScopes)],
+    scopes: ["openid", "offline_access", ...Object.keys(oauthLaunchScopes)],
     responseTypes: ["code"],
     pkce: { required: () => true },
     features: {
@@ -32,7 +32,7 @@ export function createRecoupOAuthProvider(
         getResourceServerInfo: (_ctx, resource) => {
           if (resource !== config.resource) throw new errors.InvalidTarget();
           return {
-            scope: Object.keys(oauthScopes).join(" "),
+            scope: Object.keys(oauthLaunchScopes).join(" "),
             audience: resource,
             accessTokenTTL: 300,
             accessTokenFormat: "opaque",

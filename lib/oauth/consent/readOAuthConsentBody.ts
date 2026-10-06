@@ -3,7 +3,7 @@ import { validateOAuthConsentBody } from "./validateOAuthConsentBody";
 
 /** Bound JSON parsing before attempting one-use approval consumption. */
 export async function readOAuthConsentBody(req: IncomingMessage) {
-  if (req.headers["content-type"]?.split(";")[0].trim() !== "application/json")
+  if (req.headers["content-type"]?.split(";")[0].trim().toLowerCase() !== "application/json")
     return { status: 415, error: "json_required" } as const;
   const chunks: Buffer[] = [];
   let size = 0;

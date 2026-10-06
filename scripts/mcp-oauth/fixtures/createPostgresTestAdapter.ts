@@ -24,6 +24,7 @@ export function createPostgresTestAdapter(namespace: string) {
     "oauth_store_consume",
     "oauth_store_destroy",
     "oauth_store_revoke_grant",
+    "oauth_store_list_connections",
   ]);
   const store = createOAuthStore(async (name, args) => {
     if (!allowed.has(name) || Object.keys(args).some(key => !/^p_[a-z_]+$/.test(key)))

@@ -8,6 +8,7 @@ export interface OAuthStore {
       grantHash: string | null;
       uidHash: string | null;
       userCodeHash: string | null;
+      accountHash?: string | null;
     },
   ): Promise<void>;
   find(query: {
@@ -19,4 +20,5 @@ export interface OAuthStore {
   consume(key: OAuthRecordKey): Promise<boolean>;
   destroy(key: OAuthRecordKey): Promise<void>;
   revokeGrant(namespace: string, grantHash: string): Promise<void>;
+  listConnections?(namespace: string, accountHash: string): Promise<OAuthStoredRecord[]>;
 }

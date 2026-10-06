@@ -3,7 +3,14 @@ import { createServer } from "node:http";
 import { once } from "node:events";
 import type { AddressInfo } from "node:net";
 import type { AdapterFactory, AdapterPayload } from "oidc-provider";
-import { expect, it } from "vitest";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { registerOAuthTools } from "../../../lib/mcp/oauth/registerOAuthTools";
+import { resolveOAuthAccess } from "../../../lib/oauth/resolveOAuthAccess";
+import { getOAuthResourceMetadata } from "../../../lib/oauth/getOAuthResourceMetadata";
+import { expect, it, vi } from "vitest";
 import { apiResolver } from "next/dist/server/api-utils/node/api-resolver.js";
 import { loadOAuthConfig } from "../../../lib/oauth/loadOAuthConfig";
 import { createRecoupOAuthProvider } from "../../../lib/oauth/createRecoupOAuthProvider";
@@ -80,7 +87,64 @@ it("requires browser cookie, trusted origin, matching identity, and one-use cons
       if (match) await consent(req, res, match[1]);
       else await callback(req, res);
     });
-    server.on("request", (req, res) => {
+    const verify = (bearer: string) =>
+      resolveOAuthAccess(
+        {
+          provider,
+          adapter,
+          resource: config.resource,
+          accountExists: async id => id === accountId,
+        },
+        bearer,
+      );
+    const createArtist = vi.fn(async (owner: string, name: string) => ({
+      id: "fixture-artist",
+      owner,
+      name,
+    }));
+    const services = {
+      listArtists: async () => [],
+      createArtist,
+      updateArtist: async () => ({}),
+      getSocials: async () => [],
+      getChats: async () => [],
+    };
+    server.on("request", async (req, res) => {
+      if (req.url === "/.well-known/oauth-protected-resource/mcp") {
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify(getOAuthResourceMetadata(config.issuer)));
+        return;
+      }
+      if (req.url === "/mcp") {
+        const bearer = /^Bearer ([^\s]+)$/i.exec(req.headers.authorization ?? "")?.[1];
+        const access = bearer ? await verify(bearer) : undefined;
+        if (!access) {
+          res.writeHead(401);
+          res.end();
+          return;
+        }
+        const mcp = new McpServer({ name: "recoup-delegated-integration", version: "1" });
+        registerOAuthTools(mcp, services, verify);
+        Object.assign(req, {
+          auth: {
+            token: bearer,
+            clientId: access.clientId,
+            scopes: access.scopes,
+            extra: { accountId: access.accountId, oauth: access },
+          },
+        });
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: undefined,
+          enableJsonResponse: true,
+        });
+        res.on("close", () => {
+          void transport.close();
+          void mcp.close();
+        });
+        await mcp.connect(transport);
+        await transport.handleRequest(req, res);
+        return;
+      }
       void apiResolver(
         req,
         res,
@@ -199,6 +263,42 @@ it("requires browser cookie, trusted origin, matching identity, and one-use cons
     const tokens = await tokensResponse.json();
     expect(tokens.scope).toBe("mcp:read mcp:write");
     expect(tokens.refresh_token).toEqual(expect.any(String));
+    const delegated = await verify(tokens.access_token);
+    expect(delegated).toMatchObject({ accountId, scopes: ["mcp:read", "mcp:write"] });
+    const mcpClient = new Client({ name: "synthetic-agent", version: "1" });
+    await mcpClient.connect(
+      new StreamableHTTPClientTransport(new URL(config.resource), {
+        requestInit: { headers: { Authorization: `Bearer ${tokens.access_token}` } },
+      }),
+    );
+    try {
+      const inventory = await mcpClient.listTools();
+      expect(inventory.tools.map(tool => tool.name)).toEqual([
+        "list_artists",
+        "create_new_artist",
+        "update_account_info",
+        "get_artist_socials",
+        "get_chats",
+      ]);
+      expect(
+        (
+          await mcpClient.callTool({
+            name: "create_new_artist",
+            arguments: { name: "OAuth fixture artist" },
+          })
+        ).isError,
+      ).not.toBe(true);
+      expect(createArtist).toHaveBeenCalledWith(accountId, "OAuth fixture artist");
+      const forged = await mcpClient.callTool({
+        name: "create_new_artist",
+        arguments: { name: "bad", account_id: "other" },
+      });
+      expect(forged.isError).toBe(true);
+      expect(createArtist).toHaveBeenCalledTimes(1);
+    } finally {
+      await mcpClient.close();
+    }
+
     const access = await provider.AccessToken.find(tokens.access_token);
     expect(access?.accountId).toBe(accountId);
     expect(access?.aud).toBe(config.resource);
@@ -233,6 +333,16 @@ it("requires browser cookie, trusted origin, matching identity, and one-use cons
     const denial = new URL(deniedResume.headers.get("location")!);
     expect(denial.searchParams.get("error")).toBe("access_denied");
     expect(denial.searchParams.has("code")).toBe(false);
+    await adapter("Grant").revokeByGrantId(access!.grantId);
+    expect(await verify(tokens.access_token)).toBeUndefined();
+    expect(await verify(renewed.access_token)).toBeUndefined();
+    expect(
+      (
+        await fetch(config.resource, {
+          headers: { Authorization: `Bearer ${renewed.access_token}` },
+        })
+      ).status,
+    ).toBe(401);
   } finally {
     server.closeAllConnections();
     await new Promise<void>(resolve => server.close(() => resolve()));

@@ -41,7 +41,7 @@ it.skipIf(!process.env.OAUTH_TEST_REDIS_SERVER)(
           reject(new Error("Redis fixture exited early"));
         });
         server.stdout.on("data", chunk => {
-          if (String(chunk).includes("Ready to accept connections")) {
+          if (/ready to accept connections/i.test(String(chunk))) {
             clearTimeout(timeout);
             resolve();
           }

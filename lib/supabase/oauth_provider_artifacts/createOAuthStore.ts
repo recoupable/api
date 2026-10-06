@@ -38,6 +38,7 @@ export function createOAuthStore(rpc: OAuthRpc): OAuthStore {
         p_grant_hash: record.grantHash,
         p_uid_hash: record.uidHash,
         p_user_code_hash: record.userCodeHash,
+        ...(record.accountHash ? { p_account_hash: record.accountHash } : {}),
       });
     },
     async find(query) {
@@ -62,6 +63,19 @@ export function createOAuthStore(rpc: OAuthRpc): OAuthStore {
     },
     async revokeGrant(namespace, grantHash) {
       await call("oauth_store_revoke_grant", { p_namespace: namespace, p_grant_hash: grantHash });
+    },
+    async listConnections(namespace, accountHash) {
+      const result = z
+        .array(storedRecord.unwrap())
+        .max(200)
+        .safeParse(
+          await call("oauth_store_list_connections", {
+            p_namespace: namespace,
+            p_account_hash: accountHash,
+          }),
+        );
+      if (!result.success) throw new Error("Invalid OAuth storage response");
+      return result.data.map(record => ({ ...record, consumed: record.consumed ?? null }));
     },
   };
 }
