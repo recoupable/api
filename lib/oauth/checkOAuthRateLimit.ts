@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import { isIP } from "node:net";
-import { consumeOAuthRateLimit } from "../redis/consumeOAuthRateLimit";
+import { consumeOAuthRateLimit } from "../supabase/oauth_rate_limits/consumeOAuthRateLimit";
 
 /** Limit before provider/identity/storage work without trusting spoofable forwarded headers. */
 export async function checkOAuthRateLimit(req: IncomingMessage) {
@@ -14,16 +14,16 @@ export async function checkOAuthRateLimit(req: IncomingMessage) {
     createHmac("sha256", key)
       .update(JSON.stringify([issuer, value]))
       .digest("hex");
-  const prefix = `recoup:oauth:rate:${hash("namespace")}`;
+  const namespace = hash("namespace");
   const budgets = [
-    { key: `${prefix}:all`, limit: 1200 },
-    { key: `${prefix}:peer:${hash(peer)}`, limit: 120 },
+    { key: hash("all"), limit: 1200 },
+    { key: hash(`peer:${peer}`), limit: 120 },
   ];
   if (req.url?.split("?")[0] === "/api/oauth/reg") {
     budgets.push(
-      { key: `${prefix}:registration`, limit: 100 },
-      { key: `${prefix}:registration:${hash(peer)}`, limit: 10 },
+      { key: hash("registration"), limit: 100 },
+      { key: hash(`registration:${peer}`), limit: 10 },
     );
   }
-  return consumeOAuthRateLimit(budgets);
+  return consumeOAuthRateLimit(namespace, budgets);
 }

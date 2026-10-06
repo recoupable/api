@@ -2,7 +2,6 @@ import { TablesInsert } from "@/types/database.types";
 import getSongsByIsrc, { SongWithSpotify } from "./getSongsByIsrc";
 import { upsertSongs } from "@/lib/supabase/songs/upsertSongs";
 import { linkSongsToArtists } from "./linkSongsToArtists";
-import { queueRedisSongs } from "./queueRedisSongs";
 import { mapArtistsFallback } from "./mapArtistsFallback";
 import { formatSongsInput, type SongInput } from "./formatSongsInput";
 
@@ -43,6 +42,4 @@ export async function processSongsInput(songsInput: SongInput[]): Promise<void> 
   await upsertSongs(songsToUpsert);
 
   await linkSongsToArtists(songsWithArtists);
-
-  await queueRedisSongs(songsWithArtists);
 }

@@ -3,10 +3,12 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { checkOAuthRateLimit } from "../checkOAuthRateLimit";
 const { consume } = vi.hoisted(() => ({
   consume: vi
-    .fn<(budgets: { key: string; limit: number }[]) => Promise<number>>()
+    .fn<(namespace: string, budgets: { key: string; limit: number }[]) => Promise<number>>()
     .mockResolvedValue(0),
 }));
-vi.mock("../../redis/consumeOAuthRateLimit", () => ({ consumeOAuthRateLimit: consume }));
+vi.mock("../../supabase/oauth_rate_limits/consumeOAuthRateLimit", () => ({
+  consumeOAuthRateLimit: consume,
+}));
 beforeEach(() => {
   vi.stubEnv("OAUTH_ISSUER", "https://api.example/api/oauth");
   vi.stubEnv("OAUTH_INDEX_KEY", Buffer.alloc(32, 1).toString("base64"));
@@ -18,7 +20,7 @@ it("uses shared and peer budgets, with stricter registration and no raw IP keys"
     url: "/api/oauth/reg",
     socket: { remoteAddress: "127.0.0.1" },
   } as IncomingMessage);
-  expect(consume.mock.calls[0][0].map((b: { limit: number }) => b.limit)).toEqual([
+  expect(consume.mock.calls[0][1].map((b: { limit: number }) => b.limit)).toEqual([
     1200, 120, 100, 10,
   ]);
   expect(JSON.stringify(consume.mock.calls)).not.toContain("127.0.0.1");
