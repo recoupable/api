@@ -304,6 +304,7 @@ it("requires browser cookie, trusted origin, matching identity, and one-use cons
     expect(access?.aud).toBe(config.resource);
     const attribution = await adapter("RecoupGrant").find(access!.grantId);
     expect(attribution && attribution.extra?.subject).toBe("did:privy:alice");
+    expect(attribution && attribution.extra?.expiresAt).toEqual(expect.any(Number));
     const refresh = await fetch(`${config.issuer}/token`, {
       method: "POST",
       body: new URLSearchParams({

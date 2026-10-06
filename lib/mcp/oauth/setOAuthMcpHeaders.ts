@@ -9,6 +9,7 @@ export function setOAuthMcpHeaders(response: Response, issuer?: string) {
   );
   response.headers.set("Access-Control-Expose-Headers", "WWW-Authenticate, MCP-Session-Id");
   response.headers.set("Cache-Control", "no-store");
+  if (response.status === 401 && !issuer) response.headers.set("WWW-Authenticate", "Bearer");
   if (response.status === 401 && issuer) {
     const metadata = getOAuthResourceMetadata(issuer);
     response.headers.set(

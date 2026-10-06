@@ -7,6 +7,12 @@ export default async function discovery(req: NextApiRequest, res: NextApiRespons
   if (req.method !== "GET" && req.method !== "OPTIONS") return res.status(405).end();
   const original = req.url;
   try {
+    const { checkOAuthRateLimit } = await import("../../lib/oauth/checkOAuthRateLimit");
+    const retryAfter = await checkOAuthRateLimit(req);
+    if (retryAfter > 0) {
+      res.setHeader("Retry-After", String(retryAfter));
+      return res.status(429).json({ error: "rate_limit_exceeded" });
+    }
     const { getOAuthRuntime } = await import("../../lib/oauth/getOAuthRuntime");
     req.url = "/api/oauth/.well-known/oauth-authorization-server";
     await getOAuthRuntime().handler(req, res);

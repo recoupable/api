@@ -75,7 +75,14 @@ export function registerOAuthTools(
           image: z.string().url().max(2048).optional(),
           instruction: z.string().max(10000).optional(),
         })
-        .strict(),
+        .strict()
+        .refine(
+          value =>
+            value.name !== undefined ||
+            value.image !== undefined ||
+            value.instruction !== undefined,
+          "Provide at least one profile field to update",
+        ),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
     ({ artistId, ...updates }, extra) =>

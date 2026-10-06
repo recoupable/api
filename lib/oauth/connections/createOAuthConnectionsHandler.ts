@@ -43,8 +43,11 @@ export function createOAuthConnectionsHandler(options: {
       if (req.method === "GET") return reply(200, await options.connections.list(accountId));
       await options.connections.revoke(accountId, id.data!);
       return reply(204);
-    } catch {
-      return reply(400, { error: "connection_request_failed" });
+    } catch (error) {
+      if (error instanceof Error && error.message === "Connection access denied")
+        return reply(404, { error: "connection_unavailable" });
+      console.error("OAuth connections unavailable", { event: "oauth_connections_unavailable" });
+      return reply(503, { error: "connection_request_failed" });
     }
   };
 }

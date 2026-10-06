@@ -17,7 +17,7 @@ No secrets are generated at runtime. Missing or malformed configuration returns 
 | `OAUTH_ACTIVE_ENCRYPTION_KEY` | Current encryption key ID; retain old keys while their records exist |
 | `REDIS_URL` | Shared Redis service for atomic OAuth request budgets; unavailable Redis fails closed |
 
-The loader rejects duplicate symmetric secrets. HTTP is accepted only for `127.0.0.1` test fixtures. The runtime requires Node 22 or a provider-supported newer version and all three database migrations from database PR #81. The separate app repository implements the screen in [app PR #2163](https://github.com/recoupable/app/pull/2163), at `app/oauth/authorize/page.tsx`; that server-side route consumes `OAUTH_CONSENT_ENABLED=true` and the same canonical `OAUTH_ISSUER`.
+The loader rejects duplicate symmetric secrets. HTTP is accepted only for `127.0.0.1` test fixtures. The runtime requires Node 22 or a provider-supported newer version and all four database migrations from database PR #81. The separate app repository implements the screen in [app PR #2163](https://github.com/recoupable/app/pull/2163), at `app/oauth/authorize/page.tsx`; that server-side route consumes `OAUTH_CONSENT_ENABLED=true` and the same canonical `OAUTH_ISSUER`.
 
 ## Request budgets
 
@@ -60,10 +60,10 @@ Every tool execution revalidates the token, active grant, account, audience and 
 
 ## Release sequence and outstanding live proof
 
-1. Review and merge database PR #81 (three migrations), API PR #963, and app PR #2163 through the normal release workflow. Apply database migrations to the verified Recoup production project before enabling the API gate.
+1. Review and merge database PR #81 (four migrations), API PR #963, and app PR #2163 through the normal release workflow. Apply database migrations to the verified Recoup production project before enabling the API gate.
 2. Configure stable API secrets above, `OAUTH_ISSUER=https://api.recoupable.dev/api/oauth`, and consent URL on **app.recoupable.dev**. Do not rotate the stable index key casually. Configure the app's `OAUTH_ISSUER` and `OAUTH_CONSENT_ENABLED`; enable `OAUTH_ENABLED` only for the coordinated release.
 3. Verify actual deployed metadata, canonical challenge, Redis/proxy request budgets and existing-account Privy login. Existing local protocol/browser tests use synthetic identities and data.
 4. Connect available named clients, perform a clearly labeled reversible personal artist create/update, inspect Connected Agents, revoke, and verify old/refresh credentials fail. Record each surface separately; callback registration acceptance alone is not interoperability evidence.
 5. Disable `OAUTH_ENABLED` to stop delegated requests if live verification fails; preserve keys and durable records for diagnosis. Existing independently verified API keys remain usable.
 
-The existing Recoup service credentials are verified for data access. The database repository already has Supabase GitHub integration: this PR's preview migrations pass, and main targets the production project. Use that release path and verify the production schema after merge. The separately connected Supabase MCP/CLI accounts do not list Recoup. Vercel CLI access to the Recoup team is verified; the Vercel connector itself returns a scope permission error. Stable production OAuth configuration is prepared with both gates disabled. No live identity or named-client claim should be inferred from this implementation.
+The existing Recoup service credentials are verified for data access. The database repository already has Supabase GitHub integration: this PR's preview migrations are checked on each push, and main targets the production project. Use that release path and verify the production schema after merge. The separately connected Supabase MCP/CLI accounts do not list Recoup. Vercel CLI access to the Recoup team is verified; the Vercel connector itself returns a scope permission error. Stable production OAuth configuration is prepared with both gates disabled. No live identity or named-client claim should be inferred from this implementation.

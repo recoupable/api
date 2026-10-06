@@ -11,3 +11,11 @@ it("uses the configured issuer in challenges even when Next reports an internal 
   );
   expect(response.headers.get("Access-Control-Expose-Headers")).toContain("WWW-Authenticate");
 });
+it("does not advertise a disabled OAuth metadata endpoint", () => {
+  const response = new Response(null, {
+    status: 401,
+    headers: { "WWW-Authenticate": 'Bearer resource_metadata="https://api.example/disabled"' },
+  });
+  setOAuthMcpHeaders(response);
+  expect(response.headers.get("WWW-Authenticate")).toBe("Bearer");
+});

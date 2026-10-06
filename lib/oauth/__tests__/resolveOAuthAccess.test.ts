@@ -41,6 +41,10 @@ it("accepts a live token bound to the selected account, client, resource and app
   expect(await resolveOAuthAccess(options, "secret")).toMatchObject({
     accountId: "alice",
     context: "personal",
+    clientId: "agent",
+    grantId: "grant",
+    expiresAt: 9999999999,
+    resource: "https://api.example/mcp",
     scopes: ["mcp:read", "mcp:write"],
   });
 });

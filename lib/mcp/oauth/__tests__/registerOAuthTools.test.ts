@@ -78,3 +78,11 @@ it("rejects read-only, revoked, mismatched and absent grants before any write", 
   expect(await tool.call({ name: "Artist" }, {})).toHaveProperty("isError", true);
   expect(services.createArtist).not.toHaveBeenCalled();
 });
+it("rejects profile updates with no changed fields", () => {
+  const { tools } = fixture();
+  expect(() =>
+    tools
+      .get("update_account_info")!
+      .schema.parse({ artistId: "00000000-0000-4000-8000-000000000001" }),
+  ).toThrow();
+});

@@ -17,6 +17,9 @@ export async function approveOAuthInteraction(
   grant.addOIDCScope(requested);
   const grantId = await grant.save();
   try {
+    // save() serializes expiry without mutating the original model instance.
+    const savedGrant = await provider.Grant.find(grantId);
+    if (!savedGrant?.exp) throw new Error("OAuth grant expiry unavailable");
     const client = await provider.Client.find(clientId);
     await adapter("RecoupGrant").upsert(
       grantId,
@@ -31,7 +34,7 @@ export async function approveOAuthInteraction(
           persistent: true,
           clientName: client?.clientName ?? "Unnamed agent",
           createdAt: Math.floor(Date.now() / 1000),
-          expiresAt: grant.exp,
+          expiresAt: savedGrant.exp,
         },
       },
       30 * 86400,

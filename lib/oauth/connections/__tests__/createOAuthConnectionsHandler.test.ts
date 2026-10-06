@@ -4,12 +4,18 @@ import { expect, it, vi } from "vitest";
 import { createOAuthConnectionsHandler } from "../createOAuthConnectionsHandler";
 
 const origin = "https://chat.recoupable.dev";
-async function request(method: string, headers: Record<string, string>, path = "/connections") {
+async function request(
+  method: string,
+  headers: Record<string, string>,
+  path = "/connections",
+  failure?: Error,
+) {
   const identity = vi.fn(async () => ({ accountId: "verified-account", subject: "privy-subject" }));
   const connections = {
     list: vi.fn(async () => ({ connections: [], truncated: false })),
     revoke: vi.fn(),
   };
+  if (failure) connections.list.mockRejectedValue(failure);
   const req = Object.assign(Readable.from([]), { method, headers, url: path }) as IncomingMessage;
   const res = { removeHeader: vi.fn(), setHeader: vi.fn(), writeHead: vi.fn(), end: vi.fn() };
   await createOAuthConnectionsHandler({ origin, resolveIdentity: identity, connections })(
@@ -54,9 +60,26 @@ it("revokes a strictly validated connection using only verified ownership", asyn
     "/connections/not-a-hash",
   );
   expect(invalid.connections.revoke).not.toHaveBeenCalled();
+  expect(invalid.res.writeHead).toHaveBeenCalledWith(405, expect.anything());
 });
 it("preflights only the trusted origin without login", async () => {
   const result = await request("OPTIONS", { origin });
   expect(result.res.writeHead).toHaveBeenCalledWith(204, expect.anything());
   expect(result.identity).not.toHaveBeenCalled();
+});
+
+it("reports storage failures as unavailable without logging backend details", async () => {
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    const result = await request(
+      "GET",
+      { origin, authorization: "Bearer login-token" },
+      "/connections",
+      new Error("secret backend detail"),
+    );
+    expect(result.res.writeHead).toHaveBeenCalledWith(503, expect.anything());
+    expect(JSON.stringify(log.mock.calls)).not.toContain("secret backend detail");
+  } finally {
+    log.mockRestore();
+  }
 });

@@ -18,8 +18,9 @@ export OAUTH_TEST_PG_SOCKET="$cluster_root/socket"
 psql_args=(-X -w -h "$cluster_root/socket" -p 5432 -U oauth_test_admin -d postgres -v ON_ERROR_STOP=1)
 "$pg_bin/psql" "${psql_args[@]}" -c 'CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;' >/dev/null
 "$pg_bin/psql" "${psql_args[@]}" -f "$migration" >/dev/null
-if [[ -n "${2:-}" ]]; then
-  "$pg_bin/psql" "${psql_args[@]}" -f "$2" >/dev/null
-fi
+shift
+for additional_migration in "$@"; do
+  "$pg_bin/psql" "${psql_args[@]}" -f "$additional_migration" >/dev/null
+done
 "$pg_bin/pg_ctl" --version
 "${OAUTH_TEST_NODE:-node}" node_modules/vitest/vitest.mjs run --config vitest.oauth.config.ts
