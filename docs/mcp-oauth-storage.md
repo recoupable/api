@@ -32,7 +32,7 @@ PG_BINDIR=/path/to/postgresql/bin \
 
 Run with Node 22 on PATH, or set `OAUTH_TEST_NODE` to its executable. The script creates a disposable Unix-socket cluster with no TCP listener, applies only the specified migration and test roles, runs the entire suite, then stops/removes its cluster. It never reads DATABASE_URL, contacts Supabase, or applies a migration to shared infrastructure. The psql bridge is fixture-only, not the production database client.
 
-Verified locally: 42 tests on Node 22 and PostgreSQL 17, including real HTTP registration/callback exchange, read/write scopes, refresh rotation and replay, grant revocation, persistence across adapter recreation, and eight concurrent redemption attempts with one winner. This is not a full Supabase migration-history or PostgREST deployment test. The named-client tests still use synthetic clients and synthetic consent.
+Verified locally: 43 tests on Node 22 and PostgreSQL 17, including real HTTP registration/callback exchange, read/write scopes, refresh rotation and replay, grant revocation, persistence across adapter recreation, and eight concurrent redemption attempts with one winner. This is not a full Supabase migration-history or PostgREST deployment test. The named-client tests still use synthetic clients and synthetic consent.
 
 ## Remaining runtime gates
 

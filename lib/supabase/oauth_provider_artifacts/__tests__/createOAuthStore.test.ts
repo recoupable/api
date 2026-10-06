@@ -43,7 +43,7 @@ it("preserves false consumption and rejects ambiguous backend responses", async 
   rpc.mockResolvedValue({ data: null, error: null });
   await expect(store.consume(key)).rejects.toThrow("Invalid OAuth storage response");
   rpc.mockResolvedValue({ data: true, error: { message: "sensitive" } });
-  await expect(store.consume(key)).rejects.toThrow("OAuth storage unavailable");
+  await expect(store.consume(key)).rejects.toHaveProperty("message", "OAuth storage unavailable");
 });
 it("validates stored rows and treats only null as absent", async () => {
   const rpc = vi.fn().mockResolvedValue({ data: null, error: null });

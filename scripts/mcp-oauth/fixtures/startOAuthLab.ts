@@ -17,7 +17,14 @@ export async function startOAuthLab(createAdapter?: (issuer: string) => AdapterF
   const issuer = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
   const resource = `${issuer}/mcp`;
   const metadataDocuments = new Map<string, Record<string, unknown>>();
-  const provider = createLabProvider(issuer, metadataDocuments, createAdapter?.(issuer));
+  let provider: ReturnType<typeof createLabProvider>;
+  try {
+    provider = createLabProvider(issuer, metadataDocuments, createAdapter?.(issuer));
+  } catch (error) {
+    http.closeAllConnections();
+    await new Promise<void>(resolve => http.close(() => resolve()));
+    throw error;
+  }
   const providerHandler = provider.callback();
   let value = "initial";
   let consentAllowed = true;

@@ -63,7 +63,10 @@ it("fails closed on corrupt data and storage outages without leaking backend err
   } satisfies OAuthStoredRecord);
   await expect(factory()("Session").find("id")).rejects.toThrow();
   store.find.mockRejectedValue(new Error("sensitive backend detail"));
-  await expect(factory()("Session").find("id")).rejects.toThrow("OAuth storage unavailable");
+  await expect(factory()("Session").find("id")).rejects.toHaveProperty(
+    "message",
+    "OAuth storage unavailable",
+  );
 });
 it("allows permanent clients only and hashes grant revocation consistently", async () => {
   await expect(factory()("AccessToken").upsert("id", {})).rejects.toThrow();
