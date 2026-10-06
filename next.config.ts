@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 import { withWorkflow } from "workflow/next";
 
 const nextConfig: NextConfig = {
+  // OAuth model class names are persistent storage keys; bundling renames them.
+  serverExternalPackages: ["oidc-provider"],
   env: {
     RESOURCE_WALLET_ADDRESS: process.env.RESOURCE_WALLET_ADDRESS,
   },
