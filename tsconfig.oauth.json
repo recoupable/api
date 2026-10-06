@@ -15,7 +15,8 @@
     "lib/supabase/oauth_provider_artifacts/**/*.ts",
     "lib/privy/getVerifiedOAuthIdentity.ts",
     "lib/privy/__tests__/getVerifiedOAuthIdentity.test.ts",
-    "lib/supabase/oauth_account_identities/**/*.ts"
+    "lib/supabase/oauth_account_identities/**/*.ts",
+    "lib/supabase/oauth_rate_limits/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

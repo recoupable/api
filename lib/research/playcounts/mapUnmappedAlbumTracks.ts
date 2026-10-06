@@ -6,7 +6,6 @@ import { SpotifyAlbumPlayCounts } from "@/lib/apify/spotify/fetchSpotifyAlbumPla
 import { SpotifyRateLimitError } from "@/lib/spotify/SpotifyRateLimitError";
 import { getSpotifyArtists } from "@/lib/songs/getSpotifyArtists";
 import { linkSongsToArtists } from "@/lib/songs/linkSongsToArtists";
-import { queueRedisSongs } from "@/lib/songs/queueRedisSongs";
 import { SongWithSpotify } from "@/lib/songs/getSongsByIsrc";
 
 /**
@@ -91,12 +90,8 @@ export async function mapUnmappedAlbumTracks(
       ]),
     );
 
-    // Root cause (chat#1801): give captured songs the same enrichment as the
-    // manual/CSV flow — link artists (auto-creating the artist account) and
-    // queue note generation — so valuation tracks aren't "missing info" and
-    // render in the catalog view rather than being filtered out.
+    // Link artists synchronously so captured tracks appear in the catalog.
     await linkSongsToArtists(songs);
-    await queueRedisSongs(songs);
 
     return new Map(resolved.map(r => [r.trackId, r.isrc]));
   } catch (error) {

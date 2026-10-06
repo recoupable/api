@@ -9,6 +9,7 @@ export default defineConfig({
       "lib/privy/__tests__/getVerifiedOAuthIdentity.test.ts",
       "lib/supabase/oauth_account_identities/**/*.test.ts",
       "lib/supabase/oauth_provider_artifacts/**/*.test.ts",
+      "lib/supabase/oauth_rate_limits/**/*.test.ts",
     ],
     testTimeout: 15_000,
     hookTimeout: 15_000,

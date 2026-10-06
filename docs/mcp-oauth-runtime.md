@@ -15,17 +15,16 @@ No secrets are generated at runtime. Missing or malformed configuration returns 
 | `OAUTH_INDEX_KEY` | Stable base64 32-byte lookup key; do not rotate independently of stored records |
 | `OAUTH_ENCRYPTION_KEYS` | JSON object of key IDs to base64 32-byte encryption keys |
 | `OAUTH_ACTIVE_ENCRYPTION_KEY` | Current encryption key ID; retain old keys while their records exist |
-| `REDIS_URL` | Shared Redis service for atomic OAuth request budgets; unavailable Redis fails closed |
 
-The loader rejects duplicate symmetric secrets. HTTP is accepted only for `127.0.0.1` test fixtures. The runtime requires Node 22 or a provider-supported newer version and all four database migrations from database PR #81. The separate app repository implements the screen in [app PR #2163](https://github.com/recoupable/app/pull/2163), at `app/oauth/authorize/page.tsx`; that server-side route consumes `OAUTH_CONSENT_ENABLED=true` and the same canonical `OAUTH_ISSUER`.
+The loader rejects duplicate symmetric secrets. HTTP is accepted only for `127.0.0.1` test fixtures. The runtime requires Node 22 or a provider-supported newer version and the four provider migrations from database PR #81 plus `20261006190000_oauth_rate_limits.sql`. The separate app repository implements the screen in [app PR #2163](https://github.com/recoupable/app/pull/2163), at `app/oauth/authorize/page.tsx`; that server-side route consumes `OAUTH_CONSENT_ENABLED=true` and the same canonical `OAUTH_ISSUER`.
 
 ## Request budgets
 
-Before runtime initialization, every enabled request consumes atomic shared Redis budgets: 1,200 requests/minute per issuer and 120/minute per socket peer. Registration additionally allows 100/minute per issuer and 10/minute per peer. Excess traffic receives 429 with Retry-After. Redis failure returns a generic 503 with a redacted availability event; request bodies, tokens, addresses and backend error details are never logged.
+Before runtime initialization, every enabled request consumes atomic shared Supabase/PostgreSQL budgets: 1,200 requests/minute per issuer and 120/minute per socket peer. Registration additionally allows 100/minute per issuer and 10/minute per peer. Excess traffic receives 429 with Retry-After. Database failure returns a generic 503 with a redacted availability event; request bodies, tokens, addresses and backend error details are never logged.
 
 Peer identity uses the socket address, never caller-controlled forwarded headers. Behind a platform proxy, unrelated clients may share that peer budget. Validate deployment behavior and configure edge per-client limits before public launch; do not blindly trust X-Forwarded-For to increase capacity. These conservative application budgets protect storage work but do not replace edge DDoS controls.
 
-The Redis integration test starts an isolated Unix-socket server with persistence disabled and TCP disabled when `OAUTH_TEST_REDIS_SERVER` points to a local binary. It verifies concurrent budgets, rejected requests not consuming shared capacity, expiry recovery and fail-closed handling of counters without TTL. CI installs a local test binary; no production Redis is used in these tests.
+The service-only `consume_oauth_rate_limit` RPC checks and increments all applicable budgets in one transaction. Identifiers are HMAC hashes. Counters expire after one minute; each request removes expired rows for its issuer using an expiry index. Transaction-scoped issuer locks prevent concurrent oversubscription. Rejected requests do not consume another budget or create peer rows. The database repository tests concurrency, expiry cleanup, isolation, validation, and role permissions against disposable PostgreSQL. OAuth has no Redis dependency. Counter RPCs have a two-second deadline and abort on timeout.
 
 ## Browser journey
 
@@ -60,9 +59,9 @@ Every tool execution revalidates the token, active grant, account, audience and 
 
 ## Release sequence and outstanding live proof
 
-1. Review and merge database PR #81 (four migrations), API PR #963, and app PR #2163 through the normal release workflow. Apply database migrations to the verified Recoup production project before enabling the API gate.
+1. Review and merge database PR #81 (four migrations), API PR #963, and app PR #2163 through the normal release workflow. Also merge database PR #82 (`20261006190000_oauth_rate_limits.sql`) before API PR #964. Verify all five migrations in production before enabling the API gate.
 2. Configure stable API secrets above, `OAUTH_ISSUER=https://api.recoupable.dev/api/oauth`, and consent URL on **app.recoupable.dev**. Do not rotate the stable index key casually. Configure the app's `OAUTH_ISSUER` and `OAUTH_CONSENT_ENABLED`; enable `OAUTH_ENABLED` only for the coordinated release.
-3. Verify actual deployed metadata, canonical challenge, Redis/proxy request budgets and existing-account Privy login. Existing local protocol/browser tests use synthetic identities and data.
+3. Verify actual deployed metadata, canonical challenge, database/proxy request budgets and existing-account Privy login. Existing local protocol/browser tests use synthetic identities and data.
 4. Connect available named clients, perform a clearly labeled reversible personal artist create/update, inspect Connected Agents, revoke, and verify old/refresh credentials fail. Record each surface separately; callback registration acceptance alone is not interoperability evidence.
 5. Disable `OAUTH_ENABLED` to stop delegated requests if live verification fails; preserve keys and durable records for diagnosis. Existing independently verified API keys remain usable.
 
