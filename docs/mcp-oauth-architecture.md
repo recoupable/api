@@ -8,7 +8,7 @@ Use `oidc-provider` as the candidate authorization server, retaining Privy for R
 
 The executable spike exercises discovery, DCR, PKCE, issuer identification, registered callbacks, code exchange, scopes, refresh rotation/replay, and revocation over real loopback HTTP. A generic MCP SDK client reads and updates a synthetic record and reads it back through Streamable HTTP. CIMD resolution uses an explicitly supplied synthetic HTTPS-document response; this proves provider parsing/exchange, **not** real HTTPS retrieval or SSRF protection. These are protocol tests, not Claude/Codex/ChatGPT/Cursor or Privy integration tests.
 
-The [encrypted storage implementation](mcp-oauth-storage.md) now passes the protocol suite against isolated PostgreSQL. Production configuration, identity and deployment integration are still outstanding.
+The [encrypted storage implementation](mcp-oauth-storage.md) now passes the protocol suite against isolated PostgreSQL. The [existing-account resolver and Next Pages boundary](mcp-oauth-login-boundary.md) are also implemented and locally tested. Production configuration, real login/consent and deployment integration remain outstanding.
 
 ### Alternatives considered
 

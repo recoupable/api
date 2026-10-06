@@ -7,7 +7,10 @@
     "scripts/mcp-oauth/**/*.ts",
     "vitest.oauth.config.ts",
     "lib/oauth/**/*.ts",
-    "lib/supabase/oauth_provider_artifacts/**/*.ts"
+    "lib/supabase/oauth_provider_artifacts/**/*.ts",
+    "lib/privy/getVerifiedOAuthIdentity.ts",
+    "lib/privy/__tests__/getVerifiedOAuthIdentity.test.ts",
+    "lib/supabase/oauth_account_identities/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

@@ -32,8 +32,10 @@ PG_BINDIR=/path/to/postgresql/bin \
 
 Run with Node 22 on PATH, or set `OAUTH_TEST_NODE` to its executable. The script creates a disposable Unix-socket cluster with no TCP listener, applies only the specified migration and test roles, runs the entire suite, then stops/removes its cluster. It never reads DATABASE_URL, contacts Supabase, or applies a migration to shared infrastructure. The psql bridge is fixture-only, not the production database client.
 
-Verified locally: 43 tests on Node 22 and PostgreSQL 17, including real HTTP registration/callback exchange, read/write scopes, refresh rotation and replay, grant revocation, persistence across adapter recreation, and eight concurrent redemption attempts with one winner. This is not a full Supabase migration-history or PostgREST deployment test. The named-client tests still use synthetic clients and synthetic consent.
+Verified locally: 49 tests on Node 22 and PostgreSQL 17, including real HTTP registration/callback exchange, read/write scopes, refresh rotation and replay, grant revocation, persistence across adapter recreation, and eight concurrent redemption attempts with one winner. This is not a full Supabase migration-history or PostgREST deployment test. The named-client tests still use synthetic clients and synthetic consent.
 
 ## Remaining runtime gates
 
-Stable production configuration, Next/Vercel Node mounting, existing-account Privy mapping, consent and Connected Apps UI, resource-server token validation, tool-specific authorization, real client connections and production verification remain outstanding. Do not enable production OAuth by mounting the lab: it uses synthetic identity/consent and ephemeral signing/cookie keys.
+Stable production configuration, deployed Next/Vercel mounting, live Privy login using the implemented identity resolver, consent and Connected Apps UI, resource-server token validation, tool-specific authorization, real client connections and production verification remain outstanding. Do not enable production OAuth by mounting the lab: it uses synthetic identity/consent and ephemeral signing/cookie keys.
+
+See [login and Node boundaries](mcp-oauth-login-boundary.md) for the existing-account mapping and locally tested Next Pages adapter.

@@ -5,6 +5,8 @@ export default defineConfig({
     include: [
       "scripts/mcp-oauth/**/*.test.ts",
       "lib/oauth/**/*.test.ts",
+      "lib/privy/__tests__/getVerifiedOAuthIdentity.test.ts",
+      "lib/supabase/oauth_account_identities/**/*.test.ts",
       "lib/supabase/oauth_provider_artifacts/**/*.test.ts",
     ],
     testTimeout: 15_000,
