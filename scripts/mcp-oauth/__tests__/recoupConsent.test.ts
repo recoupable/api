@@ -53,8 +53,8 @@ it("requires browser cookie, trusted origin, matching identity, and one-use cons
       OAUTH_SIGNING_JWKS: JSON.stringify({
         keys: [{ ...privateKey.export({ format: "jwk" }), kid: "test", use: "sig", alg: "RS256" }],
       }),
-      OAUTH_COOKIE_KEYS: JSON.stringify([secret]),
-      OAUTH_INDEX_KEY: secret,
+      OAUTH_COOKIE_KEYS: JSON.stringify([Buffer.alloc(32, 8).toString("base64")]),
+      OAUTH_INDEX_KEY: Buffer.alloc(32, 9).toString("base64"),
       OAUTH_ENCRYPTION_KEYS: JSON.stringify({ test: secret }),
       OAUTH_ACTIVE_ENCRYPTION_KEY: "test",
     });

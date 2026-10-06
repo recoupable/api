@@ -3,7 +3,10 @@ import type { AdapterFactory, Provider } from "oidc-provider";
 import type { OAuthRuntimeConfig } from "../loadOAuthConfig";
 import { oauthScopes } from "../oauthScopes";
 import { createOAuthConsentTickets } from "./createOAuthConsentTickets";
-import { validateOAuthConsentBody } from "./validateOAuthConsentBody";
+import { readOAuthConsentBody } from "./readOAuthConsentBody";
+import { getOAuthConsentRequest } from "./getOAuthConsentRequest";
+import { setOAuthConsentCors } from "./setOAuthConsentCors";
+import { approveOAuthInteraction } from "./approveOAuthInteraction";
 
 /** Handle browser-bound consent; call only behind the canonical issuer Node boundary. */
 export function createOAuthConsentHandler(options: {
@@ -19,15 +22,7 @@ export function createOAuthConsentHandler(options: {
       res.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store" });
       res.end(JSON.stringify(data));
     };
-    // Override broad API CORS headers: credentialed consent has exactly one trusted origin.
-    res.removeHeader("Access-Control-Allow-Origin");
-    res.setHeader("Vary", "Origin");
-    if (req.headers.origin === config.consentOrigin) {
-      res.setHeader("Access-Control-Allow-Origin", config.consentOrigin);
-      res.setHeader("Access-Control-Allow-Credentials", "true");
-      res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
-      res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    } else if (req.headers.origin || req.method !== "GET" || req.headers.authorization) {
+    if (!setOAuthConsentCors(req, res, config.consentOrigin)) {
       reply(403, { error: "untrusted_origin" });
       return;
     }
@@ -58,27 +53,16 @@ export function createOAuthConsentHandler(options: {
       }
       const identity = await resolveIdentity(bearer[1]);
       const { params } = details;
-      if (typeof params.client_id !== "string" || typeof params.scope !== "string")
-        throw new Error();
-      if (params.resource !== undefined && params.resource !== config.resource) throw new Error();
-      const requested = [...new Set(params.scope.split(" ").filter(Boolean))];
-      if (
-        requested.some(
-          scope =>
-            !Object.hasOwn(oauthScopes, scope) && scope !== "openid" && scope !== "offline_access",
-        )
-      )
-        throw new Error();
-      const scopes = requested.filter(scope => Object.hasOwn(oauthScopes, scope));
+      const { clientId, requested, scopes } = getOAuthConsentRequest(params, config.resource);
       const binding = {
         ...identity,
         uid,
-        clientId: params.client_id,
+        clientId,
         resource: config.resource,
         scopes,
       };
       if (req.method === "GET") {
-        const client = await provider.Client.find(params.client_id);
+        const client = await provider.Client.find(clientId);
         if (!client) throw new Error();
         reply(200, {
           csrf: await tickets.issue(binding),
@@ -96,21 +80,11 @@ export function createOAuthConsentHandler(options: {
         });
         return;
       }
-      if (req.headers["content-type"]?.split(";")[0].trim() !== "application/json") {
-        reply(415, { error: "json_required" });
+      const body = await readOAuthConsentBody(req);
+      if ("error" in body) {
+        reply(body.status, { error: body.error });
         return;
       }
-      const chunks: Buffer[] = [];
-      let size = 0;
-      for await (const chunk of req) {
-        size += Buffer.byteLength(chunk);
-        if (size > 16384) {
-          reply(413, { error: "body_too_large" });
-          return;
-        }
-        chunks.push(Buffer.from(chunk));
-      }
-      const body = validateOAuthConsentBody(JSON.parse(Buffer.concat(chunks).toString("utf8")));
       await tickets.consume(body.csrf, binding);
       if (body.decision === "deny") {
         const redirectUrl = await provider.interactionResult(
@@ -122,38 +96,15 @@ export function createOAuthConsentHandler(options: {
         reply(200, { redirectUrl });
         return;
       }
-      const grant = new provider.Grant({
-        accountId: identity.accountId,
-        clientId: binding.clientId,
-      });
-      grant.addResourceScope(config.resource, scopes);
-      grant.addOIDCScope(requested);
-      const grantId = await grant.save();
-      try {
-        await adapter("RecoupGrant").upsert(
-          grantId,
-          {
-            accountId: identity.accountId,
-            clientId: binding.clientId,
-            grantId,
-            extra: { subject: identity.subject, context: "personal", scopes, persistent: true },
-          },
-          30 * 86400,
-        );
-        const redirectUrl = await provider.interactionResult(
-          req,
-          res,
-          {
-            login: { accountId: identity.accountId, remember: false },
-            consent: { grantId },
-          },
-          { mergeWithLastSubmission: false },
-        );
-        reply(200, { redirectUrl });
-      } catch {
-        await adapter("Grant").revokeByGrantId(grantId);
-        throw new Error();
-      }
+      const redirectUrl = await approveOAuthInteraction(
+        provider,
+        adapter,
+        req,
+        res,
+        binding,
+        requested,
+      );
+      reply(200, { redirectUrl });
     } catch {
       reply(400, { error: "invalid_or_expired_interaction" });
     }

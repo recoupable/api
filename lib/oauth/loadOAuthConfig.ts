@@ -6,7 +6,7 @@ import { createOAuthCipher } from "./createOAuthCipher";
 /** Load stable deployment secrets; no generated keys or guessed issuer fallback. */
 export function loadOAuthConfig(env: Record<string, string | undefined> = process.env) {
   try {
-    const canonical = (value: string, path: string) => {
+    const parseCanonicalUrl = (value: string, path: string) => {
       const url = new URL(value);
       if (
         (url.protocol !== "https:" &&
@@ -21,21 +21,23 @@ export function loadOAuthConfig(env: Record<string, string | undefined> = proces
         throw new Error();
       return url;
     };
-    const issuer = canonical(env.OAUTH_ISSUER!, "/api/oauth");
-    const consent = canonical(env.OAUTH_CONSENT_URL!, "/oauth/authorize");
-    const secret = (value: string) => {
+    const issuer = parseCanonicalUrl(env.OAUTH_ISSUER!, "/api/oauth");
+    const consent = parseCanonicalUrl(env.OAUTH_CONSENT_URL!, "/oauth/authorize");
+    const decodeSecret = (value: string) => {
       const bytes = Buffer.from(value, "base64");
       if (bytes.length !== 32 || bytes.toString("base64") !== value) throw new Error();
       return bytes;
     };
     const cookieKeys = z.array(z.string()).min(1).max(3).parse(JSON.parse(env.OAUTH_COOKIE_KEYS!));
-    cookieKeys.forEach(secret);
+    cookieKeys.forEach(decodeSecret);
     const encodedKeys = z
       .record(z.string(), z.string())
       .parse(JSON.parse(env.OAUTH_ENCRYPTION_KEYS!));
     const encryptionKeys = Object.fromEntries(
-      Object.entries(encodedKeys).map(([id, value]) => [id, secret(value)]),
+      Object.entries(encodedKeys).map(([id, value]) => [id, decodeSecret(value)]),
     );
+    const symmetricKeys = [...cookieKeys, env.OAUTH_INDEX_KEY!, ...Object.values(encodedKeys)];
+    if (new Set(symmetricKeys).size !== symmetricKeys.length) throw new Error();
     const cipher = createOAuthCipher({
       activeKeyId: env.OAUTH_ACTIVE_ENCRYPTION_KEY!,
       keys: encryptionKeys,
@@ -72,7 +74,7 @@ export function loadOAuthConfig(env: Record<string, string | undefined> = proces
       resource: `${issuer.origin}/mcp`,
       cookieKeys,
       cipher,
-      indexKey: secret(env.OAUTH_INDEX_KEY!),
+      indexKey: decodeSecret(env.OAUTH_INDEX_KEY!),
       jwks: jwks as Configuration["jwks"],
     };
   } catch {

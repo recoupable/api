@@ -23,4 +23,7 @@ jobs:
           version: 9
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck:mcp-oauth
+      - run: sudo apt-get update && sudo apt-get install -y redis-server
       - run: pnpm test:mcp-oauth
+        env:
+          OAUTH_TEST_REDIS_SERVER: /usr/bin/redis-server

@@ -9,8 +9,8 @@ const environment = {
   OAUTH_SIGNING_JWKS: JSON.stringify({
     keys: [{ ...privateKey.export({ format: "jwk" }), kid: "test", alg: "RS256", use: "sig" }],
   }),
-  OAUTH_COOKIE_KEYS: JSON.stringify([key]),
-  OAUTH_INDEX_KEY: key,
+  OAUTH_COOKIE_KEYS: JSON.stringify([Buffer.alloc(32, 2).toString("base64")]),
+  OAUTH_INDEX_KEY: Buffer.alloc(32, 3).toString("base64"),
   OAUTH_ENCRYPTION_KEYS: JSON.stringify({ test: key }),
   OAUTH_ACTIVE_ENCRYPTION_KEY: "test",
 };
@@ -28,6 +28,7 @@ it.each([
   { OAUTH_COOKIE_KEYS: '["short"]' },
   { OAUTH_SIGNING_JWKS: '{"keys":[]}' },
   { OAUTH_ACTIVE_ENCRYPTION_KEY: "missing" },
+  { OAUTH_INDEX_KEY: key },
 ])("fails closed on invalid configuration without printing secrets %j", overrides => {
   expect(() => loadOAuthConfig({ ...environment, ...overrides })).toThrow(
     /^Invalid OAuth configuration$/,

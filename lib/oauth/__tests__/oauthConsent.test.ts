@@ -1,4 +1,4 @@
-import { expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import type { Adapter, AdapterPayload } from "oidc-provider";
 import { createOAuthConsentTickets } from "../consent/createOAuthConsentTickets";
 import { validateOAuthConsentBody } from "../consent/validateOAuthConsentBody";
@@ -13,11 +13,13 @@ const binding = {
 };
 function fixture() {
   const records = new Map<string, AdapterPayload>();
+  const deadlines = new Map<string, number>();
   const adapter: Adapter = {
-    upsert: vi.fn(async (id, payload) => {
+    upsert: vi.fn(async (id, payload, ttl) => {
       records.set(id, payload);
+      deadlines.set(id, Date.now() + ttl * 1000);
     }),
-    find: async id => records.get(id),
+    find: async id => ((deadlines.get(id) ?? 0) > Date.now() ? records.get(id) : undefined),
     findByUid: async () => undefined,
     findByUserCode: async () => undefined,
     consume: vi.fn(async id => {
@@ -32,6 +34,14 @@ function fixture() {
   };
   return { tickets: createOAuthConsentTickets(() => adapter), adapter, records };
 }
+afterEach(() => vi.useRealTimers());
+it("expires approval tickets at their five-minute deadline", async () => {
+  vi.useFakeTimers();
+  const { tickets } = fixture();
+  const csrf = await tickets.issue(binding);
+  vi.advanceTimersByTime(300_001);
+  await expect(tickets.consume(csrf, binding)).rejects.toThrow("Invalid OAuth approval");
+});
 it("accepts only an explicit decision and opaque nonce", () => {
   const body = { decision: "approve", csrf: "a".repeat(43) };
   expect(validateOAuthConsentBody(body)).toEqual(body);
@@ -69,7 +79,7 @@ it("binds approval to every identity, interaction, and permission field", async 
   expect(adapter.consume).not.toHaveBeenCalled();
   await tickets.consume(csrf, { ...binding, scopes: ["mcp:write", "mcp:read", "mcp:read"] });
 });
-it("rejects expired, malformed, and unsupported approvals", async () => {
+it("rejects missing, malformed, and unsupported approvals", async () => {
   const { tickets, records } = fixture();
   await expect(tickets.issue({ ...binding, scopes: ["admin"] })).rejects.toThrow();
   const csrf = await tickets.issue(binding);

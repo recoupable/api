@@ -15,8 +15,17 @@ No secrets are generated at runtime. Missing or malformed configuration returns 
 | `OAUTH_INDEX_KEY` | Stable base64 32-byte lookup key; do not rotate independently of stored records |
 | `OAUTH_ENCRYPTION_KEYS` | JSON object of key IDs to base64 32-byte encryption keys |
 | `OAUTH_ACTIVE_ENCRYPTION_KEY` | Current encryption key ID; retain old keys while their records exist |
+| `REDIS_URL` | Shared Redis service for atomic OAuth request budgets; unavailable Redis fails closed |
 
-Use independent random secrets for each purpose. HTTP is accepted only for `127.0.0.1` test fixtures. The runtime requires Node 22 or a provider-supported newer version and both database migrations from database PR #81. The chat screen has its own server-side gate, `OAUTH_CONSENT_ENABLED=true`, and the same canonical `OAUTH_ISSUER`.
+The loader rejects duplicate symmetric secrets. HTTP is accepted only for `127.0.0.1` test fixtures. The runtime requires Node 22 or a provider-supported newer version and both database migrations from database PR #81. The separate app repository implements the screen in [app PR #2163](https://github.com/recoupable/app/pull/2163), at `app/oauth/authorize/page.tsx`; that server-side route consumes `OAUTH_CONSENT_ENABLED=true` and the same canonical `OAUTH_ISSUER`.
+
+## Request budgets
+
+Before runtime initialization, every enabled request consumes atomic shared Redis budgets: 1,200 requests/minute per issuer and 120/minute per socket peer. Registration additionally allows 100/minute per issuer and 10/minute per peer. Excess traffic receives 429 with Retry-After. Redis failure returns a generic 503 with a redacted availability event; request bodies, tokens, addresses and backend error details are never logged.
+
+Peer identity uses the socket address, never caller-controlled forwarded headers. Behind a platform proxy, unrelated clients may share that peer budget. Validate deployment behavior and configure edge per-client limits before public launch; do not blindly trust X-Forwarded-For to increase capacity. These conservative application budgets protect storage work but do not replace edge DDoS controls.
+
+The Redis integration test starts an isolated Unix-socket server with persistence and TCP disabled when `OAUTH_TEST_REDIS_SERVER` points to a local binary. It verifies concurrent budgets, rejected requests not consuming shared capacity, expiry recovery and fail-closed handling of counters without TTL. CI installs a local test binary; no production Redis is used in these tests.
 
 ## Browser journey
 
