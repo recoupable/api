@@ -192,6 +192,24 @@ it("requires browser cookie, trusted origin, matching identity, and one-use cons
       expect((await registerCallbacks(callbacks)).status).toBe(400);
     }
     expect((await registerCallbacks(cursorCallbacks, "web")).status).toBe(400);
+    for (const applicationType of [undefined, "native", "web"]) {
+      for (const callback of [
+        "http://public.example/callback",
+        "http://localhost.evil.example/callback",
+        "http://127.0.0.1.evil.example/callback",
+      ]) {
+        const response = await registerCallbacks([callback], applicationType);
+        expect(response.status).toBe(400);
+        expect(await response.json()).toMatchObject({ error: "invalid_redirect_uri" });
+      }
+    }
+    for (const callback of [
+      "http://localhost:33418/callback",
+      "http://127.0.0.1:33418/callback",
+      "http://[::1]:33418/callback",
+    ]) {
+      expect((await registerCallbacks([callback], "native")).status).toBe(201);
+    }
     expect((await registerCallbacks(["https://agent.example/callback"], "web")).status).toBe(201);
     const registered = await fetch(`${config.issuer}/reg`, {
       method: "POST",

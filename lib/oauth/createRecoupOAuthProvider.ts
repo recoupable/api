@@ -1,6 +1,7 @@
 import { Provider, errors, type AdapterFactory } from "oidc-provider";
 import type { OAuthRuntimeConfig } from "./loadOAuthConfig";
 import { oauthLaunchScopes } from "./oauthLaunchScopes";
+import { validateOAuthRedirectUris } from "./validateOAuthRedirectUris";
 
 /** Real-account provider; all secrets and durable storage are supplied explicitly. */
 export function createRecoupOAuthProvider(
@@ -15,8 +16,11 @@ export function createRecoupOAuthProvider(
     cookies: { keys: config.cookieKeys },
     clients: [],
     // MCP desktop clients may omit application_type while registering native callbacks.
-    // Native validation also rejects non-loopback HTTP; explicit web clients retain web rules.
     clientDefaults: { application_type: "native" },
+    extraClientMetadata: {
+      properties: ["redirect_uris"],
+      validator: (_ctx, _key, value) => validateOAuthRedirectUris(value),
+    },
     // Remote metadata/JWKS fetching needs a dedicated SSRF-safe policy before enabling CIMD.
     fetch: async () => {
       throw new Error("Remote OAuth metadata is not enabled");
