@@ -159,6 +159,40 @@ it("requires browser cookie, trusted origin, matching identity, and one-use cons
         false,
       );
     });
+    // Cursor 3.21.12 sends this mixed callback set without application_type.
+    const cursorCallbacks = [
+      "cursor://anysphere.cursor-mcp/oauth/callback",
+      "https://www.cursor.com/agents/mcp/oauth/callback",
+      "http://localhost:8787/callback",
+    ];
+    const registerCallbacks = (redirect_uris: string[], application_type?: string) =>
+      fetch(`${config.issuer}/reg`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_name: "Cursor registration fixture",
+          redirect_uris,
+          application_type,
+          token_endpoint_auth_method: "none",
+          grant_types: ["authorization_code", "refresh_token"],
+          response_types: ["code"],
+        }),
+      });
+    const cursorRegistration = await registerCallbacks(cursorCallbacks);
+    expect(cursorRegistration.status).toBe(201);
+    expect(await cursorRegistration.json()).toMatchObject({
+      application_type: "native",
+      redirect_uris: cursorCallbacks,
+    });
+    for (const callbacks of [
+      ["http://public.example/callback"],
+      ["https://agent.example/callback#fragment"],
+      ["javascript:alert(1)"],
+    ]) {
+      expect((await registerCallbacks(callbacks)).status).toBe(400);
+    }
+    expect((await registerCallbacks(cursorCallbacks, "web")).status).toBe(400);
+    expect((await registerCallbacks(["https://agent.example/callback"], "web")).status).toBe(201);
     const registered = await fetch(`${config.issuer}/reg`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
