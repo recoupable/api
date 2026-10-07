@@ -14,6 +14,9 @@ export function createRecoupOAuthProvider(
     jwks: config.jwks,
     cookies: { keys: config.cookieKeys },
     clients: [],
+    // MCP desktop clients may omit application_type while registering native callbacks.
+    // Native validation also rejects non-loopback HTTP; explicit web clients retain web rules.
+    clientDefaults: { application_type: "native" },
     // Remote metadata/JWKS fetching needs a dedicated SSRF-safe policy before enabling CIMD.
     fetch: async () => {
       throw new Error("Remote OAuth metadata is not enabled");
