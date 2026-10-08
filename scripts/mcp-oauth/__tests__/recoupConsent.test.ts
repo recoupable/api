@@ -417,17 +417,19 @@ async function verifyConsent(mode: string) {
     expect(metadata.accessDurationDays).toBeNull();
     expect(tokens.expires_in).toBe(300);
     if (mode === "legacy") {
+      if (!attribution) throw new Error("Missing legacy attribution fixture");
       // Existing finite approvals retain the duration their owner approved.
       const deadline = Math.floor(Date.now() / 1000) + 30 * 86400;
       await adapter("RecoupGrant").upsert(
         access!.grantId,
         {
           ...attribution,
-          extra: { ...attribution!.extra, expiresAt: deadline },
+          extra: { ...attribution.extra, expiresAt: deadline },
         },
         30 * 86400,
       );
-      expect((await adapter("RecoupGrant").find(access!.grantId))!.extra!.expiresAt).toBe(deadline);
+      const legacyAttribution = await adapter("RecoupGrant").find(access!.grantId);
+      expect(legacyAttribution && legacyAttribution.extra?.expiresAt).toBe(deadline);
       const grant = await adapter("Grant").find(access!.grantId);
       await adapter("Grant").upsert(access!.grantId, { ...grant, exp: deadline }, 30 * 86400);
       const legacyRefresh = await provider.RefreshToken.find(tokens.refresh_token);
