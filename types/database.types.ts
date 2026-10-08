@@ -4133,6 +4133,15 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      confirm_professional_roster: {
+        Args: { p_actor: string; p_org: string; p_key: string; p_input: Json };
+        Returns: Json;
+      };
+      list_professional_roster: {
+        Args: { p_actor: string; p_org: string; p_after?: string };
+        Returns: Json;
+      };
+
       create_artist_with_roster: {
         Args: { p_account_id: string; p_organization_id: string | null; p_name: string };
         Returns: Json;
