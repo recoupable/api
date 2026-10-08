@@ -1,20 +1,7 @@
-import { z } from "zod";
-import { runContextEnrichment, type ContextEnrichmentModule } from "./runContextEnrichment";
-interface PlanNode {
-  key: string;
-  dependsOn: string[];
-  /** Receipts identify saved evidence; load its authorized content here when needed. */
-  prepare: (receipts: Record<string, unknown>) => Promise<ContextEnrichmentModule>;
-}
-interface Outcome {
-  key: string;
-  status: "saved" | "reused" | "failed" | "blocked";
-  startedAt?: string;
-  elapsedMs?: number;
-  receipt?: unknown;
-  blockedBy?: string[];
-  failureStage?: "authorize" | "prepare" | "execute_or_persist";
-}
+import { ContextNodeNeedsReconciliation } from "../planning/ContextNodeNeedsReconciliation";
+import { runContextEnrichment } from "./runContextEnrichment";
+import type { PlanNode, Outcome } from "./enrichmentPlanTypes";
+import { validateContextEnrichmentPlan } from "./validateContextEnrichmentPlan";
 type Dependencies = Parameters<typeof runContextEnrichment>[4];
 /**
  * Execute a server-built dependency plan using the existing independently persisted runner.
@@ -29,24 +16,16 @@ export async function runContextEnrichmentPlan(
   deps: Dependencies,
   concurrency = 3,
 ): Promise<Outcome[]> {
-  z.number().int().min(1).max(10).parse(concurrency);
-  z.array(z.object({ key: z.string().min(1), dependsOn: z.array(z.string().min(1)) }))
-    .max(100)
-    .parse(plan);
-  const keys = new Set(plan.map(n => n.key));
-  if (keys.size !== plan.length) throw new Error("Duplicate module keys");
-  if (plan.some(n => n.dependsOn.some(key => !keys.has(key))))
-    throw new Error("Unknown module dependency");
-  const visited = new Set<string>();
-  while (visited.size < plan.length) {
-    const ready = plan.filter(n => !visited.has(n.key) && n.dependsOn.every(k => visited.has(k)));
-    if (!ready.length) throw new Error("Cyclic module dependencies");
-    ready.forEach(n => visited.add(n.key));
-  }
+  validateContextEnrichmentPlan(plan, concurrency);
   await deps.authorize(actor, owner);
   const outcomes = new Map<string, Outcome>();
   const running = new Map<string, Promise<void>>();
+  let reconciliationError: ContextNodeNeedsReconciliation | undefined;
   while (outcomes.size < plan.length) {
+    if (reconciliationError) {
+      await Promise.allSettled(running.values());
+      throw reconciliationError;
+    }
     const ready = plan.filter(
       n => !outcomes.has(n.key) && !running.has(n.key) && n.dependsOn.every(k => outcomes.has(k)),
     );
@@ -85,7 +64,11 @@ export async function runContextEnrichmentPlan(
             elapsedMs: Date.now() - start,
             receipt,
           });
-        } catch {
+        } catch (error) {
+          if (error instanceof ContextNodeNeedsReconciliation) {
+            reconciliationError ??= error;
+            throw error;
+          }
           outcomes.set(node.key, {
             key: node.key,
             status: "failed",
@@ -96,9 +79,19 @@ export async function runContextEnrichmentPlan(
         }
       })();
       running.set(node.key, task);
-      void task.finally(() => running.delete(node.key));
+      const removeFinished = () => {
+        running.delete(node.key);
+      };
+      void task.then(removeFinished, removeFinished);
     }
-    if (running.size) await Promise.race(running.values());
+    if (running.size) {
+      try {
+        await Promise.race(running.values());
+      } catch (error) {
+        await Promise.allSettled(running.values());
+        throw error;
+      }
+    }
   }
   return plan.map(n => outcomes.get(n.key)!);
 }
