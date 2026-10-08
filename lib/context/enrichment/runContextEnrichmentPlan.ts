@@ -1,21 +1,7 @@
-import { z } from "zod";
 import { ContextNodeNeedsReconciliation } from "../planning/ContextNodeNeedsReconciliation";
-import { runContextEnrichment, type ContextEnrichmentModule } from "./runContextEnrichment";
-interface PlanNode {
-  key: string;
-  dependsOn: string[];
-  /** Receipts identify saved evidence; load its authorized content here when needed. */
-  prepare: (receipts: Record<string, unknown>) => Promise<ContextEnrichmentModule>;
-}
-interface Outcome {
-  key: string;
-  status: "saved" | "reused" | "failed" | "blocked";
-  startedAt?: string;
-  elapsedMs?: number;
-  receipt?: unknown;
-  blockedBy?: string[];
-  failureStage?: "authorize" | "prepare" | "execute_or_persist";
-}
+import { runContextEnrichment } from "./runContextEnrichment";
+import type { PlanNode, Outcome } from "./enrichmentPlanTypes";
+import { validateContextEnrichmentPlan } from "./validateContextEnrichmentPlan";
 type Dependencies = Parameters<typeof runContextEnrichment>[4];
 /**
  * Execute a server-built dependency plan using the existing independently persisted runner.
@@ -30,20 +16,7 @@ export async function runContextEnrichmentPlan(
   deps: Dependencies,
   concurrency = 3,
 ): Promise<Outcome[]> {
-  z.number().int().min(1).max(10).parse(concurrency);
-  z.array(z.object({ key: z.string().min(1), dependsOn: z.array(z.string().min(1)) }))
-    .max(100)
-    .parse(plan);
-  const keys = new Set(plan.map(n => n.key));
-  if (keys.size !== plan.length) throw new Error("Duplicate module keys");
-  if (plan.some(n => n.dependsOn.some(key => !keys.has(key))))
-    throw new Error("Unknown module dependency");
-  const visited = new Set<string>();
-  while (visited.size < plan.length) {
-    const ready = plan.filter(n => !visited.has(n.key) && n.dependsOn.every(k => visited.has(k)));
-    if (!ready.length) throw new Error("Cyclic module dependencies");
-    ready.forEach(n => visited.add(n.key));
-  }
+  validateContextEnrichmentPlan(plan, concurrency);
   await deps.authorize(actor, owner);
   const outcomes = new Map<string, Outcome>();
   const running = new Map<string, Promise<void>>();
