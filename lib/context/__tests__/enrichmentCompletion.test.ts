@@ -51,6 +51,7 @@ it.each([false, true])(
     ).rejects.toBeInstanceOf(ContextNodeNeedsReconciliation);
     expect(call).toHaveBeenCalledOnce();
     expect(dispatch).toHaveBeenCalledOnce();
+    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ key: "release" }), {});
     expect(persistOutcome).not.toHaveBeenCalled();
     expect(rpc.mock.calls.map(([name]) => name)).toEqual([
       "claim_context_enrichment",

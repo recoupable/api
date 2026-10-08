@@ -48,14 +48,17 @@ export async function runContextEnrichment(
   const fingerprint = createHash("sha256")
     .update(JSON.stringify([owner, module]))
     .digest("hex");
-  const claim = (await deps.rpc("claim_context_enrichment", {
-    p_owner: owner,
-    p_request: requestId,
-    p_module: { ...module, fingerprint },
-  })) as { state: string; attemptId?: string };
+  const claim = (await deps
+    .rpc("claim_context_enrichment", {
+      p_owner: owner,
+      p_request: requestId,
+      p_module: { ...module, fingerprint },
+    })
+    .catch(error => {
+      throw new ContextNodeNeedsReconciliation(error);
+    })) as { state: string; attemptId?: string };
   if (claim.state === "reused") return claim;
-  if (claim.state !== "claimed" || !claim.attemptId)
-    throw new Error("Paid attempt requires reconciliation before retry");
+  if (claim.state !== "claimed" || !claim.attemptId) throw new ContextNodeNeedsReconciliation();
   try {
     const result = resultSchema.parse(await deps.call(module));
     if (
@@ -75,9 +78,9 @@ export async function runContextEnrichment(
         p_attempt: claim.attemptId,
         p_result: result,
       })
-      .catch(() => {
+      .catch(error => {
         // The save may have committed; the scheduler must not persist a failed node.
-        throw new ContextNodeNeedsReconciliation();
+        throw new ContextNodeNeedsReconciliation(error);
       });
   } catch (error) {
     await deps

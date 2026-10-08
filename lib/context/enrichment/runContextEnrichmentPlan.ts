@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ContextNodeNeedsReconciliation } from "../planning/ContextNodeNeedsReconciliation";
 import { runContextEnrichment, type ContextEnrichmentModule } from "./runContextEnrichment";
 interface PlanNode {
   key: string;
@@ -46,7 +47,12 @@ export async function runContextEnrichmentPlan(
   await deps.authorize(actor, owner);
   const outcomes = new Map<string, Outcome>();
   const running = new Map<string, Promise<void>>();
+  let reconciliationError: ContextNodeNeedsReconciliation | undefined;
   while (outcomes.size < plan.length) {
+    if (reconciliationError) {
+      await Promise.allSettled(running.values());
+      throw reconciliationError;
+    }
     const ready = plan.filter(
       n => !outcomes.has(n.key) && !running.has(n.key) && n.dependsOn.every(k => outcomes.has(k)),
     );
@@ -85,7 +91,11 @@ export async function runContextEnrichmentPlan(
             elapsedMs: Date.now() - start,
             receipt,
           });
-        } catch {
+        } catch (error) {
+          if (error instanceof ContextNodeNeedsReconciliation) {
+            reconciliationError ??= error;
+            throw error;
+          }
           outcomes.set(node.key, {
             key: node.key,
             status: "failed",
@@ -96,9 +106,19 @@ export async function runContextEnrichmentPlan(
         }
       })();
       running.set(node.key, task);
-      void task.finally(() => running.delete(node.key));
+      const removeFinished = () => {
+        running.delete(node.key);
+      };
+      void task.then(removeFinished, removeFinished);
     }
-    if (running.size) await Promise.race(running.values());
+    if (running.size) {
+      try {
+        await Promise.race(running.values());
+      } catch (error) {
+        await Promise.allSettled(running.values());
+        throw error;
+      }
+    }
   }
   return plan.map(n => outcomes.get(n.key)!);
 }
