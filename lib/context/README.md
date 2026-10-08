@@ -164,3 +164,71 @@ Server-only adapters now create an execution record and save a node outcome. Suc
 ### Durable blocked-plan review (disabled by default)
 
 After Spotify metadata persistence, the workflow can record a review-only module plan and blocked outcomes. `CONTEXT_RECORD_BLOCKED_PLAN_ENABLED=true` enables this step **only after database PR77 is deployed**. The default is off. It uses a stable execution ID per request/policy version, so replay of this step saves the same blocked outcomes rather than starting duplicate work. It makes no provider calls, no node claims, and no credit charge. A changed plan with the same execution ID stops for reconciliation instead of overwriting the earlier trace. The workflow still returns its original metadata request result. Production execution and inspector display of this trace remain unverified.
+
+## Release metadata operating case (first slice of #2116)
+
+The following actions share this API and the MCP `context` tool. They require
+`20261008160000_context_release_cases.sql`, its cursor correction
+`20261008160100_context_release_case_cursor.sql`, and the existing Context dependencies.
+They read saved evidence and persist metadata review receipts; they make no
+provider/model calls, change no canonical identities and grant no external authority.
+
+| Action | Input beyond optional `organization_id` | Result |
+| --- | --- | --- |
+| `list_release_cases` | Optional `after_id` from `next_id` | Up to 50 owner-scoped saved release requests, newest first, `has_more`, `next_id` |
+| `read_release_case` | `request_id` | Current bounded metadata projection, gaps, source-version manifest, fingerprint and latest review status |
+| `review_release_case` | `request_id`, exact `fingerprint`, `decision` (`reviewed` or `needs_changes`), optional `note` (up to 2,000 characters), `idempotency_key` | Immutable, server-created review receipt and snapshot |
+| `read_release_case_review` | `review_id` | Original snapshot with stale/current status; withdrawn evidence and its note are withheld |
+
+```json
+{
+  "action": "review_release_case",
+  "organization_id": "11111111-1111-4111-8111-111111111111",
+  "request_id": "22222222-2222-4222-8222-222222222222",
+  "fingerprint": "<64-character fingerprint from read_release_case>",
+  "decision": "needs_changes",
+  "note": "Compare the missing writer credits with an approved source.",
+  "idempotency_key": "release-review-1"
+}
+```
+
+Use the same key and exact input after an uncertain save. A changed key payload
+is rejected. Changed evidence rejects a new review with an old fingerprint; reload
+and review the new projection explicitly. Caller identity and a caller-provided
+snapshot are never accepted. Membership is rechecked and locked in the database
+transaction, including historical reads and retries. A workspace member may record
+metadata review under `workspace-member-metadata-review-v1`; that policy is not
+rights approval, distribution permission or authority to collect royalties.
+
+The request supplies its single release subject; clients cannot substitute a
+subject. The projection includes the saved album title, first 100 track positions,
+performing-artist observations, existing ISRC candidate states, missing evidence,
+and version references. Releases exceeding the display bound cannot be marked
+reviewed. All cases remain `partial` or `blocked`: cross-source reconciliation,
+composition, writer/publisher, contract and approved-master linkage are not built.
+`distribute`, `register_rights` and `collect_royalties` are explicitly `unsupported`.
+Provider/model calls are zero; infrastructure cost is `unmeasured`, not free.
+
+The companion Chat `/releases` page in [App PR2172](https://github.com/recoupable/app/pull/2172)
+is implemented on its feature branch, not yet merged or production-verified. It uses these operations through its authenticated Context
+proxy. Switching workspaces hides previous results immediately; late responses are
+ignored, and failed reads clear cached case content. The route uses saved requests;
+it does not activate collection flags or ingest providers automatically.
+
+### Release and verification boundaries
+
+1. Inspect the **Recoup** deployed schema and role grants, including all prerequisite
+   Context migrations and `20261008030000_onboarding_membership_lock_privilege.sql`. The available
+   connector initially exposed a different project. The October 8 read-only Recoup
+   production audit now confirms these prerequisites and service-role grants;
+   see database PR86 and epic #2116. This is not deployment or hosted acceptance.
+2. Review/apply the additive database migration through the database release process.
+3. Deploy API, then Chat. Until step 2, dependent calls fail; keep the UI PR behind
+   these dependencies. No source-collection flags need changing for saved reads.
+4. Verify authenticated HTTP/MCP parity and a real authorized Recoup Records release
+   in the hosted UI, including exact-version review and changed/revoked evidence.
+
+Local fixture and transport tests are not production migration, hosted acceptance,
+or completion of the original two-song/two-brief checkpoint. This first slice does
+not implement the future rights graph, financial ledger, DDEX exchange or agent
+spending policy described in the epic.

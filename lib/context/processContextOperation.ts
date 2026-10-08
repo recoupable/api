@@ -1,3 +1,5 @@
+import { releaseCaseOperationSchemas } from "./releaseCaseOperationSchemas";
+import { processReleaseCaseOperation } from "./processReleaseCaseOperation";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { authorizeContextOwner } from "./authorizeContextOwner";
@@ -17,6 +19,7 @@ const briefFields = {
 };
 
 export const contextOperationSchema = z.discriminatedUnion("action", [
+  ...releaseCaseOperationSchemas,
   z.strictObject({
     action: z.literal("save_brief"),
     ...briefFields,
@@ -189,6 +192,13 @@ export async function processContextOperation(
     accountId,
     args.organization_id,
   );
+  if (
+    args.action === "list_release_cases" ||
+    args.action === "read_release_case" ||
+    args.action === "read_release_case_review" ||
+    args.action === "review_release_case"
+  )
+    return processReleaseCaseOperation(accountId, ownerId, args, deps.rpc);
   if (args.action === "read_brief")
     return {
       snapshot: await deps.rpc("read_context_brief", { p_owner: ownerId, p_brief: args.brief_id }),
