@@ -1,6 +1,9 @@
 import { Provider, errors, type AdapterFactory } from "oidc-provider";
 import type { OAuthRuntimeConfig } from "./loadOAuthConfig";
 import { oauthLaunchScopes } from "./oauthLaunchScopes";
+import { createOAuthMetadataFetch } from "./createOAuthMetadataFetch";
+import { validateOAuthMetadataUrl } from "./validateOAuthMetadataUrl";
+import { validateOAuthClientMetadata } from "./validateOAuthClientMetadata";
 import { validateOAuthRedirectUris } from "./validateOAuthRedirectUris";
 
 /** Real-account provider; all secrets and durable storage are supplied explicitly. */
@@ -18,18 +21,32 @@ export function createRecoupOAuthProvider(
     // MCP desktop clients may omit application_type while registering native callbacks.
     clientDefaults: { application_type: "native" },
     extraClientMetadata: {
-      properties: ["redirect_uris"],
-      validator: (_ctx, _key, value) => validateOAuthRedirectUris(value),
+      properties: ["redirect_uris", "client_id"],
+      validator: (_ctx, key, value, metadata) => {
+        if (key === "redirect_uris") validateOAuthRedirectUris(value);
+        else validateOAuthClientMetadata(metadata);
+      },
     },
-    // Remote metadata/JWKS fetching needs a dedicated SSRF-safe policy before enabling CIMD.
-    fetch: async () => {
-      throw new Error("Remote OAuth metadata is not enabled");
-    },
+    fetch: createOAuthMetadataFetch(),
+    fetchResponseBodyLimits: { "client_id metadata document": 16384, jwks_uri: 16384 },
     scopes: ["openid", "offline_access", ...Object.keys(oauthLaunchScopes)],
     responseTypes: ["code"],
     pkce: { required: () => true },
     features: {
       devInteractions: { enabled: false },
+      clientIdMetadataDocument: {
+        enabled: true,
+        ack: "draft-02",
+        cacheDuration: { min: 0, max: 300 },
+        allowFetch: (_ctx, clientId) => {
+          try {
+            validateOAuthMetadataUrl(clientId);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+      },
       registration: { enabled: true, issueRegistrationAccessToken: false },
       revocation: { enabled: true },
       resourceIndicators: {
