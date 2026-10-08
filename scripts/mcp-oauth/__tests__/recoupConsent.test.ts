@@ -56,6 +56,7 @@ function memoryAdapter(): AdapterFactory {
 }
 
 async function verifyConsent(mode: string) {
+  const requestedScopes = mode === "full" ? ["mcp:tools"] : ["mcp:read", "mcp:write"];
   const server = createServer();
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -306,7 +307,7 @@ async function verifyConsent(mode: string) {
       client_id: client.client_id,
       redirect_uri: "https://agent.example/callback",
       response_type: "code",
-      scope: "mcp:read mcp:write",
+      scope: requestedScopes.join(" "),
       resource: config.resource,
       state: "state",
       code_challenge: createHash("sha256").update(verifier).digest("base64url"),
@@ -336,10 +337,8 @@ async function verifyConsent(mode: string) {
     expect(metadataResponse.status).toBe(200);
     expect(metadataResponse.headers.get("access-control-allow-origin")).toBe(origin);
     const metadata = await metadataResponse.json();
-    expect(metadata.permissions.map((p: { scope: string }) => p.scope)).toEqual([
-      "mcp:read",
-      "mcp:write",
-    ]);
+    expect(metadata.permissions.map((p: { scope: string }) => p.scope)).toEqual(requestedScopes);
+    if (mode === "full") expect(metadata.permissions[0].description).toContain("deleting data");
     const submit = (extra: object = {}, auth = "alice") =>
       browserFetch(interactionUrl, {
         method: "POST",
@@ -370,10 +369,30 @@ async function verifyConsent(mode: string) {
     });
     expect(tokensResponse.status).toBe(200);
     const tokens = await tokensResponse.json();
-    expect(tokens.scope).toBe("mcp:read mcp:write");
+    expect(tokens.scope).toBe(requestedScopes.join(" "));
     expect(tokens.refresh_token).toEqual(expect.any(String));
     const delegated = await verify(tokens.access_token);
-    expect(delegated).toMatchObject({ accountId, scopes: ["mcp:read", "mcp:write"] });
+    expect(delegated).toMatchObject({ accountId, scopes: requestedScopes });
+    if (mode === "full") {
+      const refreshed = await fetch(`${config.issuer}/token`, {
+        method: "POST",
+        body: new URLSearchParams({
+          client_id: client.client_id,
+          grant_type: "refresh_token",
+          refresh_token: tokens.refresh_token,
+          resource: config.resource,
+        }),
+      });
+      expect(refreshed.status).toBe(200);
+      const renewed = await refreshed.json();
+      expect(await verify(renewed.access_token)).toMatchObject({
+        accountId,
+        scopes: ["mcp:tools"],
+      });
+      await adapter("Grant").revokeByGrantId(delegated!.grantId);
+      expect(await verify(renewed.access_token)).toBeUndefined();
+      return;
+    }
     const mcpClient = new Client({ name: "synthetic-agent", version: "1" });
     await mcpClient.connect(
       new StreamableHTTPClientTransport(new URL(config.resource), {
@@ -512,7 +531,7 @@ async function verifyConsent(mode: string) {
   }
 }
 
-it.each(["dcr", "cimd", "legacy"])(
+it.each(["dcr", "cimd", "legacy", "full"])(
   "requires browser cookie, trusted origin, matching identity, and one-use consent before issuing tokens (%s)",
   verifyConsent,
 );
