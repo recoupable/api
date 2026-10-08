@@ -9,7 +9,13 @@ const result = await build({
   minify: true,
   loader: { ".woff2": "dataurl", ".svg": "dataurl" },
 });
-let css = await readFile("ui/recoup/style.css", "utf8");
+let css = (
+  await Promise.all(
+    ["base", "layout", "cards", "dialog", "responsive"].map(name =>
+      readFile(`ui/recoup/styles/${name}.css`, "utf8"),
+    ),
+  )
+).join("\n");
 for (const font of ["dm-sans", "ibm-plex-mono"]) {
   const bytes = await readFile(`ui/recoup/assets/${font}.woff2`);
   css = css.replace(`assets/${font}.woff2`, `data:font/woff2;base64,${bytes.toString("base64")}`);

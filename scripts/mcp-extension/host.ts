@@ -3,7 +3,7 @@ import { AppBridge, PostMessageTransport } from "@modelcontextprotocol/ext-apps/
 const iframe = document.createElement("iframe");
 iframe.title = "Recoup extension";
 iframe.style.cssText = "width:100%;height:80vh;border:0";
-iframe.sandbox.add("allow-scripts", "allow-forms", "allow-same-origin");
+iframe.sandbox.add("allow-scripts", "allow-forms");
 document.body.append(iframe);
 const output = document.createElement("pre");
 output.id = "received";
@@ -14,7 +14,12 @@ const bridge = new AppBridge(
   null,
   { name: "Local test host", version: "1" },
   { message: { text: {} } },
-  { hostContext: { theme: "light", displayMode: "fullscreen" } },
+  {
+    hostContext: {
+      theme: new URLSearchParams(location.search).get("theme") === "dark" ? "dark" : "light",
+      displayMode: "fullscreen",
+    },
+  },
 );
 bridge.onmessage = async ({ content }) => {
   output.textContent =

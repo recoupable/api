@@ -1,0 +1,56 @@
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+[hidden] {
+  display: none !important;
+}
+@media (max-width: 800px) {
+  #cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  header {
+    gap: 16px;
+  }
+  .card-title {
+    font-size: 18px;
+  }
+}
+@media (max-width: 480px) {
+  #cards {
+    grid-template-columns: 1fr;
+  }
+  header > span {
+    display: none;
+  }
+  main {
+    padding-top: 26px;
+  }
+  .toolbar,
+  .search,
+  input {
+    width: 100%;
+  }
+  dialog {
+    padding: 28px;
+  }
+  .card-title {
+    font-size: 22px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+  }
+}
+
+.brand img {
+  width: 140px;
+  display: block;
+}
+:root[data-theme="dark"] .brand img {
+  filter: invert(1);
+}

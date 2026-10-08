@@ -12,7 +12,7 @@
     "lint": "eslint . --ext .ts --fix",
     "lint:check": "eslint . --ext .ts",
     "test": "pnpm build:extension && vitest run",
-    "test:watch": "vitest",
+    "test:watch": "pnpm build:extension && vitest",
     "update-types": "npx supabase gen types typescript --project-id godremdqwajrwazhbrue --schema public > types/database.types.ts",
     "backfill:rooms-to-sessions": "npx tsx scripts/backfillRoomsToSessions.ts",
     "eval": "braintrust eval --external-packages playwright playwright-core chromium-bidi @browserbasehq/stagehand @composio/core @composio/vercel",
