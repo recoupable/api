@@ -79,6 +79,7 @@ it.each([false, true])(
         expect(inventory.tools.map(tool => tool.name).sort()).toEqual([
           "get_tasks",
           "list_artists",
+          "open_recoup",
         ]);
         const result = await client.callTool({ name: "get_tasks", arguments: {} });
         expect(result.isError).not.toBe(true);
@@ -95,6 +96,10 @@ it.each([false, true])(
         ).not.toBe(true);
         expect(createArtist).toHaveBeenCalledWith("alice", "Route fixture");
       }
+      const opened = await client.callTool({ name: "open_recoup", arguments: {} });
+      expect(opened.structuredContent).toMatchObject({ title: "Recoup", version: 1 });
+      const ui = await client.readResource({ uri: "ui://recoup/explore.html" });
+      expect(ui.contents[0].mimeType).toBe("text/html;profile=mcp-app");
       expect(verify).toHaveBeenCalledWith(expect.any(Request), "opaque-token");
     } finally {
       await client.close();

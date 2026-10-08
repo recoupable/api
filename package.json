@@ -19,7 +19,7 @@
     "test:mcp-oauth": "vitest run --config vitest.oauth.config.ts",
     "typecheck:mcp-oauth": "pnpm build:extension && tsc --noEmit --project tsconfig.oauth.json",
     "build:extension": "node scripts/mcp-extension/build.mjs",
-    "test:extension": "pnpm build:extension && vitest run lib/mcp/extension ui/recoup"
+    "test:extension": "pnpm build:extension && vitest run lib/mcp/extension ui/recoup app/mcp/__tests__"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.78",
@@ -54,7 +54,7 @@
     "chat": "^4.15.0",
     "ioredis": "^5.8.2",
     "marked": "^15.0.12",
-    "mcp-handler": "^1.0.4",
+    "mcp-handler": "^1.1.0",
     "ms": "^2.1.3",
     "multiformats": "^13.4.1",
     "nanoid": "^5.1.11",
