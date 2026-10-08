@@ -16,3 +16,9 @@ it("carries the selected skill and user's actual brief without pretending genera
   expect(prompt).toContain("Sun Room, warm and analogue");
   expect(prompt).toContain("example, not my source material");
 });
+
+it("uses a complete request for noun-based feature titles", () => {
+  expect(buildWorkflowPrompt({ ...feature, title: "Content pack" }, "A new single")).toContain(
+    'Help me use the Recoup "Content pack" workflow.',
+  );
+});

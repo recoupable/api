@@ -30,11 +30,21 @@ bridge.onmessage = async ({ content }) => {
       .join("\n");
   return {};
 };
+const timer = setTimeout(() => {
+  output.textContent =
+    "The app did not initialize. Check that preview.html was built and is served from this directory.";
+}, 8000);
 bridge.oninitialized = () => {
+  clearTimeout(timer);
   void bridge.sendToolResult({ content: [], structuredContent: { title: "Recoup", version: 1 } });
 };
 void bridge
   .connect(new PostMessageTransport(iframe.contentWindow!, iframe.contentWindow!))
   .then(() => {
     iframe.src = "preview.html";
+  })
+  .catch(() => {
+    clearTimeout(timer);
+    output.textContent =
+      "The local MCP Apps bridge could not connect. Rebuild the preview and reload.";
   });

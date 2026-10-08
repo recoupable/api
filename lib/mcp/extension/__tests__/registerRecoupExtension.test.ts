@@ -17,6 +17,7 @@ describe("Recoup extension protocol", () => {
       expect(open?._meta?.["openai/ui"]).toMatchObject({
         entrypoints: [{ type: "global" }, { type: "thread" }],
       });
+      expect(open?._meta?.ui).toMatchObject({ resourceUri: "ui://recoup/explore.html" });
       const result = await client.callTool({ name: "open_recoup", arguments: {} });
       expect(result.isError).not.toBe(true);
       expect(result.structuredContent).toMatchObject({ title: "Recoup", version: 1 });
