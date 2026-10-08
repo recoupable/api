@@ -413,7 +413,46 @@ async function verifyConsent(mode: string) {
     expect(access?.aud).toBe(config.resource);
     const attribution = await adapter("RecoupGrant").find(access!.grantId);
     expect(attribution && attribution.extra?.subject).toBe("did:privy:alice");
-    expect(attribution && attribution.extra?.expiresAt).toEqual(expect.any(Number));
+    expect(attribution && attribution.extra?.expiresAt).toBeNull();
+    expect(metadata.accessDurationDays).toBeNull();
+    expect(tokens.expires_in).toBe(300);
+    if (mode === "legacy") {
+      // Existing finite approvals retain the duration their owner approved.
+      const deadline = Math.floor(Date.now() / 1000) + 30 * 86400;
+      const grant = await adapter("Grant").find(access!.grantId);
+      await adapter("Grant").upsert(access!.grantId, { ...grant, exp: deadline }, 30 * 86400);
+      const legacyRefresh = await provider.RefreshToken.find(tokens.refresh_token);
+      const payload = await adapter("RefreshToken").find(legacyRefresh!.jti);
+      await adapter("RefreshToken").upsert(
+        legacyRefresh!.jti,
+        { ...payload, exp: deadline },
+        30 * 86400,
+      );
+      const renewal = () =>
+        fetch(`${config.issuer}/token`, {
+          method: "POST",
+          body: new URLSearchParams({
+            client_id: client.client_id,
+            grant_type: "refresh_token",
+            refresh_token: tokens.refresh_token,
+            resource: config.resource,
+          }),
+        });
+      const response = await renewal();
+      expect(response.status).toBe(200);
+      const legacyTokens = await response.json();
+      expect(
+        (await provider.RefreshToken.find(legacyTokens.refresh_token))!.exp,
+      ).toBeLessThanOrEqual(deadline);
+      tokens.refresh_token = legacyTokens.refresh_token;
+      vi.spyOn(Date, "now").mockReturnValue((deadline + 1) * 1000);
+      expect((await renewal()).status).toBe(400);
+      expect(await verify(legacyTokens.access_token)).toBeUndefined();
+      return;
+    }
+    // Advance beyond the former 30-day deadline, including an inactive connection.
+    const clock = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 366 * 86400_000);
+    expect(await verify(tokens.access_token)).toBeUndefined();
     const refresh = await fetch(`${config.issuer}/token`, {
       method: "POST",
       body: new URLSearchParams({
@@ -428,7 +467,9 @@ async function verifyConsent(mode: string) {
     expect(renewed.refresh_token).not.toBe(tokens.refresh_token);
     const oldRefresh = await provider.RefreshToken.find(tokens.refresh_token);
     const newRefresh = await provider.RefreshToken.find(renewed.refresh_token);
-    expect(newRefresh!.exp).toBeLessThanOrEqual(oldRefresh!.exp!);
+    expect(newRefresh!.exp).toBe(oldRefresh!.exp);
+    expect(await verify(renewed.access_token)).toBeDefined();
+    clock.mockRestore();
     // A new authorization request still requires consent, even with an existing browser session.
     const nextInteraction = (await browserFetch(authorize)).headers.get("location")!;
     expect(nextInteraction).toContain("/interaction/");
@@ -454,12 +495,13 @@ async function verifyConsent(mode: string) {
       ).status,
     ).toBe(401);
   } finally {
+    vi.restoreAllMocks();
     server.closeAllConnections();
     await new Promise<void>(resolve => server.close(() => resolve()));
   }
 }
 
-it.each(["dcr", "cimd"])(
+it.each(["dcr", "cimd", "legacy"])(
   "requires browser cookie, trusted origin, matching identity, and one-use consent before issuing tokens (%s)",
   verifyConsent,
 );

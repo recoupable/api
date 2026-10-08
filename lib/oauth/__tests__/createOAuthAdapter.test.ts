@@ -76,3 +76,20 @@ it("allows permanent clients only and hashes grant revocation consistently", asy
   await factory()("AccessToken").revokeByGrantId("grant");
   expect(store.revokeGrant).toHaveBeenCalledWith("issuer", grant.idHash);
 });
+
+it("stores persistent grants and rotating refresh tokens without database expiry", async () => {
+  for (const model of ["Grant", "RefreshToken"]) {
+    await factory()(model).upsert(
+      "id",
+      { exp: 253402300799, grantId: "grant" },
+      253402300799 - Math.floor(Date.now() / 1000),
+    );
+    expect(store.upsert.mock.lastCall?.[0].expiresIn).toBeNull();
+  }
+  await factory()("RecoupGrant").upsert("grant", { grantId: "grant", extra: { expiresAt: null } });
+  expect(store.upsert.mock.lastCall?.[0].expiresIn).toBeNull();
+  await expect(
+    factory()("AccessToken").upsert("id", { exp: 253402300799 }, 253402300799),
+  ).rejects.toThrow();
+  await expect(factory()("RefreshToken").upsert("id", {}, 2678401)).rejects.toThrow();
+});

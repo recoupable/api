@@ -20,7 +20,12 @@ export function createOAuthConsentTickets(adapter: AdapterFactory) {
     const binding = bindingSchema.parse(input);
     if (binding.scopes.some(scope => !Object.hasOwn(oauthScopes, scope)))
       throw new Error("Unsupported OAuth permission");
-    return JSON.stringify({ ...binding, scopes: [...new Set(binding.scopes)].sort() });
+    // Bind the displayed duration too; old 30-day approval tickets must be reloaded.
+    return JSON.stringify({
+      ...binding,
+      scopes: [...new Set(binding.scopes)].sort(),
+      accessDurationDays: null,
+    });
   };
   return {
     async issue(binding: OAuthConsentBinding) {

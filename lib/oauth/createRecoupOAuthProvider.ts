@@ -1,3 +1,4 @@
+import { oauthPersistentExpiry } from "./oauthPersistentExpiry";
 import { Provider, errors, type AdapterFactory } from "oidc-provider";
 import type { OAuthRuntimeConfig } from "./loadOAuthConfig";
 import { oauthLaunchScopes } from "./oauthLaunchScopes";
@@ -85,12 +86,14 @@ export function createRecoupOAuthProvider(
       AccessToken: 300,
       AuthorizationCode: 60,
       Interaction: 300,
-      Grant: 30 * 86400,
+      Grant: () => oauthPersistentExpiry - Math.floor(Date.now() / 1000),
       Session: 86400,
-      RefreshToken: ctx => {
+      RefreshToken: (ctx, token) => {
         const remaining = (ctx.oidc.entities.Grant?.exp ?? 0) - Math.floor(Date.now() / 1000);
         if (remaining <= 0) throw new errors.InvalidGrant();
-        return Math.min(remaining, 30 * 86400);
+        // Preserve the exact grant deadline across serialization and refresh rotation.
+        token.exp = ctx.oidc.entities.Grant!.exp;
+        return remaining;
       },
     },
     interactions: { url: (_ctx, interaction) => `${config.issuer}/interaction/${interaction.uid}` },
