@@ -1,0 +1,506 @@
+[
+  {
+    "id": "film",
+    "title": "Music video",
+    "category": "Create",
+    "art": "film",
+    "description": "Give your song a world of its own.",
+    "skill": "recoup-music-video",
+    "mode": "narrative",
+    "outputs": [
+      "Story treatment",
+      "Shot list",
+      "Reviewed film"
+    ],
+    "inputs": [
+      "Recording",
+      "Visual references"
+    ],
+    "status": "Skill-backed concept",
+    "number": 1,
+    "video": null
+  },
+  {
+    "id": "pack",
+    "title": "Content pack",
+    "category": "Create",
+    "art": "pack",
+    "description": "One song. A whole world of content.",
+    "skill": "recoup-content-asset-pack",
+    "mode": "pack",
+    "outputs": [
+      "Creative direction",
+      "Video and graphic family",
+      "Captions"
+    ],
+    "inputs": [
+      "Song",
+      "Audience and direction"
+    ],
+    "status": "Skill-backed concept",
+    "number": 2,
+    "video": null
+  },
+  {
+    "id": "play",
+    "title": "Make a fan experience",
+    "category": "Create",
+    "art": "play",
+    "description": "Turn a release into something fans can play.",
+    "skill": "recoup-content-build-sites",
+    "mode": "interactive site",
+    "outputs": [
+      "Interactive concept",
+      "Playable site",
+      "Review checklist"
+    ],
+    "inputs": [
+      "Music or campaign",
+      "Fan experience idea"
+    ],
+    "status": "Skill-backed concept",
+    "number": 3,
+    "video": "https://d8j0ntlcm91z4.cloudfront.net/user_2zdokGh7BDcXq7kUhDXHw7JGrCp/hf_20261008_205945_835ef0bf-aa06-4e71-a16f-e39cc61a2dec.mp4"
+  },
+  {
+    "id": "cover",
+    "title": "Make cover art",
+    "category": "Create",
+    "art": "cover",
+    "description": "Make the first impression unforgettable.",
+    "skill": "recoup-content-make-graphics",
+    "mode": "cover",
+    "outputs": [
+      "Art directions",
+      "Square cover",
+      "Reviewed export"
+    ],
+    "inputs": [
+      "Title",
+      "Visual direction"
+    ],
+    "status": "Skill-backed concept",
+    "number": 4,
+    "video": "https://d8j0ntlcm91z4.cloudfront.net/user_2zdokGh7BDcXq7kUhDXHw7JGrCp/hf_20261008_205944_12fe1b44-95e6-4aae-ab80-e293db7d6795.mp4"
+  },
+  {
+    "id": "lyrics",
+    "title": "Make a lyric video",
+    "category": "Create",
+    "art": "lyrics",
+    "description": "Put every word in the spotlight.",
+    "skill": "recoup-content-make-video",
+    "mode": "lyric",
+    "outputs": [
+      "Timed lyric sheet",
+      "Visual treatment",
+      "Lyric video"
+    ],
+    "inputs": [
+      "Recording",
+      "Approved lyrics"
+    ],
+    "status": "Skill-backed concept",
+    "number": 5,
+    "video": "https://d8j0ntlcm91z4.cloudfront.net/user_2zdokGh7BDcXq7kUhDXHw7JGrCp/hf_20261008_220515_9077d0e9-b640-49f5-bc37-249ac6aff55b.mp4"
+  },
+  {
+    "id": "wave",
+    "title": "Find your song\u2019s hook",
+    "category": "Create",
+    "art": "wave",
+    "description": "Find the moment they will play again.",
+    "skill": "recoup-song-find-hook",
+    "mode": "hooks",
+    "outputs": [
+      "Three ranked excerpts",
+      "Timestamps",
+      "Selection rationale"
+    ],
+    "inputs": [
+      "Audio URL",
+      "Intended use"
+    ],
+    "status": "Skill-backed concept",
+    "number": 6,
+    "video": "https://d8j0ntlcm91z4.cloudfront.net/user_2zdokGh7BDcXq7kUhDXHw7JGrCp/hf_20261008_205944_2e89b4b5-d7bb-4ddb-9aa0-9d0a2310e752.mp4"
+  },
+  {
+    "id": "orbit",
+    "title": "Visualizer",
+    "category": "Create",
+    "art": "orbit",
+    "description": "A little loop. A bigger world.",
+    "skill": "recoup-content-make-video",
+    "mode": "visualizer",
+    "outputs": [
+      "Loop concept",
+      "Motion preview",
+      "Reviewed export"
+    ],
+    "inputs": [
+      "Recording",
+      "Art direction"
+    ],
+    "status": "Skill-backed concept",
+    "number": 7,
+    "video": null
+  },
+  {
+    "id": "short",
+    "title": "Short-form studio",
+    "category": "Create",
+    "art": "short",
+    "description": "Make a song impossible to scroll past.",
+    "skill": "recoup-content-make-video",
+    "mode": "short",
+    "outputs": [
+      "Vertical clip",
+      "Caption draft",
+      "Reviewed export"
+    ],
+    "inputs": [
+      "Song",
+      "Artist references"
+    ],
+    "status": "Skill-backed concept",
+    "number": 8,
+    "video": null
+  },
+  {
+    "id": "calendar",
+    "title": "Plan a release",
+    "category": "Promote",
+    "art": "calendar",
+    "description": "Give your next release a real game plan.",
+    "skill": "recoup-release-plan-rollout",
+    "mode": "plan",
+    "outputs": [
+      "Creative brief",
+      "Dated rollout",
+      "Release one-sheet"
+    ],
+    "inputs": [
+      "Release",
+      "Date or TBD"
+    ],
+    "status": "Skill-backed concept",
+    "number": 9,
+    "video": "https://d8j0ntlcm91z4.cloudfront.net/user_2zdokGh7BDcXq7kUhDXHw7JGrCp/hf_20261008_205944_60133a1f-f5f9-4f0a-a677-96adbc14f5d2.mp4"
+  },
+  {
+    "id": "playlist",
+    "title": "Playlist finder",
+    "category": "Promote",
+    "art": "playlist",
+    "description": "Find the playlists that fit your music.",
+    "skill": "recoup-research-playlist-targets",
+    "mode": "targets",
+    "outputs": [
+      "Ranked targets",
+      "Placement gaps",
+      "Research sources"
+    ],
+    "inputs": [
+      "Artist or catalog",
+      "Target sound"
+    ],
+    "status": "Skill-backed concept",
+    "number": 10,
+    "video": null
+  },
+  {
+    "id": "pitch",
+    "title": "Pitch this song",
+    "category": "Promote",
+    "art": "pitch",
+    "description": "Put the right words behind your music.",
+    "skill": "recoup-song-placement-pitch",
+    "mode": "pitch",
+    "outputs": [
+      "Editorial pitch",
+      "Sync brief",
+      "Audio-grounded context"
+    ],
+    "inputs": [
+      "Audio URL",
+      "Pitch objective"
+    ],
+    "status": "Skill-backed concept",
+    "number": 11,
+    "video": null
+  },
+  {
+    "id": "type",
+    "title": "In your voice",
+    "category": "Promote",
+    "art": "type",
+    "description": "Captions that sound like you wrote them.",
+    "skill": "recoup-content-write-caption",
+    "mode": "captions",
+    "outputs": [
+      "Three caption angles",
+      "Voice notes",
+      "Editable copy"
+    ],
+    "inputs": [
+      "Post idea",
+      "Past captions"
+    ],
+    "status": "Skill-backed concept",
+    "number": 12,
+    "video": null
+  },
+  {
+    "id": "milestone",
+    "title": "Celebrate a moment",
+    "category": "Promote",
+    "art": "milestone",
+    "description": "Turn something real into something shareable.",
+    "skill": "recoup-content-reactive-post",
+    "mode": "reactive",
+    "outputs": [
+      "Verified moment",
+      "Creative angle",
+      "Post asset"
+    ],
+    "inputs": [
+      "Milestone source",
+      "Artist"
+    ],
+    "status": "Skill-backed concept",
+    "number": 13,
+    "video": null
+  },
+  {
+    "id": "fans",
+    "title": "Fan connection",
+    "category": "Promote",
+    "art": "fans",
+    "description": "Give your listeners a way to stay close.",
+    "skill": "recoup-content-connect-fans",
+    "mode": "fan connection",
+    "outputs": [
+      "Connection journey",
+      "Site integration",
+      "Verification plan"
+    ],
+    "inputs": [
+      "Artist",
+      "Existing site"
+    ],
+    "status": "Skill-backed concept",
+    "number": 14,
+    "video": null
+  },
+  {
+    "id": "radar",
+    "title": "Explore an artist",
+    "category": "Discover",
+    "art": "radar",
+    "description": "See the bigger picture behind an artist.",
+    "skill": "recoup-research-artist-overview",
+    "mode": "overview",
+    "outputs": [
+      "Research brief",
+      "Audience context",
+      "Cited opportunities"
+    ],
+    "inputs": [
+      "Artist",
+      "Research question"
+    ],
+    "status": "Skill-backed concept",
+    "number": 15,
+    "video": "https://d8j0ntlcm91z4.cloudfront.net/user_2zdokGh7BDcXq7kUhDXHw7JGrCp/hf_20261008_205944_f5b062eb-6300-4865-943f-7724b33bcd4e.mp4"
+  },
+  {
+    "id": "map",
+    "title": "Audience atlas",
+    "category": "Discover",
+    "art": "map",
+    "description": "Find where your next fans could be.",
+    "skill": "recoup-research-artist-overview",
+    "mode": "audience",
+    "outputs": [
+      "Market comparison",
+      "Audience insights",
+      "Next actions"
+    ],
+    "inputs": [
+      "Artist",
+      "Growth objective"
+    ],
+    "status": "Skill-backed concept",
+    "number": 16,
+    "video": null
+  },
+  {
+    "id": "scout",
+    "title": "Talent scout",
+    "category": "Discover",
+    "art": "scout",
+    "description": "Follow a sound. Discover who is next.",
+    "skill": "recoup-research-find-talent",
+    "mode": "scout",
+    "outputs": [
+      "Candidate shortlist",
+      "Supporting signals",
+      "Source links"
+    ],
+    "inputs": [
+      "Reference artist",
+      "Scene or genre"
+    ],
+    "status": "Skill-backed concept",
+    "number": 17,
+    "video": null
+  },
+  {
+    "id": "contacts",
+    "title": "Industry connections",
+    "category": "Discover",
+    "art": "contacts",
+    "description": "Find the people behind the next opportunity.",
+    "skill": "recoup-research-find-contacts",
+    "mode": "contacts",
+    "outputs": [
+      "Sourced contacts",
+      "Relevant context",
+      "Outreach drafts"
+    ],
+    "inputs": [
+      "Role or company",
+      "Purpose"
+    ],
+    "status": "Skill-backed concept",
+    "number": 18,
+    "video": null
+  },
+  {
+    "id": "chart",
+    "title": "What changed?",
+    "category": "Discover",
+    "art": "chart",
+    "description": "Understand the movement behind the numbers.",
+    "skill": "recoup-research-weekly-brief",
+    "mode": "brief",
+    "outputs": [
+      "Dated snapshot",
+      "Changes since last run",
+      "Evidence and next steps"
+    ],
+    "inputs": [
+      "Artist",
+      "Prior brief if available"
+    ],
+    "status": "Skill-backed concept",
+    "number": 19,
+    "video": null
+  },
+  {
+    "id": "analyze",
+    "title": "Know your song",
+    "category": "Catalog",
+    "art": "analyze",
+    "description": "Hear it differently. Understand it deeply.",
+    "skill": "recoup-song-analyze-audio",
+    "mode": "report",
+    "outputs": [
+      "Audio analysis",
+      "Suggested metadata",
+      "Review notes"
+    ],
+    "inputs": [
+      "Audio URL",
+      "Analysis objective"
+    ],
+    "status": "Skill-backed concept",
+    "number": 20,
+    "video": null
+  },
+  {
+    "id": "value",
+    "title": "Catalog snapshot",
+    "category": "Catalog",
+    "art": "value",
+    "description": "Explore a value range and what drives it.",
+    "skill": "recoup-catalog-estimate-value",
+    "mode": "estimate",
+    "outputs": [
+      "Public-data estimate",
+      "Assumptions",
+      "Scenario report"
+    ],
+    "inputs": [
+      "Catalog or release",
+      "Scope"
+    ],
+    "status": "Skill-backed concept",
+    "number": 21,
+    "video": null
+  },
+  {
+    "id": "deal",
+    "title": "Deal room",
+    "category": "Catalog",
+    "art": "deal",
+    "description": "Turn a messy data room into a clear decision.",
+    "skill": "recoup-catalog-review-deal",
+    "mode": "review",
+    "outputs": [
+      "Normalized workpapers",
+      "Scenarios",
+      "Evidence-backed memo"
+    ],
+    "inputs": [
+      "Seller files",
+      "Deal scope"
+    ],
+    "status": "Skill-backed concept",
+    "number": 22,
+    "video": null
+  },
+  {
+    "id": "drop",
+    "title": "Release check",
+    "category": "Promote",
+    "art": "drop",
+    "description": "Check the drop. Know what is actually live.",
+    "skill": "recoup-release-track-drop",
+    "mode": "track",
+    "outputs": [
+      "Dated release check",
+      "Source links",
+      "Available launch signals"
+    ],
+    "inputs": [
+      "Artist and release",
+      "Expected date"
+    ],
+    "status": "Skill-backed concept",
+    "number": 23,
+    "video": null
+  },
+  {
+    "id": "format",
+    "title": "Format switch",
+    "category": "Create",
+    "art": "format",
+    "description": "Give your footage a home on every screen.",
+    "skill": "recoup-content-make-video",
+    "mode": "reformat",
+    "outputs": [
+      "Platform-specific cuts",
+      "Safe-zone review",
+      "Exports"
+    ],
+    "inputs": [
+      "Existing footage",
+      "Target formats"
+    ],
+    "status": "Skill-backed concept",
+    "number": 24,
+    "video": null
+  }
+]

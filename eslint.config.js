@@ -37,7 +37,14 @@ const jsdocStrictRules = {
 
 export default [
   {
-    ignores: ["dist/**", "node_modules/**", ".next/**", "next-env.d.ts"],
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      ".next/**",
+      "next-env.d.ts",
+      "lib/mcp/extension/generated-ui.ts",
+      "ui/recoup/host.js",
+    ],
   },
   {
     files: ["**/*.ts"],
