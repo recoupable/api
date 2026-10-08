@@ -106,6 +106,8 @@ it.each([
   expect(processContextOperation).toHaveBeenLastCalledWith("actor", operation, expect.any(Object));
   const registerTool = vi.fn();
   registerContextTool({ registerTool } as never);
+  vi.mocked(processContextOperation).mockClear();
   await registerTool.mock.calls[0][2](operation, {});
+  expect(processContextOperation).toHaveBeenCalledTimes(1);
   expect(processContextOperation).toHaveBeenLastCalledWith("actor", operation, expect.any(Object));
 });

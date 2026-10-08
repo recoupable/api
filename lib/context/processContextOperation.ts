@@ -1,4 +1,5 @@
-import type { ReleaseCaseList, ReleaseCaseProjection, ReleaseCaseReview } from "./releaseCaseTypes";
+import { releaseCaseOperationSchemas } from "./releaseCaseOperationSchemas";
+import { processReleaseCaseOperation } from "./processReleaseCaseOperation";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { authorizeContextOwner } from "./authorizeContextOwner";
@@ -18,30 +19,7 @@ const briefFields = {
 };
 
 export const contextOperationSchema = z.discriminatedUnion("action", [
-  z.strictObject({
-    action: z.literal("list_release_cases"),
-    organization_id: z.uuid().optional(),
-    after_id: z.uuid().optional(),
-  }),
-  z.strictObject({
-    action: z.literal("read_release_case"),
-    organization_id: z.uuid().optional(),
-    request_id: z.uuid(),
-  }),
-  z.strictObject({
-    action: z.literal("read_release_case_review"),
-    organization_id: z.uuid().optional(),
-    review_id: z.uuid(),
-  }),
-  z.strictObject({
-    action: z.literal("review_release_case"),
-    organization_id: z.uuid().optional(),
-    request_id: z.uuid(),
-    fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-    decision: z.enum(["reviewed", "needs_changes"]),
-    note: z.string().trim().max(2000).default(""),
-    idempotency_key: contextIngestSchema.shape.idempotency_key,
-  }),
+  ...releaseCaseOperationSchemas,
   z.strictObject({
     action: z.literal("save_brief"),
     ...briefFields,
@@ -214,34 +192,13 @@ export async function processContextOperation(
     accountId,
     args.organization_id,
   );
-  if (args.action === "list_release_cases")
-    return (await deps.rpc("list_context_release_cases", {
-      p_actor: accountId,
-      p_owner: ownerId,
-      p_after: args.after_id ?? null,
-    })) as ReleaseCaseList;
-  if (args.action === "read_release_case")
-    return (await deps.rpc("read_context_release_case", {
-      p_actor: accountId,
-      p_owner: ownerId,
-      p_request: args.request_id,
-    })) as ReleaseCaseProjection;
-  if (args.action === "read_release_case_review")
-    return (await deps.rpc("read_context_release_case_review", {
-      p_actor: accountId,
-      p_owner: ownerId,
-      p_review: args.review_id,
-    })) as ReleaseCaseReview;
-  if (args.action === "review_release_case")
-    return (await deps.rpc("review_context_release_case", {
-      p_actor: accountId,
-      p_owner: ownerId,
-      p_request: args.request_id,
-      p_fingerprint: args.fingerprint,
-      p_decision: args.decision,
-      p_note: args.note,
-      p_key: args.idempotency_key,
-    })) as ReleaseCaseReview;
+  if (
+    args.action === "list_release_cases" ||
+    args.action === "read_release_case" ||
+    args.action === "read_release_case_review" ||
+    args.action === "review_release_case"
+  )
+    return processReleaseCaseOperation(accountId, ownerId, args, deps.rpc);
   if (args.action === "read_brief")
     return {
       snapshot: await deps.rpc("read_context_brief", { p_owner: ownerId, p_brief: args.brief_id }),

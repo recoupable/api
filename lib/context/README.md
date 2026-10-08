@@ -168,7 +168,8 @@ After Spotify metadata persistence, the workflow can record a review-only module
 ## Release metadata operating case (first slice of #2116)
 
 The following actions share this API and the MCP `context` tool. They require
-`20261008160000_context_release_cases.sql` and its existing Context dependencies.
+`20261008160000_context_release_cases.sql`, its cursor correction
+`20261008160100_context_release_case_cursor.sql`, and the existing Context dependencies.
 They read saved evidence and persist metadata review receipts; they make no
 provider/model calls, change no canonical identities and grant no external authority.
 
@@ -208,7 +209,8 @@ composition, writer/publisher, contract and approved-master linkage are not buil
 `distribute`, `register_rights` and `collect_royalties` are explicitly `unsupported`.
 Provider/model calls are zero; infrastructure cost is `unmeasured`, not free.
 
-The Chat `/releases` page uses these operations through its authenticated Context
+The companion Chat `/releases` page in [App PR2172](https://github.com/recoupable/app/pull/2172)
+is implemented on its feature branch, not yet merged or production-verified. It uses these operations through its authenticated Context
 proxy. Switching workspaces hides previous results immediately; late responses are
 ignored, and failed reads clear cached case content. The route uses saved requests;
 it does not activate collection flags or ingest providers automatically.
@@ -216,7 +218,7 @@ it does not activate collection flags or ingest providers automatically.
 ### Release and verification boundaries
 
 1. Inspect the **Recoup** deployed schema and role grants, including all prerequisite
-   Context migrations and the membership lock privilege migration. The available
+   Context migrations and `20261008030000_onboarding_membership_lock_privilege.sql`. The available
    connector during implementation exposed a different project, so this gate has
    **not** been verified. Do not substitute another project's schema.
 2. Review/apply the additive database migration through the database release process.

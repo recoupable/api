@@ -1,3 +1,9 @@
+import type {
+  ReleaseTrackObservation,
+  ReleaseTrackPage,
+  ReleaseIdentityObservations,
+  ReleaseCaseEvidence,
+} from "./releaseCaseEvidenceTypes";
 /** Database projections, deliberately separate from canonical identity and rights. */
 export interface ReleaseCaseProjection {
   contract_version: "release-case-v1";
@@ -7,10 +13,10 @@ export interface ReleaseCaseProjection {
   title: string | null;
   release_url: string | null;
   readiness: "partial" | "blocked";
-  tracks: unknown[];
-  track_page: Record<string, unknown>;
-  identity_observations: Record<string, unknown>;
-  evidence_manifest: Record<string, unknown>[];
+  tracks: ReleaseTrackObservation[];
+  track_page: ReleaseTrackPage;
+  identity_observations: ReleaseIdentityObservations;
+  evidence_manifest: ReleaseCaseEvidence[];
   gaps: string[];
   reviewable: boolean;
   capabilities: Record<string, "unsupported">;

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { contextOperationSchema, processContextOperation } from "../processContextOperation";
+// Isolate module initialization from hosted Supabase credentials; tests inject authorization.
 vi.mock("../authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));
 const actor = "11111111-1111-4111-8111-111111111111";
 const owner = "22222222-2222-4222-8222-222222222222";
@@ -80,7 +81,14 @@ describe("release operating cases", () => {
       { fingerprint: "" },
       { decision: "approve_distribution" },
       { note: "x".repeat(2001) },
-    ])
-      expect(contextOperationSchema.safeParse({ ...valid, ...changes }).success).toBe(false);
+    ]) {
+      const parsed = contextOperationSchema.safeParse({ ...valid, ...changes });
+      expect(parsed.success).toBe(false);
+      const key = Object.keys(changes)[0];
+      const issue = parsed.error?.issues[0];
+      if (key === "account_id" || key === "snapshot")
+        expect(issue).toMatchObject({ code: "unrecognized_keys", keys: [key] });
+      else expect(issue?.path).toEqual([key]);
+    }
   });
 });
