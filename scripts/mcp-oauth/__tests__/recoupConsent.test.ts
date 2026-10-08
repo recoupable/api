@@ -180,6 +180,7 @@ async function verifyConsent(mode: string) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           client_name: "Cursor registration fixture",
+          client_id: "https://attacker.example/chosen-client-id",
           redirect_uris,
           application_type,
           token_endpoint_auth_method: "none",
@@ -189,7 +190,9 @@ async function verifyConsent(mode: string) {
       });
     const cursorRegistration = await registerCallbacks(cursorCallbacks);
     expect(cursorRegistration.status).toBe(201);
-    expect(await cursorRegistration.json()).toMatchObject({
+    const cursorClient = await cursorRegistration.json();
+    expect(cursorClient.client_id).not.toBe("https://attacker.example/chosen-client-id");
+    expect(cursorClient).toMatchObject({
       application_type: "native",
       redirect_uris: cursorCallbacks,
     });
