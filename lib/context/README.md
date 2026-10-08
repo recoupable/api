@@ -219,8 +219,9 @@ it does not activate collection flags or ingest providers automatically.
 
 1. Inspect the **Recoup** deployed schema and role grants, including all prerequisite
    Context migrations and `20261008030000_onboarding_membership_lock_privilege.sql`. The available
-   connector during implementation exposed a different project, so this gate has
-   **not** been verified. Do not substitute another project's schema.
+   connector initially exposed a different project. The October 8 read-only Recoup
+   production audit now confirms these prerequisites and service-role grants;
+   see database PR86 and epic #2116. This is not deployment or hosted acceptance.
 2. Review/apply the additive database migration through the database release process.
 3. Deploy API, then Chat. Until step 2, dependent calls fail; keep the UI PR behind
    these dependencies. No source-collection flags need changing for saved reads.
