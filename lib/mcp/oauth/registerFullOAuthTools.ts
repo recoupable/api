@@ -33,8 +33,10 @@ export function registerFullOAuthTools(
     config: { description?: string; inputSchema: z.ZodType; annotations?: Record<string, unknown> },
     handler: (args: Args, extra: Extra) => Promise<CallToolResult>,
   ) => {
-    // OAuth credentials never belong in model-visible output.
-    if (name === "get_api_key") return;
+    // Credentials never belong in model-visible output. Professional roster tools
+    // remain excluded until their delegated organization-grant audit is complete.
+    if (["get_api_key", "list_professional_roster", "confirm_professional_roster"].includes(name))
+      return;
     const policy = fullOAuthToolPolicy[name];
     if (!policy) throw new Error(`Missing delegated policy for ${name}`);
     const originalObject =
