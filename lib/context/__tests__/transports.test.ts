@@ -82,3 +82,30 @@ describe("Context transports", () => {
     expect(processContextOperation).toHaveBeenCalledWith("actor", body, expect.any(Object));
   });
 });
+
+it.each([
+  { action: "list_release_cases" },
+  { action: "read_release_case", request_id: "11111111-1111-4111-8111-111111111111" },
+  { action: "read_release_case_review", review_id: "22222222-2222-4222-8222-222222222222" },
+  {
+    action: "review_release_case",
+    request_id: "11111111-1111-4111-8111-111111111111",
+    fingerprint: "a".repeat(64),
+    decision: "reviewed",
+    note: "",
+    idempotency_key: "metadata-review",
+  },
+])("HTTP and MCP share authenticated $action behavior", async operation => {
+  const response = await contextOperationHandler(
+    new NextRequest("http://localhost/api/context", {
+      method: "POST",
+      body: JSON.stringify(operation),
+    }),
+  );
+  expect(response.status).toBe(200);
+  expect(processContextOperation).toHaveBeenLastCalledWith("actor", operation, expect.any(Object));
+  const registerTool = vi.fn();
+  registerContextTool({ registerTool } as never);
+  await registerTool.mock.calls[0][2](operation, {});
+  expect(processContextOperation).toHaveBeenLastCalledWith("actor", operation, expect.any(Object));
+});
