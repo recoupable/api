@@ -3,6 +3,7 @@ export class ArtistOnboardingError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly committedArtistId?: string,
   ) {
     super(message);
     this.name = "ArtistOnboardingError";

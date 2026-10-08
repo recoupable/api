@@ -4133,6 +4133,11 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      create_artist_with_roster: {
+        Args: { p_account_id: string; p_organization_id: string | null; p_name: string };
+        Returns: Json;
+      };
+
       onboard_spotify_artist: {
         Args: {
           p_account_id: string;

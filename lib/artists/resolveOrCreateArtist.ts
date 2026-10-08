@@ -1,3 +1,4 @@
+import { ArtistOnboardingError } from "./ArtistOnboardingError";
 import { createArtistInDb, type CreateArtistResult } from "@/lib/artists/createArtistInDb";
 import { onboardSpotifyArtist } from "@/lib/supabase/artists/onboardSpotifyArtist";
 import { selectAccountWithSocials } from "@/lib/supabase/accounts/selectAccountWithSocials";
@@ -24,7 +25,12 @@ export async function resolveOrCreateArtist(
   if (spotifyArtistId) {
     const result = await onboardSpotifyArtist({ name, accountId, organizationId, spotifyArtistId });
     const artist = await selectAccountWithSocials(result.artist_id);
-    if (!artist) throw new Error("Could not read artist after onboarding. Please retry.");
+    if (!artist)
+      throw new ArtistOnboardingError(
+        "Artist was added, but its profile could not be loaded. Please retry.",
+        503,
+        result.artist_id,
+      );
     return { artist: { ...artist, account_id: artist.id }, created: result.created };
   }
   return { artist: await createArtistInDb(name, accountId, organizationId), created: true };

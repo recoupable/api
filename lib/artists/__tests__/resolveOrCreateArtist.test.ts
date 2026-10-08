@@ -47,12 +47,20 @@ describe("resolveOrCreateArtist", () => {
   it("reports readback failure, allowing an idempotent retry", async () => {
     vi.mocked(onboardSpotifyArtist).mockResolvedValue({ artist_id: "canonical", created: false });
     vi.mocked(selectAccountWithSocials).mockResolvedValue(null);
-    await expect(resolveOrCreateArtist(params)).rejects.toThrow("read artist");
+    await expect(resolveOrCreateArtist(params)).rejects.toMatchObject({
+      status: 503,
+      committedArtistId: "canonical",
+    });
   });
 
   it("preserves name-only creation without manufacturing a provider identity", async () => {
     vi.mocked(createArtistInDb).mockResolvedValue({ id: "new", account_id: "new" } as never);
-    await resolveOrCreateArtist({ name: "Name", accountId: "operator", organizationId: "label" });
+    const result = await resolveOrCreateArtist({
+      name: "Name",
+      accountId: "operator",
+      organizationId: "label",
+    });
+    expect(result).toEqual({ artist: { id: "new", account_id: "new" }, created: true });
     expect(onboardSpotifyArtist).not.toHaveBeenCalled();
     expect(createArtistInDb).toHaveBeenCalledWith("Name", "operator", "label");
   });

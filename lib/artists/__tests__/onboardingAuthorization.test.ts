@@ -53,12 +53,14 @@ describe("non-admin onboarding through real validators", () => {
   });
   it("rejects revoked membership on the next call before any write", async () => {
     mocks.memberships.mockResolvedValue([]);
-    expect(
-      (await createArtistPostHandler(request({ name: "Artist", organization_id: org }))).status,
-    ).toBe(403);
-    expect(
-      (await addArtistToOrgHandler(request({ artistId: artist, organizationId: org }))).status,
-    ).toBe(403);
+    const responses = await Promise.all([
+      createArtistPostHandler(request({ name: "Artist", organization_id: org })),
+      addArtistToOrgHandler(request({ artistId: artist, organizationId: org })),
+    ]);
+    for (const response of responses) {
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ status: "error", error: expect.any(String) });
+    }
     expect(mocks.resolve).not.toHaveBeenCalled();
     expect(mocks.attach).not.toHaveBeenCalled();
   });
