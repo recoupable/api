@@ -1,0 +1,75 @@
+dialog {
+  position: fixed;
+  width: min(540px, calc(100% - 32px));
+  padding: 38px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 30px 100px #0004;
+}
+dialog::backdrop {
+  background: #07150f88;
+  backdrop-filter: blur(6px);
+}
+dialog h2 {
+  font-size: 32px;
+  letter-spacing: -1px;
+  margin: 20px 0 12px;
+}
+dialog p {
+  line-height: 1.6;
+  color: var(--muted);
+}
+.close {
+  position: absolute;
+  right: 15px;
+  top: 12px;
+  background: transparent;
+  color: var(--text);
+  font-size: 28px;
+  padding: 4px 10px;
+}
+.outputs {
+  font-size: 13px;
+  padding: 14px 0;
+  box-shadow: 0 1px var(--line);
+}
+form label {
+  display: block;
+  font-weight: 600;
+  margin: 24px 0 12px;
+}
+textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 120px;
+  padding: 14px;
+  border: 0;
+  box-shadow: 0 0 0 1px var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+}
+.hint {
+  font-size: 12px;
+}
+.primary {
+  background: var(--primary);
+  color: var(--surface);
+  border-radius: 12px;
+  padding: 15px 24px;
+  width: 100%;
+  margin-top: 12px;
+}
+.primary:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+#feedback {
+  font-size: 13px;
+}
+#copy {
+  padding: 10px;
+  border-radius: 8px;
+}

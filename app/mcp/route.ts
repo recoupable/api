@@ -1,3 +1,4 @@
+import { registerRecoupExtension } from "@/lib/mcp/extension/registerRecoupExtension";
 import { registerFullOAuthTools } from "@/lib/mcp/oauth/registerFullOAuthTools";
 import { createFullOAuthToolServices } from "@/lib/mcp/oauth/createFullOAuthToolServices";
 import { setOAuthMcpHeaders } from "@/lib/mcp/oauth/setOAuthMcpHeaders";
@@ -14,6 +15,7 @@ export const maxDuration = 300;
 const baseHandler = createMcpHandler(
   server => {
     registerAllTools(server);
+    registerRecoupExtension(server);
   },
   {
     serverInfo: {
@@ -27,12 +29,16 @@ const baseHandler = createMcpHandler(
 const oauthHandler = createMcpHandler(
   server => {
     registerOAuthTools(server, createOAuthToolServices(), verifyOAuthBearer);
+    registerRecoupExtension(server);
   },
   { serverInfo: { name: "recoup-mcp", version: "0.1.0" } },
 );
 
 const fullOAuthHandler = createMcpHandler(
-  server => registerFullOAuthTools(server, verifyOAuthBearer, createFullOAuthToolServices()),
+  server => {
+    registerFullOAuthTools(server, verifyOAuthBearer, createFullOAuthToolServices());
+    registerRecoupExtension(server);
+  },
   { serverInfo: { name: "recoup-mcp", version: "0.2.0" } },
 );
 

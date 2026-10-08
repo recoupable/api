@@ -42,3 +42,12 @@ yarn-error.log*
 next-env.d.ts
 supabase/.temp/
 .env*
+
+# Bundled MCP app, rebuilt by predev/prebuild
+/lib/mcp/extension/generated-ui.ts
+/ui/recoup/preview.html
+
+/ui/recoup/host.html
+/ui/recoup/host.js
+
+/ui/recoup/node_modules/
