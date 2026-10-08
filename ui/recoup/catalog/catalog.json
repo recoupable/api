@@ -1,0 +1,5 @@
+[
+  {"id": "analyze", "title": "Know your song", "category": "Catalog", "art": "analyze", "description": "Hear it differently. Understand it deeply.", "skill": "recoup-song-analyze-audio", "mode": "report", "outputs": ["Audio analysis", "Suggested metadata", "Review notes"], "inputs": ["Audio URL", "Analysis objective"], "status": "Skill-backed concept", "number": 20, "video": null},
+  {"id": "value", "title": "Catalog snapshot", "category": "Catalog", "art": "value", "description": "Explore a value range and what drives it.", "skill": "recoup-catalog-estimate-value", "mode": "estimate", "outputs": ["Public-data estimate", "Assumptions", "Scenario report"], "inputs": ["Catalog or release", "Scope"], "status": "Skill-backed concept", "number": 21, "video": null},
+  {"id": "deal", "title": "Deal room", "category": "Catalog", "art": "deal", "description": "Turn a messy data room into a clear decision.", "skill": "recoup-catalog-review-deal", "mode": "review", "outputs": ["Normalized workpapers", "Scenarios", "Evidence-backed memo"], "inputs": ["Seller files", "Deal scope"], "status": "Skill-backed concept", "number": 22, "video": null}
+]

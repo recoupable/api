@@ -1,0 +1,61 @@
+@font-face {
+  font-family: DM Sans;
+  src: url("assets/dm-sans.woff2");
+}
+@font-face {
+  font-family: IBM Plex Mono;
+  src: url("assets/ibm-plex-mono.woff2");
+}
+:root {
+  font-family:
+    DM Sans,
+    sans-serif;
+  color: #152e37;
+  background: #fff;
+  --surface: #fff;
+  --text: #152e37;
+  --muted: #58727d;
+  --line: #dce5e7;
+  --primary: #132b26;
+  --soft: #f2f6f5;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --surface: #111916;
+  --text: #f2f6f5;
+  --muted: #b1c2bd;
+  --line: #33443c;
+  --primary: #d6ff62;
+  --soft: #1f2c25;
+  color-scheme: dark;
+  background: var(--surface);
+  color: var(--text);
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--text);
+}
+button,
+input,
+textarea {
+  font: inherit;
+}
+button,
+a {
+  touch-action: manipulation;
+}
+button {
+  cursor: pointer;
+  border: 0;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #0075a8;
+  outline-offset: 4px;
+}
