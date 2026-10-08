@@ -95,9 +95,12 @@ it("aborts during DNS without starting a request", async () => {
 
 it("enforces a wall-clock deadline even if DNS never responds", async () => {
   mocks.lookup.mockImplementation(() => new Promise(() => {}));
-  await expect(createOAuthMetadataFetch()("https://agent.example/client.json")).rejects.toThrow(
-    "aborted",
-  );
+  const deadline = new AbortController();
+  const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(deadline.signal);
+  const pending = createOAuthMetadataFetch()("https://agent.example/client.json");
+  expect(timeout).toHaveBeenCalledWith(2500);
+  deadline.abort(new DOMException("Timed out", "TimeoutError"));
+  await expect(pending).rejects.toThrow("aborted");
   expect(mocks.request).not.toHaveBeenCalled();
 });
 
