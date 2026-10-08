@@ -1,3 +1,5 @@
+import { registerFullOAuthTools } from "@/lib/mcp/oauth/registerFullOAuthTools";
+import { createFullOAuthToolServices } from "@/lib/mcp/oauth/createFullOAuthToolServices";
 import { setOAuthMcpHeaders } from "@/lib/mcp/oauth/setOAuthMcpHeaders";
 import { registerAllTools } from "@/lib/mcp/tools";
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
@@ -29,11 +31,20 @@ const oauthHandler = createMcpHandler(
   { serverInfo: { name: "recoup-mcp", version: "0.1.0" } },
 );
 
+const fullOAuthHandler = createMcpHandler(
+  server => registerFullOAuthTools(server, verifyOAuthBearer, createFullOAuthToolServices()),
+  { serverInfo: { name: "recoup-mcp", version: "0.2.0" } },
+);
+
 async function handler(req: Request) {
   const bearer = /^Bearer +([^\s]+)$/i.exec(req.headers.get("authorization") ?? "")?.[1];
   const auth = await verifyBearerToken(req, bearer);
   const response = await withMcpAuth(
-    auth?.extra.oauth ? oauthHandler : baseHandler,
+    auth?.extra.oauth
+      ? auth.scopes.includes("mcp:tools")
+        ? fullOAuthHandler
+        : oauthHandler
+      : baseHandler,
     async () => auth,
     {
       required: true,

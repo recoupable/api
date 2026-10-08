@@ -4,7 +4,7 @@ it("advertises only the canonical resource and audited launch scopes", () => {
   expect(getOAuthResourceMetadata("https://api.recoupable.dev/api/oauth")).toEqual({
     resource: "https://api.recoupable.dev/mcp",
     authorization_servers: ["https://api.recoupable.dev/api/oauth"],
-    scopes_supported: ["mcp:read", "mcp:write"],
+    scopes_supported: ["mcp:read", "mcp:write", "mcp:tools"],
     bearer_methods_supported: ["header"],
     resource_name: "Recoup",
   });
