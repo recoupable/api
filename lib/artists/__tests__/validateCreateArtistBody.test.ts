@@ -275,4 +275,14 @@ describe("validateCreateArtistBody", () => {
     expect(result).toBeInstanceOf(NextResponse);
     if (result instanceof NextResponse) expect(result.status).toBe(400);
   });
+  it.each(["spotify:artist:AbCdEfGhIjKlMnOpQrStUv", "AbCdEfGhIjKlMnOpQrStUv-extra", "same name"])(
+    "rejects a non-ID Spotify input %s",
+    async spotify_artist_id => {
+      const result = await validateCreateArtistBody(
+        createRequest({ name: "Artist", spotify_artist_id }, { "x-api-key": "k" }),
+      );
+      expect(result).toBeInstanceOf(NextResponse);
+      expect((result as NextResponse).status).toBe(400);
+    },
+  );
 });

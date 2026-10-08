@@ -133,4 +133,12 @@ describe("createArtistInDb", () => {
 
     expect(result).toBeNull();
   });
+  it("does not report success when organization attachment returns no relationship", async () => {
+    mockInsertAccount.mockResolvedValue(mockAccount);
+    mockInsertAccountInfo.mockResolvedValue(mockAccountInfo);
+    mockSelectAccountWithSocials.mockResolvedValue(mockFullAccount);
+    mockInsertAccountArtistId.mockResolvedValue(undefined);
+    mockAddArtistToOrganization.mockResolvedValue(null);
+    expect(await createArtistInDb("Test Artist", "owner-456", "org-789")).toBeNull();
+  });
 });

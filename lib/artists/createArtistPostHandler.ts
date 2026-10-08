@@ -1,3 +1,4 @@
+import { ArtistOnboardingError } from "@/lib/artists/ArtistOnboardingError";
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateCreateArtistBody } from "@/lib/artists/validateCreateArtistBody";
@@ -49,7 +50,10 @@ export async function createArtistPostHandler(request: NextRequest): Promise<Nex
     const message = error instanceof Error ? error.message : "Failed to create artist";
     return NextResponse.json(
       { status: "error", error: message },
-      { status: 500, headers: getCorsHeaders() },
+      {
+        status: error instanceof ArtistOnboardingError ? error.status : 500,
+        headers: getCorsHeaders(),
+      },
     );
   }
 }

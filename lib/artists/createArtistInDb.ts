@@ -44,7 +44,8 @@ export async function createArtistInDb(
 
     // Step 5: Link to organization if provided
     if (organizationId) {
-      await addArtistToOrganization(account.id, organizationId);
+      const relationshipId = await addArtistToOrganization(account.id, organizationId);
+      if (!relationshipId) return null;
     }
 
     return {

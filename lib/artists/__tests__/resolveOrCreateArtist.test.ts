@@ -1,90 +1,59 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { resolveOrCreateArtist } from "@/lib/artists/resolveOrCreateArtist";
-import { createArtistInDb } from "@/lib/artists/createArtistInDb";
-import { findCanonicalArtistBySpotifyId } from "@/lib/valuation/findCanonicalArtistBySpotifyId";
-import { upsertAccountArtistId } from "@/lib/supabase/account_artist_ids/upsertAccountArtistId";
+import { resolveOrCreateArtist } from "../resolveOrCreateArtist";
+import { createArtistInDb } from "../createArtistInDb";
+import { onboardSpotifyArtist } from "@/lib/supabase/artists/onboardSpotifyArtist";
 import { selectAccountWithSocials } from "@/lib/supabase/accounts/selectAccountWithSocials";
-import { updateArtistSocials } from "@/lib/artist/updateArtistSocials";
 
-vi.mock("@/lib/artists/createArtistInDb", () => ({ createArtistInDb: vi.fn() }));
-vi.mock("@/lib/valuation/findCanonicalArtistBySpotifyId", () => ({
-  findCanonicalArtistBySpotifyId: vi.fn(),
-}));
-vi.mock("@/lib/supabase/account_artist_ids/upsertAccountArtistId", () => ({
-  upsertAccountArtistId: vi.fn(),
-}));
+vi.mock("../createArtistInDb", () => ({ createArtistInDb: vi.fn() }));
+vi.mock("@/lib/supabase/artists/onboardSpotifyArtist", () => ({ onboardSpotifyArtist: vi.fn() }));
 vi.mock("@/lib/supabase/accounts/selectAccountWithSocials", () => ({
   selectAccountWithSocials: vi.fn(),
 }));
-vi.mock("@/lib/artist/updateArtistSocials", () => ({ updateArtistSocials: vi.fn() }));
 
-const SPOTIFY_ID = "0xPoVNPnxIIUS1vrxAYV00";
-const created = { id: "new-1", account_id: "new-1", name: "Del Water Gap" };
+const params = {
+  name: "Same Name",
+  accountId: "operator",
+  organizationId: "label",
+  spotifyArtistId: "AbCdEfGhIjKlMnOpQrStUv",
+};
 
 describe("resolveOrCreateArtist", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(createArtistInDb).mockResolvedValue(created as never);
-    vi.mocked(findCanonicalArtistBySpotifyId).mockResolvedValue(null);
+    vi.resetAllMocks();
     vi.mocked(selectAccountWithSocials).mockResolvedValue({
-      id: "canonical-1",
-      name: "Del Water Gap",
+      id: "canonical",
+      name: "Original Name",
     } as never);
   });
 
-  it("creates and attaches the Spotify social when no canonical exists", async () => {
-    const result = await resolveOrCreateArtist({
-      name: "Del Water Gap",
-      accountId: "acct-1",
-      spotifyArtistId: SPOTIFY_ID,
-    });
-
-    expect(createArtistInDb).toHaveBeenCalledWith("Del Water Gap", "acct-1", undefined);
-    expect(updateArtistSocials).toHaveBeenCalledWith("new-1", {
-      SPOTIFY: `https://open.spotify.com/artist/${SPOTIFY_ID}`,
-    });
-    expect(result).toEqual({ artist: created, created: true });
-  });
-
-  // One canonical artist per Spotify id (chat#1889, decision 2026-07-29):
-  // when it exists, link it to the account — never mint a second row. The link
-  // is a blind upsert: idempotency is the database's job, not a precheck's
-  // (chat#1965).
-  it("links and returns the existing canonical instead of creating", async () => {
-    vi.mocked(findCanonicalArtistBySpotifyId).mockResolvedValue("canonical-1");
-
-    const result = await resolveOrCreateArtist({
-      name: "Del Water Gap",
-      accountId: "acct-1",
-      spotifyArtistId: SPOTIFY_ID,
-    });
-
+  it.each([true, false])("returns the committed canonical identity (created=%s)", async created => {
+    vi.mocked(onboardSpotifyArtist).mockResolvedValue({ artist_id: "canonical", created });
+    const result = await resolveOrCreateArtist(params);
+    expect(onboardSpotifyArtist).toHaveBeenCalledWith(params);
     expect(createArtistInDb).not.toHaveBeenCalled();
-    expect(updateArtistSocials).not.toHaveBeenCalled();
-    expect(upsertAccountArtistId).toHaveBeenCalledWith("acct-1", "canonical-1");
-    expect(result.created).toBe(false);
-    expect(result.artist).toMatchObject({ id: "canonical-1", account_id: "canonical-1" });
-  });
-
-  it("plain create path is untouched when no spotify id is given", async () => {
-    const result = await resolveOrCreateArtist({ name: "X", accountId: "acct-1" });
-
-    expect(findCanonicalArtistBySpotifyId).not.toHaveBeenCalled();
-    expect(updateArtistSocials).not.toHaveBeenCalled();
-    expect(result).toEqual({ artist: created, created: true });
-  });
-
-  // Enrichment is non-fatal (same contract as chat#1892): the row exists by
-  // the time the social attach runs, so a failed attach must not fail the add.
-  it("returns the created artist when the social attach fails", async () => {
-    vi.mocked(updateArtistSocials).mockRejectedValue(new Error("nope"));
-
-    const result = await resolveOrCreateArtist({
-      name: "Del Water Gap",
-      accountId: "acct-1",
-      spotifyArtistId: SPOTIFY_ID,
+    expect(result).toEqual({
+      artist: { id: "canonical", account_id: "canonical", name: "Original Name" },
+      created,
     });
+  });
 
-    expect(result).toEqual({ artist: created, created: true });
+  it("does not fall back to creating when identity lookup or attachment fails", async () => {
+    vi.mocked(onboardSpotifyArtist).mockRejectedValue(new Error("attachment failed"));
+    await expect(resolveOrCreateArtist(params)).rejects.toThrow("attachment failed");
+    expect(createArtistInDb).not.toHaveBeenCalled();
+    expect(selectAccountWithSocials).not.toHaveBeenCalled();
+  });
+
+  it("reports readback failure, allowing an idempotent retry", async () => {
+    vi.mocked(onboardSpotifyArtist).mockResolvedValue({ artist_id: "canonical", created: false });
+    vi.mocked(selectAccountWithSocials).mockResolvedValue(null);
+    await expect(resolveOrCreateArtist(params)).rejects.toThrow("read artist");
+  });
+
+  it("preserves name-only creation without manufacturing a provider identity", async () => {
+    vi.mocked(createArtistInDb).mockResolvedValue({ id: "new", account_id: "new" } as never);
+    await resolveOrCreateArtist({ name: "Name", accountId: "operator", organizationId: "label" });
+    expect(onboardSpotifyArtist).not.toHaveBeenCalled();
+    expect(createArtistInDb).toHaveBeenCalledWith("Name", "operator", "label");
   });
 });
