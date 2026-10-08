@@ -5,7 +5,7 @@ import { createOAuthCipher } from "../createOAuthCipher";
 import type { OAuthRuntimeConfig } from "../loadOAuthConfig";
 import type { OAuthStore } from "../OAuthStore";
 
-it("authenticates encrypted connection ownership before listing or revoking a grant", async () => {
+it.each([100, null])("lists and revokes owned connections with expiry %s", async expiresAt => {
   const config = {
     issuer: "issuer",
     indexKey: Buffer.alloc(32, 1),
@@ -37,7 +37,7 @@ it("authenticates encrypted connection ownership before listing or revoking a gr
         clientName: "Agent",
         scopes: ["recoup:read"],
         createdAt: 1,
-        expiresAt: 100,
+        expiresAt,
       },
     },
     60,

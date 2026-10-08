@@ -1,3 +1,4 @@
+import { oauthPersistentExpiry } from "../oauthPersistentExpiry";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AdapterFactory, Provider } from "oidc-provider";
 import type { OAuthConsentBinding } from "./createOAuthConsentTickets";
@@ -13,6 +14,7 @@ export async function approveOAuthInteraction(
 ) {
   const { accountId, clientId, subject, resource, scopes } = binding;
   const grant = new provider.Grant({ accountId, clientId });
+  grant.exp = oauthPersistentExpiry;
   grant.addResourceScope(resource, scopes);
   grant.addOIDCScope(requested);
   const grantId = await grant.save();
@@ -21,24 +23,20 @@ export async function approveOAuthInteraction(
     const savedGrant = await provider.Grant.find(grantId);
     if (!savedGrant?.exp) throw new Error("OAuth grant expiry unavailable");
     const client = await provider.Client.find(clientId);
-    await adapter("RecoupGrant").upsert(
+    await adapter("RecoupGrant").upsert(grantId, {
+      accountId,
+      clientId,
       grantId,
-      {
-        accountId,
-        clientId,
-        grantId,
-        extra: {
-          subject,
-          context: "personal",
-          scopes,
-          persistent: true,
-          clientName: client?.clientName ?? "Unnamed agent",
-          createdAt: Math.floor(Date.now() / 1000),
-          expiresAt: savedGrant.exp,
-        },
+      extra: {
+        subject,
+        context: "personal",
+        scopes,
+        persistent: true,
+        clientName: client?.clientName ?? "Unnamed agent",
+        createdAt: Math.floor(Date.now() / 1000),
+        expiresAt: null,
       },
-      30 * 86400,
-    );
+    });
     return await provider.interactionResult(
       req,
       res,

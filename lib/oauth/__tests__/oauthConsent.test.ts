@@ -87,3 +87,14 @@ it("rejects missing, malformed, and unsupported approvals", async () => {
   await expect(tickets.consume(csrf, binding)).rejects.toThrow();
   await expect(tickets.consume("invalid", binding)).rejects.toThrow();
 });
+
+it("rejects approval tickets issued before the until-disconnected policy", async () => {
+  const { tickets, records, adapter } = fixture();
+  const csrf = await tickets.issue(binding);
+  const record = records.get(csrf)!;
+  const oldBinding = JSON.parse(record.extra!.binding as string);
+  delete oldBinding.accessDurationDays;
+  record.extra!.binding = JSON.stringify(oldBinding);
+  await expect(tickets.consume(csrf, binding)).rejects.toThrow("Invalid OAuth approval");
+  expect(adapter.consume).not.toHaveBeenCalled();
+});

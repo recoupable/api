@@ -13,7 +13,7 @@ const schema = z.object({
     context: z.literal("personal"),
     scopes: z.array(z.string()),
     createdAt: z.number().int(),
-    expiresAt: z.number().int(),
+    expiresAt: z.number().int().nullable(),
   }),
 });
 
