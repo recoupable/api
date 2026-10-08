@@ -232,3 +232,19 @@ Local fixture and transport tests are not production migration, hosted acceptanc
 or completion of the original two-song/two-brief checkpoint. This first slice does
 not implement the future rights graph, financial ledger, DDEX exchange or agent
 spending policy described in the epic.
+
+### Uncertain enrichment claims and saves
+
+If an enrichment claim is uncertain or `complete_context_enrichment` fails to
+acknowledge a result, the collector throws
+`ContextNodeNeedsReconciliation`. The recorded planner stops without persisting a
+failed node or starting its dependents: the database may already have saved the
+result. Best-effort uncertainty marking only changes a still-running attempt and
+cannot replace an already-succeeded attempt. Failure of that marking call retains
+the reconciliation signal. This does not retry the provider, settle charges or
+implement the shared credit reservations required by #2123/#2105. An uncertain
+claim never reaches the provider; a reused claim still returns its saved receipt.
+Both enrichment coordinators propagate this signal. The in-process plan drains
+already-running work before rejecting and starts no further modules once the
+uncertainty is known. RPC errors remain attached as internal causes; the public
+error message does not include private database diagnostics.

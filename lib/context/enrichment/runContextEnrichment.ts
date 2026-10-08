@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { ContextNodeNeedsReconciliation } from "../planning/ContextNodeNeedsReconciliation";
 export interface ContextEnrichmentModule {
   key: string;
   topic: string;
@@ -47,14 +48,17 @@ export async function runContextEnrichment(
   const fingerprint = createHash("sha256")
     .update(JSON.stringify([owner, module]))
     .digest("hex");
-  const claim = (await deps.rpc("claim_context_enrichment", {
-    p_owner: owner,
-    p_request: requestId,
-    p_module: { ...module, fingerprint },
-  })) as { state: string; attemptId?: string };
+  const claim = (await deps
+    .rpc("claim_context_enrichment", {
+      p_owner: owner,
+      p_request: requestId,
+      p_module: { ...module, fingerprint },
+    })
+    .catch(error => {
+      throw new ContextNodeNeedsReconciliation(error);
+    })) as { state: string; attemptId?: string };
   if (claim.state === "reused") return claim;
-  if (claim.state !== "claimed" || !claim.attemptId)
-    throw new Error("Paid attempt requires reconciliation before retry");
+  if (claim.state !== "claimed" || !claim.attemptId) throw new ContextNodeNeedsReconciliation();
   try {
     const result = resultSchema.parse(await deps.call(module));
     if (
@@ -67,14 +71,24 @@ export async function runContextEnrichment(
     )
       throw new Error("Observed source was not declared by this module");
     await deps.authorize(actor, owner);
-    return await deps.rpc("complete_context_enrichment", {
-      p_owner: owner,
-      p_request: requestId,
-      p_attempt: claim.attemptId,
-      p_result: result,
-    });
+    return await deps
+      .rpc("complete_context_enrichment", {
+        p_owner: owner,
+        p_request: requestId,
+        p_attempt: claim.attemptId,
+        p_result: result,
+      })
+      .catch(error => {
+        // The save may have committed; the scheduler must not persist a failed node.
+        throw new ContextNodeNeedsReconciliation(error);
+      });
   } catch (error) {
-    await deps.rpc("fail_context_enrichment", { p_owner: owner, p_attempt: claim.attemptId });
+    await deps
+      .rpc("fail_context_enrichment", { p_owner: owner, p_attempt: claim.attemptId })
+      .catch(markError => {
+        // Losing this best-effort mark cannot turn an ambiguous save into a known failure.
+        if (!(error instanceof ContextNodeNeedsReconciliation)) throw markError;
+      });
     throw error;
   }
 }
