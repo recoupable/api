@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { ContextNodeNeedsReconciliation } from "../planning/ContextNodeNeedsReconciliation";
 export interface ContextEnrichmentModule {
   key: string;
   topic: string;
@@ -67,14 +68,24 @@ export async function runContextEnrichment(
     )
       throw new Error("Observed source was not declared by this module");
     await deps.authorize(actor, owner);
-    return await deps.rpc("complete_context_enrichment", {
-      p_owner: owner,
-      p_request: requestId,
-      p_attempt: claim.attemptId,
-      p_result: result,
-    });
+    return await deps
+      .rpc("complete_context_enrichment", {
+        p_owner: owner,
+        p_request: requestId,
+        p_attempt: claim.attemptId,
+        p_result: result,
+      })
+      .catch(() => {
+        // The save may have committed; the scheduler must not persist a failed node.
+        throw new ContextNodeNeedsReconciliation();
+      });
   } catch (error) {
-    await deps.rpc("fail_context_enrichment", { p_owner: owner, p_attempt: claim.attemptId });
+    await deps
+      .rpc("fail_context_enrichment", { p_owner: owner, p_attempt: claim.attemptId })
+      .catch(markError => {
+        // Losing this best-effort mark cannot turn an ambiguous save into a known failure.
+        if (!(error instanceof ContextNodeNeedsReconciliation)) throw markError;
+      });
     throw error;
   }
 }
