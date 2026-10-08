@@ -36,7 +36,7 @@
       "mcp:write"
     ],
     "status": "requires OAuth execution audit before enablement",
-    "authorizationWork": "API-key MCP currently resolves the authenticated actor and rechecks organization membership in the transaction. Before OAuth enablement, bind the selected organization to the current delegated grant, recheck revocation and scope at execution, and retain explicit identity confirmation and idempotency."
+    "authorizationWork": "Legacy API-key/Privy MCP currently resolves the authenticated actor and rechecks organization membership in the transaction. Before OAuth enablement, bind the selected organization to the current delegated grant, recheck revocation and scope at execution, and retain explicit identity confirmation and idempotency."
   },
   {
     "name": "contact_team",
@@ -311,7 +311,7 @@
       "mcp:read"
     ],
     "status": "requires OAuth execution audit before enablement",
-    "authorizationWork": "API-key MCP currently resolves the authenticated actor and rechecks organization membership in the transaction. Before OAuth enablement, bind the selected organization to the current delegated grant, recheck revocation and scope at execution, and retain explicit identity confirmation and idempotency."
+    "authorizationWork": "Legacy API-key/Privy MCP currently resolves the authenticated actor and rechecks organization membership in the transaction. Before OAuth enablement, bind the selected organization to the current delegated grant, recheck revocation and scope at execution. Listing is read-only and does not confirm identity."
   },
   {
     "name": "list_sites",

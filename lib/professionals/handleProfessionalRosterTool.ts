@@ -12,6 +12,11 @@ export async function handleProfessionalRosterTool(
   args: unknown,
   authInfo: McpAuthInfo | undefined,
 ) {
+  if (authInfo?.extra?.oauth)
+    return {
+      ...getToolResultError("Professional roster tools are not available with delegated OAuth"),
+      isError: true,
+    };
   try {
     const { accountId, error } = await resolveAccountId({ authInfo, accountIdOverride: undefined });
     if (error || !accountId)

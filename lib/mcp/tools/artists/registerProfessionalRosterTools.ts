@@ -3,7 +3,7 @@ import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { confirmProfessionalSchema, listProfessionalsSchema } from "@/lib/professionals/schema";
 import { handleProfessionalRosterTool } from "@/lib/professionals/handleProfessionalRosterTool";
 
-/** API-key MCP only; delegated OAuth organization scopes require a separate audit. */
+/** Legacy API-key/Privy MCP only; delegated OAuth organization scopes require a separate audit. */
 export function registerProfessionalRosterTools(server: McpServer) {
   server.registerTool(
     "list_professional_roster",

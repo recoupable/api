@@ -172,3 +172,31 @@ it("MCP list preserves authenticated organization and cursor and returns the pag
   expect(result.isError).not.toBe(true);
   expect(result.content).toEqual([{ type: "text", text: JSON.stringify(page) }]);
 });
+
+it("rejects delegated OAuth even if a legacy roster handler is invoked directly", async () => {
+  const { handleProfessionalRosterTool } = await import("../handleProfessionalRosterTool");
+  const result = await handleProfessionalRosterTool(
+    "list",
+    { organization_id: org },
+    {
+      token: "fixture",
+      clientId: "fixture",
+      scopes: ["mcp:read"],
+      extra: {
+        accountId: actor,
+        oauth: {
+          accountId: actor,
+          clientId: "fixture",
+          grantId: "fixture",
+          scopes: ["mcp:read"],
+          expiresAt: 9999999999,
+          resource: "https://api.example/mcp",
+          context: "personal",
+        },
+      },
+    },
+  );
+  expect(result.isError).toBe(true);
+  expect(resolveAccountId).not.toHaveBeenCalled();
+  expect(executeProfessionalRoster).not.toHaveBeenCalled();
+});
