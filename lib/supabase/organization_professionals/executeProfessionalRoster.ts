@@ -32,7 +32,9 @@ export async function executeProfessionalRoster(
     if (code === "22023" || code === "22P02")
       throw new ProfessionalRosterError("Invalid professional roster request", 400);
     throw new ProfessionalRosterError(
-      "Could not access the professional roster. Retry with the same request key.",
+      "idempotency_key" in input
+        ? "Could not access the professional roster. Retry with the same request key."
+        : "Could not load the professional roster. Retry this page.",
       503,
     );
   }

@@ -30,6 +30,15 @@
     "authorizationWork": "Bind account and requested resources to the selected grant context; enforce scopes, current access, and redacted errors at execution. Verify billing owner, entitlement, credit checks, and bounded retry behavior before starting provider work."
   },
   {
+    "name": "confirm_professional_roster",
+    "file": "lib/mcp/tools/artists/registerProfessionalRosterTools.ts",
+    "scopes": [
+      "mcp:write"
+    ],
+    "status": "requires OAuth execution audit before enablement",
+    "authorizationWork": "API-key MCP currently resolves the authenticated actor and rechecks organization membership in the transaction. Before OAuth enablement, bind the selected organization to the current delegated grant, recheck revocation and scope at execution, and retain explicit identity confirmation and idempotency."
+  },
+  {
     "name": "contact_team",
     "file": "lib/mcp/tools/registerContactTeamTool.ts",
     "scopes": [
@@ -294,6 +303,15 @@
     ],
     "status": "requires OAuth execution audit before enablement",
     "authorizationWork": "Bind account and requested resources to the selected grant context; enforce scopes, current access, and redacted errors at execution. Check every catalog owner against the grant; a catalog ID is not authorization."
+  },
+  {
+    "name": "list_professional_roster",
+    "file": "lib/mcp/tools/artists/registerProfessionalRosterTools.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "requires OAuth execution audit before enablement",
+    "authorizationWork": "API-key MCP currently resolves the authenticated actor and rechecks organization membership in the transaction. Before OAuth enablement, bind the selected organization to the current delegated grant, recheck revocation and scope at execution, and retain explicit identity confirmation and idempotency."
   },
   {
     "name": "list_sites",

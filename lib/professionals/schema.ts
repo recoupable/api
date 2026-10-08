@@ -23,7 +23,8 @@ export const confirmProfessionalSchema = z
     roles: z
       .array(z.enum(["songwriter", "producer"]))
       .min(1)
-      .max(2),
+      .max(2)
+      .refine(roles => new Set(roles).size === roles.length, "Choose distinct roles"),
     roster_intent: z.literal("add"),
     confirmed: z.literal(true),
   })

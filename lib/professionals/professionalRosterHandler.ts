@@ -32,6 +32,11 @@ export async function professionalRosterHandler(request: NextRequest) {
         : error instanceof ProfessionalRosterError
           ? error.status
           : 503;
+    if (status === 503)
+      console.error("Professional roster request failed", {
+        operation: request.method,
+        category: error instanceof ProfessionalRosterError ? "storage" : "unexpected",
+      });
     const message =
       error instanceof z.ZodError
         ? "Invalid professional roster request"

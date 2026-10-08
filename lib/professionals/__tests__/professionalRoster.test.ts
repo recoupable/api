@@ -62,6 +62,7 @@ it.each([
   { confirmed: false },
   { roster_intent: "research" },
   { roles: [] },
+  { roles: ["songwriter", "songwriter"] },
   { roles: ["owner"] },
   { mode: "existing" },
   { name: " " },
@@ -135,4 +136,39 @@ it("MCP and REST use the same confirmation contract and authenticated actor", as
   const denied = await handler({ ...body, confirmed: false }, extra);
   expect(denied.isError).toBe(true);
   expect(executeProfessionalRoster).not.toHaveBeenCalled();
+});
+
+it("denies unauthorized GET without reading storage", async () => {
+  vi.mocked(validateAuthContext).mockResolvedValue(
+    NextResponse.json({ error: "Denied" }, { status: 403 }),
+  );
+  const result = await professionalRosterHandler(
+    new NextRequest(`https://api.example/api/organizations/professionals?organization_id=${org}`),
+  );
+  expect(result.status).toBe(403);
+  expect(executeProfessionalRoster).not.toHaveBeenCalled();
+});
+it("MCP list preserves authenticated organization and cursor and returns the page", async () => {
+  const page = { professionals: [professional], next_cursor: id };
+  vi.mocked(executeProfessionalRoster).mockResolvedValue(page);
+  const server = new McpServer({ name: "fixture", version: "1" });
+  const register = vi.spyOn(server, "registerTool");
+  registerProfessionalRosterTools(server);
+  const handler = register.mock.calls.find(args => args[0] === "list_professional_roster")![2];
+  const result = await handler(
+    { organization_id: org, after: id },
+    {
+      authInfo: { token: "fixture", clientId: "fixture", scopes: [] },
+      requestId: "fixture",
+      signal: new AbortController().signal,
+      sendNotification: vi.fn(),
+      sendRequest: vi.fn(),
+    },
+  );
+  expect(executeProfessionalRoster).toHaveBeenCalledWith(actor, {
+    organization_id: org,
+    after: id,
+  });
+  expect(result.isError).not.toBe(true);
+  expect(result.content).toEqual([{ type: "text", text: JSON.stringify(page) }]);
 });
