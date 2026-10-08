@@ -4,7 +4,7 @@ A real MCP Apps UI served by the existing authenticated `/mcp` route. The `open_
 
 ## Experience
 
-Six featured video cards open a focused brief form. Search and “See all experiences” expose 24 workflows. “Continue in chat” sends the brief, selected skill, mode and intended outputs through the MCP Apps bridge. It uses OpenAI's message extension when negotiated and standard `ui/message` otherwise. A standalone browser preview clearly identifies itself and offers a copy fallback instead of pretending to execute work.
+Six featured video cards open a focused brief form. Search and “See all experiences” expose 24 workflows, each with its own generated video preview. “Continue in chat” sends the brief, selected skill, mode and intended outputs through the MCP Apps bridge. It uses OpenAI's message extension when negotiated and standard `ui/message` otherwise. A standalone browser preview clearly identifies itself and offers a copy fallback instead of pretending to execute work.
 
 Execution belongs to the host agent and existing Recoup skills/tools. Skill names are hints, not a skill installation mechanism. Install the Recoup skills plugin alongside the MCP connection. Tool/skill availability and missing inputs must be checked in the conversation. This version does not run generation inside the gallery, persist projects, upload files, add file handlers, or alter consent. Files are attached in the host conversation. Existing limited-scope connections remain limited; opening the library does not expand them.
 
@@ -19,7 +19,7 @@ The browser SDKs live in the private `@recoup/explore-ui` workspace. The API use
 - `node scripts/mcp-extension/build-host.mjs`: create a local SDK host harness at `ui/recoup/host.html`. Serve this directory with a loopback static server. The harness shows received messages; it does not send them to a model or remote service.
 - `pnpm dev`, `pnpm build`, `pnpm test` and the OAuth typecheck build the UI first. Rebuild after editing UI source during development.
 
-The six approved Higgsfield films are referenced by their existing HTTPS URLs; they are concept previews, not outputs generated from the current brief. They depend on that media host remaining available. The CSP allows only that media origin and no direct API connections. Do not put account files, tokens or private input data in this bundle.
+The 24 Higgsfield films are referenced by their HTTPS URLs; they are concept previews, not outputs generated from the current brief. They depend on that media host remaining available. The CSP allows only that media origin and no direct API connections. Do not put account files, tokens or private input data in this bundle.
 
 ## Host verification after deployment
 
