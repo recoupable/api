@@ -58,5 +58,13 @@ describe("OAuth metadata network policy", () => {
     expect(policy({ "cache-control": "no-store, max-age=300" })).toBe("max-age=0");
     expect(policy({ "cache-control": "no-cache, max-age=300" })).toBe("max-age=0");
     expect(policy({})).toBe("max-age=0");
+    expect(policy({ "cache-control": 'foo="x, max-age=999"' })).toBe("max-age=0");
+    expect(policy({ "cache-control": "s-maxage=10, max-age=300" })).toBe("max-age=10");
+    expect(policy({ "cache-control": "max-age=300, max-age=600" })).toBe("max-age=0");
+    expect(
+      policy({ "cache-control": "max-age=300", date: new Date(Date.now() - 600000).toUTCString() }),
+    ).toBe("max-age=0");
+    expect(policy({ expires: new Date(Date.now() + 600000).toUTCString() })).toBe("max-age=300");
+    expect(policy({ expires: new Date(Date.now() - 600000).toUTCString() })).toBe("max-age=0");
   });
 });

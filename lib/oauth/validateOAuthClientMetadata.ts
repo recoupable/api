@@ -9,8 +9,9 @@ const cimd = z.object({
 /** CIMD display metadata is untrusted; documents must never carry private key material. */
 export function validateOAuthClientMetadata(metadata: ClientMetadata): void {
   if (!/^https:\/\//i.test(metadata.client_id ?? "")) return;
-  if (!cimd.safeParse(metadata).success)
-    throw new errors.InvalidClientMetadata("Invalid MCP client metadata");
+  const validated = cimd.safeParse(metadata);
+  if (!validated.success) throw new errors.InvalidClientMetadata("Invalid MCP client metadata");
+  metadata.client_name = validated.data.client_name;
   for (const key of metadata.jwks?.keys ?? []) {
     if (
       key.kty === "oct" ||
