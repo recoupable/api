@@ -74,7 +74,14 @@ function openFeature(id: string) {
     const brief = dialog.querySelector("textarea")!.value;
     const feedback = dialog.querySelector<HTMLElement>("#feedback")!;
     const button = dialog.querySelector<HTMLButtonElement>(".primary")!;
-    const prompt = buildWorkflowPrompt(selected!, brief);
+    let prompt: string;
+    try {
+      prompt = buildWorkflowPrompt(selected!, brief);
+    } catch (error) {
+      feedback.textContent = error instanceof Error ? error.message : "Add a brief to continue.";
+      dialog.querySelector("textarea")!.focus();
+      return;
+    }
     button.disabled = true;
     feedback.textContent = "Sending your brief…";
     try {
@@ -100,7 +107,16 @@ function openFeature(id: string) {
           feedback.textContent = "Copied. Paste it into your conversation.";
         } catch {
           feedback.textContent = "Select and copy the brief below.";
-          dialog.querySelector("textarea")!.value = prompt;
+          let copyable = dialog.querySelector<HTMLTextAreaElement>("#copyable");
+          if (!copyable) {
+            copyable = document.createElement("textarea");
+            copyable.id = "copyable";
+            copyable.readOnly = true;
+            copyable.setAttribute("aria-label", "Copyable workflow request");
+            copy.after(copyable);
+          }
+          copyable.value = prompt;
+          copyable.select();
         }
       };
     }
