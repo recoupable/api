@@ -1,3 +1,4 @@
+import { registerProfessionalRosterTools } from "./registerProfessionalRosterTools";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerCreateNewArtistTool } from "./registerCreateNewArtistTool";
 
@@ -8,4 +9,5 @@ import { registerCreateNewArtistTool } from "./registerCreateNewArtistTool";
  */
 export const registerAllArtistTools = (server: McpServer): void => {
   registerCreateNewArtistTool(server);
+  registerProfessionalRosterTools(server);
 };

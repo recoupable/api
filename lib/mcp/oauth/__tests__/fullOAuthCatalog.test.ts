@@ -28,6 +28,8 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
     expect(tools.map(tool => tool.name).sort()).toEqual(Object.keys(fullOAuthToolPolicy).sort());
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
     expect(tools).toHaveLength(51);
+    expect(tools.map(tool => tool.name)).not.toContain("list_professional_roster");
+    expect(tools.map(tool => tool.name)).not.toContain("confirm_professional_roster");
     expect(
       tools.find(tool => tool.name === "send_email")!.inputSchema.required ?? [],
     ).not.toContain("room_id");
