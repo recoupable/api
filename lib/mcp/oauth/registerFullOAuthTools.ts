@@ -4,6 +4,7 @@ import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/proto
 import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { registerAllTools } from "../tools";
+import { resolveAccountId } from "../resolveAccountId";
 import type { McpAuthInfo } from "../verifyApiKey";
 import type { OAuthAccess } from "../../oauth/resolveOAuthAccess";
 import { fullOAuthToolPolicy } from "./fullOAuthToolPolicy";
@@ -114,7 +115,11 @@ export function registerFullOAuthTools(
       inputSchema: z.object({}).strict(),
     },
     async (_args, extra) => {
-      const accountId = (extra.authInfo as McpAuthInfo).extra.accountId;
+      const { accountId, error } = await resolveAccountId({
+        authInfo: extra.authInfo as McpAuthInfo | undefined,
+        accountIdOverride: undefined,
+      });
+      if (error || !accountId) throw new Error("Authentication required");
       return {
         content: [
           {

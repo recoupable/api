@@ -70,3 +70,5 @@ describe("full OAuth registry", () => {
     expect(prepare).toHaveBeenCalledWith("get_tasks", { account_id: "owner" }, "owner");
   });
 });
+
+vi.mock("@/lib/organizations/canAccessAccount", () => ({ canAccessAccount: vi.fn() }));

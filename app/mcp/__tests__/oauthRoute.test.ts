@@ -103,3 +103,5 @@ it.each([false, true])(
     expect(missing.status).toBe(401);
   },
 );
+
+vi.mock("@/lib/organizations/canAccessAccount", () => ({ canAccessAccount: vi.fn() }));
