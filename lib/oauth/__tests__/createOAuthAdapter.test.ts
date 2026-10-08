@@ -93,3 +93,15 @@ it("stores persistent grants and rotating refresh tokens without database expiry
   ).rejects.toThrow();
   await expect(factory()("RefreshToken").upsert("id", {}, 2678401)).rejects.toThrow();
 });
+
+it.each(["Grant", "RefreshToken", "RecoupGrant"])(
+  "preserves finite storage expiry for legacy %s",
+  async model => {
+    await factory()(model).upsert(
+      "id",
+      { exp: 2000000000, grantId: "id", extra: { expiresAt: 2000000000 } },
+      300,
+    );
+    expect(store.upsert.mock.lastCall?.[0].expiresIn).toBe(300);
+  },
+);
