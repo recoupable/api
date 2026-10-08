@@ -1,5 +1,6 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { prepareFullOAuthTool } from "../prepareFullOAuthTool";
+vi.mock("../checkFullOAuthRateLimit", () => ({ checkFullOAuthRateLimit: vi.fn() }));
 const mocks = vi.hoisted(() => ({
   artists: vi.fn(),
   orgs: vi.fn(),
@@ -41,6 +42,8 @@ describe("delegated resource authorization", () => {
     "requires the task owner even for an organization peer: %s",
     async name => {
       mocks.tasks.mockResolvedValue([]);
+      await expect(prepareFullOAuthTool(name, { id: "task" }, "owner")).rejects.toThrow();
+      mocks.tasks.mockResolvedValue([{ id: "task", account_id: "org" }]);
       await expect(prepareFullOAuthTool(name, { id: "task" }, "owner")).rejects.toThrow();
       mocks.tasks.mockResolvedValue([{ id: "task", account_id: "owner" }]);
       await expect(prepareFullOAuthTool(name, { id: "task" }, "owner")).resolves.toMatchObject({
@@ -115,6 +118,6 @@ describe("delegated resource authorization", () => {
         { to: ["owner@example.com"], text: "hello", headers: { Bcc: "foreign@example.com" } },
         "owner",
       ),
-    ).toMatchObject({ headers: {} });
+    ).toHaveProperty("headers", {});
   });
 });

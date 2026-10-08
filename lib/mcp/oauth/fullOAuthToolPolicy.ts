@@ -57,13 +57,13 @@ export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
   transcribe_audio: { readOnly: false, destructive: false },
   create_knowledge_base: {
     readOnly: false,
-    destructive: false,
+    destructive: true,
     notice:
       "Publishes text permanently to public Arweave. Use only for content explicitly approved for permanent public publication; never confidential material.",
   },
   generate_txt_file: {
     readOnly: false,
-    destructive: false,
+    destructive: true,
     notice:
       "Publishes text permanently to public Arweave. Use only for content explicitly approved for permanent public publication; never confidential material.",
   },

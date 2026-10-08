@@ -92,13 +92,21 @@ export function registerFullOAuthTools(
           return await (services.execute
             ? services.execute(name, args, current.accountId, run)
             : run());
-        } catch {
+        } catch (error) {
+          const validation = error instanceof z.ZodError;
+          const throttled =
+            error instanceof Error &&
+            /^Tool rate limit reached; retry in \d+ seconds$/.test(error.message);
           return {
             isError: true,
             content: [
               {
                 type: "text",
-                text: "Operation unavailable or permission denied. Check workspace access and reconnect with the full Recoup tools permission if needed.",
+                text: validation
+                  ? "Invalid tool arguments. Check the tool schema and try again."
+                  : throttled
+                    ? (error as Error).message
+                    : "Operation unavailable or permission denied. Check workspace access and reconnect with the full Recoup tools permission if needed.",
               },
             ],
           };

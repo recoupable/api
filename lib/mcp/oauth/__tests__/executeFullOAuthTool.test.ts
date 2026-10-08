@@ -1,4 +1,4 @@
-import { beforeEach, describe, it, expect, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { executeFullOAuthTool } from "../executeFullOAuthTool";
 const mocks = vi.hoisted(() => ({ run: vi.fn(), video: vi.fn(), tasks: vi.fn() }));
 vi.mock("@/lib/trigger/retrieveTaskRun", () => ({ retrieveTaskRun: mocks.run }));
@@ -10,6 +10,7 @@ vi.mock("@/lib/supabase/scheduled_actions/selectScheduledActions", () => ({
 const ok = (data: unknown) => ({
   content: [{ type: "text" as const, text: JSON.stringify(data) }],
 });
+afterEach(() => vi.unstubAllEnvs());
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv("OAUTH_INDEX_KEY", Buffer.alloc(32, 7).toString("base64"));

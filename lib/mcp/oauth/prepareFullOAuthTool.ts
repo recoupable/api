@@ -7,6 +7,7 @@ import selectRoom from "@/lib/supabase/rooms/selectRoom";
 import { assertRecipientsAllowed } from "@/lib/emails/assertRecipientsAllowed";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 import { z } from "zod";
+import { checkFullOAuthRateLimit } from "./checkFullOAuthRateLimit";
 
 /** Authorize legacy tool references before invoking any business operation. No admin bypass. */
 export async function prepareFullOAuthTool(
@@ -14,6 +15,7 @@ export async function prepareFullOAuthTool(
   input: Record<string, unknown>,
   accountId: string,
 ) {
+  await checkFullOAuthRateLimit(name, accountId);
   const args = { ...input };
   if (name === "update_task" || name === "delete_task") {
     const id = z.string().parse(args.id);
@@ -54,7 +56,7 @@ export async function prepareFullOAuthTool(
   const roomIds = [
     args.room_id,
     args.active_conversation_id,
-    ...(name === "compact_chats" ? z.array(z.string()).parse(args.chat_id) : []),
+    ...(name === "compact_chats" ? z.array(z.string()).max(50).parse(args.chat_id) : []),
   ].filter((id): id is string => typeof id === "string");
   for (const id of roomIds) {
     const room = await selectRoom(id);

@@ -12,9 +12,9 @@ export function createOAuthVideoLocator() {
       return `${payload}.${signature(payload).toString("base64url")}`;
     },
     verify(token: string, accountId: string) {
+      if (token.length > 4096) throw new Error("Invalid video locator");
       const [payload, mac, extra] = token.split(".");
-      if (!payload || !mac || extra || token.length > 4096)
-        throw new Error("Invalid video locator");
+      if (!payload || !mac || extra) throw new Error("Invalid video locator");
       const expected = signature(payload),
         actual = Buffer.from(mac, "base64url");
       if (actual.length !== expected.length || !timingSafeEqual(actual, expected))
