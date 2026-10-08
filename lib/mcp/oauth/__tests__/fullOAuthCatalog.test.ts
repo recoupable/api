@@ -1,0 +1,38 @@
+import { expect, it, vi } from "vitest";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { registerFullOAuthTools } from "../registerFullOAuthTools";
+import { fullOAuthToolPolicy } from "../fullOAuthToolPolicy";
+vi.mock("@/lib/supabase/serverClient", () => ({ default: {} }));
+vi.hoisted(() => {
+  process.env.PRIVY_PROJECT_SECRET = "test";
+  process.env.SPOTIFY_CLIENT_ID = "test";
+  process.env.SPOTIFY_CLIENT_SECRET = "test";
+});
+vi.mock("@/lib/arweave/client", () => ({ arweave: {}, ARWEAVE_KEY: {} }));
+vi.mock("@/lib/telegram/client", () => ({ default: {} }));
+vi.mock("@/lib/apify/client", () => ({ default: {}, apifyClient: {} }));
+vi.mock("@/lib/privy/client", () => ({ default: {} }));
+vi.mock("@/lib/emails/client", () => ({ default: {} }));
+vi.mock("@/lib/stripe/client", () => ({ default: {} }));
+it("discovers the entire delegated catalog over the real MCP SDK", async () => {
+  const server = new McpServer({ name: "recoup-test", version: "1" });
+  registerFullOAuthTools(server, vi.fn(), { prepare: vi.fn(), listArtists: vi.fn() });
+  const client = new Client({ name: "test", version: "1" });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await server.connect(serverTransport);
+  await client.connect(clientTransport);
+  try {
+    const { tools } = await client.listTools();
+    expect(tools.map(tool => tool.name).sort()).toEqual(Object.keys(fullOAuthToolPolicy).sort());
+    for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
+    expect(tools).toHaveLength(51);
+    expect(
+      tools.find(tool => tool.name === "send_email")!.inputSchema.required ?? [],
+    ).not.toContain("room_id");
+  } finally {
+    await client.close();
+    await server.close();
+  }
+});
