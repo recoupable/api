@@ -72,7 +72,7 @@ export function createOAuthConsentHandler(options: {
           accountId: identity.accountId,
           context: "personal",
           expiresIn: 300,
-          accessDurationDays: 30,
+          accessDurationDays: null,
           permissions: scopes.map(scope => ({
             scope,
             description: oauthLaunchScopes[scope as keyof typeof oauthLaunchScopes],

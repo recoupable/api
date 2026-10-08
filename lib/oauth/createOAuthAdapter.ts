@@ -1,3 +1,4 @@
+import { oauthPersistentExpiry } from "./oauthPersistentExpiry";
 import { hashOAuthIdentifier } from "./hashOAuthIdentifier";
 import type { AdapterFactory, AdapterPayload } from "oidc-provider";
 import type { OAuthStore } from "./OAuthStore";
@@ -49,10 +50,15 @@ export function createOAuthAdapter(options: {
     };
     return {
       async upsert(id, payload, expiresIn) {
+        const persistent =
+          ((model === "Grant" || model === "RefreshToken") &&
+            payload.exp === oauthPersistentExpiry) ||
+          (model === "RecoupGrant" && payload.extra?.expiresAt === null);
         if (
-          (expiresIn === undefined && model !== "Client") ||
-          (expiresIn !== undefined &&
-            (!Number.isInteger(expiresIn) || expiresIn < 1 || expiresIn > 2678400))
+          !persistent &&
+          ((expiresIn === undefined && model !== "Client") ||
+            (expiresIn !== undefined &&
+              (!Number.isInteger(expiresIn) || expiresIn < 1 || expiresIn > 2678400)))
         )
           throw new Error("Invalid OAuth artifact lifetime");
         const recordKey = key(id);
@@ -62,7 +68,7 @@ export function createOAuthAdapter(options: {
           store.upsert({
             ...recordKey,
             payload: cipher.encrypt(clean, [namespace, model, recordKey.idHash]),
-            expiresIn: expiresIn ?? null,
+            expiresIn: persistent ? null : (expiresIn ?? null),
             grantHash:
               model === "Grant" ? recordKey.idHash : payload.grantId ? hash(payload.grantId) : null,
             uidHash: payload.uid ? hash(payload.uid) : null,
