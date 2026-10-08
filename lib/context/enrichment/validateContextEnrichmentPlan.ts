@@ -4,7 +4,16 @@ import type { PlanNode } from "./enrichmentPlanTypes";
 /** Reject malformed dependency plans before authorization or provider work. */
 export function validateContextEnrichmentPlan(plan: PlanNode[], concurrency: number): void {
   z.number().int().min(1).max(10).parse(concurrency);
-  z.array(z.object({ key: z.string().min(1), dependsOn: z.array(z.string().min(1)) }))
+  z.array(
+    z.object({
+      key: z.string().min(1),
+      dependsOn: z.array(z.string().min(1)),
+      prepare: z.custom<PlanNode["prepare"]>(
+        value => typeof value === "function",
+        "Expected a prepare function",
+      ),
+    }),
+  )
     .max(100)
     .parse(plan);
   const keys = new Set(plan.map(n => n.key));
