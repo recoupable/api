@@ -34,6 +34,7 @@ describe("OAuth metadata network policy", () => {
   });
   it.each([
     "http://agent.example/client.json",
+    "https://agent.example",
     "https://user:pass@agent.example/client.json",
     "https://agent.example/client.json#fragment",
     "https://localhost/client.json",

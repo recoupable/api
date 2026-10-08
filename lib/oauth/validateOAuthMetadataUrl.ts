@@ -7,7 +7,7 @@ export function validateOAuthMetadataUrl(input: string): URL {
   const hostname = url.hostname.replace(/^\[|\]$/g, "");
   const rawPath = input.replace(/^https:\/\/[^/]+/i, "").split(/[?#]/)[0];
   if (
-    !/^https:\/\//i.test(input) ||
+    !/^https:\/\/[^/?#]+\//i.test(input) ||
     /[\x00-\x20\x7f\\]/.test(input) ||
     url.protocol !== "https:" ||
     url.username ||
