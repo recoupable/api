@@ -17,12 +17,14 @@ export function createOAuthMetadataFetch(): NonNullable<Configuration["fetch"]> 
     if ((init?.method && init.method !== "GET") || active >= 8)
       throw new Error("OAuth metadata fetch unavailable");
     const hostname = url.hostname.replace(/^\[|\]$/g, "");
+    const callerSignal = init?.signal ?? (input instanceof Request ? input.signal : undefined);
     const signal = AbortSignal.any([
       AbortSignal.timeout(2500),
-      ...(init?.signal ? [init.signal] : []),
+      ...(callerSignal ? [callerSignal] : []),
     ]);
     signal.throwIfAborted();
     active++;
+    let dnsSettled = Promise.resolve();
     try {
       return await new Promise<Response>((resolve, reject) => {
         let req: ClientRequest | undefined;
@@ -46,6 +48,10 @@ export function createOAuthMetadataFetch(): NonNullable<Configuration["fetch"]> 
         const addresses = isIP(hostname)
           ? Promise.resolve([{ address: hostname, family: isIP(hostname) }])
           : lookup(hostname, { all: true, verbatim: true });
+        dnsSettled = addresses.then(
+          () => undefined,
+          () => undefined,
+        );
         void addresses
           .then(records => {
             if (settled) return;
@@ -83,7 +89,10 @@ export function createOAuthMetadataFetch(): NonNullable<Configuration["fetch"]> 
           .catch(error => finish(error));
       });
     } finally {
-      active--;
+      // OS DNS lookups cannot be cancelled. Do not free their slot on early timeout.
+      void dnsSettled.then(() => {
+        active--;
+      });
     }
   };
 }

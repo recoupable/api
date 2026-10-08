@@ -104,8 +104,14 @@ it("enforces a wall-clock deadline even if DNS never responds", async () => {
   expect(mocks.request).not.toHaveBeenCalled();
 });
 
-it("bounds concurrent fetches and releases capacity after cancellation", async () => {
-  mocks.lookup.mockImplementation(() => new Promise(() => {}));
+it("retains capacity after cancellation until DNS actually settles", async () => {
+  const resolvers: ((value: unknown) => void)[] = [];
+  mocks.lookup.mockImplementation(
+    () =>
+      new Promise(resolve => {
+        resolvers.push(resolve);
+      }),
+  );
   const fetchMetadata = createOAuthMetadataFetch();
   const controller = new AbortController();
   const pending = Array.from({ length: 8 }, () =>
@@ -116,6 +122,9 @@ it("bounds concurrent fetches and releases capacity after cancellation", async (
   await expect(fetchMetadata("https://agent.example/client.json")).rejects.toThrow("unavailable");
   controller.abort();
   await Promise.all(pending);
+  await expect(fetchMetadata("https://agent.example/client.json")).rejects.toThrow("unavailable");
+  resolvers.forEach(resolve => resolve([{ address: "1.1.1.1", family: 4 }]));
+  await new Promise(resolve => setImmediate(resolve));
   mocks.lookup.mockResolvedValue([{ address: "1.1.1.1", family: 4 }]);
   expect((await fetchMetadata("https://agent.example/client.json")).status).toBe(200);
 });
@@ -140,4 +149,19 @@ it("aborts a stalled response body", async () => {
   controller.abort();
   await expect(pending).rejects.toThrow("aborted");
   expect(response!.destroyed).toBe(true);
+});
+
+it("honors a Request input's abort signal", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  await expect(
+    createOAuthMetadataFetch()(
+      new Request("https://agent.example/client.json", { signal: controller.signal }),
+    ),
+  ).rejects.toThrow();
+  expect(mocks.lookup).not.toHaveBeenCalled();
+});
+it("accepts case-insensitive identity content encoding", async () => {
+  headers["content-encoding"] = "Identity";
+  expect((await createOAuthMetadataFetch()("https://agent.example/client.json")).status).toBe(200);
 });

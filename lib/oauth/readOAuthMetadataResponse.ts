@@ -9,7 +9,7 @@ export async function readOAuthMetadataResponse(response: IncomingMessage): Prom
     if (
       response.statusCode !== 200 ||
       !/^application\/(?:json|[\w.+-]+\+json)(?:\s*;|$)/i.test(type) ||
-      (encoding && encoding !== "identity") ||
+      (encoding && encoding.toLowerCase() !== "identity") ||
       Number(response.headers["content-length"] ?? 0) > 16384
     ) {
       throw new Error("Invalid OAuth metadata response");
