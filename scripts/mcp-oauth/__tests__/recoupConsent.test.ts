@@ -18,6 +18,15 @@ import { createOAuthNodeHandler } from "../../../lib/oauth/createOAuthNodeHandle
 import { createOAuthConsentHandler } from "../../../lib/oauth/consent/createOAuthConsentHandler";
 import { createPostgresTestAdapter } from "../fixtures/createPostgresTestAdapter";
 
+const metadataDocuments = vi.hoisted(() => new Map<string, Record<string, unknown>>());
+vi.mock("../../../lib/oauth/createOAuthMetadataFetch", () => ({
+  createOAuthMetadataFetch: () => async (input: string) => {
+    const document = metadataDocuments.get(String(input));
+    if (!document) throw new Error("Unexpected metadata request");
+    return Response.json(document, { headers: { "cache-control": "max-age=300" } });
+  },
+}));
+
 // Protocol-only fallback; the PostgreSQL harness injects the real encrypted adapter.
 function memoryAdapter(): AdapterFactory {
   const records = new Map<string, AdapterPayload>();
@@ -46,7 +55,7 @@ function memoryAdapter(): AdapterFactory {
   });
 }
 
-it("requires browser cookie, trusted origin, matching identity, and one-use consent before issuing tokens", async () => {
+async function verifyConsent(mode: string) {
   const server = createServer();
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -223,7 +232,52 @@ it("requires browser cookie, trusted origin, matching identity, and one-use cons
       }),
     });
     expect(registered.status).toBe(201);
+    const discovery = await fetch(`${config.issuer}/.well-known/openid-configuration`);
+    expect(await discovery.json()).toMatchObject({ client_id_metadata_document_supported: true });
     const client = await registered.json();
+    if (mode === "cimd") {
+      client.client_id = "https://agent.example/oauth/client.json";
+      metadataDocuments.set(client.client_id, {
+        client_id: client.client_id,
+        client_name: "Synthetic CIMD agent",
+        redirect_uris: ["https://agent.example/callback"],
+        token_endpoint_auth_method: "none",
+        grant_types: ["authorization_code", "refresh_token"],
+        response_types: ["code"],
+      });
+    }
+    if (mode === "cimd") {
+      const valid = metadataDocuments.get(client.client_id)!;
+      const invalidDocuments = [
+        { client_id: "https://other.example/client.json" },
+        { client_name: undefined },
+        { client_secret: "must-not-be-published" },
+        { token_endpoint_auth_method: "client_secret_basic" },
+        { redirect_uris: ["http://public.example/callback"], application_type: "web" },
+        { redirect_uris: ["https://agent.example/callback#fragment"] },
+        { jwks: { keys: [{ kty: "RSA", n: "test", e: "AQAB", d: "private" }] } },
+      ];
+      for (const [index, overrides] of invalidDocuments.entries()) {
+        const id = `https://agent.example/invalid-${index}.json`;
+        metadataDocuments.set(id, { ...valid, client_id: id, ...overrides });
+        await expect(provider.Client.find(id)).rejects.toThrow();
+      }
+      const cached = await provider.Client.find(client.client_id);
+      expect(cached?.clientId).toBe(client.client_id);
+      metadataDocuments.set(client.client_id, {
+        ...valid,
+        client_id: "https://other.example/client.json",
+      });
+      expect((await provider.Client.find(client.client_id))?.clientId).toBe(client.client_id);
+      const now = Date.now();
+      const clock = vi.spyOn(Date, "now").mockReturnValue(now + 301000);
+      try {
+        await expect(provider.Client.find(client.client_id)).rejects.toThrow();
+      } finally {
+        clock.mockRestore();
+        metadataDocuments.set(client.client_id, valid);
+      }
+    }
     const cookies = new Map<string, { pair: string; path: string }>();
     const browserFetch = async (url: string, init: RequestInit = {}) => {
       const path = new URL(url).pathname;
@@ -400,4 +454,9 @@ it("requires browser cookie, trusted origin, matching identity, and one-use cons
     server.closeAllConnections();
     await new Promise<void>(resolve => server.close(() => resolve()));
   }
-});
+}
+
+it.each(["dcr", "cimd"])(
+  "requires browser cookie, trusted origin, matching identity, and one-use consent before issuing tokens (%s)",
+  verifyConsent,
+);
