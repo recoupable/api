@@ -22,7 +22,8 @@ export function createFeatureDialog(
     dialog.showModal();
     syncMotion();
     dialog.querySelector("textarea")!.focus();
-    dialog.querySelector("form")!.onsubmit = async event => {
+    const form = dialog.querySelector("form")!;
+    form.onsubmit = async event => {
       event.preventDefault();
       const brief = dialog.querySelector("textarea")!.value;
       const feedback = dialog.querySelector<HTMLElement>("#feedback")!;
@@ -39,11 +40,13 @@ export function createFeatureDialog(
       feedback.textContent = "Sending your brief…";
       try {
         const result = await send(prompt);
+        if (!form.isConnected) return;
         if (result.isError)
           throw new Error("The conversation could not accept this brief. Try again or copy it.");
         feedback.textContent = "Sent. Continue in your conversation.";
         button.textContent = "Brief sent ✓";
       } catch (error) {
+        if (!form.isConnected) return;
         feedback.textContent =
           error instanceof Error ? error.message : "Unable to send. Your brief is still here.";
         button.disabled = false;
@@ -54,6 +57,7 @@ export function createFeatureDialog(
             await navigator.clipboard.writeText(prompt);
             feedback.textContent = "Copied. Paste it into your conversation.";
           } catch {
+            if (!form.isConnected) return;
             feedback.textContent = "Select and copy the brief below.";
             let copyable = dialog.querySelector<HTMLTextAreaElement>("#copyable");
             if (!copyable) {

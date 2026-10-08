@@ -1,7 +1,7 @@
 import { build } from "esbuild";
 import { writeFile } from "node:fs/promises";
 await build({
-  entryPoints: ["scripts/mcp-extension/host.ts"],
+  entryPoints: ["ui/recoup/dev/host.ts"],
   bundle: true,
   outfile: "ui/recoup/host.js",
   format: "iife",

@@ -22,13 +22,15 @@ const bridge = new AppBridge(
   },
 );
 bridge.onmessage = async ({ content }) => {
+  const delayedFailure = new URLSearchParams(location.search).has("delayedFailure");
+  if (delayedFailure) await new Promise(resolve => setTimeout(resolve, 5000));
   output.textContent =
     "Received through MCP Apps bridge:\n" +
     content
       .filter(item => item.type === "text")
       .map(item => item.text)
       .join("\n");
-  return {};
+  return delayedFailure ? { isError: true } : {};
 };
 const timer = setTimeout(() => {
   output.textContent =

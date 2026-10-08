@@ -8,6 +8,10 @@ Six featured video cards open a focused brief form. Search and “See all experi
 
 Execution belongs to the host agent and existing Recoup skills/tools. Skill names are hints, not a skill installation mechanism. Install the Recoup skills plugin alongside the MCP connection. Tool/skill availability and missing inputs must be checked in the conversation. This version does not run generation inside the gallery, persist projects, upload files, add file handlers, or alter consent. Files are attached in the host conversation. Existing limited-scope connections remain limited; opening the library does not expand them.
 
+## Dependency boundary
+
+The browser SDKs live in the private `@recoup/explore-ui` workspace. The API uses the SDK version supported by its existing MCP adapter; it registers standard UI resource/tool metadata directly. Browser-only SDK upgrades do not force a change to the shared API transport.
+
 ## Build and review
 
 - `pnpm build:extension`: bundle the browser SDK, UI, styles and fonts into one generated TypeScript module plus `ui/recoup/preview.html`. No runtime CDN for scripts or fonts.

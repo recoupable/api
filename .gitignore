@@ -49,3 +49,5 @@ supabase/.temp/
 
 /ui/recoup/host.html
 /ui/recoup/host.js
+
+/ui/recoup/node_modules/
