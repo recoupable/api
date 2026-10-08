@@ -6,7 +6,10 @@ import { z } from "zod";
 
 export const createArtistBodySchema = z.object({
   name: z.string({ message: "name is required" }).min(1, "name cannot be empty"),
-  spotify_artist_id: z.string().min(1, "spotify_artist_id cannot be empty").optional(),
+  spotify_artist_id: z
+    .string()
+    .regex(/^[A-Za-z0-9]{22}$/, "spotify_artist_id must be an exact Spotify artist ID")
+    .optional(),
   account_id: z.uuid({ message: "account_id must be a valid UUID" }).optional(),
   organization_id: z.uuid({ message: "organization_id must be a valid UUID" }).optional(),
 });

@@ -1,3 +1,4 @@
+import { ArtistOnboardingError } from "@/lib/artists/ArtistOnboardingError";
 import { NextRequest, NextResponse, after } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
@@ -153,8 +154,12 @@ export async function runValuationHandler(request: NextRequest): Promise<NextRes
         });
       }
     } catch (error) {
-      console.error("Roster attach failed for valuation:", error);
-      rosterAttachError = error instanceof Error ? error.message : String(error);
+      if (error instanceof ArtistOnboardingError && error.committedArtistId) {
+        rosterArtistId = error.committedArtistId;
+      } else {
+        console.error("Roster attach failed for valuation:", error);
+        rosterAttachError = error instanceof Error ? error.message : String(error);
+      }
     }
 
     // 5. Value it — same model as GET /catalogs/{id}/measurements.

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
+import { ArtistOnboardingError } from "../ArtistOnboardingError";
 import { createArtistPostHandler } from "../createArtistPostHandler";
 
 const mockResolveOrCreateArtist = vi.fn();
@@ -222,5 +223,13 @@ describe("createArtistPostHandler", () => {
     expect(mockResolveOrCreateArtist).toHaveBeenCalledWith(
       expect.objectContaining({ spotifyArtistId: "0xPoVNPnxIIUS1vrxAYV00" }),
     );
+  });
+  it.each([403, 409, 503])("preserves actionable onboarding status %s", async status => {
+    mockResolveOrCreateArtist.mockRejectedValue(
+      new ArtistOnboardingError("Retry or resolve access", status),
+    );
+    const response = await createArtistPostHandler(createRequest({ name: "Artist" }));
+    expect(response.status).toBe(status);
+    expect(await response.json()).toEqual({ status: "error", error: "Retry or resolve access" });
   });
 });

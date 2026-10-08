@@ -1,3 +1,4 @@
+import { ArtistOnboardingError } from "@/lib/artists/ArtistOnboardingError";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse, after } from "next/server";
 
@@ -238,6 +239,21 @@ describe("runValuationHandler", () => {
       );
       expect(captureValuationLead).toHaveBeenCalledWith(
         expect.objectContaining({ rosterArtistId: "canonical-2" }),
+      );
+    });
+
+    it("preserves a committed roster identity when only the profile readback fails", async () => {
+      happyPath();
+      withArtist();
+      vi.mocked(attachCanonicalArtistToAccount).mockResolvedValue(null);
+      vi.mocked(resolveOrCreateArtist).mockRejectedValue(
+        new ArtistOnboardingError("Read unavailable", 503, "canonical-2"),
+      );
+      const res = await runValuationHandler(makeRequest());
+      await flushAfter();
+      expect(res.status).toBe(200);
+      expect(captureValuationLead).toHaveBeenCalledWith(
+        expect.objectContaining({ rosterArtistId: "canonical-2", rosterAttachError: undefined }),
       );
     });
 
