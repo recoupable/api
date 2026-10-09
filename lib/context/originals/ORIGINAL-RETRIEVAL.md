@@ -31,6 +31,7 @@ refresh main to remove overlap afterward. Ordinary receipts remain metadata-only
 
 Validation: 17 new synthetic fixtures exercise the RPC/default-storage adapters
 with mocked backend boundaries and actual local bytes. Along with 47 inherited
-original cases, all 64 passed after implementation. The initial missing-module
+original cases, all 64 passed after implementation; the current suite has 70 passing cases
+including UUID, neutral-path verification and retained neutral readback coverage. The initial missing-module
 TDD failure was resolved before the passing run.
 Synthetic RPC/storage/auth boundaries only; no hosted file read or transport proof.

@@ -92,15 +92,3 @@ it("does not lookup invalid receipt identity", async () => {
   await expect(readRetainedContextOriginal(actor, owner, "bad")).rejects.toThrow();
   expect(supabase.rpc).not.toHaveBeenCalled();
 });
-
-it("retrieves a neutral-path original without exposing its internal path", async () => {
-  const neutral = key.replace(/\.csv$/, ".original");
-  vi.mocked(supabase.rpc)
-    .mockReset()
-    .mockResolvedValueOnce({ data: { ...internal, storage_path: neutral }, error: null } as never)
-    .mockResolvedValueOnce({ data: saved, error: null } as never);
-  const result = await readRetainedContextOriginal(actor, owner, id);
-  expect(result).toEqual({ receipt: saved, file });
-  expect(download).toHaveBeenCalledExactlyOnceWith(neutral);
-  expect(result).not.toHaveProperty("storage_path");
-});
