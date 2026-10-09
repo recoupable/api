@@ -45,6 +45,9 @@ export function registerFullOAuthTools(
       for (const option of config.inputSchema.options) {
         if (!(option instanceof z.ZodObject)) throw new Error("Invalid context operation schema");
         const action = option.shape.action.value as keyof typeof contextToolOperations;
+        // This combined read includes the same professional records excluded above.
+        // Keep that delegated-access boundary until the organization-grant audit completes.
+        if (action === "read_company_baseline") continue;
         const metadata = contextToolOperations[action];
         if (!metadata) throw new Error(`Missing delegated context policy for ${action}`);
         register(

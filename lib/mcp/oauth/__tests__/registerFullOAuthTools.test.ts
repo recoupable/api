@@ -17,6 +17,10 @@ vi.mock("../../tools", () => ({
       "context",
       {
         inputSchema: z.discriminatedUnion("action", [
+          z.strictObject({
+            action: z.literal("read_company_baseline"),
+            organization_id: z.string(),
+          }),
           z.strictObject({ action: z.literal("read"), request_id: z.string() }),
           z.strictObject({
             action: z.literal("save_brief"),
