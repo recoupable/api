@@ -10,8 +10,8 @@ export async function verifyContextOriginal(
   key: string,
   load: (key: string) => Promise<Blob> = getContextOriginalFile,
 ) {
-  z.string().uuid().parse(actor);
-  z.string().uuid().parse(owner);
+  actor = z.string().uuid().parse(actor).toLowerCase();
+  owner = z.string().uuid().parse(owner).toLowerCase();
   const match = new RegExp(`^${owner}/context-originals/([a-f0-9-]{36})\\.(pdf|csv)$`).exec(key);
   if (!match || !z.string().uuid().safeParse(match[1]).success)
     throw new Error("Original must belong to the selected workspace");
