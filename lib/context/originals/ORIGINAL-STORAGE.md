@@ -39,7 +39,7 @@ Depends on separately pending API986/987/989 and Database94. Reviewed API depend
 commits are included until their releases; refresh main afterward. Nothing is
 merged/deployed/live-verified by this engineering slice.
 
-Validation: 99 current synthetic original cases, including neutral-path coverage,
+Validation: 103 current synthetic original/route cases, including neutral-path and preflight coverage,
 full lint/scoped TypeScript/format/diff. Initial missing-module TDD failures were resolved before the passing run. Tests are synthetic, including upload errors, lost register ack,
 explicit no-upload replay, changed bytes, revoked scope and a simulated raw storage
 mutation. No hosted upload, customer bytes, storage deletion or production fault.

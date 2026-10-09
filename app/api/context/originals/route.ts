@@ -7,7 +7,9 @@ import { readBoundedOriginalStream } from "@/lib/context/originals/readBoundedOr
 import { storeContextOriginal } from "@/lib/context/originals/storeContextOriginal";
 import { reconcileContextOriginal } from "@/lib/context/originals/reconcileContextOriginal";
 import { ContextOriginalNeedsReconciliation } from "@/lib/context/originals/ContextOriginalNeedsReconciliation";
-const headers = { "Cache-Control": "private, no-store" };
+import { getOriginalIntakeHeaders } from "@/lib/context/originals/getOriginalIntakeHeaders";
+export { handleOriginalIntakePreflight as OPTIONS } from "@/lib/context/originals/handleOriginalIntakePreflight";
+const headers = getOriginalIntakeHeaders();
 /**
  * Disabled pilot for raw private PDF/CSV bytes and explicit reconciliation.
  *
@@ -30,7 +32,7 @@ export async function POST(request: NextRequest) {
   }
   const auth = await validateAuthContext(request, { organizationId: parsed.organizationId });
   if (auth instanceof NextResponse) {
-    auth.headers.set("Cache-Control", "private, no-store");
+    for (const [name, value] of Object.entries(headers)) auth.headers.set(name, value);
     return auth;
   }
   const owner = auth.orgId ?? auth.accountId;

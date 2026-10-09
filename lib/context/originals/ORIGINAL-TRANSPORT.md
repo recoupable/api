@@ -29,17 +29,23 @@ uncertainty returns 409 needs_reconciliation without paths/internal cause/IDs.
 The caller retains the original source/work key and explicitly selects reconcile;
 it never allocates a new key or blindly retries/deletes. Body-read cancellation
 and pre-dispatch rejection are distinct from uncertain downstream outcomes.
-Responses are private/no-store. No binary read route, preflight/browser UI,
+Responses are private/no-store. No binary read route or browser UI,
 signed capabilities or parsing. Actual transport authentication, end-to-end
 storage/RPC integration and hosted behavior remain unverified: route fixtures
 mock the auth/domain boundary; inherited flow tests exercise real adapters with
 synthetic Supabase storage/RPC. They are not real hosted customer operations.
 
 Activation gates: dependencies separately reviewed/approved/released, distributed
-concurrency/storage budget and retained/orphan lifecycle, browser preflight if
-needed, private retrieval/delivery contract, and authenticated complete write/read/
+concurrency/storage budget and retained/orphan lifecycle, hosted browser validation, private retrieval/delivery contract, and authenticated complete write/read/
 recovery verification. No upload, customer document, billing/provider call or
 production mutation occurred. Refresh included dependency commits after release.
 Vercel's documented function payload limit is 4.5MB; 4MiB is below that. Internal
 50MiB preparation remains capacity support, not a client transport promise.
 https://vercel.com/docs/functions/limitations
+
+OPTIONS is gated by the same disabled pilot flag. When enabled it advertises only
+POST/OPTIONS, the existing explicit token/API-key request headers, and readable
+Retry-After. Unsupported methods/custom headers are rejected. It performs no
+authentication, admission or body/storage operation. All POST responses include
+private/no-store CORS headers with no credentialed browser access. This is synthetic
+route coverage, not a hosted browser upload or activation.
