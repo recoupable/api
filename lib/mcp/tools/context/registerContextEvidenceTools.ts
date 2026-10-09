@@ -7,32 +7,39 @@ import { handleContextToolOperation } from "./handleContextToolOperation";
 
 /** Object schemas make unpaid evidence operations discoverable to standard MCP clients. */
 export function registerContextEvidenceTools(server: McpServer) {
-  for (const operation of evidenceAttachmentOperationSchemas) {
+  const prepare = (operation: (typeof evidenceAttachmentOperationSchemas)[number]) => {
     const action = operation.shape.action.value;
     const metadata = contextToolOperations[action];
     const inputSchema = (operation as z.ZodObject).omit({ action: true });
-    server.registerTool(
-      metadata.name,
-      {
-        description: metadata.description,
-        inputSchema,
-        annotations: {
-          readOnlyHint: metadata.readOnly,
-          destructiveHint: false,
-          openWorldHint: false,
-        },
+    const config = {
+      description: metadata.description,
+      inputSchema,
+      annotations: {
+        readOnlyHint: metadata.readOnly,
+        destructiveHint: false,
+        openWorldHint: false,
       },
-      async (raw, extra) => {
-        try {
-          const args = inputSchema.parse(raw);
-          return await handleContextToolOperation({ ...args, action }, extra);
-        } catch {
-          return {
-            ...getToolResultError("Invalid evidence arguments. Check the tool schema."),
-            isError: true,
-          };
-        }
-      },
-    );
-  }
+    };
+    const handler = async (
+      raw: unknown,
+      extra: Parameters<typeof handleContextToolOperation>[1],
+    ) => {
+      try {
+        const args = inputSchema.parse(raw);
+        return await handleContextToolOperation({ ...args, action }, extra);
+      } catch {
+        return {
+          ...getToolResultError("Invalid evidence arguments. Check the tool schema."),
+          isError: true,
+        };
+      }
+    };
+    return { config, handler };
+  };
+  const attach = prepare(evidenceAttachmentOperationSchemas[0]);
+  const read = prepare(evidenceAttachmentOperationSchemas[1]);
+  const list = prepare(evidenceAttachmentOperationSchemas[2]);
+  server.registerTool("attach_music_evidence", attach.config, attach.handler);
+  server.registerTool("read_music_evidence_attachment", read.config, read.handler);
+  server.registerTool("list_music_evidence_attachments", list.config, list.handler);
 }
