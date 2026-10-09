@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { getContextOriginalFile } from "@/lib/supabase/storage/getContextOriginalFile";
 const { fetchMock } = vi.hoisted(() => ({ fetchMock: vi.fn() }));
 vi.mock("@/lib/supabase/serverClient", async () => {
@@ -9,7 +9,17 @@ vi.mock("@/lib/supabase/serverClient", async () => {
     }),
   };
 });
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.stubEnv("SUPABASE_URL", "https://storage.example.test");
+  vi.stubEnv("SUPABASE_KEY", "synthetic-key");
+  vi.stubGlobal("fetch", fetchMock);
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 it("uses the installed SDK streaming path without materializing the HTTP Blob", async () => {
   const response = new Response("title,isrc\nSong,TEST\n");
   const blob = vi.spyOn(response, "blob");
@@ -48,6 +58,50 @@ it("redacts a failed storage HTTP response", async () => {
     new Response(JSON.stringify({ message: "secret backend" }), { status: 403 }),
   );
   await expect(getContextOriginalFile("object.original", 32)).rejects.toThrow(
-    "Private original unavailable",
+    /^Private original unavailable$/,
   );
+});
+
+it("aborts a stalled header request at the download deadline", async () => {
+  vi.useFakeTimers();
+  fetchMock.mockImplementation(
+    (_url, options) =>
+      new Promise((_resolve, reject) =>
+        options?.signal?.addEventListener("abort", () => reject(new Error("aborted"))),
+      ),
+  );
+  const result = getContextOriginalFile("object.original", 32);
+  void result.catch(() => {});
+  await vi.advanceTimersByTimeAsync(30001);
+  try {
+    expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
+    await expect(result).rejects.toThrow(/^Private original unavailable$/);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+it("returns on deadline even when header transport ignores abort", async () => {
+  vi.useFakeTimers();
+  fetchMock.mockImplementation(() => new Promise(() => {}));
+  const rejected = expect(getContextOriginalFile("object.original", 32)).rejects.toThrow(
+    /^Private original unavailable$/,
+  );
+  await vi.advanceTimersByTimeAsync(30001);
+  await rejected;
+});
+it("shares one deadline across delayed headers and stalled body", async () => {
+  vi.useFakeTimers();
+  const cancel = vi.fn();
+  fetchMock.mockImplementation(
+    () =>
+      new Promise(resolve =>
+        setTimeout(() => resolve(new Response(new ReadableStream({ cancel }))), 20000),
+      ),
+  );
+  const rejected = expect(getContextOriginalFile("object.original", 32)).rejects.toThrow(
+    "disconnected",
+  );
+  await vi.advanceTimersByTimeAsync(30001);
+  await rejected;
+  expect(cancel).toHaveBeenCalledOnce();
 });

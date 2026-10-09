@@ -19,3 +19,7 @@ it("retrieves a neutral-path original without exposing its internal path", async
   expect(download).toHaveBeenCalledExactlyOnceWith(neutral);
   expect(result).not.toHaveProperty("storage_path");
 });
+
+vi.mock("@/lib/supabase/storage/getContextOriginalDownload", () => ({
+  getContextOriginalDownload: (key: string) => from("context-private").download(key).asStream(),
+}));

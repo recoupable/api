@@ -10,7 +10,7 @@ export const saved = {
 };
 export const internal = { ...saved, bucket: "context-private", storage_path: key };
 const response = vi.fn();
-export const download = vi.fn(() => ({
+export const download = vi.fn((_key: string) => ({
   asStream: async () => {
     const result = await response();
     return { ...result, data: result.data?.stream() };

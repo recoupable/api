@@ -31,5 +31,6 @@ Do not automatically migrate or reupload historical objects. Intake is not activ
 The server-only retained reader accepts a trusted optional maximum byte size. It
 rejects oversized receipt metadata before storage download and checks Blob size
 afterward. It uses the installed SDK stream and existing bounded reader before Blob creation.
-Upstream allocation, response-header wait and concurrency remain unbounded here.
-All 95 local original fixture cases pass; this branch exposes no HTTP route or signed capability.
+Upstream allocation, concurrency remain unbounded here. Headers and body share a scoped, abortable
+30-second download deadline.
+All 98 local original fixture cases pass; this branch exposes no HTTP route or signed capability.

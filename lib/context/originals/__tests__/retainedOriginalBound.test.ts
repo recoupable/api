@@ -40,3 +40,7 @@ it("withholds a storage replacement exceeding the bound", async () => {
   expect(arrayBuffer).not.toHaveBeenCalled();
   arrayBuffer.mockRestore();
 });
+
+vi.mock("@/lib/supabase/storage/getContextOriginalDownload", () => ({
+  getContextOriginalDownload: (key: string) => from("context-private").download(key).asStream(),
+}));

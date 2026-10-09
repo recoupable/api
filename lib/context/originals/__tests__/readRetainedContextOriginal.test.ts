@@ -92,3 +92,7 @@ it("does not lookup invalid receipt identity", async () => {
   await expect(readRetainedContextOriginal(actor, owner, "bad")).rejects.toThrow();
   expect(supabase.rpc).not.toHaveBeenCalled();
 });
+
+vi.mock("@/lib/supabase/storage/getContextOriginalDownload", () => ({
+  getContextOriginalDownload: (key: string) => from("context-private").download(key).asStream(),
+}));
