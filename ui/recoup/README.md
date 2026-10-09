@@ -1,4 +1,4 @@
-# Recoup Explore extension
+# Recoup extension
 
 A real MCP Apps UI served by the existing authenticated `/mcp` route. The `open_recoup` tool exposes OpenAI global/sidebar and thread entrypoints and a standard MCP Apps resource for other compatible hosts. Its library is public product information; it does not expose account data or change tool authorization.
 
@@ -25,7 +25,7 @@ The 24 Higgsfield films are referenced by their HTTPS URLs; they are concept pre
 
 1. Connect the deployed `/mcp` endpoint with normal Recoup OAuth, or refresh an existing connection's tool metadata.
 2. Confirm `open_recoup`, `ui://recoup/explore.html`, and both global/thread entrypoints are discovered.
-3. Open Recoup Explore from the sidebar and a conversation panel. Check light/dark and narrow widths, video playback/pause, reduced motion, keyboard navigation, search and the brief dialog.
+3. Open Recoup from the sidebar and a conversation panel. Check light/dark and narrow widths, video playback/pause, reduced motion, keyboard navigation, search and the brief dialog.
 4. Send a harmless brief. Verify it reaches the correct conversation and the agent resolves the intended installed skill. Check a send failure retains the brief and offers copying.
 5. Exercise a real authorized workflow with the required inputs and verify its actual output. Gallery handoff alone is not end-to-end generation verification.
 

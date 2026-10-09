@@ -5,7 +5,7 @@ import html from "./generated-ui";
 export function registerRecoupExtension(server: McpServer) {
   const uri = "ui://recoup/explore.html";
   server.registerResource(
-    "Recoup Explore",
+    "Recoup",
     uri,
     { mimeType: "text/html;profile=mcp-app" },
     async () => ({
@@ -33,7 +33,7 @@ export function registerRecoupExtension(server: McpServer) {
   server.registerTool(
     "open_recoup",
     {
-      title: "Recoup Explore",
+      title: "Recoup",
       description:
         "Open Recoup's visual music workflow library. Explore release planning, cover art, fan experiences, lyric videos, song hooks and artist research, then start a brief in the conversation.",
       inputSchema: {},
