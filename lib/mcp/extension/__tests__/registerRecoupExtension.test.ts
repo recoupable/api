@@ -1,4 +1,4 @@
-import { recoupIcons } from "../../recoupIcons";
+import { createRecoupServerInfo } from "../../createRecoupServerInfo";
 import { describe, it, expect } from "vitest";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -7,7 +7,7 @@ import { registerRecoupExtension } from "../registerRecoupExtension";
 
 describe("Recoup extension protocol", () => {
   it("discovers sidebar and conversation entrypoints and serves a self-contained UI", async () => {
-    const server = new McpServer({ name: "test", version: "1", icons: recoupIcons });
+    const server = new McpServer(createRecoupServerInfo("1"));
     registerRecoupExtension(server);
     const client = new Client({ name: "test", version: "1" });
     const [a, b] = InMemoryTransport.createLinkedPair();
