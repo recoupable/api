@@ -54,3 +54,16 @@ it("withholds a receipt if raw storage changes between precheck and registration
   expect(supabase.rpc).toHaveBeenCalledTimes(1);
   expect(remove).not.toHaveBeenCalled();
 });
+
+it("disconnect during pre-write authorization prevents upload", async () => {
+  const c = new AbortController();
+  vi.mocked(authorizeContextOwner).mockImplementation(async () => {
+    c.abort();
+    return { accountId: actor, ownerId: owner, organizationId: owner };
+  });
+  await expect(storeContextOriginal(actor, owner, input, stream(), c.signal)).rejects.toThrow(
+    "disconnected",
+  );
+  expect(upload).not.toHaveBeenCalled();
+  expect(supabase.rpc).not.toHaveBeenCalled();
+});

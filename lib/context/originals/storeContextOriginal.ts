@@ -12,12 +12,14 @@ export async function storeContextOriginal(
   owner: string,
   input: unknown,
   stream: ReadableStream<Uint8Array>,
+  signal?: AbortSignal,
 ) {
   actor = z.string().uuid().parse(actor).toLowerCase();
   owner = z.string().uuid().parse(owner).toLowerCase();
   const parsed = contextOriginalPreparationSchema.parse(input);
   const prepared = await prepareContextOriginal(actor, owner, parsed, stream);
   await authorizeContextOwner(actor, owner === actor ? undefined : owner);
+  if (signal?.aborted) throw new Error("Original request disconnected");
   try {
     await insertContextOriginalFile(prepared.key, prepared.file, prepared.mediaType);
     return await registerPreparedContextOriginal(
