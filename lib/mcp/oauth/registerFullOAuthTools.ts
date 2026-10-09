@@ -39,6 +39,13 @@ export function registerFullOAuthTools(
     // remain excluded until their delegated organization-grant audit is complete.
     if (["get_api_key", "list_professional_roster", "confirm_professional_roster"].includes(name))
       return;
+    if (
+      Object.values(contextToolOperations).some(
+        metadata =>
+          "delegated" in metadata && metadata.delegated === false && metadata.name === name,
+      )
+    )
+      return;
     if (name === "context" && !operation) {
       if (!(config.inputSchema instanceof z.ZodDiscriminatedUnion))
         throw new Error("Context operations must have individually discoverable schemas");
@@ -47,6 +54,9 @@ export function registerFullOAuthTools(
         const action = option.shape.action.value as keyof typeof contextToolOperations;
         const metadata = contextToolOperations[action];
         if (!metadata) throw new Error(`Missing delegated context policy for ${action}`);
+        // Evidence receipts may include organization professionals; keep them
+        // private to standard Context until delegated organization grants are audited.
+        if ("delegated" in metadata && metadata.delegated === false) continue;
         register(
           name,
           { ...config, description: metadata.description, inputSchema: option },

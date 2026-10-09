@@ -33,12 +33,29 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
         ),
         "get_daily_email_status",
         "set_daily_email_status",
-        ...Object.values(contextToolOperations).map(operation => operation.name),
+        ...Object.entries(contextToolOperations)
+          .filter(
+            ([action]) =>
+              ![
+                "attach_evidence",
+                "read_evidence_attachment",
+                "list_evidence_attachments",
+              ].includes(action),
+          )
+          .map(([, operation]) => operation.name),
       ].sort(),
     );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
     expect(tools).toHaveLength(77);
-    for (const operation of Object.values(contextToolOperations)) {
+    for (const [action, operation] of Object.entries(contextToolOperations)) {
+      if (
+        ["attach_evidence", "read_evidence_attachment", "list_evidence_attachments"].includes(
+          action,
+        )
+      ) {
+        expect(tools.map(tool => tool.name)).not.toContain(operation.name);
+        continue;
+      }
       const tool = tools.find(tool => tool.name === operation.name)!;
       expect(Object.keys(tool.inputSchema.properties ?? {}).length).toBeGreaterThan(0);
       expect(tool.inputSchema.properties).not.toHaveProperty("action");
