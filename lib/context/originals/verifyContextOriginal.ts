@@ -1,3 +1,4 @@
+import { CONTEXT_PRIVATE_BUCKET } from "@/lib/supabase/storage/const";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { authorizeContextOwner } from "../authorizeContextOwner";
@@ -34,7 +35,7 @@ export async function verifyContextOriginal(
   }
   await authorizeContextOwner(actor, owner === actor ? undefined : owner);
   return {
-    bucket: "context-private" as const,
+    bucket: CONTEXT_PRIVATE_BUCKET,
     key,
     sha256: createHash("sha256").update(bytes).digest("hex"),
     bytes: bytes.length,

@@ -1,3 +1,4 @@
+import { originalStorageFlowStream as stream } from "./originalStorageFlowStream";
 import { createHash } from "node:crypto";
 import { beforeEach, expect, it, vi } from "vitest";
 import { storeContextOriginal } from "../storeContextOriginal";
@@ -13,7 +14,6 @@ import {
   upload,
   download,
   remove,
-  stream,
   resetStorageFlow,
 } from "./originalStorageFlowFixture";
 vi.mock("../../authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));

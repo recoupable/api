@@ -1,6 +1,7 @@
 # Private original verification prerequisite
 
-`verifyContextOriginal` is an unused server-side helper. It authorizes the actor's
+`verifyContextOriginal` is used by preparation and registration server flows;
+those flows are not connected to public HTTP/MCP on this branch. It authorizes the actor's
 workspace before and after reading a canonical owner/UUID PDF or CSV key from
 `context-private`, derives SHA-256 and byte size from the actual stored bytes,
 and rejects empty or over-50-MiB files. The service storage utility itself does
