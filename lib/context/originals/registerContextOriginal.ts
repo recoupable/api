@@ -6,7 +6,10 @@ import { ContextOriginalNeedsReconciliation } from "./ContextOriginalNeedsReconc
 
 const inputSchema = z
   .object({
-    sourceId: z.string().uuid(),
+    sourceId: z
+      .string()
+      .uuid()
+      .transform(value => value.toLowerCase()),
     idempotencyKey: z.string().regex(/^[A-Za-z0-9._:-]{1,128}$/),
     fileKey: z.string().min(1),
   })
@@ -14,6 +17,8 @@ const inputSchema = z
 
 /** Unused server adapter: verify private bytes before retaining their scoped version receipt. */
 export async function registerContextOriginal(actor: string, owner: string, input: unknown) {
+  actor = z.string().uuid().parse(actor).toLowerCase();
+  owner = z.string().uuid().parse(owner).toLowerCase();
   const parsed = inputSchema.parse(input);
   const verified = await verifyContextOriginal(actor, owner, parsed.fileKey);
   try {

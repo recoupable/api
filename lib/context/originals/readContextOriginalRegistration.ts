@@ -5,9 +5,9 @@ import { contextOriginalReceiptSchema } from "./contextOriginalReceiptSchema";
 
 /** Read retained metadata only; SQL rechecks current access and withdrawal. */
 export async function readContextOriginalRegistration(actor: string, owner: string, id: string) {
-  z.string().uuid().parse(actor);
-  z.string().uuid().parse(owner);
-  z.string().uuid().parse(id);
+  actor = z.string().uuid().parse(actor).toLowerCase();
+  owner = z.string().uuid().parse(owner).toLowerCase();
+  id = z.string().uuid().parse(id).toLowerCase();
   await authorizeContextOwner(actor, owner === actor ? undefined : owner);
   const raw = await callContextRpc("read_context_original_registration", {
     p_actor: actor,
