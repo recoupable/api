@@ -1,4 +1,6 @@
 import { releaseCaseOperationSchemas } from "./releaseCaseOperationSchemas";
+import { evidenceAttachmentOperationSchemas } from "./evidenceAttachmentSchemas";
+import { processEvidenceAttachmentOperation } from "./processEvidenceAttachmentOperation";
 import { processReleaseCaseOperation } from "./processReleaseCaseOperation";
 import { createHash } from "node:crypto";
 import { z } from "zod";
@@ -19,6 +21,7 @@ const briefFields = {
 };
 
 export const contextOperationSchema = z.discriminatedUnion("action", [
+  ...evidenceAttachmentOperationSchemas,
   ...releaseCaseOperationSchemas,
   z.strictObject({
     action: z.literal("save_brief"),
@@ -192,6 +195,12 @@ export async function processContextOperation(
     accountId,
     args.organization_id,
   );
+  if (
+    args.action === "attach_evidence" ||
+    args.action === "read_evidence_attachment" ||
+    args.action === "list_evidence_attachments"
+  )
+    return processEvidenceAttachmentOperation(accountId, ownerId, args, deps.rpc);
   if (
     args.action === "list_release_cases" ||
     args.action === "read_release_case" ||

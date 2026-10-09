@@ -20,6 +20,15 @@
     "authorizationWork": "Bind account and requested resources to the selected grant context; enforce scopes, current access, and redacted errors at execution. Verify billing owner, entitlement, credit checks, and bounded retry behavior before starting provider work."
   },
   {
+    "name": "attach_music_evidence",
+    "file": "lib/mcp/tools/context/registerContextEvidenceTools.ts",
+    "scopes": [
+      "mcp:write"
+    ],
+    "status": "excluded until delegated organization-grant audit",
+    "authorizationWork": "Keep excluded from delegated OAuth, including generic Context action expansion. Before enablement bind the authenticated actor, selected owner, retained source version and every typed target to current organization grants on writes and exact-key retries. Linking evidence grants no identity, rights, mandate or paid execution authority."
+  },
+  {
     "name": "compact_chats",
     "file": "lib/mcp/tools/chats/registerCompactChatsTool.ts",
     "scopes": [
@@ -305,6 +314,15 @@
     "authorizationWork": "Bind account and requested resources to the selected grant context; enforce scopes, current access, and redacted errors at execution. Check every catalog owner against the grant; a catalog ID is not authorization."
   },
   {
+    "name": "list_music_evidence_attachments",
+    "file": "lib/mcp/tools/context/registerContextEvidenceTools.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "excluded until delegated organization-grant audit",
+    "authorizationWork": "Keep excluded from delegated OAuth, including generic Context action expansion. Before enablement bind the authenticated actor, selected owner, source version and cursor to current organization grants on every page; withhold inaccessible receipts while preserving bounded cursor progress. Listing grants no write or paid execution authority."
+  },
+  {
     "name": "list_professional_roster",
     "file": "lib/mcp/tools/artists/registerProfessionalRosterTools.ts",
     "scopes": [
@@ -341,6 +359,15 @@
     ],
     "status": "requires OAuth execution audit before enablement",
     "authorizationWork": "Bind account and requested resources to the selected grant context; enforce scopes, current access, and redacted errors at execution. Preserve shared site domain access checks, revision guards, and grant-bound org context; require the relevant destructive/publication policy."
+  },
+  {
+    "name": "read_music_evidence_attachment",
+    "file": "lib/mcp/tools/context/registerContextEvidenceTools.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "excluded until delegated organization-grant audit",
+    "authorizationWork": "Keep excluded from delegated OAuth, including generic Context action expansion. Before enablement recheck current organization grants for the authenticated actor, receipt owner, retained source version and every linked target on each read; withhold withdrawn or inaccessible evidence. Reading a receipt grants no authority to modify evidence or act on rights."
   },
   {
     "name": "retrieve_sora_2_video",

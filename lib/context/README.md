@@ -26,6 +26,8 @@ Part of recoupable/app#2116. Spotify metadata now flows through shared authentic
 
 Account identity always comes from authentication. Both transports use the same authorization. Background execution rechecks access before acceptance. Private context never becomes public Site content automatically.
 
+See [retained evidence associations](EVIDENCE-ASSOCIATIONS.md) for the version-specific linking contract and release prerequisites.
+
 ## Persistence and identity
 
 Companion database migrations: `20260920010000_context_foundation.sql` and `20260920020000_context_spotify_pipeline.sql`.
