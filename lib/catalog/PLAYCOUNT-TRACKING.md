@@ -78,9 +78,10 @@ private owning project; access here is not permission to ingest it.
 - [Spotify for Artists exports](https://support.spotify.com/au/artists/article/exporting-data/)
   support downloaded CSV stats. [Update documentation](https://support.spotify.com/kh/artists/article/when-stats-update/)
   specifies UTC days and approximate daily publication at 21:00 UTC. Authorized exports
-  are the supported fallback for precise source-reported analytics. An actual sample,
-  metric/period/granularity, provider identities, territory and access must be verified
-  before implementing a format-specific private importer; do not invent its CSV schema.
+  are the supported fallback for precise source-reported analytics. Authorized native
+  exports were verified on October 9; see the adapter section below. Browser access
+  enables a local export, not an unattended server analytics API. Refreshing this source
+  requires another export until a supported provider/distributor feed is connected.
 - The existing [Beat Analytics actor](https://apify.com/beatanalytics/spotify-play-count-scraper)
   claims cumulative public counts and album batching. Its current listed price is
   $4/1,000 input URLs, versus $3/1,000 in the code's estimate. For A album URLs and
@@ -103,7 +104,7 @@ existing foundations, but universal exact daily Spotify stream coverage is not
 established. Public totals cannot supply listeners/saves or exact calendar-day
 streams. Use verified authorized artist/distributor exports for source-reported
 analytics; keep that private metric separate from public observed counter changes.
-No specific small-count recording or campaign uplift has been verified here.
+No low-count public scraper response or campaign uplift has been verified here.
 
 ## Proposed collection architecture — not implemented or activated
 
@@ -143,9 +144,38 @@ No specific small-count recording or campaign uplift has been verified here.
    counter deltas retain observation spans. Zero baselines and negative corrections
    stay explicit. No unsupported causal attribution to marketing/website clicks.
 
-Next source-dependent slice: verify an authorized analytics export and its format,
-then add private versioned import/reads in coordination with Context evidence work.
+Native export formats are now verified and parsed locally (see below). The next slice
+is private versioned import/reads in coordination with Context evidence work.
 After provider/access/cost approval, add inactive durable subscriptions/claim migration,
 workflow receipts and catalog UI, then release only with separate migration/merge
 approval and actual authenticated readback. This PR is a useful read slice, not completion
 of daily organization-wide collection or a second live-customer deployment.
+
+## Native analytics adapter — tested locally, not a hosted importer
+
+`parseSpotifyAnalyticsTimeline` supports the verified song `date,streams` and audience
+`date,listeners,monthly listeners,monthly active listeners,super listeners,streams,playlist adds,saves,followers`
+timeline headers. It extracts daily streams only, hashes original UTF-8 content for
+version identity, preserves zeros and gaps, and rejects unknown schemas, duplicate or
+invalid dates, thresholded/negative/unsafe counts, malformed rows and oversized files.
+It deliberately does not support arbitrary CSV dialects or the period-total song table.
+The native exports can cover more dates than the visible selected chart range.
+
+`compareSpotifyDailyStreams` sums two adjacent equal UTC periods, independently of
+the cumulative-counter comparison. Missing, duplicate, invalid or unfinished days and
+unsafe totals suppress growth. A zero baseline has no percentage. Completed calendar
+dates do not prove provider freshness. Unique listeners/monthly audience are not summed.
+
+CSV rows lack provider IDs, scope, retrieval time and upstream update time. Caller-owned
+private manifests must retain verified artist/track identities, export scope, source URL,
+retrieval time and source hash. Never infer track identity from titles or filenames. Each
+changed export is a distinct version, not an overwrite of observations. Leading zeros
+before a release do not establish historical availability or catalog membership.
+
+The adapter and daily comparator were exercised against authorized private files locally;
+those files, identities and figures are excluded from source and fixtures. They do not
+write Supabase, offer an upload endpoint, authorize access or activate jobs. Next: integrate
+authenticated, catalog-scoped, versioned private import/storage and readback with the
+Context evidence work. Automatic collection additionally needs a supported source feed,
+verified entitlement/cost and durable subscription/run storage. CSV is an interim source,
+not the intended permanent manual-refresh product workflow.
