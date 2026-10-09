@@ -55,6 +55,10 @@ it("denies initial scope loss and revocation during the file read", async () => 
     .mockResolvedValueOnce({ accountId: actor, ownerId: owner, organizationId: owner })
     .mockRejectedValueOnce(new Error("revoked"));
   await expect(verifyContextOriginal(actor, owner, key, load)).rejects.toThrow("revoked");
+  expect(load).toHaveBeenCalledExactlyOnceWith(key);
+  const order = vi.mocked(authorizeContextOwner).mock.invocationCallOrder;
+  expect(order[1]).toBeLessThan(load.mock.invocationCallOrder[0]);
+  expect(load.mock.invocationCallOrder[0]).toBeLessThan(order[2]);
 });
 it.each([
   new Blob([]),
