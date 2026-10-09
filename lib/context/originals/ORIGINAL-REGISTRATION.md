@@ -29,5 +29,11 @@ retrieval and attachment readback are still required before customer intake.
 Registration is a customer assertion, never an accepted enrichment, identity,
 rights or mandate decision. It reuses existing sources/versions and private storage.
 
-Validation: 25 new real-adapter tests plus 18 verifier/storage tests. Supabase RPC
+The storage object UUID and database-generated source version UUID are distinct.
+Receipts validate the version UUID format, not equality with the object key.
+Recovery identifiers remain readable internally but non-enumerable and immutable;
+generic JSON/spread serialization does not disclose them. UUID inputs normalize
+to lowercase before authorization, dispatch and scope comparisons.
+
+Validation: 29 new real-adapter tests plus 18 verifier/storage tests. Supabase RPC
 and storage boundaries use synthetic fixtures; no hosted operation is exercised.

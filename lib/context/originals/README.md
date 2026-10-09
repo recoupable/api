@@ -12,10 +12,10 @@ Neither check is a malware scan, document extraction, credit/rights verification
 or signature validation. Original CSV formulas/content are preserved; later
 rendering/export must treat them as untrusted data.
 
-No endpoint, MCP tool, upload, source/version registration, persisted receipt,
-parsing, signed download or customer intake is introduced. The Blob download
-completes before its size is checked; this is not a streaming network/memory cap.
-A future staged-upload/registration flow must enforce acquisition limits and
-immutable/version-bound storage, handle orphans, retain byte fingerprints, and
-recheck current scope/withdrawal before original retrieval. This helper does not
-accept caller-provided digests as verification or create accepted analysis.
+No endpoint, MCP tool, upload, parsing, signed download or customer intake is introduced.
+Separate unused server adapters now register and read scoped source/version receipts;
+see [the registration boundary](./ORIGINAL-REGISTRATION.md).
+The Blob download completes before its size is checked; this is not a streaming
+network/memory cap. Future acquisition must enforce bounded immutable storage and
+handle orphans; current-access original retrieval remains required. This helper
+never accepts caller digests as verification or creates accepted analysis.
