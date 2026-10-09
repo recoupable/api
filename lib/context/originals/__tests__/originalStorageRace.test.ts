@@ -50,7 +50,7 @@ it("withholds a receipt if raw storage changes between precheck and registration
   } as never);
   const error = await storeContextOriginal(actor, owner, input, stream()).catch(e => e);
   expect(error).toBeInstanceOf(ContextOriginalNeedsReconciliation);
-  expect(error.cause.message).toBe("Original changed during registration");
-  expect(supabase.rpc).toHaveBeenCalledTimes(1);
+  expect(error.cause.message).toBe("Original changed before registration");
+  expect(supabase.rpc).not.toHaveBeenCalled();
   expect(remove).not.toHaveBeenCalled();
 });

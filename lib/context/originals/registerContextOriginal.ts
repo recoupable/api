@@ -15,12 +15,27 @@ const inputSchema = z
   })
   .strict();
 
-/** Unused server adapter: verify private bytes before retaining their scoped version receipt. */
-export async function registerContextOriginal(actor: string, owner: string, input: unknown) {
+/** Verify private bytes and expected preparation before retaining their scoped receipt. */
+export async function registerContextOriginal(
+  actor: string,
+  owner: string,
+  input: unknown,
+  expected?: Pick<
+    Awaited<ReturnType<typeof verifyContextOriginal>>,
+    "sha256" | "bytes" | "mediaType"
+  >,
+) {
   actor = z.string().uuid().parse(actor).toLowerCase();
   owner = z.string().uuid().parse(owner).toLowerCase();
   const parsed = inputSchema.parse(input);
   const verified = await verifyContextOriginal(actor, owner, parsed.fileKey);
+  if (
+    expected &&
+    (verified.sha256 !== expected.sha256 ||
+      verified.bytes !== expected.bytes ||
+      verified.mediaType !== expected.mediaType)
+  )
+    throw new Error("Original changed before registration");
   try {
     const raw = await callContextRpc("register_context_original", {
       p_actor: actor,

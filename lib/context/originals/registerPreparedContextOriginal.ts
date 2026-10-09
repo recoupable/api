@@ -18,11 +18,12 @@ export async function registerPreparedContextOriginal(
     stored.mediaType !== prepared.mediaType
   )
     throw new Error("Stored original conflicts with preparation");
-  const receipt = await registerContextOriginal(actor, owner, {
-    sourceId,
-    idempotencyKey,
-    fileKey: prepared.key,
-  });
+  const receipt = await registerContextOriginal(
+    actor,
+    owner,
+    { sourceId, idempotencyKey, fileKey: prepared.key },
+    prepared,
+  );
   if (
     receipt.fingerprint !== prepared.sha256 ||
     receipt.bytes !== prepared.bytes ||
