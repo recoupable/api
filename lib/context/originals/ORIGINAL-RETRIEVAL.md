@@ -29,6 +29,8 @@ Dependencies: Database #95/#94 and API #986/#987, each separately approved befor
 release. This branch includes reviewed API dependencies pending their release;
 refresh main to remove overlap afterward. Ordinary receipts remain metadata-only.
 
-Validation: 17 new real-RPC/default-storage/actual-byte fixtures plus 47 inherited
-original cases pass locally. New suite failed for missing module before code.
+Validation: 17 new synthetic fixtures exercise the RPC/default-storage adapters
+with mocked backend boundaries and actual local bytes. Along with 47 inherited
+original cases, all 64 passed after implementation. The initial missing-module
+TDD failure was resolved before the passing run.
 Synthetic RPC/storage/auth boundaries only; no hosted file read or transport proof.
