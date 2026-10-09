@@ -8,7 +8,7 @@ document.body.append(iframe);
 const output = document.createElement("pre");
 output.id = "received";
 output.style.whiteSpace = "pre-wrap";
-output.textContent = "Local host harness — no message received.";
+output.textContent = "Local host harness. No message received.";
 document.body.append(output);
 const bridge = new AppBridge(
   null,
