@@ -43,6 +43,8 @@ export function registerFullOAuthTools(
         "list_professional_roster",
         "confirm_professional_roster",
         "get_catalog_playcount_history",
+        "get_catalog_streams",
+        "manage_catalog_stream_tracking",
       ].includes(name)
     )
       return;

@@ -1,3 +1,14 @@
+# Current daily-stream MVP
+
+The Luminate integration now implements opt-in daily collection, durable run receipts,
+versioned daily history and shared authenticated REST/MCP controls. See
+[the integration guide](../luminate/README.md) for current implementation, configuration,
+semantics, limits and release checks. It stores worldwide aggregate streams separately
+from this document's legacy public Spotify counter series. The historical audit below
+describes the earlier read-only slice; it is not the current collection implementation.
+
+---
+
 # Catalog playcount tracking: first read slice
 
 ## Implemented, not released

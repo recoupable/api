@@ -1,0 +1,125 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { manageCatalogStreamTracking } from "../manageCatalogStreamTracking";
+import { getCatalogStreams } from "../getCatalogStreams";
+import { selectAccountCatalog } from "@/lib/supabase/account_catalogs/selectAccountCatalog";
+import { upsertCatalogStreamTracking } from "@/lib/supabase/catalog_stream_tracking/upsertCatalogStreamTracking";
+import { selectCatalogStreamObservations } from "@/lib/supabase/catalog_stream_observations/selectCatalogStreamObservations";
+import { startCatalogStreamRun } from "../startCatalogStreamRun";
+vi.mock("../getCatalogOwnerIds", () => ({
+  getCatalogOwnerIds: vi.fn().mockResolvedValue(["owner"]),
+}));
+vi.mock("@/lib/supabase/account_catalogs/selectAccountCatalog", () => ({
+  selectAccountCatalog: vi.fn(),
+}));
+vi.mock("@/lib/supabase/catalog_stream_tracking/selectCatalogStreamTracking", () => ({
+  selectCatalogStreamTracking: vi.fn().mockResolvedValue(null),
+}));
+vi.mock("@/lib/supabase/catalog_stream_tracking/upsertCatalogStreamTracking", () => ({
+  upsertCatalogStreamTracking: vi.fn().mockResolvedValue({ enabled: true }),
+}));
+vi.mock("@/lib/supabase/catalog_stream_runs/selectLatestCatalogStreamRun", () => ({
+  selectLatestCatalogStreamRun: vi.fn().mockResolvedValue(null),
+}));
+vi.mock("@/lib/supabase/catalog_songs/selectCatalogRecordingPage", () => ({
+  selectCatalogRecordingPage: vi
+    .fn()
+    .mockResolvedValue({ songs: [{ isrc: "USAAA2400001", name: "Track" }], total_count: 1 }),
+}));
+vi.mock("@/lib/supabase/catalog_stream_observations/selectCatalogStreamObservations", () => ({
+  selectCatalogStreamObservations: vi.fn(),
+}));
+vi.mock("../startCatalogStreamRun", () => ({
+  startCatalogStreamRun: vi.fn().mockResolvedValue({ state: "started", run_id: "run" }),
+}));
+const catalog = "00000000-0000-4000-8000-000000000001";
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(selectAccountCatalog).mockResolvedValue({ account: "owner", catalog } as never);
+  vi.mocked(selectCatalogStreamObservations).mockResolvedValue([]);
+});
+describe("catalog daily streams", () => {
+  it("denies inaccessible catalog before writes or provider work", async () => {
+    vi.mocked(selectAccountCatalog).mockResolvedValue(null);
+    expect(
+      await manageCatalogStreamTracking("account", { catalog_id: catalog, action: "enable" }),
+    ).toEqual({ error: "Catalog not found", status: 404 });
+    expect(upsertCatalogStreamTracking).not.toHaveBeenCalled();
+    expect(startCatalogStreamRun).not.toHaveBeenCalled();
+  });
+  it("enables tracking and starts initial backfill", async () => {
+    expect(
+      await manageCatalogStreamTracking("account", { catalog_id: catalog, action: "enable" }),
+    ).toMatchObject({ data: { tracking: { enabled: true }, collection: { state: "started" } } });
+    expect(upsertCatalogStreamTracking).toHaveBeenCalledWith({
+      catalog_id: catalog,
+      owner_id: "owner",
+      enabled: true,
+    });
+  });
+  it("pauses without starting a workflow", async () => {
+    await manageCatalogStreamTracking("account", { catalog_id: catalog, action: "disable" });
+    expect(startCatalogStreamRun).not.toHaveBeenCalled();
+  });
+  it("keeps unmeasured recordings visible and suppresses growth", async () => {
+    const r = await getCatalogStreams("account", {
+      catalog_id: catalog,
+      since: "2026-09-02",
+      days: 1,
+      page: 1,
+      limit: 25,
+    });
+    expect(r).toMatchObject({
+      data: { platform: "all_dsps", recordings: [{ state: "incomplete", current_streams: null }] },
+    });
+  });
+  it("uses latest correction and preserves missing days", async () => {
+    vi.mocked(selectCatalogStreamObservations).mockResolvedValue([
+      { date: "2026-09-02", streams: 3, provider_recording_id: "MR1", retrieved_at: "2026-09-04" },
+      { date: "2026-09-02", streams: 2, provider_recording_id: "MR1", retrieved_at: "2026-09-03" },
+      { date: "2026-09-01", streams: 1, provider_recording_id: "MR1", retrieved_at: "2026-09-03" },
+    ] as never);
+    const r = await getCatalogStreams("account", {
+      catalog_id: catalog,
+      since: "2026-09-02",
+      days: 1,
+      page: 1,
+      limit: 25,
+    });
+    expect(r).toMatchObject({
+      data: { recordings: [{ previous_streams: 1, current_streams: 3, percentage_growth: 200 }] },
+    });
+    vi.mocked(selectCatalogStreamObservations).mockResolvedValue([
+      {
+        date: "2026-09-01",
+        streams: null,
+        provider_recording_id: "MR1",
+        retrieved_at: "2026-09-04",
+      },
+      { date: "2026-09-01", streams: 1, provider_recording_id: "MR1", retrieved_at: "2026-09-03" },
+    ] as never);
+    expect(
+      await getCatalogStreams("account", {
+        catalog_id: catalog,
+        since: "2026-09-02",
+        days: 1,
+        page: 1,
+        limit: 25,
+      }),
+    ).toMatchObject({ data: { recordings: [{ state: "incomplete" }] } });
+  });
+  it("never joins different provider recording identities into growth", async () => {
+    vi.mocked(selectCatalogStreamObservations).mockResolvedValue([
+      { date: "2026-09-01", streams: 1, provider_recording_id: "MR1", retrieved_at: "2026-09-03" },
+      { date: "2026-09-02", streams: 3, provider_recording_id: "MR2", retrieved_at: "2026-09-04" },
+    ] as never);
+    expect(
+      await getCatalogStreams("account", {
+        catalog_id: catalog,
+        since: "2026-09-02",
+        days: 1,
+        page: 1,
+        limit: 25,
+      }),
+    ).toMatchObject({ data: { recordings: [{ state: "incomplete", percentage_growth: null }] } });
+  });
+});
