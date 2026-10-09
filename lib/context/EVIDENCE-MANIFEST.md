@@ -3,7 +3,7 @@
 `GET /api/context/evidence?request_id=<uuid>` reads retained source-version
 metadata for an authorized saved request. Optional query parameters are
 `organization_id` and `after_id`. Unknown or repeated fields are rejected;
-responses use `Cache-Control: private, no-store`. The existing Context command
+responses use `Cache-Control: private, no-store`. GET allows 120 requests per authenticated account per 60-second window across cursors/workspaces using the existing shared database limiter. Exhaustion returns 429 with `Retry-After`; limiter failure returns 503 before evidence access. This does not establish a cross-transport quota for POST or MCP. The existing Context command
 surface also accepts `POST /api/context` with `action: "list_evidence_versions"`
 and the same fields. Standard MCP exposes the same operation as
 `list_context_evidence_versions` with a concrete schema and no `action` parameter.

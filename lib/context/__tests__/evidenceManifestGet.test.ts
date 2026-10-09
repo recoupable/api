@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { GET, OPTIONS } from "@/app/api/context/evidence/route";
 import { authorizeContextOwner } from "../authorizeContextOwner";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { consumeOAuthRateLimit } from "@/lib/supabase/oauth_rate_limits/consumeOAuthRateLimit";
+vi.mock("@/lib/supabase/oauth_rate_limits/consumeOAuthRateLimit", () => ({
+  consumeOAuthRateLimit: vi.fn(),
+}));
 const rpc = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/serverClient", () => ({ default: { rpc } }));
 vi.mock("../authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));
@@ -13,6 +17,7 @@ const cursor = "33333333-3333-4333-8333-333333333333";
 const page = { owner_id: actor, request_id: request, versions: [], has_more: false, next_id: null };
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(consumeOAuthRateLimit).mockResolvedValue(0);
   vi.mocked(validateAuthContext).mockResolvedValue({ accountId: actor } as never);
   vi.mocked(authorizeContextOwner).mockResolvedValue({
     accountId: actor,
