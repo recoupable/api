@@ -4,32 +4,27 @@ import html from "./generated-ui";
 /** Public catalog only. Existing authenticated MCP tools retain all execution authorization. */
 export function registerRecoupExtension(server: McpServer) {
   const uri = "ui://recoup/explore.html";
-  server.registerResource(
-    "Recoup",
-    uri,
-    { mimeType: "text/html;profile=mcp-app" },
-    async () => ({
-      contents: [
-        {
-          uri,
-          mimeType: "text/html;profile=mcp-app",
-          text: html,
-          _meta: {
-            ui: {
-              csp: {
-                connectDomains: [],
-                resourceDomains: ["https://d8j0ntlcm91z4.cloudfront.net"],
-              },
-            },
-            "openai/ui": {
-              preferredDisplayMode: "fullscreen",
-              availableDisplayModes: ["inline", "fullscreen", "pip"],
+  server.registerResource("Recoup", uri, { mimeType: "text/html;profile=mcp-app" }, async () => ({
+    contents: [
+      {
+        uri,
+        mimeType: "text/html;profile=mcp-app",
+        text: html,
+        _meta: {
+          ui: {
+            csp: {
+              connectDomains: [],
+              resourceDomains: ["https://d8j0ntlcm91z4.cloudfront.net"],
             },
           },
+          "openai/ui": {
+            preferredDisplayMode: "fullscreen",
+            availableDisplayModes: ["inline", "fullscreen", "pip"],
+          },
         },
-      ],
-    }),
-  );
+      },
+    ],
+  }));
   server.registerTool(
     "open_recoup",
     {

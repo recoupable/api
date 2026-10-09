@@ -20,6 +20,10 @@ for (const font of ["dm-sans", "ibm-plex-mono"]) {
   const bytes = await readFile(`ui/recoup/assets/${font}.woff2`);
   css = css.replace(`assets/${font}.woff2`, `data:font/woff2;base64,${bytes.toString("base64")}`);
 }
+css = css.replace(
+  "assets/instrument-serif-italic.ttf",
+  `data:font/ttf;base64,${(await readFile("ui/recoup/assets/instrument-serif-italic.ttf")).toString("base64")}`,
+);
 const wordmark = `data:image/svg+xml;base64,${(await readFile("ui/recoup/assets/wordmark-light.svg")).toString("base64")}`;
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recoup</title><style>${css}</style></head><body><div id="root"></div><script>${result.outputFiles[0].text.replace("__WORDMARK__", wordmark).replaceAll("</script", "<\\/script")}</script></body></html>`;
 await writeFile(
