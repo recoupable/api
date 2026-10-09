@@ -19,3 +19,11 @@ A future staged-upload/registration flow must enforce acquisition limits and
 immutable/version-bound storage, handle orphans, retain byte fingerprints, and
 recheck current scope/withdrawal before original retrieval. This helper does not
 accept caller-provided digests as verification or create accepted analysis.
+
+New original object addresses use `.original`, independent of PDF/CSV type, while
+legacy `.pdf` and `.csv` verification remains supported. Neutral-path bytes select
+the bounded PDF/UTF-8 plausibility check; preparation rejects a declared type that
+differs from the detected type. This is not statement parsing, malware validation
+or proof of storage immutability. New neutral registrations require Database94's
+forward-only `20261009230000` migration before dependent release. Do not migrate
+or reupload historical objects automatically. No customer intake is activated.
