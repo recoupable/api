@@ -14,14 +14,6 @@ export const upload = vi.fn(),
   download = vi.fn(),
   remove = vi.fn();
 export const from = vi.fn((_bucket: string) => ({ upload, download, remove }));
-export function stream(value = text) {
-  return new ReadableStream<Uint8Array>({
-    start(c) {
-      c.enqueue(new TextEncoder().encode(value));
-      c.close();
-    },
-  });
-}
 export function resetStorageFlow() {
   vi.resetAllMocks();
   from.mockReturnValue({ upload, download, remove });

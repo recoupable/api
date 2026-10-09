@@ -1,3 +1,4 @@
+import { originalStorageFlowStream as stream } from "./originalStorageFlowStream";
 import { beforeEach, expect, it, vi } from "vitest";
 import { storeContextOriginal } from "../storeContextOriginal";
 import { ContextOriginalNeedsReconciliation } from "../ContextOriginalNeedsReconciliation";
@@ -12,7 +13,6 @@ import {
   upload,
   download,
   remove,
-  stream,
   resetStorageFlow,
 } from "./originalStorageFlowFixture";
 vi.mock("../../authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));

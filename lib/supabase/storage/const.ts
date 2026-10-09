@@ -4,3 +4,5 @@
  * parent row holding the storage_key, never from the object itself.
  */
 export const PUBLIC_UPLOADS_BUCKET = "public-uploads";
+
+export const CONTEXT_PRIVATE_BUCKET = "context-private" as const;
