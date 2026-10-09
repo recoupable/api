@@ -38,15 +38,6 @@
   color: var(--muted);
   margin: 0;
 }
-.try {
-  display: block;
-  margin-top: 16px;
-  font:
-    11px IBM Plex Mono,
-    monospace;
-  letter-spacing: 1px;
-  color: var(--muted);
-}
 .art {
   padding: 24px;
   display: flex;
