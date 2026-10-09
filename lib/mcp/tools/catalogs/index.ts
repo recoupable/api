@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerGetCatalogsTool } from "./registerGetCatalogsTool";
 import { registerGetCatalogSongsTool } from "./registerGetCatalogSongsTool";
 import { registerInsertCatalogSongsTool } from "./registerInsertCatalogSongsTool";
+import { registerGetCatalogPlaycountHistoryTool } from "./registerGetCatalogPlaycountHistoryTool";
 
 /**
  * Registers all catalog-related MCP tools on the server.
@@ -12,4 +13,5 @@ export const registerAllCatalogTools = (server: McpServer): void => {
   registerGetCatalogsTool(server);
   registerGetCatalogSongsTool(server);
   registerInsertCatalogSongsTool(server);
+  registerGetCatalogPlaycountHistoryTool(server);
 };

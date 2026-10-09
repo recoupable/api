@@ -37,7 +37,14 @@ export function registerFullOAuthTools(
   ) => {
     // Credentials never belong in model-visible output. Professional roster tools
     // remain excluded until their delegated organization-grant audit is complete.
-    if (["get_api_key", "list_professional_roster", "confirm_professional_roster"].includes(name))
+    if (
+      [
+        "get_api_key",
+        "list_professional_roster",
+        "confirm_professional_roster",
+        "get_catalog_playcount_history",
+      ].includes(name)
+    )
       return;
     if (name === "context" && !operation) {
       if (!(config.inputSchema instanceof z.ZodDiscriminatedUnion))
