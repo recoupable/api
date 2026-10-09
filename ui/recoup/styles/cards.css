@@ -1,78 +1,141 @@
 #cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 34px 24px;
+  gap: 32px 24px;
 }
 .card {
   text-align: left;
   background: none;
   color: var(--text);
   padding: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   min-width: 0;
+}
+.media {
+  position: relative;
+  display: block;
+  aspect-ratio: 16/10;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--art);
 }
 .card video,
 .art {
   width: 100%;
-  aspect-ratio: 16/9;
+  height: 100%;
   object-fit: cover;
-  border-radius: 14px;
-  background: #132b26;
-  display: block;
+  position: absolute;
+  inset: 0;
 }
-.card:hover video,
-.card:hover .art {
-  box-shadow: 0 8px 24px #132b2628;
+.card video {
+  opacity: 0;
+  transition: opacity 200ms;
 }
-.card-title {
-  display: block;
-  font-size: 21px;
-  font-weight: 600;
-  margin: 18px 0 9px;
-  letter-spacing: -0.5px;
-}
-.card-description {
-  display: block;
-  font-size: 15px;
-  line-height: 1.55;
-  color: var(--muted);
-  margin: 0;
+.card video.loaded {
+  opacity: 1;
 }
 .art {
   padding: 24px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  color: #fff;
-  background: linear-gradient(135deg, #163a30, #38694c);
+  color: var(--art-text);
+  background: var(--art);
 }
 .art strong {
-  font-size: clamp(22px, 3vw, 38px);
+  font-size: clamp(22px, 3vw, 36px);
   letter-spacing: -1px;
 }
 .art span {
-  font: 11px IBM Plex Mono;
+  font:
+    10px IBM Plex Mono,
+    monospace;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
-.art-promote {
-  background: linear-gradient(135deg, #945734, #d39f78);
+.preview-label {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  background: var(--overlay);
+  color: var(--overlay-text);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font:
+    8px IBM Plex Mono,
+    monospace;
+  letter-spacing: 1px;
 }
-.art-discover {
-  background: linear-gradient(135deg, #13546b, #32858a);
+.card-arrow {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  transition: transform 150ms;
 }
-.art-catalog {
-  background: linear-gradient(135deg, #554066, #86719e);
+.card:hover .card-arrow {
+  transform: rotate(45deg);
+}
+.card-category {
+  display: block;
+  margin-top: 16px;
+  text-transform: uppercase;
+  font:
+    9px IBM Plex Mono,
+    monospace;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.card-title {
+  display: block;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 6px 0;
+  letter-spacing: -0.6px;
+}
+.card-description {
+  display: block;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
 }
 .more {
   display: block;
   background: var(--soft);
   color: var(--text);
-  margin: 40px auto 0;
-  padding: 15px 24px;
-  border-radius: 12px;
+  margin: 32px auto 0;
+  padding: 14px 22px;
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 14px;
 }
-.connection {
-  font-size: 12px;
-  color: var(--muted);
+.more:hover {
+  box-shadow: 0 0 0 1px var(--line);
+}
+.empty {
+  grid-column: 1/-1;
   text-align: center;
-  margin-top: 30px;
+  padding: 48px 16px;
+  background: var(--soft);
+  border-radius: 16px;
+}
+.empty h3 {
+  font-size: 24px;
+  letter-spacing: -0.6px;
+  margin: 16px 0 8px;
+}
+.empty > p:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 14px;
+}
+.empty .more {
+  background: var(--primary);
+  color: var(--on-primary);
+  margin-top: 20px;
 }

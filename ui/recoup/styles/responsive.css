@@ -1,19 +1,69 @@
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-}
-[hidden] {
-  display: none !important;
-}
-@media (max-width: 800px) {
+@media (max-width: 850px) {
   #cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  header {
-    gap: 16px;
+  .header-label {
+    display: none;
+  }
+  .hero {
+    gap: 24px;
+  }
+  .how-it-works {
+    min-width: 250px;
+    padding: 22px;
+  }
+  .hero h1 {
+    font-size: 44px;
+  }
+}
+@media (max-width: 640px) {
+  main {
+    padding-top: 28px;
+  }
+  .hero {
+    display: block;
+    padding-bottom: 32px;
+  }
+  .hero h1 {
+    font-size: clamp(38px, 9vw, 52px);
+  }
+  .hero-description {
+    font-size: 16px;
+  }
+  .how-it-works {
+    margin-top: 24px;
+    padding: 18px;
+  }
+  .how-it-works ol {
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+  }
+  .search,
+  input {
+    width: 100%;
+  }
+  .filter-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    margin: 18px 0;
+  }
+  #filters {
+    gap: 2px;
+  }
+  #filters button {
+    padding: 10px 12px;
+  }
+  #result-count {
+    margin: 0;
+  }
+  dialog {
+    padding: 28px 22px;
   }
   .card-title {
     font-size: 18px;
@@ -22,20 +72,7 @@
 @media (max-width: 480px) {
   #cards {
     grid-template-columns: 1fr;
-  }
-  header > span {
-    display: none;
-  }
-  main {
-    padding-top: 26px;
-  }
-  .toolbar,
-  .search,
-  input {
-    width: 100%;
-  }
-  dialog {
-    padding: 28px;
+    gap: 28px;
   }
   .card-title {
     font-size: 22px;
@@ -44,13 +81,6 @@
 @media (prefers-reduced-motion: reduce) {
   * {
     scroll-behavior: auto !important;
+    transition: none !important;
   }
-}
-
-.brand img {
-  width: 140px;
-  display: block;
-}
-:root[data-theme="dark"] .brand img {
-  filter: invert(1);
 }
