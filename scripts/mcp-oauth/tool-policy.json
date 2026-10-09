@@ -26,7 +26,7 @@
       "mcp:write"
     ],
     "status": "excluded until delegated organization-grant audit",
-    "authorizationWork": "Keep excluded from delegated OAuth, including generic Context action expansion. Before enablement bind actor, selected owner, retained source version and every typed target to current organization grants; recheck writes, reads, pagination and exact-key replay without granting identity, rights, mandate or paid execution authority."
+    "authorizationWork": "Keep excluded from delegated OAuth, including generic Context action expansion. Before enablement bind the authenticated actor, selected owner, retained source version and every typed target to current organization grants on writes and exact-key retries. Linking evidence grants no identity, rights, mandate or paid execution authority."
   },
   {
     "name": "compact_chats",
@@ -320,7 +320,7 @@
       "mcp:read"
     ],
     "status": "excluded until delegated organization-grant audit",
-    "authorizationWork": "Keep excluded from delegated OAuth, including generic Context action expansion. Before enablement bind actor, selected owner, retained source version and every typed target to current organization grants; recheck writes, reads, pagination and exact-key replay without granting identity, rights, mandate or paid execution authority."
+    "authorizationWork": "Keep excluded from delegated OAuth, including generic Context action expansion. Before enablement bind the authenticated actor, selected owner, source version and cursor to current organization grants on every page; withhold inaccessible receipts while preserving bounded cursor progress. Listing grants no write or paid execution authority."
   },
   {
     "name": "list_professional_roster",
@@ -367,7 +367,7 @@
       "mcp:read"
     ],
     "status": "excluded until delegated organization-grant audit",
-    "authorizationWork": "Keep excluded from delegated OAuth, including generic Context action expansion. Before enablement bind actor, selected owner, retained source version and every typed target to current organization grants; recheck writes, reads, pagination and exact-key replay without granting identity, rights, mandate or paid execution authority."
+    "authorizationWork": "Keep excluded from delegated OAuth, including generic Context action expansion. Before enablement recheck current organization grants for the authenticated actor, receipt owner, retained source version and every linked target on each read; withhold withdrawn or inaccessible evidence. Reading a receipt grants no authority to modify evidence or act on rights."
   },
   {
     "name": "retrieve_sora_2_video",
