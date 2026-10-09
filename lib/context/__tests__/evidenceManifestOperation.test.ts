@@ -70,6 +70,8 @@ it.each([
   { ...page, versions: [{ ...item, evidence_kinds: [] }] },
   { ...page, versions: [{ ...item, evidence_kinds: ["observation", "observation"] }] },
   { ...page, versions: [{ ...item, retrieved_at: "yesterday" }] },
+  { ...page, versions: [{ ...item, fingerprint: "z".repeat(64) }] },
+  { ...page, versions: [{ ...item, fingerprint: "A".repeat(64) }] },
   { ...page, versions: [{ ...item, content: "private payload" }] },
   { ...page, versions: [{ ...item, rights_verified: true }] },
   { ...page, next_id: version },

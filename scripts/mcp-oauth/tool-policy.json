@@ -501,6 +501,6 @@
       "mcp:read"
     ],
     "status": "excluded pending organization-grant execution audit",
-    "authorizationWork": "Retained private evidence: bind actor and workspace and recheck request/version withdrawals. Exclude dedicated tool and combined Context action from delegated OAuth until audited."
+    "authorizationWork": "Retained private evidence: bind actor and workspace, scope after_id to a visible source version in the authorized request, and recheck request/version withdrawals. Exclude dedicated tool and combined Context action from delegated OAuth until audited."
   }
 ]

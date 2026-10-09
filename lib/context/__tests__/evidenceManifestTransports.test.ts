@@ -80,7 +80,9 @@ it("both transports require authentication", async () => {
     error: "Authentication required",
   });
   expect((await http()).status).toBe(401);
-  expect((await tool({ request_id: request }, {})).isError).toBe(true);
+  const result = await tool({ request_id: request }, {});
+  expect(result.isError).toBe(true);
+  expect(result.content[0].text).toContain("Recoup API key");
 });
 it("both transports reject actor overrides", async () => {
   const tool = setup();

@@ -23,7 +23,7 @@ export const evidenceManifestPageSchema = z.strictObject({
           "social",
           "customer",
         ]),
-        fingerprint: z.string().length(64),
+        fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
         retrieved_at: z.iso.datetime({ offset: true }),
         evidence_kinds: z
           .array(z.enum(["observation", "estimate", "interpretation", "customer_assertion"]))

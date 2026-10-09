@@ -7,6 +7,7 @@ export async function callContextRpc(
   params: Record<string, unknown>,
 ): Promise<unknown> {
   const allowed = [
+    "list_context_request_evidence_versions",
     "list_context_release_cases",
     "read_context_release_case",
     "review_context_release_case",

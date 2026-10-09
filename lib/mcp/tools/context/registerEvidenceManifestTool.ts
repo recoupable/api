@@ -26,7 +26,10 @@ export function registerEvidenceManifestTool(server: McpServer) {
           accountIdOverride: undefined,
         });
         if (error || !accountId)
-          return { ...getToolResultError("Authentication required"), isError: true };
+          return {
+            ...getToolResultError("Authentication required. Connect using a Recoup API key."),
+            isError: true,
+          };
         return getToolResultSuccess(
           await processContextOperation(
             accountId,
