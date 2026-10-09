@@ -39,7 +39,7 @@ export async function verifyContextOriginal(
   }
   await authorizeContextOwner(actor, owner === actor ? undefined : owner);
   return {
-    bucket: "context-private",
+    bucket: "context-private" as const,
     key,
     sha256: createHash("sha256").update(bytes).digest("hex"),
     bytes: bytes.length,
