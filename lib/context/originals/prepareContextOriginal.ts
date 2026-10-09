@@ -6,7 +6,7 @@ import { verifyContextOriginal } from "./verifyContextOriginal";
 
 import { contextOriginalPreparationSchema } from "./contextOriginalPreparationSchema";
 
-/** Unused server preparation only. Bytes are not uploaded or registered evidence. */
+/** Server-side preparation only. Bytes are not uploaded or registered evidence. */
 export async function prepareContextOriginal(
   actor: string,
   owner: string,
@@ -22,7 +22,9 @@ export async function prepareContextOriginal(
     JSON.stringify(["recoup-context-original", owner, parsed.sourceId, parsed.idempotencyKey]),
     uuidv5.URL,
   );
-  const key = `${owner}/context-originals/${objectId}.${parsed.mediaType === "application/pdf" ? "pdf" : "csv"}`;
+  const key = `${owner}/context-originals/${objectId}.original`;
   const verified = await verifyContextOriginal(actor, owner, key, async () => file);
+  if (verified.mediaType !== parsed.mediaType)
+    throw new Error("Original type conflicts with declared media type");
   return { ...verified, file };
 }

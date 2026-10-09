@@ -10,7 +10,7 @@ SHA-256/size with fresh scope checks, using the in-memory Blob instead of storag
 Object UUIDv5 is derived from a namespaced owner/source/retry tuple, not the bytes.
 Same retry addresses the same object; changed bytes must conflict later rather than
 get another object silently. Separate sources/work keys/workspaces get separate
-identities. Media type selects the canonical extension. This is not a database
+identities. New objects use a type-independent `.original` extension. This is not a database
 version ID. Inputs cannot supply a path, digest or identity override.
 
 Return is server preparation data plus Blob, not a retained-source receipt or proof

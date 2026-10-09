@@ -54,3 +54,28 @@ it("withholds a receipt if raw storage changes between precheck and registration
   expect(supabase.rpc).not.toHaveBeenCalled();
   expect(remove).not.toHaveBeenCalled();
 });
+
+it("simultaneous changed-type retries use one no-overwrite object", async () => {
+  const objects = new Map<string, Blob>();
+  upload.mockImplementation(async (key: string, file: Blob, options: { upsert: boolean }) => {
+    expect(options.upsert).toBe(false);
+    if (objects.has(key)) return { data: null, error: new Error("Object exists") };
+    objects.set(key, file);
+    return { data: { path: key }, error: null };
+  });
+  download.mockImplementation(async (key: string) => ({ data: objects.get(key), error: null }));
+  const outcomes = await Promise.allSettled([
+    storeContextOriginal(actor, owner, input, stream()),
+    storeContextOriginal(
+      actor,
+      owner,
+      { ...input, mediaType: "application/pdf" },
+      stream("%PDF-1.7\nfixture\n%%EOF"),
+    ),
+  ]);
+  expect(upload.mock.calls[0][0]).toBe(upload.mock.calls[1][0]);
+  expect(objects.size).toBe(1);
+  expect(outcomes.filter(r => r.status === "fulfilled")).toHaveLength(1);
+  expect(supabase.rpc).toHaveBeenCalledTimes(1);
+  expect(remove).not.toHaveBeenCalled();
+});
