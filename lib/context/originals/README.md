@@ -20,11 +20,9 @@ immutable/version-bound storage, handle orphans, retain byte fingerprints, and
 recheck current scope/withdrawal before original retrieval. This helper does not
 accept caller-provided digests as verification or create accepted analysis.
 
-New original object addresses use `.original`, independent of PDF/CSV type, while
-legacy `.pdf` and `.csv` verification remains supported. Neutral-path bytes select
-the bounded PDF/UTF-8 plausibility check. This branch derives type from bytes;
-its verifier accepts no declared-type input. The separate preparation flow is
-responsible for comparing declared and detected type. This is not statement parsing, malware validation
-or proof of storage immutability. New neutral registrations require Database94's
-forward-only `20261009230000` migration before dependent release. Do not migrate
-or reupload historical objects automatically. No customer intake is activated.
+The verifier accepts canonical `.original`, `.pdf` and `.csv` keys. Only neutral
+`.original` paths select type from the bytes. Legacy paths retain their suffix-selected
+PDF or UTF-8 plausibility policy. This helper accepts no declared type, performs no
+preparation, and does not validate contract/schema semantics, malware or rights.
+Neutral registration requires Database94's forward-only compatibility migration.
+Do not automatically migrate or reupload historical objects. Intake is not activated.
