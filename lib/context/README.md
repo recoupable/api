@@ -248,3 +248,6 @@ Both enrichment coordinators propagate this signal. The in-process plan drains
 already-running work before rejecting and starts no further modules once the
 uncertainty is known. RPC errors remain attached as internal causes; the public
 error message does not include private database diagnostics.
+
+
+See [retained evidence discovery](./EVIDENCE-MANIFEST.md) for scoped source-version listing.

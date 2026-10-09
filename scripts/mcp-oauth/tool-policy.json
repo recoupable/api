@@ -493,5 +493,14 @@
     ],
     "status": "requires OAuth execution audit before enablement",
     "authorizationWork": "Bind account and requested resources to the selected grant context; enforce scopes, current access, and redacted errors at execution. Verify billing owner, entitlement, credit checks, and bounded retry behavior before starting provider work."
+  },
+  {
+    "name": "list_context_evidence_versions",
+    "file": "lib/mcp/tools/context/registerEvidenceManifestTool.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "excluded pending organization-grant execution audit",
+    "authorizationWork": "Retained private evidence: bind actor and workspace, scope after_id to a visible source version in the authorized request, and recheck request/version withdrawals. Exclude dedicated tool and combined Context action from delegated OAuth until audited."
   }
 ]
