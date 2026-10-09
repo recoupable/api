@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     NextResponse.json({ status: "error", error }, { status, headers });
   if (process.env.CONTEXT_ORIGINAL_INTAKE_ENABLED !== "true")
     return reply("Original intake unavailable", 503);
-  let parsed;
+  let parsed: ReturnType<typeof validateOriginalIntakeQuery>;
   try {
     parsed = validateOriginalIntakeQuery(
       request.nextUrl.searchParams,
@@ -72,6 +72,13 @@ export async function POST(request: NextRequest) {
         : await storeContextOriginal(auth.accountId, owner, input, file.stream(), request.signal);
     return NextResponse.json(receipt, { headers });
   } catch (error) {
+    // Report a bounded category, never customer paths, bytes, IDs or backend causes.
+    console.error("Context original operation failed", {
+      outcome:
+        error instanceof ContextOriginalNeedsReconciliation
+          ? "needs_reconciliation"
+          : "unavailable",
+    });
     if (error instanceof ContextOriginalNeedsReconciliation)
       return NextResponse.json(
         { status: "needs_reconciliation", error: "Original outcome requires reconciliation" },

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { authorizeContextOwner } from "../authorizeContextOwner";
 import { getContextOriginalFile } from "@/lib/supabase/storage/getContextOriginalFile";
 
-/** Verify stored original bytes in current workspace scope; no parsing or rights decision. */
+/** Verify actual private bytes and current workspace access; no contract parsing or rights proof. */
 export async function verifyContextOriginal(
   actor: string,
   owner: string,

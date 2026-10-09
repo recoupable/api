@@ -1,7 +1,8 @@
 # Original registration adapter
 
-`registerContextOriginal` and `readContextOriginalRegistration` are unused server
-functions. No HTTP/MCP operation, upload, signed URL or paid caller is connected.
+`registerContextOriginal` is connected through private storage to the disabled
+POST pilot. `readContextOriginalRegistration` remains an internal metadata helper.
+No MCP operation, signed URL or paid caller is connected; intake is not activated.
 The authenticated caller supplies the actor/workspace separately from the strict
 logical source ID, retry key and private file key input. Never accept actor or
 workspace identity overrides in an eventual public input.

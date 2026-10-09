@@ -6,7 +6,7 @@ import { verifyContextOriginal } from "./verifyContextOriginal";
 
 import { contextOriginalPreparationSchema } from "./contextOriginalPreparationSchema";
 
-/** Unused server preparation only. Bytes are not uploaded or registered evidence. */
+/** Server-side preparation only. Bytes are not uploaded or registered evidence. */
 export async function prepareContextOriginal(
   actor: string,
   owner: string,

@@ -71,6 +71,7 @@ it("preserves foreign workspace denial before body read", async () => {
     NextResponse.json({ error: "denied" }, { status: 403 }),
   );
   expect((await POST(r)).status).toBe(403);
+  expect(validateAuthContext).toHaveBeenCalledWith(r, { organizationId: source });
   expect(r.bodyUsed).toBe(false);
   expect(consumeOAuthRateLimit).not.toHaveBeenCalled();
 });
@@ -106,4 +107,17 @@ it("uncertain save withholds internal cause and IDs", async () => {
     status: "needs_reconciliation",
     error: "Original outcome requires reconciliation",
   });
+});
+
+it("accepts a valid parameterized UTF-8 CSV media header", async () => {
+  const r = request();
+  r.headers.set("content-type", "Text/CSV; charset=utf-8");
+  expect((await POST(r)).status).toBe(200);
+  expect(storeContextOriginal).toHaveBeenCalledWith(
+    actor,
+    actor,
+    expect.objectContaining({ mediaType: "text/csv" }),
+    expect.anything(),
+    r.signal,
+  );
 });

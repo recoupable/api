@@ -1,4 +1,4 @@
-# Unused bounded original preparation
+# Bounded original preparation
 
 `prepareContextOriginal` accepts trusted actor/workspace, strict logical source ID,
 retry key, PDF/CSV type and a server-owned incoming byte stream. It authorizes before
@@ -14,15 +14,16 @@ identities. Media type selects the canonical extension. This is not a database
 version ID. Inputs cannot supply a path, digest or identity override.
 
 Return is server preparation data plus Blob, not a retained-source receipt or proof
-of stored bytes. No upload, SQL, signing, HTTP/MCP caller, provider, parsing, rights
-or customer intake. Storage must use no-overwrite semantics, check existing bytes
+of stored bytes. The disabled POST pilot connects preparation to private upload and registration;
+this helper itself performs no upload, SQL, signing, provider call, parsing or rights
+decision. No customer intake is activated. Storage must use no-overwrite semantics, check existing bytes
 on exact replay, and reject changed payloads. Registration must reverify the stored
 object rather than trust preparation metadata. Acquisition/reconciliation must keep
 the stable retry identity and never blindly delete after uncertain registration.
 
 The byte and chunk bounds do not limit how long reader.read waits, upstream network
-allocation, total concurrent uploads or storage quota. A connected transport still
-needs cancellation/deadline/concurrency controls. Blob/buffer verification may copy
+allocation, total concurrent uploads or storage quota. The disabled POST transport adds deadline and cancellation controls; distributed
+concurrency controls remain required. Blob/buffer verification may copy
 bounded bytes more than once; this is not zero-copy streaming. Extremely fragmented
 otherwise-valid files can hit the chunk cap. File checks are plausibility only,
 not malware scan, PDF parser, statement/schema validation or rights evidence.

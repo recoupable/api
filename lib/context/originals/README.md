@@ -13,8 +13,9 @@ Neither check is a malware scan, document extraction, credit/rights verification
 or signature validation. Original CSV formulas/content are preserved; later
 rendering/export must treat them as untrusted data.
 
-No endpoint, MCP tool, upload, parsing, signed download or customer intake is introduced.
-Separate unused server adapters now register and read scoped source/version receipts;
+The disabled POST pilot connects private storage and registration. No MCP tool,
+parsing, signed download or customer intake has been activated. Server adapters
+register and read scoped source/version receipts;
 see [the registration boundary](./ORIGINAL-REGISTRATION.md).
 The Blob download completes before its size is checked; this is not a streaming
 network/memory cap. Future acquisition must enforce bounded immutable storage and

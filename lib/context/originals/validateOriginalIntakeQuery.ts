@@ -14,5 +14,8 @@ export function validateOriginalIntakeQuery(params: URLSearchParams, contentType
   if (params.has("mediaType")) throw new Error("Type must come from Content-Type");
   if (new Set(entries.map(([k]) => k)).size !== entries.length)
     throw new Error("Repeated metadata");
-  return schema.parse({ ...Object.fromEntries(entries), mediaType: contentType });
+  return schema.parse({
+    ...Object.fromEntries(entries),
+    mediaType: contentType?.split(";")[0].trim().toLowerCase(),
+  });
 }

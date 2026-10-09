@@ -81,9 +81,13 @@ it("withholds a changed post-write receipt and preserves recovery identity", asy
     data: { ...saved, fingerprint: "b".repeat(64) },
     error: null,
   } as never);
-  await expect(storeContextOriginal(actor, owner, input, stream())).rejects.toBeInstanceOf(
-    ContextOriginalNeedsReconciliation,
-  );
+  const error = await storeContextOriginal(actor, owner, input, stream()).catch(e => e);
+  expect(error).toBeInstanceOf(ContextOriginalNeedsReconciliation);
+  expect(error).toMatchObject({
+    ownerId: owner,
+    sourceId: source,
+    idempotencyKey: input.idempotencyKey,
+  });
   expect(remove).not.toHaveBeenCalled();
 });
 it("does not retry a lost registration acknowledgement", async () => {

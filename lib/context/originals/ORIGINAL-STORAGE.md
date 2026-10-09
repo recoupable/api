@@ -1,10 +1,10 @@
-# Unconnected private storage and explicit reconciliation
+# Private storage and explicit reconciliation
 
 `storeContextOriginal` combines bounded incoming preparation (#989), current
 workspace authorization immediately before storage, context-private insertion
 with hardcoded upsert:false, actual stored-byte readback and registration (#987).
 The byte fingerprint/size/type must match the preparation before registration;
-the returned receipt must still match afterward. No public HTTP/MCP caller exists.
+the returned receipt must still match afterward. The disabled POST pilot calls these flows; no MCP caller exists.
 
 `reconcileContextOriginal` is a separate explicit recovery operation. Given the
 same original input/source/retry identity, it derives the same key, checks existing
@@ -28,8 +28,9 @@ not against other trusted raw service writers or storage administrators. A mutat
 between verification and save withholds the receipt and requires reconciliation,
 which is not an automatic rollback or proof that registration failed.
 
-Transport still needs authentication, stream deadline/cancellation/concurrency,
-rate/storage quotas and controlled delivery before client intake. Byte/chunk caps
+The disabled transport adds authentication, a 4MiB body cap, a 30-second body
+deadline, disconnect cancellation and shared rate admission. Distributed concurrency,
+retained storage budgets and controlled delivery remain activation gates. Byte/chunk caps
 are not duration/upstream memory/zero-copy guarantees; readback downloads complete
 before their Blob size cap. The existing helper's PDF/UTF-8 tests are plausibility,
 not parsing, malware/contract validation, identity or rights proof.
@@ -47,5 +48,8 @@ Known activation blocker: changing PDF/CSV type with the same owner/source/work
 key changes the extension and may store a second orphan object before Database94
 rejects changed payload. Including mediaType in the UUID name does not solve this.
 Stable type-independent object addressing or an authoritative pre-upload binding
-needs a coherent storage/schema correction before activation; this branch remains
-unconnected. Do not claim changed-type rejection occurs before upload.
+needs a coherent storage/schema correction before activation; the connected pilot remains
+disabled. Do not claim changed-type rejection occurs before upload.
+
+The second stored-byte read also compares prepared fingerprint, size and type before
+SQL dispatch. A changed second read cannot register a different version.

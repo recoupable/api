@@ -43,4 +43,5 @@ it("keeps unavailable storage uncertain rather than proving original upload fail
   );
   expect(upload).not.toHaveBeenCalled();
   expect(supabase.rpc).not.toHaveBeenCalled();
+  expect(remove).not.toHaveBeenCalled();
 });

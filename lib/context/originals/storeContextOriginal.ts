@@ -6,7 +6,7 @@ import { prepareContextOriginal } from "./prepareContextOriginal";
 import { registerPreparedContextOriginal } from "./registerPreparedContextOriginal";
 import { ContextOriginalNeedsReconciliation } from "./ContextOriginalNeedsReconciliation";
 
-/** Unconnected server flow: no-overwrite storage, byte readback, retained receipt. */
+/** Private intake flow: no-overwrite storage, byte readback, retained receipt. */
 export async function storeContextOriginal(
   actor: string,
   owner: string,
