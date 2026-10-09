@@ -27,3 +27,8 @@ PDF or UTF-8 plausibility policy. This helper accepts no declared type, performs
 preparation, and does not validate contract/schema semantics, malware or rights.
 Neutral registration requires Database94's forward-only compatibility migration.
 Do not automatically migrate or reupload historical objects. Intake is not activated.
+
+The server-only retained reader accepts a trusted optional maximum byte size. It
+rejects oversized receipt metadata before storage download and checks Blob size
+afterward. This is not streaming memory control. All78 local original fixture
+cases pass; this branch exposes no HTTP route or signed capability.

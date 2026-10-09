@@ -11,8 +11,14 @@ const internalSchema = contextOriginalReceiptSchema.extend({
   storage_path: z.string().min(1),
 });
 
-/** Unused server-only readback. Never serialize the internal path tuple in HTTP/MCP. */
-export async function readRetainedContextOriginal(actor: string, owner: string, id: string) {
+/** Server-only readback. Never serialize the internal path tuple in HTTP/MCP. */
+export async function readRetainedContextOriginal(
+  actor: string,
+  owner: string,
+  id: string,
+  maxBytes = 52428800,
+) {
+  maxBytes = z.number().int().min(1).max(52428800).parse(maxBytes);
   actor = z.string().uuid().parse(actor).toLowerCase();
   owner = z.string().uuid().parse(owner).toLowerCase();
   id = z.string().uuid().parse(id).toLowerCase();
@@ -24,10 +30,12 @@ export async function readRetainedContextOriginal(actor: string, owner: string, 
       p_receipt: id,
     }),
   );
-  if (internal.owner_id !== owner || internal.id !== id) throw new Error("Original unavailable");
+  if (internal.owner_id !== owner || internal.id !== id || internal.bytes > maxBytes)
+    throw new Error("Original unavailable");
   let file: Blob | undefined;
   const verified = await verifyContextOriginal(actor, owner, internal.storage_path, async key => {
     file = await getContextOriginalFile(key);
+    if (file.size > maxBytes) throw new Error("Original unavailable");
     return file;
   });
   if (
