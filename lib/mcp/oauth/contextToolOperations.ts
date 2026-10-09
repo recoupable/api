@@ -4,6 +4,12 @@ import type { contextOperationSchema } from "@/lib/context/processContextOperati
 type Action = z.infer<typeof contextOperationSchema>["action"];
 /** Each public operation has its own schema and permission classification. */
 export const contextToolOperations = {
+  read_company_baseline: {
+    name: "read_music_company_baseline",
+    description:
+      "Read registered roster and source metadata with explicit gaps; no collection or rights verification.",
+    readOnly: true,
+  },
   list_release_cases: {
     name: "list_music_release_cases",
     description: "List saved release cases and their review status.",

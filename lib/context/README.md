@@ -248,3 +248,21 @@ Both enrichment coordinators propagate this signal. The in-process plan drains
 already-running work before rejecting and starts no further modules once the
 uncertainty is known. RPC errors remain attached as internal causes; the public
 error message does not include private database diagnostics.
+
+## Company onboarding: registered baseline
+
+`read_company_baseline` is a read-only action on `POST /api/context` and the standard MCP `context` tool. It requires an explicit `organization_id`; the actor comes from authentication. Deploy database migration `20261009160000_context_company_baseline.sql` before this API consumer. This feature does not depend on the pending wallet-uniqueness change.
+
+```json
+{ "action": "read_company_baseline", "organization_id": "22222222-2222-4222-8222-222222222222" }
+```
+
+The flat `company-baseline-v1` response includes the organization account name, `read_at`, `consistency: "live_read"`, `coverage: "registered_roster_and_context_sources_only"`, and three independent pages: `artists`, `professionals`, `sources`. Each page contains up to 50 `items` and `next_id`. Continue each non-null cursor using `after_artist_id`, `after_professional_id`, or `after_source_id`, respectively. The artist cursor is the **relationship ID**, not the artist account ID. Omitted or null cursors restart that section; clients must only append the sections they are advancing. Foreign, wrong-section, deleted or withdrawn cursors are rejected without disclosing whether they exist elsewhere; restart that section after rechecking access. Null means that section ended at the time of the read, not that the company's real-world records are complete.
+
+Artists retain account IDs; professionals retain their separate organization-scoped IDs and operator-confirmed roles. Names never merge those records. Existing roster links are reported as stored, including any created by legacy research workflows; they are not evidence of representation or ownership. The organization account name is not a verified legal-company identity. The existing owner/member access policy applies; this action does not introduce a new account-type rule.
+
+Source rows include only IDs, kind, creation time and the number of retained versions. Withdrawn sources and removed versions are excluded. No document text, raw URLs or storage paths are returned. A version count does not prove parsing, review, rights or catalog completeness. Both transports validate the returned shape and owner, and suppress internal storage errors.
+
+Explicit gaps remain for company relationships, catalog coverage, source-to-roster attribution, parsing/review and rights/mandates. This is a live inventory across existing tables, not an immutable assessment or a single historical snapshot across all pages. Concurrent changes can alter later reads. It performs no collection, model dispatch, charge or business-row write.
+
+This is the first reusable onboarding read under app#2116, not the full baseline milestone. Next: supported private source intake linked to existing identities, then a saved current-state assessment. Local synthetic HTTP/MCP parity does not establish hosted authentication, plugin/OAuth catalog exposure or production rollout. API#980 has now landed: its delegated OAuth catalog deliberately excludes professional roster operations pending an organization-grant audit. This combined baseline also contains professional records, so it remains excluded from that delegated catalog. The HTTP and standard MCP operation remain available through their existing authenticated policy; finish that access audit before enabling this operation for delegated connections.

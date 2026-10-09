@@ -1,3 +1,5 @@
+import { companyBaselineOperationSchema } from "./companyBaselineSchema";
+import { processCompanyBaselineOperation } from "./processCompanyBaselineOperation";
 import { releaseCaseOperationSchemas } from "./releaseCaseOperationSchemas";
 import { processReleaseCaseOperation } from "./processReleaseCaseOperation";
 import { createHash } from "node:crypto";
@@ -19,6 +21,7 @@ const briefFields = {
 };
 
 export const contextOperationSchema = z.discriminatedUnion("action", [
+  companyBaselineOperationSchema,
   ...releaseCaseOperationSchemas,
   z.strictObject({
     action: z.literal("save_brief"),
@@ -192,6 +195,8 @@ export async function processContextOperation(
     accountId,
     args.organization_id,
   );
+  if (args.action === "read_company_baseline")
+    return processCompanyBaselineOperation(accountId, ownerId, args, deps.rpc);
   if (
     args.action === "list_release_cases" ||
     args.action === "read_release_case" ||

@@ -25,6 +25,9 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
   await server.connect(serverTransport);
   await client.connect(clientTransport);
   try {
+    const delegatedContextOperations = Object.values(contextToolOperations).filter(
+      operation => operation.name !== "read_music_company_baseline",
+    );
     const { tools } = await client.listTools();
     expect(tools.map(tool => tool.name).sort()).toEqual(
       [
@@ -33,12 +36,12 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
         ),
         "get_daily_email_status",
         "set_daily_email_status",
-        ...Object.values(contextToolOperations).map(operation => operation.name),
+        ...delegatedContextOperations.map(operation => operation.name),
       ].sort(),
     );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
     expect(tools).toHaveLength(77);
-    for (const operation of Object.values(contextToolOperations)) {
+    for (const operation of delegatedContextOperations) {
       const tool = tools.find(tool => tool.name === operation.name)!;
       expect(Object.keys(tool.inputSchema.properties ?? {}).length).toBeGreaterThan(0);
       expect(tool.inputSchema.properties).not.toHaveProperty("action");
@@ -47,6 +50,7 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
     const artist = tools.find(tool => tool.name === "create_new_artist")!;
     expect(artist.inputSchema.properties).not.toHaveProperty("active_conversation_id");
     expect(JSON.stringify(artist)).not.toMatch(/system prompt|copy.*conversation/i);
+    expect(tools.map(tool => tool.name)).not.toContain("read_music_company_baseline");
     expect(tools.map(tool => tool.name)).not.toContain("list_professional_roster");
     expect(tools.map(tool => tool.name)).not.toContain("confirm_professional_roster");
     expect(
