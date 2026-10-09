@@ -49,7 +49,7 @@ export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
   delete_task: { readOnly: false },
   insert_catalog_songs: { readOnly: false, destructive: false },
   compact_chats: { readOnly: false },
-  context: { readOnly: false },
+  // Context operations are classified individually in contextToolOperations.ts.
   generate_image: { readOnly: false, destructive: false },
   edit_image: { readOnly: false, destructive: false },
   generate_sora_2_video: { readOnly: false, destructive: false },

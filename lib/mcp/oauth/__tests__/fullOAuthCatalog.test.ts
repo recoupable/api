@@ -29,7 +29,7 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
     expect(tools.map(tool => tool.name).sort()).toEqual(
       [
         ...Object.keys(fullOAuthToolPolicy).filter(
-          name => !["context", "get_pulses", "update_pulse"].includes(name),
+          name => !["get_pulses", "update_pulse"].includes(name),
         ),
         "get_daily_email_status",
         "set_daily_email_status",
