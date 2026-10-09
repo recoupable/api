@@ -60,7 +60,7 @@ main {
   margin: 18px 0;
 }
 .hero-description {
-  max-width: 64ch;
+  max-width: 56ch;
   color: var(--muted);
   font-size: 17px;
   line-height: 1.6;
