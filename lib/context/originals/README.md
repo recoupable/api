@@ -17,8 +17,9 @@ The disabled GET/POST pilot connects private storage and registration. No MCP to
 parsing, signed download or customer intake has been activated. Server adapters
 register and read scoped source/version receipts;
 see [the registration boundary](./ORIGINAL-REGISTRATION.md).
-The Blob download completes before its size is checked; this is not a streaming
-network/memory cap. Future acquisition must enforce bounded immutable storage and
+The default verification path downloads a Blob before its size check. Retained
+delivery supplies an explicit bound and uses the SDK stream with the shared byte/
+chunk-limited reader. Neither path bounds upstream allocation or concurrency. Future acquisition must enforce bounded immutable storage and
 handle orphans; current-access original retrieval is connected in the disabled GET pilot. This helper
 never accepts caller digests as verification or creates accepted analysis.
 

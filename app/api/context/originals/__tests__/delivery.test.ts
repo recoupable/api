@@ -40,7 +40,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 it("keeps delivery default disabled", async () => {
-  vi.stubEnv("CONTEXT_ORIGINAL_INTAKE_ENABLED", "false");
+  delete process.env.CONTEXT_ORIGINAL_INTAKE_ENABLED;
   expect((await GET(request())).status).toBe(503);
   expect(validateAuthContext).not.toHaveBeenCalled();
 });

@@ -29,6 +29,14 @@ it("withholds a storage replacement exceeding the bound", async () => {
   vi.mocked(supabase.rpc)
     .mockReset()
     .mockResolvedValueOnce({ data: internal, error: null } as never);
-  download.mockResolvedValueOnce({ data: new Blob([new Uint8Array(100)]), error: null });
-  await expect(readRetainedContextOriginal(actor, owner, id, file.size)).rejects.toThrow();
+  const replacement = new Blob(["title,isrc\n" + "Song,TEST\n".repeat(20)]);
+  const arrayBuffer = vi.spyOn(Blob.prototype, "arrayBuffer");
+  download.mockReturnValueOnce({
+    asStream: async () => ({ data: replacement.stream(), error: null }),
+  } as never);
+  await expect(readRetainedContextOriginal(actor, owner, id, file.size)).rejects.toThrow(
+    "Original exceeds preparation limit",
+  );
+  expect(arrayBuffer).not.toHaveBeenCalled();
+  arrayBuffer.mockRestore();
 });
