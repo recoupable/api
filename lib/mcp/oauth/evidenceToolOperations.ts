@@ -19,7 +19,7 @@ export const evidenceToolOperations = {
   list_evidence_attachments: {
     name: "list_music_evidence_attachments",
     description:
-      "List a bounded page of associations for an exact source version. Continue with next_id while has_more is true, including empty pages with withheld receipts.",
+      "List a bounded page of associations for an exact source version. Pass the returned next_id as after_id while has_more is true, including empty pages with withheld receipts.",
     readOnly: true,
     delegated: false,
   },
