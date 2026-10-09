@@ -7,6 +7,7 @@ import { registerAllTools } from "../tools";
 import { resolveAccountId } from "../resolveAccountId";
 import type { McpAuthInfo } from "../verifyApiKey";
 import type { OAuthAccess } from "../../oauth/resolveOAuthAccess";
+import { contextToolOperations } from "./contextToolOperations";
 import { fullOAuthToolPolicy } from "./fullOAuthToolPolicy";
 
 type Extra = RequestHandlerExtra<ServerRequest, ServerNotification>;
@@ -32,12 +33,32 @@ export function registerFullOAuthTools(
     name: string,
     config: { description?: string; inputSchema: z.ZodType; annotations?: Record<string, unknown> },
     handler: (args: Args, extra: Extra) => Promise<CallToolResult>,
+    operation?: { name: string; action: string; readOnly: boolean },
   ) => {
     // Credentials never belong in model-visible output. Professional roster tools
     // remain excluded until their delegated organization-grant audit is complete.
     if (["get_api_key", "list_professional_roster", "confirm_professional_roster"].includes(name))
       return;
-    const policy = fullOAuthToolPolicy[name];
+    if (name === "context" && !operation) {
+      if (!(config.inputSchema instanceof z.ZodDiscriminatedUnion))
+        throw new Error("Context operations must have individually discoverable schemas");
+      for (const option of config.inputSchema.options) {
+        if (!(option instanceof z.ZodObject)) throw new Error("Invalid context operation schema");
+        const action = option.shape.action.value as keyof typeof contextToolOperations;
+        const metadata = contextToolOperations[action];
+        if (!metadata) throw new Error(`Missing delegated context policy for ${action}`);
+        register(
+          name,
+          { ...config, description: metadata.description, inputSchema: option },
+          handler,
+          { ...metadata, action },
+        );
+      }
+      return;
+    }
+    const policy = operation
+      ? { readOnly: operation.readOnly, destructive: false, notice: "" }
+      : fullOAuthToolPolicy[name];
     if (!policy) throw new Error(`Missing delegated policy for ${name}`);
     const originalObject =
       config.inputSchema instanceof z.ZodObject ? config.inputSchema : undefined;
@@ -52,16 +73,47 @@ export function registerFullOAuthTools(
       ? z
           .object(
             Object.fromEntries(
-              Object.entries(object.shape).filter(([key]) => key !== "account_id"),
+              Object.entries(object.shape)
+                .filter(
+                  ([key]) =>
+                    key !== "account_id" &&
+                    !(operation && key === "action") &&
+                    !(name === "create_new_artist" && key === "active_conversation_id"),
+                )
+                .map(([key, schema]) => [
+                  key,
+                  name === "create_new_artist" && key === "organization_id"
+                    ? (schema as z.ZodType).describe(
+                        "Optional organization workspace ID. Use only a workspace the account can access.",
+                      )
+                    : schema,
+                ]),
             ) as z.ZodRawShape,
           )
           .strict()
       : sourceSchema;
+    const publicName =
+      operation?.name ??
+      (
+        { get_pulses: "get_daily_email_status", update_pulse: "set_daily_email_status" } as Record<
+          string,
+          string
+        >
+      )[name] ??
+      name;
+    const description =
+      name === "create_new_artist"
+        ? "Create an artist workspace using the supplied artist name and optional organization workspace."
+        : name === "get_pulses"
+          ? "Read whether Recoup daily Pulse email updates are enabled for the connected account."
+          : name === "update_pulse"
+            ? "Enable or disable Recoup daily Pulse email updates for the connected account."
+            : (config.description ?? publicName);
     server.registerTool(
-      name,
+      publicName,
       {
         ...config,
-        description: `${config.description ?? name}\n${policy.notice ?? ""} Requires the full Recoup tools permission. Account identity comes from the connection.`,
+        description: `${description}\n${policy.notice ?? ""} Requires the full Recoup tools permission. Account identity comes from the connection.`,
         inputSchema,
         annotations: {
           ...config.annotations,
@@ -87,6 +139,7 @@ export function registerFullOAuthTools(
           const parsed = inputSchema.parse(raw) as Args;
           const validated = sourceSchema.parse({
             ...parsed,
+            ...(operation ? { action: operation.action } : {}),
             ...(hasOwner ? { account_id: current.accountId } : {}),
           }) as Args;
           const args = await services.prepare(name, validated, current.accountId);

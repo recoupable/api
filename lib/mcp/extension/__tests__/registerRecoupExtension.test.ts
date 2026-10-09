@@ -14,7 +14,8 @@ describe("Recoup extension protocol", () => {
     await Promise.all([server.connect(a), client.connect(b)]);
     try {
       const { tools } = await client.listTools();
-      const open = tools.find(tool => tool.name === "open_recoup");
+      const open = tools.find(tool => tool.name === "open_recoup_workflows");
+      expect(open?.title).toBe("Open Recoup workflows");
       expect(client.getServerVersion()?.icons).toEqual([
         {
           src: "https://api.recoupable.dev/recoup-extension-icon.svg",
@@ -26,7 +27,7 @@ describe("Recoup extension protocol", () => {
         entrypoints: [{ type: "global" }, { type: "thread" }],
       });
       expect(open?._meta?.ui).toMatchObject({ resourceUri: "ui://recoup/explore.html" });
-      const result = await client.callTool({ name: "open_recoup", arguments: {} });
+      const result = await client.callTool({ name: "open_recoup_workflows", arguments: {} });
       expect(result.isError).not.toBe(true);
       expect(result.structuredContent).toMatchObject({ title: "Recoup", version: 1 });
       const resource = await client.readResource({ uri: "ui://recoup/explore.html" });
