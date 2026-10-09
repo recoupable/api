@@ -4,16 +4,7 @@ import { authorizeContextOwner } from "../authorizeContextOwner";
 import { readBoundedOriginalStream } from "./readBoundedOriginalStream";
 import { verifyContextOriginal } from "./verifyContextOriginal";
 
-const inputSchema = z
-  .object({
-    sourceId: z
-      .string()
-      .uuid()
-      .transform(value => value.toLowerCase()),
-    idempotencyKey: z.string().regex(/^[A-Za-z0-9._:-]{1,128}$/),
-    mediaType: z.enum(["application/pdf", "text/csv"]),
-  })
-  .strict();
+import { contextOriginalPreparationSchema } from "./contextOriginalPreparationSchema";
 
 /** Unused server preparation only. Bytes are not uploaded or registered evidence. */
 export async function prepareContextOriginal(
@@ -24,7 +15,7 @@ export async function prepareContextOriginal(
 ) {
   actor = z.string().uuid().parse(actor).toLowerCase();
   owner = z.string().uuid().parse(owner).toLowerCase();
-  const parsed = inputSchema.parse(input);
+  const parsed = contextOriginalPreparationSchema.parse(input);
   await authorizeContextOwner(actor, owner === actor ? undefined : owner);
   const file = await readBoundedOriginalStream(stream);
   const objectId = uuidv5(
