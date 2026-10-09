@@ -30,7 +30,12 @@ export async function POST(request: NextRequest) {
   } catch {
     return reply("Invalid original metadata", 400);
   }
-  const auth = await validateAuthContext(request, { organizationId: parsed.organizationId });
+  let auth: Awaited<ReturnType<typeof validateAuthContext>>;
+  try {
+    auth = await validateAuthContext(request, { organizationId: parsed.organizationId });
+  } catch {
+    return reply("Original authentication unavailable", 503);
+  }
   if (auth instanceof NextResponse) {
     for (const [name, value] of Object.entries(headers)) auth.headers.set(name, value);
     return auth;

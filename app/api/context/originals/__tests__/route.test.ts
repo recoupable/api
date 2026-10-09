@@ -121,3 +121,14 @@ it("accepts a valid parameterized UTF-8 CSV media header", async () => {
     r.signal,
   );
 });
+
+it("withholds private intake on an authentication dependency rejection", async () => {
+  vi.mocked(validateAuthContext).mockRejectedValueOnce(new Error("private auth backend failure"));
+  const res = await POST(request());
+  expect(res.status).toBe(503);
+  expect(res.headers.get("cache-control")).toBe("private, no-store");
+  expect(res.headers.get("access-control-allow-origin")).toBe("*");
+  expect(await res.text()).not.toContain("private auth backend");
+  expect(consumeOAuthRateLimit).not.toHaveBeenCalled();
+  expect(storeContextOriginal).not.toHaveBeenCalled();
+});
