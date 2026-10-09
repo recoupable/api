@@ -34,7 +34,7 @@ export async function readRetainedContextOriginal(
     throw new Error("Original unavailable");
   let file: Blob | undefined;
   const verified = await verifyContextOriginal(actor, owner, internal.storage_path, async key => {
-    file = await getContextOriginalFile(key);
+    file = await getContextOriginalFile(key, maxBytes);
     if (file.size > maxBytes) throw new Error("Original unavailable");
     return file;
   });

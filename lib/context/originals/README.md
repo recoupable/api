@@ -30,5 +30,6 @@ Do not automatically migrate or reupload historical objects. Intake is not activ
 
 The server-only retained reader accepts a trusted optional maximum byte size. It
 rejects oversized receipt metadata before storage download and checks Blob size
-afterward. This is not streaming memory control. All78 local original fixture
-cases pass; this branch exposes no HTTP route or signed capability.
+afterward. It uses the installed SDK stream and existing bounded reader before Blob creation.
+Upstream allocation, response-header wait and concurrency remain unbounded here.
+All 95 local original fixture cases pass; this branch exposes no HTTP route or signed capability.
