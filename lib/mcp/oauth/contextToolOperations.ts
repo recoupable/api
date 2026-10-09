@@ -4,6 +4,13 @@ import type { contextOperationSchema } from "@/lib/context/processContextOperati
 type Action = z.infer<typeof contextOperationSchema>["action"];
 /** Each public operation has its own schema and permission classification. */
 export const contextToolOperations = {
+  list_evidence_versions: {
+    name: "list_music_evidence_versions",
+    description:
+      "List retained source versions for a saved request. Excluded pending organization-grant audit.",
+    readOnly: true,
+    delegated: false,
+  },
   list_release_cases: {
     name: "list_music_release_cases",
     description: "List saved release cases and their review status.",
@@ -148,4 +155,7 @@ export const contextToolOperations = {
       "Compile a creative direction or playlist pitch brief from saved music context without saving a snapshot.",
     readOnly: true,
   },
-} satisfies Record<Action, { name: string; description: string; readOnly: boolean }>;
+} satisfies Record<
+  Action,
+  { name: string; description: string; readOnly: boolean; delegated?: boolean }
+>;

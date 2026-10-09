@@ -37,7 +37,14 @@ export function registerFullOAuthTools(
   ) => {
     // Credentials never belong in model-visible output. Professional roster tools
     // remain excluded until their delegated organization-grant audit is complete.
-    if (["get_api_key", "list_professional_roster", "confirm_professional_roster"].includes(name))
+    if (
+      [
+        "get_api_key",
+        "list_professional_roster",
+        "confirm_professional_roster",
+        "list_context_evidence_versions",
+      ].includes(name)
+    )
       return;
     if (name === "context" && !operation) {
       if (!(config.inputSchema instanceof z.ZodDiscriminatedUnion))
@@ -47,6 +54,7 @@ export function registerFullOAuthTools(
         const action = option.shape.action.value as keyof typeof contextToolOperations;
         const metadata = contextToolOperations[action];
         if (!metadata) throw new Error(`Missing delegated context policy for ${action}`);
+        if ("delegated" in metadata && metadata.delegated === false) continue;
         register(
           name,
           { ...config, description: metadata.description, inputSchema: option },

@@ -33,12 +33,18 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
         ),
         "get_daily_email_status",
         "set_daily_email_status",
-        ...Object.values(contextToolOperations).map(operation => operation.name),
+        ...Object.values(contextToolOperations)
+          .filter(operation => !("delegated" in operation && operation.delegated === false))
+          .map(operation => operation.name),
       ].sort(),
     );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
     expect(tools).toHaveLength(77);
     for (const operation of Object.values(contextToolOperations)) {
+      if ("delegated" in operation && operation.delegated === false) {
+        expect(tools.map(tool => tool.name)).not.toContain(operation.name);
+        continue;
+      }
       const tool = tools.find(tool => tool.name === operation.name)!;
       expect(Object.keys(tool.inputSchema.properties ?? {}).length).toBeGreaterThan(0);
       expect(tool.inputSchema.properties).not.toHaveProperty("action");
@@ -49,6 +55,7 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
     expect(JSON.stringify(artist)).not.toMatch(/system prompt|copy.*conversation/i);
     expect(tools.map(tool => tool.name)).not.toContain("list_professional_roster");
     expect(tools.map(tool => tool.name)).not.toContain("confirm_professional_roster");
+    expect(tools.map(tool => tool.name)).not.toContain("list_context_evidence_versions");
     expect(
       tools.find(tool => tool.name === "send_email")!.inputSchema.required ?? [],
     ).not.toContain("room_id");
