@@ -3,11 +3,11 @@ import { filterWorkflows } from "../filterWorkflows";
 import features from "../features";
 
 describe("workflow discovery", () => {
-  it("shows six featured workflows before browsing", () => {
-    expect(filterWorkflows("", "Featured")).toHaveLength(6);
+  it("shows every workflow by default", () => {
+    expect(filterWorkflows("")).toEqual(features);
   });
   it("searches the whole library with trimmed, case-insensitive terms", () => {
-    expect(filterWorkflows("  MUSIC VIDEO  ", "Featured").map(f => f.id)).toEqual(["film"]);
+    expect(filterWorkflows("  MUSIC VIDEO  ", "All").map(f => f.id)).toEqual(["film"]);
   });
   it("combines category and search and includes intended outputs", () => {
     expect(filterWorkflows("Square cover", "Create").map(f => f.id)).toEqual(["cover"]);
