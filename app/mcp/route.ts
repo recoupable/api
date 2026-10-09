@@ -1,3 +1,4 @@
+import { recoupIcons } from "@/lib/mcp/recoupIcons";
 import { registerRecoupExtension } from "@/lib/mcp/extension/registerRecoupExtension";
 import { registerFullOAuthTools } from "@/lib/mcp/oauth/registerFullOAuthTools";
 import { createFullOAuthToolServices } from "@/lib/mcp/oauth/createFullOAuthToolServices";
@@ -21,6 +22,7 @@ const baseHandler = createMcpHandler(
     serverInfo: {
       name: "recoup-mcp",
       version: "0.0.1",
+      icons: recoupIcons,
     },
   },
 );
@@ -31,7 +33,7 @@ const oauthHandler = createMcpHandler(
     registerOAuthTools(server, createOAuthToolServices(), verifyOAuthBearer);
     registerRecoupExtension(server);
   },
-  { serverInfo: { name: "recoup-mcp", version: "0.1.0" } },
+  { serverInfo: { name: "recoup-mcp", version: "0.1.0", icons: recoupIcons } },
 );
 
 const fullOAuthHandler = createMcpHandler(
@@ -39,7 +41,7 @@ const fullOAuthHandler = createMcpHandler(
     registerFullOAuthTools(server, verifyOAuthBearer, createFullOAuthToolServices());
     registerRecoupExtension(server);
   },
-  { serverInfo: { name: "recoup-mcp", version: "0.2.0" } },
+  { serverInfo: { name: "recoup-mcp", version: "0.2.0", icons: recoupIcons } },
 );
 
 async function handler(req: Request) {

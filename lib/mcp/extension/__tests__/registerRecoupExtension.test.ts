@@ -1,3 +1,4 @@
+import { recoupIcons } from "../../recoupIcons";
 import { describe, it, expect } from "vitest";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -6,7 +7,7 @@ import { registerRecoupExtension } from "../registerRecoupExtension";
 
 describe("Recoup extension protocol", () => {
   it("discovers sidebar and conversation entrypoints and serves a self-contained UI", async () => {
-    const server = new McpServer({ name: "test", version: "1" });
+    const server = new McpServer({ name: "test", version: "1", icons: recoupIcons });
     registerRecoupExtension(server);
     const client = new Client({ name: "test", version: "1" });
     const [a, b] = InMemoryTransport.createLinkedPair();
@@ -14,6 +15,13 @@ describe("Recoup extension protocol", () => {
     try {
       const { tools } = await client.listTools();
       const open = tools.find(tool => tool.name === "open_recoup");
+      expect(client.getServerVersion()?.icons).toEqual([
+        {
+          src: "https://api.recoupable.dev/recoup-extension-icon.svg",
+          mimeType: "image/svg+xml",
+          sizes: ["20x20"],
+        },
+      ]);
       expect(open?._meta?.["openai/ui"]).toMatchObject({
         entrypoints: [{ type: "global" }, { type: "thread" }],
       });
