@@ -44,12 +44,10 @@ full lint/scoped TypeScript/format/diff. Initial missing-module TDD failures wer
 explicit no-upload replay, changed bytes, revoked scope and a simulated raw storage
 mutation. No hosted upload, customer bytes, storage deletion or production fault.
 
-Known activation blocker: changing PDF/CSV type with the same owner/source/work
-key changes the extension and may store a second orphan object before Database94
-rejects changed payload. Including mediaType in the UUID name does not solve this.
-Stable type-independent object addressing or an authoritative pre-upload binding
-needs a coherent storage/schema correction before activation; the connected pilot remains
-disabled. Do not claim changed-type rejection occurs before upload.
-
-The second stored-byte read also compares prepared fingerprint, size and type before
-SQL dispatch. A changed second read cannot register a different version.
+Changed-type addressing correction: new owner/source/work identities resolve to
+one `.original` object path for both media types. Synthetic simultaneous uploads
+with no-overwrite return one receipt and one recovery-required outcome, with one
+object and one SQL dispatch. This models the storage boundary; it is not hosted
+concurrency proof. Legacy receipts remain readable and replayable at their legacy
+paths. No automatic legacy reupload/migration is implemented. Other activation
+gates remain; the pilot is disabled.

@@ -28,7 +28,7 @@ it("prepares bounded bytes with stable scope/source/retry-derived object identit
   );
   expect(one.key).toEqual(retry.key);
   expect(one.sha256).toEqual(retry.sha256);
-  expect(one.key).toMatch(new RegExp(`^${owner}/context-originals/[a-f0-9-]{36}\\.csv$`));
+  expect(one.key).toMatch(new RegExp(`^${owner}/context-originals/[a-f0-9-]{36}\\.original$`));
   expect(one.bytes).toBe(one.file.size);
   expect(await one.file.text()).toBe("name,isrc\nSong,TEST12345\n");
 });
@@ -75,4 +75,25 @@ it("withholds prepared bytes if access is revoked after consumption", async () =
     .mockResolvedValueOnce(undefined)
     .mockRejectedValueOnce(new Error("Revoked"));
   await expect(prepareContextOriginal(actor, owner, input, stream())).rejects.toThrow("Revoked");
+});
+
+it("uses one path for concurrent PDF/CSV retries of the same identity", async () => {
+  const [csv, pdf] = await Promise.all([
+    prepareContextOriginal(actor, owner, input, stream()),
+    prepareContextOriginal(
+      actor,
+      owner,
+      { ...input, mediaType: "application/pdf" },
+      stream("%PDF-1.7\nfixture\n%%EOF"),
+    ),
+  ]);
+  expect(csv.key).toBe(pdf.key);
+  expect(csv.key).toMatch(/\.original$/);
+  expect(csv.mediaType).toBe("text/csv");
+  expect(pdf.mediaType).toBe("application/pdf");
+});
+it("rejects declared type conflicting with neutral-path bytes", async () => {
+  await expect(
+    prepareContextOriginal(actor, owner, input, stream("%PDF-1.7\nfixture\n%%EOF")),
+  ).rejects.toThrow();
 });
