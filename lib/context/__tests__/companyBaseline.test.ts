@@ -53,6 +53,39 @@ describe("company baseline", () => {
       p_after_source: actor,
     });
   });
+  it("accepts null page markers exactly like omitted markers", async () => {
+    const deps = dependencies();
+    await processContextOperation(
+      actor,
+      { ...input, after_artist_id: null, after_professional_id: null, after_source_id: null },
+      deps,
+    );
+    expect(deps.rpc).toHaveBeenCalledWith("read_context_company_baseline", {
+      p_actor: actor,
+      p_org: owner,
+      p_after_artist: null,
+      p_after_professional: null,
+      p_after_source: null,
+    });
+  });
+  it("rejects duplicate professional roles in storage output", async () => {
+    const deps = dependencies({
+      ...baseline,
+      professionals: {
+        items: [
+          {
+            professional_id: cursor,
+            name: "Example",
+            roles: ["songwriter", "songwriter"],
+            confirmation_basis: "operator_confirmed",
+          },
+        ],
+        next_id: null,
+      },
+    });
+    await expect(processContextOperation(actor, input, deps)).rejects.toThrow();
+    expect(deps.rpc).toHaveBeenCalledTimes(1);
+  });
   it("denies before storage when membership is revoked", async () => {
     const deps = dependencies();
     deps.authorize.mockRejectedValue(new Error("Access denied"));

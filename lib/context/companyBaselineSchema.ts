@@ -3,12 +3,9 @@ import { z } from "zod";
 export const companyBaselineOperationSchema = z.strictObject({
   action: z.literal("read_company_baseline"),
   organization_id: z.uuid(),
-  after_artist_id: z
-    .uuid()
-    .optional()
-    .describe("Artist relationship cursor, not artist account ID"),
-  after_professional_id: z.uuid().optional(),
-  after_source_id: z.uuid().optional(),
+  after_artist_id: z.uuid().nullish().describe("Artist relationship cursor, not artist account ID"),
+  after_professional_id: z.uuid().nullish(),
+  after_source_id: z.uuid().nullish(),
 });
 
 const page = <T extends z.ZodType>(item: T) =>
@@ -31,7 +28,8 @@ export const companyBaselineSchema = z.strictObject({
       roles: z
         .array(z.enum(["songwriter", "producer"]))
         .min(1)
-        .max(2),
+        .max(2)
+        .refine(roles => new Set(roles).size === roles.length, "Roles must be distinct"),
       confirmation_basis: z.literal("operator_confirmed"),
     }),
   ),
