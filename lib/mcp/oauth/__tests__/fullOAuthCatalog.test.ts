@@ -3,6 +3,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { registerFullOAuthTools } from "../registerFullOAuthTools";
+import { contextToolOperations } from "../contextToolOperations";
 import { fullOAuthToolPolicy } from "../fullOAuthToolPolicy";
 vi.mock("@/lib/supabase/serverClient", () => ({ default: {} }));
 vi.hoisted(() => {
@@ -25,9 +26,27 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
   await client.connect(clientTransport);
   try {
     const { tools } = await client.listTools();
-    expect(tools.map(tool => tool.name).sort()).toEqual(Object.keys(fullOAuthToolPolicy).sort());
+    expect(tools.map(tool => tool.name).sort()).toEqual(
+      [
+        ...Object.keys(fullOAuthToolPolicy).filter(
+          name => !["context", "get_pulses", "update_pulse"].includes(name),
+        ),
+        "get_daily_email_status",
+        "set_daily_email_status",
+        ...Object.values(contextToolOperations).map(operation => operation.name),
+      ].sort(),
+    );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
-    expect(tools).toHaveLength(51);
+    expect(tools).toHaveLength(77);
+    for (const operation of Object.values(contextToolOperations)) {
+      const tool = tools.find(tool => tool.name === operation.name)!;
+      expect(Object.keys(tool.inputSchema.properties ?? {}).length).toBeGreaterThan(0);
+      expect(tool.inputSchema.properties).not.toHaveProperty("action");
+      expect(tool.annotations?.readOnlyHint).toBe(operation.readOnly);
+    }
+    const artist = tools.find(tool => tool.name === "create_new_artist")!;
+    expect(artist.inputSchema.properties).not.toHaveProperty("active_conversation_id");
+    expect(JSON.stringify(artist)).not.toMatch(/system prompt|copy.*conversation/i);
     expect(tools.map(tool => tool.name)).not.toContain("list_professional_roster");
     expect(tools.map(tool => tool.name)).not.toContain("confirm_professional_roster");
     expect(
