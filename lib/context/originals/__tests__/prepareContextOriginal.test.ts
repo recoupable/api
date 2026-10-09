@@ -54,16 +54,20 @@ it.each(["sha256", "fileKey", "account_id"])(
   "rejects caller override %s without reading",
   async field => {
     const bytes = stream();
+    const getReader = vi.spyOn(bytes, "getReader");
     await expect(
       prepareContextOriginal(actor, owner, { ...input, [field]: "override" }, bytes),
     ).rejects.toThrow();
+    expect(getReader).not.toHaveBeenCalled();
     expect(bytes.locked).toBe(false);
   },
 );
 it("does not acquire reader before revoked workspace check", async () => {
   const bytes = stream();
+  const getReader = vi.spyOn(bytes, "getReader");
   vi.mocked(authorizeContextOwner).mockRejectedValueOnce(new Error("Revoked"));
   await expect(prepareContextOriginal(actor, owner, input, bytes)).rejects.toThrow("Revoked");
+  expect(getReader).not.toHaveBeenCalled();
   expect(bytes.locked).toBe(false);
 });
 it("withholds prepared bytes if access is revoked after consumption", async () => {
