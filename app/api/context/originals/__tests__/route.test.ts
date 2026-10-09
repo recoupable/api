@@ -32,6 +32,7 @@ function request(
 }
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.spyOn(console, "error").mockImplementation(() => {});
   vi.stubEnv("CONTEXT_ORIGINAL_INTAKE_ENABLED", "true");
   vi.mocked(validateAuthContext).mockResolvedValue({
     accountId: actor,
@@ -129,6 +130,13 @@ it("withholds private intake on an authentication dependency rejection", async (
   expect(res.headers.get("cache-control")).toBe("private, no-store");
   expect(res.headers.get("access-control-allow-origin")).toBe("*");
   expect(await res.text()).not.toContain("private auth backend");
+  expect(console.error).toHaveBeenCalledWith("Context original authentication failed", {
+    outcome: "unavailable",
+  });
   expect(consumeOAuthRateLimit).not.toHaveBeenCalled();
   expect(storeContextOriginal).not.toHaveBeenCalled();
 });
+
+vi.mock("@/lib/context/originals/readRetainedContextOriginal", () => ({
+  readRetainedContextOriginal: vi.fn(),
+}));

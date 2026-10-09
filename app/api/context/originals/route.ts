@@ -8,6 +8,7 @@ import { storeContextOriginal } from "@/lib/context/originals/storeContextOrigin
 import { reconcileContextOriginal } from "@/lib/context/originals/reconcileContextOriginal";
 import { ContextOriginalNeedsReconciliation } from "@/lib/context/originals/ContextOriginalNeedsReconciliation";
 import { getOriginalIntakeHeaders } from "@/lib/context/originals/getOriginalIntakeHeaders";
+export { handleOriginalDelivery as GET } from "@/lib/context/originals/handleOriginalDelivery";
 export { handleOriginalIntakePreflight as OPTIONS } from "@/lib/context/originals/handleOriginalIntakePreflight";
 const headers = getOriginalIntakeHeaders();
 /**
@@ -34,6 +35,7 @@ export async function POST(request: NextRequest) {
   try {
     auth = await validateAuthContext(request, { organizationId: parsed.organizationId });
   } catch {
+    console.error("Context original authentication failed", { outcome: "unavailable" });
     return reply("Original authentication unavailable", 503);
   }
   if (auth instanceof NextResponse) {

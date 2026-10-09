@@ -13,13 +13,13 @@ Neither check is a malware scan, document extraction, credit/rights verification
 or signature validation. Original CSV formulas/content are preserved; later
 rendering/export must treat them as untrusted data.
 
-The disabled POST pilot connects private storage and registration. No MCP tool,
+The disabled GET/POST pilot connects private storage and registration. No MCP tool,
 parsing, signed download or customer intake has been activated. Server adapters
 register and read scoped source/version receipts;
 see [the registration boundary](./ORIGINAL-REGISTRATION.md).
 The Blob download completes before its size is checked; this is not a streaming
 network/memory cap. Future acquisition must enforce bounded immutable storage and
-handle orphans; current-access original retrieval remains required. This helper
+handle orphans; current-access original retrieval is connected in the disabled GET pilot. This helper
 never accepts caller digests as verification or creates accepted analysis.
 
 New original object addresses use `.original`, independent of PDF/CSV type, while

@@ -35,10 +35,10 @@ it("keeps browser intake unavailable while the pilot is disabled", () => {
   expect(consumeOAuthRateLimit).not.toHaveBeenCalled();
   expect(storeContextOriginal).not.toHaveBeenCalled();
 });
-it("advertises only POST/OPTIONS and explicit auth headers without credentials", () => {
+it("advertises only GET/POST/OPTIONS and explicit auth headers without credentials", () => {
   const res = OPTIONS(request());
   expect(res.status).toBe(204);
-  expect(res.headers.get("access-control-allow-methods")).toBe("POST, OPTIONS");
+  expect(res.headers.get("access-control-allow-methods")).toBe("GET, POST, OPTIONS");
   expect(res.headers.get("access-control-allow-headers")).toContain("Authorization");
   expect(res.headers.get("access-control-expose-headers")).toContain("Retry-After");
   expect(res.headers.get("access-control-allow-credentials")).toBeNull();
@@ -51,4 +51,13 @@ it("does not advertise other application methods", () => {
 });
 it("rejects unsupported custom headers", () => {
   expect(OPTIONS(request("POST", "x-caller-identity")).status).toBe(400);
+});
+
+vi.mock("@/lib/context/originals/readRetainedContextOriginal", () => ({
+  readRetainedContextOriginal: vi.fn(),
+}));
+
+it("advertises authenticated GET without performing a read", () => {
+  expect(OPTIONS(request("GET")).status).toBe(204);
+  expect(validateAuthContext).not.toHaveBeenCalled();
 });

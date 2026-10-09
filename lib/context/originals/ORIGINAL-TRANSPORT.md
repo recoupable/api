@@ -29,8 +29,7 @@ uncertainty returns 409 needs_reconciliation without paths/internal cause/IDs.
 The caller retains the original source/work key and explicitly selects reconcile;
 it never allocates a new key or blindly retries/deletes. Body-read cancellation
 and pre-dispatch rejection are distinct from uncertain downstream outcomes.
-Responses are private/no-store. No binary read route or browser UI,
-signed capabilities or parsing. Actual transport authentication, end-to-end
+Responses are private/no-store. A disabled binary GET route is included; no browser UI, signed capabilities or parsing. Actual transport authentication, end-to-end
 storage/RPC integration and hosted behavior remain unverified: route fixtures
 mock the auth/domain boundary; inherited flow tests exercise real adapters with
 synthetic Supabase storage/RPC. They are not real hosted customer operations.
@@ -44,8 +43,32 @@ Vercel's documented function payload limit is 4.5MB; 4MiB is below that. Interna
 https://vercel.com/docs/functions/limitations
 
 OPTIONS is gated by the same disabled pilot flag. When enabled it advertises only
-POST/OPTIONS, the existing explicit token/API-key request headers, and readable
+GET/POST/OPTIONS, the existing explicit token/API-key request headers, and readable
 Retry-After. Unsupported methods/custom headers are rejected. It performs no
-authentication, admission or body/storage operation. All POST responses include
+authentication, admission or body/storage operation. All GET/POST responses include
 private/no-store CORS headers with no credentialed browser access. This is synthetic
 route coverage, not a hosted browser upload or activation.
+
+GET /api/context/originals accepts only receiptId and optional organizationId;
+unknown/repeated fields and Range requests are rejected. The same default-disabled
+flag, shared auth and pilot admission budget cover delivery. A write can consume
+the account's single admission, so immediate readback may wait for Retry-After;
+this conservative budget must be evaluated before activation.
+
+The existing retained reader accepts a trusted server byte bound: receipt metadata
+over4MiB is denied before download, then actual Blob size and retained digest/type
+are checked and current receipt/access/withdrawal reread before response. GET
+returns a private/no-store attachment with fixed original.pdf/original.csv filename,
+explicit verified media type and nosniff. It returns no path, signed capability,
+receipt metadata or accepted-analysis assertion. Disconnect before/after read
+withholds the response; this does not cancel an in-flight storage download. Blob
+download is not streaming bounded acquisition. Authorization is point-in-time,
+not a lock across HTTP delivery or retroactive revocation of delivered bytes.
+
+All145 original/route fixtures pass locally, including14 GET cases,8 payload-bound
+reader cases and inherited actual-byte/default-storage boundaries. Route fixtures
+mock shared auth/domain; they do not prove hosted authentication or a complete
+write/read/recovery transaction. No intake environment was enabled. Larger retained
+originals are withheld rather than truncated. Distributed concurrency, retained
+storage/orphan lifecycle, explicit legacy recovery and hosted authenticated
+synthetic roundtrip remain activation gates.

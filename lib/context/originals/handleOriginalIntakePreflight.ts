@@ -6,7 +6,7 @@ export function handleOriginalIntakePreflight(request: Request) {
   const headers = getOriginalIntakeHeaders();
   if (process.env.CONTEXT_ORIGINAL_INTAKE_ENABLED !== "true")
     return new NextResponse(null, { status: 503, headers });
-  if (request.headers.get("access-control-request-method") !== "POST")
+  if (!["GET", "POST"].includes(request.headers.get("access-control-request-method") ?? ""))
     return new NextResponse(null, { status: 405, headers });
   const allowed = new Set(
     headers["Access-Control-Allow-Headers"]
