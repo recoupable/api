@@ -7,6 +7,12 @@ export class ContextOriginalNeedsReconciliation extends Error {
     cause: unknown,
   ) {
     super("Original save needs reconciliation", { cause });
+    for (const field of ["ownerId", "sourceId", "idempotencyKey"])
+      Object.defineProperty(this, field, {
+        enumerable: false,
+        writable: false,
+        configurable: false,
+      });
     this.name = "ContextOriginalNeedsReconciliation";
   }
 }
