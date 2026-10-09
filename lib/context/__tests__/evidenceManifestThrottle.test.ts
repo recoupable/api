@@ -29,7 +29,7 @@ it("shares authenticated actor throttling across cursor and workspace choices", 
   expect(calls[0]).toEqual(calls[1]);
   expect(calls[0]).toEqual([
     expect.stringMatching(/^[a-f0-9]{64}$/),
-    [{ key: expect.stringMatching(/^[a-f0-9]{64}$/), limit: 120 }],
+    [{ key: "111ac3322f9d42a8895a2198dff3a4c27270e564e79e52d05bb52e05fa958728", limit: 120 }],
   ]);
   expect(JSON.stringify(calls)).not.toContain(actor);
 });
