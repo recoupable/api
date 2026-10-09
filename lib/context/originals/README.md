@@ -20,3 +20,11 @@ The Blob download completes before its size is checked; this is not a streaming
 network/memory cap. Future acquisition must enforce bounded immutable storage and
 handle orphans; current-access original retrieval remains required. This helper
 never accepts caller digests as verification or creates accepted analysis.
+
+New original object addresses use `.original`, independent of PDF/CSV type, while
+legacy `.pdf` and `.csv` verification remains supported. Neutral-path bytes select
+the bounded PDF/UTF-8 plausibility check; preparation rejects a declared type that
+differs from the detected type. This is not statement parsing, malware validation
+or proof of storage immutability. New neutral registrations require Database94's
+forward-only `20261009230000` migration before dependent release. Do not migrate
+or reupload historical objects automatically. No customer intake is activated.
