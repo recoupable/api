@@ -21,7 +21,7 @@ export async function handleContextToolOperation(
       accountIdOverride: undefined,
     });
     if (error || !accountId)
-      return { ...getToolResultError(error ?? "Authentication required"), isError: true };
+      return { ...getToolResultError("Authentication required"), isError: true };
     return getToolResultSuccess(
       await processContextOperation(accountId, args, {
         rpc: callContextRpc,
@@ -33,7 +33,7 @@ export async function handleContextToolOperation(
   } catch {
     return {
       ...getToolResultError(
-        "Context operation failed. Verify access and retry using the same idempotency key.",
+        "Context operation unavailable. Check workspace access and operation arguments.",
       ),
       isError: true,
     };

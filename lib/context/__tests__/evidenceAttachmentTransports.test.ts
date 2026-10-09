@@ -96,6 +96,25 @@ describe("evidence HTTP and standard Context MCP", () => {
     expect((await mcp()(operations[0], {})).isError).toBe(true);
     expect(callContextRpc).not.toHaveBeenCalled();
   });
+  it("does not suggest an unsupported actor override on authentication failure", async () => {
+    vi.mocked(resolveAccountId).mockResolvedValueOnce({
+      accountId: null,
+      error: "Supply account_id",
+    });
+    const result = await mcp()(operations[0], {});
+    expect(result.isError).toBe(true);
+    expect(JSON.parse(result.content[0].text)).toMatchObject({
+      success: false,
+      message: "Authentication required",
+    });
+    expect(callContextRpc).not.toHaveBeenCalled();
+  });
+  it("does not require a write key to retry a failed read", async () => {
+    vi.mocked(callContextRpc).mockRejectedValueOnce(new Error("Unavailable"));
+    const result = await mcp()(operations[1], {});
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).not.toContain("idempotency");
+  });
   it("rejects identity overrides on both interfaces", async () => {
     const input = { ...operations[0], account_id: actor };
     expect((await http(input)).status).toBe(400);
