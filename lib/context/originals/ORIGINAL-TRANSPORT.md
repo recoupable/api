@@ -66,11 +66,11 @@ or accepted-analysis assertion. Disconnect before/after read withholds the respo
 this does not cancel an in-flight storage download.
 
 Retained delivery uses the installed storage SDK stream and the existing bounded reader,
-with a 30-second body-consumption deadline and cancellation on overflow. Authorization
-is point-in-time, not a lock across HTTP delivery or retroactive revocation of delivered
+with a 30-second download deadline covering headers and body, plus cancellation on
+overflow. Authorization is point-in-time, not a lock across HTTP delivery or retroactive revocation of delivered
 bytes.
 
-All 153 original/route fixtures pass locally, including 14 GET cases, 8 payload-bound
+All 156 original/route fixtures pass locally, including 14 GET cases, 8 payload-bound
 reader cases and inherited actual-byte/default-storage boundaries. Route fixtures mock
 shared auth/domain; they do not prove hosted authentication or a complete
 write/read/recovery transaction. No intake environment was enabled. Larger retained
@@ -79,8 +79,9 @@ storage/orphan lifecycle, explicit legacy recovery and hosted authenticated synt
 roundtrip remain activation gates.
 
 Streaming delivery limits copied application bytes and chunk count before Blob creation.
-It cannot bound an upstream chunk allocation, total concurrent memory or the time spent
-awaiting initial response headers. The service SDK's default Blob path remains for
+It cannot bound an upstream chunk allocation or total concurrent memory. Header wait
+and body consumption share the same scoped, abortable deadline. The service SDK's
+default Blob path remains for
 registration verification callers that omit the bound; that path does not acquire a
 streaming memory guarantee. These limits remain activation considerations, alongside
 storage/orphan controls.
