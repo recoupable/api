@@ -39,7 +39,7 @@ Depends on separately pending API986/987/989 and Database94. Reviewed API depend
 commits are included until their releases; refresh main afterward. Nothing is
 merged/deployed/live-verified by this engineering slice.
 
-Validation:12 new synthetic mocked-storage/RPC-boundary cases +60 inherited =72 local cases,
+Validation: 99 current synthetic original cases, including neutral-path coverage,
 full lint/scoped TypeScript/format/diff. Initial missing-module TDD failures were resolved before the passing run. Tests are synthetic, including upload errors, lost register ack,
 explicit no-upload replay, changed bytes, revoked scope and a simulated raw storage
 mutation. No hosted upload, customer bytes, storage deletion or production fault.
