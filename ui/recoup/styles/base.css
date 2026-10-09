@@ -1,10 +1,4 @@
 @font-face {
-  font-family: Instrument Serif;
-  font-style: italic;
-  font-weight: 400;
-  src: url("assets/instrument-serif-italic.ttf");
-}
-@font-face {
   font-family: DM Sans;
   src: url("assets/dm-sans.woff2");
 }
