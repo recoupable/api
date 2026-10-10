@@ -77,10 +77,20 @@ export async function planStoredContextModules(actor: string, owner: string, req
               .strictObject({
                 subjectId: z.uuid(),
                 kind: z.literal("songwriter"),
-                identityConfirmed: z.literal(false),
+                // Only an explicit operator resolution confirms identity; it does not permit research.
+                identityConfirmed: z.boolean(),
+                professionalId: z.uuid().optional(),
                 availableFields: z.array(z.literal("submitted_name")).length(1),
                 reusableModules: z.array(z.string()),
               })
+              // A confirmed identity names its professional; an unconfirmed one names none.
+              .refine(
+                target => target.identityConfirmed === (target.professionalId !== undefined),
+                {
+                  message: "Songwriter identity confirmation and professional must agree",
+                },
+              )
+              .transform(({ professionalId: _resolved, ...target }) => target)
               .parse(
                 await callContextRpc("list_context_songwriter_request_target", {
                   p_owner: owner,
