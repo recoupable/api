@@ -12,7 +12,7 @@ Implementation pending release. This is a reusable API-owned feature, not a Gats
 
 ## Dependencies and activation
 
-1. Review/apply database migrations `20261010060000_release_players.sql` and `20261010060001_release_player_reports.sql`.
+1. Review/apply database migrations `20261010060000_release_players.sql` `20261010060001_release_player_reports.sql` and `20261010060002_player_duration_budget.sql` in order.
 2. Release API and app PRs. API needs its existing `SITES_SPOTIFY_CLIENT_ID`, signing credentials and Apple developer keys. Optional `PLAYER_APP_ORIGIN` defaults to `https://app.recoupable.dev`; Spotify must register that origin's `/s/spotify/callback` on the same developer app. Optional `PLAYER_SESSION_SECRET` uses an isolated signer; otherwise the API's service role key is used with a separate signing context. No app-side Spotify client ID is needed for the new player.
 3. Register the artist's destinations and exact website origins through the authenticated API/MCP. Explicitly enable the player after reviewing configuration.
 4. Use the returned listen/embed links, passing bounded `source`, `medium`, `campaign`, `content` labels.
