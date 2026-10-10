@@ -103,7 +103,15 @@ it("rejects a track, playlist or lookalike host before authorization or storage"
         { action: "ingest_video", url, idempotency_key: "bad" },
         { authorize, rpc, dispatch },
       ),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({
+      issues: [
+        {
+          code: "custom",
+          path: ["url"],
+          message: "Use a single YouTube video URL; Spotify tracks use ingest",
+        },
+      ],
+    });
   expect(authorize).not.toHaveBeenCalled();
   expect(rpc).not.toHaveBeenCalled();
   expect(dispatch).not.toHaveBeenCalled();
@@ -118,7 +126,9 @@ it("does not accept research topics or direction that would imply collection", a
         { action: "ingest_video", url: canonical, idempotency_key: "strict", ...extra },
         { authorize: vi.fn(), rpc, dispatch: vi.fn() },
       ),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({
+      issues: [{ code: "unrecognized_keys", keys: Object.keys(extra), path: [] }],
+    });
   expect(rpc).not.toHaveBeenCalled();
 });
 
