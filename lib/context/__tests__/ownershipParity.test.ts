@@ -111,16 +111,66 @@ function expectNoPrivateSink() {
   for (const [name, sink] of Object.entries(sinks))
     expect(sink, `${name} ran after a denial`).not.toHaveBeenCalled();
 }
+type SinkName = keyof typeof sinks;
+// Where each private sink receives the workspace owner and, when it takes one, the actor.
+const scopeOf: Record<SinkName, (args: unknown[]) => { owner: unknown; actor?: unknown }> = {
+  callContextRpc: ([, params]) => {
+    const { p_owner, p_actor } = params as Record<string, unknown>;
+    return { owner: p_owner, actor: p_actor };
+  },
+  dispatchContextRequest: ([account, owner]) => ({ actor: account, owner }),
+  dispatchContextReleaseVerification: ([account, owner]) => ({ actor: account, owner }),
+  dispatchContextReleaseTrackIsrcs: ([account, owner]) => ({ actor: account, owner }),
+  planStoredContextModules: ([account, owner]) => ({ actor: account, owner }),
+  listContextRequestExecutions: ([owner]) => ({ owner }),
+  listContextCatalogMembers: ([owner]) => ({ owner }),
+  expandContextCatalogMembers: ([owner]) => ({ owner }),
+  listContextCatalogMemberTargets: ([owner]) => ({ owner }),
+};
+function recordedSinkCalls() {
+  return (Object.keys(sinks) as SinkName[]).flatMap(name =>
+    sinks[name].mock.calls.map(args => ({ name, args: args as unknown[] })),
+  );
+}
+/** The authorized owner, never the actor's personal workspace or a caller-supplied ID, reaches every sink. */
+function expectSinksBoundToWorkspace(calls: ReturnType<typeof recordedSinkCalls>) {
+  expect(calls.length, "authorized operation reached no private sink").toBeGreaterThan(0);
+  for (const { name, args } of calls) {
+    const scope = scopeOf[name](args);
+    expect(scope.owner, `${name} owner`).toBe(organization);
+    if (scope.actor !== undefined) expect(scope.actor, `${name} actor`).toBe(actor);
+  }
+}
+/**
+ * The denial envelope and exact status belong to the Context error contract. Ownership pins only
+ * the security property: a client-error denial on both transports with no private detail.
+ */
+function expectHttpDenial(status: number) {
+  expect(status).toBeGreaterThanOrEqual(400);
+  expect(status).toBeLessThan(500);
+}
 
-afterEach(() => vi.resetAllMocks());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.resetAllMocks();
+});
 
 describe.each(operations)("Context ownership parity: $action", ({ option, operation }) => {
-  it("authorized: both transports pass the authenticated actor to one shared operation", async () => {
+  it("authorized: both transports reach the same sinks, bound to the authorized workspace", async () => {
     expect(option.safeParse(operation).success).toBe(true);
+    // Server gates on so gated actions reach their first private read.
+    vi.stubEnv("CONTEXT_SPOTIFY_RELEASE_VERIFY_ENABLED", "true");
+    vi.stubEnv("CONTEXT_SPOTIFY_RELEASE_TRACK_ISRC_ENABLED", "true");
     vi.mocked(validateOrganizationAccess).mockResolvedValue(true);
+    // An empty database answer, so both transports serialize the same result.
+    const answerEmpty = () => Object.values(sinks).forEach(sink => sink.mockResolvedValue(null));
+    answerEmpty();
 
     const response = await callHttp(operation);
     expect([400, 401, 403]).not.toContain(response.status);
+    const httpBody = await response.json();
+    const httpSinkCalls = recordedSinkCalls();
+    expectSinksBoundToWorkspace(httpSinkCalls);
     expect(processContextOperation).toHaveBeenCalledExactlyOnceWith(
       actor,
       operation,
@@ -132,7 +182,12 @@ describe.each(operations)("Context ownership parity: $action", ({ option, operat
 
     vi.clearAllMocks();
     vi.mocked(validateOrganizationAccess).mockResolvedValue(true);
-    await callMcp(operation);
+    answerEmpty();
+    const { text } = await callMcp(operation);
+    // Same private reads, writes and dispatches with the same arguments, and the same outcome.
+    expect(recordedSinkCalls()).toEqual(httpSinkCalls);
+    if (response.ok) expect(JSON.parse(text)).toEqual(httpBody);
+    else expect(JSON.parse(text)).toMatchObject({ success: false });
     expect(processContextOperation).toHaveBeenCalledExactlyOnceWith(
       actor,
       operation,
@@ -151,16 +206,16 @@ describe.each(operations)("Context ownership parity: $action", ({ option, operat
     vi.mocked(authorizeContextOwner).mockRejectedValue(new Error(`Access denied: ${canary}`));
 
     const response = await callHttp(operation);
-    expect(response.status).toBe(409);
+    expectHttpDenial(response.status);
     const body = await response.json();
-    expect(body).toEqual({ error: expect.any(String) });
+    expect(body).toMatchObject({ error: expect.any(String) });
     expect(JSON.stringify(body)).not.toContain(canary);
     expect(JSON.stringify(body)).not.toContain(organization);
     expect(processContextOperation).toHaveBeenCalledTimes(1);
     expectNoPrivateSink();
 
     const { result, text } = await callMcp(operation);
-    expect(JSON.parse(text)).toEqual({ success: false, message: expect.any(String) });
+    expect(JSON.parse(text)).toMatchObject({ success: false, message: expect.any(String) });
     expect(JSON.stringify(result)).not.toContain(canary);
     expect(JSON.stringify(result)).not.toContain(organization);
     expect(processContextOperation).toHaveBeenCalledTimes(2);
@@ -179,7 +234,7 @@ describe.each(operations)("Context ownership parity: $action", ({ option, operat
     expectNoPrivateSink();
 
     const { result, text } = await callMcp(operation);
-    expect(JSON.parse(text)).toEqual({ success: false, message: expect.any(String) });
+    expect(JSON.parse(text)).toMatchObject({ success: false, message: expect.any(String) });
     expect(JSON.stringify(result)).not.toContain(organization);
     expect(processContextOperation).toHaveBeenCalledExactlyOnceWith(
       actor,

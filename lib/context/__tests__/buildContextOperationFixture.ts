@@ -1,13 +1,14 @@
 import { z } from "zod";
 
 // Ordered so the first match is the most specific plausible value for a field.
-// Spotify IDs are syntactic fixtures only; they identify nothing real.
+// Spotify and YouTube IDs are syntactic fixtures only; nothing is fetched or resolved.
 const candidates: unknown[] = [
   "key-1",
   "a".repeat(64),
   "11111111-1111-4111-8111-111111111111",
   "https://open.spotify.com/album/abcdefghijklmnopqrstuv",
   "https://open.spotify.com/track/2ay96C6SLNv9urvXKD3ecB",
+  "https://www.youtube.com/watch?v=AbCdEfGhI_1",
   "2026-01-01",
   1,
   0,

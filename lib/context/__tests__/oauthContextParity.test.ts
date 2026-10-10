@@ -161,7 +161,8 @@ describe.each(operations)("OAuth Context parity: $action", ({ action, input, exp
     vi.mocked(authorizeContextOwner).mockRejectedValue(new Error(`Access denied: ${canary}`));
     const { registered } = setup();
     const result = await registered.get(metadata.name)!.run(input, extra);
-    expect(JSON.parse(result.content[0].text)).toEqual({
+    // The envelope belongs to the Context error contract; ownership pins only opacity.
+    expect(JSON.parse(result.content[0].text)).toMatchObject({
       success: false,
       message: expect.any(String),
     });
