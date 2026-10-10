@@ -50,6 +50,9 @@ export async function generateContextObject(options: {
     costStatus: known ? "confirmed" : "unknown",
     trace: {
       model,
+      // The model the gateway actually answered with; collectors compare it to the request.
+      actualModel:
+        typeof response.response?.modelId === "string" ? response.response.modelId : null,
       system: options.system,
       messages,
       response: response.response,
