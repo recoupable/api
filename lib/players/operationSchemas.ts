@@ -2,7 +2,13 @@ import { z } from "zod";
 import { playerInputSchema } from "./schema";
 export const playerOperationSchemas = {
   create: playerInputSchema,
-  list: z.object({ organizationId: z.string().uuid().nullable().default(null) }).strict(),
+  list: z
+    .object({
+      organizationId: z.string().uuid().nullable().default(null),
+      offset: z.coerce.number().int().min(0).max(100000).default(0),
+      limit: z.coerce.number().int().min(1).max(100).default(50),
+    })
+    .strict(),
   get: z
     .object({ id: z.string().uuid(), organizationId: z.string().uuid().nullable().default(null) })
     .strict(),

@@ -1,3 +1,4 @@
+export { playerPreflight as OPTIONS } from "@/lib/players/playerPreflight";
 import { exchangePlayerSpotify } from "@/lib/players/exchangePlayerSpotify";
 import { publicPlayerResponse } from "@/lib/players/publicPlayerResponse";
 /**

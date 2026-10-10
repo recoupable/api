@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { describe, expect, it } from "vitest";
 import { playerInputSchema, listeningEventSchema } from "../schema";
 const input = {
@@ -52,4 +53,20 @@ it("accepts Spotify share links and normalizes provider tracking parameters", ()
     spotifyUrl: "https://open.spotify.com/intl-en/album/abc123?si=share-token",
   };
   expect(playerInputSchema.parse(input).spotifyUrl).toBe("https://open.spotify.com/album/abc123");
+});
+
+it.each([
+  { allowedOrigins: ["artist.example"] },
+  { appleUrl: "artist.example" },
+  { artwork: "artist.example" },
+  { artwork: "https://user:secret@artist.example/image.jpg" },
+])("rejects malformed and credential-bearing URLs as validation errors", patch => {
+  expect(() =>
+    playerInputSchema.parse({
+      artistId: "10000000-0000-4000-8000-000000000001",
+      name: "Release",
+      spotifyUrl: "https://open.spotify.com/track/abc",
+      ...patch,
+    }),
+  ).toThrow(z.ZodError);
 });

@@ -13,7 +13,7 @@ const spotifyUrl = z
   });
 const appleUrl = z
   .string()
-  .url()
+  .url({ abort: true })
   .refine(value => {
     const url = new URL(value);
     return (
@@ -28,7 +28,7 @@ const appleUrl = z
   }, "Use an Apple Music album or song link");
 const origin = z
   .string()
-  .url()
+  .url({ abort: true })
   .refine(value => {
     const url = new URL(value);
     return url.protocol === "https:" && url.origin === value;
@@ -44,8 +44,11 @@ export const playerInputSchema = z
     enabled: z.boolean().default(false),
     artwork: z
       .string()
-      .url()
-      .refine(value => new URL(value).protocol === "https:")
+      .url({ abort: true })
+      .refine(value => {
+        const url = new URL(value);
+        return url.protocol === "https:" && !url.username && !url.password;
+      })
       .nullable()
       .default(null),
   })

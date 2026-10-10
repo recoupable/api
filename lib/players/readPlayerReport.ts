@@ -1,3 +1,4 @@
+import { limitSiteRequest } from "@/lib/sites/activity/limitSiteRequest";
 import { z } from "zod";
 import { authorizeSiteWorkspace } from "@/lib/sites/authorizeSiteWorkspace";
 import { selectReleasePlayer } from "@/lib/supabase/release_players/selectReleasePlayer";
@@ -15,6 +16,7 @@ export async function readPlayerReport(accountId: string, id: string, input: unk
   const owner = await authorizeSiteWorkspace(accountId, value.organizationId),
     player = await selectReleasePlayer(id);
   if (!player || player.owner_id !== owner) throw new SiteError(404, "Player not found");
+  await limitSiteRequest(owner, "player-private-report", 120);
   return {
     measurement: "browser_reported_playback",
     dspStreams: null,

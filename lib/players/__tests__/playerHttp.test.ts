@@ -1,3 +1,4 @@
+import { playerPreflight } from "../playerPreflight";
 import { NextRequest, NextResponse } from "next/server";
 import { afterEach, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -73,4 +74,20 @@ it("reports malformed event JSON as invalid input", async () => {
     }),
   );
   expect(result.status).toBe(400);
+});
+
+it("allows only trusted-origin JSON preflight", () => {
+  const response = playerPreflight(
+    new Request("https://api.example", {
+      method: "OPTIONS",
+      headers: { origin: "https://app.recoupable.dev" },
+    }),
+  );
+  expect(response.status).toBe(204);
+  expect(response.headers.get("Access-Control-Allow-Headers")).toBe("Content-Type");
+  expect(
+    playerPreflight(
+      new Request("https://api.example", { headers: { origin: "https://evil.example" } }),
+    ).status,
+  ).toBe(403);
 });

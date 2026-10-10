@@ -10,7 +10,7 @@ import { verifyPlayerSession } from "./verifyPlayerSession";
 import { signPlayerSession } from "./signPlayerSession";
 import { requirePlayerSession } from "./requirePlayerSession";
 /** No private artist/fan/owner fields are exposed in public configuration. */
-export async function getPublicPlayer(id: string, input: unknown) {
+export async function getPublicPlayer(id: string, input: unknown, createSession = false) {
   z.string().uuid().parse(id);
   const query = z
     .object({
@@ -21,7 +21,11 @@ export async function getPublicPlayer(id: string, input: unknown) {
     })
     .strict()
     .parse(input);
-  await limitSiteRequest(id, "player-config", 600);
+  if (!createSession && query.provider)
+    throw new SiteError(400, "Use POST to acquire a player session");
+  if (createSession && (!query.provider || !query.parent))
+    throw new SiteError(400, "Provider and parent are required");
+  await limitSiteRequest(id, createSession ? "player-session" : "player-config", 600);
   const player = await selectReleasePlayer(id);
   if (!player?.enabled) throw new SiteError(404, "Player not available");
   const oauth = getPlayerOAuthConfig();

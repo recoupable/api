@@ -1,3 +1,4 @@
+vi.mock("@/lib/sites/activity/limitSiteRequest", () => ({ limitSiteRequest: vi.fn() }));
 import { beforeEach, expect, it, vi } from "vitest";
 import { readPlayerReport } from "../readPlayerReport";
 const m = vi.hoisted(() => ({ select: vi.fn(), access: vi.fn(), report: vi.fn() }));

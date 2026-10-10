@@ -48,12 +48,13 @@ export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
   },
   create_release_player: {
     readOnly: false,
-    destructive: false,
+    destructive: true,
     notice:
       "Disabled by default. Setting enabled=true publishes; requires explicit account authorization.",
   },
   update_release_player: {
     readOnly: false,
+    destructive: true,
     notice: "Enabling publishes. Require explicit account authorization and current revision.",
   },
   list_sites: { readOnly: true },

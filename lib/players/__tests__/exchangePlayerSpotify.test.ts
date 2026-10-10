@@ -74,3 +74,21 @@ it("rejects supplied emails, old sessions, and Apple sessions", async () => {
     exchangePlayerSpotify({ code: "code", verifier: "v".repeat(64), flow: "signed" }),
   ).rejects.toMatchObject({ status: 403 });
 });
+
+it("rejects stale Spotify authorization sessions before exchanging credentials", async () => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  m.session.mockResolvedValue({
+    context: {},
+    session: {
+      provider: "spotify",
+      created_at: new Date(Date.now() - 11 * 60000).toISOString(),
+      connected_at: null,
+    },
+  });
+  await expect(
+    exchangePlayerSpotify({ code: "code", verifier: "v".repeat(64), flow: "signed" }),
+  ).rejects.toMatchObject({ status: 403 });
+  expect(fetch).not.toHaveBeenCalled();
+  expect(m.save).not.toHaveBeenCalled();
+});

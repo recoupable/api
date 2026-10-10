@@ -8,6 +8,7 @@ export async function recordListeningEvent(token: string, input: unknown) {
     { context, session } = await requirePlayerSession(token);
   if (session.provider !== event.provider) throw new SiteError(403, "Wrong listening provider");
   await limitSiteRequest(context.sessionId, "listening-event", 120);
+  await limitSiteRequest(context.playerId, "player-listening-events", 1000);
   return {
     success: true,
     recorded: await insertPlayerListeningEvent(context.sessionId, context.revision, event),

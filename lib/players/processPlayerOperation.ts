@@ -1,3 +1,4 @@
+import { limitSiteRequest } from "@/lib/sites/activity/limitSiteRequest";
 import { z } from "zod";
 import { authorizeSiteWorkspace } from "@/lib/sites/authorizeSiteWorkspace";
 import { selectArtistOrganizationIds } from "@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds";
@@ -18,6 +19,7 @@ export async function processPlayerOperation(
 ) {
   const parsed = playerOperationSchemas[operation].parse(input);
   const owner = await authorizeSiteWorkspace(accountId, parsed.organizationId);
+  await limitSiteRequest(owner, "player-management", 180);
   if (operation === "create") {
     const value = playerInputSchema.parse(input);
     const memberships = await selectArtistOrganizationIds(value.artistId);
@@ -41,7 +43,16 @@ export async function processPlayerOperation(
     });
     return { player, ...getPlayerLinks(player.id) };
   }
-  if (operation === "list") return { players: await selectReleasePlayers(owner) };
+  if (operation === "list") {
+    const pagination = playerOperationSchemas.list.parse(input);
+    const players = await selectReleasePlayers(owner, pagination.offset, pagination.limit);
+    return {
+      players,
+      offset: pagination.offset,
+      limit: pagination.limit,
+      nextOffset: players.length === pagination.limit ? pagination.offset + pagination.limit : null,
+    };
+  }
   const id = z.object({ id: z.string().uuid() }).parse(input).id;
   const player = await selectReleasePlayer(id);
   if (!player || player.owner_id !== owner) throw new SiteError(404, "Player not found");
@@ -49,7 +60,7 @@ export async function processPlayerOperation(
   const update = playerOperationSchemas.update.parse(input);
   if (player.revision !== update.revision)
     throw new SiteError(409, "Player changed; read the latest revision");
-  if (update.enabled && !(await hasPaidSiteSubscription(owner)))
+  if ((update.enabled ?? player.enabled) && !(await hasPaidSiteSubscription(owner)))
     throw new SiteError(402, "An active paid Recoup subscription is required to publish a player");
   const value = playerInputSchema.parse({
     artistId: player.artist_id,

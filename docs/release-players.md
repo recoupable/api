@@ -24,3 +24,5 @@ Implementation pending release. This is a reusable API-owned feature, not a Gats
 API unit tests exercise ownership, paid publication, revisions, safe destinations/origins, signed sessions, confirmed scopes/profile capture, provider-bound reporting and private fan/activity access. The database PR runs real PostgreSQL identity, isolation, deduplication, concurrent retry and duration tests. App tests cover trusted renderers, PKCE session transport, observed active duration and unchanged legacy Sites behavior.
 
 No production migration, real fan authorization or playback has been performed for this version. Records must be registered after the dependent releases; documentation alone does not activate players.
+
+Apple Music browser tokens currently support the default app.recoupable.dev origin only. A custom PLAYER_APP_ORIGIN supports Spotify; Apple needs a matching signer configuration before enabling its player there.

@@ -1,3 +1,4 @@
+vi.mock("@/lib/sites/activity/limitSiteRequest", () => ({ limitSiteRequest: vi.fn() }));
 import { beforeEach, expect, it, vi } from "vitest";
 import { processPlayerOperation } from "../processPlayerOperation";
 const mocks = vi.hoisted(() => ({
@@ -119,4 +120,19 @@ it("updates destinations and branding without changing artist or fan ownership",
       apple_url: "https://music.apple.com/us/album/release/123",
     }),
   );
+});
+
+it("checks entitlement when editing an enabled player without an enabled flag", async () => {
+  mocks.select.mockResolvedValue({ id: artist, owner_id: owner, enabled: true, revision: 1 });
+  mocks.paid.mockResolvedValue(false);
+  await expect(
+    processPlayerOperation(owner, "update", { id: artist, revision: 1, name: "Published edit" }),
+  ).rejects.toMatchObject({ status: 402 });
+  expect(mocks.update).not.toHaveBeenCalled();
+});
+it("paginates the workspace catalog instead of silently truncating it", async () => {
+  mocks.list.mockResolvedValue([{ id: artist }]);
+  const result = await processPlayerOperation(owner, "list", { offset: 100, limit: 1 });
+  expect(mocks.list).toHaveBeenCalledWith(owner, 100, 1);
+  expect(result).toMatchObject({ offset: 100, limit: 1, nextOffset: 101 });
 });

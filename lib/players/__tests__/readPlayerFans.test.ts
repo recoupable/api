@@ -1,3 +1,5 @@
+import { z } from "zod";
+vi.mock("@/lib/sites/activity/limitSiteRequest", () => ({ limitSiteRequest: vi.fn() }));
 import { beforeEach, expect, it, vi } from "vitest";
 import { readPlayerFans } from "../readPlayerFans";
 const m = vi.hoisted(() => ({ access: vi.fn(), player: vi.fn(), fans: vi.fn() }));
@@ -23,6 +25,7 @@ it("returns the artist's fans across releases only within the owning workspace",
 it("blocks cross-workspace and malformed pagination", async () => {
   m.player.mockResolvedValue({ owner_id: "other" });
   await expect(readPlayerFans("account", id, {})).rejects.toMatchObject({ status: 404 });
-  await expect(readPlayerFans("account", id, { limit: 10000 })).rejects.toThrow();
+  m.player.mockResolvedValue({ owner_id: "owner", artist_id: "artist" });
+  await expect(readPlayerFans("account", id, { limit: 10000 })).rejects.toBeInstanceOf(z.ZodError);
   expect(m.fans).not.toHaveBeenCalled();
 });
