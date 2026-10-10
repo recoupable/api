@@ -151,7 +151,13 @@ export const contextToolOperations = {
   withdraw_source: {
     name: "withdraw_music_context_source",
     description:
-      "Withdraw one private or incorrect source recorded as an input of a saved context request so future authorized reads and briefs exclude it. History is retained; this does not delete original files or recompute anything.",
+      "Withdraw one private or incorrect source recorded as an input of a saved context request, named by source_id or by a source_version_id from a brief manifest, so future authorized reads and briefs exclude it. Rows are kept; this does not delete original files or recompute anything.",
     readOnly: false,
+    destructive: true,
+    notice:
+      "Cannot be undone: the source stays withdrawn in this workspace, later jobs cannot republish it, and dependent documents and saved briefs stop returning its evidence.",
   },
-} satisfies Record<Action, { name: string; description: string; readOnly: boolean }>;
+} satisfies Record<
+  Action,
+  { name: string; description: string; readOnly: boolean; destructive?: boolean; notice?: string }
+>;

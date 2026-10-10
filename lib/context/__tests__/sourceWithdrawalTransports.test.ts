@@ -35,7 +35,13 @@ const operation = {
   request_id: request,
   source_id: source,
 };
-const params = { p_actor: actor, p_owner: owner, p_request: request, p_source: source };
+const params = {
+  p_actor: actor,
+  p_owner: owner,
+  p_request: request,
+  p_source: source,
+  p_source_version: null,
+};
 const receipt = {
   contract_version: "context-source-withdrawal-v1",
   request_id: request,

@@ -33,7 +33,13 @@ export function registerFullOAuthTools(
     name: string,
     config: { description?: string; inputSchema: z.ZodType; annotations?: Record<string, unknown> },
     handler: (args: Args, extra: Extra) => Promise<CallToolResult>,
-    operation?: { name: string; action: string; readOnly: boolean },
+    operation?: {
+      name: string;
+      action: string;
+      readOnly: boolean;
+      destructive?: boolean;
+      notice?: string;
+    },
   ) => {
     // Credentials never belong in model-visible output. Professional roster tools
     // remain excluded until their delegated organization-grant audit is complete.
@@ -66,7 +72,11 @@ export function registerFullOAuthTools(
       return;
     }
     const policy = operation
-      ? { readOnly: operation.readOnly, destructive: false, notice: "" }
+      ? {
+          readOnly: operation.readOnly,
+          destructive: operation.destructive ?? false,
+          notice: operation.notice ?? "",
+        }
       : fullOAuthToolPolicy[name];
     if (!policy) throw new Error(`Missing delegated policy for ${name}`);
     const originalObject =

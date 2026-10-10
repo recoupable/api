@@ -12,6 +12,7 @@ export async function processSourceWithdrawalOperation(
     p_actor: accountId,
     p_owner: ownerId,
     p_request: args.request_id,
-    p_source: args.source_id,
+    p_source: args.source_id ?? null,
+    p_source_version: args.source_version_id ?? null,
   })) as ContextSourceWithdrawalReceipt;
 }
