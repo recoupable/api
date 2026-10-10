@@ -27,17 +27,16 @@ const mediaRow = (n: number) => ({
   ],
   media_observed_at: "2026-10-10T12:00:00+00:00",
 });
-it("does not read profiles without access", async () => {
+it("does not read profiles, posts or media without access", async () => {
   const profiles = vi.fn();
+  const posts = vi.fn();
+  const media = vi.fn();
   await expect(
-    collectContextSocials(id, id, 1, {
-      access: async () => false,
-      profiles,
-      posts: vi.fn(),
-      media: vi.fn(),
-    }),
+    collectContextSocials(id, id, 1, { access: async () => false, profiles, posts, media }),
   ).rejects.toThrow("accessible");
   expect(profiles).not.toHaveBeenCalled();
+  expect(posts).not.toHaveBeenCalled();
+  expect(media).not.toHaveBeenCalled();
 });
 it("preserves pagination and does not read media when the page has no posts", async () => {
   const media = vi.fn();

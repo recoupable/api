@@ -240,8 +240,9 @@ describe("handleInstagramProfileScraperResults", () => {
       ],
     });
     expect(rows[0].media_observed_at).toEqual(expect.any(String));
-    // No caption/media reported: the row carries no media keys at all, so the
-    // upsert's nullish stripping leaves whatever an earlier scrape retained.
+    // No caption/media reported: the row carries no media keys at all, and
+    // upsertPosts writes it in a separate call from the carousel row (see
+    // upsertPosts.test.ts), so whatever an earlier scrape retained is kept.
     expect(rows[1]).toEqual({
       post_url: "https://www.instagram.com/p/alice-legacy",
       updated_at: "2026-07-01T00:00:00.000Z",

@@ -10,7 +10,7 @@ type Dependencies = {
 };
 type MediaRow = Awaited<ReturnType<typeof selectPostMedia>>[number];
 const MEDIA_RETENTION =
-  "Provider URLs only; no bytes retained; reference-only material, not a production asset; provider URLs may expire";
+  "Provider URLs only; no bytes retained; reference-only material, not a production asset; provider URLs may expire; video entries reference the cover still image, not the video";
 /**
  * Reuse authorized stored social evidence. Does not start paid scraping or assert profile
  * verification. Retained captions/media (recoupable/app#2132) are merged per post as

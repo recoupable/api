@@ -9,10 +9,11 @@ import type { TablesInsert } from "@/types/database.types";
  * plus the caption, publish date and provider media references it already
  * returns (recoupable/app#2132). Items without a URL are dropped.
  *
- * Retention columns are only named when the run reported them: upsertPosts
- * strips nullish fields, so a degraded scrape never erases a caption or
- * media an earlier run retained. `media_observed_at` marks when caption or
- * media were last written, not when engagement was refreshed.
+ * Retention columns are only named when the run reported them, so rows in
+ * one run can carry different keys; upsertPosts writes each column set in
+ * its own call, so a degraded scrape never erases a caption or media an
+ * earlier run retained. `media_observed_at` marks when caption or media
+ * were last written, not when engagement was refreshed.
  *
  * @param latestPosts - Profile actor items
  * @param observedAt - ISO timestamp stamped on rows that carry caption/media
