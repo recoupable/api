@@ -239,3 +239,8 @@
     grid-auto-columns: 72%;
   }
 }
+
+/* Free scrolling avoids snap animation across the invisible loop boundary. */
+.experience-row {
+  scroll-snap-type: none;
+}
