@@ -33,6 +33,16 @@ describe("Recoup extension protocol", () => {
       const resource = await client.readResource({ uri: "ui://recoup/explore.html" });
       expect(resource.contents[0].mimeType).toBe("text/html;profile=mcp-app");
       expect(resource.contents[0].text).toContain("Make cover art");
+      for (const title of [
+        "Add a release",
+        "Check my release metadata",
+        "Import my catalog",
+        "Check my song credits",
+        "Explain this music contract",
+        "Organize my publishing",
+      ]) {
+        expect(resource.contents[0].text).toContain(title);
+      }
       expect(resource.contents[0]._meta?.ui).toMatchObject({
         csp: { connectDomains: [], resourceDomains: ["https://d8j0ntlcm91z4.cloudfront.net"] },
       });

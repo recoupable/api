@@ -1,0 +1,122 @@
+[
+  {
+    "id": "add-release",
+    "title": "Add a release",
+    "category": "Catalog",
+    "art": "add-release",
+    "description": "Build a release record from a Spotify link or your files, with the track list and missing details to complete.",
+    "skill": "recoup-release-add-release",
+    "mode": "import",
+    "outputs": [
+      "Release details and ordered track list",
+      "Missing details to complete",
+      "Saved record or private worksheet"
+    ],
+    "inputs": [
+      "Release link or files",
+      "Artist and release identity"
+    ],
+    "status": "Skill-backed concept",
+    "number": 25
+  },
+  {
+    "id": "check-release-metadata",
+    "title": "Check my release metadata",
+    "category": "Catalog",
+    "art": "check-release-metadata",
+    "description": "Compare your release details and track list with your source files to find missing fields and conflicting metadata.",
+    "skill": "recoup-release-check-metadata",
+    "mode": "review",
+    "outputs": [
+      "Missing and conflicting fields",
+      "Suggested corrections tied to sources",
+      "Release metadata checklist"
+    ],
+    "inputs": [
+      "Release record or spreadsheet",
+      "Source files or provider links"
+    ],
+    "status": "Skill-backed concept",
+    "number": 26
+  },
+  {
+    "id": "import-catalog",
+    "title": "Import my catalog",
+    "category": "Catalog",
+    "art": "import-catalog",
+    "description": "Turn a catalog spreadsheet into matched song records, with duplicates and incomplete rows separated for review.",
+    "skill": "recoup-catalog-import-catalog",
+    "mode": "import",
+    "outputs": [
+      "Matched catalog rows",
+      "Duplicate and incomplete rows",
+      "Import results or prepared worksheet"
+    ],
+    "inputs": [
+      "Catalog spreadsheet",
+      "Destination catalog"
+    ],
+    "status": "Skill-backed concept",
+    "number": 27
+  },
+  {
+    "id": "check-song-credits",
+    "title": "Check my song credits",
+    "category": "Catalog",
+    "art": "check-song-credits",
+    "description": "Compare songwriter, producer and performer credits across your files and flag missing names, roles and conflicting splits.",
+    "skill": "recoup-song-check-credits",
+    "mode": "review",
+    "outputs": [
+      "Credits comparison by person and role",
+      "Missing credits and conflicting splits",
+      "Questions needed to resolve differences"
+    ],
+    "inputs": [
+      "Song or release",
+      "Credit sheets, split sheets or source records"
+    ],
+    "status": "Skill-backed concept",
+    "number": 28
+  },
+  {
+    "id": "explain-music-contract",
+    "title": "Explain this music contract",
+    "category": "Catalog",
+    "art": "explain-music-contract",
+    "description": "Explain the money, rights, obligations and deadlines in your music contract, with clause references and unanswered questions.",
+    "skill": "recoup-catalog-explain-contract",
+    "mode": "explain",
+    "outputs": [
+      "Plain-language contract summary",
+      "Money, rights and deadline breakdown",
+      "Questions for your lawyer or counterparty"
+    ],
+    "inputs": [
+      "Contract file or text",
+      "Your role and specific questions"
+    ],
+    "status": "Skill-backed concept",
+    "number": 29
+  },
+  {
+    "id": "organize-publishing",
+    "title": "Organize my publishing",
+    "category": "Catalog",
+    "art": "organize-publishing",
+    "description": "Build a publishing worksheet from your songs, writers, splits and registrations, showing missing information and conflicting records.",
+    "skill": "recoup-catalog-organize-publishing",
+    "mode": "organize",
+    "outputs": [
+      "Songwriter and publisher worksheet",
+      "Split and registration status",
+      "Missing information and conflicts"
+    ],
+    "inputs": [
+      "Song list and split sheets",
+      "Publisher and registration records"
+    ],
+    "status": "Skill-backed concept",
+    "number": 30
+  }
+]
