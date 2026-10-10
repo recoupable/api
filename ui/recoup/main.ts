@@ -4,12 +4,11 @@ import { createFeatureDialog } from "./createFeatureDialog";
 import { filterWorkflows } from "./filterWorkflows";
 
 const root = document.getElementById("root")!;
-const categories = ["Create", "Promote", "Discover", "Catalog"];
 let category = "All";
 let query = "";
 let previewsPaused = false;
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-root.innerHTML = `<header class="top-nav"><nav id="filters" aria-label="Experience categories">${categories.map(c => `<button data-category="${c}" aria-pressed="false">${c}</button>`).join("")}</nav><label class="search"><span class="sr-only">Search experiences</span><input id="search" type="search" placeholder="Search videos, releases, fans…"></label></header><main><section class="hero" aria-labelledby="hero-title"><div><h1 id="hero-title">Your record label.<br>Inside ChatGPT.</h1><p class="hero-description">Start with a song, album, artist, or entire catalog. Manage your roster, create content, grow your audience, and find your next opportunity.</p></div></section><section aria-labelledby="library-title"><div class="toolbar"><h2 id="library-title">Put your agent to work.</h2><button id="motion" aria-pressed="false">Pause previews</button></div><p id="result-count" role="status" aria-live="polite"></p><section id="cards" aria-label="Music workflows"></section></section><footer><p id="connection" class="connection" role="status">Connecting to your conversation…</p></footer></main><dialog id="detail" aria-labelledby="detail-title"><button class="close" aria-label="Close workflow">×</button><div id="detail-content"></div></dialog>`;
+root.innerHTML = `<main><section class="hero" aria-labelledby="hero-title"><div><h1 id="hero-title">Your record label.<br>Inside ChatGPT.</h1><p class="hero-description">Start with a song, album, artist, or entire catalog. Manage your roster, create content, grow your audience, and find your next opportunity.</p></div></section><section aria-labelledby="library-title"><div class="toolbar"><h2 id="library-title">Put your agent to work.</h2><label class="search"><span class="sr-only">Search experiences</span><input id="search" type="search" placeholder="Search videos, releases, fans…"></label><button id="motion" aria-pressed="false">Pause previews</button></div><p id="result-count" role="status" aria-live="polite"></p><section id="cards" aria-label="Music workflows"></section></section><footer><p id="connection" class="connection" role="status">Connecting to your conversation…</p></footer></main><dialog id="detail" aria-labelledby="detail-title"><button class="close" aria-label="Close workflow">×</button><div id="detail-content"></div></dialog>`;
 const dialog = document.querySelector<HTMLDialogElement>("#detail")!;
 const cards = document.querySelector<HTMLElement>("#cards")!;
 const status = document.querySelector<HTMLElement>("#connection")!;
@@ -89,13 +88,6 @@ cards.onclick = event => {
 search.addEventListener("input", () => {
   query = search.value;
   renderCards();
-});
-document.querySelector("#filters")!.addEventListener("click", event => {
-  const button = (event.target as HTMLElement).closest<HTMLElement>("[data-category]");
-  if (button) {
-    category = category === button.dataset.category ? "All" : button.dataset.category!;
-    renderCards();
-  }
 });
 motion.addEventListener("click", () => {
   previewsPaused = !previewsPaused;
