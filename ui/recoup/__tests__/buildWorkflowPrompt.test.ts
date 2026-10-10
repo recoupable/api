@@ -6,8 +6,9 @@ const feature = {
   mode: "cover",
   outputs: ["Square cover"],
 };
-it("requires real input and bounds the message", () => {
-  expect(() => buildWorkflowPrompt(feature, "  ")).toThrow();
+it("allows selection without a brief and bounds supplied text", () => {
+  expect(buildWorkflowPrompt(feature)).toContain("Ask only for missing essentials");
+  expect(buildWorkflowPrompt(feature)).not.toContain("My brief:");
   expect(() => buildWorkflowPrompt(feature, "a".repeat(4001))).toThrow();
 });
 it("carries the selected skill and user's actual brief without pretending generation ran", () => {
