@@ -98,3 +98,34 @@ it("excludes unrelated workspace evidence and creative proposals", () => {
   expect(brief.text).not.toMatch(/PRIVATE|PROPOSAL/);
   expect(brief.documents).toEqual([]);
 });
+
+it("reports unknown freshness without failing when source rows are absent or undated", () => {
+  const brief = compileContextBrief({
+    ...input,
+    purpose: "playlist_pitch",
+    documents: [
+      document("song-a", "song_summary"),
+      { ...document("song-a", "catalog_metadata"), sources: [] },
+      {
+        ...document("artist", "artist_research"),
+        sources: [{ versionId: "artist:artist_research:source", retrievedAt: "yesterday" }],
+      },
+    ],
+  });
+  expect(brief.input_manifest.compilerVersion).toBe("context-brief-v1");
+  expect(brief.input_manifest.freshness).toEqual({
+    oldestRetrievedAt: null,
+    newestRetrievedAt: null,
+    documentsWithoutRetrievalDate: [
+      "song-a:catalog_metadata",
+      "song-a:song_summary",
+      "artist:artist_research",
+    ],
+    documents: [
+      { documentId: "song-a:catalog_metadata", retrievedAt: null },
+      { documentId: "song-a:song_summary", retrievedAt: null },
+      { documentId: "artist:artist_research", retrievedAt: null },
+    ],
+  });
+  expect(brief.text.match(/Retrieved: unknown/g)).toHaveLength(3);
+});
