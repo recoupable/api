@@ -22,6 +22,8 @@ export const companyRelationshipItemSchema = z.strictObject({
   basis: z.literal("operator_assertion"),
   note: z.string().max(2000),
   asserted_by: z.uuid(),
+  supersedes_id: z.uuid().nullable(),
+  superseded_by: z.uuid().nullable(),
   created_at: z.iso.datetime({ offset: true }),
 });
 export const companyRelationshipReceiptSchema = z.strictObject({

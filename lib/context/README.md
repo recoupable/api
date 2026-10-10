@@ -293,19 +293,27 @@ an operator asserts about that company:
   "relationship_kind": "frontline_roster",
   "status": "former",
   "ended_on": "2025-06-30",
+  "supersedes_id": "<the earlier current frontline_roster row id>",
   "idempotency_key": "roster-former-v1"
 }
 ```
 
-`counterparty` is the workspace itself, one of its artist accounts or one of its
-organization professionals; it must already be reachable and is never created or
-enrolled. `relationship_kind` is business vocabulary only (`frontline_roster`,
-`catalog_interest`, `publishing`, `distribution`, `management`, `services`, `other`):
-frontline roster and catalog interest are separate rows, and `former` keeps history
-without deletion. Unknown dates stay null. `list_company_relationships` returns 50 rows
+The company holds the relationship toward `counterparty`: the workspace itself, one of
+its artist accounts or one of its organization professionals. The counterparty must be
+reachable in the workspace now and is never created or enrolled; an artist the workspace
+no longer reaches, a name-only party and the reverse direction (the workspace holding an
+interest in the company) cannot be recorded yet. `relationship_kind` is business
+vocabulary only (`frontline_roster`, `catalog_interest`, `publishing`, `distribution`,
+`management`, `services`, `other`): frontline roster and catalog interest are separate
+rows. Rows are never rewritten or deleted. When an artist leaves the roster, record a
+`former` row with `supersedes_id` set to the earlier `current` row; it must share the
+company, counterparty and kind, and each row is superseded at most once. Listed rows
+carry `supersedes_id` and `superseded_by`, so rows with `superseded_by: null` are the
+latest statements. Unknown dates stay null. `list_company_relationships` returns 50 rows
 per page with `next_id`, `coverage: operator_asserted_relationships_only` and gaps
 `operator_assertion_not_verified`, `no_ownership_rights_or_mandate_implied` and
-`no_access_granted`. A withdrawn company source withholds the list; unknown or foreign
-subjects, artists and professionals receive one generic denial. These actions stay out
-of delegated OAuth, like the professional roster tools. Requires the database
+`no_access_granted`. After `withdraw_context_source` withdraws the company source, the
+list returns `state: unavailable` with no rows and new assertions are refused; unknown or
+foreign subjects, artists and professionals receive one generic denial. These actions stay
+out of delegated OAuth, like the professional roster tools. Requires the database
 company-relationship migration before API release; local fixtures do not prove hosted use.

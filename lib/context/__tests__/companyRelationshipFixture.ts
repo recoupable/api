@@ -18,6 +18,8 @@ export const formerRosterRelationship = {
   basis: "operator_assertion",
   note: "Left after second album",
   asserted_by: relationshipActor,
+  supersedes_id: null,
+  superseded_by: null,
   created_at: "2026-10-10T12:00:00+00:00",
 };
 export const workspaceDistributionRelationship = {
@@ -68,6 +70,7 @@ export const recordParams = {
   p_ended_on: "2020-12-31",
   p_note: "Left after second album",
   p_key: "roster-former-v1",
+  p_supersedes: null,
 };
 export const listInput = {
   action: "list_company_relationships",

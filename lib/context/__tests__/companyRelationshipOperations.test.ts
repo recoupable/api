@@ -16,6 +16,9 @@ import {
 // Isolate module initialization from hosted Supabase credentials; tests inject authorization.
 vi.mock("../authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));
 const cursor = "33333333-3333-4333-8333-333333333333";
+const supersededRow = "88888888-8888-4888-8888-888888888888";
+const lowerSubject = "abcdef12-3456-4789-8abc-def123456789";
+const upperSubject = lowerSubject.toUpperCase();
 const workspaceInput = {
   action: "record_company_relationship",
   organization_id: owner,
@@ -44,7 +47,37 @@ const cases = [
       p_ended_on: null,
       p_note: "",
       p_key: "distribution-v1",
+      p_supersedes: null,
     },
+  ],
+  [
+    { ...recordInput, supersedes_id: supersededRow },
+    {
+      ...relationshipReceipt,
+      relationship: { ...formerRosterRelationship, supersedes_id: supersededRow },
+    },
+    "record_context_company_relationship",
+    { ...recordParams, p_supersedes: supersededRow },
+  ],
+  // PostgreSQL echoes canonical lowercase UUIDs; valid uppercase input must not turn a commit into a failure.
+  [
+    { ...recordInput, company_subject_id: upperSubject },
+    {
+      ...relationshipReceipt,
+      relationship: { ...formerRosterRelationship, company_subject_id: lowerSubject },
+    },
+    "record_context_company_relationship",
+    { ...recordParams, p_company_subject: upperSubject },
+  ],
+  [
+    { ...listInput, company_subject_id: upperSubject },
+    {
+      ...relationshipPage,
+      company_subject_id: lowerSubject,
+      items: relationshipPage.items.map(item => ({ ...item, company_subject_id: lowerSubject })),
+    },
+    "list_context_company_relationships",
+    { ...listParams, p_company_subject: upperSubject },
   ],
   [listInput, relationshipPage, "list_context_company_relationships", listParams],
   [
@@ -96,6 +129,7 @@ describe("company business relationships", () => {
     { ...recordInput, ended_on: "yesterday" },
     { ...recordInput, note: "x".repeat(2001) },
     { ...recordInput, idempotency_key: "bad key" },
+    { ...recordInput, supersedes_id: "not-a-row" },
     { ...recordInput, account_id: actor },
     { ...recordInput, ownership_share: 0.5 },
     (({ idempotency_key: _key, ...rest }) => rest)(recordInput),
@@ -129,6 +163,17 @@ describe("company business relationships", () => {
     [
       recordInput,
       { ...relationshipReceipt, relationship: { ...formerRosterRelationship, basis: "verified" } },
+    ],
+    [
+      recordInput,
+      {
+        ...relationshipReceipt,
+        relationship: (({ superseded_by: _later, ...rest }) => rest)(formerRosterRelationship),
+      },
+    ],
+    [
+      listInput,
+      { ...relationshipPage, items: [{ ...formerRosterRelationship, superseded_by: "later" }] },
     ],
     [listInput, { ...relationshipPage, coverage: "complete" }],
     [listInput, { ...relationshipPage, company_subject_id: actor }],

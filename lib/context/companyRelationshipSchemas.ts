@@ -12,7 +12,11 @@ export const companyRelationshipKinds = [
   "other",
 ] as const;
 export const companyRelationshipStatuses = ["current", "former"] as const;
-/** Counterparties must already be reachable in the workspace; nothing is created or enrolled. */
+/**
+ * The company holds the relationship toward the counterparty (for example, it has the artist on its
+ * frontline roster or distributes for the workspace). Counterparties must already be reachable in the
+ * workspace; nothing is created or enrolled.
+ */
 export const companyRelationshipCounterpartySchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("workspace") }),
   z.strictObject({ kind: z.literal("artist_account"), artist_id: z.uuid() }),
@@ -27,19 +31,27 @@ export const companyRelationshipOperationSchemas = [
         .uuid()
         .describe("Saved company subject ID (subjectIds[0]) from ingest_company_name."),
       counterparty: companyRelationshipCounterpartySchema.describe(
-        "The workspace itself, one of its artist accounts or one of its professionals. Never created, enrolled or granted access.",
+        "Who the company holds the relationship toward: the workspace itself, an artist account the workspace can access now, or one of its professionals. Never created, enrolled or granted access.",
       ),
       relationship_kind: z
         .enum(companyRelationshipKinds)
         .describe(
-          "Business vocabulary only; frontline_roster and catalog_interest are separate. Never ownership, rights or a mandate.",
+          "What the company holds toward the counterparty, in business vocabulary only; frontline_roster and catalog_interest are separate. Never ownership, rights or a mandate.",
         ),
       status: z
         .enum(companyRelationshipStatuses)
-        .describe("former keeps history, such as an artist who left the roster."),
+        .describe(
+          "former keeps history, such as an artist who left the roster; pair it with supersedes_id when it replaces a current row.",
+        ),
       started_on: z.iso.date().optional().describe("Omit when unknown; never inferred."),
       ended_on: z.iso.date().optional().describe("Only with status former. Omit when unknown."),
       note: z.string().trim().max(2000).default(""),
+      supersedes_id: z
+        .uuid()
+        .optional()
+        .describe(
+          "Earlier relationship row this one replaces, with the same company, counterparty and relationship_kind. The earlier row stays as history and lists superseded_by; each row is superseded at most once.",
+        ),
       idempotency_key: contextIngestSchema.shape.idempotency_key,
     })
     .refine(value => value.status === "former" || !value.ended_on, {

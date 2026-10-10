@@ -4,6 +4,9 @@ import {
   companyRelationshipReceiptSchema,
 } from "./companyRelationshipTypes";
 
+// PostgreSQL echoes canonical lowercase UUIDs; valid input may use uppercase hex.
+const sameId = (left: string, right: string) => left.toLowerCase() === right.toLowerCase();
+
 /** Delegate operator-asserted relationship writes and reads after shared workspace authorization. */
 export async function processCompanyRelationshipOperation(
   accountId: string,
@@ -24,9 +27,10 @@ export async function processCompanyRelationshipOperation(
         p_ended_on: args.ended_on ?? null,
         p_note: args.note,
         p_key: args.idempotency_key,
+        p_supersedes: args.supersedes_id ?? null,
       }),
     );
-    if (receipt.relationship.company_subject_id !== args.company_subject_id)
+    if (!sameId(receipt.relationship.company_subject_id, args.company_subject_id))
       throw new Error("Company relationship scope mismatch");
     return receipt;
   }
@@ -39,8 +43,8 @@ export async function processCompanyRelationshipOperation(
     }),
   );
   if (
-    page.company_subject_id !== args.company_subject_id ||
-    page.items.some(item => item.company_subject_id !== args.company_subject_id)
+    !sameId(page.company_subject_id, args.company_subject_id) ||
+    page.items.some(item => !sameId(item.company_subject_id, args.company_subject_id))
   )
     throw new Error("Company relationship scope mismatch");
   return page;

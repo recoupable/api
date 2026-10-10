@@ -151,7 +151,7 @@ export const contextToolOperations = {
   record_company_relationship: {
     name: "record_music_company_relationship",
     description:
-      "Save an operator-asserted business relationship for a saved company, such as frontline roster or catalog interest, current or former. Grants no access, ownership, rights or mandate.",
+      "Save an operator-asserted business relationship a saved company holds toward this workspace, one of its artists or professionals, such as frontline roster or catalog interest, current or former; supersedes_id replaces an earlier row. Grants no access, ownership, rights or mandate.",
     readOnly: false,
   },
   list_company_relationships: {
