@@ -2,7 +2,7 @@ import {
   selectCreditsUsage,
   type CreditsUsage,
 } from "@/lib/supabase/credits_usage/selectCreditsUsage";
-import { updateCreditsUsage } from "@/lib/supabase/credits_usage/updateCreditsUsage";
+import { refillCreditsToFloor } from "@/lib/supabase/credits_usage/refillCreditsToFloor";
 import { getAccountSubscriptionState } from "@/lib/credits/getAccountSubscriptionState";
 import { usdToCredits } from "@/lib/credits/usdToCredits";
 import { getPlanEntitlements } from "@/lib/plans/getPlanEntitlements";
@@ -22,7 +22,10 @@ export interface CheckAndResetCreditsResult {
  *
  * The refill is a **floor, not an assignment**: it never lowers a balance, so
  * a top-up or an admin grant above the plan total survives every refill
- * without the read path needing to know where the balance came from.
+ * without the read path needing to know where the balance came from. The
+ * floor is applied by the database under the wallet row lock, never from the
+ * balance read here, so a concurrent deduction, top-up or grant is neither
+ * resurrected nor dropped.
  *
  * Also returns `plan` so callers don't need to repeat the subscription lookup.
  */
@@ -65,19 +68,18 @@ export async function checkAndResetCredits(accountId: string): Promise<CheckAndR
   }
 
   const planTotal = usdToCredits(getPlanEntitlements(plan).credits_usd);
-  const remaining = creditsUsage.remaining_credits ?? 0;
 
-  // The timestamp advances on every due refill, including the no-op ones —
+  // One locked statement raises the balance to the plan total with GREATEST and
+  // advances the timestamp on every due refill, including the no-op ones —
   // otherwise the account re-evaluates as refill-due on every subsequent read.
-  // `remaining_credits` is omitted rather than written back as `max(remaining,
-  // planTotal)` when the balance already clears the total: writing a value read
-  // moments earlier would resurrect credits a concurrent deduction had spent.
-  const updates: Partial<Pick<CreditsUsage, "remaining_credits" | "timestamp">> = {
-    timestamp: new Date().toISOString(),
+  const refilled = await refillCreditsToFloor({ accountId, floor: planTotal });
+
+  return {
+    creditsUsage: {
+      ...creditsUsage,
+      remaining_credits: refilled.remainingCredits,
+      timestamp: refilled.timestamp,
+    },
+    plan,
   };
-  if (remaining < planTotal) updates.remaining_credits = planTotal;
-
-  const refilled = await updateCreditsUsage({ account_id: accountId, updates });
-
-  return { creditsUsage: refilled, plan };
 }
