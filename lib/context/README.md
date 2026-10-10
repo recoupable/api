@@ -269,7 +269,8 @@ returned snapshot ID. No collection, model call or original-file upload is neede
 The assessment contains attributed company/creator/artist/catalog/recording/release
 evidence, missing-topic coverage and per-request `next_steps` for evidence review.
 `assessment_scope` is `selected_saved_context_requests`: it is not the complete
-company register. Missing topics are review prompts, not proof that every topic
+company register. Missing topics describe coverage in this assessment, including size-limited omissions,
+not a claim that evidence does not exist. They are review prompts, not proof that every topic
 applies to every company. Submitted names remain assertions; metadata and credits
 do not establish rights, ownership or mandates. Existing snapshot access,
 withdrawal, replay and history behavior applies.
