@@ -278,12 +278,18 @@ withdrawal, replay and history behavior applies.
 This requires the database company-assessment purpose migration before API release.
 Local fixtures cover compile/save/reopen; they do not prove a hosted Records trial.
 
-The assessment recipe also selects saved `catalog_valuation` evidence (appended after
-the existing topics). That document is a labeled, workspace-private **estimate** from
-the shared Recoup `computeValuationBand` model over existing song measurements; its
-`estimate` block carries currency, period basis, assumptions, methodology and source,
-and `observedRevenue` stays `not_collected`. It is not observed revenue, royalties or an
-appraisal, and it is not shareable context. Collecting `catalog_valuation` remains
-policy-blocked in `dispatchPlannedContextModule`; a missing topic is a review prompt.
-Luminate and Chartmetric licensed analytics are not connected to Context and never
-enter shared context.
+### Catalog valuation estimate label
+
+The `catalog_valuation` collector (`providers/collectContextCatalogValuation.ts`,
+enrichment module `catalog-valuation-v2`) reuses the shared Recoup `computeValuationBand`
+model over existing song measurements. Its saved content carries an `estimate` block with
+currency, period basis, assumptions, methodology and source; `revenueBasis` is
+`modeled_estimate` and `observedRevenue` stays `not_collected`. It is not observed revenue,
+royalties or an appraisal. `scope: workspace_private` and `shareable: false` are labels in
+the saved content, not an enforcement mechanism; reads stay owner-scoped through
+`selectContextDocuments`.
+
+Current state: collection is still policy-blocked in `dispatchPlannedContextModule`, and no
+brief recipe (including `company_onboarding`) selects `catalog_valuation` yet. Luminate and
+Chartmetric have no planning module or persisting Context collector, so no licensed
+analytics are written to Context documents today.

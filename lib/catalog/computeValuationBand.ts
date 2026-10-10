@@ -9,13 +9,14 @@ const DISTRIBUTION_FEE = 0.15;
 const ROYALTY_SHARE = 0.25;
 const MULTIPLE = { low: 10, mid: 13, high: 16 };
 const DEFAULT_AGE_YEARS = 5;
+const MIN_AGE_YEARS = 1;
 const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
 
 /**
  * Read-only description of the constants above, for callers that must label
- * an estimate with its assumptions (Context Engine evidence). It is derived
- * from the same values the band uses, so it cannot drift from the model; it
- * is not a second place to tune them.
+ * an estimate with its assumptions (Context Engine evidence). Every field reads
+ * the same constant the band uses, so it cannot drift from the model; it is
+ * not a second place to tune them.
  */
 export const VALUATION_MODEL_ASSUMPTIONS = Object.freeze({
   spotifyPerStreamUsd: SPOTIFY_PER_STREAM_USD,
@@ -24,7 +25,7 @@ export const VALUATION_MODEL_ASSUMPTIONS = Object.freeze({
   royaltyShare: ROYALTY_SHARE,
   masterCatalogMultiple: Object.freeze({ ...MULTIPLE }),
   defaultCatalogAgeYears: DEFAULT_AGE_YEARS,
-  minimumCatalogAgeYears: 1,
+  minimumCatalogAgeYears: MIN_AGE_YEARS,
 });
 
 /**
@@ -51,7 +52,7 @@ export function computeValuationBand(params: {
     // An unparseable date yields NaN, which would poison the whole band —
     // fall back to the default age instead (chat#1969 review).
     if (Number.isFinite(ageMs)) {
-      catalogAgeYears = Math.max(1, Math.round(ageMs / YEAR_MS));
+      catalogAgeYears = Math.max(MIN_AGE_YEARS, Math.round(ageMs / YEAR_MS));
       // A catalog younger than a year is priced on a full-year run rate;
       // callers surface the floor honestly (chat#1969).
       ageFlooredToOneYear = ageMs < YEAR_MS;

@@ -6,15 +6,14 @@ import { VALUATION_MODEL_ASSUMPTIONS } from "@/lib/catalog/computeValuationBand"
  * the number; observed revenue is a separate state that this collector never
  * reads, so it stays `not_collected` rather than zero or unknown.
  *
- * @param period.catalogAgeYears - Modeled catalog age; null when nothing was modeled
- * @param period.ageFlooredToOneYear - Whether a sub-year catalog was priced on a full year
- * @param period.ageSource - Where the age came from; null when nothing was modeled
+ * @param modeled - The `computeValuationBand` result; null when nothing was modeled,
+ *   which leaves every period field null
+ * @param ageSource - Where the modeled catalog age came from
  */
-export function describeCatalogValuationMethodology(period: {
-  catalogAgeYears: number | null;
-  ageFlooredToOneYear: boolean | null;
-  ageSource: "release_date" | "model_default" | null;
-}) {
+export function describeCatalogValuationMethodology(
+  modeled: { catalogAgeYears: number; ageFlooredToOneYear: boolean } | null,
+  ageSource: "release_date" | "model_default",
+) {
   return {
     methodology: {
       id: "recoup-master-catalog-band",
@@ -25,9 +24,9 @@ export function describeCatalogValuationMethodology(period: {
     currency: "USD",
     period: {
       basis: "lifetime_average_annual_run_rate",
-      catalogAgeYears: period.catalogAgeYears,
-      ageFlooredToOneYear: period.ageFlooredToOneYear,
-      ageSource: period.ageSource,
+      catalogAgeYears: modeled?.catalogAgeYears ?? null,
+      ageFlooredToOneYear: modeled?.ageFlooredToOneYear ?? null,
+      ageSource: modeled ? ageSource : null,
       // The measurement aggregate carries no capture date; unknown stays null.
       measuredThrough: null,
     },

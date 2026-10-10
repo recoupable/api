@@ -6,11 +6,10 @@ import {
 } from "@/lib/catalog/computeValuationBand";
 
 it("labels the reused valuation as a workspace-private modeled estimate, not observed revenue", () => {
-  const estimate = describeCatalogValuationMethodology({
-    catalogAgeYears: 4,
-    ageFlooredToOneYear: false,
-    ageSource: "release_date",
-  });
+  const estimate = describeCatalogValuationMethodology(
+    { catalogAgeYears: 4, ageFlooredToOneYear: false },
+    "release_date",
+  );
   expect(estimate).toMatchObject({
     methodology: {
       id: "recoup-master-catalog-band",
@@ -40,11 +39,7 @@ it("labels the reused valuation as a workspace-private modeled estimate, not obs
 });
 
 it("keeps every period field null when nothing was modeled", () => {
-  const estimate = describeCatalogValuationMethodology({
-    catalogAgeYears: null,
-    ageFlooredToOneYear: null,
-    ageSource: null,
-  });
+  const estimate = describeCatalogValuationMethodology(null, "model_default");
   expect(estimate.period).toEqual({
     basis: "lifetime_average_annual_run_rate",
     catalogAgeYears: null,
@@ -81,6 +76,12 @@ it("exposes frozen assumptions that reproduce the shared valuation model exactly
   expect(computeValuationBand({ totalStreams, earliestReleaseDate: null }).catalogAgeYears).toBe(
     a.defaultCatalogAgeYears,
   );
-  expect(a.minimumCatalogAgeYears).toBe(1);
+  const young = computeValuationBand({
+    totalStreams,
+    earliestReleaseDate: "2026-03-01",
+    now: new Date("2026-06-12"),
+  });
+  expect(young.ageFlooredToOneYear).toBe(true);
+  expect(young.catalogAgeYears).toBe(a.minimumCatalogAgeYears);
   expect(Object.isFrozen(a)).toBe(true);
 });

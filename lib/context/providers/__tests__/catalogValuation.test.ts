@@ -103,7 +103,14 @@ it("labels the estimate with currency, period, assumptions, methodology and sour
     shareable: false,
   });
   expect(r.estimate.assumptions).toEqual(VALUATION_MODEL_ASSUMPTIONS);
-  expect(r.trace.currency).toBe("USD");
+  // Labels repeated at the top level and in the trace must agree with the estimate block.
+  expect(r.estimate.period).toMatchObject({
+    catalogAgeYears: r.catalogAgeYears,
+    ageFlooredToOneYear: r.ageFlooredToOneYear,
+    ageSource: r.ageSource,
+  });
+  expect(r.estimate.scope).toBe(r.scope);
+  expect(r.estimate.currency).toBe(r.trace.currency);
 });
 it("keeps the estimate label but no modeled period when the catalog is not measured", async () => {
   const r = await collectContextCatalogValuation(account, catalog, {

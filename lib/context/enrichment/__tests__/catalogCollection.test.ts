@@ -92,3 +92,26 @@ it("does not save when access is revoked during collection", async () => {
   ).rejects.toThrow("revoked");
   expect(d.rpc.mock.calls.map(c => c[0])).not.toContain("complete_context_enrichment");
 });
+it("saves the labeled estimate as content under a reuse key bumped for that shape", async () => {
+  const d = deps();
+  await collectContextCatalogEstimate(
+    actor,
+    actor,
+    "request",
+    { subjectId: subject, collectionVersion: "v1" },
+    d,
+  );
+  // A saved v1 valuation lacks the estimate label, so it must not be reused as-is.
+  expect(d.rpc).toHaveBeenCalledWith(
+    "claim_context_enrichment",
+    expect.objectContaining({ p_module: expect.objectContaining({ key: "catalog-valuation-v2" }) }),
+  );
+  const calls = d.rpc.mock.calls as unknown as [string, { p_result?: { content: unknown } }][];
+  const saved = calls.find(([name]) => name === "complete_context_enrichment")?.[1];
+  // read_context_documents returns saved content as its JSON text, so assert on that form.
+  const text = JSON.stringify(saved?.p_result?.content);
+  expect(text).toContain('"revenueBasis":"modeled_estimate"');
+  expect(text).toContain('"observedRevenue":{"status":"not_collected"}');
+  expect(text).toContain('"scope":"workspace_private","shareable":false');
+  expect(text).toContain('"methodology":{"id":"recoup-master-catalog-band"');
+});

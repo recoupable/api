@@ -87,12 +87,7 @@ export async function collectContextCatalogValuation(
     catalogAgeYears: modeled?.catalogAgeYears ?? null,
     ageFlooredToOneYear: modeled?.ageFlooredToOneYear ?? null,
     inputs: { totalStreams: aggregate.totalStreams, earliestReleaseDate },
-    // Labels the number as a modeled estimate; observed revenue is a separate, uncollected state.
-    estimate: describeCatalogValuationMethodology({
-      catalogAgeYears: modeled?.catalogAgeYears ?? null,
-      ageFlooredToOneYear: modeled?.ageFlooredToOneYear ?? null,
-      ageSource: modeled ? ageSource : null,
-    }),
+    estimate: describeCatalogValuationMethodology(modeled, ageSource),
     trace: {
       startedAt,
       elapsedMs: Date.now() - start,

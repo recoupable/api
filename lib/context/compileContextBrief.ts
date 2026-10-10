@@ -13,8 +13,6 @@ const recipes = {
       "recording_metadata",
       "release_metadata",
       "release_locator",
-      // Appended last: a labeled workspace-private estimate, never observed revenue.
-      "catalog_valuation",
     ],
   },
   creative_direction: {
