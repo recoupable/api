@@ -17,7 +17,8 @@
       "Artist and release identity"
     ],
     "status": "Skill-backed concept",
-    "number": 25
+    "number": 25,
+    "video": ""
   },
   {
     "id": "check-release-metadata",
@@ -37,7 +38,8 @@
       "Source files or provider links"
     ],
     "status": "Skill-backed concept",
-    "number": 26
+    "number": 26,
+    "video": ""
   },
   {
     "id": "import-catalog",
@@ -57,7 +59,8 @@
       "Destination catalog"
     ],
     "status": "Skill-backed concept",
-    "number": 27
+    "number": 27,
+    "video": ""
   },
   {
     "id": "check-song-credits",
@@ -77,7 +80,8 @@
       "Credit sheets, split sheets or source records"
     ],
     "status": "Skill-backed concept",
-    "number": 28
+    "number": 28,
+    "video": ""
   },
   {
     "id": "explain-music-contract",
@@ -97,7 +101,8 @@
       "Your role and specific questions"
     ],
     "status": "Skill-backed concept",
-    "number": 29
+    "number": 29,
+    "video": ""
   },
   {
     "id": "organize-publishing",
@@ -117,6 +122,7 @@
       "Publisher and registration records"
     ],
     "status": "Skill-backed concept",
-    "number": 30
+    "number": 30,
+    "video": ""
   }
 ]
