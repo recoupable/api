@@ -267,7 +267,7 @@ Add `additional_request_ids` to include other saved requests and `organization_i
 for the existing authorized organization scope. Reopen with `read_brief` and the
 returned snapshot ID. No collection, model call or original-file upload is needed.
 The assessment contains attributed company/creator/artist/catalog/recording/release
-evidence, missing-topic coverage and per-request `next_steps` for evidence review.
+evidence (including submitted release locators), missing-topic coverage and per-request `next_steps` for evidence review.
 `assessment_scope` is `selected_saved_context_requests`: it is not the complete
 company register. Missing topics describe coverage in this assessment, including size-limited omissions,
 not a claim that evidence does not exist. They are review prompts, not proof that every topic

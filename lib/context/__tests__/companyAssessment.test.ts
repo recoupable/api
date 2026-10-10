@@ -88,3 +88,22 @@ it("saves and reopens the assessment through existing snapshot operations withou
   ).toEqual(result);
   expect(dispatch).not.toHaveBeenCalled();
 });
+
+it("includes the submitted release locator without claiming verified release metadata", () => {
+  const locator = {
+    ...document,
+    topic: "release_locator",
+    text: "Submitted Spotify release URL; metadataVerified:false; rightsVerified:false.",
+  };
+  const result = compileContextBrief({
+    ownerId: owner,
+    requests: [{ id: request, subjectIds: [subject] }],
+    documents: [locator],
+    purpose: "company_onboarding",
+    maxCharacters: 12000,
+  });
+  expect(result.documents).toEqual([locator]);
+  expect(result.text).toContain("metadataVerified:false");
+  expect(result.missingTopics).toContain("release_metadata");
+  expect(result.readiness).toBe("partial");
+});

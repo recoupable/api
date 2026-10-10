@@ -12,6 +12,7 @@ const recipes = {
       "catalog_metadata",
       "recording_metadata",
       "release_metadata",
+      "release_locator",
     ],
   },
   creative_direction: {
