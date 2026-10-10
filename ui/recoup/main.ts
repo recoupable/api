@@ -1,3 +1,4 @@
+import { createExperienceHover } from "./createExperienceHover";
 import { groupExperienceCards } from "./groupExperienceCards";
 import { escapeHtml } from "./escapeHtml";
 import { createHostBridge } from "./createHostBridge";
@@ -76,6 +77,7 @@ function syncMotion() {
   });
 }
 const openFeature = createFeatureDialog(dialog, createHostBridge(status), syncMotion);
+const hideHover = createExperienceHover(cards, openFeature);
 cards.onclick = event => {
   const target = event.target as HTMLElement;
   const card = target.closest<HTMLElement>("[data-id]");
@@ -88,6 +90,7 @@ cards.onclick = event => {
   }
 };
 search.addEventListener("input", () => {
+  hideHover();
   query = search.value;
   renderCards();
 });
