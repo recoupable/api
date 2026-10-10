@@ -36,6 +36,26 @@ export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
     readOnly: true,
     notice: "Pass the account-bound video_id returned by generate_sora_2_video.",
   },
+  list_release_player: { readOnly: true },
+  get_release_player: { readOnly: true },
+  get_release_player_activity: {
+    readOnly: true,
+    notice: "Private reported browser listening; never DSP stream totals.",
+  },
+  get_release_player_fans: {
+    readOnly: true,
+    notice: "Private artist/workspace fan profiles. Sign-in is not marketing consent.",
+  },
+  create_release_player: {
+    readOnly: false,
+    destructive: false,
+    notice:
+      "Disabled by default. Setting enabled=true publishes; requires explicit account authorization.",
+  },
+  update_release_player: {
+    readOnly: false,
+    notice: "Enabling publishes. Require explicit account authorization and current revision.",
+  },
   list_sites: { readOnly: true },
   get_site: { readOnly: true },
   get_site_signups: { readOnly: true },

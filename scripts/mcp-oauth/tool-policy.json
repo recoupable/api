@@ -520,5 +520,61 @@
     ],
     "status": "requires OAuth execution audit before enablement",
     "authorizationWork": "Bind account and requested resources to the selected grant context; enforce scopes, current access, and redacted errors at execution. Verify billing owner, entitlement, credit checks, and bounded retry behavior before starting provider work."
+  },
+  {
+    "name": "create_release_player",
+    "file": "lib/mcp/tools/players/registerCreateReleasePlayerTool.ts",
+    "scopes": [
+      "mcp:write",
+      "mcp:publish"
+    ],
+    "status": "requires OAuth execution audit before enablement",
+    "authorizationWork": "Bind authenticated account and current workspace/artist access through the shared player domain. Preserve grant verification, paid publication, revision checks and private fan/history ownership. Publishing requires explicit account authorization; sign-in is not marketing consent."
+  },
+  {
+    "name": "list_release_player",
+    "file": "lib/mcp/tools/players/registerListReleasePlayerTool.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "requires OAuth execution audit before enablement",
+    "authorizationWork": "Bind authenticated account and current workspace/artist access through the shared player domain. Preserve grant verification, paid publication, revision checks and private fan/history ownership. Publishing requires explicit account authorization; sign-in is not marketing consent."
+  },
+  {
+    "name": "get_release_player",
+    "file": "lib/mcp/tools/players/registerGetReleasePlayerTool.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "requires OAuth execution audit before enablement",
+    "authorizationWork": "Bind authenticated account and current workspace/artist access through the shared player domain. Preserve grant verification, paid publication, revision checks and private fan/history ownership. Publishing requires explicit account authorization; sign-in is not marketing consent."
+  },
+  {
+    "name": "update_release_player",
+    "file": "lib/mcp/tools/players/registerUpdateReleasePlayerTool.ts",
+    "scopes": [
+      "mcp:write",
+      "mcp:publish"
+    ],
+    "status": "requires OAuth execution audit before enablement",
+    "authorizationWork": "Bind authenticated account and current workspace/artist access through the shared player domain. Preserve grant verification, paid publication, revision checks and private fan/history ownership. Publishing requires explicit account authorization; sign-in is not marketing consent."
+  },
+  {
+    "name": "get_release_player_activity",
+    "file": "lib/mcp/tools/players/registerGetReleasePlayerActivityTool.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "requires OAuth execution audit before enablement",
+    "authorizationWork": "Bind authenticated account and current workspace/artist access through the shared player domain. Preserve grant verification, paid publication, revision checks and private fan/history ownership. Publishing requires explicit account authorization; sign-in is not marketing consent."
+  },
+  {
+    "name": "get_release_player_fans",
+    "file": "lib/mcp/tools/players/registerGetReleasePlayerFansTool.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "requires OAuth execution audit before enablement",
+    "authorizationWork": "Bind authenticated account and current workspace/artist access through the shared player domain. Preserve grant verification, paid publication, revision checks and private fan/history ownership. Publishing requires explicit account authorization; sign-in is not marketing consent."
   }
 ]
