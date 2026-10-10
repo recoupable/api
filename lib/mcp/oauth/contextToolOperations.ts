@@ -36,6 +36,12 @@ export const contextToolOperations = {
     description: "Read a previously saved music brief.",
     readOnly: true,
   },
+  read_document_history: {
+    name: "read_music_context_document_history",
+    description:
+      "Read the immutable revision history of one saved context document: which result was current at each revision and whether its sources are still live. Lineage is not review or rights approval.",
+    readOnly: true,
+  },
   plan: {
     name: "plan_music_context_research",
     description: "Preview research modules for saved music context without running them.",
