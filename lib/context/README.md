@@ -42,6 +42,8 @@ Database request claims use fencing tokens and a two-minute metadata lease. Retr
 
 The public metadata path invokes no LLM. Spotify metadata has no per-call model charge; hosting/database costs are not measured by the zero provider-cost field. Paid enrichment remains gated on spending authorization and stable settlement, rather than bypassing the existing credit ledger.
 
+`social_context` (`social-evidence-v1`) now carries, per saved post, the caption, publish date and provider media references the Instagram profile scraper already reported, each marked `usage_status: reference_only`, `retained_bytes: null` and `provider_url_status: may_expire` (recoupable/app#2132). Provider URLs only: no bytes are fetched, retained or analyzed, nothing becomes a production asset, and posts scraped before retention are counted in a gap rather than backfilled. Expired-URL repair, retained asset bytes, production-asset approval and provisional era summaries are later slices.
+
 ## Validation
 
 - `pnpm test lib/context`: contracts, access, extraction, orchestration, brief selection and HTTP/MCP delegation tests.
