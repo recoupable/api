@@ -1,3 +1,4 @@
+import { deliverPluginPurchase } from "@/lib/stripe/checkout/deliverPluginPurchase";
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
@@ -26,8 +27,12 @@ export async function stripeWebhookHandler(request: NextRequest): Promise<NextRe
     if (event.type === "checkout.session.completed") {
       await processCreditsTopupSession(event.data.object as Stripe.Checkout.Session);
       await processCheckoutSubscriptionCompleted(event.data.object as Stripe.Checkout.Session);
+      await deliverPluginPurchase(event.data.object as Stripe.Checkout.Session);
       await processCheckoutSetupCompleted(event.data.object as Stripe.Checkout.Session);
       await notifyCreditsTopupSession(event.data.object as Stripe.Checkout.Session);
+    } else if (event.type === "checkout.session.async_payment_succeeded") {
+      await processCheckoutSubscriptionCompleted(event.data.object as Stripe.Checkout.Session);
+      await deliverPluginPurchase(event.data.object as Stripe.Checkout.Session);
     } else if (event.type === "checkout.session.expired") {
       await processCheckoutSessionExpired(event.data.object as Stripe.Checkout.Session);
     } else if (event.type === "payment_intent.succeeded") {

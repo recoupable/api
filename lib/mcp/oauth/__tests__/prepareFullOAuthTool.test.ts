@@ -121,3 +121,19 @@ describe("delegated resource authorization", () => {
     ).toHaveProperty("headers", {});
   });
 });
+
+it.each([
+  "create_release_player",
+  "list_release_player",
+  "get_release_player",
+  "update_release_player",
+  "get_release_player_activity",
+  "get_release_player_fans",
+])("enforces current workspace access for %s", async name => {
+  await expect(prepareFullOAuthTool(name, { organizationId: "foreign" }, "owner")).rejects.toThrow(
+    "Workspace access denied",
+  );
+  await expect(
+    prepareFullOAuthTool(name, { organizationId: "org" }, "owner"),
+  ).resolves.toMatchObject({ organizationId: "org" });
+});

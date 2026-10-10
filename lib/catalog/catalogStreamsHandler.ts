@@ -5,7 +5,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { successResponse } from "@/lib/networking/successResponse";
 import { getCatalogStreams } from "./getCatalogStreams";
 import { manageCatalogStreamTracking } from "./manageCatalogStreamTracking";
-import { validateCatalogPlaycountHistoryQuery } from "./validateCatalogPlaycountHistoryQuery";
+import { validateCatalogStreamHistoryQuery } from "./validateCatalogStreamHistoryQuery";
 import { validateCatalogStreamTracking } from "./validateCatalogStreamTracking";
 
 /** Authenticated stream history and tracking control; caller identity always comes from auth. */
@@ -22,7 +22,7 @@ export async function catalogStreamsHandler(
       return errorResponse("Invalid or duplicate query", 400);
     let result;
     if (mode === "history") {
-      const parsed = validateCatalogPlaycountHistoryQuery({
+      const parsed = validateCatalogStreamHistoryQuery({
         ...Object.fromEntries(params),
         catalog_id: catalogId,
       });
