@@ -81,7 +81,14 @@ and `readiness`, and adds bounded Markdown `text`, `text_characters`, `request_i
 versions. `max_characters` independently bounds evidence JSON and rendered text;
 it is not a cap on the entire response including metadata. Documents are omitted
 whole to fit the limit; evidence is never cut mid-claim. A missing topic may mean
-absent, ineligible or over-budget evidence.
+absent, ineligible or over-budget evidence. `input_manifest.freshness` reports the
+oldest and newest retrieval timestamps across every dated source of the selected
+documents, the documents with no dated source, and each selected document's own
+`oldestRetrievedAt`/`newestRetrievedAt`; every document section in `text` ends with a
+`Retrieved:` line (one timestamp, `<oldest> to <newest>` when its sources differ, or
+`unknown`) and never a source location. Freshness is reported, not enforced: no age
+limit drops evidence yet. `compilerVersion` remains `context-brief-v1` because `save_context_brief`
+pins that value and compares the document manifest exactly; freshness is additive.
 
 These are attributed evidence briefs for downstream work, not generated creative
 proposals or finished outreach. `brief` is read-only and recompilation can reflect
