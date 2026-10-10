@@ -148,4 +148,16 @@ export const contextToolOperations = {
       "Compile a creative direction or playlist pitch brief from saved music context without saving a snapshot.",
     readOnly: true,
   },
+  record_company_relationship: {
+    name: "record_music_company_relationship",
+    description:
+      "Save an operator-asserted business relationship for a saved company, such as frontline roster or catalog interest, current or former. Grants no access, ownership, rights or mandate.",
+    readOnly: false,
+  },
+  list_company_relationships: {
+    name: "list_music_company_relationships",
+    description:
+      "List operator-asserted business relationships saved for a company in this workspace, with explicit gaps.",
+    readOnly: true,
+  },
 } satisfies Record<Action, { name: string; description: string; readOnly: boolean }>;

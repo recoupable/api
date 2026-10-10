@@ -277,3 +277,35 @@ withdrawal, replay and history behavior applies.
 
 This requires the database company-assessment purpose migration before API release.
 Local fixtures cover compile/save/reopen; they do not prove a hosted Records trial.
+
+### Company business relationships
+
+`ingest_company_name` saves a researched company as a workspace-private subject with
+`identityConfirmed: false`; it creates no membership, roster link or relationship. Use
+the same HTTP `POST /api/context` or standard MCP Context operation to record what
+an operator asserts about that company:
+
+```json
+{
+  "action": "record_company_relationship",
+  "company_subject_id": "<company subjectIds[0] from ingest_company_name>",
+  "counterparty": { "kind": "artist_account", "artist_id": "<artist the workspace can access>" },
+  "relationship_kind": "frontline_roster",
+  "status": "former",
+  "ended_on": "2025-06-30",
+  "idempotency_key": "roster-former-v1"
+}
+```
+
+`counterparty` is the workspace itself, one of its artist accounts or one of its
+organization professionals; it must already be reachable and is never created or
+enrolled. `relationship_kind` is business vocabulary only (`frontline_roster`,
+`catalog_interest`, `publishing`, `distribution`, `management`, `services`, `other`):
+frontline roster and catalog interest are separate rows, and `former` keeps history
+without deletion. Unknown dates stay null. `list_company_relationships` returns 50 rows
+per page with `next_id`, `coverage: operator_asserted_relationships_only` and gaps
+`operator_assertion_not_verified`, `no_ownership_rights_or_mandate_implied` and
+`no_access_granted`. A withdrawn company source withholds the list; unknown or foreign
+subjects, artists and professionals receive one generic denial. These actions stay out
+of delegated OAuth, like the professional roster tools. Requires the database
+company-relationship migration before API release; local fixtures do not prove hosted use.
