@@ -51,3 +51,7 @@ vi.mock("@/lib/stripe/checkout/processCheckoutSubscriptionCompleted", () => ({
 vi.mock("@/lib/stripe/processCheckoutSetupCompleted", () => ({
   processCheckoutSetupCompleted: vi.fn(),
 }));
+
+vi.mock("@/lib/stripe/checkout/deliverPluginPurchase", () => ({
+  deliverPluginPurchase: vi.fn().mockResolvedValue(undefined),
+}));

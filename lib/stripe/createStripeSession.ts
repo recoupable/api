@@ -11,6 +11,7 @@ export type CreateStripeSessionArgs = {
   price: CheckoutPrice;
   successUrl: string;
   cancelUrl?: string;
+  fulfillment?: "recoup-plugin";
 };
 
 /**
@@ -23,7 +24,10 @@ export async function createStripeSession(
   args: CreateStripeSessionArgs,
 ): Promise<Stripe.Checkout.Session> {
   const { accountId, plan, price, successUrl, cancelUrl } = args;
-  const metadata = accountId ? { accountId, plan } : { plan, source: CHECKOUT_UNAUTH_SOURCE };
+  const metadata = {
+    ...(accountId ? { accountId, plan } : { plan, source: CHECKOUT_UNAUTH_SOURCE }),
+    ...(args.fulfillment ? { fulfillment: args.fulfillment } : {}),
+  };
 
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",

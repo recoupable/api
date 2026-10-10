@@ -38,6 +38,13 @@ describe("findOrCreateAccountForCheckout", () => {
     expect(welcomeMock).toHaveBeenCalledWith({ accountId: "acc_new", email: "fan@example.com" });
   });
 
+  it("suppresses the generic welcome for plugin purchases", async () => {
+    selectByEmailMock.mockResolvedValue(null);
+    getOrCreateMock.mockResolvedValue("acc_new");
+    await findOrCreateAccountForCheckout("fan@example.com", { sendWelcome: false });
+    expect(welcomeMock).not.toHaveBeenCalled();
+  });
+
   it("throws when the account could not be created (so Stripe retries the webhook)", async () => {
     selectByEmailMock.mockResolvedValue(null);
     getOrCreateMock.mockResolvedValue(null);
