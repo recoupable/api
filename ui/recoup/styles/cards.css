@@ -1,78 +1,468 @@
 #cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 34px 24px;
+  gap: 32px 24px;
 }
 .card {
   text-align: left;
   background: none;
   color: var(--text);
   padding: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   min-width: 0;
+}
+.media {
+  position: relative;
+  display: block;
+  aspect-ratio: 16/10;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--art);
 }
 .card video,
 .art {
   width: 100%;
-  aspect-ratio: 16/9;
+  height: 100%;
   object-fit: cover;
-  border-radius: 14px;
-  background: #132b26;
-  display: block;
+  position: absolute;
+  inset: 0;
 }
-.card:hover video,
-.card:hover .art {
-  box-shadow: 0 8px 24px #132b2628;
+.card video {
+  opacity: 0;
+  transition: opacity 200ms;
 }
-.card-title {
-  display: block;
-  font-size: 21px;
-  font-weight: 600;
-  margin: 18px 0 9px;
-  letter-spacing: -0.5px;
-}
-.card-description {
-  display: block;
-  font-size: 15px;
-  line-height: 1.55;
-  color: var(--muted);
-  margin: 0;
+.card video.loaded {
+  opacity: 1;
 }
 .art {
   padding: 24px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  color: #fff;
-  background: linear-gradient(135deg, #163a30, #38694c);
+  color: var(--art-text);
+  background: var(--art);
 }
 .art strong {
-  font-size: clamp(22px, 3vw, 38px);
+  font-size: clamp(22px, 3vw, 36px);
   letter-spacing: -1px;
 }
 .art span {
-  font: 11px IBM Plex Mono;
+  font:
+    10px IBM Plex Mono,
+    monospace;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
-.art-promote {
-  background: linear-gradient(135deg, #945734, #d39f78);
+.preview-label {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  background: var(--overlay);
+  color: var(--overlay-text);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font:
+    8px IBM Plex Mono,
+    monospace;
+  letter-spacing: 1px;
 }
-.art-discover {
-  background: linear-gradient(135deg, #13546b, #32858a);
+.card-arrow {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  transition: transform 150ms;
 }
-.art-catalog {
-  background: linear-gradient(135deg, #554066, #86719e);
+.card:hover .card-arrow {
+  transform: rotate(45deg);
+}
+.card-category {
+  display: block;
+  margin-top: 16px;
+  text-transform: uppercase;
+  font:
+    9px IBM Plex Mono,
+    monospace;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.card-title {
+  display: block;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 6px 0;
+  letter-spacing: -0.6px;
+}
+.card-description {
+  display: block;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
 }
 .more {
   display: block;
   background: var(--soft);
   color: var(--text);
-  margin: 40px auto 0;
-  padding: 15px 24px;
-  border-radius: 12px;
+  margin: 32px auto 0;
+  padding: 14px 22px;
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 14px;
 }
-.connection {
-  font-size: 12px;
-  color: var(--muted);
+.more:hover {
+  box-shadow: 0 0 0 1px var(--line);
+}
+.empty {
+  grid-column: 1/-1;
   text-align: center;
-  margin-top: 30px;
+  padding: 48px 16px;
+  background: var(--soft);
+  border-radius: 16px;
+}
+.empty h3 {
+  font-size: 24px;
+  letter-spacing: -0.6px;
+  margin: 16px 0 8px;
+}
+.empty > p:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 14px;
+}
+.empty .more {
+  background: var(--primary);
+  color: var(--on-primary);
+  margin-top: 20px;
+}
+
+#cards {
+  display: block;
+}
+.experience-section {
+  margin: 32px 0 44px;
+}
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.section-heading h3 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.6px;
+}
+.row-controls {
+  display: flex;
+  gap: 8px;
+}
+.row-controls button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--line);
+  font-size: 28px;
+}
+.row-controls button:hover:enabled {
+  background: var(--soft);
+}
+.row-controls button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.experience-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 48px) / 3);
+  gap: 24px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding: 4px 4px 16px;
+  margin: -4px;
+  scrollbar-width: thin;
+}
+.experience-row .card {
+  scroll-snap-align: start;
+  align-self: start;
+}
+@media (max-width: 900px) {
+  .experience-row {
+    grid-auto-columns: calc((100% - 24px) / 2);
+  }
+}
+@media (max-width: 600px) {
+  .experience-row {
+    grid-auto-columns: 82%;
+    gap: 16px;
+  }
+  .section-heading h3 {
+    font-size: 21px;
+  }
+}
+
+/* A partial next card and edge fade make horizontal browsing discoverable. */
+.experience-row {
+  grid-auto-columns: calc((100% - 72px) / 3.5);
+  scrollbar-width: none;
+  cursor: grab;
+}
+.experience-row::-webkit-scrollbar {
+  display: none;
+}
+.experience-row.has-more {
+  mask-image: linear-gradient(to right, black 0%, black 88%, transparent 100%);
+}
+.experience-row.dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+  user-select: none;
+}
+.experience-row.dragging .card {
+  cursor: grabbing;
+}
+@media (max-width: 900px) {
+  .experience-row {
+    grid-auto-columns: calc((100% - 48px) / 2.5);
+  }
+}
+@media (max-width: 600px) {
+  .experience-row {
+    grid-auto-columns: 72%;
+  }
+}
+
+/* Free scrolling avoids snap animation across the invisible loop boundary. */
+.experience-row {
+  scroll-snap-type: none;
+}
+
+/* Artwork-led cards with details revealed on hover or keyboard focus. */
+:root {
+  --experience-overlay: rgba(0, 0, 0, 0.84);
+  --experience-on-art: #fff;
+}
+.experience-row {
+  grid-auto-columns: calc((100% - 48px) / 2.5);
+  padding-block: 12px 20px;
+}
+.experience-row .card {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 16px;
+  isolation: isolate;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+.experience-row .card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(to bottom, transparent 28%, var(--experience-overlay) 100%);
+  pointer-events: none;
+}
+.experience-row .card video,
+.experience-row .card .art,
+.experience-row .card .media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+.experience-row .card-category,
+.experience-row .preview-label,
+.experience-row .card-arrow {
+  display: none;
+}
+.experience-row .card-title {
+  position: absolute;
+  z-index: 2;
+  left: 24px;
+  right: 24px;
+  bottom: 24px;
+  margin: 0;
+  color: var(--experience-on-art);
+  font-size: clamp(24px, 2.3vw, 34px);
+  line-height: 1.08;
+  letter-spacing: -0.8px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 180ms ease;
+}
+.experience-row .card-description {
+  position: absolute;
+  z-index: 2;
+  left: 24px;
+  right: 24px;
+  bottom: 24px;
+  margin: 0;
+  color: var(--experience-on-art);
+  font-size: 15px;
+  line-height: 1.4;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+.experience-row .card-description::after {
+  content: "Start experience ↗";
+  display: block;
+  margin-top: 12px;
+  font-weight: 600;
+}
+@media (hover: hover) {
+  .experience-row .card:hover {
+    transform: scale(1.025);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  }
+  .experience-row .card:hover .card-title {
+    transform: translateY(-90px);
+  }
+  .experience-row .card:hover .card-description {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.experience-row .card:focus-visible .card-title {
+  transform: translateY(-90px);
+}
+.experience-row .card:focus-visible .card-description {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (max-width: 900px) {
+  .experience-row {
+    grid-auto-columns: calc((100% - 24px) / 1.5);
+  }
+}
+@media (max-width: 600px) {
+  .experience-row {
+    grid-auto-columns: 86%;
+  }
+  .experience-row .card {
+    aspect-ratio: 4 / 3;
+  }
+  .experience-row .card-title,
+  .experience-row .card-description {
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+  }
+}
+@media (hover: none) {
+  .experience-row .card-title {
+    transform: translateY(-90px);
+  }
+  .experience-row .card-description {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .experience-row .card,
+  .experience-row .card-title,
+  .experience-row .card-description {
+    transition: none;
+  }
+}
+
+/* Floating expansion: thumbnail above, information panel below. */
+@media (hover: hover) {
+  .experience-row .card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  .experience-row .card:hover .card-title {
+    transform: none;
+  }
+  .experience-row .card:hover .card-description {
+    opacity: 0;
+  }
+}
+.experience-row .card:focus-visible .card-title {
+  transform: none;
+}
+.experience-row .card:focus-visible .card-description {
+  opacity: 0;
+}
+.experience-hover {
+  position: fixed;
+  z-index: 50;
+  transform-origin: top left;
+  cursor: pointer;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.28),
+    0 0 0 1px var(--line);
+}
+.experience-hover:focus-visible {
+  outline: 3px solid var(--text);
+  outline-offset: 4px;
+}
+.experience-hover[hidden] {
+  display: none;
+}
+.hover-thumbnail {
+  position: relative;
+  aspect-ratio: 16/10;
+  background: var(--text);
+  overflow: hidden;
+}
+.hover-thumbnail video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.hover-image-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(transparent 45%, rgba(0, 0, 0, 0.75));
+}
+.hover-thumbnail h3 {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  right: 24px;
+  margin: 0;
+  color: #fff;
+  font-size: 30px;
+  line-height: 1.08;
+  letter-spacing: -0.8px;
+}
+.hover-information {
+  padding: 24px;
+}
+.hover-category {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  backdrop-filter: blur(12px);
+  font-size: 13px;
+  font-weight: 600;
+}
+.hover-information p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
 }
