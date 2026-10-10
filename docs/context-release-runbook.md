@@ -37,20 +37,20 @@ The database repository holds 37 migrations whose file name contains `context` (
 
 | # | Migration | Introduces | Unlocks |
 | --- | --- | --- | --- |
-| 1 | `20260920010000_context_foundation.sql` | `context_resources`, `context_subjects`, `context_resource_links`, `context_requests`, `context_sources`, `context_source_versions`, `context_attempts` | Prerequisite for everything below. |
+| 1 | `20260920010000_context_foundation.sql` | `context_resources`, `context_subjects`, `context_resource_links`, `context_requests`, `context_sources`, `context_source_versions`, `context_attempts`, `context_documents`, `context_results`, `context_result_sources`; `accept_context_result`, `withdraw_context_source` | Prerequisite for everything below. |
 | 2 | `20260920020000_context_spotify_pipeline.sql` | Request claim tokens; `create_context_request`, `read_context_request`, `claim_context_request`, `fail_context_request`, `save_context_metadata`, `commit_spotify_context`, `read_context_documents` | `ingest`, `read`, `brief`; the `contextWorkflow` metadata run. |
 | 3 | `20260920030000_context_enrichment_pilot.sql` | Attempt input/error columns; `claim_context_enrichment`, `complete_context_enrichment`, `fail_context_enrichment` | Opt-in paid enrichment harness (`enrichment.live.test.ts`) only; no public action. |
 | 4 | `20260920040000_context_guests.sql` | `context_guest_workspaces`; `start_context_guest`, `read_context_guest`, `claim_context_guest_worker`, `context_guest_worker_scope`, `complete_context_guest`, `fail_context_guest`, `adopt_context_guest` | `/api/context/guest`, `/api/context/guest/claim`, the guest and purge workflows (behind `CONTEXT_GUEST_ENABLED`). |
 | 5 | `20260921150000_context_reuse_unlinked_socials.sql` | `commit_spotify_context` revision | Reuses unlinked social rows during `ingest` commit. |
 | 6 | `20260922060000_context_provider_evidence.sql` | Enrichment claim/complete revision | Provider evidence binding for enrichment results. |
-| 7 | `20260922070000_context_catalog_entry.sql` | Provider/kind check extensions; `create_catalog_context_request` | `ingest_catalog`. |
+| 7 | `20260922070000_context_catalog_entry.sql` | Provider/kind check extensions; `context_subjects.catalog_id` (foreign key to `catalogs`); `create_catalog_context_request`, `resolve_context_catalog` | `ingest_catalog`. |
 | 8 | `20260922080000_context_artist_scope.sql` | `resolve_context_artist` | Artist scoping in planning. |
 | 9 | `20260922144500_context_release_scope.sql` | `resolve_context_spotify_release` | Release scoping in planning. |
 | 10 | `20260922160000_context_canonical_spotify_releases.sql` | `commit_spotify_context` revision | Canonical Spotify release subjects. |
 | 11 | `20260922161000_context_release_corrections.sql` | `context_release_corrections`; `correct_context_spotify_release` | Server-side release correction records. |
 | 12 | `20260922190000_context_profile_lookup_index.sql` | `socials_context_profile_identity_idx` | Profile lookup performance for identity matching. |
 | 13 | `20260923070000_context_enrichment_scope.sql` | Enrichment claim/complete revision | Completion-scope checks (database PR76). |
-| 14 | `20260923080000_context_execution_records.sql` | `context_executions`, `context_execution_outcomes`; `create_context_execution`, `save_context_execution_outcome`, `read_context_execution` | `plan`, `list_executions`, `read_execution`, `plan_catalog_members`; the `CONTEXT_RECORD_BLOCKED_PLAN_ENABLED` step (database PR77). |
+| 14 | `20260923080000_context_execution_records.sql` | `context_executions`, `context_execution_outcomes`, `context_execution_node_claims`, `context_request_catalog_members`; `create_context_execution`, `save_context_execution_outcome`, `read_context_execution`, `list_context_request_executions`, `claim_context_execution_node`, `list_context_request_targets`, `list_context_catalog_members`, `expand_context_catalog_members`, `list_context_catalog_member_targets`, `resolve_context_catalog_member_recording`, `resolve_context_recording_isrc`, `resolve_context_songstats_lookup` | `plan`, `list_executions`, `read_execution`, `list_catalog_members`, `expand_catalog_members`, `plan_catalog_members`; the `CONTEXT_RECORD_BLOCKED_PLAN_ENABLED` step (database PR77). |
 | 15 | `20260924020000_context_enrichment_reuse_binding.sql` | Enrichment claim revision | Reuse binding for accepted results. |
 | 16 | `20260924030000_context_artist_entry.sql` | `create_context_artist_request`, `list_context_artist_request_target` | `ingest_artist`. |
 | 17 | `20260924040000_context_release_entry.sql` | `create_context_release_request`, `list_context_release_request_target` | `ingest_release`; the `verify_release` target read. |
@@ -73,15 +73,17 @@ The database repository holds 37 migrations whose file name contains `context` (
 | 34 | `20261008160000_context_release_cases.sql` | `context_release_case_reviews`; `authorize_context_case_actor`, `list_context_release_cases`, `read_context_release_case`, `read_context_release_case_review`, `review_context_release_case` | `list_release_cases`, `read_release_case`, `review_release_case`, `read_release_case_review`; app `/releases`. |
 | 35 | `20261008160100_context_release_case_cursor.sql` | `list_context_release_cases` revision (forward-only cursor correction) | Controlled permission error for missing, foreign or non-release cursors. |
 | 36 | `20261009190000_context_research_without_roster.sql` | `commit_spotify_context` revision | Research saves without roster enrollment. |
-| 37 | `20261010010000_context_company_assessment.sql` | `context_briefs` purpose check; `save_context_brief` revision | `company_onboarding` purpose for `brief`, `save_brief` and `read_brief`; app company assessment panel. |
+| 37 | `20261010010000_context_company_assessment.sql` | `context_briefs` purpose check; `save_context_brief` revision | `save_brief` with `company_onboarding` (and therefore `read_brief` of such snapshots); app company assessment panel. The read-only `brief` action compiles `company_onboarding` in api code and does not need this migration. |
 
 Non-`context`-named prerequisite: `20261008030000_onboarding_membership_lock_privilege.sql` grants the `service_role` `select` and `update`-column privileges on `account_organization_ids` that migrations 34–35 lock inside their transactions.
+
+Open database PRs listed in 4.1 add further `context` migrations; they are not in this table and must be added here when they merge.
 
 Hosted migration state is **not verified by this document**. The 2026-10-08 read-only production audit recorded in the database `README.md` confirmed the prerequisites for migration 34; migrations 34–37 were later released per epic #2116 comments (database PR86 audit, database PR96 release). `[ ] Hosted migration inventory re-checked` — not performed in this PR.
 
 ### 2.2 API release contents
 
-- `POST /api/context` (`app/api/context/route.ts` → `lib/context/contextOperationHandler.ts` → `processContextOperation`). The MCP `context` tool (`lib/mcp/tools/context/registerContextTool.ts`) and the per-operation OAuth tools (`lib/mcp/oauth/contextToolOperations.ts`) share the same Zod schema, authorization and domain function, so MCP parity is structural: the public docs can lag, the MCP schema cannot.
+- `POST /api/context` (`app/api/context/route.ts` → `lib/context/contextOperationHandler.ts` → `processContextOperation`). The MCP `context` tool (`lib/mcp/tools/context/registerContextTool.ts`) and the per-operation OAuth tools (`lib/mcp/oauth/contextToolOperations.ts`) share the same Zod schema, authorization and domain function, so input and behavior parity is structural: the public docs and the human-readable MCP tool descriptions can lag, the MCP input schema cannot. Known lag at this commit: the `context` tool description and the OAuth `compile_music_context_brief` / `save_music_context_brief` descriptions still name only creative direction and playlist pitch, although the shared schema accepts `company_onboarding`.
 - `POST`/`GET /api/context/guest`, `POST /api/context/guest/claim` (`lib/context/guest/guestContextHandler.ts`) and the cron `GET /api/internal/context-guest-maintenance` (`CRON_SECRET` bearer).
 - Vercel Workflows under `app/workflows/context` (`contextWorkflow`, `releaseVerificationWorkflow`, `releaseTrackIsrcWorkflow`, `recordContextPlanStep`) and `app/workflows/contextGuest` (`guestContextWorkflow`, `purgeGuestWorkflow`).
 - Database access only through `lib/supabase/context_requests/` (`callContextRpc.ts` and the typed wrappers).
@@ -94,13 +96,14 @@ Hosted migration state is **not verified by this document**. The 2026-10-08 read
 ### 2.4 Docs release contents
 
 - `api-reference/openapi/context.json` documents `ingest`, `read`, `brief`, `save_brief`, `read_brief` and the three guest routes; the remaining shared actions are documented in `lib/context/README.md` and the MCP tool schema until they are promoted to the public reference.
+- On docs `main` the `brief`/`save_brief` purpose enums still lack `company_onboarding`. Open docs PR360 adds it (with the purpose description, the `assessment_scope`/`next_steps` response text and an example); docs PR358 and docs PR365 make the same enum edit and conflict with it, so only one of the three should merge (docs PR365, opened for this ticket, is marked draft as superseded by docs PR360).
 - MDX pages are frontmatter-only; `docs.json` nav group "Context".
 
 ## 3. Rollback switches
 
 ### 3.1 Runtime switches read by api code
 
-Every switch is off unless its value is exactly `true`. Turning a switch off is a code-free rollback for that path; saved rows are untouched.
+The four `*_ENABLED` switches are off unless their value is exactly `true`. `CONTEXT_GUEST_ORIGINS` is not a boolean: it is a comma-separated origin list that defaults to the request's own origin. Turning a switch off (or narrowing the origin list) is a code-free rollback for that path; saved rows are untouched.
 
 | Switch | Read in | Default | Off disables |
 | --- | --- | --- | --- |
@@ -122,7 +125,7 @@ Related non-`CONTEXT_` configuration: `CRON_SECRET` (maintenance cron bearer), e
 
 1. Revert or roll back the **app** deployment first (it depends on the api). Alternatively repoint `CONTEXT_API_URL`.
 2. Revert or roll back the **api** deployment, or turn the relevant switch off (3.1).
-3. **Keep** the additive `context_*` tables, review receipts, execution records and brief snapshots. Rolling back code must **never drop** Context tables, functions or snapshots as a routine step; schema removal needs a separate reviewed retention/export plan (database `README.md`, "Rollout and rollback"). Earlier api code ignores the newer columns and functions.
+3. **Keep** the additive `context_*` tables, review receipts, execution records and brief snapshots. Rolling back code must **never drop** Context tables, functions or snapshots as a routine step; schema removal needs a separate reviewed retention/export plan (database `README.md`, "Rollout and rollback"). Backward compatibility of earlier api code with the newest migrations is **not verified** by this document. The database `README.md` "Rollout and rollback" guidance covers only the release-case review migration (34). Several migrations replace functions in place (`commit_spotify_context` in 5, 10 and 36; `save_context_execution_outcome` in 23; the enrichment claim/complete functions in 6, 13, 15 and 30; `list_context_release_cases` in 35; `save_context_brief` in 37), so rolled-back api code runs against the newest function bodies. Confirm the specific rollback target against those functions in the rollback drill below before relying on it.
 4. Existing published Sites URLs and the legacy knowledge-base file paths are served by their own tables and storage; no Context migration alters them, so a Context rollback leaves them unchanged. Private Context evidence never enters the legacy knowledge-base route.
 5. Docs: revert the docs PR only if the described action is withdrawn, not merely disabled by a switch; a disabled switch should be documented as disabled.
 
@@ -130,21 +133,21 @@ Related non-`CONTEXT_` configuration: `CRON_SECRET` (maintenance cron bearer), e
 
 ## 4. Shared HTTP/MCP action surface
 
-Twenty-nine action literals in `contextOperationSchema` (`lib/context/processContextOperation.ts` plus `releaseCaseOperationSchemas.ts`). "State" is the state reported in epic #2116 comments at the time of writing; nothing in this column was re-verified by this PR. Migration numbers refer to table 2.1.
+Twenty-seven action literals in `contextOperationSchema` (4 release-case + 23) (`lib/context/processContextOperation.ts` plus `releaseCaseOperationSchemas.ts`). "State" is the state reported in epic #2116 comments at the time of writing; nothing in this column was re-verified by this PR. Migration numbers refer to table 2.1.
 
 | Action | Requires | Switch | State (reported, not re-verified here) |
 | --- | --- | --- | --- |
 | `ingest` | 1–2 (+5, 10, 33, 36 for current commit behavior) | — | deployed and live-verified for the Spotify metadata path (api PR916, database PR74/75). |
 | `read` | 1–2 | — | deployed and live-verified with `ingest`. |
-| `brief` | 1–2; 37 for `company_onboarding` | — | fixture-tested for `creative_direction` and `playlist_pitch`; `company_onboarding` live-verified through `save_brief`. |
+| `brief` | 1–2 (all purposes; compilation is api code) | — | fixture-tested for all three purposes; `company_onboarding` live-verified only through `save_brief`. |
 | `save_brief` | 29; 37 for `company_onboarding` | — | live-verified for `company_onboarding` (database PR96 → api PR992 → app PR2178, 2026-10-10); other purposes fixture-tested. |
 | `read_brief` | 29 | — | live-verified with `save_brief` (`company_onboarding`). |
 | `plan` | 14 | — | fixture-tested; read-only, never dispatches. |
 | `list_executions` | 14 | — | fixture-tested. |
 | `read_execution` | 14 | — | fixture-tested. |
-| `ingest_catalog` | 7 | — | fixture-tested (api PR917 merged; not live-verified). |
-| `list_catalog_members` | 7 | — | fixture-tested. |
-| `expand_catalog_members` | 7 | — | fixture-tested; records inclusion only. |
+| `ingest_catalog` | 7 | — | fixture-tested (api PR916; database adapter fix in api PR917; not live-verified). |
+| `list_catalog_members` | 7, 14 | — | fixture-tested. |
+| `expand_catalog_members` | 7, 14 | — | fixture-tested; records inclusion only. |
 | `plan_catalog_members` | 7, 14 | — | fixture-tested; `collectionPermitted: false` always. |
 | `ingest_artist` | 16 | — | fixture-tested. |
 | `ingest_release` | 17 | — | deployed and live-verified (direct locator intake, app PR2173, 2026-10-08). |
@@ -168,12 +171,21 @@ Brief purposes: `creative_direction`, `playlist_pitch`, `company_onboarding`. `c
 
 ### 4.1 Open PRs, not merged
 
-These add actions that are **not** part of the shipped surface. Do not document them as live; when one merges, add its actions to the table above or the runbook test fails.
+These add actions or switches that are **not** part of the shipped surface (open PRs as of 2026-10-10). Do not document them as live. Their names are listed here in backticks so that merging one of them does not, by itself, fail `contextReleaseRunbook.test.ts` (the guard checks that each name appears somewhere in this file; it does not check which section). When one merges, move its names into the table above (with the migrations it needs and its reported state) or into 3.1, in the same PR or the next one. A Context action, brief purpose or `CONTEXT_*` switch that appears nowhere in this file still fails the guard.
 
 - api PR981 + database PR89: `read_company_baseline` (company roster and evidence baseline).
 - api PR983 + database PR90: `attach_evidence`, `list_evidence_attachments`, `read_evidence_attachment` (private evidence associations).
 - api PR985 + database PR92: `list_evidence_versions` (retained evidence discovery).
-- api PR986–PR991 + database PR94/PR95: private original intake and delivery, default-disabled.
+- api PR986–PR991 + database PR94/PR95: private original intake and delivery; api PR991 adds the default-off switch `CONTEXT_ORIGINAL_INTAKE_ENABLED` (read in `app/api/context/originals/route.ts` and `lib/context/originals/`).
+- api PR1004 + database PR99: `read_document_history` (document version lineage).
+- api PR1008 + database PR102: `withdraw_source` (scoped source withdrawal).
+- api PR1017 + database PR106: `cancel` (owner-scoped request cancellation).
+- api PR1019 + database PR107: `ingest_video` (single YouTube video locator).
+- api PR1022 + database PR110: `resolve_songwriter_identity`.
+- api PR1023 + database PR111: `ingest_unreleased_recording`, `ingest_planned_release`.
+- api PR1024 + database PR112: `record_company_relationship`, `list_company_relationships`.
+
+No open PR adds a brief purpose. PRs opened after this list was written are not covered; the guard fails for them until their names are added here or to the table above.
 
 ## 5. Verification checklist
 
@@ -186,9 +198,9 @@ Run from each repository root. Record counts, not "passes".
 | api Context suite | `pnpm exec vitest run lib/context` | 68 files passed, 8 skipped (76 files); 330 tests passed, 8 skipped (338) |
 | api runbook guard | `pnpm exec vitest run lib/context/__tests__/contextReleaseRunbook.test.ts` | 4 tests: RED (ENOENT) before this file existed, GREEN after |
 | api workflows | `pnpm exec vitest run app/workflows/context app/workflows/contextGuest` | 3 files, 4 tests passed |
-| api types / lint / format | `pnpm exec tsc --noEmit`, `pnpm exec eslint <changed files>`, `pnpm exec prettier --check <changed files>` | eslint and prettier clean on changed files; full `tsc --noEmit` reports pre-existing errors only in unrelated `__tests__` files, none in `lib/context`, `docs/` or changed files |
+| api types / lint / format | `pnpm exec tsc --noEmit`, `pnpm exec eslint <changed files>`, `pnpm exec prettier --check <changed files>` | eslint and prettier clean on changed files (`*.md` is in `.prettierignore`, so prettier does not check this file); full `tsc --noEmit` reports pre-existing errors in unrelated files (mostly `__tests__`, plus `lib/mcp/extension/registerRecoupExtension.ts`), none in `lib/context`, `docs/` or changed files |
 | database | `export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"` (on macOS also `export LC_ALL=en_US.UTF-8`, or `pg_ctl` stops with `postmaster became multithreaded during startup`) then `python3 -m unittest discover -s tests -p 'test_release_cases.py'` and `-p 'test_company_assessment.py'` (CI: PostgreSQL 15 and 16 in `.github/workflows/release-cases.yml`) | PostgreSQL 17.7, disposable cluster: `test_release_cases` 1 test OK, `test_company_assessment` 3 tests OK |
-| docs | `python3 -c "import json;json.load(open('api-reference/openapi/context.json'))"` plus the enum/response assertions in the docs PR | parses; `brief`/`save_brief` enums contain `company_onboarding`; 200 response names `assessment_scope` |
+| docs | `python3 -c "import json;json.load(open('api-reference/openapi/context.json'))"` plus an assertion that the `brief`/`save_brief` purpose enums contain `company_onboarding` | docs `main` parses but its enums lack `company_onboarding`; the branch of docs PR365 parses and passes the assertion; docs PR360 (preferred) is not re-run here |
 | app | `pnpm exec vitest run components/Releases hooks/__tests__/useContextFunnel.test.tsx components/Context lib/context` and `pnpm exec tsc --noEmit` | `[ ]` not run in this PR (app untouched) |
 
 ### 5.2 Hosted smoke steps (after deployment, in the intended environment)
@@ -200,10 +212,10 @@ Each step is `[ ]` not performed in this PR. Perform them with an authorized acc
 3. `[ ]` Authenticated `save_brief` with `purpose: "company_onboarding"` on an existing completed or partial request, then `read_brief` of the returned snapshot ID returns the same `assessment_scope`, `next_steps` and `input_manifest`. — not performed in this PR.
 4. `[ ]` Workspace-scope negative read: the same `read_brief` and `read_release_case` from another workspace (or after membership revocation) returns the controlled not-found/denied error, never the payload. — not performed in this PR.
 5. `[ ]` App `/releases`: Preview assessment → cited evidence and gaps → Save → Open saved ID after a full reload; switching workspace clears the panel. — not performed in this PR.
-6. `[ ]` MCP parity: the `context` tool (and the OAuth per-operation tools) accept the same `company_onboarding` request and return the same snapshot shape as HTTP. — not performed in this PR.
+6. `[ ]` MCP parity: the `context` tool (and the OAuth per-operation tools) accept the same `company_onboarding` request and return the same snapshot shape as HTTP; note that the tool descriptions still lag (2.2). — not performed in this PR.
 7. `[ ]` Guest switch: with `CONTEXT_GUEST_ENABLED` unset, `POST /api/context/guest` returns 503 and the maintenance cron returns `{ skipped: true }`; with it set, a wrong `Origin` returns 403. — not performed in this PR.
 8. `[ ]` Default-off collection switches: `verify_release` and `verify_release_tracks` return their "not enabled" error with the switches unset; no workflow run or provider call appears. — not performed in this PR.
-9. `[ ]` Public docs render the updated `purpose` enum and the `company_onboarding` response description at `docs.recoupable.dev`. — not performed in this PR.
+9. `[ ]` After docs PR360 (or one of its duplicates, 2.4) merges, public docs render the updated `purpose` enum and the `company_onboarding` response description at `docs.recoupable.dev`. — not performed in this PR.
 10. `[ ]` Rollback drill (3.3) on a preview environment before any production rollback is needed. — not performed in this PR.
 
 ### 5.3 Evidence rules for the checklist
