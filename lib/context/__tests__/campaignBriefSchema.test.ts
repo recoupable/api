@@ -71,6 +71,15 @@ describe("campaignBriefSchema", () => {
     expect(failure({ ...brief, channels: ["C:\\plans\\brief.pdf"] })).toMatch(/Channels are names/);
   });
 
+  it("catches obvious links only, as documented; channel names are never fetched or linked", () => {
+    const parsed = campaignBriefSchema.parse({
+      ...brief,
+      channels: ["example.com/release", "plan.pdf"],
+    });
+    expect(parsed.channels).toEqual(["example.com/release", "plan.pdf"]);
+    expect(parsed.promoted).toBeUndefined();
+  });
+
   it("requires distinct bounded channels and promoted pairs", () => {
     expect(failure({ ...brief, channels: ["TikTok", "tiktok "] })).toMatch(/distinct/);
     expect(

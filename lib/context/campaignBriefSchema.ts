@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-// URLs, URI schemes (mailto:, spotify:, file:), drive letters and paths; matches the database check.
+// Obvious links only: scheme URLs, URI schemes (mailto:, spotify:, file:), www. hosts, and absolute, home or
+// drive paths. Not a full URL or file detector; channel names are never fetched. Matches the database check.
 const CHANNEL_LINK_PATTERN = /:\/\/|^(?:www\.|\/|\\|~\/)|^[a-z][a-z0-9+.-]*:\S/i;
 const CHANNEL_MESSAGE =
   "Channels are names, not links or files; save promoted records first and reference them in promoted";
@@ -15,8 +16,8 @@ const promotedSubjectSchema = z.strictObject({
 
 /**
  * Structured campaign brief accepted by `ingest_campaign_brief`.
- * Promoted entries reference Context requests and subjects the workspace already saved; the database
- * verifies each pair. Raw URLs, file paths and asset references are rejected here, before authorization.
+ * Promoted entries are only `{request_id, subject_id}` pairs the workspace already saved; the database
+ * verifies each pair. Channel names that look like links are rejected here, before authorization.
  */
 export const campaignBriefSchema = z
   .strictObject({
@@ -56,5 +57,3 @@ export const campaignBriefSchema = z
   .refine(value => !value.start_date || !value.end_date || value.end_date >= value.start_date, {
     message: "Campaign end date must not precede start date",
   });
-
-export type CampaignBrief = z.infer<typeof campaignBriefSchema>;
