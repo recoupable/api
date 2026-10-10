@@ -119,3 +119,41 @@ it("rechecks recording access after lookup and refuses to save detached evidence
   expect(d.rpc.mock.calls.some(([name]) => name === "complete_context_enrichment")).toBe(false);
   expect(d.rpc).toHaveBeenCalledWith("fail_context_enrichment", expect.anything());
 });
+it("saves a registry projection beside the raw result without inventing credits or rights", async () => {
+  const d = dependencies();
+  d.fetcher.mockResolvedValue(
+    Response.json({
+      isrc: "USAT22103065",
+      recordings: [
+        {
+          id: "00000000-0000-4000-8000-00000000000a",
+          title: "Song",
+          "artist-credit": [{ name: "Fixture Artist" }],
+        },
+      ],
+    }),
+  );
+  await collectContextMusicBrainz("actor", "owner", "request", input, d);
+  const calls = d.rpc.mock.calls as unknown as Array<
+    [string, { p_result: { content: Record<string, unknown> } }]
+  >;
+  const content = calls.find(([name]) => name === "complete_context_enrichment")![1].p_result
+    .content;
+  expect(content.identityConfirmed).toBe(false);
+  expect(content.projection).toMatchObject({
+    projectionVersion: "registry-evidence-v1",
+    claimKind: "registry_claim",
+    identityConfirmed: false,
+    ownershipVerified: false,
+    status: "candidate_found",
+    recordingIds: [
+      { provider: "musicbrainz", id: "00000000-0000-4000-8000-00000000000a", title: "Song" },
+    ],
+    credits: [expect.objectContaining({ name: "Fixture Artist", ipi: null, roleCode: null })],
+    workIds: [],
+    shares: [],
+    conflicts: [],
+  });
+  // The raw adapter result stays beside the projection; nothing is dropped from the saved content.
+  expect(content.recordings).toEqual(expect.any(Array));
+});

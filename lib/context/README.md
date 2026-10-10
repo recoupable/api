@@ -277,3 +277,40 @@ withdrawal, replay and history behavior applies.
 
 This requires the database company-assessment purpose migration before API release.
 Local fixtures cover compile/save/reopen; they do not prove a hosted Records trial.
+
+### Registry evidence projection (MusicBrainz and MLC)
+
+`collectContextMusicBrainz` and `collectContextMlc` now save a bounded
+`projection` beside the raw adapter result in each registry observation
+(`musicbrainz_recordings`, `mlc_recordings`, `mlc_works`, `mlc_work_candidates`).
+`projectRegistryEvidence` is a pure function over the adapter output; it makes no
+provider call and reads only keys the adapters already observe (`recordings[].id`,
+`title`, `artist-credit[].name`, `mlcsongCode`, `mlcSongCode`, `iswc`, `primaryTitle`,
+`workTitle`, `writers[].writerFirstName/writerLastName/writerIPI`,
+`publishers[].collectionShare`, plus `publisherName`, `publisherIpiNumber`,
+`writerRoleCode` and `publisherRoleCode` when the source supplies them). Everything
+else stays in the raw trace. The projection carries `claimKind: "registry_claim"`,
+`identityConfirmed: false`, `ownershipVerified: false`, recording MBIDs, MLC song
+codes with `iswc: null` when absent, credited roles with `ipi`/`roleCode: null` when
+absent, and collection shares with `territory: "unknown"`, `effectiveFrom/To: null`
+and `dateState: "unknown"`; no identifier, share, territory or date is ever
+synthesised. More than one recording or work candidate yields `needs_review` with a
+`multiple_candidates` conflict; publisher collection shares above 100% yield an
+`inconsistent_share_total` conflict that is reported, not corrected. An
+unrecognised payload shape yields `status: "unknown"` with a limitation instead of a
+throw. Identifier mismatches never reach the projection because the adapters reject
+them first.
+
+The `company_onboarding` assessment recipe now includes the four registry topics.
+Saved registry observations with `partial` coverage appear as cited documents;
+`not_found` lookups are saved with `unknown` coverage and therefore surface as
+missing topics (review prompts), as do topics never collected. Guidance states that
+registry lookups are source assertions and collection shares, not proven ownership,
+identity or collection authority.
+
+State: implemented and fixture-tested only. Planner dispatch for these modules is
+still blocked (`permittedModules: []`), no live MusicBrainz or MLC call has been made
+for this slice, no rights or ownership is inferred, and no HTTP/MCP action, database
+migration or docs contract changes. The MLC credential guard
+(`getRecoupMlcAccessToken`) is unit-tested to fail before any provider request when
+`MLC_USERNAME`/`MLC_PASSWORD` are unset and to keep credential values out of errors.
