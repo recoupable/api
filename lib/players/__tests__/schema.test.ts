@@ -70,3 +70,25 @@ it.each([
     }),
   ).toThrow(z.ZodError);
 });
+
+it("defaults to Spotify and requires audio for uploaded-file playback", () => {
+  expect(playerInputSchema.parse(input)).toMatchObject({ freePlayback: "spotify", audioUrl: null });
+  expect(playerInputSchema.safeParse({ ...input, freePlayback: "audio" }).success).toBe(false);
+  expect(
+    playerInputSchema.safeParse({
+      ...input,
+      freePlayback: "audio",
+      audioUrl: "https://storage.test/song.mp3",
+    }).success,
+  ).toBe(true);
+  expect(playerInputSchema.safeParse({ ...input, freePlayback: "other" }).success).toBe(false);
+  expect(
+    playerInputSchema.safeParse({
+      ...input,
+      spotifyUrl: null,
+      appleUrl: "https://music.apple.com/us/album/release/123",
+      freePlayback: "audio",
+      audioUrl: "https://storage.test/song.mp3",
+    }).success,
+  ).toBe(false);
+});

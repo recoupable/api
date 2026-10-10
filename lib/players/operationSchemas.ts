@@ -18,6 +18,8 @@ export const playerOperationSchemas = {
       organizationId: z.string().uuid().nullable().default(null),
       revision: z.number().int().positive(),
       enabled: z.boolean().optional(),
+      freePlayback: playerInputSchema.shape.freePlayback.removeDefault().optional(),
+      audioUrl: playerInputSchema.shape.audioUrl.removeDefault().optional(),
       name: playerInputSchema.shape.name.optional(),
       spotifyUrl: playerInputSchema.shape.spotifyUrl.removeDefault().optional(),
       appleUrl: playerInputSchema.shape.appleUrl.removeDefault().optional(),

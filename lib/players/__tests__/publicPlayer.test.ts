@@ -80,3 +80,24 @@ it("session acquisition requires an explicit parent", async () => {
   });
   expect(m.insert).not.toHaveBeenCalled();
 });
+
+it("exposes configured audio only to Spotify provider sessions, not the chooser or Apple", async () => {
+  m.select.mockResolvedValue({
+    id,
+    name: "Release",
+    enabled: true,
+    revision: 1,
+    spotify_url: "https://open.spotify.com/track/abc",
+    apple_url: "https://music.apple.com/us/album/release/123",
+    allowed_origins: ["https://artist.example"],
+    free_playback: "audio",
+    audio_url: "https://storage.test/song.mp3",
+  });
+  expect(await getPublicPlayer(id, {})).not.toHaveProperty("audioUrl");
+  expect(
+    await getPublicPlayer(id, { provider: "spotify", parent: "https://artist.example" }, true),
+  ).toMatchObject({ freePlayback: "audio", audioUrl: "https://storage.test/song.mp3" });
+  expect(
+    await getPublicPlayer(id, { provider: "apple_music", parent: "https://artist.example" }, true),
+  ).toMatchObject({ audioUrl: null });
+});

@@ -1,3 +1,4 @@
+import { requirePlayerAudio } from "./requirePlayerAudio";
 import { limitSiteRequest } from "@/lib/sites/activity/limitSiteRequest";
 import { z } from "zod";
 import { authorizeSiteWorkspace } from "@/lib/sites/authorizeSiteWorkspace";
@@ -30,6 +31,7 @@ export async function processPlayerOperation(
         402,
         "An active paid Recoup subscription is required to publish a player",
       );
+    await requirePlayerAudio(owner, value.audioUrl);
     const player = await insertReleasePlayer({
       owner_id: owner,
       created_by: accountId,
@@ -39,6 +41,8 @@ export async function processPlayerOperation(
       apple_url: value.appleUrl,
       allowed_origins: value.allowedOrigins,
       enabled: value.enabled,
+      free_playback: value.freePlayback,
+      audio_url: value.audioUrl,
       artwork: value.artwork,
     });
     return { player, ...getPlayerLinks(player.id) };
@@ -70,7 +74,10 @@ export async function processPlayerOperation(
     allowedOrigins: update.allowedOrigins ?? player.allowed_origins,
     artwork: update.artwork === undefined ? player.artwork : update.artwork,
     enabled: update.enabled ?? player.enabled,
+    freePlayback: update.freePlayback ?? player.free_playback ?? "spotify",
+    audioUrl: update.audioUrl === undefined ? (player.audio_url ?? null) : update.audioUrl,
   });
+  await requirePlayerAudio(owner, value.audioUrl);
   const saved = await updateReleasePlayer(id, owner, update.revision, {
     name: value.name,
     spotify_url: value.spotifyUrl,
@@ -78,6 +85,8 @@ export async function processPlayerOperation(
     allowed_origins: value.allowedOrigins,
     artwork: value.artwork,
     enabled: value.enabled,
+    free_playback: value.freePlayback,
+    audio_url: value.audioUrl,
   });
   if (!saved) throw new SiteError(409, "Player changed; read the latest revision");
   return { player: saved, ...getPlayerLinks(id) };

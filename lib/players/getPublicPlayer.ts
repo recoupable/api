@@ -42,6 +42,7 @@ export async function getPublicPlayer(id: string, input: unknown, createSession 
     spotifyUrl: player.spotify_url,
     appleUrl: player.apple_url,
     revision: player.revision,
+    freePlayback: player.free_playback ?? "spotify",
   };
   if (!query.provider) return result;
   const release = query.provider === "spotify" ? player.spotify_url : player.apple_url;
@@ -78,6 +79,8 @@ export async function getPublicPlayer(id: string, input: unknown, createSession 
   return {
     ...result,
     provider: query.provider,
+    audioUrl:
+      query.provider === "spotify" && player.free_playback === "audio" ? player.audio_url : null,
     release,
     flow,
     sessionId: verifyPlayerSession(flow).sessionId,

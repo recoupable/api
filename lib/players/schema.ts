@@ -42,6 +42,8 @@ export const playerInputSchema = z
     appleUrl: appleUrl.nullable().default(null),
     allowedOrigins: z.array(origin).max(10).default([]),
     enabled: z.boolean().default(false),
+    freePlayback: z.enum(["spotify", "audio"]).default("spotify"),
+    audioUrl: z.string().url({ abort: true }).nullable().default(null),
     artwork: z
       .string()
       .url({ abort: true })
@@ -53,7 +55,11 @@ export const playerInputSchema = z
       .default(null),
   })
   .strict()
-  .refine(value => value.spotifyUrl || value.appleUrl, "Add at least one DSP destination");
+  .refine(value => value.spotifyUrl || value.appleUrl, "Add at least one DSP destination")
+  .refine(
+    value => value.freePlayback !== "audio" || (value.audioUrl && value.spotifyUrl),
+    "Uploaded-audio playback requires an audio file and Spotify destination",
+  );
 export const playerSessionSchema = z
   .object({
     playerId: z.string().uuid(),
@@ -105,6 +111,8 @@ export type ReleasePlayer = {
   apple_url: string | null;
   allowed_origins: string[];
   enabled: boolean;
+  free_playback: "spotify" | "audio";
+  audio_url: string | null;
   artwork: string | null;
   revision: number;
 };
