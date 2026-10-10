@@ -14,7 +14,7 @@ const quarantined = {
   ...request,
   status: "failed",
   error:
-    "Conflicting recording identity: this Spotify track is already mapped to a different ISRC. Review required before context can be accepted.",
+    "identity_conflict: This Spotify track is already mapped to a different ISRC. The conflicting evidence was saved for review and nothing was accepted; retry this request after the mapping is resolved.",
   output: {
     identityConflicts: [
       {
@@ -56,7 +56,7 @@ describe("identity conflict quarantine read-through", () => {
     expect(result).toBe(quarantined);
     expect(result).toMatchObject({
       status: "failed",
-      error: expect.stringContaining("Conflicting recording identity"),
+      error: expect.stringMatching(/^identity_conflict: /),
       output: { identityConflicts: quarantined.output.identityConflicts, subjectIds: [] },
     });
     expect(deps.rpc).toHaveBeenCalledWith(
