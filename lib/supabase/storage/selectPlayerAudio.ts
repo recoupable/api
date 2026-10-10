@@ -10,7 +10,7 @@ export async function selectPlayerAudio(owner: string, value: string): Promise<b
   const { data, error } = await supabase.storage
     .from("site-assets")
     .list(owner, { search: name, limit: 100 });
-  if (error) return false;
+  if (error) throw new Error("Audio storage lookup unavailable");
   return !!data?.some(
     file =>
       file.name === name &&

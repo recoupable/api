@@ -190,3 +190,28 @@ it("updates fallback with revision control and can switch back to Spotify", asyn
     expect.objectContaining({ free_playback: "spotify", audio_url: null }),
   );
 });
+
+it("can unpublish or change a title without rechecking unchanged audio", async () => {
+  mocks.select.mockResolvedValue({
+    id: artist,
+    owner_id: owner,
+    artist_id: artist,
+    name: "Release",
+    spotify_url: "https://open.spotify.com/track/abc",
+    apple_url: null,
+    allowed_origins: [],
+    enabled: true,
+    artwork: null,
+    revision: 1,
+    free_playback: "audio",
+    audio_url: "https://storage.test/song.mp3",
+  });
+  mocks.audio.mockRejectedValue(new Error("Storage unavailable"));
+  mocks.update.mockResolvedValue({ id: artist });
+  await processPlayerOperation(owner, "update", { id: artist, revision: 1, enabled: false });
+  await processPlayerOperation(owner, "update", { id: artist, revision: 1, name: "New title" });
+  expect(mocks.audio).not.toHaveBeenCalled();
+  await expect(
+    processPlayerOperation(owner, "update", { id: artist, revision: 1, enabled: true }),
+  ).rejects.toThrow("Storage unavailable");
+});

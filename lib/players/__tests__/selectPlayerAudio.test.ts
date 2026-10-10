@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { selectPlayerAudio } from "@/lib/supabase/storage/selectPlayerAudio";
 const m = vi.hoisted(() => ({ list: vi.fn() }));
 vi.mock("@/lib/supabase/serverClient", () => ({
@@ -12,8 +12,10 @@ beforeEach(() => {
   vi.stubEnv("SUPABASE_URL", "https://storage.test");
   m.list.mockResolvedValue({ data: [{ name, metadata: { mimetype: "audio/mpeg" } }], error: null });
 });
+afterEach(() => vi.unstubAllEnvs());
 it("requires an existing audio object in the current workspace", async () => {
   expect(await selectPlayerAudio(owner, url)).toBe(true);
+  expect(m.list).toHaveBeenCalledWith(owner, expect.objectContaining({ search: name }));
   m.list.mockResolvedValueOnce({
     data: [{ name, metadata: { mimetype: "image/jpeg" } }],
     error: null,
@@ -33,5 +35,5 @@ it.each([
 });
 it("fails closed on storage lookup errors", async () => {
   m.list.mockResolvedValueOnce({ data: null, error: { message: "Unavailable" } });
-  expect(await selectPlayerAudio(owner, url)).toBe(false);
+  await expect(selectPlayerAudio(owner, url)).rejects.toThrow("Audio storage lookup unavailable");
 });

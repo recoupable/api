@@ -77,7 +77,11 @@ export async function processPlayerOperation(
     freePlayback: update.freePlayback ?? player.free_playback ?? "spotify",
     audioUrl: update.audioUrl === undefined ? (player.audio_url ?? null) : update.audioUrl,
   });
-  await requirePlayerAudio(owner, value.audioUrl);
+  if (
+    update.audioUrl !== undefined ||
+    (value.freePlayback === "audio" && (update.freePlayback === "audio" || update.enabled === true))
+  )
+    await requirePlayerAudio(owner, value.audioUrl);
   const saved = await updateReleasePlayer(id, owner, update.revision, {
     name: value.name,
     spotify_url: value.spotifyUrl,
