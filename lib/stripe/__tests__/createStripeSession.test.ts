@@ -66,3 +66,18 @@ describe("createStripeSession", () => {
     expect(params).not.toHaveProperty("cancel_url");
   });
 });
+
+it("tags plugin sessions for webhook fulfillment", async () => {
+  await createStripeSession({
+    accountId: null,
+    plan: "starter",
+    price: { price: "price_starter" },
+    successUrl: "https://recoupable.dev/label-in-a-box/setup",
+    fulfillment: "recoup-plugin",
+  });
+  expect(checkoutSessionsCreate).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      metadata: expect.objectContaining({ fulfillment: "recoup-plugin" }),
+    }),
+  );
+});

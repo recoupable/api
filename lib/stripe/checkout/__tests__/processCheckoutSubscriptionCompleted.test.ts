@@ -34,6 +34,13 @@ describe("processCheckoutSubscriptionCompleted", () => {
     findOrCreateMock.mockResolvedValue({ accountId: "acc_new", created: true });
   });
 
+  it("uses the plugin email instead of the generic welcome", async () => {
+    await processCheckoutSubscriptionCompleted(
+      session({ metadata: { fulfillment: "recoup-plugin" } }),
+    );
+    expect(findOrCreateMock).toHaveBeenCalledWith("fan@example.com", { sendWelcome: false });
+  });
+
   it("finds or creates the account by the lowercased billing email and stamps it", async () => {
     await processCheckoutSubscriptionCompleted(session());
     expect(findOrCreateMock).toHaveBeenCalledWith("fan@example.com");

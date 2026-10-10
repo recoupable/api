@@ -1,0 +1,8 @@
+/** Fixed first-party destination: never reflect checkout-supplied URLs in email. */
+export function buildPluginPurchaseEmail() {
+  const url = "https://recoupable.dev/label-in-a-box/setup";
+  const subject = "Your Recoup plugin is ready";
+  const text = `Thanks for subscribing to Recoup.\n\nDownload your plugin: ${url}\n\n1. Sign in with the email you used at checkout.\n2. Download and unzip recoup-plugin.zip.\n3. Open START HERE.html for installation instructions, then connect your Recoup account inside your AI.\n\nThe ZIP includes the customer skills, MCP connection and supported client manifests. Use this same page for future downloads while subscribed.\n\nManage your subscription: https://app.recoupable.dev/plan\nQuestions? agent@recoupable.dev`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#152e37;line-height:1.7"><h1 style="font-size:28px">Your Recoup plugin is ready.</h1><p>Thanks for subscribing. Your skills, connected tools and setup instructions are in one download.</p><p><a href="${url}" style="display:inline-block;background:#132b26;color:white;padding:12px 22px;border-radius:8px;text-decoration:none">Download your plugin →</a></p><ol><li>Sign in with your checkout email.</li><li>Download and unzip <strong>recoup-plugin.zip</strong>.</li><li>Open <strong>START HERE.html</strong>, install the plugin, and connect your Recoup account.</li></ol><p>Keep this link for future downloads while subscribed.</p><p><a href="https://app.recoupable.dev/plan">Manage subscription</a> · <a href="mailto:agent@recoupable.dev">Get help</a></p></div>`;
+  return { subject, text, html };
+}

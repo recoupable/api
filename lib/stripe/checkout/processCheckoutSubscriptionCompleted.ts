@@ -28,7 +28,10 @@ export async function processCheckoutSubscriptionCompleted(
   const subscription = await stripeClient.subscriptions.retrieve(subscriptionId);
   if (subscription.metadata?.accountId) return;
 
-  const { accountId, created } = await findOrCreateAccountForCheckout(email);
+  const { accountId, created } =
+    session.metadata?.fulfillment === "recoup-plugin"
+      ? await findOrCreateAccountForCheckout(email, { sendWelcome: false })
+      : await findOrCreateAccountForCheckout(email);
   await stampSubscriptionAccount({
     subscriptionId,
     customerId,

@@ -476,3 +476,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Plugin purchase fulfillment
+
+Subscription session requests accept optional `fulfillment: "recoup-plugin"`. The verified Stripe checkout completed/async-payment-succeeded webhook links the account and sends a download email only for a paid, active, linked subscription. The destination is fixed to the marketing setup page; no caller-supplied URL enters email. Plugin checkout suppresses the generic new-account welcome. Delivery failures return 500 for Stripe retry; Resend uses a session idempotency key, and the session records `pluginEmailSent` after success. No recurring update email is scheduled. Deploy this API support before enabling the companion marketing checkout.
