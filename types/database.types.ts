@@ -1,6 +1,7 @@
+import type { CatalogStreamTables, CatalogStreamFunctions } from "./catalogStreams";
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export type Database = {
+type BaseDatabase = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
@@ -4680,3 +4681,10 @@ export const Constants = {
     },
   },
 } as const;
+
+export type Database = Omit<BaseDatabase, "public"> & {
+  public: Omit<BaseDatabase["public"], "Tables" | "Functions"> & {
+    Tables: BaseDatabase["public"]["Tables"] & CatalogStreamTables;
+    Functions: BaseDatabase["public"]["Functions"] & CatalogStreamFunctions;
+  };
+};
