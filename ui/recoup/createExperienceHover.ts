@@ -11,11 +11,15 @@ export function createExperienceHover(container: HTMLElement, openFeature: (id: 
   document.body.append(panel);
   let timer: ReturnType<typeof setTimeout>;
   let current: HTMLElement | null = null;
+  let videoHome: Comment | null = null;
+  let liveVideo: HTMLVideoElement | null = null;
   const cancelTimer = () => clearTimeout(timer);
   const hide = () => {
     cancelTimer();
-    panel.getAnimations().forEach(animation => animation.cancel());
-    panel.querySelector("video")?.pause();
+    panel.getAnimations({ subtree: true }).forEach(animation => animation.cancel());
+    if (videoHome && liveVideo) videoHome.replaceWith(liveVideo);
+    videoHome = null;
+    liveVideo = null;
     panel.hidden = true;
     current = null;
   };
@@ -25,6 +29,7 @@ export function createExperienceHover(container: HTMLElement, openFeature: (id: 
   };
   const show = (card: HTMLElement) => {
     if (
+      card === current ||
       !card.isConnected ||
       container.querySelector(".dragging") ||
       document.querySelector("dialog[open]")
@@ -35,7 +40,15 @@ export function createExperienceHover(container: HTMLElement, openFeature: (id: 
     hide();
     current = card;
     panel.setAttribute("aria-label", `Start ${feature.title}`);
-    panel.innerHTML = `<div class="hover-thumbnail">${feature.video ? `<video muted loop playsinline src="${escapeHtml(feature.video)}" aria-hidden="true"></video>` : ""}<div class="hover-image-shade"></div><span class="hover-category">${escapeHtml(feature.category)}</span><h3>${escapeHtml(feature.title)}</h3></div><div class="hover-information"><p>${escapeHtml(feature.description)}</p></div>`;
+    panel.innerHTML = `<div class="hover-thumbnail"><div class="hover-image-shade"></div><span class="hover-category">${escapeHtml(feature.category)}</span><h3>${escapeHtml(feature.title)}</h3></div><div class="hover-information"><p>${escapeHtml(feature.description)}</p></div>`;
+    // Reuse the playing video instead of loading and seeking a second decoder.
+    const source = card.querySelector("video");
+    if (source) {
+      videoHome = document.createComment("preview video home");
+      source.replaceWith(videoHome);
+      panel.querySelector(".hover-thumbnail")!.prepend(source);
+      liveVideo = source;
+    }
     const rect = card.getBoundingClientRect();
     const width = Math.min(rect.width * 1.35, 500, window.innerWidth - 32);
     panel.style.width = `${width}px`;
@@ -54,30 +67,15 @@ export function createExperienceHover(container: HTMLElement, openFeature: (id: 
           },
           { transform: "none", clipPath: "inset(0 0 0 0 round 16px)" },
         ],
-        { duration: 300, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+        { duration: 220, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
       );
       panel.querySelector<HTMLElement>(".hover-information")!.animate(
         [
           { opacity: 0, transform: "translateY(10px)" },
           { opacity: 1, transform: "none" },
         ],
-        { duration: 240, delay: 70, fill: "backwards", easing: "ease-out" },
+        { duration: 160, delay: 40, fill: "backwards", easing: "ease-out" },
       );
-    }
-    const source = card.querySelector("video");
-    const video = panel.querySelector("video");
-    if (video) {
-      video.muted = true;
-      if (source)
-        video.addEventListener(
-          "loadedmetadata",
-          () => {
-            video.currentTime = source.currentTime;
-          },
-          { once: true },
-        );
-      if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
-        void video.play().catch(() => {});
     }
     panel.onclick = () => {
       hide();
@@ -89,7 +87,7 @@ export function createExperienceHover(container: HTMLElement, openFeature: (id: 
     const card = (event.target as HTMLElement).closest<HTMLElement>(".card");
     if (!card || card === current || card.contains(event.relatedTarget as Node | null)) return;
     cancelTimer();
-    timer = setTimeout(() => show(card), 250);
+    timer = setTimeout(() => show(card), 90);
   });
   container.addEventListener("pointerout", event => {
     const card = (event.target as HTMLElement).closest(".card");
