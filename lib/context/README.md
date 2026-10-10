@@ -277,3 +277,18 @@ withdrawal, replay and history behavior applies.
 
 This requires the database company-assessment purpose migration before API release.
 Local fixtures cover compile/save/reopen; they do not prove a hosted Records trial.
+
+### Error contract
+
+Every failure thrown inside `processContextOperation` is classified by
+`classifyContextOperationError` into a `ContextOperationError` and formatted the same
+way on both transports: HTTP returns `{error, code, retryable, guidance}` with the status
+below, and the MCP `context` tool returns `{success: false, code, message, retryable,
+guidance}`. Codes: `permission_denied` 403, `not_found` 404, `conflict` 409,
+`unsupported_input` 422, `not_ready` 409, `unavailable` 503, `budget_exhausted` 402
+(reserved for the spend path in #2123), `storage_failed` 503, `internal` 500. Messages
+and guidance are authored per code; raw database and provider diagnostics stay on the
+error `cause` and are never returned. Caller input is validated before the operation on
+both transports, so a Zod failure inside it is a prerequisite that is not ready.
+`cancel`, source withdrawal, scoped correction and selected-topic refresh are not yet
+exposed (tracked in #2122 and #2124); when added they reuse this contract.
