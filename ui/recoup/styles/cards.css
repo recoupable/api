@@ -208,3 +208,34 @@
     font-size: 21px;
   }
 }
+
+/* A partial next card and edge fade make horizontal browsing discoverable. */
+.experience-row {
+  grid-auto-columns: calc((100% - 72px) / 3.5);
+  scrollbar-width: none;
+  cursor: grab;
+}
+.experience-row::-webkit-scrollbar {
+  display: none;
+}
+.experience-row.has-more {
+  mask-image: linear-gradient(to right, black 0%, black 88%, transparent 100%);
+}
+.experience-row.dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+  user-select: none;
+}
+.experience-row.dragging .card {
+  cursor: grabbing;
+}
+@media (max-width: 900px) {
+  .experience-row {
+    grid-auto-columns: calc((100% - 48px) / 2.5);
+  }
+}
+@media (max-width: 600px) {
+  .experience-row {
+    grid-auto-columns: 72%;
+  }
+}
