@@ -70,7 +70,7 @@ with a 30-second download deadline covering headers and body, plus cancellation 
 overflow. Authorization is point-in-time, not a lock across HTTP delivery or retroactive revocation of delivered
 bytes.
 
-All 156 original/route fixtures pass locally, including 14 GET cases, 8 payload-bound
+All 163 original/route fixtures pass locally, including 14 GET cases, 8 payload-bound
 reader cases and inherited actual-byte/default-storage boundaries. Route fixtures mock
 shared auth/domain; they do not prove hosted authentication or a complete
 write/read/recovery transaction. No intake environment was enabled. Larger retained
@@ -85,3 +85,15 @@ default Blob path remains for
 registration verification callers that omit the bound; that path does not acquire a
 streaming memory guarantee. These limits remain activation considerations, alongside
 storage/orphan controls.
+
+Seven integrated lifecycle fixtures now keep shared API-key/Bearer-key auth, workspace
+authorization, domain operations and storage/RPC wrappers real against a synthetic
+backend. They cover module-reset retained readback, committed-save lost reply and
+no-upload recovery, invalid credentials, revoked scope before recovery/delivery, and
+withdrawal or membership revocation during SDK download. The scoped SDK fetch is
+checked for the private bucket URL and synthetic service authentication. Backend
+receipt persistence, access denial and admission responses are simulated: these tests
+do not prove database transaction semantics, actual limiter windows, hosted HTTP or
+production storage behavior. Test-only enabled environment is removed afterward; no
+real environment is activated. Hosted roundtrip and lifecycle resource controls remain
+gates.
