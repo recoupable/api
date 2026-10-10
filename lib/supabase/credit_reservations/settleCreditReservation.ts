@@ -5,6 +5,8 @@ import {
   type CreditChargeInput,
 } from "@/lib/credits/charges/validateCreditCharge";
 import { CreditChargeNeedsReconciliation } from "@/lib/credits/charges/CreditChargeNeedsReconciliation";
+import { CreditReservationRejected } from "@/lib/credits/reservations/CreditReservationRejected";
+import { toCreditReservationRejection } from "@/lib/credits/reservations/toCreditReservationRejection";
 import type { Json } from "@/types/database.types";
 
 const credits = z.number().int().positive();
@@ -21,7 +23,8 @@ export type CreditSettlementReceipt = z.infer<typeof receiptSchema>;
 /**
  * Charge the actual credits for a held reservation and release the remainder. The charge
  * goes through the same owner/key receipt as `recordCreditChargeOnce`, so a retry after a
- * lost reply returns `reused`. Any failure may have committed: keep the key and reconcile.
+ * lost reply returns `reused`. A rolled-back database rejection throws
+ * `CreditReservationRejected`; any other failure may have committed: keep the key and reconcile.
  * Auto-top-up is not triggered here.
  */
 export async function settleCreditReservation(
@@ -40,7 +43,7 @@ export async function settleCreditReservation(
       p_credits: args.creditsToDeduct,
       p_event: args.event,
     });
-    if (error) throw error;
+    if (error) throw toCreditReservationRejection(error) ?? error;
     const receipt = receiptSchema.parse(data);
     if (
       receipt.creditsCharged !== args.creditsToDeduct ||
@@ -50,6 +53,7 @@ export async function settleCreditReservation(
     }
     return receipt;
   } catch (cause) {
+    if (cause instanceof CreditReservationRejected) throw cause;
     throw new CreditChargeNeedsReconciliation(cause);
   }
 }

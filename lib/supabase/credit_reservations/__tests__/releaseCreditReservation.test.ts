@@ -63,3 +63,27 @@ it.each([{ operationKey: "" }, { accountId: "invalid" }, { creditsToReserve: 300
     expect(supabase.rpc).not.toHaveBeenCalled();
   },
 );
+
+it("reports a rolled-back database rejection as definite, not uncertain", async () => {
+  const error = { code: "22023", message: "Credit reservation was settled" };
+  vi.mocked(supabase.rpc).mockResolvedValue({ data: null, error } as never);
+  await expect(releaseCreditReservation(input)).rejects.toMatchObject({
+    name: "CreditReservationRejected",
+    reason: "Credit reservation was settled",
+    cause: error,
+    message: "Credit reservation request was rejected; nothing was written",
+  });
+  expect(supabase.rpc).toHaveBeenCalledOnce();
+});
+
+it.each([
+  { code: "08006", message: "connection failure" },
+  { code: "22023" },
+  { code: 22023, message: "numeric code" },
+])("keeps any other returned database error uncertain: %j", async error => {
+  vi.mocked(supabase.rpc).mockResolvedValue({ data: null, error } as never);
+  await expect(releaseCreditReservation(input)).rejects.toMatchObject({
+    name: "CreditReservationNeedsReconciliation",
+    cause: error,
+  });
+});

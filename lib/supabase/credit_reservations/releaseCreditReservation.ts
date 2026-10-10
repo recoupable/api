@@ -5,6 +5,8 @@ import {
   type CreditReservationReleaseInput,
 } from "@/lib/credits/reservations/validateCreditReservationRelease";
 import { CreditReservationNeedsReconciliation } from "@/lib/credits/reservations/CreditReservationNeedsReconciliation";
+import { CreditReservationRejected } from "@/lib/credits/reservations/CreditReservationRejected";
+import { toCreditReservationRejection } from "@/lib/credits/reservations/toCreditReservationRejection";
 
 const credits = z.number().int().positive();
 const receiptSchema = z.strictObject({
@@ -34,13 +36,14 @@ export async function releaseCreditReservation(
       p_account_id: args.accountId,
       p_operation_key: args.operationKey,
     });
-    if (error) throw error;
+    if (error) throw toCreditReservationRejection(error) ?? error;
     const receipt = receiptSchema.parse(data);
     if (receipt.creditsReleased !== receipt.creditsHeld) {
       throw new Error("Credit release receipt mismatch");
     }
     return receipt;
   } catch (cause) {
+    if (cause instanceof CreditReservationRejected) throw cause;
     throw new CreditReservationNeedsReconciliation(cause);
   }
 }

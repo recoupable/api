@@ -5,6 +5,8 @@ import {
   type CreditReservationInput,
 } from "@/lib/credits/reservations/validateCreditReservation";
 import { CreditReservationNeedsReconciliation } from "@/lib/credits/reservations/CreditReservationNeedsReconciliation";
+import { CreditReservationRejected } from "@/lib/credits/reservations/CreditReservationRejected";
+import { toCreditReservationRejection } from "@/lib/credits/reservations/toCreditReservationRejection";
 
 const reservationId = z.string().regex(/^hold-v1-[a-f0-9]{64}$/);
 const credits = z.number().int().positive();
@@ -33,7 +35,8 @@ export type CreditReservationReceipt = z.infer<typeof receiptSchema>;
  * Opt-in server-only hold on the existing wallet before paid AI work starts. The caller
  * resolves/authorizes the billing owner and supplies one stable key per chargeable attempt.
  * `insufficient` is a definite denial (nothing held); paid work may start only on a hold
- * whose status is `held`. No debit, usage event, provider call or auto-top-up happens here.
+ * whose status is `held`. A rolled-back database rejection throws `CreditReservationRejected`.
+ * No debit, usage event, provider call or auto-top-up happens here.
  */
 export async function reserveCreditsOnce(
   input: CreditReservationInput,
@@ -50,13 +53,14 @@ export async function reserveCreditsOnce(
       p_operation_key: args.operationKey,
       p_credits: args.creditsToReserve,
     });
-    if (error) throw error;
+    if (error) throw toCreditReservationRejection(error) ?? error;
     const receipt = receiptSchema.parse(data);
     const amount =
       receipt.state === "insufficient" ? receipt.creditsRequested : receipt.creditsHeld;
     if (amount !== args.creditsToReserve) throw new Error("Credit reservation receipt mismatch");
     return receipt;
   } catch (cause) {
+    if (cause instanceof CreditReservationRejected) throw cause;
     throw new CreditReservationNeedsReconciliation(cause);
   }
 }
