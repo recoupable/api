@@ -2,6 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
+      "path": "/api/internal/catalog-stream-maintenance",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/internal/credit-spend-digest",
       "schedule": "*/10 * * * *"
     },

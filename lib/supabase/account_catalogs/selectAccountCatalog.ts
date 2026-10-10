@@ -21,9 +21,11 @@ import type { Tables } from "@/types/database.types";
 export async function selectAccountCatalog({
   accountIds,
   catalogId,
+  throwOnError = false,
 }: {
   accountIds: string[];
   catalogId: string;
+  throwOnError?: boolean;
 }): Promise<Tables<"account_catalogs"> | null> {
   if (!accountIds.length) return null;
 
@@ -37,6 +39,7 @@ export async function selectAccountCatalog({
 
   if (error) {
     console.error("Error fetching account_catalogs:", error);
+    if (throwOnError) throw new Error("Catalog ownership unavailable");
     return null;
   }
 
