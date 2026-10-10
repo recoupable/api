@@ -20,6 +20,7 @@ const observedFormat: ReleaseFormatObservation = {
   label: "Fixture label",
   upc: null,
   upc_state: "not_observed",
+  track_coverage: "full",
   disc_count: 2,
   multi_disc: true,
   reissue: "unknown",
@@ -85,16 +86,28 @@ describe("release format observation", () => {
       release_date_precision: null,
       label: null,
       upc_state: "uncollected",
+      track_coverage: "uncollected",
+      disc_count: null,
+      multi_disc: null,
+    };
+    // A partial track list proves at most several discs, never how many or only one.
+    const partial: ReleaseFormatObservation = {
+      ...observedFormat,
+      track_coverage: "partial",
       disc_count: null,
       multi_disc: null,
     };
     expect(uncollected.upc_state).not.toBe(observedFormat.upc_state);
+    expect(partial.track_coverage).not.toBe(observedFormat.track_coverage);
     expect(uncollected.format_state).not.toBe(observedFormat.format_state);
     // Spotify metadata cannot establish these; the contract forbids any other value.
     expectTypeOf<ReleaseFormatObservation["reissue"]>().toEqualTypeOf<"unknown">();
     expectTypeOf<ReleaseFormatObservation["physical_format"]>().toEqualTypeOf<"unknown">();
     expectTypeOf<ReleaseFormatObservation["format_state"]>().toEqualTypeOf<
       "single" | "album" | "compilation" | "unknown"
+    >();
+    expectTypeOf<ReleaseFormatObservation["track_coverage"]>().toEqualTypeOf<
+      "full" | "partial" | "uncollected"
     >();
   });
   it("types saved review snapshots from before the format projection without release_format", () => {

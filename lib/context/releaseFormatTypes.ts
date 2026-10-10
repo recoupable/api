@@ -16,7 +16,11 @@ export interface ReleaseFormatObservation {
   label: string | null;
   upc: string | null;
   upc_state: "observed" | "not_observed" | "uncollected";
+  /** "full" only when every reported track slot was collected; page limits or failed pages are "partial". */
+  track_coverage: "full" | "partial" | "uncollected";
+  /** Definite only with full coverage and a disc number on every slot; otherwise null (unknown). */
   disc_count: number | null;
+  /** true once any slot shows disc 2 or higher; false only when disc_count is a definite 1. */
   multi_disc: boolean | null;
   reissue: "unknown";
   physical_format: "unknown";
