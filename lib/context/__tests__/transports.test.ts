@@ -87,6 +87,7 @@ it.each([
   { action: "list_release_cases" },
   { action: "read_release_case", request_id: "11111111-1111-4111-8111-111111111111" },
   { action: "read_release_case_review", review_id: "22222222-2222-4222-8222-222222222222" },
+  { action: "cancel", request_id: "11111111-1111-4111-8111-111111111111" },
   {
     action: "review_release_case",
     request_id: "11111111-1111-4111-8111-111111111111",
