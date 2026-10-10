@@ -4,7 +4,8 @@ import { createContextReuseKey } from "../createContextReuseKey";
 import { selectContextDocuments } from "../selectContextDocuments";
 import { CONTEXT_CONTRACT_VERSION } from "../contracts/contextContractVersion";
 import { contextContractEnvelopeSchema } from "../contracts/contextContractEnvelopeSchema";
-import { classifyContextInputUrl } from "../contracts/classifyContextInputUrl";
+import { parseContextUrl } from "../parseContextUrl";
+import { parseContextReleaseUrl } from "../parseContextReleaseUrl";
 import { resolveContextCorrectionAuthority } from "../contracts/resolveContextCorrectionAuthority";
 import { contextPilotConfigSchema } from "../contracts/contextPilotConfigSchema";
 import { evaluateContextPilotActivation } from "../contracts/evaluateContextPilotActivation";
@@ -15,6 +16,20 @@ import {
   type ContextAcceptanceFixture,
 } from "./fixtures/contextAcceptanceFixtures";
 
+/**
+ * Run a locator parser and report its result, or null when it rejects the input.
+ *
+ * @param parse - The parser call.
+ * @returns The parsed value, or null when the parser throws.
+ */
+function attempt<T>(parse: () => T): T | null {
+  try {
+    return parse();
+  } catch {
+    return null;
+  }
+}
+
 /** Run one decision-table fixture against the contract it names. */
 function runFixture(fixture: ContextAcceptanceFixture) {
   switch (fixture.check) {
@@ -23,19 +38,15 @@ function runFixture(fixture: ContextAcceptanceFixture) {
         fixture.expected.valid,
       );
       return;
-    case "classification":
-      expect(classifyContextInputUrl(fixture.input.url)).toMatchObject(
-        fixture.expected.routing === "unsupported"
-          ? { routing: "unsupported", reason: fixture.expected.reason }
-          : fixture.expected.routing === "ingest_release"
-            ? { routing: "ingest_release", resource: { id: fixture.expected.id } }
-            : {
-                routing: "ingest",
-                pilot: fixture.expected.pilot,
-                resource: { provider: fixture.expected.provider, id: fixture.expected.id },
-              },
-      );
+    case "routing": {
+      const resource = attempt(() => parseContextUrl(fixture.input.url));
+      const release = attempt(() => parseContextReleaseUrl(fixture.input.url));
+      expect(
+        resource ? { provider: resource.provider, kind: resource.kind, id: resource.id } : null,
+      ).toEqual(fixture.expected.resource);
+      expect(release?.id ?? null).toBe(fixture.expected.release_id);
       return;
+    }
     case "authority":
       expect(resolveContextCorrectionAuthority(fixture.input)).toEqual(fixture.expected);
       return;
@@ -132,40 +143,17 @@ describe("versioned URL-only contract", () => {
   });
 });
 
-describe("input URL classification", () => {
+describe("input URL routing boundary", () => {
   afterEach(() => vi.restoreAllMocks());
-  it("never fetches while classifying", () => {
+  it("parses locators without any network call", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
-    classifyContextInputUrl(`https://open.spotify.com/album/${syntheticSpotifyId("AlbumA")}`);
-    classifyContextInputUrl("https://open.spotify.com/playlist/37i9dQfixture");
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-  it("routes an album to the existing ingest_release action with a normalized URL", () => {
-    const id = syntheticSpotifyId("AlbumA");
-    expect(classifyContextInputUrl(`https://open.spotify.com/album/${id}?si=share`)).toEqual({
-      routing: "ingest_release",
-      resource: {
-        provider: "spotify",
-        kind: "album",
-        id,
-        url: `https://open.spotify.com/album/${id}`,
-      },
-    });
-  });
-  it("explains every unsupported reason", () => {
-    for (const url of [
-      "https://open.spotify.com/playlist/37i9dQfixture",
-      "https://open.spotify.com/intl-fr/artist/" + syntheticSpotifyId("ArtistA"),
-      "https://www.youtube.com/watch?list=PLfixture",
-      "https://www.youtube.com/channel/UCfixture",
-      "https://www.youtube.com/c/fixture",
-      "https://user:pw@open.spotify.com/track/" + syntheticSpotifyId("TrackA"),
-      "https://open.spotify.com/show/fixture",
-    ]) {
-      const result = classifyContextInputUrl(url);
-      expect(result.routing).toBe("unsupported");
-      if (result.routing === "unsupported") expect(result.message.length).toBeGreaterThan(10);
+    for (const url of contextAcceptanceFixtures.flatMap(fixture =>
+      fixture.check === "routing" ? [fixture.input.url] : [],
+    )) {
+      attempt(() => parseContextUrl(url));
+      attempt(() => parseContextReleaseUrl(url));
     }
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -184,10 +172,8 @@ describe("pilot configuration", () => {
       unpaid_operations: "allowed",
     });
     expect(
-      classifyContextInputUrl("https://open.spotify.com/track/" + syntheticSpotifyId("T")),
-    ).toMatchObject({
-      routing: "ingest",
-    });
+      parseContextUrl("https://open.spotify.com/track/" + syntheticSpotifyId("T")),
+    ).toMatchObject({ provider: "spotify", kind: "track" });
     expect(
       contextCoverageSchema.safeParse({
         extent: "unknown",
@@ -220,6 +206,30 @@ describe("correction authority", () => {
         field: "rights_share",
         current_evidence_kind: "observation",
         proposed_evidence_kind: "customer_assertion",
+      }),
+    ).toThrow();
+  });
+  it("never records relabelled derived output as a shared source observation", () => {
+    for (const current of ["estimate", "interpretation", "customer_assertion", "creative_proposal"])
+      for (const field of ["spotify_track_id", "isrc", "credited_artist_order", "release_date"])
+        expect(
+          resolveContextCorrectionAuthority({
+            actor: "service",
+            field,
+            current_evidence_kind: current,
+            proposed_evidence_kind: "observation",
+            source_version_id: "source-version-fixture-2",
+          }).recorded_as,
+        ).toBeNull();
+  });
+  it("rejects an empty source version reference", () => {
+    expect(() =>
+      resolveContextCorrectionAuthority({
+        actor: "service",
+        field: "isrc",
+        current_evidence_kind: "observation",
+        proposed_evidence_kind: "observation",
+        source_version_id: "",
       }),
     ).toThrow();
   });

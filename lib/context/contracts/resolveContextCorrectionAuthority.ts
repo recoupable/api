@@ -12,12 +12,19 @@ export const contextCorrectionFieldSchema = z.enum([
   "customer_note",
 ]);
 
-/** A proposed correction: who proposes it, what it touches, and what it claims to be. */
+/**
+ * A proposed correction: who proposes it, what it touches, and what it claims to be.
+ *
+ * `source_version_id` names the retained source version an `observation` was read
+ * from. Without it an "observation" would only be a label. The persistence layer
+ * (#2124) must still confirm the reference resolves to a source version in scope.
+ */
 export const contextCorrectionSchema = z.strictObject({
   actor: contextCorrectionActorSchema,
   field: contextCorrectionFieldSchema,
   current_evidence_kind: contextEvidenceKindSchema,
   proposed_evidence_kind: contextEvidenceKindSchema,
+  source_version_id: z.string().trim().min(1).max(200).optional(),
 });
 
 export type ContextCorrection = z.infer<typeof contextCorrectionSchema>;
@@ -25,11 +32,13 @@ export type ContextCorrection = z.infer<typeof contextCorrectionSchema>;
 export type ContextCorrectionReason =
   | "creative_output_cannot_become_factual"
   | "customer_assertion_cannot_become_factual"
+  | "derived_output_cannot_become_observation"
   | "customer_corrections_are_private_assertions"
   | "customer_note_is_customer_authored"
   | "shared_identity_not_customer_overridable"
   | "shared_identity_dispute_requires_review"
   | "service_corrections_require_source_observation"
+  | "source_observation_requires_source_version"
   | "private_assertion_allowed"
   | "source_observation_allowed";
 
@@ -50,6 +59,10 @@ const FACTUAL_KINDS = new Set<ContextCorrection["proposed_evidence_kind"]>([
   "estimate",
   "interpretation",
 ]);
+const DERIVED_KINDS = new Set<ContextCorrection["current_evidence_kind"]>([
+  "estimate",
+  "interpretation",
+]);
 
 /**
  * Decide whether a proposed correction may be applied, and as what.
@@ -57,10 +70,13 @@ const FACTUAL_KINDS = new Set<ContextCorrection["proposed_evidence_kind"]>([
  * Encodes the ownership rules from recoupable/app#2118: shared canonical identity
  * (Spotify ID, ISRC, credited artist order) is never rewritten by an ordinary
  * customer override; a workspace admin can only raise a review; the service
- * changes it only through a source observation. Creative proposals and customer
- * assertions never become factual research by relabelling. Customer-side
- * corrections are recorded as private assertions scoped to the workspace.
- * This is a pure decision; persistence of corrections belongs to #2124.
+ * changes it only through a source observation that cites a source version.
+ * Creative proposals and customer assertions never become factual research by
+ * relabelling, and model estimates or interpretations never become observations:
+ * a new observation enters through source ingestion with its own source version,
+ * not by upgrading derived output. Customer-side corrections are recorded as
+ * private assertions scoped to the workspace. This is a pure decision;
+ * persistence of corrections belongs to #2124.
  *
  * @param input - The proposed correction, validated with `contextCorrectionSchema`.
  * @returns The decision, a stable reason code and where an allowed change is recorded.
@@ -72,6 +88,11 @@ export function resolveContextCorrectionAuthority(input: unknown): ContextCorrec
     return deny("creative_output_cannot_become_factual");
   if (correction.current_evidence_kind === "customer_assertion" && proposedFactual)
     return deny("customer_assertion_cannot_become_factual");
+  if (
+    DERIVED_KINDS.has(correction.current_evidence_kind) &&
+    correction.proposed_evidence_kind === "observation"
+  )
+    return deny("derived_output_cannot_become_observation");
   const customerSide = correction.actor !== "service";
   if (customerSide && correction.proposed_evidence_kind !== "customer_assertion")
     return deny("customer_corrections_are_private_assertions");
@@ -88,13 +109,14 @@ export function resolveContextCorrectionAuthority(input: unknown): ContextCorrec
       reason: "private_assertion_allowed",
       recorded_as: "private_customer_assertion",
     };
-  return correction.proposed_evidence_kind === "observation"
-    ? {
-        decision: "allowed",
-        reason: "source_observation_allowed",
-        recorded_as: "shared_source_observation",
-      }
-    : review("service_corrections_require_source_observation");
+  if (correction.proposed_evidence_kind !== "observation")
+    return review("service_corrections_require_source_observation");
+  if (!correction.source_version_id) return deny("source_observation_requires_source_version");
+  return {
+    decision: "allowed",
+    reason: "source_observation_allowed",
+    recorded_as: "shared_source_observation",
+  };
 }
 
 /**

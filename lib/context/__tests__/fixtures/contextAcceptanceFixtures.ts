@@ -43,12 +43,13 @@ export type ContextAcceptanceFixture =
   | {
       id: string;
       scenario: string;
-      check: "classification";
+      /** Runs the live `parseContextUrl` and `parseContextReleaseUrl`; there is no second routing table. */
+      check: "routing";
       input: { url: string };
-      expected:
-        | { routing: "ingest"; provider: "spotify" | "youtube"; id: string; pilot: string }
-        | { routing: "ingest_release"; id: string }
-        | { routing: "unsupported"; reason: string };
+      expected: {
+        resource: { provider: "spotify" | "youtube"; kind: "track" | "video"; id: string } | null;
+        release_id: string | null;
+      };
     }
   | {
       id: string;
@@ -128,6 +129,9 @@ const reuseBase: ContextReuseInput = {
   requiredCoverage: "full",
   sources: [{ id: `spotify:track:${trackA}`, version: "1" }],
 };
+
+const trackSource = { id: `spotify:track:${trackA}`, version: "1" };
+const lyricSource = { id: `lyrics:fixture:${trackA}`, version: "3" };
 
 const document = (
   overrides: Partial<ContextBriefDocument> & { id: string },
@@ -226,81 +230,95 @@ export const contextAcceptanceFixtures: ContextAcceptanceFixture[] = [
     input: { ...envelope, account_id: FIXTURE_OTHER_OWNER, payer_id: FIXTURE_OTHER_OWNER },
     expected: { valid: false },
   },
-  // --- Album / playlist routing semantics ------------------------------------------------
+  // --- Album / playlist routing boundary (live locator parsers) --------------------------
   {
     id: "route-spotify-track",
-    scenario: "Spotify track routes to ingest and is enabled in the pilot",
-    check: "classification",
+    scenario: "A Spotify track parses as one track resource and never as a release",
+    check: "routing",
     input: { url: `${trackUrl(trackA)}?si=tracking` },
-    expected: { routing: "ingest", provider: "spotify", id: trackA, pilot: "enabled" },
+    expected: { resource: { provider: "spotify", kind: "track", id: trackA }, release_id: null },
   },
   {
     id: "route-youtube-video",
-    scenario: "Single YouTube video is contract-valid but the pilot operation rejects it",
-    check: "classification",
+    scenario:
+      "A single YouTube video parses as one video resource; which action accepts it is a pilot decision, not a parser one",
+    check: "routing",
     input: { url: `https://youtu.be/${SYNTHETIC_VIDEO_ID}?t=4` },
     expected: {
-      routing: "ingest",
-      provider: "youtube",
-      id: SYNTHETIC_VIDEO_ID,
-      pilot: "not_enabled",
+      resource: { provider: "youtube", kind: "video", id: SYNTHETIC_VIDEO_ID },
+      release_id: null,
     },
   },
   {
     id: "route-spotify-album",
-    scenario: "Spotify album routes to ingest_release, including a single's album page",
-    check: "classification",
+    scenario:
+      "A Spotify album, including a single's album page, is not a track input; only the release locator accepts it",
+    check: "routing",
     input: { url: `https://open.spotify.com/intl-de/album/${albumA}` },
-    expected: { routing: "ingest_release", id: albumA },
+    expected: { resource: null, release_id: albumA },
   },
   {
     id: "route-spotify-playlist",
-    scenario: "Spotify playlist is explicitly unsupported",
-    check: "classification",
+    scenario: "A Spotify playlist is accepted by neither the track nor the release locator",
+    check: "routing",
     input: { url: `https://open.spotify.com/playlist/${syntheticSpotifyId("Playlist")}` },
-    expected: { routing: "unsupported", reason: "spotify_playlist" },
+    expected: { resource: null, release_id: null },
   },
   {
     id: "route-spotify-artist",
-    scenario: "Spotify artist page is explicitly unsupported",
-    check: "classification",
+    scenario: "A Spotify artist page is accepted by neither locator",
+    check: "routing",
     input: { url: `https://open.spotify.com/artist/${artistA}` },
-    expected: { routing: "unsupported", reason: "spotify_artist" },
+    expected: { resource: null, release_id: null },
   },
   {
     id: "route-youtube-playlist",
-    scenario: "YouTube playlist is explicitly unsupported",
-    check: "classification",
+    scenario: "A YouTube playlist is accepted by neither locator",
+    check: "routing",
     input: { url: "https://www.youtube.com/playlist?list=PLfixture" },
-    expected: { routing: "unsupported", reason: "youtube_playlist" },
+    expected: { resource: null, release_id: null },
+  },
+  {
+    id: "route-youtube-watch-without-video",
+    scenario: "A YouTube watch URL without a video ID is not a video",
+    check: "routing",
+    input: { url: "https://www.youtube.com/watch" },
+    expected: { resource: null, release_id: null },
   },
   {
     id: "route-youtube-channel",
-    scenario: "YouTube channel or handle is explicitly unsupported",
-    check: "classification",
+    scenario: "A YouTube channel or handle is accepted by neither locator",
+    check: "routing",
     input: { url: "https://www.youtube.com/@fixturechannel" },
-    expected: { routing: "unsupported", reason: "youtube_channel" },
+    expected: { resource: null, release_id: null },
   },
   {
     id: "route-not-https",
-    scenario: "Non-HTTPS or credentialed URLs are rejected before any provider call",
-    check: "classification",
+    scenario: "A non-HTTPS URL is rejected before any provider call",
+    check: "routing",
     input: { url: `http://open.spotify.com/track/${trackA}` },
-    expected: { routing: "unsupported", reason: "not_public_https" },
+    expected: { resource: null, release_id: null },
+  },
+  {
+    id: "route-credentialed",
+    scenario: "A URL with embedded credentials is rejected before any provider call",
+    check: "routing",
+    input: { url: `https://user:pw@open.spotify.com/track/${trackA}` },
+    expected: { resource: null, release_id: null },
   },
   {
     id: "route-unrecognized",
-    scenario: "Unknown hosts are unrecognized, not guessed",
-    check: "classification",
+    scenario: "Unknown hosts are not guessed",
+    check: "routing",
     input: { url: "https://example.test/music/song" },
-    expected: { routing: "unsupported", reason: "unrecognized" },
+    expected: { resource: null, release_id: null },
   },
   {
     id: "route-invalid",
-    scenario: "A string that is not a URL is invalid",
-    check: "classification",
+    scenario: "A string that is not a URL is rejected",
+    check: "routing",
     input: { url: "not a url" },
-    expected: { routing: "unsupported", reason: "invalid_url" },
+    expected: { resource: null, release_id: null },
   },
   // --- Correction authority ------------------------------------------------------------
   {
@@ -434,7 +452,24 @@ export const contextAcceptanceFixtures: ContextAcceptanceFixture[] = [
   },
   {
     id: "authority-service-observation-allowed",
-    scenario: "The service updates shared identity only through a source observation",
+    scenario: "The service updates shared identity only through a source observation it cites",
+    check: "authority",
+    input: {
+      actor: "service",
+      field: "isrc",
+      current_evidence_kind: "observation",
+      proposed_evidence_kind: "observation",
+      source_version_id: "source-version-fixture-2",
+    },
+    expected: {
+      decision: "allowed",
+      reason: "source_observation_allowed",
+      recorded_as: "shared_source_observation",
+    },
+  },
+  {
+    id: "authority-service-observation-without-source-denied",
+    scenario: "A service observation that cites no source version is only a label and is denied",
     check: "authority",
     input: {
       actor: "service",
@@ -443,9 +478,43 @@ export const contextAcceptanceFixtures: ContextAcceptanceFixture[] = [
       proposed_evidence_kind: "observation",
     },
     expected: {
-      decision: "allowed",
-      reason: "source_observation_allowed",
-      recorded_as: "shared_source_observation",
+      decision: "denied",
+      reason: "source_observation_requires_source_version",
+      recorded_as: null,
+    },
+  },
+  {
+    id: "authority-service-estimate-relabel-denied",
+    scenario:
+      "A model estimate of a shared ISRC cannot be relabelled an observation, even when a source is cited",
+    check: "authority",
+    input: {
+      actor: "service",
+      field: "isrc",
+      current_evidence_kind: "estimate",
+      proposed_evidence_kind: "observation",
+      source_version_id: "source-version-fixture-2",
+    },
+    expected: {
+      decision: "denied",
+      reason: "derived_output_cannot_become_observation",
+      recorded_as: null,
+    },
+  },
+  {
+    id: "authority-service-interpretation-relabel-denied",
+    scenario: "An interpretation of a shared ISRC cannot be relabelled an observation",
+    check: "authority",
+    input: {
+      actor: "service",
+      field: "isrc",
+      current_evidence_kind: "interpretation",
+      proposed_evidence_kind: "observation",
+    },
+    expected: {
+      decision: "denied",
+      reason: "derived_output_cannot_become_observation",
+      recorded_as: null,
     },
   },
   {
@@ -580,7 +649,8 @@ export const contextAcceptanceFixtures: ContextAcceptanceFixture[] = [
   },
   {
     id: "coverage-lyrics-multilingual-partial",
-    scenario: "Multilingual lyrics transcribed for one language only remain partial",
+    scenario:
+      "Multilingual lyrics transcribed in one language can be recorded as partial with that language; the schema cannot see the missing language, so the lyric adapter must not claim full",
     check: "coverage",
     input: { ...fullCoverage, extent: "partial", language: "en" },
     expected: { valid: true },
@@ -615,6 +685,34 @@ export const contextAcceptanceFixtures: ContextAcceptanceFixture[] = [
     expected: { valid: true },
   },
   {
+    id: "date-leap-day",
+    scenario: "A real leap day keeps day precision",
+    check: "observed_date",
+    input: { value: "2000-02-29", precision: "day" },
+    expected: { valid: true },
+  },
+  {
+    id: "date-day-not-calendar-date",
+    scenario: "A day-precision value must be a real calendar date",
+    check: "observed_date",
+    input: { value: "1999-02-31", precision: "day" },
+    expected: { valid: false },
+  },
+  {
+    id: "date-non-leap-day-rejected",
+    scenario: "February 29 in a non-leap century year is not a calendar date",
+    check: "observed_date",
+    input: { value: "1900-02-29", precision: "day" },
+    expected: { valid: false },
+  },
+  {
+    id: "date-year-zero-rejected",
+    scenario: "Year 0000 is not an observed release year",
+    check: "observed_date",
+    input: { value: "0000", precision: "year" },
+    expected: { valid: false },
+  },
+  {
     id: "date-unknown-with-value-rejected",
     scenario: "A value with unknown precision is a contradiction",
     check: "observed_date",
@@ -631,7 +729,8 @@ export const contextAcceptanceFixtures: ContextAcceptanceFixture[] = [
   // --- Identity reuse boundaries --------------------------------------------------------------
   {
     id: "reuse-same-name-artists-distinct",
-    scenario: "Same-name artists with different Spotify IDs never share derived evidence",
+    scenario:
+      "Same-name artists: the reuse key carries the subject ID and no display name, so two artist IDs never share derived evidence",
     check: "reuse",
     input: {
       a: { ...reuseBase, subjectId: `artist:spotify:${artistA}`, topic: "artist_metadata" },
@@ -641,11 +740,12 @@ export const contextAcceptanceFixtures: ContextAcceptanceFixture[] = [
   },
   {
     id: "reuse-reissue-shares-recording",
-    scenario: "Reissue: the same recording and source version reuse lyric evidence",
+    scenario:
+      "Reissue: a reissue track already resolved to the same recording reuses its lyric evidence; the order its sources were gathered in is not part of the key",
     check: "reuse",
     input: {
-      a: reuseBase,
-      b: { ...reuseBase },
+      a: { ...reuseBase, sources: [trackSource, lyricSource] },
+      b: { ...reuseBase, sources: [lyricSource, trackSource] },
     },
     expected: { same: true },
   },
@@ -733,7 +833,8 @@ export const contextAcceptanceFixtures: ContextAcceptanceFixture[] = [
   },
   {
     id: "selection-collaboration-separate-artists",
-    scenario: "Collaboration: both credited artists stay separate subjects; neither is enrolled",
+    scenario:
+      "Collaboration: credited artists stay separate subjects; requesting the recording and one collaborator does not pull in the other collaborator",
     check: "selection",
     input: {
       documents: [
@@ -764,6 +865,34 @@ export const contextAcceptanceFixtures: ContextAcceptanceFixture[] = [
       }),
     },
     expected: { documentIds: ["artist-b", "recording-credits"], missingTopics: [] },
+  },
+  {
+    id: "selection-same-name-artists-by-id",
+    scenario: "Same-name artists: two artists with identical names are selected by subject ID only",
+    check: "selection",
+    input: {
+      documents: [
+        document({
+          id: "artist-a-same-name",
+          subjectId: `artist:spotify:${artistA}`,
+          topic: "artist_metadata",
+          evidenceKind: "observation",
+          text: "Fixture Same Name.",
+        }),
+        document({
+          id: "artist-b-same-name",
+          subjectId: `artist:spotify:${artistB}`,
+          topic: "artist_metadata",
+          evidenceKind: "observation",
+          text: "Fixture Same Name.",
+        }),
+      ],
+      request: selection({
+        subjectIds: [`artist:spotify:${artistB}`],
+        topics: ["artist_metadata"],
+      }),
+    },
+    expected: { documentIds: ["artist-b-same-name"], missingTopics: [] },
   },
   {
     id: "selection-source-injection-is-data",
