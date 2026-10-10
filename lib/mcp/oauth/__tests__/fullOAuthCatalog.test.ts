@@ -5,6 +5,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { registerFullOAuthTools } from "../registerFullOAuthTools";
 import { contextToolOperations } from "../contextToolOperations";
 import { fullOAuthToolPolicy } from "../fullOAuthToolPolicy";
+import { undelegatedContextActions } from "../undelegatedContextActions";
 vi.mock("@/lib/supabase/serverClient", () => ({ default: {} }));
 vi.hoisted(() => {
   process.env.PRIVY_PROJECT_SECRET = "test";
@@ -25,6 +26,9 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
   await server.connect(serverTransport);
   await client.connect(clientTransport);
   try {
+    const delegatedContextOperations = Object.entries(contextToolOperations)
+      .filter(([action]) => !undelegatedContextActions.includes(action))
+      .map(([, operation]) => operation);
     const { tools } = await client.listTools();
     expect(tools.map(tool => tool.name).sort()).toEqual(
       [
@@ -33,12 +37,12 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
         ),
         "get_daily_email_status",
         "set_daily_email_status",
-        ...Object.values(contextToolOperations).map(operation => operation.name),
+        ...delegatedContextOperations.map(operation => operation.name),
       ].sort(),
     );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
     expect(tools).toHaveLength(84);
-    for (const operation of Object.values(contextToolOperations)) {
+    for (const operation of delegatedContextOperations) {
       const tool = tools.find(tool => tool.name === operation.name)!;
       expect(Object.keys(tool.inputSchema.properties ?? {}).length).toBeGreaterThan(0);
       expect(tool.inputSchema.properties).not.toHaveProperty("action");
@@ -47,6 +51,8 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
     const artist = tools.find(tool => tool.name === "create_new_artist")!;
     expect(artist.inputSchema.properties).not.toHaveProperty("active_conversation_id");
     expect(JSON.stringify(artist)).not.toMatch(/system prompt|copy.*conversation/i);
+    expect(tools.map(tool => tool.name)).not.toContain("record_music_company_relationship");
+    expect(tools.map(tool => tool.name)).not.toContain("list_music_company_relationships");
     expect(tools.map(tool => tool.name)).not.toContain("list_professional_roster");
     expect(tools.map(tool => tool.name)).not.toContain("confirm_professional_roster");
     expect(
