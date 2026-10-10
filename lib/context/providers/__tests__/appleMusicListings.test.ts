@@ -170,6 +170,25 @@ it("compares titles and artists by whole words, not substrings", () => {
   });
 });
 
+it("ignores accent-only differences in titles and artists", () => {
+  const accented = mapAppleMusicListings(
+    { ...recording, title: "Cafe Song", artists: ["Beyonce"] },
+    found(song({ id: "1009", name: "Café Song", artist_name: "Beyoncé" })),
+  );
+  expect(accented.songListings[0].match).toMatchObject({
+    status: "exact_isrc",
+    evidence: { titleMatch: true, artistMatch: true },
+  });
+  const plain = mapAppleMusicListings(
+    { ...recording, title: "Café Song", artists: ["Beyoncé"] },
+    found(song({ id: "1010", name: "Cafe Song", artist_name: "Beyonce" })),
+  );
+  expect(plain.songListings[0].match).toMatchObject({
+    status: "exact_isrc",
+    evidence: { titleMatch: true, artistMatch: true },
+  });
+});
+
 it("reports a missing ISRC as not listed in that storefront only", () => {
   const listing = mapAppleMusicListings(
     { ...recording, storefront: "jp" },
@@ -188,7 +207,7 @@ it("reports a missing ISRC as not listed in that storefront only", () => {
 it("keeps an echoed but unresolved hit as unknown availability, never as not listed", () => {
   const listing = mapAppleMusicListings(recording, { isrc: ISRC, found: true, songs: [] });
   expect(listing.availability).toEqual({ status: "unknown", storefront: "us" });
-  expect(listing.match.status).toBe("ambiguous");
+  expect(listing.match).toEqual({ status: "unknown", flags: [] });
   expect(listing.songListings).toEqual([]);
 });
 

@@ -17,6 +17,11 @@ export const appleStorefrontsSchema = z
 const isrcSchema = z.string().regex(/^[A-Z]{2}[A-Z0-9]{3}\d{7}$/);
 const providerIdSchema = z.string().min(1).max(256);
 
+/**
+ * `youtube_music` is reserved and nothing produces it. Every storefront field below validates
+ * Apple storefront codes, so a YouTube Music collector (still an open #2143 gap) first needs a
+ * provider-aware storefront schema.
+ */
 export const dspListingProviderSchema = z.enum(["apple_music", "youtube_music"]);
 /** Store objects stay separate: a song never stands in for its album, a video, an art track or a channel. */
 export const dspListingResourceTypeSchema = z.enum([
@@ -37,10 +42,12 @@ export const dspMatchFlagSchema = z.enum([
   "remix_or_alternate_title",
   "regional_variant",
 ]);
+/** `unknown`: the provider reported a hit it did not resolve, so no match could be judged. */
 export const dspMatchStatusSchema = z.enum([
   "exact_isrc",
   "ambiguous",
   "not_found",
+  "unknown",
   "unsupported_resource",
 ]);
 /** Unknown comparisons stay null; they are not false. Version tokens are store-title words the recording title lacks. */

@@ -93,11 +93,17 @@ it("claims an observation module keyed by ISRC, storefronts and version", async 
         provider: "apple_music",
         model: "none",
         evidenceKind: "observation",
-        input: { isrc: ISRC, storefronts: ["us"], collectionVersion: "fixture-v1" },
+        input: {
+          isrc: ISRC,
+          storefronts: ["us"],
+          collectionVersion: "fixture-v1",
+          matchedAgainst: { title: "Song", artists: ["Artist"], durationMs: 180_000 },
+        },
         sources: [
           expect.objectContaining({
             kind: "provider_metadata",
-            url: expect.stringContaining("api.music.apple.com/v1/catalog/us/songs"),
+            // The exact request getAppleSongsByIsrc sends for one ISRC.
+            url: "https://api.music.apple.com/v1/catalog/us/songs?filter%5Bisrc%5D=USAT22103065&include=albums&extend=composerName%2CaudioVariants",
             content: expect.objectContaining({ isrc: ISRC, storefront: "us" }),
           }),
         ],
@@ -179,6 +185,7 @@ it("observes several storefronts in one saved result and flags a regional album 
     isrc: ISRC,
     storefronts: ["jp", "us"],
     collectionVersion: "fixture-v1",
+    matchedAgainst: { title: "Song", artists: ["Artist"], durationMs: 180_000 },
   });
   expect(claim.sources.map(source => source.url)).toEqual([
     expect.stringContaining("/catalog/jp/songs"),
@@ -242,6 +249,28 @@ it("keeps storefront order out of the fingerprint but isolates storefront sets a
   expect(fingerprints).toHaveLength(4);
   expect(fingerprints[0]).toBe(fingerprints[1]);
   expect(new Set(fingerprints).size).toBe(3);
+});
+
+it("isolates reuse by the title, artists and duration the listing is matched against", async () => {
+  const d = dependencies();
+  d.rpc.mockResolvedValue({ state: "reused" });
+  const { durationMs: _omitted, ...withoutDuration } = input;
+  for (const variant of [
+    input,
+    { ...input },
+    { ...input, title: "Totally Different" },
+    { ...input, artists: ["Someone Else"] },
+    { ...input, durationMs: 999 },
+    withoutDuration,
+  ])
+    await collectContextAppleMusicListings("actor", "owner", "request", variant, d);
+  expect(d.lookup).not.toHaveBeenCalled();
+  const fingerprints = (d.rpc.mock.calls as unknown as RpcCall[]).map(
+    ([, params]) => params.p_module.fingerprint,
+  );
+  expect(fingerprints).toHaveLength(6);
+  expect(fingerprints[0]).toBe(fingerprints[1]);
+  expect(new Set(fingerprints).size).toBe(5);
 });
 
 it("records storefronts where the ISRC is not listed as unknown coverage", async () => {

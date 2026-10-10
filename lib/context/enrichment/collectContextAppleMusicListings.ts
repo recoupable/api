@@ -36,8 +36,13 @@ const LIMITATIONS = [
   "Regional variants are compared only across the storefronts observed in this result.",
   "YouTube Music, music video, art track and uploader channel listings are typed but not collected by this module.",
 ];
+/** The exact request `getAppleSongsByIsrc` sends for one ISRC (see `lib/apple/fetchAppleSongsChunk`). */
 const lookupUrl = (storefront: string, isrc: string) =>
-  `https://api.music.apple.com/v1/catalog/${storefront}/songs?${new URLSearchParams({ "filter[isrc]": isrc })}`;
+  `https://api.music.apple.com/v1/catalog/${storefront}/songs?${new URLSearchParams({
+    "filter[isrc]": isrc,
+    include: "albums",
+    extend: "composerName,audioVariants",
+  })}`;
 
 /**
  * Persist Apple Music listings for one recording ISRC across up to ten storefronts as one
@@ -62,6 +67,12 @@ export async function collectContextAppleMusicListings(
       throw new Error("ISRC does not match the context recording");
   };
   const now = () => (deps.now?.() ?? new Date()).toISOString();
+  // Match status depends on these, so they are part of the reuse fingerprint.
+  const matchedAgainst = {
+    title: args.title,
+    artists: args.artists,
+    durationMs: args.durationMs ?? null,
+  };
   return runContextEnrichment(
     actor,
     owner,
@@ -77,6 +88,7 @@ export async function collectContextAppleMusicListings(
         isrc: args.isrc,
         storefronts: args.storefronts,
         collectionVersion: args.collectionVersion,
+        matchedAgainst,
       },
       // Query provenance here; the exact returned payload is retained in the observed sources.
       sources: args.storefronts.map(storefront => ({
@@ -125,11 +137,7 @@ export async function collectContextAppleMusicListings(
         return {
           content: {
             ...listings,
-            matchedAgainst: {
-              title: args.title,
-              artists: args.artists,
-              durationMs: args.durationMs ?? null,
-            },
+            matchedAgainst,
             limitations: LIMITATIONS,
           },
           coverage:

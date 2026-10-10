@@ -284,8 +284,9 @@ Local fixtures cover compile/save/reopen; they do not prove a hosted Records tri
 one recording ISRC across 1–10 storefronts (default `us`) as one `dsp_listings` observation
 through the existing claim/complete/fail enrichment chain. It reuses
 `lib/apple/getAppleSongsByIsrc` (no new provider client or developer-token change). Each
-storefront is a separate declared and observed source; the storefront set (sorted) and
-collection version are part of the reuse fingerprint. All storefronts share one saved result
+storefront is a separate declared and observed source; the storefront set (sorted), the
+collection version and the title, artists and duration the listing is matched against are part
+of the reuse fingerprint, and each declared source URL is the exact Apple request sent. All storefronts share one saved result
 because a Context document holds one current result per subject and topic.
 
 `mapAppleMusicListings` turns one storefront's result into a `storefrontListingSchema`
@@ -298,12 +299,17 @@ fewer than two listed storefronts `varies` stays null. Several store songs for o
 storefront are `multiple_store_songs` (plus `multiple_album_contexts` when the albums differ),
 never a regional variant. An album id is never written into a song or recording identifier. A
 missing ISRC is `not_listed` for that storefront only; a hit Apple echoes but does not resolve
-stays `unknown`; a song whose own ISRC differs is kept as `ambiguous`, never dropped or
+stays `unknown` for both availability and match; titles and artists compare without case,
+punctuation or accents; a song whose own ISRC differs is kept as `ambiguous`, never dropped or
 promoted. Any failed storefront lookup saves nothing. Listings are observations, never
 canonical `context_resources`, identities, release IDs or rights.
 
 State: implemented and fixture-tested on the server only. It requires database migration
 `20261010214300_context_dsp_listings.sql` (adds the `dsp_listings` observation topic) and is not
 wired into `planContextModules`, the dispatcher, HTTP or MCP, and no brief recipe reads it.
-`youtube_music`, `music_video`, `art_track` and `uploader_channel` exist in the listing enums so
-#2131 can extend without a schema break, but nothing collects them here.
+`youtube_music`, `music_video`, `art_track` and `uploader_channel` are reserved in the listing
+enums, but nothing collects them, and every storefront field validates Apple storefront codes.
+YouTube Music listing collection remains an open #2143 gap (#2131 covers single-video YouTube
+context, not store listings) and needs a provider-aware storefront schema first. The title and
+artists are supplied by the caller and recorded as `matchedAgainst`; whoever wires this
+collector must supply them from server-side recording metadata.

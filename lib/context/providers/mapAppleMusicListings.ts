@@ -39,8 +39,11 @@ const VERSION_TOKENS = [
   "remaster",
   "remastered",
 ];
+/** Case-, punctuation- and accent-insensitive, so "Beyonce" and "Beyoncé" agree. */
 const normalize = (value: string) =>
   value
+    .normalize("NFKD")
+    .replace(/\p{M}+/gu, "")
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
@@ -104,8 +107,8 @@ function sharedFlags(songs: AppleSong[]): DspMatchFlag[] {
  * Rules: `exact_isrc` needs a single song that echoes the ISRC without a title or
  * artist contradiction or an extra version token; anything else is `ambiguous`
  * and is kept, never dropped or promoted. `found: false` is `not_listed` for this
- * storefront only. A hit Apple echoes but does not resolve is `unknown`, not a
- * takedown. The album stays a separate listing; its id never becomes a song,
+ * storefront only. A hit Apple echoes but does not resolve is `unknown` (both
+ * availability and match), not a takedown and not an ambiguous match. The album stays a separate listing; its id never becomes a song,
  * recording or release identifier. Nothing here confirms identity or rights.
  * Regional variants need more than one storefront; see `compareAppleMusicStorefronts`.
  *
@@ -159,9 +162,11 @@ export function mapAppleMusicListings(
     match: {
       status: !result.found
         ? "not_found"
-        : songListings.length === 1 && songListings[0].match.status === "exact_isrc"
-          ? "exact_isrc"
-          : "ambiguous",
+        : songListings.length === 0
+          ? "unknown"
+          : songListings.length === 1 && songListings[0].match.status === "exact_isrc"
+            ? "exact_isrc"
+            : "ambiguous",
       flags: [...new Set(songListings.flatMap(listing => listing.match.flags))],
     },
     songListings,
