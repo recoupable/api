@@ -27,49 +27,49 @@ const contract: Record<
     message: "Context record not found in the selected workspace.",
     retryable: false,
     guidance:
-      "Check request_id, brief_id, execution_id or review_id and the organization_id scope; records in another workspace are not visible.",
+      "Check request_id, subject_id, brief_id, execution_id or review_id and the organization_id scope; records in another workspace are not visible.",
   },
   conflict: {
     message: "The operation conflicts with saved state.",
     retryable: false,
     guidance:
-      "Reuse an idempotency_key only with identical input and send a new key for new input. Reload the current record before reviewing it again.",
+      "Read the current record first. An idempotency_key was reused with different input, a review fingerprint is stale, the saved record changed, or it is already past the state this action needs. Send identical input to reconnect, or a new idempotency_key for new input.",
   },
   unsupported_input: {
     message: "The input is not supported by this operation.",
     retryable: false,
     guidance:
-      "Submit a public Spotify track URL for ingest or a Spotify album URL for ingest_release, and check the action's documented inputs. YouTube, playlist and other sources are not enabled in this pilot.",
+      "Change the input before retrying; check the action's documented fields and limits. In this pilot ingest accepts public Spotify track URLs and ingest_release accepts Spotify album URLs; YouTube, playlist and other sources are not enabled.",
   },
   not_ready: {
     message: "The context request is not ready for this action.",
     retryable: true,
     guidance:
-      "Read the request and retry once its status is completed or partial; a partial status still exposes output.gaps and the evidence collected so far.",
+      "Read the request and retry this action once it reaches the required state (usually completed or partial); a partial request still exposes output.gaps and the evidence collected so far.",
   },
   unavailable: {
     message: "A required provider or capability is unavailable.",
     retryable: true,
     guidance:
-      "Retry later with the same input and idempotency_key; no duplicate work is created. The capability may be disabled in this environment.",
+      "Retry later with the same input; actions that take an idempotency_key must reuse it, so no duplicate work is created. The capability may be disabled in this environment.",
   },
   budget_exhausted: {
     message: "The authorized budget for this operation is exhausted.",
     retryable: false,
     guidance:
-      "No paid work was started. Increase the available budget or credits, then retry with the same idempotency_key.",
+      "No paid work was started. Increase the available budget or credits, then retry with the same input and idempotency_key.",
   },
   storage_failed: {
     message: "Context storage rejected the operation.",
-    retryable: true,
+    retryable: false,
     guidance:
-      "Retry with the same input and idempotency_key. If it repeats, read the request to confirm its saved state before changing input.",
+      "The saved state does not allow this operation as sent, so an identical retry is rejected again. Read the request or record to confirm its current state before changing input.",
   },
   internal: {
     message: "Context operation failed.",
     retryable: false,
     guidance:
-      "Confirm the saved state with read before changing input; an identical retry with the same idempotency_key never duplicates work.",
+      "Read the request or record to confirm its saved state before changing input. Actions that take an idempotency_key never duplicate work when retried with the same key.",
   },
 };
 

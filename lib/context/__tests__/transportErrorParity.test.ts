@@ -8,11 +8,12 @@ import { callContextRpc } from "@/lib/supabase/context_requests/callContextRpc";
 import { dispatchContextRequest } from "../dispatchContextRequest";
 import { registerContextTool } from "@/lib/mcp/tools/context/registerContextTool";
 
+const actor = "44444444-4444-4444-8444-444444444444";
 vi.mock("@/lib/auth/validateAuthContext", () => ({
-  validateAuthContext: vi.fn(async () => ({ accountId: "actor" })),
+  validateAuthContext: vi.fn(async () => ({ accountId: actor })),
 }));
 vi.mock("@/lib/mcp/resolveAccountId", () => ({
-  resolveAccountId: vi.fn(async () => ({ accountId: "actor", error: null })),
+  resolveAccountId: vi.fn(async () => ({ accountId: actor, error: null })),
 }));
 vi.mock("@/lib/supabase/context_requests/callContextRpc", () => ({ callContextRpc: vi.fn() }));
 vi.mock("../dispatchContextRequest", () => ({ dispatchContextRequest: vi.fn() }));
@@ -51,19 +52,28 @@ async function callHttp(input: unknown) {
   return { status: response.status, body: await response.json() };
 }
 
-async function callMcp(input: unknown) {
+async function callMcpResult(input: unknown) {
   const registerTool = vi.fn();
   registerContextTool({ registerTool } as never);
-  const result = await registerTool.mock.calls[0][2](input, {});
-  return JSON.parse(result.content[0].text);
+  return registerTool.mock.calls[0][2](input, {});
 }
 
+async function callMcp(input: unknown) {
+  return JSON.parse((await callMcpResult(input)).content[0].text);
+}
+
+const noRow = new Error("Context storage operation failed: query returned no rows");
+
 beforeEach(() => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
   vi.mocked(callContextRpc).mockReset();
   vi.mocked(dispatchContextRequest).mockReset();
   vi.mocked(processContextOperation).mockClear();
 });
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
 
 describe("Context transport error parity", () => {
   it.each(contextOperationErrorCodes)(
@@ -85,6 +95,13 @@ describe("Context transport error parity", () => {
       });
     },
   );
+
+  it("flags the typed MCP failure as a tool execution error", async () => {
+    vi.mocked(processContextOperation).mockRejectedValueOnce(new ContextOperationError("conflict"));
+    const result = await callMcpResult(read);
+    expect(result.isError).toBe(true);
+    expect(JSON.parse(result.content[0].text).code).toBe("conflict");
+  });
 
   it("classifies an untyped permission failure identically on both transports", async () => {
     vi.mocked(processContextOperation).mockRejectedValueOnce(
@@ -150,7 +167,7 @@ describe("Context transport error parity", () => {
   it("reports a request that cannot serve a brief yet as 409 not_ready", async () => {
     vi.mocked(callContextRpc).mockResolvedValue({
       id: read.request_id,
-      owner_id: "actor",
+      owner_id: actor,
       status: "queued",
     });
     const brief = { action: "brief", request_id: read.request_id, purpose: "creative_direction" };
@@ -190,5 +207,54 @@ describe("Context transport error parity", () => {
     expect(http.body.retryable).toBe(true);
     const mcp = await callMcp(verify);
     expect(mcp.code).toBe("unavailable");
+  });
+
+  it.each([
+    ["read_brief", { action: "read_brief", brief_id: "33333333-3333-4333-8333-333333333333" }],
+    [
+      "read_execution",
+      { action: "read_execution", execution_id: "55555555-5555-4555-8555-555555555555" },
+    ],
+    ["list_executions", { action: "list_executions", request_id: read.request_id }],
+    ["verify_release", { action: "verify_release", request_id: read.request_id }],
+  ])(
+    "reports a missing or other-workspace record from %s as 404 not_found, not a retryable storage failure",
+    async (_, input) => {
+      vi.stubEnv("CONTEXT_SPOTIFY_RELEASE_VERIFY_ENABLED", "true");
+      vi.mocked(callContextRpc).mockRejectedValue(noRow);
+      const http = await callHttp(input);
+      expect(http.status).toBe(404);
+      expect(http.body).toMatchObject({ code: "not_found", retryable: false });
+      expect(JSON.stringify(http.body)).not.toContain("query returned");
+      const mcp = await callMcp(input);
+      expect(mcp).toMatchObject({ code: "not_found", retryable: false });
+    },
+  );
+
+  it("reports planning over a request missing from this workspace as 404 not_found", async () => {
+    vi.mocked(callContextRpc).mockResolvedValue(null);
+    const plan = { action: "plan", request_id: read.request_id };
+    const http = await callHttp(plan);
+    expect(http.status).toBe(404);
+    expect(http.body).toMatchObject({ code: "not_found", retryable: false });
+    const mcp = await callMcp(plan);
+    expect(mcp.code).toBe("not_found");
+  });
+
+  it("reports a release whose identity is already confirmed as non-retryable conflict", async () => {
+    vi.stubEnv("CONTEXT_SPOTIFY_RELEASE_VERIFY_ENABLED", "true");
+    vi.mocked(callContextRpc).mockResolvedValue({
+      subjectId: "22222222-2222-4222-8222-222222222222",
+      kind: "release",
+      identityConfirmed: true,
+      availableFields: ["spotify_id"],
+      reusableModules: [],
+    });
+    const verify = { action: "verify_release", request_id: read.request_id };
+    const http = await callHttp(verify);
+    expect(http.status).toBe(409);
+    expect(http.body).toMatchObject({ code: "conflict", retryable: false });
+    const mcp = await callMcp(verify);
+    expect(mcp).toMatchObject({ code: "conflict", retryable: false });
   });
 });

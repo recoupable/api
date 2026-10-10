@@ -8,7 +8,7 @@ const statusByCode: Record<ContextOperationErrorCode, number> = {
   not_ready: 409,
   unavailable: 503,
   budget_exhausted: 402,
-  storage_failed: 503,
+  storage_failed: 409,
   internal: 500,
 };
 
