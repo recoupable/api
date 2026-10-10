@@ -46,6 +46,11 @@ export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
     readOnly: true,
     notice: "Private artist/workspace fan profiles. Sign-in is not marketing consent.",
   },
+  get_workspace_player_fans: {
+    readOnly: true,
+    notice:
+      "Private workspace fan contacts with artist relationships. Sign-in is not marketing consent.",
+  },
   create_release_player: {
     readOnly: false,
     destructive: true,

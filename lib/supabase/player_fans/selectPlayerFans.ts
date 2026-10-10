@@ -8,7 +8,9 @@ export async function selectPlayerFans(
 ) {
   const { data, error } = await playerDatabase()
     .from("player_fans")
-    .select("id,provider,email,display_name,first_connected_at,last_connected_at")
+    .select(
+      "id,contact_id,provider,first_connected_at,last_connected_at,contact:player_fan_contacts!player_fans_contact_identity_fkey(email,display_name)",
+    )
     .eq("owner_id", owner)
     .eq("artist_id", artist)
     .order("last_connected_at", { ascending: false })
@@ -22,12 +24,13 @@ export async function selectPlayerFans(
     .array(
       z.object({
         id: z.string().uuid(),
+        contact_id: z.string().uuid(),
         provider: z.literal("spotify"),
-        email: z.string().nullable(),
-        display_name: z.string().nullable(),
+        contact: z.object({ email: z.string().nullable(), display_name: z.string().nullable() }),
         first_connected_at: z.string(),
         last_connected_at: z.string(),
       }),
     )
-    .parse(data || []);
+    .parse(data || [])
+    .map(({ contact, ...fan }) => ({ ...fan, ...contact }));
 }
