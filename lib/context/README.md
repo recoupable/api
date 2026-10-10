@@ -286,8 +286,10 @@ trigger so `accept_context_result`, `withdraw_context_source`, metadata saves,
 enrichment completion and the entry functions are unchanged. A row is `accepted`
 (the result that became current) or `cleared` (withdrawal nulled the pointer);
 rows cannot be updated or deleted, one revision is recorded once, and a pointer
-that moves without a new revision is rejected. Existing documents are backfilled
-from their current revision with `backfilled: true`.
+that moves without a new revision is rejected. The trigger is the only writer:
+the service role can read history but not insert it, and each row can cite only
+a result of the document's own workspace, subject and topic. Existing documents
+are backfilled from their current revision with `backfilled: true`.
 
 Read lineage through the shared HTTP `POST /api/context` or standard MCP operation:
 
@@ -295,8 +297,10 @@ Read lineage through the shared HTTP `POST /api/context` or standard MCP operati
 { "action": "read_document_history", "document_id": "<document UUID>", "limit": 50 }
 ```
 
-`organization_id` selects the authorized workspace exactly like other reads;
-`before_revision` is an exclusive cursor for older pages (`next_before`). The
+`document_id` comes from a brief response (`documents[].id` or
+`input_manifest.documents[].documentId`). `organization_id` selects the
+authorized workspace exactly like other reads; `before_revision` (1 or more) is
+an exclusive cursor for older pages (`next_before`). The
 result is `{state, document, versions, has_more, next_before}`; `versions` are
 newest first with `result_id`, `change`, `recorded_at`, the result's current
 `result_status`, `evidence_kind`, `source_version_ids` and `source_state`
@@ -305,5 +309,6 @@ brief's manifest (`documentId`, `version`, `resultId`) therefore resolves to the
 result that was current at that version. Another workspace's or an unknown
 document returns `state: "not_found"` without confirming existence. Lineage is
 not human review, rights approval or correction semantics; it requires the
-database document-version migration before API release and is fixture-tested,
-not live-verified.
+database document-version migration before API release (production apply waits
+for the CE01 deployed-schema verification) and is fixture-tested, not
+live-verified.

@@ -6,7 +6,7 @@ export const documentHistoryOperationSchemas = [
     action: z.literal("read_document_history"),
     document_id: z.uuid(),
     organization_id: z.uuid().optional(),
-    before_revision: z.number().int().min(0).optional(),
+    before_revision: z.number().int().min(1).optional(),
     limit: z.number().int().min(1).max(100).default(50),
   }),
 ] as const;

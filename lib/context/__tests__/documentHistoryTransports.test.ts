@@ -44,7 +44,8 @@ it("HTTP and MCP share authenticated read_document_history behavior", async () =
   expect(processContextOperation).toHaveBeenCalledTimes(1);
   expect(processContextOperation).toHaveBeenLastCalledWith("actor", operation, expect.any(Object));
 });
-it("HTTP rejects a forged caller identity on the lineage read", async () => {
+it("HTTP rejects a forged caller identity on the lineage read as an identity field", async () => {
+  vi.mocked(processContextOperation).mockClear();
   const response = await contextOperationHandler(
     new NextRequest("http://localhost/api/context", {
       method: "POST",
@@ -52,4 +53,8 @@ it("HTTP rejects a forged caller identity on the lineage read", async () => {
     }),
   );
   expect(response.status).toBe(400);
+  expect((await response.json()).issues).toEqual([
+    expect.objectContaining({ code: "unrecognized_keys", keys: ["account_id"] }),
+  ]);
+  expect(processContextOperation).not.toHaveBeenCalled();
 });

@@ -142,9 +142,14 @@ describe("document version history", () => {
     ).rejects.toThrow("Access denied");
     expect(rpc).not.toHaveBeenCalled();
   });
-  it("rejects caller identity, unbounded pages and negative cursors", () => {
+  it("rejects caller identity, unbounded pages and cursors the API never returns", () => {
     const valid = { action: "read_document_history", document_id: document };
     expect(contextOperationSchema.parse(valid)).toEqual({ ...valid, limit: 50 });
+    expect(contextOperationSchema.parse({ ...valid, before_revision: 1 })).toEqual({
+      ...valid,
+      before_revision: 1,
+      limit: 50,
+    });
     for (const changes of [
       { account_id: actor },
       { owner_id: owner },
@@ -152,6 +157,7 @@ describe("document version history", () => {
       { limit: 101 },
       { limit: 1.5 },
       { before_revision: -1 },
+      { before_revision: 0 },
       { document_id: "not-a-document" },
     ]) {
       const parsed = contextOperationSchema.safeParse({ ...valid, ...changes });
