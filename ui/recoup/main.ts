@@ -1,16 +1,15 @@
-import features from "./features";
 import { escapeHtml } from "./escapeHtml";
 import { createHostBridge } from "./createHostBridge";
 import { createFeatureDialog } from "./createFeatureDialog";
 import { filterWorkflows } from "./filterWorkflows";
 
 const root = document.getElementById("root")!;
-const categories = ["All", ...new Set(features.map(f => f.category))];
+const categories = ["Create", "Promote", "Discover", "Catalog"];
 let category = "All";
 let query = "";
 let previewsPaused = false;
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-root.innerHTML = `<header><span class="header-label">YOUR MUSIC. YOUR NEXT MOVE.</span><button id="motion" aria-pressed="false">Pause previews</button></header><main><section class="hero" aria-labelledby="hero-title"><div><h1 id="hero-title">Your record label.<br>Inside your chat.</h1><p class="hero-description">Start with a song, album, artist, or entire catalog. Manage your roster, create content, grow your audience, and find your next opportunity.</p></div><div class="how-it-works"><p class="eyebrow">FROM IDEA TO NEXT MOVE</p><ol><li><span>01</span>Pick a workflow</li><li><span>02</span>Bring your music or an idea</li><li><span>03</span>Continue in your conversation</li></ol></div></section><section aria-labelledby="library-title"><div class="toolbar"><div><p class="eyebrow">THE WORKFLOW LIBRARY</p><h2 id="library-title">Put your agent to work.</h2></div><label class="search"><span class="sr-only">Search workflows</span><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search videos, releases, fans…"></label></div><div class="filter-row"><nav id="filters" aria-label="Workflow categories">${categories.map(c => `<button data-category="${c}" aria-pressed="${c === category}">${c}</button>`).join("")}</nav><p id="result-count" role="status" aria-live="polite"></p></div><section id="cards" aria-label="Music workflows"></section></section><footer><p>Pick a direction. Your agent helps with the next step.</p><p id="connection" class="connection" role="status">Connecting to your conversation…</p></footer></main><dialog id="detail" aria-labelledby="detail-title"><button class="close" aria-label="Close workflow">×</button><div id="detail-content"></div></dialog>`;
+root.innerHTML = `<header class="top-nav"><nav id="filters" aria-label="Experience categories">${categories.map(c => `<button data-category="${c}" aria-pressed="false">${c}</button>`).join("")}</nav><label class="search"><span class="sr-only">Search experiences</span><input id="search" type="search" placeholder="Search videos, releases, fans…"></label></header><main><section class="hero" aria-labelledby="hero-title"><div><h1 id="hero-title">Your record label.<br>Inside ChatGPT.</h1><p class="hero-description">Start with a song, album, artist, or entire catalog. Manage your roster, create content, grow your audience, and find your next opportunity.</p></div></section><section aria-labelledby="library-title"><div class="toolbar"><h2 id="library-title">Put your agent to work.</h2><button id="motion" aria-pressed="false">Pause previews</button></div><p id="result-count" role="status" aria-live="polite"></p><section id="cards" aria-label="Music workflows"></section></section><footer><p id="connection" class="connection" role="status">Connecting to your conversation…</p></footer></main><dialog id="detail" aria-labelledby="detail-title"><button class="close" aria-label="Close workflow">×</button><div id="detail-content"></div></dialog>`;
 const dialog = document.querySelector<HTMLDialogElement>("#detail")!;
 const cards = document.querySelector<HTMLElement>("#cards")!;
 const status = document.querySelector<HTMLElement>("#connection")!;
@@ -94,7 +93,7 @@ search.addEventListener("input", () => {
 document.querySelector("#filters")!.addEventListener("click", event => {
   const button = (event.target as HTMLElement).closest<HTMLElement>("[data-category]");
   if (button) {
-    category = button.dataset.category!;
+    category = category === button.dataset.category ? "All" : button.dataset.category!;
     renderCards();
   }
 });

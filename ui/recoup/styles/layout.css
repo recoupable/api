@@ -178,3 +178,71 @@ footer {
 footer p {
   margin: 0;
 }
+
+/* Category navigation shares the catalog filters; no category means all experiences. */
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 5%;
+  background: var(--surface);
+  box-shadow: 0 1px 0 var(--line);
+}
+#filters {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+}
+#filters button {
+  flex: none;
+  min-height: 44px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 500;
+}
+#filters button:hover {
+  background: var(--soft);
+  color: var(--text);
+}
+#filters button[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--surface);
+}
+.top-nav .search {
+  flex: 0 1 320px;
+  margin: 0;
+}
+.top-nav .search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+.top-nav .search {
+  padding: 0;
+}
+@media (max-width: 640px) {
+  .top-nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 5%;
+  }
+  .top-nav .search {
+    flex: auto;
+    width: 100%;
+  }
+  #filters button {
+    padding: 10px 16px;
+    font-size: 15px;
+  }
+}
