@@ -119,3 +119,52 @@ it("rechecks recording access after lookup and refuses to save detached evidence
   expect(d.rpc.mock.calls.some(([name]) => name === "complete_context_enrichment")).toBe(false);
   expect(d.rpc).toHaveBeenCalledWith("fail_context_enrichment", expect.anything());
 });
+it("saves a registry projection beside the raw result without inventing credits or rights", async () => {
+  const d = dependencies();
+  const recordings = [
+    {
+      id: "00000000-0000-4000-8000-00000000000a",
+      title: "Song",
+      "artist-credit": [{ name: "Fixture Artist" }],
+    },
+  ];
+  d.fetcher.mockResolvedValue(Response.json({ isrc: "USAT22103065", recordings }));
+  await collectContextMusicBrainz("actor", "owner", "request", input, d);
+  const calls = d.rpc.mock.calls as unknown as Array<
+    [string, { p_module: { key: string }; p_result: { content: Record<string, unknown> } }]
+  >;
+  // The saved content shape changed, so results saved before the projection are not reused.
+  expect(calls.find(([name]) => name === "claim_context_enrichment")![1].p_module.key).toBe(
+    "musicbrainz-isrc-v2",
+  );
+  const content = calls.find(([name]) => name === "complete_context_enrichment")![1].p_result
+    .content;
+  expect(content.identityConfirmed).toBe(false);
+  expect(content.projection).toMatchObject({
+    projectionVersion: "registry-evidence-v1",
+    claimKind: "registry_claim",
+    identityConfirmed: false,
+    ownershipVerified: false,
+    status: "candidate_found",
+    recordingIds: [
+      { provider: "musicbrainz", id: "00000000-0000-4000-8000-00000000000a", title: "Song" },
+    ],
+    credits: [
+      expect.objectContaining({
+        record: {
+          provider: "musicbrainz",
+          recordKind: "recording",
+          recordingId: "00000000-0000-4000-8000-00000000000a",
+        },
+        name: "Fixture Artist",
+        ipi: null,
+        roleCode: null,
+      }),
+    ],
+    workIds: [],
+    shares: [],
+    conflicts: [],
+  });
+  // The raw adapter result stays beside the projection; nothing is dropped from the saved content.
+  expect(content.recordings).toEqual(recordings);
+});
