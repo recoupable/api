@@ -95,7 +95,7 @@ export function createExperienceHover(container: HTMLElement, openFeature: (id: 
   });
   container.addEventListener("focusin", event => {
     const card = (event.target as HTMLElement).closest<HTMLElement>(".card");
-    if (card) show(card);
+    if (card?.matches(":focus-visible")) show(card);
   });
   container.addEventListener("focusout", event => {
     if (!panel.contains(event.relatedTarget as Node | null)) scheduleHide();
