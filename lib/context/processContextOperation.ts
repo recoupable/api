@@ -14,7 +14,7 @@ const briefFields = {
   request_id: z.uuid(),
   additional_request_ids: z.array(z.uuid()).max(9).default([]),
   organization_id: z.uuid().optional(),
-  purpose: z.enum(["creative_direction", "playlist_pitch"]),
+  purpose: z.enum(["creative_direction", "playlist_pitch", "company_onboarding"]),
   max_characters: z.number().int().min(1000).max(32000).default(12000),
 };
 
