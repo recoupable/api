@@ -148,4 +148,16 @@ export const contextToolOperations = {
       "Compile a creative direction or playlist pitch brief from saved music context without saving a snapshot.",
     readOnly: true,
   },
+  ingest_unreleased_recording: {
+    name: "import_unreleased_recording_context",
+    description:
+      "Save an unreleased recording by submitted title under an internal identity. A title is not an ISRC, store listing, ownership or rights claim; identifiers stay unknown.",
+    readOnly: false,
+  },
+  ingest_planned_release: {
+    name: "import_planned_release_context",
+    description:
+      "Save a planned release with lifecycle, products and promotional links under an internal identity. Store IDs and UPC stay unknown; this is not a store listing, distribution or rights claim.",
+    readOnly: false,
+  },
 } satisfies Record<Action, { name: string; description: string; readOnly: boolean }>;

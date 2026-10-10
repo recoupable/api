@@ -107,3 +107,35 @@ it("includes the submitted release locator without claiming verified release met
   expect(result.missingTopics).toContain("release_metadata");
   expect(result.readiness).toBe("partial");
 });
+
+it("lists submitted unreleased recordings and planned releases with their identifier gaps", () => {
+  const unreleased = {
+    ...document,
+    id: "66666666-6666-4666-8666-666666666666",
+    topic: "unreleased_recording",
+    text: '{"recording":{"title":"Night drive","lifecycle_state":"mixed"},"identifiers":{"isrc":"unknown"},"identityConfirmed":false}',
+  };
+  const planned = {
+    ...document,
+    id: "77777777-7777-4777-8777-777777777777",
+    subjectId: "88888888-8888-4888-8888-888888888888",
+    topic: "planned_release",
+    text: '{"release":{"title":"Night Drive EP","lifecycle_state":"scheduled"},"storeIds":{"spotify":"unknown","apple_music":"unknown","upc":"unknown"}}',
+  };
+  const result = compileContextBrief({
+    ownerId: owner,
+    requests: [{ id: request, subjectIds: [subject, planned.subjectId] }],
+    documents: [unreleased, planned],
+    purpose: "company_onboarding",
+    maxCharacters: 12000,
+  });
+  expect(result.documents).toEqual([unreleased, planned]);
+  expect(result.text).toContain('"isrc":"unknown"');
+  expect(result.text).toContain('"upc":"unknown"');
+  expect(result.missingTopics).toContain("recording_metadata");
+  expect(result.missingTopics).toContain("release_metadata");
+  expect(result.missingTopics).not.toContain("unreleased_recording");
+  expect(result.missingTopics).not.toContain("planned_release");
+  expect(result.readiness).toBe("partial");
+  expect(result.input_manifest.excludedTopics).toEqual([]);
+});
