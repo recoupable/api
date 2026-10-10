@@ -44,7 +44,7 @@ it("mints a correctly signed, short-lived token restricted to Recoup's player", 
       Buffer.from(segments[2], "base64url"),
     ),
   ).toBe(true);
-  expect(limiter).toHaveBeenCalledWith("recoup-musickit-player", "browser-config", 1200);
+  expect(limiter).toHaveBeenCalledWith("recoup-musickit-player", "browser-config", 600);
   expect(response.headers.get("cache-control")).toBe("no-store");
 });
 it("redacts signing failures and records a safe server diagnostic", async () => {

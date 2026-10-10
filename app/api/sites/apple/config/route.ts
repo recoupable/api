@@ -18,7 +18,7 @@ export async function GET() {
   )
     return Response.json({ configured: false }, { headers });
   try {
-    await limitSiteRequest("recoup-musickit-player", "browser-config", 1200);
+    await limitSiteRequest("recoup-musickit-player", "browser-config", 600);
     const developerToken = generateDeveloperToken({
       origin: ["https://app.recoupable.dev"],
       ttlSeconds: 600,
