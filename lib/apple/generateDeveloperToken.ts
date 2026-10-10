@@ -55,6 +55,9 @@ export function generateDeveloperToken(
 ): string {
   const now = Math.floor(Date.now() / 1000);
   const ttl = options.ttlSeconds ?? TOKEN_TTL_SECONDS;
+  if (!Number.isInteger(ttl) || ttl < 1 || ttl > TOKEN_TTL_SECONDS) {
+    throw new Error("Developer token lifetime must be a positive integer no longer than one hour");
+  }
   const cacheKey = JSON.stringify(options);
   const cached = tokens.get(cacheKey);
 
