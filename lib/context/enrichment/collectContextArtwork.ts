@@ -9,9 +9,13 @@ type Dependencies = Omit<Parameters<typeof runContextEnrichment>[4], "call"> & {
   generate?: typeof generateContextObject;
 };
 const SELECTED_MODEL = "openai/gpt-6-astra";
-/** Accept the exact id or the gateway's provider-less spelling; any other model is a substitution. */
-const isSelectedModel = (actual: string) =>
-  actual === SELECTED_MODEL || actual === SELECTED_MODEL.split("/").pop();
+/** v2 adds the separate proposal field; ARTWORK_PROMPT alone lists only evidence fields. */
+const ARTWORK_V2_PROMPT = `${ARTWORK_PROMPT} Also return proposedDesignChoices (string[]): neutral design choices directly grounded in the visible evidence, labelled as proposals, never a website, game, campaign or creative concept and never attributed to the artist; return [] when none are grounded. Keep proposals out of visibleObservations.`;
+/** Same model: exact id with or without the provider prefix, or a dated snapshot of it. */
+const isSelectedModel = (reported: string) => {
+  const id = reported.replace(/^openai\//, "");
+  return id === "gpt-6-astra" || /^gpt-6-astra-(?:\d{4}-\d{2}-\d{2}|\d{4})$/.test(id);
+};
 /** Persist release-specific visual extraction; never infer an enduring artist brand. */
 export async function collectContextArtwork(
   actor: string,
@@ -38,24 +42,25 @@ export async function collectContextArtwork(
       subjectId: input.releaseSubjectId,
       provider: "ai-gateway",
       model: SELECTED_MODEL,
-      input: { ...scoped, system: ARTWORK_PROMPT },
+      input: { ...scoped, system: ARTWORK_V2_PROMPT },
       sources: [{ url, kind: "artwork", content: { assetVersion: input.assetVersion } }],
     },
     {
       ...deps,
       call: async () => {
         const result = await (deps.generate ?? generateContextObject)({
-          system: ARTWORK_PROMPT,
+          system: ARTWORK_V2_PROMPT,
           input: { assetVersion: input.assetVersion },
           images: [url],
           schema: artworkBrandingSchema.omit({ scope: true }),
         });
-        const actualModel = z
-          .object({ actualModel: z.string().optional() })
+        // Only a model id reported by the gateway's raw body can expose a substitution.
+        const reportedModel = z
+          .object({ reportedModel: z.string().nullish() })
           .passthrough()
-          .safeParse(result.trace).data?.actualModel;
-        if (actualModel !== undefined && !isSelectedModel(actualModel))
-          throw new Error(`Selected artwork model unavailable: ${actualModel}`);
+          .safeParse(result.trace).data?.reportedModel;
+        if (reportedModel && !isSelectedModel(reportedModel))
+          throw new Error(`Selected artwork model unavailable: ${reportedModel}`);
         // Scope is a server fact about the subject, not a model claim.
         const content = validateArtworkBranding(
           artworkBrandingSchema.parse({ ...(result.content as object), scope: "release" }),

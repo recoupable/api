@@ -11,7 +11,7 @@ export type ResolvedArtworkBrandingInput =
       status: "available";
       releaseSubjectId: string;
       artworkUrl: string;
-      /** SHA-256 of the exact URL plus known dimensions, so a changed asset is a new version. */
+      /** SHA-256 of the exact URL plus known dimensions; image bytes are not hashed. */
       assetVersion: string;
     }
   | {
@@ -38,6 +38,7 @@ const area = (image: ReleaseArtworkImage) =>
 /**
  * Pure selection of one release's artwork for extraction. Never throws and never calls a
  * provider: missing or unsupported artwork becomes an explicit gap with the metadata fallback.
+ * Not connected yet: no production caller persists or surfaces this gap (see ARTWORK.md).
  */
 export function resolveArtworkBrandingInput(
   releaseSubjectId: string,

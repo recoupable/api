@@ -42,7 +42,7 @@ Database request claims use fencing tokens and a two-minute metadata lease. Retr
 
 The public metadata path invokes no LLM. Spotify metadata has no per-call model charge; hosting/database costs are not measured by the zero provider-cost field. Paid enrichment remains gated on spending authorization and stable settlement, rather than bypassing the existing credit ledger.
 
-Release artwork extraction (`artwork-branding-v2`): contract, evidence guards, missing-artwork gap and model-substitution guard are documented in `enrichment/ARTWORK.md`; it is fixture-tested only and live vision calls stay gated on CE07.
+Release artwork extraction (`artwork-branding-v2`): contract, evidence guards, missing-artwork gap scaffolding, model check and the current reconciliation behaviour of rejections are documented in `enrichment/ARTWORK.md`; it is fixture-tested only and live vision calls stay gated on CE07.
 
 ## Validation
 

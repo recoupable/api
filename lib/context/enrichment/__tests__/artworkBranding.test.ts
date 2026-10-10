@@ -109,6 +109,12 @@ describe("artwork branding v2 contract", () => {
       string,
       unknown
     >;
+    expect(posterClaim.input).toMatchObject({
+      system: expect.stringContaining("proposedDesignChoices"),
+    });
+    expect(poster.generate).toHaveBeenCalledWith(
+      expect.objectContaining({ system: (posterClaim.input as { system: string }).system }),
+    );
     expect(posterClaim).toMatchObject({
       key: "artwork-branding-v2",
       topic: "artwork_branding",
@@ -142,6 +148,16 @@ describe("artwork branding v2 contract", () => {
     ).rejects.toThrow("accent colors");
     expect(calls(deps, "complete_context_enrichment")).toHaveLength(0);
     expect(calls(deps, "fail_context_enrichment")).toHaveLength(1);
+    expect(() =>
+      validateArtworkBranding({
+        scope: "release",
+        ...accentOnly,
+        visibleObservations: ["Red accent", "Blue accent", "Green accent"],
+        typography: "n/a",
+        composition: "None",
+        motifs: ["-"],
+      }),
+    ).toThrow("accent colors");
   });
 
   it("rejects output that claims artist intent, endorsement or official brand rules", () => {
@@ -159,6 +175,28 @@ describe("artwork branding v2 contract", () => {
           visualInterpretation: claim,
         }),
       ).toThrow("artist intent or endorsement");
+  });
+
+  it("accepts hedges, negations and quoted lettering that make no authority claim", () => {
+    const content = validateArtworkBranding({
+      scope: "release",
+      ...typographicPoster,
+      visibleObservations: [
+        ...typographicPoster.visibleObservations,
+        "Title text reads 'YOU SHOULD KNOW' in red",
+      ],
+      visualInterpretation:
+        "No brand guidelines are visible in the image. Nothing here implies a game concept",
+      uncertainties: ["Cannot tell whether the artist intended the blur"],
+    });
+    expect(content.visibleObservations).toContain("Title text reads 'YOU SHOULD KNOW' in red");
+    expect(() =>
+      validateArtworkBranding({
+        scope: "release",
+        ...typographicPoster,
+        visualInterpretation: "No blur is visible. The artist intends the lettering as a logo",
+      }),
+    ).toThrow("artist intent or endorsement");
   });
 
   it("rejects proposal language inside visible observations", () => {
@@ -189,7 +227,7 @@ describe("artwork branding v2 contract", () => {
 
   it("fails visibly instead of saving output from a substituted model", async () => {
     const deps = dependencies(typographicPoster, {
-      trace: { model: "openai/gpt-6-astra", actualModel: "openai/gpt-5" },
+      trace: { model: "openai/gpt-6-astra", reportedModel: "openai/gpt-5" },
     });
     await expect(
       collectContextArtwork(
@@ -204,18 +242,32 @@ describe("artwork branding v2 contract", () => {
     expect(calls(deps, "fail_context_enrichment")).toHaveLength(1);
   });
 
-  it("accepts the selected model when the gateway reports it without a provider prefix", async () => {
-    const deps = dependencies(typographicPoster, {
-      trace: { model: "openai/gpt-6-astra", actualModel: "gpt-6-astra" },
+  it("accepts the selected model reported without a provider prefix or as a dated snapshot", async () => {
+    for (const reportedModel of ["gpt-6-astra", "openai/gpt-6-astra-2026-09-01", null]) {
+      const deps = dependencies(typographicPoster, {
+        trace: { model: "openai/gpt-6-astra", reportedModel },
+      });
+      await collectContextArtwork(
+        "a",
+        "o",
+        "r",
+        releaseInput("release", "https://example.com/cover.png", "v1"),
+        deps,
+      );
+      expect(calls(deps, "complete_context_enrichment")).toHaveLength(1);
+    }
+    const sibling = dependencies(typographicPoster, {
+      trace: { model: "openai/gpt-6-astra", reportedModel: "openai/gpt-6-astra-mini" },
     });
-    await collectContextArtwork(
-      "a",
-      "o",
-      "r",
-      releaseInput("release", "https://example.com/cover.png", "v1"),
-      deps,
-    );
-    expect(calls(deps, "complete_context_enrichment")).toHaveLength(1);
+    await expect(
+      collectContextArtwork(
+        "a",
+        "o",
+        "r",
+        releaseInput("release", "https://example.com/cover.png", "v1"),
+        sibling,
+      ),
+    ).rejects.toThrow("Selected artwork model unavailable: openai/gpt-6-astra-mini");
   });
 
   it("yields an explicit gap for missing or unsupported artwork without any provider call", () => {
@@ -295,28 +347,34 @@ describe("artwork branding v2 contract", () => {
     expect(claims[0].input).toMatchObject({ scope: "release" });
   });
 
-  it("lists artwork as missing from a creative-direction brief until extraction exists", () => {
-    const brief = compileContextBrief({
+  it("selects artwork for a creative-direction brief only from a saved extraction", () => {
+    const document = (subjectId: string, topic: string) => ({
+      id: `${subjectId}:${topic}`,
       ownerId: "owner",
-      requests: [{ id: "request", subjectIds: ["song", "release"] }],
-      documents: [
-        {
-          id: "song:song_summary",
-          ownerId: "owner",
-          subjectId: "song",
-          topic: "song_summary",
-          version: 1,
-          status: "accepted",
-          evidenceKind: "interpretation",
-          text: "summary",
-          sourceVersionIds: ["song:source"],
-          coverage: "partial",
-        },
-      ],
-      purpose: "creative_direction",
-      maxCharacters: 4000,
+      subjectId,
+      topic,
+      version: 1,
+      status: "accepted" as const,
+      evidenceKind: "interpretation" as const,
+      text: topic,
+      sourceVersionIds: [`${subjectId}:source`],
+      coverage: "partial" as const,
     });
-    expect(brief.missingTopics).toContain("artwork_branding");
-    expect(brief.readiness).toBe("partial");
+    const compile = (documents: Array<ReturnType<typeof document>>) =>
+      compileContextBrief({
+        ownerId: "owner",
+        requests: [{ id: "request", subjectIds: ["song", "release"] }],
+        documents,
+        purpose: "creative_direction",
+        maxCharacters: 4000,
+      });
+    const before = compile([document("song", "song_summary")]);
+    expect(before.missingTopics).toContain("artwork_branding");
+    expect(before.readiness).toBe("partial");
+    const after = compile([
+      document("song", "song_summary"),
+      document("release", "artwork_branding"),
+    ]);
+    expect(after.missingTopics).not.toContain("artwork_branding");
   });
 });
