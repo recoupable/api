@@ -5,16 +5,19 @@ export const CATALOG_EXPORT_PROFILE_VERSION = "generic-catalog-export-v1";
 /**
  * Header aliases for the generic profile, written in normalised form (lower case, separators
  * collapsed to single spaces). Deliberately small and distributor-neutral: unknown columns are
- * retained verbatim on each proposal rather than guessed.
+ * retained verbatim on each proposal rather than guessed. A bare "Title", "Song" or "Song Title"
+ * is left unmapped because it may name a release or a composition rather than a recording, and
+ * this profile does not guess the grain of a row. It has not been calibrated against a real
+ * distributor export.
  */
 export const CATALOG_EXPORT_HEADER_ALIASES: Readonly<
   Record<CatalogExportField, readonly string[]>
 > = {
-  track_title: ["track title", "title", "track name", "song title", "song", "recording title"],
+  track_title: ["track title", "track name", "recording title"],
   artist_name: ["artist name", "artist", "artists", "primary artist", "track artist", "performer"],
   release_title: ["release title", "release", "album", "album title", "album name"],
-  isrc: ["isrc"],
-  upc: ["upc", "ean", "upc/ean", "upc ean", "barcode", "gtin"],
+  isrc: ["isrc", "isrc code", "track isrc"],
+  upc: ["upc", "ean", "upc/ean", "upc ean", "upc code", "release upc", "barcode", "gtin"],
   release_date: ["release date", "original release date"],
   label: ["label", "label name", "record label"],
   track_number: ["track number", "track no", "track no.", "track #", "trackno"],

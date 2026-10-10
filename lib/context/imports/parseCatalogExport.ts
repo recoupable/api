@@ -1,28 +1,19 @@
 import { createHash } from "node:crypto";
 import { assertSupportedCatalogExportText } from "./assertSupportedCatalogExportText";
-import { CATALOG_EXPORT_PROFILE_VERSION, resolveCatalogExportField } from "./catalogExportColumns";
+import { buildCatalogExportProposal } from "./buildCatalogExportProposal";
 import {
   CATALOG_EXPORT_PARSER_VERSION,
-  type CatalogExportClaims,
-  type CatalogExportField,
   type CatalogExportFieldPointers,
   type CatalogExportIdentifier,
   type CatalogExportParseResult,
-  type CatalogExportProposal,
 } from "./catalogExportTypes";
-import { classifyCatalogIdentifier } from "./classifyCatalogIdentifier";
-import { ContextImportError } from "./contextImportError";
+import { ContextImportError } from "./ContextImportError";
 import { findCatalogExportDuplicates } from "./findCatalogExportDuplicates";
 import { parseCsvRecords } from "./parseCsvRecords";
-
-const CLAIM_FIELDS: ReadonlyArray<[CatalogExportField, keyof CatalogExportClaims]> = [
-  ["track_title", "trackTitle"],
-  ["artist_name", "artistName"],
-  ["release_title", "releaseTitle"],
-  ["release_date", "releaseDate"],
-  ["label", "label"],
-  ["track_number", "trackNumber"],
-];
+import {
+  CATALOG_EXPORT_PROFILE_VERSION,
+  resolveCatalogExportField,
+} from "./resolveCatalogExportField";
 
 const sha256 = (value: string): string => createHash("sha256").update(value, "utf8").digest("hex");
 
@@ -47,6 +38,11 @@ export function parseCatalogExport(text: string): CatalogExportParseResult {
   const records = parseCsvRecords(text);
   if (records.header.every(column => column.trim() === ""))
     throw new ContextImportError("header_missing", "Catalog export has no usable header row");
+  if (records.header.length === 1 && /[\t;]/.test(records.header[0]))
+    throw new ContextImportError(
+      "unsupported_input",
+      "Only comma-delimited CSV is supported; the header looks tab- or semicolon-delimited",
+    );
 
   const fields: CatalogExportFieldPointers = {};
   const unmappedColumns: number[] = [];
@@ -56,34 +52,9 @@ export function parseCatalogExport(text: string): CatalogExportParseResult {
     else unmappedColumns.push(index);
   });
 
-  const proposals: CatalogExportProposal[] = records.rows.map(row => {
-    const cellAt = (field: CatalogExportField): string | undefined => {
-      const index = fields[field];
-      return index === undefined ? undefined : row.cells[index];
-    };
-    const claims: CatalogExportClaims = {};
-    for (const [field, key] of CLAIM_FIELDS) {
-      const value = cellAt(field)?.trim();
-      if (value) claims[key] = value;
-    }
-    return {
-      kind: "catalog_export_row",
-      status: "proposed",
-      pointer: { row: row.rowNumber, line: row.line, fields: { ...fields } },
-      claims,
-      identifiers: {
-        isrc: classifyCatalogIdentifier("isrc", cellAt("isrc")),
-        upc: classifyCatalogIdentifier("upc", cellAt("upc")),
-      },
-      unmappedFields: unmappedColumns.map(column => ({
-        column,
-        header: records.header[column],
-        value: row.cells[column],
-      })),
-      rawCells: [...row.cells],
-    };
-  });
-
+  const proposals = records.rows.map(row =>
+    buildCatalogExportProposal(row, records.header, fields, unmappedColumns),
+  );
   const malformedRows = records.malformed.map(row => ({
     row: row.rowNumber,
     line: row.line,
@@ -115,6 +86,8 @@ export function parseCatalogExport(text: string): CatalogExportParseResult {
       malformedIsrc: countIdentifiers("isrc", "malformed"),
       missingUpc: countIdentifiers("upc", "unknown"),
       malformedUpc: countIdentifiers("upc", "malformed"),
+      uncollectedIsrc: countIdentifiers("isrc", "uncollected"),
+      uncollectedUpc: countIdentifiers("upc", "uncollected"),
     },
   };
 }

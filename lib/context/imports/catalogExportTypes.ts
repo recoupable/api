@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CSV_MALFORMED_REASONS } from "./parseCsvRecords";
+import { CSV_MALFORMED_REASONS } from "./csvRecordTypes";
 
 export const CATALOG_EXPORT_PARSER_VERSION = "catalog-export-csv-v1";
 
@@ -37,14 +37,16 @@ export type CatalogExportFieldPointers = z.infer<typeof catalogExportFieldPointe
 
 /**
  * Identifier shape check only. `present` means the cell matched the ISRC or UPC/EAN shape after
- * separator/case normalisation; `malformed` keeps the raw text and no value; `unknown` means the
- * cell was empty. Nothing is generated, padded or repaired.
+ * space/hyphen/case normalisation; `malformed` keeps the raw text and no value; `unknown` means the
+ * cell was empty; `uncollected` means the export has no recognised column for it. Nothing is
+ * generated, padded or repaired, and each state allows only its own value/raw combination.
  */
-export const catalogExportIdentifierSchema = z.object({
-  state: z.enum(["present", "malformed", "unknown"]),
-  value: z.string().nullable(),
-  raw: z.string().nullable(),
-});
+export const catalogExportIdentifierSchema = z.discriminatedUnion("state", [
+  z.object({ state: z.literal("present"), value: z.string().min(1), raw: z.string().min(1) }),
+  z.object({ state: z.literal("malformed"), value: z.null(), raw: z.string().min(1) }),
+  z.object({ state: z.literal("unknown"), value: z.null(), raw: z.null() }),
+  z.object({ state: z.literal("uncollected"), value: z.null(), raw: z.null() }),
+]);
 export type CatalogExportIdentifier = z.infer<typeof catalogExportIdentifierSchema>;
 
 /** Trimmed cell text carried as plain strings; dates and track numbers are not interpreted. */
@@ -98,6 +100,11 @@ export type CatalogExportDuplicate = z.infer<typeof catalogExportDuplicateSchema
 export const catalogExportParseResultSchema = z.object({
   parserVersion: z.literal(CATALOG_EXPORT_PARSER_VERSION),
   profileVersion: z.string().min(1),
+  /**
+   * SHA-256 of the UTF-8 encoding of the decoded text that was parsed. It is not the byte hash of
+   * a retained original (a decoder may strip a byte-order mark or replace invalid bytes), so source
+   * versions must stay keyed on the original's own byte SHA-256.
+   */
   contentFingerprint: sha256Hex,
   headerFingerprint: sha256Hex,
   header: z.object({
@@ -117,6 +124,8 @@ export const catalogExportParseResultSchema = z.object({
     malformedIsrc: count,
     missingUpc: count,
     malformedUpc: count,
+    uncollectedIsrc: count,
+    uncollectedUpc: count,
   }),
 });
 export type CatalogExportParseResult = z.infer<typeof catalogExportParseResultSchema>;

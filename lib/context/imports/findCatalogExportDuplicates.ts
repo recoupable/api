@@ -11,7 +11,8 @@ const append = (groups: Map<string, number[]>, key: string, row: number): void =
  *
  * `same_isrc` groups rows whose ISRC is present and identical; `same_row_content` groups rows whose
  * raw cells are byte-for-byte identical. A shared UPC is not reported because tracks of one
- * release legitimately share it. Groups are returned in first-occurrence order.
+ * release legitimately share it. Groups of both kinds are returned ordered by their first row;
+ * on a tie the `same_isrc` group comes first.
  *
  * @param proposals - Proposals in source row order.
  * @returns Duplicate groups, each listing at least two row ordinals.
@@ -31,5 +32,5 @@ export function findCatalogExportDuplicates(
     if (rows.length > 1) duplicates.push({ kind: "same_isrc", value, rows });
   for (const rows of byContent.values())
     if (rows.length > 1) duplicates.push({ kind: "same_row_content", value: null, rows });
-  return duplicates;
+  return duplicates.sort((left, right) => left.rows[0] - right.rows[0]);
 }

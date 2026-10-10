@@ -1,12 +1,12 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { CATALOG_EXPORT_PROFILE_VERSION } from "../catalogExportColumns";
+import { CATALOG_EXPORT_PROFILE_VERSION } from "../resolveCatalogExportField";
 import {
   CATALOG_EXPORT_PARSER_VERSION,
   catalogExportParseResultSchema,
   type CatalogExportParseResult,
 } from "../catalogExportTypes";
-import { ContextImportError } from "../contextImportError";
+import { ContextImportError } from "../ContextImportError";
 import { parseCatalogExport } from "../parseCatalogExport";
 
 const fixture = (name: string): string =>
@@ -104,6 +104,8 @@ describe("parseCatalogExport", () => {
       malformedIsrc: 1,
       missingUpc: 1,
       malformedUpc: 1,
+      uncollectedIsrc: 0,
+      uncollectedUpc: 0,
     });
   });
 
@@ -161,7 +163,7 @@ describe("parseCatalogExport", () => {
   });
 
   it("lets the first column win when two headers map to the same field and keeps the other verbatim", () => {
-    const result = parseCatalogExport("isrc,ISRC,title\nZZTST2600001,ZZTST2600002,Song\n");
+    const result = parseCatalogExport("isrc,ISRC,track title\nZZTST2600001,ZZTST2600002,Song\n");
     expect(result.header.fields).toEqual({ isrc: 0, track_title: 2 });
     expect(result.header.unmappedColumns).toEqual([1]);
     expect(result.proposals[0].identifiers.isrc.value).toBe("ZZTST2600001");
@@ -241,7 +243,7 @@ describe("parseCatalogExport", () => {
   });
 
   it("accepts a header-only export as zero proposals rather than an error", () => {
-    for (const text of [HEADER, `${HEADER}\n`, `﻿${HEADER}\r\n`]) {
+    for (const text of [HEADER, `${HEADER}\n`, `\uFEFF${HEADER}\r\n`]) {
       const result = parseCatalogExport(text);
       expect(result.rowCount).toBe(0);
       expect(result.proposals).toEqual([]);
@@ -256,6 +258,8 @@ describe("parseCatalogExport", () => {
         malformedIsrc: 0,
         missingUpc: 0,
         malformedUpc: 0,
+        uncollectedIsrc: 0,
+        uncollectedUpc: 0,
       });
     }
   });
@@ -265,7 +269,16 @@ describe("parseCatalogExport", () => {
     expect(result.header.fields).toEqual({});
     expect(result.header.unmappedColumns).toEqual([0, 1]);
     expect(result.proposals[0].claims).toEqual({});
-    expect(result.proposals[0].identifiers.isrc.state).toBe("unknown");
+    expect(result.proposals[0].identifiers).toEqual({
+      isrc: { state: "uncollected", value: null, raw: null },
+      upc: { state: "uncollected", value: null, raw: null },
+    });
+    expect(result.summary).toMatchObject({
+      missingIsrc: 0,
+      missingUpc: 0,
+      uncollectedIsrc: 1,
+      uncollectedUpc: 1,
+    });
     expect(result.proposals[0].unmappedFields).toEqual([
       { column: 0, header: "colour", value: "red" },
       { column: 1, header: "shape", value: "circle" },
@@ -273,7 +286,7 @@ describe("parseCatalogExport", () => {
   });
 
   it("rejects empty input and a blank or broken header with explicit codes", () => {
-    for (const text of ["", "   ", "﻿", "\n\n"]) {
+    for (const text of ["", "   ", "\uFEFF", "\n\n"]) {
       expect(() => parseCatalogExport(text)).toThrow(
         expect.objectContaining({ code: "empty_input" }),
       );
@@ -332,13 +345,18 @@ describe("parseCatalogExport", () => {
       "%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n",
       "PK\u0003\u0004\u0014\u0000\u0000\u0000xl/workbook.xml",
       "title,artist\nSong\u0000One,Artist\n",
-      "title,artist\nSong�One,Artist\n",
+      "title,artist\nSong\uFFFDOne,Artist\n",
+      "\uFEFF%PDF-1.7\n1 0 obj\n",
+      "title,artist\nSong\uD800One,Artist\n",
+      "title,artist\nSong\uDC00One,Artist\n",
+      "title,artist\nSong\u0085One,Artist\n",
     ]) {
       expect(() => parseCatalogExport(text)).toThrow(
         expect.objectContaining({ code: "unsupported_input" }),
       );
     }
     expect(() => parseCatalogExport("title,artist\nSong\tOne,Artist\n")).not.toThrow();
+    expect(() => parseCatalogExport("title,artist\nSong \uD83C\uDFB5,Artist\n")).not.toThrow();
   });
 
   it("produces a result that satisfies the published schema and survives a JSON round trip", () => {
@@ -378,6 +396,128 @@ describe("parseCatalogExport", () => {
       ]) {
         expect(source, `${name} must not contain ${forbidden}`).not.toContain(forbidden);
       }
+    }
+  });
+  it("keeps text after a closing quote out of proposals and reports the literal cell", () => {
+    const result = parseCatalogExport(
+      `${HEADER}\n"Heroes" (Live),Example Artist,Release,ZZTST2600001,,,,\nSong Two,Example Artist,Release,ZZTST2600002,,,,\n`,
+    );
+    expect(result.proposals.map(proposal => proposal.claims.trackTitle)).toEqual(["Song Two"]);
+    expect(result.malformedRows).toEqual([
+      {
+        row: 1,
+        line: 2,
+        reason: "text_after_closing_quote",
+        rawCells: ['"Heroes" (Live)', "Example Artist", "Release", "ZZTST2600001", "", "", "", ""],
+      },
+    ]);
+    expect(JSON.stringify(result)).not.toContain("Heroes (Live)");
+  });
+
+  it("strips only spaces and hyphens from identifiers; tabs or line breaks stay malformed", () => {
+    const result = parseCatalogExport(
+      `isrc,upc\n"ZZTST\t2600001","000000\n000017"\n"ZZTST\n2600002",000000000017\n`,
+    );
+    expect(result.proposals.map(proposal => proposal.identifiers)).toEqual([
+      {
+        isrc: { state: "malformed", value: null, raw: "ZZTST\t2600001" },
+        upc: { state: "malformed", value: null, raw: "000000\n000017" },
+      },
+      {
+        isrc: { state: "malformed", value: null, raw: "ZZTST\n2600002" },
+        upc: { state: "present", value: "000000000017", raw: "000000000017" },
+      },
+    ]);
+  });
+
+  it("marks identifiers as uncollected when the export has no recognised column for them", () => {
+    const result = parseCatalogExport(
+      "Track Name,ISRC Code\nSong,ZZTST2600001\nOther,\nThird,bad\n",
+    );
+    expect(result.header.fields).toEqual({ track_title: 0, isrc: 1 });
+    expect(result.proposals.map(proposal => proposal.identifiers.isrc.state)).toEqual([
+      "present",
+      "unknown",
+      "malformed",
+    ]);
+    expect(result.proposals.map(proposal => proposal.identifiers.upc.state)).toEqual([
+      "uncollected",
+      "uncollected",
+      "uncollected",
+    ]);
+    expect(result.summary).toMatchObject({
+      missingIsrc: 1,
+      malformedIsrc: 1,
+      uncollectedIsrc: 0,
+      missingUpc: 0,
+      malformedUpc: 0,
+      uncollectedUpc: 3,
+    });
+    expect(
+      parseCatalogExport("Track ISRC,Release UPC\nZZTST2600001,000000000017\n").header.fields,
+    ).toEqual({
+      isrc: 0,
+      upc: 1,
+    });
+  });
+
+  it("leaves an ambiguous bare Title or Song column unmapped instead of guessing its grain", () => {
+    const release = parseCatalogExport(
+      "Title,Release Date,UPC\nMy Album,2026-01-01,000000000017\n",
+    );
+    expect(release.header.fields).toEqual({ release_date: 1, upc: 2 });
+    expect(release.proposals[0].claims).toEqual({ releaseDate: "2026-01-01" });
+    expect(release.proposals[0].unmappedFields).toEqual([
+      { column: 0, header: "Title", value: "My Album" },
+    ]);
+    const song = parseCatalogExport("Song,Song Title,ISWC\nA,B,T1234567890\n");
+    expect(song.header.fields).toEqual({});
+    expect(song.header.unmappedColumns).toEqual([0, 1, 2]);
+  });
+
+  it("refuses tab- or semicolon-delimited text instead of returning an all-unmapped result", () => {
+    for (const text of [
+      "ISRC\tTitle\tArtist\nZZTST2600001\tSong\tArtist\n",
+      "ISRC;Title;Artist\nZZTST2600001;Song;Artist\n",
+    ]) {
+      expect(() => parseCatalogExport(text)).toThrow(
+        expect.objectContaining({ code: "unsupported_input" }),
+      );
+    }
+    expect(parseCatalogExport("isrc\nZZTST2600001\n").proposals).toHaveLength(1);
+  });
+
+  it("does not count trailing blank lines as malformed rows", () => {
+    const result = parseCatalogExport("isrc,track title\nZZTST2600001,S\n\n\r\n");
+    expect(result.malformedRows).toEqual([]);
+    expect(result.rowCount).toBe(1);
+  });
+
+  it("returns duplicate groups in order of their first row across kinds", () => {
+    const result = parseCatalogExport(
+      "track title,isrc\nSame,\nA,ZZTST2600009\nSame,\nB,ZZTST2600009\n",
+    );
+    expect(result.duplicates).toEqual([
+      { kind: "same_row_content", value: null, rows: [1, 3] },
+      { kind: "same_isrc", value: "ZZTST2600009", rows: [2, 4] },
+    ]);
+  });
+
+  it("rejects identifier objects whose value contradicts their state", () => {
+    const result = parseCatalogExport(fixture("generic-catalog-export.csv"));
+    const withIdentifier = (isrc: unknown): unknown => ({
+      ...result,
+      proposals: [
+        { ...result.proposals[0], identifiers: { ...result.proposals[0].identifiers, isrc } },
+      ],
+    });
+    for (const isrc of [
+      { state: "unknown", value: "ZZTST2600001", raw: null },
+      { state: "uncollected", value: null, raw: "ZZTST2600001" },
+      { state: "malformed", value: "ZZTST2600001", raw: "bad" },
+      { state: "present", value: null, raw: "ZZTST2600001" },
+    ]) {
+      expect(catalogExportParseResultSchema.safeParse(withIdentifier(isrc)).success).toBe(false);
     }
   });
 });

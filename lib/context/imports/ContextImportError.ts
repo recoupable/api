@@ -3,6 +3,7 @@ export const CONTEXT_IMPORT_ERROR_CODES = [
   "empty_input",
   "header_missing",
   "row_limit_exceeded",
+  "column_limit_exceeded",
   "cell_limit_exceeded",
 ] as const;
 

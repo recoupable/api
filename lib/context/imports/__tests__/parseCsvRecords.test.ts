@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { ContextImportError } from "../contextImportError";
-import { CSV_MAX_CELL_LENGTH, CSV_MAX_ROWS, parseCsvRecords } from "../parseCsvRecords";
+import { ContextImportError } from "../ContextImportError";
+import { CSV_MAX_CELL_LENGTH, CSV_MAX_ROWS } from "../csvRecordTypes";
+import { parseCsvRecords } from "../parseCsvRecords";
 
 describe("parseCsvRecords", () => {
   it("tokenizes a LF file into a header and rows with row and line pointers", () => {
@@ -28,7 +29,7 @@ describe("parseCsvRecords", () => {
   });
 
   it("strips a leading byte-order mark from the first header cell only", () => {
-    const records = parseCsvRecords("﻿isrc,title\nZZTST2600001,Song\n");
+    const records = parseCsvRecords("\uFEFFisrc,title\nZZTST2600001,Song\n");
     expect(records.header).toEqual(["isrc", "title"]);
     expect(records.rows[0]?.cells).toEqual(["ZZTST2600001", "Song"]);
   });
@@ -134,5 +135,96 @@ describe("parseCsvRecords", () => {
         cells: ["title,artist\nSong One,Artist A\n"],
       },
     ]);
+  });
+  it("reports text after a closing quote as malformed and keeps the literal source cell", () => {
+    const records = parseCsvRecords(
+      'title,artist\n"Heroes" (Live),Artist A\n"x"y,z\n"Spaced" ,Artist C\nSong Four,Artist D\n',
+    );
+    expect(records.rows).toEqual([{ rowNumber: 4, line: 5, cells: ["Song Four", "Artist D"] }]);
+    expect(records.malformed).toEqual([
+      {
+        rowNumber: 1,
+        line: 2,
+        reason: "text_after_closing_quote",
+        cells: ['"Heroes" (Live)', "Artist A"],
+      },
+      { rowNumber: 2, line: 3, reason: "text_after_closing_quote", cells: ['"x"y', "z"] },
+      {
+        rowNumber: 3,
+        line: 4,
+        reason: "text_after_closing_quote",
+        cells: ['"Spaced" ', "Artist C"],
+      },
+    ]);
+  });
+
+  it("still accepts a properly closed quoted cell followed by a delimiter or end of input", () => {
+    const records = parseCsvRecords('title,artist\n"Song","Artist"\r\n"Last","Row"');
+    expect(records.rows).toEqual([
+      { rowNumber: 1, line: 2, cells: ["Song", "Artist"] },
+      { rowNumber: 2, line: 3, cells: ["Last", "Row"] },
+    ]);
+    expect(records.malformed).toEqual([]);
+  });
+
+  it("reports an unterminated quote at its opening line even when more than a cell of text follows", () => {
+    const tail = Array.from({ length: 20 }, (_, i) => `x${i},y`).join("\n");
+    const records = parseCsvRecords(
+      `title,artist\nSong One,Artist A\n"Song Two,Artist B\n${tail}\n`,
+      {
+        maxCellLength: 10,
+      },
+    );
+    expect(records.rows).toEqual([{ rowNumber: 1, line: 2, cells: ["Song One", "Artist A"] }]);
+    expect(records.malformed).toEqual([
+      {
+        rowNumber: 2,
+        line: 3,
+        reason: "unterminated_quote",
+        cells: [`Song Two,Artist B\n${tail}\n`],
+      },
+    ]);
+    const realistic = `isrc,title\n"ZZTST2600001,Song\n${"x,y\n".repeat(3_000)}`;
+    expect(parseCsvRecords(realistic).malformed).toMatchObject([
+      { rowNumber: 1, line: 2, reason: "unterminated_quote" },
+    ]);
+  });
+
+  it("names the starting line when a quoted cell that does close exceeds the cell cap", () => {
+    const text = `title,artist\nSong One,Artist A\n"${"line\n".repeat(5)}",Artist B\n`;
+    expect(() => parseCsvRecords(text, { maxCellLength: 10 })).toThrow(
+      expect.objectContaining({
+        code: "cell_limit_exceeded",
+        message: expect.stringContaining("starting on line 3"),
+      }),
+    );
+  });
+
+  it("does not report blank lines at the end of the file as malformed rows", () => {
+    for (const text of ["a,b\n1,2\n\n", "a,b\r\n1,2\r\n\r\n\r\n", "a,b\n1,2\n\n\n"]) {
+      const records = parseCsvRecords(text);
+      expect(records.rows).toEqual([{ rowNumber: 1, line: 2, cells: ["1", "2"] }]);
+      expect(records.malformed).toEqual([]);
+    }
+    expect(parseCsvRecords("a,b\n\n\n").rows).toEqual([]);
+    expect(parseCsvRecords("a,b\n\n\n").malformed).toEqual([]);
+    expect(parseCsvRecords("a,b\n\n1,2\n\n").malformed).toEqual([
+      { rowNumber: 1, line: 2, reason: "empty_row", cells: [""] },
+    ]);
+  });
+
+  it("refuses a record with more columns than the column cap", () => {
+    expect(() => parseCsvRecords(`a,b\n${",".repeat(5)}\n`, { maxColumns: 5 })).toThrow(
+      expect.objectContaining({ code: "column_limit_exceeded" }),
+    );
+    expect(() => parseCsvRecords(`${",".repeat(5)}\n`, { maxColumns: 5 })).toThrow(
+      expect.objectContaining({ code: "column_limit_exceeded" }),
+    );
+    expect(parseCsvRecords(`a,b,c,d,e\n${",".repeat(4)}\n`, { maxColumns: 5 }).malformed).toEqual([
+      { rowNumber: 1, line: 2, reason: "empty_row", cells: ["", "", "", "", ""] },
+    ]);
+    expect(() => parseCsvRecords(`title\n${",".repeat(2_000_000)}\n`)).toThrow(
+      expect.objectContaining({ code: "column_limit_exceeded" }),
+    );
   });
 });
