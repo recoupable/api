@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-const CHANNEL_LINK_PATTERN = /:\/\/|^(?:www\.|file:|\/|\\|~\/)/i;
+// URLs, URI schemes (mailto:, spotify:, file:), drive letters and paths; matches the database check.
+const CHANNEL_LINK_PATTERN = /:\/\/|^(?:www\.|\/|\\|~\/)|^[a-z][a-z0-9+.-]*:\S/i;
 const CHANNEL_MESSAGE =
   "Channels are names, not links or files; save promoted records first and reference them in promoted";
 // Matches the database: control characters are rejected and inner whitespace is collapsed before comparing.
@@ -29,7 +30,7 @@ export const campaignBriefSchema = z
         z
           .string()
           .trim()
-          .min(2)
+          .min(1)
           .max(60)
           .refine(value => !CONTROL_CHARACTER_PATTERN.test(value), {
             message: "Channel names must not contain control characters",

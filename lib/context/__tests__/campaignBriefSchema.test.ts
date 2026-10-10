@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { campaignBriefSchema } from "../campaignBriefSchema";
 
-const requestId = "00000000-0000-4000-8000-000000000011";
-const subjectId = "00000000-0000-4000-8000-000000000012";
+// Hex letters make the upper-case duplicate check below meaningful.
+const requestId = "00000000-0000-4000-a000-0000000000aa";
+const subjectId = "00000000-0000-4000-a000-0000000000bb";
 const brief = { name: "Release campaign", goal: "Promote the single" };
 
 function failure(input: unknown) {
@@ -18,10 +19,10 @@ describe("campaignBriefSchema", () => {
       audience: "Existing listeners",
       start_date: "2026-10-01",
       end_date: "2026-10-31",
-      channels: ["  Short-form video ", "Radio"],
+      channels: ["  Short-form video ", "Radio", "X"],
       promoted: [{ request_id: requestId, subject_id: subjectId }],
     });
-    expect(parsed.channels).toEqual(["Short-form video", "Radio"]);
+    expect(parsed.channels).toEqual(["Short-form video", "Radio", "X"]);
     expect(parsed.promoted).toEqual([{ request_id: requestId, subject_id: subjectId }]);
   });
 
@@ -54,6 +55,12 @@ describe("campaignBriefSchema", () => {
       /Channels are names/,
     );
     expect(failure({ ...brief, channels: ["www.example.com"] })).toMatch(/Channels are names/);
+    expect(failure({ ...brief, channels: ["mailto:team@example.com"] })).toMatch(
+      /Channels are names/,
+    );
+    expect(failure({ ...brief, channels: ["spotify:album:example"] })).toMatch(
+      /Channels are names/,
+    );
   });
 
   it("rejects private file references; material intake is a separate action", () => {
@@ -61,6 +68,7 @@ describe("campaignBriefSchema", () => {
     expect(failure({ ...brief, assets: ["artwork.png"] })).toMatch(/assets/);
     expect(failure({ ...brief, channels: ["/private/plan.pdf"] })).toMatch(/Channels are names/);
     expect(failure({ ...brief, channels: ["file:plan.pdf"] })).toMatch(/Channels are names/);
+    expect(failure({ ...brief, channels: ["C:\\plans\\brief.pdf"] })).toMatch(/Channels are names/);
   });
 
   it("requires distinct bounded channels and promoted pairs", () => {
@@ -68,7 +76,7 @@ describe("campaignBriefSchema", () => {
     expect(
       failure({ ...brief, channels: Array.from({ length: 11 }, (_, i) => `channel ${i}`) }),
     ).toMatch(/channels/);
-    expect(failure({ ...brief, channels: ["X"] })).toMatch(/channels/);
+    expect(failure({ ...brief, channels: ["   "] })).toMatch(/channels/);
     // The database collapses inner whitespace before comparing, so the boundary must agree.
     expect(failure({ ...brief, channels: ["Short  form video", "short form video"] })).toMatch(
       /distinct/,
