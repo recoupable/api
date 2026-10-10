@@ -3,7 +3,8 @@ import { contextIngestSchema } from "./schema";
 
 // Mirrors the database checks so invalid input is a 400, not a failed save: no control
 // characters, case-sensitive http(s) scheme, no whitespace and no repeated tracklist slot.
-const withoutControlCharacters = /^[^\p{Cc}]*$/u;
+// Explicit \u ranges (not \p{Cc}) keep the published JSON Schema pattern portable.
+const withoutControlCharacters = /^[^\u0000-\u001f\u007f-\u009f]*$/;
 const submittedText = (min: number) =>
   z.string().trim().min(min).max(200).regex(withoutControlCharacters);
 const submittedTitle = submittedText(2);
@@ -59,7 +60,7 @@ export const unreleasedMusicOperationSchemas = [
             url: z
               .url({ protocol: /^https?$/ })
               .max(2048)
-              .regex(/^https?:\/\/[^\s\p{Cc}]+$/u),
+              .regex(/^https?:\/\/[^\s\u0000-\u001f\u007f-\u009f]+$/),
           }),
         )
         .max(20)
