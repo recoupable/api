@@ -1,3 +1,4 @@
+import { registerAllPlayerTools } from "./players";
 import { registerAllSitesTools } from "./sites";
 import { registerContextTool } from "./context/registerContextTool";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -34,6 +35,7 @@ import { registerAllPulseTools } from "./pulse";
  */
 export const registerAllTools = (server: McpServer): void => {
   registerAllSitesTools(server);
+  registerAllPlayerTools(server);
   registerContextTool(server);
   registerAllArtistTools(server);
   registerAllArtistSocialsTools(server);

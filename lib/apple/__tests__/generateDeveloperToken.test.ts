@@ -119,3 +119,11 @@ describe("generateDeveloperToken", () => {
     expect(() => generateDeveloperToken()).not.toThrow();
   });
 });
+
+it.each([0, -1, NaN, Infinity, 3601])(
+  "rejects invalid developer token lifetime %s",
+  async ttlSeconds => {
+    const generateDeveloperToken = await loadFresh();
+    expect(() => generateDeveloperToken({ ttlSeconds })).toThrow("Developer token lifetime");
+  },
+);
