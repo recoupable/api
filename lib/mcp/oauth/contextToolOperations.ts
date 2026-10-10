@@ -142,6 +142,12 @@ export const contextToolOperations = {
     description: "Read the status and results of a saved music context request.",
     readOnly: true,
   },
+  cancel: {
+    name: "cancel_music_context_request",
+    description:
+      "Stop a saved music context request that is still queued, failed or running. Completed or partial requests keep their saved evidence; nothing is refunded or withdrawn.",
+    readOnly: false,
+  },
   brief: {
     name: "compile_music_context_brief",
     description:
