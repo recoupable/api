@@ -90,6 +90,7 @@ it("collects when no accepted research exists", () => {
     underlyingSources: 2,
     copiesCollapsed: 0,
     collaboratorOnlySources: 0,
+    unattributedSources: 0,
   });
 });
 
@@ -121,7 +122,7 @@ it("flags a historical prior as stale and retains its dated claims after merge",
   const stale = prior({ retrievedAt: "2026-03-01T00:00:00.000Z" });
   const result = plan({ prior: stale, candidates: [stories.bio, stories.interview] });
   expect(result.decision).toBe("collect");
-  expect(result.reasons).toEqual(["prior_stale"]);
+  expect(result.reasons).toEqual(["prior_stale", "no_new_sources"]);
   expect(result.prior).toEqual({ resultId: "result-1", version: 1, status: "stale" });
   const merged = mergeContextArtistResearchClaims({
     prior: { resultId: stale.resultId, version: stale.version, claims: stale.claims },
@@ -166,7 +167,7 @@ it("collects again when the prior research was withdrawn", () => {
     candidates: [stories.bio, stories.interview],
   });
   expect(result.decision).toBe("collect");
-  expect(result.reasons).toEqual(["prior_withdrawn"]);
+  expect(result.reasons).toEqual(["prior_withdrawn", "no_new_sources"]);
   expect(result.reusedResultId).toBeNull();
   expect(result.prior?.status).toBe("withdrawn");
 });
@@ -264,4 +265,107 @@ it("counts press-release copies as one corroborating source and keeps differing 
     new: 1,
     deduplicated: 2,
   });
+});
+
+it("does not pay for adjacent collaborator mentions or unattributed snippets", () => {
+  const adjacent = {
+    url: "https://other.example/adjacent",
+    title: "Interview: Nova Ninefold",
+    snippet: "Nova Ninefold announce a tour of Manchester in May.",
+  };
+  const anonymous = {
+    url: "https://other.example/anonymous",
+    title: "Synth-pop roundup",
+    snippet: "No artist is named here.",
+  };
+  const result = plan({ candidates: [adjacent, anonymous] });
+  expect(result.decision).toBe("blocked");
+  expect(result.reasons).toEqual([
+    "no_prior_research",
+    "collaborator_only_evidence",
+    "unattributed_evidence",
+    "no_usable_sources",
+  ]);
+  expect(result.budget).toMatchObject({
+    modelCalls: 0,
+    collaboratorOnlySources: 1,
+    unattributedSources: 1,
+  });
+  const withPrior = plan({ prior: prior(), candidates: [stories.bio, anonymous] });
+  expect(withPrior.decision).toBe("reuse");
+  expect(withPrior.reasons).toEqual(["prior_fresh", "no_new_sources"]);
+  expect(withPrior.budget.modelCalls).toBe(0);
+});
+
+it("does not let an old article found after fresh research trigger paid work", () => {
+  const archive = {
+    url: "https://archive.example/nova-early-demo",
+    title: "Nova early demo",
+    snippet: "Nova uploaded an early demo.",
+    date: "2017-03-02",
+  };
+  const candidates = [stories.bio, stories.interview, archive];
+  const fresh = plan({ prior: prior(), candidates });
+  expect(fresh.decision).toBe("reuse");
+  expect(fresh.reasons).toEqual(["prior_fresh", "historical_sources_only"]);
+  expect(fresh.budget.modelCalls).toBe(0);
+  const stale = plan({ prior: prior({ retrievedAt: "2026-03-01T00:00:00.000Z" }), candidates });
+  expect(stale.decision).toBe("collect");
+  expect(stale.reasons).toEqual(["prior_stale", "new_underlying_sources"]);
+  expect(stale.sourcesToSynthesize[0].url).toBe(archive.url);
+});
+
+it("reports truncated search results instead of looking complete", () => {
+  const many = Array.from({ length: 22 }, (_, index) => ({
+    url: `https://press.example/nova-${index}`,
+    title: `Nova story ${index}`,
+    snippet: `Nova detail ${index}.`,
+  }));
+  const result = plan({
+    prior: prior({ sourceUrls: many.slice(0, 20).map(story => story.url) }),
+    candidates: many,
+  });
+  expect(result.decision).toBe("reuse");
+  expect(result.reasons).toEqual(["prior_fresh", "no_new_sources", "sources_truncated"]);
+  expect(result.budget).toMatchObject({ underlyingSources: 22, modelCalls: 0 });
+});
+
+it("does not treat research retrieved in the future as fresh", () => {
+  const result = plan({
+    prior: prior({ retrievedAt: "2099-01-01T00:00:00.000Z" }),
+    candidates: [stories.bio],
+  });
+  expect(result.prior?.status).toBe("stale");
+  expect(result.decision).toBe("collect");
+});
+
+it("keeps symbol-only, empty and long claims and canonicalizes unmapped sources", () => {
+  const long = "x".repeat(5000);
+  const merged = mergeContextArtistResearchClaims({
+    prior: {
+      resultId: "result-1",
+      version: 1,
+      claims: [
+        { claim: "★", sourceUrl: "https://a.example/x?utm_source=feed", date: null },
+        { claim: "", sourceUrl: "", date: null },
+      ],
+    },
+    next: {
+      resultId: "result-2",
+      version: 2,
+      claims: [
+        { claim: "☆", sourceUrl: "https://a.example/x", date: null },
+        { claim: "★", sourceUrl: "https://a.example/x#top", date: null },
+        { claim: long, sourceUrl: "https://a.example/long", date: null },
+      ],
+    },
+    sources: [],
+  });
+  expect(merged.claims.map(claim => [claim.claim, claim.status, claim.corroboration])).toEqual([
+    ["★", "retained_prior", 1],
+    ["", "retained_prior", 1],
+    ["☆", "new", 1],
+    [long, "new", 1],
+  ]);
+  expect(merged.claims[0].provenance).toHaveLength(2);
 });

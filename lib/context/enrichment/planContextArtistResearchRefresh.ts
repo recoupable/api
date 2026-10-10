@@ -1,50 +1,9 @@
-import { z } from "zod";
-import {
-  contextResearchClaimSchema,
-  normalizedContextResearchSourceSchema,
-  type NormalizedContextResearchSource,
-} from "./artistResearchTypes";
+import type { z } from "zod";
+import type { NormalizedContextResearchSource } from "./artistResearchTypes";
+import { artistResearchRefreshInputSchema } from "./artistResearchRefreshInputSchema";
 import { canonicalizeContextSourceUrl } from "./canonicalizeContextSourceUrl";
 
 const DAY_MS = 86_400_000;
-const count = z.number().int().min(0);
-const normalizedSchema = z.object({
-  retrievedAt: z.iso.datetime(),
-  sources: z.array(normalizedContextResearchSourceSchema).max(20),
-  rejected: z.array(z.object({ url: z.string(), reason: z.enum(["invalid_url", "non_https"]) })),
-  counts: z.object({
-    candidates: count,
-    rejected: count,
-    underlyingSources: count,
-    copiesCollapsed: count,
-    truncated: count,
-  }),
-});
-const policySchema = z.object({
-  maxAgeDays: z.number().int().min(1).max(3650).default(90),
-  maxSources: z.number().int().min(1).max(20).default(20),
-  maxSearchCalls: z.number().int().min(0).max(1).default(1),
-  maxModelCalls: z.number().int().min(0).max(1).default(1),
-});
-const inputSchema = z.strictObject({
-  artistSubjectId: z.string().trim().min(1).max(200),
-  now: z.iso.datetime(),
-  prior: z
-    .object({
-      resultId: z.string().min(1).max(200),
-      version: z.number().int().min(1),
-      retrievedAt: z.iso.datetime(),
-      claims: z.array(contextResearchClaimSchema).max(500),
-      sourceUrls: z.array(z.string().min(1).max(2048)).max(100),
-      withdrawn: z.boolean(),
-    })
-    .nullable(),
-  search: z.discriminatedUnion("status", [
-    z.object({ status: z.literal("ok"), calls: count.max(10), normalized: normalizedSchema }),
-    z.object({ status: z.literal("failed"), calls: count.max(10), error: z.string().max(2000) }),
-  ]),
-  policy: policySchema.optional(),
-});
 
 export type ContextArtistResearchRefreshReason =
   | "no_prior_research"
@@ -52,9 +11,12 @@ export type ContextArtistResearchRefreshReason =
   | "prior_stale"
   | "prior_withdrawn"
   | "new_underlying_sources"
+  | "historical_sources_only"
   | "no_new_sources"
   | "no_usable_sources"
   | "collaborator_only_evidence"
+  | "unattributed_evidence"
+  | "sources_truncated"
   | "search_failed"
   | "search_budget_exceeded"
   | "model_call_not_authorized"
@@ -67,6 +29,7 @@ export interface ContextArtistResearchRefreshPlan {
   prior: { resultId: string; version: number; status: "fresh" | "stale" | "withdrawn" } | null;
   reusedResultId: string | null;
   sourcesToSynthesize: NormalizedContextResearchSource[];
+  /** `searchCalls` is the bounded search already run before planning; `modelCalls` is what this plan would spend. */
   budget: {
     searchCalls: number;
     modelCalls: 0 | 1;
@@ -74,86 +37,108 @@ export interface ContextArtistResearchRefreshPlan {
     underlyingSources: number;
     copiesCollapsed: number;
     collaboratorOnlySources: number;
+    unattributedSources: number;
   };
 }
 
-/** Decide reuse, one bounded collect, or no paid work at all. Pure: no search, model, database or retry. */
+/** True when a known publication date falls strictly before `instant` at the source's own precision. */
+function publishedBefore(source: NormalizedContextResearchSource, instant: string) {
+  return (
+    source.publishedAt !== null && source.publishedAt < instant.slice(0, source.publishedAt.length)
+  );
+}
+
+/**
+ * Decide reuse, one bounded collect, or no paid work at all. Pure: no search, model, database or retry.
+ * Only focal-artist evidence can justify paid work; with fresh prior research, a newly found story that
+ * was published before that research was retrieved does not justify it either.
+ */
 export function planContextArtistResearchRefresh(
-  input: z.input<typeof inputSchema>,
+  input: z.input<typeof artistResearchRefreshInputSchema>,
 ): ContextArtistResearchRefreshPlan {
-  const args = inputSchema.parse(input);
-  const policy = args.policy ?? policySchema.parse({});
-  const status: "fresh" | "stale" | "withdrawn" | null = !args.prior
+  const { artistSubjectId, now, prior, search, policy } =
+    artistResearchRefreshInputSchema.parse(input);
+  const ageDays = prior ? (Date.parse(now) - Date.parse(prior.retrievedAt)) / DAY_MS : 0;
+  const status: "fresh" | "stale" | "withdrawn" | null = !prior
     ? null
-    : args.prior.withdrawn
+    : prior.withdrawn
       ? "withdrawn"
-      : (Date.parse(args.now) - Date.parse(args.prior.retrievedAt)) / DAY_MS > policy.maxAgeDays
+      : ageDays < -1 || ageDays > policy.maxAgeDays
         ? "stale"
         : "fresh";
   const reasons: ContextArtistResearchRefreshReason[] = [
     status === null ? "no_prior_research" : `prior_${status}`,
   ];
-  const reusable = status === "fresh";
+  const reusable = status === "fresh" && prior !== null;
   const base = {
-    artistSubjectId: args.artistSubjectId,
-    prior:
-      args.prior && status
-        ? { resultId: args.prior.resultId, version: args.prior.version, status }
-        : null,
+    artistSubjectId,
+    prior: prior && status ? { resultId: prior.resultId, version: prior.version, status } : null,
     sourcesToSynthesize: [],
   };
   const budget: ContextArtistResearchRefreshPlan["budget"] = {
-    searchCalls: args.search.calls,
+    searchCalls: search.calls,
     modelCalls: 0,
     sourcesConsidered: 0,
     underlyingSources: 0,
     copiesCollapsed: 0,
     collaboratorOnlySources: 0,
+    unattributedSources: 0,
   };
-  const settle = (extra: ContextArtistResearchRefreshReason[]): ContextArtistResearchRefreshPlan =>
-    reusable && args.prior
-      ? {
-          ...base,
-          decision: "reuse",
-          reasons: [...reasons, ...extra],
-          reusedResultId: args.prior.resultId,
-          budget,
-        }
-      : {
-          ...base,
-          decision: "blocked",
-          reasons: [...reasons, ...extra],
-          reusedResultId: null,
-          budget,
-        };
-  if (args.search.calls > policy.maxSearchCalls) return settle(["search_budget_exceeded"]);
-  if (args.search.status === "failed") return settle(["search_failed"]);
-  const { normalized } = args.search;
+  const settle = (
+    extra: ContextArtistResearchRefreshReason[],
+  ): ContextArtistResearchRefreshPlan => ({
+    ...base,
+    decision: reusable ? "reuse" : "blocked",
+    reasons: [...reasons, ...extra],
+    reusedResultId: reusable && prior ? prior.resultId : null,
+    budget,
+  });
+  if (search.calls > policy.maxSearchCalls) return settle(["search_budget_exceeded"]);
+  if (search.status === "failed") return settle(["search_failed"]);
+  const { sources, counts } = search.normalized;
+  const scoped = (scope: NormalizedContextResearchSource["scope"]) =>
+    sources.filter(source => source.scope === scope);
+  const usable = scoped("focal_artist");
+  budget.sourcesConsidered = counts.candidates;
+  budget.underlyingSources = sources.length + counts.truncated;
+  budget.copiesCollapsed = counts.copiesCollapsed;
+  budget.collaboratorOnlySources = scoped("collaborator_only").length;
+  budget.unattributedSources = scoped("unattributed").length;
+  const truncated: ContextArtistResearchRefreshReason[] = counts.truncated
+    ? ["sources_truncated"]
+    : [];
+  if (!usable.length)
+    return settle([
+      ...(budget.collaboratorOnlySources ? (["collaborator_only_evidence"] as const) : []),
+      ...(budget.unattributedSources ? (["unattributed_evidence"] as const) : []),
+      "no_usable_sources",
+      ...truncated,
+    ]);
   const priorUrls = new Set(
-    (args.prior?.sourceUrls ?? []).map(url => {
+    (prior?.sourceUrls ?? []).map(url => {
       const canonical = canonicalizeContextSourceUrl(url);
       return canonical.ok ? canonical.url : url;
     }),
   );
-  const usable = normalized.sources.filter(source => source.scope !== "collaborator_only");
-  budget.sourcesConsidered = normalized.counts.candidates;
-  budget.underlyingSources = normalized.sources.length;
-  budget.copiesCollapsed = normalized.counts.copiesCollapsed;
-  budget.collaboratorOnlySources = normalized.sources.length - usable.length;
-  if (!usable.length)
-    return settle(
-      budget.collaboratorOnlySources
-        ? ["collaborator_only_evidence", "no_usable_sources"]
-        : ["no_usable_sources"],
-    );
   const cited = usable.filter(source => source.copies.some(url => priorUrls.has(url)));
-  const fresh = usable.filter(source => !cited.includes(source));
-  if (fresh.length) reasons.push("new_underlying_sources");
-  if (reusable && !fresh.length) return settle(["no_new_sources"]);
+  const uncited = usable.filter(source => !cited.includes(source));
+  const current =
+    reusable && prior
+      ? uncited.filter(source => !publishedBefore(source, prior.retrievedAt))
+      : uncited;
+  reasons.push(
+    current.length
+      ? "new_underlying_sources"
+      : uncited.length
+        ? "historical_sources_only"
+        : "no_new_sources",
+    ...truncated,
+  );
+  if (reusable && !current.length) return settle([]);
   if (policy.maxModelCalls < 1) return settle(["model_call_not_authorized"]);
-  const sourcesToSynthesize = [...fresh, ...cited].slice(0, policy.maxSources);
-  if (sourcesToSynthesize.length < fresh.length + cited.length)
-    reasons.push("source_limit_applied");
+  const ordered = [...current, ...uncited.filter(source => !current.includes(source)), ...cited];
+  const sourcesToSynthesize = ordered.slice(0, policy.maxSources);
+  if (sourcesToSynthesize.length < ordered.length) reasons.push("source_limit_applied");
   return {
     ...base,
     decision: "collect",

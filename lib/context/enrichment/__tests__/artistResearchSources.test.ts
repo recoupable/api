@@ -207,3 +207,102 @@ it("bounds the result to twenty underlying sources", () => {
 it("requires a caller-supplied retrieval timestamp", () => {
   expect(() => normalize([], { retrievedAt: "yesterday" })).toThrow();
 });
+
+it("keeps adjacent and repeated collaborator mentions out of focal-artist evidence", () => {
+  const result = normalize([
+    {
+      url: "https://a.example/adjacent",
+      title: "Interview: Nova Ninefold",
+      snippet: "Nova Ninefold announce a tour of Manchester in May.",
+    },
+    {
+      url: "https://a.example/repeated",
+      title: "Feature",
+      snippet: "The track features Nova Ninefold. Nova Ninefold previously toured Europe.",
+    },
+  ]);
+  expect(result.sources.map(source => source.scope)).toEqual([
+    "collaborator_only",
+    "collaborator_only",
+  ]);
+});
+
+it("keeps a focal mention when an excluded name is part of the focal name", () => {
+  const result = normalize(
+    [
+      {
+        url: "https://a.example/full",
+        title: "Vela Quinn live",
+        snippet: "Vela Quinn played Leeds.",
+      },
+      {
+        url: "https://a.example/short",
+        title: "Festival notes",
+        snippet: "Vela played a solo set.",
+      },
+    ],
+    { artistName: "Vela Quinn", excludeNames: ["Vela"] },
+  );
+  expect(result.sources.map(source => source.scope)).toEqual(["focal_artist", "collaborator_only"]);
+});
+
+it("matches names regardless of Unicode composition", () => {
+  const result = normalize(
+    [{ url: "https://a.example/accent", title: "Renée Halvard tour", snippet: "Dates." }],
+    { artistName: "Renée Halvard", excludeNames: [] },
+  );
+  expect(result.sources[0].scope).toBe("focal_artist");
+});
+
+it("keeps the earliest known publication date across copies of one story", () => {
+  const reprintFirst = normalize([
+    { url: "https://reprint.example/nova", ...press, date: "2026-10-05" },
+    { url: "https://undated.example/nova", ...press },
+    { url: "https://original.example/nova", ...press, date: "2026-09-01" },
+  ]);
+  expect(reprintFirst.sources).toHaveLength(1);
+  expect(reprintFirst.sources[0]).toMatchObject({
+    url: "https://reprint.example/nova",
+    publishedAt: "2026-09-01",
+    datePrecision: "day",
+    dateSource: "date",
+  });
+  const undatedFirst = normalize([
+    { url: "https://undated.example/nova", ...press },
+    { url: "https://dated.example/nova", ...press, date: "2025-01-01" },
+  ]);
+  expect(undatedFirst.sources[0]).toMatchObject({
+    publishedAt: "2025-01-01",
+    datePrecision: "day",
+  });
+});
+
+it("treats implausible and future publication dates as unknown", () => {
+  const result = normalize([
+    { url: "https://a.example/zero", title: "Nova zero", snippet: "Nova.", date: "0000-01-01" },
+    { url: "https://a.example/far", title: "Nova far", snippet: "Nova.", date: "3000" },
+    { url: "https://a.example/later", title: "Nova later", snippet: "Nova.", date: "2026-10-20" },
+    { url: "https://a.example/zone", title: "Nova zone", snippet: "Nova.", date: "2026-10-11" },
+  ]);
+  expect(result.sources.map(source => [source.publishedAt, source.datePrecision])).toEqual([
+    [null, "unknown"],
+    [null, "unknown"],
+    [null, "unknown"],
+    ["2026-10-11", "day"],
+  ]);
+});
+
+it("does not merge distinct sources that carry no title or snippet text", () => {
+  const result = normalize([
+    { url: "https://a.example/one", title: "", snippet: "" },
+    { url: "https://b.example/two", title: " ", snippet: "..." },
+  ]);
+  expect(result.sources).toHaveLength(2);
+  expect(result.counts.copiesCollapsed).toBe(0);
+  expect(result.sources.map(source => source.scope)).toEqual(["unattributed", "unattributed"]);
+});
+
+it("keeps the order of repeated query parameters", () => {
+  const result = normalize([{ url: "https://a.example/list?id=2&b=1&id=1", ...press }]);
+  expect(result.sources[0].url).toBe("https://a.example/list?b=1&id=2&id=1");
+});

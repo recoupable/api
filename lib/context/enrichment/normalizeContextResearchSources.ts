@@ -1,11 +1,10 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import type {
-  ContextResearchSourceScope,
-  NormalizedContextResearchSource,
-} from "./artistResearchTypes";
+import type { NormalizedContextResearchSource } from "./artistResearchTypes";
 import { canonicalizeContextSourceUrl } from "./canonicalizeContextSourceUrl";
+import { classifyContextResearchSourceScope } from "./classifyContextResearchSourceScope";
 import { parseContextSourceDate } from "./parseContextSourceDate";
+import { tokenizeContextResearchText } from "./tokenizeContextResearchText";
 
 const MAX_UNDERLYING_SOURCES = 20;
 const inputSchema = z.strictObject({
@@ -38,42 +37,44 @@ export interface NormalizedContextResearchSources {
   };
 }
 
-/** Lower-cased words separated by single spaces, padded so whole-name matches need no regex over untrusted text. */
-function tokenize(text: string) {
-  return ` ${text
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim()} `;
-}
+type DateFields = Pick<
+  NormalizedContextResearchSource,
+  "publishedAt" | "datePrecision" | "dateSource"
+>;
 
-function classify(text: string, focal: string, excluded: string[]): ContextResearchSourceScope {
-  let remaining = tokenize(text);
-  let collaborator = false;
-  for (const name of excluded) {
-    if (!remaining.includes(name)) continue;
-    collaborator = true;
-    remaining = remaining.split(name).join(" ");
-  }
-  if (remaining.includes(focal)) return "focal_artist";
-  return collaborator ? "collaborator_only" : "unattributed";
-}
-
-function dateFields(candidate: { date?: string; last_updated?: string }) {
+function dateFields(
+  candidate: { date?: string; last_updated?: string },
+  notAfter: string,
+): DateFields {
   for (const dateSource of ["date", "last_updated"] as const) {
-    const parsed = parseContextSourceDate(candidate[dateSource]);
+    const parsed = parseContextSourceDate(candidate[dateSource], notAfter);
     if (parsed.precision !== "unknown")
       return { publishedAt: parsed.value, datePrecision: parsed.precision, dateSource };
   }
-  return { publishedAt: null, datePrecision: "unknown" as const, dateSource: null };
+  return { publishedAt: null, datePrecision: "unknown", dateSource: null };
 }
 
-/** Deterministic, model-free source identity: canonical URLs, honest dates, one entry per underlying story. Snippets stay data. */
+/** True when `next` is a known date earlier than `current`, or the same date at a finer precision. */
+function isEarlier(next: DateFields, current: DateFields) {
+  if (next.publishedAt === null) return false;
+  if (current.publishedAt === null) return true;
+  const length = Math.min(next.publishedAt.length, current.publishedAt.length);
+  const [a, b] = [next.publishedAt.slice(0, length), current.publishedAt.slice(0, length)];
+  return a < b || (a === b && next.publishedAt.length > current.publishedAt.length);
+}
+
+/**
+ * Deterministic, model-free source identity: canonical URLs, honest dates (the earliest known date across copies),
+ * one entry per underlying story. Snippets stay data.
+ */
 export function normalizeContextResearchSources(
   input: z.input<typeof inputSchema>,
 ): NormalizedContextResearchSources {
   const args = inputSchema.parse(input);
-  const focal = tokenize(args.artistName);
-  const excluded = args.excludeNames.map(tokenize).filter(name => name.trim() && name !== focal);
+  const focal = tokenizeContextResearchText(args.artistName);
+  const excluded = args.excludeNames
+    .map(tokenizeContextResearchText)
+    .filter(name => name.length && name.join(" ") !== focal.join(" "));
   const rejected: NormalizedContextResearchSources["rejected"] = [];
   const seenUrls = new Set<string>();
   const stories = new Map<string, NormalizedContextResearchSource>();
@@ -89,12 +90,19 @@ export function normalizeContextResearchSources(
       continue;
     }
     seenUrls.add(canonical.url);
-    const storyKey = createHash("sha256")
-      .update(`${tokenize(candidate.title)}\n${tokenize(candidate.snippet)}`)
-      .digest("hex");
+    const title = tokenizeContextResearchText(candidate.title);
+    const snippet = tokenizeContextResearchText(candidate.snippet);
+    // Text-less candidates keep their own identity instead of all sharing the empty-text story.
+    const identity =
+      title.length || snippet.length
+        ? `${title.join(" ")}\n${snippet.join(" ")}`
+        : `url\n${canonical.url}`;
+    const storyKey = createHash("sha256").update(identity).digest("hex");
+    const dates = dateFields(candidate, args.retrievedAt);
     const story = stories.get(storyKey);
     if (story) {
       story.copies.push(canonical.url);
+      if (isEarlier(dates, story)) Object.assign(story, dates);
       copiesCollapsed += 1;
       continue;
     }
@@ -104,9 +112,10 @@ export function normalizeContextResearchSources(
       copies: [canonical.url],
       title: candidate.title,
       snippet: candidate.snippet,
-      ...dateFields(candidate),
+      ...dates,
       retrievedAt: args.retrievedAt,
-      scope: classify(`${candidate.title} ${candidate.snippet}`, focal, excluded),
+      // The empty token separates title from snippet so no name can match across the boundary.
+      scope: classifyContextResearchSourceScope([...title, "", ...snippet], focal, excluded),
     });
   }
   const all = [...stories.values()];

@@ -48,14 +48,26 @@ export interface MergedContextResearchClaim {
   provenance: ContextResearchClaimProvenance[];
 }
 
+/** Case- and punctuation-folded text; claims with no letters or digits keep their exact text as the key. */
 function claimKey(text: string) {
-  return text
+  const folded = text
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
+  return folded ? `text:${folded}` : `raw:${text.trim()}`;
 }
 
-/** Merge prior and new research claims verbatim. Prior claims are never rewritten or dropped; copies corroborate once. */
+function sourceKey(provenance: ContextResearchClaimProvenance) {
+  if (provenance.storyKey) return provenance.storyKey;
+  const canonical = canonicalizeContextSourceUrl(provenance.sourceUrl);
+  return `url:${canonical.ok ? canonical.url : provenance.sourceUrl}`;
+}
+
+/**
+ * Merge prior and new research claims. Claim text is never rewritten; claims whose case- and punctuation-folded
+ * text matches merge into one entry that shows the first wording and keeps every provenance. Copies of one
+ * story (or one canonical URL) corroborate once. Contradictions are retained side by side, not resolved.
+ */
 export function mergeContextArtistResearchClaims(input: z.input<typeof inputSchema>): {
   claims: MergedContextResearchClaim[];
   counts: {
@@ -111,7 +123,7 @@ export function mergeContextArtistResearchClaims(input: z.input<typeof inputSche
   if (args.next) ingest("new", args.next);
   const claims = [...merged.values()].map(claim => ({
     ...claim,
-    corroboration: new Set(claim.provenance.map(p => p.storyKey ?? `url:${p.sourceUrl}`)).size,
+    corroboration: new Set(claim.provenance.map(sourceKey)).size,
   }));
   const prior = args.prior?.claims.length ?? 0;
   const next = args.next?.claims.length ?? 0;

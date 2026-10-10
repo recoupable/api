@@ -19,10 +19,12 @@ export const contextResearchSourceScopeSchema = z.enum([
 export type ContextResearchSourceScope = z.infer<typeof contextResearchSourceScopeSchema>;
 
 /** One underlying story after canonicalization; `copies` lists every URL carrying identical text. */
+const httpsUrl = z.url({ protocol: /^https$/ });
+
 export const normalizedContextResearchSourceSchema = z.object({
   storyKey: z.string().regex(/^[0-9a-f]{64}$/),
-  url: z.url(),
-  copies: z.array(z.url()).min(1).max(100),
+  url: httpsUrl,
+  copies: z.array(httpsUrl).min(1).max(100),
   title: z.string(),
   snippet: z.string(),
   publishedAt: z.string().nullable(),
@@ -33,11 +35,14 @@ export const normalizedContextResearchSourceSchema = z.object({
 });
 export type NormalizedContextResearchSource = z.infer<typeof normalizedContextResearchSourceSchema>;
 
-/** A synthesized claim as the research recipe emits it; `kind` stays optional until the recipe supplies it. */
+/**
+ * A synthesized claim exactly as the artist-research-v1 recipe accepts it (no extra length limits, so any
+ * persisted prior parses); `kind` stays optional until the recipe supplies it.
+ */
 export const contextResearchClaimSchema = z.object({
-  claim: z.string().min(1).max(2000),
-  sourceUrl: z.string().min(1).max(2048),
-  date: z.string().max(100).nullable(),
+  claim: z.string(),
+  sourceUrl: z.string(),
+  date: z.string().nullable(),
   kind: contextResearchClaimKindSchema.optional(),
 });
 export type ContextResearchClaim = z.infer<typeof contextResearchClaimSchema>;

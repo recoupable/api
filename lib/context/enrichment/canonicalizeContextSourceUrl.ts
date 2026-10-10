@@ -34,7 +34,8 @@ export function canonicalizeContextSourceUrl(
     const name = key.toLowerCase();
     return !name.startsWith("utm_") && !TRACKING_PARAMETERS.has(name);
   });
-  parameters.sort((a, b) => (a[0] === b[0] ? compare(a[1], b[1]) : compare(a[0], b[0])));
+  // Stable sort by key only: repeated keys keep their original order, which a server may treat as meaningful.
+  parameters.sort((a, b) => compare(a[0], b[0]));
   parsed.search = "";
   for (const [key, value] of parameters) parsed.searchParams.append(key, value);
   return { ok: true, url: parsed.toString() };
