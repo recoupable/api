@@ -56,6 +56,23 @@ describe("cancel context request operation", () => {
     expect(authorize).not.toHaveBeenCalled();
     expect(cancel).not.toHaveBeenCalled();
   });
+  it("accepts the stored owner when the caller spelled the workspace UUID in uppercase", async () => {
+    const upper = "A19F0000-0000-4000-8000-0000000000AB";
+    authorize.mockResolvedValue({ ownerId: upper });
+    const receipt = {
+      outcome: "cancelled",
+      request: { id: requestId, owner_id: upper.toLowerCase(), status: "cancelled" },
+    };
+    cancel.mockResolvedValue(receipt);
+    await expect(
+      processContextOperation(
+        actor,
+        { action: "cancel", request_id: requestId, organization_id: upper },
+        deps(),
+      ),
+    ).resolves.toEqual(receipt);
+    expect(cancel).toHaveBeenCalledWith(upper, actor, requestId);
+  });
   it("rejects a receipt owned by another workspace", async () => {
     cancel.mockResolvedValue({
       outcome: "cancelled",

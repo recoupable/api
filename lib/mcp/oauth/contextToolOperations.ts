@@ -147,6 +147,8 @@ export const contextToolOperations = {
     description:
       "Stop a saved music context request that is still queued, failed or running. Completed or partial requests keep their saved evidence; nothing is refunded or withdrawn.",
     readOnly: false,
+    // There is no un-cancel; continuing requires a new request with a new idempotency key.
+    destructive: true,
   },
   brief: {
     name: "compile_music_context_brief",
@@ -154,4 +156,7 @@ export const contextToolOperations = {
       "Compile a creative direction or playlist pitch brief from saved music context without saving a snapshot.",
     readOnly: true,
   },
-} satisfies Record<Action, { name: string; description: string; readOnly: boolean }>;
+} satisfies Record<
+  Action,
+  { name: string; description: string; readOnly: boolean; destructive?: boolean }
+>;

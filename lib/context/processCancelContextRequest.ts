@@ -7,6 +7,8 @@ export async function processCancelContextRequest(
   requestId: string,
 ) {
   const receipt = await cancelContextRequest(ownerId, accountId, requestId);
-  if (receipt.request.owner_id !== ownerId) throw new Error("Context request not found");
+  // Postgres returns UUIDs in lowercase; a caller may have spelled the workspace in uppercase.
+  if (receipt.request.owner_id.toLowerCase() !== ownerId.toLowerCase())
+    throw new Error("Context request not found");
   return receipt;
 }

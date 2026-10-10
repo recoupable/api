@@ -10,7 +10,7 @@ beforeEach(() => vi.clearAllMocks());
 it("passes owner, actor and request to the service-only cancellation", async () => {
   const receipt = {
     outcome: "cancelled",
-    request: { id: request, owner_id: owner, status: "cancelled", error: "Cancelled" },
+    request: { id: request, owner_id: owner, status: "cancelled", error: null },
   };
   rpc.mockResolvedValue({ data: receipt, error: null });
   await expect(cancelContextRequest(owner, actor, request)).resolves.toEqual(receipt);
