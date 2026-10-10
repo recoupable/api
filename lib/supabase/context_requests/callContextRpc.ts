@@ -61,6 +61,7 @@ export async function callContextRpc(
     "fail_context_request",
     "read_context_documents",
     "resolve_context_spotify_release",
+    "withdraw_context_request_source",
   ];
   if (!allowed.includes(name)) throw new Error("Unknown context operation");
   const rpc = supabase.rpc.bind(supabase) as unknown as (

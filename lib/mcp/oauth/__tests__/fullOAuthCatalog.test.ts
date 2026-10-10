@@ -37,13 +37,21 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
       ].sort(),
     );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
-    expect(tools).toHaveLength(84);
+    expect(tools).toHaveLength(85);
     for (const operation of Object.values(contextToolOperations)) {
       const tool = tools.find(tool => tool.name === operation.name)!;
       expect(Object.keys(tool.inputSchema.properties ?? {}).length).toBeGreaterThan(0);
       expect(tool.inputSchema.properties).not.toHaveProperty("action");
       expect(tool.annotations?.readOnlyHint).toBe(operation.readOnly);
+      expect(tool.annotations?.destructiveHint).toBe(
+        "destructive" in operation ? operation.destructive : false,
+      );
     }
+    const withdrawal = tools.find(
+      tool => tool.name === contextToolOperations.withdraw_source.name,
+    )!;
+    expect(withdrawal.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+    expect(withdrawal.description).toContain("Cannot be undone");
     const artist = tools.find(tool => tool.name === "create_new_artist")!;
     expect(artist.inputSchema.properties).not.toHaveProperty("active_conversation_id");
     expect(JSON.stringify(artist)).not.toMatch(/system prompt|copy.*conversation/i);
