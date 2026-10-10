@@ -30,8 +30,14 @@ const shapes = {
   search: z.looseObject({ candidates: rows }),
 };
 
+/** The source record a credit or share was read from; claims are never pooled across records. */
+export type RegistryRecordRef =
+  | { provider: "musicbrainz"; recordKind: "recording"; recordingId: string }
+  | { provider: "mlc"; recordKind: "recording_row"; isrc: string | null; songCode: string }
+  | { provider: "mlc"; recordKind: "work"; songCode: string };
 export interface RegistryCredit {
-  name: string;
+  record: RegistryRecordRef;
+  name: string | null;
   role: "performing_artist_credit" | "writer" | "publisher" | "unknown";
   roleCode: string | null;
   ipi: string | null;
@@ -39,7 +45,8 @@ export interface RegistryCredit {
   source: "musicbrainz_artist_credit" | "mlc_recording_artist" | "mlc_writer" | "mlc_publisher";
 }
 export interface RegistryShare {
-  party: string;
+  record: Extract<RegistryRecordRef, { recordKind: "work" }>;
+  party: string | null;
   shareKind: "collection_share" | "unknown";
   percent: number | null;
   territory: string;
@@ -63,6 +70,8 @@ export interface RegistryEvidenceProjection {
   conflicts: { kind: "multiple_candidates" | "inconsistent_share_total"; detail: string }[];
   limitations: string[];
 }
+type Rows = Record<string, unknown>[];
+type WorkRef = Extract<RegistryRecordRef, { recordKind: "work" }>;
 
 const text = (value: unknown): string | null =>
   typeof value === "string" && value.trim() ? value.trim() : null;
@@ -70,34 +79,210 @@ const record = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
-const list = (value: unknown): Record<string, unknown>[] =>
+const list = (value: unknown): Rows =>
   Array.isArray(value)
     ? value.map(record).filter((item): item is Record<string, unknown> => !!item)
     : [];
+const workRef = (songCode: string): WorkRef => ({ provider: "mlc", recordKind: "work", songCode });
 const credit = (
+  ref: RegistryRecordRef,
   source: RegistryCredit["source"],
   role: RegistryCredit["role"],
   name: string | null,
-  order: number,
+  order: number | null,
   extra: { roleCode?: unknown; ipi?: unknown } = {},
 ): RegistryCredit => ({
-  name: name ?? "unknown",
+  record: ref,
+  name,
   role,
   roleCode: text(extra.roleCode),
   ipi: text(extra.ipi),
   order,
   source,
 });
-const writerCredits = (writers: Record<string, unknown>[]) =>
-  writers.map((writer, order) =>
-    credit(
-      "mlc_writer",
-      "writer",
-      text([text(writer.writerFirstName), text(writer.writerLastName)].filter(Boolean).join(" ")),
-      order,
-      { roleCode: writer.writerRoleCode, ipi: writer.writerIPI },
-    ),
+
+/** First BOUND items; anything beyond is named in a limitation and left in the raw trace. */
+function bound<T>(projection: RegistryEvidenceProjection, items: T[], label: string): T[] {
+  if (items.length > BOUND)
+    projection.limitations.push(
+      `Only the first ${BOUND} of ${items.length} ${label} are projected; see the raw trace.`,
+    );
+  return items.slice(0, BOUND);
+}
+
+/** Counts use the complete source list, never the bounded slice. */
+function flagCandidates(projection: RegistryEvidenceProjection, count: number, detail: string) {
+  if (count <= 1) return;
+  projection.status = "needs_review";
+  projection.conflicts.push({ kind: "multiple_candidates", detail });
+}
+
+function noteSkipped(projection: RegistryEvidenceProjection, skipped: number, detail: string) {
+  if (skipped) projection.limitations.push(`${skipped} ${detail}; see the raw trace.`);
+}
+
+function writerCredits(projection: RegistryEvidenceProjection, ref: WorkRef, writers: unknown) {
+  return bound(projection, list(writers), `writers for MLC song code ${ref.songCode}`).map(
+    (writer, order) =>
+      credit(
+        ref,
+        "mlc_writer",
+        "writer",
+        text([text(writer.writerFirstName), text(writer.writerLastName)].filter(Boolean).join(" ")),
+        order,
+        { roleCode: writer.writerRoleCode, ipi: writer.writerIPI },
+      ),
   );
+}
+
+function projectMusicBrainzIsrc(projection: RegistryEvidenceProjection, data: Rows[number]) {
+  const all = list(data.recordings);
+  flagCandidates(projection, all.length, `${all.length} MusicBrainz recordings share this ISRC.`);
+  let skipped = 0;
+  for (const recording of bound(projection, all, "recordings")) {
+    const id = text(recording.id);
+    if (!id) {
+      skipped += 1;
+      continue;
+    }
+    const ref: RegistryRecordRef = {
+      provider: "musicbrainz",
+      recordKind: "recording",
+      recordingId: id,
+    };
+    projection.recordingIds.push({ provider: "musicbrainz", id, title: text(recording.title) });
+    bound(
+      projection,
+      list(recording["artist-credit"]),
+      `artist credits for recording ${id}`,
+    ).forEach((entry, order) =>
+      projection.credits.push(
+        credit(
+          ref,
+          "musicbrainz_artist_credit",
+          "performing_artist_credit",
+          text(entry.name) ?? text(record(entry.artist)?.name),
+          order,
+        ),
+      ),
+    );
+  }
+  noteSkipped(projection, skipped, "MusicBrainz recordings without an MBID are not projected");
+}
+
+function projectMlcRecording(projection: RegistryEvidenceProjection, data: Rows[number]) {
+  const all = list(data.candidates);
+  flagCandidates(projection, all.length, `${all.length} MLC recording rows match this ISRC.`);
+  let skipped = 0;
+  for (const candidate of bound(projection, all, "candidates")) {
+    const songCode = text(candidate.mlcsongCode);
+    if (!songCode) {
+      skipped += 1;
+      continue;
+    }
+    const isrc = text(candidate.isrc)?.replace(/-/g, "").toUpperCase() ?? null;
+    // A recording row's title is the recording title, not the work title.
+    projection.workIds.push({ provider: "mlc", songCode, iswc: null, title: null });
+    const artist = text(candidate.artist);
+    // The row carries one artist string, not an ordered credit list, so order is not supplied.
+    if (artist)
+      projection.credits.push(
+        credit(
+          { provider: "mlc", recordKind: "recording_row", isrc, songCode },
+          "mlc_recording_artist",
+          "performing_artist_credit",
+          artist,
+          null,
+        ),
+      );
+  }
+  noteSkipped(projection, skipped, "MLC recording rows without a song code are not projected");
+  projection.limitations.push(
+    "A recording match links candidate work codes only; no writer, publisher, share or work title is inferred.",
+  );
+}
+
+function projectMlcSearch(projection: RegistryEvidenceProjection, data: Rows[number]) {
+  const all = list(data.candidates);
+  flagCandidates(projection, all.length, `${all.length} MLC works match this title search.`);
+  let skipped = 0;
+  for (const candidate of bound(projection, all, "candidates")) {
+    const songCode = text(candidate.mlcSongCode);
+    if (!songCode) {
+      skipped += 1;
+      continue;
+    }
+    const iswc = text(candidate.iswc);
+    projection.workIds.push({ provider: "mlc", songCode, iswc, title: text(candidate.workTitle) });
+    projection.credits.push(...writerCredits(projection, workRef(songCode), candidate.writers));
+  }
+  noteSkipped(projection, skipped, "MLC search candidates without a song code are not projected");
+}
+
+const percentOf = (publisher: Rows[number]) => {
+  const share = publisher.collectionShare;
+  return typeof share === "number" && Number.isFinite(share) ? share : null;
+};
+
+function projectPublishers(projection: RegistryEvidenceProjection, ref: WorkRef, publishers: Rows) {
+  bound(projection, publishers, `publishers for MLC song code ${ref.songCode}`).forEach(
+    (publisher, order) => {
+      const party = text(publisher.publisherName);
+      const percent = percentOf(publisher);
+      projection.credits.push(
+        credit(ref, "mlc_publisher", "publisher", party, order, {
+          roleCode: publisher.publisherRoleCode,
+          ipi: publisher.publisherIpiNumber,
+        }),
+      );
+      projection.shares.push({
+        record: ref,
+        party,
+        shareKind: percent === null ? "unknown" : "collection_share",
+        percent,
+        territory: "unknown",
+        effectiveFrom: null,
+        effectiveTo: null,
+        dateState: "unknown",
+      });
+    },
+  );
+}
+
+function projectMlcWork(projection: RegistryEvidenceProjection, data: Rows[number]) {
+  const work = record(data.work);
+  const songCode = text(work?.mlcSongCode);
+  if (!work || !songCode) return;
+  const ref = workRef(songCode);
+  projection.workIds.push({
+    provider: "mlc",
+    songCode,
+    iswc: text(work.iswc),
+    title: text(work.primaryTitle),
+  });
+  projection.credits.push(...writerCredits(projection, ref, work.writers));
+  const publishers = list(work.publishers);
+  projectPublishers(projection, ref, publishers);
+  // The total covers every publisher row the source returned, including rows past the bound.
+  const total =
+    Math.round(publishers.reduce((sum, publisher) => sum + (percentOf(publisher) ?? 0), 0) * 1e4) /
+    1e4;
+  if (total > 100)
+    projection.conflicts.push({
+      kind: "inconsistent_share_total",
+      detail: `Publisher collection shares for MLC song code ${songCode} total ${total}%, above 100%.`,
+    });
+  projection.limitations.push(
+    "Collection shares are not ownership shares; territory and effective dates are not supplied by this lookup and remain unknown.",
+  );
+}
+
+const projectors = {
+  isrc: projectMusicBrainzIsrc,
+  recording: projectMlcRecording,
+  search: projectMlcSearch,
+  work: projectMlcWork,
+};
 
 /** Project saved MusicBrainz/MLC lookup results into bounded registry claims; unknown stays unknown. */
 export function projectRegistryEvidence(input: {
@@ -134,119 +319,8 @@ export function projectRegistryEvidence(input: {
   const status = statuses.find(candidate => candidate === data.status);
   projection.status = status ?? "unknown";
   if (!status) projection.limitations.push("Source lookup status was not recognised.");
-  const bounded = (items: Record<string, unknown>[], label: string) => {
-    if (items.length > BOUND)
-      projection.limitations.push(
-        `Only the first ${BOUND} of ${items.length} ${label} are projected; see the raw trace.`,
-      );
-    return items.slice(0, BOUND);
-  };
-  const ambiguous = (count: number, detail: string) => {
-    if (count <= 1) return;
-    projection.status = "needs_review";
-    projection.conflicts.push({ kind: "multiple_candidates", detail });
-  };
-  if (operation === "isrc") {
-    const recordings = bounded(list(data.recordings), "recordings");
-    ambiguous(recordings.length, `${recordings.length} MusicBrainz recordings share this ISRC.`);
-    for (const recording of recordings) {
-      const id = text(recording.id);
-      if (!id) continue;
-      projection.recordingIds.push({ provider: "musicbrainz", id, title: text(recording.title) });
-      bounded(list(recording["artist-credit"]), "artist credits").forEach((entry, order) =>
-        projection.credits.push(
-          credit(
-            "musicbrainz_artist_credit",
-            "performing_artist_credit",
-            text(entry.name) ?? text(record(entry.artist)?.name),
-            order,
-          ),
-        ),
-      );
-    }
-    return projection;
-  }
-  if (operation === "recording") {
-    const candidates = bounded(list(data.candidates), "candidates");
-    ambiguous(candidates.length, `${candidates.length} MLC recording rows match this ISRC.`);
-    candidates.forEach((candidate, order) => {
-      const songCode = text(candidate.mlcsongCode);
-      if (songCode)
-        projection.workIds.push({
-          provider: "mlc",
-          songCode,
-          iswc: null,
-          title: text(candidate.title),
-        });
-      const artist = text(candidate.artist);
-      if (artist)
-        projection.credits.push(
-          credit("mlc_recording_artist", "performing_artist_credit", artist, order),
-        );
-    });
-    projection.limitations.push(
-      "A recording match links candidate work codes only; no writer, publisher or share is inferred.",
-    );
-    return projection;
-  }
-  if (operation === "search") {
-    const candidates = bounded(list(data.candidates), "candidates");
-    ambiguous(candidates.length, `${candidates.length} MLC works match this title search.`);
-    for (const candidate of candidates) {
-      const songCode = text(candidate.mlcSongCode);
-      if (!songCode) continue;
-      projection.workIds.push({
-        provider: "mlc",
-        songCode,
-        iswc: text(candidate.iswc),
-        title: text(candidate.workTitle),
-      });
-      projection.credits.push(...writerCredits(bounded(list(candidate.writers), "writers")));
-    }
-    return projection;
-  }
-  const work = record(data.work);
-  const songCode = text(work?.mlcSongCode);
-  if (work && songCode) {
-    projection.workIds.push({
-      provider: "mlc",
-      songCode,
-      iswc: text(work.iswc),
-      title: text(work.primaryTitle),
-    });
-    projection.credits.push(...writerCredits(bounded(list(work.writers), "writers")));
-    const publishers = bounded(list(work.publishers), "publishers");
-    publishers.forEach((publisher, order) => {
-      const party = text(publisher.publisherName);
-      const share = publisher.collectionShare;
-      const percent = typeof share === "number" && Number.isFinite(share) ? share : null;
-      projection.credits.push(
-        credit("mlc_publisher", "publisher", party, order, {
-          roleCode: publisher.publisherRoleCode,
-          ipi: publisher.publisherIpiNumber,
-        }),
-      );
-      projection.shares.push({
-        party: party ?? "unknown",
-        shareKind: percent === null ? "unknown" : "collection_share",
-        percent,
-        territory: "unknown",
-        effectiveFrom: null,
-        effectiveTo: null,
-        dateState: "unknown",
-      });
-    });
-    const total =
-      Math.round(projection.shares.reduce((sum, share) => sum + (share.percent ?? 0), 0) * 10000) /
-      10000;
-    if (total > 100)
-      projection.conflicts.push({
-        kind: "inconsistent_share_total",
-        detail: `Publisher collection shares total ${total}%, above 100%.`,
-      });
-    projection.limitations.push(
-      "Collection shares are not ownership shares; territory and effective dates are not supplied by this lookup and remain unknown.",
-    );
-  }
+  projectors[operation](projection, data);
+  // Per-record lists are bounded above; this bounds the combined list across all candidates.
+  projection.credits = bound(projection, projection.credits, "credits in total");
   return projection;
 }

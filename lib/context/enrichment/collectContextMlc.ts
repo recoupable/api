@@ -63,7 +63,7 @@ export async function collectContextMlc(
     owner,
     requestId,
     {
-      key: `mlc-${args.operation}-v1`,
+      key: `mlc-${args.operation}-v2`,
       topic,
       subjectId: args.subjectId,
       provider: "mlc",

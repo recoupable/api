@@ -122,8 +122,12 @@ it("saves a work projection with unknown territory and dates and no ownership cl
   );
   await collectContextMlc("a", "o", "r", { ...base, operation: "work", workCode: "123" }, d);
   const calls = d.rpc.mock.calls as unknown as Array<
-    [string, { p_result: { content: Record<string, unknown> } }]
+    [string, { p_module: { key: string }; p_result: { content: Record<string, unknown> } }]
   >;
+  // The saved content shape changed, so results saved before the projection are not reused.
+  expect(calls.find(([name]) => name === "claim_context_enrichment")![1].p_module.key).toBe(
+    "mlc-work-v2",
+  );
   const content = calls.find(([name]) => name === "complete_context_enrichment")![1].p_result
     .content;
   expect(content.ownershipVerified).toBe(false);
@@ -134,6 +138,7 @@ it("saves a work projection with unknown territory and dates and no ownership cl
     workIds: [{ provider: "mlc", songCode: "123", iswc: null, title: "Fixture Work" }],
     shares: [
       {
+        record: { provider: "mlc", recordKind: "work", songCode: "123" },
         party: "Fixture Music",
         shareKind: "collection_share",
         percent: 50,

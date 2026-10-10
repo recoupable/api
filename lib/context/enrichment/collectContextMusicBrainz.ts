@@ -37,7 +37,7 @@ export async function collectContextMusicBrainz(
     owner,
     requestId,
     {
-      key: "musicbrainz-isrc-v1",
+      key: "musicbrainz-isrc-v2",
       topic: "musicbrainz_recordings",
       subjectId: recordingSubjectId,
       provider: "musicbrainz",

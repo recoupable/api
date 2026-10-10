@@ -43,8 +43,14 @@ it("projects one MusicBrainz candidate with ordered artist credits and no rights
     shares: [],
     conflicts: [],
   });
+  const mbRecording = {
+    provider: "musicbrainz",
+    recordKind: "recording",
+    recordingId: "00000000-0000-4000-8000-00000000000a",
+  };
   expect(projection.credits).toEqual([
     {
+      record: mbRecording,
       name: "Fixture Artist",
       role: "performing_artist_credit",
       roleCode: null,
@@ -53,6 +59,7 @@ it("projects one MusicBrainz candidate with ordered artist credits and no rights
       source: "musicbrainz_artist_credit",
     },
     {
+      record: mbRecording,
       name: "Second Fixture",
       role: "performing_artist_credit",
       roleCode: null,
@@ -113,8 +120,10 @@ it("projects MLC work writers and collection shares while leaving territory and 
     workIds: [{ provider: "mlc", songCode: "123", iswc: "T-FIXTURE-1", title: "Fixture Work" }],
     conflicts: [],
   });
+  const work = { provider: "mlc", recordKind: "work", songCode: "123" };
   expect(projection.credits).toEqual([
     {
+      record: work,
       name: "Ada Fixture",
       role: "writer",
       roleCode: null,
@@ -122,8 +131,17 @@ it("projects MLC work writers and collection shares while leaving territory and 
       order: 0,
       source: "mlc_writer",
     },
-    { name: "Nameless", role: "writer", roleCode: null, ipi: null, order: 1, source: "mlc_writer" },
     {
+      record: work,
+      name: "Nameless",
+      role: "writer",
+      roleCode: null,
+      ipi: null,
+      order: 1,
+      source: "mlc_writer",
+    },
+    {
+      record: work,
       name: "Fixture Music",
       role: "publisher",
       roleCode: null,
@@ -132,7 +150,8 @@ it("projects MLC work writers and collection shares while leaving territory and 
       source: "mlc_publisher",
     },
     {
-      name: "unknown",
+      record: work,
+      name: null,
       role: "publisher",
       roleCode: null,
       ipi: null,
@@ -142,6 +161,7 @@ it("projects MLC work writers and collection shares while leaving territory and 
   ]);
   expect(projection.shares).toEqual([
     {
+      record: work,
       party: "Fixture Music",
       shareKind: "collection_share",
       percent: 50,
@@ -151,7 +171,8 @@ it("projects MLC work writers and collection shares while leaving territory and 
       dateState: "unknown",
     },
     {
-      party: "unknown",
+      record: work,
+      party: null,
       shareKind: "collection_share",
       percent: 25,
       territory: "unknown",
@@ -184,41 +205,51 @@ it("reports an inconsistent collection-share total without correcting the source
   expect(projection.conflicts).toEqual([
     {
       kind: "inconsistent_share_total",
-      detail: "Publisher collection shares total 125%, above 100%.",
+      detail: "Publisher collection shares for MLC song code 123 total 125%, above 100%.",
     },
   ]);
 });
 
-it("keeps MLC recording candidates as work code candidates with performing artist credits", () => {
+it("keeps MLC recording rows as work code candidates bound to their row, never as work titles", () => {
   const projection = projectRegistryEvidence({
     provider: "mlc",
     operation: "recording",
     payload: {
       status: "needs_review",
       candidates: [
-        { isrc: "USAT22103065", mlcsongCode: "123", title: "Fixture", artist: "Fixture Artist" },
-        { isrc: "USAT22103065", mlcsongCode: "456" },
+        { isrc: "USAT22103065", mlcsongCode: "456", title: "Recording Title" },
+        { isrc: "US-AT2-21-03065", mlcsongCode: "123", title: "Fixture", artist: "Fixture Artist" },
+        { isrc: "USAT22103065", artist: "Unlinked Artist" },
       ],
       rejectedCount: 1,
     },
   });
   expect(projection.status).toBe("needs_review");
   expect(projection.workIds).toEqual([
-    { provider: "mlc", songCode: "123", iswc: null, title: "Fixture" },
     { provider: "mlc", songCode: "456", iswc: null, title: null },
+    { provider: "mlc", songCode: "123", iswc: null, title: null },
   ]);
   expect(projection.credits).toEqual([
     {
+      record: {
+        provider: "mlc",
+        recordKind: "recording_row",
+        isrc: "USAT22103065",
+        songCode: "123",
+      },
       name: "Fixture Artist",
       role: "performing_artist_credit",
       roleCode: null,
       ipi: null,
-      order: 0,
+      order: null,
       source: "mlc_recording_artist",
     },
   ]);
+  expect(JSON.stringify(projection)).not.toContain("Recording Title");
+  expect(JSON.stringify(projection)).not.toContain("Unlinked Artist");
+  expect(projection.limitations.join(" ")).toMatch(/1 MLC recording rows without a song code/);
   expect(projection.conflicts).toEqual([
-    { kind: "multiple_candidates", detail: "2 MLC recording rows match this ISRC." },
+    { kind: "multiple_candidates", detail: "3 MLC recording rows match this ISRC." },
   ]);
   expect(projection.shares).toEqual([]);
 });
@@ -245,6 +276,7 @@ it("projects MLC search candidates and their writers without inventing an ISWC",
   ]);
   expect(projection.credits).toEqual([
     {
+      record: { provider: "mlc", recordKind: "work", songCode: "789" },
       name: "Smith",
       role: "writer",
       roleCode: null,
@@ -290,10 +322,45 @@ it("keeps not-found lookups empty and unknown payloads explicit instead of throw
   }
 });
 
-it("bounds the projection and rejects provider/operation pairs the adapters never produce", () => {
+it("binds every credit to its own candidate when several works or recordings match", () => {
+  const search = projectRegistryEvidence({
+    provider: "mlc",
+    operation: "search",
+    payload: {
+      status: "needs_review",
+      candidates: [
+        { mlcSongCode: "A1", workTitle: "Same Title", writers: [{ writerLastName: "Xavier" }] },
+        { mlcSongCode: "B2", workTitle: "Same Title", writers: [{ writerLastName: "Yolanda" }] },
+      ],
+    },
+  });
+  expect(search.status).toBe("needs_review");
+  expect(search.credits.map(entry => [entry.record, entry.name, entry.order])).toEqual([
+    [{ provider: "mlc", recordKind: "work", songCode: "A1" }, "Xavier", 0],
+    [{ provider: "mlc", recordKind: "work", songCode: "B2" }, "Yolanda", 0],
+  ]);
+  const isrc = projectRegistryEvidence({
+    provider: "musicbrainz",
+    operation: "isrc",
+    payload: {
+      status: "needs_review",
+      recordings: [
+        { id: "r1", "artist-credit": [{ name: "First" }] },
+        { id: "r2", "artist-credit": [{ name: "Second" }] },
+      ],
+    },
+  });
+  expect(isrc.credits.map(entry => [entry.record, entry.name])).toEqual([
+    [{ provider: "musicbrainz", recordKind: "recording", recordingId: "r1" }, "First"],
+    [{ provider: "musicbrainz", recordKind: "recording", recordingId: "r2" }, "Second"],
+  ]);
+});
+
+it("bounds every projected list while counting conflicts over the complete source response", () => {
   const recordings = Array.from({ length: 101 }, (_, index) => ({
     id: `recording-${index}`,
     title: `Title ${index}`,
+    "artist-credit": [{ name: `Artist ${index}` }, { name: `Guest ${index}` }],
   }));
   const projection = projectRegistryEvidence({
     provider: "musicbrainz",
@@ -301,7 +368,25 @@ it("bounds the projection and rejects provider/operation pairs the adapters neve
     payload: { status: "needs_review", recordings },
   });
   expect(projection.recordingIds).toHaveLength(100);
+  expect(projection.credits).toHaveLength(100);
   expect(projection.limitations.join(" ")).toMatch(/101 recordings/);
+  expect(projection.limitations.join(" ")).toMatch(/200 credits in total/);
+  expect(projection.conflicts).toEqual([
+    { kind: "multiple_candidates", detail: "101 MusicBrainz recordings share this ISRC." },
+  ]);
+  const publishers = Array.from({ length: 101 }, () => ({ collectionShare: 1 }));
+  const work = projectRegistryEvidence({
+    provider: "mlc",
+    operation: "work",
+    payload: { status: "source_found", work: { mlcSongCode: "123", publishers } },
+  });
+  expect(work.shares).toHaveLength(100);
+  expect(work.conflicts).toEqual([
+    {
+      kind: "inconsistent_share_total",
+      detail: "Publisher collection shares for MLC song code 123 total 101%, above 100%.",
+    },
+  ]);
   expect(() =>
     projectRegistryEvidence({ provider: "musicbrainz", operation: "work", payload: {} }),
   ).toThrow();
