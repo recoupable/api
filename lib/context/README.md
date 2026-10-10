@@ -277,3 +277,33 @@ withdrawal, replay and history behavior applies.
 
 This requires the database company-assessment purpose migration before API release.
 Local fixtures cover compile/save/reopen; they do not prove a hosted Records trial.
+
+### DSP listings (Apple Music, fixture-only)
+
+`lib/context/enrichment/collectContextAppleMusicListings.ts` persists Apple Music listings for
+one recording ISRC across 1–10 storefronts (default `us`) as one `dsp_listings` observation
+through the existing claim/complete/fail enrichment chain. It reuses
+`lib/apple/getAppleSongsByIsrc` (no new provider client or developer-token change). Each
+storefront is a separate declared and observed source; the storefront set (sorted) and
+collection version are part of the reuse fingerprint. All storefronts share one saved result
+because a Context document holds one current result per subject and topic.
+
+`mapAppleMusicListings` turns one storefront's result into a `storefrontListingSchema`
+observation: song listings and their separate album listings, each with provider, resource
+type, storefront, observed time, availability and match evidence (ISRC echo, whole-word
+title/artist comparison, duration delta, version tokens such as `remix` or `live`).
+`compareAppleMusicStorefronts` combines storefronts into `recordingListingSchema` and adds
+`regional_variant` only when store song or album ids differ between listed storefronts; with
+fewer than two listed storefronts `varies` stays null. Several store songs for one ISRC in one
+storefront are `multiple_store_songs` (plus `multiple_album_contexts` when the albums differ),
+never a regional variant. An album id is never written into a song or recording identifier. A
+missing ISRC is `not_listed` for that storefront only; a hit Apple echoes but does not resolve
+stays `unknown`; a song whose own ISRC differs is kept as `ambiguous`, never dropped or
+promoted. Any failed storefront lookup saves nothing. Listings are observations, never
+canonical `context_resources`, identities, release IDs or rights.
+
+State: implemented and fixture-tested on the server only. It requires database migration
+`20261010214300_context_dsp_listings.sql` (adds the `dsp_listings` observation topic) and is not
+wired into `planContextModules`, the dispatcher, HTTP or MCP, and no brief recipe reads it.
+`youtube_music`, `music_video`, `art_track` and `uploader_channel` exist in the listing enums so
+#2131 can extend without a schema break, but nothing collects them here.
