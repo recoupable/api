@@ -13,6 +13,7 @@ export function createExperienceHover(container: HTMLElement, openFeature: (id: 
   const cancelTimer = () => clearTimeout(timer);
   const hide = () => {
     cancelTimer();
+    panel.getAnimations().forEach(animation => animation.cancel());
     panel.querySelector("video")?.pause();
     panel.hidden = true;
     current = null;
@@ -33,13 +34,35 @@ export function createExperienceHover(container: HTMLElement, openFeature: (id: 
     hide();
     current = card;
     panel.setAttribute("aria-label", `${feature.title} preview`);
-    panel.innerHTML = `<div class="hover-thumbnail">${feature.video ? `<video muted loop playsinline src="${escapeHtml(feature.video)}" aria-hidden="true"></video>` : ""}<div class="hover-image-shade"></div><h3>${escapeHtml(feature.title)}</h3></div><div class="hover-information"><div class="hover-actions"><button class="hover-start">Start experience <span aria-hidden="true">↗</span></button><span class="hover-category">${escapeHtml(feature.category)}</span></div><p>${escapeHtml(feature.description)}</p><div class="hover-outputs">${feature.outputs.map(output => `<span>${escapeHtml(output)}</span>`).join("")}</div></div>`;
+    panel.innerHTML = `<div class="hover-thumbnail">${feature.video ? `<video muted loop playsinline src="${escapeHtml(feature.video)}" aria-hidden="true"></video>` : ""}<div class="hover-image-shade"></div><span class="hover-category">${escapeHtml(feature.category)}</span><h3>${escapeHtml(feature.title)}</h3></div><div class="hover-information"><p>${escapeHtml(feature.description)}</p><div class="hover-outputs">${feature.outputs.map(output => `<span>${escapeHtml(output)}</span>`).join("")}</div><div class="hover-actions"><button class="hover-start">Start experience <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div></div>`;
     const rect = card.getBoundingClientRect();
     const width = Math.min(rect.width * 1.35, 500, window.innerWidth - 32);
     panel.style.width = `${width}px`;
     panel.style.left = `${Math.max(16, Math.min(rect.left - (width - rect.width) / 2, window.innerWidth - width - 16))}px`;
     panel.hidden = false;
     panel.style.top = `${Math.max(16, Math.min(rect.top - 40, window.innerHeight - panel.offsetHeight - 16))}px`;
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const expanded = panel.getBoundingClientRect();
+      const scale = rect.width / expanded.width;
+      // Grow from the original thumbnail, revealing the lower panel as it opens.
+      panel.animate(
+        [
+          {
+            transform: `translate(${rect.left - expanded.left}px, ${rect.top - expanded.top}px) scale(${scale})`,
+            clipPath: `inset(0 0 ${Math.max(0, expanded.height - rect.height / scale)}px 0 round 16px)`,
+          },
+          { transform: "none", clipPath: "inset(0 0 0 0 round 16px)" },
+        ],
+        { duration: 300, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+      );
+      panel.querySelector<HTMLElement>(".hover-information")!.animate(
+        [
+          { opacity: 0, transform: "translateY(10px)" },
+          { opacity: 1, transform: "none" },
+        ],
+        { duration: 240, delay: 70, fill: "backwards", easing: "ease-out" },
+      );
+    }
     const source = card.querySelector("video");
     const video = panel.querySelector("video");
     if (video) {

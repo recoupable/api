@@ -401,6 +401,7 @@
 .experience-hover {
   position: fixed;
   z-index: 50;
+  transform-origin: top left;
   overflow: hidden;
   border-radius: 16px;
   background: var(--surface);
@@ -446,7 +447,8 @@
 .hover-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
+  margin-top: 22px;
   gap: 12px;
 }
 .hover-start {
@@ -458,15 +460,29 @@
   font-size: 14px;
   font-weight: 600;
 }
-.hover-start span {
-  margin-left: 12px;
+.hover-start {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.hover-start svg {
+  width: 20px;
+  height: 20px;
 }
 .hover-category {
-  color: var(--muted);
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  backdrop-filter: blur(12px);
   font-size: 13px;
+  font-weight: 600;
 }
 .hover-information p {
-  margin: 18px 0 14px;
+  margin: 0 0 14px;
   font-size: 16px;
   line-height: 1.5;
 }
