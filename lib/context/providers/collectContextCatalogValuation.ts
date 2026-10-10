@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { computeValuationBand } from "@/lib/catalog/computeValuationBand";
+import { describeCatalogValuationMethodology } from "./describeCatalogValuationMethodology";
 type Dependencies = {
   authorize: (accountId: string, catalogId: string) => Promise<void>;
   aggregate: (
@@ -86,6 +87,12 @@ export async function collectContextCatalogValuation(
     catalogAgeYears: modeled?.catalogAgeYears ?? null,
     ageFlooredToOneYear: modeled?.ageFlooredToOneYear ?? null,
     inputs: { totalStreams: aggregate.totalStreams, earliestReleaseDate },
+    // Labels the number as a modeled estimate; observed revenue is a separate, uncollected state.
+    estimate: describeCatalogValuationMethodology({
+      catalogAgeYears: modeled?.catalogAgeYears ?? null,
+      ageFlooredToOneYear: modeled?.ageFlooredToOneYear ?? null,
+      ageSource: modeled ? ageSource : null,
+    }),
     trace: {
       startedAt,
       elapsedMs: Date.now() - start,

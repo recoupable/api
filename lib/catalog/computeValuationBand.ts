@@ -12,6 +12,22 @@ const DEFAULT_AGE_YEARS = 5;
 const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
 
 /**
+ * Read-only description of the constants above, for callers that must label
+ * an estimate with its assumptions (Context Engine evidence). It is derived
+ * from the same values the band uses, so it cannot drift from the model; it
+ * is not a second place to tune them.
+ */
+export const VALUATION_MODEL_ASSUMPTIONS = Object.freeze({
+  spotifyPerStreamUsd: SPOTIFY_PER_STREAM_USD,
+  grossUpOverSpotify: Object.freeze({ ...GROSS_UP }),
+  distributionFee: DISTRIBUTION_FEE,
+  royaltyShare: ROYALTY_SHARE,
+  masterCatalogMultiple: Object.freeze({ ...MULTIPLE }),
+  defaultCatalogAgeYears: DEFAULT_AGE_YEARS,
+  minimumCatalogAgeYears: 1,
+});
+
+/**
  * Derive a catalog valuation band from lifetime Spotify play counts — the same
  * model as the recoupable.dev valuation card: annual run-rate via the
  * lifetime-average proxy (all-time streams / catalog age), converted to net

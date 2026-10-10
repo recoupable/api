@@ -277,3 +277,13 @@ withdrawal, replay and history behavior applies.
 
 This requires the database company-assessment purpose migration before API release.
 Local fixtures cover compile/save/reopen; they do not prove a hosted Records trial.
+
+The assessment recipe also selects saved `catalog_valuation` evidence (appended after
+the existing topics). That document is a labeled, workspace-private **estimate** from
+the shared Recoup `computeValuationBand` model over existing song measurements; its
+`estimate` block carries currency, period basis, assumptions, methodology and source,
+and `observedRevenue` stays `not_collected`. It is not observed revenue, royalties or an
+appraisal, and it is not shareable context. Collecting `catalog_valuation` remains
+policy-blocked in `dispatchPlannedContextModule`; a missing topic is a review prompt.
+Luminate and Chartmetric licensed analytics are not connected to Context and never
+enter shared context.
