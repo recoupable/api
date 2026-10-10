@@ -4,6 +4,7 @@ import type {
   ReleaseIdentityObservations,
   ReleaseCaseEvidence,
 } from "./releaseCaseEvidenceTypes";
+import type { ReleaseFormatObservation } from "./releaseFormatTypes";
 /** Database projections, deliberately separate from canonical identity and rights. */
 export interface ReleaseCaseProjection {
   contract_version: "release-case-v1";
@@ -12,6 +13,7 @@ export interface ReleaseCaseProjection {
   subject_id: string;
   title: string | null;
   release_url: string | null;
+  release_format: ReleaseFormatObservation;
   readiness: "partial" | "blocked";
   tracks: ReleaseTrackObservation[];
   track_page: ReleaseTrackPage;
