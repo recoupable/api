@@ -37,7 +37,7 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
       ].sort(),
     );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
-    expect(tools).toHaveLength(83);
+    expect(tools).toHaveLength(84);
     for (const operation of Object.values(contextToolOperations)) {
       const tool = tools.find(tool => tool.name === operation.name)!;
       expect(Object.keys(tool.inputSchema.properties ?? {}).length).toBeGreaterThan(0);

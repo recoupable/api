@@ -569,6 +569,15 @@
     "authorizationWork": "Bind authenticated account and current workspace/artist access through the shared player domain. Preserve grant verification, paid publication, revision checks and private fan/history ownership. Publishing requires explicit account authorization; sign-in is not marketing consent."
   },
   {
+    "name": "get_workspace_player_fans",
+    "file": "lib/mcp/tools/players/registerGetWorkspacePlayerFansTool.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "requires OAuth execution audit before enablement",
+    "authorizationWork": "Bind the authenticated account to current organization membership before reading private workspace contacts and artist relationships. Never accept an account override or return provider credentials; Spotify sign-in is not marketing consent."
+  },
+  {
     "name": "get_release_player_fans",
     "file": "lib/mcp/tools/players/registerGetReleasePlayerFansTool.ts",
     "scopes": [
