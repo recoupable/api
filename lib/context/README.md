@@ -277,3 +277,38 @@ withdrawal, replay and history behavior applies.
 
 This requires the database company-assessment purpose migration before API release.
 Local fixtures cover compile/save/reopen; they do not prove a hosted Records trial.
+
+### Withdraw a source
+
+Use the same HTTP `POST /api/context` or MCP Context operation to withdraw one
+recorded source input of a saved request, for example a private note or an
+incorrect page that must stop informing briefs:
+
+```json
+{
+  "action": "withdraw_source",
+  "request_id": "<existing request UUID>",
+  "source_id": "<source UUID recorded as an input of that request>"
+}
+```
+
+Add `organization_id` for the existing authorized organization scope; membership
+is rechecked inside the transaction. The source must belong to the workspace and
+be recorded as an input of `request_id` through saved result lineage; arbitrary
+source IDs and sources only linked to other requests are rejected. The operation
+calls the existing `withdraw_context_source` primitive: every saved result that
+depends on any version of the source becomes `withdrawn`, documents whose current
+result depended on it lose that result (revision bumped), and `read_context_documents`,
+`accept_context_result` and `read_context_brief` withhold the evidence on the next
+read, so a slow older job cannot republish it and saved briefs that depend on it
+return `state: unavailable`. Unrelated documents, the request and all history are
+retained. The receipt (`context-source-withdrawal-v1`) reports `withdrawn_at`,
+`already_withdrawn` and `affected` counts of results, documents and the request IDs
+whose attempts produced those results, so targeted invalidation is visible to the
+caller. Replaying the same withdrawal returns the same receipt without touching
+timestamps or revisions.
+
+This does not delete original bytes or storage objects, correct or refresh
+evidence, recompute briefs, de-duplicate articles, or spend credits; those remain
+separate lifecycle work. It requires the database source-withdrawal migration
+before API release. Fixture-tested only; not hosted-verified.
