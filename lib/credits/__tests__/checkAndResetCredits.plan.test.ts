@@ -41,7 +41,11 @@ describe("checkAndResetCredits plan", () => {
 
     const result = await checkAndResetCredits("acc");
 
-    expect(refillCreditsToFloor).toHaveBeenCalledWith({ accountId: "acc", floor: STARTER_CREDITS });
+    expect(refillCreditsToFloor).toHaveBeenCalledWith({
+      accountId: "acc",
+      floor: STARTER_CREDITS,
+      expectedTimestamp: twoMonthsAgo.toISOString(),
+    });
     expect(result).toEqual({
       creditsUsage: {
         ...(row as object),

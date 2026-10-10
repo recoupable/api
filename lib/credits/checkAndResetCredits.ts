@@ -24,8 +24,13 @@ export interface CheckAndResetCreditsResult {
  * a top-up or an admin grant above the plan total survives every refill
  * without the read path needing to know where the balance came from. The
  * floor is applied by the database under the wallet row lock, never from the
- * balance read here, so a concurrent deduction, top-up or grant is neither
- * resurrected nor dropped.
+ * balance read here, so a concurrent atomic deduction, top-up or grant is not
+ * dropped. The refill also carries the timestamp read here and the database only
+ * applies it while that timestamp is still current: when two reads of the same
+ * stale row both judge a refill due, the second is `superseded` and a debit taken
+ * after the first refill is not resurrected. (The unaudited read-modify-write in
+ * `lib/credits/deductCredits.ts` can still overwrite any concurrent wallet change;
+ * that writer is a separate known gap.)
  *
  * Also returns `plan` so callers don't need to repeat the subscription lookup.
  */
@@ -72,7 +77,12 @@ export async function checkAndResetCredits(accountId: string): Promise<CheckAndR
   // One locked statement raises the balance to the plan total with GREATEST and
   // advances the timestamp on every due refill, including the no-op ones —
   // otherwise the account re-evaluates as refill-due on every subsequent read.
-  const refilled = await refillCreditsToFloor({ accountId, floor: planTotal });
+  // If the timestamp moved since this read, the receipt carries the current values.
+  const refilled = await refillCreditsToFloor({
+    accountId,
+    floor: planTotal,
+    expectedTimestamp: creditsUsage.timestamp,
+  });
 
   return {
     creditsUsage: {

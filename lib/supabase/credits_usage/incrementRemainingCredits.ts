@@ -11,9 +11,12 @@ interface IncrementRemainingCreditsParams {
 
 /**
  * Adds `delta` credits to the account's single wallet row in one locked database
- * statement (`increment_credits_atomic`), so a debit or refill landing between a
- * read and a write can no longer be lost. Leaves the refill timestamp alone and
- * writes no usage event. Used by the Stripe credit top-up handlers.
+ * statement (`increment_credits_atomic`), so this top-up never writes back a balance
+ * read earlier and a concurrent atomic debit, refill or charge receipt is not lost.
+ * The unaudited read-modify-write in `lib/credits/deductCredits.ts` can still
+ * overwrite this top-up if its read came first; that writer is a separate known gap.
+ * Leaves the refill timestamp alone and writes no usage event. Used by the Stripe
+ * credit top-up handlers.
  */
 export const incrementRemainingCredits = async ({
   accountId,

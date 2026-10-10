@@ -64,7 +64,7 @@ const baseRow = (
   ...overrides,
 });
 
-const refillReceipt = (state: "raised" | "unchanged", remainingCredits: number) => ({
+const refillReceipt = (state: "raised" | "unchanged" | "superseded", remainingCredits: number) => ({
   state,
   remainingCredits,
   timestamp: REFILL_STAMP,
@@ -146,6 +146,7 @@ describe("checkAndResetCredits", () => {
     expect(refillCreditsToFloor).toHaveBeenCalledWith({
       accountId: ACCOUNT,
       floor: DEFAULT_CREDITS,
+      expectedTimestamp: row.timestamp,
     });
     expect(result).toEqual({
       creditsUsage: { ...row, remaining_credits: DEFAULT_CREDITS, timestamp: REFILL_STAMP },
@@ -161,7 +162,11 @@ describe("checkAndResetCredits", () => {
 
     const result = await checkAndResetCredits(ACCOUNT);
 
-    expect(refillCreditsToFloor).toHaveBeenCalledWith({ accountId: ACCOUNT, floor: PRO_CREDITS });
+    expect(refillCreditsToFloor).toHaveBeenCalledWith({
+      accountId: ACCOUNT,
+      floor: PRO_CREDITS,
+      expectedTimestamp: row.timestamp,
+    });
     expect(result).toEqual({
       creditsUsage: { ...row, remaining_credits: PRO_CREDITS, timestamp: REFILL_STAMP },
       plan: "pro",
@@ -177,6 +182,11 @@ describe("checkAndResetCredits", () => {
     const result = await checkAndResetCredits(ACCOUNT);
 
     expect(refillCreditsToFloor).toHaveBeenCalledTimes(1);
+    expect(refillCreditsToFloor).toHaveBeenCalledWith({
+      accountId: ACCOUNT,
+      floor: PRO_CREDITS,
+      expectedTimestamp: row.timestamp,
+    });
     expect(result.plan).toBe("pro");
     expect(result.creditsUsage).toEqual({
       ...row,
@@ -211,6 +221,7 @@ describe("checkAndResetCredits", () => {
       expect(refillCreditsToFloor).toHaveBeenCalledWith({
         accountId: ACCOUNT,
         floor: DEFAULT_CREDITS,
+        expectedTimestamp: row.timestamp,
       });
       expect(supabase.from).not.toHaveBeenCalled();
     });
@@ -242,6 +253,7 @@ describe("checkAndResetCredits", () => {
       expect(refillCreditsToFloor).toHaveBeenCalledWith({
         accountId: ACCOUNT,
         floor: DEFAULT_CREDITS,
+        expectedTimestamp: row.timestamp,
       });
       expect(result.creditsUsage?.remaining_credits).toBe(PRO_CREDITS);
       expect(result.creditsUsage?.timestamp).toBe(REFILL_STAMP);
@@ -265,6 +277,7 @@ describe("checkAndResetCredits", () => {
       expect(refillCreditsToFloor).toHaveBeenCalledWith({
         accountId: ACCOUNT,
         floor: DEFAULT_CREDITS,
+        expectedTimestamp: row.timestamp,
       });
       expect(result.creditsUsage?.timestamp).toBe(REFILL_STAMP);
     });
@@ -282,7 +295,11 @@ describe("checkAndResetCredits", () => {
 
       const result = await checkAndResetCredits(ACCOUNT);
 
-      expect(refillCreditsToFloor).toHaveBeenCalledWith({ accountId: ACCOUNT, floor: PRO_CREDITS });
+      expect(refillCreditsToFloor).toHaveBeenCalledWith({
+        accountId: ACCOUNT,
+        floor: PRO_CREDITS,
+        expectedTimestamp: row.timestamp,
+      });
       expect(result.creditsUsage?.remaining_credits).toBe(PRO_CREDITS + 1);
     });
 
@@ -299,8 +316,9 @@ describe("checkAndResetCredits", () => {
 
       const result = await checkAndResetCredits(ACCOUNT);
 
-      const [{ floor }] = vi.mocked(refillCreditsToFloor).mock.calls[0];
+      const [{ floor, expectedTimestamp }] = vi.mocked(refillCreditsToFloor).mock.calls[0];
       expect(floor).toBe(DEFAULT_CREDITS);
+      expect(expectedTimestamp).toBe(row.timestamp);
       expect(result.creditsUsage?.remaining_credits).toBe(PRO_CREDITS);
       expect(result.creditsUsage?.remaining_credits).not.toBe(DEFAULT_CREDITS);
     });
@@ -318,8 +336,40 @@ describe("checkAndResetCredits", () => {
 
       const result = await checkAndResetCredits(ACCOUNT);
 
-      expect(refillCreditsToFloor).toHaveBeenCalledWith({ accountId: ACCOUNT, floor: PRO_CREDITS });
+      expect(refillCreditsToFloor).toHaveBeenCalledWith({
+        accountId: ACCOUNT,
+        floor: PRO_CREDITS,
+        expectedTimestamp: row.timestamp,
+      });
       expect(result.creditsUsage?.remaining_credits).toBe(PRO_CREDITS + 2_001_000);
+    });
+
+    it("does not refill twice when another caller already refilled this period", async () => {
+      // Two reads of the same stale row both decide a refill is due. The database
+      // compares the timestamp each one observed under the row lock, so the second
+      // refill is superseded and a debit taken in between is not resurrected.
+      const row = baseRow({ timestamp: "2026-03-01T00:00:00.000Z", remaining_credits: 12 });
+      vi.mocked(selectCreditsUsage).mockResolvedValue([row]);
+      vi.mocked(refillCreditsToFloor).mockResolvedValue({
+        state: "superseded",
+        remainingCredits: DEFAULT_CREDITS - 200,
+        timestamp: "2026-05-11T11:59:58",
+      });
+      vi.mocked(getAccountSubscriptionState).mockResolvedValue(freeState);
+
+      const result = await checkAndResetCredits(ACCOUNT);
+
+      expect(refillCreditsToFloor).toHaveBeenCalledOnce();
+      expect(refillCreditsToFloor).toHaveBeenCalledWith({
+        accountId: ACCOUNT,
+        floor: DEFAULT_CREDITS,
+        expectedTimestamp: "2026-03-01T00:00:00.000Z",
+      });
+      expect(result.creditsUsage).toEqual({
+        ...row,
+        remaining_credits: DEFAULT_CREDITS - 200,
+        timestamp: "2026-05-11T11:59:58",
+      });
     });
 
     it("keeps the auto-top-up settings from the row it read", async () => {

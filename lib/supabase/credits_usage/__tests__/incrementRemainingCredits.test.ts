@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { ZodError } from "zod";
 import supabase from "@/lib/supabase/serverClient";
 import { incrementRemainingCredits } from "@/lib/supabase/credits_usage/incrementRemainingCredits";
 
@@ -39,11 +40,13 @@ describe("incrementRemainingCredits", () => {
   });
 
   it.each([null, { remainingCredits: "300" }, { remainingCredits: 300, timestamp: "x" }])(
-    "rejects an invalid receipt: %j",
+    "rejects an invalid receipt with a validation error: %j",
     async data => {
       vi.mocked(supabase.rpc).mockResolvedValue({ data, error: null } as never);
 
-      await expect(incrementRemainingCredits({ accountId: ACCOUNT, delta: 100 })).rejects.toThrow();
+      await expect(
+        incrementRemainingCredits({ accountId: ACCOUNT, delta: 100 }),
+      ).rejects.toBeInstanceOf(ZodError);
     },
   );
 
