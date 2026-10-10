@@ -33,6 +33,7 @@ export async function callContextRpc(
     "list_context_request_targets",
     "list_context_artist_request_target",
     "list_context_songwriter_request_target",
+    "resolve_context_songwriter_identity",
     "list_context_company_request_target",
     "list_context_campaign_request_target",
     "list_context_material_request_target",

@@ -17,6 +17,10 @@ vi.mock("@/lib/apify/client", () => ({ default: {}, apifyClient: {} }));
 vi.mock("@/lib/privy/client", () => ({ default: {} }));
 vi.mock("@/lib/emails/client", () => ({ default: {} }));
 vi.mock("@/lib/stripe/client", () => ({ default: {} }));
+// Songwriter identity resolution stays with the roster tools until the delegated-grant audit.
+const delegatedContextOperations = Object.entries(contextToolOperations)
+  .filter(([action]) => action !== "resolve_songwriter_identity")
+  .map(([, operation]) => operation);
 it("discovers the entire delegated catalog over the real MCP SDK", async () => {
   const server = new McpServer({ name: "recoup-test", version: "1" });
   registerFullOAuthTools(server, vi.fn(), { prepare: vi.fn(), listArtists: vi.fn() });
@@ -33,12 +37,12 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
         ),
         "get_daily_email_status",
         "set_daily_email_status",
-        ...Object.values(contextToolOperations).map(operation => operation.name),
+        ...delegatedContextOperations.map(operation => operation.name),
       ].sort(),
     );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
     expect(tools).toHaveLength(84);
-    for (const operation of Object.values(contextToolOperations)) {
+    for (const operation of delegatedContextOperations) {
       const tool = tools.find(tool => tool.name === operation.name)!;
       expect(Object.keys(tool.inputSchema.properties ?? {}).length).toBeGreaterThan(0);
       expect(tool.inputSchema.properties).not.toHaveProperty("action");
@@ -49,6 +53,7 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
     expect(JSON.stringify(artist)).not.toMatch(/system prompt|copy.*conversation/i);
     expect(tools.map(tool => tool.name)).not.toContain("list_professional_roster");
     expect(tools.map(tool => tool.name)).not.toContain("confirm_professional_roster");
+    expect(tools.map(tool => tool.name)).not.toContain("resolve_songwriter_identity");
     expect(
       tools.find(tool => tool.name === "send_email")!.inputSchema.required ?? [],
     ).not.toContain("room_id");

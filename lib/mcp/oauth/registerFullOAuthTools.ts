@@ -54,6 +54,8 @@ export function registerFullOAuthTools(
       for (const option of config.inputSchema.options) {
         if (!(option instanceof z.ZodObject)) throw new Error("Invalid context operation schema");
         const action = option.shape.action.value as keyof typeof contextToolOperations;
+        // Identity resolution writes into the professional roster scope; it waits for the same audit.
+        if (action === "resolve_songwriter_identity") continue;
         const metadata = contextToolOperations[action];
         if (!metadata) throw new Error(`Missing delegated context policy for ${action}`);
         register(
