@@ -11,6 +11,7 @@ const httpUrl = (label: string) =>
 export const createSubscriptionSessionBodySchema = z
   .object({
     plan: z.enum(["starter", "pro"], { message: "plan must be starter or pro" }).default("pro"),
+    fulfillment: z.literal("recoup-plugin").optional(),
     successUrl: httpUrl("successUrl"),
     cancelUrl: httpUrl("cancelUrl").optional(),
   })

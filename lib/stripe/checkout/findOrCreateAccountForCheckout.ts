@@ -10,6 +10,7 @@ import { selectAccountEmail } from "@/lib/supabase/account_emails/selectAccountE
  */
 export async function findOrCreateAccountForCheckout(
   email: string,
+  options: { sendWelcome?: boolean } = {},
 ): Promise<{ accountId: string; created: boolean }> {
   const existing = await selectAccountEmail(email);
   if (existing?.account_id) return { accountId: existing.account_id, created: false };
@@ -17,6 +18,6 @@ export async function findOrCreateAccountForCheckout(
   const accountId = await getOrCreateAccountByEmail(email);
   if (!accountId) throw new Error(`could not create an account for checkout email ${email}`);
 
-  await sendWelcomeEmail({ accountId, email });
+  if (options.sendWelcome !== false) await sendWelcomeEmail({ accountId, email });
   return { accountId, created: true };
 }

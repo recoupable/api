@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import type Stripe from "stripe";
+vi.mock("@/lib/stripe/checkout/deliverPluginPurchase", () => ({
+  deliverPluginPurchase: deliverPluginPurchaseMock,
+}));
 
 const {
+  deliverPluginPurchaseMock,
   processCheckoutSetupCompletedMock,
   verifyStripeWebhookEventMock,
   processCreditsTopupSessionMock,
@@ -16,6 +20,7 @@ const {
   processCheckoutSessionExpiredMock,
   processCheckoutSubscriptionCompletedMock,
 } = vi.hoisted(() => ({
+  deliverPluginPurchaseMock: vi.fn(),
   processCheckoutSetupCompletedMock: vi.fn(),
   verifyStripeWebhookEventMock: vi.fn(),
   processCreditsTopupSessionMock: vi.fn(),
@@ -236,4 +241,24 @@ describe("stripeWebhookHandler", () => {
     expect(res.status).toBe(500);
     await expect(res.json()).resolves.toEqual({ error: "Internal server error" });
   });
+});
+
+it("delivers plugin email after account linking for delayed payments", async () => {
+  verifyStripeWebhookEventMock.mockReturnValue({
+    event: {
+      id: "evt_async",
+      type: "checkout.session.async_payment_succeeded",
+      data: { object: { id: "cs_async", mode: "subscription" } },
+    },
+  });
+  const response = await stripeWebhookHandler(
+    new NextRequest("http://localhost/api/stripe/webhook", { method: "POST" }),
+  );
+  expect(response.status).toBe(200);
+  expect(deliverPluginPurchaseMock).toHaveBeenCalledWith(
+    expect.objectContaining({ id: "cs_async" }),
+  );
+  expect(processCheckoutSubscriptionCompletedMock.mock.invocationCallOrder.at(-1)).toBeLessThan(
+    deliverPluginPurchaseMock.mock.invocationCallOrder.at(-1)!,
+  );
 });
