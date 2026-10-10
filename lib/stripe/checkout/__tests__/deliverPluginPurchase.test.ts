@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
+import { deliverPluginPurchase } from "../deliverPluginPurchase";
 const mocks = vi.hoisted(() => ({
   retrieve: vi.fn(),
   subscription: vi.fn(),
@@ -15,7 +16,6 @@ vi.mock("@/lib/stripe/client", () => ({
 }));
 vi.mock("@/lib/emails/sendEmail", () => ({ sendEmailWithResend: mocks.send }));
 vi.mock("@/lib/const", () => ({ RECOUP_FROM_EMAIL: "Recoup <agent@example.com>" }));
-import { deliverPluginPurchase } from "../deliverPluginPurchase";
 const session = {
   id: "cs_plugin",
   mode: "subscription",
@@ -37,7 +37,9 @@ describe("plugin purchase delivery", () => {
     expect(mocks.send).toHaveBeenCalledWith(
       expect.objectContaining({
         to: ["buyer@example.com"],
-        text: expect.stringContaining("https://recoupable.dev/label-in-a-box/setup"),
+        text: expect.stringContaining(
+          "https://recoupable.dev/label-in-a-box/setup#purchase=cs_plugin",
+        ),
       }),
       { idempotencyKey: "plugin-purchase/cs_plugin" },
     );

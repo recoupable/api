@@ -27,7 +27,7 @@ export async function deliverPluginPurchase(eventSession: Stripe.Checkout.Sessio
     {
       from: RECOUP_FROM_EMAIL,
       to: [email],
-      ...buildPluginPurchaseEmail(),
+      ...buildPluginPurchaseEmail(session.id),
     },
     { idempotencyKey: `plugin-purchase/${session.id}` },
   );

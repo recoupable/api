@@ -1,9 +1,9 @@
-vi.mock("@/lib/stripe/checkout/deliverPluginPurchase", () => ({
-  deliverPluginPurchase: deliverPluginPurchaseMock,
-}));
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import type Stripe from "stripe";
+vi.mock("@/lib/stripe/checkout/deliverPluginPurchase", () => ({
+  deliverPluginPurchase: deliverPluginPurchaseMock,
+}));
 
 const {
   deliverPluginPurchaseMock,
