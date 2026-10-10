@@ -14,20 +14,23 @@ export async function processSongwriterIdentityOperation(
   args: SongwriterIdentityOperation,
   rpc: (name: string, params: Record<string, unknown>) => Promise<unknown>,
 ): Promise<SongwriterIdentityReceipt> {
+  // Postgres returns canonical lowercase UUIDs, so compare the selection in that form.
+  const requestId = args.request_id.toLowerCase();
+  const professionalId = args.professional_id.toLowerCase();
   const parsed = songwriterIdentityReceiptSchema.safeParse(
     await rpc("resolve_context_songwriter_identity", {
       p_actor: accountId,
       p_owner: ownerId,
-      p_request: args.request_id,
-      p_professional: args.professional_id,
+      p_request: requestId,
+      p_professional: professionalId,
       p_key: args.idempotency_key,
     }),
   );
   if (!parsed.success) throw new Error("Songwriter identity resolution receipt is invalid");
   const { resolution } = parsed.data;
   if (
-    resolution.request_id !== args.request_id ||
-    resolution.professional_id !== args.professional_id
+    resolution.request_id.toLowerCase() !== requestId ||
+    resolution.professional_id.toLowerCase() !== professionalId
   )
     throw new Error(
       "Songwriter identity resolution receipt does not match the confirmed selection",

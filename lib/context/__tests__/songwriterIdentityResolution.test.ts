@@ -77,6 +77,30 @@ describe("resolve_songwriter_identity", () => {
       await processContextOperation(actor, input, { rpc, dispatch: vi.fn(), authorize: grant() }),
     ).toEqual(replay);
   });
+  it("accepts uppercase IDs and matches the canonical lowercase receipt, including replay", async () => {
+    const upperRequest = "ABCDEF00-0000-4000-8000-000000000003";
+    const upperProfessional = "ABCDEF00-0000-4000-8000-000000000004";
+    const stored = {
+      ...receipt,
+      resolution: {
+        ...receipt.resolution,
+        request_id: upperRequest.toLowerCase(),
+        professional_id: upperProfessional.toLowerCase(),
+      },
+    };
+    const upper = { ...input, request_id: upperRequest, professional_id: upperProfessional };
+    for (const result of [stored, { ...stored, created: false }]) {
+      const rpc = vi.fn(async () => result);
+      expect(
+        await processContextOperation(actor, upper, { rpc, dispatch: vi.fn(), authorize: grant() }),
+      ).toEqual(result);
+      expect(rpc).toHaveBeenCalledExactlyOnceWith("resolve_context_songwriter_identity", {
+        ...rpcParams,
+        p_request: upperRequest.toLowerCase(),
+        p_professional: upperProfessional.toLowerCase(),
+      });
+    }
+  });
   it.each([
     { confirmed: false },
     { confirmed: undefined },
@@ -220,6 +244,30 @@ describe("resolve_songwriter_identity transports", () => {
 });
 
 describe("resolved songwriter targets", () => {
+  it.each([
+    { identityConfirmed: true },
+    { identityConfirmed: false, professionalId: professional },
+  ])("plan rejects a target whose confirmation and professional disagree: %j", async patch => {
+    vi.mocked(authorizeContextOwner).mockResolvedValue({
+      accountId: actor,
+      ownerId: workspace,
+      organizationId: workspace,
+    });
+    vi.mocked(callContextRpc).mockImplementation(async name =>
+      name === "read_context_request"
+        ? { id: request, owner_id: workspace, status: "partial", input: { kind: "songwriter" } }
+        : {
+            subjectId: subject,
+            kind: "songwriter",
+            availableFields: ["submitted_name"],
+            reusableModules: [],
+            ...patch,
+          },
+    );
+    await expect(planStoredContextModules(actor, workspace, request)).rejects.toThrow(
+      /confirmation and professional must agree/,
+    );
+  });
   it("plan accepts a resolved target and still blocks unimplemented research", async () => {
     vi.mocked(authorizeContextOwner).mockResolvedValue({
       accountId: actor,

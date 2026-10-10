@@ -83,6 +83,13 @@ export async function planStoredContextModules(actor: string, owner: string, req
                 availableFields: z.array(z.literal("submitted_name")).length(1),
                 reusableModules: z.array(z.string()),
               })
+              // A confirmed identity names its professional; an unconfirmed one names none.
+              .refine(
+                target => target.identityConfirmed === (target.professionalId !== undefined),
+                {
+                  message: "Songwriter identity confirmation and professional must agree",
+                },
+              )
               .transform(({ professionalId: _resolved, ...target }) => target)
               .parse(
                 await callContextRpc("list_context_songwriter_request_target", {
