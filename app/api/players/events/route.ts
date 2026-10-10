@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       const { flow, event } = z
         .object({ flow: z.string().max(2048), event: z.unknown() })
         .strict()
-        .parse(await request.json());
+        .parse(await request.json().catch(() => null));
       return recordListeningEvent(flow, event);
     },
     true,

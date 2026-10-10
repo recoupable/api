@@ -9,7 +9,7 @@ import { publicPlayerResponse } from "@/lib/players/publicPlayerResponse";
 export async function POST(request: Request) {
   return publicPlayerResponse(
     request,
-    async () => exchangePlayerSpotify(await request.json()),
+    async () => exchangePlayerSpotify(await request.json().catch(() => null)),
     true,
   );
 }

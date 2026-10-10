@@ -1,7 +1,10 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { signPlayerSession } from "../signPlayerSession";
 import { verifyPlayerSession } from "../verifyPlayerSession";
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.useRealTimers();
+});
 it("binds the session to a player revision and the trusted player origin", () => {
   vi.stubEnv("PLAYER_SESSION_SECRET", "test-key");
   const payload = {
@@ -16,6 +19,8 @@ it("binds the session to a player revision and the trusted player origin", () =>
   expect(() => verifyPlayerSession(signed + "x")).toThrow();
 });
 it("rejects expired and excessively long sessions", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-10-10T00:00:00Z"));
   vi.stubEnv("PLAYER_SESSION_SECRET", "test-key");
   const payload = {
     playerId: crypto.randomUUID(),
