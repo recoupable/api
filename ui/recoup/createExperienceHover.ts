@@ -101,6 +101,31 @@ export function createExperienceHover(container: HTMLElement, openFeature: (id: 
   container.addEventListener("focusout", event => {
     if (!panel.contains(event.relatedTarget as Node | null)) scheduleHide();
   });
+  // Keep trackpad momentum in the same row after the floating preview closes.
+  let wheelRow: HTMLElement | null = null;
+  let wheelUntil = 0;
+  document.addEventListener(
+    "wheel",
+    event => {
+      if (event.ctrlKey) return;
+      const horizontal = event.shiftKey && !event.deltaX ? event.deltaY : event.deltaX;
+      if (!horizontal || (!event.shiftKey && Math.abs(horizontal) < Math.abs(event.deltaY))) return;
+      const overPanel = panel.contains(event.target as Node);
+      const row = overPanel
+        ? current?.closest<HTMLElement>(".experience-row")
+        : Date.now() < wheelUntil
+          ? wheelRow
+          : null;
+      if (!row?.isConnected || row.scrollWidth <= row.clientWidth) return;
+      event.preventDefault();
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? row.clientWidth : 1;
+      row.scrollLeft += horizontal * unit;
+      hide();
+      wheelRow = row;
+      wheelUntil = Date.now() + 220;
+    },
+    { passive: false },
+  );
   panel.addEventListener("pointerenter", cancelTimer);
   panel.addEventListener("pointerleave", scheduleHide);
   panel.addEventListener("focusin", cancelTimer);
