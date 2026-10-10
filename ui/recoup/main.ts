@@ -8,7 +8,7 @@ import features from "./features";
 const root = document.getElementById("root")!;
 let previewsPaused = false;
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-root.innerHTML = `<main><section class="hero" aria-labelledby="hero-title"><div><h1 id="hero-title">Your record label.<br>Inside ChatGPT.</h1><p class="hero-description">Start with a song, album, artist, or entire catalog. Manage your roster, create content, grow your audience, and find your next opportunity.</p></div></section><section id="cards" aria-label="Music workflows"></section><footer><button id="motion" aria-pressed="false">Pause previews</button><p id="connection" class="connection" role="status">Connecting to your conversation…</p></footer></main>`;
+root.innerHTML = `<main><section class="hero" aria-labelledby="hero-title"><div><h1 id="hero-title">Your record label. Inside ChatGPT.</h1><p class="hero-description">Start with a song, album, artist, or entire catalog. Manage your roster, create content, grow your audience, and find your next opportunity.</p></div></section><section id="cards" aria-label="Music workflows"></section><footer><button id="motion" aria-pressed="false">Pause previews</button><p id="connection" class="connection" role="status">Connecting to your conversation…</p></footer></main>`;
 const cards = document.querySelector<HTMLElement>("#cards")!;
 const status = document.querySelector<HTMLElement>("#connection")!;
 const motion = document.querySelector<HTMLButtonElement>("#motion")!;

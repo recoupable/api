@@ -46,14 +46,12 @@ main {
   margin: 0;
 }
 .hero {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 40px;
+  display: block;
+  text-align: center;
   padding-bottom: 44px;
 }
 .hero h1 {
-  font-size: clamp(38px, 4.8vw, 64px);
+  font-size: clamp(32px, 4.4vw, 56px);
   line-height: 1.02;
   letter-spacing: -0.055em;
   font-weight: 600;
@@ -64,7 +62,7 @@ main {
   color: var(--muted);
   font-size: 17px;
   line-height: 1.6;
-  margin: 0;
+  margin: 0 auto;
 }
 .how-it-works {
   padding: 28px;
