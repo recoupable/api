@@ -7,6 +7,7 @@ const actor = "00000000-0000-4000-8000-000000000001";
 const workspace = "00000000-0000-4000-8000-000000000002";
 const firstRecording = "00000000-0000-4000-8000-000000000011";
 const secondRecording = "00000000-0000-4000-8000-000000000012";
+const lettered = "0000000a-0000-4000-8000-0000000000ab";
 
 const authorized = () =>
   vi.fn(async () => ({ accountId: actor, ownerId: workspace, organizationId: workspace }));
@@ -85,7 +86,7 @@ describe("unreleased recording intake", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it("rejects an unknown lifecycle state, a short title and a malformed date", () => {
+  it("rejects an unknown lifecycle state, a short title, control characters and a malformed date", () => {
     const valid = {
       action: "ingest_unreleased_recording",
       recording: { title: "Night drive" },
@@ -94,6 +95,8 @@ describe("unreleased recording intake", () => {
     for (const recording of [
       { title: "Night drive", lifecycle_state: "released" },
       { title: "N" },
+      { title: "Night\tdrive" },
+      { title: "Night drive", working_title: "ND\u0007" },
       { title: "Night drive", planned_release_date: "March 2027" },
     ]) {
       const parsed = contextOperationSchema.safeParse({ ...valid, recording });
@@ -156,6 +159,25 @@ describe("planned release intake", () => {
     expect(deps.dispatch).not.toHaveBeenCalled();
   });
 
+  it("forwards an omitted lifecycle so the database records it as unknown", async () => {
+    const rpc = vi.fn(async () => ({ id: "request", status: "partial" }));
+    await processContextOperation(
+      actor,
+      {
+        action: "ingest_planned_release",
+        release: { title: "Untitled album" },
+        idempotency_key: "release-c",
+      },
+      { authorize: authorized(), rpc, dispatch: vi.fn() },
+    );
+    expect(rpc).toHaveBeenCalledExactlyOnceWith("create_context_planned_release_request", {
+      p_owner: workspace,
+      p_actor: actor,
+      p_release: { title: "Untitled album" },
+      p_key: "release-c",
+    });
+  });
+
   it("rejects store identifiers, invalid lifecycle, too many links and non-http links", async () => {
     const authorize = vi.fn();
     const rpc = vi.fn();
@@ -172,6 +194,9 @@ describe("planned release intake", () => {
       { ...release, upc: "supplied" },
       { ...release, isrc: "supplied" },
       { ...release, lifecycle_state: "released" },
+      { ...release, lifecycle_state: null },
+      { ...release, title: "Night\tDrive EP" },
+      { ...release, products: [{ format: "vinyl", label: "Limited\u0000pressing" }] },
       {
         ...release,
         promotional_links: Array.from({ length: 21 }, (_, index) => ({
@@ -180,8 +205,15 @@ describe("planned release intake", () => {
         })),
       },
       { ...release, promotional_links: [{ kind: "pre_save", url: "spotify:album:placeholder" }] },
+      { ...release, promotional_links: [{ kind: "pre_save", url: "HTTPS://example.com/presave" }] },
+      {
+        ...release,
+        promotional_links: [{ kind: "pre_save", url: "https://example.com/pre save" }],
+      },
       { ...release, products: [{ format: "minidisc" }] },
       { ...release, recording_subject_ids: ["not-a-uuid"] },
+      { ...release, recording_subject_ids: [firstRecording, firstRecording] },
+      { ...release, recording_subject_ids: [lettered, lettered.toUpperCase()] },
     ];
     for (const candidate of invalid) {
       const parsed = contextOperationSchema.safeParse({
