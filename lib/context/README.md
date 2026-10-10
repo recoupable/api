@@ -22,7 +22,7 @@ Part of recoupable/app#2116. Spotify metadata now flows through shared authentic
 - `review_release_track_identities`: provide the saved release `request_id` and `subject_id`, plus optional organization scope. The service-only database read compares current source-backed track/ISRC observations with existing Spotify track mappings and returns `unmapped`, `existing_identifier_match`, `conflict` or `unresolved` per position. It never returns another song's metadata, creates a recording, or asserts rights. Withdrawn or changed evidence cannot yield ready candidates. This is locally fixture-tested and requires database PR77 and API PR917; it is not hosted-verified.
 - `collectSpotifyReleaseTrackIsrcs` fetches at most five distinct Spotify tracks concurrently. Repeated positions share one lookup. It records source URL, response status and missing/failed ISRC gaps without retries or identity writes. The persisted ISRC is a provider observation, not a verified recording identity. No release position becomes a recording subject automatically.
 - `loadCurrentReleaseTrackSlots` is the read-only handoff for that future collection: it checks the selected actor/workspace, pages through the exact saved release request, verifies one stable source result and position count, then checks the current result again. A withdrawn, incomplete, overlapping or changed source aborts before any provider work. It does not itself grant collection permission or call the track reader.
-- `brief`: provide `request_id`, `purpose` (`creative_direction` or `playlist_pitch`), optional organization scope and `max_characters` (1000–32000). Returns attributed current documents, result/version references, missing topics and readiness. This selects evidence; it does not write a creative concept or playlist pitch.
+- `brief`: provide `request_id`, `purpose` (`creative_direction`, `playlist_pitch` or `company_onboarding`), optional organization scope and `max_characters` (1000–32000). Returns attributed current documents, result/version references, missing topics and readiness. This selects evidence; it does not write a creative concept or playlist pitch.
 
 Account identity always comes from authentication. Both transports use the same authorization. Background execution rechecks access before acceptance. Private context never becomes public Site content automatically.
 
@@ -248,3 +248,32 @@ Both enrichment coordinators propagate this signal. The in-process plan drains
 already-running work before rejecting and starts no further modules once the
 uncertainty is known. RPC errors remain attached as internal causes; the public
 error message does not include private database diagnostics.
+
+### Company-onboarding assessment MVP
+
+Use the existing HTTP `POST /api/context` or standard MCP Context operation to
+compile a scoped assessment from one to ten saved Context requests:
+
+```json
+{
+  "action": "save_brief",
+  "request_id": "<existing request UUID>",
+  "purpose": "company_onboarding",
+  "idempotency_key": "company-assessment-v1"
+}
+```
+
+Add `additional_request_ids` to include other saved requests and `organization_id`
+for the existing authorized organization scope. Reopen with `read_brief` and the
+returned snapshot ID. No collection, model call or original-file upload is needed.
+The assessment contains attributed company/creator/artist/catalog/recording/release
+evidence (including submitted release locators), missing-topic coverage and per-request `next_steps` for evidence review.
+`assessment_scope` is `selected_saved_context_requests`: it is not the complete
+company register. Missing topics describe coverage in this assessment, including size-limited omissions,
+not a claim that evidence does not exist. They are review prompts, not proof that every topic
+applies to every company. Submitted names remain assertions; metadata and credits
+do not establish rights, ownership or mandates. Existing snapshot access,
+withdrawal, replay and history behavior applies.
+
+This requires the database company-assessment purpose migration before API release.
+Local fixtures cover compile/save/reopen; they do not prove a hosted Records trial.
