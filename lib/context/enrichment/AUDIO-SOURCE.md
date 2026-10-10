@@ -65,35 +65,49 @@ expose a public route; callers must supply authenticated actor/workspace context
 ## Catalog metadata on a saved source
 
 `analyzeSavedContextCatalogMetadata(actor, owner, requestId, subjectId, apiKey, deps)` runs the
-existing `catalog_metadata` preset on the same accepted `audio_source` document, with the same
-workspace authorization, checksum and duration verification, 15-minute signed URL and reuse path.
+existing `catalog_metadata` preset on the same accepted `audio_source` document. It shares the
+summary and lyric path's document lookup (`loadAcceptedContextAudioSource`: workspace storage
+key check) and provider request (`requestSavedContextAudioAnalysis`: checksum and duration
+re-verification, 15-minute signed URL, one production call), plus the same reuse path.
 Before claiming an attempt it classifies the saved audio with `resolveSongEvidenceCoverage`,
-which maps the evidence to one of `full`, `preview`, `wrong_recording` or `missing` plus a
-`contextCoverageSchema` record (extent, identity, range, language). Only `full` evidence —
-waveform-verified audio whose duration agrees with the recording — is sent for paid analysis;
-unverified or disagreeing audio is refused before any claim or provider call. A language label
-is passed through verbatim from the caller (for example a multilingual lyrics attribution) and
-is never guessed.
+which maps the evidence to one of `full`, `preview`, `unverified`, `wrong_recording` or
+`missing` plus a `contextCoverageSchema` record (extent, identity, range, language). Only `full`
+evidence — waveform-verified audio whose duration agrees with the recording — is sent for paid
+analysis; unverified audio and audio whose duration disagrees with the recording are refused
+before any claim or provider call, and a subject with no accepted audio is refused the same way.
+A language label is trimmed and passed through from the caller (for example a multilingual
+lyrics attribution); it is never guessed, and a value too long to be a label is dropped.
 
 The production endpoint applies the preset's JSON-like parser itself and returns either an
 object or, when that fails, the raw text. `parseCatalogMetadataResponse` accepts both, applies
 the same Python-dict tolerant parser to text, validates the result against a schema that mirrors
-the preset's fields (all optional; no invented values) and returns `valid` or `invalid` with a
-reason. Raw provider output, the parsed record, the coverage result and the accepted document
-stay separate. Invalid structured output throws `ContextStructuredOutputInvalid`, so
-`runContextEnrichment` marks the attempt failed and no `catalog_metadata` document is accepted;
-`lyrics` and `song_summary` documents for the recording are untouched.
+the preset's fields and limits (integer tempo, 1-10 energy and danceability, at most 3 subgenres,
+5 moods, 3 lyrical themes and 3 similar artists, non-empty strings; every field optional, no
+invented values) and returns `valid` or `invalid` with a reason. The endpoint response body, the
+validated record, the coverage result and the accepted document stay separate. Invalid
+structured output throws `ContextStructuredOutputInvalid`, so `runContextEnrichment` marks the
+attempt failed and no `catalog_metadata` document is accepted; `lyrics` and `song_summary`
+documents for the recording are untouched.
 
 The result is saved under the `catalog_metadata` topic with key
 `saved-audio-catalog-metadata-v1`. Its input includes the audio result ID, checksum and a
 `presetVersion` hash of the local preset prompt and parameters, so a changed recipe is a new
 paid call while a compatible accepted result is reused without one. The trace records the local
 preset prompt and parameters, a provenance note that production resolves the deployed prompt,
-the media manifest (coverage label, analyzed range, checksum, no URL), the raw response, the
-validation status, timing and a billing note. The signed URL and API key are never persisted.
-Cost remains `unknown` until CE07 cost references exist. The module is server-only; it does not
-add an HTTP, MCP or workflow action, and failed-attempt traces are not yet persisted because
-`fail_context_enrichment` accepts no reason.
+the media manifest (coverage label, analyzed range, checksum, no URL), the full endpoint response
+body with every key it returned (production has already applied its own JSON-like parsing, so
+this is not the model's untouched token output), the validation status, timing and a billing
+note. The signed URL and API key are never persisted. Cost remains `unknown` until CE07 cost
+references exist. The module is server-only; it does not add an HTTP, MCP or workflow action. An
+operator runs it the same way as the lyric runner below (a paid production call; the command
+prints only state and result ID):
+
+```sh
+npx tsx --env-file=.env.local scripts/analyzeContextCatalogMetadata.ts <request-id> <recording-subject-id> [workspace-owner-id]
+```
+
+Failed-attempt traces (including the response body of an attempt whose output failed validation)
+are not yet persisted because `fail_context_enrichment` accepts no reason.
 
 ## Lyric transcription
 

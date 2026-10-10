@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { analyzeSavedContextCatalogMetadata } from "../analyzeSavedContextCatalogMetadata";
 import { ContextStructuredOutputInvalid } from "../ContextStructuredOutputInvalid";
@@ -40,7 +41,12 @@ function setup(response: unknown = metadata) {
     fetcher: vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ status: "success", response, elapsed_seconds: 12.5 }),
+      json: async () => ({
+        status: "success",
+        preset: "catalog_metadata",
+        response,
+        elapsed_seconds: 12.5,
+      }),
     }),
   };
 }
@@ -67,7 +73,14 @@ describe("analyzeSavedContextCatalogMetadata", () => {
         audioSourceResultId: id,
         sha256: asset.sha256,
         preset: "catalog_metadata",
-        presetVersion: expect.stringMatching(/^[a-f0-9]{64}$/),
+        presetVersion: createHash("sha256")
+          .update(
+            JSON.stringify([
+              getPreset("catalog_metadata")!.prompt,
+              getPreset("catalog_metadata")!.params,
+            ]),
+          )
+          .digest("hex"),
         normalization: "catalog-metadata-json-v1",
       },
     });
@@ -94,7 +107,12 @@ describe("analyzeSavedContextCatalogMetadata", () => {
     expect(complete?.[1].p_result.trace).toMatchObject({
       preset: { name: "catalog_metadata", prompt: preset.prompt, params: preset.params },
       media: [{ coverage: "full", startSeconds: 0, endSeconds: 152, sha256: asset.sha256 }],
-      rawResponse: { status: "success", response: metadata },
+      rawResponse: {
+        status: "success",
+        preset: "catalog_metadata",
+        response: metadata,
+        elapsed_seconds: 12.5,
+      },
       validation: { status: "valid" },
     });
     expect(complete?.[1].p_result.trace.elapsedMs).toEqual(expect.any(Number));
@@ -164,7 +182,7 @@ describe("analyzeSavedContextCatalogMetadata", () => {
           ]
         : { state: "claimed", attemptId: id },
     );
-    await expect(call(deps)).rejects.toThrow("wrong_recording");
+    await expect(call(deps)).rejects.toThrow("(unverified)");
     expect(deps.rpc).not.toHaveBeenCalledWith("claim_context_enrichment", expect.anything());
     expect(deps.fetcher).not.toHaveBeenCalled();
   });

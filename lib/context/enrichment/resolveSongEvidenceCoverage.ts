@@ -1,6 +1,11 @@
 import { contextCoverageSchema, type ContextCoverage } from "../schema";
 
-export type SongEvidenceCoverageLabel = "full" | "preview" | "wrong_recording" | "missing";
+export type SongEvidenceCoverageLabel =
+  | "full"
+  | "preview"
+  | "unverified"
+  | "wrong_recording"
+  | "missing";
 
 export interface SongEvidenceCoverageInput {
   /** Accepted `audio_source` content for the recording, or null when none is saved. */
@@ -12,7 +17,7 @@ export interface SongEvidenceCoverageInput {
   previewDurationSeconds?: number | null;
   /** Provider-reported recording duration, used only to detect a different recording. */
   expectedDurationSeconds?: number | null;
-  /** Language attribution supplied by a lyrics document; passed through verbatim, never guessed. */
+  /** Language attribution supplied by a lyrics document; trimmed and passed through, never guessed. */
   language?: string | null;
 }
 
@@ -24,11 +29,13 @@ export interface SongEvidenceCoverage {
 }
 
 const DURATION_TOLERANCE_SECONDS = 2;
+const MAX_LANGUAGE_LENGTH = 100;
 
 /**
  * Classify what song evidence an analysis actually received. Full coverage requires waveform-verified
- * audio whose duration agrees with the recording; anything else stays a distinct partial, wrong or
- * missing state so downstream consumers cannot mistake it for the complete song.
+ * audio whose duration agrees with the recording; anything else stays a distinct preview, unverified,
+ * wrong-recording or missing state so downstream consumers cannot mistake it for the complete song.
+ * Never throws on caller input: a language label longer than a label can be is dropped, not truncated.
  *
  * @param input - Saved audio, optional preview length, optional provider duration and language label.
  * @returns A label, a schema-valid coverage record and the flat value to persist.
@@ -36,7 +43,8 @@ const DURATION_TOLERANCE_SECONDS = 2;
 export function resolveSongEvidenceCoverage(
   input: SongEvidenceCoverageInput,
 ): SongEvidenceCoverage {
-  const language = input.language?.trim() ? input.language : null;
+  const trimmed = input.language?.trim();
+  const language = trimmed && trimmed.length <= MAX_LANGUAGE_LENGTH ? trimmed : null;
   const expected = input.expectedDurationSeconds ?? null;
   const preview = input.previewDurationSeconds ?? null;
   const build = (
@@ -61,7 +69,7 @@ export function resolveSongEvidenceCoverage(
     const disagrees =
       expected !== null && Math.abs(durationSeconds - expected) > DURATION_TOLERANCE_SECONDS;
     if (disagrees) return build("wrong_recording", "unknown", unavailable("mismatch"));
-    if (!verified) return build("wrong_recording", "unknown", unavailable("uncertain"));
+    if (!verified) return build("unverified", "unknown", unavailable("uncertain"));
     return build("full", "full", {
       extent: "full",
       identity: "matched",

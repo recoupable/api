@@ -17,21 +17,26 @@ const assetSchema = z.object({
 export type AcceptedContextAudioSource = z.infer<typeof assetSchema>;
 
 /**
- * Find the accepted verified recording audio for one subject inside an authorized Context request.
- * The caller authorizes the actor first; this only reads documents and checks workspace storage.
+ * Find the accepted recording audio for one subject inside an authorized Context request. The
+ * caller authorizes the actor first; this only reads documents and checks workspace storage.
+ * Whether the audio is verified full-song evidence is decided by `resolveSongEvidenceCoverage`.
  *
  * @param rpc - The Context Engine RPC caller.
  * @param owner - Workspace owner the request belongs to.
  * @param requestId - Context request to read documents from.
  * @param subjectId - Recording subject whose audio is required.
- * @returns The document result ID and its parsed audio asset.
+ * @returns All request documents, the audio document result ID and its parsed audio asset.
  */
 export async function loadAcceptedContextAudioSource(
   rpc: (name: string, params: Record<string, unknown>) => Promise<unknown>,
   owner: string,
   requestId: string,
   subjectId: string,
-): Promise<{ resultId: string; asset: AcceptedContextAudioSource }> {
+): Promise<{
+  documents: z.infer<typeof documentSchema>[];
+  resultId: string;
+  asset: AcceptedContextAudioSource;
+}> {
   const documents = z
     .array(documentSchema)
     .parse(await rpc("read_context_documents", { p_owner: owner, p_request: requestId }));
@@ -45,5 +50,5 @@ export async function loadAcceptedContextAudioSource(
     !/^[a-zA-Z0-9/-]+\.wav$/.test(asset.storage.key)
   )
     throw new Error("Audio outside workspace storage");
-  return { resultId: document.resultId, asset };
+  return { documents, resultId: document.resultId, asset };
 }

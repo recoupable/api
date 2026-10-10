@@ -38,4 +38,37 @@ describe("parseCatalogMetadataResponse", () => {
     expect(parseCatalogMetadataResponse("{}").status).toBe("invalid");
     expect(parseCatalogMetadataResponse(null).status).toBe("invalid");
   });
+  it("rejects values outside the limits the catalog_metadata preset defines", () => {
+    const five = ["a", "b", "c", "d", "e"];
+    for (const raw of [
+      { genre: "Pop", energy_level: 99 },
+      { genre: "Pop", energy_level: 0 },
+      { genre: "Pop", danceability: -4 },
+      { genre: "Pop", tempo_bpm: -20 },
+      { genre: "Pop", tempo_bpm: 0 },
+      { genre: "Pop", tempo_bpm: 120.5 },
+      { genre: "Pop", mood: [...five, "f", "g"] },
+      { genre: "Pop", subgenres: ["a", "b", "c", "d"] },
+      { genre: "Pop", lyrical_themes: ["a", "b", "c", "d"] },
+      { genre: "Pop", similar_artists: ["a", "b", "c", "d"] },
+      { genre: "" },
+      { genre: "Pop", description: "   " },
+      { genre: "Pop", instruments: ["piano", " "] },
+    ])
+      expect(parseCatalogMetadataResponse(raw).status, JSON.stringify(raw)).toBe("invalid");
+  });
+  it("accepts values at the preset limits and trims surrounding whitespace", () => {
+    const result = parseCatalogMetadataResponse({
+      genre: " Pop ",
+      subgenres: ["a", "b", "c"],
+      mood: ["a", "b", "c", "d", "e"],
+      lyrical_themes: ["a", "b", "c"],
+      similar_artists: ["a", "b", "c"],
+      energy_level: 10,
+      danceability: 1,
+      tempo_bpm: 1,
+    });
+    expect(result.status).toBe("valid");
+    if (result.status === "valid") expect(result.parsed.genre).toBe("Pop");
+  });
 });

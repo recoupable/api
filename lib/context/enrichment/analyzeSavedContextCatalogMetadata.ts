@@ -6,19 +6,17 @@ import { loadAcceptedContextAudioSource } from "./loadAcceptedContextAudioSource
 import { resolveSongEvidenceCoverage } from "./resolveSongEvidenceCoverage";
 import { parseCatalogMetadataResponse } from "./parseCatalogMetadataResponse";
 import { ContextStructuredOutputInvalid } from "./ContextStructuredOutputInvalid";
+import {
+  requestSavedContextAudioAnalysis,
+  type SavedContextAudioRequestDependencies,
+} from "./requestSavedContextAudioAnalysis";
 
 const PRESET_NAME = "catalog_metadata";
 const NORMALIZATION = "catalog-metadata-json-v1";
-type Dependencies = Omit<Parameters<typeof runContextEnrichment>[4], "call"> & {
-  verifyFile?: (key: string) => Promise<{ sha256: string; durationSeconds: number }>;
-  sign?: (input: { key: string; expiresInSeconds: number }) => Promise<string>;
-  fetcher?: typeof fetch;
-  analyze?: (input: {
-    audio_url: string;
-    preset: typeof PRESET_NAME;
-  }) => Promise<{ status: "success"; response: unknown; elapsed_seconds?: number }>;
-};
-const responseSchema = z.object({
+type Dependencies = Omit<Parameters<typeof runContextEnrichment>[4], "call"> &
+  SavedContextAudioRequestDependencies<{ audio_url: string; preset: typeof PRESET_NAME }>;
+/** Keeps every key production returns (for example `preset`) so the trace holds the full body. */
+const responseSchema = z.looseObject({
   status: z.literal("success"),
   response: z.unknown().refine(value => value !== undefined && value !== null),
   elapsed_seconds: z.number().optional(),
@@ -26,9 +24,9 @@ const responseSchema = z.object({
 
 /**
  * Run the `catalog_metadata` preset on verified full-song audio already saved for a recording and
- * persist the validated JSON as a separate `catalog_metadata` interpretation. Raw provider output,
- * the parsed record, the coverage result and the accepted document stay distinct; invalid structured
- * output fails the attempt instead of being accepted. Compatible accepted results are reused.
+ * persist the validated JSON as a separate `catalog_metadata` interpretation. The endpoint response
+ * body, the validated record, the coverage result and the accepted document stay distinct; invalid
+ * structured output fails the attempt instead of being accepted. Compatible accepted results are reused.
  *
  * @param actor - Authenticated account performing the analysis.
  * @param owner - Workspace owner of the Context request.
@@ -94,39 +92,12 @@ export async function analyzeSavedContextCatalogMetadata(
     {
       ...deps,
       call: async () => {
-        const verify =
-          deps.verifyFile ??
-          (await import("@/lib/supabase/storage/getContextAudioFileMetadata"))
-            .getContextAudioFileMetadata;
-        const file = await verify(asset.storage.key);
-        if (
-          file.sha256 !== asset.sha256 ||
-          Math.abs(file.durationSeconds - asset.durationSeconds) > 0.1
-        )
-          throw new Error("Saved audio changed");
-        const sign =
-          deps.sign ??
-          (await import("@/lib/supabase/storage/createSignedFileUrlByKey"))
-            .createSignedFileUrlByKey;
-        const url = await sign({ key: asset.storage.key, expiresInSeconds: 900 });
-        const started = Date.now();
-        const body = { audio_url: url, preset: PRESET_NAME } as const;
-        let responseBody: unknown;
-        if (deps.analyze) responseBody = await deps.analyze(body);
-        else {
-          const response = await (deps.fetcher ?? fetch)(
-            "https://api.recoupable.dev/api/songs/analyze",
-            {
-              method: "POST",
-              headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
-              body: JSON.stringify(body),
-              redirect: "error",
-              signal: AbortSignal.timeout(300000),
-            },
-          );
-          if (!response.ok) throw new Error(`Music Flamingo failed HTTP ${response.status}`);
-          responseBody = await response.json();
-        }
+        const { responseBody, startedAt } = await requestSavedContextAudioAnalysis(
+          asset,
+          audio_url => ({ audio_url, preset: PRESET_NAME }),
+          apiKey,
+          deps,
+        );
         const raw = responseSchema.parse(responseBody);
         const validation = parseCatalogMetadataResponse(raw.response);
         if (validation.status === "invalid")
@@ -160,7 +131,7 @@ export async function analyzeSavedContextCatalogMetadata(
             ],
             rawResponse: raw,
             validation: { status: validation.status, normalization: NORMALIZATION },
-            elapsedMs: Date.now() - started,
+            elapsedMs: Date.now() - startedAt,
             billing:
               "Production audio endpoint charges the API-key account; no duplicate local debit. Endpoint does not return a confirmed cost.",
           },

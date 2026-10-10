@@ -57,13 +57,16 @@ describe("resolveSongEvidenceCoverage", () => {
       endSeconds: null,
     });
   });
-  it("does not accept audio without waveform verification as the recording", () => {
-    const result = resolveSongEvidenceCoverage({
-      audioSource: { durationSeconds: 152.23, verification: null },
-    });
-    expect(result.label).toBe("wrong_recording");
-    expect(result.coverage.extent).toBe("unavailable");
-    expect(result.coverage.identity).toBe("uncertain");
+  it("labels audio without waveform verification as unverified, distinct from a wrong recording", () => {
+    for (const verification of [null, undefined, { method: "manual" }]) {
+      const result = resolveSongEvidenceCoverage({
+        audioSource: { durationSeconds: 152.23, verification },
+      });
+      expect(result.label).toBe("unverified");
+      expect(result.persistedCoverage).toBe("unknown");
+      expect(result.coverage.extent).toBe("unavailable");
+      expect(result.coverage.identity).toBe("uncertain");
+    }
   });
   it("labels missing audio as unavailable and unknown with no range", () => {
     const result = resolveSongEvidenceCoverage({ audioSource: null });
@@ -90,6 +93,15 @@ describe("resolveSongEvidenceCoverage", () => {
       resolveSongEvidenceCoverage({ audioSource: verified, language: "  " }).coverage.language,
     ).toBeNull();
   });
+  it("trims the language label and drops one too long to be a label instead of throwing", () => {
+    expect(
+      resolveSongEvidenceCoverage({ audioSource: verified, language: "  en  " }).coverage.language,
+    ).toBe("en");
+    expect(
+      resolveSongEvidenceCoverage({ audioSource: null, language: "x".repeat(101) }).coverage
+        .language,
+    ).toBeNull();
+  });
   it("returns schema-valid coverage for every label", () => {
     for (const input of [
       { audioSource: verified },
@@ -97,6 +109,7 @@ describe("resolveSongEvidenceCoverage", () => {
       { audioSource: verified, expectedDurationSeconds: 210 },
       { audioSource: null },
       { audioSource: null, previewDurationSeconds: 45, expectedDurationSeconds: 30 },
+      { audioSource: { durationSeconds: 152.23, verification: null } },
     ]) {
       const { coverage } = resolveSongEvidenceCoverage(input);
       expect(contextCoverageSchema.safeParse(coverage).success).toBe(true);

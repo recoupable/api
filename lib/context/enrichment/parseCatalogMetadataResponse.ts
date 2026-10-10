@@ -1,23 +1,31 @@
 import { z } from "zod";
 import { parseJsonLike } from "@/lib/flamingo/presets/parseJsonLike";
 
-/** Mirrors the fields the `catalog_metadata` preset asks for. Everything is optional; nothing is invented. */
+const text = z.string().trim().min(1);
+const tags = (max?: number) => (max ? z.array(text).max(max) : z.array(text));
+const scale = z.number().min(1).max(10);
+
+/**
+ * Mirrors the fields and limits the `catalog_metadata` preset prompt defines: an integer tempo,
+ * 1-10 energy and danceability, and at most 3 subgenres, 5 moods, 3 lyrical themes and 3 similar
+ * artists. Strings must be non-empty after trimming. Every field is optional; nothing is invented.
+ */
 export const catalogMetadataSchema = z.object({
-  genre: z.string().nullish(),
-  subgenres: z.array(z.string()).nullish(),
-  mood: z.array(z.string()).nullish(),
-  tempo_bpm: z.number().int().nullish(),
-  key: z.string().nullish(),
-  time_signature: z.string().nullish(),
-  instruments: z.array(z.string()).nullish(),
-  vocal_type: z.string().nullish(),
-  vocal_style: z.string().nullish(),
-  production_style: z.string().nullish(),
-  energy_level: z.number().nullish(),
-  danceability: z.number().nullish(),
-  lyrical_themes: z.array(z.string()).nullish(),
-  similar_artists: z.array(z.string()).nullish(),
-  description: z.string().nullish(),
+  genre: text.nullish(),
+  subgenres: tags(3).nullish(),
+  mood: tags(5).nullish(),
+  tempo_bpm: z.number().int().positive().nullish(),
+  key: text.nullish(),
+  time_signature: text.nullish(),
+  instruments: tags().nullish(),
+  vocal_type: text.nullish(),
+  vocal_style: text.nullish(),
+  production_style: text.nullish(),
+  energy_level: scale.nullish(),
+  danceability: scale.nullish(),
+  lyrical_themes: tags(3).nullish(),
+  similar_artists: tags(3).nullish(),
+  description: text.nullish(),
 });
 export type CatalogMetadata = z.infer<typeof catalogMetadataSchema>;
 export type CatalogMetadataParseResult =
