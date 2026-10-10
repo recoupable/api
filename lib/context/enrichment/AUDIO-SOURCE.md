@@ -62,6 +62,39 @@ the extractor's cost. Provider or extraction failures require reconciliation, no
 an implicit paid retry. This server collector does not itself schedule a job or
 expose a public route; callers must supply authenticated actor/workspace context.
 
+## Catalog metadata on a saved source
+
+`analyzeSavedContextCatalogMetadata(actor, owner, requestId, subjectId, apiKey, deps)` runs the
+existing `catalog_metadata` preset on the same accepted `audio_source` document, with the same
+workspace authorization, checksum and duration verification, 15-minute signed URL and reuse path.
+Before claiming an attempt it classifies the saved audio with `resolveSongEvidenceCoverage`,
+which maps the evidence to one of `full`, `preview`, `wrong_recording` or `missing` plus a
+`contextCoverageSchema` record (extent, identity, range, language). Only `full` evidence —
+waveform-verified audio whose duration agrees with the recording — is sent for paid analysis;
+unverified or disagreeing audio is refused before any claim or provider call. A language label
+is passed through verbatim from the caller (for example a multilingual lyrics attribution) and
+is never guessed.
+
+The production endpoint applies the preset's JSON-like parser itself and returns either an
+object or, when that fails, the raw text. `parseCatalogMetadataResponse` accepts both, applies
+the same Python-dict tolerant parser to text, validates the result against a schema that mirrors
+the preset's fields (all optional; no invented values) and returns `valid` or `invalid` with a
+reason. Raw provider output, the parsed record, the coverage result and the accepted document
+stay separate. Invalid structured output throws `ContextStructuredOutputInvalid`, so
+`runContextEnrichment` marks the attempt failed and no `catalog_metadata` document is accepted;
+`lyrics` and `song_summary` documents for the recording are untouched.
+
+The result is saved under the `catalog_metadata` topic with key
+`saved-audio-catalog-metadata-v1`. Its input includes the audio result ID, checksum and a
+`presetVersion` hash of the local preset prompt and parameters, so a changed recipe is a new
+paid call while a compatible accepted result is reused without one. The trace records the local
+preset prompt and parameters, a provenance note that production resolves the deployed prompt,
+the media manifest (coverage label, analyzed range, checksum, no URL), the raw response, the
+validation status, timing and a billing note. The signed URL and API key are never persisted.
+Cost remains `unknown` until CE07 cost references exist. The module is server-only; it does not
+add an HTTP, MCP or workflow action, and failed-attempt traces are not yet persisted because
+`fail_context_enrichment` accepts no reason.
+
 ## Lyric transcription
 
 `analyzeSavedContextLyrics` uses the same saved-audio authorization, file verification,
