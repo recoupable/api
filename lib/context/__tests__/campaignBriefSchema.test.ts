@@ -69,6 +69,11 @@ describe("campaignBriefSchema", () => {
       failure({ ...brief, channels: Array.from({ length: 11 }, (_, i) => `channel ${i}`) }),
     ).toMatch(/channels/);
     expect(failure({ ...brief, channels: ["X"] })).toMatch(/channels/);
+    // The database collapses inner whitespace before comparing, so the boundary must agree.
+    expect(failure({ ...brief, channels: ["Short  form video", "short form video"] })).toMatch(
+      /distinct/,
+    );
+    expect(failure({ ...brief, channels: ["Radio\tpress"] })).toMatch(/control characters/);
     expect(
       failure({
         ...brief,

@@ -3,6 +3,9 @@ import { z } from "zod";
 const CHANNEL_LINK_PATTERN = /:\/\/|^(?:www\.|file:|\/|\\|~\/)/i;
 const CHANNEL_MESSAGE =
   "Channels are names, not links or files; save promoted records first and reference them in promoted";
+// Matches the database: control characters are rejected and inner whitespace is collapsed before comparing.
+const CONTROL_CHARACTER_PATTERN = /\p{Cc}/u;
+const channelKey = (value: string) => value.replace(/\s+/g, " ").toLowerCase();
 
 const promotedSubjectSchema = z.strictObject({
   request_id: z.uuid(),
@@ -28,10 +31,13 @@ export const campaignBriefSchema = z
           .trim()
           .min(2)
           .max(60)
+          .refine(value => !CONTROL_CHARACTER_PATTERN.test(value), {
+            message: "Channel names must not contain control characters",
+          })
           .refine(value => !CHANNEL_LINK_PATTERN.test(value), { message: CHANNEL_MESSAGE }),
       )
       .max(10)
-      .refine(values => new Set(values.map(value => value.toLowerCase())).size === values.length, {
+      .refine(values => new Set(values.map(channelKey)).size === values.length, {
         message: "Campaign channels must be distinct",
       })
       .optional(),
