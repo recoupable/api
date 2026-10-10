@@ -122,9 +122,9 @@ it("reports unknown freshness without failing when source rows are absent or und
       "artist:artist_research",
     ],
     documents: [
-      { documentId: "song-a:catalog_metadata", retrievedAt: null },
-      { documentId: "song-a:song_summary", retrievedAt: null },
-      { documentId: "artist:artist_research", retrievedAt: null },
+      { documentId: "song-a:catalog_metadata", oldestRetrievedAt: null, newestRetrievedAt: null },
+      { documentId: "song-a:song_summary", oldestRetrievedAt: null, newestRetrievedAt: null },
+      { documentId: "artist:artist_research", oldestRetrievedAt: null, newestRetrievedAt: null },
     ],
   });
   expect(brief.text.match(/Retrieved: unknown/g)).toHaveLength(3);

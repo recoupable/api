@@ -79,7 +79,9 @@ export function compileContextBrief(input: {
   const retrievedAt = new Map(
     summarizeContextBriefFreshness(documents).documents.map(entry => [
       entry.documentId,
-      entry.retrievedAt ?? "unknown",
+      entry.oldestRetrievedAt === entry.newestRetrievedAt
+        ? (entry.newestRetrievedAt ?? "unknown")
+        : `${entry.oldestRetrievedAt} to ${entry.newestRetrievedAt}`,
     ]),
   );
   const render = () =>

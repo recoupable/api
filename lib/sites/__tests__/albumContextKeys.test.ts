@@ -55,4 +55,9 @@ it("saves distinct briefs for different tracks in the same site revision", async
   >);
   const keys = m.operation.mock.calls.slice(-2).map(call => call[1].idempotency_key);
   expect(keys[0]).not.toBe(keys[1]);
+  // v4: compiled briefs gained freshness lines, so pre-deploy brief-v3 keys must not be replayed.
+  expect(keys).toEqual([
+    `sites:site:1:${requestId}:brief-v4`,
+    `sites:site:1:${otherRequest}:brief-v4`,
+  ]);
 });

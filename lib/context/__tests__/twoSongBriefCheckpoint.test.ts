@@ -196,7 +196,9 @@ it("keeps each brief task-specific and honest about lyric coverage", async () =>
   expect(pitch.gaps.some(gap => gap.topic === "lyrics")).toBe(false);
 });
 
-it("keeps private assertions, withdrawn evidence, other workspaces and source locations out", async () => {
+// material_input is outside both recipes, so this proves topic scoping, not an evidence-kind
+// private-input rule; a customer_assertion on a recipe topic would still be selected.
+it("keeps out-of-recipe material, withdrawn evidence, other workspaces and source locations out", async () => {
   for (const purpose of ["creative_direction", "playlist_pitch"] as const) {
     const brief = await compile(purpose);
     expect(brief.text).not.toMatch(/PRIVATE|WITHDRAWN|OTHER-WORKSPACE/);
@@ -219,21 +221,25 @@ it("attributes evidence freshness without changing the snapshot-compatible manif
       "topic",
       "version",
     ]);
+  // The oldest bound comes from any selected source, not from each document's newest one.
   expect(brief.input_manifest.freshness).toMatchObject({
-    oldestRetrievedAt: retrieved.artistResearch,
+    oldestRetrievedAt: retrieved.songBOlder,
     newestRetrievedAt: retrieved.songB,
     documentsWithoutRetrievalDate: ["4444:artist_metadata"],
   });
   expect(brief.input_manifest.freshness.documents).toContainEqual({
     documentId: "333b:release_metadata",
-    retrievedAt: retrieved.songB,
+    oldestRetrievedAt: retrieved.songBOlder,
+    newestRetrievedAt: retrieved.songB,
   });
   expect(brief.input_manifest.freshness.documents).toContainEqual({
     documentId: "4444:artist_metadata",
-    retrievedAt: null,
+    oldestRetrievedAt: null,
+    newestRetrievedAt: null,
   });
   expect(brief.input_manifest.freshness.documents).toHaveLength(brief.documents.length);
-  expect(brief.text).toContain(`Retrieved: ${retrieved.songA}`);
+  expect(brief.text).toContain(`Retrieved: ${retrieved.songA}\n`);
+  expect(brief.text).toContain(`Retrieved: ${retrieved.songBOlder} to ${retrieved.songB}\n`);
   expect(brief.text).toContain("Retrieved: unknown");
 });
 
