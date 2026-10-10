@@ -139,3 +139,72 @@
   color: var(--on-primary);
   margin-top: 20px;
 }
+
+#cards {
+  display: block;
+}
+.experience-section {
+  margin: 32px 0 44px;
+}
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.section-heading h3 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.6px;
+}
+.row-controls {
+  display: flex;
+  gap: 8px;
+}
+.row-controls button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--line);
+  font-size: 28px;
+}
+.row-controls button:hover:enabled {
+  background: var(--soft);
+}
+.row-controls button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.experience-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 48px) / 3);
+  gap: 24px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding: 4px 4px 16px;
+  margin: -4px;
+  scrollbar-width: thin;
+}
+.experience-row .card {
+  scroll-snap-align: start;
+  align-self: start;
+}
+@media (max-width: 900px) {
+  .experience-row {
+    grid-auto-columns: calc((100% - 24px) / 2);
+  }
+}
+@media (max-width: 600px) {
+  .experience-row {
+    grid-auto-columns: 82%;
+    gap: 16px;
+  }
+  .section-heading h3 {
+    font-size: 21px;
+  }
+}

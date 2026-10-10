@@ -1,3 +1,4 @@
+import { groupExperienceCards } from "./groupExperienceCards";
 import { escapeHtml } from "./escapeHtml";
 import { createHostBridge } from "./createHostBridge";
 import { createFeatureDialog } from "./createFeatureDialog";
@@ -42,6 +43,7 @@ function renderCards() {
       )
       .join("") ||
     `<div class="empty"><p class="eyebrow">LET’S FIND YOUR NEXT MOVE</p><h3>No workflows found</h3><p>Try “video”, “release”, or browse the full library.</p><button id="reset" class="more">Clear filters</button></div>`;
+  groupExperienceCards(cards);
   cards.querySelectorAll("video").forEach(video => {
     video.muted = true;
     video.addEventListener("loadeddata", () => video.classList.add("loaded"));
