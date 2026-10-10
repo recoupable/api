@@ -129,6 +129,7 @@ it.each([
   "update_release_player",
   "get_release_player_activity",
   "get_release_player_fans",
+  "get_workspace_player_fans",
 ])("enforces current workspace access for %s", async name => {
   await expect(prepareFullOAuthTool(name, { organizationId: "foreign" }, "owner")).rejects.toThrow(
     "Workspace access denied",

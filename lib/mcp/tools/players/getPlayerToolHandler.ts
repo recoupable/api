@@ -6,8 +6,11 @@ import type { PlayerOperation } from "@/lib/players/operationSchemas";
 import { processPlayerOperation } from "@/lib/players/processPlayerOperation";
 import { readPlayerReport } from "@/lib/players/readPlayerReport";
 import { readPlayerFans } from "@/lib/players/readPlayerFans";
+import { readWorkspacePlayerFans } from "@/lib/players/readWorkspacePlayerFans";
 import { SiteError } from "@/lib/sites/SiteError";
-export function getPlayerToolHandler(operation: PlayerOperation | "activity" | "fans") {
+export function getPlayerToolHandler(
+  operation: PlayerOperation | "activity" | "fans" | "workspaceFans",
+) {
   return async (args: Record<string, unknown>, extra: { authInfo?: unknown }) => {
     const resolved = await resolveAccountId({
       authInfo: extra.authInfo as McpAuthInfo | undefined,
@@ -18,11 +21,13 @@ export function getPlayerToolHandler(operation: PlayerOperation | "activity" | "
     try {
       const { id, ...query } = args;
       const result =
-        operation === "fans"
-          ? await readPlayerFans(resolved.accountId, String(id), query)
-          : operation === "activity"
-            ? await readPlayerReport(resolved.accountId, String(id), query)
-            : await processPlayerOperation(resolved.accountId, operation, args);
+        operation === "workspaceFans"
+          ? await readWorkspacePlayerFans(resolved.accountId, args)
+          : operation === "fans"
+            ? await readPlayerFans(resolved.accountId, String(id), query)
+            : operation === "activity"
+              ? await readPlayerReport(resolved.accountId, String(id), query)
+              : await processPlayerOperation(resolved.accountId, operation, args);
       return getToolResultSuccess(result);
     } catch (error) {
       return {
