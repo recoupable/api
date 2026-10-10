@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { z } from "zod";
 import { consumeOAuthRateLimit } from "@/lib/supabase/oauth_rate_limits/consumeOAuthRateLimit";
 import { catalogStreamTrackingSchema } from "./validateCatalogStreamTracking";
@@ -18,7 +19,10 @@ export async function manageCatalogStreamTracking(
   const { catalog_id: catalogId, action } = parsed.data;
   if (
     action !== "status" &&
-    (await consumeOAuthRateLimit("catalog-stream-controls", [{ key: accountId, limit: 10 }]))
+    (await consumeOAuthRateLimit(
+      createHash("sha256").update("catalog-stream-controls").digest("hex"),
+      [{ key: createHash("sha256").update(accountId).digest("hex"), limit: 10 }],
+    ))
   )
     return { error: "Too many tracking requests", status: 429 } as const;
   const existing = await selectCatalogStreamTracking(catalogId);

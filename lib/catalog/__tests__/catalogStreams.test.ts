@@ -59,6 +59,9 @@ describe("catalog daily streams", () => {
       owner_id: "owner",
       enabled: true,
     });
+    expect(consumeOAuthRateLimit).toHaveBeenCalledWith(expect.stringMatching(/^[a-f0-9]{64}$/), [
+      { key: expect.stringMatching(/^[a-f0-9]{64}$/), limit: 10 },
+    ]);
   });
   it("throttles repeated controls before writes or provider traffic", async () => {
     vi.mocked(consumeOAuthRateLimit).mockResolvedValueOnce(30);
